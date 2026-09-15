@@ -252,6 +252,22 @@ class KrakenItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, %(value="#{@second_item.id}")
   end
 
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_kraken_items_url,
+    link_url: :link_existing_account_kraken_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Crypto", balance: 0, currency: "USD",
+                               accountable: Crypto.create!(subtype: "exchange"))
+    },
+    provider_account: -> {
+      @second_item.kraken_accounts.create!(name: "Kraken", account_id: SecureRandom.hex(6),
+                                           account_type: "combined", currency: "USD", current_balance: 1000)
+    },
+    provider_param: :kraken_account_id,
+    params: -> { { kraken_item_id: @second_item.id } }
+  )
+
   test "cannot access another family's kraken item" do
     other_item = KrakenItem.create!(
       family: families(:empty),

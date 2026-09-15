@@ -134,4 +134,28 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
     assert_match "Api key can't be blank", flash[:alert]
   end
+
+  # link_existing_account looks the Lunchflow account up by its upstream
+  # account_id, while the shared tests post the record id, so the two are equal.
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_lunchflow_items_url,
+    link_url: :link_existing_account_lunchflow_items_url,
+    target: ->(owner) {
+      owner.family.accounts.create!(owner: owner, name: "Manual Checking", balance: 0, currency: "USD",
+                                    accountable: Depository.new)
+    },
+    provider_account: -> {
+      id = SecureRandom.uuid
+      lunchflow_items(:one).lunchflow_accounts.create!(id: id, account_id: id, name: "Lunchflow Checking",
+                                                       currency: "USD")
+    },
+    provider_param: :lunchflow_account_id,
+    prepare: -> {
+      accounts = lunchflow_items(:one).lunchflow_accounts.reload.map do |lunchflow_account|
+        { id: lunchflow_account.account_id, name: lunchflow_account.name, currency: "USD" }
+      end
+      Provider::LunchflowAdapter.stubs(:build_provider).returns(stub(get_accounts: { accounts: accounts }))
+    }
+  )
 end

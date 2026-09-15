@@ -141,4 +141,19 @@ class IndexaCapitalItemsControllerTest < ActionDispatch::IntegrationTest
       }
     end
   end
+
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_indexa_capital_items_url,
+    link_url: :link_existing_account_indexa_capital_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Fund", balance: 0, currency: "EUR",
+                               accountable: Investment.create!)
+    },
+    provider_account: -> {
+      @item.indexa_capital_accounts.create!(name: "Indexa Fund", indexa_capital_account_id: SecureRandom.hex(4),
+                                            currency: "EUR", current_balance: 1000)
+    },
+    provider_param: :indexa_capital_account_id
+  )
 end

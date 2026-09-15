@@ -458,14 +458,17 @@ class SnaptradeItemsController < ApplicationController
     @account = Current.family.accounts.find_by(id: @account_id)
     snaptrade_item = current_snaptrade_item
 
-    if snaptrade_item && @account
-      @snaptrade_accounts = snaptrade_item.snaptrade_accounts
-        .left_joins(:account_provider)
-        .where(account_providers: { id: nil })
-      render :select_existing_account
-    else
+    unless snaptrade_item && @account
       redirect_to settings_providers_path, alert: t(".not_found", default: "Account or SnapTrade configuration not found.")
+      return
     end
+
+    return unless require_linkable_account!(@account)
+
+    @snaptrade_accounts = snaptrade_item.snaptrade_accounts
+      .left_joins(:account_provider)
+      .where(account_providers: { id: nil })
+    render :select_existing_account
   end
 
   def link_existing_account
@@ -477,25 +480,31 @@ class SnaptradeItemsController < ApplicationController
     snaptrade_item = Current.family.snaptrade_items.find_by(id: snaptrade_item_id)
     snaptrade_account = snaptrade_item&.snaptrade_accounts&.find_by(id: snaptrade_account_id)
 
-    if account && snaptrade_account
-      begin
-        # Create AccountProvider linking - pass the account directly
-        provider = snaptrade_account.ensure_account_provider!(account)
-
-        unless provider
-          raise "Failed to create AccountProvider link"
-        end
-
-        # Trigger sync to process the linked account
-        snaptrade_item.sync_later_with_follow_up
-
-        redirect_to account_path(account), notice: t(".success", default: "Successfully linked to SnapTrade account.")
-      rescue => e
-        Rails.logger.error "Failed to link existing account: #{e.message}"
-        redirect_to settings_providers_path, alert: t(".failed", default: "Failed to link account: #{e.message}")
-      end
-    else
+    unless account && snaptrade_account
       redirect_to settings_providers_path, alert: t(".not_found", default: "Account not found.")
+      return
+    end
+
+    return unless require_linkable_account!(account)
+
+    # ensure_account_provider! moves an existing link off the account holding it.
+    return unless require_relinkable_provider_account!(snaptrade_account, account)
+
+    begin
+      # Create AccountProvider linking - pass the account directly
+      provider = snaptrade_account.ensure_account_provider!(account)
+
+      unless provider
+        raise "Failed to create AccountProvider link"
+      end
+
+      # Trigger sync to process the linked account
+      snaptrade_item.sync_later_with_follow_up
+
+      redirect_to account_path(account), notice: t(".success", default: "Successfully linked to SnapTrade account.")
+    rescue => e
+      Rails.logger.error "Failed to link existing account: #{e.message}"
+      redirect_to settings_providers_path, alert: t(".failed", default: "Failed to link account: #{e.message}")
     end
   end
 
