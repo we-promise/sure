@@ -47,24 +47,61 @@ class ReleaseHighlightsControllerTest < ActionDispatch::IntegrationTest
     assert_response :no_content
   end
 
-  test "dismiss marks the given tag as seen" do
-    patch release_highlight_dismiss_path, params: { tag: "v1.2.3" }, as: :json
-
-    assert_response :ok
-    assert_equal "v1.2.3", @user.reload.last_seen_release_tag
-  end
-
-  test "dismiss rejects malformed tags" do
-    patch release_highlight_dismiss_path, params: { tag: "not-a-release" }, as: :json
-
-    assert_response :unprocessable_entity
-    assert_nil @user.reload.last_seen_release_tag
-  end
-
-  test "dismiss without a tag marks the deployed release as seen" do
+  test "dismiss marks the pending release as seen" do
     patch release_highlight_dismiss_path, as: :json
 
     assert_response :ok
     assert_equal Sure.version.to_release_tag, @user.reload.last_seen_release_tag
+  end
+
+  test "dismiss accepts the tag the client actually displayed" do
+    patch release_highlight_dismiss_path, params: { tag: Sure.version.to_release_tag }, as: :json
+
+    assert_response :ok
+    assert_equal Sure.version.to_release_tag, @user.reload.last_seen_release_tag
+  end
+
+  test "dismiss rejects a stale tag so a rolling deploy cannot suppress the new popup" do
+    patch release_highlight_dismiss_path, params: { tag: "v9.9.9" }, as: :json
+
+    assert_response :conflict
+    assert_nil @user.reload.last_seen_release_tag
+  end
+
+  test "dismiss returns no content when no release is pending" do
+    @user.mark_release_seen!(Sure.version.to_release_tag)
+
+    patch release_highlight_dismiss_path, as: :json
+
+    assert_response :no_content
+  end
+
+  test "dismiss_feature marks the pending feature as seen" do
+    Sure.stubs(:version).returns(Semver.new("0.7.5"))
+    @user.update!(preferences: { "preview_features_enabled" => true })
+
+    patch feature_highlight_dismiss_path(key: "bills"), as: :json
+
+    assert_response :ok
+    assert_equal "v0.7.5-alpha.1", @user.reload.seen_feature_highlights["bills"]
+  end
+
+  test "dismiss_feature rejects keys that are not pending" do
+    Sure.stubs(:version).returns(Semver.new("0.7.5"))
+    @user.update!(preferences: { "preview_features_enabled" => true })
+
+    patch feature_highlight_dismiss_path(key: "plan"), as: :json
+
+    assert_response :unprocessable_entity
+    assert_empty @user.reload.seen_feature_highlights
+  end
+
+  test "dismiss_feature rejects the feature when the user is not eligible" do
+    Sure.stubs(:version).returns(Semver.new("0.7.5"))
+
+    patch feature_highlight_dismiss_path(key: "bills"), as: :json
+
+    assert_response :unprocessable_entity
+    assert_empty @user.reload.seen_feature_highlights
   end
 end
