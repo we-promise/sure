@@ -177,8 +177,7 @@ class IndexaCapitalAccount::ActivitiesProcessor
       ticker = data[:symbol] || data[:ticker]
       security = ticker.present? ? resolve_security(ticker, data) : nil
 
-      # Same sign normalization the cash path applies, so the direction logic
-      # stays in one place and reversals keep their outflow sign.
+      # Same sign normalization the cash path applies.
       amount = normalize_cash_amount(amount, activity_type)
 
       label = label_from_type(activity_type)

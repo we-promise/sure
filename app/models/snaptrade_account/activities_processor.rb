@@ -137,8 +137,11 @@ class SnaptradeAccount::ActivitiesProcessor
 
     # Dividends and interest are Trades in Sure, not Transactions. Routed on the
     # resolved label so every alias (DIV as well as DIVIDEND) follows one path.
+    #
+    # Reads the mapping directly rather than through label_from_type, which
+    # records unmapped types in the debug log; the cash path already does that.
     def trade_income_activity?(activity_type)
-      Trade::INCOME_LABELS.include?(label_from_type(activity_type))
+      Trade::INCOME_LABELS.include?(SNAPTRADE_TYPE_TO_LABEL[activity_type])
     end
 
     # Extract and normalize symbol data.
@@ -277,8 +280,7 @@ class SnaptradeAccount::ActivitiesProcessor
       ticker, symbol_data = extract_symbol(data)
       security = ticker.present? ? resolve_security(ticker, symbol_data) : nil
 
-      # Same sign normalization the cash path applies, so the direction logic
-      # stays in one place and reversals keep their outflow sign.
+      # Same sign normalization the cash path applies.
       amount = normalize_cash_amount(amount, activity_type)
 
       label = label_from_type(activity_type)

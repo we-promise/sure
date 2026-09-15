@@ -499,11 +499,11 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
 
     process_activities(
       build_trade_activity(id: "trade_fails", type: "BUY", symbol: "AAPL", units: 1, price: 10.00, amount: -10.00),
-      build_cash_activity(id: "div_after_failure", type: "DIVIDEND", amount: 5.00, settlement_date: Date.current.to_s)
+      build_cash_activity(id: "contribution_after_failure", type: "CONTRIBUTION", amount: 5.00, settlement_date: Date.current.to_s)
     )
 
     assert_nil snaptrade_entry("trade_fails")
-    assert_not_nil snaptrade_entry("div_after_failure"), "later activities are still processed"
+    assert_not_nil snaptrade_entry("contribution_after_failure"), "later activities are still processed"
 
     log = snaptrade_debug_log("trade_fails", category: "provider_sync_error", level: "error")
     assert_not_nil log, "a failed activity must be recorded in /settings/debug"
