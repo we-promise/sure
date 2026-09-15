@@ -57,6 +57,29 @@ cd desktop/src-tauri
 cargo test
 ```
 
+## Reports and downloads
+
+CSV exports are saved in the macOS Downloads folder. Sure sends a native
+notification when a download finishes or fails; allow Sure notifications in
+System Settings to see them. Repeated downloads get a numbered filename.
+
+Print Report opens a separate Sure window using the current signed-in session,
+then the native print dialog once the report has loaded. Print it, or choose
+PDF → Save as PDF. Close the report window to return to the app.
+
+Other links that open a new window follow the same rule: pages of your Sure
+server open in a separate Sure window with your session, and other websites
+open in your default browser. Only the main window has the desktop
+integrations: notifications, SSO in your browser and report CSV exports.
+Downloads are only accepted from pages of your saved servers.
+
+To verify changes to this flow, run `npm test` and `npm run build` in `desktop`,
+then `cargo test --locked` in `desktop/src-tauri`. In the desktop app, export a
+CSV twice, check both files in Downloads, and open Print Report to save a PDF.
+Open an external link (for example the Discord help icon) and check that it
+opens in your browser. Repeat against a server mounted under a URL prefix, if
+applicable.
+
 ## Deep links
 Registered scheme: `sure://{host}[:port]/{path}` → opens the app to that
 server/page. Example: `open "sure://localhost:3000/accounts"`. (Works from the

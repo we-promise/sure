@@ -82,6 +82,7 @@ de:
     sso_identities: SSO-Verbindungen
     sso_providers: SSO-Anbieter
     subscriptions: Abo
+    system_health: Systemstatus
     tags: Tags
     trades: Trades
     transactions: Transaktionen

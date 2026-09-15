@@ -5,6 +5,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
   setup do
     @family = families(:dylan_family)
+    @user = users(:family_admin)
     @depository = accounts(:depository)
     @credit_card = accounts(:credit_card)
     @loan = accounts(:loan)
@@ -232,10 +233,21 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
-  test "matches an iban-confirmed transfer up to 14 days apart, beyond the default 4-day window" do
+  test "matches an iban-confirmed transfer up to 30 days apart, beyond the default 4-day window" do
     @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
-    outflow = create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
+    outflow = create_transaction(date: 28.days.ago.to_date, account: @depository, amount: 500)
     outflow.transaction.update!(extra: { "counterparty_iban" => "DE89 3704 0044 0532 0130 00" })
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "matches an iban-confirmed transfer whose counterparty iban has dots and dashes" do
+    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow = create_transaction(date: 28.days.ago.to_date, account: @depository, amount: 500)
+    outflow.transaction.update!(extra: { "counterparty_iban" => "de89.3704-0044/0532:0130'00" })
     create_transaction(date: Date.current, account: @credit_card, amount: -500)
 
     assert_difference -> { Transfer.count } => 1 do
@@ -245,10 +257,10 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
   test "an iban-confirmed match inside the default window still stays pending for review" do
     # IBAN confirmation only needs to force status: "confirmed" when a match
-    # would otherwise be rejected by the 4-day default window (see the 14-day
-    # test above). Within the default window it would have matched without
-    # any IBAN signal at all, so it must not skip user review just because
-    # it also happens to be IBAN-confirmed.
+    # would otherwise be rejected by the 4-day default window (see the
+    # 30-day test above). Within the default window it would have matched
+    # without any IBAN signal at all, so it must not skip user review just
+    # because it also happens to be IBAN-confirmed.
     @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
     outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     outflow.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
@@ -260,9 +272,9 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal "pending", transfer.status
   end
 
-  test "still does not match beyond 14 days even with a confirmed iban" do
+  test "still does not match beyond 30 days even with a confirmed iban" do
     @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
-    outflow = create_transaction(date: 20.days.ago.to_date, account: @depository, amount: 500)
+    outflow = create_transaction(date: 31.days.ago.to_date, account: @depository, amount: 500)
     outflow.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
     create_transaction(date: Date.current, account: @credit_card, amount: -500)
 
@@ -294,6 +306,42 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     create_transaction(date: Date.current, account: @credit_card, amount: -500)
 
     assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "does not confirm a match when the inflow side's own counterparty iban contradicts the outflow account" do
+    # The destination (credit_card) iban matches the outflow's recorded
+    # counterparty_iban, which alone would confirm the match. But the inflow
+    # transaction itself recorded a DIFFERENT counterparty_iban than the
+    # outflow account's own iban -- the destination bank says this money came
+    # from somewhere else, so this is likely two coincidentally-similar
+    # transactions, not a real transfer, and must not be confirmed.
+    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @depository.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    outflow = create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
+    outflow.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    inflow.transaction.update!(extra: { "counterparty_iban" => "FR1420041010050500013M02606" }) # pipelock:ignore IBAN
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "confirms a match when the inflow side's own counterparty iban agrees with the outflow account" do
+    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @depository.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    outflow = create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
+    outflow.transaction.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    inflow.transaction.update!(extra: { "counterparty_iban" => "AT611904300234573201" }) # pipelock:ignore IBAN
+
+    assert_difference -> { Transfer.count } => 1 do
       @family.auto_match_transfers!
     end
   end
@@ -444,6 +492,78 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     # Destination is credit card, so outflow should be cc_payment
     assert_equal "cc_payment", outflow_entry.entryable.kind
     assert_equal "funds_movement", inflow_entry.entryable.kind
+  end
+
+  test "missing_transfer_suggestion_for finds an account whose iban matches the outflow's counterparty iban" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "de89 3704 0044 0532 0130 00" })
+
+    assert_equal @loan, @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
+  end
+
+  test "missing_transfer_suggestion_for returns nil without a counterparty iban" do
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
+  end
+
+  test "missing_transfer_suggestion_for returns nil when no account matches" do
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "AT611904300234573201" }) # pipelock:ignore IBAN
+
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
+  end
+
+  test "missing_transfer_suggestion_for returns nil for an inflow entry" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    inflow_entry = create_transaction(date: Date.current, account: @depository, amount: -500)
+    inflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    assert_nil @family.missing_transfer_suggestion_for(inflow_entry, user: @user)
+  end
+
+  test "missing_transfer_suggestion_for returns nil once dismissed" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(extra: {
+      "counterparty_iban" => "DE89370400440532013000", # pipelock:ignore IBAN
+      "counterparty_transfer_suggestion_dismissed" => true
+    })
+
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
+  end
+
+  test "missing_transfer_suggestion_for returns nil for an already-matched transfer" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }, kind: "funds_movement") # pipelock:ignore IBAN
+    inflow_entry = create_transaction(date: Date.current, account: @loan, amount: -500)
+    Transfer.create!(inflow_transaction: inflow_entry.entryable, outflow_transaction: outflow_entry.entryable)
+
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry.reload, user: @user)
+  end
+
+  test "missing_transfer_suggestion_for does not suggest a disabled account" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @loan.disable!
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry, user: @user)
+  end
+
+  test "missing_transfer_suggestion_for does not suggest an account the user cannot write to" do
+    @loan.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    other_member = users(:family_member)
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 500)
+    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+
+    # @loan is owned by @user (family_admin) with no share granted to
+    # other_member, so it's outside other_member's writable_by scope --
+    # the same restriction TransferMatchesController#new applies to its
+    # target_account_id dropdown.
+    assert_nil @family.missing_transfer_suggestion_for(outflow_entry, user: other_member)
   end
 
   private
