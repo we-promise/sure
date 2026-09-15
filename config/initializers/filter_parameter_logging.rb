@@ -10,5 +10,9 @@ Rails.application.config.filter_parameters += [
   # A device code redeems into tokens on its own, so it is a bearer credential in
   # transit; verification_uri_complete embeds the user code, hence all three.
   :device_code, :user_code, :verification_uri_complete,
-  :bank_username, :bank_password, :security_answers, :captcha_input
+  :bank_username, :bank_password, :security_answers, :captcha_input,
+  # Provider credential fields that are encrypted at rest (e.g. Indexa Capital's
+  # username/document login identifiers, Trade Republic's PIN) but still pass
+  # through request params in plaintext before being persisted.
+  :username, :document, :identity_label, :pin, :authorization, :cookie
 ]

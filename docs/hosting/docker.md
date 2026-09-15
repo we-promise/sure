@@ -55,12 +55,9 @@ This command will do the following:
 
 At this point, you should have `compose.yml` in your directory (and optionally `bin/db-backup.sh` generated alongside `compose.yml` when using backups).
 
-### Step 3 (optional): Configure your environment
+### Step 3 (required): Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  
-That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
-
-If you're running the app locally and don't care much about security, you can skip this step.
+`compose.yml` requires a `SECRET_KEY_BASE` you provide yourself — there is no built-in default. This isn't just a Rails formality: `SECRET_KEY_BASE` also seeds the automatic generation of your Active Record encryption keys (used to encrypt provider API tokens/keys and other sensitive data at rest) when you don't set `ACTIVE_RECORD_ENCRYPTION_*` explicitly. A shared or guessable value would mean session cookies can be forged **and** your encryption keys can be computed by anyone. Follow the steps below before starting the app.
 
 #### Create your environment file
 
@@ -338,6 +335,38 @@ docker compose pull # This pulls the "latest" published image from GHCR
 docker compose build # This rebuilds the app with updates
 docker compose up --no-deps -d web worker # This restarts the app using the newest version
 ```
+
+### Re-encrypting data after an encryption-related update
+
+If a release note mentions a fix to Active Record encryption configuration, any data written before you updated may still be stored as plaintext even though it's supposed to be encrypted. After updating, run the backfill task once to encrypt it in place:
+
+```bash
+docker compose exec web bin/rails security:backfill_encryption
+```
+
+This is idempotent (safe to re-run) and defaults to a dry run — pass `dry_run=0` to actually write changes:
+
+```bash
+docker compose exec web bin/rails "security:backfill_encryption[100,0]"
+```
+
+### Rotating encryption keys
+
+If you ever need to change `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY` (and friends) on an install that already has encrypted data — for example, after a startup `[SECURITY]` warning tells you the keys were auto-derived from a compromised `SECRET_KEY_BASE` — do **not** just set new values and re-run the backfill task. The backfill can't tell existing ciphertext (encrypted under the old key) apart from real plaintext, and will re-encrypt it on top of the old encryption, making the original data permanently unrecoverable.
+
+Rotate safely instead:
+
+1. **Keep the old keys readable.** Set `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY_PREVIOUS`, `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY_PREVIOUS`, and `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT_PREVIOUS` to the *current* key values before changing anything else, so already-encrypted data keeps decrypting during the transition. If you never set `ACTIVE_RECORD_ENCRYPTION_*` explicitly and it was auto-derived from `SECRET_KEY_BASE`, compute the old values first:
+   ```bash
+   docker compose exec web bin/rails runner 'puts Digest::SHA256.hexdigest("#{Rails.application.secret_key_base}:primary_key")[0..63]'
+   # repeat with :deterministic_key and :key_derivation_salt
+   ```
+   Older Compose releases didn't pass `ACTIVE_RECORD_ENCRYPTION_*` through to the container at all, so don't assume unset env vars mean the keys were never configured — auto-derivation from `SECRET_KEY_BASE` may still be what actually encrypted your data.
+2. **Generate new keys** with `docker compose exec web bin/rails db:encryption:init` and set those as `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY` (and friends, without the `_PREVIOUS` suffix).
+3. **Restart the app**, then **re-run the backfill task** (`security:backfill_encryption`, see above) to re-encrypt existing rows under the new keys.
+4. Once you've confirmed the backfill completed, you can remove the `_PREVIOUS` variables.
+
+This procedure only covers columns encrypted via Active Record encryption. `Setting` (provider/API credentials configured through the admin UI) is encrypted separately using a key derived directly from `SECRET_KEY_BASE`, not from `ACTIVE_RECORD_ENCRYPTION_*`. If you also need to rotate `SECRET_KEY_BASE` itself, expect saved Settings values to stop decrypting and need re-entering afterward — and note that rotating `SECRET_KEY_BASE` invalidates all existing sessions and signed cookies too.
 
 ## How to change which updates your app receives
 

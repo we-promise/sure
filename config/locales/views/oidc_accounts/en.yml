@@ -39,4 +39,5 @@ en:
     create_user:
       no_pending_oidc: No pending OIDC authentication found
       account_creation_disabled: SSO account creation is disabled. Please contact an administrator.
+      account_already_exists: An account with this email already exists. Please verify your identity to link it instead.
       account_created: "Welcome! Your account has been created."

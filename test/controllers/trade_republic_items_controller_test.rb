@@ -184,4 +184,13 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'data-action="DS--dialog#close"'
     assert_includes response.body, I18n.t("settings.providers.trade_republic_panel.connection_success.close")
   end
+
+  test "Trade Republic PIN is filtered from logs" do
+    parameter_filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
+    filtered_params = parameter_filter.filter(
+      trade_republic_item: { phone_number: "+491701234567", pin: "1234" }
+    )
+
+    assert_equal "[FILTERED]", filtered_params[:trade_republic_item][:pin]
+  end
 end

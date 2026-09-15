@@ -73,7 +73,7 @@ module Api
       end
 
       def login
-        user = User.find_by(email: params[:email])
+        user = User.find_by_email(params[:email])
 
         if user&.authenticate(params[:password])
           unless user.active?
@@ -174,7 +174,7 @@ module Api
         cached = validate_linking_code(linking_code)
         return unless cached
 
-        user = User.authenticate_by(email: params[:email], password: params[:password])
+        user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
         unless user
           render json: { error: "Invalid email or password" }, status: :unauthorized
@@ -236,6 +236,18 @@ module Api
         return unless cached
 
         email = cached[:email]
+
+        # Server-side duplicate guard: this endpoint must never create a
+        # second account for an email that already has one. The DB unique
+        # index and AR uniqueness validation both compare against the
+        # *encrypted* column value, so they don't catch a collision with an
+        # existing legacy plaintext row - only the compatibility lookup
+        # does (see User.find_by_email). The mobile client is expected to
+        # call sso_link instead once it sees this error.
+        if User.find_by_email(email).present?
+          render json: { error: "An account with this email already exists. Please sign in to link it instead.", account_exists: true }, status: :conflict
+          return
+        end
 
         # Check for a pending invitation for this email
         invitation = Invitation.pending.find_by(email: email)
