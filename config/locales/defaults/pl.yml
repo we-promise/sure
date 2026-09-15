@@ -199,6 +199,7 @@ pl:
   mcp:
     errors:
       invalid_session_id: Nieprawidłowy identyfikator sesji MCP
+      protocol_version_mismatch: 'Nagłówek MCP-Protocol-Version (%{header}) i _meta protocolVersion (%{meta}) są niezgodne'
       unsupported_protocol_version: 'Nieobsługiwana wersja protokołu MCP: %{version}'
   number:
     currency:
@@ -252,6 +253,7 @@ pl:
     registration:
       invalid_redirect_uris: redirect_uris musi używać https, loopback http lub schematu
         URI aplikacji natywnej
+      invalid_scope: 'Nieznany zakres(y): %{scopes}. Obsługiwane zakresy: read, read_write'
   support:
     array:
       last_word_connector: " oraz "
