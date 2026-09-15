@@ -186,7 +186,12 @@ class Provider::Openai::AutoCategorizer
     # The heuristic is simple: if >50% of results are null or missing, the model likely
     # needs the freedom to reason in its output (which strict mode prevents).
     def auto_categorize_with_auto_mode
-      result = auto_categorize_with_mode(JSON_MODE_STRICT)
+      result = begin
+        auto_categorize_with_mode(JSON_MODE_STRICT)
+      rescue Provider::Openai::ResponseFormatError => e
+        Rails.logger.warn("Auto mode: strict JSON response could not be parsed (#{e.message}), retrying with none mode")
+        return auto_categorize_with_mode(JSON_MODE_NONE)
+      end
 
       null_count = result.count { |r| r.category_name.nil? || r.category_name == "null" }
       missing_count = transactions.size - result.size
@@ -360,7 +365,7 @@ class Provider::Openai::AutoCategorizer
                         parsed.dig("results") ||
                         (parsed.is_a?(Array) ? parsed : nil)
 
-      raise Provider::Openai::Error, "Could not find categorizations in response" if categorizations.nil?
+      raise Provider::Openai::ResponseFormatError, "Could not find categorizations in response" if categorizations.nil?
 
       # Normalize field names (some LLMs use different naming)
       categorizations.map do |cat|
@@ -433,7 +438,7 @@ class Provider::Openai::AutoCategorizer
         end
       end
 
-      raise Provider::Openai::Error, "Could not parse JSON from response: #{raw.truncate(200)}"
+      raise Provider::Openai::ResponseFormatError, "Could not parse JSON from response: #{raw.truncate(200)}"
     end
 
     # Strip thinking model tags (<think>...</think>) from response
