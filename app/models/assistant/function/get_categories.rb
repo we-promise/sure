@@ -26,6 +26,10 @@ class Assistant::Function::GetCategories < Assistant::Function
         - `total_results`: The total number of results
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   # Optional params are incompatible with strict function calling, which

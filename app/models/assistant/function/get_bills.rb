@@ -27,6 +27,10 @@ class Assistant::Function::GetBills < Assistant::Function
         Use get_bill_details for one bill's full history and configuration.
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?

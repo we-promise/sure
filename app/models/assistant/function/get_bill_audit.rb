@@ -24,6 +24,10 @@ class Assistant::Function::GetBillAudit < Assistant::Function
         before changing anything.
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?

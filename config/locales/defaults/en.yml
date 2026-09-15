@@ -10,10 +10,12 @@ en:
   mcp:
     errors:
       invalid_session_id: "Invalid MCP session id"
+      protocol_version_mismatch: "MCP-Protocol-Version header (%{header}) and _meta protocolVersion (%{meta}) disagree"
       unsupported_protocol_version: "Unsupported MCP protocol version: %{version}"
   oauth:
     registration:
       invalid_redirect_uris: "redirect_uris must use https, loopback http, or a native app URI scheme"
+      invalid_scope: "Unknown scope(s): %{scopes}. Supported scopes: read, read_write"
   activerecord:
     errors:
       messages:

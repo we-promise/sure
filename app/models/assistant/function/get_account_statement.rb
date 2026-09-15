@@ -53,6 +53,10 @@ class Assistant::Function::GetAccountStatement < Assistant::Function
         ```
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?

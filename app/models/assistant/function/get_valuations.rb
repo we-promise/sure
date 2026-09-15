@@ -16,6 +16,10 @@ class Assistant::Function::GetValuations < Assistant::Function
         value, or trace where a balance number came from.
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   def strict_mode?
