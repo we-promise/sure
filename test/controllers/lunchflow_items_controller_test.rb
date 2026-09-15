@@ -121,6 +121,34 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "Ein unerwarteter Fehler ist aufgetreten. Versuch es später noch einmal."
   end
 
+  test "select accounts masks the iban to the last 4 characters" do
+    provider = mock("lunchflow_provider")
+    provider.stubs(:get_accounts).returns(accounts: [
+      { id: "acc_1", name: "Checking", iban: "DE89370400440532013000", institution_name: "Test Bank", currency: "EUR", status: "active" } # pipelock:ignore IBAN
+    ])
+    Provider::LunchflowAdapter.stubs(:build_provider).returns(provider)
+
+    get select_accounts_lunchflow_items_url
+
+    assert_response :success
+    assert_includes response.body, "•3000"
+    refute_includes response.body, "DE89370400440532013000"
+  end
+
+  test "select existing account masks the iban to the last 4 characters" do
+    provider = mock("lunchflow_provider")
+    provider.stubs(:get_accounts).returns(accounts: [
+      { id: "acc_1", name: "Checking", iban: "DE89370400440532013000", institution_name: "Test Bank", currency: "EUR", status: "active" } # pipelock:ignore IBAN
+    ])
+    Provider::LunchflowAdapter.stubs(:build_provider).returns(provider)
+
+    get select_existing_account_lunchflow_items_url(account_id: accounts(:depository).id)
+
+    assert_response :success
+    assert_includes response.body, "•3000"
+    refute_includes response.body, "DE89370400440532013000"
+  end
+
   test "invalid non-Turbo create redirects instead of rendering a missing template" do
     assert_no_difference "LunchflowItem.count" do
       post lunchflow_items_url, params: {
