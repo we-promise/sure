@@ -80,12 +80,14 @@ module TransactionsHelper
       }
     else
       display_extra = extra
-      # Unconditional, unlike the preference check elsewhere on this page:
-      # the dedicated counterparty-account row above is the ONLY sanctioned
-      # place this value is ever shown, and only in masked form. Stripping it
-      # here only when the preference is off would let a user with the
-      # preference ON bypass the masking entirely by expanding Additional
-      # Details -- the full IBAN must never appear anywhere in the UI.
+      # Defensive, not load-bearing anymore: counterparty_iban/
+      # counterparty_account_id now live in their own encrypted transaction
+      # columns (see Transaction), not in this jsonb hash, so a freshly
+      # synced transaction's `extra` never carries them. Kept in case any
+      # already-synced row from before that change still has them here --
+      # unconditionally, unlike the preference check elsewhere on this page,
+      # since the dedicated counterparty-account row above is the ONLY
+      # sanctioned place this value is ever shown, and only in masked form.
       if display_extra.is_a?(Hash)
         display_extra = display_extra.except("counterparty_iban", "counterparty_account_id")
       end
