@@ -33,6 +33,24 @@ class Loan < ApplicationRecord
   # charging a month's interest for the gap.
   validates :start_date, comparison: { less_than_or_equal_to: -> { Date.current } }, allow_nil: true
 
+  # What the borrower put in up front. Not part of the amortisation -- the loan
+  # amortises what was actually lent -- but it is what makes leverage readable:
+  # a 20,000 deposit against an 80,000 loan is a different position from the
+  # same loan against 5,000.
+  validates :down_payment, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+
+  validates :insurance_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :insurance_rate_type, inclusion: { in: Loan::Insurance::RATE_TYPES }, allow_nil: true
+
+  # How much was borrowed for every unit the borrower put in. Nil without a
+  # down payment recorded: a loan with no deposit is not infinitely leveraged,
+  # it is a loan whose leverage nobody has told us.
+  LEVERAGE_BANDS = {
+    conservative: 0..4,
+    moderate: 4..8,
+    high: 8..
+  }.freeze
+
   # The contracted repayment, for a loan that has exactly one.
   #
   # Deliberately still nil for a variable loan even though it now has a
@@ -224,13 +242,61 @@ class Loan < ApplicationRecord
   SCHEDULE_INPUTS.each do |input|
     define_method(:"#{input}=") do |value|
       @amortization_schedule = nil
+      @insurance = nil
+      super(value)
+    end
+  end
+
+  # The premium is charged against the schedule, so it goes stale for both its
+  # own inputs and the schedule's.
+  INSURANCE_INPUTS = %i[insurance_rate insurance_rate_type].freeze
+
+  INSURANCE_INPUTS.each do |input|
+    define_method(:"#{input}=") do |value|
+      @insurance = nil
       super(value)
     end
   end
 
   def reload(*)
     @amortization_schedule = nil
+    @insurance = nil
     super
+  end
+
+  # The insurance policy charged alongside this loan's instalments, or nil when
+  # no premium is recorded. Read #total_insurance for a figure that is always
+  # money.
+  def insurance
+    @insurance ||= Loan::Insurance.for(self)
+  end
+
+  def total_insurance
+    insurance&.total || Money.new(0, account.currency)
+  end
+
+  # Everything the loan costs the borrower: what was borrowed, the interest on
+  # it, and the premium charged alongside. Nil when there is no schedule to
+  # read an interest figure from, because a cost without interest in it would
+  # understate the loan rather than decline to answer.
+  def total_cost
+    schedule = amortization_schedule
+    return nil if schedule.nil?
+
+    original_balance + schedule.total_interest + total_insurance
+  end
+
+  def initial_leverage_ratio
+    return nil unless down_payment&.positive?
+
+    original_balance.amount.fdiv(down_payment)
+  end
+
+  def leverage_band
+    ratio = initial_leverage_ratio
+    return nil if ratio.nil?
+
+    LEVERAGE_BANDS.find { |_band, range| range.cover?(ratio) }&.first
   end
 
   # The date the loan was drawn down. Recorded explicitly when the borrower

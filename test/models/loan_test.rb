@@ -1,6 +1,50 @@
 require "test_helper"
 
 class LoanTest < ActiveSupport::TestCase
+  # Leverage is what the down payment is FOR: 80,000 borrowed against 20,000 put
+  # in is 4x, and the same loan against 5,000 is 16x. Bands are read off the
+  # ratio rather than stored, so a loan re-read after an edit cannot disagree
+  # with its own figure.
+  test "leverage is the borrowed amount over the down payment" do
+    loan = build_loan_account(balance: 80_000, down_payment: 20_000).loan
+
+    assert_in_delta 4.0, loan.initial_leverage_ratio, 0.001
+    assert_equal :conservative, loan.leverage_band, "4x sits on the conservative boundary"
+
+    loan.down_payment = 5_000
+    assert_in_delta 16.0, loan.initial_leverage_ratio, 0.001
+    assert_equal :high, loan.leverage_band
+  end
+
+  test "a moderate loan lands in the middle band" do
+    loan = build_loan_account(balance: 80_000, down_payment: 16_000).loan
+
+    assert_in_delta 5.0, loan.initial_leverage_ratio, 0.001
+    assert_equal :moderate, loan.leverage_band
+  end
+
+  # No deposit recorded is not a deposit of zero: a loan nobody has told us
+  # about is not infinitely leveraged, and a view must be able to tell the two
+  # apart to decide whether to show the figure at all.
+  test "a loan with no down payment recorded has no leverage figure" do
+    loan = build_loan_account(balance: 80_000, down_payment: nil).loan
+
+    assert_nil loan.initial_leverage_ratio
+    assert_nil loan.leverage_band
+
+    loan.down_payment = 0
+    assert_nil loan.initial_leverage_ratio, "zero is not a deposit either"
+  end
+
+  test "rejects a negative down payment or insurance rate" do
+    loan = Loan.new(down_payment: -1, insurance_rate: -1, insurance_rate_type: "nonsense")
+
+    assert_not loan.valid?
+    assert_includes loan.errors[:down_payment], "must be greater than or equal to 0"
+    assert_includes loan.errors[:insurance_rate], "must be greater than or equal to 0"
+    assert_includes loan.errors[:insurance_rate_type], "is not included in the list"
+  end
+
   test "rejects invalid subtype" do
     loan = Loan.new(subtype: "invalid")
 
@@ -107,4 +151,18 @@ class LoanTest < ActiveSupport::TestCase
     loan.start_date = nil
     assert loan.valid?
   end
+
+  private
+    def build_loan_account(balance:, down_payment:)
+      Account.create!(
+        family: families(:dylan_family),
+        name: "Leveraged #{SecureRandom.hex(3)}",
+        balance: balance,
+        currency: "USD",
+        accountable: Loan.create!(
+          subtype: "mortgage", interest_rate: 5, term_months: 120,
+          rate_type: "fixed", down_payment: down_payment
+        )
+      )
+    end
 end
