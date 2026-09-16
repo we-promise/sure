@@ -243,6 +243,44 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
       "the booked representative must still gain the pending sibling's iban"
   end
 
+  test "merges a pending row's additional_identification and agent into the booked representative when neither has an iban" do
+    # A donor row that only carries the additional_identification fallback
+    # (no IBAN at all) must still be picked up -- the old donor search only
+    # matched on IBAN presence, so a row like this was silently ignored and
+    # EnableBankingEntry::Processor never saw the fallback counterparty_account_id
+    # or bank name it would otherwise have used.
+    transactions = [
+      {
+        entry_reference: "ref_pending_with_additional_id",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        creditor_account_additional_identification: { identification: "landlord-ref-123" },
+        creditor_agent: { name: "Sparkasse" },
+        credit_debit_indicator: "DBIT",
+        status: "PDNG"
+      },
+      {
+        entry_reference: "ref_booked_without_any_counterparty_data",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "850.00", currency: "EUR" },
+        creditor: { name: "Miete" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 1, result.count
+    assert_equal "ref_booked_without_any_counterparty_data", result.first[:entry_reference],
+      "the settled row must be kept, not the still-pending one"
+    assert_equal "landlord-ref-123", result.first.dig(:creditor_account_additional_identification, :identification),
+      "the booked representative must gain the pending sibling's additional_identification fallback"
+    assert_equal "Sparkasse", result.first.dig(:creditor_agent, :name),
+      "the booked representative must gain the pending sibling's bank name"
+  end
+
   test "keeps transactions with different creditors" do
     transactions = [
       {
