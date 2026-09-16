@@ -56,7 +56,13 @@ module AccountableResource
       # requests both passed the Rails uniqueness validation before either
       # committed, so it surfaces from the adapter instead of being caught
       # above. Same user-facing outcome, just a different failure point.
+      # create_and_sync itself would have built an accountable from
+      # accountable_attributes; building @account directly from create_params
+      # here does not, so the type-specific fields_for :accountable block in
+      # the re-rendered form (e.g. loans/_form.html.erb's rate fields) would
+      # otherwise silently disappear instead of showing what the user typed.
       @account = Current.family.accounts.build(create_params)
+      @account.accountable ||= accountable_type.new
       @account.errors.add(:iban, :taken)
       @error_message = @account.errors.full_messages.join(", ")
       set_link_options
