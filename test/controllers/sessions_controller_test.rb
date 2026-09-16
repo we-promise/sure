@@ -92,6 +92,33 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "codespaces rejects a mismatched forwarded host with a valid CSRF token" do
+    with_codespaces_origin_check do
+      host! "other-codespace-3000.app.github.dev"
+      get new_session_url
+      token = css_select("input[name=authenticity_token]").first["value"]
+
+      post sessions_url,
+        params: { email: @user.email, password: user_password_test, authenticity_token: token },
+        headers: { "Origin" => "https://localhost:3000" }
+
+      assert_response :unprocessable_content
+    end
+  end
+
+  test "codespaces rejects a mismatched localhost port with a valid CSRF token" do
+    with_codespaces_origin_check do
+      get new_session_url
+      token = css_select("input[name=authenticity_token]").first["value"]
+
+      post sessions_url,
+        params: { email: @user.email, password: user_password_test, authenticity_token: token },
+        headers: { "Origin" => "https://localhost:3001" }
+
+      assert_response :unprocessable_content
+    end
+  end
+
   test "ordinary local development keeps standard same-origin validation" do
     Rails.env.stubs(:development?).returns(true)
 
