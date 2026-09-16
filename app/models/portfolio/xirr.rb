@@ -18,11 +18,20 @@
 #
 # MULTIPLE ROOTS. The present value is a generalised polynomial in the rate, so
 # a series that changes sign more than once can cross zero twice inside the
-# bracket, and two rates are then equally "the" answer. This returns whichever
-# one the search reaches first. An ordinary portfolio -- money in, money out,
-# a terminal value -- changes sign once and has one root, but a caller feeding
-# it a series that alternates should know the figure is one of several rather
-# than the only one.
+# bracket, and two rates are then equally "the" answer. -1000, +2700, -1800 on
+# three annual dates is solved by both 20% and 50%.
+#
+# This returns the root the search reaches from its 10% start, which is the
+# lower one for that series and is what every other XIRR does -- Excel's takes
+# a `guess` argument for exactly this reason. It is a deliberate choice rather
+# than an accident, because the alternative, refusing every series that changes
+# sign twice, refuses most real portfolios: any account with a withdrawal
+# between two deposits changes sign twice.
+#
+# `#ambiguous?` is how a caller finds out. A figure from an ambiguous series is
+# one of several rates that fit, and a page that prints it as "the" money-
+# weighted return is overstating what was computed. The caller that renders
+# this is a later PR; the predicate is here so that PR has something to ask.
 #
 # No gem: AGENTS.md asks for Rails and few dependencies, and this is eighty
 # lines of arithmetic with no upstream to track.
@@ -45,7 +54,13 @@ class Portfolio::Xirr
   DAYS_PER_YEAR = 365.0
   MAX_NEWTON_ITERATIONS = 50
   MAX_BISECTION_ITERATIONS = 200
-  TOLERANCE = 1e-9
+  # Two different quantities, deliberately named apart. RESIDUAL_TOLERANCE is a
+  # present value -- money -- and says the objective is close enough to zero;
+  # RATE_TOLERANCE is a rate, and says the search has stopped moving. They
+  # carry the same number today and mean different things, and reading one
+  # `TOLERANCE` in both places invited the assumption that they must match.
+  RESIDUAL_TOLERANCE = 1e-9
+  RATE_TOLERANCE = 1e-9
 
   # Widest bracket we will search. -0.999999 rather than -1 because the
   # objective function is undefined at exactly -1 (a total loss of every
@@ -84,6 +99,21 @@ class Portfolio::Xirr
     new(flows, days_per_unit: days_per_unit).rate
   end
 
+  # How many times the series changes sign, once zero amounts are dropped. One
+  # is the ordinary shape: money goes out, money comes back.
+  def sign_changes
+    @sign_changes ||= flows.map { |flow| flow.amount <=> 0 }
+                           .each_cons(2)
+                           .count { |previous, current| previous != current }
+  end
+
+  # More than one sign change admits more than one rate (Descartes' rule bounds
+  # the count by the number of changes), so the figure #rate returns is one of
+  # several that fit rather than the only one. See MULTIPLE ROOTS above.
+  def ambiguous?
+    sign_changes > 1
+  end
+
   # The money-weighted rate per `days_per_unit`, as a BigDecimal
   # (0.0725 == 7.25%). Annualised unless the caller said otherwise.
   def rate
@@ -116,7 +146,7 @@ class Portfolio::Xirr
     end
 
     def sign_change?
-      flows.any? { |f| f.amount.positive? } && flows.any? { |f| f.amount.negative? }
+      sign_changes.positive?
     end
 
     def first_date
@@ -148,7 +178,7 @@ class Portfolio::Xirr
 
       MAX_NEWTON_ITERATIONS.times do
         value = present_value(rate)
-        return rate if value.abs < TOLERANCE
+        return rate if value.abs < RESIDUAL_TOLERANCE
 
         derivative = present_value_derivative(rate)
         return nil if derivative.zero? || !derivative.finite?
@@ -165,8 +195,8 @@ class Portfolio::Xirr
         # stall far from the root, and returning the rate here skipped the only
         # check that says so. Confirm the residual, and hand over to bisection
         # when it fails rather than reporting a stalled guess as an answer.
-        if (next_rate - rate).abs < TOLERANCE
-          return next_rate if present_value(next_rate).abs < TOLERANCE
+        if (next_rate - rate).abs < RATE_TOLERANCE
+          return next_rate if present_value(next_rate).abs < RESIDUAL_TOLERANCE
 
           return nil
         end
@@ -191,7 +221,7 @@ class Portfolio::Xirr
         mid = (low + high) / 2.0
         mid_value = present_value(mid)
 
-        return mid if mid_value.abs < TOLERANCE || (high - low).abs < TOLERANCE
+        return mid if mid_value.abs < RESIDUAL_TOLERANCE || (high - low).abs < RATE_TOLERANCE
 
         if low_value * mid_value < 0
           high = mid

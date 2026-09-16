@@ -81,7 +81,7 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     assert_in_delta(-0.5, xirr.rate.to_f, 0.0005)
   end
 
-  # A 10% year on a billion. Newton's steps shrink below TOLERANCE while the
+  # A 10% year on a billion. Newton's steps shrink below RATE_TOLERANCE while the
   # present-value residual, in currency units, stays near 1.2e-7: at this
   # magnitude an absolute 1e-9 residual is out of reach in Float. A step that
   # small means Newton stopped moving, not that it solved, so it must hand over
@@ -140,6 +140,45 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     assert_raises(Portfolio::Xirr::ConvergenceError) { Portfolio::Xirr.rate(flows) }
     assert_nil Portfolio::Xirr.rate_or_nil(flows),
                "the render path degrades to nil here too, or it raises in a view"
+  end
+
+  # -1000, +2700, -1800 on three annual dates is 1000x^2 - 2700x + 1800 = 0 for
+  # x = 1 + r, whose roots are 1.2 and 1.5: 20% and 50% both satisfy the series
+  # exactly, and neither is more "correct" than the other.
+  #
+  # The decision this pins is that the figure is the root the search reaches
+  # from its 10% start -- the lower one here -- rather than a refusal. Refusing
+  # every series that changes sign twice would refuse most real portfolios: one
+  # withdrawal between two deposits is two sign changes. What a caller must not
+  # do is print it as THE money-weighted return without asking #ambiguous?.
+  test "a series with two valid rates returns the one the search reaches, and says it is ambiguous" do
+    flows = [
+      [ Date.new(2026, 1, 1), -1_000 ],
+      [ Date.new(2027, 1, 1), 2_700 ],
+      [ Date.new(2028, 1, 1), -1_800 ]
+    ]
+
+    xirr = Portfolio::Xirr.new(flows)
+
+    assert_in_delta 0.0, xirr.send(:present_value, 0.2), 1e-9, "0.2 must actually solve it"
+    assert_in_delta 0.0, xirr.send(:present_value, 0.5), 1e-9, "and so must 0.5, or there is one root"
+
+    assert_in_delta 0.2, xirr.rate.to_f, 1e-9
+    assert xirr.ambiguous?, "two sign changes, so the figure is one of several"
+    assert_equal 2, xirr.sign_changes
+  end
+
+  # The ordinary shape -- money out, money back -- has one sign change and one
+  # root, so nothing is hedged for the common case.
+  test "an ordinary series is not ambiguous" do
+    xirr = Portfolio::Xirr.new([
+      [ Date.new(2026, 1, 1), -1_000 ],
+      [ Date.new(2026, 6, 1), -500 ],
+      [ Date.new(2027, 1, 1), 1_800 ]
+    ])
+
+    assert_equal 1, xirr.sign_changes
+    assert_not xirr.ambiguous?
   end
 
   test "ignores zero amounts" do
