@@ -1620,7 +1620,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       name: "Old Landlord Payment",
       source: "enable_banking"
     )
-    assert_nil entry.transaction.extra&.dig("counterparty_iban")
+    assert_nil entry.transaction.counterparty_iban
 
     entry.mark_user_modified!
     assert entry.reload.user_modified?, "entry should be marked user-modified"
@@ -1641,7 +1641,87 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
       assert_equal entry.id, updated_entry.id
       updated_entry.reload
-      assert_equal "AT611904300234573201", updated_entry.transaction.extra["counterparty_iban"] # pipelock:ignore IBAN
+      assert_equal "AT611904300234573201", updated_entry.transaction.counterparty_iban # pipelock:ignore IBAN
     end
+  end
+
+  test "does not clobber a backfilled counterparty iban with a later nil on a user-modified entry" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_user_mod_iban_then_nil",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Old Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+    )
+    assert_equal "AT611904300234573201", entry.transaction.counterparty_iban # pipelock:ignore IBAN
+
+    entry.mark_user_modified!
+    assert entry.reload.user_modified?, "entry should be marked user-modified"
+
+    # A later sync's payload doesn't carry counterparty data this time (e.g. a
+    # re-delivery through a path that doesn't populate it) -- this is a purely
+    # additive backfill for a protected entry, so it must not erase data a
+    # previous sync already filled in.
+    assert_no_difference "@account.entries.count" do
+      updated_entry = @adapter.import_transaction(
+        external_id: "eb_user_mod_iban_then_nil",
+        amount: 20.0,
+        currency: "EUR",
+        date: Date.today - 5.days,
+        name: "Old Landlord Payment",
+        source: "enable_banking",
+        extra: { "counterparty_iban" => nil }
+      )
+
+      assert_equal entry.id, updated_entry.id
+      updated_entry.reload
+      assert_equal "AT611904300234573201", updated_entry.transaction.counterparty_iban, # pipelock:ignore IBAN
+        "a nil counterparty_iban on a later sync must not clobber an already-backfilled value on a protected entry"
+    end
+  end
+
+  test "always assigns counterparty iban on the unprotected path, clearing a stale value on correction" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_unprotected_iban_then_nil",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+    )
+    assert_equal "AT611904300234573201", entry.transaction.counterparty_iban # pipelock:ignore IBAN
+
+    updated_entry = @adapter.import_transaction(
+      external_id: "eb_unprotected_iban_then_nil",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => nil }
+    )
+
+    assert_equal entry.id, updated_entry.id
+    assert_nil updated_entry.reload.transaction.counterparty_iban,
+      "an unprotected entry must have a corrected/removed counterparty iban actually cleared"
+  end
+
+  test "leaves counterparty iban columns untouched when the provider never mentions them" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_no_counterparty_keys",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Some Payment",
+      source: "plaid",
+      extra: { "fx_rate" => "1.05" }
+    )
+
+    assert_nil entry.transaction.counterparty_iban
+    assert_nil entry.transaction.counterparty_account_id
+    assert_equal "1.05", entry.transaction.extra["fx_rate"]
   end
 end
