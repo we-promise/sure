@@ -248,7 +248,8 @@ RSpec.configure do |config|
           PushSubscriptionRegistration: {
             type: :object, required: %w[token environment platform],
             properties: {
-              token: { type: :string }, environment: { type: :string, enum: %w[sandbox production] },
+              token: { type: :string, maxLength: 2048, pattern: "^(?:[0-9a-fA-F]{2})+$" },
+              environment: { type: :string, enum: %w[sandbox production] },
               platform: { type: :string, enum: %w[ios] },
               device_key: { type: :string, pattern: '^[0-9a-f]{64}$', description: 'Optional 256-bit installation secret, unique per server and kept in device secure storage. Required proof to replace another user’s registration for this device. Never returned.' }
             }

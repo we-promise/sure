@@ -37,7 +37,10 @@ export default class extends Controller {
       chart.removeAttribute("data-preview-sankey-chart-data-value");
       chart.querySelectorAll("svg").forEach((svg) => svg.remove());
     });
-    if (this.hasInvestmentNoteTarget) this.investmentNoteTarget.hidden = true;
+    if (this.hasInvestmentNoteTarget) {
+      this.investmentNoteTarget.hidden = true;
+      this.investmentNoteTarget.textContent = "";
+    }
     this.show("loading");
   }
 
@@ -67,7 +70,7 @@ export default class extends Controller {
         );
       });
       this.renderInvestmentNote(body);
-      this.show(data.links.length ? "content" : "empty");
+      this.show(data.links.length ? "content" : "empty", data);
     } catch {
       if (this.request === request) this.show("error");
     }
@@ -83,6 +86,7 @@ export default class extends Controller {
       typeof raw === "string" && /^\d+(\.\d+)?$/.test(raw) ? Number(raw) : 0;
     if (amount <= 0) {
       this.investmentNoteTarget.hidden = true;
+      this.investmentNoteTarget.textContent = "";
       return;
     }
     const formatted = formatCashFlowCurrency(
@@ -97,10 +101,12 @@ export default class extends Controller {
     this.investmentNoteTarget.hidden = false;
   }
 
-  show(state) {
+  show(state, graph = null) {
     for (const name of ["loading", "error", "empty", "content"]) {
       this[`${name}Target`].hidden = name !== state;
     }
-    this.dispatch("state", { detail: { state, ready: state === "content" } });
+    this.dispatch("state", {
+      detail: { state, ready: state === "content", graph },
+    });
   }
 }

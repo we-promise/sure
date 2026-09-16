@@ -84,6 +84,8 @@ export function sanitizeSelfHostedFeedback(event) {
   if (!event || ![
     "sankey_preview_displayed",
     "sankey_preview_feedback_clicked",
+    "new_sankey_match",
+    "new_sankey_mismatch",
     "survey shown",
     "survey sent",
     "survey dismissed",
@@ -115,4 +117,11 @@ export function initializeSelfHostedFeedback(posthog, key, host, loaded) {
   } catch {
     // Blocked analytics must not prevent chart setup or navigation.
   }
+}
+
+// Only the outcome leaves the browser, never the compared graphs.
+// The controller deduplicates successful SDK captures for each graph load.
+export function captureSankeyComparison(posthog, result) {
+  if (!["match", "mismatch"].includes(result)) return false;
+  return capturePreviewEvent(posthog, `new_sankey_${result}`);
 }

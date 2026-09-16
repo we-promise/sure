@@ -100,4 +100,8 @@
       </table>
     <% end %>
   </div>
+  <% if push_notification_test %>
+    <%= render "push_notifications", disabled_reason: push_disabled_reason,
+      latest_test: latest_push_test, results: push_test_results %>
+  <% end %>
 </div>
