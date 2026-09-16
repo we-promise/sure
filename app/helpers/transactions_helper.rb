@@ -80,10 +80,13 @@ module TransactionsHelper
       }
     else
       display_extra = extra
-      # The dedicated counterparty-account row above already respects this
-      # preference; without stripping the same keys here, a user who turned
-      # it off could still see the IBAN by expanding Additional Details.
-      if display_extra.is_a?(Hash) && !Current.user.show_counterparty_account?
+      # Unconditional, unlike the preference check elsewhere on this page:
+      # the dedicated counterparty-account row above is the ONLY sanctioned
+      # place this value is ever shown, and only in masked form. Stripping it
+      # here only when the preference is off would let a user with the
+      # preference ON bypass the masking entirely by expanding Additional
+      # Details -- the full IBAN must never appear anywhere in the UI.
+      if display_extra.is_a?(Hash)
         display_extra = display_extra.except("counterparty_iban", "counterparty_account_id")
       end
 

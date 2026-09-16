@@ -56,17 +56,17 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     # The label anchors this to the dedicated counterparty-account row, not
-    # the pre-existing raw-extra debug dump further down the page (which
-    # would also contain the IBAN string regardless of this feature).
+    # the pre-existing raw-extra debug dump further down the page.
     assert_match I18n.t("transactions.show.counterparty_account_label"), response.body
     # Masked to the last 4 characters by default -- a counterparty's own
     # account identifier is more sensitive than the user's own account IBAN
     # (elsewhere shown the same way), so the dedicated row doesn't show it in
-    # full just because Privacy Mode happens to be off. (The raw "Additional
-    # Details" debug dump further down the page still shows the unmasked
-    # value when this setting is on -- that's the existing, opt-in
-    # show-everything surface, unrelated to this dedicated row.)
+    # full just because Privacy Mode happens to be off.
     assert_match "•3000", response.body
+    # The full IBAN must never appear anywhere in the response, including
+    # the raw "Additional Details" debug dump further down the page -- that
+    # surface strips these keys unconditionally, regardless of this setting.
+    assert_no_match "DE89370400440532013000", response.body # pipelock:ignore IBAN
   end
 
   test "hides the counterparty account line when there is no counterparty data" do
@@ -84,8 +84,8 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_no_match I18n.t("transactions.show.counterparty_account_label"), response.body
-    # The dedicated row is gone, but the pre-existing raw-extra debug dump
-    # (Additional Details) would otherwise still leak the same value.
+    # The dedicated row is gone; the raw-extra debug dump (Additional
+    # Details) always strips this key too, regardless of the setting.
     assert_no_match "DE89370400440532013000", response.body # pipelock:ignore IBAN
   end
 
