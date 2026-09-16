@@ -77,7 +77,7 @@ class CashFlowTest < ApplicationSystemTestCase
     sign_in @user
     [ :escape, :close_button ].each do |closing|
       visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
-      expand = find("#cashflow-preview button", text: "Expand")
+      expand = find("#cashflow-preview [data-sankey-preview-target='expandButton']")
       expand.send_keys(:enter)
       within "#cashflow-preview-expanded-dialog[open]" do
         find("g[role='button'][aria-label^='Sankey Shopping,']").send_keys(:enter)
@@ -89,7 +89,7 @@ class CashFlowTest < ApplicationSystemTestCase
         end
       end
       assert_no_selector "#cashflow-preview-expanded-dialog[open]"
-      assert_selector "#cashflow-preview button:focus", text: "Expand"
+      assert_selector "#cashflow-preview [data-sankey-preview-target='expandButton']:focus"
       assert_equal "true", find("[data-section-key='cashflow_sankey']")["draggable"]
     end
   end
@@ -306,6 +306,86 @@ class CashFlowTest < ApplicationSystemTestCase
       assert_event_count "survey shown", 1
       assert_event_count "survey sent", 1
     end
+  end
+
+  test "captures once per graph load and compares each selected period independently" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    # A previous lifetime marker must no longer suppress comparisons.
+    @user.update!(preferences: @user.preferences.merge("sankey_comparison_result" => "mismatch"))
+    sign_in @user
+    visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
+    assert_selector "#cashflow-preview svg .sankey-link"
+    install_posthog_fake
+    # Expense-only input adds an explicit deficit in the new graph.
+    assert_event_count "new_sankey_mismatch", 1
+    page.execute_script("document.dispatchEvent(new Event('posthog:ready'))")
+    find("#cashflow-preview [data-sankey-preview-target='expandButton']").click
+    find("#cashflow-preview-expanded-dialog").find("button[data-action='DS--dialog#close']").click
+    assert_event_count "new_sankey_mismatch", 1
+    properties = page.evaluate_script("window.sankeyEvents.find(e => e.event === 'new_sankey_mismatch').properties")
+    assert_equal({ "preview_version" => "cash_flow_v1" }, properties)
+
+    # Retrying data within the same controller permits one new comparison.
+    page.execute_script(<<~JS)
+      const preview = document.querySelector('#cashflow-preview');
+      const loader = window.Stimulus.getControllerForElementAndIdentifier(preview.querySelector('[data-controller="cash-flow"]'), 'cash-flow');
+      loader.load();
+    JS
+    assert_event_count "new_sankey_mismatch", 2
+
+    visit root_path(start_date: "1900-01-01", end_date: "1900-01-02")
+    assert_selector "#cashflow-preview[data-sankey-comparison='match']"
+    install_posthog_fake
+    assert_event_count "new_sankey_match", 1
+    assert_event_count "new_sankey_mismatch", 0
+    page.execute_script("document.dispatchEvent(new Event('posthog:ready'))")
+    assert_event_count "new_sankey_match", 1
+  end
+
+  test "feedback buttons highlight the current comparison without analytics and reset on loading" do
+    sign_in @user
+    visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
+    assert_selector "#cashflow-preview[data-sankey-comparison='mismatch']"
+    positive = "#cashflow-preview button[data-sankey-preview-rating-param='positive']"
+    negative = "#cashflow-preview button[data-sankey-preview-rating-param='negative']"
+    background = ->(selector) { page.evaluate_script("getComputedStyle(document.querySelector(#{selector.to_json})).backgroundColor") }
+    neutral = background.call(positive)
+    assert_not_equal neutral, background.call(negative)
+    page.execute_script(<<~JS)
+      const preview = document.querySelector('#cashflow-preview');
+      const graph = JSON.parse(preview.querySelector('[data-preview-sankey-chart-data-value]').getAttribute('data-preview-sankey-chart-data-value'));
+      preview.setAttribute('data-sankey-preview-legacy-data-value', JSON.stringify(graph));
+      preview.dispatchEvent(new CustomEvent('cash-flow:state', { detail: { state: 'content', ready: true, graph } }));
+    JS
+    assert_selector "#cashflow-preview[data-sankey-comparison='match']"
+    assert_not_equal neutral, background.call(positive)
+    assert_equal neutral, background.call(negative)
+    page.execute_script(<<~JS)
+      document.querySelector('#cashflow-preview').dispatchEvent(new CustomEvent('cash-flow:state', { detail: { state: 'loading', ready: false } }));
+    JS
+    assert_selector "#cashflow-preview[data-sankey-comparison='']"
+    assert_equal neutral, background.call(positive)
+    assert_equal neutral, background.call(negative)
+  end
+
+  test "feedback refreshes stale cached survey definitions on each click" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    sign_in @user
+    visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
+    assert_selector "#cashflow-preview svg .sankey-link"
+    install_posthog_fake
+    page.execute_script(<<~JS)
+      const getCurrentSurveys = window.posthog.getSurveys;
+      window.posthog.getSurveys = (callback, forceReload) => {
+        if (forceReload) getCurrentSurveys(callback);
+        else callback([]);
+      };
+    JS
+    within "#cashflow-preview" do
+      click_button "Looks right"
+    end
+    assert_selector "#cashflow-preview-feedback-dialog textarea"
+    assert_event_count "survey shown", 1
   end
 
   private
