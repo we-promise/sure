@@ -742,7 +742,10 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       post "/mcp", params: jsonrpc_request("server/discover", {
         _meta: { "io.modelcontextprotocol/protocolVersion" => MODERN_PROTOCOL_VERSION }
       }).to_json,
-        headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION)
+        headers: mcp_headers(@token).merge(
+          "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+          "Mcp-Method" => "server/discover"
+        )
 
       assert_response :ok
       body = JSON.parse(response.body)
@@ -764,29 +767,88 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
-  test "tools/list adds resultType complete for the 2026-07-28 dialect" do
+  test "tools/list adds resultType complete and cache hints for the 2026-07-28 dialect" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("tools/list").to_json,
-           headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION)
+           headers: mcp_headers(@token).merge(
+             "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+             "Mcp-Method" => "tools/list"
+           )
 
       assert_response :ok
       result = JSON.parse(response.body)["result"]
       assert_equal "complete", result["resultType"]
       assert_kind_of Array, result["tools"]
       assert_equal "sure", result.dig("_meta", "io.modelcontextprotocol/serverInfo", "name")
+      # CacheableResult (2026-07-28): list results carry freshness/scope hints.
+      # ttlMs: 0 because the tool surface depends on the caller's own scope.
+      assert_equal 0, result["ttlMs"]
+      assert_equal "private", result["cacheScope"]
     end
   end
 
-  test "tools/call adds resultType complete for the 2026-07-28 dialect" do
+  test "tools/call adds resultType complete for the 2026-07-28 dialect, with no cache hints" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json,
-           headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION)
+           headers: mcp_headers(@token).merge(
+             "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+             "Mcp-Method" => "tools/call",
+             "Mcp-Name" => "get_balance_sheet"
+           )
 
       assert_response :ok
       result = JSON.parse(response.body)["result"]
       assert_equal "complete", result["resultType"]
       assert_not result["isError"]
       assert_equal "sure", result.dig("_meta", "io.modelcontextprotocol/serverInfo", "name")
+      # CacheableResult only applies to list-shaped results, not a tool call.
+      assert_not result.key?("ttlMs")
+      assert_not result.key?("cacheScope")
+    end
+  end
+
+  test "a 2026-07-28 request without Mcp-Method is rejected" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list", {}, id: 62).to_json,
+           headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION)
+
+      assert_response :bad_request
+      body = JSON.parse(response.body)
+      assert_equal 62, body["id"]
+      assert_equal(-32020, body["error"]["code"])
+      assert_includes body["error"]["message"], "Mcp-Method"
+    end
+  end
+
+  test "a 2026-07-28 request with a Mcp-Method that disagrees with the JSON-RPC method is rejected" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list", {}, id: 63).to_json,
+           headers: mcp_headers(@token).merge(
+             "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+             "Mcp-Method" => "tools/call"
+           )
+
+      assert_response :bad_request
+      body = JSON.parse(response.body)
+      assert_equal 63, body["id"]
+      assert_equal(-32020, body["error"]["code"])
+    end
+  end
+
+  test "a 2026-07-28 tools/call without a matching Mcp-Name is rejected before the tool runs" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "get_balance_sheet", arguments: {} }, id: 64).to_json,
+           headers: mcp_headers(@token).merge(
+             "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+             "Mcp-Method" => "tools/call",
+             "Mcp-Name" => "update_transaction"
+           )
+
+      assert_response :bad_request
+      body = JSON.parse(response.body)
+      assert_equal 64, body["id"]
+      assert_equal(-32020, body["error"]["code"])
+      assert_includes body["error"]["message"], "Mcp-Name"
     end
   end
 
@@ -831,6 +893,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
         post "/mcp", params: jsonrpc_request("tools/list").to_json,
              headers: mcp_headers(@token).merge(
                "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+               "Mcp-Method" => "tools/list",
                "Mcp-Session-Id" => legacy_session_id
              )
 

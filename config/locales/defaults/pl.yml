@@ -198,6 +198,7 @@ pl:
       update: Aktualizuj %{model}
   mcp:
     errors:
+      header_mismatch: 'Nagłówek %{header} nie odpowiada żądaniu (oczekiwano: %{expected})'
       invalid_session_id: Nieprawidłowy identyfikator sesji MCP
       protocol_version_mismatch: 'Nagłówek MCP-Protocol-Version (%{header}) i _meta protocolVersion (%{meta}) są niezgodne'
       unsupported_protocol_version: 'Nieobsługiwana wersja protokołu MCP: %{version}'

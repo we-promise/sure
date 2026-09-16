@@ -170,6 +170,7 @@ fr:
       update: Modifier ce(tte) %{model}
   mcp:
     errors:
+      header_mismatch: "L'en-tête %{header} ne correspond pas à la requête (attendu : %{expected})"
       invalid_session_id: Identifiant de session MCP invalide
       protocol_version_mismatch: "L'en-tête MCP-Protocol-Version (%{header}) et _meta protocolVersion (%{meta}) sont en désaccord"
       unsupported_protocol_version: 'Version du protocole MCP non prise en charge : %{version}'
