@@ -815,6 +815,9 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
 
     assert_response :success
+    # Assert the card renders BEFORE asserting the account is absent -- an
+    # absence check alone would also pass if the whole card disappeared.
+    assert_select "##{ActionView::RecordIdentifier.dom_id(item)}", count: 1
     # The card is visible because the member owns the connection, but an
     # account they have no access to must not be rendered on it.
     assert_no_match(/Not Shared With Member/, response.body)
