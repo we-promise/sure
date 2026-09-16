@@ -1,5 +1,5 @@
 class EnableBankingAccount < ApplicationRecord
-  include CurrencyNormalizable, Encryptable
+  include CurrencyNormalizable, Encryptable, IbanNormalizable
 
   # Encrypt raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
