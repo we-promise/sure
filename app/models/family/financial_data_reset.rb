@@ -40,6 +40,7 @@ class Family::FinancialDataReset
   ].freeze
   STATUS_COUNT_KEYS = (COUNT_KEYS - %i[syncs]) + %i[plaid_items]
   PROVIDER_ITEM_ASSOCIATIONS = %i[
+    financekit_items
     binance_items
     brex_items
     coinbase_items
