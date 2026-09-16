@@ -277,6 +277,76 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_in_delta 150.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
   end
 
+  test "cost_basis_for clears the unknown state once a transferred-in position is fully closed" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    buy_date      = 12.days.ago.to_date
+    transfer_date = 9.days.ago.to_date
+    close_date    = 6.days.ago.to_date
+    rebuy_date    = 3.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, date: buy_date)
+      transfer_in = create_trade(security, account: @account, qty: 5, price: 120, date: transfer_date)
+      transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # moved in, unknown cost
+      create_trade(security, account: @account, qty: -15, price: 130, date: close_date) # fully closed
+      create_trade(security, account: @account, qty: 10, price: 150, date: rebuy_date)    # repurchased
+    end
+
+    # Trades net to 10, matching the 10-share snapshot, so the position really does
+    # hit zero at the close before the repurchase.
+    # Unknown while the transferred-in units are held
+    assert_nil cost_basis_for(calc, security, transfer_date)
+    assert_nil cost_basis_for(calc, security, close_date - 1)
+    # Known again once the position is fully closed and bought back
+    assert_in_delta 150.0, cost_basis_for(calc, security, rebuy_date).to_f, 1e-6
+    assert_in_delta 150.0, cost_basis_for(calc, security, Date.current).to_f, 1e-6
+  end
+
+  # A reverse-synced account can hold shares before its first imported trade. Here
+  # the snapshot is 10 but the trades net to only 8, so two shares predate the
+  # history and the position never truly reaches zero — the transferred-in units
+  # are still mixed in, so the basis must stay unknown.
+  test "cost_basis_for keeps a transferred position unknown when opening shares prevent liquidation" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    buy_date      = 12.days.ago.to_date
+    transfer_date = 9.days.ago.to_date
+    sell_date     = 6.days.ago.to_date
+    rebuy_date    = 3.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, date: buy_date)
+      transfer_in = create_trade(security, account: @account, qty: 5, price: 120, date: transfer_date)
+      transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # moved in, unknown cost
+      create_trade(security, account: @account, qty: -15, price: 130, date: sell_date)
+      create_trade(security, account: @account, qty: 8, price: 150, date: rebuy_date)
+    end
+
+    assert_nil cost_basis_for(calc, security, rebuy_date)
+    assert_nil cost_basis_for(calc, security, Date.current)
+  end
+
+  # A gapped import can record more net buys than the current snapshot, so the
+  # reconstructed baseline is negative. Opening and closing the unknown span must
+  # not collapse onto the transfer's own trade, which would wrongly mark it known.
+  test "cost_basis_for keeps a transferred position unknown when a gapped import gives a negative baseline" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    transfer_date = 9.days.ago.to_date
+    buy_date      = 5.days.ago.to_date
+
+    transfer_in = create_trade(security, account: @account, qty: 5, price: 120, date: transfer_date)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # moved in, unknown cost
+    create_trade(security, account: @account, qty: 5, price: 150, date: buy_date)
+
+    # Snapshot shows no current holding, but the trades net to +10, so the seeded
+    # baseline is -10 and the transfer lands while the running position is negative.
+    snapshot = OpenStruct.new(to_h: { security.id => 0 })
+    calc = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot)
+    calc.send(:precompute_cost_basis)
+
+    assert_nil cost_basis_for(calc, security, transfer_date)
+    assert_nil cost_basis_for(calc, security, Date.current)
+  end
+
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
