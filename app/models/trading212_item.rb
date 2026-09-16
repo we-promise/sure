@@ -1,5 +1,5 @@
 class Trading212Item < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
   enum :environment, { live: "live", demo: "demo" }, default: :live
@@ -21,11 +21,6 @@ class Trading212Item < ApplicationRecord
   scope :syncable, -> { active.where.not(api_key: [ nil, "" ]) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   def credentials_configured?
     api_key.present? && api_secret.present?

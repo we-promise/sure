@@ -111,12 +111,19 @@ class PlaidAccount::Processor
     end
 
     def process_liabilities
-      case [ plaid_account.plaid_type, plaid_account.plaid_subtype ]
-      when [ "credit", "credit card" ]
+      type = plaid_account.plaid_type
+      subtype = plaid_account.plaid_subtype
+
+      # The `credit` branch is deliberately subtype-agnostic, mirroring
+      # AccountsSnapshot#can_fetch_liabilities?. Matching only "credit card"
+      # here meant a credit/paypal account fetched and stored the raw
+      # liabilities response but never updated minimum_payment or apr, leaving
+      # the user-visible figures blank.
+      if type == "credit"
         PlaidAccount::Liabilities::CreditProcessor.new(plaid_account).process
-      when [ "loan", "mortgage" ]
+      elsif type == "loan" && subtype == "mortgage"
         PlaidAccount::Liabilities::MortgageProcessor.new(plaid_account).process
-      when [ "loan", "student" ]
+      elsif type == "loan" && subtype == "student"
         PlaidAccount::Liabilities::StudentLoanProcessor.new(plaid_account).process
       end
     rescue => e
