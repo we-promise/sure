@@ -1,8 +1,33 @@
 ---
 pl:
   properties:
+    address:
+      address_line1_label: Ulica i numer
+      address_line1_placeholder: ul. Przykładowa 123
+      city_label: Miasto
+      city_placeholder: Warszawa
+      country_label: Kraj
+      country_placeholder: Polska
+      postal_code_label: Kod pocztowy
+      postal_code_placeholder: 00-001
+      save: Zapisz
+      state_region_label: Województwo/region
+      state_region_placeholder: mazowieckie
+      title: Wprowadź nieruchomość ręcznie
+    avm_providers:
+      realie: Realie
+      rentcast: RentCast
+    balances:
+      market_value_label: Szacowana wartość rynkowa
+      market_value_tooltip: Szacowana wartość rynkowa Twojej nieruchomości. Tę liczbę
+        często można znaleźć na stronach takich jak Zillow czy Redfin i nigdy nie
+        jest to dokładna wartość.
+      next: Dalej
+      save: Zapisz
+      title: Wprowadź nieruchomość ręcznie
     edit:
       edit: Edytuj %{account}
+      title: Wprowadź nieruchomość ręcznie
     form:
       address_line1: Adres
       address_line1_placeholder: 123 Main St
@@ -21,7 +46,27 @@ pl:
       subtype_prompt: Wybierz typ nieruchomości
       year_built: Rok budowy
       year_built_placeholder: '2000'
+    form_tabs:
+      address: Adres
+      overview: Przegląd
+      value: Wartość
     new:
+      avm_description: Podaj nazwę nieruchomości i jej adres. %{provider} wyszuka
+        dla Ciebie szczegóły nieruchomości i szacowaną wartość rynkową.
+      avm_option: Dodaj przez %{provider}
+      avm_preview_back: Wstecz
+      avm_preview_confirm: Dodaj nieruchomość
+      avm_preview_description: Oto co znalazł %{provider}. Sprawdź szczegóły przed
+        dodaniem nieruchomości - nic jeszcze nie zostało utworzone.
+      avm_preview_no_record: "%{provider} nie znalazł rekordu nieruchomości pod tym
+        adresem, więc pokazana wartość jest szacunkiem opartym na okolicy. Sprawdź
+        adres przed kontynuowaniem."
+      avm_preview_title: Potwierdź szczegóły nieruchomości
+      avm_submit: Wyszukaj nieruchomość
+      avm_title: Dodaj nieruchomość przez %{provider}
+      avm_us_only: "%{provider} obsługuje wyłącznie nieruchomości położone w Stanach
+        Zjednoczonych."
+      next: Dalej
       title: Wprowadź dane nieruchomości
     overview:
       living_area: Powierzchnia użytkowa
@@ -30,3 +75,40 @@ pl:
       trend: Trend
       unknown: Nieznane
       year_built: Rok budowy
+    overview_fields:
+      area_label: Powierzchnia (opcjonalnie)
+      area_placeholder: '1200'
+      area_unit_label: Jednostka powierzchni
+      name_label: Nazwa
+      name_placeholder: Dom wakacyjny
+      property_type_label: Typ nieruchomości
+      square_feet: Stopy kwadratowe
+      square_meters: Metry kwadratowe
+      subtype_prompt: Wybierz typ
+      year_built_label: Rok budowy (opcjonalnie)
+      year_built_placeholder: '1990'
+    subtypes:
+      agri_land:
+        long: Grunt rolny
+        short: Grunt rolny
+      apartment:
+        long: Mieszkanie
+        short: Mieszkanie
+      commercial:
+        long: Nieruchomość komercyjna
+        short: Komercyjna
+      plot:
+        long: Działka / grunt
+        short: Działka
+      rented:
+        long: Nieruchomość wynajmowana
+        short: Wynajmowana
+    tabs:
+      overview:
+        edit_account_details: Edytuj szczegóły konta
+        living_area: Powierzchnia mieszkalna
+        market_value: Wartość rynkowa
+        purchase_price: Cena zakupu
+        trend: Trend
+        unknown: Nieznana
+        year_built: Rok budowy

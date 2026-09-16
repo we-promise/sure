@@ -123,11 +123,7 @@ class IncomeStatement
     Rails.cache.fetch([
       "income_statement", "daily_expense_series", family.id, user&.id,
       included_account_ids_hash, period.start_date, period.end_date,
-      family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i,
-      # Rates change via ExchangeRate::Importer's upsert_all and the target
-      # currency via settings; neither touches entries/accounts, so both must
-      # be part of the key to keep the chart from going stale.
-      family.currency, ExchangeRate.maximum(:updated_at)&.to_i
+      *cache_freshness_key
     ]) do
       DailyExpenseTotals.new(
         family,
@@ -276,11 +272,21 @@ class IncomeStatement
       @included_account_ids_hash ||= included_account_ids ? Digest::MD5.hexdigest(included_account_ids.sort.join(",")) : nil
     end
 
+    # An IncomeStatement is a request-scoped reporting snapshot, like its memoized
+    # period totals. Share these aggregate reads across totals and daily series.
+    # Rates and target currency can change without touching entries or accounts.
+    def cache_freshness_key
+      @cache_freshness_key ||= [
+        family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i,
+        family.currency, ExchangeRate.maximum(:updated_at)&.to_i
+      ]
+    end
+
     def totals_query(transactions_scope:, date_range:)
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, family.entries_cache_version, family.accounts.maximum(:updated_at)&.to_i
+        "income_statement", "totals_query", "v2", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
     end
 
