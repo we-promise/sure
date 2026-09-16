@@ -1,13 +1,14 @@
 # A bounded monthly projection of Sure's existing reporting calculations.
 # The client never needs to download transaction history to reproduce these rules.
 class IncomeStatement::CashFlow
-  def initialize(statement, month:, as_of: Date.current, time_zone: Time.zone.tzinfo.identifier)
+  def initialize(statement, month:, as_of: Date.current, time_zone: Time.zone.tzinfo.identifier, include_sankey: false)
     raise ArgumentError, "month must be a non-future first day" unless month.day == 1 && month <= as_of
 
     @statement = statement
     @month = month
     @as_of = as_of
     @time_zone = time_zone
+    @include_sankey = include_sankey
   end
 
   def as_json(*)
@@ -23,7 +24,7 @@ class IncomeStatement::CashFlow
     previous_total = previous.fetch(comparison_day - 1).fetch(:amount).to_d
     current_total = current.last.fetch(:amount).to_d
 
-    {
+    result = {
       month: @month.iso8601, as_of: @as_of.iso8601, time_zone: @time_zone,
       currency: @statement.family.currency,
       period: period_json(current_period), income: decimal(income), spending: decimal(spending),
@@ -36,6 +37,8 @@ class IncomeStatement::CashFlow
         delta: decimal(current_total - previous_total), current: current, previous: previous
       }
     }
+    result[:sankey] = IncomeStatement::Sankey.new(@statement, period: current_period).as_json if @include_sankey
+    result
   end
 
   private

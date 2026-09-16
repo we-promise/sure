@@ -4,6 +4,11 @@ ro:
     changelog:
       title: Ce e nou
     dashboard:
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Flux de numerar"
+          surplus: "Excedent"
+          deficit: "Deficit"
       welcome: "Bun venit, %{name}"
       subtitle: "Iată ce se întâmplă cu finanțele tale"
       new: "Nou"
