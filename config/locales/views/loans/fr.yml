@@ -12,6 +12,13 @@ fr:
       rate_type_adjustable: Révisable
       rate_type_fixed: Fixe
       rate_type_variable: Variable
+      down_payment: Apport personnel
+      insurance_rate: Taux d'assurance
+      insurance_rate_hint: Un taux annuel, prélevé chaque mois en complément de la mensualité. L'assurance constante porte sur le capital initial, l'assurance dégressive sur le capital restant dû.
+      insurance_rate_placeholder: '0,36'
+      insurance_rate_type: Type d'assurance
+      insurance_rate_type_decreasing_life: Dégressive
+      insurance_rate_type_level_term: Constante
       subtype_none: Aucun
       subtype_prompt: Sélectionner le type de prêt
       term_months: Durée (mois)
@@ -31,10 +38,25 @@ fr:
       overview:
         edit_loan_details: Modifier les détails du prêt
         interest_rate: Taux d'intérêt
+        leverage: Effet de levier
+        leverage_band_conservative: Prudent
+        leverage_band_high: Élevé
+        leverage_band_moderate: Modéré
+        leverage_multiple: "%{ratio}x"
         monthly_payment: Paiement mensuel
         not_applicable: N/D
         original_principal: Capital d'origine
         remaining_principal: Capital restant
         term: Durée
+        total_cost: Coût total
+        total_insurance: Assurance
         type: Type
         unknown: Inconnu
+      repayment_progress:
+        instalment: Échéance %{number} · %{date}
+        insurance: Assurance
+        interest: Intérêts
+        of_original: sur %{amount}
+        principal: Capital
+        repaid: Remboursé
+        total: Total
