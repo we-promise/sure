@@ -1,0 +1,38 @@
+{
+  "accounts": [
+    {
+      "booked_balance": {
+        "amount": "112.6600",
+        "credit_debit": "credit",
+        "currency": "USD"
+      },
+      "mapping_version": 1,
+      "observed_at": "2026-09-10T12:00:00Z",
+      "source_id": "11111111-1111-4111-8111-111111111111"
+    }
+  ],
+  "captured_at": "2026-09-10T12:00:00Z",
+  "history": {
+    "complete": true,
+    "end_at": "2026-09-10T12:00:00Z",
+    "kind": "snapshot",
+    "snapshot_id": "33333333-3333-4333-8333-333333333333",
+    "start_at": "2026-01-01T00:00:00Z"
+  },
+  "tombstones": [],
+  "transactions": [
+    {
+      "account_id": "11111111-1111-4111-8111-111111111111",
+      "amount": "12.3400",
+      "credit_debit": "debit",
+      "currency": "USD",
+      "mapping_version": 1,
+      "merchant": "Synthetic shop",
+      "posted_at": "2026-09-01T07:00:00Z",
+      "source_id": "22222222-2222-4222-8222-222222222222",
+      "status": "booked",
+      "transacted_at": "2026-09-01T06:00:00Z",
+      "type": "purchase"
+    }
+  ]
+}

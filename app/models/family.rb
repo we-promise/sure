@@ -1,4 +1,6 @@
 class Family < ApplicationRecord
+  has_many :financekit_items, dependent: :destroy
+
   include FioConnectable
   include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
   include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, AkahuConnectable, EnableBankingConnectable

@@ -1,4 +1,6 @@
 class User < ApplicationRecord
+  has_many :financekit_items, dependent: :destroy
+
   include Encryptable
 
   # Allow nil password for SSO-only users (JIT provisioning).
@@ -397,6 +399,8 @@ class User < ApplicationRecord
         provider_item_for(account_provider.provider)
       end
     end.uniq
+    provider_items.concat(financekit_items.left_joins(financekit_accounts: :account_provider).where(account_providers: { id: nil }))
+    provider_items.uniq!
 
     provider_items.each do |provider_item|
       linked_account_ids = provider_item.accounts.map(&:id)
