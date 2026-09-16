@@ -39,6 +39,22 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal [ "has already been taken" ], duplicate.errors[:ticker]
   end
 
+  test "canonicalizes WAR to XWAR on save" do
+    security = Security.create!(ticker: "KTY", exchange_operating_mic: "WAR")
+
+    assert_equal "XWAR", security.exchange_operating_mic
+  end
+
+  test "find_by_ticker_and_exchange upgrades legacy WAR and avoids duplicates" do
+    legacy = Security.create!(ticker: "KTY", exchange_operating_mic: "XWAR")
+    legacy.update_columns(exchange_operating_mic: "WAR")
+
+    found = Security.find_by_ticker_and_exchange(ticker: "KTY", exchange_operating_mic: "XWAR")
+
+    assert_equal legacy.id, found.id
+    assert_equal "XWAR", found.reload.exchange_operating_mic
+  end
+
   test "cash_for lazily creates a per-account synthetic cash security" do
     account = accounts(:investment)
 
