@@ -281,6 +281,110 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
       "the booked representative must gain the pending sibling's bank name"
   end
 
+  test "does not merge an ambiguous blank-iban row into either of two distinct-iban transactions" do
+    # Three rows share the same content pattern (date/amount/creditor/etc.),
+    # but two of them carry different, distinct IBANs -- proof this content
+    # pattern really does correspond to (at least) two separate real
+    # transactions, not one duplicated delivery. The third row has no IBAN
+    # at all, so it's genuinely unknown which of the two (or neither) it
+    # belongs to. Picking one by, say, alphabetical IBAN order would risk
+    # attributing a status/data update to the wrong transaction (or, if it's
+    # actually a third distinct payee, silently dropping it) -- so it must
+    # end up as its own separate result, not merged into either bucket.
+    transactions = [
+      {
+        entry_reference: "ref_a_book",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "50.00", currency: "EUR" },
+        creditor: { name: "Same Payee" },
+        creditor_account: { iban: "AT611904300234573201" }, # pipelock:ignore IBAN
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_b_pending",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "50.00", currency: "EUR" },
+        creditor: { name: "Same Payee" },
+        creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+        credit_debit_indicator: "DBIT",
+        status: "PDNG"
+      },
+      {
+        entry_reference: "ref_ambiguous_no_iban",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "50.00", currency: "EUR" },
+        creditor: { name: "Same Payee" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 3, result.count, "all three rows must survive as distinct results"
+    by_ref = result.index_by { |tx| tx[:entry_reference] }
+    assert_equal "BOOK", by_ref["ref_a_book"][:status]
+    assert_equal "AT611904300234573201", by_ref["ref_a_book"].dig(:creditor_account, :iban) # pipelock:ignore IBAN
+    assert_equal "PDNG", by_ref["ref_b_pending"][:status],
+      "the ambiguous row must not have been silently merged into this transaction's status"
+    assert_equal "DE89370400440532013000", by_ref["ref_b_pending"].dig(:creditor_account, :iban) # pipelock:ignore IBAN
+    assert_equal "BOOK", by_ref["ref_ambiguous_no_iban"][:status]
+    assert_nil by_ref["ref_ambiguous_no_iban"].dig(:creditor_account, :iban)
+  end
+
+  test "collapses two ambiguous blank-iban rows into each other, but still apart from the known-iban buckets" do
+    # Multiple rows that are ALL blank on IBAN, within a group that also has
+    # two distinct known IBANs, can't be told apart from each other either --
+    # but unlike merging into a KNOWN-different counterparty, merging them
+    # with each other loses nothing (they're indistinguishable anyway).
+    transactions = [
+      {
+        entry_reference: "ref_a_book",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "50.00", currency: "EUR" },
+        creditor: { name: "Same Payee" },
+        creditor_account: { iban: "AT611904300234573201" }, # pipelock:ignore IBAN
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_b_book",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "50.00", currency: "EUR" },
+        creditor: { name: "Same Payee" },
+        creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      },
+      {
+        entry_reference: "ref_ambiguous_1",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "50.00", currency: "EUR" },
+        creditor: { name: "Same Payee" },
+        credit_debit_indicator: "DBIT",
+        status: "PDNG"
+      },
+      {
+        entry_reference: "ref_ambiguous_2",
+        booking_date: "2026-02-07",
+        transaction_amount: { amount: "50.00", currency: "EUR" },
+        creditor: { name: "Same Payee" },
+        credit_debit_indicator: "DBIT",
+        status: "BOOK"
+      }
+    ]
+
+    result = @importer.send(:deduplicate_api_transactions, transactions)
+
+    assert_equal 3, result.count, "the two ambiguous rows must collapse into one, alongside the two known-iban transactions"
+    by_ref = result.index_by { |tx| tx[:entry_reference] }
+    assert_equal "AT611904300234573201", by_ref["ref_a_book"].dig(:creditor_account, :iban) # pipelock:ignore IBAN
+    assert_equal "DE89370400440532013000", by_ref["ref_b_book"].dig(:creditor_account, :iban) # pipelock:ignore IBAN
+    assert_equal "ref_ambiguous_2", result.map { |tx| tx[:entry_reference] }.find { |ref| ref.start_with?("ref_ambiguous") },
+      "the booked ambiguous row must be the kept representative, not the still-pending one"
+  end
+
   test "keeps transactions with different creditors" do
     transactions = [
       {
@@ -529,13 +633,14 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 2, result.count
   end
 
-  test "collapses a blank-iban duplicate into an existing bucket instead of forming a third transaction" do
+  test "keeps a blank-iban row apart from an existing bucket it cannot be attributed to" do
     # A base-content group with two genuinely distinct counterparty IBANs
-    # (a same-tx_id collision, per issue #954) plus a pending duplicate of
-    # one of them that hasn't gained account data yet must still resolve
-    # to 2 transactions -- not 3, which would happen if the blank-IBAN row
-    # formed its own bucket instead of aliasing into one of the existing
-    # IBAN buckets.
+    # (a same-tx_id collision, per issue #954) plus a row that hasn't gained
+    # account data yet resolves to 3 transactions, not 2: aliasing the
+    # blank-IBAN row into one of the two known-IBAN buckets would be a
+    # guess that can silently attribute (or fail to attribute) a status
+    # update to the wrong real transaction. See the "ambiguous" bucket in
+    # #deduplicate_api_transactions.
     transactions = [
       {
         entry_reference: "ref_a",
@@ -558,7 +663,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         status: "BOOK"
       },
       {
-        entry_reference: "ref_a_pending",
+        entry_reference: "ref_ambiguous",
         transaction_id: "shared_tid",
         booking_date: "2026-02-07",
         transaction_amount: { amount: "850.00", currency: "EUR" },
@@ -570,20 +675,22 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
 
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
-    assert_equal 2, result.count
+    assert_equal 3, result.count
+    kept_refs = result.map { |tx| tx[:entry_reference] }
+    assert_includes kept_refs, "ref_a"
+    assert_includes kept_refs, "ref_b"
+    assert_includes kept_refs, "ref_ambiguous"
   end
 
   test "a blank-iban row occupying a bucket first does not block the row that actually owns it" do
     # Same 3-row split-group shape as above, but the blank-IBAN row is
-    # listed FIRST in the array, ahead of the row for the bucket it
-    # aliases into. Naively keeping "whichever row is seen first" per key
-    # would let the blank row claim that bucket and then discard the real,
-    # IBAN-bearing row as a "duplicate" -- losing that transaction's actual
-    # counterparty data (or, worse, an entirely different real transaction
-    # if the API ever also reused the blank row's own entry_reference).
+    # listed FIRST in the array, ahead of the two known-IBAN rows. This
+    # must not affect which rows end up representing which bucket --
+    # ref_a and ref_b must keep their own IBAN data regardless of array
+    # order, and the blank row must still end up on its own.
     transactions = [
       {
-        entry_reference: "ref_a_pending",
+        entry_reference: "ref_ambiguous",
         transaction_id: "shared_tid",
         booking_date: "2026-02-07",
         transaction_amount: { amount: "850.00", currency: "EUR" },
@@ -615,11 +722,11 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
 
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
-    assert_equal 2, result.count
+    assert_equal 3, result.count
     kept_refs = result.map { |tx| tx[:entry_reference] }
+    assert_includes kept_refs, "ref_ambiguous"
     assert_includes kept_refs, "ref_a"
     assert_includes kept_refs, "ref_b"
-    assert_not_includes kept_refs, "ref_a_pending"
   end
 
   test "returns empty array for empty input" do
