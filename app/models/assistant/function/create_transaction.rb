@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-# AI-ASSISTED: written with AI assistance (Claude) and manually reviewed and
-# tested by its author against a live 0.7.5-alpha.7 deployment.
-
 # Creates a ledger transaction through the same Entry + Transaction path the
 # app's own create endpoint (Api::V1::TransactionsController#create) uses, so
 # balance recalculation and provider-sync protection behave exactly as they do

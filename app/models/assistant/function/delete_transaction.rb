@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-# AI-ASSISTED: written with AI assistance (Claude) and manually reviewed and
-# tested by its author against a live 0.7.5-alpha.7 deployment.
-
 # DeleteTransaction — a Sure Assistant MCP tool that permanently deletes a
 # transaction, mirroring the native Api::V1::TransactionsController#destroy.
 #
