@@ -199,6 +199,14 @@ class Transaction < ApplicationRecord
 
   # SQL snippet for raw queries that must exclude pending transactions.
   # Use in income statements, balance sheets, and raw analytics.
+  #
+  # Emits a LEADING `AND`, so it appends to a WHERE that already has at least
+  # one condition -- which is how all three callers use it
+  # (IncomeStatement::FamilyStats, ::CategoryStats, ::ScopedTransactionsQuery),
+  # interpolating it after their own `AND` clauses. As the first condition in a
+  # WHERE it produces `WHERE AND NOT (...)`, a syntax error. Use
+  # `not_pending_sql` for that position; this method is only the `AND`-prefixed
+  # form of it.
   def self.pending_providers_sql(table_alias = "t", providers: PENDING_PROVIDERS)
     "AND #{not_pending_sql(table_alias, providers: providers)}"
   end
