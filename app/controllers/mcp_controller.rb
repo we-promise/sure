@@ -64,6 +64,13 @@ class McpController < ApplicationController
     end
 
     def dispatch_jsonrpc(request_id, method, params)
+      # JSON-RPC 2.0 allows "params" to be an Array (positional) as well as an
+      # Object; nothing Sure implements takes positional params, but every
+      # downstream #dig call below assumes Hash semantics. Array#dig raises
+      # TypeError on a String key, which would otherwise 500 a spec-legal
+      # "params": [] instead of degrading to "no named params given".
+      params = {} unless params.is_a?(Hash)
+
       return unless prepare_mcp_request_context(request_id, method, params)
 
       case method
@@ -292,6 +299,12 @@ class McpController < ApplicationController
         )
         return false
       end
+
+      # 2026-07-28 has no session concept at all (see the dialect note above) —
+      # ignore a stray Mcp-Session-Id rather than validating and echoing it
+      # back, so a modern request never carries session state its own
+      # protocol version says doesn't exist.
+      return true if modern_mcp_request?
 
       session_id = mcp_request_header("Mcp-Session-Id").presence
       return true unless session_id
