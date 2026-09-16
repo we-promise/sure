@@ -16,11 +16,7 @@
         <%= turbo_frame_tag "#{account_group.key}_sparkline",
                             src: accountable_sparkline_path(account_group.key),
                             loading: "lazy",
-                            data: {
-                              controller: "turbo-frame-timeout",
-                              action: "turbo:before-fetch-request->turbo-frame-timeout#startTimeout turbo:frame-load->turbo-frame-timeout#clearTimeout",
-                              turbo_frame_timeout_timeout_value: 10000
-                            } do %>
+                            data: sparkline_frame_data do %>
           <div class="flex items-center w-8 h-4 ml-auto">
             <div class="w-6 h-px bg-loader"></div>
           </div>
@@ -54,11 +50,7 @@
             <%= turbo_frame_tag dom_id(account, :sparkline),
                                 src: sparkline_account_path(account),
                                 loading: "lazy",
-                                data: {
-                                  controller: "turbo-frame-timeout",
-                                  action: "turbo:before-fetch-request->turbo-frame-timeout#startTimeout turbo:frame-load->turbo-frame-timeout#clearTimeout",
-                                  turbo_frame_timeout_timeout_value: 10000
-                                } do %>
+                                data: sparkline_frame_data do %>
               <div class="flex items-center w-8 h-4 ml-auto">
                 <div class="w-6 h-px bg-loader"></div>
               </div>
