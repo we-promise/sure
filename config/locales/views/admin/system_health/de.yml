@@ -2,6 +2,47 @@
 de:
   admin:
     system_health:
+      push_notifications:
+        send_test: "Testbenachrichtigung senden"
+        queueing: "Wird eingereiht…"
+        title: "Push-Benachrichtigungen"
+        requested_at: "Letzter Test angefordert am %{time}"
+        result_help: "Die Annahme durch APNs bestätigt nicht die Zustellung auf deinem Gerät. Aktualisiere die Ergebnisse, um den Worker-Status zu sehen. Ergebnisse werden 24 Stunden gespeichert."
+        device: "Gerät %{number}"
+        pending: "Ausstehend"
+        refresh: "Ergebnisse aktualisieren"
+        columns:
+          device: "Gerät"
+          environment: "APNs-Umgebung"
+          status: "Ergebnis"
+          checked_at: "Letzte Aktualisierung"
+        environments:
+          sandbox: "Sandbox"
+          production: "Produktion"
+        messages:
+          enqueue_failed: "Der Test konnte nicht eingereiht werden. Prüfe Sidekiq und aktualisiere die Ergebnisse unten."
+          ready: "Sende eine Testbenachrichtigung an die für dein Konto registrierten, aktivierten iOS-Geräte."
+          queued: "Testbenachrichtigung eingereiht. Aktualisiere die Ergebnisse unten, um den Status zu prüfen."
+          hosted_only: "Push-Benachrichtigungen sind nur im gehosteten Modus verfügbar."
+          ineligible: "Nur ein aktiver Super-Admin kann eine Testbenachrichtigung senden."
+          no_devices: "Aktiviere Push-Benachrichtigungen in der Sure-iOS-App für dieses Konto, um einen Test zu senden."
+          disabled: "Der Betreiber hat den Push-Versand deaktiviert."
+          not_configured: "Die APNs-Zugangsdaten sind nicht konfiguriert."
+          cooldown: "Bitte warte 30 Sekunden, bevor du einen weiteren Test sendest."
+          storage_unavailable: "Die Testanfrage konnte nicht gespeichert werden. Prüfe die Konfiguration des gemeinsamen Caches."
+        statuses:
+          queued: "Eingereiht"
+          accepted: "Von APNs angenommen"
+          skipped: "Übersprungen: nicht mehr berechtigt"
+          rejected: "Von APNs abgelehnt; Push-Debug-Protokolle prüfen"
+          unregistered: "Geräteregistrierung ist nicht mehr gültig"
+          retrying: "Vorübergehender Fehler; erneuter Versuch"
+          failed: "Fehlgeschlagen; Push-Debug-Protokolle prüfen"
+          enqueue_failed: "Einreihen fehlgeschlagen; Sidekiq prüfen"
+          expired: "Ohne abschließendes Ergebnis abgelaufen"
+      push_notification:
+        title: "Sure-Testbenachrichtigung"
+        body: "Dies ist eine Testbenachrichtigung für dein Sure-Konto."
       verify_worker_ai:
         queued: Die Worker-Prüfung wurde in die Warteschlange gestellt. Das Ergebnis erscheint unten, sobald ein Worker-Prozess die Prüfung übernimmt – normalerweise innerhalb weniger Sekunden.
       show:
