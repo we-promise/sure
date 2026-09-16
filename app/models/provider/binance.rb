@@ -141,7 +141,122 @@ class Provider::Binance
     end
   end
 
+  # Bounded readers for shared ingestion. Existing importer entry points above
+  # retain their response parsing and limits throughout incremental migration.
+  def get_portfolio_page(source, page: 1)
+    paths = { "spot" => [ "/api/v3/account", "balances" ], "margin" => [ "/sapi/v1/margin/account", "userAssets" ],
+      "earn_flexible" => [ "/sapi/v1/simple-earn/flexible/position", "rows" ],
+      "earn_locked" => [ "/sapi/v1/simple-earn/locked/position", "rows" ], "futures" => [ "/fapi/v2/account", "assets" ] }
+    path, collection = paths.fetch(source) { raise ApiError, "Unknown Binance portfolio source" }
+    raise ApiError, "Invalid Binance page" unless page.is_a?(Integer) && page.positive?
+    paginated = source.start_with?("earn_")
+    raise ApiError, "Binance source has no continuation" if !paginated && page != 1
+    data = ingestion_signed_get(path, params: paginated ? { "current" => page.to_s, "size" => "100" } : {},
+      base_url: source == "futures" ? FUTURES_BASE_URL : SPOT_BASE_URL)
+    raise ApiError, "Invalid Binance portfolio response" unless data.is_a?(Hash)
+    rows = ingestion_rows(data[collection], limit: paginated ? 100 : nil)
+    total = data["total"]
+    if paginated && !total.nil? && !(total.is_a?(Integer) && total >= 0)
+      raise ApiError, "Invalid Binance portfolio total"
+    end
+    if paginated && total && rows.size != [ [ total - (page - 1) * 100, 0 ].max, 100 ].min
+      raise ApiError, "Incomplete Binance portfolio page"
+    end
+    more = paginated && (total ? page * 100 < total : rows.size == 100)
+    raise ApiError, "Incomplete Binance portfolio page" if more && rows.empty?
+    { items: rows, next_cursor: more ? (page + 1).to_s : nil, evidence: data }
+  end
+
+  def get_trades_page(symbol, market:, from_id: nil, start_time: nil, end_time: nil)
+    ingestion_symbol(symbol)
+    raise ApiError, "Invalid Binance trade market" unless %w[spot futures].include?(market)
+    if from_id && (start_time || end_time)
+      raise ApiError, "Binance trade IDs cannot be combined with time windows"
+    end
+    [ from_id, start_time, end_time ].compact.each { |value| raise ApiError, "Invalid Binance trade cursor" unless value.is_a?(Integer) && value >= 0 }
+    if start_time || end_time
+      span = market == "spot" ? 86_400_000 : 604_800_000
+      unless start_time && end_time && end_time >= start_time && end_time - start_time < span
+        raise ApiError, "Invalid Binance trade time window"
+      end
+    end
+    params = { "symbol" => symbol, "limit" => "1000", "fromId" => from_id&.to_s,
+      "startTime" => start_time&.to_s, "endTime" => end_time&.to_s }.compact
+    data = ingestion_signed_get(market == "spot" ? "/api/v3/myTrades" : "/fapi/v1/userTrades", params: params,
+      base_url: market == "spot" ? SPOT_BASE_URL : FUTURES_BASE_URL)
+    { items: ingestion_rows(data, limit: 1000), next_cursor: nil, evidence: data }
+  end
+
+  def get_p2p_page(trade_type:, start_time:, end_time:, page: 1)
+    unless %w[BUY SELL].include?(trade_type) && [ start_time, end_time, page ].all? { |value| value.is_a?(Integer) } &&
+        start_time >= 0 && end_time >= start_time && end_time - start_time <= 2_592_000_000 && page.positive?
+      raise ApiError, "Invalid Binance P2P window"
+    end
+    data = ingestion_signed_get("/sapi/v1/c2c/orderMatch/listUserOrderHistory", params: {
+      "tradeType" => trade_type, "startTimestamp" => start_time.to_s, "endTimestamp" => end_time.to_s,
+      "page" => page.to_s, "rows" => "100"
+    })
+    unless data.is_a?(Hash) && data["success"] != false
+      raise ApiError, "Invalid Binance P2P response"
+    end
+    rows = ingestion_rows(data["data"], limit: 100)
+    { items: rows, next_cursor: rows.size == 100 ? (page + 1).to_s : nil, evidence: data }
+  end
+
+  def get_price_page(symbol, date: nil)
+    ingestion_symbol(symbol)
+    query = if date
+      raise ApiError, "Invalid Binance price date" unless date.instance_of?(Date)
+      { symbol: symbol, interval: "1d", startTime: Time.utc(date.year, date.month, date.day).to_i * 1000, limit: 1 }
+    else
+      { symbol: symbol }
+    end
+    data = ingestion_response(self.class.get(date ? "/api/v3/klines" : "/api/v3/ticker/price", query: query))
+    price = if date
+      unless data.is_a?(Array) && data.size <= 1 && (data.empty? || (data.first.is_a?(Array) && data.first.size >= 5))
+        raise ApiError, "Invalid Binance historical price"
+      end
+      data.first&.[](4)
+    else
+      raise ApiError, "Invalid Binance price" unless data.is_a?(Hash) && data.key?("price")
+      data["price"]
+    end
+    { items: price.nil? ? [] : [ { "price" => price } ], next_cursor: nil, evidence: data }
+  end
+
   private
+
+    def ingestion_rows(rows, limit:)
+      unless rows.is_a?(Array) && rows.all? { |row| row.is_a?(Hash) } && (limit.nil? || rows.size <= limit)
+        raise ApiError, "Invalid Binance collection"
+      end
+      rows
+    end
+
+    def ingestion_symbol(symbol)
+      raise ApiError, "Invalid Binance symbol" unless symbol.is_a?(String) && symbol.match?(/\A[A-Z0-9]+\z/)
+    end
+
+    def ingestion_signed_get(path, params: {}, base_url: SPOT_BASE_URL)
+      query = URI.encode_www_form(timestamp_params.merge(params).sort)
+      ingestion_response(self.class.get(path, base_uri: base_url, query: "#{query}&signature=#{sign(query)}", headers: auth_headers))
+    end
+
+    def ingestion_response(response)
+      case response.code
+      when 401, 403 then raise AuthenticationError, "Binance authorization does not permit this resource"
+      when 418, 429 then raise RateLimitError, "Binance request was rate limited"
+      end
+      data = JSON.parse(response.body, decimal_class: BigDecimal)
+      case response.code
+      when 200..299 then data
+      else
+        raise InvalidSymbolError, "Binance symbol is unavailable" if data.is_a?(Hash) && data["code"] == -1121
+        raise ApiError, "Binance request failed (HTTP #{response.code})"
+      end
+    rescue JSON::ParserError, TypeError
+      raise ApiError, "Invalid Binance response", cause: nil
+    end
 
     def signed_get(path, extra_params: {}, base_url: SPOT_BASE_URL)
       params = timestamp_params.merge(extra_params)

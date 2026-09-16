@@ -1,5 +1,5 @@
 class CoinbaseItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, LegacyWriterGuard
   include Encryptable
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -174,4 +174,6 @@ class CoinbaseItem < ApplicationRecord
       institution_color: "#0052FF"
     )
   end
+
+  guard_legacy_writes import_latest_coinbase_data: :ingest, process_accounts: :publish
 end

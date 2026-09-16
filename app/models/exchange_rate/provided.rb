@@ -1,7 +1,20 @@
 module ExchangeRate::Provided
   extend ActiveSupport::Concern
+  MissingCachedRate = Class.new(StandardError)
+  CACHE_ONLY_KEY = :account_materialization_cached_exchange_rates
 
   class_methods do
+    # Native publication must never call a provider or silently apply a 1:1
+    # fallback. This error intentionally differs from Money::ConversionError,
+    # which legacy materializers rescue to continue a partial calculation.
+    def with_cached_rates_only
+      previous = ActiveSupport::IsolatedExecutionState[CACHE_ONLY_KEY]
+      ActiveSupport::IsolatedExecutionState[CACHE_ONLY_KEY] = true
+      yield
+    ensure
+      ActiveSupport::IsolatedExecutionState[CACHE_ONLY_KEY] = previous
+    end
+
     def provider
       provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
       registry = Provider::Registry.for_concept(:exchange_rates)
@@ -12,19 +25,25 @@ module ExchangeRate::Provided
     NEAREST_RATE_LOOKBACK_DAYS = 5
 
     def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)
-      rate = find_by(from_currency: from, to_currency: to, date: date)
-      return rate if rate.present?
+      cached_only = ActiveSupport::IsolatedExecutionState[CACHE_ONLY_KEY]
+      scope = cached_only ? lock("FOR SHARE") : all
+      rate = scope.find_by(from_currency: from, to_currency: to, date: date)
+      return checked_cached_rate(rate, cached_only: cached_only) if rate.present?
 
       # Reuse the nearest recently-cached rate before hitting the provider.
       # Providers like Yahoo Finance return the most recent trading-day rate
       # (e.g. Friday for a Saturday request) and save it under that date, so
       # subsequent requests for the weekend date always miss the exact lookup
       # and trigger redundant API calls.
-      nearest = where(from_currency: from, to_currency: to)
+      nearest = scope.where(from_currency: from, to_currency: to)
                   .where(date: (date - NEAREST_RATE_LOOKBACK_DAYS)..date)
                   .order(date: :desc)
                   .first
-      return nearest if nearest.present?
+      return checked_cached_rate(nearest, cached_only: cached_only) if nearest.present?
+
+      if ActiveSupport::IsolatedExecutionState[CACHE_ONLY_KEY]
+        raise MissingCachedRate, "No cached exchange rate for #{from}/#{to} on #{date}"
+      end
 
       return nil unless provider.present? # No provider configured (some self-hosted apps)
 
@@ -138,5 +157,13 @@ module ExchangeRate::Provided
         Rails.cache.delete(lock_key) if Rails.cache.read(lock_key) == lock_token
       end
     end
+
+    private
+      def checked_cached_rate(record, cached_only:)
+        if cached_only && (!record.rate.is_a?(BigDecimal) || !record.rate.finite? || !record.rate.positive?)
+          raise MissingCachedRate, "Cached exchange rate is not positive and finite"
+        end
+        record
+      end
   end
 end

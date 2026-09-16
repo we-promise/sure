@@ -1,7 +1,9 @@
 require "test_helper"
+require_relative "../../support/sophtron_fixture_fence_helper"
 
 class SophtronItem::ImporterTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
+  include SophtronFixtureFenceHelper
 
   setup do
     @family = families(:dylan_family)
@@ -29,7 +31,9 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       total: 1
     })
 
-    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    result = SophtronItem::Importer.new(@item).import
 
     assert result[:success]
     assert_equal 1, result[:accounts_created]
@@ -50,7 +54,9 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     provider = mock
     provider.expects(:get_accounts).never
 
-    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    result = SophtronItem::Importer.new(@item).import
 
     assert_not result[:success]
     assert_equal "Sophtron institution connection is incomplete", result[:error]
@@ -97,7 +103,9 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       total: 1
     })
 
-    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    result = SophtronItem::Importer.new(@item).import
 
     assert result[:success]
     assert_equal 1, result[:transactions_imported]
@@ -131,7 +139,9 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     provider.expects(:refresh_account).never
     provider.expects(:get_account_transactions).never
 
-    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    result = SophtronItem::Importer.new(@item).import
 
     assert result[:success]
     assert_equal 0, result[:transactions_imported]
@@ -167,7 +177,9 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       total: 0
     })
 
-    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    result = SophtronItem::Importer.new(@item).import
 
     assert result[:success]
     assert_equal [], sophtron_account.reload.raw_transactions_payload
@@ -202,7 +214,9 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       total: 1
     })
 
-    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    result = SophtronItem::Importer.new(@item).import
 
     assert result[:success]
     assert_equal 1, result[:transactions_imported]
@@ -218,7 +232,7 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       balance: 100
     )
     AccountProvider.create!(account: account, provider: sophtron_account)
-    @item.stubs(:last_synced_at).returns(Time.current)
+    @item.syncs.create!(status: "completed", completed_at: Time.current)
 
     provider = mock
     provider.expects(:get_accounts).with("ui-1").returns({
@@ -250,7 +264,9 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       total: 1
     })
 
-    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    result = SophtronItem::Importer.new(@item).import
 
     assert result[:success]
     assert_equal 1, sophtron_account.reload.raw_transactions_payload.count
@@ -286,7 +302,9 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       LastStatus: "Waiting"
     })
 
-    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    result = SophtronItem::Importer.new(@item).import
 
     assert_not result[:success]
     assert_equal "requires_update", @item.reload.status
@@ -322,7 +340,8 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     provider.expects(:get_account_transactions).never
 
     assert_enqueued_with(job: SophtronRefreshPollJob) do
-      result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+      SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+      result = SophtronItem::Importer.new(@item).import
 
       assert result[:success]
       assert_equal 0, result[:transactions_imported]

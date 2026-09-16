@@ -1,6 +1,9 @@
 require "test_helper"
+require_relative "../support/simplefin_fixture_fence_helper"
 
 class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
+  include SimplefinFixtureFenceHelper
+
   setup do
     @family = families(:dylan_family)
     @item = SimplefinItem.create!(family: @family, name: "SF", access_url: "https://example.com/x")
@@ -41,15 +44,16 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
         }
       ]
     )
+    request = SimplefinAccount::HoldingsRequest.capture(@sfa)
 
     assert_difference "Holding.where(account: @account).count", 2 do
-      SimplefinHoldingsApplyJob.perform_now(@sfa.id)
+      SimplefinHoldingsApplyJob.perform_now(@sfa.id, request: request)
     end
 
 
     # Running again should not create duplicates (external_id uniqueness)
     assert_no_difference "Holding.where(account: @account).count" do
-      SimplefinHoldingsApplyJob.perform_now(@sfa.id)
+      SimplefinHoldingsApplyJob.perform_now(@sfa.id, request: request)
     end
 
     holdings = @account.holdings.order(:external_id)
@@ -81,9 +85,10 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
         }
       ]
     )
+    request = SimplefinAccount::HoldingsRequest.capture(@sfa)
 
     assert_difference "Holding.where(account: @account).count", 1 do
-      SimplefinHoldingsApplyJob.perform_now(@sfa.id)
+      SimplefinHoldingsApplyJob.perform_now(@sfa.id, request: request)
     end
 
     holding = @account.holdings.find_by(external_id: "simplefin_h_vanguard")
@@ -113,9 +118,10 @@ class SimplefinHoldingsApplyJobTest < ActiveSupport::TestCase
         }
       ]
     )
+    request = SimplefinAccount::HoldingsRequest.capture(@sfa)
 
     assert_difference "Holding.where(account: @account).count", 1 do
-      SimplefinHoldingsApplyJob.perform_now(@sfa.id)
+      SimplefinHoldingsApplyJob.perform_now(@sfa.id, request: request)
     end
 
     holding = @account.holdings.find_by(external_id: "simplefin_h_fallback")

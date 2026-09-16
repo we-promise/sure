@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../support/sophtron_fixture_fence_helper"
 
 class SophtronRefreshPollJobTest < ActiveJob::TestCase
+  include SophtronFixtureFenceHelper
   setup do
     @family = families(:dylan_family)
     @item = @family.sophtron_items.create!(

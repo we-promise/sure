@@ -24,6 +24,16 @@ class Entry < ApplicationRecord
   has_many :recurring_allocations, dependent: nil, inverse_of: :entry
 
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
+
+  has_many :entry_sources
+  # Keep immutable source evidence and the original Entry UUID after a legitimate
+  # deletion (for example a cancelled provider hold). Only the live FK is released.
+  before_destroy :archive_ingestion_evidence
+
+  def archive_ingestion_evidence
+    entry_sources.update_all(entry_id: nil, active: false, updated_at: Time.current)
+  end
+  private :archive_ingestion_evidence
   accepts_nested_attributes_for :entryable
 
   validates :date, :name, :amount, :currency, presence: true
@@ -298,8 +308,14 @@ class Entry < ApplicationRecord
   end
 
   def sync_account_later
+    sync_account = account
     sync_start_date = [ date_previously_was, date ].compact.min unless destroyed?
-    account.sync_later(window_start_date: sync_start_date)
+    # Financial edits may already hold Entry/entryable locks. Account sync
+    # scheduling locks Account first, so wait until those edit locks are released.
+    # Capture the account and date window now; later saves can replace dirty state.
+    ActiveRecord.after_all_transactions_commit do
+      sync_account.sync_later(window_start_date: sync_start_date) if Account.exists?(sync_account.id)
+    end
   end
 
   def entryable_name_short

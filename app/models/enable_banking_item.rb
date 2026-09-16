@@ -1,5 +1,5 @@
 class EnableBankingItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -27,9 +27,12 @@ class EnableBankingItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
+  def destroy_later(actor: Current.user)
+    Lifecycle.new(item: self, actor: actor).disconnect
+  end
+
+  def unlink_all!(dry_run: false, actor: Current.user)
+    Lifecycle.new(item: self, actor: actor).unlink_all(dry_run: dry_run)
   end
 
   def credentials_configured?
@@ -37,7 +40,7 @@ class EnableBankingItem < ApplicationRecord
   end
 
   def session_valid?
-    session_id.present? && (session_expires_at.nil? || session_expires_at > Time.current)
+    good? && session_id.present? && (session_expires_at.nil? || session_expires_at > Time.current)
   end
 
   def session_expired?
@@ -59,115 +62,29 @@ class EnableBankingItem < ApplicationRecord
     end
   end
 
-  # Start the OAuth authorization flow
-  # @param aspsp_name [String] Name of the selected ASPSP
-  # @param redirect_url [String] Callback URL
-  # @param state [String, nil] State parameter (passed through to callback)
-  # @param psu_type [String] "personal" or "business"
-  # @param aspsp_data [Hash, nil] Full ASPSP object from GET /aspsps (used to store metadata)
-  # @param language [String, nil] Two-letter language code
-  # @return [String] Redirect URL for the user
+  # OAuth state is generated and verified by the admitted lifecycle command.
   def start_authorization(aspsp_name:, redirect_url:, state: nil, psu_type: "personal",
-                          aspsp_data: nil, language: nil)
-    provider = enable_banking_provider
-    raise StandardError.new("Enable Banking provider is not configured") unless provider
-
-    validated_psu_type = psu_type
-    selected_method = nil
-
-    # Store ASPSP metadata before calling provider so it's available even if auth fails
-    if aspsp_data.present?
-      aspsp_data = aspsp_data.with_indifferent_access
-      aspsp_types = Array(aspsp_data[:psu_types]).map(&:to_s)
-
-      # If the requested PSU type isn't supported by this ASPSP, fall back to the
-      # first type it advertises rather than failing outright.
-      validated_psu_type = if psu_type.present? && aspsp_types.include?(psu_type)
-        psu_type
-      elsif aspsp_types.any?
-        aspsp_types.first
-      else
-        psu_type
-      end
-
-      selected_method = select_auth_method(aspsp_data, validated_psu_type)
-
-      update!(
-        aspsp_required_psu_headers: aspsp_data[:required_psu_headers] || [],
-        aspsp_maximum_consent_validity: aspsp_data[:maximum_consent_validity],
-        aspsp_auth_approach: selected_method&.dig(:approach),
-        aspsp_psu_types: aspsp_types
-      )
-    end
-
-    result = provider.start_authorization(
-      aspsp_name: aspsp_name,
-      aspsp_country: country_code,
-      redirect_url: redirect_url,
-      state: state,
-      psu_type: validated_psu_type,
-      maximum_consent_validity: aspsp_maximum_consent_validity,
-      language: language,
-      auth_method: selected_method&.dig(:name)
-    )
-
-    attributes = {
-      authorization_id: result[:authorization_id],
-      aspsp_name: aspsp_name
-    }
-    attributes[:psu_type] = validated_psu_type if validated_psu_type.present?
-
-    update!(attributes)
-
-    result[:url]
+                          aspsp_data: nil, language: nil, actor: Current.user, last_psu_ip: nil)
+    Lifecycle.refuse! unless state.nil?
+    Lifecycle.new(item: self, actor: actor).start_authorization(aspsp_name: aspsp_name,
+      redirect_url: redirect_url, psu_type: psu_type, aspsp_data: aspsp_data, language: language, last_psu_ip: last_psu_ip)
   end
 
-  # Shared entry point for both initial authorization and reauthorization.
-  # Re-fetches ASPSP metadata (so the auth method / PSU type selection and the
-  # stored approach stay accurate) and starts the provider authorization. The
-  # re-fetch — rather than caching the full ASPSP object in the session — keeps
-  # us under the 4KB session cookie limit.
-  # @return [String] Redirect URL for the user
-  def begin_authorization!(redirect_url:, state:, language: nil, psu_type: nil, aspsp_name: nil)
-    name = aspsp_name.presence || self.aspsp_name
-    raise StandardError.new("No bank selected for this connection") if name.blank?
-
-    start_authorization(
-      aspsp_name: name,
-      redirect_url: redirect_url,
-      state: state,
-      psu_type: psu_type.presence || self.psu_type || "personal",
-      aspsp_data: fetch_aspsp_data(name),
-      language: language
-    )
+  def begin_authorization!(redirect_url:, state: nil, language: nil, psu_type: nil, aspsp_name: nil, actor: Current.user, last_psu_ip: nil)
+    Lifecycle.refuse! unless state.nil?
+    Lifecycle.new(item: self, actor: actor).begin_authorization!(redirect_url: redirect_url,
+      language: language, psu_type: psu_type, aspsp_name: aspsp_name, last_psu_ip: last_psu_ip)
   end
 
-  # Complete the authorization flow with the code from callback
-  def complete_authorization(code:)
-    provider = enable_banking_provider
-    raise StandardError.new("Enable Banking provider is not configured") unless provider
-
-    result = provider.create_session(code: code)
-
-    # Store session information
-    update!(
-      session_id: result[:session_id],
-      session_expires_at: parse_session_expiry(result),
-      authorization_id: nil,  # Clear the authorization ID
-      status: :good
-    )
-
-    # Import the accounts from the session
-    import_accounts_from_session(result[:accounts] || [])
-
-    result
+  def complete_authorization(code:, state:, actor: Current.user, last_psu_ip: nil)
+    Lifecycle.from_state(state, actor: actor, item: self).complete_authorization(code: code, last_psu_ip: last_psu_ip)
   end
 
   # Reconcile the locally-stored session expiry with what the API reports.
   # The session info returned by GET /sessions carries the authoritative
   # access.valid_until; persisting it on every sync keeps session_valid? accurate
   # and avoids both premature "expired" states and stale "still valid" states.
-  def reconcile_session_expiry!(session_data)
+  def reconcile_session_expiry!(session_data, expected_context: nil)
     return unless session_data.is_a?(Hash)
 
     valid_until = session_data.dig(:access, :valid_until) || session_data.dig("access", "valid_until")
@@ -176,41 +93,60 @@ class EnableBankingItem < ApplicationRecord
     parsed = Time.zone.parse(valid_until.to_s)
     return if parsed.nil? || parsed == session_expires_at
 
-    update!(session_expires_at: parsed)
+    context = EnableBankingItem::LegacyAccess.with_snapshot(self, expected_context: expected_context) do |current|
+      current.update!(session_expires_at: parsed)
+      EnableBankingItem::LegacyAccess.transport_context(current)
+    end
+    reload
+    context
+  rescue *EnableBankingItem::LegacyAccess::DENIAL_ERRORS
+    raise
   rescue ArgumentError, TypeError, ActiveRecord::ActiveRecordError => e
     # Best-effort reconciliation: swallow bad timestamps (ArgumentError/TypeError)
     # as well as validation/locking failures from update! (RecordInvalid,
     # StaleObjectError) so a sync is never derailed by expiry bookkeeping.
     Rails.logger.warn "EnableBankingItem #{id} - Failed to reconcile session expiry: #{e.message}"
+    nil
   end
 
   def import_latest_enable_banking_data
-    provider = enable_banking_provider
-    unless provider
-      Rails.logger.error "EnableBankingItem #{id} - Cannot import: Enable Banking provider is not configured"
-      raise StandardError.new("Enable Banking provider is not configured")
-    end
-
-    unless session_valid?
-      Rails.logger.error "EnableBankingItem #{id} - Cannot import: Session is not valid"
-      update!(status: :requires_update)
-      raise StandardError.new("Enable Banking session is not valid or has expired")
-    end
-
-    EnableBankingItem::Importer.new(self, enable_banking_provider: provider).import
+    EnableBankingItem::Importer.new(self).import
+  rescue *EnableBankingItem::LegacyAccess::DENIAL_ERRORS
+    raise
   rescue => e
     Rails.logger.error "EnableBankingItem #{id} - Failed to import data: #{e.message}"
     raise
   end
 
-  def process_accounts
+  def process_accounts(expected_contexts: nil, expected_item_context: nil)
+    expected_item_context ||= EnableBankingItem::LegacyAccess.transport_context(self)
+    EnableBankingItem::LegacyAccess.with_item(self, operation: :publish) do |current|
+      EnableBankingItem::LegacyAccess.verify_transport!(current, expected_item_context)
+      current.send(:process_accounts_admitted, expected_contexts: expected_contexts, expected_item_context: expected_item_context)
+    end
+  end
+
+  private def process_accounts_admitted(expected_contexts:, expected_item_context:)
+    if expected_contexts
+      unless expected_contexts.is_a?(Hash) && expected_contexts.keys.all? { |id| id.is_a?(String) } &&
+          expected_contexts.keys.sort == enable_banking_accounts.order(:id).pluck(:id).sort
+        raise EnableBankingItem::LegacyAccess::Fence::OwnershipChanged, "Enable Banking processing inventory changed after acquisition"
+      end
+      EnableBankingItem::LegacyAccess.bounded_sources(enable_banking_accounts).each do |source|
+        EnableBankingItem::LegacyAccess.verify_source!(source, expected_contexts.fetch(source.id))
+      end
+    end
     return [] if enable_banking_accounts.empty?
 
     results = []
-    enable_banking_accounts.joins(:account).merge(Account.visible).each do |enable_banking_account|
+    EnableBankingItem::LegacyAccess.bounded_sources(enable_banking_accounts.joins(:account).merge(Account.visible)).each do |enable_banking_account|
       begin
-        result = EnableBankingAccount::Processor.new(enable_banking_account).process
-        results << { enable_banking_account_id: enable_banking_account.id, success: true, result: result }
+        result = EnableBankingAccount::Processor.new(enable_banking_account,
+          expected_context: expected_contexts&.fetch(enable_banking_account.id), expected_item_context: expected_item_context).process
+        success = !result.is_a?(Hash) || result.with_indifferent_access[:success] != false
+        results << { enable_banking_account_id: enable_banking_account.id, success: success, result: result }
+      rescue *EnableBankingItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         Rails.logger.error "EnableBankingItem #{id} - Failed to process account #{enable_banking_account.id}: #{e.message}"
         results << { enable_banking_account_id: enable_banking_account.id, success: false, error: e.message }
@@ -221,6 +157,13 @@ class EnableBankingItem < ApplicationRecord
   end
 
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
+    EnableBankingItem::LegacyAccess.with_item(self, operation: :publish, sync: parent_sync) do |current, admitted_sync|
+      current.send(:schedule_account_syncs_admitted, parent_sync: admitted_sync,
+        window_start_date: window_start_date, window_end_date: window_end_date)
+    end
+  end
+
+  private def schedule_account_syncs_admitted(parent_sync:, window_start_date:, window_end_date:)
     return [] if accounts.empty?
 
     results = []
@@ -232,6 +175,8 @@ class EnableBankingItem < ApplicationRecord
           window_end_date: window_end_date
         )
         results << { account_id: account.id, success: true }
+      rescue *EnableBankingItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         Rails.logger.error "EnableBankingItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
         results << { account_id: account.id, success: false, error: e.message }
@@ -241,12 +186,16 @@ class EnableBankingItem < ApplicationRecord
     results
   end
 
-  def upsert_enable_banking_snapshot!(accounts_snapshot)
-    assign_attributes(
-      raw_payload: accounts_snapshot
-    )
-
-    save!
+  def upsert_enable_banking_snapshot!(accounts_snapshot = nil, expected_context: nil, **snapshot_fields)
+    unless snapshot_fields.empty?
+      raise ArgumentError, "Expected one Enable Banking snapshot" unless accounts_snapshot.nil?
+      accounts_snapshot = snapshot_fields
+    end
+    EnableBankingItem::LegacyAccess.with_snapshot(self, expected_context: expected_context) do |current|
+      current.update!(raw_payload: accounts_snapshot)
+    end
+    reload
+    true
   end
 
   def has_completed_initial_setup?
@@ -320,24 +269,8 @@ class EnableBankingItem < ApplicationRecord
     end
   end
 
-  # Revoke the session with Enable Banking
-  def revoke_session
-    return unless session_id.present?
-
-    provider = enable_banking_provider
-    return unless provider
-
-    begin
-      provider.delete_session(session_id: session_id)
-    rescue Provider::EnableBanking::EnableBankingError => e
-      Rails.logger.warn "EnableBankingItem #{id} - Failed to revoke session: #{e.message}"
-    ensure
-      update!(
-        session_id: nil,
-        session_expires_at: nil,
-        authorization_id: nil
-      )
-    end
+  def revoke_session(actor: Current.user)
+    Lifecycle.new(item: self, actor: actor).revoke_session
   end
 
   private
@@ -373,20 +306,6 @@ class EnableBankingItem < ApplicationRecord
       { name: best[:name], approach: best[:approach] }
     end
 
-    # Fetch the ASPSP object for a given name from the provider's /aspsps list.
-    # Returns a HashWithIndifferentAccess, or nil if unavailable.
-    def fetch_aspsp_data(aspsp_name)
-      provider = enable_banking_provider
-      return nil unless provider
-
-      response = provider.get_aspsps(country: country_code)
-      raw_aspsps = response[:aspsps] || response["aspsps"] || []
-      raw_aspsps.find { |a| (a[:name] || a["name"]) == aspsp_name }&.with_indifferent_access
-    rescue Provider::EnableBanking::EnableBankingError => e
-      Rails.logger.warn "EnableBankingItem #{id} - could not fetch ASPSP metadata for #{aspsp_name}: #{e.message}"
-      nil
-    end
-
     def parse_session_expiry(session_result)
       if session_result[:access].present? && session_result[:access][:valid_until].present?
         parsed = Time.zone.parse(session_result[:access][:valid_until])
@@ -395,21 +314,8 @@ class EnableBankingItem < ApplicationRecord
         90.days.from_now
       end
     rescue ArgumentError, TypeError => e
-      Rails.logger.warn "EnableBankingItem #{id} - Failed to parse session expiry: #{e.message}"
+      Rails.logger.warn "Enable Banking session expiry could not be parsed"
       90.days.from_now
     end
 
-    def import_accounts_from_session(accounts_data)
-      return if accounts_data.blank?
-
-      accounts_data.each do |account_data|
-        # Use identification_hash as the stable identifier across sessions
-        uid = account_data[:identification_hash] || account_data[:uid]
-        next unless uid.present?
-
-        enable_banking_account = enable_banking_accounts.find_or_initialize_by(uid: uid)
-        enable_banking_account.upsert_enable_banking_snapshot!(account_data)
-        enable_banking_account.save!
-      end
-    end
 end

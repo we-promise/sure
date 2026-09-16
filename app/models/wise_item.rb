@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class WiseItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, LegacyWriterGuard
 
   SCA_PRIVATE_KEY_ATTRIBUTE = "sca_private_key"
 
@@ -225,4 +225,6 @@ class WiseItem < ApplicationRecord
 
       errors.add(:sca_private_key, :encryption_unavailable)
     end
+
+  guard_legacy_writes import_latest_wise_data: :ingest, process_accounts: :publish
 end

@@ -9,6 +9,8 @@
 # Note on scope: Monobank's terms limit this token to personal use, so credentials are
 # per-family (the user brings their own token from https://api.monobank.ua/) rather than
 # a site-wide integration.
+require "bigdecimal"
+
 class Provider::Monobank < Provider
   include HTTParty
   include Provider::RateLimitable
@@ -118,6 +120,42 @@ class Provider::Monobank < Provider
     end
   end
 
+  # Canonical ingestion reads one bounded response and retains its original shape.
+  # Legacy methods above retain their tolerant filtering and parser behavior.
+  def get_accounts_page
+    payload = get("/personal/client-info", bucket: :client_info, exact: true)
+    unless payload.is_a?(Hash) && payload["accounts"].is_a?(Array) &&
+        (!payload.key?("jars") || payload["jars"].is_a?(Array))
+      raise Error.new("Invalid Monobank account inventory", failure_code: :parse_error)
+    end
+    items = [ [ payload["accounts"], "card" ], [ payload["jars"] || [], "jar" ] ].flat_map do |resources, kind|
+      resources.map do |resource|
+        raise Error.new("Invalid Monobank account", failure_code: :parse_error) unless resource.is_a?(Hash)
+        resource.with_indifferent_access.merge(kind: kind)
+      end
+    end
+    { items: items, next_cursor: nil, evidence: payload }
+  rescue Error => error
+    raise error.class.new("Monobank account data request failed", failure_code: error.failure_code), cause: nil
+  end
+
+  def get_statement_page(account_id:, from:, to:, before_request: nil)
+    from_unix = to_unix(from)
+    to_unix_value = to_unix(to)
+    unless to_unix_value >= from_unix && to_unix_value - from_unix <= MAX_STATEMENT_WINDOW
+      raise Error.new("Invalid Monobank statement window", failure_code: :window_too_large)
+    end
+    path = "/personal/statement/#{ERB::Util.url_encode(account_id.to_s)}/#{from_unix}/#{to_unix_value}"
+    payload = get(path, bucket: :statement, exact: true, before_request: before_request)
+    unless payload.is_a?(Array) && payload.size <= MAX_STATEMENT_ITEMS && payload.all? { |item| item.is_a?(Hash) }
+      raise Error.new("Invalid Monobank statement page", failure_code: :parse_error)
+    end
+    { items: payload.map { |item| item.with_indifferent_access.merge(account_id: account_id.to_s) },
+      next_cursor: nil, evidence: payload }
+  rescue Error => error
+    raise error.class.new("Monobank account data request failed", failure_code: error.failure_code), cause: nil
+  end
+
   private
 
     RETRYABLE_ERRORS = [
@@ -135,13 +173,14 @@ class Provider::Monobank < Provider
 
     # Issues a throttled GET against the personal API. `bucket` names the rate-limit
     # bucket (see #throttle_request).
-    def get(path, bucket:, query: nil)
+    def get(path, bucket:, query: nil, exact: false, before_request: nil)
       operation = "GET #{path}"
 
       with_retries(operation) do
+        before_request&.call
         throttle_request(bucket)
         response = self.class.get(resolve_url(path), headers: auth_headers, query: query)
-        handle_response(response, operation: operation)
+        handle_response(response, operation: operation, exact: exact)
       end
     end
 
@@ -270,10 +309,10 @@ class Provider::Monobank < Provider
     end
 
     # Maps an HTTP response to parsed data or a typed error by status code.
-    def handle_response(response, operation: nil)
+    def handle_response(response, operation: nil, exact: false)
       case response.code
       when 200, 201
-        parse_response_body(response, operation: operation)
+        parse_response_body(response, operation: operation, exact: exact)
       when 204
         {}
       when 400
@@ -303,10 +342,10 @@ class Provider::Monobank < Provider
     end
 
     # Parses a JSON response body, raising a typed error on malformed JSON.
-    def parse_response_body(response, operation: nil)
+    def parse_response_body(response, operation: nil, exact: false)
       return {} if response.body.blank?
 
-      JSON.parse(response.body)
+      exact ? JSON.parse(response.body, decimal_class: BigDecimal) : JSON.parse(response.body)
     rescue JSON::ParserError
       capture_request_error(
         level: "error",

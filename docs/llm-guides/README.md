@@ -12,6 +12,7 @@ being changed. These guides hold the detailed conventions and procedures.
 | Change views, components, CSS, Stimulus or localization | [UI](ui.md) |
 | Add or modify an API v1 endpoint | [API endpoint consistency](api-endpoint-consistency.md) |
 | Change provider imports, pending/FX metadata or diagnostics | [Provider sync guidance](providers.md) |
+| Design/migrate bank integrations or generate a new adapter | [Bank-data architecture](../architecture/bank-data-providers.md), [migration matrix](../architecture/bank-data-provider-migration-matrix.md), [generator](../api/rails_provider_generator.md) |
 | Add a securities price provider | [Provider walkthrough](adding-a-securities-provider.md) |
 | Gate or release a preview feature | [Preview-feature gating](gating-a-preview-feature.md) |
 | Change goals, pledges or reconciliation | [Goals](goals.md) |

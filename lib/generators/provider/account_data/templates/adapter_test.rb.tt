@@ -1,0 +1,41 @@
+require "test_helper"
+
+class Provider::AccountData::<%= class_name %>Test < ActiveSupport::TestCase
+  test "declares the ingestion identity and capabilities" do
+    definition = Provider::AccountData::<%= class_name %>.definition
+
+    assert_equal <%= file_name.inspect %>, definition.key
+    assert_equal <%= file_name.inspect %>, definition.source
+    assert_equal %w[<%= capabilities.join(" ") %>], definition.capabilities
+  end
+
+  test "inspection does not expose credentials" do
+    client = Provider::AccountData::<%= class_name %>::Client.new(
+      credentials: { token: "private-token" }, settings: {},
+      application_credentials: { secret: "private-secret" }
+    )
+    adapter = Provider::AccountData::<%= class_name %>.new(client: client)
+
+    assert_not_includes client.inspect, "private-token"
+    assert_not_includes client.inspect, "private-secret"
+    assert_not_includes adapter.inspect, "private-token"
+  end
+
+  test "normalizes a complete account inventory from a recorded response" do
+    flunk "Implement a sanitized fixture/VCR response and assert Ingestion::Record.account values and Page completeness"
+  end
+
+  test "normalizes transactions with exact identity amount currency and pending state" do
+    flunk "Assert external ID, BigDecimal signed amount, Date, currency, pending and FX metadata against a fixture"
+  end
+
+  test "distinguishes partial results pagination removals and failures" do
+    flunk "Assert partial coverage and cursor behavior; API failures must raise and never return an empty success"
+  end
+<% if options[:type] == "investment" -%>
+
+  test "normalizes holdings and investment activities" do
+    flunk "Assert security identity, decimal quantity/price, as-of date and trade/cash classification against fixtures"
+  end
+<% end -%>
+end

@@ -32,43 +32,73 @@ class AkahuEntry::Processor
     Digest::MD5.hexdigest(attributes)
   end
 
-  def initialize(akahu_transaction, akahu_account:)
-    @akahu_transaction = akahu_transaction
+  def initialize(akahu_transaction, akahu_account:, expected_context: nil)
+    @akahu_transaction = Provider::AccountData::MigrationManifest.copy_value(akahu_transaction)
     @akahu_account = akahu_account
+    @expected_context = expected_context || AkahuItem::LegacyAccess.source_context(akahu_account)
   end
 
   def process
-    unless account.present?
-      Rails.logger.warn "AkahuEntry::Processor - No linked account for akahu_account #{akahu_account.id}, skipping transaction #{external_id}"
-      return nil
+    AkahuItem::LegacyAccess.with_account(akahu_account) do |current|
+      AkahuItem::LegacyAccess.verify_source!(current, @expected_context)
+      expected = current.current_account
+      next unless expected
+      AkahuItem::LegacyAccess.with_publication(current, expected_account: expected, resource: "transactions") do |fresh, _financial|
+        AkahuItem::LegacyAccess.verify_source!(fresh, @expected_context)
+        self.class.new(akahu_transaction, akahu_account: fresh).send(:process_admitted)
+      end
     end
-
-    import_adapter.import_transaction(
-      external_id: external_id,
-      amount: amount,
-      currency: currency,
-      date: date,
-      name: name,
-      source: "akahu",
-      merchant: merchant,
-      notes: notes,
-      extra: extra_metadata
-    )
-  rescue ArgumentError => e
-    Rails.logger.error "AkahuEntry::Processor - Validation error for transaction #{external_id}: #{e.message}"
-    raise
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-    Rails.logger.error "AkahuEntry::Processor - Failed to save transaction #{external_id}: #{e.message}"
-    raise StandardError.new("Failed to import transaction: #{e.message}")
-  rescue => e
-    Rails.logger.error "AkahuEntry::Processor - Unexpected error processing transaction #{external_id}: #{e.class} - #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-    raise StandardError.new("Unexpected error importing transaction: #{e.message}")
   end
 
   private
 
+    def process_admitted
+      unless akahu_transaction.is_a?(Hash)
+        raise ArgumentError, "Akahu transaction must be an object"
+      end
+      remote = data[:_account].presence || data[:account].presence || data[:account_id].presence
+      unless remote.is_a?(String) && remote == akahu_account.account_id
+        raise AkahuItem::LegacyAccess::Fence::OwnershipChanged, "Akahu transaction belongs to another source account"
+      end
+      unless account.present?
+        Rails.logger.warn "AkahuEntry::Processor - No linked account for akahu_account #{akahu_account.id}, skipping transaction #{external_id}"
+        return nil
+      end
+
+      import_adapter.import_transaction(
+        external_id: external_id,
+        amount: amount,
+        currency: currency,
+        date: date,
+        name: name,
+        source: "akahu",
+        merchant: merchant,
+        notes: notes,
+        extra: extra_metadata
+      )
+    rescue *AkahuItem::LegacyAccess::DENIAL_ERRORS
+      raise
+    rescue ArgumentError => e
+      report_failure(e)
+      raise
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+      report_failure(e)
+      raise StandardError, "Failed to import Akahu transaction", cause: nil
+    rescue => e
+      report_failure(e)
+      raise StandardError, "Unexpected error importing Akahu transaction", cause: nil
+    end
+
     attr_reader :akahu_transaction, :akahu_account
+
+    def report_failure(error)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "warn", source: self.class.name,
+        provider_key: "akahu", family: akahu_account.akahu_item.family,
+        message: "Akahu transaction publication failed",
+        metadata: { akahu_account_id: akahu_account.id, error_class: error.class.name })
+    rescue StandardError
+      nil
+    end
 
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
@@ -153,8 +183,9 @@ class AkahuEntry::Processor
       when Numeric
         BigDecimal(data[:amount].to_s)
       else
-        BigDecimal("0")
+        raise ArgumentError, "Transaction amount is required"
       end
+      raise ArgumentError, "Transaction amount must be finite" unless parsed_amount.finite?
 
       # Akahu uses banking convention: negative is money out, positive is money in.
       # Sure stores expenses as positive and income as negative.

@@ -4,7 +4,7 @@
 # the family tracks; the addresses and the assets held at them live on
 # onchain_wallet_accounts.
 class OnchainWalletItem < ApplicationRecord
-  include Syncable, Provided, Encryptable
+  include Syncable, Provided, Encryptable, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -44,6 +44,7 @@ class OnchainWalletItem < ApplicationRecord
   # Writes the given rows into the accounts they are linked to. One failing
   # asset must not stop the rest of the wallet from syncing.
   def process_accounts(onchain_accounts)
+    onchain_accounts = Provider::AccountData::LegacyWriterFence.scoped_accounts!(self, onchain_accounts)
     onchain_accounts.map do |onchain_account|
       OnchainWalletAccount::Processor.new(onchain_account).process
       { onchain_wallet_account_id: onchain_account.id, success: true }
@@ -150,4 +151,6 @@ class OnchainWalletItem < ApplicationRecord
 
       self.etherscan_api_key = etherscan_api_key.to_s.strip.presence
     end
+
+  guard_legacy_writes import_latest_onchain_data: :ingest, process_accounts: :publish
 end

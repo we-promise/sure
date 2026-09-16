@@ -1,5 +1,5 @@
 class LunchflowItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, LegacyWriterGuard
 
   DEFAULT_BASE_URL = "https://lunchflow.app/api/v1".freeze
 
@@ -174,4 +174,6 @@ class LunchflowItem < ApplicationRecord
   rescue URI::InvalidURIError
     DEFAULT_BASE_URL
   end
+
+  guard_legacy_writes import_latest_lunchflow_data: :ingest, process_accounts: :publish
 end

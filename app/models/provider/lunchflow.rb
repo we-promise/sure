@@ -1,3 +1,5 @@
+require "bigdecimal"
+
 class Provider::Lunchflow
   include HTTParty
   extend SslConfigurable
@@ -66,7 +68,51 @@ class Provider::Lunchflow
     get(path, holdings_not_supported: true)
   end
 
+  # Native readers make one protocol request and retain decimal tokens. The
+  # adapter checks each endpoint's total/completeness before advancing a stream.
+  def get_accounts_snapshot
+    get_snapshot("/accounts")
+  end
+
+  def get_account_transactions_snapshot(account_id, start_date: nil, end_date: nil, include_pending:)
+    raise ArgumentError, "include_pending must be explicit" unless [ true, false ].include?(include_pending)
+    query = {}
+    query[:start_date] = start_date.to_date.to_s if start_date
+    query[:end_date] = end_date.to_date.to_s if end_date
+    query[:include_pending] = true if include_pending
+    path = "/accounts/#{ERB::Util.url_encode(account_id.to_s)}/transactions"
+    path += "?#{URI.encode_www_form(query)}" if query.any?
+    get_snapshot(path)
+  end
+
+  def get_account_balance_snapshot(account_id)
+    get_snapshot("/accounts/#{ERB::Util.url_encode(account_id.to_s)}/balance")
+  end
+
+  def get_account_holdings_snapshot(account_id)
+    get_snapshot("/accounts/#{ERB::Util.url_encode(account_id.to_s)}/holdings", holdings_not_supported: true)
+  end
+
   private
+
+    def get_snapshot(path, holdings_not_supported: false)
+      with_retries("GET account data", redact_errors: true) do
+        response = self.class.get("#{base_url}#{path}", headers: auth_headers)
+        if response.code == 200
+          JSON.parse(response.body, symbolize_names: true, decimal_class: BigDecimal)
+        elsif response.code == 501 && holdings_not_supported
+          { holdings_not_supported: true }
+        elsif response.code == 429 || rate_limited_response?(response)
+          details = rate_limit_error(response)
+          raise LunchflowError.new("Lunch Flow rate limit exceeded", :rate_limited,
+            retry_after: details.retry_after, status: response.code), cause: nil
+        else
+          type = { 400 => :bad_request, 401 => :unauthorized, 403 => :access_forbidden, 404 => :not_found }
+            .fetch(response.code, response.code.in?(500..599) ? :server_error : :fetch_failed)
+          raise LunchflowError.new("Lunch Flow request failed (HTTP #{response.code})", type, status: response.code), cause: nil
+        end
+      end
+    end
 
     def get(path, holdings_not_supported: false)
       operation_name = "GET #{path}"
@@ -119,21 +165,27 @@ class Provider::Lunchflow
       end
     end
 
-    def with_retries(operation_name, max_retries: MAX_RETRIES)
+    def with_retries(operation_name, max_retries: MAX_RETRIES, redact_errors: false)
       retries = 0
 
       begin
         yield
       rescue => original_error
         error = normalize_request_error(original_error, operation_name)
+        if redact_errors
+          error = LunchflowError.new("Lunch Flow account data request failed", error.error_type,
+            retry_after: error.retry_after, status: error.status)
+        end
         unless retryable_error?(error, original_error)
           capture_terminal_error(operation_name, error, original_error)
+          raise error, cause: nil if redact_errors
           raise error
         end
 
         retry_limit = error.error_type == :rate_limited ? MAX_RATE_LIMIT_RETRIES : max_retries
         if retries >= retry_limit
           capture_terminal_error(operation_name, error, original_error, retries:, retry_limit:)
+          raise error, cause: nil if redact_errors
           raise error
         end
 

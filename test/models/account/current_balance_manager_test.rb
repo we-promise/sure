@@ -13,6 +13,36 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     )
   end
 
+  test "a captured balance retains its observation date when applied later" do
+    date = Date.current
+    travel_to 4.days.from_now do
+      result = Account::CurrentBalanceManager.new(@linked_account, date: date).set_current_balance(BigDecimal("72.91"))
+      assert result.success?
+      assert_equal date, @linked_account.valuations.current_anchor.first.entry.date
+      assert_equal BigDecimal("72.91"), @linked_account.reload.balance
+    end
+  end
+
+  test "an older captured balance cannot replace a newer anchor" do
+    manager = Account::CurrentBalanceManager.new(@linked_account)
+    assert manager.set_current_balance(BigDecimal("100")).success?
+    result = Account::CurrentBalanceManager.new(@linked_account, date: Date.current - 1).set_current_balance(BigDecimal("50"))
+
+    assert_not result.success?
+    assert_equal BigDecimal("100"), @linked_account.reload.balance
+    assert_equal Date.current, @linked_account.valuations.current_anchor.first.entry.date
+  end
+
+  test "a same-day refreshed anchor uses the current account currency" do
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(BigDecimal("100")).success?
+    @linked_account.update!(currency: "EUR")
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(BigDecimal("80")).success?
+
+    anchor = @linked_account.valuations.current_anchor.first.entry
+    assert_equal "EUR", anchor.currency
+    assert_equal BigDecimal("80"), anchor.amount
+  end
+
   # -------------------------------------------------------------------------------------------------
   # Manual account current balance management
   #

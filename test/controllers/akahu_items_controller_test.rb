@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../support/akahu_fixture_fence_helper"
 
 class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
+  include AkahuFixtureFenceHelper
   setup do
     ensure_tailwind_build
     sign_in users(:family_admin)
@@ -22,9 +24,8 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "setup_accounts preselects mapped account type for each account" do
-    AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
-
     @akahu_account.update!(account_type: "SAVINGS")
+    stub_discovery(flow: :complete_account_setup)
     get setup_accounts_akahu_item_url(@akahu_item)
     assert_response :success
 
@@ -37,6 +38,7 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Depository", selected_option["value"]
 
     @akahu_account.update!(account_type: "FOREIGN")
+    stub_discovery(flow: :complete_account_setup)
     get setup_accounts_akahu_item_url(@akahu_item)
     assert_response :success
     selected_option = css_select("select[name='account_types[#{@akahu_account.id}]'] option[selected='selected']").first
@@ -49,7 +51,8 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     assert_difference "Account.count", 1 do
       assert_difference "AccountProvider.count", 1 do
         post complete_account_setup_akahu_item_url(@akahu_item), params: {
-          account_types: { @akahu_account.id.to_s => "Investment" }
+          account_types: { @akahu_account.id.to_s => "Investment" },
+          selection_token: selection_token(flow: :complete_account_setup)
         }
       end
     end
@@ -63,7 +66,7 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "select accounts rejects unsafe return paths" do
-    AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
+    stub_discovery(flow: :link_accounts)
 
     unsafe_return_paths.each do |return_to|
       get select_accounts_akahu_items_url, params: {
@@ -80,7 +83,7 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "select existing account rejects unsafe return paths" do
-    AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
+    stub_discovery(flow: :link_existing_account, account_id: @account.id)
 
     unsafe_return_paths.each do |return_to|
       get select_existing_account_akahu_items_url, params: {
@@ -98,7 +101,7 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "select existing account preserves safe local return path" do
     return_to = "/accounts?tab=manual"
-    AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
+    stub_discovery(flow: :link_existing_account, account_id: @account.id)
 
     get select_existing_account_akahu_items_url, params: {
       account_id: @account.id,
@@ -131,6 +134,7 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
       post link_accounts_akahu_items_url, params: {
         akahu_item_id: @akahu_item.id,
         account_ids: [ @akahu_account.id ],
+        selection_token: selection_token(flow: :link_accounts),
         accountable_type: "Depository",
         return_to: "https://evil.example/accounts"
       }
@@ -158,6 +162,7 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
           account_id: account.id,
           akahu_item_id: @akahu_item.id,
           akahu_account_id: akahu_account.id,
+          selection_token: selection_token(flow: :link_existing_account, account_id: account.id),
           return_to: return_to
         }
       end
@@ -174,10 +179,9 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
       user_token: "akahu-user-credential-2"
     )
 
-    AkahuItemsController.any_instance
-      .expects(:fetch_akahu_accounts_from_api)
-      .with(second_item)
-      .returns(nil)
+    command = mock("requested Akahu discovery")
+    AkahuItem::Lifecycle.expects(:new).with(item: second_item, actor: users(:family_admin)).returns(command)
+    command.expects(:discover).returns(item: second_item, accounts: [])
 
     get preload_accounts_akahu_items_url, params: { akahu_item_id: second_item.id }, as: :json
 
@@ -197,7 +201,7 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
       account_id: "acc_secondary",
       currency: "NZD"
     )
-    AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
+    stub_discovery(item: second_item, flow: :link_accounts)
 
     get select_accounts_akahu_items_url, params: { akahu_item_id: second_item.id, accountable_type: "Depository" }
 
@@ -225,6 +229,7 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
         post link_accounts_akahu_items_url, params: {
           akahu_item_id: second_item.id,
           account_ids: [ second_account.id ],
+          selection_token: selection_token(item: second_item, flow: :link_accounts),
           accountable_type: "Depository"
         }
       end
@@ -247,7 +252,7 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
       account_id: "acc_secondary",
       currency: "NZD"
     )
-    AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil)
+    stub_discovery(item: second_item, flow: :link_existing_account, account_id: @account.id)
 
     get select_existing_account_akahu_items_url, params: {
       account_id: @account.id,
@@ -261,12 +266,13 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "complete account setup hides raw creation errors from users" do
     raw_message = "raw provider failure with akahu-user-credential"
-    AkahuItemsController.any_instance
-      .stubs(:create_account_from_akahu)
+    AkahuItem::Lifecycle.any_instance
+      .stubs(:complete_account_setup)
       .raises(ActiveRecord::RecordNotSaved.new(raw_message))
 
     post complete_account_setup_akahu_item_url(@akahu_item), params: {
-      account_types: { @akahu_account.id.to_s => "Depository" }
+      account_types: { @akahu_account.id.to_s => "Depository" },
+      selection_token: selection_token(flow: :complete_account_setup)
     }
 
     assert_redirected_to accounts_path
@@ -275,6 +281,16 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def selection_token(item: @akahu_item, flow:, account_id: nil)
+      AkahuItem::Selection.issue(item.reload, actor: users(:family_admin), flow: flow, account_id: account_id)
+    end
+
+    def stub_discovery(item: @akahu_item, flow:, account_id: nil)
+      sources = item == @akahu_item ? [ @akahu_account ] : item.akahu_accounts.to_a
+      AkahuItem::Lifecycle.any_instance.stubs(:discover).returns(item: item, accounts: sources,
+        selection_token: selection_token(item: item, flow: flow, account_id: account_id), account_already_linked: false)
+    end
 
     def unsafe_return_paths
       [

@@ -1,6 +1,9 @@
 require "test_helper"
+require_relative "../../../support/simplefin_fixture_fence_helper"
 
 class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::TestCase
+  include SimplefinFixtureFenceHelper
+
   setup do
     @family = families(:dylan_family)
 
@@ -204,7 +207,9 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
     @simplefin_item.upstream_account_ids = [ new_simplefin_account.account_id ]
 
     # Process accounts - should repair the stale linkage
-    @simplefin_item.process_accounts
+    # This test supplies discovery proof on the freshly admitted receiver;
+    # nontransactional fence tests cover real locking and proof lifetime.
+    process_with_discovery_proof
 
     # After repair: new_simplefin_account should be linked
     @account.reload
@@ -240,7 +245,7 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
 
     original_linkage = @account.simplefin_account_id
 
-    @simplefin_item.process_accounts
+    process_with_discovery_proof
 
     # Should NOT have transferred linkage because names don't match
     @account.reload
@@ -269,7 +274,7 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
     # genuinely absent upstream, so the repair is allowed to proceed.
     @simplefin_item.upstream_account_ids = [ new_simplefin_account.account_id ]
 
-    @simplefin_item.process_accounts
+    process_with_discovery_proof
 
     # Should transfer linkage to new account (repair by name match)
     @account.reload
@@ -282,4 +287,11 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
     @simplefin_account.reload
     assert_equal [], @simplefin_account.raw_transactions_payload
   end
+  private
+    def process_with_discovery_proof
+      Provider::AccountData::LegacyWriterFence.with_item(@simplefin_item, operation: :publish) do |current|
+        current.upstream_account_ids = @simplefin_item.upstream_account_ids
+        current.process_accounts
+      end
+    end
 end

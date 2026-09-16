@@ -8,6 +8,12 @@ class SimplefinItem::Syncer
   end
 
   def perform_sync(sync)
+    SimplefinItem::ConnectionUpdate.with_item(simplefin_item) do |current|
+      self.class.new(current).send(:perform_sync_admitted, sync)
+    end
+  end
+
+  private def perform_sync_admitted(sync)
     # If no accounts are linked yet, run a balances-only discovery pass so the user
     # can review and manually link accounts first. This mirrors the historical flow
     # users expect: initial 7-day balances snapshot, then full chunked history after linking.
@@ -21,14 +27,18 @@ class SimplefinItem::Syncer
         # Pre-mark the sync as balances_only for runtime only (no persistence)
         begin
           sync.define_singleton_method(:balances_only?) { true }
+        rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+          raise
         rescue => e
           Rails.logger.warn("SimplefinItem::Syncer: failed to attach balances_only? flag: #{e.class} - #{e.message}")
         end
-        SimplefinItem::Importer.new(simplefin_item, simplefin_provider: simplefin_item.simplefin_provider, sync: sync).import_balances_only
+        SimplefinItem::Importer.new(simplefin_item, sync: sync).import_balances_only
         finalize_setup_counts(sync)
         mark_completed(sync)
         return
       end
+    rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue => e
       # If discovery-only path errors, fall back to regular logic below so we don't block syncs entirely
       Rails.logger.warn("SimplefinItem::Syncer auto balances-only path failed: #{e.class} - #{e.message}")
@@ -39,12 +49,14 @@ class SimplefinItem::Syncer
       sync.update!(status_text: "Refreshing balances only...") if sync.respond_to?(:status_text)
       begin
         # Use the Importer to run balances-only path
-        SimplefinItem::Importer.new(simplefin_item, simplefin_provider: simplefin_item.simplefin_provider, sync: sync).import_balances_only
+        SimplefinItem::Importer.new(simplefin_item, sync: sync).import_balances_only
         # IMPORTANT: Do NOT update last_synced_at during balances-only runs.
         # Leaving last_synced_at nil ensures the next full sync uses the
         # chunked-history path to fetch full historical transactions.
         finalize_setup_counts(sync)
         mark_completed(sync)
+      rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         mark_failed(sync, e)
       end
@@ -109,6 +121,9 @@ class SimplefinItem::Syncer
       end
 
       if sync.respond_to?(:sync_stats)
+        # The admitted importer writes through its own freshly loaded Sync.
+        # Keep its durable balances-only marker when merging setup counts.
+        sync.reload
         existing = (sync.sync_stats || {})
         setup_stats = {
           "total_accounts" => total_accounts,
@@ -155,6 +170,8 @@ class SimplefinItem::Syncer
           existing = (sync.sync_stats || {})
           sync.update!(sync_stats: existing.merge(post_stats))
         end
+      rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         Rails.logger.warn("SimplefinItem::Syncer#mark_completed stats error: #{e.class} - #{e.message}")
       end
@@ -170,6 +187,8 @@ class SimplefinItem::Syncer
             sync.update_columns(status_text: "Some accounts skipped as duplicates — try Link existing accounts to merge.")
           end
         end
+      rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         Rails.logger.warn("SimplefinItem::Syncer duplicate-only error normalization failed: #{e.class} - #{e.message}")
       end
@@ -194,6 +213,8 @@ class SimplefinItem::Syncer
         # re-fetches via their own authenticated request, so the manual accounts
         # list is correctly scoped to the current user.
         simplefin_item.family.broadcast_refresh
+      rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         Rails.logger.warn("SimplefinItem::Syncer broadcast failed: #{e.class} - #{e.message}")
       end

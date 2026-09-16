@@ -1,0 +1,15 @@
+<%= content_for :page_title, t("provider_connections.account_setup.title") %>
+
+<div class="space-y-4">
+  <%= render DS::Link.new(text: t("provider_connections.account_setup.back"), href: settings_providers_path, icon: "arrow-left") %>
+  <%= render DS::Card.new do %>
+    <h2 class="text-lg font-medium text-primary"><%= @connection.name %></h2>
+    <p class="mt-2 text-sm text-secondary"><%= t("provider_connections.account_setup.description") %></p>
+  <% end %>
+
+  <% if @form %>
+    <%= render "form", selection: @form %>
+  <% else %>
+    <%= render "catalog", catalog: @catalog %>
+  <% end %>
+</div>

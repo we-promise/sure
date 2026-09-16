@@ -312,10 +312,44 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal Merchant.first.id, @entry.entryable.merchant_id
     assert_equal "test notes", @entry.notes
     assert_equal false, @entry.excluded
+    assert @entry.user_modified?
+    assert @entry.locked?(:amount)
+    assert @entry.transaction.locked?(:tag_ids)
 
     assert_equal "Transaction updated", flash[:notice]
     assert_redirected_to account_url(@entry.account)
     assert_enqueued_with(job: SyncJob)
+  end
+
+  test "failed protection rolls back a manual transaction before it can be adopted by sync" do
+    Entry.any_instance.expects(:mark_user_modified!).raises(RuntimeError, "Protection failed")
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      assert_no_enqueued_jobs do
+        assert_raises(RuntimeError) do
+          post transactions_url, params: {
+            entry: { account_id: @entry.account_id, name: "Atomic creation", amount: 99,
+              date: Date.current, currency: "USD", entryable_type: "Transaction" }
+          }
+        end
+      end
+    end
+  end
+
+  test "failed protection rolls back transaction edits and field locks together" do
+    before = [ @entry.reload.attributes, @entry.transaction.reload.attributes ]
+    Entry.any_instance.expects(:mark_user_modified!).raises(RuntimeError, "Protection failed")
+
+    assert_no_enqueued_jobs do
+      assert_raises(RuntimeError) do
+        patch transaction_url(@entry), params: {
+          entry: { name: "Atomic edit", amount: 99, currency: "USD", notes: "Changed notes",
+            entryable_attributes: { id: @entry.entryable_id, category_id: categories(:food_and_drink).id } }
+        }
+      end
+    end
+
+    assert_equal before, [ @entry.reload.attributes, @entry.transaction.reload.attributes ]
   end
 
   test "re-renders show with mark-recurring state when update fails validation" do
@@ -447,6 +481,20 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.reload.entryable.tag_ids.sort
     assert_equal @entry.entryable.tag_ids.sort, JSON.parse(response.body)["tag_ids"].sort
+  end
+
+  test "failed protection rolls back tag-only edits and field locks together" do
+    @entry.transaction.tag_ids = [ tags(:one).id ]
+    before = [ @entry.reload.attributes, @entry.transaction.reload.attributes, @entry.transaction.tag_ids ]
+    Entry.any_instance.expects(:mark_user_modified!).raises(RuntimeError, "Protection failed")
+
+    assert_no_enqueued_jobs do
+      assert_raises(RuntimeError) do
+        patch tags_transaction_url(@entry, format: :json), params: { tag_ids: [] }, as: :json
+      end
+    end
+
+    assert_equal before, [ @entry.reload.attributes, @entry.transaction.reload.attributes, @entry.transaction.tag_ids ]
   end
 
   test "tag-only endpoint ignores tags from another family" do

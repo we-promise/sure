@@ -150,12 +150,17 @@ class TransactionsController < ApplicationController
 
     @entry = account.entries.new(entry_params_with_idempotency_key(idempotency_key))
 
-    if @entry.save
-      @entry.sync_account_later
+    created = account.with_lock do
+      next false unless @entry.save
+
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
+      true
+    end
 
+    if created
+      @entry.sync_account_later
       respond_with_created_entry(@entry)
     else
       set_new_transaction_form_options
@@ -175,7 +180,14 @@ class TransactionsController < ApplicationController
   end
 
   def update
-    if @entry.update(permitted_entry_params)
+    locked_account = @entry.account
+    notes_changed = false
+    updated = locked_account.with_lock do
+      @entry.lock!
+      raise ActiveRecord::RecordNotFound unless @entry.account_id == locked_account.id
+      @entry.entryable.lock!
+      next false unless @entry.update(permitted_entry_params)
+
       transaction = @entry.transaction
       transaction.record_category_usage!
 
@@ -187,12 +199,15 @@ class TransactionsController < ApplicationController
         }
       end
 
+      notes_changed = @entry.saved_change_to_notes?
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
-      @entry.sync_account_later
+      true
+    end
 
-      notes_changed = @entry.saved_change_to_notes?
+    if updated
+      @entry.sync_account_later
 
       # Reload to ensure fresh state for turbo stream rendering
       @entry.reload
@@ -244,10 +259,16 @@ class TransactionsController < ApplicationController
 
     tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
 
-    @entry.transaction.tag_ids = tag_ids
-    @entry.lock_saved_attributes!
-    @entry.mark_user_modified!
-    @entry.transaction.lock_attr!(:tag_ids)
+    locked_account = @entry.account
+    locked_account.with_lock do
+      @entry.lock!
+      raise ActiveRecord::RecordNotFound unless @entry.account_id == locked_account.id
+      @entry.entryable.lock!
+      @entry.transaction.tag_ids = tag_ids
+      @entry.lock_saved_attributes!
+      @entry.mark_user_modified!
+      @entry.transaction.lock_attr!(:tag_ids)
+    end
     @entry.sync_account_later
 
     render json: { tag_ids: @entry.transaction.tag_ids }

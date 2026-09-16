@@ -1,5 +1,5 @@
 class BrexItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, LegacyWriterGuard
 
   BLANK_TOKEN_SENTINELS = [ "", " ", "  ", "   ", "\t", "\n", "\r" ].freeze
 
@@ -41,24 +41,25 @@ class BrexItem < ApplicationRecord
   end
 
   def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
+    BrexItem::Lifecycle.schedule_destroy!(self)
   end
 
   def import_latest_brex_data(sync_start_date: nil)
-    provider = brex_provider
-    unless provider
-      Rails.logger.error "BrexItem #{id} - Cannot import: provider is not configured"
-      raise Provider::Brex::BrexError.new("Brex provider is not configured", :not_configured)
-    end
-
-    BrexItem::Importer.new(self, brex_provider: provider, sync_start_date: sync_start_date).import
+    BrexItem::Importer.new(self, sync_start_date: sync_start_date).import
+  rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+    raise
   rescue => e
     Rails.logger.error "BrexItem #{id} - Failed to import data: #{e.message}"
     raise
   end
 
   def process_accounts
+    BrexItem::LegacyAccess.with_item(self, operation: :publish) do |current|
+      current.send(:process_accounts_admitted)
+    end
+  end
+
+  private def process_accounts_admitted
     return [] if brex_accounts.empty?
 
     results = []
@@ -66,6 +67,8 @@ class BrexItem < ApplicationRecord
       begin
         result = BrexAccount::Processor.new(brex_account).process
         results << { brex_account_id: brex_account.id, success: true, result: result }
+      rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         Rails.logger.error "BrexItem #{id} - Failed to process account #{brex_account.id}: #{e.message}"
         results << { brex_account_id: brex_account.id, success: false, error: e.message }
@@ -76,6 +79,13 @@ class BrexItem < ApplicationRecord
   end
 
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
+    BrexItem::LegacyAccess.with_item(self, operation: :publish, sync: parent_sync) do |current, admitted_sync|
+      current.send(:schedule_account_syncs_admitted, parent_sync: admitted_sync,
+        window_start_date: window_start_date, window_end_date: window_end_date)
+    end
+  end
+
+  private def schedule_account_syncs_admitted(parent_sync:, window_start_date:, window_end_date:)
     return [] if accounts.empty?
 
     results = []
@@ -87,6 +97,8 @@ class BrexItem < ApplicationRecord
           window_end_date: window_end_date
         )
         results << { account_id: account.id, success: true }
+      rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         Rails.logger.error "BrexItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
         results << { account_id: account.id, success: false, error: e.message }
@@ -96,8 +108,16 @@ class BrexItem < ApplicationRecord
     results
   end
 
-  def upsert_brex_snapshot!(accounts_snapshot)
-    update!(raw_payload: BrexAccount.sanitize_payload(accounts_snapshot))
+  def upsert_brex_snapshot!(accounts_snapshot = nil, expected_context: nil, **snapshot_fields)
+    unless snapshot_fields.empty?
+      raise ArgumentError, "Expected one Brex snapshot" unless accounts_snapshot.nil?
+      accounts_snapshot = snapshot_fields
+    end
+    BrexItem::LegacyAccess.with_snapshot(self, expected_context: expected_context) do |current|
+      current.update!(raw_payload: BrexAccount.sanitize_payload(accounts_snapshot))
+    end
+    reload
+    true
   end
 
   def has_completed_initial_setup?
@@ -194,4 +214,6 @@ class BrexItem < ApplicationRecord
 
       errors.add(:base_url, :official_hosts_only)
     end
+
+  guard_legacy_writes import_latest_brex_data: :ingest, process_accounts: :publish
 end

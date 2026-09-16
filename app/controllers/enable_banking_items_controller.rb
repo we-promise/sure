@@ -1,7 +1,7 @@
 class EnableBankingItemsController < ApplicationController
   include EnableBankingItems::MapsHelper
   before_action :set_enable_banking_item, only: [ :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
-  before_action :require_admin!, only: [ :new, :create, :link_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
+  before_action :require_admin!, only: [ :callback, :new, :create, :link_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
   skip_before_action :verify_authenticity_token, only: [ :callback ]
 
   def new
@@ -43,7 +43,8 @@ class EnableBankingItemsController < ApplicationController
   end
 
   def update
-    if @enable_banking_item.update(enable_banking_item_params)
+    @enable_banking_item = lifecycle.update_settings(enable_banking_item_params)
+    if @enable_banking_item.errors.empty?
       if turbo_frame_request?
         flash.now[:notice] = t(".success", default: "Successfully updated Enable Banking configuration.")
         @enable_banking_items = Current.family.enable_banking_items.ordered
@@ -71,18 +72,15 @@ class EnableBankingItemsController < ApplicationController
         redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
       end
     end
+  rescue StandardError => error
+    consent_failure(error)
   end
 
   def destroy
-    # Ensure we detach provider links before scheduling deletion
-    begin
-      @enable_banking_item.unlink_all!(dry_run: false)
-    rescue => e
-      Rails.logger.warn("Enable Banking unlink during destroy failed: #{e.class} - #{e.message}")
-    end
-    @enable_banking_item.revoke_session
-    @enable_banking_item.destroy_later
-    redirect_to settings_providers_path, notice: t(".success", default: "Scheduled Enable Banking connection for deletion.")
+    lifecycle.disconnect
+    redirect_to settings_providers_path, notice: t(".success", default: "Scheduled Enable Banking connection for deletion."), status: :see_other
+  rescue StandardError => error
+    consent_failure(error)
   end
 
   def sync
@@ -106,16 +104,13 @@ class EnableBankingItemsController < ApplicationController
     @new_connection = params[:new_connection] == "true"
 
     begin
-      provider = @enable_banking_item.enable_banking_provider
-      response = provider.get_aspsps(country: @enable_banking_item.country_code)
+      response = lifecycle.banks
       raw_aspsps = response[:aspsps] || response["aspsps"] || []
 
       # Sort: non-beta alphabetically, then beta alphabetically
       @aspsps = raw_aspsps.map(&:with_indifferent_access).sort_by { |a| [ a[:beta] ? 1 : 0, a[:name].to_s.downcase ] }
-    rescue Provider::EnableBanking::EnableBankingError => e
-      Rails.logger.error "Enable Banking API error in select_bank: #{e.message}"
-      @error_message = e.message
-      @aspsps = []
+    rescue StandardError => error
+      return consent_failure(error)
     end
 
     render layout: false
@@ -123,107 +118,31 @@ class EnableBankingItemsController < ApplicationController
 
   # Initiate authorization for a selected bank
   def authorize
-    aspsp_name = params[:aspsp_name]
-    psu_type   = params[:psu_type].presence || "personal"
-
-    unless aspsp_name.present?
-      redirect_to settings_providers_path, alert: t(".bank_required", default: "Please select a bank.")
-      return
+    unless params[:aspsp_name].is_a?(String) && params[:aspsp_name].present?
+      return redirect_to settings_providers_path, alert: t(".bank_required", default: "Please select a bank."), status: :see_other
     end
 
-    begin
-      target_item = if params[:new_connection] == "true"
-        Current.family.enable_banking_items.create!(
-          name: "Enable Banking Connection",
-          country_code: @enable_banking_item.country_code,
-          application_id: @enable_banking_item.application_id,
-          client_certificate: @enable_banking_item.client_certificate
-        )
-      else
-        @enable_banking_item
-      end
-
-      # Capture PSU IP for use in background sync PSU headers
-      target_item.update(last_psu_ip: request.remote_ip) if request.remote_ip.present?
-
-      language = I18n.locale.to_s.split("-").first
-
-      # begin_authorization! re-fetches ASPSP metadata and auto-selects the best
-      # auth method (REDIRECT > DECOUPLED > EMBEDDED). Decoupled/MFA banks proceed
-      # through Enable Banking's hosted SCA page rather than being blocked.
-      redirect_url = target_item.begin_authorization!(
-        aspsp_name: aspsp_name,
-        redirect_url: enable_banking_callback_url,
-        state: target_item.id,
-        psu_type: psu_type,
-        language: language
-      )
-
-      safe_redirect_to_enable_banking(
-        redirect_url,
-        fallback_path: settings_providers_path,
-        fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again.")
-      )
-    rescue Provider::EnableBanking::EnableBankingError => e
-      if e.message.include?("REDIRECT_URI_NOT_ALLOWED")
-        Rails.logger.error "Enable Banking redirect URI not allowed: #{e.message}"
-        redirect_to settings_providers_path, alert: t(".redirect_uri_not_allowed",
-          default: "Redirect not allowed. Configure `%{callback_url}` in your Enable Banking application settings.",
-          callback_url: enable_banking_callback_url)
-      else
-        Rails.logger.error "Enable Banking authorization error: #{e.message}"
-        redirect_to settings_providers_path, alert: t(".authorization_failed",
-          default: "Failed to start authorization: %{message}", message: e.message)
-      end
-    rescue => e
-      Rails.logger.error "Unexpected error in authorize: #{e.class}: #{e.message}"
-      redirect_to settings_providers_path, alert: t(".unexpected_error", default: "An unexpected error occurred. Please try again.")
-    end
+    target = params[:new_connection] == "true" ? lifecycle.duplicate : @enable_banking_item
+    redirect_url = EnableBankingItem::Lifecycle.new(item: target, actor: Current.user).begin_authorization!(
+      aspsp_name: params[:aspsp_name], redirect_url: enable_banking_callback_url,
+      psu_type: params[:psu_type].presence || "personal", language: I18n.locale.to_s.split("-").first, last_psu_ip: request.remote_ip)
+    safe_redirect_to_enable_banking(redirect_url, fallback_path: settings_providers_path,
+      fallback_alert: t("enable_banking_items.consent.unavailable"))
+  rescue StandardError => error
+    consent_failure(error)
   end
 
   # Handle OAuth callback from Enable Banking
   def callback
-    code = params[:code]
-    state = params[:state]
-    error = params[:error]
-    error_description = params[:error_description]
-
-    if error.present?
-      Rails.logger.error "Enable Banking callback error: #{error} - #{error_description}"
-      redirect_to settings_providers_path, alert: t(".authorization_error", default: "Authorization failed: %{error}", error: error_description || error)
-      return
+    command = EnableBankingItem::Lifecycle.from_state(params[:state], actor: Current.user)
+    if params[:error].present?
+      command.authorization_failed!
+      return consent_failure
     end
-
-    unless code.present? && state.present?
-      redirect_to settings_providers_path, alert: t(".invalid_callback", default: "Invalid callback parameters.")
-      return
-    end
-
-    # Find the enable_banking_item by ID from state
-    enable_banking_item = Current.family.enable_banking_items.find_by(id: state)
-
-    unless enable_banking_item.present?
-      redirect_to settings_providers_path, alert: t(".item_not_found", default: "Connection not found.")
-      return
-    end
-
-    # Refresh PSU IP on callback (user's browser is present here)
-    enable_banking_item.update(last_psu_ip: request.remote_ip) if request.remote_ip.present?
-
-    begin
-      enable_banking_item.complete_authorization(code: code)
-
-      # Trigger sync to process accounts
-      enable_banking_item.sync_later
-
-      redirect_to accounts_path, notice: t(".success", default: "Successfully connected to your bank. Your accounts are being synced.")
-    rescue Provider::EnableBanking::EnableBankingError => e
-      Rails.logger.error "Enable Banking session creation error: #{e.message}"
-      redirect_to settings_providers_path, alert: t(".session_failed", default: "Failed to complete authorization: %{message}", message: e.message)
-    rescue => e
-      Rails.logger.error "Unexpected error in callback: #{e.class}: #{e.message}"
-      redirect_to settings_providers_path, alert: t(".unexpected_error", default: "An unexpected error occurred. Please try again.")
-    end
+    command.complete_authorization(code: params[:code], last_psu_ip: request.remote_ip)
+    redirect_to accounts_path, notice: t(".success", default: "Successfully connected to your bank. Your accounts are being synced."), status: :see_other
+  rescue StandardError => error
+    consent_failure(error)
   end
 
   # Show bank selection for a new connection using credentials from an existing item
@@ -235,27 +154,12 @@ class EnableBankingItemsController < ApplicationController
 
   # Re-authorize an expired session
   def reauthorize
-    begin
-      language = I18n.locale.to_s.split("-").first
-
-      # Route through the shared path so reauthorization re-selects the same auth
-      # method (decoupled banks included) instead of falling back to a default.
-      redirect_url = @enable_banking_item.begin_authorization!(
-        redirect_url: enable_banking_callback_url,
-        state: @enable_banking_item.id,
-        language: language
-      )
-
-      safe_redirect_to_enable_banking(
-        redirect_url,
-        fallback_path: settings_providers_path,
-        fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again.")
-      )
-    rescue Provider::EnableBanking::EnableBankingError => e
-      Rails.logger.error "Enable Banking reauthorization error: #{e.message}"
-      redirect_to settings_providers_path, alert: t(".reauthorization_failed",
-        default: "Failed to re-authorize: %{message}", message: e.message)
-    end
+    redirect_url = lifecycle.begin_authorization!(redirect_url: enable_banking_callback_url,
+      language: I18n.locale.to_s.split("-").first, last_psu_ip: request.remote_ip)
+    safe_redirect_to_enable_banking(redirect_url, fallback_path: settings_providers_path,
+      fallback_alert: t("enable_banking_items.consent.unavailable"))
+  rescue StandardError => error
+    consent_failure(error)
   end
 
   # Link accounts from Enable Banking to internal accounts
@@ -549,6 +453,24 @@ class EnableBankingItemsController < ApplicationController
 
   private
 
+    def lifecycle
+      EnableBankingItem::Lifecycle.new(item: @enable_banking_item, actor: Current.user)
+    end
+
+    def consent_failure(error = nil)
+      report_consent_failure(error) if error
+      redirect_to settings_providers_path, alert: t("enable_banking_items.consent.unavailable"), status: :see_other
+    end
+
+    def report_consent_failure(error)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "warning", source: self.class.name,
+        provider_key: "enable_banking", family_id: Current.family.id,
+        message: "Enable Banking consent operation was not completed",
+        metadata: { item_id: @enable_banking_item&.id, action: action_name, error_class: error.class.name })
+    rescue StandardError
+      nil
+    end
+
     def set_enable_banking_item
       @enable_banking_item = Current.family.enable_banking_items.find(params[:id])
     end
@@ -592,7 +514,7 @@ class EnableBankingItemsController < ApplicationController
           uri.host == trusted_host || uri.host.end_with?(".#{trusted_host}")
         end
       rescue URI::InvalidURIError => e
-        Rails.logger.warn("Enable Banking invalid redirect URL: #{url.inspect} - #{e.message}")
+        report_consent_failure(e)
         false
       end
     end
@@ -601,7 +523,7 @@ class EnableBankingItemsController < ApplicationController
       if valid_enable_banking_redirect_url?(redirect_url)
         redirect_to redirect_url, allow_other_host: true
       else
-        Rails.logger.warn("Enable Banking redirect blocked - invalid URL: #{redirect_url.inspect}")
+        report_consent_failure(ArgumentError.new)
         redirect_to fallback_path, alert: fallback_alert
       end
     end

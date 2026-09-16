@@ -1,5 +1,5 @@
 class MonobankItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -219,4 +219,6 @@ class MonobankItem < ApplicationRecord
         { linked: linked, unlinked: unlinked, total: rows.size }
       end
     end
+
+  guard_legacy_writes import_latest_monobank_data: :ingest, process_accounts: :publish
 end

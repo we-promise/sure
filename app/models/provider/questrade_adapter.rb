@@ -41,7 +41,7 @@ class Provider::QuestradeAdapter < Provider::Base
 
   # Build a Questrade provider instance with family-specific credentials
   # @param family [Family] The family to get credentials for (required)
-  # @return [Provider::Questrade, nil] Returns nil if credentials are not configured
+  # @return [QuestradeItem::CredentialSession::Client, nil] A guarded legacy facade
   def self.build_provider(family: nil)
     return nil unless family.present?
 

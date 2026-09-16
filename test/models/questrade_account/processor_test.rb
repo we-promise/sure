@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../../support/questrade_fixture_fence_helper"
 
 class QuestradeAccount::ProcessorTest < ActiveSupport::TestCase
+  include QuestradeFixtureFenceHelper
   setup do
     @family = families(:empty)
     @questrade_item = @family.questrade_items.create!(name: "Test", refresh_token: "dummy-token")

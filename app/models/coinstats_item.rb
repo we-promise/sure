@@ -1,7 +1,7 @@
 # Represents a CoinStats API connection for a family.
 # Stores credentials and manages associated wallet and exchange portfolio accounts.
 class CoinstatsItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -153,4 +153,6 @@ class CoinstatsItem < ApplicationRecord
   def exchange_configured?
     exchange_portfolio_id.present? && exchange_connection_id.present?
   end
+
+  guard_legacy_writes import_latest_coinstats_data: :ingest, process_accounts: :publish
 end

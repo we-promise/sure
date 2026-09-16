@@ -59,63 +59,94 @@ class SophtronAccount < ApplicationRecord
   # @return [Boolean] true if save was successful
   # @raise [ActiveRecord::RecordInvalid] if validation fails
   def upsert_sophtron_snapshot!(account_snapshot)
-    # Convert to symbol keys or handle both string and symbol keys
-    snapshot = account_snapshot.with_indifferent_access
-    account_id = first_present(snapshot, :account_id, :id, :AccountID)
-    account_name = first_present(snapshot, :account_name, :name, :AccountName)
-    account_number = first_present(snapshot, :account_number, :AccountNumber)
-    currency = first_present(snapshot, :balance_currency, :currency, :BalanceCurrency, :Currency)
-    balance = first_present(snapshot, :balance, :account_balance, :AccountBalance, :Balance)
-    available_balance = first_present(snapshot, :"available-balance", :available_balance, :AvailableBalance)
-    account_type = first_present(snapshot, :account_type, :type, :AccountType)
-    account_sub_type = first_present(snapshot, :sub_type, :account_sub_type, :AccountSubType, :SubType)
-    last_updated = first_present(snapshot, :last_updated, :LastUpdated)
-    institution_name = first_present(snapshot, :institution_name, :InstitutionName).presence || sophtron_item&.institution_name
-    user_institution_id = first_present(snapshot, :user_institution_id, :UserInstitutionID).presence || sophtron_item&.user_institution_id
-
-    # Map Sophtron field names to our field names
-    assign_attributes(
-      name: account_name,
-      account_id: account_id,
-      currency: parse_currency(currency) || "USD",
-      balance: parse_balance(balance),
-      available_balance: parse_balance(available_balance),
-      account_type: account_type.presence || "unknown",
-      account_sub_type: account_sub_type.presence || "unknown",
-      last_updated: parse_balance_date(last_updated),
-      account_status: first_present(snapshot, :account_status, :status, :AccountStatus, :Status),
-      account_number_mask: snapshot[:account_number_mask].presence || mask_account_number(account_number),
-      institution_metadata: {
-        name: institution_name,
-        user_institution_id: user_institution_id
-      }.compact,
-      raw_payload: account_snapshot,
-      customer_id: first_present(snapshot, :customer_id, :CustomerID) || customer_id,
-      member_id: first_present(snapshot, :member_id, :MemberID) || member_id
-    )
-    self.manual_sync = true if new_record? && sophtron_item&.manual_sync?
-
-    save!
+    SophtronItem::LegacyAccess.with_account(self, operation: :ingest, allow_new: true) do |current, _sync|
+      result = current.send(:write_sophtron_snapshot!, account_snapshot)
+      reload unless current.equal?(self)
+      result
+    end
   end
 
-  # Stores raw transaction data from the Sophtron API.
-  #
-  # This method saves the raw transaction payload which will later be
-  # processed by SophtronAccount::Transactions::Processor to create
-  # actual Transaction records.
-  #
-  # @param transactions_snapshot [Array<Hash>] Array of raw transaction data
-  # @return [Boolean] true if save was successful
-  # @raise [ActiveRecord::RecordInvalid] if validation fails
   def upsert_sophtron_transactions_snapshot!(transactions_snapshot)
-    assign_attributes(
-      raw_transactions_payload: transactions_snapshot
-    )
+    SophtronItem::LegacyAccess.with_account(self, operation: :ingest) do |current, _sync|
+      result = current.update!(raw_transactions_payload: transactions_snapshot)
+      reload
+      result
+    end
+  end
 
-    save!
+  def destroy
+    return super if new_record? || destroyed?
+
+    SophtronItem::LegacyAccess.with_account(self, operation: :lifecycle) do |current|
+      # Retain unlink's Account/source locks until the source itself is removed;
+      # a relink or reparent cannot slip between detach and destruction.
+      Account.transaction do
+        if destroyed_by_association&.active_record == SophtronItem
+          # The parent already detached its links before starting its destroy
+          # transaction. Do not acquire a new Account lock after earlier child
+          # source locks if a concurrent link slipped into that interval.
+          item = current.sophtron_item
+          current.lock!
+          Provider::AccountData::LegacyWriterFence.scoped_accounts!(item, [ current ])
+          if AccountProvider.uncached { AccountProvider.where(provider_type: "SophtronAccount", provider_id: current.id).exists? }
+            raise Provider::AccountData::LegacyWriterFence::OwnershipChanged, "Sophtron account was relinked during item destruction"
+          end
+        else
+          result = current.sophtron_item.unlink_account!(current)
+          if result[:error].present?
+            raise ActiveRecord::RecordNotDestroyed.new("Sophtron link could not be removed", self)
+          end
+        end
+        reload
+        super
+      end
+    end
   end
 
   private
+
+    def write_sophtron_snapshot!(account_snapshot)
+      # Convert to symbol keys or handle both string and symbol keys
+      snapshot = account_snapshot.with_indifferent_access
+      account_id = first_present(snapshot, :account_id, :id, :AccountID)
+      if persisted? && account_id.to_s != self.account_id.to_s
+        raise Provider::AccountData::LegacyWriterFence::OwnershipChanged, "Snapshot identifies another Sophtron account"
+      end
+      account_name = first_present(snapshot, :account_name, :name, :AccountName)
+      account_number = first_present(snapshot, :account_number, :AccountNumber)
+      currency = first_present(snapshot, :balance_currency, :currency, :BalanceCurrency, :Currency)
+      balance = first_present(snapshot, :balance, :account_balance, :AccountBalance, :Balance)
+      available_balance = first_present(snapshot, :"available-balance", :available_balance, :AvailableBalance)
+      account_type = first_present(snapshot, :account_type, :type, :AccountType)
+      account_sub_type = first_present(snapshot, :sub_type, :account_sub_type, :AccountSubType, :SubType)
+      last_updated = first_present(snapshot, :last_updated, :LastUpdated)
+      institution_name = first_present(snapshot, :institution_name, :InstitutionName).presence || sophtron_item&.institution_name
+      user_institution_id = first_present(snapshot, :user_institution_id, :UserInstitutionID).presence || sophtron_item&.user_institution_id
+
+      # Map Sophtron field names to our field names
+      assign_attributes(
+        name: account_name,
+        account_id: account_id,
+        currency: parse_currency(currency) || "USD",
+        balance: parse_balance(balance),
+        available_balance: parse_balance(available_balance),
+        account_type: account_type.presence || "unknown",
+        account_sub_type: account_sub_type.presence || "unknown",
+        last_updated: parse_balance_date(last_updated),
+        account_status: first_present(snapshot, :account_status, :status, :AccountStatus, :Status),
+        account_number_mask: snapshot[:account_number_mask].presence || mask_account_number(account_number),
+        institution_metadata: {
+          name: institution_name,
+          user_institution_id: user_institution_id
+        }.compact,
+        raw_payload: account_snapshot,
+        customer_id: first_present(snapshot, :customer_id, :CustomerID) || customer_id,
+        member_id: first_present(snapshot, :member_id, :MemberID) || member_id
+      )
+      self.manual_sync = true if new_record? && sophtron_item&.manual_sync?
+
+      save!
+    end
 
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' for Sophtron account #{id}, defaulting to USD")

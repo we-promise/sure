@@ -1,0 +1,29 @@
+<%= content_for :page_title, t("provider_connections.edit.title") %>
+
+<div class="space-y-4">
+  <%= render DS::Link.new(text: t("provider_connections.edit.back"), href: settings_providers_path, icon: "arrow-left") %>
+  <% if native_account_setup_available?(@form.connection) %>
+    <%= render DS::Link.new(text: t("provider_connections.account_setup.open"), href: provider_connection_account_setup_path(@form.connection), icon: "plus") %>
+  <% end %>
+  <% if native_disconnect_available?(@form.connection) %>
+    <%= render DS::Link.new(text: t("provider_connections.disconnect.open"), href: provider_connection_disconnect_path(@form.connection), icon: "unplug") %>
+  <% end %>
+  <%= render DS::Card.new do %>
+    <h2 class="text-lg font-medium text-primary"><%= @form.connection.name %></h2>
+    <p class="mt-2 text-sm text-secondary"><%= t("provider_connections.edit.description") %></p>
+
+    <%= styled_form_with scope: :provider_connection, url: provider_connection_path(@form.connection), method: :patch,
+                         class: "mt-4 space-y-4", data: { turbo_frame: "_top" } do |form| %>
+      <%= form.hidden_field :form_token, value: @form.token %>
+      <%= form.text_field :name, label: t("provider_connections.edit.name"), value: @form.connection.name, required: true %>
+      <%= form.date_field :sync_start_date, label: t("provider_connections.edit.sync_start_date"), value: @form.connection.sync_start_date&.to_date&.iso8601 %>
+      <% @form.credential_fields.each do |field| %>
+        <%= form.text_field field, label: t("provider_connections.edit.credentials.#{field}"), type: :password,
+                            value: "", autocomplete: "new-password", placeholder: t("provider_connections.edit.keep_credential") %>
+      <% end %>
+      <div class="flex justify-end">
+        <%= render DS::Button.new(text: t("provider_connections.edit.save"), type: "submit") %>
+      </div>
+    <% end %>
+  <% end %>
+</div>

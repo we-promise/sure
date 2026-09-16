@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../../support/akahu_fixture_fence_helper"
 
 class AkahuItem::ImporterTest < ActiveSupport::TestCase
+  include AkahuFixtureFenceHelper
   class FakeAkahuProvider
     attr_reader :transaction_calls
 
@@ -112,12 +114,10 @@ class AkahuItem::ImporterTest < ActiveSupport::TestCase
   test "removes pending transactions that disappear from latest pending response" do
     pending = [ pending_transaction(description: "Pending card auth", amount: -8.00) ]
     import_with(pending_transactions: pending, posted_transactions: [])
-    process_transactions
 
     assert_equal 1, pending_entries.count
 
     import_with(pending_transactions: [], posted_transactions: [])
-    process_transactions
 
     @akahu_account.reload
     assert_empty pending_entries
@@ -127,12 +127,10 @@ class AkahuItem::ImporterTest < ActiveSupport::TestCase
   test "keeps unchanged pending transactions without creating duplicates" do
     pending = [ pending_transaction(description: "Pending card auth", amount: -8.00) ]
     import_with(pending_transactions: pending, posted_transactions: [])
-    process_transactions
 
     original_entry = pending_entries.first
 
     import_with(pending_transactions: pending, posted_transactions: [])
-    process_transactions
 
     assert_equal 1, pending_entries.count
     assert_equal original_entry.id, pending_entries.first.id
@@ -140,12 +138,10 @@ class AkahuItem::ImporterTest < ActiveSupport::TestCase
 
   test "replaces changed pending transactions" do
     import_with(pending_transactions: [ pending_transaction(description: "Pending card auth", amount: -8.00) ], posted_transactions: [])
-    process_transactions
 
     original_entry = pending_entries.first
 
     import_with(pending_transactions: [ pending_transaction(description: "Pending card auth", amount: -10.00) ], posted_transactions: [])
-    process_transactions
 
     assert_equal 1, pending_entries.count
     replacement_entry = pending_entries.first
@@ -156,12 +152,10 @@ class AkahuItem::ImporterTest < ActiveSupport::TestCase
   test "preserves existing pending transactions when pending fetch fails" do
     pending = [ pending_transaction(description: "Pending card auth", amount: -8.00) ]
     import_with(pending_transactions: pending, posted_transactions: [])
-    process_transactions
 
     original_entry = pending_entries.first
 
     import_with(posted_transactions: [], pending_error: "Akahu pending unavailable")
-    process_transactions
 
     assert_equal 1, pending_entries.count
     assert_equal original_entry.id, pending_entries.first.id
@@ -171,7 +165,6 @@ class AkahuItem::ImporterTest < ActiveSupport::TestCase
   test "posted transaction can claim matching pending before stale pending pruning" do
     pending = [ pending_transaction(description: "Pending card auth", amount: -8.00, date: "2026-01-15") ]
     import_with(pending_transactions: pending, posted_transactions: [])
-    process_transactions
 
     original_entry = pending_entries.first
     import_with(
@@ -186,7 +179,6 @@ class AkahuItem::ImporterTest < ActiveSupport::TestCase
         }
       ]
     )
-    process_transactions
 
     original_entry.reload
     assert_empty pending_entries
@@ -202,11 +194,12 @@ class AkahuItem::ImporterTest < ActiveSupport::TestCase
         pending_transactions: pending_transactions,
         pending_error: pending_error
       )
-      AkahuItem::Importer.new(@akahu_item, akahu_provider: provider).import
-    end
-
-    def process_transactions
-      AkahuAccount::Transactions::Processor.new(@akahu_account.reload).process
+      AkahuItem::LegacyAccess.with_item(@akahu_item) do |current|
+        result = AkahuItem::Importer.new(current, akahu_provider: provider).import
+        receipt = result.fetch(:pending_inventories, {})[@akahu_account.id]
+        AkahuAccount::Transactions::Processor.new(@akahu_account.reload, pending_inventory: receipt).process
+        result
+      end
     end
 
     def pending_entries

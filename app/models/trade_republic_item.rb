@@ -1,5 +1,5 @@
 class TradeRepublicItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, LegacyWriterGuard
 
   # The PIN is accepted only for the authentication request. It is never
   # persisted; session restoration uses the encrypted session blob instead.
@@ -211,4 +211,6 @@ class TradeRepublicItem < ApplicationRecord
       days: days
     }
   end
+
+  guard_legacy_writes import_latest_data: :ingest, process_accounts: :publish
 end

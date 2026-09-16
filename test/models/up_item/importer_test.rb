@@ -63,12 +63,20 @@ class UpItem::ImporterTest < ActiveSupport::TestCase
       currency: "AUD"
     )
     AccountProvider.create!(account: @account, provider: @up_account)
+
+    # These snapshot/normalization tests retain fixture transactions. Real
+    # advisory admission is exercised by UpItem::LegacyWriterTest.
+    Provider::AccountData::LegacyWriterFence.stubs(:with_item).with(@up_item, operation: :ingest).yields(@up_item)
+    Provider::AccountData::LegacyWriterFence.stubs(:scoped_accounts!).with(@up_item, [ @up_account ]).returns([ @up_account ])
+    UpItem::LegacyWriter.stubs(:with_account).with(@up_account).yields(@up_account)
+    UpItem::LegacyWriter.stubs(:with_account).with(@up_account, operation: :ingest).yields(@up_account)
   end
 
   test "imports account snapshot and stores transactions" do
     provider = FakeUpProvider.new
 
-    result = UpItem::Importer.new(@up_item, up_provider: provider).import
+    @up_item.stubs(:up_provider).returns(provider)
+    result = UpItem::Importer.new(@up_item).import
 
     assert result[:success]
     assert_equal 1, result[:accounts_updated]
@@ -116,7 +124,8 @@ class UpItem::ImporterTest < ActiveSupport::TestCase
 
     def import_with(transactions:)
       provider = FakeUpProvider.new(transactions: transactions)
-      UpItem::Importer.new(@up_item, up_provider: provider).import
+      @up_item.stubs(:up_provider).returns(provider)
+      UpItem::Importer.new(@up_item).import
     end
 
     def process_transactions

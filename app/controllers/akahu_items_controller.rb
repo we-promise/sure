@@ -1,13 +1,18 @@
 class AkahuItemsController < ApplicationController
+  include RetiredProviderRouting
+  self.retired_provider_key = "akahu"
+  self.route_live_provider_management = true
+
   before_action :set_akahu_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
   before_action :require_admin!, only: [
     :new, :create, :preload_accounts, :select_accounts, :link_accounts,
     :select_existing_account, :link_existing_account, :edit, :update,
     :destroy, :sync, :setup_accounts, :complete_account_setup
   ]
+  rescue_from StandardError, with: :render_lifecycle_failure
 
   def index
-    @akahu_items = Current.family.akahu_items.active.ordered
+    @akahu_items = legacy_akahu_items
     render layout: "settings"
   end
 
@@ -19,14 +24,15 @@ class AkahuItemsController < ApplicationController
   end
 
   def edit
+    AkahuItem::LegacyAccess.with_item(@akahu_item, operation: :lifecycle) { |current| @akahu_item = current }
+    redirect_to settings_providers_path, status: :see_other
   end
 
   def create
-    @akahu_item = Current.family.akahu_items.build(akahu_item_params)
-    @akahu_item.name = t("akahu_items.provider_panel.default_connection_name") if @akahu_item.name.blank?
-
-    if @akahu_item.save
-      @akahu_item.sync_later
+    attributes = akahu_item_params.to_h
+    attributes["name"] = t("akahu_items.provider_panel.default_connection_name") if attributes["name"].blank?
+    @akahu_item = AkahuItem::Lifecycle.create(family: Current.family, actor: Current.user, attributes: attributes)
+    if @akahu_item.persisted?
       render_provider_panel(:notice, t(".success"))
     else
       render_provider_panel_error(@akahu_item.errors.full_messages.join(", "))
@@ -34,7 +40,8 @@ class AkahuItemsController < ApplicationController
   end
 
   def update
-    if @akahu_item.update(update_params)
+    @akahu_item = lifecycle(@akahu_item).update_settings(update_params)
+    if @akahu_item.errors.empty?
       render_provider_panel(:notice, t(".success"))
     else
       render_provider_panel_error(@akahu_item.errors.full_messages.join(", "))
@@ -42,16 +49,12 @@ class AkahuItemsController < ApplicationController
   end
 
   def destroy
-    @akahu_item.unlink_all!(dry_run: false)
-    @akahu_item.destroy_later
+    lifecycle(@akahu_item).disconnect(dry_run: false, schedule: true)
     redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-  rescue => e
-    Rails.logger.warn("Akahu unlink during destroy failed: #{e.class} - #{e.message}")
-    redirect_to settings_providers_path, alert: t(".unlink_failed"), status: :see_other
   end
 
   def sync
-    @akahu_item.sync_later unless @akahu_item.syncing?
+    AkahuItem::SyncRequest.new(item: @akahu_item, actor: Current.user).call
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -60,11 +63,11 @@ class AkahuItemsController < ApplicationController
   end
 
   def preload_accounts
-    akahu_item = requested_akahu_item
-    return render json: { success: false, error: "no_credentials", has_accounts: false } unless akahu_item.credentials_configured?
+    @akahu_item = requested_akahu_item
+    return render json: { success: false, error: "no_credentials", has_accounts: false } unless @akahu_item.credentials_configured?
 
-    error = fetch_akahu_accounts_from_api(akahu_item)
-    render json: { success: error.blank?, error_message: error, has_accounts: akahu_item.akahu_accounts.exists? }
+    result = lifecycle(@akahu_item).discover
+    render json: { success: true, error_message: nil, has_accounts: result.fetch(:item).akahu_accounts.exists? }
   end
 
   def select_accounts
@@ -77,25 +80,21 @@ class AkahuItemsController < ApplicationController
       return
     end
 
-    @api_error = fetch_akahu_accounts_from_api(@akahu_item)
-    @akahu_accounts = @akahu_item.akahu_accounts
-      .left_joins(:account_provider)
-      .where(account_providers: { id: nil })
-      .order(:name)
+    discover_accounts(flow: :link_accounts)
 
     render layout: false
   end
 
   def link_accounts
-    akahu_item = requested_akahu_item
-    unless akahu_item.credentials_configured?
+    @akahu_item = requested_akahu_item
+    unless @akahu_item.credentials_configured?
       redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
 
     selected_ids = Array(params[:account_ids]).compact_blank
     if selected_ids.empty?
-      redirect_to select_accounts_akahu_items_path(akahu_item_id: akahu_item.id, accountable_type: params[:accountable_type], return_to: safe_return_to_path), alert: t(".no_accounts_selected")
+      redirect_to select_accounts_akahu_items_path(akahu_item_id: @akahu_item.id, accountable_type: params[:accountable_type], return_to: safe_return_to_path), alert: t(".no_accounts_selected")
       return
     end
 
@@ -105,34 +104,19 @@ class AkahuItemsController < ApplicationController
       return
     end
 
-    created_accounts = []
-
-    ActiveRecord::Base.transaction do
-      akahu_item.akahu_accounts.where(id: selected_ids).find_each do |akahu_account|
-        next if akahu_account.account_provider.present?
-
-        account = create_account_from_akahu(akahu_account, account_type)
-        AccountProvider.create!(account: account, provider: akahu_account)
-        created_accounts << account
-      end
-    end
-
-    akahu_item.sync_later if created_accounts.any?
+    result = lifecycle(@akahu_item).link_accounts(account_ids: selected_ids, account_type: account_type,
+      selection: selection_from_token(flow: :link_accounts))
+    created_accounts = result.fetch(:created_accounts)
 
     if created_accounts.any?
       redirect_to safe_return_to_path || accounts_path, notice: t(".success", count: created_accounts.count)
     else
-      redirect_to select_accounts_akahu_items_path(akahu_item_id: akahu_item.id, accountable_type: account_type, return_to: safe_return_to_path), alert: t(".link_failed")
+      redirect_to select_accounts_akahu_items_path(akahu_item_id: @akahu_item.id, accountable_type: account_type, return_to: safe_return_to_path), alert: t(".link_failed")
     end
   end
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
-
-    if @account.account_providers.exists?
-      redirect_to accounts_path, alert: t(".account_already_linked")
-      return
-    end
 
     @akahu_item = requested_akahu_item
     unless @akahu_item.credentials_configured?
@@ -140,11 +124,11 @@ class AkahuItemsController < ApplicationController
       return
     end
 
-    @api_error = fetch_akahu_accounts_from_api(@akahu_item)
-    @akahu_accounts = @akahu_item.akahu_accounts
-      .left_joins(:account_provider)
-      .where(account_providers: { id: nil })
-      .order(:name)
+    result = discover_accounts(flow: :link_existing_account, account_id: @account.id)
+    if result[:account_already_linked]
+      redirect_to accounts_path, alert: t(".account_already_linked")
+      return
+    end
     @return_to = safe_return_to_path
 
     render layout: false
@@ -152,37 +136,25 @@ class AkahuItemsController < ApplicationController
 
   def link_existing_account
     account = Current.family.accounts.find(params[:account_id])
-    akahu_item = requested_akahu_item
+    @akahu_item = requested_akahu_item
 
-    unless akahu_item.credentials_configured?
+    unless @akahu_item.credentials_configured?
       redirect_to settings_providers_path, alert: t("akahu_items.select_existing_account.no_credentials_configured")
       return
     end
 
-    akahu_account = akahu_item.akahu_accounts.find(params[:akahu_account_id])
-
-    if account.account_providers.exists?
-      redirect_to accounts_path, alert: t(".account_already_linked")
+    result = lifecycle(@akahu_item).link_existing_account(account_id: account.id, akahu_account_id: params[:akahu_account_id],
+      selection: selection_from_token(flow: :link_existing_account, account_id: account.id))
+    if result[:error]
+      redirect_to accounts_path, alert: t(".#{result.fetch(:error)}")
       return
     end
-
-    if akahu_account.account_provider.present?
-      redirect_to accounts_path, alert: t(".akahu_account_already_linked")
-      return
-    end
-
-    AccountProvider.create!(account: account, provider: akahu_account)
-    akahu_item.sync_later
-
+    account = result.fetch(:account)
     redirect_to safe_return_to_path || accounts_path, notice: t(".success", account_name: account.name)
   end
 
   def setup_accounts
-    @api_error = fetch_akahu_accounts_from_api(@akahu_item)
-    @akahu_accounts = @akahu_item.akahu_accounts
-      .left_joins(:account_provider)
-      .where(account_providers: { id: nil })
-      .order(:name)
+    discover_accounts(flow: :complete_account_setup, setup: true)
     @account_type_options = [
       [ t(".account_types.skip"), "skip" ],
       [ t(".account_types.depository"), "Depository" ],
@@ -197,29 +169,11 @@ class AkahuItemsController < ApplicationController
 
   def complete_account_setup
     account_types = params[:account_types] || {}
-    created_accounts = []
-    skipped_count = 0
-
-    ActiveRecord::Base.transaction do
-      account_types.each do |akahu_account_id, selected_type|
-        if selected_type.blank? || selected_type == "skip"
-          skipped_count += 1
-          next
-        end
-
-        next unless Provider::AkahuAdapter.supported_account_types.include?(selected_type)
-
-        akahu_account = @akahu_item.akahu_accounts.find_by(id: akahu_account_id)
-        next unless akahu_account
-        next if akahu_account.account_provider.present?
-
-        account = create_account_from_akahu(akahu_account, selected_type)
-        AccountProvider.create!(account: account, provider: akahu_account)
-        created_accounts << account
-      end
-    end
-
-    @akahu_item.sync_later if created_accounts.any?
+    account_types = account_types.to_unsafe_h if account_types.respond_to?(:to_unsafe_h)
+    result = lifecycle(@akahu_item).complete_account_setup(account_types: account_types,
+      selection: selection_from_token(flow: :complete_account_setup))
+    created_accounts = result.fetch(:created_accounts)
+    skipped_count = result.fetch(:skipped_count)
 
     flash[:notice] = if created_accounts.any?
       t(".success", count: created_accounts.count)
@@ -231,7 +185,7 @@ class AkahuItemsController < ApplicationController
 
     redirect_to accounts_path, status: :see_other
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-    Rails.logger.error("Akahu account setup failed: #{e.class} - #{e.message}")
+    capture_lifecycle_failure(e)
     redirect_to accounts_path, alert: t(".creation_failed"), status: :see_other
   end
 
@@ -256,59 +210,61 @@ class AkahuItemsController < ApplicationController
       Current.family.akahu_items.active.find_by!(id: params[:akahu_item_id])
     end
 
-    def fetch_akahu_accounts_from_api(akahu_item)
-      return t("akahu_items.setup_accounts.no_credentials") unless akahu_item.credentials_configured?
-
-      provider = akahu_item.akahu_provider
-      accounts = provider.get_accounts
-      accounts.each do |account_data|
-        account = account_data.with_indifferent_access
-        account_id = account[:_id].presence || account[:id].presence
-        next if account_id.blank? || account[:name].blank?
-
-        akahu_account = akahu_item.akahu_accounts.find_or_initialize_by(account_id: account_id.to_s)
-        akahu_account.upsert_akahu_snapshot!(account)
-      end
-
-      nil
-    rescue Provider::Akahu::AkahuError => e
-      Rails.logger.error("Akahu API error while fetching accounts: #{e.class}: #{e.message}")
-      t("akahu_items.setup_accounts.api_error")
-    rescue StandardError => e
-      Rails.logger.error("Unexpected error fetching Akahu accounts: #{e.class}: #{e.message}")
-      t("akahu_items.setup_accounts.api_error")
+    def lifecycle(item)
+      AkahuItem::Lifecycle.new(item: item, actor: Current.user)
     end
 
-    def create_account_from_akahu(akahu_account, account_type)
-      balance = akahu_account.current_balance || 0
-      balance = balance.abs if account_type.in?(%w[CreditCard Loan])
-      subtype = if account_type == "CreditCard"
-        "credit_card"
-      elsif account_type == "Depository" && akahu_account.suggested_account_type == account_type
-        akahu_account.suggested_subtype
-      elsif account_type == "Investment" && akahu_account.suggested_account_type == account_type
-        akahu_account.suggested_subtype
-      end
-      cash_balance = account_type == "Investment" ? 0 : balance
+    def selection_from_token(flow:, account_id: nil)
+      AkahuItem::Selection.from_token(params[:selection_token], actor: Current.user, flow: flow, account_id: account_id)
+    end
 
-      Account.create_and_sync(
-        {
-          family: Current.family,
-          name: akahu_account.name,
-          balance: balance,
-          cash_balance: cash_balance,
-          currency: akahu_account.currency || "NZD",
-          accountable_type: account_type,
-          accountable_attributes: subtype.present? ? { subtype: subtype } : {}
-        },
-        skip_initial_sync: true
-      )
+    def discover_accounts(**options)
+      result = lifecycle(@akahu_item).discover(**options)
+      @akahu_item = result.fetch(:item)
+      @akahu_accounts = result.fetch(:accounts)
+      @selection_token = result[:selection_token]
+      result
+    end
+
+    def legacy_akahu_items
+      Current.family.akahu_items.active.legacy_manageable.ordered
+    end
+
+    def render_lifecycle_failure(error)
+      # Preserve normal not-found and malformed-request behavior, including
+      # foreign-family lookups; do not turn them into successful redirects.
+      actions = %w[create edit update destroy sync preload_accounts select_accounts link_accounts
+        select_existing_account link_existing_account setup_accounts complete_account_setup]
+      unless actions.include?(action_name) && !error.is_a?(ActiveRecord::RecordNotFound) && !error.is_a?(ActionController::ParameterMissing)
+        raise error
+      end
+
+      capture_lifecycle_failure(error)
+      denied = AkahuItem::LegacyAccess::DENIAL_ERRORS.any? { |klass| error.is_a?(klass) }
+      status = denied ? :conflict : :service_unavailable
+      message = t("akahu_items.lifecycle.unavailable")
+      if request.format.json?
+        render json: { success: false, error: denied ? "ownership_changed" : "unavailable",
+          error_message: message, has_accounts: nil }, status: status
+      elsif turbo_frame_request? && action_name.in?(%w[create update])
+        render_provider_panel_error(message, status: status)
+      else
+        redirect_to settings_providers_path, alert: message, status: :see_other
+      end
+    end
+
+    def capture_lifecycle_failure(error)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "warning", source: self.class.name,
+        provider_key: "akahu", family: Current.family, message: "Akahu connection management failed",
+        metadata: { action: action_name, akahu_item_id: @akahu_item&.id, error_class: error.class.name })
+    rescue StandardError
+      nil
     end
 
     def render_provider_panel(flash_type, message)
       if turbo_frame_request?
         flash.now[flash_type] = message
-        @akahu_items = Current.family.akahu_items.active.ordered
+        @akahu_items = legacy_akahu_items
         render turbo_stream: [
           turbo_stream.replace(
             "akahu-providers-panel",
@@ -322,16 +278,16 @@ class AkahuItemsController < ApplicationController
       end
     end
 
-    def render_provider_panel_error(message)
+    def render_provider_panel_error(message, status: :unprocessable_entity)
       @error_message = message
       if turbo_frame_request?
         render turbo_stream: turbo_stream.replace(
           "akahu-providers-panel",
           partial: "settings/providers/akahu_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
+          locals: { error_message: @error_message, akahu_items: legacy_akahu_items }
+        ), status: status
       else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
+        redirect_to settings_providers_path, alert: @error_message, status: :see_other
       end
     end
 

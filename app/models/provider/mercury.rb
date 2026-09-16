@@ -1,3 +1,5 @@
+require "bigdecimal"
+
 class Provider::Mercury
   include HTTParty
   extend SslConfigurable
@@ -97,7 +99,79 @@ class Provider::Mercury
     raise MercuryError.new("Exception during GET request: #{e.message}", :request_failed)
   end
 
+  # Bounded, precise reads for shared ingestion. Legacy API methods retain their
+  # response shapes. Pagination references: docs.mercury.com/reference/getaccounts
+  # and docs.mercury.com/reference/listaccounttransactions.
+  def get_accounts_page(cursor: nil, limit: 1000)
+    validate_ingestion_limit!(limit)
+    raise MercuryError.new("Invalid account cursor", :invalid_response) unless cursor.nil? || (cursor.is_a?(String) && cursor.present?)
+    payload = get_ingestion_json("/accounts", limit: limit, order: "asc", start_after: cursor)
+    accounts = ingestion_records(payload, :accounts)
+    raise MercuryError.new("Invalid account page size", :invalid_response) if accounts.size > limit
+    next_cursor = accounts.size == limit ? accounts.last[:id] : nil
+    unless next_cursor.nil? || (next_cursor.is_a?(String) && next_cursor.present? && next_cursor != cursor)
+      raise MercuryError.new("Invalid account continuation", :invalid_response)
+    end
+    { items: accounts, next_cursor: next_cursor, evidence: payload }
+  end
+
+  def get_account_transactions_page(account_id, cursor: nil, start_date: nil, end_date: nil, limit: 1000)
+    validate_ingestion_limit!(limit)
+    unless cursor.nil? || (cursor.is_a?(String) && cursor.match?(/\A(?:0|[1-9]\d*)\z/))
+      raise MercuryError.new("Invalid transaction cursor", :invalid_response)
+    end
+    offset = cursor ? Integer(cursor, 10) : 0
+    payload = get_ingestion_json(
+      "/account/#{ERB::Util.url_encode(account_id.to_s)}/transactions",
+      start: ingestion_date(start_date), end: ingestion_date(end_date), offset: offset, limit: limit, order: "asc"
+    )
+    transactions = ingestion_records(payload, :transactions)
+    raise MercuryError.new("Invalid transaction page size", :invalid_response) if transactions.size > limit
+    consumed = offset + transactions.size
+    total = payload[:total]
+    if !total.nil? && (!total.is_a?(Integer) || total.negative? || consumed > total || (transactions.empty? && offset < total))
+      raise MercuryError.new("Invalid transaction total", :invalid_response)
+    end
+    more = total.nil? ? transactions.size == limit : consumed < total
+    { items: transactions, next_cursor: more ? consumed.to_s : nil, evidence: payload }
+  end
+
   private
+
+    def validate_ingestion_limit!(limit)
+      raise MercuryError.new("Invalid page limit", :invalid_response) unless limit.is_a?(Integer) && (1..1000).cover?(limit)
+    end
+
+    def ingestion_records(payload, key)
+      unless payload.is_a?(Hash) && payload[key].is_a?(Array) && payload[key].all? { |record| record.is_a?(Hash) } &&
+          payload[:error].blank? && payload[:errors].blank?
+        raise MercuryError.new("Invalid Mercury collection response", :invalid_response)
+      end
+      payload[key]
+    end
+
+    def ingestion_date(value)
+      return nil if value.nil?
+      return value.iso8601 if value.is_a?(Date) || value.is_a?(Time)
+      raise MercuryError.new("Invalid request date", :invalid_response) unless value.is_a?(String) && value.present?
+      value
+    end
+
+    def get_ingestion_json(path, **params)
+      query = URI.encode_www_form(params.compact)
+      response = self.class.get("#{base_url}#{path}?#{query}", headers: auth_headers)
+      unless response.code == 200
+        type = { 400 => :bad_request, 401 => :unauthorized, 403 => :access_forbidden, 404 => :not_found, 429 => :rate_limited }.fetch(response.code, :fetch_failed)
+        raise MercuryError.new("Mercury request failed (HTTP #{response.code})", type)
+      end
+      JSON.parse(response.body, symbolize_names: true, decimal_class: BigDecimal)
+    rescue MercuryError
+      raise
+    rescue JSON::ParserError, TypeError, ArgumentError
+      raise MercuryError.new("Invalid Mercury response", :invalid_response), cause: nil
+    rescue SocketError, Net::OpenTimeout, Net::ReadTimeout
+      raise MercuryError.new("Mercury request failed", :request_failed), cause: nil
+    end
 
     def auth_headers
       {

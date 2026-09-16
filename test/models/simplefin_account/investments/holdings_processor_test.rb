@@ -1,6 +1,9 @@
 require "test_helper"
+require_relative "../../../support/simplefin_fixture_fence_helper"
 
 class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
+  include SimplefinFixtureFenceHelper
+
   setup do
     @processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
   end

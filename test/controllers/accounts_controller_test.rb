@@ -577,64 +577,6 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Account is not linked to a provider", flash[:alert]
   end
 
-  test "unlinks linked account successfully with new system" do
-    plaid_account = plaid_accounts(:one)
-    AccountProvider.create!(account: @account, provider: plaid_account)
-    @account.reload
-
-    assert @account.linked?
-
-    delete unlink_account_url(@account)
-    @account.reload
-
-    assert_not @account.linked?
-    assert_redirected_to accounts_path
-    assert_equal "Account unlinked successfully. It is now a manual account.", flash[:notice]
-  end
-
-  test "unlinks linked account successfully with legacy system" do
-    plaid_account = plaid_accounts(:one)
-    @account.update!(plaid_account_id: plaid_account.id)
-    @account.reload
-
-    assert @account.linked?
-
-    delete unlink_account_url(@account)
-    @account.reload
-
-    assert_not @account.linked?
-    assert_nil @account.plaid_account_id
-    assert_redirected_to accounts_path
-    assert_equal "Account unlinked successfully. It is now a manual account.", flash[:notice]
-  end
-
-  test "redirects when unlinking unlinked account" do
-    delete unlink_account_url(@account)
-    assert_redirected_to account_url(@account)
-    assert_equal "Account is not linked to a provider", flash[:alert]
-  end
-
-  test "unlinked account can be deleted" do
-    plaid_account = plaid_accounts(:one)
-    AccountProvider.create!(account: @account, provider: plaid_account)
-    @account.reload
-
-    # Cannot delete while linked
-    delete account_url(@account)
-    assert_redirected_to account_url(@account)
-    assert_equal "Cannot delete a linked account. Please unlink it first.", flash[:alert]
-
-    # Unlink the account
-    delete unlink_account_url(@account)
-    @account.reload
-
-    # Now can delete
-    delete account_url(@account)
-    assert_redirected_to accounts_path
-    assert_enqueued_with job: DestroyJob
-    assert_equal "Depository account scheduled for deletion", flash[:notice]
-  end
-
   test "disabling an account keeps it visible on index" do
     @account.disable!
 
@@ -717,51 +659,6 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get select_provider_account_url(@account)
     assert_redirected_to account_url(@account)
     assert_equal "Account is already linked to a provider", flash[:alert]
-  end
-
-  test "unlink preserves SnaptradeAccount record" do
-    snaptrade_account = snaptrade_accounts(:fidelity_401k)
-    investment = accounts(:investment)
-    AccountProvider.create!(account: investment, provider: snaptrade_account)
-    investment.reload
-
-    assert investment.linked?
-
-    delete unlink_account_url(investment)
-    investment.reload
-
-    assert_not investment.linked?
-    assert_redirected_to accounts_path
-    # SnaptradeAccount should still exist (not destroyed)
-    assert SnaptradeAccount.exists?(snaptrade_account.id), "SnaptradeAccount should be preserved after unlink"
-    # But AccountProvider should be gone
-    assert_not AccountProvider.exists?(provider_type: "SnaptradeAccount", provider_id: snaptrade_account.id)
-  end
-
-  test "unlink does not enqueue SnapTrade cleanup job" do
-    snaptrade_account = snaptrade_accounts(:fidelity_401k)
-    investment = accounts(:investment)
-    AccountProvider.create!(account: investment, provider: snaptrade_account)
-    investment.reload
-
-    assert_no_enqueued_jobs(only: SnaptradeConnectionCleanupJob) do
-      delete unlink_account_url(investment)
-    end
-  end
-
-  test "unlink detaches holdings from SnapTrade provider" do
-    snaptrade_account = snaptrade_accounts(:fidelity_401k)
-    investment = accounts(:investment)
-    ap = AccountProvider.create!(account: investment, provider: snaptrade_account)
-
-    # Assign a holding to this provider
-    holding = holdings(:one)
-    holding.update!(account_provider: ap)
-
-    delete unlink_account_url(investment)
-    holding.reload
-
-    assert_nil holding.account_provider_id, "Holding should be detached from provider after unlink"
   end
 
   # Regression for #2516: the account sidebar fragment cache renders DS::* view

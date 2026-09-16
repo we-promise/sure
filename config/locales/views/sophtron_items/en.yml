@@ -1,6 +1,7 @@
 ---
 en:
   sophtron_items:
+    connection_unavailable: This connection is unavailable for this operation. Refresh the page and try again.
     defaults:
       name: Sophtron Connection
     new:

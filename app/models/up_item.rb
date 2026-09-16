@@ -1,5 +1,5 @@
 class UpItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -24,14 +24,26 @@ class UpItem < ApplicationRecord
 
   # Mark the item for deletion and enqueue the background destroy job.
   def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
+    Provider::AccountData::LegacyWriterFence.with_item(self, operation: :lifecycle) do |current|
+      current.update!(scheduled_for_deletion: true)
+      DestroyJob.perform_later(current)
+    end
+  end
+
+  # Keep background/direct destruction in the same permit as its dependent
+  # provider accounts. An outer unfenced transaction is rejected by the fence.
+  def destroy
+    return super if new_record? || destroyed?
+
+    Provider::AccountData::LegacyWriterFence.with_item(self, operation: :lifecycle) do
+      reload
+      super
+    end
   end
 
   # Run the importer to fetch the latest accounts/transactions from Up.
   def import_latest_up_data
-    provider = up_provider
-    unless provider
+    unless credentials_configured?
       DebugLogEntry.capture(
         category: "provider_sync_error",
         level: "error",
@@ -44,7 +56,9 @@ class UpItem < ApplicationRecord
       raise StandardError.new("Up provider is not configured")
     end
 
-    UpItem::Importer.new(self, up_provider: provider).import
+    UpItem::Importer.new(self).import
+  rescue Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::Busy
+    raise
   rescue => e
     DebugLogEntry.capture(
       category: "provider_sync_error",
@@ -69,6 +83,8 @@ class UpItem < ApplicationRecord
       else
         { up_account_id: up_account.id, success: true, result: result }
       end
+    rescue Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::Busy
+      raise
     rescue => e
       DebugLogEntry.capture(
         category: "provider_sync_error",
@@ -181,6 +197,9 @@ class UpItem < ApplicationRecord
   def credentials_configured?
     access_token.present?
   end
+
+  guard_legacy_writes import_latest_up_data: :ingest, process_accounts: :publish,
+    upsert_up_snapshot!: :ingest, schedule_account_syncs: :publish
 
   private
 

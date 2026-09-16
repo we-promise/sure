@@ -87,6 +87,22 @@ namespace :security do
       batch.each do |record|
         processed += 1
 
+        if model_class == SimplefinItem && !dry_run
+          begin
+            rewritten = SimplefinItem::ConnectionUpdate.with_locked_item(record) do |current|
+              next if filter_block && !filter_block.call(current)
+
+              # Read every rewritten field after admission and verified reload,
+              # including payloads changed since the batch was enumerated.
+              backfill_encrypted_record(current, fields)
+            end
+            updated += 1 if rewritten
+          rescue => e
+            failed << { id: record.id, error: e.class.name, message: "SimpleFIN encryption backfill failed" }
+          end
+          next
+        end
+
         # Skip if filter block returns false
         next if block_given? && !filter_block.call(record)
 
@@ -99,31 +115,7 @@ namespace :security do
         next if dry_run
 
         begin
-          # Read plaintext values safely
-          plaintext_values = {}
-          fields.each do |field|
-            value = safe_read_field(record, field)
-            plaintext_values[field] = value unless value.nil?
-          end
-
-          next if plaintext_values.empty?
-
-          # Use a temporary instance to encrypt values (avoids triggering
-          # validations/callbacks that might read other encrypted fields)
-          encryptor = model_class.new
-          plaintext_values.each do |field, value|
-            encryptor.send("#{field}=", value)
-          end
-
-          # Extract the encrypted values from the temporary instance
-          encrypted_attrs = {}
-          plaintext_values.keys.each do |field|
-            encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
-          end
-
-          # Write directly to database, bypassing callbacks/validations
-          record.update_columns(encrypted_attrs)
-          updated += 1
+          updated += 1 if backfill_encrypted_record(record, fields)
         rescue => e
           failed << { id: record.id, error: e.class.name, message: e.message }
         end
@@ -136,6 +128,28 @@ namespace :security do
       failed_count: failed.size,
       failed_samples: failed.take(3)
     }
+  end
+
+  def backfill_encrypted_record(record, fields)
+    plaintext_values = {}
+    fields.each do |field|
+      value = safe_read_field(record, field)
+      plaintext_values[field] = value unless value.nil?
+    end
+    return false if plaintext_values.empty?
+
+    # Use a temporary instance to encrypt values without validations/callbacks
+    # reading other encrypted fields. Preserve the other providers' write path.
+    encryptor = record.class.new
+    plaintext_values.each do |field, value|
+      encryptor.send("#{field}=", value)
+    end
+    encrypted_attrs = {}
+    plaintext_values.keys.each do |field|
+      encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
+    end
+    record.update_columns(encrypted_attrs)
+    true
   end
 
   # Safely read a field value, handling both encrypted and plaintext data.

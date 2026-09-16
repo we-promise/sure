@@ -1,0 +1,39 @@
+<%# locals: (catalog:) %>
+<div class="flex justify-end">
+  <%= render DS::Button.new(text: t("provider_connections.account_setup.refresh"),
+                            href: refresh_provider_connection_account_setup_path(catalog.connection),
+                            method: :post, variant: "secondary", icon: "refresh-cw", frame: "_top") %>
+</div>
+
+<% if catalog.external_accounts.empty? %>
+  <%= render DS::EmptyState.new(icon: "landmark", title: t("provider_connections.account_setup.empty_title"),
+                                description: t("provider_connections.account_setup.empty_description")) %>
+<% end %>
+
+<% catalog.external_accounts.each do |external| %>
+  <%= render DS::Card.new do %>
+    <h3 class="font-medium text-primary"><%= external.name %></h3>
+    <p class="mt-1 text-sm text-secondary"><%= external.currency %></p>
+    <div class="mt-4 space-y-4">
+      <%= render DS::Link.new(text: t("provider_connections.account_setup.create_new"),
+                              href: provider_connection_account_setup_path(catalog.connection, external_account_id: external.id), icon: "plus") %>
+      <% if catalog.existing_accounts.any? %>
+        <%= render DS::Disclosure.new(title: t("provider_connections.account_setup.link_existing")) do %>
+          <%= styled_form_with scope: nil, url: provider_connection_account_setup_path(catalog.connection), method: :get,
+                               namespace: "existing_#{external.id}", class: "space-y-3", data: { turbo_frame: "_top" } do |form| %>
+            <%= form.hidden_field :external_account_id, value: external.id %>
+            <%= form.select :account_id, catalog.existing_accounts.map { |account| [ account.name, account.id ] },
+                            { label: t("provider_connections.account_setup.existing_account"), prompt: t("provider_connections.account_setup.choose_account") },
+                            { required: true } %>
+            <%= render DS::Button.new(text: t("provider_connections.account_setup.review_link"), type: "submit", variant: "secondary") %>
+          <% end %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
+
+<% if catalog.next_cursor %>
+  <%= render DS::Link.new(text: t("provider_connections.account_setup.next_page"),
+                          href: provider_connection_account_setup_path(catalog.connection, after: catalog.next_cursor), icon: "arrow-right") %>
+<% end %>

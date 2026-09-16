@@ -42,9 +42,19 @@ class TradesController < ApplicationController
   def update
     return unless require_account_permission!(@entry.account)
 
-    if @entry.update(update_entry_params)
+    locked_account = @entry.account
+    updated = locked_account.with_lock do
+      @entry.lock!
+      raise ActiveRecord::RecordNotFound unless @entry.account_id == locked_account.id
+      @entry.entryable.lock!
+      next false unless @entry.update(update_entry_params)
+
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
+      true
+    end
+
+    if updated
       @entry.sync_account_later
 
       # Reload to ensure fresh state for turbo stream rendering

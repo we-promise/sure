@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "bigdecimal"
+
 class Provider::Wise
   include HTTParty
   extend SslConfigurable
@@ -98,9 +100,50 @@ class Provider::Wise
     get("/v1/borderless-accounts", query: { profileId: profile_id })
   end
 
+  def get_balances_page(profile_id, type: "STANDARD")
+    items = get_for_ingestion("/v4/profiles/#{ERB::Util.url_encode(profile_id.to_s)}/balances", query: { types: type })
+    checked_ingestion_page(items, evidence: items)
+  end
+
+  def get_borderless_accounts_page(profile_id)
+    payload = get_for_ingestion("/v1/borderless-accounts", query: { profileId: profile_id })
+    checked_ingestion_page(payload, evidence: payload)
+  end
+
+  def get_balance_statement_page(profile_id, balance_id, currency:, interval_start:, interval_end:)
+    payload = get_for_ingestion(
+      "/v1/profiles/#{ERB::Util.url_encode(profile_id.to_s)}/balance-statements/#{ERB::Util.url_encode(balance_id.to_s)}/statement.json",
+      query: { currency: currency, intervalStart: interval_start.to_time.utc.iso8601(3), intervalEnd: interval_end.to_time.utc.iso8601(3) }
+    )
+    raise WiseError.new("Invalid statement response", :invalid_response) unless payload.is_a?(Hash)
+    checked_ingestion_page(payload["transactions"], evidence: payload)
+  end
+
+  def get_transfers_page(profile_id, cursor: nil)
+    if cursor && !(cursor.is_a?(String) && cursor.match?(/\A\d+\z/))
+      raise WiseError.new("Invalid transfer cursor", :invalid_response)
+    end
+    offset = cursor ? Integer(cursor, 10) : 0
+    payload = get_for_ingestion("/v1/transfers", query: { profile: profile_id, limit: 100, offset: offset })
+    items = payload.is_a?(Hash) ? payload["content"] : payload
+    raise WiseError.new("Invalid transfer page size", :invalid_response) if items.is_a?(Array) && items.size > 100
+    checked_ingestion_page(items, next_cursor: items.is_a?(Array) && items.size == 100 ? (offset + 100).to_s : nil, evidence: payload)
+  end
+
+  def get_activities_page(profile_id, cursor: nil)
+    unless cursor.nil? || (cursor.is_a?(String) && cursor.present?)
+      raise WiseError.new("Invalid activity cursor", :invalid_response)
+    end
+    query = { size: 100 }
+    query[:cursor] = cursor if cursor
+    payload = get_for_ingestion("/v1/profiles/#{ERB::Util.url_encode(profile_id.to_s)}/activities", query: query)
+    raise WiseError.new("Invalid activities response", :invalid_response) unless payload.is_a?(Hash)
+    checked_ingestion_page(payload["activities"], next_cursor: payload["cursor"], evidence: payload)
+  end
+
   private
 
-    def get(path, query: {}, sca_headers: {})
+    def get(path, query: {}, sca_headers: {}, exact: false)
       response = self.class.get(
         "#{base_url}#{path}",
         headers: auth_headers.merge(sca_headers),
@@ -108,10 +151,10 @@ class Provider::Wise
       )
 
       if sca_retry?(response, already_retried: sca_headers.present?)
-        return get(path, query: query, sca_headers: sca_approval_headers(response))
+        return get(path, query: query, sca_headers: sca_approval_headers(response), exact: exact)
       end
 
-      handle_response(response)
+      handle_response(response, exact: exact)
     rescue WiseError
       raise
     rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
@@ -155,10 +198,10 @@ class Provider::Wise
       }
     end
 
-    def handle_response(response)
+    def handle_response(response, exact: false)
       case response.code
       when 200
-        JSON.parse(response.body)
+        exact ? JSON.parse(response.body, decimal_class: BigDecimal) : JSON.parse(response.body)
       when 401
         raise WiseError.new("Invalid API token", :unauthorized)
       when 403
@@ -173,6 +216,19 @@ class Provider::Wise
     end
 
     private
+
+      def get_for_ingestion(path, query: {})
+        with_rate_limit_retry { get(path, query: query, exact: true) }
+      rescue WiseError => error
+        raise WiseError.new("Wise account data request failed", error.error_type), cause: nil
+      end
+
+      def checked_ingestion_page(items, next_cursor: nil, evidence: nil)
+        unless items.is_a?(Array) && (next_cursor.nil? || (next_cursor.is_a?(String) && next_cursor.present?))
+          raise WiseError.new("Invalid paginated response", :invalid_response)
+        end
+        { items: items, next_cursor: next_cursor, evidence: evidence }
+      end
 
       # Retries only the failed window so a rate-limited request does not
       # restart earlier windows in a multi-window statement fetch.

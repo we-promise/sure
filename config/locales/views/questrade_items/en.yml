@@ -16,6 +16,7 @@ en:
         other: "%{count} institutions"
     errors:
       provider_not_configured: "Questrade provider is not configured"
+      credentials_in_use: "This Questrade connection is busy or its owner has changed. Refresh the page and try again."
 
     # Syncer status messages
     sync:

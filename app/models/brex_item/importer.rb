@@ -3,43 +3,65 @@
 class BrexItem::Importer
   attr_reader :brex_item, :brex_provider, :sync_start_date
 
-  def initialize(brex_item, brex_provider:, sync_start_date: nil)
+  def initialize(brex_item, brex_provider: nil, sync_start_date: nil)
     @brex_item = brex_item
     @brex_provider = brex_provider
     @sync_start_date = sync_start_date
+    @provided_context = BrexItem::LegacyAccess.transport_context(brex_item) if brex_provider
   end
 
   def import
-    Rails.logger.info "BrexItem::Importer - Starting import for item #{brex_item.id}"
-
-    accounts_data = fetch_accounts_data
-    return failed_result("Failed to fetch accounts data") unless accounts_data
-
-    store_item_snapshot(accounts_data)
-
-    account_result = import_accounts(accounts_data[:accounts].to_a)
-    transaction_result = import_transactions
-
-    brex_item.update!(status: :good) if account_result[:accounts_failed].zero? && transaction_result[:transactions_failed].zero?
-
-    {
-      success: account_result[:accounts_failed].zero? && transaction_result[:transactions_failed].zero?,
-      **account_result,
-      **transaction_result
-    }
+    BrexItem::LegacyAccess.with_item(brex_item) do |current|
+      BrexItem::LegacyAccess.assert_transport!
+      BrexItem::LegacyAccess.verify_transport!(current, @provided_context) if @provided_context
+      @brex_item = current
+      @transport_context = BrexItem::LegacyAccess.transport_context(current)
+      @brex_provider ||= current.brex_provider
+      raise Provider::Brex::BrexError.new("Brex provider is not configured", :not_configured) unless brex_provider
+      if brex_provider.is_a?(Provider::Brex) && (brex_provider.token != current.token ||
+          brex_provider.base_url != Provider::Brex.normalize_base_url(current.base_url))
+        raise BrexItem::LegacyAccess::Fence::OwnershipChanged, "Brex client does not match the admitted credentials"
+      end
+      import_admitted
+    end
   end
 
   private
 
+    def import_admitted
+      Rails.logger.info "BrexItem::Importer - Starting import for item #{brex_item.id}"
+
+      accounts_data = fetch_accounts_data
+      return failed_result("Failed to fetch accounts data") unless accounts_data
+
+      store_item_snapshot(accounts_data)
+
+      account_result = import_accounts(accounts_data[:accounts].to_a)
+      transaction_result = import_transactions
+
+      if account_result[:accounts_failed].zero? && transaction_result[:transactions_failed].zero?
+        BrexItem::LegacyAccess.with_snapshot(brex_item, expected_context: @transport_context) { |fresh| fresh.update!(status: :good) }
+      end
+
+      {
+        success: account_result[:accounts_failed].zero? && transaction_result[:transactions_failed].zero?,
+        **account_result,
+        **transaction_result
+      }
+    end
+
     def fetch_accounts_data
+      verify_request!
       accounts_data = brex_provider.get_accounts
 
-      unless accounts_data.is_a?(Hash)
+      unless accounts_data.is_a?(Hash) && accounts_data.with_indifferent_access[:accounts].is_a?(Array)
         Rails.logger.error "BrexItem::Importer - Invalid accounts_data format: expected Hash, got #{accounts_data.class}"
         return nil
       end
 
-      accounts_data
+      accounts_data.with_indifferent_access
+    rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue Provider::Brex::BrexError => e
       mark_requires_update_if_credentials_error(e)
       Rails.logger.error "BrexItem::Importer - Brex API error: #{e.message} trace_id=#{e.trace_id}"
@@ -54,7 +76,9 @@ class BrexItem::Importer
     end
 
     def store_item_snapshot(accounts_data)
-      brex_item.upsert_brex_snapshot!(accounts_data)
+      brex_item.upsert_brex_snapshot!(accounts_data, expected_context: @transport_context)
+    rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue => e
       Rails.logger.error "BrexItem::Importer - Failed to store accounts snapshot: #{e.message}"
       Sentry.capture_exception(e) do |scope|
@@ -88,6 +112,8 @@ class BrexItem::Importer
           accounts_created += 1
           all_existing_ids << account_id
         end
+      rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         accounts_failed += 1
         Rails.logger.error "BrexItem::Importer - Failed to import account #{account_id.presence || 'unknown'}: #{e.message}"
@@ -107,7 +133,7 @@ class BrexItem::Importer
       brex_account = brex_item.brex_accounts.find_or_initialize_by(account_id: account_id)
       brex_account.name ||= BrexAccount.name_for(account_data)
       brex_account.currency ||= BrexAccount.currency_code_from_money(account_data[:current_balance] || account_data[:available_balance] || account_data[:account_limit])
-      brex_account.upsert_brex_snapshot!(account_data)
+      brex_account.upsert_brex_snapshot!(account_data, expected_item_context: @transport_context)
       brex_account
     end
 
@@ -122,6 +148,8 @@ class BrexItem::Importer
         else
           transactions_failed += 1
         end
+      rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         transactions_failed += 1
         Rails.logger.error "BrexItem::Importer - Failed to fetch/store transactions for account #{brex_account.account_id}: #{e.message}"
@@ -134,24 +162,29 @@ class BrexItem::Importer
     end
 
     def fetch_and_store_transactions(brex_account)
+      brex_account = BrexItem::LegacyAccess.with_account(brex_account, operation: :ingest) { |fresh| fresh }
+      expected_context = BrexItem::LegacyAccess.source_context(brex_account)
       start_date = determine_sync_start_date(brex_account)
       Rails.logger.info "BrexItem::Importer - Fetching #{brex_account.account_kind} transactions for account #{brex_account.account_id} from #{start_date}"
 
+      verify_request!
       transactions_data = if brex_account.card?
         brex_provider.get_primary_card_transactions(start_date: start_date)
       else
         brex_provider.get_cash_transactions(brex_account.account_id, start_date: start_date)
       end
 
-      unless transactions_data.is_a?(Hash)
+      unless transactions_data.is_a?(Hash) && transactions_data.with_indifferent_access[:transactions].is_a?(Array)
         Rails.logger.error "BrexItem::Importer - Invalid transactions_data format for account #{brex_account.account_id}"
         return { success: false, transactions_count: 0, error: "Invalid response format" }
       end
 
-      transactions = transactions_data[:transactions].to_a
-      created_count = store_new_transactions(brex_account, transactions, window_start_date: start_date)
+      transactions = transactions_data.with_indifferent_access.fetch(:transactions)
+      created_count = store_new_transactions(brex_account, transactions, window_start_date: start_date, expected_context: expected_context)
 
       { success: true, transactions_count: created_count }
+    rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue Provider::Brex::BrexError => e
       mark_requires_update_if_credentials_error(e)
       Rails.logger.error "BrexItem::Importer - Brex API error for account #{brex_account.account_id}: #{e.message} trace_id=#{e.trace_id}"
@@ -165,7 +198,7 @@ class BrexItem::Importer
       { success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }
     end
 
-    def store_new_transactions(brex_account, transactions, window_start_date:)
+    def store_new_transactions(brex_account, transactions, window_start_date:, expected_context:)
       existing_payload = brex_account.raw_transactions_payload.to_a
       existing_transactions = transactions_in_window(existing_payload, window_start_date)
       existing_ids = existing_transactions.map { |tx| tx.with_indifferent_access[:id] }.to_set
@@ -175,9 +208,13 @@ class BrexItem::Importer
         tx_id.present? && !existing_ids.include?(tx_id) && transaction_in_window?(tx, window_start_date)
       end
 
-      return 0 if new_transactions.empty? && existing_transactions.count == existing_payload.count
-
-      brex_account.upsert_brex_transactions_snapshot!(existing_transactions + new_transactions)
+      BrexItem::LegacyAccess.with_source_snapshot(brex_account, expected_context: expected_context,
+        expected_item_context: @transport_context) do |fresh|
+        # Even a no-change response must prove it still belongs to this request.
+        unless new_transactions.empty? && existing_transactions.count == existing_payload.count
+          fresh.update!(raw_transactions_payload: BrexAccount.sanitize_payload(existing_transactions + new_transactions))
+        end
+      end
       new_transactions.count
     end
 
@@ -226,7 +263,9 @@ class BrexItem::Importer
     def mark_requires_update_if_credentials_error(error)
       return unless error.error_type.in?([ :unauthorized, :access_forbidden ])
 
-      brex_item.update!(status: :requires_update)
+      BrexItem::LegacyAccess.with_snapshot(brex_item, expected_context: @transport_context) { |fresh| fresh.update!(status: :requires_update) }
+    rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue => update_error
       Rails.logger.error "BrexItem::Importer - Failed to update item status: #{update_error.message}"
     end
@@ -241,5 +280,12 @@ class BrexItem::Importer
         transactions_imported: 0,
         transactions_failed: 0
       }
+    end
+
+    def verify_request!
+      BrexItem::LegacyAccess.with_item(brex_item) do |fresh|
+        BrexItem::LegacyAccess.verify_transport!(fresh, @transport_context)
+        BrexItem::LegacyAccess.assert_transport!
+      end
     end
 end

@@ -3,8 +3,10 @@ class Account::CurrentBalanceManager
 
   Result = Struct.new(:success?, :changes_made?, :error, keyword_init: true)
 
-  def initialize(account)
+  def initialize(account, date: nil)
+    raise ArgumentError, "Balance observation date must be a Date" unless date.nil? || date.instance_of?(Date)
     @account = account
+    @observation_date = date
   end
 
   def has_current_anchor?
@@ -26,7 +28,7 @@ class Account::CurrentBalanceManager
     if current_anchor_valuation
       current_anchor_valuation.entry.date
     else
-      Date.current
+      date
     end
   end
 
@@ -47,6 +49,10 @@ class Account::CurrentBalanceManager
 
   private
     attr_reader :account
+
+    def date
+      @observation_date || Date.current
+    end
 
     def opening_balance_manager
       @opening_balance_manager ||= Account::OpeningBalanceManager.new(account)
@@ -71,9 +77,9 @@ class Account::CurrentBalanceManager
       if account.balance_type == :cash && account.valuations.reconciliation.empty?
         adjust_opening_balance_with_delta(new_balance: balance, old_balance: account.balance)
       else
-        existing_reconciliation = account.entries.valuations.find_by(date: Date.current)
+        existing_reconciliation = account.entries.valuations.find_by(date: date)
 
-        result = reconciliation_manager.reconcile_balance(balance: balance, date: Date.current, existing_valuation_entry: existing_reconciliation)
+        result = reconciliation_manager.reconcile_balance(balance: balance, date: date, existing_valuation_entry: existing_reconciliation)
 
         # Normalize to expected result format
         Result.new(success?: result.success?, changes_made?: true, error: result.error_message)
@@ -100,6 +106,9 @@ class Account::CurrentBalanceManager
       changes_made = false
 
       ActiveRecord::Base.transaction do
+        if current_anchor_valuation && current_anchor_valuation.entry.date > date
+          raise InvalidOperation, "A newer balance anchor already exists"
+        end
         # If an anchor exists from a previous day, preserve it as a reconciliation
         # before replacing it with today's fresh anchor.
         preserve_anchor_as_reconciliation_if_stale if current_anchor_valuation
@@ -127,7 +136,7 @@ class Account::CurrentBalanceManager
     # Same-day updates are left in place (no extra reconciliations on repeated syncs).
     def preserve_anchor_as_reconciliation_if_stale
       entry = current_anchor_valuation.entry
-      return if entry.date == Date.current # Same-day update — nothing to preserve
+      return if entry.date == date # Same-day update — nothing to preserve
 
       current_anchor_valuation.update!(kind: "reconciliation")
       entry.update!(name: Valuation.build_reconciliation_name(account.accountable_type))
@@ -141,7 +150,7 @@ class Account::CurrentBalanceManager
 
     def create_current_anchor(balance)
       account.entries.create!(
-        date: Date.current,
+        date: date,
         name: Valuation.build_current_anchor_name(account.accountable_type),
         amount: balance,
         currency: account.currency,
@@ -163,8 +172,13 @@ class Account::CurrentBalanceManager
         changes_made = true
       end
 
-      if entry.date != Date.current
-        entry.date = Date.current
+      if entry.date != date
+        entry.date = date
+        changes_made = true
+      end
+
+      if entry.currency != account.currency
+        entry.currency = account.currency
         changes_made = true
       end
 

@@ -5,13 +5,30 @@ class SimplefinAccount::Liabilities::CreditProcessor
   end
 
   def process
-    return unless simplefin_account.current_account&.accountable_type == "CreditCard"
+    SimplefinItem::LegacyAccess.with_account(simplefin_account) do |current|
+      expected = current.current_account
+      next unless expected&.accountable_type == "CreditCard"
 
-    # Update credit card specific attributes if available
-    update_credit_attributes
+      publication_result = nil
+      SimplefinItem::LegacyAccess.with_publication(current, expected_account: expected) do |fresh, _financial|
+        publication_result = self.class.new(fresh).send(:process_admitted)
+        # The import adapter returns false after rescued save/callback failures.
+        # Its joined update may already have issued SQL; roll back our savepoint.
+        raise ActiveRecord::Rollback if publication_result == false
+      end
+      publication_result
+    end
   end
 
   private
+
+    def process_admitted
+      return unless simplefin_account.current_account&.accountable_type == "CreditCard"
+
+      # Update credit card specific attributes if available
+      update_credit_attributes
+    end
+
     attr_reader :simplefin_account
 
     def import_adapter

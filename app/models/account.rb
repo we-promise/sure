@@ -5,6 +5,10 @@ class Account < ApplicationRecord
 
   before_destroy :capture_account_statement_ids_to_move
   before_destroy :cleanup_transfers
+  # Ordinary legacy deletion clears only disposable history. The prepended
+  # evidence guard below must run before this pointer or any Sync is removed.
+  before_destroy -> { Account::SyncSource.where(account_id: id).delete_all }, prepend: true
+  before_destroy :preserve_ingestion_identity, prepend: true
 
   after_destroy_commit :move_account_statements_to_inbox
 
@@ -551,11 +555,56 @@ class Account < ApplicationRecord
   end
 
   def destroy_later
-    transaction do
+    transaction(requires_new: true) do
       mark_for_deletion!
+      # The status update holds the Account lock. Refuse before enqueue and roll
+      # that status back, rather than leave an account hidden after a guarded
+      # background destroy returns false. First publication checks this status.
+      identity = Account::IngestionIdentity.where(id: id).lock("FOR UPDATE NOWAIT").first
+      if retained_calculation_evidence? || (identity && (identity.retired? || identity.source_records.exists? || identity.source_policies.exists?))
+        errors.add(:base, "Account ingestion evidence requires an admitted retirement")
+        raise ActiveRecord::RecordNotDestroyed.new("Account ingestion evidence must be retained", self)
+      end
       DestroyJob.perform_later(self)
     end
   end
+
+  # This check runs before dependent callbacks can remove source/link history.
+  # A later admitted retirement command must preserve that complete history;
+  # the legacy destroy path cannot dispose of published source evidence.
+  def preserve_ingestion_identity
+    return if new_record?
+    Account::IngestionIdentity.transaction(requires_new: true) do
+      # Lock even when no identity exists yet: first publication must not race
+      # an absence check and arrive after dependent destruction has started.
+      Account.where(id: id, family_id: family_id).lock("FOR UPDATE NOWAIT").first!
+      identity = Account::IngestionIdentity.where(id: id).lock("FOR UPDATE NOWAIT").first
+      if retained_calculation_evidence? || (identity && (identity.retired? || identity.source_records.exists? || identity.source_policies.exists?))
+        errors.add(:base, "Account ingestion evidence requires an admitted retirement")
+        throw :abort
+      end
+      if identity
+        # An unused live identity has no source observations to retain. Its
+        # restrictive FK can be released with this Account's destruction.
+        identity.destroy!
+      end
+    end
+  rescue ActiveRecord::LockWaitTimeout, ActiveRecord::RecordNotFound
+    errors.add(:base, "Account changed during deletion; retry with current state")
+    throw :abort
+  end
+  private :preserve_ingestion_identity
+
+  # An empty input seal is ordinary job metadata. Actual calculation evidence
+  # still needs retention even if its source policy was removed independently.
+  def retained_calculation_evidence?
+    calculations = Sync.where(syncable_type: "Account", syncable_id: id)
+    Account::SyncInput.where(account_id: id).exists? ||
+      Account::SyncSource.where(account_id: id).exists? ||
+      Account::SyncPreparation.where(sync_id: calculations.select(:id)).exists? ||
+      calculations.where.not(account_materialized_at: nil).exists?
+  end
+  private :retained_calculation_evidence?
 
   # Override destroy to handle error recovery for accounts
   def destroy

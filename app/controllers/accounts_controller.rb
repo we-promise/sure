@@ -236,45 +236,17 @@ class AccountsController < ApplicationController
   end
 
   def unlink
-    unless @account.linked?
-      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
-      return
-    end
-
     begin
-      Account.transaction do
-        # Detach holdings from provider links before destroying them
-        provider_link_ids = @account.account_providers.pluck(:id)
-        if provider_link_ids.any?
-          Holding.where(account_provider_id: provider_link_ids).update_all(account_provider_id: nil)
-        end
-
-        # Capture provider accounts before clearing links (so we can destroy them)
-        simplefin_account_to_destroy = @account.simplefin_account
-
-        # Remove new system links (account_providers join table)
-        # SnaptradeAccount records are preserved (not destroyed) so users can relink later.
-        # This follows the Plaid pattern where the provider account survives as "unlinked".
-        # SnapTrade has limited connection slots (5 free), so preserving the record avoids
-        # wasting a slot on reconnect.
-        @account.account_providers.destroy_all
-
-        # Remove legacy system links (foreign keys)
-        @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
-
-        # Destroy the SimplefinAccount record so it doesn't cause stale account issues
-        # This is safe because:
-        # - Account data (transactions, holdings, balances) lives on the Account, not SimplefinAccount
-        # - SimplefinAccount only caches API data which is regenerated on reconnect
-        # - If user reconnects SimpleFin later, a new SimplefinAccount will be created
-        simplefin_account_to_destroy&.destroy!
+      if Account::Unlink.new(account: @account, user: Current.user).call
+        redirect_to accounts_path, notice: t("accounts.unlink.success")
+      else
+        redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
       end
-
-      redirect_to accounts_path, notice: t("accounts.unlink.success")
+    rescue Account::Unlink::NotAuthorized
+      redirect_to account_path(@account), alert: t("accounts.not_authorized")
     rescue ActiveRecord::RecordInvalid => e
       redirect_to account_path(@account), alert: t("accounts.unlink.error", error: e.message)
-    rescue StandardError => e
-      Rails.logger.error "Failed to unlink account #{@account.id}: #{e.message}"
+    rescue StandardError
       redirect_to account_path(@account), alert: t("accounts.unlink.error", error: t("accounts.unlink.generic_error"))
     end
   end

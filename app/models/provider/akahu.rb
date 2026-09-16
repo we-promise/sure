@@ -1,3 +1,6 @@
+require "bigdecimal"
+require "set"
+
 class Provider::Akahu
   include HTTParty
   extend SslConfigurable
@@ -22,8 +25,7 @@ class Provider::Akahu
   end
 
   def get_accounts
-    payload = get("accounts")
-    payload[:items] || []
+    fetch_all("accounts")
   end
 
   def get_account(account_id)
@@ -44,8 +46,22 @@ class Provider::Akahu
   end
 
   def get_pending_transactions
-    payload = get("transactions/pending")
-    payload[:items] || []
+    fetch_all("transactions/pending")
+  end
+
+  # Bounded, decimal-preserving reads for the canonical account-data adapter.
+  # Legacy methods retain their response types and full-resource behavior.
+  def get_accounts_page(cursor: nil)
+    account_data_page("accounts", cursor: cursor)
+  end
+
+  def get_account_transactions_page(account_id:, start_date: nil, end_date: nil, cursor: nil)
+    account_data_page("accounts/#{ERB::Util.url_encode(account_id.to_s)}/transactions",
+      query: date_query(start_date: start_date, end_date: end_date), cursor: cursor)
+  end
+
+  def get_pending_transactions_page(cursor: nil)
+    account_data_page("transactions/pending", cursor: cursor)
   end
 
   def refresh(account_id: nil)
@@ -54,6 +70,34 @@ class Provider::Akahu
   end
 
   private
+
+    def account_data_page(path, query: {}, cursor: nil)
+      unless cursor.nil? || (cursor.is_a?(String) && cursor.present?)
+        raise AkahuError.new("Invalid pagination cursor", :invalid_response)
+      end
+      query = query.merge(cursor: cursor) if cursor
+      payload = with_retries("GET #{path}") do
+        response = self.class.get(endpoint_url(path), headers: auth_headers, query: query.presence)
+        if [ 200, 201 ].include?(response.code)
+          JSON.parse(response.body, symbolize_names: true, decimal_class: BigDecimal)
+        else
+          handle_response(response)
+        end
+      end
+      unless payload.is_a?(Hash) && payload[:items].is_a?(Array) && payload[:success] != false &&
+          (payload[:cursor].nil? || payload[:cursor].is_a?(Hash))
+        raise AkahuError.new("Invalid paginated response", :invalid_response)
+      end
+      next_cursor = payload.dig(:cursor, :next)
+      unless next_cursor.nil? || (next_cursor.is_a?(String) && next_cursor.present?)
+        raise AkahuError.new("Invalid pagination cursor", :invalid_response)
+      end
+      { items: payload[:items], next_cursor: next_cursor, evidence: payload }
+    rescue JSON::ParserError
+      raise AkahuError.new("Invalid paginated response", :invalid_response), cause: nil
+    rescue AkahuError => error
+      raise AkahuError.new("Akahu account data request failed", error.error_type), cause: nil
+    end
 
     RETRYABLE_ERRORS = [
       SocketError,
@@ -69,20 +113,31 @@ class Provider::Akahu
     INITIAL_RETRY_DELAY = 2
 
     def fetch_all(path, start_date: nil, end_date: nil)
+      # Discovery and pending cleanup depend on complete inventories. Keep the
+      # legacy Float decoder while refusing malformed or unfinished responses.
       query = date_query(start_date: start_date, end_date: end_date)
       cursor = nil
-      results = []
+      results, seen, bytes = [], Set.new, 0
 
-      loop do
-        page_query = query.dup
-        page_query[:cursor] = cursor if cursor.present?
+      1_000.times do
+        page_query = cursor ? query.merge(cursor: cursor) : query
         payload = get(path, query: page_query)
-        results.concat(Array(payload[:items]))
+        unless payload.is_a?(Hash) && payload[:items].is_a?(Array) && payload[:items].all? { |row| row.is_a?(Hash) } &&
+            (!payload.key?(:success) || payload[:success] == true) && (payload[:cursor].nil? || payload[:cursor].is_a?(Hash))
+          raise AkahuError.new("Invalid complete inventory response", :invalid_response)
+        end
         cursor = payload.dig(:cursor, :next)
-        break if cursor.blank?
+        unless cursor.nil? || (cursor.is_a?(String) && cursor.present? && seen.add?(cursor))
+          raise AkahuError.new("Invalid inventory pagination cursor", :invalid_response)
+        end
+        bytes += JSON.generate(payload).bytesize
+        results.concat(payload[:items])
+        if results.size > 20_000 || bytes > 16 * 1024 * 1024
+          raise AkahuError.new("Response exceeds its complete inventory bound", :invalid_response)
+        end
+        return results unless cursor
       end
-
-      results
+      raise AkahuError.new("Response did not finish within its page bound", :invalid_response)
     end
 
     def date_query(start_date:, end_date:)

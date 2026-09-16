@@ -5,6 +5,59 @@ class Provider::WiseTest < ActiveSupport::TestCase
     @provider = Provider::Wise.new("test_token", base_url: "https://api.wise.com")
   end
 
+  test "canonical balance pages preserve JSON decimal precision" do
+    Provider::Wise.expects(:get).once.returns(fake_response(code: 200,
+      body: '[{"id":123,"amount":{"value":123.123456789012345678,"currency":"EUR"}}]'))
+
+    page = @provider.get_balances_page("profile_1")
+
+    assert_equal BigDecimal("123.123456789012345678"), page[:items].first.dig("amount", "value")
+    assert_instance_of BigDecimal, page[:items].first.dig("amount", "value")
+    assert_nil page[:next_cursor]
+    assert_equal page[:items], page[:evidence]
+  end
+
+  test "canonical statement pages retain decimal parsing across SCA challenge retry" do
+    key = OpenSSL::PKey::RSA.new(2048)
+    provider = Provider::Wise.new("token", sca_private_key: key.to_pem)
+    Provider::Wise.expects(:get).twice.returns(fake_response(code: 403, headers: { "x-2fa-approval" => "challenge" })).then
+      .returns(fake_response(code: 200, body: '{"transactions":[{"amount":{"value":-7.123456789012345678}}]}'))
+
+    page = provider.get_balance_statement_page("profile", "balance", currency: "EUR",
+      interval_start: Time.utc(2026, 1, 1), interval_end: Time.utc(2026, 1, 31))
+
+    assert_equal BigDecimal("-7.123456789012345678"), page[:items].first.dig("amount", "value")
+    assert_instance_of BigDecimal, page[:items].first.dig("amount", "value")
+  end
+
+  test "canonical transfer pages return a continuation without fetching subsequent pages" do
+    rows = Array.new(100) { |index| { id: index } }
+    Provider::Wise.expects(:get).once.with { |_url, options| options[:query] == { profile: "profile", limit: 100, offset: 100 } }
+      .returns(fake_response(code: 200, body: { content: rows }.to_json))
+
+    page = @provider.get_transfers_page("profile", cursor: "100")
+
+    assert_equal "200", page[:next_cursor]
+    assert_equal 100, page[:items].size
+  end
+
+  test "canonical failures preserve error type while removing response bodies and causes" do
+    Provider::Wise.expects(:get).returns(fake_response(code: 500, body: "private-financial-payload"))
+
+    error = assert_raises(Provider::Wise::WiseError) { @provider.get_activities_page("profile") }
+
+    assert_equal :fetch_failed, error.error_type
+    refute_includes error.message, "private-financial-payload"
+    assert_nil error.cause
+  end
+
+  test "canonical pages reject oversized transfers and malformed activity cursors" do
+    Provider::Wise.expects(:get).once.returns(fake_response(code: 200, body: Array.new(101) { { id: 1 } }.to_json))
+
+    assert_raises(Provider::Wise::WiseError) { @provider.get_transfers_page("profile") }
+    assert_raises(Provider::Wise::WiseError) { @provider.get_activities_page("profile", cursor: {}) }
+  end
+
   test "chunks balance statement requests into windows under the 469-day limit" do
     start_date = Date.new(2015, 4, 12)
     end_date = Date.new(2018, 4, 30)

@@ -1,115 +1,132 @@
 class MercuryItem::Importer
   attr_reader :mercury_item, :mercury_provider
 
-  def initialize(mercury_item, mercury_provider:)
+  def initialize(mercury_item)
     @mercury_item = mercury_item
-    @mercury_provider = mercury_provider
   end
 
   def import
-    Rails.logger.info "MercuryItem::Importer - Starting import for item #{mercury_item.id}"
-
-    # Step 1: Fetch all accounts from Mercury
-    accounts_data = fetch_accounts_data
-    unless accounts_data
-      Rails.logger.error "MercuryItem::Importer - Failed to fetch accounts data for item #{mercury_item.id}"
-      return { success: false, error: "Failed to fetch accounts data", accounts_imported: 0, transactions_imported: 0 }
+    MercuryItem::LegacyAccess.with_item(mercury_item) do |current|
+      MercuryItem::LegacyAccess.assert_transport!
+      @mercury_item = current
+      @mercury_provider = current.mercury_provider
+      raise StandardError, "Mercury provider is not configured" unless mercury_provider
+      import_admitted
     end
-
-    # Store raw payload
-    begin
-      mercury_item.upsert_mercury_snapshot!(accounts_data)
-    rescue => e
-      Rails.logger.error "MercuryItem::Importer - Failed to store accounts snapshot: #{e.message}"
-      # Continue with import even if snapshot storage fails
-    end
-
-    # Step 2: Update linked accounts and create records for new accounts from API
-    accounts_updated = 0
-    accounts_created = 0
-    accounts_failed = 0
-
-    if accounts_data[:accounts].present?
-      # Get linked mercury account IDs (ones actually imported/used by the user)
-      linked_account_ids = mercury_item.mercury_accounts
-                                       .joins(:account_provider)
-                                       .pluck(:account_id)
-                                       .map(&:to_s)
-
-      # Get all existing mercury account IDs (linked or not)
-      all_existing_ids = mercury_item.mercury_accounts.pluck(:account_id).map(&:to_s)
-
-      accounts_data[:accounts].each do |account_data|
-        account_id = account_data[:id]&.to_s
-        next unless account_id.present?
-
-        # Mercury uses 'name' or 'nickname' for account name
-        account_name = account_data[:nickname].presence || account_data[:name].presence || account_data[:legalBusinessName].presence
-        next if account_name.blank?
-
-        if linked_account_ids.include?(account_id)
-          # Update existing linked accounts
-          begin
-            import_account(account_data)
-            accounts_updated += 1
-          rescue => e
-            accounts_failed += 1
-            Rails.logger.error "MercuryItem::Importer - Failed to update account #{account_id}: #{e.message}"
-          end
-        elsif !all_existing_ids.include?(account_id)
-          # Create new unlinked mercury_account records for accounts we haven't seen before
-          # This allows users to link them later via "Setup new accounts"
-          begin
-            mercury_account = mercury_item.mercury_accounts.build(
-              account_id: account_id,
-              name: account_name,
-              currency: "USD"  # Mercury is US-only, always USD
-            )
-            mercury_account.upsert_mercury_snapshot!(account_data)
-            accounts_created += 1
-            Rails.logger.info "MercuryItem::Importer - Created new unlinked account record for #{account_id}"
-          rescue => e
-            accounts_failed += 1
-            Rails.logger.error "MercuryItem::Importer - Failed to create account #{account_id}: #{e.message}"
-          end
-        end
-      end
-    end
-
-    Rails.logger.info "MercuryItem::Importer - Updated #{accounts_updated} accounts, created #{accounts_created} new (#{accounts_failed} failed)"
-
-    # Step 3: Fetch transactions only for linked accounts with active status
-    transactions_imported = 0
-    transactions_failed = 0
-
-    mercury_item.mercury_accounts.joins(:account).merge(Account.visible).each do |mercury_account|
-      begin
-        result = fetch_and_store_transactions(mercury_account)
-        if result[:success]
-          transactions_imported += result[:transactions_count]
-        else
-          transactions_failed += 1
-        end
-      rescue => e
-        transactions_failed += 1
-        Rails.logger.error "MercuryItem::Importer - Failed to fetch/store transactions for account #{mercury_account.account_id}: #{e.message}"
-        # Continue with other accounts even if one fails
-      end
-    end
-
-    Rails.logger.info "MercuryItem::Importer - Completed import for item #{mercury_item.id}: #{accounts_updated} accounts updated, #{accounts_created} new accounts discovered, #{transactions_imported} transactions"
-
-    {
-      success: accounts_failed == 0 && transactions_failed == 0,
-      accounts_updated: accounts_updated,
-      accounts_created: accounts_created,
-      accounts_failed: accounts_failed,
-      transactions_imported: transactions_imported,
-      transactions_failed: transactions_failed
-    }
   end
 
   private
+
+    def import_admitted
+      Rails.logger.info "MercuryItem::Importer - Starting import for item #{mercury_item.id}"
+
+      # Step 1: Fetch all accounts from Mercury
+      accounts_data = fetch_accounts_data
+      unless accounts_data
+        Rails.logger.error "MercuryItem::Importer - Failed to fetch accounts data for item #{mercury_item.id}"
+        return { success: false, error: "Failed to fetch accounts data", accounts_imported: 0, transactions_imported: 0 }
+      end
+
+      # Store raw payload
+      begin
+        mercury_item.upsert_mercury_snapshot!(accounts_data)
+      rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+        raise
+      rescue => e
+        Rails.logger.error "MercuryItem::Importer - Failed to store accounts snapshot: #{e.message}"
+        # Continue with import even if snapshot storage fails
+      end
+
+      # Step 2: Update linked accounts and create records for new accounts from API
+      accounts_updated = 0
+      accounts_created = 0
+      accounts_failed = 0
+
+      if accounts_data[:accounts].present?
+        # Get linked mercury account IDs (ones actually imported/used by the user)
+        linked_account_ids = mercury_item.mercury_accounts
+                                         .joins(:account_provider)
+                                         .pluck(:account_id)
+                                         .map(&:to_s)
+
+        # Get all existing mercury account IDs (linked or not)
+        all_existing_ids = mercury_item.mercury_accounts.pluck(:account_id).map(&:to_s)
+
+        accounts_data[:accounts].each do |account_data|
+          account_id = account_data[:id]&.to_s
+          next unless account_id.present?
+
+          # Mercury uses 'name' or 'nickname' for account name
+          account_name = account_data[:nickname].presence || account_data[:name].presence || account_data[:legalBusinessName].presence
+          next if account_name.blank?
+
+          if linked_account_ids.include?(account_id)
+            # Update existing linked accounts
+            begin
+              import_account(account_data)
+              accounts_updated += 1
+            rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+              raise
+            rescue => e
+              accounts_failed += 1
+              Rails.logger.error "MercuryItem::Importer - Failed to update account #{account_id}: #{e.message}"
+            end
+          elsif !all_existing_ids.include?(account_id)
+            # Create new unlinked mercury_account records for accounts we haven't seen before
+            # This allows users to link them later via "Setup new accounts"
+            begin
+              mercury_account = mercury_item.mercury_accounts.build(
+                account_id: account_id,
+                name: account_name,
+                currency: "USD"  # Mercury is US-only, always USD
+              )
+              mercury_account.upsert_mercury_snapshot!(account_data)
+              accounts_created += 1
+              Rails.logger.info "MercuryItem::Importer - Created new unlinked account record for #{account_id}"
+            rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+              raise
+            rescue => e
+              accounts_failed += 1
+              Rails.logger.error "MercuryItem::Importer - Failed to create account #{account_id}: #{e.message}"
+            end
+          end
+        end
+      end
+
+      Rails.logger.info "MercuryItem::Importer - Updated #{accounts_updated} accounts, created #{accounts_created} new (#{accounts_failed} failed)"
+
+      # Step 3: Fetch transactions only for linked accounts with active status
+      transactions_imported = 0
+      transactions_failed = 0
+
+      mercury_item.mercury_accounts.joins(:account).merge(Account.visible).each do |mercury_account|
+        begin
+          result = fetch_and_store_transactions(mercury_account)
+          if result[:success]
+            transactions_imported += result[:transactions_count]
+          else
+            transactions_failed += 1
+          end
+        rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+          raise
+        rescue => e
+          transactions_failed += 1
+          Rails.logger.error "MercuryItem::Importer - Failed to fetch/store transactions for account #{mercury_account.account_id}: #{e.message}"
+          # Continue with other accounts even if one fails
+        end
+      end
+
+      Rails.logger.info "MercuryItem::Importer - Completed import for item #{mercury_item.id}: #{accounts_updated} accounts updated, #{accounts_created} new accounts discovered, #{transactions_imported} transactions"
+
+      {
+        success: accounts_failed == 0 && transactions_failed == 0,
+        accounts_updated: accounts_updated,
+        accounts_created: accounts_created,
+        accounts_failed: accounts_failed,
+        transactions_imported: transactions_imported,
+        transactions_failed: transactions_failed
+      }
+    end
 
     def fetch_accounts_data
       begin
@@ -119,6 +136,8 @@ class MercuryItem::Importer
         if e.error_type == :unauthorized || e.error_type == :access_forbidden
           begin
             mercury_item.update!(status: :requires_update)
+          rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+            raise
           rescue => update_error
             Rails.logger.error "MercuryItem::Importer - Failed to update item status: #{update_error.message}"
           end
@@ -128,6 +147,8 @@ class MercuryItem::Importer
       rescue JSON::ParserError => e
         Rails.logger.error "MercuryItem::Importer - Failed to parse Mercury API response: #{e.message}"
         return nil
+      rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         Rails.logger.error "MercuryItem::Importer - Unexpected error fetching accounts: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
@@ -258,6 +279,8 @@ class MercuryItem::Importer
                 metadata: { account_id: mercury_account.account_id }
               )
             end
+          rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+            raise
           rescue => e
             Rails.logger.error "MercuryItem::Importer - Failed to store transactions for account #{mercury_account.account_id}: #{e.message}"
             return { success: false, transactions_count: 0, error: "Failed to store transactions: #{e.message}" }
@@ -273,6 +296,8 @@ class MercuryItem::Importer
       rescue JSON::ParserError => e
         Rails.logger.error "MercuryItem::Importer - Failed to parse transaction response for account #{mercury_account.id}: #{e.message}"
         { success: false, transactions_count: 0, error: "Failed to parse response" }
+      rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         Rails.logger.error "MercuryItem::Importer - Unexpected error fetching transactions for account #{mercury_account.id}: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
@@ -317,6 +342,8 @@ class MercuryItem::Importer
       if needs_update
         begin
           mercury_item.update!(status: :requires_update)
+        rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+          raise
         rescue => e
           Rails.logger.error "MercuryItem::Importer - Failed to update item status: #{e.message}"
         end

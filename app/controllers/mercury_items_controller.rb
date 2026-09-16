@@ -1,6 +1,11 @@
 class MercuryItemsController < ApplicationController
+  include RetiredProviderRouting
+  self.retired_provider_key = "mercury"
+
   before_action :set_mercury_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
   before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  rescue_from(*MercuryItem::LegacyAccess::DENIAL_ERRORS, with: :render_ownership_changed)
+  rescue_from ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved, with: :render_ownership_changed
 
   def index
     @mercury_items = Current.family.mercury_items.active.ordered
@@ -25,38 +30,18 @@ class MercuryItemsController < ApplicationController
         return
       end
 
-      cache_key = mercury_accounts_cache_key(mercury_item)
-
-      # Check if already cached
-      cached_accounts = Rails.cache.read(cache_key)
-
-      if cached_accounts.present?
-        render json: { success: true, has_accounts: cached_accounts.any?, cached: true }
-        return
-      end
-
-      mercury_provider = mercury_item.mercury_provider
-
-      unless mercury_provider.present?
-        render json: { success: false, error: "no_api_token", has_accounts: false }
-        return
-      end
-
-      accounts_data = mercury_provider.get_accounts
-      available_accounts = accounts_data[:accounts] || []
-
-      # Cache the accounts for 5 minutes
-      Rails.cache.write(cache_key, available_accounts, expires_in: 5.minutes)
-
-      render json: { success: true, has_accounts: available_accounts.any?, cached: false }
+      result = lifecycle(mercury_item).discover
+      render json: { success: true, has_accounts: result[:accounts].any?, cached: result[:cached] }
+    rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue Provider::Mercury::MercuryError => e
-      Rails.logger.error("Mercury preload error: #{e.message}")
+      capture_lifecycle_failure(e)
       # API error (bad token, network issue, etc) - keep button visible, show error when clicked
-      render json: { success: false, error: "api_error", error_message: e.message, has_accounts: nil }
+      render json: { success: false, error: "api_error", error_message: t("mercury_items.lifecycle.unavailable"), has_accounts: nil }
     rescue StandardError => e
-      Rails.logger.error("Unexpected error preloading Mercury accounts: #{e.class}: #{e.message}")
+      capture_lifecycle_failure(e)
       # Unexpected error - keep button visible, show error when clicked
-      render json: { success: false, error: "unexpected_error", error_message: e.message, has_accounts: nil }
+      render json: { success: false, error: "unexpected_error", error_message: t("mercury_items.lifecycle.unavailable"), has_accounts: nil }
     end
   end
 
@@ -70,32 +55,10 @@ class MercuryItemsController < ApplicationController
         return
       end
 
-      cache_key = mercury_accounts_cache_key(@mercury_item)
-
-      # Try to get cached accounts first
-      @available_accounts = Rails.cache.read(cache_key)
-
-      # If not cached, fetch from API
-      if @available_accounts.nil?
-        mercury_provider = @mercury_item.mercury_provider
-
-        unless mercury_provider.present?
-          redirect_to settings_providers_path, alert: t(".no_api_token",
-                                                        default: "Mercury API token not found. Please configure it in Provider Settings.")
-          return
-        end
-
-        accounts_data = mercury_provider.get_accounts
-
-        @available_accounts = accounts_data[:accounts] || []
-
-        # Cache the accounts for 5 minutes
-        Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
-      end
-
-      linked_account_ids = @mercury_item.mercury_accounts.joins(:account_provider).pluck(:account_id)
-      @available_accounts = @available_accounts.reject { |acc| linked_account_ids.include?(acc[:id].to_s) }
-
+      result = lifecycle(@mercury_item).discover(flow: :link_accounts)
+      @mercury_item = result[:item]
+      @available_accounts = result[:accounts]
+      @selection_token = result[:selection_token]
       @accountable_type = params[:accountable_type] || "Depository"
       @return_to = safe_return_to_path
 
@@ -105,16 +68,18 @@ class MercuryItemsController < ApplicationController
       end
 
       render layout: false
+    rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue Provider::Mercury::MercuryError => e
-      Rails.logger.error("Mercury API error in select_accounts: #{e.message}")
-      @error_message = e.message
+      capture_lifecycle_failure(e)
+      @error_message = t("mercury_items.lifecycle.unavailable")
       @return_path = safe_return_to_path
       render partial: "mercury_items/api_error",
              locals: { error_message: @error_message, return_path: @return_path },
              layout: false
     rescue StandardError => e
-      Rails.logger.error("Unexpected error in select_accounts: #{e.class}: #{e.message}")
-      @error_message = "An unexpected error occurred. Please try again later."
+      capture_lifecycle_failure(e)
+      @error_message = t("mercury_items.lifecycle.unavailable")
       @return_path = safe_return_to_path
       render partial: "mercury_items/api_error",
              locals: { error_message: @error_message, return_path: @return_path },
@@ -133,80 +98,16 @@ class MercuryItemsController < ApplicationController
       return
     end
 
-    account_flow = mercury_item_account_flow_context
-    mercury_item = account_flow[:mercury_item]
-
+    mercury_item = explicit_mercury_item
     unless mercury_item
       redirect_to settings_providers_path, alert: t(".select_connection", default: "Choose a Mercury connection before linking accounts.")
       return
     end
-
-    # Fetch account details from API
-    mercury_provider = mercury_item.mercury_provider
-    unless mercury_provider.present?
-      redirect_to new_account_path, alert: t(".no_api_token")
-      return
-    end
-
-    accounts_data = mercury_provider.get_accounts
-
-    created_accounts = []
-    already_linked_accounts = []
-    invalid_accounts = []
-
-    selected_account_ids.each do |account_id|
-      # Find the account data from API response
-      account_data = accounts_data[:accounts].find { |acc| acc[:id].to_s == account_id.to_s }
-      next unless account_data
-
-      # Get account name
-      account_name = account_data[:nickname].presence || account_data[:name].presence || account_data[:legalBusinessName].presence
-
-      # Validate account name is not blank (required by Account model)
-      if account_name.blank?
-        invalid_accounts << account_id
-        Rails.logger.warn "MercuryItemsController - Skipping account #{account_id} with blank name"
-        next
-      end
-
-      # Create or find mercury_account
-      mercury_account = mercury_item.mercury_accounts.find_or_initialize_by(
-        account_id: account_id.to_s
-      )
-      mercury_account.upsert_mercury_snapshot!(account_data)
-      mercury_account.save!
-
-      # Check if this mercury_account is already linked
-      if mercury_account.account_provider.present?
-        already_linked_accounts << account_name
-        next
-      end
-
-      # Create the internal Account with proper balance initialization
-      account = Account.create_and_sync(
-        {
-          family: Current.family,
-          name: account_name,
-          balance: 0, # Initial balance will be set during sync
-          currency: "USD", # Mercury is US-only
-          accountable_type: accountable_type,
-          accountable_attributes: {}
-        },
-        skip_initial_sync: true
-      )
-
-      # Link account to mercury_account via account_providers join table
-      AccountProvider.create!(
-        account: account,
-        provider: mercury_account
-      )
-
-      created_accounts << account
-    end
-
-    # Trigger sync to fetch transactions if any accounts were created
-    mercury_item.sync_later if created_accounts.any?
-
+    selection = MercuryItem::Selection.from_token(params[:selection_token], flow: :link_accounts)
+    result = lifecycle(mercury_item).link_accounts(account_ids: selected_account_ids, account_type: accountable_type, selection: selection)
+    created_accounts = result[:created_accounts]
+    already_linked_accounts = result[:already_linked_accounts]
+    invalid_accounts = result[:invalid_accounts]
     # Build appropriate flash message
     if invalid_accounts.any? && created_accounts.empty? && already_linked_accounts.empty?
       # All selected accounts were invalid (blank names)
@@ -236,7 +137,8 @@ class MercuryItemsController < ApplicationController
       redirect_to new_account_path, alert: t(".link_failed")
     end
   rescue Provider::Mercury::MercuryError => e
-    redirect_to new_account_path, alert: t(".api_error", message: e.message)
+    capture_lifecycle_failure(e)
+    redirect_to new_account_path, alert: t("mercury_items.lifecycle.unavailable")
   end
 
   # Fetch available Mercury accounts to link with an existing account
@@ -264,54 +166,28 @@ class MercuryItemsController < ApplicationController
     end
 
     begin
-      cache_key = mercury_accounts_cache_key(@mercury_item)
-
-      # Try to get cached accounts first
-      @available_accounts = Rails.cache.read(cache_key)
-
-      # If not cached, fetch from API
-      if @available_accounts.nil?
-        mercury_provider = @mercury_item.mercury_provider
-
-        unless mercury_provider.present?
-          redirect_to settings_providers_path, alert: t(".no_api_token",
-                                                        default: "Mercury API token not found. Please configure it in Provider Settings.")
-          return
-        end
-
-        accounts_data = mercury_provider.get_accounts
-
-        @available_accounts = accounts_data[:accounts] || []
-
-        # Cache the accounts for 5 minutes
-        Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
-      end
-
-      if @available_accounts.empty?
-        redirect_to accounts_path, alert: t(".no_accounts_found")
-        return
-      end
-
-      linked_account_ids = @mercury_item.mercury_accounts.joins(:account_provider).pluck(:account_id)
-      @available_accounts = @available_accounts.reject { |acc| linked_account_ids.include?(acc[:id].to_s) }
-
+      result = lifecycle(@mercury_item).discover(flow: :link_existing_account, account_id: @account.id)
+      @mercury_item = result[:item]
+      @available_accounts = result[:accounts]
+      @selection_token = result[:selection_token]
       if @available_accounts.empty?
         redirect_to accounts_path, alert: t(".all_accounts_already_linked")
         return
       end
-
       @return_to = safe_return_to_path
 
       render layout: false
+    rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue Provider::Mercury::MercuryError => e
-      Rails.logger.error("Mercury API error in select_existing_account: #{e.message}")
-      @error_message = e.message
+      capture_lifecycle_failure(e)
+      @error_message = t("mercury_items.lifecycle.unavailable")
       render partial: "mercury_items/api_error",
              locals: { error_message: @error_message, return_path: accounts_path },
              layout: false
     rescue StandardError => e
-      Rails.logger.error("Unexpected error in select_existing_account: #{e.class}: #{e.message}")
-      @error_message = "An unexpected error occurred. Please try again later."
+      capture_lifecycle_failure(e)
+      @error_message = t("mercury_items.lifecycle.unavailable")
       render partial: "mercury_items/api_error",
              locals: { error_message: @error_message, return_path: accounts_path },
              layout: false
@@ -329,73 +205,23 @@ class MercuryItemsController < ApplicationController
       return
     end
 
-    account_flow = mercury_item_account_flow_context
-    mercury_item = account_flow[:mercury_item]
-
-    @account = Current.family.accounts.find(account_id)
-
-    # Check if account is already linked
-    if @account.account_providers.exists?
-      redirect_to accounts_path, alert: t(".account_already_linked")
-      return
-    end
-
+    mercury_item = explicit_mercury_item
     unless mercury_item
       redirect_to settings_providers_path, alert: t(".select_connection", default: "Choose a Mercury connection before linking accounts.")
       return
     end
-
-    # Fetch account details from API
-    mercury_provider = mercury_item.mercury_provider
-    unless mercury_provider.present?
-      redirect_to accounts_path, alert: t(".no_api_token")
+    selection = MercuryItem::Selection.from_token(params[:selection_token], flow: :link_existing_account, account_id: account_id)
+    result = lifecycle(mercury_item).link_existing_account(account_id: account_id, mercury_account_id: mercury_account_id, selection: selection)
+    if result[:error]
+      redirect_to accounts_path, alert: t(".#{result[:error]}")
       return
     end
-
-    accounts_data = mercury_provider.get_accounts
-
-    # Find the selected Mercury account data
-    account_data = accounts_data[:accounts].find { |acc| acc[:id].to_s == mercury_account_id.to_s }
-    unless account_data
-      redirect_to accounts_path, alert: t(".mercury_account_not_found")
-      return
-    end
-
-    # Get account name
-    account_name = account_data[:nickname].presence || account_data[:name].presence || account_data[:legalBusinessName].presence
-
-    # Validate account name is not blank (required by Account model)
-    if account_name.blank?
-      redirect_to accounts_path, alert: t(".invalid_account_name")
-      return
-    end
-
-    # Create or find mercury_account
-    mercury_account = mercury_item.mercury_accounts.find_or_initialize_by(
-      account_id: mercury_account_id.to_s
-    )
-    mercury_account.upsert_mercury_snapshot!(account_data)
-    mercury_account.save!
-
-    # Check if this mercury_account is already linked to another account
-    if mercury_account.account_provider.present?
-      redirect_to accounts_path, alert: t(".mercury_account_already_linked")
-      return
-    end
-
-    # Link account to mercury_account via account_providers join table
-    AccountProvider.create!(
-      account: @account,
-      provider: mercury_account
-    )
-
-    # Trigger sync to fetch transactions
-    mercury_item.sync_later
-
+    @account = result.fetch(:account)
     redirect_to return_to || accounts_path,
                 notice: t(".success", account_name: @account.name)
   rescue Provider::Mercury::MercuryError => e
-    redirect_to accounts_path, alert: t(".api_error", message: e.message)
+    capture_lifecycle_failure(e)
+    redirect_to accounts_path, alert: t("mercury_items.lifecycle.unavailable")
   end
 
   def new
@@ -403,13 +229,8 @@ class MercuryItemsController < ApplicationController
   end
 
   def create
-    @mercury_item = Current.family.mercury_items.build(mercury_item_params)
-    @mercury_item.name ||= "Mercury Connection"
-
-    if @mercury_item.save
-      # Trigger initial sync to fetch accounts
-      @mercury_item.sync_later
-
+    @mercury_item = MercuryItem::Lifecycle.create(family: Current.family, actor: Current.user, attributes: mercury_item_params)
+    if @mercury_item.persisted?
       if turbo_frame_request?
         flash.now[:notice] = t(".success")
         @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
@@ -440,15 +261,16 @@ class MercuryItemsController < ApplicationController
   end
 
   def edit
+    connection = Current.family.provider_connections.where(provider_key: "mercury")
+      .joins(:provider_migration_control).find_by(provider_migration_controls: {
+        family_id: Current.family.id, legacy_type: "MercuryItem", legacy_id: @mercury_item.id, state: ProviderMigrationControl::NATIVE_STATES
+      })
+    redirect_to edit_provider_connection_path(connection) if connection
   end
 
   def update
-    permitted_params = mercury_item_params
-    expire_accounts_cache = mercury_accounts_cache_sensitive_update?(permitted_params)
-
-    if @mercury_item.update(permitted_params)
-      Rails.cache.delete(mercury_accounts_cache_key(@mercury_item)) if expire_accounts_cache
-
+    @mercury_item = lifecycle(@mercury_item).update_settings(mercury_item_params)
+    if @mercury_item.errors.empty?
       if turbo_frame_request?
         flash.now[:notice] = t(".success")
         @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
@@ -479,20 +301,12 @@ class MercuryItemsController < ApplicationController
   end
 
   def destroy
-    # Ensure we detach provider links before scheduling deletion
-    begin
-      @mercury_item.unlink_all!(dry_run: false)
-    rescue => e
-      Rails.logger.warn("Mercury unlink during destroy failed: #{e.class} - #{e.message}")
-    end
-    @mercury_item.destroy_later
+    lifecycle(@mercury_item).disconnect
     redirect_to accounts_path, notice: t(".success")
   end
 
   def sync
-    unless @mercury_item.syncing?
-      @mercury_item.sync_later
-    end
+    MercuryItem::SyncRequest.new(item: @mercury_item, actor: Current.user).call
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -569,85 +383,10 @@ class MercuryItemsController < ApplicationController
     account_types = params[:account_types] || {}
     account_subtypes = params[:account_subtypes] || {}
 
-    # Valid account types for this provider
-    valid_types = Provider::MercuryAdapter.supported_account_types
-
-    created_accounts = []
-    skipped_count = 0
-
-    begin
-      ActiveRecord::Base.transaction do
-        account_types.each do |mercury_account_id, selected_type|
-          # Skip accounts marked as "skip"
-          if selected_type == "skip" || selected_type.blank?
-            skipped_count += 1
-            next
-          end
-
-          # Validate account type is supported
-          unless valid_types.include?(selected_type)
-            Rails.logger.warn("Invalid account type '#{selected_type}' submitted for Mercury account #{mercury_account_id}")
-            next
-          end
-
-          # Find account - scoped to this item to prevent cross-item manipulation
-          mercury_account = @mercury_item.mercury_accounts.find_by(id: mercury_account_id)
-          unless mercury_account
-            Rails.logger.warn("Mercury account #{mercury_account_id} not found for item #{@mercury_item.id}")
-            next
-          end
-
-          # Skip if already linked (race condition protection)
-          if mercury_account.account_provider.present?
-            Rails.logger.info("Mercury account #{mercury_account_id} already linked, skipping")
-            next
-          end
-
-          selected_subtype = account_subtypes[mercury_account_id]
-
-          # Default subtype for CreditCard since it only has one option
-          selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
-
-          # Create account with user-selected type and subtype (raises on failure)
-          # Skip initial sync - provider sync will handle balance creation with correct currency
-          account = Account.create_and_sync(
-            {
-              family: Current.family,
-              name: mercury_account.name,
-              balance: mercury_account.current_balance || 0,
-              currency: "USD", # Mercury is US-only
-              accountable_type: selected_type,
-              accountable_attributes: selected_subtype.present? ? { subtype: selected_subtype } : {}
-            },
-            skip_initial_sync: true
-          )
-
-          # Link account to mercury_account via account_providers join table (raises on failure)
-          AccountProvider.create!(
-            account: account,
-            provider: mercury_account
-          )
-
-          created_accounts << account
-        end
-      end
-    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-      Rails.logger.error("Mercury account setup failed: #{e.class} - #{e.message}")
-      Rails.logger.error(e.backtrace.first(10).join("\n"))
-      flash[:alert] = t(".creation_failed", error: e.message)
-      redirect_to accounts_path, status: :see_other
-      return
-    rescue StandardError => e
-      Rails.logger.error("Mercury account setup failed unexpectedly: #{e.class} - #{e.message}")
-      Rails.logger.error(e.backtrace.first(10).join("\n"))
-      flash[:alert] = t(".creation_failed", error: "An unexpected error occurred")
-      redirect_to accounts_path, status: :see_other
-      return
-    end
-
-    # Trigger a sync to process transactions
-    @mercury_item.sync_later if created_accounts.any?
-
+    selection = MercuryItem::Selection.from_token(params[:selection_token], flow: :complete_account_setup)
+    result = lifecycle(@mercury_item).complete_account_setup(account_types: account_types, account_subtypes: account_subtypes, selection: selection)
+    created_accounts = result[:created_accounts]
+    skipped_count = result[:skipped_count]
     # Set appropriate flash message
     if created_accounts.any?
       flash[:notice] = t(".success", count: created_accounts.count)
@@ -695,50 +434,42 @@ class MercuryItemsController < ApplicationController
     # Fetch Mercury accounts from the API and store them locally
     # Returns nil on success, or an error message string on failure
     def fetch_mercury_accounts_from_api
-      # Skip if we already have accounts cached
-      return nil unless @mercury_item.mercury_accounts.empty?
+      result = lifecycle(@mercury_item).discover(flow: :complete_account_setup, setup: true)
+      @mercury_item = result[:item]
+      @selection_token = result[:selection_token]
+      nil
+    rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+      raise
+    rescue StandardError => error
+      capture_lifecycle_failure(error)
+      # An unavailable API never issues a token for an unreviewed connection.
+      t("mercury_items.lifecycle.unavailable")
+    end
 
-      # Validate API token is configured
-      unless @mercury_item.credentials_configured?
-        return t("mercury_items.setup_accounts.no_api_token")
-      end
+    def lifecycle(item)
+      MercuryItem::Lifecycle.new(item: item, actor: Current.user)
+    end
 
-      # Use the specific mercury_item's provider (scoped to this family's item)
-      mercury_provider = @mercury_item.mercury_provider
-      unless mercury_provider.present?
-        return t("mercury_items.setup_accounts.no_api_token")
-      end
+    def explicit_mercury_item
+      Current.family.mercury_items.find(params[:mercury_item_id]) if params[:mercury_item_id].present?
+    end
 
-      begin
-        accounts_data = mercury_provider.get_accounts
-        available_accounts = accounts_data[:accounts] || []
-
-        if available_accounts.empty?
-          Rails.logger.info("Mercury API returned no accounts for item #{@mercury_item.id}")
-          return nil
-        end
-
-        available_accounts.each do |account_data|
-          account_name = account_data[:nickname].presence || account_data[:name].presence || account_data[:legalBusinessName].presence
-          next if account_name.blank?
-
-          mercury_account = @mercury_item.mercury_accounts.find_or_initialize_by(
-            account_id: account_data[:id].to_s
-          )
-          mercury_account.upsert_mercury_snapshot!(account_data)
-          mercury_account.save!
-        end
-
-        nil # Success
-      rescue Provider::Mercury::MercuryError => e
-        Rails.logger.error("Mercury API error: #{e.message}")
-        t("mercury_items.setup_accounts.api_error", message: e.message)
-      rescue StandardError => e
-        Rails.logger.error("Unexpected error fetching Mercury accounts: #{e.class}: #{e.message}")
-        t("mercury_items.setup_accounts.api_error", message: e.message)
+    def render_ownership_changed(error)
+      capture_lifecycle_failure(error)
+      if action_name == "preload_accounts"
+        render json: { success: false, error: "ownership_changed", error_message: t("mercury_items.lifecycle.unavailable"), has_accounts: nil }, status: :conflict
+      else
+        redirect_to settings_providers_path, alert: t("mercury_items.lifecycle.unavailable"), status: :see_other
       end
     end
 
+    def capture_lifecycle_failure(error)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "warning", message: "Mercury connection management failed",
+        source: self.class.name, provider_key: "mercury", family: Current.family,
+        metadata: { action: action_name, mercury_item_id: @mercury_item&.id, error_class: error.class.name })
+    rescue StandardError
+      nil
+    end
     def set_mercury_item
       @mercury_item = Current.family.mercury_items.find(params[:id])
     end
@@ -767,14 +498,6 @@ class MercuryItemsController < ApplicationController
         mercury_item: mercury_item,
         credentialed_items: credentialed_items
       }
-    end
-
-    def mercury_accounts_cache_key(mercury_item)
-      "mercury_accounts_#{Current.family.id}_#{mercury_item.id}"
-    end
-
-    def mercury_accounts_cache_sensitive_update?(permitted_params)
-      permitted_params.key?(:token) || permitted_params.key?(:base_url)
     end
 
     def mercury_item_selection_error_payload(credentialed_items)

@@ -1,0 +1,58 @@
+# <%= class_name %> account-data integration
+
+Status: draft. Generated code fails explicitly until transport and normalization
+are implemented. Generating this package does not make it available for connection
+or sync. The shared persistence/runtime rollout is described in
+[the architecture](../architecture/bank-data-providers.md).
+
+## Configuration
+
+The declared fields have `<%= options[:credential_scope] %>` scope. Fields marked
+secret belong in encrypted credential storage; other fields belong in validated
+settings. Defaults are configuration values, never credentials. All connections
+remain family-owned, even with application credentials. A provider with both
+application credentials and connection tokens must model both before activation.
+
+## Implement and verify
+
+1. Implement `Client` with the provider's documented API or compose an existing SDK.
+   Inject credentials; bound requests, timeouts and retries; sanitize errors. Rotate
+   tokens through the shared credential owner under its write fence.
+2. Implement adapter methods returning `Provider::AccountData::Page` containing
+   `Ingestion::Record.account`, `Ingestion::Record.transaction`<% if options[:type] == "investment" %>, `Ingestion::Record.holding` and `Ingestion::Record.activity`<% end %> values.
+   Records carry decimals, explicit currencies and dates. Do not write to the ledger,
+   create jobs or advance persisted cursors inside the adapter.
+3. Replace every failing generated test with assertions over sanitized fixtures/VCR.
+   Verify partial/empty snapshots, pagination, rate limits, authentication failures,
+   pending-to-posted identity, removed IDs, signs and currency/FX semantics.
+4. Define actual API scope/coverage and whether each resource is a snapshot or delta.
+   No missing data implies deletion. Return recoverable warnings without raw payloads;
+   the shared runtime captures support incidents through `DebugLogEntry.capture`.
+   A connection-wide transaction log overrides `transaction_scope` with `:connection`
+   and implements `fetch_transaction_group` using `TransactionGroup`; its cursor
+   must not be passed to the ordinary per-account page runner. Follow the
+   [generation protocol](../architecture/connection-change-sets.md), including
+   complete capture, restart, bounded account publication and cursor promotion.
+<% if options[:type] == "investment" -%>
+   A connection-wide activity log instead overrides `activity_scope` with
+   `:connection` and implements `fetch_activity_group` with resource `activities`.
+   Opt into `resumable_activity_groups?` only when retained prefixes and credential
+   transitions support recovery in the same logical Sync. Activity groups cannot
+   authorize removals or holdings absence.
+<% end -%>
+5. Complete the runtime activation gates in the architecture before changing
+   `native_ready?` to true. The registry discovers adapter declarations from the
+   application source tree; discovery does not authorize a legacy cutover.
+   For a legacy integration, preserve its `source` and external IDs and complete its
+   row in the [migration matrix](../architecture/bank-data-provider-migration-matrix.md).
+6. Review the [shared account setup contract](../architecture/provider-native-account-setup.md)
+   before declaring `self.account_setup_types` (disabled by default). Declare all
+   required source-policy resources, including historical balances when applicable.
+   Verify initially unlinked observations and copied caches can be replayed under
+   a new authorized link without rewriting their original evidence. Shared setup
+   preserves existing authority when adding a secondary source; it does not merge
+   overlapping financial history or switch writers.
+
+Run `bin/rails test test/models/provider/account_data/<%= file_name %>_test.rb`, then
+the repository's required checks. A green scaffold identity test alone is not an
+implementation or a migration acceptance test.

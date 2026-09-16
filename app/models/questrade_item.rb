@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class QuestradeItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -43,8 +43,7 @@ class QuestradeItem < ApplicationRecord
 
   # Import data from provider API
   def import_latest_questrade_data(sync: nil)
-    provider = questrade_provider
-    unless provider
+    unless credentials_configured?
       DebugLogEntry.capture(
         category: "provider_sync_error",
         level: "error",
@@ -57,7 +56,9 @@ class QuestradeItem < ApplicationRecord
       raise StandardError, I18n.t("questrade_items.errors.provider_not_configured")
     end
 
-    QuestradeItem::Importer.new(self, questrade_provider: provider, sync: sync).import
+    QuestradeItem::Importer.new(self, sync: sync).import
+  rescue *QuestradeItem::CredentialSession::DENIAL_ERRORS
+    raise
   rescue => e
     DebugLogEntry.capture(
       category: "provider_sync_error",
@@ -66,7 +67,7 @@ class QuestradeItem < ApplicationRecord
       source: self.class.name,
       provider_key: "questrade",
       family: family,
-      metadata: { questrade_item_id: id, error_class: e.class.name, error_message: e.message }
+      metadata: { questrade_item_id: id, error_class: e.class.name }
     )
     raise
   end
@@ -80,6 +81,8 @@ class QuestradeItem < ApplicationRecord
       begin
         result = QuestradeAccount::Processor.new(questrade_account).process
         results << { questrade_account_id: questrade_account.id, success: true, result: result }
+      rescue *QuestradeItem::CredentialSession::DENIAL_ERRORS
+        raise
       rescue => e
         DebugLogEntry.capture(
           category: "provider_sync_error",
@@ -110,6 +113,8 @@ class QuestradeItem < ApplicationRecord
           window_end_date: window_end_date
         )
         results << { account_id: account.id, success: true }
+      rescue *QuestradeItem::CredentialSession::DENIAL_ERRORS
+        raise
       rescue => e
         DebugLogEntry.capture(
           category: "provider_sync_error",
@@ -199,4 +204,6 @@ class QuestradeItem < ApplicationRecord
   def credentials_configured?
     refresh_token.present?
   end
+
+  guard_legacy_writes import_latest_questrade_data: :ingest, process_accounts: :publish
 end

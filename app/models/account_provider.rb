@@ -1,11 +1,20 @@
 class AccountProvider < ApplicationRecord
   belongs_to :account
-  belongs_to :provider, polymorphic: true
+  belongs_to :provider, polymorphic: true, optional: true
+  belongs_to :external_account, optional: true
+  belongs_to :family, optional: true
 
   has_many :holdings, dependent: :nullify
+  # Historical revisions retain the original link UUID. The database keeps a
+  # live link only while a policy is active or lacks captured source ownership.
+  has_many :source_policies, class_name: "Account::SourcePolicy"
 
-  validates :account_id, uniqueness: { scope: :provider_type }
-  validates :provider_id, uniqueness: { scope: :provider_type }
+  validates :account_id, uniqueness: { scope: :provider_type }, if: :provider_type?
+  validates :provider_id, uniqueness: { scope: :provider_type }, if: :provider_type?
+  validates :account_id, uniqueness: { scope: :provider_key }, if: :external_account_id?
+  validates :external_account_id, uniqueness: true, allow_nil: true
+  before_validation :assign_shared_identity
+  validate :consistent_shared_link
 
   # When unlinking a CoinStats account, also destroy the CoinstatsAccount record
   # so it doesn't remain orphaned and count as "needs setup".
@@ -22,16 +31,39 @@ class AccountProvider < ApplicationRecord
 
   # Returns the provider adapter for this connection
   def adapter
-    Provider::Factory.create_adapter(provider, account: account)
+    Provider::Factory.create_adapter(effective_provider, account: account)
+  end
+
+  def effective_provider
+    if external_account
+      control = external_account.provider_connection.provider_migration_control
+      return external_account if control.nil? || control.native_owned?
+    end
+    provider
   end
 
   # Convenience method to get provider name
   # Delegates to the adapter for consistency, falls back to underscored provider_type
   def provider_name
-    adapter&.provider_name || provider_type.underscore
+    adapter&.provider_name || provider_key || provider_type&.underscore
   end
 
   private
+
+    def assign_shared_identity
+      return unless external_account
+      self.family_id ||= account&.family_id
+      self.provider_key ||= external_account.provider_key
+    end
+
+    def consistent_shared_link
+      errors.add(:provider, "is required") unless provider || external_account
+      return unless external_account
+      unless account&.family_id == family_id && external_account.family_id == family_id &&
+          external_account.provider_key == provider_key
+        errors.add(:external_account, "must belong to the account family and provider")
+      end
+    end
 
     def coinstats_provider?
       provider_type == "CoinstatsAccount"

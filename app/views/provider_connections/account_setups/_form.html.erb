@@ -1,0 +1,31 @@
+<%# locals: (selection:) %>
+<%= render DS::Card.new do %>
+  <h3 class="font-medium text-primary"><%= selection.external_account.name %></h3>
+  <% if selection.account %>
+    <p class="mt-2 text-sm text-secondary"><%= t("provider_connections.account_setup.confirm_existing", name: selection.account.name) %></p>
+    <% if selection.secondary %>
+      <div class="mt-4">
+        <%= render DS::Alert.new(message: t("provider_connections.account_setup.secondary"), variant: :info) %>
+      </div>
+    <% end %>
+  <% else %>
+    <p class="mt-2 text-sm text-secondary"><%= t("provider_connections.account_setup.opening_balance_help") %></p>
+  <% end %>
+
+  <%= styled_form_with scope: :account_setup, url: provider_connection_account_setup_path(selection.connection), method: :post,
+                       class: "mt-4 space-y-4", data: { turbo_frame: "_top" } do |form| %>
+    <%= form.hidden_field :token, value: selection.token %>
+    <% unless selection.account %>
+      <%= form.text_field :name, label: t("provider_connections.account_setup.name"), value: selection.external_account.name, required: true %>
+      <%= form.select :accountable_type, @account_type_options,
+                      { label: t("provider_connections.account_setup.account_type"), prompt: t("provider_connections.account_setup.choose_type") },
+                      { required: true } %>
+      <%= form.text_field :currency, label: t("provider_connections.account_setup.currency"), value: selection.external_account.currency, required: true %>
+      <%= form.text_field :balance, label: t("provider_connections.account_setup.opening_balance"), value: "", inputmode: "decimal", required: true %>
+    <% end %>
+    <div class="flex items-center justify-end gap-3">
+      <%= render DS::Link.new(text: t("provider_connections.account_setup.cancel"), href: provider_connection_account_setup_path(selection.connection), variant: "secondary") %>
+      <%= render DS::Button.new(text: t(selection.account ? "provider_connections.account_setup.confirm_link" : "provider_connections.account_setup.confirm_create"), type: "submit") %>
+    </div>
+  <% end %>
+<% end %>

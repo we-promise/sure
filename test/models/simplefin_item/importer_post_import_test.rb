@@ -1,6 +1,9 @@
 require "test_helper"
+require_relative "../../support/simplefin_fixture_fence_helper"
 
 class SimplefinItem::ImporterPostImportTest < ActiveSupport::TestCase
+  include SimplefinFixtureFenceHelper
+
   setup do
     @family = families(:dylan_family)
     @item = SimplefinItem.create!(family: @family, name: "SF Conn", access_url: "https://example.com/access")
@@ -64,7 +67,7 @@ class SimplefinItem::ImporterPostImportTest < ActiveSupport::TestCase
     }
 
     # Prevent the job from running in this unit test; we only care about cash balance recompute
-    SimplefinHoldingsApplyJob.expects(:perform_later).once
+    SimplefinHoldingsApplyJob.expects(:enqueue_for).once.with(sfa, sync: @sync)
 
     importer.send(:import_account, account_data)
 

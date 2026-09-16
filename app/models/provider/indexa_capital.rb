@@ -90,7 +90,70 @@ class Provider::IndexaCapital
     []
   end
 
+  # Exact native reads preserve the response before normalization. Activity
+  # history is deliberately absent: the legacy client exposes no such endpoint.
+  def get_ingestion_accounts
+    ingestion_get("/users/me")
+  end
+
+  def get_ingestion_performance(account_number:)
+    ingestion_account_number!(account_number)
+    ingestion_get("/accounts/#{account_number}/performance")
+  end
+
+  def get_ingestion_fiscal_results(account_number:)
+    ingestion_account_number!(account_number)
+    ingestion_get("/accounts/#{account_number}/fiscal-results")
+  end
+
+  def get_ingestion_portfolio(account_number:)
+    ingestion_account_number!(account_number)
+    ingestion_get("/accounts/#{account_number}/portfolio")
+  end
+
   private
+
+    def ingestion_account_number!(account_number)
+      unless account_number.is_a?(String) && account_number.match?(/\A[A-Za-z0-9]+\z/)
+        raise Error.new("Invalid Indexa Capital account identifier", :bad_request)
+      end
+    end
+
+    def ingestion_get(path)
+      attempts = 0
+      begin
+        response = self.class.get("#{BASE_URL}#{path}", headers: base_headers.merge("X-AUTH-TOKEN" => ingestion_token))
+        ingestion_response(response)
+      rescue *RETRYABLE_ERRORS
+        attempts += 1
+        raise Error.new("Indexa Capital network request failed", :network_error), cause: nil if attempts > MAX_RETRIES
+        sleep(calculate_retry_delay(attempts))
+        retry
+      end
+    end
+
+    def ingestion_token
+      return @ingestion_token if @ingestion_token.present?
+      return @ingestion_token = api_token if api_token.present?
+
+      response = self.class.post("#{BASE_URL}/auth/authenticate", headers: base_headers,
+        body: JSON.generate(username: username, document: document, password: password))
+      data = ingestion_response(response)
+      value = data.is_a?(Hash) && data[:token]
+      raise AuthenticationError.new("Indexa Capital authentication token missing", :unauthorized) unless value.is_a?(String) && value.present?
+      @ingestion_token = value
+    end
+
+    def ingestion_response(response)
+      return JSON.parse(response.body, symbolize_names: true, decimal_class: BigDecimal) if [ 200, 201 ].include?(response.code)
+
+      type = { 400 => :bad_request, 401 => :unauthorized, 403 => :access_forbidden, 404 => :not_found,
+        429 => :rate_limited }.fetch(response.code, :server_error)
+      error = %i[unauthorized access_forbidden].include?(type) ? AuthenticationError : Error
+      raise error.new("Indexa Capital request failed (#{type})", type), cause: nil
+    rescue JSON::ParserError, TypeError
+      raise Error.new("Invalid Indexa Capital response", :bad_response), cause: nil
+    end
 
     RETRYABLE_ERRORS = [
       SocketError, Net::OpenTimeout, Net::ReadTimeout,

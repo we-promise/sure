@@ -1,0 +1,44 @@
+en:
+  provider_connections:
+    legacy_route:
+      moved: This connection now uses the shared settings and account setup screens. Review and submit any changes there.
+    edit:
+      title: Connection settings
+      description: Update this connection. Leave credentials blank to keep their current values.
+      back: Back to connections
+      name: Connection name
+      sync_start_date: History start date
+      keep_credential: Leave blank to keep the current credential
+      credentials:
+        access_token: Access token
+        token: API token
+      save: Save changes
+    update:
+      success: Connection settings updated.
+    disconnect:
+      title: Disconnect from Sure
+      open: Disconnect from Sure
+      back: Back to connection settings
+      description: Stop syncing this connection and unlink it from the accounts below.
+      kept_title: Your financial records stay in Sure
+      kept_description: Your accounts, transactions and history are kept. Links to other providers stay connected.
+      remote_access: This does not revoke access at your bank or provider. You can manage that access with them.
+      accounts_title:
+        one: "%{count} account will be unlinked from this connection"
+        other: "%{count} accounts will be unlinked from this connection"
+      no_accounts: No accounts are currently linked to this connection.
+      cancel: Keep connected
+      submit: Disconnect from Sure
+      success: Disconnected from Sure. Your accounts, transactions and history have been kept.
+      errors:
+        conflict: This connection or its linked accounts changed, or you no longer have permission. Review the connection again before disconnecting.
+        busy: This connection is in use. Wait for its current work to finish, then review it again.
+        invalid: Could not confirm this disconnect. Open the review again and try again.
+        failed: Could not disconnect this connection. Try again after reviewing it.
+    errors:
+      conflict: This connection changed or is unavailable. Open its settings again before retrying.
+      busy: This connection is in use. Wait for its current work to finish and try again.
+      invalid: Could not update the connection. Check the values and try again.
+    list:
+      title: Connection settings
+      edit: Edit %{name}

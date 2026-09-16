@@ -23,9 +23,10 @@ class SophtronEntry::Processor
   #
   # @param sophtron_transaction [Hash] Raw transaction data from Sophtron API
   # @param sophtron_account [SophtronAccount] The account this transaction belongs to
-  def initialize(sophtron_transaction, sophtron_account:)
+  def initialize(sophtron_transaction, sophtron_account:, sync: nil, allow_completed: false)
     @sophtron_transaction = sophtron_transaction
     @sophtron_account = sophtron_account
+    @sync, @allow_completed = sync, allow_completed
   end
 
   # Processes the transaction and creates/updates a Maybe Transaction record.
@@ -38,41 +39,51 @@ class SophtronEntry::Processor
   # @raise [ArgumentError] if required transaction fields are missing
   # @raise [StandardError] if the transaction cannot be saved
   def process
-    # Validate that we have a linked account before processing
-    unless account.present?
-      Rails.logger.warn "SophtronEntry::Processor - No linked account for sophtron_account #{sophtron_account.id}, skipping transaction #{external_id}"
-      return nil
-    end
-
-    # Wrap import in error handling to catch validation and save errors
-    begin
-      import_adapter.import_transaction(
-        external_id: external_id,
-        amount: amount,
-        currency: currency,
-        date: date,
-        name: name,
-        source: "sophtron",
-        merchant: merchant,
-        notes: notes
-      )
-    rescue ArgumentError => e
-      # Re-raise validation errors (missing required fields, invalid data)
-      Rails.logger.error "SophtronEntry::Processor - Validation error for transaction #{external_id}: #{e.message}"
-      raise
-    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-      # Handle database save errors
-      Rails.logger.error "SophtronEntry::Processor - Failed to save transaction #{external_id}: #{e.message}"
-      raise StandardError.new("Failed to import transaction: #{e.message}")
-    rescue => e
-      # Catch unexpected errors with full context
-      Rails.logger.error "SophtronEntry::Processor - Unexpected error processing transaction #{external_id}: #{e.class} - #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
-      raise StandardError.new("Unexpected error importing transaction: #{e.message}")
+    SophtronItem::LegacyAccess.with_account(sophtron_account, sync: @sync, allow_completed: @allow_completed) do |current, sync|
+      self.class.new(sophtron_transaction, sophtron_account: current, sync: sync,
+        allow_completed: @allow_completed).send(:process_admitted)
     end
   end
 
   private
+
+    def process_admitted
+      # Validate that we have a linked account before processing
+      unless account.present?
+        Rails.logger.warn "SophtronEntry::Processor - No linked account for sophtron_account #{sophtron_account.id}, skipping transaction #{external_id}"
+        return nil
+      end
+
+      # Wrap import in error handling to catch validation and save errors
+      begin
+        import_adapter.import_transaction(
+          external_id: external_id,
+          amount: amount,
+          currency: currency,
+          date: date,
+          name: name,
+          source: "sophtron",
+          merchant: merchant,
+          notes: notes
+        )
+      rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+        raise
+      rescue ArgumentError => e
+        # Re-raise validation errors (missing required fields, invalid data)
+        Rails.logger.error "SophtronEntry::Processor - Validation error for transaction #{external_id}: #{e.message}"
+        raise
+      rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+        # Handle database save errors
+        Rails.logger.error "SophtronEntry::Processor - Failed to save transaction #{external_id}: #{e.message}"
+        raise StandardError.new("Failed to import transaction: #{e.message}")
+      rescue => e
+        # Catch unexpected errors with full context
+        Rails.logger.error "SophtronEntry::Processor - Unexpected error processing transaction #{external_id}: #{e.class} - #{e.message}"
+        Rails.logger.error e.backtrace.join("\n")
+        raise StandardError.new("Unexpected error importing transaction: #{e.message}")
+      end
+    end
+
     attr_reader :sophtron_transaction, :sophtron_account
 
     # Returns the import adapter for this transaction's account.

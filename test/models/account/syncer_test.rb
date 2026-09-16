@@ -32,6 +32,7 @@ class Account::SyncerTest < ActiveSupport::TestCase
 
     Account::MarketDataImporter.any_instance.expects(:import_all).once
     Balance::Materializer.any_instance.expects(:materialize_balances).once
+    Provider::AccountData::LegacyWriterFence.expects(:with_account).with(ibkr_account).yields(ibkr_account)
     IbkrAccount::HistoricalBalancesSync.any_instance.expects(:sync!).once
 
     Account::Syncer.new(account).perform_sync(OpenStruct.new(window_start_date: nil))

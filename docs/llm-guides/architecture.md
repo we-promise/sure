@@ -104,9 +104,10 @@ provider integrations.
 [Account::Syncer](../../app/models/account/syncer.rb) imports market data,
 materializes history (reverse for linked accounts, forward for manual accounts),
 applies provider balance overrides and matches transfers after sync.
-[Family::Syncer](../../app/models/family/syncer.rb) schedules all eligible Syncable
-`*_items` associations plus manual accounts, then matches transfers and applies
-active rules. Entry-changing workflows call `Entry#sync_account_later`; inspect
+[Family::Syncer](../../app/models/family/syncer.rb) uses
+[Family::ProviderSyncables](../../app/models/family/provider_syncables.rb) to select
+eligible legacy items or shared connections by migration ownership, plus manual
+accounts, then matches transfers and applies active rules. Entry-changing workflows call `Entry#sync_account_later`; inspect
 the calling workflow rather than assuming every save schedules a full sync.
 
 [AutoSync](../../app/controllers/concerns/auto_sync.rb) can request a family sync

@@ -9,6 +9,13 @@ class QuestradeItemsControllerTest < ActionDispatch::IntegrationTest
 
     @family = families(:dylan_family)
     @questrade_item = questrade_items(:one)
+
+    # These UI examples run in rollback fixtures. Real session admission and
+    # independent commits are covered by CredentialSessionTest without this seam.
+    item = @questrade_item
+    session = Object.new
+    session.define_singleton_method(:replace!) { |attributes| item.update!(attributes); item }
+    QuestradeItem::CredentialSession.stubs(:with).with(@questrade_item, allow_unusable: true).yields(session)
   end
 
   # ---------------------------------------------------------------------------
@@ -66,6 +73,22 @@ class QuestradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_providers_path
     assert_equal "Renamed Questrade", @questrade_item.name
     assert_equal original_token, @questrade_item.refresh_token
+  end
+
+  test "busy or changed credential ownership returns a sanitized refusal without replacement" do
+    [ Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged ].each do |error|
+      original = @questrade_item.reload.attributes
+      QuestradeItem::CredentialSession.expects(:with).with(@questrade_item, allow_unusable: true).raises(error, "private refusal")
+
+      patch questrade_item_url(@questrade_item), params: { questrade_item: { refresh_token: "private-new-token" } }
+
+      assert_response :see_other
+      assert_redirected_to settings_providers_path
+      assert_equal I18n.t("questrade_items.errors.credentials_in_use"), flash[:alert]
+      assert_equal original, @questrade_item.reload.attributes
+      assert_not_includes response.body, "private-new-token"
+      assert_not_includes response.body, "private refusal"
+    end
   end
 
   # ---------------------------------------------------------------------------

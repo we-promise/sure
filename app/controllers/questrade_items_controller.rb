@@ -63,7 +63,17 @@ class QuestradeItemsController < ApplicationController
     # A fresh, non-blank token re-arms a connection that was marked requires_update.
     update_attrs = update_attrs.merge(status: :good) if update_attrs[:refresh_token].present?
 
-    if @questrade_item.update(update_attrs)
+    begin
+      QuestradeItem::CredentialSession.with(@questrade_item, allow_unusable: true) do |session|
+        @questrade_item = session.replace!(update_attrs)
+      end
+      updated = true
+    rescue ActiveRecord::RecordInvalid => error
+      @questrade_item = error.record
+      updated = false
+    end
+
+    if updated
       if turbo_frame_request?
         flash.now[:notice] = t(".success", default: "Successfully updated Questrade configuration.")
         @questrade_items = Current.family.questrade_items.ordered
@@ -91,6 +101,8 @@ class QuestradeItemsController < ApplicationController
         redirect_to settings_providers_path, alert: @error_message
       end
     end
+  rescue *QuestradeItem::CredentialSession::DENIAL_ERRORS
+    redirect_to settings_providers_path, alert: t("questrade_items.errors.credentials_in_use"), status: :see_other
   end
 
   def destroy

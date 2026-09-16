@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../../support/brex_fixture_fence_helper"
 
 class BrexItem::SyncerTest < ActiveSupport::TestCase
+  include BrexFixtureFenceHelper
   setup do
     @brex_item = brex_items(:one)
     @syncer = BrexItem::Syncer.new(@brex_item)
@@ -14,7 +16,7 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
 
     @brex_item.expects(:import_latest_brex_data).with(sync_start_date: window_start_date).once
 
-    @syncer.perform_sync(sync)
+    @syncer.send(:perform_sync_admitted, sync)
   end
 
   test "records localized setup status text and counts" do
@@ -23,7 +25,7 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
 
     @brex_item.expects(:import_latest_brex_data).with(sync_start_date: window_start_date).once
 
-    @syncer.perform_sync(sync)
+    @syncer.send(:perform_sync_admitted, sync)
 
     assert_equal [
       I18n.t("brex_items.syncer.importing_accounts"),
@@ -44,7 +46,7 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
       transactions_failed: 1
     )
 
-    @syncer.perform_sync(sync)
+    @syncer.send(:perform_sync_admitted, sync)
 
     assert_equal 2, sync.sync_stats["total_errors"]
     assert_equal [
@@ -76,7 +78,7 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
       { account_id: account.id, success: false, error: "scheduling failure" }
     ])
 
-    @syncer.perform_sync(sync)
+    @syncer.send(:perform_sync_admitted, sync)
 
     assert_equal 2, sync.sync_stats["total_errors"]
     assert_equal [
@@ -92,7 +94,7 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
     Sentry.expects(:capture_exception)
 
     error = assert_raises(BrexItem::Syncer::SafeSyncError) do
-      @syncer.perform_sync(sync)
+      @syncer.send(:perform_sync_admitted, sync)
     end
 
     assert_equal I18n.t("brex_items.syncer.credentials_invalid"), error.message

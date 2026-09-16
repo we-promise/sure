@@ -243,9 +243,9 @@ class Settings::ProvidersController < ApplicationController
     def load_provider_items(provider_key)
       case provider_key
       when "akahu"
-        @akahu_items = Current.family.akahu_items.active.ordered
+        @akahu_items = Current.family.akahu_items.active.legacy_manageable.ordered
       when "up"
-        @up_items = Current.family.up_items.active.ordered
+        @up_items = legacy_settings_items(Current.family.up_items.active.ordered, "UpItem")
       when "monobank"
         @monobank_items = Current.family.monobank_items.active.ordered
       when "simplefin"
@@ -261,9 +261,9 @@ class Settings::ProvidersController < ApplicationController
       when "wise"
         @wise_items = Current.family.wise_items.active.ordered.includes(:syncs, :wise_accounts)
       when "mercury"
-        @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
+        @mercury_items = legacy_settings_items(Current.family.mercury_items.active.ordered, "MercuryItem").includes(:syncs, :mercury_accounts)
       when "brex"
-        @brex_items = Current.family.brex_items.active.ordered.includes(:syncs, :brex_accounts)
+        @brex_items = legacy_settings_items(Current.family.brex_items.active.ordered, "BrexItem").includes(:syncs, :brex_accounts)
       when "coinbase"
         @coinbase_items = Current.family.coinbase_items.ordered
       when "binance"
@@ -291,14 +291,21 @@ class Settings::ProvidersController < ApplicationController
 
     # Prepares instance vars needed by the show view and partials
     def prepare_show_context
+      @native_connections = Current.family.provider_connections
+        .where(provider_key: Provider::AccountData::Registry.keys, scheduled_for_deletion: false)
+        .where.not(status: "disabled")
+        .left_outer_joins(:provider_migration_control)
+        .where("provider_migration_controls.id IS NULL OR provider_migration_controls.state IN (?)", ProviderMigrationControl::NATIVE_STATES)
+        .select(:id, :name, :provider_key).ordered
+
       # Load all provider configurations (exclude family-scoped panels, which have their own UI below)
       Provider::Factory.ensure_adapters_loaded
       @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
         FAMILY_PANEL_KEYS.any? { |key| config.provider_key.to_s.casecmp(key).zero? }
       end
 
-      @akahu_items = Current.family.akahu_items.active.ordered
-      @up_items = Current.family.up_items.active.ordered
+      @akahu_items = Current.family.akahu_items.active.legacy_manageable.ordered
+      @up_items = legacy_settings_items(Current.family.up_items.active.ordered, "UpItem")
       @monobank_items = Current.family.monobank_items.active.ordered
       # Providers page only needs to know whether any SimpleFin/Lunchflow connections exist with valid credentials
       @simplefin_items = Current.family.simplefin_items.where.not(access_url: [ nil, "" ]).ordered.select(:id)
@@ -309,8 +316,8 @@ class Settings::ProvidersController < ApplicationController
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
       @wise_items = Current.family.wise_items.active.ordered
-      @mercury_items = Current.family.mercury_items.active.ordered
-      @brex_items = Current.family.brex_items.active.ordered
+      @mercury_items = legacy_settings_items(Current.family.mercury_items.active.ordered, "MercuryItem")
+      @brex_items = legacy_settings_items(Current.family.brex_items.active.ordered, "BrexItem")
       @coinbase_items = Current.family.coinbase_items.ordered # Coinbase panel needs name and sync info for status display
       @snaptrade_items = Current.family.snaptrade_items.ordered
       @ibkr_items = Current.family.ibkr_items.ordered.select(:id)
@@ -336,6 +343,12 @@ class Settings::ProvidersController < ApplicationController
     # Maps each family panel key to the loaded item collection. Used by
     # compute_provider_sync_health and build_provider_entries to avoid relying
     # on instance_variable_get for control flow.
+    def legacy_settings_items(scope, legacy_type)
+      migrated_ids = ProviderMigrationControl.where(family_id: Current.family.id, legacy_type: legacy_type,
+        state: ProviderMigrationControl::NATIVE_STATES).select(:legacy_id)
+      scope.where.not(id: migrated_ids)
+    end
+
     def family_panel_items
       {
         "akahu"          => @akahu_items,

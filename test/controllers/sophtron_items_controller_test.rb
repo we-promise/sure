@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../support/sophtron_fixture_fence_helper"
 
 class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
+  include SophtronFixtureFenceHelper
   setup do
     sign_in @user = users(:family_admin)
     @item = @user.family.sophtron_items.create!(
@@ -9,6 +11,272 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
       access_key: Base64.strict_encode64("secret-key"),
       customer_id: "cust-1"
     )
+  end
+
+  test "migration ownership denial stops manual sync polling and MFA before upstream calls" do
+    @item.update!(current_job_id: "job-before-cutover", last_connection_error: "Retained error")
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+    fence = Provider::AccountData::LegacyWriterFence
+    fence.stubs(:with_item).with(@item, operation: :sync).raises(fence::OwnershipChanged)
+    DebugLogEntry.expects(:capture).times(3).with do |attributes|
+      attributes[:provider_key] == "sophtron" && attributes[:family] == @user.family &&
+        attributes.dig(:metadata, :item_id) == @item.id
+    end
+    before_attributes = @item.reload.attributes
+
+    assert_no_enqueued_jobs do
+      post sync_sophtron_item_url(@item)
+      assert_redirected_to accounts_path
+      get connection_status_sophtron_item_url(@item)
+      assert_redirected_to accounts_path
+      post submit_mfa_sophtron_item_url(@item), params: { token_input: "do-not-send" }
+      assert_redirected_to accounts_path
+    end
+
+    assert_equal before_attributes, @item.reload.attributes
+  end
+
+  test "busy ownership returns a conflict to a JSON refresh caller without changing the source" do
+    fence = Provider::AccountData::LegacyWriterFence
+    fence.stubs(:with_item).with(@item, operation: :sync).raises(fence::Busy)
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+    before_attributes = @item.reload.attributes
+
+    post sync_sophtron_item_url(@item, format: :json)
+
+    assert_response :conflict
+    assert_equal I18n.t("sophtron_items.connection_unavailable"), response.parsed_body.fetch("error")
+    assert_equal before_attributes, @item.reload.attributes
+  end
+
+  test "lifecycle denial prevents link setup institution manual and delete mutations" do
+    @item.update!(user_institution_id: "connected")
+    link_token = SophtronItem::Selection.issue(@item, flow: :link_accounts)
+    existing_token = SophtronItem::Selection.issue(@item, flow: :link_existing_account, account_id: accounts(:depository).id)
+    setup_token = SophtronItem::Selection.issue(@item, flow: :complete_account_setup)
+    fence = Provider::AccountData::LegacyWriterFence
+    fence.stubs(:with_item).with(@item, operation: :lifecycle).raises(fence::OwnershipChanged)
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+    DebugLogEntry.stubs(:capture)
+    before = @item.reload.attributes
+    assert_no_enqueued_jobs do
+      assert_no_difference [ "SophtronItem.count", "SophtronAccount.count", "Account.count", "AccountProvider.count" ] do
+        post connect_institution_sophtron_item_url(@item), params: {
+          institution_id: "new", bank_username: "user", bank_password: "secret", connect_new_institution: true
+        }
+        assert_redirected_to accounts_path
+        post link_accounts_sophtron_items_url, params: { account_ids: [ "remote" ], selection_token: link_token }
+        assert_redirected_to accounts_path
+        post link_existing_account_sophtron_items_url, params: { account_id: accounts(:depository).id, sophtron_account_id: "remote", selection_token: existing_token }
+        assert_redirected_to accounts_path
+        post complete_account_setup_sophtron_item_url(@item), params: { account_types: { SecureRandom.uuid => "Depository" }, selection_token: setup_token }
+        assert_redirected_to accounts_path
+        post toggle_manual_sync_sophtron_item_url(@item)
+        assert_redirected_to accounts_path
+        delete sophtron_item_url(@item)
+        assert_redirected_to accounts_path
+      end
+    end
+    assert_equal before, @item.reload.attributes
+  end
+
+  test "members cannot enter lifecycle commands and foreign item routes remain scoped" do
+    sign_in users(:family_member)
+    SophtronItem::Lifecycle.expects(:new).never
+    post connect_institution_sophtron_item_url(@item), params: { institution_id: "new", bank_username: "user", bank_password: "secret" }
+    assert_redirected_to accounts_path
+    post link_accounts_sophtron_items_url, params: { account_ids: [ "remote" ] }
+    assert_redirected_to accounts_path
+    delete sophtron_item_url(@item)
+    assert_redirected_to accounts_path
+
+    sign_in @user
+    foreign = families(:empty).sophtron_items.create!(name: "Foreign", user_id: "user", access_key: "key")
+    post connect_institution_sophtron_item_url(foreign), params: { institution_id: "new", bank_username: "user", bank_password: "secret" }
+    assert_response :not_found
+    delete sophtron_item_url(foreign)
+    assert_response :not_found
+  end
+
+  test "missing and tampered picker grants never fall back to the configured item" do
+    @item.update!(user_institution_id: "connected")
+    token = SophtronItem::Selection.issue(@item, flow: :link_accounts)
+    tampered = token[0...-1] + (token.end_with?("0") ? "1" : "0")
+    Family.any_instance.expects(:configured_sophtron_item).never
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+    DebugLogEntry.stubs(:capture)
+    assert_no_enqueued_jobs do
+      assert_no_difference [ "Account.count", "AccountProvider.count", "SophtronAccount.count" ] do
+        [ nil, tampered ].each do |selection_token|
+          post link_accounts_sophtron_items_url, params: { account_ids: [ "remote" ], selection_token: selection_token }
+          assert_redirected_to accounts_path
+          post link_existing_account_sophtron_items_url, params: {
+            account_id: accounts(:depository).id, sophtron_account_id: "remote", selection_token: selection_token
+          }
+          assert_redirected_to accounts_path
+          post complete_account_setup_sophtron_item_url(@item), params: {
+            account_types: { SecureRandom.uuid => "Depository" }, selection_token: selection_token
+          }
+          assert_redirected_to accounts_path
+        end
+      end
+    end
+  end
+
+  test "expired picker grant is refused before discovery" do
+    @item.update!(user_institution_id: "connected")
+    token = SophtronItem::Selection.issue(@item, flow: :link_accounts)
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+    DebugLogEntry.stubs(:capture)
+    travel SophtronItem::Selection::LIFETIME + 1.second do
+      post link_accounts_sophtron_items_url, params: { account_ids: [ "remote" ], selection_token: token }
+      assert_redirected_to accounts_path
+    end
+  end
+
+  test "stale picker grant cannot link accounts after institution changes" do
+    @item.update!(user_institution_id: "before")
+    token = SophtronItem::Selection.issue(@item, flow: :link_accounts)
+    @item.update!(user_institution_id: "after")
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+    DebugLogEntry.stubs(:capture)
+    assert_no_difference [ "Account.count", "AccountProvider.count", "SophtronAccount.count" ] do
+      post link_accounts_sophtron_items_url, params: { account_ids: [ "remote" ], selection_token: token }
+    end
+    assert_redirected_to accounts_path
+    assert_equal "after", @item.reload.user_institution_id
+  end
+
+  test "a valid foreign-family grant and a mismatched setup route are refused" do
+    foreign = families(:empty).sophtron_items.create!(name: "Foreign", user_id: "user", access_key: "key")
+    foreign_token = SophtronItem::Selection.issue(foreign, flow: :link_accounts)
+    other = @user.family.sophtron_items.create!(name: "Other", user_id: "other-user", access_key: "other-key")
+    setup_token = SophtronItem::Selection.issue(other, flow: :complete_account_setup)
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+    DebugLogEntry.stubs(:capture)
+    assert_no_difference [ "Account.count", "AccountProvider.count", "SophtronAccount.count" ] do
+      post link_accounts_sophtron_items_url, params: { account_ids: [ "remote" ], selection_token: foreign_token }
+      assert_redirected_to accounts_path
+      post complete_account_setup_sophtron_item_url(@item), params: {
+        account_types: { SecureRandom.uuid => "Depository" }, selection_token: setup_token
+      }
+      assert_redirected_to accounts_path
+    end
+  end
+
+  test "each picker renders a grant for its exact item flow and financial account" do
+    @item.update!(user_institution_id: "connected")
+    data = { id: "remote", account_id: "remote", account_name: "Checking", balance: 1, currency: "USD" }.with_indifferent_access
+    @item.upsert_sophtron_account(data)
+    SophtronItem.any_instance.stubs(:fetch_remote_accounts).returns([ data ])
+    requests = [
+      [ select_accounts_sophtron_items_url, {}, "link_accounts", nil ],
+      [ select_existing_account_sophtron_items_url, { account_id: accounts(:depository).id }, "link_existing_account", accounts(:depository).id ],
+      [ setup_accounts_sophtron_item_url(@item), {}, "complete_account_setup", nil ]
+    ]
+    requests.each do |url, parameters, flow, account_id|
+      get url, params: parameters
+      assert_response :success
+      assert_select "input[name=selection_token]", count: 1 do |fields|
+        selection = SophtronItem::Selection.from_token(fields.first["value"], flow: flow, account_id: account_id)
+        assert_equal @item.id, selection.item_for(@user.family).id
+        assert_equal @item.id, selection.verify!(@item).id
+      end
+    end
+  end
+
+  test "successful connection and post MFA completion both issue new and existing account picker grants" do
+    data = { id: "remote", account_id: "remote", account_name: "Checking", balance: 1, currency: "USD" }.with_indifferent_access
+    SophtronItem.any_instance.stubs(:fetch_remote_accounts).returns([ data ])
+    provider = mock("completed connection")
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+    [ true, false ].each do |success|
+      [ nil, accounts(:depository).id ].each do |account_id|
+        @item.update!(user_institution_id: "connected", current_job_id: "job", job_status: nil, raw_job_payload: {})
+        job = { LastStatus: "Completed", JobID: "job" }
+        job[:SuccessFlag] = true if success
+        provider.expects(:get_job_information).with("job").returns(job)
+        get connection_status_sophtron_item_url(@item), params: { account_id: account_id, post_mfa: !success }
+        assert_response :success
+        assert_nil @item.reload.current_job_id
+        flow = account_id ? :link_existing_account : :link_accounts
+        assert_select "input[name=selection_token]", count: 1 do |fields|
+          selection = SophtronItem::Selection.from_token(fields.first["value"], flow: flow, account_id: account_id)
+          assert_equal @item.id, selection.verify!(@item).id
+        end
+      end
+    end
+  end
+
+  test "credential updates are refused before saving attributes or verifying credentials" do
+    fence = Provider::AccountData::LegacyWriterFence
+    fence.stubs(:with_item).with(@item, operation: :credentials).raises(fence::OwnershipChanged)
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+    DebugLogEntry.expects(:capture).with do |attributes|
+      attributes[:metadata] == { item_id: @item.id, error_class: fence::OwnershipChanged.name } &&
+        !attributes.to_s.include?("replacement-key")
+    end
+    before = @item.reload.attributes
+
+    patch sophtron_item_url(@item), params: { sophtron_item: { user_id: "replacement-user", access_key: "replacement-key" } }
+
+    assert_redirected_to accounts_path
+    assert_equal before, @item.reload.attributes
+  end
+
+  test "credential update verifies the newly saved credentials through the admitted item" do
+    provider = mock("new credentials")
+    Provider::Sophtron.expects(:new).with("replacement-user", "replacement-key", base_url: "https://example.com/api").returns(provider)
+    provider.expects(:health_check_auth).returns({})
+    provider.expects(:list_customers).never # Preserve an already provisioned customer.
+
+    patch sophtron_item_url(@item), params: {
+      sophtron_item: { user_id: "replacement-user", access_key: "replacement-key", base_url: "https://example.com/api" }
+    }
+
+    assert_redirected_to accounts_path
+    assert_equal "replacement-user", @item.reload.user_id
+    assert_equal "cust-1", @item.customer_id
+  end
+
+  test "invalid credential form values retain validation rendering without provider calls" do
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+
+    patch sophtron_item_url(@item), params: { sophtron_item: { name: "" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "Sophtron", @item.reload.name
+  end
+
+  test "discovery actions refuse migration ownership before requests normalization or scheduling" do
+    fence = Provider::AccountData::LegacyWriterFence
+    fence.stubs(:with_item).with(@item, operation: :ingest).raises(fence::OwnershipChanged)
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+    before = @item.reload.attributes
+
+    assert_no_enqueued_jobs do
+      get preload_accounts_sophtron_items_url(format: :json)
+      assert_response :conflict
+      get select_accounts_sophtron_items_url, params: { institution_name: "Bank" }
+      assert_redirected_to accounts_path
+      get select_existing_account_sophtron_items_url, params: { account_id: accounts(:depository).id }
+      assert_redirected_to accounts_path
+      get setup_accounts_sophtron_item_url(@item)
+      assert_redirected_to accounts_path
+    end
+    assert_equal before, @item.reload.attributes
+  end
+
+  test "member cannot update Sophtron credentials or discover institutions" do
+    sign_in users(:family_member)
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+    before = @item.reload.attributes
+
+    patch sophtron_item_url(@item), params: { sophtron_item: { access_key: "replacement-key" } }
+    assert_redirected_to accounts_path
+    get select_accounts_sophtron_items_url, params: { institution_name: "Bank" }
+    assert_redirected_to accounts_path
+    assert_equal before, @item.reload.attributes
   end
 
   test "select_accounts renders institution connection flow when no institution is connected" do
@@ -935,11 +1203,14 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
 
     SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
     SophtronItem.any_instance.stubs(:start_initial_load_later)
+    token = SophtronItem::Selection.issue(@item, flow: :link_existing_account, account_id: account.id)
+    Family.any_instance.expects(:configured_sophtron_item).never
 
     assert_difference "AccountProvider.count", 1 do
       post link_existing_account_sophtron_items_url, params: {
         account_id: account.id,
-        sophtron_account_id: "acct-1"
+        sophtron_account_id: "acct-1",
+        selection_token: token
       }
     end
 

@@ -58,6 +58,31 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
     end
   end
 
+  test "reset refuses retired account history before deleting any financial data" do
+    account = @other_family.accounts.create!(name: "Retired calculation owner", currency: "USD",
+      balance: 0, accountable: Depository.new)
+    identity = Account::IngestionIdentity.capture!(account: account)
+    sync = account.syncs.create!(status: "completed")
+    original = sync.reload.attributes
+    # Test-only atomic retirement proves the database boundary. This is not a
+    # public account retirement or full-family erasure command.
+    ApplicationRecord.transaction(requires_new: true) do
+      Account::IngestionIdentity.where(id: identity.id).update_all(live_account_id: nil, retired_at: Time.current)
+      Account.where(id: account.id).delete_all
+      ApplicationRecord.connection.execute("SET CONSTRAINTS account_ingestion_identity_retirement IMMEDIATE")
+    end
+    before_counts = reset_counts(@other_family)
+    reset = Family::FinancialDataReset.new(family: @other_family, dry_run: false, confirmed: true)
+    reset.expects(:delete_active_storage_attachments!).never
+
+    assert_raises(Family::FinancialDataReset::RetainedHistoryError) { reset.call }
+
+    assert_equal before_counts, reset_counts(@other_family)
+    assert_equal original, sync.reload.attributes
+    assert identity.reload.retired?
+    assert Family.exists?(@other_family.id)
+  end
+
   test "destructive reset without confirmation does not partially mutate financial data" do
     create_extra_target_data!(family: @family, label: "Unconfirmed")
     before_counts = reset_counts(@family)

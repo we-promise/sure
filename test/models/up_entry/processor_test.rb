@@ -23,6 +23,9 @@ class UpEntry::ProcessorTest < ActiveSupport::TestCase
     )
 
     AccountProvider.create!(account: @account, provider: @up_account)
+    # Keep these normalization fixtures transactional; admission is tested with
+    # real advisory locks in UpItem::LegacyWriterTest.
+    UpItem::LegacyWriter.stubs(:with_account).with(@up_account).yields(@up_account)
   end
 
   test "imports settled Up transaction with sign conversion and provider metadata" do

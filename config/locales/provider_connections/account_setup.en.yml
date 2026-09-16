@@ -1,0 +1,33 @@
+en:
+  provider_connections:
+    account_setup:
+      title: Set up accounts
+      back: Back to connections
+      description: Create an account or link a discovered account to one you already manage.
+      open: Set up accounts
+      refresh: Refresh discovered accounts
+      refresh_success: Account discovery queued. Return here when the sync finishes.
+      empty_title: No accounts to set up
+      empty_description: Accounts may already be linked. Refresh discovery to check for more accounts.
+      create_new: Create a new account
+      link_existing: Link to an existing account
+      existing_account: Existing account
+      choose_account: Choose an account
+      review_link: Review link
+      next_page: More discovered accounts
+      confirm_existing: Link this discovered account to %{name}.
+      secondary: This connection will collect source observations. Your current source choices will be kept, and account history will not be merged automatically.
+      opening_balance_help: Enter the account's opening balance in its currency. For a liability, enter the amount owed as a positive number.
+      name: Account name
+      account_type: Account type
+      choose_type: Choose an account type
+      currency: Currency
+      opening_balance: Opening balance
+      cancel: Cancel
+      confirm_link: Link account
+      confirm_create: Create account
+      success: Account connected.
+      errors:
+        conflict: This account selection changed or is unavailable. Open account setup again before retrying.
+        busy: This connection or account is in use. Wait for its current work to finish and try again.
+        invalid: Could not set up the account. Check the values and try again.

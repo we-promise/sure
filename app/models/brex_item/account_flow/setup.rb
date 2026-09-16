@@ -4,23 +4,8 @@ class BrexItem::AccountFlow
   module Setup
     def import_accounts_from_api_if_needed
       raise NoApiTokenError unless brex_item&.credentials_configured?
-
-      available_accounts = fetch_accounts
-      return nil if available_accounts.empty?
-
-      existing_accounts = brex_item.brex_accounts.index_by(&:account_id)
-
-      available_accounts.each do |account_data|
-        account_id = account_data.with_indifferent_access[:id].to_s
-        account_name = BrexAccount.name_for(account_data)
-        next if account_id.blank? || account_name.blank?
-
-        brex_account = existing_accounts[account_id]
-        next if brex_account.present? && !brex_account_snapshot_changed?(brex_account, account_data)
-
-        upsert_brex_account!(account_id, account_data)
-      end
-
+      result = lifecycle.discover(flow: :complete_account_setup, setup: true)
+      @brex_item, @selection_token = result.values_at(:item, :selection_token)
       nil
     end
 
@@ -84,75 +69,15 @@ class BrexItem::AccountFlow
     end
 
     def complete_setup!(account_types:, account_subtypes:)
-      created_accounts = []
-      skipped_count = 0
-      valid_types = Provider::BrexAdapter.supported_account_types
-      failed_count = 0
-
-      submitted_brex_accounts = brex_item.brex_accounts
-                                      .where(id: account_types.keys)
-                                      .includes(:account_provider)
-                                      .index_by { |brex_account| brex_account.id.to_s }
-
-      account_types.each do |brex_account_id, selected_type|
-        if selected_type == "skip" || selected_type.blank?
-          skipped_count += 1
-          next
-        end
-
-        unless valid_types.include?(selected_type)
-          Rails.logger.warn("Invalid account type '#{selected_type}' submitted for Brex account #{brex_account_id}")
-          skipped_count += 1
-          next
-        end
-
-        brex_account = submitted_brex_accounts[brex_account_id.to_s]
-        unless brex_account
-          Rails.logger.warn("Brex account #{brex_account_id} not found for item #{brex_item.id}")
-          next
-        end
-
-        if brex_account.account_provider.present?
-          Rails.logger.info("Brex account #{brex_account_id} already linked, skipping")
-          next
-        end
-
-        selected_subtype = selected_subtype_for(
-          selected_type: selected_type,
-          submitted_subtype: account_subtypes[brex_account_id]
-        )
-
-        begin
-          ActiveRecord::Base.transaction do
-            account = Account.create_and_sync(
-              {
-                family: family,
-                name: brex_account.name,
-                balance: brex_account.current_balance || 0,
-                currency: brex_account.currency.presence || family.currency,
-                accountable_type: selected_type,
-                accountable_attributes: selected_subtype.present? ? { subtype: selected_subtype } : {}
-              },
-              skip_initial_sync: true
-            )
-
-            AccountProvider.create!(account: account, provider: brex_account)
-            created_accounts << account
-          end
-        rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-          failed_count += 1
-          Rails.logger.error("Brex account setup failed for #{brex_account_id}: #{e.class} - #{e.message}")
-          Rails.logger.error(Array(e.backtrace).first(10).join("\n"))
-        end
-      end
-
-      brex_item.sync_later if created_accounts.any?
-
-      SetupResult.new(created_accounts: created_accounts, skipped_count: skipped_count, failed_count: failed_count)
+      result = lifecycle.complete_account_setup(account_types: account_types, account_subtypes: account_subtypes,
+        selection: selection(:complete_account_setup))
+      SetupResult.new(**result)
     end
 
     def import_accounts_with_user_facing_error
       import_accounts_from_api_if_needed
+    rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue NoApiTokenError
       I18n.t("brex_items.setup_accounts.no_api_token")
     rescue Provider::Brex::BrexError => e
@@ -167,6 +92,8 @@ class BrexItem::AccountFlow
       result = complete_setup!(account_types: account_types, account_subtypes: account_subtypes)
 
       SetupCompletion.new(success: result.failed_count.zero? && result.created_count.positive?, message: setup_notice(result))
+    rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
       Rails.logger.error("Brex account setup failed: #{e.class} - #{e.message}")
       Rails.logger.error(Array(e.backtrace).first(10).join("\n"))

@@ -1,11 +1,22 @@
 class EnableBankingAccount::Transactions::Processor
   attr_reader :enable_banking_account
 
-  def initialize(enable_banking_account)
+  def initialize(enable_banking_account, expected_context: nil, expected_item_context: nil)
     @enable_banking_account = enable_banking_account
+    @expected_context = expected_context || EnableBankingItem::LegacyAccess.source_context(enable_banking_account)
+    @expected_item_context = expected_item_context || EnableBankingItem::LegacyAccess.transport_context(enable_banking_account.enable_banking_item)
   end
 
   def process
+    EnableBankingItem::LegacyAccess.with_account(enable_banking_account) do |current|
+      EnableBankingItem::LegacyAccess.verify_source!(current, @expected_context)
+      EnableBankingItem::LegacyAccess.verify_transport!(current.enable_banking_item, @expected_item_context)
+      self.class.new(current, expected_context: @expected_context, expected_item_context: @expected_item_context).send(:process_admitted)
+    end
+  end
+
+  private def process_admitted
+    expected_context = @expected_context
     unless enable_banking_account.raw_transactions_payload.present?
       Rails.logger.info "EnableBankingAccount::Transactions::Processor - No transactions in raw_transactions_payload for enable_banking_account #{enable_banking_account.id}"
       return { success: true, total: 0, imported: 0, failed: 0, errors: [] }
@@ -91,7 +102,9 @@ class EnableBankingAccount::Transactions::Processor
           transaction_data,
           enable_banking_account: enable_banking_account,
           import_adapter: shared_adapter,
-          known_merchant_names: shared_known_merchant_names
+          known_merchant_names: shared_known_merchant_names,
+          expected_context: expected_context,
+          expected_item_context: @expected_item_context
         ).process
 
         if result.nil?
@@ -100,6 +113,8 @@ class EnableBankingAccount::Transactions::Processor
         else
           imported_count += 1
         end
+      rescue *EnableBankingItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue ArgumentError => e
         failed_count += 1
         transaction_id = transaction_data.try(:[], :transaction_id) || transaction_data.try(:[], "transaction_id") || "unknown"

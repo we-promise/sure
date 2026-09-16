@@ -1,5 +1,5 @@
 class MercuryItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -32,8 +32,18 @@ class MercuryItem < ApplicationRecord
   scope :needs_update, -> { where(status: :requires_update) }
 
   def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
+    MercuryItem::LegacyAccess.with_item(self, operation: :lifecycle) do |current|
+      MercuryItem.transaction(requires_new: true) do
+        current.lock!("FOR UPDATE NOWAIT")
+        unless current.family_id == family_id && !current.scheduled_for_deletion?
+          raise MercuryItem::LegacyAccess::Fence::OwnershipChanged, "Mercury deletion owner changed"
+        end
+        current.update!(scheduled_for_deletion: true)
+        DestroyJob.perform_later(current)
+      end
+    end
+  rescue ActiveRecord::LockWaitTimeout
+    raise MercuryItem::LegacyAccess::Fence::Busy, "Mercury deletion is busy", cause: nil
   end
 
   # TODO: Implement data import from provider API
@@ -41,14 +51,15 @@ class MercuryItem < ApplicationRecord
   # May need provider-specific validation (e.g., session validity checks).
   # See LunchflowItem#import_latest_lunchflow_data or EnableBankingItem#import_latest_enable_banking_data for examples.
   def import_latest_mercury_data
-    provider = mercury_provider
-    unless provider
+    unless credentials_configured?
       Rails.logger.error "MercuryItem #{id} - Cannot import: provider is not configured"
       raise StandardError.new("Mercury provider is not configured")
     end
 
     # TODO: Add any provider-specific validation here (e.g., session checks)
-    MercuryItem::Importer.new(self, mercury_provider: provider).import
+    MercuryItem::Importer.new(self).import
+  rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+    raise
   rescue => e
     Rails.logger.error "MercuryItem #{id} - Failed to import data: #{e.message}"
     raise
@@ -65,6 +76,8 @@ class MercuryItem < ApplicationRecord
       begin
         result = MercuryAccount::Processor.new(mercury_account).process
         results << { mercury_account_id: mercury_account.id, success: true, result: result }
+      rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         Rails.logger.error "MercuryItem #{id} - Failed to process account #{mercury_account.id}: #{e.message}"
         results << { mercury_account_id: mercury_account.id, success: false, error: e.message }
@@ -77,6 +90,8 @@ class MercuryItem < ApplicationRecord
   # TODO: Customize sync scheduling if needed
   # This method schedules sync jobs for all linked accounts.
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
+    raise MercuryItem::LegacyAccess::Fence::OwnershipChanged, "Mercury source is scheduled for deletion" if scheduled_for_deletion?
+    parent_sync = Provider::AccountData::LegacyWriterFence.scoped_sync!(self, parent_sync) if parent_sync
     return [] if accounts.empty?
 
     results = []
@@ -88,6 +103,8 @@ class MercuryItem < ApplicationRecord
           window_end_date: window_end_date
         )
         results << { account_id: account.id, success: true }
+      rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         Rails.logger.error "MercuryItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
         results << { account_id: account.id, success: false, error: e.message }
@@ -98,6 +115,7 @@ class MercuryItem < ApplicationRecord
   end
 
   def upsert_mercury_snapshot!(accounts_snapshot)
+    raise MercuryItem::LegacyAccess::Fence::OwnershipChanged, "Mercury source is scheduled for deletion" if scheduled_for_deletion?
     assign_attributes(
       raw_payload: accounts_snapshot
     )
@@ -174,4 +192,7 @@ class MercuryItem < ApplicationRecord
   def effective_base_url
     base_url.presence || "https://api.mercury.com/api/v1"
   end
+
+  guard_legacy_writes import_latest_mercury_data: :ingest, process_accounts: :publish,
+    upsert_mercury_snapshot!: :ingest, schedule_account_syncs: :publish
 end

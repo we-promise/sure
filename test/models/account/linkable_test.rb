@@ -1,6 +1,9 @@
 require "test_helper"
+require_relative "../../support/provider_ingestion_test_helper"
 
 class Account::LinkableTest < ActiveSupport::TestCase
+  include ProviderIngestionTestHelper
+
   setup do
     @family = families(:dylan_family)
     @account = accounts(:depository)
@@ -15,6 +18,76 @@ class Account::LinkableTest < ActiveSupport::TestCase
 
   test "linked? returns false when account has no providers" do
     assert @account.unlinked?
+  end
+
+  test "provider preserves legacy fallback without balance policy history" do
+    AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+
+    assert_instance_of Provider::PlaidAdapter, @account.provider
+    assert_equal "plaid", @account.provider_name
+  end
+
+  test "transaction policy alone does not remove legacy balance fallback" do
+    with_provider_encryption do
+      external = create_external_account(create_provider_connection)
+      link = AccountProvider.create!(account: @account, external_account: external)
+      Account::SourcePolicy.select!(account: @account, account_provider: link, resource: "transactions")
+
+      assert_instance_of Provider::ExternalAccountAdapter, @account.provider
+      assert_equal external.provider_connection, @account.provider.item
+    end
+  end
+
+  test "provider follows explicit balance authority rather than the first link" do
+    with_provider_encryption do
+      first = AccountProvider.create!(account: @account, external_account: create_external_account(create_provider_connection))
+      second_external = create_external_account(create_provider_connection(provider_key: "mercury"))
+      second = AccountProvider.create!(account: @account, external_account: second_external)
+      Account::SourcePolicy.select!(account: @account, account_provider: first, resource: "balances")
+      selected = Account::SourcePolicy.select!(account: @account, account_provider: second, resource: "balances")
+
+      assert_equal second_external.provider_connection, @account.provider.item
+      assert_equal [ selected.id ], @account.source_policies.active.pluck(:id)
+    end
+  end
+
+  test "deactivated balance selection does not fall back even while its link remains" do
+    with_provider_encryption do
+      link = AccountProvider.create!(account: @account, external_account: create_external_account(create_provider_connection))
+      selected = Account::SourcePolicy.select!(account: @account, account_provider: link, resource: "balances")
+      selected.update!(active: false)
+
+      assert @account.linked?
+      assert_nil @account.provider
+      assert_nil @account.provider_name
+      assert_equal [ link.id ], @account.account_providers.pluck(:id)
+    end
+  end
+
+  test "detaching selected balances retains history without promoting the remaining source" do
+    with_provider_encryption do
+      selected_link = AccountProvider.create!(account: @account, external_account: create_external_account(create_provider_connection))
+      remaining_external = create_external_account(create_provider_connection(provider_key: "mercury"))
+      remaining_link = AccountProvider.create!(account: @account, external_account: remaining_external)
+      selected = Account::SourcePolicy.select!(account: @account, account_provider: selected_link, resource: "balances")
+      selected.update!(active: false)
+      retained = selected.reload.attributes
+      selected_link.destroy!
+
+      assert @account.linked?
+      refute @account.manual?
+      assert_nil @account.provider
+      assert_nil @account.provider_name
+      assert_equal retained, selected.reload.attributes
+      assert_equal [ remaining_link.id ], @account.account_providers.pluck(:id)
+      assert_equal [ remaining_external.provider_connection ], @account.providers.map(&:item)
+
+      replacement = Account::SourcePolicy.select!(account: @account, account_provider: remaining_link, resource: "balances")
+
+      assert_equal 2, replacement.revision
+      assert_equal remaining_external.provider_connection, @account.provider.item
+      assert_equal retained, selected.reload.attributes
+    end
   end
 
   test "providers returns all provider adapters" do

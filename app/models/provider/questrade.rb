@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "uri"
+
 # Questrade API client.
 #
 # Auth model (the important part): Questrade uses single-use, rotating refresh
@@ -12,7 +14,8 @@
 # immediately and the exchange MUST be serialized (no two syncs refreshing at
 # once). This SDK performs the exchange and hands the new credentials back to
 # the caller via the `on_token_refresh` callback so the item model can persist
-# them inside its own row lock / transaction.
+# them in a short commit before lending the new access token. Application callers
+# supply an operation-scoped credential session; HTTP never holds a row lock.
 class Provider::Questrade
   include HTTParty
 
@@ -45,11 +48,12 @@ class Provider::Questrade
   # @param on_token_refresh [#call] called with the new credentials hash
   #        { refresh_token:, api_server:, access_token:, expires_at: } so the
   #        caller can persist them. REQUIRED for durable operation.
-  def initialize(refresh_token:, api_server: nil, on_token_refresh: nil, synchronize_exchange: nil)
+  def initialize(refresh_token:, api_server: nil, on_token_refresh: nil, synchronize_exchange: nil, admit_request: nil)
     @refresh_token        = refresh_token
     @api_server           = api_server
     @on_token_refresh     = on_token_refresh
     @synchronize_exchange = synchronize_exchange
+    @admit_request = admit_request
     @access_token      = nil
     @access_expires_at = nil
     validate_configuration!
@@ -95,7 +99,10 @@ class Provider::Questrade
         query: { startTime: iso(window_start.beginning_of_day),
                  endTime:   iso(window_end.end_of_day) }
       )
-      activities.concat(Array(page[:activities]))
+      unless page.is_a?(Hash) && page[:activities].is_a?(Array) && page[:activities].all? { |row| row.is_a?(Hash) }
+        raise Error.new("Invalid Questrade activities response", :invalid_response)
+      end
+      activities.concat(page.fetch(:activities))
       window_start = window_end + 1
     end
 
@@ -117,16 +124,24 @@ class Provider::Questrade
     end
 
     def get_json(path, query: {})
+      @admit_request&.call
       ensure_authenticated!
       with_retries(path) do
-        response = self.class.get("#{api_base}#{path}", headers: auth_headers, query: query)
+        response = data_request(path, query)
         # Access token can expire mid-sync; refresh once and retry on 401.
         if response.code == 401
           authenticate!(force: true)
-          response = self.class.get("#{api_base}#{path}", headers: auth_headers, query: query)
+          response = data_request(path, query)
         end
         handle_response(response)
       end
+    end
+
+    def data_request(path, query)
+      @admit_request&.call
+      response = self.class.get("#{api_base}#{path}", headers: auth_headers, query: query, max_retries: 0, follow_redirects: false)
+      @admit_request&.call
+      response
     end
 
     # Exchange the refresh token unless we already hold a valid access token.
@@ -151,11 +166,11 @@ class Provider::Questrade
     end
 
     def exchange_token!
-      response = with_retries("oauth_token") do
-        # POST with a form body keeps the single-use refresh token out of the
-        # URL (and therefore out of access logs / error-tracking breadcrumbs).
-        self.class.post(LOGIN_URL, body: { grant_type: "refresh_token", refresh_token: @refresh_token })
-      end
+      # A timeout can follow consumption of the token. Never retry this POST.
+      @admit_request&.call
+      response = self.class.post(LOGIN_URL, body: { grant_type: "refresh_token", refresh_token: @refresh_token },
+        max_retries: 0, follow_redirects: false)
+      @admit_request&.call
 
       unless response.code == 200
         # 400/401 here usually means the refresh token expired (>7 days) or was
@@ -166,19 +181,29 @@ class Provider::Questrade
         )
       end
 
+      raise AuthenticationError.new("Invalid Questrade token replacement", :reauth_required) unless response.body.is_a?(String) && response.body.bytesize <= 64.kilobytes
       body = JSON.parse(response.body, symbolize_names: true)
-      @access_token      = body[:access_token]
-      @api_server        = body[:api_server]
-      @refresh_token     = body[:refresh_token] # rotate in-memory immediately
-      @access_expires_at = Time.current + (body[:expires_in].to_i - ACCESS_TOKEN_SKEW).seconds
+      unless body.is_a?(Hash) && %i[access_token refresh_token api_server].all? { |field| body[field].is_a?(String) && body[field].present? && body[field].bytesize <= 16.kilobytes } &&
+          !body[:access_token].match?(/[[:space:][:cntrl:]]/) && body[:expires_in].is_a?(Integer) && body[:expires_in] > ACCESS_TOKEN_SKEW
+        raise AuthenticationError.new("Invalid Questrade token replacement", :reauth_required)
+      end
+      server = URI.parse(body[:api_server])
+      unless server.is_a?(URI::HTTPS) && server.port == 443 && server.host&.match?(/\A[a-z0-9-]+\.iq\.questrade\.com\z/i) &&
+          server.userinfo.nil? && server.query.nil? && server.fragment.nil? && [ "", "/" ].include?(server.path)
+        raise AuthenticationError.new("Invalid Questrade API server", :reauth_required)
+      end
+      expires_at = Time.current + (body[:expires_in] - ACCESS_TOKEN_SKEW).seconds
 
       # Hand the new credentials to the caller to persist (single-use token!).
       @on_token_refresh&.call(
-        refresh_token: @refresh_token,
-        api_server:    @api_server,
-        access_token:  @access_token,
-        expires_at:    @access_expires_at
+        refresh_token: body[:refresh_token],
+        api_server:    body[:api_server],
+        access_token:  body[:access_token],
+        expires_at:    expires_at
       )
+      @refresh_token, @api_server, @access_token, @access_expires_at = body.values_at(:refresh_token, :api_server, :access_token) + [ expires_at ]
+    rescue JSON::ParserError, URI::InvalidURIError, *RETRYABLE_ERRORS
+      raise AuthenticationError.new("Questrade token exchange requires a replacement token", :refresh_uncertain), cause: nil
     end
 
     def api_base

@@ -228,4 +228,26 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_equal "BALANCES_UNAVAILABLE", error.response_data[:error]
     assert_equal "redacted", error.response_data.dig(:detail, :account_id)
   end
+
+  test "single use consent POSTs disable transport retries and redirects" do
+    Provider::EnableBanking.expects(:post).with do |url, options|
+      url == "#{Provider::EnableBanking::BASE_URL}/auth" && options[:max_retries] == 0 && options[:follow_redirects] == false
+    end.once.raises(Net::ReadTimeout)
+    assert_raises(Provider::EnableBanking::EnableBankingError) do
+      @provider.start_authorization(aspsp_name: "Bank", aspsp_country: "FI", redirect_url: "https://example.com/callback", state: "signed-state")
+    end
+    Provider::EnableBanking.expects(:post).with do |url, options|
+      url == "#{Provider::EnableBanking::BASE_URL}/sessions" && options[:max_retries] == 0 && options[:follow_redirects] == false
+    end.once.raises(Net::ReadTimeout)
+    assert_raises(Provider::EnableBanking::EnableBankingError) { @provider.create_session(code: "single-use-code") }
+  end
+
+  test "revocation disables transport retries and does not interpret missing remote session as proof of our DELETE" do
+    response = OpenStruct.new(code: 404, body: "{}")
+    Provider::EnableBanking.expects(:delete).with do |url, options|
+      url == "#{Provider::EnableBanking::BASE_URL}/sessions/original" && options[:max_retries] == 0 && options[:follow_redirects] == false
+    end.once.returns(response)
+    error = assert_raises(Provider::EnableBanking::EnableBankingError) { @provider.delete_session(session_id: "original") }
+    assert_equal :not_found, error.error_type
+  end
 end

@@ -1,5 +1,5 @@
 class SimplefinItem < ApplicationRecord
-  include Syncable, Provided, Encryptable
+  include Syncable, Provided, Encryptable, LegacyWriterGuard
   include SimplefinItem::Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -51,21 +51,16 @@ class SimplefinItem < ApplicationRecord
   end
 
   def import_latest_simplefin_data(sync: nil)
-    SimplefinItem::Importer.new(self, simplefin_provider: simplefin_provider, sync: sync).import
+    SimplefinItem::Importer.new(self, sync: sync).import
   end
 
   # Update the access_url by claiming a new setup token.
   # This is used when reconnecting an existing SimpleFIN connection.
   # Unlike create_simplefin_item!, this updates in-place, preserving all account linkages.
   def update_access_url!(setup_token:)
-    new_access_url = simplefin_provider.claim_access_url(setup_token)
-
-    update!(
-      access_url: new_access_url,
-      status: :good
-    )
-
-    self
+    claim = SimplefinItem::ConnectionUpdate.prepare(self, setup_token: setup_token)
+    SimplefinItem::ConnectionUpdate.perform(claim_id: claim.id, family_id: family_id)
+    reload
   end
 
   def process_accounts
@@ -221,6 +216,8 @@ class SimplefinItem < ApplicationRecord
         # trigger autosave on the preloaded account association, reverting the FK we just set!
         SimplefinAccount.where(id: stale_match.id).update_all(raw_transactions_payload: [], raw_holdings_payload: [])
         Rails.logger.info "SimplefinItem#repair_stale_linkages - Cleared data from stale SimplefinAccount id=#{stale_match.id} (leaving orphaned)"
+      rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         Rails.logger.error "SimplefinItem#repair_stale_linkages - Failed to transfer linkage: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
@@ -517,4 +514,6 @@ class SimplefinItem < ApplicationRecord
       # SimpleFin doesn't require server-side cleanup like Plaid
       # The access URL just becomes inactive
     end
+
+  guard_legacy_writes import_latest_simplefin_data: :ingest, process_accounts: :publish
 end

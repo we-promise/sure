@@ -36,6 +36,8 @@ en:
         one: 1 institution
         other: "%{count} institutions"
   akahu_items:
+    lifecycle:
+      unavailable: This Akahu connection changed or is temporarily unavailable. Refresh provider settings and try again.
     provider_panel:
       default_connection_name: Akahu Connection
       add_connection: Add Akahu connection
@@ -87,6 +89,7 @@ en:
       success: "Linked Akahu account to %{account_name}."
       account_already_linked: This account is already linked to a provider.
       akahu_account_already_linked: This Akahu account is already linked.
+      akahu_account_not_found: This Akahu account is no longer available. Refresh the account list and try again.
     setup_accounts:
       title: Set Up Akahu Accounts
       subtitle: Choose how each Akahu account should appear in Sure.

@@ -1,7 +1,9 @@
 require "test_helper"
+require_relative "../../support/provider_ingestion_test_helper"
 
 class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
+  include ProviderIngestionTestHelper
 
   setup do
     ensure_tailwind_build
@@ -57,6 +59,25 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Brex"
     assert_includes response.body, "Test Brex Connection"
     assert_includes response.body, "brex-providers-panel"
+  end
+
+  test "Akahu settings and connection drawers retain only manageable legacy items" do
+    with_provider_encryption do
+      family = families(:dylan_family)
+      legacy = family.akahu_items.create!(name: "Legacy Akahu", app_token: "app-credential", user_token: "user-credential")
+      %w[quiescing active retired rollback_pending].each do |state|
+        item = family.akahu_items.create!(name: "Unavailable Akahu #{state}", app_token: "app-credential", user_token: "user-credential")
+        ProviderMigrationControl.create!(family: family, provider_key: "akahu", legacy_type: "AkahuItem", legacy_id: item.id, state: state)
+      end
+
+      get settings_providers_url
+      assert_response :success
+      assert_equal [ legacy.id ], @controller.view_assigns.fetch("akahu_items").map(&:id)
+
+      get connect_form_settings_providers_path(provider_key: "akahu")
+      assert_response :success
+      assert_equal [ legacy.id ], @controller.view_assigns.fetch("akahu_items").map(&:id)
+    end
   end
 
   test "shows Brex as available when family has no Brex connections" do

@@ -44,7 +44,46 @@ class Provider::Up
     fetch_all_resources(path, query: query).map { |resource| flatten_transaction(resource) }
   end
 
+  # Bounded reads for the shared ingestion engine. It persists each page before
+  # asking for the next one, and owns cycle detection and checkpoint advancement.
+  def get_accounts_page(cursor: nil)
+    resources_page(cursor || "accounts", resource_type: "accounts") do |resource|
+      flatten_account(resource)
+    end
+  end
+
+  def get_account_transactions_page(account_id:, cursor: nil, since: nil, until_date: nil)
+    query = { "page[size]" => DEFAULT_PAGE_SIZE }
+    query["filter[since]"] = format_api_time(since) if since.present?
+    query["filter[until]"] = format_api_time(until_date) if until_date.present?
+    path = "accounts/#{ERB::Util.url_encode(account_id.to_s)}/transactions"
+    resources_page(cursor || path, query: cursor ? nil : query, resource_type: "transactions") do |resource|
+      flatten_transaction(resource)
+    end
+  end
+
   private
+
+    def resources_page(path, resource_type:, query: nil)
+      payload = get(path, query: query)
+      unless payload.is_a?(Hash) && payload[:data].is_a?(Array) &&
+          payload[:links].is_a?(Hash) && payload[:links].key?(:next)
+        raise UpError.new("Invalid paginated response", :invalid_response)
+      end
+      next_cursor = payload.dig(:links, :next)
+      unless next_cursor.nil? || (next_cursor.is_a?(String) && next_cursor.present?)
+        raise UpError.new("Invalid pagination cursor", :invalid_response)
+      end
+      resolve_url(next_cursor) if next_cursor
+      items = payload[:data].map do |resource|
+        unless resource.is_a?(Hash) && resource[:type] == resource_type &&
+            resource[:attributes].is_a?(Hash)
+          raise UpError.new("Invalid resource in paginated response", :invalid_response)
+        end
+        yield resource
+      end
+      { items: items, next_cursor: next_cursor, evidence: payload }
+    end
 
     RETRYABLE_ERRORS = [
       SocketError,

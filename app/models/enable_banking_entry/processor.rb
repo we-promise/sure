@@ -59,14 +59,34 @@ class EnableBankingEntry::Processor
   # EnableBankingAccount::Transactions::Processor) can compute it once instead of
   # once per row -- same pattern as the shared import_adapter. Falls back to
   # fetching it lazily per-instance when not provided (e.g. in isolation/tests).
-  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil)
-    @enable_banking_transaction = enable_banking_transaction
+  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil, expected_context: nil, expected_item_context: nil)
+    @enable_banking_transaction = Provider::AccountData::MigrationManifest.copy_value(enable_banking_transaction)
     @enable_banking_account = enable_banking_account
     @import_adapter = import_adapter
     @known_merchant_names = known_merchant_names
+    @expected_context = expected_context || EnableBankingItem::LegacyAccess.source_context(enable_banking_account)
+    @expected_item_context = expected_item_context || EnableBankingItem::LegacyAccess.transport_context(enable_banking_account.enable_banking_item)
   end
 
   def process
+    EnableBankingItem::LegacyAccess.with_account(enable_banking_account) do |current|
+      EnableBankingItem::LegacyAccess.verify_source!(current, @expected_context)
+      EnableBankingItem::LegacyAccess.verify_transport!(current.enable_banking_item, @expected_item_context)
+      expected = current.current_account
+      next unless expected
+      EnableBankingItem::LegacyAccess.with_publication(current, expected_account: expected, resource: "transactions") do |fresh, _financial|
+        EnableBankingItem::LegacyAccess.verify_source!(fresh, @expected_context)
+        EnableBankingItem::LegacyAccess.verify_transport!(fresh.enable_banking_item, @expected_item_context)
+        # Build the importer from the locked financial owner. A caller's cached
+        # adapter can retain a prior link even when its source object was reloaded.
+        self.class.new(enable_banking_transaction, enable_banking_account: fresh,
+          known_merchant_names: @known_merchant_names, expected_context: @expected_context,
+          expected_item_context: @expected_item_context).send(:process_admitted)
+      end
+    end
+  end
+
+  private def process_admitted
     # Cache a safe diagnostic id upfront — used in all logging paths so rescue
     # blocks never call the potentially-raising private external_id method.
     safe_id = self.class.compute_external_id(@enable_banking_transaction) || "unknown"
@@ -88,6 +108,8 @@ class EnableBankingEntry::Processor
         notes: notes,
         extra: extra
       )
+    rescue *EnableBankingItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue ArgumentError => e
       Rails.logger.error "EnableBankingEntry::Processor - Validation error for transaction #{safe_id}: #{e.message}"
       raise

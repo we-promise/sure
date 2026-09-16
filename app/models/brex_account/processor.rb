@@ -10,13 +10,16 @@ class BrexAccount::Processor
   end
 
   def process
-    unless brex_account.current_account.present?
-      Rails.logger.info "BrexAccount::Processor - No linked account for brex_account #{brex_account.id}, skipping processing"
-      return
+    BrexItem::LegacyAccess.with_account(brex_account) do |current|
+      expected = current.current_account
+      next unless expected
+      BrexItem::LegacyAccess.with_publication(current, expected_account: expected) do |fresh, _financial|
+        self.class.new(fresh).send(:process_account!)
+      end
+      self.class.new(current).send(:process_transactions)
     end
-
-    process_account!
-    process_transactions
+  rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+    raise
   rescue StandardError => e
     Rails.logger.error "BrexAccount::Processor - Failed to process account #{brex_account.id}: #{e.message}"
     report_exception(e, "account")
@@ -61,6 +64,8 @@ class BrexAccount::Processor
     # Transaction import errors are logged and swallowed so balance sync can continue.
     def process_transactions
       BrexAccount::Transactions::Processor.new(brex_account).process
+    rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue StandardError => e
       Rails.logger.error "BrexAccount::Processor - Failed to process transactions for brex_account #{brex_account.id}: #{e.message}"
       Rails.logger.error Array(e.backtrace).first(10).join("\n")

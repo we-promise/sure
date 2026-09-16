@@ -1,5 +1,6 @@
 class BrexItems::AccountFlowsController < ApplicationController
   before_action :require_admin!
+  rescue_from(*BrexItem::LegacyAccess::DENIAL_ERRORS, with: :render_ownership_changed)
 
   def preload_accounts
     render json: brex_account_flow.preload_payload
@@ -14,6 +15,7 @@ class BrexItems::AccountFlowsController < ApplicationController
 
     @brex_item = result.brex_item
     @available_accounts = result.available_accounts
+    @selection_token = brex_account_flow.selection_token
 
     render "brex_items/select_accounts", layout: false
   end
@@ -39,6 +41,7 @@ class BrexItems::AccountFlowsController < ApplicationController
 
     @brex_item = result.brex_item
     @available_accounts = result.available_accounts
+    @selection_token = brex_account_flow.selection_token
     @return_to = safe_return_to_path
 
     render "brex_items/select_existing_account", layout: false
@@ -61,7 +64,26 @@ class BrexItems::AccountFlowsController < ApplicationController
   private
 
     def brex_account_flow
-      @brex_account_flow ||= BrexItem::AccountFlow.new(family: Current.family, brex_item_id: params[:brex_item_id])
+      @brex_account_flow ||= BrexItem::AccountFlow.new(family: Current.family, brex_item_id: params[:brex_item_id],
+        actor: Current.user, selection_token: params[:selection_token])
+    end
+
+    def render_ownership_changed(error)
+      capture_ownership_failure(error)
+      if action_name == "preload_accounts"
+        render json: { success: false, error: "ownership_changed", has_accounts: nil,
+          error_message: t("brex_items.lifecycle.unavailable") }, status: :conflict
+      else
+        redirect_to settings_providers_path, alert: t("brex_items.lifecycle.unavailable"), status: :see_other
+      end
+    end
+
+    def capture_ownership_failure(error)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "warning", message: "Brex account selection refused",
+        source: self.class.name, provider_key: "brex", family: Current.family,
+        metadata: { action: action_name, error_class: error.class.name })
+    rescue StandardError
+      nil
     end
 
     def handle_brex_selection_result(result, empty_path:, api_return_path:)

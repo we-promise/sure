@@ -81,16 +81,20 @@ class SyncCleanerJobTest < ActiveSupport::TestCase
     snaptrade = snaptrade_accounts(:fidelity_401k)
     snaptrade.update_columns(activities_fetch_pending: true, updated_at: 7.hours.ago)
 
+    indexa = indexa_capital_accounts(:mutual_fund)
+    indexa.update_columns(activities_fetch_pending: true, updated_at: 7.hours.ago)
+
     questrade = questrade_accounts(:one)
     questrade.update_columns(activities_fetch_pending: true, updated_at: 7.hours.ago)
 
-    # SnaptradeAccount is swept before QuestradeAccount; a failing update! on a
-    # Snaptrade record must not skip the models that follow it.
+    # Questrade's unknown historical flag is no longer erased by the generic
+    # age-based sweep. Its original owner needs an explicit disposition.
     SnaptradeAccount.any_instance.stubs(:update!).raises(ActiveRecord::RecordInvalid.new(SnaptradeAccount.new))
 
     assert_nothing_raised { SyncCleanerJob.perform_now }
 
     assert snaptrade.reload.activities_fetch_pending      # rolled back, still stuck
-    assert_not questrade.reload.activities_fetch_pending  # still cleared
+    assert_not indexa.reload.activities_fetch_pending     # later legacy model cleaned
+    assert questrade.reload.activities_fetch_pending      # unknown owner preserved
   end
 end

@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../../support/akahu_fixture_fence_helper"
 
 class AkahuAccount::ProcessorTest < ActiveSupport::TestCase
+  include AkahuFixtureFenceHelper
   setup do
     @family = families(:empty)
     @akahu_item = AkahuItem.create!(
@@ -41,8 +43,7 @@ class AkahuAccount::ProcessorTest < ActiveSupport::TestCase
     sensitive_message = "provider returned account holder details"
     error = RuntimeError.new(sensitive_message)
 
-    @akahu_account.stubs(:current_account).returns(@account)
-    @account.stubs(:update!).raises(error)
+    Account.any_instance.stubs(:update!).raises(error)
     scope = RecordingSentryScope.new
     Sentry.expects(:capture_exception).with do |captured_error|
       captured_error.is_a?(AkahuAccount::Processor::SanitizedProcessingError) &&

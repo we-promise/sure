@@ -1,10 +1,15 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../../support/brex_fixture_fence_helper"
 
 class BrexItem::AccountFlowTest < ActiveSupport::TestCase
+  include BrexFixtureFenceHelper
   setup do
     SyncJob.stubs(:perform_later)
+    BrexItem::LegacyAccess.stubs(:assert_transport!)
+    Current.user = users(:family_admin)
+    DebugLogEntry.stubs(:capture)
     @family = families(:dylan_family)
     @brex_item = brex_items(:one)
   end
@@ -42,9 +47,9 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     cache_key = BrexItem::AccountFlow.cache_key(@family, @brex_item)
     Rails.cache.expects(:read).with(cache_key).returns([])
     Rails.cache.expects(:write).never
-    @brex_item.expects(:brex_provider).never
+    BrexItem.any_instance.expects(:brex_provider).never
 
-    payload = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item).preload_payload
+    payload = flow_for(@brex_item).preload_payload
 
     assert payload[:success]
     assert_equal false, payload[:has_accounts]
@@ -69,7 +74,7 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     )
     Rails.cache.expects(:write).never
 
-    result = BrexItem::AccountFlow.new(family: @family, brex_item: second_item).select_accounts_result(accountable_type: "CreditCard")
+    result = flow_for(second_item).select_accounts_result(accountable_type: "CreditCard")
 
     assert result.success?
     assert_equal [ "Second Brex Card" ], result.available_accounts.map { |account| account.with_indifferent_access[:name] }
@@ -113,8 +118,8 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
   end
 
   test "link new accounts rejects unsupported account type before creating accounts" do
-    flow = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item)
-    @brex_item.expects(:brex_provider).never
+    flow = flow_for(@brex_item)
+    BrexItem.any_instance.expects(:brex_provider).never
 
     assert_no_difference [ "Account.count", "BrexAccount.count", "AccountProvider.count" ] do
       result = flow.link_new_accounts_result(
@@ -129,7 +134,7 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
   end
 
   test "link new accounts converts unexpected errors into navigation alerts" do
-    flow = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item)
+    flow = flow_for(@brex_item)
     flow.expects(:link_new_accounts!).raises(StandardError, "link failure")
 
     result = flow.link_new_accounts_result(
@@ -149,7 +154,7 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
       currency: "USD",
       accountable: Depository.new
     )
-    flow = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item)
+    flow = flow_for(@brex_item)
     flow.expects(:link_existing_account!).raises(StandardError, "link existing failure")
 
     result = flow.link_existing_account_result(account: account, brex_account_id: "cash_import_1")
@@ -179,9 +184,9 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
         }
       ]
     )
-    brex_item.expects(:brex_provider).returns(provider)
+    BrexItem.any_instance.expects(:brex_provider).returns(provider)
 
-    flow = BrexItem::AccountFlow.new(family: @family, brex_item: brex_item)
+    flow = flow_for(brex_item)
 
     assert_difference -> { brex_item.brex_accounts.count }, 1 do
       assert_nil flow.import_accounts_from_api_if_needed
@@ -219,9 +224,9 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
         }
       ]
     )
-    brex_item.expects(:brex_provider).returns(provider)
+    BrexItem.any_instance.expects(:brex_provider).returns(provider)
 
-    flow = BrexItem::AccountFlow.new(family: @family, brex_item: brex_item)
+    flow = flow_for(brex_item)
 
     assert_no_difference -> { brex_item.brex_accounts.count } do
       assert_nil flow.import_accounts_from_api_if_needed
@@ -249,7 +254,7 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     )
     second_brex_account.update_column(:name, nil)
 
-    result = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item).complete_setup_result(
+    result = flow_for(@brex_item).complete_setup_result(
       account_types: {
         first_brex_account.id => "Depository",
         second_brex_account.id => "Depository"
@@ -272,7 +277,7 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
       current_balance: 100
     )
 
-    flow = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item)
+    flow = flow_for(@brex_item)
 
     assert_difference "AccountProvider.count", 1 do
       result = flow.complete_setup!(
@@ -306,7 +311,7 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     )
     second_brex_account.update_column(:name, nil)
 
-    result = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item).complete_setup!(
+    result = flow_for(@brex_item).complete_setup!(
       account_types: {
         first_brex_account.id => "Depository",
         second_brex_account.id => "Depository"
@@ -332,14 +337,14 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
         }
       ]
     )
-    @brex_item.expects(:brex_provider).returns(provider)
+    BrexItem.any_instance.expects(:brex_provider).returns(provider)
     AccountProvider.expects(:create!).raises(ActiveRecord::RecordInvalid.new(AccountProvider.new))
 
-    flow = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item)
+    flow = flow_for(@brex_item)
 
     assert_no_difference [ "Account.count", "BrexAccount.count", "AccountProvider.count" ] do
       assert_raises(ActiveRecord::RecordInvalid) do
-        flow.link_new_accounts!(account_ids: [ "rollback_cash_1" ], accountable_type: "Depository")
+        flow_for(@brex_item, selection_flow: :link_accounts).link_new_accounts!(account_ids: [ "rollback_cash_1" ], accountable_type: "Depository")
       end
     end
   end
@@ -362,14 +367,14 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
         }
       ]
     )
-    @brex_item.expects(:brex_provider).returns(provider)
+    BrexItem.any_instance.expects(:brex_provider).returns(provider)
     AccountProvider.expects(:create!).raises(ActiveRecord::RecordInvalid.new(AccountProvider.new))
 
-    flow = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item)
+    flow = flow_for(@brex_item)
 
     assert_no_difference [ "BrexAccount.count", "AccountProvider.count" ] do
       assert_raises(ActiveRecord::RecordInvalid) do
-        flow.link_existing_account!(account: account, brex_account_id: "rollback_existing_cash_1")
+        flow_for(@brex_item, selection_flow: :link_existing_account, account: account).link_existing_account!(account: account, brex_account_id: "rollback_existing_cash_1")
       end
     end
   end
@@ -383,7 +388,7 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
       current_balance: 100
     )
 
-    result = BrexItem::AccountFlow.new(family: @family, brex_item: @brex_item).complete_setup_result(
+    result = flow_for(@brex_item).complete_setup_result(
       account_types: { brex_account.id => "Depository" },
       account_subtypes: {}
     )
@@ -391,4 +396,9 @@ class BrexItem::AccountFlowTest < ActiveSupport::TestCase
     assert result.success?
     assert_equal I18n.t("brex_items.complete_account_setup.success", count: 1), result.message
   end
+  private
+    def flow_for(item, selection_flow: :complete_account_setup, account: nil)
+      BrexItem::AccountFlow.new(family: @family, brex_item: item, actor: users(:family_admin),
+        selection_token: BrexItem::Selection.issue(item, flow: selection_flow, account_id: account&.id))
+    end
 end

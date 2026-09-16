@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../../support/mercury_fixture_fence_helper"
 
 class MercuryEntry::ProcessorTest < ActiveSupport::TestCase
+  include MercuryFixtureFenceHelper
   setup do
     @family  = families(:dylan_family)
     @account = @family.accounts.create!(

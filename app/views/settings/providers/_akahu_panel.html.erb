@@ -1,5 +1,5 @@
 <div id="akahu-providers-panel" class="space-y-4">
-  <% active_items = local_assigns[:akahu_items] || @akahu_items || Current.family.akahu_items.active.ordered %>
+  <% active_items = local_assigns[:akahu_items] || @akahu_items || Current.family.akahu_items.active.legacy_manageable.ordered %>
 
   <%= render "settings/providers/setup_steps",
              steps: [

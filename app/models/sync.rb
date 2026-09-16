@@ -11,21 +11,44 @@ class Sync < ApplicationRecord
   Error = Class.new(StandardError)
 
   belongs_to :syncable, polymorphic: true
+  belongs_to :account_family, class_name: "Family", optional: true
 
   belongs_to :parent, class_name: "Sync", optional: true
   has_many :children, class_name: "Sync", foreign_key: :parent_id, dependent: :destroy
+  belongs_to :predecessor, class_name: "Sync", optional: true
+  # The predecessor FK restricts successors to the same owner. Remove their
+  # queued work with its context; ingestion evidence still restricts deletion.
+  has_many :successors, class_name: "Sync", foreign_key: :predecessor_id, dependent: :destroy
+  # Immutable evidence can only be deleted by the owning Sync FK cascade.
+  has_many :account_sync_inputs, class_name: "Account::SyncInput"
+  has_one :account_sync_preparation, class_name: "Account::SyncPreparation"
+  attr_readonly :predecessor_id
+  attr_readonly :account_family_id
 
   scope :ordered, -> { order(created_at: :desc, id: :desc) }
   scope :incomplete, -> { where("syncs.status IN (?)", %w[pending syncing]) }
   # Cancel-requested syncs are excluded so spinners clear immediately and
   # sync_later stops piggybacking new requests onto a dying sync.
   scope :visible, -> { incomplete.where("syncs.created_at > ?", VISIBLE_FOR.ago).where(cancel_requested_at: nil) }
+  scope :awaiting_provider, -> { incomplete.where.not(resume_at: nil).where(cancel_requested_at: nil).where("syncs.created_at > ?", STALE_AFTER.ago) }
 
   after_commit :update_family_sync_timestamp, on: [ :create, :update ]
+  # A transition may be followed by an error/stats save in the same transaction,
+  # replacing saved_changes. Re-enqueueing pending successors is idempotent;
+  # relying on the final save's status diff can strand them permanently.
+  after_update_commit :enqueue_ready_successors, if: -> { (provider_sync? || account_sync?) && terminal? }
 
   serialize :sync_stats, coder: JSON
 
   validate :window_valid
+  validate :predecessor_ownership
+  before_validation :capture_account_family, on: :create
+  validate :account_family_scope
+  validates :provider_attempt, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  validates :provider_execution_revision, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
+  attr_reader :provider_execution
+  validates :predecessor_id, uniqueness: { conditions: -> { incomplete.where(cancel_requested_at: nil) } },
+    allow_nil: true, if: -> { in_progress? && cancel_requested_at.nil? }
 
   # Sync state machine
   aasm column: :status, timestamps: true do
@@ -49,6 +72,10 @@ class Sync < ApplicationRecord
       transitions from: :syncing, to: :failed
     end
 
+    event :defer_provider do
+      transitions from: :syncing, to: :pending, guard: :provider_sync?
+    end
+
     # Marks a sync that never completed within the expected time window
     event :mark_stale do
       transitions from: %i[pending syncing], to: :stale
@@ -57,18 +84,33 @@ class Sync < ApplicationRecord
 
   class << self
     def clean
-      incomplete.where("syncs.created_at < ?", STALE_AFTER.ago).find_each(&:mark_stale!)
+      incomplete.where.not(syncable_type: %w[ProviderConnection Account]).where("syncs.created_at < ?", STALE_AFTER.ago).find_each(&:mark_stale!)
+      incomplete.where(syncable_type: "Account").where("syncs.created_at < ?", STALE_AFTER.ago).find_each do |sync|
+        expire_account(sync)
+      end
+      incomplete.where(syncable_type: "ProviderConnection").where("syncs.created_at <= ?", STALE_AFTER.ago)
+        .find_each { |sync| Provider::AccountData::SyncExecution.expire!(sync) }
     end
 
     def for_family(family, resource_owner: nil)
-      query = where(syncable_type: "Family", syncable_id: family.id)
-      query = query.or(where(syncable_type: "Account", syncable_id: account_syncable_ids(family, resource_owner)))
+      return none if resource_owner && resource_owner.family_id != family.id
 
-      family_syncable_associations.each do |association|
+      query = where(syncable_type: "Family", syncable_id: family.id)
+      accounts = where(syncable_type: "Account", account_family_id: family.id)
+      # Retained family ownership does not confer user access to an account.
+      # Retired accounts have no retained owner/share ACL in this interface.
+      accounts = accounts.where(syncable_id: account_syncable_ids(family, resource_owner)) if resource_owner
+      query = query.or(accounts)
+
+      providers = Family::ProviderSyncables.new(family)
+      providers.history_scopes.each do |scope|
         query = query.or(
-          where(syncable_type: association.klass.name, syncable_id: family.public_send(association.name).select(:id))
+          where(syncable_type: scope.klass.base_class.name, syncable_id: scope.select(:id))
         )
       end
+
+      retained = providers.retained_history_scope.select(:legacy_type, :legacy_id)
+      query = query.or(where("(syncs.syncable_type, syncs.syncable_id) IN (#{retained.to_sql})"))
 
       query
     end
@@ -78,9 +120,14 @@ class Sync < ApplicationRecord
       return none if syncables.empty?
 
       scope = none
-      syncables.group_by { |record| record.class.base_class.name }.each do |type, records|
+      syncables.group_by do |record|
+        type = record.class.base_class.name
+        [ type, type == "Account" ? record.family_id : nil ]
+      end.each do |(type, family_id), records|
         ids = records.map(&:id)
-        scope = scope.or(where(syncable_type: type, syncable_id: ids))
+        owners = where(syncable_type: type, syncable_id: ids)
+        owners = owners.where(account_family_id: family_id) if type == "Account"
+        scope = scope.or(owners)
       end
       scope
     end
@@ -125,33 +172,56 @@ class Sync < ApplicationRecord
     end
 
     # True iff the family has any pending/syncing Sync — across its own row,
-    # its accounts, and every Syncable provider `*_items` association. Built
-    # on `for_family` so new provider integrations are picked up automatically
-    # via `family_syncable_associations` reflection (no hand-rolled list).
+    # its accounts, legacy provider items and shared provider connections.
+    # History remains visible even when a connection is no longer scheduled.
     def any_incomplete_for?(family)
-      for_family(family).incomplete.exists?
+      history = for_family(family).incomplete
+      history.where.not(syncable_type: "Account").or(
+        history.where(syncable_type: "Account", syncable_id: available_account_ids(family))
+      ).exists?
     end
 
     private
+      def expire_account(sync)
+        original_owner = [ sync.syncable_type, sync.syncable_id, sync.account_family_id ]
+        transaction(requires_new: true) do
+          if sync.account_family_id
+            owner = Account::SyncAdmission.current(account_id: sync.syncable_id, family_id: sync.account_family_id, lock: true)
+          end
+          sync.lock!
+          unless [ sync.syncable_type, sync.syncable_id, sync.account_family_id ] == original_owner
+            raise Provider::AccountData::StaleWriter, "Sync owner changed before expiration"
+          end
+          next unless sync.in_progress? && sync.created_at < STALE_AFTER.ago
+
+          owner ? sync.mark_stale! : sync.stop_unavailable_account!
+        end
+      rescue ActiveRecord::LockWaitTimeout
+        # An admitted owner is changing. The next sweep rechecks the same row.
+        nil
+      end
+
       def syncable_keys(syncables)
         Array(syncables).compact.uniq { |record| [ record.class.base_class.name, record.id ] }
           .map { |record| [ record.class.base_class.name, record.id ] }
       end
 
       def account_syncable_ids(family, resource_owner)
-        (resource_owner ? resource_owner.accessible_accounts : family.accounts)
-          .where(family_id: family.id)
-          .select(:id)
+        resource_owner.accessible_accounts.where(family_id: family.id).select(:id)
       end
 
-      def family_syncable_associations
-        Family.reflect_on_all_associations(:has_many).select do |association|
-          association.name.to_s.end_with?("_items") &&
-            association.klass.included_modules.include?(Syncable)
-        rescue NameError
-          false
-        end
+      def available_account_ids(family)
+        Account.where(family_id: family.id, status: Account::SyncAdmission::SUPPORTED_STATES)
+          .where(<<~SQL.squish).select(:id)
+            NOT EXISTS (
+              SELECT 1 FROM account_ingestion_identities identity_row
+              WHERE identity_row.id = accounts.id AND
+                (identity_row.retired_at IS NOT NULL OR identity_row.family_id <> accounts.family_id OR
+                 identity_row.live_account_id IS DISTINCT FROM accounts.id)
+            )
+          SQL
       end
+
   end
 
   def in_progress?
@@ -177,48 +247,163 @@ class Sync < ApplicationRecord
   end
 
   def perform
+    if account_sync?
+      Account::SyncExecution.with(self) { |owner| perform_work(account_owner: owner) }
+    elsif provider_sync?
+      Provider::AccountData::SyncExecution.new(self).perform do |execution|
+        @provider_execution = execution
+        begin
+          perform_work(provider_execution: execution)
+        ensure
+          @provider_execution = nil
+        end
+      end
+    else
+      perform_work
+    end
+  end
+
+  def verify_account_inputs!
+    inputs = account_sync_inputs.order(:resource).to_a
+    unless account_sync? && account_inputs_sealed_at && account_inputs_digest == Account::SyncInput.digest(inputs)
+      raise Provider::AccountData::InvalidResponse, "Account execution inputs are missing or changed"
+    end
+    inputs
+  end
+
+  def retry_account_later
+    unless account_sync? && account_family_id
+      raise Account::SyncAdmission::Unavailable, "Financial account is unavailable for synchronization"
+    end
+    owner = Account::SyncAdmission.fetch!(account_id: syncable_id, family_id: account_family_id)
+    Account::SyncQueue.new(owner).enqueue(parent_sync: nil, window_start_date: window_start_date,
+      window_end_date: window_end_date, retry_of: self)
+  end
+
+  # The caller holds the Sync row lock and has freshly rejected its Account.
+  # No AASM start/completion or after-commit callback may dispatch more work for
+  # that missing/retired/deleting owner. Existing terminal history is unchanged.
+  def stop_unavailable_account!
+    raise ArgumentError, "Expected an account execution" unless account_sync?
+    return false unless in_progress?
+    update_columns(status: "stale", updated_at: Time.current,
+      error: "Account is unavailable for sync")
+    DebugLogEntry.capture(category: "provider_sync_error", level: "warn",
+      message: "Account sync stopped because its owner is unavailable", source: self.class.name,
+      family_id: account_family_id, account_id: syncable_id,
+      metadata: { sync_id: id, account_id: syncable_id })
+    true
+  end
+
+  def perform_work(provider_execution: nil, account_owner: nil)
     Rails.logger.tagged("Sync", id, syncable_type, syncable_id) do
-      # This can happen on server restarts or if Sidekiq enqueues a duplicate job
-      unless may_start?
-        Rails.logger.warn("Sync #{id} is not in a valid state (#{aasm.from_state}) to start.  Skipping sync.")
-        return
-      end
+      if provider_execution
+        target = provider_execution.connection
+      else
+        association(:syncable).target = account_owner if account_owner
+        # This can happen on server restarts or if Sidekiq enqueues a duplicate job
+        unless may_start?
+          Rails.logger.warn("Sync #{id} is not in a valid state (#{aasm.from_state}) to start.  Skipping sync.")
+          return
+        end
 
-      # Guard: syncable may have been deleted while job was queued
-      unless syncable.present?
-        Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} no longer exists. Marking as failed.")
-        start! if may_start?
-        fail! if may_fail?
-        update(error: "Syncable record was deleted")
-        return
-      end
+        # Guard: syncable may have been deleted while job was queued
+        unless syncable.present?
+          Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} no longer exists. Marking as failed.")
+          start! if may_start?
+          fail! if may_fail?
+          update(error: "Syncable record was deleted")
+          return
+        end
 
-      # Guard: syncable may be scheduled for deletion
-      if syncable.respond_to?(:scheduled_for_deletion?) && syncable.scheduled_for_deletion?
-        Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} is scheduled for deletion. Skipping sync.")
-        start! if may_start?
-        fail! if may_fail?
-        update(error: "Syncable record is scheduled for deletion")
-        return
-      end
+        # Guard: syncable may be scheduled for deletion
+        if syncable.respond_to?(:scheduled_for_deletion?) && syncable.scheduled_for_deletion?
+          Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} is scheduled for deletion. Skipping sync.")
+          start! if may_start?
+          fail! if may_fail?
+          update(error: "Syncable record is scheduled for deletion")
+          return
+        end
 
-      start!
+        target = syncable
+        started = with_lock do
+          if may_start? && account_sync? && continuation_cancelled?
+            mark_stale!
+            :cancelled
+          elsif may_start? && (!resume_at || resume_at <= Time.current) && (!predecessor || predecessor.terminal?)
+            start!
+            true
+          end
+        end
+        if started == :cancelled
+          finalize_if_all_children_finalized
+          return
+        end
+        return unless started
+      end
+      provider_work_returned = false
 
       begin
-        syncable.perform_sync(self)
+        target.perform_sync(self)
+        provider_work_returned = true
+      rescue Provider::AccountData::DeferredPage => e
+        if provider_execution
+          provider_execution.transition { schedule_provider_continuation(e) }
+        else
+          schedule_provider_continuation(e)
+        end
+      rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged => e
+        # A rejected legacy dispatch must not run post-sync repair code. That
+        # code can itself write financial entries even after the main sync fails.
+        mark_fenced = lambda do
+          with_lock do
+            if may_mark_stale?
+              mark_stale!
+              update!(error: "Legacy provider execution was fenced")
+            end
+          end
+        end
+        settled = if provider_execution
+          provider_execution.transition(&mark_fenced)
+        else
+          mark_fenced.call
+          true
+        end
+        if settled
+          manifest = Provider::AccountData::MigrationManifest.all.find { |entry| entry.item_type == target.class.base_class.name }
+          DebugLogEntry.capture(category: "provider_sync_error", level: "warn", message: "Legacy provider execution was fenced",
+            source: self.class.name, provider_key: manifest&.provider_key, family: family,
+            metadata: { sync_id: id, syncable_type: syncable_type, syncable_id: syncable_id, error_class: e.class.name })
+        end
       rescue => e
         # Re-check state under a row lock (with_lock reloads): the sync may
         # have been terminalized externally (marked stale by SyncCleanerJob)
         # while this job was still running. An unguarded fail! on the in-memory
         # record would silently overwrite that terminal status.
-        with_lock { fail! if may_fail? }
-        update(error: e.message)
-        report_error(e)
+        if account_sync? && e.is_a?(Account::SyncAdmission::Unavailable)
+          with_lock { stop_unavailable_account! }
+        elsif provider_execution
+          settled = provider_execution.transition do
+            continuation_cancelled? ? mark_stale! : fail!
+            update!(error: e.message)
+          end
+          report_error(e) if settled
+        else
+          with_lock { fail! if may_fail? }
+          update(error: e.message)
+          report_error(e)
+        end
       ensure
-        finalize_if_all_children_finalized
+        if provider_execution
+          provider_execution.finish_work! if provider_work_returned
+          provider_execution.finalize!
+        end
+        finalize_if_all_children_finalized unless provider_execution
       end
     end
   end
+
+  private :perform_work
 
   # Requests cooperative cancellation of this sync tree. Only this sync
   # carries the flag: pending descendants are marked stale immediately (their
@@ -261,8 +446,32 @@ class Sync < ApplicationRecord
 
   # Finalizes the current sync AND parent (if it exists)
   def finalize_if_all_children_finalized
-    Sync.transaction do
+    # A caller may rescue post-sync failure inside an existing transaction. Keep
+    # this finalization atomic there too, so partial database effects roll back.
+    Sync.transaction(requires_new: true) do
+      original_owner = [ syncable_type, syncable_id, account_family_id ]
+      if account_sync? && account_family_id
+        owner = Account::SyncAdmission.current(account_id: syncable_id, family_id: account_family_id, lock: true)
+      end
       lock!
+      unless [ syncable_type, syncable_id, account_family_id ] == original_owner
+        raise Provider::AccountData::StaleWriter, "Sync owner changed before finalization"
+      end
+      if account_sync?
+        # A child may be finalized by another worker long after initial
+        # admission. Account is locked before this child Sync; release both
+        # before propagating to its provider/Family parent below.
+        unless owner
+          stop_unavailable_account!
+          return
+        end
+        association(:syncable).target = owner
+      end
+
+      # A deferred provider attempt has not finished its own work. An account
+      # child may complete while the provider is waiting or still fanning out.
+      return if pending?
+      return if provider_sync? && syncing? && provider_work_finished_at.nil?
 
       # Eagerly load children once so that all_children_finalized? and
       # has_failed_children? can filter in-memory without additional DB queries.
@@ -288,19 +497,38 @@ class Sync < ApplicationRecord
       # unless the sync was terminalized externally (marked stale by SyncCleanerJob while its job
       # was still running). A stale sync's job has been written off: re-running transfer matching,
       # rules, and broadcasts for it would apply side effects for work the system already abandoned.
-      perform_post_sync unless stale?
+      unless stale? || post_sync_completed_at
+        perform_post_sync
+        # Database effects and this marker commit together under the Sync lock.
+        # External broadcasts are not transactional and may repeat after a
+        # rollback; this is not an exactly-once external delivery guarantee.
+        update!(post_sync_completed_at: Time.current)
+      end
     end
 
-    # If this sync has a parent, try to finalize it so the child status propagates up the chain.
-    parent&.finalize_if_all_children_finalized
+    # A savepoint does not release an outer transaction's Account locks. Delay
+    # upward propagation until commit so provider-parent -> Account queue order
+    # is not reversed by Account -> provider-parent finalization.
+    if parent_id
+      original_parent_id = parent_id
+      ActiveRecord.after_all_transactions_commit do
+        Sync.find_by(id: original_parent_id)&.finalize_if_all_children_finalized
+      end
+    end
   end
 
   # If a sync is pending, we can adjust the window if new syncs are created with a wider window.
   def expand_window_if_needed(new_window_start_date, new_window_end_date)
     return unless pending?
-    return if self.window_start_date.nil? && self.window_end_date.nil? # already as wide as possible
+    return if account_inputs_sealed_at
+    return if provider_window_frozen?
+    return if !provider_sync? && self.window_start_date.nil? && self.window_end_date.nil? # legacy unbounded window
 
-    earliest_start_date = if self.window_start_date && new_window_start_date
+    earliest_start_date = if provider_sync?
+      # Native nil starts use configured history or a checkpoint overlap, not
+      # unlimited history. A default request must retain an explicit backfill.
+      [ self.window_start_date, new_window_start_date ].compact.min
+    elsif self.window_start_date && new_window_start_date
       [ self.window_start_date, new_window_start_date ].min
     else
       nil
@@ -318,6 +546,22 @@ class Sync < ApplicationRecord
     )
   end
 
+  def provider_window_frozen?
+    provider_sync? && (syncing_at.present? || provider_attempt.positive?)
+  end
+
+  def covers_window?(start_date, end_date)
+    if provider_sync?
+      # Effective starts differ by external account/checkpoint. Without an
+      # explicit earlier start we cannot prove a frozen default covers backfill.
+      covers_start = start_date.nil? || (window_start_date && window_start_date <= start_date)
+      captured_end = [ window_end_date, created_at.utc.to_date ].compact.min
+      return covers_start && captured_end >= (end_date || created_at.utc.to_date)
+    end
+    (window_start_date.nil? || (start_date && window_start_date <= start_date)) &&
+      (window_end_date.nil? || (end_date && window_end_date >= end_date))
+  end
+
   protected
     def cancel_pending_descendants!
       children.incomplete.find_each do |child|
@@ -327,6 +571,80 @@ class Sync < ApplicationRecord
     end
 
   private
+    def capture_account_family
+      return unless new_record? && account_sync?
+
+      owner = Account::SyncAdmission.current(account_id: syncable_id)
+      unless owner && (account_family_id.nil? || account_family_id == owner.family_id)
+        errors.add(:account_family, "must identify an available financial account's family")
+        return
+      end
+      self.account_family_id = owner.family_id
+    end
+
+    def account_family_scope
+      if !account_sync? && account_family_id.present?
+        errors.add(:account_family, "is only valid for an account execution")
+      end
+    end
+
+    def predecessor_ownership
+      if predecessor && (!(provider_sync? || account_sync?) || predecessor.syncable_type != syncable_type || predecessor.syncable_id != syncable_id || predecessor.id == id)
+        errors.add(:predecessor, "must be an earlier sync of this owner")
+      end
+    end
+
+    def enqueue_ready_successors
+      if account_sync?
+        return unless account_family_id && Account::SyncAdmission.current(account_id: syncable_id, family_id: account_family_id)
+      end
+      successors.pending.where(cancel_requested_at: nil).find_each { |successor| SyncJob.perform_later(successor) }
+    end
+
+    def provider_sync?
+      syncable_type == "ProviderConnection"
+    end
+
+    def account_sync?
+      syncable_type == "Account"
+    end
+
+    def schedule_provider_continuation(error)
+      with_lock do
+        return unless syncing?
+        if continuation_cancelled?
+          mark_stale!
+        elsif provider_sync? && error.resume_at.is_a?(Time) && provider_attempt < 1_000 &&
+            [ error.resume_at, 1.second.from_now ].max < created_at + STALE_AFTER
+          self.resume_at = [ error.resume_at, 1.second.from_now ].max
+          self.provider_attempt += 1
+          self.provider_work_finished_at = nil
+          self.error = nil
+          defer_provider!
+          # Active Job defers enqueueing until this state transaction commits.
+          SyncJob.set(wait_until: resume_at).perform_later(self)
+        else
+          fail!
+          update!(error: "Provider continuation exceeded its retry boundary")
+        end
+      end
+    end
+
+    def continuation_cancelled?
+      return true if cancel_requested_at?
+      ancestor_id = parent_id
+      visited = [ id ]
+      while ancestor_id
+        return true if visited.include?(ancestor_id) || visited.size >= 100
+        visited << ancestor_id
+        ancestor = Sync.where(id: ancestor_id).pick(:parent_id, :cancel_requested_at)
+        return false unless ancestor
+        return true if ancestor.last
+        ancestor_id = ancestor.first
+      end
+      false
+    end
+
     def log_status_change
       Rails.logger.info("changing from #{aasm.from_state} to #{aasm.to_state} (event: #{aasm.current_event})")
     end
@@ -346,6 +664,7 @@ class Sync < ApplicationRecord
     rescue => e
       Rails.logger.error("Error performing post-sync for #{syncable_type} (#{syncable.id}): #{e.message}")
       report_error(e)
+      raise
     end
 
     def report_error(error)
@@ -355,6 +674,7 @@ class Sync < ApplicationRecord
     end
 
     def report_warnings
+      return unless syncable
       todays_sync_count = syncable.syncs.where(created_at: Date.current.all_day).count
 
       if todays_sync_count > 10
@@ -391,6 +711,7 @@ class Sync < ApplicationRecord
     end
 
     def family
+      return account_family if account_sync?
       return nil unless syncable
 
       if syncable.is_a?(Family)

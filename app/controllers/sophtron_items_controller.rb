@@ -20,6 +20,11 @@ class SophtronItemsController < ApplicationController
     :edit, :update, :destroy, :sync, :connection_status, :submit_mfa, :toggle_manual_sync,
     :setup_accounts, :complete_account_setup
   ]
+  around_action :with_legacy_refresh, only: [ :sync, :connection_status, :submit_mfa ]
+  around_action :with_legacy_credentials, only: [ :update ]
+  around_action :with_legacy_discovery, only: [ :preload_accounts, :select_accounts, :select_existing_account, :setup_accounts ]
+  around_action :with_legacy_lifecycle, only: [ :connect_institution, :link_accounts, :link_existing_account,
+    :complete_account_setup, :toggle_manual_sync, :destroy ]
 
   def index
     @sophtron_items = Current.family.sophtron_items.active.ordered
@@ -48,6 +53,8 @@ class SophtronItemsController < ApplicationController
   rescue Provider::Sophtron::Error => e
     Rails.logger.error("Sophtron preload error: #{e.message}")
     render json: { success: false, error: "api_error", error_message: t(".api_error"), has_accounts: nil }
+  rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+    raise
   rescue StandardError => e
     Rails.logger.error("Unexpected error preloading Sophtron accounts: #{e.class}: #{e.message}")
     render json: { success: false, error: "unexpected_error", error_message: t(".unexpected_error"), has_accounts: nil }
@@ -77,10 +84,12 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    render layout: false
+    render_selection_form(item)
   rescue Provider::Sophtron::Error => e
     Rails.logger.error("Sophtron API error in select_accounts: #{e.message}")
     render_api_error(t(".api_error"), safe_return_to_path)
+  rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+    raise
   rescue StandardError => e
     Rails.logger.error("Unexpected error in select_accounts: #{e.class}: #{e.message}")
     render_api_error(t(".unexpected_error"), safe_return_to_path)
@@ -92,39 +101,14 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    item = item_for_institution_connection(@sophtron_item)
-    item.ensure_customer!
-    response = sophtron_response_data!(
-      item.sophtron_provider.create_user_institution(
-        institution_id: params[:institution_id],
-        username: params[:bank_username],
-        password: params[:bank_password],
-        pin: ""
-      )
-    ).with_indifferent_access
-
-    job_id = response[:JobID] || response[:job_id]
-    user_institution_id = response[:UserInstitutionID] || response[:user_institution_id]
-
-    if job_id.blank? || user_institution_id.blank?
-      raise Provider::Sophtron::Error.new("Sophtron did not return JobID and UserInstitutionID", :invalid_response)
-    end
-
-    item.update!(
-      name: item.name.presence || t("sophtron_items.defaults.name"),
-      institution_id: params[:institution_id],
-      institution_name: params[:institution_name],
-      user_institution_id: user_institution_id,
-      current_job_id: job_id,
-      raw_job_payload: response,
-      job_status: nil,
-      last_connection_error: nil,
-      status: :good
-    )
+    item = SophtronItem::Lifecycle.new(@sophtron_item).connect_institution(
+      institution_id: params[:institution_id], institution_name: params[:institution_name],
+      username: params[:bank_username], password: params[:bank_password],
+      new_institution: connect_new_institution_flow?)
 
     redirect_to connection_status_sophtron_item_path(item, connection_context_params)
   rescue Provider::Sophtron::Error => e
-    Rails.logger.error("Sophtron connect institution error: #{e.message}")
+    capture_lifecycle_failure(e)
     redirect_to select_accounts_sophtron_items_path(connection_context_params), alert: t(".api_error", message: e.message)
   end
 
@@ -237,56 +221,16 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    item = configured_sophtron_item
+    item = @sophtron_item
     unless item&.connected_to_institution?
       redirect_to select_accounts_sophtron_items_path(accountable_type: accountable_type, return_to: return_to), alert: t(".no_institution_connected")
       return
     end
 
-    accounts_data = item.fetch_remote_accounts(force: true)
-
-    created_accounts = []
-    already_linked_accounts = []
-    invalid_accounts = []
-
-    selected_account_ids.each do |account_id|
-      account_data = accounts_data.find { |account| SophtronItem.external_account_id(account).to_s == account_id.to_s }
-      next unless account_data
-
-      if account_data[:account_name].blank?
-        invalid_accounts << account_id
-        Rails.logger.warn "SophtronItemsController - Skipping account #{account_id} with blank name"
-        next
-      end
-
-      sophtron_account = item.upsert_sophtron_account(account_data)
-
-      if sophtron_account.account_provider.present?
-        already_linked_accounts << account_data[:account_name]
-        next
-      end
-
-      ActiveRecord::Base.transaction do
-        account = Account.create_and_sync(
-          {
-            family: Current.family,
-            name: account_data[:account_name],
-            balance: 0,
-            currency: account_data[:currency] || "USD",
-            accountable_type: accountable_type,
-            accountable_attributes: {}
-          },
-          skip_initial_sync: true
-        )
-
-        AccountProvider.create!(account: account, provider: sophtron_account)
-        created_accounts << account
-      end
-    end
-
-    item.start_initial_load_later if created_accounts.any?
-    redirect_after_account_link(return_to, created_accounts, already_linked_accounts, invalid_accounts)
+    result = SophtronItem::Lifecycle.new(item).link_accounts(account_ids: selected_account_ids, account_type: accountable_type)
+    redirect_after_account_link(return_to, result[:created_accounts], result[:already_linked_accounts], result[:invalid_accounts])
   rescue Provider::Sophtron::Error => e
+    capture_lifecycle_failure(e)
     redirect_to new_account_path, alert: t(".api_error", message: e.message)
   end
 
@@ -325,10 +269,12 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    render layout: false
+    render_selection_form(item, account: @account)
   rescue Provider::Sophtron::Error => e
     Rails.logger.error("Sophtron API error in select_existing_account: #{e.message}")
     render_api_error(t(".api_error", message: e.message), accounts_path)
+  rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+    raise
   rescue StandardError => e
     Rails.logger.error("Unexpected error in select_existing_account: #{e.class}: #{e.message}")
     render_api_error(t(".unexpected_error"), accounts_path)
@@ -351,36 +297,20 @@ class SophtronItemsController < ApplicationController
       return
     end
 
-    item = configured_sophtron_item
+    item = @sophtron_item
     unless item&.connected_to_institution?
       redirect_to accounts_path, alert: t(".no_institution_connected")
       return
     end
 
-    account_data = item.fetch_remote_accounts(force: true).find { |remote_account| SophtronItem.external_account_id(remote_account).to_s == sophtron_account_id.to_s }
-    unless account_data
-      redirect_to accounts_path, alert: t(".sophtron_account_not_found")
+    result = SophtronItem::Lifecycle.new(item).link_existing_account(account_id: account.id, sophtron_account_id: sophtron_account_id)
+    if result[:error]
+      redirect_to accounts_path, alert: t(".#{result[:error]}")
       return
     end
-
-    if account_data[:account_name].blank?
-      redirect_to accounts_path, alert: t(".invalid_account_name")
-      return
-    end
-
-    sophtron_account = item.upsert_sophtron_account(account_data)
-
-    if sophtron_account.account_provider.present?
-      redirect_to accounts_path, alert: t(".sophtron_account_already_linked")
-      return
-    end
-
-    AccountProvider.create!(account: account, provider: sophtron_account)
-    item.start_initial_load_later
-
-    redirect_to return_to || accounts_path, notice: t(".success", account_name: account.name)
+    redirect_to return_to || accounts_path, notice: t(".success", account_name: result[:account].name)
   rescue Provider::Sophtron::Error => e
-    Rails.logger.error("Sophtron API error in link_existing_account: #{e.message}")
+    capture_lifecycle_failure(e)
     redirect_to accounts_path, alert: t(".api_error", message: e.message)
   end
 
@@ -421,13 +351,11 @@ class SophtronItemsController < ApplicationController
   end
 
   def destroy
-    begin
-      @sophtron_item.unlink_all!(dry_run: false)
-    rescue => e
-      Rails.logger.warn("Sophtron unlink during destroy failed: #{e.class} - #{e.message}")
+    results = SophtronItem::Lifecycle.new(@sophtron_item).disconnect
+    if results.any? { |result| result[:error].present? }
+      redirect_to accounts_path, alert: t("sophtron_items.connection_unavailable")
+      return
     end
-
-    @sophtron_item.destroy_later
     redirect_to accounts_path, notice: t(".success")
   end
 
@@ -446,24 +374,13 @@ class SophtronItemsController < ApplicationController
   end
 
   def toggle_manual_sync
-    toggle_accounts = manual_sync_toggle_sophtron_accounts
-
-    if toggle_accounts.exists?
-      enabled = if @sophtron_item.manual_sync?
-        @sophtron_item.sophtron_accounts.where.not(id: toggle_accounts.select(:id)).update_all(manual_sync: true, updated_at: Time.current)
-        false
-      else
-        !toggle_accounts.requires_manual_sync.exists?
-      end
-      toggle_accounts.update_all(manual_sync: enabled, updated_at: Time.current)
-      @sophtron_item.update!(manual_sync: false) unless enabled
-    elsif params[:institution_key].present? || params[:user_institution_id].present?
+    result = SophtronItem::Lifecycle.new(@sophtron_item).toggle_manual_sync(
+      institution_key: params[:institution_key].presence || params[:user_institution_id])
+    if result[:error]
       redirect_back_or_to accounts_path, alert: t("sophtron_items.sync.no_linked_accounts")
       return
-    else
-      @sophtron_item.update!(manual_sync: !@sophtron_item.manual_sync?)
-      enabled = @sophtron_item.manual_sync?
     end
+    enabled = result[:enabled]
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path, notice: t(".success_#{enabled ? 'enabled' : 'disabled'}") }
@@ -483,6 +400,7 @@ class SophtronItemsController < ApplicationController
 
   def setup_accounts
     @api_error = fetch_sophtron_accounts_from_api
+    @selection_token = SophtronItem::Selection.issue(@sophtron_item, flow: :complete_account_setup)
 
     @sophtron_accounts = @sophtron_item.sophtron_accounts
       .left_joins(:account_provider)
@@ -537,68 +455,24 @@ class SophtronItemsController < ApplicationController
   def complete_account_setup
     account_types = params[:account_types] || {}
     account_subtypes = params[:account_subtypes] || {}
-    valid_types = Provider::SophtronAdapter.supported_account_types
-    created_accounts = []
-    skipped_count = 0
 
     begin
-      ActiveRecord::Base.transaction do
-        account_types.each do |sophtron_account_id, selected_type|
-          if selected_type == "skip" || selected_type.blank?
-            skipped_count += 1
-            next
-          end
-
-          unless valid_types.include?(selected_type)
-            Rails.logger.warn("Invalid account type '#{selected_type}' submitted for Sophtron account #{sophtron_account_id}")
-            next
-          end
-
-          sophtron_account = @sophtron_item.sophtron_accounts.find_by(id: sophtron_account_id)
-          unless sophtron_account
-            Rails.logger.warn("Sophtron account #{sophtron_account_id} not found for item #{@sophtron_item.id}")
-            next
-          end
-
-          if sophtron_account.account_provider.present?
-            Rails.logger.info("Sophtron account #{sophtron_account_id} already linked, skipping")
-            next
-          end
-
-          selected_subtype = account_subtypes[sophtron_account_id]
-          selected_subtype = "credit_card" if selected_type == "CreditCard" && selected_subtype.blank?
-
-          account = Account.create_and_sync(
-            {
-              family: Current.family,
-              name: sophtron_account.name,
-              balance: sophtron_account.balance || 0,
-              currency: sophtron_account.currency || "USD",
-              accountable_type: selected_type,
-              accountable_attributes: selected_subtype.present? ? { subtype: selected_subtype } : {}
-            },
-            skip_initial_sync: true
-          )
-
-          AccountProvider.create!(account: account, provider: sophtron_account)
-          created_accounts << account
-        end
-      end
+      result = SophtronItem::Lifecycle.new(@sophtron_item).complete_account_setup(
+        account_types: account_types, account_subtypes: account_subtypes)
+      created_accounts, skipped_count = result.values_at(:created_accounts, :skipped_count)
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-      Rails.logger.error("Sophtron account setup failed: #{e.class} - #{e.message}")
-      Rails.logger.error(e.backtrace.first(10).join("\n"))
+      capture_lifecycle_failure(e)
       flash[:alert] = t(".creation_failed")
       redirect_to accounts_path, status: :see_other
       return
+    rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+      raise
     rescue StandardError => e
-      Rails.logger.error("Sophtron account setup failed unexpectedly: #{e.class} - #{e.message}")
-      Rails.logger.error(e.backtrace.first(10).join("\n"))
+      capture_lifecycle_failure(e)
       flash[:alert] = t(".unexpected_error")
       redirect_to accounts_path, status: :see_other
       return
     end
-
-    @sophtron_item.start_initial_load_later if created_accounts.any?
 
     flash[:notice] = if created_accounts.any?
       t(".success", count: created_accounts.count)
@@ -758,7 +632,7 @@ class SophtronItemsController < ApplicationController
     def complete_manual_sync!(sophtron_account, provider, sync)
       raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
 
-      result = SophtronItem::Importer.new(@sophtron_item, sophtron_provider: provider, sync: sync)
+      result = SophtronItem::Importer.new(@sophtron_item, sync: sync)
                                     .import_transactions_after_refresh(sophtron_account)
 
       unless result[:success]
@@ -777,8 +651,10 @@ class SophtronItemsController < ApplicationController
         status: :good
       )
 
-      if (account = sophtron_account.current_account)
-        account.sync_later(
+      sophtron_account = Provider::AccountData::LegacyWriterFence.scoped_accounts!(@sophtron_item, [ sophtron_account ]).sole
+      if sophtron_account.current_account
+        @sophtron_item.schedule_account_syncs(
+          sophtron_accounts_scope: [ sophtron_account ],
           parent_sync: sync,
           window_start_date: sync.window_start_date,
           window_end_date: sync.window_end_date
@@ -792,7 +668,9 @@ class SophtronItemsController < ApplicationController
     end
 
     def process_manual_sync_account!(sync, sophtron_account)
-      SophtronAccount::Processor.new(sophtron_account.reload).process
+      SophtronAccount::Processor.new(sophtron_account, sync: sync).process
+    rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+      raise
     rescue StandardError => e
       Rails.logger.error("Sophtron manual sync processing error: #{e.class} - #{e.message}")
       fail_manual_sync_and_clear_job!(sync, e.message)
@@ -848,18 +726,6 @@ class SophtronItemsController < ApplicationController
       @sophtron_item.manual_sync_sophtron_accounts
     end
 
-    def manual_sync_toggle_sophtron_accounts
-      accounts = @sophtron_item.sophtron_accounts.order(:created_at, :id)
-      institution_key = params[:institution_key].presence || params[:user_institution_id]
-      return accounts if institution_key.blank?
-
-      account_ids = accounts.select do |sophtron_account|
-        sophtron_account.institution_key.to_s == institution_key.to_s
-      end.map(&:id)
-
-      accounts.where(id: account_ids)
-    end
-
     def next_manual_sync_sophtron_account(sync)
       processed_ids = manual_sync_processed_sophtron_account_ids(sync)
       linked_manual_sync_sophtron_accounts.detect { |sophtron_account| processed_ids.exclude?(sophtron_account.id.to_s) }
@@ -910,7 +776,7 @@ class SophtronItemsController < ApplicationController
     end
 
     def configured_sophtron_item
-      Current.family.configured_sophtron_item
+      @legacy_discovery_item || Current.family.configured_sophtron_item
     end
 
     def normalized_security_answers
@@ -932,16 +798,7 @@ class SophtronItemsController < ApplicationController
     end
 
     def verify_and_provision_customer(item)
-      provider = item.sophtron_provider
-      raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
-
-      sophtron_response_data!(provider.health_check_auth)
-      item.ensure_customer!(provider: provider)
-      true
-    rescue Provider::Sophtron::Error => e
-      item.update(status: :requires_update, last_connection_error: e.message)
-      Rails.logger.error("Sophtron customer provisioning failed: #{e.message}")
-      false
+      item.verify_and_provision_customer
     end
 
     def render_sophtron_panel_success(action_name)
@@ -982,29 +839,6 @@ class SophtronItemsController < ApplicationController
       end
     end
 
-    def item_for_institution_connection(item)
-      return item unless connect_new_institution_flow? && should_create_sophtron_item_for_new_institution?(item)
-
-      Current.family.sophtron_items.create!(
-        name: item.name.presence || t("sophtron_items.defaults.name"),
-        user_id: item.user_id,
-        access_key: item.access_key,
-        base_url: item.base_url,
-        customer_id: item.customer_id,
-        customer_name: item.customer_name,
-        raw_customer_payload: item.raw_customer_payload,
-        sync_start_date: item.sync_start_date
-      )
-    end
-
-    def should_create_sophtron_item_for_new_institution?(item)
-      item.user_institution_id.present? ||
-        item.current_job_id.present? ||
-        item.institution_id.present? ||
-        item.institution_name.present? ||
-        item.sophtron_accounts.exists?
-    end
-
     def prepare_connection_form(item, account: nil)
       @sophtron_item = item
       @account = account
@@ -1015,7 +849,7 @@ class SophtronItemsController < ApplicationController
       @institutions = []
 
       if @institution_search.length >= 2
-        @institutions = sophtron_response_data!(item.sophtron_provider.search_institutions(@institution_search))
+        @institutions = item.search_institutions(@institution_search)
       end
     end
 
@@ -1024,12 +858,8 @@ class SophtronItemsController < ApplicationController
       @accountable_type = params[:accountable_type] || "Depository"
       @return_to = safe_return_to_path
 
-      if params[:account_id].present?
-        @account = Current.family.accounts.find(params[:account_id])
-        render :select_existing_account, layout: false
-      else
-        render :select_accounts, layout: false
-      end
+      account = Current.family.accounts.find(params[:account_id]) if params[:account_id].present?
+      render_selection_form(item, account: account)
     end
 
     def render_account_selection_if_accounts_available(item)
@@ -1047,17 +877,20 @@ class SophtronItemsController < ApplicationController
       @accountable_type = params[:accountable_type] || "Depository"
       @return_to = safe_return_to_path
 
-      if params[:account_id].present?
-        @account = Current.family.accounts.find(params[:account_id])
-        render :select_existing_account, layout: false
-      else
-        render :select_accounts, layout: false
-      end
+      account = Current.family.accounts.find(params[:account_id]) if params[:account_id].present?
+      render_selection_form(item, account: account)
 
       true
     rescue Provider::Sophtron::Error => e
       Rails.logger.info("Sophtron accounts are not available after completed job #{item.current_job_id}: #{e.message}")
       false
+    end
+
+    def render_selection_form(item, account: nil)
+      @account = account
+      flow = account ? :link_existing_account : :link_accounts
+      @selection_token = SophtronItem::Selection.issue(item, flow: flow, account_id: account&.id)
+      render(account ? :select_existing_account : :select_accounts, layout: false)
     end
 
     def render_pending_connection_status
@@ -1209,6 +1042,8 @@ class SophtronItemsController < ApplicationController
     rescue Provider::Sophtron::Error => e
       Rails.logger.error("Sophtron API error: #{e.message}")
       t("sophtron_items.setup_accounts.api_error")
+    rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+      raise
     rescue StandardError => e
       Rails.logger.error("Unexpected error fetching Sophtron accounts: #{e.class}: #{e.message}")
       Rails.logger.error(e.backtrace.first(10).join("\n"))
@@ -1217,6 +1052,80 @@ class SophtronItemsController < ApplicationController
 
     def set_sophtron_item
       @sophtron_item = Current.family.sophtron_items.find(params[:id])
+    end
+
+    def with_legacy_refresh
+      with_legacy_operation(@sophtron_item, operation: :sync) { yield }
+    end
+
+    def with_legacy_credentials
+      with_legacy_operation(@sophtron_item, operation: :credentials) { yield }
+    end
+
+    def with_legacy_discovery
+      item = @sophtron_item || configured_sophtron_item
+      return yield unless item
+
+      with_legacy_operation(item, operation: :ingest) do
+        @legacy_discovery_item = @sophtron_item
+        yield
+      end
+    ensure
+      @legacy_discovery_item = nil
+    end
+
+    def with_legacy_lifecycle
+      if SophtronItem::Selection::FLOWS.include?(action_name)
+        selection = SophtronItem::Selection.from_token(params[:selection_token], flow: action_name,
+          account_id: action_name == "link_existing_account" ? params[:account_id] : nil)
+        item = selection.item_for(Current.family)
+        if @sophtron_item && @sophtron_item.id != item.id
+          raise SophtronItem::Selection::Invalid, "Sophtron setup selection identifies another item"
+        end
+      else
+        item = @sophtron_item
+      end
+      return yield unless item
+
+      with_legacy_operation(item, operation: :lifecycle) do
+        selection&.verify!(@sophtron_item)
+        @legacy_discovery_item = @sophtron_item
+        yield
+      end
+    rescue SophtronItem::Selection::Invalid => error
+      render_legacy_operation_denial(@sophtron_item, error)
+    ensure
+      @legacy_discovery_item = nil
+    end
+
+    def with_legacy_operation(item, operation:)
+      Provider::AccountData::LegacyWriterFence.with_item(item, operation: operation) do |current|
+        @sophtron_item = current
+        yield
+      end
+    rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged => error
+      render_legacy_operation_denial(item, error)
+    end
+
+    def render_legacy_operation_denial(item, error)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "warn",
+        message: "Sophtron operation was refused by migration ownership", source: self.class.name,
+        provider_key: "sophtron", family: Current.family,
+        metadata: { item_id: item&.id, error_class: error.class.name })
+      message = t("sophtron_items.connection_unavailable")
+      respond_to do |format|
+        format.json { render json: { error: message }, status: :conflict }
+        format.html { redirect_to accounts_path, alert: message }
+      end
+    end
+
+    def capture_lifecycle_failure(error)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "warn",
+        message: "Sophtron lifecycle operation failed", source: self.class.name,
+        provider_key: "sophtron", family: Current.family,
+        metadata: { item_id: @sophtron_item&.id, operation: action_name, error_class: error.class.name })
+    rescue StandardError
+      # Keep the existing user-facing failure response if diagnostics are down.
     end
 
     def sophtron_params

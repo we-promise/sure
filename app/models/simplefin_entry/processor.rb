@@ -26,27 +26,51 @@ class SimplefinEntry::Processor
     posted_is_epoch_zero && transacted_present
   end
 
-  def process
-    # Skip pending transactions when pending inclusion is disabled. Without this guard
-    # the SIMPLEFIN_INCLUDE_PENDING/syncs_include_pending setting only affects the API
-    # request, while pending rows already stored in raw_transactions_payload would still
-    # be (re)created here on every sync - including ones the user manually deleted.
-    return if pending? && !pending_enabled?
+  # Read-only projection shared with legacy cleanup. No merchant creation or
+  # financial write occurs; callers supply the admitted source/account context.
+  def identity_attributes
+    { external_id: external_id, amount: amount, currency: currency, date: date, name: name, pending: pending? }
+  end
 
-    import_adapter.import_transaction(
-      external_id: external_id,
-      amount: amount,
-      currency: currency,
-      date: date,
-      name: name,
-      source: "simplefin",
-      merchant: merchant,
-      notes: notes,
-      extra: extra_metadata
-    )
+  def process
+    SimplefinItem::LegacyAccess.with_account(simplefin_account) do |current|
+      expected = current.current_account
+      next unless expected
+      SimplefinItem::LegacyAccess.with_publication(current, expected_account: expected) do |fresh, _financial|
+        self.class.new(simplefin_transaction, simplefin_account: fresh, import_adapter: @shared_import_adapter).send(:process_admitted)
+      end
+    end
   end
 
   private
+
+    def process_admitted
+      return unless account
+      if @shared_import_adapter &&
+          (!@shared_import_adapter.is_a?(Account::ProviderImportAdapter) || !@shared_import_adapter.account.is_a?(Account) ||
+            @shared_import_adapter.account.attributes.slice("id", "family_id", "currency", "accountable_type", "accountable_id") !=
+              account.attributes.slice("id", "family_id", "currency", "accountable_type", "accountable_id"))
+        raise SimplefinItem::LegacyAccess::Fence::OwnershipChanged, "SimpleFIN transaction adapter has a different financial owner"
+      end
+      # Skip pending transactions when pending inclusion is disabled. Without this guard
+      # the SIMPLEFIN_INCLUDE_PENDING/syncs_include_pending setting only affects the API
+      # request, while pending rows already stored in raw_transactions_payload would still
+      # be (re)created here on every sync - including ones the user manually deleted.
+      return if pending? && !pending_enabled?
+
+      import_adapter.import_transaction(
+        external_id: external_id,
+        amount: amount,
+        currency: currency,
+        date: date,
+        name: name,
+        source: "simplefin",
+        merchant: merchant,
+        notes: notes,
+        extra: extra_metadata
+      )
+    end
+
     attr_reader :simplefin_transaction, :simplefin_account
 
     # Whether pending transactions should be imported. Mirrors the resolution order used

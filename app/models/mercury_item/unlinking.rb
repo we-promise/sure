@@ -9,41 +9,51 @@ module MercuryItem::Unlinking
   # - Detaches Holdings that point at the AccountProvider links
   # Returns a per-account result payload for observability
   def unlink_all!(dry_run: false)
-    results = []
-
-    mercury_accounts.find_each do |provider_account|
-      links = AccountProvider.where(provider_type: "MercuryAccount", provider_id: provider_account.id).to_a
-      link_ids = links.map(&:id)
-      result = {
-        provider_account_id: provider_account.id,
-        name: provider_account.name,
-        provider_link_ids: link_ids
-      }
-      results << result
-
-      next if dry_run
-
-      begin
-        ActiveRecord::Base.transaction do
-          # Detach holdings for any provider links found
-          if link_ids.any?
-            Holding.where(account_provider_id: link_ids).update_all(account_provider_id: nil)
-          end
-
-          # Destroy all provider links
-          links.each do |ap|
-            ap.destroy!
-          end
-        end
-      rescue StandardError => e
-        Rails.logger.warn(
-          "MercuryItem Unlinker: failed to fully unlink provider account ##{provider_account.id} (links=#{link_ids.inspect}): #{e.class} - #{e.message}"
-        )
-        # Record error for observability; continue with other accounts
-        result[:error] = e.message
-      end
+    MercuryItem::LegacyAccess.with_item(self, operation: :lifecycle) do |current|
+      current.send(:unlink_mercury_accounts_admitted!, dry_run: dry_run)
     end
-
-    results
   end
+
+  private
+
+    def unlink_mercury_accounts_admitted!(dry_run:)
+      results = []
+
+      mercury_accounts.find_each do |provider_account|
+        links = AccountProvider.where(provider_type: "MercuryAccount", provider_id: provider_account.id).to_a
+        link_ids = links.map(&:id)
+        result = {
+          provider_account_id: provider_account.id,
+          name: provider_account.name,
+          provider_link_ids: link_ids
+        }
+        results << result
+
+        next if dry_run
+
+        begin
+          ActiveRecord::Base.transaction do
+            # Detach holdings for any provider links found
+            if link_ids.any?
+              Holding.where(account_provider_id: link_ids).update_all(account_provider_id: nil)
+            end
+
+            # Destroy all provider links
+            links.each do |ap|
+              ap.destroy!
+            end
+          end
+        rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+          raise
+        rescue StandardError => e
+          DebugLogEntry.capture(category: "provider_sync_error", level: "warning", message: "Mercury account unlink failed",
+            source: self.class.name, provider_key: "mercury", family: family,
+            metadata: { mercury_item_id: id, mercury_account_id: provider_account.id, error_class: e.class.name })
+          # Record error for observability; continue with other accounts
+          result[:error] = "Mercury account unlink failed"
+        end
+      end
+
+      results
+    end
 end

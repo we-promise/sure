@@ -23,43 +23,61 @@ class MercuryAccount < ApplicationRecord
   end
 
   def upsert_mercury_snapshot!(account_snapshot)
-    # Convert to symbol keys or handle both string and symbol keys
-    snapshot = account_snapshot.with_indifferent_access
-
-    # Map Mercury field names to our field names
-    # Mercury API fields: id, name, currentBalance, availableBalance, status, type, kind,
-    #                     legalBusinessName, nickname, routingNumber, accountNumber, etc.
-    account_name = snapshot[:nickname].presence || snapshot[:name].presence || snapshot[:legalBusinessName].presence
-
-    update!(
-      current_balance: snapshot[:currentBalance] || snapshot[:current_balance] || 0,
-      currency: "USD",  # Mercury is US-only, always USD
-      name: account_name,
-      account_id: snapshot[:id]&.to_s,
-      account_status: snapshot[:status],
-      provider: "mercury",
-      institution_metadata: {
-        name: "Mercury",
-        domain: "mercury.com",
-        url: "https://mercury.com",
-        account_type: snapshot[:type],
-        account_kind: snapshot[:kind],
-        legal_business_name: snapshot[:legalBusinessName],
-        available_balance: snapshot[:availableBalance]
-      }.compact,
-      raw_payload: account_snapshot
-    )
+    MercuryItem::LegacyAccess.with_item(mercury_item) do |item|
+      current = if persisted?
+        Provider::AccountData::LegacyWriterFence.scoped_accounts!(item, [ self ]).sole
+      else
+        raise MercuryItem::LegacyAccess::Fence::InvalidSource, "Cannot restore a removed Mercury account" if destroyed?
+        item.mercury_accounts.find_or_initialize_by(account_id: account_snapshot.with_indifferent_access[:id]&.to_s)
+      end
+      unless current.account_id == account_snapshot.with_indifferent_access[:id]&.to_s
+        raise MercuryItem::LegacyAccess::Fence::OwnershipChanged, "Mercury snapshot belongs to another source account"
+      end
+      result = current.send(:persist_mercury_snapshot!, account_snapshot)
+      self.id = current.id
+      reload
+      result
+    end
   end
 
   def upsert_mercury_transactions_snapshot!(transactions_snapshot)
-    assign_attributes(
-      raw_transactions_payload: transactions_snapshot
-    )
-
-    save!
+    MercuryItem::LegacyAccess.with_account(self, operation: :ingest) do |current|
+      result = current.update!(raw_transactions_payload: transactions_snapshot)
+      reload
+      result
+    end
   end
 
   private
+
+    def persist_mercury_snapshot!(account_snapshot)
+      # Convert to symbol keys or handle both string and symbol keys
+      snapshot = account_snapshot.with_indifferent_access
+
+      # Map Mercury field names to our field names
+      # Mercury API fields: id, name, currentBalance, availableBalance, status, type, kind,
+      #                     legalBusinessName, nickname, routingNumber, accountNumber, etc.
+      account_name = snapshot[:nickname].presence || snapshot[:name].presence || snapshot[:legalBusinessName].presence
+
+      update!(
+        current_balance: snapshot[:currentBalance] || snapshot[:current_balance] || 0,
+        currency: "USD",  # Mercury is US-only, always USD
+        name: account_name,
+        account_id: snapshot[:id]&.to_s,
+        account_status: snapshot[:status],
+        provider: "mercury",
+        institution_metadata: {
+          name: "Mercury",
+          domain: "mercury.com",
+          url: "https://mercury.com",
+          account_type: snapshot[:type],
+          account_kind: snapshot[:kind],
+          legal_business_name: snapshot[:legalBusinessName],
+          available_balance: snapshot[:availableBalance]
+        }.compact,
+        raw_payload: account_snapshot
+      )
+    end
 
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' for Mercury account #{id}, defaulting to USD")

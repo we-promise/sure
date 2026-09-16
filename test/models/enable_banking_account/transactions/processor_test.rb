@@ -1,6 +1,8 @@
 require "test_helper"
+require "support/enable_banking_fixture_fence_helper"
 
 class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
+  include EnableBankingFixtureFenceHelper
   include EntriesTestHelper
 
   setup do

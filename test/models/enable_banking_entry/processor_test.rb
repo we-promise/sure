@@ -1,7 +1,9 @@
 require "test_helper"
+require "support/enable_banking_fixture_fence_helper"
 require "ostruct"
 
 class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
+  include EnableBankingFixtureFenceHelper
   setup do
     @family = families(:dylan_family)
     @account = accounts(:depository)

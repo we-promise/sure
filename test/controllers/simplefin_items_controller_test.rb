@@ -1,6 +1,9 @@
 require "test_helper"
+require_relative "../support/simplefin_fixture_fence_helper"
 
 class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
+  include SimplefinFixtureFenceHelper
+
   include ActiveJob::TestHelper
   fixtures :users, :families
   setup do
@@ -159,8 +162,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     SimplefinConnectionUpdateJob.expects(:perform_later).with(
       family_id: @family.id,
-      old_simplefin_item_id: @simplefin_item.id,
-      setup_token: token
+      claim_id: kind_of(String)
     ).once
 
     patch simplefin_item_url(@simplefin_item), params: {
@@ -169,6 +171,10 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to accounts_path
     assert_equal "SimpleFIN connection updated.", flash[:notice]
+    claim = ProviderCredentialClaim.find_by!(family_id: @family.id, target_id: @simplefin_item.id)
+    assert_equal token, claim.request.fetch("setup_token")
+    assert_equal @simplefin_item.credential_revision, claim.expected.fetch("credential_revision")
+    assert claim.prepared?
   end
 
   test "should handle update with invalid token" do
@@ -431,8 +437,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     SimplefinConnectionUpdateJob.expects(:perform_later).with(
       family_id: @family.id,
-      old_simplefin_item_id: @simplefin_item.id,
-      setup_token: token
+      claim_id: kind_of(String)
     ).once
 
     patch simplefin_item_url(@simplefin_item), params: { simplefin_item: { setup_token: token } }
@@ -463,8 +468,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     SimplefinConnectionUpdateJob.expects(:perform_later).with(
       family_id: @family.id,
-      old_simplefin_item_id: @simplefin_item.id,
-      setup_token: token
+      claim_id: kind_of(String)
     ).once
 
     patch simplefin_item_url(@simplefin_item), params: { simplefin_item: { setup_token: token } }

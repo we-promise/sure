@@ -1,0 +1,62 @@
+<% if connection_requests.any? || @connection_requests_error || params[:connection_requests_before].present? %>
+  <div class="mb-6">
+    <%= render DS::Disclosure.new(title: t("simplefin_items.connection_recovery.title"), open: true) do %>
+      <div class="space-y-4">
+        <% if @connection_requests_error %>
+          <%= render DS::Alert.new(message: @connection_requests_error, variant: :warning, live: :status) %>
+        <% end %>
+
+        <ul class="space-y-4">
+          <% connection_requests.each do |connection_request| %>
+            <li class="space-y-3">
+              <%= render DS::Alert.new(
+                title: simplefin_connection_request_title(connection_request),
+                message: simplefin_connection_request_description(connection_request),
+                variant: simplefin_connection_request_variant(connection_request)
+              ) %>
+              <p class="text-xs text-secondary">
+                <%= t("simplefin_items.connection_recovery.requested_at", date: l(connection_request.created_at, format: :long)) %>
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <% if connection_request.can_retry %>
+                  <%= render DS::Button.new(
+                    text: t("simplefin_items.connection_recovery.retry"),
+                    href: retry_connection_simplefin_item_path(@simplefin_item),
+                    method: :post,
+                    params: { claim_id: connection_request.id },
+                    variant: :secondary,
+                    icon: "refresh-cw"
+                  ) %>
+                <% end %>
+                <% if connection_request.can_cancel %>
+                  <%= render DS::Button.new(
+                    text: t("simplefin_items.connection_recovery.cancel"),
+                    href: cancel_connection_update_simplefin_item_path(@simplefin_item),
+                    method: :post,
+                    params: { claim_id: connection_request.id },
+                    variant: :outline
+                  ) %>
+                <% end %>
+              </div>
+            </li>
+          <% end %>
+        </ul>
+
+        <div class="flex flex-wrap gap-3">
+          <% if @connection_requests_next_cursor %>
+            <%= render DS::Link.new(
+              text: t("simplefin_items.connection_recovery.older"),
+              href: edit_simplefin_item_path(@simplefin_item, connection_requests_before: @connection_requests_next_cursor)
+            ) %>
+          <% end %>
+          <% if params[:connection_requests_before].present? %>
+            <%= render DS::Link.new(
+              text: t("simplefin_items.connection_recovery.newest"),
+              href: edit_simplefin_item_path(@simplefin_item)
+            ) %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

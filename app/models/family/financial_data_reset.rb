@@ -1,5 +1,6 @@
 class Family::FinancialDataReset
   ConfirmationRequiredError = Class.new(StandardError)
+  RetainedHistoryError = Class.new(StandardError)
 
   CONFIRMATION_PHRASE = "RESET FINANCIAL DATA"
 
@@ -130,6 +131,11 @@ class Family::FinancialDataReset
     end
 
     def delete_financial_data!
+      # Reset keeps the Family alive. It is not the explicit erasure protocol
+      # for retired financial identities and their retained source evidence.
+      if Account::IngestionIdentity.where(family_id: family.id).where.not(retired_at: nil).exists?
+        raise RetainedHistoryError, "Retired account history requires an explicit retention disposition before financial reset"
+      end
       scope(:syncs).delete_all
       delete_active_storage_attachments!
       scope(:transfers).destroy_all

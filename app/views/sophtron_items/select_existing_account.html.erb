@@ -13,6 +13,7 @@
               class: "space-y-4",
               data: { turbo_frame: "_top" } do %>
           <%= hidden_field_tag :account_id, @account.id %>
+          <%= hidden_field_tag :selection_token, @selection_token %>
           <%= hidden_field_tag :return_to, @return_to %>
 
           <div class="space-y-2">

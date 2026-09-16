@@ -1,5 +1,5 @@
 class PlaidItem < ApplicationRecord
-  include Syncable, Provided, Encryptable
+  include Syncable, Provided, Encryptable, LegacyWriterGuard
 
   enum :plaid_region, { us: "us", eu: "eu" }
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -204,4 +204,6 @@ class PlaidItem < ApplicationRecord
     def supported_products
       available_products + billed_products
     end
+
+  guard_legacy_writes import_latest_plaid_data: :ingest, process_accounts: :publish
 end

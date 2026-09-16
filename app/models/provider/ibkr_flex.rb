@@ -52,7 +52,69 @@ class Provider::IbkrFlex
     poll_statement(reference_code)
   end
 
+  # Native ingestion performs one physical request at a time. The coordinator
+  # persists the encrypted reference and schedules a later poll; no worker sleeps.
+  def request_statement_page
+    response, document = native_response("/SendRequest", query_id)
+    native_response_error!(document, response)
+    reference = document.at_xpath("/FlexStatementResponse/ReferenceCode")&.text.to_s.strip
+    validate_native_reference!(reference)
+    { status: "requested", reference: reference, evidence: { "response_xml" => response.body } }
+  end
+
+  def poll_statement_page(reference:)
+    validate_native_reference!(reference)
+    response, document = native_response("/GetStatement", reference)
+    if response.success? && document.root&.name == "FlexQueryResponse"
+      return { status: "ready", reference: reference, xml: response.body, evidence: { "response_xml" => response.body } }
+    end
+    code = document.at_xpath("/FlexStatementResponse/ErrorCode")&.text.to_s.strip
+    if response.success? && PENDING_ERROR_CODES.include?(code)
+      return { status: "pending", reference: reference, evidence: { "response_xml" => response.body } }
+    end
+    native_response_error!(document, response)
+    raise ApiError, "IBKR Flex returned an unexpected statement response"
+  end
+
   private
+
+    def validate_native_reference!(reference)
+      unless reference.is_a?(String) && reference.match?(/\A[A-Za-z0-9_-]{1,256}\z/)
+        raise ApiError, "IBKR Flex returned an invalid statement reference"
+      end
+    end
+
+    def native_response(path, reference)
+      response = self.class.get(path, query: { t: token, q: reference, v: 3 }, follow_redirects: false)
+      if [ 401, 403 ].include?(response.code.to_i)
+        raise AuthenticationError, "IBKR Flex authentication failed"
+      end
+      body = response.body
+      unless body.is_a?(String) && body.bytesize <= 32 * 1024 * 1024 && !body.match?(/<!DOCTYPE/i)
+        raise ApiError, "IBKR Flex returned an invalid or oversized XML response"
+      end
+      document = Nokogiri::XML(body) { |config| config.strict.nonet.noblanks }
+      unless %w[FlexStatementResponse FlexQueryResponse].include?(document.root&.name)
+        raise ApiError, "IBKR Flex returned an unexpected XML root"
+      end
+      [ response, document ]
+    rescue Nokogiri::XML::SyntaxError, *RETRYABLE_ERRORS
+      raise ApiError, "IBKR Flex statement request failed", cause: nil
+    end
+
+    def native_response_error!(document, response)
+      code = document.at_xpath("/FlexStatementResponse/ErrorCode")&.text.to_s.strip
+      status = document.at_xpath("/FlexStatementResponse/Status")&.text.to_s.strip
+      return if response.success? && code.empty? && status == "Success"
+      case code
+      when "1012", "1015"
+        raise AuthenticationError, "IBKR Flex authentication failed"
+      when "1014"
+        raise ConfigurationError, "IBKR Flex query configuration is invalid"
+      else
+        raise ApiError.new("IBKR Flex request failed", status_code: response.code, error_code: code.presence)
+      end
+    end
 
     def request_reference_code
       response = with_retries("SendRequest") do

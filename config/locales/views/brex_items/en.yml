@@ -1,6 +1,8 @@
 ---
 en:
   brex_items:
+    lifecycle:
+      unavailable: This Brex connection or account selection changed. Open it again before continuing.
     default_connection_name: Brex Connection
     account_metadata:
       provider: Brex

@@ -1,6 +1,8 @@
 require "test_helper"
+require "support/enable_banking_fixture_fence_helper"
 
 class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
+  include EnableBankingFixtureFenceHelper
   setup do
     @family = families(:dylan_family)
     @account = accounts(:depository)

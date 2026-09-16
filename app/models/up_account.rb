@@ -47,35 +47,64 @@ class UpAccount < ApplicationRecord
 
   # Persist the latest Up account snapshot, normalizing balance/currency/metadata.
   def upsert_up_snapshot!(account_snapshot)
-    snapshot = account_snapshot.with_indifferent_access
-    balance = snapshot[:balance].is_a?(Hash) ? snapshot[:balance].with_indifferent_access : {}
-
-    assign_attributes(
-      current_balance: parse_balance(balance[:value]),
-      currency: parse_currency(balance[:currencyCode]) || "AUD",
-      name: snapshot[:displayName].presence || I18n.t("up_account.fallback"),
-      account_id: snapshot[:id],
-      account_status: snapshot[:accountType],
-      account_type: snapshot[:accountType],
-      ownership_type: snapshot[:ownershipType],
-      provider: "up",
-      institution_metadata: {
-        name: INSTITUTION_NAME,
-        domain: INSTITUTION_DOMAIN
-      }.compact,
-      raw_payload: account_snapshot
-    )
-
-    save!
+    Provider::AccountData::LegacyWriterFence.with_item(up_item, operation: :ingest) do |item|
+      current = if persisted?
+        Provider::AccountData::LegacyWriterFence.scoped_accounts!(item, [ self ]).fetch(0)
+      else
+        raise Provider::AccountData::LegacyWriterFence::InvalidSource, "Cannot restore a removed Up account" if destroyed?
+        item.up_accounts.find_or_initialize_by(account_id: account_snapshot.with_indifferent_access[:id])
+      end
+      result = current.send(:persist_up_snapshot!, account_snapshot)
+      self.id = current.id
+      reload
+      result
+    end
   end
 
   # Persist the latest raw transactions payload for this account.
   def upsert_up_transactions_snapshot!(transactions_snapshot)
-    assign_attributes(raw_transactions_payload: transactions_snapshot)
-    save!
+    UpItem::LegacyWriter.with_account(self, operation: :ingest) do |current|
+      result = current.update!(raw_transactions_payload: transactions_snapshot)
+      reload
+      result
+    end
+  end
+
+  # Admission must precede Active Record's destruction transaction, including
+  # when DestroyJob invokes this method directly.
+  def destroy
+    return super if new_record? || destroyed?
+
+    UpItem::LegacyWriter.with_account(self, operation: :lifecycle) do
+      reload
+      super
+    end
   end
 
   private
+
+    def persist_up_snapshot!(account_snapshot)
+      snapshot = account_snapshot.with_indifferent_access
+      balance = snapshot[:balance].is_a?(Hash) ? snapshot[:balance].with_indifferent_access : {}
+
+      assign_attributes(
+        current_balance: parse_balance(balance[:value]),
+        currency: parse_currency(balance[:currencyCode]) || "AUD",
+        name: snapshot[:displayName].presence || I18n.t("up_account.fallback"),
+        account_id: snapshot[:id],
+        account_status: snapshot[:accountType],
+        account_type: snapshot[:accountType],
+        ownership_type: snapshot[:ownershipType],
+        provider: "up",
+        institution_metadata: {
+          name: INSTITUTION_NAME,
+          domain: INSTITUTION_DOMAIN
+        }.compact,
+        raw_payload: account_snapshot
+      )
+
+      save!
+    end
 
     # Parse an Up balance string into a BigDecimal, defaulting to 0 on bad input.
     def parse_balance(value)

@@ -12,7 +12,7 @@
 # @attr [Boolean] scheduled_for_deletion Whether the item is scheduled for deletion
 # @attr [DateTime] last_synced_at When the last successful sync occurred
 class SophtronItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, LegacyWriterGuard
 
   INITIAL_LOAD_LOOKBACK_DAYS = 120
   MAX_TRANSACTION_HISTORY_YEARS = 3
@@ -55,8 +55,26 @@ class SophtronItem < ApplicationRecord
   scope :needs_update, -> { where(status: :requires_update) }
 
   def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
+    SophtronItem::LegacyAccess.with_item(self, operation: :lifecycle) do |current|
+      current.update!(scheduled_for_deletion: true)
+      DestroyJob.perform_later(current)
+    end
+  end
+
+  # Admission precedes Active Record's destruction transaction and remains held
+  # through dependent Sophtron accounts. Generic unfenced parent transactions
+  # fail closed until their caller adopts an operation boundary.
+  def destroy
+    return super if new_record? || destroyed?
+
+    SophtronItem::LegacyAccess.with_item(self, operation: :lifecycle) do |current|
+      results = current.unlink_all!
+      if results.any? { |result| result[:error].present? }
+        raise ActiveRecord::RecordNotDestroyed.new("Sophtron links could not be removed", self)
+      end
+      reload
+      super
+    end
   end
 
   # Imports the latest account and transaction data from Sophtron.
@@ -72,13 +90,9 @@ class SophtronItem < ApplicationRecord
   # @raise [StandardError] if the Sophtron provider is not configured
   # @raise [Provider::Sophtron::Error] if the Sophtron API returns an error
   def import_latest_sophtron_data(sync: nil)
-    provider = sophtron_provider
-    unless provider
-      Rails.logger.error "SophtronItem #{id} - Cannot import: Sophtron provider is not configured (missing API key)"
-      raise StandardError.new("Sophtron provider is not configured")
-    end
-
-    SophtronItem::Importer.new(self, sophtron_provider: provider, sync: sync).import
+    SophtronItem::Importer.new(self, sync: sync).import
+  rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+    raise
   rescue => e
     Rails.logger.error "SophtronItem #{id} - Failed to import data: #{e.message}"
     raise
@@ -129,15 +143,20 @@ class SophtronItem < ApplicationRecord
     institution_accounts.any?(&:manual_sync?) || (manual_sync? && !sophtron_accounts.requires_manual_sync.exists?)
   end
 
-  def process_accounts(sophtron_accounts_scope: linked_visible_sophtron_accounts)
+  def process_accounts(sophtron_accounts_scope: linked_visible_sophtron_accounts, sync: nil)
+    sync = Provider::AccountData::LegacyWriterFence.scoped_sync!(self, sync)
+    sophtron_accounts_scope = Provider::AccountData::LegacyWriterFence.scoped_accounts!(self, sophtron_accounts_scope)
     return [] if sophtron_accounts_scope.empty?
 
     results = []
     # Only process accounts that are linked and have active status
     sophtron_accounts_scope.each do |sophtron_account|
       begin
-        result = SophtronAccount::Processor.new(sophtron_account).process
+        processor = sync ? SophtronAccount::Processor.new(sophtron_account, sync: sync) : SophtronAccount::Processor.new(sophtron_account)
+        result = processor.process
         results << { sophtron_account_id: sophtron_account.id, success: true, result: result }
+      rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+        raise
       rescue => e
         Rails.logger.error "SophtronItem #{id} - Failed to process account #{sophtron_account.id}: #{e.message}"
         results << { sophtron_account_id: sophtron_account.id, success: false, error: e.message }
@@ -148,13 +167,18 @@ class SophtronItem < ApplicationRecord
     results
   end
 
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil, sophtron_accounts_scope: linked_visible_sophtron_accounts)
-    linked_accounts = sophtron_accounts_scope.includes(:account_provider).filter_map(&:current_account)
-    return [] if linked_accounts.empty?
+  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil, sophtron_accounts_scope: linked_visible_sophtron_accounts, allow_completed: false)
+    parent_sync = Provider::AccountData::LegacyWriterFence.scoped_sync!(self, parent_sync, allow_completed: allow_completed)
+    selected = Provider::AccountData::LegacyWriterFence.scoped_accounts!(self, sophtron_accounts_scope)
+    return [] if selected.empty?
 
     results = []
     # Only schedule syncs for active accounts
-    linked_accounts.each do |account|
+    selected.each do |source_account|
+      parent_sync = Provider::AccountData::LegacyWriterFence.scoped_sync!(self, parent_sync, allow_completed: allow_completed)
+      current = Provider::AccountData::LegacyWriterFence.scoped_accounts!(self, [ source_account ]).sole
+      account = current.current_account
+      next unless account
       begin
         account.sync_later(
           parent_sync: parent_sync,
@@ -162,6 +186,8 @@ class SophtronItem < ApplicationRecord
           window_end_date: window_end_date
         )
         results << { account_id: account.id, success: true }
+      rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+        raise
       rescue => e
         Rails.logger.error "SophtronItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
         results << { account_id: account.id, success: false, error: e.message }
@@ -198,35 +224,20 @@ class SophtronItem < ApplicationRecord
     save!
   end
 
-  def ensure_customer!(provider: sophtron_provider)
-    return customer_id if customer_id.present?
-    raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
-
-    matching_customer = find_matching_customer(Provider::Sophtron.response_data!(provider.list_customers))
-    customer_payload = matching_customer || Provider::Sophtron.response_data!(
-      provider.create_customer(
-        unique_id: generated_customer_unique_id,
-        name: generated_customer_name,
-        source: "Sure"
-      )
-    )
-
-    # Some Sophtron endpoints may return an empty body on success; re-list to find
-    # the customer we just created if the create response does not include an id.
-    if extract_customer_id(customer_payload).blank?
-      customer_payload = find_matching_customer(Provider::Sophtron.response_data!(provider.list_customers))
+  def ensure_customer!
+    SophtronItem::LegacyAccess.with_item(self, operation: :credentials) do |current, _sync|
+      result = current.send(:ensure_customer_admitted!)
+      reload unless current.equal?(self)
+      result
     end
+  end
 
-    extracted_customer_id = extract_customer_id(customer_payload)
-    raise Provider::Sophtron::Error.new("Sophtron customer response did not include CustomerID", :invalid_response) if extracted_customer_id.blank?
-
-    update!(
-      customer_id: extracted_customer_id,
-      customer_name: extract_customer_name(customer_payload).presence || generated_customer_name,
-      raw_customer_payload: customer_payload
-    )
-
-    customer_id
+  def verify_and_provision_customer
+    SophtronItem::LegacyAccess.with_item(self, operation: :credentials) do |current, _sync|
+      result = current.send(:verify_and_provision_customer_admitted)
+      reload unless current.equal?(self)
+      result
+    end
   end
 
   def connected_to_institution?
@@ -260,7 +271,7 @@ class SophtronItem < ApplicationRecord
   end
 
   def fetch_remote_accounts(force: false)
-    cache_key = "sophtron_accounts_#{family.id}_#{id}_#{user_institution_id}"
+    cache_key = discovery_cache_key
     cached = Rails.cache.read(cache_key)
     return cached if cached.present? && !force
 
@@ -269,6 +280,13 @@ class SophtronItem < ApplicationRecord
     Rails.cache.write(cache_key, accounts, expires_in: 5.minutes)
     persist_remote_sophtron_accounts(accounts)
     accounts
+  end
+
+  def search_institutions(query)
+    provider = sophtron_provider
+    raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
+
+    Provider::Sophtron.response_data!(provider.search_institutions(query))
   end
 
   def persist_remote_sophtron_accounts(accounts)
@@ -380,6 +398,14 @@ class SophtronItem < ApplicationRecord
     base_url.presence || Provider::Sophtron::DEFAULT_BASE_URL
   end
 
+  # Keyed identity may be used in caches and signed form grants without exposing
+  # the credentials or permitting an offline guess of their plaintext values.
+  def discovery_identity_fingerprint
+    key = Rails.application.key_generator.generate_key("sophtron-discovery-cache-v1", 32)
+    identity = JSON.generate([ user_id, access_key, effective_base_url, customer_id, user_institution_id ])
+    OpenSSL::HMAC.hexdigest("SHA256", key, identity)
+  end
+
   def generated_customer_unique_id
     "sure-family-#{family.id}"
   end
@@ -389,6 +415,54 @@ class SophtronItem < ApplicationRecord
   end
 
   private
+
+    def verify_and_provision_customer_admitted
+      provider = sophtron_provider
+      raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
+
+      Provider::Sophtron.response_data!(provider.health_check_auth)
+      ensure_customer_admitted!(provider: provider)
+      true
+    rescue Provider::Sophtron::Error => error
+      update(status: :requires_update, last_connection_error: error.message)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "warn",
+        message: "Sophtron credential verification or customer provisioning failed", source: self.class.name,
+        provider_key: "sophtron", family: family,
+        metadata: { item_id: id, error_class: error.class.name })
+      false
+    end
+
+    def ensure_customer_admitted!(provider: nil)
+      return customer_id if customer_id.present?
+      provider ||= sophtron_provider
+      raise Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error) unless provider
+
+      matching_customer = find_matching_customer(Provider::Sophtron.response_data!(provider.list_customers))
+      customer_payload = matching_customer || Provider::Sophtron.response_data!(
+        provider.create_customer(
+          unique_id: generated_customer_unique_id,
+          name: generated_customer_name,
+          source: "Sure"
+        )
+      )
+      if extract_customer_id(customer_payload).blank?
+        customer_payload = find_matching_customer(Provider::Sophtron.response_data!(provider.list_customers))
+      end
+
+      extracted_customer_id = extract_customer_id(customer_payload)
+      raise Provider::Sophtron::Error.new("Sophtron customer response did not include CustomerID", :invalid_response) if extracted_customer_id.blank?
+
+      update!(
+        customer_id: extracted_customer_id,
+        customer_name: extract_customer_name(customer_payload).presence || generated_customer_name,
+        raw_customer_payload: customer_payload
+      )
+      customer_id
+    end
+
+    def discovery_cache_key
+      "sophtron_accounts_v2_#{family_id}_#{id}_#{discovery_identity_fingerprint}"
+    end
 
     def find_matching_customer(customers)
       customers = Array(customers)
@@ -413,4 +487,10 @@ class SophtronItem < ApplicationRecord
       customer_payload = customer_payload.with_indifferent_access
       customer_payload[:CustomerName] || customer_payload[:customer_name] || customer_payload[:name]
     end
+
+  guard_legacy_writes import_latest_sophtron_data: :ingest, process_accounts: :publish,
+    schedule_account_syncs: :publish, start_initial_load_later: :publish,
+    upsert_sophtron_snapshot!: :ingest, upsert_job_snapshot!: :ingest,
+    fetch_remote_accounts: :ingest, persist_remote_sophtron_accounts: :ingest,
+    upsert_sophtron_account: :ingest, search_institutions: :ingest
 end

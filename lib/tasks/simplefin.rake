@@ -85,8 +85,13 @@ namespace :sure do
           next if dry_run
 
           begin
-            # Reassign to trigger encryption on write
-            item.update!(access_url: item.access_url)
+            SimplefinItem::ConnectionUpdate.with_locked_item(item) do |current|
+              # Reread after the credential permit and verified row reload. A
+              # batch's earlier snapshot must never overwrite a reconnect.
+              value = current.access_url
+              current.access_url_will_change!
+              current.update!(access_url: value)
+            end
             total_updated += 1
           rescue ActiveRecord::RecordInvalid => e
             failed << { id: item.id, error: e.class.name, message: e.message }

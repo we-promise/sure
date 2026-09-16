@@ -4,43 +4,52 @@
 class UpItem::Importer
   attr_reader :up_item, :up_provider
 
-  # Build an importer for the given +up_item+ using the supplied +up_provider+ client.
-  def initialize(up_item, up_provider:)
+  # Credentials are read only after admission, never from a caller's old client.
+  def initialize(up_item)
     @up_item = up_item
-    @up_provider = up_provider
   end
 
   # Run the full import (accounts then transactions) and return a result hash
   # of success flag and per-entity counts. On a failed accounts fetch, returns
   # a +failed_result+ with the same shape and zeroed counts.
   def import
-    Rails.logger.info "UpItem::Importer - Starting import for item #{up_item.id}"
+    Provider::AccountData::LegacyWriterFence.with_item(up_item, operation: :ingest) do |current|
+      @up_item = current
+      @up_provider = current.up_provider
+      raise StandardError, "Up provider is not configured" unless up_provider
 
-    accounts_data = fetch_accounts_data
-    return failed_result("Failed to fetch accounts data") unless accounts_data
-
-    up_item.upsert_up_snapshot!(accounts_data)
-
-    account_stats = import_accounts(accounts_data)
-    transaction_stats = import_transactions
-
-    Rails.logger.info(
-      "UpItem::Importer - Completed import for item #{up_item.id}: " \
-      "#{account_stats[:updated]} accounts updated, #{account_stats[:created]} new accounts discovered, " \
-      "#{transaction_stats[:imported]} transactions"
-    )
-
-    {
-      success: account_stats[:failed].zero? && transaction_stats[:failed].zero?,
-      accounts_updated: account_stats[:updated],
-      accounts_created: account_stats[:created],
-      accounts_failed: account_stats[:failed],
-      transactions_imported: transaction_stats[:imported],
-      transactions_failed: transaction_stats[:failed]
-    }
+      import_admitted
+    end
   end
 
   private
+
+    def import_admitted
+      Rails.logger.info "UpItem::Importer - Starting import for item #{up_item.id}"
+
+      accounts_data = fetch_accounts_data
+      return failed_result("Failed to fetch accounts data") unless accounts_data
+
+      up_item.upsert_up_snapshot!(accounts_data)
+
+      account_stats = import_accounts(accounts_data)
+      transaction_stats = import_transactions
+
+      Rails.logger.info(
+        "UpItem::Importer - Completed import for item #{up_item.id}: " \
+        "#{account_stats[:updated]} accounts updated, #{account_stats[:created]} new accounts discovered, " \
+        "#{transaction_stats[:imported]} transactions"
+      )
+
+      {
+        success: account_stats[:failed].zero? && transaction_stats[:failed].zero?,
+        accounts_updated: account_stats[:updated],
+        accounts_created: account_stats[:created],
+        accounts_failed: account_stats[:failed],
+        transactions_imported: transaction_stats[:imported],
+        transactions_failed: transaction_stats[:failed]
+      }
+    end
 
     # Fetch the current account list from Up, returning a hash of +items+ or
     # +nil+ on any provider/parse error (which is logged and captured).
@@ -85,6 +94,8 @@ class UpItem::Importer
           up_account.upsert_up_snapshot!(account)
           stats[:created] += 1
         end
+      rescue Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::Busy
+        raise
       rescue => e
         stats[:failed] += 1
         Rails.logger.error "UpItem::Importer - Failed to import account #{account_id}: #{e.message}"
@@ -114,6 +125,8 @@ class UpItem::Importer
         else
           stats[:failed] += 1
         end
+      rescue Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::Busy
+        raise
       rescue => e
         stats[:failed] += 1
         Rails.logger.error "UpItem::Importer - Failed to fetch/store transactions for Up account #{up_account.id}: #{e.class}"
@@ -140,6 +153,8 @@ class UpItem::Importer
       store_transactions(up_account, fresh_transactions: Array(transactions))
 
       { success: true, transactions_count: Array(transactions).count }
+    rescue Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::Busy
+      raise
     rescue Provider::Up::UpError => e
       mark_requires_update! if e.error_type.in?([ :unauthorized, :access_forbidden ])
       Rails.logger.error "UpItem::Importer - Up API error for account #{up_account.id}: #{e.error_type}"

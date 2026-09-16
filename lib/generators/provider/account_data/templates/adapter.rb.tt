@@ -1,0 +1,58 @@
+class Provider::AccountData::<%= class_name %> < Provider::AccountData::Adapter
+  def self.definition
+    Provider::AccountData::Definition.new(
+      key: <%= file_name.inspect %>,
+      source: <%= file_name.inspect %>,
+      credential_scope: <%= options[:credential_scope].inspect %>,
+<% if parsed_fields.empty? -%>
+      fields: [],
+<% else -%>
+      fields: [
+<% parsed_fields.each do |field| -%>
+        { name: <%= field[:name].inspect %>, type: <%= field[:type].inspect %>, secret: <%= field[:secret].inspect %>, default: <%= field[:default].inspect %> },
+<% end -%>
+      ],
+<% end -%>
+      capabilities: %w[<%= capabilities.join(" ") %>]
+    )
+  end
+
+  def self.build(credentials:, settings:, context:)
+    new(client: Client.new(
+      credentials: credentials, settings: settings,
+      application_credentials: context.fetch(:application_credentials, {}),
+      application_settings: context.fetch(:application_settings, {})
+    ))
+  end
+
+  def self.native_ready?
+    # Opt in after every required shared writer capability and parity check passes.
+    false
+  end
+
+  def list_accounts(cursor: nil)
+    # Normalize client responses into Ingestion::Record.account values inside a Page.
+    # Never treat a failed/partial inventory as a complete empty snapshot.
+    raise Provider::AccountData::NotImplementedError, "Implement <%= class_name %> account normalization"
+  end
+
+  def fetch_transactions(account:, cursor: nil, window: nil)
+    # Use Ingestion::Record.transaction with BigDecimal amounts (outflows positive), Date,
+    # explicit currency and pending state. Preserve existing external IDs/source
+    # when migrating. Respect the requested date window (start/end); return
+    # Page with actual coverage, explicit removals and a separate checkpoint.
+    raise Provider::AccountData::NotImplementedError, "Implement <%= class_name %> transaction normalization"
+  end
+<% if options[:type] == "investment" -%>
+
+  def fetch_holdings(account:, cursor: nil, window: nil)
+    # Use Ingestion::Record.holding. Unknown holdings or prices must never become zeroes.
+    raise Provider::AccountData::NotImplementedError, "Implement <%= class_name %> holdings normalization"
+  end
+
+  def fetch_activities(account:, cursor: nil, window: nil)
+    # Use Ingestion::Record.activity; retain trade/cash classifications and dated FX.
+    raise Provider::AccountData::NotImplementedError, "Implement <%= class_name %> activity normalization"
+  end
+<% end -%>
+end

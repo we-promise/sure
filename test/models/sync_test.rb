@@ -3,6 +3,15 @@ require "test_helper"
 class SyncTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  setup do
+    # State-machine tests use fixture transactions. Session serialization and
+    # crash recovery are exercised with real commits in Account::SyncExecutionTest.
+    Account::SyncExecution.stubs(:with).yields
+    # These cases exercise state transitions inside fixture transactions. The
+    # real commit/rollback boundary is covered by SyncOwnerAdmissionTest.
+    ActiveRecord.stubs(:after_all_transactions_commit).yields
+  end
+
   test "does not run if not in a valid state" do
     syncable = accounts(:depository)
     sync = Sync.create!(syncable: syncable, status: :completed)

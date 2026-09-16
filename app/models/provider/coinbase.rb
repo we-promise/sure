@@ -82,7 +82,90 @@ class Provider::Coinbase
     prices
   end
 
+  # Shared ingestion consumes one exact response at a time. The legacy helpers
+  # above retain their existing limits and behavior during incremental rollout.
+  def get_accounts_page(cursor: nil)
+    ingestion_collection("/v2/accounts", cursor: cursor)
+  end
+
+  def get_account_page(account_id)
+    ingestion_object("/v2/accounts/#{ingestion_identifier(account_id)}")
+  end
+
+  def get_transactions_page(account_id, cursor: nil)
+    ingestion_collection("/v2/accounts/#{ingestion_identifier(account_id)}/transactions", cursor: cursor)
+  end
+
+  def get_buys_page(account_id, cursor: nil)
+    ingestion_collection("/v2/accounts/#{ingestion_identifier(account_id)}/buys", cursor: cursor)
+  end
+
+  def get_sells_page(account_id, cursor: nil)
+    ingestion_collection("/v2/accounts/#{ingestion_identifier(account_id)}/sells", cursor: cursor)
+  end
+
+  def get_spot_price_page(currency_pair)
+    ingestion_object("/v2/prices/#{ingestion_identifier(currency_pair)}/spot", authenticated: false)
+  end
+
   private
+
+    def ingestion_identifier(value)
+      unless value.is_a?(String) && value.match?(/\A[A-Za-z0-9_:-]+\z/)
+        raise ApiError, "Invalid Coinbase resource identifier"
+      end
+      value
+    end
+
+    def ingestion_path(path, cursor)
+      return "#{path}?limit=100" if cursor.nil?
+      raise ArgumentError unless cursor.is_a?(String) && cursor.present?
+      uri = URI.parse(cursor)
+      unless uri.scheme.nil? && uri.host.nil? && uri.userinfo.nil? && uri.fragment.nil? && uri.path == path
+        raise ArgumentError
+      end
+      cursor
+    rescue ArgumentError, URI::InvalidURIError
+      raise ApiError, "Invalid Coinbase continuation", cause: nil
+    end
+
+    def ingestion_collection(path, cursor:)
+      data = ingestion_get(ingestion_path(path, cursor))
+      rows = data["data"]
+      pagination = data["pagination"]
+      unless rows.is_a?(Array) && rows.size <= 100 && rows.all? { |row| row.is_a?(Hash) } &&
+          pagination.is_a?(Hash) && pagination.key?("next_uri")
+        raise ApiError, "Invalid Coinbase collection"
+      end
+      continuation = pagination["next_uri"]
+      ingestion_path(path, continuation) unless continuation.nil?
+      { items: rows, next_cursor: continuation, evidence: data }
+    end
+
+    def ingestion_object(path, authenticated: true)
+      data = ingestion_get(path, authenticated: authenticated)
+      raise ApiError, "Invalid Coinbase resource" unless data["data"].is_a?(Hash)
+      { items: [ data["data"] ], next_cursor: nil, evidence: data }
+    end
+
+    def ingestion_get(path, authenticated: true)
+      options = authenticated ? { headers: auth_headers("GET", path.split("?").first) } : { timeout: 10 }
+      response = self.class.get(path, **options)
+      case response.code
+      when 200..299
+        parsed = JSON.parse(response.body, decimal_class: BigDecimal)
+        raise ApiError, "Invalid Coinbase response" unless parsed.is_a?(Hash)
+        parsed
+      when 401, 403
+        raise AuthenticationError, "Coinbase authorization does not permit this resource"
+      when 429
+        raise RateLimitError, "Coinbase request was rate limited"
+      else
+        raise ApiError, "Coinbase request failed (HTTP #{response.code})"
+      end
+    rescue JSON::ParserError, TypeError
+      raise ApiError, "Invalid Coinbase response", cause: nil
+    end
 
     def get(path, params: {})
       url = path

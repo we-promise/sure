@@ -79,7 +79,45 @@ class Provider::Brex
     }
   end
 
+  # One request per page; the canonical adapter owns aggregation and the shared
+  # engine persists continuations. These methods never invoke BrexAccount.
+  def get_cash_accounts_page(cursor: nil)
+    get_ingestion_page("/v2/accounts/cash", cursor: cursor)
+  end
+
+  def get_card_accounts_page(cursor: nil)
+    get_ingestion_page("/v2/accounts/card", cursor: cursor)
+  end
+
+  def get_cash_transactions_page(account_id, cursor: nil, start_date: nil)
+    get_ingestion_page(
+      "/v2/transactions/cash/#{ERB::Util.url_encode(account_id.to_s)}", cursor: cursor, params: posted_at_start_params(start_date)
+    )
+  end
+
+  def get_primary_card_transactions_page(cursor: nil, start_date: nil)
+    get_ingestion_page("/v2/transactions/card/primary", cursor: cursor, params: posted_at_start_params(start_date))
+  end
+
   private
+
+    def get_ingestion_page(path, cursor:, params: {})
+      unless cursor.nil? || (cursor.is_a?(String) && cursor.present?)
+        raise BrexError.new("Invalid Brex page cursor", :invalid_response)
+      end
+      payload = get_json(path, params: params.compact.merge(limit: DEFAULT_LIMIT, cursor: cursor).compact)
+      return { items: payload, next_cursor: nil, evidence: payload } if payload.is_a?(Array) && payload.all? { |record| record.is_a?(Hash) }
+      raise BrexError.new("Invalid Brex collection response", :invalid_response) unless payload.is_a?(Hash)
+      payload = payload.with_indifferent_access
+      collection_keys = %i[items data accounts transactions].select { |key| payload.key?(key) }
+      records = collection_keys.one? ? payload[collection_keys.first] : nil
+      continuation = payload[:next_cursor]
+      unless records.is_a?(Array) && records.all? { |record| record.is_a?(Hash) } &&
+          (continuation.nil? || (continuation.is_a?(String) && continuation.present? && continuation != cursor))
+        raise BrexError.new("Invalid Brex page", :invalid_response)
+      end
+      { items: records, next_cursor: continuation, evidence: payload }
+    end
 
     def aggregate_card_account(card_accounts)
       totals = %i[current_balance available_balance account_limit].index_with do |field|

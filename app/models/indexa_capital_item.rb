@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class IndexaCapitalItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -178,4 +178,6 @@ class IndexaCapitalItem < ApplicationRecord
 
       errors.add(:base, :credentials_required)
     end
+
+  guard_legacy_writes import_latest_indexa_capital_data: :ingest, process_accounts: :publish
 end

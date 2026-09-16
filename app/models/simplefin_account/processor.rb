@@ -11,25 +11,37 @@ class SimplefinAccount::Processor
   # Processing the account is the first step and if it fails, we halt
   # Each subsequent step can fail independently, but we continue processing
   def process
-    # If the account is missing (e.g., user deleted the connection and re‑linked later),
-    # do not auto‑link. Relinking is now a manual, user‑confirmed flow via the Relink modal.
-    unless simplefin_account.current_account.present?
-      return
+    SimplefinItem::LegacyAccess.with_account(simplefin_account) do |current|
+      processor = self.class.new(current)
+      result = processor.send(:process_admitted)
+      @skipped_entries = processor.skipped_entries
+      result
     end
-
-    process_account!
-    # Ensure provider link exists after processing the account/balance
-    begin
-      simplefin_account.ensure_account_provider!
-    rescue => e
-      Rails.logger.warn("SimpleFin provider link ensure failed for #{simplefin_account.id}: #{e.class} - #{e.message}")
-    end
-    process_transactions
-    process_investments
-    process_liabilities
   end
 
   private
+
+    def process_admitted
+      # If the account is missing (e.g., user deleted the connection and re‑linked later),
+      # do not auto‑link. Relinking is now a manual, user‑confirmed flow via the Relink modal.
+      expected_account = simplefin_account.current_account
+      return unless expected_account
+
+      SimplefinItem::LegacyAccess.with_publication(simplefin_account, expected_account: expected_account) do |fresh, _financial|
+        self.class.new(fresh).send(:process_account!)
+      end
+      # Ensure provider link exists after processing the account/balance
+      begin
+        simplefin_account.ensure_account_provider!
+      rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+        raise
+      rescue => e
+        Rails.logger.warn("SimpleFin provider link ensure failed for #{simplefin_account.id}: #{e.class} - #{e.message}")
+      end
+      process_transactions
+      process_investments
+      process_liabilities
+    end
 
     def process_account!
       # This should not happen in normal flow since accounts are created manually
@@ -186,6 +198,8 @@ class SimplefinAccount::Processor
       processor = SimplefinAccount::Transactions::Processor.new(simplefin_account)
       processor.process
       @skipped_entries.concat(processor.skipped_entries)
+    rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue => e
       report_exception(e, "transactions")
     end
@@ -194,6 +208,8 @@ class SimplefinAccount::Processor
       return unless simplefin_account.current_account&.accountable_type == "Investment"
       SimplefinAccount::Investments::TransactionsProcessor.new(simplefin_account).process
       SimplefinAccount::Investments::HoldingsProcessor.new(simplefin_account).process
+    rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue => e
       report_exception(e, "investments")
     end
@@ -205,6 +221,8 @@ class SimplefinAccount::Processor
       when "Loan"
         SimplefinAccount::Liabilities::LoanProcessor.new(simplefin_account).process
       end
+    rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue => e
       report_exception(e, "liabilities")
     end

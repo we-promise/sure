@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 module SophtronItem::Unlinking
-  # Concern that encapsulates unlinking logic for a Sophtron item.
-  # Mirrors the SimplefinItem::Unlinking behavior.
   extend ActiveSupport::Concern
 
   # Idempotently removes all connections between this Sophtron item and local accounts.
@@ -24,41 +22,65 @@ module SophtronItem::Unlinking
   #   item.unlink_all!(dry_run: true)  # Preview what would be unlinked
   #   item.unlink_all!                 # Actually unlink all accounts
   def unlink_all!(dry_run: false)
-    results = []
-
-    sophtron_accounts.find_each do |sfa|
-      links = AccountProvider.where(provider_type: "SophtronAccount", provider_id: sfa.id).to_a
-      link_ids = links.map(&:id)
-      result = {
-        sfa_id: sfa.id,
-        name: sfa.name,
-        provider_link_ids: link_ids
-      }
-      results << result
-
-      next if dry_run
-
-      begin
-        ActiveRecord::Base.transaction do
-          # Detach holdings for any provider links found
-          if link_ids.any?
-            Holding.where(account_provider_id: link_ids).update_all(account_provider_id: nil)
-          end
-
-          # Destroy all provider links
-          links.each do |ap|
-            ap.destroy!
-          end
-        end
-      rescue => e
-        Rails.logger.warn(
-          "SophtronItem Unlinker: failed to fully unlink SophtronAccount ##{sfa.id} (links=#{link_ids.inspect}): #{e.class} - #{e.message}"
-        )
-        # Record error for observability; continue with other accounts
-        result[:error] = e.message
+    SophtronItem::LegacyAccess.with_item(self, operation: :lifecycle) do |item|
+      item.sophtron_accounts.order(:id).map do |source|
+        item.unlink_account!(source, dry_run: dry_run)
       end
     end
-
-    results
   end
+
+  def unlink_account!(source, dry_run: false)
+    SophtronItem::LegacyAccess.with_item(self, operation: :lifecycle) do |item|
+      current = Provider::AccountData::LegacyWriterFence.scoped_accounts!(item, [ source ]).sole
+      item.send(:unlink_admitted_account!, current, dry_run: dry_run)
+    end
+  end
+
+  private
+    def unlink_admitted_account!(source, dry_run:)
+      fence = Provider::AccountData::LegacyWriterFence
+      result = { sfa_id: source.id, name: source.name, provider_link_ids: [] }
+      links = AccountProvider.where(provider_type: "SophtronAccount", provider_id: source.id)
+      planned_links = AccountProvider.uncached { links.order(:id).pluck(:id, :account_id) }
+      result[:provider_link_ids] = planned_links.map(&:first)
+
+      Account.transaction do
+        # Fix the lock set before acquiring Account. A relink requires a new
+        # operation, never extending the Account lock set after locking source.
+        account_ids = planned_links.map(&:last).uniq.sort
+        accounts = family.accounts.where(id: account_ids).order(:id).lock.to_a
+        unless accounts.map(&:id).sort == account_ids
+          raise fence::OwnershipChanged, "Sophtron unlink contains another family's account"
+        end
+        current = sophtron_accounts.lock.find(source.id)
+        fence.scoped_accounts!(self, [ current ])
+        current_links = links.order(:id).lock.to_a
+        unless current_links.map { |link| [ link.id, link.account_id ] } == planned_links
+          raise fence::OwnershipChanged, "Sophtron links changed during unlink"
+        end
+        result[:name] = current.name
+        current_links.each do |link|
+          if Holding.where(account_provider_id: link.id).where.not(account_id: link.account_id).exists?
+            raise fence::OwnershipChanged, "Sophtron holding belongs to another financial account"
+          end
+        end
+        unless dry_run
+          Holding.where(account_provider_id: result[:provider_link_ids]).update_all(account_provider_id: nil)
+          current_links.each(&:destroy!)
+        end
+      end
+      result
+    rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+      raise
+    rescue StandardError => error
+      begin
+        DebugLogEntry.capture(category: "provider_sync_error", level: "warn",
+          message: "Sophtron account could not be unlinked", source: self.class.name,
+          provider_key: "sophtron", family: family,
+          metadata: { item_id: id, sophtron_account_id: source.id, error_class: error.class.name })
+      rescue StandardError
+        # Diagnostics must not replace the failed operation's result.
+      end
+      result.merge(error: error.class.name)
+    end
 end

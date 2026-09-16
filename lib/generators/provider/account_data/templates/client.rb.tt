@@ -1,0 +1,28 @@
+# Transport only. Reuse an existing Provider::<%= class_name %> SDK when migrating.
+# Configure explicit timeouts, bounded retries and sanitized errors. Do not perform
+# network requests in #initialize or log credentials/raw financial payloads.
+class Provider::AccountData::<%= class_name %>::Client
+  def initialize(credentials:, settings:, application_credentials: {}, application_settings: {})
+    @credentials = credentials
+    @settings = settings
+    @application_credentials = application_credentials
+    @application_settings = application_settings
+  end
+
+  def list_accounts(cursor: nil)
+    raise Provider::AccountData::NotImplementedError, "Implement <%= class_name %> account API"
+  end
+<% capabilities.each do |capability| -%>
+
+  def fetch_<%= capability %>(account:, cursor: nil, window: nil)
+    raise Provider::AccountData::NotImplementedError, "Implement <%= class_name %> <%= capability %> API"
+  end
+<% end -%>
+
+  def inspect
+    "#<#{self.class.name}>"
+  end
+
+  private
+    attr_reader :credentials, :settings, :application_credentials, :application_settings
+end

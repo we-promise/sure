@@ -27,34 +27,56 @@ class QuestradeAccount::ActivitiesProcessor
   # currencies with no cash impact. Recorded as zero-cost "Transfer" trades.
   JOURNAL_TYPES = [ "Other", "Transfers" ].freeze
 
-  def initialize(questrade_account)
+  def initialize(questrade_account, publication_verifier: nil, raise_on_error: false, expected_account: nil, expected_context: nil)
     @questrade_account = questrade_account
+    @verifier, @account, @expected_context = publication_verifier, expected_account, expected_context
+    @raise_on_error = raise_on_error
   end
 
   def process
-    return { trades: 0, transactions: 0 } unless account.present?
-
-    @trades_count = 0
-    @transactions_count = 0
-
-    activities.each do |raw|
-      process_activity(raw.with_indifferent_access)
-    rescue => e
-      Rails.logger.error "QuestradeAccount::ActivitiesProcessor - Failed to process activity: #{e.message}"
-      Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
+    QuestradeItem::LegacyAccess.with_account(@questrade_account) do |fresh|
+      @questrade_account = fresh
+      @account ||= Account.instantiate(fresh.current_account.attributes.deep_dup) if fresh.current_account
+      @expected_context ||= QuestradeItem::LegacyAccess.capture_context(fresh)
+      process_admitted
     end
-
-    { trades: @trades_count, transactions: @transactions_count }
   end
 
   private
 
-    def account
-      @questrade_account.current_account
+    def process_admitted
+      return { trades: 0, transactions: 0 } unless account.present?
+
+      @trades_count = 0
+      @transactions_count = 0
+
+      activities.each do |raw|
+        process_activity(raw.with_indifferent_access)
+      rescue *QuestradeItem::LegacyAccess::DENIAL_ERRORS
+        raise
+      rescue => e
+        raise if @raise_on_error
+        Rails.logger.error "QuestradeAccount::ActivitiesProcessor - Failed to process activity: #{e.message}"
+        Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
+      end
+
+      { trades: @trades_count, transactions: @transactions_count }
     end
 
+    attr_reader :account
+
     def import_adapter
-      @import_adapter ||= Account::ProviderImportAdapter.new(account)
+      @import_adapter || raise(QuestradeItem::LegacyAccess::Fence::InvalidSource, "Questrade activity requires publication admission")
+    end
+
+    def with_publication
+      QuestradeItem::LegacyAccess.with_publication(@questrade_account, expected_account: account,
+        expected_context: @expected_context, verifier: @verifier) do |_fresh, financial|
+        @import_adapter = Account::ProviderImportAdapter.new(financial)
+        yield
+      ensure
+        @import_adapter = nil
+      end
     end
 
     # raw_activities_payload may be the array itself or the { activities: [...] }
@@ -115,28 +137,30 @@ class QuestradeAccount::ActivitiesProcessor
       date = parse_date(data[:tradeDate]) || parse_date(data[:transactionDate]) || Date.current
       currency = extract_currency(data, fallback: account.currency)
 
-      result = import_adapter.import_trade(
-        external_id: external_id(data, "trade"),
-        security: security,
-        quantity: signed_quantity,
-        price: price,
-        amount: amount,
-        currency: currency,
-        date: date,
-        name: data[:description].presence || "#{sell ? 'Sell' : 'Buy'} #{ticker}",
-        source: "questrade",
-        activity_label: sell ? "Sell" : "Buy"
-      )
+      result, commission = with_publication do
+        trade = import_adapter.import_trade(
+          external_id: external_id(data, "trade"),
+          security: security,
+          quantity: signed_quantity,
+          price: price,
+          amount: amount,
+          currency: currency,
+          date: date,
+          name: data[:description].presence || "#{sell ? 'Sell' : 'Buy'} #{ticker}",
+          source: "questrade",
+          activity_label: sell ? "Sell" : "Buy"
+        )
+        [ trade, import_commission(data, ticker, date, currency) ]
+      end
       @trades_count += 1 if result
-
-      import_commission(data, ticker, date, currency)
+      @transactions_count += 1 if commission
     end
 
     def import_commission(data, ticker, date, currency)
       commission = parse_decimal(data[:commission])
       return if commission.nil? || commission.zero?
 
-      result = import_adapter.import_transaction(
+      import_adapter.import_transaction(
         external_id: external_id(data, "fee"),
         amount: commission.abs, # money out
         currency: currency,
@@ -145,7 +169,6 @@ class QuestradeAccount::ActivitiesProcessor
         source: "questrade",
         investment_activity_label: "Fee"
       )
-      @transactions_count += 1 if result
     end
 
     def journal?(data)
@@ -166,18 +189,20 @@ class QuestradeAccount::ActivitiesProcessor
       date = parse_date(data[:tradeDate]) || parse_date(data[:transactionDate]) || Date.current
       currency = extract_currency(data, fallback: account.currency)
 
-      result = import_adapter.import_trade(
-        external_id: external_id(data, "journal"),
-        security: security,
-        quantity: quantity,
-        price: 0,
-        amount: 0,
-        currency: currency,
-        date: date,
-        name: data[:description].presence || "Journal #{ticker}",
-        source: "questrade",
-        activity_label: "Transfer"
-      )
+      result = with_publication do
+        import_adapter.import_trade(
+          external_id: external_id(data, "journal"),
+          security: security,
+          quantity: quantity,
+          price: 0,
+          amount: 0,
+          currency: currency,
+          date: date,
+          name: data[:description].presence || "Journal #{ticker}",
+          source: "questrade",
+          activity_label: "Transfer"
+        )
+      end
       @trades_count += 1 if result
     end
 
@@ -197,16 +222,18 @@ class QuestradeAccount::ActivitiesProcessor
 
       name = data[:description].presence || (symbol.present? ? "#{label} - #{symbol}" : label)
 
-      result = import_adapter.import_transaction(
-        external_id: external_id(data, "cash"),
-        amount: signed_amount,
-        currency: currency,
-        date: date,
-        name: name,
-        source: "questrade",
-        investment_activity_label: label,
-        extra: { security_id: security&.id }.compact
-      )
+      result = with_publication do
+        import_adapter.import_transaction(
+          external_id: external_id(data, "cash"),
+          amount: signed_amount,
+          currency: currency,
+          date: date,
+          name: name,
+          source: "questrade",
+          investment_activity_label: label,
+          extra: { security_id: security&.id }.compact
+        )
+      end
       @transactions_count += 1 if result
     end
 end

@@ -1,23 +1,24 @@
 class SyncCleanerJob < ApplicationJob
   queue_as :scheduled
 
-  # Provider account rows flip activities_fetch_pending while a fetch-job chain
-  # runs; the chain's state lives only in job args, so a lost link strands the
-  # flag (and its "fetching" UI badge) forever.
+  # These legacy providers retain fetch-chain state only in job arguments.
+  # Questrade instead recovers identified durable requests in its own sweep.
   ACTIVITY_FLAG_STUCK_AFTER = 6.hours
-  ACTIVITY_FLAG_MODELS = %w[SnaptradeAccount QuestradeAccount IndexaCapitalAccount].freeze
+  ACTIVITY_FLAG_MODELS = %w[SnaptradeAccount IndexaCapitalAccount].freeze
 
   # Sweeps records whose background job died without finalizing them. A hard
   # worker kill (OOM, SIGKILL during deploy) loses in-flight Sidekiq jobs
   # permanently, leaving records wedged in non-terminal statuses. Each sweep is
   # isolated so one failing model doesn't block the others.
   def perform
+    sweep("provider_sync_recovery") { Provider::AccountData::SyncExecution.recover_stalled! }
     sweep("syncs") { Sync.clean }
     sweep("imports") { Import.clean }
     sweep("import_sessions") { ImportSession.clean }
     sweep("family_exports") { FamilyExport.clean }
     sweep("pdf_imports") { PdfImport.clean }
     sweep("provider_activity_flags") { clear_stuck_activity_fetch_flags }
+    sweep("questrade_activity_requests") { QuestradeAccount::ActivitiesRequest.recover_due! }
   end
 
   private

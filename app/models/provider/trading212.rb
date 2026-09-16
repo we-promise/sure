@@ -1,3 +1,5 @@
+require "bigdecimal"
+
 class Provider::Trading212
   include HTTParty
   extend SslConfigurable
@@ -71,6 +73,32 @@ class Provider::Trading212
     fetch_all_pages("/equity/history/transactions")
   end
 
+  def fetch_account_summary_page
+    payload = get_for_ingestion("/equity/account/summary")
+    raise ApiError, "Invalid Trading 212 account summary" unless payload.is_a?(Hash)
+    { items: [ payload ], next_cursor: nil, evidence: payload }
+  end
+
+  def fetch_positions_page
+    ingestion_page(get_for_ingestion("/equity/positions"))
+  end
+
+  def fetch_instruments_page
+    ingestion_page(get_for_ingestion("/equity/metadata/instruments"))
+  end
+
+  def fetch_orders_page(cursor: nil)
+    history_page("/equity/history/orders", cursor: cursor)
+  end
+
+  def fetch_dividends_page(cursor: nil)
+    history_page("/equity/history/dividends", cursor: cursor)
+  end
+
+  def fetch_transactions_page(cursor: nil)
+    history_page("/equity/history/transactions", cursor: cursor)
+  end
+
   private
 
     def base_uri
@@ -86,13 +114,61 @@ class Provider::Trading212
       }
     end
 
-    def get(path, query: {})
+    def get(path, query: {}, exact: false, history_bucket: nil)
       request_path = path.delete_prefix(API_PATH_PREFIX)
       url = "#{base_uri}#{request_path}"
       response = with_retries(path) do
+        throttle_history_request(history_bucket) if history_bucket
         self.class.get(url, headers: auth_headers, query: query.compact)
       end
-      handle_response(response)
+      handle_response(response, exact: exact)
+    end
+
+    def get_for_ingestion(path, query: {}, history_bucket: nil)
+      get(path, query: query, exact: true, history_bucket: history_bucket)
+    rescue ApiError => error
+      raise ApiError.new("Trading 212 account data request failed", status_code: error.status_code), cause: nil
+    rescue *RETRYABLE_ERRORS, JSON::ParserError
+      raise ApiError.new("Trading 212 account data request failed"), cause: nil
+    end
+
+    def ingestion_page(items, next_cursor: nil, evidence: items)
+      unless items.is_a?(Array) && items.all? { |item| item.is_a?(Hash) } &&
+          (next_cursor.nil? || (next_cursor.is_a?(String) && next_cursor.present?))
+        raise ApiError, "Invalid Trading 212 page"
+      end
+      { items: items, next_cursor: next_cursor, evidence: evidence }
+    end
+
+    def history_page(path, cursor: nil)
+      request_path = cursor ? checked_history_path(cursor, path) : path
+      payload = get_for_ingestion(request_path, query: cursor ? {} : { limit: PAGE_LIMIT }, history_bucket: path)
+      raise ApiError, "Invalid Trading 212 history page" unless payload.is_a?(Hash)
+      if payload["items"].is_a?(Array) && payload["items"].size > PAGE_LIMIT
+        raise ApiError, "Invalid Trading 212 history page size"
+      end
+      next_cursor = payload["nextPagePath"]
+      checked_history_path(next_cursor, path) unless next_cursor.nil?
+      ingestion_page(payload["items"], next_cursor: next_cursor, evidence: payload)
+    end
+
+    def checked_history_path(value, endpoint)
+      raise ApiError, "Invalid Trading 212 continuation" unless value.is_a?(String) && value.present?
+      uri = URI.parse(value)
+      unless uri.host.nil? && uri.scheme.nil? && uri.userinfo.nil? && uri.fragment.nil? &&
+          [ endpoint, "#{API_PATH_PREFIX}#{endpoint}" ].include?(uri.path)
+        raise ApiError, "Invalid Trading 212 continuation"
+      end
+      value
+    rescue URI::InvalidURIError
+      raise ApiError, "Invalid Trading 212 continuation", cause: nil
+    end
+
+    def throttle_history_request(endpoint)
+      @history_requested_at ||= {}
+      elapsed = Time.current - (@history_requested_at[endpoint] || Time.at(0))
+      sleep(10 - elapsed) if elapsed < 10
+      @history_requested_at[endpoint] = Time.current
     end
 
     def fetch_all_pages(path)
@@ -115,10 +191,10 @@ class Provider::Trading212
       items
     end
 
-    def handle_response(response)
+    def handle_response(response, exact: false)
       case response.code
       when 200, 201
-        response.parsed_response
+        exact ? JSON.parse(response.body, decimal_class: BigDecimal) : response.parsed_response
       when 401, 403
         raise AuthenticationError, "Trading 212 authentication failed (#{response.code}). Check your API key."
       when 429

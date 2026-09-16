@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../../support/brex_fixture_fence_helper"
 
 class BrexItem::ImporterTest < ActiveSupport::TestCase
+  include BrexFixtureFenceHelper
   setup do
+    BrexItem::LegacyAccess.stubs(:assert_transport!) # Fake transports in fixture transactions; real admission is tested separately.
     @family = families(:dylan_family)
     @brex_item = brex_items(:one)
     @account = @family.accounts.create!(

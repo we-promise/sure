@@ -147,34 +147,60 @@ class BrexAccount < ApplicationRecord
     account_kind == "card"
   end
 
-  def upsert_brex_snapshot!(account_snapshot)
-    snapshot = account_snapshot.with_indifferent_access
-    kind = snapshot[:account_kind].presence || snapshot[:kind].presence || "cash"
-    kind = "card" if kind.to_s == "credit_card"
-
-    update!(
-      current_balance: self.class.money_to_decimal(snapshot[:current_balance]),
-      available_balance: self.class.money_to_decimal(snapshot[:available_balance]),
-      account_limit: self.class.money_to_decimal(snapshot[:account_limit]),
-      currency: self.class.currency_code_from_money(snapshot[:current_balance] || snapshot[:available_balance] || snapshot[:account_limit]),
-      name: self.class.name_for(snapshot.merge(account_kind: kind)),
-      account_id: snapshot[:id]&.to_s,
-      account_kind: kind,
-      account_status: snapshot[:status],
-      account_type: snapshot[:type],
-      provider: "brex",
-      institution_metadata: build_institution_metadata(snapshot, kind),
-      raw_payload: self.class.sanitize_payload(account_snapshot)
-    )
+  def upsert_brex_snapshot!(account_snapshot = nil, expected_context: nil, expected_item_context: nil, **snapshot_fields)
+    unless snapshot_fields.empty?
+      raise ArgumentError, "Expected one Brex account snapshot" unless account_snapshot.nil?
+      account_snapshot = snapshot_fields
+    end
+    if persisted?
+      BrexItem::LegacyAccess.with_source_snapshot(self, expected_context: expected_context, expected_item_context: expected_item_context) do |current|
+        unless current.account_id == account_snapshot.with_indifferent_access[:id]&.to_s
+          raise BrexItem::LegacyAccess::Fence::OwnershipChanged, "Brex snapshot belongs to another source account"
+        end
+        current.send(:persist_brex_snapshot!, account_snapshot)
+      end
+    else
+      raise BrexItem::LegacyAccess::Fence::InvalidSource, "Cannot restore a removed Brex account" if destroyed?
+      BrexItem::LegacyAccess.with_snapshot(brex_item, expected_context: expected_item_context) do |item|
+        current = item.brex_accounts.find_or_initialize_by(account_id: account_snapshot.with_indifferent_access[:id]&.to_s)
+        current.send(:persist_brex_snapshot!, account_snapshot)
+        self.id = current.id
+      end
+    end
+    reload
+    true
   end
 
-  def upsert_brex_transactions_snapshot!(transactions_snapshot)
-    update!(
-      raw_transactions_payload: self.class.sanitize_payload(transactions_snapshot)
-    )
+  def upsert_brex_transactions_snapshot!(transactions_snapshot, expected_context: nil, expected_item_context: nil)
+    BrexItem::LegacyAccess.with_source_snapshot(self, expected_context: expected_context, expected_item_context: expected_item_context) do |current|
+      current.update!(raw_transactions_payload: self.class.sanitize_payload(transactions_snapshot))
+    end
+    reload
+    true
   end
 
   private
+
+    def persist_brex_snapshot!(account_snapshot)
+      snapshot = account_snapshot.with_indifferent_access
+      kind = snapshot[:account_kind].presence || snapshot[:kind].presence || "cash"
+      kind = "card" if kind.to_s == "credit_card"
+
+      update!(
+        current_balance: self.class.money_to_decimal(snapshot[:current_balance]),
+        available_balance: self.class.money_to_decimal(snapshot[:available_balance]),
+        account_limit: self.class.money_to_decimal(snapshot[:account_limit]),
+        currency: self.class.currency_code_from_money(snapshot[:current_balance] || snapshot[:available_balance] || snapshot[:account_limit]),
+        name: self.class.name_for(snapshot.merge(account_kind: kind)),
+        account_id: snapshot[:id]&.to_s,
+        account_kind: kind,
+        account_status: snapshot[:status],
+        account_type: snapshot[:type],
+        provider: "brex",
+        institution_metadata: build_institution_metadata(snapshot, kind),
+        raw_payload: self.class.sanitize_payload(account_snapshot)
+      )
+    end
 
     def self.sensitive_number_key?(normalized_key)
       normalized_key.in?(%w[account_number routing_number pan primary_account_number card_number])

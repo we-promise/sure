@@ -17,6 +17,13 @@ class Holding < ApplicationRecord
   belongs_to :security
   belongs_to :account_provider, optional: true
   belongs_to :provider_security, class_name: "Security", optional: true
+  has_many :holding_sources
+  before_destroy :archive_ingestion_evidence
+
+  def archive_ingestion_evidence
+    holding_sources.update_all(holding_id: nil, active: false, updated_at: Time.current)
+  end
+  private :archive_ingestion_evidence
 
   validates :qty, :currency, :date, :price, :amount, presence: true
   validates :qty, :price, :amount, numericality: { greater_than_or_equal_to: 0 }

@@ -7,6 +7,8 @@ Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :openai_access_token,
   :client_id, :consumer_key, :snaptrade_user_id, :snaptrade_user_secret,
   :oauth_access_token, :oauth_refresh_token, :code_verifier, :code_challenge,
+  # OAuth callback exchanges and signed state must not appear in request logs.
+  /\A(?:code|state|error_description)\z/,
   # A device code redeems into tokens on its own, so it is a bearer credential in
   # transit; verification_uri_complete embeds the user code, hence all three.
   :device_code, :user_code, :verification_uri_complete,

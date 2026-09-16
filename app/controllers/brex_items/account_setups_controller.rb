@@ -1,10 +1,15 @@
 class BrexItems::AccountSetupsController < ApplicationController
+  include RetiredProviderRouting
+  self.retired_provider_key = "brex"
+
   before_action :require_admin!
   before_action :set_brex_item
+  rescue_from(*BrexItem::LegacyAccess::DENIAL_ERRORS, with: :render_ownership_changed)
 
   def setup_accounts
     flow = brex_account_flow
     @api_error = flow.import_accounts_with_user_facing_error
+    @selection_token = flow.selection_token
     @brex_accounts = flow.unlinked_brex_accounts
     @account_type_options = flow.account_type_options
     @displayable_account_type_options = flow.displayable_account_type_options
@@ -40,7 +45,21 @@ class BrexItems::AccountSetupsController < ApplicationController
     end
 
     def brex_account_flow
-      @brex_account_flow ||= BrexItem::AccountFlow.new(family: Current.family, brex_item: @brex_item)
+      @brex_account_flow ||= BrexItem::AccountFlow.new(family: Current.family, brex_item: @brex_item,
+        actor: Current.user, selection_token: params[:selection_token])
+    end
+
+    def render_ownership_changed(error)
+      capture_ownership_failure(error)
+      redirect_to settings_providers_path, alert: t("brex_items.lifecycle.unavailable"), status: :see_other
+    end
+
+    def capture_ownership_failure(error)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "warning", message: "Brex account setup refused",
+        source: self.class.name, provider_key: "brex", family: Current.family,
+        metadata: { action: action_name, brex_item_id: @brex_item&.id, error_class: error.class.name })
+    rescue StandardError
+      nil
     end
 
     def render_accounts_update_after_setup

@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../../../support/brex_fixture_fence_helper"
 
 class BrexAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
+  include BrexFixtureFenceHelper
   setup do
     @brex_item = brex_items(:one)
     @brex_account = @brex_item.brex_accounts.create!(

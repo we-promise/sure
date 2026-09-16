@@ -8,23 +8,19 @@ class MercuryAccount::Processor
   end
 
   def process
-    unless mercury_account.current_account.present?
-      Rails.logger.info "MercuryAccount::Processor - No linked account for mercury_account #{mercury_account.id}, skipping processing"
-      return
+    MercuryItem::LegacyAccess.with_account(mercury_account) do |current|
+      expected = current.current_account
+      next unless expected
+      MercuryItem::LegacyAccess.with_publication(current, expected_account: expected) do |fresh, _financial|
+        self.class.new(fresh).send(:process_account!)
+      end
+      self.class.new(current).send(:process_transactions)
     end
-
-    Rails.logger.info "MercuryAccount::Processor - Processing mercury_account #{mercury_account.id} (account #{mercury_account.account_id})"
-
-    begin
-      process_account!
-    rescue StandardError => e
-      Rails.logger.error "MercuryAccount::Processor - Failed to process account #{mercury_account.id}: #{e.message}"
-      Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
-      report_exception(e, "account")
-      raise
-    end
-
-    process_transactions
+  rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+    raise
+  rescue StandardError => error
+    report_exception(error, "account")
+    raise
   end
 
   private
@@ -63,6 +59,8 @@ class MercuryAccount::Processor
 
     def process_transactions
       MercuryAccount::Transactions::Processor.new(mercury_account).process
+    rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue => e
       report_exception(e, "transactions")
     end

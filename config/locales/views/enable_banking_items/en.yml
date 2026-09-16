@@ -1,6 +1,8 @@
 ---
 en:
   enable_banking_items:
+    consent:
+      unavailable: "This consent operation could not be completed. Your existing data is preserved. Begin authorization again, or review an unresolved revocation before retrying disconnect."
     errors:
       api_error: "A communication error occurred with the bank."
       network_unreachable: "The banking service is temporarily unreachable. Please try again later."

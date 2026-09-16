@@ -9,6 +9,7 @@ class QuestradeAccount < ApplicationRecord
     encrypts :raw_holdings_payload
     encrypts :raw_activities_payload
     encrypts :raw_balances_payload
+    encrypts :activities_fetch_request
   end
 
   belongs_to :questrade_item
@@ -46,6 +47,34 @@ class QuestradeAccount < ApplicationRecord
   end
 
   def upsert_from_questrade!(account_data)
+    data = sdk_object_to_hash(account_data).with_indifferent_access
+    remote_id = (data[:number] || data[:id]).to_s
+    if destroyed? || remote_id.blank? || questrade_account_id != remote_id
+      raise QuestradeItem::LegacyAccess::Fence::OwnershipChanged, "Questrade snapshot belongs to another source account"
+    end
+    if persisted?
+      persist_snapshot { |fresh| fresh.send(:persist_account_snapshot!, data) }
+    else
+      QuestradeItem::LegacyAccess.with_item(questrade_item) do |item|
+        QuestradeAccount.transaction(requires_new: true) do
+          item.lock!("FOR UPDATE NOWAIT")
+          raise QuestradeItem::LegacyAccess::Fence::OwnershipChanged, "Questrade source is scheduled for deletion" if item.scheduled_for_deletion?
+          current = item.questrade_accounts.find_or_initialize_by(questrade_account_id: remote_id)
+          if current.persisted?
+            current.upsert_from_questrade!(data)
+          else
+            current.send(:persist_account_snapshot!, data)
+          end
+          self.id = current.id
+        end
+        reload
+      end
+    end
+  rescue ActiveRecord::LockWaitTimeout
+    raise QuestradeItem::LegacyAccess::Fence::Busy, "Questrade snapshot source is being changed", cause: nil
+  end
+
+  def persist_account_snapshot!(account_data)
     # Convert SDK object to hash if needed
     data = sdk_object_to_hash(account_data).with_indifferent_access
 
@@ -70,29 +99,35 @@ class QuestradeAccount < ApplicationRecord
   end
 
   # Store holdings snapshot - return early if empty to avoid setting timestamps incorrectly
-  def upsert_holdings_snapshot!(holdings_data)
+  def upsert_holdings_snapshot!(holdings_data, expected_context: nil, publication_verifier: nil)
     return if holdings_data.blank?
 
-    update!(
-      raw_holdings_payload: holdings_data,
-      last_holdings_sync: Time.current
-    )
+    persist_snapshot(expected_context: expected_context, verifier: publication_verifier) do |fresh|
+      fresh.update!(raw_holdings_payload: holdings_data, last_holdings_sync: Time.current)
+    end
   end
 
   # Store activities snapshot - return early if empty to avoid setting timestamps incorrectly
-  def upsert_activities_snapshot!(activities_data)
+  def upsert_activities_snapshot!(activities_data, mark_synced: true, expected_context: nil, publication_verifier: nil)
     return if activities_data.blank?
 
-    update!(
-      raw_activities_payload: activities_data,
-      last_activities_sync: Time.current
-    )
+    persist_snapshot(expected_context: expected_context, verifier: publication_verifier) do |fresh|
+      values = { raw_activities_payload: activities_data }
+      values[:last_activities_sync] = Time.current if mark_synced
+      fresh.update!(values)
+    end
   end
 
   # Store per-currency balances. Primary (account currency) cash goes in
   # cash_balance; the full set is kept so the processor can surface
   # non-primary-currency cash as holdings (issue #1809).
-  def upsert_balances!(per_currency_balances)
+  def upsert_balances!(per_currency_balances, expected_context: nil, publication_verifier: nil)
+    persist_snapshot(expected_context: expected_context, verifier: publication_verifier) do |fresh|
+      fresh.send(:persist_balances!, per_currency_balances)
+    end
+  end
+
+  def persist_balances!(per_currency_balances)
     data = Array(per_currency_balances).map { |b| sdk_object_to_hash(b).with_indifferent_access }
 
     # Questrade has no account-level currency field, so infer the home currency
@@ -121,6 +156,14 @@ class QuestradeAccount < ApplicationRecord
   end
 
   private
+
+    private :persist_account_snapshot!, :persist_balances!
+
+    def persist_snapshot(expected_context: nil, verifier: nil)
+      result = QuestradeItem::LegacyAccess.with_snapshot(self, expected_context: expected_context, verifier: verifier) { |fresh| yield fresh }
+      reload
+      result
+    end
 
     # Infer the account home currency from per-currency balances: the currency
     # holding the most cash wins (ties broken by total equity), default CAD.

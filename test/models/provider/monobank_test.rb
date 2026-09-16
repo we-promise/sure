@@ -3,6 +3,62 @@ require "test_helper"
 class Provider::MonobankTest < ActiveSupport::TestCase
   FakeResponse = Struct.new(:code, :body, :message, keyword_init: true)
 
+  test "canonical account inventory retains the full evidence and parses exact JSON decimals" do
+    response = FakeResponse.new(code: 200, body: '{"accounts":[{"id":"card","balance":12345678901234567890}],"jars":[],"name":"private-owner","rate":1.123456789012345678}')
+    Provider::Monobank.expects(:get).once.returns(response)
+
+    page = Provider::Monobank.new("token").get_accounts_page
+
+    assert_equal "card", page[:items].first[:kind]
+    assert_equal 12_345_678_901_234_567_890, page[:items].first[:balance]
+    assert_equal BigDecimal("1.123456789012345678"), page[:evidence]["rate"]
+    assert_equal "private-owner", page[:evidence]["name"]
+    assert_nil page[:next_cursor]
+  end
+
+  test "canonical statement rejects malformed rows instead of filtering an incomplete response" do
+    Provider::Monobank.expects(:get).once.returns(FakeResponse.new(code: 200, body: '[{"id":"valid"},null]'))
+
+    error = assert_raises(Provider::Monobank::Error) do
+      Provider::Monobank.new("token").get_statement_page(account_id: "card", from: Time.utc(2026, 1, 1), to: Time.utc(2026, 1, 2))
+    end
+
+    assert_equal :parse_error, error.failure_code
+    assert_nil error.cause
+  end
+
+  test "canonical transport charges the statement budget before each retry HTTP attempt" do
+    client = Provider::Monobank.new("token")
+    client.stubs(:sleep)
+    client.stubs(:throttle_request)
+    DebugLogEntry.stubs(:capture)
+    Provider::Monobank.expects(:get).twice.raises(SocketError.new("network")).then
+      .returns(FakeResponse.new(code: 200, body: '[]'))
+    attempts = 0
+
+    client.get_statement_page(account_id: "card", from: Time.utc(2026, 1, 1), to: Time.utc(2026, 1, 2), before_request: -> { attempts += 1 })
+
+    assert_equal 2, attempts
+  end
+
+  test "exhausted canonical retry budget stops before a second HTTP request" do
+    client = Provider::Monobank.new("token")
+    client.stubs(:sleep)
+    client.stubs(:throttle_request)
+    DebugLogEntry.stubs(:capture)
+    Provider::Monobank.expects(:get).once.raises(SocketError.new("network"))
+    attempts = 0
+    guard = -> do
+      raise Provider::AccountData::BudgetExhausted if attempts >= 1
+      attempts += 1
+    end
+
+    assert_raises(Provider::AccountData::BudgetExhausted) do
+      client.get_statement_page(account_id: "card", from: Time.utc(2026, 1, 1), to: Time.utc(2026, 1, 2), before_request: guard)
+    end
+    assert_equal 1, attempts
+  end
+
   test "sends the personal token in X-Token and returns the statement window" do
     requests = []
     response = FakeResponse.new(

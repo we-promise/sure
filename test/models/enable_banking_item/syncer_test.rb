@@ -1,6 +1,8 @@
 require "test_helper"
+require "support/enable_banking_fixture_fence_helper"
 
 class EnableBankingItem::SyncerTest < ActiveSupport::TestCase
+  include EnableBankingFixtureFenceHelper
   setup do
     @item = EnableBankingItem.create!(
       family: families(:dylan_family),
@@ -16,7 +18,7 @@ class EnableBankingItem::SyncerTest < ActiveSupport::TestCase
   end
 
   test "expired session marks requires_update and finishes gracefully without raising" do
-    sync = Sync.create!(syncable: @item)
+    sync = Sync.create!(syncable: @item, status: "syncing")
 
     assert_nothing_raised do
       @syncer.perform_sync(sync)

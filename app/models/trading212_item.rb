@@ -1,5 +1,5 @@
 class Trading212Item < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
   enum :environment, { live: "live", demo: "demo" }, default: :live
@@ -145,4 +145,6 @@ class Trading212Item < ApplicationRecord
       map[instrument["ticker"]] = instrument
     end
   end
+
+  guard_legacy_writes import_latest_data: :ingest, process_accounts: :publish
 end

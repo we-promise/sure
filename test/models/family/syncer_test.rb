@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../../support/provider_ingestion_test_helper"
 
 class Family::SyncerTest < ActiveSupport::TestCase
+  include ProviderIngestionTestHelper
   setup do
     @family = families(:dylan_family)
   end
@@ -86,6 +88,23 @@ class Family::SyncerTest < ActiveSupport::TestCase
 
     syncer.perform_sync(family_sync)
     syncer.perform_post_sync
+  end
+
+  test "family fanout schedules a shared connection after legacy retirement" do
+    with_provider_encryption do
+      item = @family.up_items.create!(name: "Original Up", access_token: "private-up-token")
+      connection = create_provider_connection(family: @family)
+      ProviderMigrationControl.create!(family: @family, provider_connection: connection,
+        provider_key: "up", legacy_type: "UpItem", legacy_id: item.id, state: "retired")
+      family_sync = syncs(:family)
+      Account.any_instance.stubs(:sync_later)
+      syncable_item_associations.each { |association| association.klass.any_instance.stubs(:sync_later) }
+      UpItem.any_instance.expects(:sync_later).never
+      ProviderConnection.any_instance.expects(:sync_later)
+        .with(parent_sync: family_sync, window_start_date: nil, window_end_date: nil).once
+
+      Family::Syncer.new(@family).perform_sync(family_sync)
+    end
   end
 
   private

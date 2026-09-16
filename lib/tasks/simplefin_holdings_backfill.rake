@@ -123,7 +123,10 @@ namespace :sure do
           if dry_run
             puts({ dry_run: true, sfa_id: sfa.id, account_id: account.id, name: sfa.name, would_process: count }.to_json)
           else
-            SimplefinHoldingsApplyJob.perform_later(sfa.id)
+            unless SimplefinHoldingsApplyJob.enqueue_for(sfa)
+              puts({ skipped: true, sfa_id: sfa.id, reason: "source_no_longer_eligible" }.to_json)
+              next
+            end
             total_holdings_written += count
             puts({ ok: true, sfa_id: sfa.id, account_id: account.id, name: sfa.name, enqueued: true, estimated_holdings: count }.to_json)
           end

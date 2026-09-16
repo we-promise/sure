@@ -1,6 +1,9 @@
 require "test_helper"
+require_relative "../../support/simplefin_fixture_fence_helper"
 
 class SimplefinItem::ImporterTest < ActiveSupport::TestCase
+  include SimplefinFixtureFenceHelper
+
   setup do
     @family = families(:dylan_family)
     @item = SimplefinItem.create!(

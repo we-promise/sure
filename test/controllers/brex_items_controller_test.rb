@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../support/brex_fixture_fence_helper"
 
 class BrexItemsControllerTest < ActionDispatch::IntegrationTest
+  include BrexFixtureFenceHelper
   setup do
     sign_in users(:family_admin)
     SyncJob.stubs(:perform_later)
+    BrexItem::LegacyAccess.stubs(:assert_transport!)
+    DebugLogEntry.stubs(:capture)
 
     @family = families(:dylan_family)
     clear_brex_cache_entries
@@ -134,7 +138,7 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "preload accounts uses selected brex item cache key" do
     Rails.cache.expects(:read).with(brex_cache_key(@second_item)).returns(nil)
-    Rails.cache.expects(:write).with(brex_cache_key(@second_item), brex_accounts_payload, expires_in: 5.minutes)
+    Rails.cache.expects(:write).with(brex_cache_key(@second_item), brex_accounts_payload.map(&:with_indifferent_access), expires_in: 5.minutes)
 
     provider = mock("brex_provider")
     provider.expects(:get_accounts).returns(accounts: brex_accounts_payload)
@@ -159,7 +163,7 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "select accounts renders the selected brex item id" do
     Rails.cache.expects(:read).with(brex_cache_key(@second_item)).returns(nil)
-    Rails.cache.expects(:write).with(brex_cache_key(@second_item), brex_accounts_payload, expires_in: 5.minutes)
+    Rails.cache.expects(:write).with(brex_cache_key(@second_item), brex_accounts_payload.map(&:with_indifferent_access), expires_in: 5.minutes)
 
     provider = mock("brex_provider")
     provider.expects(:get_accounts).returns(accounts: brex_accounts_payload)
@@ -292,7 +296,7 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
     )
 
     Rails.cache.expects(:read).with(brex_cache_key(@second_item)).returns(nil)
-    Rails.cache.expects(:write).with(brex_cache_key(@second_item), brex_accounts_payload, expires_in: 5.minutes)
+    Rails.cache.expects(:write).with(brex_cache_key(@second_item), brex_accounts_payload.map(&:with_indifferent_access), expires_in: 5.minutes)
 
     provider = mock("brex_provider")
     provider.expects(:get_accounts).returns(accounts: brex_accounts_payload)
@@ -327,6 +331,7 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
     assert_difference -> { @second_item.brex_accounts.where(account_id: "shared_brex_account").count }, 1 do
       assert_difference "AccountProvider.count", 1 do
         post link_accounts_brex_items_url, params: {
+          selection_token: selection_token(:link_accounts),
           brex_item_id: @second_item.id,
           account_ids: [ "shared_brex_account" ],
           accountable_type: "Depository"
@@ -426,6 +431,7 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_difference "AccountProvider.count", 1 do
       post complete_account_setup_brex_item_url(@second_item), params: {
+        selection_token: selection_token(:complete_account_setup),
         account_types: {
           valid_brex_account.id => "Depository",
           unsupported_brex_account.id => "Investment",
@@ -448,6 +454,7 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
   test "complete account setup treats scalar setup params as empty" do
     assert_no_difference "AccountProvider.count" do
       post complete_account_setup_brex_item_url(@second_item), params: {
+        selection_token: selection_token(:complete_account_setup),
         account_types: "not-a-hash",
         account_subtypes: "also-not-a-hash"
       }
@@ -457,7 +464,49 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("brex_items.complete_account_setup.no_accounts"), flash[:alert]
   end
 
+  test "a picker without its original signed selection cannot publish" do
+    Provider::Brex.expects(:new).never
+    assert_no_difference [ "Account.count", "BrexAccount.count", "AccountProvider.count", "Sync.count" ] do
+      post link_accounts_brex_items_url, params: { brex_item_id: @second_item.id,
+        account_ids: [ "shared_brex_account" ], accountable_type: "Depository" }
+    end
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("brex_items.lifecycle.unavailable"), flash[:alert]
+  end
+
+  test "native and transitional owners refuse stale legacy mutations even when diagnostics fail" do
+    control = ProviderMigrationControl.create!(family: @family, provider_key: "brex", legacy_type: "BrexItem", legacy_id: @second_item.id)
+    DebugLogEntry.stubs(:capture).raises(IOError, "diagnostics unavailable")
+    Provider::Brex.expects(:new).never
+    %w[quiescing active retired rollback_pending].each do |state|
+      control.update!(state: state)
+      original = @second_item.reload.attributes
+      patch brex_item_url(@second_item), params: { brex_item: { token: "must-not-install" } }
+      assert_response :see_other
+      assert_equal original, @second_item.reload.attributes
+      delete brex_item_url(@second_item)
+      assert_response :see_other
+      assert_equal original, @second_item.reload.attributes
+      get preload_accounts_brex_items_url, params: { brex_item_id: @second_item.id }, as: :json
+      assert_response :conflict
+      assert_equal "ownership_changed", response.parsed_body.fetch("error")
+    end
+  end
+
+  test "panel refresh does not restore legacy forms for a native owned item" do
+    ProviderMigrationControl.create!(family: @family, provider_key: "brex", legacy_type: "BrexItem", legacy_id: @existing_item.id, state: "active")
+    patch brex_item_url(@second_item), params: { brex_item: { name: "Edited legacy item" } }, headers: { "Turbo-Frame" => "modal" }
+    assert_response :success
+    assert_includes response.body, "Edited legacy item"
+    refute_includes response.body, %(action="#{brex_item_path(@existing_item)}")
+  end
+
   private
+
+    def selection_token(flow, account: nil)
+      BrexItem::Selection.issue(@second_item.reload, flow: flow, account_id: account&.id)
+    end
 
     def brex_accounts_payload
       [
@@ -480,7 +529,7 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
       return unless defined?(@family) && @family.present?
       return unless Rails.cache.respond_to?(:delete_matched)
 
-      Rails.cache.delete_matched("brex_accounts_#{@family.id}_*")
+      Rails.cache.delete_matched("brex_accounts_v2_#{@family.id}_*")
     rescue NotImplementedError
       # Some test cache stores do not implement delete_matched; tests that depend
       # on cache state stub exact Brex cache keys instead of relying on globals.

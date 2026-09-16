@@ -1,4 +1,9 @@
 class UpItemsController < ApplicationController
+  include RetiredProviderRouting
+  self.retired_provider_key = "up"
+
+  rescue_from Provider::AccountData::LegacyWriterFence::Busy,
+    Provider::AccountData::LegacyWriterFence::OwnershipChanged, with: :handle_legacy_writer_denial
   before_action :set_up_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
   before_action :require_admin!, only: [
     :new, :create, :preload_accounts, :select_accounts, :link_accounts,
@@ -23,6 +28,11 @@ class UpItemsController < ApplicationController
 
   # Render the edit-connection form.
   def edit
+    connection = Current.family.provider_connections.where(provider_key: "up")
+      .joins(:provider_migration_control).find_by(provider_migration_controls: {
+        family_id: Current.family.id, legacy_type: "UpItem", legacy_id: @up_item.id, state: ProviderMigrationControl::NATIVE_STATES
+      })
+    redirect_to edit_provider_connection_path(connection) if connection
   end
 
   # Create an Up connection and kick off its first sync.
@@ -40,7 +50,8 @@ class UpItemsController < ApplicationController
 
   # Update connection settings (name/token/start date).
   def update
-    if @up_item.update(update_params)
+    @up_item = UpItem::Lifecycle.new(@up_item).update_settings(update_params)
+    if @up_item.errors.empty?
       render_provider_panel(:notice, t(".success"))
     else
       render_provider_panel_error(@up_item.errors.full_messages.join(", "))
@@ -49,7 +60,7 @@ class UpItemsController < ApplicationController
 
   # Unlink all accounts then schedule deletion of the connection.
   def destroy
-    results = @up_item.unlink_all!(dry_run: false)
+    results = UpItem::Lifecycle.new(@up_item).disconnect
 
     if results.any? { |result| result[:error].present? }
       DebugLogEntry.capture(
@@ -65,7 +76,6 @@ class UpItemsController < ApplicationController
       return
     end
 
-    @up_item.destroy_later
     redirect_to settings_providers_path, notice: t(".success"), status: :see_other
   rescue => e
     DebugLogEntry.capture(
@@ -82,7 +92,7 @@ class UpItemsController < ApplicationController
 
   # Trigger a manual sync unless one is already running.
   def sync
-    @up_item.sync_later unless @up_item.syncing?
+    UpItem::SyncRequest.new(item: @up_item, actor: Current.user).call
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -139,19 +149,7 @@ class UpItemsController < ApplicationController
       return
     end
 
-    created_accounts = []
-
-    ActiveRecord::Base.transaction do
-      up_item.up_accounts.where(id: selected_ids).find_each do |up_account|
-        next if up_account.account_provider.present?
-
-        account = create_account_from_up(up_account, account_type)
-        AccountProvider.create!(account: account, provider: up_account)
-        created_accounts << account
-      end
-    end
-
-    up_item.sync_later if created_accounts.any?
+    created_accounts = UpItem::Lifecycle.new(up_item).link_accounts(account_ids: selected_ids, account_type: account_type)
 
     if created_accounts.any?
       redirect_to safe_return_to_path || accounts_path, notice: t(".success", count: created_accounts.count)
@@ -200,26 +198,12 @@ class UpItemsController < ApplicationController
       return
     end
 
-    up_account = up_item.up_accounts.find_by(id: params[:up_account_id])
-    unless up_account
-      redirect_to accounts_path, alert: t(".no_account_selected")
+    result = UpItem::Lifecycle.new(up_item).link_existing_account(account_id: account.id, up_account_id: params[:up_account_id])
+    if result[:error]
+      redirect_to accounts_path, alert: t(".#{result[:error]}")
       return
     end
-
-    if account.account_providers.exists?
-      redirect_to accounts_path, alert: t(".account_already_linked")
-      return
-    end
-
-    if up_account.account_provider.present?
-      redirect_to accounts_path, alert: t(".up_account_already_linked")
-      return
-    end
-
-    AccountProvider.create!(account: account, provider: up_account)
-    up_item.sync_later
-
-    redirect_to safe_return_to_path || accounts_path, notice: t(".success", account_name: account.name)
+    redirect_to safe_return_to_path || accounts_path, notice: t(".success", account_name: result.fetch(:account).name)
   end
 
   # Render the post-sync setup screen for accounts still needing a decision.
@@ -239,31 +223,9 @@ class UpItemsController < ApplicationController
   # Apply the user's per-account setup choices (create/link or skip).
   def complete_account_setup
     account_types = params[:account_types] || {}
-    created_accounts = []
-    skipped_count = 0
-
-    ActiveRecord::Base.transaction do
-      account_types.each do |up_account_id, selected_type|
-        up_account = @up_item.up_accounts.find_by(id: up_account_id)
-        next unless up_account
-
-        if selected_type.blank? || selected_type == "skip"
-          # Persist the skip so the account stops resurfacing as "needs setup" on every sync.
-          up_account.update!(ignored: true) unless up_account.account_provider.present?
-          skipped_count += 1
-          next
-        end
-
-        next unless Provider::UpAdapter.supported_account_types.include?(selected_type)
-        next if up_account.account_provider.present?
-
-        account = create_account_from_up(up_account, selected_type)
-        AccountProvider.create!(account: account, provider: up_account)
-        created_accounts << account
-      end
-    end
-
-    @up_item.sync_later if created_accounts.any?
+    result = UpItem::Lifecycle.new(@up_item).complete_account_setup(account_types: account_types)
+    created_accounts = result.fetch(:created_accounts)
+    skipped_count = result.fetch(:skipped_count)
 
     flash[:notice] = if created_accounts.any?
       t(".success", count: created_accounts.count)
@@ -288,6 +250,13 @@ class UpItemsController < ApplicationController
   end
 
   private
+
+    def handle_legacy_writer_denial(error)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "warn",
+        message: "Up operation was fenced", source: self.class.name, provider_key: "up",
+        family: Current.family, metadata: { up_item_id: @up_item&.id, error_class: error.class.name })
+      redirect_to settings_providers_path, alert: t("up_items.setup_accounts.api_error"), status: :see_other
+    end
 
     # Load the requested item scoped to the current family.
     def set_up_item
@@ -315,18 +284,7 @@ class UpItemsController < ApplicationController
     def fetch_up_accounts_from_api(up_item)
       return t("up_items.setup_accounts.no_credentials") unless up_item.credentials_configured?
 
-      provider = up_item.up_provider
-      accounts = provider.get_accounts
-      accounts.each do |account_data|
-        account = account_data.with_indifferent_access
-        account_id = account[:id].presence
-        next if account_id.blank? || account[:displayName].blank?
-
-        up_account = up_item.up_accounts.find_or_initialize_by(account_id: account_id.to_s)
-        up_account.upsert_up_snapshot!(account)
-      end
-
-      nil
+      UpItem::Lifecycle.new(up_item).discover_accounts
     rescue Provider::Up::UpError => e
       DebugLogEntry.capture(
         category: "provider_sync_error",
@@ -349,31 +307,6 @@ class UpItemsController < ApplicationController
         metadata: { up_item_id: up_item.id, error_class: e.class.name, error_message: e.message }
       )
       t("up_items.setup_accounts.api_error")
-    end
-
-    # Create and sync a Sure account from an Up account snapshot.
-    def create_account_from_up(up_account, account_type)
-      # Linking an account clears any prior skip so a future unlink re-prompts for setup.
-      up_account.update!(ignored: false) if up_account.ignored?
-
-      balance = up_account.current_balance || 0
-      balance = balance.abs if account_type == "Loan"
-      subtype = if account_type == "Depository" && up_account.suggested_account_type == account_type
-        up_account.suggested_subtype
-      end
-
-      Account.create_and_sync(
-        {
-          family: Current.family,
-          name: up_account.name,
-          balance: balance,
-          cash_balance: balance,
-          currency: up_account.currency || "AUD",
-          accountable_type: account_type,
-          accountable_attributes: subtype.present? ? { subtype: subtype } : {}
-        },
-        skip_initial_sync: true
-      )
     end
 
     # Re-render the providers settings panel (Turbo) or redirect with a flash.

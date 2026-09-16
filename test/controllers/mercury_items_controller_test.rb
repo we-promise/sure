@@ -1,12 +1,17 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../support/mercury_fixture_fence_helper"
 
 class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
+  include MercuryFixtureFenceHelper
   setup do
     sign_in users(:family_admin)
     Rails.cache.clear
     SyncJob.stubs(:perform_later)
+    # These transactional rendering examples fake transport. The lifecycle
+    # integration suite separately uses actual session admission and commits.
+    MercuryItem::LegacyAccess.stubs(:assert_transport!)
 
     @family = families(:dylan_family)
     @existing_item = mercury_items(:one)
@@ -42,6 +47,7 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "update changes only the selected mercury connection" do
     existing_token = @existing_item.token
+    expect_settings_command(name: "Renamed Business Mercury", token: "updated_second_token", base_url: "https://api-sandbox.mercury.com/api/v1")
 
     patch mercury_item_url(@second_item), params: {
       mercury_item: {
@@ -60,6 +66,7 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "blank token update preserves the selected mercury token" do
     original_token = @second_item.token
+    expect_settings_command(name: "Renamed Business Mercury", base_url: "https://api.mercury.com/api/v1")
 
     patch mercury_item_url(@second_item), params: {
       mercury_item: {
@@ -74,23 +81,9 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_token, @second_item.token
   end
 
-  test "update expires selected mercury account cache when credentials change" do
-    Rails.cache.expects(:delete).with(mercury_cache_key(@existing_item)).never
-    Rails.cache.expects(:delete).with(mercury_cache_key(@second_item)).once
-
-    patch mercury_item_url(@second_item), params: {
-      mercury_item: {
-        name: "Renamed Business Mercury",
-        token: "updated_second_token",
-        base_url: "https://api-sandbox.mercury.com/api/v1"
-      }
-    }
-
-    assert_redirected_to accounts_path
-  end
-
-  test "update does not expire selected mercury account cache for name-only changes" do
+  test "name-only update delegates exact settings without controller cache mutation" do
     Rails.cache.expects(:delete).never
+    expect_settings_command(name: "Renamed Business Mercury")
 
     patch mercury_item_url(@second_item), params: {
       mercury_item: {
@@ -104,7 +97,7 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "preload accounts uses selected mercury item cache key" do
     Rails.cache.expects(:read).with(mercury_cache_key(@second_item)).returns(nil)
-    Rails.cache.expects(:write).with(mercury_cache_key(@second_item), mercury_accounts_payload, expires_in: 5.minutes)
+    Rails.cache.expects(:write).with(mercury_cache_key(@second_item), mercury_accounts_payload.map(&:with_indifferent_access), expires_in: 5.minutes)
 
     provider = mock("mercury_provider")
     provider.expects(:get_accounts).returns(accounts: mercury_accounts_payload)
@@ -129,7 +122,7 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "select accounts renders the selected mercury item id" do
     Rails.cache.expects(:read).with(mercury_cache_key(@second_item)).returns(nil)
-    Rails.cache.expects(:write).with(mercury_cache_key(@second_item), mercury_accounts_payload, expires_in: 5.minutes)
+    Rails.cache.expects(:write).with(mercury_cache_key(@second_item), mercury_accounts_payload.map(&:with_indifferent_access), expires_in: 5.minutes)
 
     provider = mock("mercury_provider")
     provider.expects(:get_accounts).returns(accounts: mercury_accounts_payload)
@@ -156,7 +149,7 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
     )
 
     Rails.cache.expects(:read).with(mercury_cache_key(@second_item)).returns(nil)
-    Rails.cache.expects(:write).with(mercury_cache_key(@second_item), mercury_accounts_payload, expires_in: 5.minutes)
+    Rails.cache.expects(:write).with(mercury_cache_key(@second_item), mercury_accounts_payload.map(&:with_indifferent_access), expires_in: 5.minutes)
 
     provider = mock("mercury_provider")
     provider.expects(:get_accounts).returns(accounts: mercury_accounts_payload)
@@ -192,6 +185,7 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
       assert_difference "AccountProvider.count", 1 do
         post link_accounts_mercury_items_url, params: {
           mercury_item_id: @second_item.id,
+          selection_token: MercuryItem::Selection.issue(@second_item, flow: :link_accounts),
           account_ids: [ "shared_mercury_account" ],
           accountable_type: "Depository"
         }
@@ -249,6 +243,16 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
+    # Settings now drain the real session fence. These transactional examples
+    # cover controller parameter/rendering behavior at the command boundary;
+    # LifecycleTest covers actual commit, cache invalidation and contention.
+    def expect_settings_command(**attributes)
+      @second_item.update!(attributes)
+      command = mock("Mercury settings command")
+      MercuryItem::Lifecycle.expects(:new).with(item: @second_item, actor: users(:family_admin)).returns(command)
+      command.expects(:update_settings).with { |parameters| parameters.to_h == attributes.stringify_keys }.returns(@second_item)
+    end
+
     def mercury_accounts_payload
       [
         {
@@ -263,6 +267,6 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
     end
 
     def mercury_cache_key(mercury_item)
-      "mercury_accounts_#{@family.id}_#{mercury_item.id}"
+      MercuryItem::Selection.cache_key(mercury_item)
     end
 end

@@ -5,45 +5,63 @@ require "digest/md5"
 class BrexEntry::Processor
   include CurrencyNormalizable
 
-  def initialize(brex_transaction, brex_account:)
+  def initialize(brex_transaction, brex_account:, expected_context: nil)
     @brex_transaction = brex_transaction
     @brex_account = brex_account
+    @expected_context = expected_context
   end
 
   def process
-    cached_external_id = nil
-    cached_external_id = external_id
-
-    unless account.present?
-      Rails.logger.warn "BrexEntry::Processor - No linked account for brex_account #{brex_account.id}, skipping transaction #{cached_external_id}"
-      return :skipped
+    BrexItem::LegacyAccess.with_account(brex_account) do |current|
+      expected = current.current_account
+      next :skipped unless expected
+      BrexItem::LegacyAccess.with_publication(current, expected_account: expected) do |fresh, _financial|
+        BrexItem::LegacyAccess.verify_source!(fresh, @expected_context) if @expected_context
+        self.class.new(brex_transaction, brex_account: fresh).send(:process_admitted)
+      end
     end
-
-    import_adapter.import_transaction(
-      external_id: cached_external_id,
-      amount: amount,
-      currency: currency,
-      date: date,
-      name: name,
-      source: "brex",
-      kind: transaction_kind,
-      merchant: merchant,
-      notes: notes,
-      extra: extra
-    )
-  rescue ArgumentError => e
-    Rails.logger.error "BrexEntry::Processor - Validation error for transaction #{cached_external_id || safe_external_id}: #{e.message}"
-    raise
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-    Rails.logger.error "BrexEntry::Processor - Failed to save transaction #{cached_external_id || safe_external_id}: #{e.message}"
-    raise StandardError.new("Failed to import transaction: #{e.message}")
-  rescue => e
-    Rails.logger.error "BrexEntry::Processor - Unexpected error processing transaction #{cached_external_id || safe_external_id}: #{e.class} - #{e.message}"
-    Rails.logger.error Array(e.backtrace).join("\n")
-    raise StandardError.new("Unexpected error importing transaction: #{e.message}")
   end
 
   private
+
+    def process_admitted
+      if brex_account.cash? && data[:account_id].present? && data[:account_id].to_s != brex_account.account_id
+        raise BrexItem::LegacyAccess::Fence::OwnershipChanged, "Brex transaction belongs to another cash account"
+      end
+      cached_external_id = nil
+      cached_external_id = external_id
+
+      unless account.present?
+        Rails.logger.warn "BrexEntry::Processor - No linked account for brex_account #{brex_account.id}, skipping transaction #{cached_external_id}"
+        return :skipped
+      end
+
+      import_adapter.import_transaction(
+        external_id: cached_external_id,
+        amount: amount,
+        currency: currency,
+        date: date,
+        name: name,
+        source: "brex",
+        kind: transaction_kind,
+        merchant: merchant,
+        notes: notes,
+        extra: extra
+      )
+    rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+      raise
+    rescue ArgumentError => e
+      Rails.logger.error "BrexEntry::Processor - Validation error for transaction #{cached_external_id || safe_external_id}: #{e.message}"
+      raise
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+      Rails.logger.error "BrexEntry::Processor - Failed to save transaction #{cached_external_id || safe_external_id}: #{e.message}"
+      raise StandardError.new("Failed to import transaction: #{e.message}")
+    rescue => e
+      Rails.logger.error "BrexEntry::Processor - Unexpected error processing transaction #{cached_external_id || safe_external_id}: #{e.class} - #{e.message}"
+      Rails.logger.error Array(e.backtrace).join("\n")
+      raise StandardError.new("Unexpected error importing transaction: #{e.message}")
+    end
+
     attr_reader :brex_transaction, :brex_account
 
     def import_adapter

@@ -11,7 +11,7 @@ class Provider::AkahuAdapter < Provider::Base
   def self.connection_configs(family:)
     return [] unless family.can_connect_akahu?
 
-    family.akahu_items.active.ordered.select(&:credentials_configured?).map do |akahu_item|
+    family.akahu_items.active.legacy_manageable.ordered.select(&:credentials_configured?).map do |akahu_item|
       connection_config_for(akahu_item)
     end
   end
@@ -93,13 +93,13 @@ class Provider::AkahuAdapter < Provider::Base
 
   def self.resolve_akahu_item(family, akahu_item_id)
     if akahu_item_id.present?
-      item = family.akahu_items.active.find_by(id: akahu_item_id)
+      item = family.akahu_items.active.legacy_manageable.find_by(id: akahu_item_id)
       return item if item&.credentials_configured?
 
       return nil
     end
 
-    family.akahu_items.active.ordered.find(&:credentials_configured?)
+    family.akahu_items.active.legacy_manageable.ordered.find(&:credentials_configured?)
   end
   private_class_method :resolve_akahu_item
 end

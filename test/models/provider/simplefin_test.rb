@@ -135,19 +135,17 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
     @provider.get_accounts(@access_url, pending: nil)
   end
 
-  test "claim_access_url retries on network errors" do
+  test "claim_access_url does not replay a single-use token after a network error" do
     setup_token = Base64.encode64("https://example.com/claim")
-    mock_response = OpenStruct.new(code: 200, body: "https://example.com/access")
 
     Provider::Simplefin.expects(:post)
-      .times(2)
+      .with("https://example.com/claim", timeout: 15, max_retries: 0).once
       .raises(Net::ReadTimeout.new("Connection timed out"))
-      .then.returns(mock_response)
 
-    @provider.stubs(:sleep)
-
-    result = @provider.claim_access_url(setup_token)
-    assert_equal "https://example.com/access", result
+    error = assert_raises(Provider::Simplefin::SimplefinError) { @provider.claim_access_url(setup_token) }
+    assert_equal :network_error, error.error_type
+    assert_equal "SimpleFIN network request failed", error.message
+    assert_nil error.cause
   end
 
   test "exponential backoff delay increases with retries" do

@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../../support/brex_fixture_fence_helper"
 
 class BrexEntry::ProcessorTest < ActiveSupport::TestCase
+  include BrexFixtureFenceHelper
   setup do
     @family = families(:dylan_family)
     @brex_item = brex_items(:one)

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class KrakenItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -150,4 +150,6 @@ class KrakenItem < ApplicationRecord
       self.api_key = api_key.to_s.strip if api_key_changed? && !api_key.nil?
       self.api_secret = api_secret.to_s.strip if api_secret_changed? && !api_secret.nil?
     end
+
+  guard_legacy_writes import_latest_kraken_data: :ingest, process_accounts: :publish
 end

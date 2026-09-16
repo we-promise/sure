@@ -19,6 +19,7 @@
                     turbo_frame: "_top"
                   },
                   class: "space-y-6" do |form| %>
+      <%= hidden_field_tag :selection_token, @selection_token %>
 
       <div class="space-y-4">
         <% if @api_error.present? %>

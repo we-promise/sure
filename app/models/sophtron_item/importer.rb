@@ -16,16 +16,14 @@ require "set"
 class SophtronItem::Importer
   INCREMENTAL_SYNC_BUFFER_DAYS = 60
 
-  attr_reader :sophtron_item, :sophtron_provider, :sync
+  attr_reader :sophtron_item, :sync
 
   # Initializes a new importer.
   #
   # @param sophtron_item [SophtronItem] The Sophtron item to import data for
-  # @param sophtron_provider [Provider::Sophtron] Configured Sophtron API client
   # @param sync [Sync, nil] Optional sync record whose window should guide import scope
-  def initialize(sophtron_item, sophtron_provider:, sync: nil)
+  def initialize(sophtron_item, sync: nil)
     @sophtron_item = sophtron_item
-    @sophtron_provider = sophtron_provider
     @sync = sync
   end
 
@@ -51,137 +49,181 @@ class SophtronItem::Importer
   #   # => { success: true, accounts_updated: 2, accounts_created: 1,
   #   #      accounts_failed: 0, transactions_imported: 150, transactions_failed: 0 }
   def import
-    Rails.logger.info "SophtronItem::Importer - Starting import for item #{sophtron_item.id}"
-    unless sophtron_item.user_institution_id.present?
-      error_message = "Sophtron institution connection is incomplete"
-      Rails.logger.warn "SophtronItem::Importer - Item #{sophtron_item.id} has no Sophtron UserInstitutionID"
-      sophtron_item.update!(
-        status: :requires_update,
-        last_connection_error: error_message
-      )
-
-      return {
-        success: false,
-        error: error_message,
-        accounts_updated: 0,
-        accounts_created: 0,
-        accounts_failed: 0,
-        transactions_imported: 0,
-        transactions_failed: 0
-      }
+    SophtronItem::LegacyAccess.with_item(sophtron_item, sync: sync) do |current, current_sync|
+      self.class.new(current, sync: current_sync).send(:import_admitted)
     end
-
-    # Step 1: Fetch all accounts from Sophtron
-    accounts_data = fetch_accounts_data
-    unless accounts_data
-      Rails.logger.error "SophtronItem::Importer - Failed to fetch accounts data for item #{sophtron_item.id}"
-      return { success: false, error: "Failed to fetch accounts data", accounts_imported: 0, transactions_imported: 0 }
-    end
-
-    # Store raw payload
-    begin
-      sophtron_item.upsert_sophtron_snapshot!(accounts_data)
-    rescue => e
-      Rails.logger.error "SophtronItem::Importer - Failed to store accounts snapshot: #{e.message}"
-      # Continue with import even if snapshot storage fails
-    end
-
-    # Step 2: Update linked accounts and create records for new accounts from API
-    accounts_updated = 0
-    accounts_created = 0
-    accounts_failed = 0
-
-    if accounts_data[:accounts].present?
-      # Get linked sophtron account IDs (ones actually imported/used by the user)
-      linked_account_ids = sophtron_item.sophtron_accounts
-                                         .joins(:account_provider)
-                                         .pluck(:account_id)
-                                         .map(&:to_s)
-      # Get all existing sophtron account IDs (linked or not)
-      all_existing_ids = sophtron_item.sophtron_accounts.pluck(:account_id).map(&:to_s)
-      accounts_data[:accounts].each do |account_data|
-        account_id = (account_data[:account_id] || account_data[:id])&.to_s
-        next unless account_id.present?
-        account_name = account_data[:account_name] || account_data[:name]
-        next if account_name.blank?
-        if linked_account_ids.include?(account_id)
-          # Update existing linked accounts
-          begin
-            import_account(account_data)
-            accounts_updated += 1
-          rescue => e
-            accounts_failed += 1
-            Rails.logger.error "SophtronItem::Importer - Failed to update account #{account_id}: #{e.message}"
-          end
-        elsif !all_existing_ids.include?(account_id)
-          # Create new unlinked sophtron_account records for accounts we haven't seen before
-          # This allows users to link them later via "Setup new accounts"
-          begin
-            sophtron_account = sophtron_item.sophtron_accounts.build(
-              account_id: account_id,
-              name: account_name,
-              currency: account_data[:currency] || "USD"
-            )
-            sophtron_account.upsert_sophtron_snapshot!(account_data)
-            accounts_created += 1
-            Rails.logger.info "SophtronItem::Importer - Created new unlinked account record for #{account_id}"
-          rescue => e
-            accounts_failed += 1
-            Rails.logger.error "SophtronItem::Importer - Failed to create account #{account_id}: #{e.message}"
-          end
-        end
-      end
-    end
-
-    Rails.logger.info "SophtronItem::Importer - Updated #{accounts_updated} accounts, created #{accounts_created} new (#{accounts_failed} failed)"
-
-    # Step 3: Fetch transactions only for linked accounts with active status
-    transactions_imported = 0
-    transactions_failed = 0
-
-    linked_accounts = sophtron_item.automatic_sync_sophtron_accounts
-    linked_accounts.each do |sophtron_account|
-      begin
-        result = fetch_and_store_transactions(sophtron_account)
-        if result[:success]
-          transactions_imported += result[:transactions_count]
-        else
-          transactions_failed += 1
-          break if result[:requires_update]
-        end
-      rescue => e
-        transactions_failed += 1
-        Rails.logger.error "SophtronItem::Importer - Failed to fetch/store transactions for account #{sophtron_account.account_id}: #{e.message}"
-        # Continue with other accounts even if one fails
-      end
-    end
-
-    Rails.logger.info "SophtronItem::Importer - Completed import for item #{sophtron_item.id}: #{accounts_updated} accounts updated, #{accounts_created} new accounts discovered, #{transactions_imported} transactions"
-
-    {
-      success: accounts_failed == 0 && transactions_failed == 0,
-      accounts_updated: accounts_updated,
-      accounts_created: accounts_created,
-      accounts_failed: accounts_failed,
-      transactions_imported: transactions_imported,
-      transactions_failed: transactions_failed
-    }
   end
 
   def import_transactions_after_refresh(sophtron_account)
-    fetch_and_store_transactions(sophtron_account, refresh: false)
+    SophtronItem::LegacyAccess.with_item(sophtron_item, sync: sync, allow_completed: true) do |current, current_sync|
+      account = Provider::AccountData::LegacyWriterFence.scoped_accounts!(current, [ sophtron_account ]).sole
+      importer = self.class.new(current, sync: current_sync)
+      importer.instance_variable_set(:@allow_completed, true)
+      importer.send(:fetch_and_store_transactions, account, refresh: false)
+    end
   end
 
   private
 
+    def import_admitted
+      Rails.logger.info "SophtronItem::Importer - Starting import for item #{sophtron_item.id}"
+      unless sophtron_item.user_institution_id.present?
+        error_message = "Sophtron institution connection is incomplete"
+        Rails.logger.warn "SophtronItem::Importer - Item #{sophtron_item.id} has no Sophtron UserInstitutionID"
+        sophtron_item.update!(
+          status: :requires_update,
+          last_connection_error: error_message
+        )
+
+        return {
+          success: false,
+          error: error_message,
+          accounts_updated: 0,
+          accounts_created: 0,
+          accounts_failed: 0,
+          transactions_imported: 0,
+          transactions_failed: 0
+        }
+      end
+
+      # Step 1: Fetch all accounts from Sophtron
+      accounts_data = fetch_accounts_data
+      unless accounts_data
+        Rails.logger.error "SophtronItem::Importer - Failed to fetch accounts data for item #{sophtron_item.id}"
+        return { success: false, error: "Failed to fetch accounts data", accounts_imported: 0, transactions_imported: 0 }
+      end
+
+      # Store raw payload
+      begin
+        sophtron_item.upsert_sophtron_snapshot!(accounts_data)
+      rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+        raise
+      rescue => e
+        Rails.logger.error "SophtronItem::Importer - Failed to store accounts snapshot: #{e.message}"
+        # Continue with import even if snapshot storage fails
+      end
+
+      # Step 2: Update linked accounts and create records for new accounts from API
+      accounts_updated = 0
+      accounts_created = 0
+      accounts_failed = 0
+
+      if accounts_data[:accounts].present?
+        # Get linked sophtron account IDs (ones actually imported/used by the user)
+        linked_account_ids = sophtron_item.sophtron_accounts
+                                           .joins(:account_provider)
+                                           .pluck(:account_id)
+                                           .map(&:to_s)
+        # Get all existing sophtron account IDs (linked or not)
+        all_existing_ids = sophtron_item.sophtron_accounts.pluck(:account_id).map(&:to_s)
+        accounts_data[:accounts].each do |account_data|
+          validate_context!
+          account_id = (account_data[:account_id] || account_data[:id])&.to_s
+          next unless account_id.present?
+          account_name = account_data[:account_name] || account_data[:name]
+          next if account_name.blank?
+          if linked_account_ids.include?(account_id)
+            # Update existing linked accounts
+            begin
+              import_account(account_data)
+              accounts_updated += 1
+            rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+              raise
+            rescue => e
+              accounts_failed += 1
+              Rails.logger.error "SophtronItem::Importer - Failed to update account #{account_id}: #{e.message}"
+            end
+          elsif !all_existing_ids.include?(account_id)
+            # Create new unlinked sophtron_account records for accounts we haven't seen before
+            # This allows users to link them later via "Setup new accounts"
+            begin
+              sophtron_account = sophtron_item.sophtron_accounts.build(
+                account_id: account_id,
+                name: account_name,
+                currency: account_data[:currency] || "USD"
+              )
+              sophtron_account.upsert_sophtron_snapshot!(account_data)
+              accounts_created += 1
+              Rails.logger.info "SophtronItem::Importer - Created new unlinked account record for #{account_id}"
+            rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+              raise
+            rescue => e
+              accounts_failed += 1
+              Rails.logger.error "SophtronItem::Importer - Failed to create account #{account_id}: #{e.message}"
+            end
+          end
+        end
+      end
+
+      Rails.logger.info "SophtronItem::Importer - Updated #{accounts_updated} accounts, created #{accounts_created} new (#{accounts_failed} failed)"
+
+      # Step 3: Fetch transactions only for linked accounts with active status
+      transactions_imported = 0
+      transactions_failed = 0
+
+      linked_accounts = Provider::AccountData::LegacyWriterFence.scoped_accounts!(sophtron_item, sophtron_item.automatic_sync_sophtron_accounts)
+      linked_accounts.each do |sophtron_account|
+        begin
+          result = fetch_and_store_transactions(sophtron_account)
+          if result[:success]
+            transactions_imported += result[:transactions_count]
+          else
+            transactions_failed += 1
+            break if result[:requires_update]
+          end
+        rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+          raise
+        rescue => e
+          transactions_failed += 1
+          Rails.logger.error "SophtronItem::Importer - Failed to fetch/store transactions for account #{sophtron_account.account_id}: #{e.message}"
+          # Continue with other accounts even if one fails
+        end
+      end
+
+      Rails.logger.info "SophtronItem::Importer - Completed import for item #{sophtron_item.id}: #{accounts_updated} accounts updated, #{accounts_created} new accounts discovered, #{transactions_imported} transactions"
+
+      {
+        success: accounts_failed == 0 && transactions_failed == 0,
+        accounts_updated: accounts_updated,
+        accounts_created: accounts_created,
+        accounts_failed: accounts_failed,
+        transactions_imported: transactions_imported,
+        transactions_failed: transactions_failed
+      }
+    end
+
+    def sophtron_provider
+      @sophtron_provider ||= sophtron_item.sophtron_provider ||
+        raise(Provider::Sophtron::Error.new("Sophtron provider is not configured", :configuration_error))
+    end
+
+    def validate_context!(account = nil)
+      @sync = Provider::AccountData::LegacyWriterFence.scoped_sync!(sophtron_item, sync, allow_completed: @allow_completed == true)
+      Provider::AccountData::LegacyWriterFence.scoped_accounts!(sophtron_item, [ account ]).sole if account
+    end
+
+    def request_data!(account: nil)
+      validate_context!(account)
+      begin
+        response = yield
+      ensure
+        # Cancellation or relinking during HTTP invalidates success and error
+        # responses alike, before normalization or legacy status publication.
+        validate_context!(account)
+      end
+      Provider::Sophtron.response_data!(response)
+    end
+
     def fetch_accounts_data
       begin
-        accounts_data = Provider::Sophtron.response_data!(sophtron_provider.get_accounts(sophtron_item.user_institution_id))
+        accounts_data = request_data! { sophtron_provider.get_accounts(sophtron_item.user_institution_id) }
       rescue Provider::Sophtron::Error => e
         # Handle authentication errors by marking item as requiring update
         if e.error_type == :unauthorized || e.error_type == :access_forbidden
           begin
             sophtron_item.update!(status: :requires_update)
+          rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+            raise
           rescue => update_error
             Rails.logger.error "SophtronItem::Importer - Failed to update item status: #{update_error.message}"
           end
@@ -191,6 +233,8 @@ class SophtronItem::Importer
       rescue JSON::ParserError => e
         Rails.logger.error "SophtronItem::Importer - Failed to parse Sophtron API response: #{e.message}"
         return nil
+      rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+        raise
       rescue => e
         Rails.logger.error "SophtronItem::Importer - Unexpected error fetching accounts: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
@@ -270,6 +314,7 @@ class SophtronItem::Importer
     #   - :transactions_count [Integer] Number of transactions fetched
     #   - :error [String, nil] Error message if failed
     def fetch_and_store_transactions(sophtron_account, refresh: true)
+      sophtron_account = validate_context!(sophtron_account)
       start_date = determine_sync_start_date(sophtron_account)
       Rails.logger.info "SophtronItem::Importer - Fetching transactions for account #{sophtron_account.account_id} from #{start_date}"
 
@@ -280,12 +325,13 @@ class SophtronItem::Importer
         end
 
         # Fetch transactions
-        transactions_data = Provider::Sophtron.response_data!(
+        transactions_data = request_data!(account: sophtron_account) do
           sophtron_provider.get_account_transactions(
             sophtron_account.account_id,
             start_date: start_date
           )
-        )
+        end
+        sophtron_account = validate_context!(sophtron_account)
 
         # Validate response structure
         unless transactions_data.is_a?(Hash)
@@ -328,6 +374,8 @@ class SophtronItem::Importer
               Rails.logger.info "SophtronItem::Importer - No new transactions to store (all #{transactions.count} were duplicates) for account #{sophtron_account.account_id}"
               sophtron_account.upsert_sophtron_transactions_snapshot!(existing_transactions) if sophtron_account.raw_transactions_payload.nil?
             end
+          rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+            raise
           rescue => e
             Rails.logger.error "SophtronItem::Importer - Failed to store transactions for account #{sophtron_account.account_id}: #{e.message}"
             return { success: false, transactions_count: 0, error: "Failed to store transactions: #{e.message}" }
@@ -346,6 +394,8 @@ class SophtronItem::Importer
       rescue JSON::ParserError => e
         Rails.logger.error "SophtronItem::Importer - Failed to parse transaction response for account #{sophtron_account.id}: #{e.message}"
         { success: false, transactions_count: 0, error: "Failed to parse response" }
+      rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+        raise
       rescue => e
         Rails.logger.error "SophtronItem::Importer - Unexpected error fetching transactions for account #{sophtron_account.id}: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
@@ -354,11 +404,11 @@ class SophtronItem::Importer
     end
 
     def refresh_account_before_transaction_fetch(sophtron_account)
-      refresh_response = Provider::Sophtron.response_data!(sophtron_provider.refresh_account(sophtron_account.account_id))
+      refresh_response = request_data!(account: sophtron_account) { sophtron_provider.refresh_account(sophtron_account.account_id) }
       job_id = refresh_response.with_indifferent_access[:JobID] || refresh_response.with_indifferent_access[:job_id]
       return nil if job_id.blank?
 
-      job = Provider::Sophtron.response_data!(sophtron_provider.get_job_information(job_id))
+      job = request_data!(account: sophtron_account) { sophtron_provider.get_job_information(job_id) }
       sophtron_item.upsert_job_snapshot!(job)
 
       if Provider::Sophtron.job_requires_input?(job)
@@ -446,6 +496,8 @@ class SophtronItem::Importer
       if needs_update
         begin
           sophtron_item.update!(status: :requires_update)
+        rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+          raise
         rescue => e
           Rails.logger.error "SophtronItem::Importer - Failed to update item status: #{e.message}"
         end

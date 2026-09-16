@@ -13,20 +13,28 @@ class UpAccount::Processor
   # Sync the linked account's balance and process its transactions. No-op when
   # the Up account isn't linked to a Sure account.
   def process
-    unless up_account.current_account.present?
-      Rails.logger.info "UpAccount::Processor - No linked account for up_account #{up_account.id}, skipping processing"
-      return
+    UpItem::LegacyWriter.with_account(up_account) do |current|
+      self.class.new(current).send(:process_admitted)
     end
-
-    process_account!
-    process_transactions
-  rescue StandardError => e
-    Rails.logger.error "UpAccount::Processor - Failed to process account up_account_id=#{up_account.id} error_class=#{e.class.name}"
-    report_exception(e, "account")
-    raise
   end
 
   private
+
+    def process_admitted
+      unless up_account.current_account.present?
+        Rails.logger.info "UpAccount::Processor - No linked account for up_account #{up_account.id}, skipping processing"
+        return
+      end
+
+      process_account!
+      process_transactions
+    rescue Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::Busy
+      raise
+    rescue StandardError => e
+      Rails.logger.error "UpAccount::Processor - Failed to process account up_account_id=#{up_account.id} error_class=#{e.class.name}"
+      report_exception(e, "account")
+      raise
+    end
 
     # Update the linked Sure account's balance/currency from the Up snapshot.
     def process_account!
@@ -47,6 +55,8 @@ class UpAccount::Processor
     # Delegate to the transactions processor, capturing and logging failures.
     def process_transactions
       UpAccount::Transactions::Processor.new(up_account).process
+    rescue Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::Busy
+      raise
     rescue => e
       report_exception(e, "transactions")
       Rails.logger.error "UpAccount::Processor - Failed to process transactions up_account_id=#{up_account.id} error_class=#{e.class.name}"

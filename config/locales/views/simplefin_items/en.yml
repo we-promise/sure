@@ -17,6 +17,35 @@ en:
         unexpected: An unexpected error occurred. Please try again.
     destroy:
       success: SimpleFIN connection will be removed
+    retry_connection:
+      success: Your connection update has been queued. Your accounts will refresh when it finishes.
+    cancel_connection_update:
+      success: Connection update canceled. Your current connection is unchanged.
+    connection_recovery:
+      title: Connection updates
+      requested_at: "Requested %{date}"
+      retry: Try again
+      cancel: Cancel update
+      older: Older updates
+      newest: Newest updates
+      titles:
+        pending: Pending connection update
+        in_progress: Connection update in progress
+        new_token_needed: New setup token needed
+        unavailable: Connection update unavailable
+      descriptions:
+        prepared: This update has not finished. Try again to continue with the setup token you already provided.
+        claimed: Your connection update is ready to finish. Try again to complete it.
+        installed: Your connection is updated, but your account refresh has not started. Try again to start it.
+        claiming: This update has started. Check back shortly, or cancel it before starting another update.
+        uncertain: We could not confirm the previous update. Cancel it and use a new setup token below.
+        unavailable: This update is no longer available. Cancel it before starting a new update.
+        refresh_unavailable: This account refresh can no longer be restarted here. Return to your accounts to refresh them.
+      errors:
+        busy: Another connection update is in progress. Please try again shortly.
+        unavailable: This update is no longer available for that action. Refresh the page to see your current options.
+        new_token: This setup token cannot be used again. Create a new setup token in SimpleFIN Bridge.
+        unexpected: We could not complete that action. Please try again.
     update:
       success: SimpleFIN connection updated successfully! Your accounts are being reconnected.
       errors:

@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../../support/akahu_fixture_fence_helper"
 
 class AkahuEntry::ProcessorTest < ActiveSupport::TestCase
+  include AkahuFixtureFenceHelper
   setup do
     @family = families(:empty)
     @akahu_item = AkahuItem.create!(

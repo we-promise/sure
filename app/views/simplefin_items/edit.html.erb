@@ -10,30 +10,32 @@
   <% end %>
 
   <% dialog.with_body do %>
-    <%= form_with model: @simplefin_item, local: true, class: "space-y-6" do |form| %>
-      <div class="bg-surface border border-primary p-4 rounded-lg">
-        <div class="flex items-start gap-3">
-          <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
-          <div>
-            <p class="text-sm text-primary mb-2">
-              <strong><%= t(".connection_needs_update") %></strong>
-            </p>
-            <ol class="text-xs text-secondary space-y-1 list-decimal list-inside">
-              <li><%= t(".step_1_html") %></li>
-              <li><%= t(".step_2") %></li>
-              <li><%= t(".step_3") %></li>
-            </ol>
-          </div>
+    <% if turbo_frame_request? %>
+      <% if flash[:notice].present? %>
+        <div class="mb-4">
+          <%= render DS::Alert.new(message: flash[:notice], variant: :success, live: :status) %>
         </div>
-      </div>
+      <% end %>
+      <% if flash[:alert].present? %>
+        <div class="mb-4">
+          <%= render DS::Alert.new(message: flash[:alert], variant: :error, live: :alert) %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <%= render "connection_requests", connection_requests: @connection_requests %>
+
+    <%= form_with model: @simplefin_item, local: true, class: "space-y-6" do |form| %>
+      <%= render DS::Alert.new(title: t(".connection_needs_update"), variant: :info) do %>
+        <ol class="text-xs text-secondary space-y-1 list-decimal list-inside">
+          <li><%= t(".step_1_html") %></li>
+          <li><%= t(".step_2") %></li>
+          <li><%= t(".step_3") %></li>
+        </ol>
+      <% end %>
 
       <% if @error_message %>
-        <div class="bg-destructive/10 border border-destructive-subtle p-4 rounded-lg">
-          <div class="flex items-start gap-3">
-            <%= icon "alert-triangle", size: "sm", class: "text-destructive mt-0.5 flex-shrink-0" %>
-            <p class="text-sm text-destructive"><%= @error_message %></p>
-          </div>
-        </div>
+        <%= render DS::Alert.new(message: @error_message, variant: :error, live: :alert) %>
       <% end %>
 
       <div>

@@ -1,88 +1,67 @@
 class AkahuAccount::Transactions::Processor
+  MAX_RECORDS = 20_000
+  MAX_BYTES = 16.megabytes
   attr_reader :akahu_account
 
-  def initialize(akahu_account)
+  def initialize(akahu_account, pending_inventory: nil, expected_context: nil)
     @akahu_account = akahu_account
+    @pending_inventory = pending_inventory
+    @expected_context = expected_context || AkahuItem::LegacyAccess.source_context(akahu_account)
   end
 
   def process
-    unless akahu_account.raw_transactions_payload.present?
-      Rails.logger.info "AkahuAccount::Transactions::Processor - No Akahu transactions available to process"
-      pruned_count = prune_stale_pending_entries([])
-      return { success: true, total: 0, imported: 0, failed: 0, pruned_pending: pruned_count, errors: [] }
+    AkahuItem::LegacyAccess.with_account(akahu_account) do |current|
+      AkahuItem::LegacyAccess.verify_source!(current, @expected_context)
+      self.class.new(current, pending_inventory: @pending_inventory, expected_context: @expected_context).send(:process_admitted)
     end
-
-    total_count = akahu_account.raw_transactions_payload.count
-    imported_count = 0
-    failed_count = 0
-    errors = []
-    current_pending_external_ids = pending_external_ids
-
-    akahu_account.raw_transactions_payload.each_with_index do |transaction_data, index|
-      result = AkahuEntry::Processor.new(
-        transaction_data,
-        akahu_account: akahu_account
-      ).process
-
-      if result.nil?
-        failed_count += 1
-        errors << { index: index, transaction_id: transaction_id(transaction_data), error: "No linked account" }
-      else
-        imported_count += 1
-      end
-    rescue ArgumentError => e
-      failed_count += 1
-      errors << { index: index, transaction_id: transaction_id(transaction_data), error: "Validation error: #{e.message}" }
-      Rails.logger.error "AkahuAccount::Transactions::Processor - Validation error processing transaction #{transaction_id(transaction_data)}: #{e.message}"
-    rescue => e
-      failed_count += 1
-      errors << { index: index, transaction_id: transaction_id(transaction_data), error: "#{e.class}: #{e.message}" }
-      Rails.logger.error "AkahuAccount::Transactions::Processor - Error processing transaction #{transaction_id(transaction_data)}: #{e.class} - #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
-    end
-    pruned_count = prune_stale_pending_entries(current_pending_external_ids)
-
-    {
-      success: failed_count.zero?,
-      total: total_count,
-      imported: imported_count,
-      failed: failed_count,
-      pruned_pending: pruned_count,
-      errors: errors
-    }
   end
 
   private
-
-    def transaction_id(transaction_data)
-      transaction_data.try(:[], :_id) ||
-        transaction_data.try(:[], "_id") ||
-        transaction_data.try(:[], :id) ||
-        transaction_data.try(:[], "id") ||
-        "unknown"
-    end
-
-    def pending_external_ids
-      akahu_account.raw_transactions_payload.filter_map do |transaction_data|
-        next unless transaction_data.is_a?(Hash)
-        next unless AkahuEntry::Processor.pending?(transaction_data)
-
-        AkahuEntry::Processor.canonical_external_id(transaction_data)
+    def process_admitted
+      stored = akahu_account.read_attribute_before_type_cast(:raw_transactions_payload)
+      raise ArgumentError, "Akahu transaction cache exceeds its byte limit" if stored.to_json.bytesize > MAX_BYTES
+      rows = akahu_account.raw_transactions_payload
+      rows = [] if rows.nil?
+      unless rows.is_a?(Array) && rows.size <= MAX_RECORDS
+        raise ArgumentError, "Akahu transaction cache must be a bounded array"
       end
+      imported_count, failed_count = 0, 0
+      errors = []
+      rows.each_with_index do |transaction_data, index|
+        begin
+          result = AkahuEntry::Processor.new(transaction_data, akahu_account: akahu_account,
+            expected_context: @expected_context).process
+          if result.nil?
+            failed_count += 1
+            errors << { index: index, error: "No linked account" }
+          else
+            imported_count += 1
+          end
+        rescue *AkahuItem::LegacyAccess::DENIAL_ERRORS
+          raise
+        rescue StandardError => error
+          failed_count += 1
+          errors << { index: index, error: I18n.t("akahu_item.errors.account_processing_failed") }
+          report_failure(error, index)
+        end
+      end
+      # A cache is not a fresh inventory. Even with a receipt, an incomplete
+      # financial import cannot turn absence into deletion.
+      pruned = if failed_count.zero? && @pending_inventory
+        AkahuAccount::PendingCleanup.new(akahu_account, receipt: @pending_inventory).call
+      else
+        0
+      end
+      { success: failed_count.zero?, total: rows.size, imported: imported_count, failed: failed_count,
+        pruned_pending: pruned, errors: errors }
     end
 
-    def prune_stale_pending_entries(current_pending_external_ids)
-      account = akahu_account.current_account
-      return 0 unless account.present?
-
-      stale_pending_entries = account.entries
-        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-        .where(source: "akahu")
-        .where("(transactions.extra -> 'akahu' ->> 'pending')::boolean = true")
-      stale_pending_entries = stale_pending_entries.where.not(external_id: current_pending_external_ids) if current_pending_external_ids.any?
-
-      count = stale_pending_entries.count
-      stale_pending_entries.find_each(&:destroy!) if count.positive?
-      count
+    def report_failure(error, index)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "warn", source: self.class.name,
+        provider_key: "akahu", family: akahu_account.akahu_item.family,
+        message: "Akahu transaction publication failed; the row was rolled back",
+        metadata: { akahu_account_id: akahu_account.id, index: index, error_class: error.class.name })
+    rescue StandardError
+      nil
     end
 end

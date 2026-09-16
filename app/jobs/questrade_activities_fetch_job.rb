@@ -1,131 +1,86 @@
-# frozen_string_literal: true
-
 class QuestradeActivitiesFetchJob < ApplicationJob
   include QuestradeAccount::DataHelpers
-
   queue_as :default
 
-  MAX_RETRIES = 6
-  RETRY_INTERVAL = 10.seconds
+  Request = QuestradeAccount::ActivitiesRequest
+  Session = QuestradeItem::CredentialSession
 
-  sidekiq_options lock: :until_executed,
-                  lock_args_method: ->(args) { args.first },
-                  on_conflict: :log
+  # Correctness lives in the durable request revision; queue uniqueness must not
+  # suppress a replacement request merely because its source account is the same.
+  def self.enqueue_for(source, start_date:, sync: nil)
+    Request.enqueue(source, start_date: start_date, sync: sync)
+  end
 
-  def perform(questrade_account, start_date: nil, retry_count: 0)
-    @questrade_account = questrade_account
-    @start_date = start_date || 3.years.ago.to_date
-    @retry_count = retry_count
-
-    return clear_pending_flag unless valid_for_fetch?
-
-    fetch_and_process_activities
-  rescue => e
-    Rails.logger.error("QuestradeActivitiesFetchJob error: #{e.class} - #{e.message}")
-    clear_pending_flag
-    raise
+  # Retain old keywords only to explicitly refuse old deliveries. A worker never
+  # reconstructs original authority or date bounds from today's source or args.
+  def perform(source, request_id: nil, revision: nil, **legacy_arguments)
+    Request.refuse!("Legacy activity job needs an explicit disposition") if legacy_arguments.any?
+    Request.with_claim(source, request_id: request_id, revision: revision) do |session, request|
+      begin
+        rows = fetch(session, request)
+        if rows.empty? && request.document.fetch("retry_count") < Request::MAX_RETRIES
+          ticket = request.defer!(source)
+          session.after_release { Request.dispatch(ticket) }
+          next
+        end
+        if rows.any?
+          source.reload
+          snapshot_context = QuestradeItem::LegacyAccess.capture_context(source)
+          merged = merge_activities(source.raw_activities_payload || [], rows)
+          source.upsert_activities_snapshot!(merged, mark_synced: false, expected_context: snapshot_context,
+            publication_verifier: request.method(:verify!))
+          QuestradeAccount::ActivitiesProcessor.new(source.reload, publication_verifier: request.method(:verify!), raise_on_error: true).process
+        end
+        completed = request.complete!(source)
+        session.after_release { Request.broadcast_completed(completed) }
+      rescue *Session::DENIAL_ERRORS
+        raise
+      rescue Provider::Questrade::Error => error
+        if !error.is_a?(Provider::Questrade::AuthenticationError) &&
+            %i[network_error rate_limited server_error].include?(error.error_type) && request.document.fetch("retry_count") < Request::MAX_RETRIES
+          ticket = request.defer!(source)
+          session.after_release { Request.dispatch(ticket) }
+          next
+        end
+        session.require_update! if error.is_a?(Provider::Questrade::AuthenticationError)
+        request.fail!(source)
+        raise
+      rescue StandardError => error
+        request.fail!(source)
+        raise
+      end
+    end
   end
 
   private
-
-    def valid_for_fetch?
-      return false unless @questrade_account
-      return false unless @questrade_account.questrade_item
-      return false unless @questrade_account.current_account
-      true
-    end
-
-    def fetch_and_process_activities
-      activities = fetch_activities
-
-      if activities.blank? && @retry_count < MAX_RETRIES
-        schedule_retry
-        return
+    def fetch(session, request)
+      value = request.document
+      response = session.provider.get_activities(account_id: value.fetch("context").fetch("remote_id"),
+        start_date: Date.iso8601(value.fetch("start_date")), end_date: Date.iso8601(value.fetch("end_date")))
+      unless response.is_a?(Hash) && response[:activities].is_a?(Array) && response[:activities].all? { |row| row.is_a?(Hash) }
+        raise Provider::Questrade::Error.new("Invalid Questrade activities response", :invalid_response)
       end
-
-      if activities.any?
-        merged = merge_activities(existing_activities, activities)
-        @questrade_account.upsert_activities_snapshot!(merged)
-        QuestradeAccount::ActivitiesProcessor.new(@questrade_account).process
-      end
-
-      # Always record the fetch as completed (even for legitimately empty
-      # accounts) so the importer's fresh-account check stops re-queueing this.
-      @questrade_account.update!(last_activities_sync: Time.current)
-      clear_pending_flag
-      broadcast_updates
-    end
-
-    def fetch_activities
-      provider = @questrade_account.questrade_item.questrade_provider
-      return [] unless provider
-
-      response = provider.get_activities(
-        account_id: @questrade_account.questrade_account_id,
-        start_date: @start_date,
-        end_date: Date.current
-      )
-      Array(response.is_a?(Hash) ? response[:activities] : response)
-    rescue Provider::Questrade::AuthenticationError
-      # Re-raise auth errors - they need immediate attention
+      response.fetch(:activities)
+    rescue *Session::DENIAL_ERRORS, Provider::Questrade::AuthenticationError
       raise
-    rescue => e
-      # Transient errors trigger retry via blank response
-      Rails.logger.error("QuestradeActivitiesFetchJob - API error: #{e.message}")
-      []
+    rescue Provider::Questrade::Error => error
+      # Preserve failure as failure. The caller can defer a classified transient
+      # request, but never complete it as an empty response.
+      DebugLogEntry.capture(category: "provider_sync_error", level: "error", message: "Questrade activity request failed",
+        source: self.class.name, provider_key: "questrade", family: session.item.family,
+        metadata: { request_id: request.document.fetch("id"), error_class: error.class.name })
+      raise
     end
 
-    def existing_activities
-      @questrade_account.raw_activities_payload || []
-    end
-
-    def merge_activities(existing, new_activities)
+    def merge_activities(existing, incoming)
+      existing = existing.with_indifferent_access.fetch(:activities) if existing.is_a?(Hash)
+      Request.refuse!("Questrade cached activities are malformed") unless existing.is_a?(Array) && existing.all? { |row| row.is_a?(Hash) }
       by_id = {}
-      existing.each { |a| by_id[activity_key(a)] = a }
-      new_activities.each do |a|
-        activity_hash = sdk_object_to_hash(a)
-        by_id[activity_key(activity_hash)] = activity_hash
+      (existing + incoming).each do |row|
+        data = sdk_object_to_hash(row).with_indifferent_access
+        key = [ data[:transactionDate], data[:action], data[:symbolId], data[:netAmount], data[:description], data[:currency], data[:type] ].join("-")
+        by_id[key] = data
       end
       by_id.values
-    end
-
-    def activity_key(activity)
-      activity = activity.with_indifferent_access if activity.is_a?(Hash)
-      # Questrade activities have no id; key on the immutable fields (same basis
-      # as QuestradeItem::Importer#activity_key) to dedup across syncs.
-      [ activity[:transactionDate], activity[:action], activity[:symbolId],
-        activity[:netAmount], activity[:description], activity[:currency], activity[:type] ].join("-")
-    end
-
-    def schedule_retry
-      Rails.logger.info(
-        "QuestradeActivitiesFetchJob - No activities found, scheduling retry " \
-        "#{@retry_count + 1}/#{MAX_RETRIES} in #{RETRY_INTERVAL.to_i}s"
-      )
-
-      self.class.set(wait: RETRY_INTERVAL).perform_later(
-        @questrade_account,
-        start_date: @start_date,
-        retry_count: @retry_count + 1
-      )
-    end
-
-    def clear_pending_flag
-      @questrade_account.update!(activities_fetch_pending: false)
-    rescue => e
-      # Best-effort: never let clearing the flag mask the original error in
-      # perform's rescue (which then re-raises).
-      Rails.logger.warn("QuestradeActivitiesFetchJob - failed to clear pending flag: #{e.message}")
-    end
-
-    def broadcast_updates
-      @questrade_account.current_account&.broadcast_sync_complete
-      @questrade_account.questrade_item&.broadcast_replace_to(
-        @questrade_account.questrade_item.family,
-        target: "questrade_item_#{@questrade_account.questrade_item.id}",
-        partial: "questrade_items/questrade_item"
-      )
-    rescue => e
-      Rails.logger.warn("QuestradeActivitiesFetchJob - Broadcast failed: #{e.message}")
     end
 end

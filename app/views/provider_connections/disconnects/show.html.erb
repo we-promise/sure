@@ -1,0 +1,37 @@
+<%= content_for :page_title, t("provider_connections.disconnect.title") %>
+
+<div class="space-y-4">
+  <%= render DS::Link.new(text: t("provider_connections.disconnect.back"), href: edit_provider_connection_path(@form.connection), icon: "arrow-left") %>
+
+  <%= render DS::Card.new do %>
+    <h2 class="text-lg font-medium text-primary"><%= @form.connection.name %></h2>
+    <p class="mt-2 text-sm text-secondary"><%= t("provider_connections.disconnect.description") %></p>
+
+    <div class="mt-4">
+      <%= render DS::Alert.new(variant: :warning, title: t("provider_connections.disconnect.kept_title")) do %>
+        <p><%= t("provider_connections.disconnect.kept_description") %></p>
+        <p><%= t("provider_connections.disconnect.remote_access") %></p>
+      <% end %>
+    </div>
+
+    <div class="mt-4 space-y-2">
+      <h3 class="text-sm font-medium text-primary"><%= t("provider_connections.disconnect.accounts_title", count: @form.accounts.size) %></h3>
+      <% if @form.accounts.any? %>
+        <ul class="list-disc space-y-1 pl-5 text-sm text-primary">
+          <% @form.accounts.each do |account| %>
+            <li><%= account.name %></li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="text-sm text-secondary"><%= t("provider_connections.disconnect.no_accounts") %></p>
+      <% end %>
+    </div>
+
+    <%= styled_form_with scope: :disconnect, url: provider_connection_disconnect_path(@form.connection), method: :post,
+                         class: "mt-6 flex flex-wrap items-center justify-end gap-3", data: { turbo_frame: "_top" } do |form| %>
+      <%= form.hidden_field :form_token, value: @form.token %>
+      <%= render DS::Link.new(text: t("provider_connections.disconnect.cancel"), href: edit_provider_connection_path(@form.connection), variant: :ghost) %>
+      <%= render DS::Button.new(text: t("provider_connections.disconnect.submit"), type: "submit", variant: :destructive) %>
+    <% end %>
+  <% end %>
+</div>

@@ -1,7 +1,8 @@
 class SimplefinItemsController < ApplicationController
   include SimplefinItems::MapsHelper
-  before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :dismiss_replacement_suggestion ]
-  before_action :require_admin!, only: [ :new, :create, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :dismiss_replacement_suggestion ]
+  helper SimplefinConnectionRecoveryHelper
+  before_action :set_simplefin_item, only: [ :show, :edit, :update, :retry_connection, :cancel_connection_update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :dismiss_replacement_suggestion ]
+  before_action :require_admin!, only: [ :new, :create, :select_existing_account, :link_existing_account, :edit, :update, :retry_connection, :cancel_connection_update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :dismiss_replacement_suggestion ]
 
   def index
     @simplefin_items = Current.family.simplefin_items.active.ordered
@@ -14,6 +15,19 @@ class SimplefinItemsController < ApplicationController
   def edit
     # For SimpleFin, editing means providing a new setup token to replace expired access
     @simplefin_item.setup_token = nil # Clear any existing setup token
+    load_connection_requests
+  end
+
+  def retry_connection
+    recover_connection_request do |claim_id|
+      SimplefinItem::ConnectionUpdate.retry_later(@simplefin_item, claim_id: claim_id, actor: Current.user)
+    end
+  end
+
+  def cancel_connection_update
+    recover_connection_request do |claim_id|
+      SimplefinItem::ConnectionUpdate.cancel(@simplefin_item, claim_id: claim_id, actor: Current.user)
+    end
   end
 
   def update
@@ -22,16 +36,12 @@ class SimplefinItemsController < ApplicationController
     return render_error(t(".errors.blank_token"), context: :edit) if setup_token.blank?
 
     begin
-      # Validate token shape early so the user gets immediate feedback.
-      claim_url = Base64.decode64(setup_token)
-      URI.parse(claim_url)
-
-      # Updating a SimpleFin connection can involve network retries/backoff and account import.
-      # Do it asynchronously so web requests aren't blocked by retry sleeps.
+      # Persist the authorized target and encrypted input before queue delivery.
+      # A delayed job cannot acquire a new credential baseline at execution time.
+      claim = SimplefinItem::ConnectionUpdate.prepare(@simplefin_item, setup_token: setup_token)
       SimplefinConnectionUpdateJob.perform_later(
         family_id: Current.family.id,
-        old_simplefin_item_id: @simplefin_item.id,
-        setup_token: setup_token
+        claim_id: claim.id
       )
 
       if turbo_frame_request?
@@ -46,12 +56,14 @@ class SimplefinItemsController < ApplicationController
       error_message = case e.error_type
       when :token_compromised
         t(".errors.token_compromised")
+      when :claim_uncertain
+        t("simplefin_items.connection_recovery.errors.new_token")
       else
         t(".errors.update_failed", message: e.message)
       end
       render_error(error_message, setup_token, context: :edit)
     rescue => e
-      Rails.logger.error("SimpleFin connection update error: #{e.message}")
+      Rails.logger.error("SimpleFin connection update error: #{e.class}")
       render_error(t(".errors.unexpected"), setup_token, context: :edit)
     end
   end
@@ -91,12 +103,14 @@ class SimplefinItemsController < ApplicationController
       error_message = case e.error_type
       when :token_compromised
         t(".errors.token_compromised")
+      when :claim_uncertain
+        t("simplefin_items.connection_recovery.errors.new_token")
       else
         t(".errors.create_failed", message: e.message)
       end
       render_error(error_message, setup_token)
     rescue => e
-      Rails.logger.error("SimpleFin connection error: #{e.message}")
+      Rails.logger.error("SimpleFin connection error: #{e.class}")
       render_error(t(".errors.unexpected"), setup_token)
     end
   end
@@ -512,6 +526,51 @@ class SimplefinItemsController < ApplicationController
 
   private
 
+    def recover_connection_request
+      claim_id = params.require(:claim_id)
+      raise ArgumentError unless claim_id.is_a?(String)
+      yield claim_id
+      redirect_to edit_simplefin_item_path(@simplefin_item), notice: t(".success"), status: :see_other
+    rescue Provider::AccountData::LegacyWriterFence::Busy, ProviderCredentialClaim::Busy
+      redirect_to edit_simplefin_item_path(@simplefin_item), alert: t("simplefin_items.connection_recovery.errors.busy"), status: :see_other
+    rescue SimplefinItem::ConnectionUpdate::Unauthorized,
+        Provider::AccountData::LegacyWriterFence::OwnershipChanged,
+        Provider::AccountData::LegacyWriterFence::InvalidSource,
+        ActiveRecord::RecordNotFound, ActionController::ParameterMissing, ArgumentError
+      redirect_to edit_simplefin_item_path(@simplefin_item), alert: t("simplefin_items.connection_recovery.errors.unavailable"), status: :see_other
+    rescue => error
+      capture_connection_recovery_error(error)
+      redirect_to edit_simplefin_item_path(@simplefin_item), alert: t("simplefin_items.connection_recovery.errors.unexpected"), status: :see_other
+    end
+
+    def load_connection_requests
+      @connection_requests = []
+      @connection_requests_next_cursor = nil
+      cursor = params[:connection_requests_before].presence
+      raise ArgumentError unless cursor.nil? || cursor.is_a?(String)
+      page = SimplefinItem::ConnectionUpdate.recovery_requests(@simplefin_item, actor: Current.user,
+        before: cursor)
+      @connection_requests = page.requests
+      @connection_requests_next_cursor = page.next_cursor
+    rescue Provider::AccountData::LegacyWriterFence::Busy, ProviderCredentialClaim::Busy
+      @connection_requests_error = t("simplefin_items.connection_recovery.errors.busy")
+    rescue SimplefinItem::ConnectionUpdate::Unauthorized,
+        Provider::AccountData::LegacyWriterFence::OwnershipChanged,
+        Provider::AccountData::LegacyWriterFence::InvalidSource,
+        ActiveRecord::RecordNotFound, ArgumentError
+      @connection_requests_error = t("simplefin_items.connection_recovery.errors.unavailable")
+    rescue => error
+      capture_connection_recovery_error(error)
+      @connection_requests_error = t("simplefin_items.connection_recovery.errors.unexpected")
+    end
+
+    def capture_connection_recovery_error(error)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "error",
+        message: "SimpleFIN connection recovery failed", source: self.class.name,
+        provider_key: "simplefin", family: Current.family,
+        metadata: { item_id: @simplefin_item.id, action: action_name, error_class: error.class.name })
+    end
+
     def set_simplefin_item
       @simplefin_item = Current.family.simplefin_items.find(params[:id])
     end
@@ -542,6 +601,7 @@ class SimplefinItemsController < ApplicationController
       if context == :edit
         # Keep the persisted record and assign the token for re-render
         @simplefin_item.setup_token = setup_token if @simplefin_item
+        load_connection_requests
       else
         @simplefin_item = Current.family.simplefin_items.build(setup_token: setup_token)
       end

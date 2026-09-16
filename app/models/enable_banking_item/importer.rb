@@ -1,4 +1,5 @@
 class EnableBankingItem::Importer
+  Access = EnableBankingItem::LegacyAccess
   # Maximum number of pagination requests to prevent infinite loops
   # Enable Banking typically returns ~100 transactions per page, so 100 pages = ~10,000 transactions
   MAX_PAGINATION_PAGES = 100
@@ -24,14 +25,39 @@ class EnableBankingItem::Importer
 
   attr_reader :enable_banking_item, :enable_banking_provider
 
-  def initialize(enable_banking_item, enable_banking_provider:)
+  def initialize(enable_banking_item, enable_banking_provider: nil)
     @enable_banking_item = enable_banking_item
     @enable_banking_provider = enable_banking_provider
+    @provided_provider = enable_banking_provider
+    @provided_context = Access.transport_context(enable_banking_item)
   end
 
   def import
+    Access.with_item(enable_banking_item) do |current|
+      Access.assert_transport!
+      Access.verify_transport!(current, @provided_context) if @provided_context
+      @enable_banking_item = current
+      @transport_context = Access.transport_context(current)
+      @enable_banking_provider = @provided_provider || current.enable_banking_provider
+      raise ArgumentError, "Enable Banking provider is not configured" unless enable_banking_provider
+      if enable_banking_provider.is_a?(Provider::EnableBanking)
+        expected = current.enable_banking_provider
+        unless enable_banking_provider.application_id == expected.application_id && enable_banking_provider.private_key.to_der == expected.private_key.to_der
+          raise Access::Fence::OwnershipChanged, "Enable Banking client credentials differ from the admitted application"
+        end
+      end
+      @session_error = @sync_error = nil
+      sources = Access.bounded_sources(current.enable_banking_accounts)
+      @source_contexts = sources.to_h { |source| [ source.id, Access.source_context(source) ] }
+      result = import_admitted
+      result.merge(admitted_transport_context: @transport_context,
+        admitted_source_contexts: @source_contexts.transform_values { |context| context.dup.freeze }.freeze)
+    end
+  end
+
+  private def import_admitted
     unless enable_banking_item.session_valid?
-      enable_banking_item.update!(status: :requires_update)
+      mark_requires_update!
       return { success: false, error: I18n.t("enable_banking_items.errors.session_invalid"), accounts_updated: 0, transactions_imported: 0 }
     end
 
@@ -43,7 +69,9 @@ class EnableBankingItem::Importer
 
     # Store raw payload
     begin
-      enable_banking_item.upsert_enable_banking_snapshot!(session_data)
+      enable_banking_item.upsert_enable_banking_snapshot!(session_data, expected_context: @transport_context)
+    rescue *Access::DENIAL_ERRORS
+      raise
     rescue => e
       Rails.logger.error "EnableBankingItem::Importer - Failed to store session snapshot: #{e.message}"
     end
@@ -85,6 +113,8 @@ class EnableBankingItem::Importer
             import_account(account_data)
             accounts_updated += 1
           end
+        rescue *Access::DENIAL_ERRORS
+          raise
         rescue => e
           accounts_failed += 1
           @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
@@ -102,7 +132,14 @@ class EnableBankingItem::Importer
 
     linked_accounts_query = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
 
-    linked_accounts_query.each do |enable_banking_account|
+    linked_ids = linked_accounts_query.pluck("enable_banking_accounts.id")
+    unless (linked_ids - @source_contexts.keys).empty?
+      raise Access::Fence::OwnershipChanged, "Enable Banking linked inventory changed during acquisition"
+    end
+    Access.bounded_sources(linked_accounts_query).each do |enable_banking_account|
+      unless @source_contexts.key?(enable_banking_account.id)
+        raise Access::Fence::OwnershipChanged, "Enable Banking linked inventory changed during acquisition"
+      end
       begin
         balances_failed += 1 unless fetch_and_update_balance(enable_banking_account)
 
@@ -113,6 +150,8 @@ class EnableBankingItem::Importer
           transactions_failed += 1
           @sync_error = promote_session_invalid(@sync_error, result[:error])
         end
+      rescue *Access::DENIAL_ERRORS
+        raise
       rescue => e
         transactions_failed += 1
         @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
@@ -135,6 +174,43 @@ class EnableBankingItem::Importer
 
   private
 
+    def verify_request!
+      Access.assert_transport!
+      @transport_context ||= @provided_context || Access.transport_context(enable_banking_item)
+      fresh = EnableBankingItem.find_by!(id: enable_banking_item.id, family_id: enable_banking_item.family_id)
+      Access.verify_transport!(fresh, @transport_context)
+      raise Access::Fence::OwnershipChanged, "Enable Banking source is scheduled for deletion" if fresh.scheduled_for_deletion?
+    rescue ActiveRecord::RecordNotFound
+      raise Access::Fence::OwnershipChanged, "Enable Banking request owner disappeared", cause: nil
+    end
+
+    def mark_requires_update!
+      Access.with_snapshot(enable_banking_item, expected_context: @transport_context || @provided_context) { |fresh| fresh.update!(status: :requires_update) }
+      enable_banking_item.reload
+    end
+
+    def with_source_read(source)
+      Access.with_account(source, operation: :ingest) do |fresh|
+        @source_contexts ||= {}
+        expected = @source_contexts.fetch(fresh.id) { Access.source_context(fresh) }
+        Access.verify_source!(fresh, expected)
+        @source_contexts[fresh.id] = expected
+        yield fresh
+      end
+    end
+
+    def write_source(source)
+      @source_contexts ||= { source.id => Access.source_context(source) }
+      unless @source_contexts.key?(source.id)
+        raise Access::Fence::OwnershipChanged, "Enable Banking source was not in the original acquisition inventory"
+      end
+      context = Access.with_source_snapshot(source, expected_context: @source_contexts.fetch(source.id), expected_item_context: @transport_context || @provided_context) do |fresh|
+        yield fresh
+        Access.source_context(fresh)
+      end
+      @source_contexts[source.id] = context
+    end
+
     # @param session_level [Boolean] true only for the top-level GET /sessions call.
     #   A session-level 401/404 means the consent is genuinely dead and the user
     #   must re-authorize. Per-account 401/404 (a stale account UID, a transient
@@ -149,7 +225,7 @@ class EnableBankingItem::Importer
 
       # Handle session expiration status update (session-level failures only)
       if session_level && provider_error && [ :unauthorized, :not_found ].include?(provider_error.error_type)
-        enable_banking_item.update!(status: :requires_update)
+        mark_requires_update!
         return I18n.t("enable_banking_items.errors.session_invalid")
       end
 
@@ -168,11 +244,16 @@ class EnableBankingItem::Importer
     end
 
     def fetch_session_data
+      verify_request!
       session_data = enable_banking_provider.get_session(session_id: enable_banking_item.session_id)
       # Keep the local expiry in sync with the authoritative value from the API so
       # session_valid? doesn't drift (premature "expired" or stale "still valid").
-      enable_banking_item.reconcile_session_expiry!(session_data)
+      context = enable_banking_item.reconcile_session_expiry!(session_data, expected_context: @transport_context)
+      # Only this admitted reconciliation may advance the captured expiry.
+      @transport_context = context if context
       session_data
+    rescue *Access::DENIAL_ERRORS
+      raise
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "EnableBankingItem::Importer - Enable Banking API error: #{e.message}"
       @session_error = handle_sync_error(e, session_level: true)
@@ -190,11 +271,15 @@ class EnableBankingItem::Importer
       enable_banking_account = find_enable_banking_account_by_hash(uid)
       return unless enable_banking_account
 
-      enable_banking_account.upsert_enable_banking_snapshot!(account_data)
-      enable_banking_account.save!
+      write_source(enable_banking_account) { |fresh| fresh.send(:persist_enable_banking_snapshot!, account_data) }
     end
 
     def fetch_and_update_balance(enable_banking_account)
+      with_source_read(enable_banking_account) { |fresh| fetch_and_update_balance_admitted(fresh) }
+    end
+
+    def fetch_and_update_balance_admitted(enable_banking_account)
+      verify_request!
       balance_data = enable_banking_provider.get_account_balances(
         account_id: enable_banking_account.api_account_id,
         psu_headers: enable_banking_item.build_psu_headers
@@ -232,12 +317,13 @@ class EnableBankingItem::Importer
       # DBIT indicates a negative balance (money owed/withdrawn).
       parsed_amount = -parsed_amount if indicator == "DBIT"
 
-      enable_banking_account.update!(
-        current_balance: parsed_amount,
-        currency: currency.presence || enable_banking_account.currency
-      )
+      write_source(enable_banking_account) do |fresh|
+        fresh.update!(current_balance: parsed_amount, currency: currency.presence || fresh.currency)
+      end
 
       true
+    rescue *Access::DENIAL_ERRORS
+      raise
     rescue Provider::EnableBanking::EnableBankingError => e
       @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
       Rails.logger.error "EnableBankingItem::Importer - Error fetching balance for account #{enable_banking_account.uid}: #{e.message}"
@@ -273,10 +359,7 @@ class EnableBankingItem::Importer
         return
       end
 
-      enable_banking_account.update_columns(
-        current_balance: nil,
-        updated_at: Time.current
-      )
+      write_source(enable_banking_account) { |fresh| fresh.update!(current_balance: nil) }
     end
 
     def capture_balance_sync_error(enable_banking_account, error)
@@ -401,6 +484,10 @@ class EnableBankingItem::Importer
     end
 
     def fetch_and_store_transactions(enable_banking_account)
+      with_source_read(enable_banking_account) { |fresh| fetch_and_store_transactions_admitted(fresh) }
+    end
+
+    def fetch_and_store_transactions_admitted(enable_banking_account)
       start_date = determine_sync_start_date(enable_banking_account)
       include_pending = include_pending?
 
@@ -536,15 +623,15 @@ class EnableBankingItem::Importer
         end
 
         if new_transactions.any? || removed_pending
-          enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
+          write_source(enable_banking_account) { |fresh| fresh.update!(raw_transactions_payload: existing_transactions + new_transactions) }
         end
       elsif removed_pending
-        enable_banking_account.upsert_enable_banking_transactions_snapshot!(
-          existing_transactions
-        )
+        write_source(enable_banking_account) { |fresh| fresh.update!(raw_transactions_payload: existing_transactions) }
       end
 
       { success: true, transactions_count: transactions_count }
+    rescue *Access::DENIAL_ERRORS
+      raise
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "EnableBankingItem::Importer - Error fetching transactions for account #{enable_banking_account.uid}: #{e.message}"
       { success: false, transactions_count: 0, error: handle_sync_error(e) }
@@ -622,6 +709,12 @@ class EnableBankingItem::Importer
     class PaginationTruncatedError < StandardError; end
 
     def fetch_paginated_transactions(enable_banking_account, start_date:, transaction_status:, psu_headers: {})
+      with_source_read(enable_banking_account) do |fresh|
+        fetch_paginated_transactions_admitted(fresh, start_date: start_date, transaction_status: transaction_status, psu_headers: psu_headers)
+      end
+    end
+
+    def fetch_paginated_transactions_admitted(enable_banking_account, start_date:, transaction_status:, psu_headers:)
       all_transactions = []
       continuation_key = nil
       previous_continuation_key = nil
@@ -636,6 +729,10 @@ class EnableBankingItem::Importer
         end
 
         begin
+          verify_request!
+          current_source = EnableBankingAccount.find_by(id: enable_banking_account.id, enable_banking_item_id: enable_banking_item.id)
+          raise Access::Fence::OwnershipChanged, "Enable Banking account disappeared during pagination" unless current_source
+          Access.verify_source!(current_source, @source_contexts.fetch(enable_banking_account.id))
           transactions_data = enable_banking_provider.get_account_transactions(
             account_id: enable_banking_account.api_account_id,
             date_from: start_date,
@@ -744,7 +841,9 @@ class EnableBankingItem::Importer
         eb_acc = find_enable_banking_account_by_hash(identification_hash)
         next unless eb_acc
         # Update the API account_id (UUID) if it has changed (UIDs are session-scoped)
-        eb_acc.update!(account_id: current_uid) if eb_acc.account_id != current_uid
+        if eb_acc.account_id != current_uid
+          write_source(eb_acc) { |fresh| fresh.update!(account_id: current_uid) }
+        end
       end
     end
 

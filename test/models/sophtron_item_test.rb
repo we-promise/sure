@@ -1,7 +1,9 @@
 require "test_helper"
+require_relative "../support/sophtron_fixture_fence_helper"
 
 class SophtronItemTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
+  include SophtronFixtureFenceHelper
 
   setup do
     @family = families(:dylan_family)
@@ -17,7 +19,8 @@ class SophtronItemTest < ActiveSupport::TestCase
     provider = mock
     provider.expects(:list_customers).never
 
-    assert_equal "cust-existing", @item.ensure_customer!(provider: provider)
+    SophtronItem.any_instance.expects(:sophtron_provider).never
+    assert_equal "cust-existing", @item.ensure_customer!
   end
 
   test "ensure_customer reuses matching listed customer" do
@@ -27,7 +30,8 @@ class SophtronItemTest < ActiveSupport::TestCase
     ])
     provider.expects(:create_customer).never
 
-    assert_equal "cust-1", @item.ensure_customer!(provider: provider)
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+    assert_equal "cust-1", @item.ensure_customer!
     assert_equal "cust-1", @item.customer_id
     assert_equal @item.generated_customer_name, @item.customer_name
   end
@@ -39,7 +43,8 @@ class SophtronItemTest < ActiveSupport::TestCase
       .with(unique_id: @item.generated_customer_unique_id, name: @item.generated_customer_name, source: "Sure")
       .returns({ CustomerID: "cust-new", CustomerName: @item.generated_customer_name })
 
-    assert_equal "cust-new", @item.ensure_customer!(provider: provider)
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+    assert_equal "cust-new", @item.ensure_customer!
     assert_equal "cust-new", @item.customer_id
   end
 
@@ -91,7 +96,7 @@ class SophtronItemTest < ActiveSupport::TestCase
       ],
       total: 1
     })
-    @item.stubs(:sophtron_provider).returns(provider)
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
 
     accounts = @item.fetch_remote_accounts(force: true)
 

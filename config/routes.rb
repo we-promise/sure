@@ -2,6 +2,12 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :provider_connections, only: %i[edit update] do
+    resource :disconnect, only: %i[show create], module: :provider_connections
+    resource :account_setup, only: %i[show create], module: :provider_connections do
+      post :refresh
+    end
+  end
   resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
@@ -807,6 +813,8 @@ Rails.application.routes.draw do
     end
 
     member do
+      post :retry_connection
+      post :cancel_connection_update
       post :sync
       post :balances
       get :setup_accounts

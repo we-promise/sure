@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../../support/akahu_fixture_fence_helper"
 
 class AkahuItem::SyncerTest < ActiveSupport::TestCase
+  include AkahuFixtureFenceHelper
   setup do
     @akahu_item = AkahuItem.create!(
       family: families(:dylan_family),
@@ -18,6 +20,8 @@ class AkahuItem::SyncerTest < ActiveSupport::TestCase
       success: false,
       error: "Failed to fetch accounts data"
     )
+    AkahuItem.any_instance.expects(:process_accounts).never
+    AkahuItem.any_instance.expects(:schedule_account_syncs).never
 
     sync = @akahu_item.syncs.create!
 
@@ -29,6 +33,38 @@ class AkahuItem::SyncerTest < ActiveSupport::TestCase
     assert_equal 1, sync.sync_stats["total_errors"]
     assert_equal "Akahu import: Failed to fetch accounts data", sync.sync_stats.dig("errors", 0, "message")
     assert_equal "sync_error", sync.sync_stats.dig("errors", 0, "category")
+  end
+
+  test "successful coordination forwards pending evidence and merges fresh setup and health statistics" do
+    source = @akahu_item.akahu_accounts.create!(name: "Checking", account_id: "account-1", currency: "NZD")
+    account = @akahu_item.family.accounts.create!(name: "Akahu checking", balance: 0, currency: "NZD", accountable: Depository.new)
+    AccountProvider.create!(account: account, provider: source)
+    receipt = Object.new.freeze
+    sync = @akahu_item.syncs.create!
+    AkahuItem.any_instance.expects(:import_latest_akahu_data).returns(
+      success: true, pending_inventories: { source.id => receipt }.freeze
+    )
+    AkahuItem.any_instance.expects(:process_accounts).with do |pending_inventories:|
+      assert_same receipt, pending_inventories.fetch(source.id)
+      true
+    end.returns([])
+    AkahuItem.any_instance.expects(:schedule_account_syncs).with do |parent_sync:, window_start_date:, window_end_date:|
+      assert_equal sync.id, parent_sync.id
+      assert_nil window_start_date
+      assert_nil window_end_date
+      true
+    end.returns([])
+
+    sync.perform
+
+    assert_predicate sync.reload, :completed?
+    assert_equal 1, sync.sync_stats.fetch("total_accounts")
+    assert_equal 1, sync.sync_stats.fetch("linked_accounts")
+    assert_equal 0, sync.sync_stats.fetch("unlinked_accounts")
+    assert_equal 0, sync.sync_stats.fetch("tx_seen")
+    assert_equal 0, sync.sync_stats.fetch("total_errors")
+    assert sync.sync_stats.fetch("import_started")
+    refute @akahu_item.reload.pending_account_setup?
   end
 
   test "unexpected sync error log excludes raw exception message" do

@@ -19,30 +19,41 @@ class AkahuItem::Syncer
   end
 
   def perform_sync(sync)
-    sync.update!(status_text: "Importing accounts from Akahu...") if sync.respond_to?(:status_text)
+    AkahuItem::LegacyAccess.with_item(akahu_item, operation: :ingest, sync: sync) do |current, current_sync|
+      unless current_sync
+        raise Provider::AccountData::LegacyWriterFence::InvalidSource, "Akahu coordination requires its original Sync"
+      end
+      AkahuItem::LegacyAccess.assert_transport!
+      self.class.new(current).send(:perform_sync_admitted, current_sync)
+    end
+  end
+
+  private def perform_sync_admitted(sync)
+    @item_context = AkahuItem::LegacyAccess.transport_context(akahu_item)
+    update_status(sync, "Importing accounts from Akahu...")
     import_result = akahu_item.import_latest_akahu_data
     raise_if_failed_result!(import_result, stage: "Akahu import")
 
-    sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
+    update_status(sync, "Checking account configuration...")
     collect_setup_stats(sync, provider_accounts: akahu_item.akahu_accounts)
 
     linked_accounts = akahu_item.akahu_accounts.joins(:account_provider)
     unlinked_accounts = akahu_item.akahu_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
 
-    if unlinked_accounts.any?
-      akahu_item.update!(pending_account_setup: true)
-      sync.update!(status_text: "#{unlinked_accounts.count} accounts need setup...") if sync.respond_to?(:status_text)
-    else
-      akahu_item.update!(pending_account_setup: false)
+    unlinked_count = unlinked_accounts.count
+    with_progress(sync) do |current_sync, current_item|
+      current_item.update!(pending_account_setup: unlinked_count.positive?)
+      current_sync.update!(status_text: "#{unlinked_count} accounts need setup...") if unlinked_count.positive?
     end
 
     if linked_accounts.any?
-      sync.update!(status_text: "Processing transactions...") if sync.respond_to?(:status_text)
+      update_status(sync, "Processing transactions...")
       mark_import_started(sync)
-      process_results = akahu_item.process_accounts
+      pending_inventories = import_result.is_a?(Hash) ? import_result.with_indifferent_access[:pending_inventories] || {} : {}
+      process_results = akahu_item.process_accounts(pending_inventories: pending_inventories)
       raise_if_failed_results!(process_results, stage: "Akahu account processing")
 
-      sync.update!(status_text: "Calculating balances...") if sync.respond_to?(:status_text)
+      update_status(sync, "Calculating balances...")
       schedule_results = akahu_item.schedule_account_syncs(
         parent_sync: sync,
         window_start_date: sync.window_start_date,
@@ -57,6 +68,8 @@ class AkahuItem::Syncer
     end
 
     collect_health_stats(sync, errors: nil)
+  rescue *AkahuItem::LegacyAccess::DENIAL_ERRORS
+    raise
   rescue SyncError => e
     collect_health_stats(sync, errors: e.sync_errors)
     raise
@@ -72,6 +85,31 @@ class AkahuItem::Syncer
   end
 
   private
+
+    def update_status(sync, message)
+      with_progress(sync) { |current, _item| current.update!(status_text: message) }
+    end
+
+    # The generic stats collector swallows write failures. Coordinator progress
+    # must instead preserve an ownership denial and retain the fresh Sync stats.
+    def merge_sync_stats(sync, new_stats)
+      with_progress(sync) do |current, _item|
+        current.update!(sync_stats: (current.sync_stats || {}).merge(new_stats))
+      end
+    end
+
+    def with_progress(sync)
+      AkahuItem::LegacyAccess.with_snapshot(akahu_item, expected_context: @item_context) do |fresh|
+        current = Provider::AccountData::LegacyWriterFence.scoped_sync!(akahu_item, sync)
+        current.lock!("FOR UPDATE NOWAIT")
+        Provider::AccountData::LegacyWriterFence.scoped_sync!(akahu_item, current)
+        yield current, fresh
+      end
+    rescue ActiveRecord::RecordNotFound
+      raise Provider::AccountData::LegacyWriterFence::OwnershipChanged, "Akahu sync owner changed before progress publication", cause: nil
+    rescue ActiveRecord::LockWaitTimeout
+      raise Provider::AccountData::LegacyWriterFence::Busy, "Akahu sync progress is being changed; retry publication", cause: nil
+    end
 
     def raise_if_failed_result!(result, stage:)
       return unless failed_result?(result)

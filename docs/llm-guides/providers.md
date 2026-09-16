@@ -1,5 +1,20 @@
 # Provider integration guidance
 
+For bank/account ingestion architecture and the replacement generator, read the
+[shared bank-data design](../architecture/bank-data-providers.md), the
+[complete migration matrix](../architecture/bank-data-provider-migration-matrix.md)
+and the [generator guide](../api/rails_provider_generator.md). The new contracts
+and generator are available; the proposed shared tables and runtime have not yet
+replaced existing providers. Keep existing provider behavior intact during rollout.
+
+For direct-source versus aggregator topology and proposed UI-managed transaction
+cleanup, read [account data sources and import rules](../architecture/account-data-and-import-rules.md).
+The shared rules hook is proposed, not implemented in the current rule executors.
+For overlapping provider coverage and PDF statement ingestion, read
+[source authority and shared ingestion](../architecture/multi-source-ingestion.md).
+Check [implementation status](../architecture/provider-implementation-status.md)
+before assuming a provider or shared runtime feature has been activated or verified.
+
 Read [architecture](architecture.md) for provider concepts, runtime registry
 selection and `Provided` concerns. For a new securities price provider, follow
 [the complete workflow](adding-a-securities-provider.md), including response

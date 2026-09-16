@@ -46,37 +46,45 @@ class UpEntry::Processor
   # Import the transaction into the linked Sure account via the import adapter.
   # Returns nil when the account isn't linked; re-raises on validation/save errors.
   def process
-    unless account.present?
-      Rails.logger.warn "UpEntry::Processor - No linked account for up_account #{up_account.id}, skipping transaction #{external_id}"
-      return nil
+    UpItem::LegacyWriter.with_account(up_account) do |current|
+      self.class.new(up_transaction, up_account: current, category_matcher: @category_matcher).send(:process_admitted)
     end
-
-    import_adapter.import_transaction(
-      external_id: external_id,
-      amount: amount,
-      currency: currency,
-      date: date,
-      name: name,
-      source: "up",
-      category_id: matched_category_id,
-      kind: kind,
-      merchant: merchant,
-      notes: notes,
-      extra: extra_metadata
-    )
-  rescue ArgumentError => e
-    Rails.logger.error "UpEntry::Processor - Validation error for transaction #{external_id}: #{e.message}"
-    raise
-  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-    Rails.logger.error "UpEntry::Processor - Failed to save transaction #{external_id}: #{e.message}"
-    raise StandardError.new("Failed to import transaction: #{e.message}")
-  rescue => e
-    Rails.logger.error "UpEntry::Processor - Unexpected error processing transaction #{external_id}: #{e.class} - #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-    raise StandardError.new("Unexpected error importing transaction: #{e.message}")
   end
 
   private
+
+    def process_admitted
+      unless account.present?
+        Rails.logger.warn "UpEntry::Processor - No linked account for up_account #{up_account.id}, skipping transaction #{external_id}"
+        return nil
+      end
+
+      import_adapter.import_transaction(
+        external_id: external_id,
+        amount: amount,
+        currency: currency,
+        date: date,
+        name: name,
+        source: "up",
+        category_id: matched_category_id,
+        kind: kind,
+        merchant: merchant,
+        notes: notes,
+        extra: extra_metadata
+      )
+    rescue Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::Busy
+      raise
+    rescue ArgumentError => e
+      Rails.logger.error "UpEntry::Processor - Validation error for transaction #{external_id}: #{e.message}"
+      raise
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+      Rails.logger.error "UpEntry::Processor - Failed to save transaction #{external_id}: #{e.message}"
+      raise StandardError.new("Failed to import transaction: #{e.message}")
+    rescue => e
+      Rails.logger.error "UpEntry::Processor - Unexpected error processing transaction #{external_id}: #{e.class} - #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
+      raise StandardError.new("Unexpected error importing transaction: #{e.message}")
+    end
 
     attr_reader :up_transaction, :up_account
 
@@ -114,7 +122,8 @@ class UpEntry::Processor
       return nil unless @category_matcher
       return nil unless account&.enable_category_matcher?
 
-      @category_matcher.match(data[:category_id])&.id
+      category_id = @category_matcher.match(data[:category_id])&.id
+      account.family.categories.find_by(id: category_id)&.id if category_id
     end
 
     # The id of the other account in an internal money movement, if any (see

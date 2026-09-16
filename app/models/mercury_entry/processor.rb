@@ -14,48 +14,64 @@ class MercuryEntry::Processor
   end
 
   def process
-    # Validate that we have a linked account before processing
-    unless account.present?
-      Rails.logger.warn "MercuryEntry::Processor - No linked account for mercury_account #{mercury_account.id}, skipping transaction #{external_id}"
-      return nil
-    end
-
-    # Skip failed transactions
-    if data[:status] == "failed"
-      Rails.logger.debug "MercuryEntry::Processor - Skipping failed transaction #{external_id}"
-      return nil
-    end
-
-    # Wrap import in error handling to catch validation and save errors
-    begin
-      import_adapter.import_transaction(
-        external_id: external_id,
-        amount: amount,
-        currency: currency,
-        date: date,
-        name: name,
-        source: "mercury",
-        merchant: merchant,
-        notes: notes,
-        extra: extra
-      )
-    rescue ArgumentError => e
-      # Re-raise validation errors (missing required fields, invalid data)
-      Rails.logger.error "MercuryEntry::Processor - Validation error for transaction #{external_id}: #{e.message}"
-      raise
-    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
-      # Handle database save errors
-      Rails.logger.error "MercuryEntry::Processor - Failed to save transaction #{external_id}: #{e.message}"
-      raise StandardError.new("Failed to import transaction: #{e.message}")
-    rescue => e
-      # Catch unexpected errors with full context
-      Rails.logger.error "MercuryEntry::Processor - Unexpected error processing transaction #{external_id}: #{e.class} - #{e.message}"
-      Rails.logger.error e.backtrace.join("\n")
-      raise StandardError.new("Unexpected error importing transaction: #{e.message}")
+    MercuryItem::LegacyAccess.with_account(mercury_account) do |current|
+      expected = current.current_account
+      next unless expected
+      MercuryItem::LegacyAccess.with_publication(current, expected_account: expected) do |fresh, _financial|
+        self.class.new(mercury_transaction, mercury_account: fresh).send(:process_admitted)
+      end
     end
   end
 
   private
+
+    def process_admitted
+      if data[:accountId].present? && data[:accountId].to_s != mercury_account.account_id
+        raise MercuryItem::LegacyAccess::Fence::OwnershipChanged, "Mercury transaction belongs to another source account"
+      end
+      # Validate that we have a linked account before processing
+      unless account.present?
+        Rails.logger.warn "MercuryEntry::Processor - No linked account for mercury_account #{mercury_account.id}, skipping transaction #{external_id}"
+        return nil
+      end
+
+      # Skip failed transactions
+      if data[:status] == "failed"
+        Rails.logger.debug "MercuryEntry::Processor - Skipping failed transaction #{external_id}"
+        return nil
+      end
+
+      # Wrap import in error handling to catch validation and save errors
+      begin
+        import_adapter.import_transaction(
+          external_id: external_id,
+          amount: amount,
+          currency: currency,
+          date: date,
+          name: name,
+          source: "mercury",
+          merchant: merchant,
+          notes: notes,
+          extra: extra
+        )
+      rescue *MercuryItem::LegacyAccess::DENIAL_ERRORS
+        raise
+      rescue ArgumentError => e
+        # Re-raise validation errors (missing required fields, invalid data)
+        Rails.logger.error "MercuryEntry::Processor - Validation error for transaction #{external_id}: #{e.message}"
+        raise
+      rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+        # Handle database save errors
+        Rails.logger.error "MercuryEntry::Processor - Failed to save transaction #{external_id}: #{e.message}"
+        raise StandardError.new("Failed to import transaction: #{e.message}")
+      rescue => e
+        # Catch unexpected errors with full context
+        Rails.logger.error "MercuryEntry::Processor - Unexpected error processing transaction #{external_id}: #{e.class} - #{e.message}"
+        Rails.logger.error e.backtrace.join("\n")
+        raise StandardError.new("Unexpected error importing transaction: #{e.message}")
+      end
+    end
+
     attr_reader :mercury_transaction, :mercury_account
 
     def import_adapter

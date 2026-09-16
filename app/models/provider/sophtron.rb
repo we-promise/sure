@@ -284,7 +284,62 @@ class Provider::Sophtron < Provider
     get_job_information(job_id)
   end
 
+  # These read-only RPCs return one complete provider collection. There is no
+  # invented page number/limit contract; date windows bound transaction requests.
+  def get_ingestion_accounts(user_institution_id, cursor: nil)
+    unless cursor.nil? && user_institution_id.is_a?(String) && user_institution_id.present?
+      raise Error.new("Invalid institution inventory request", :invalid_response)
+    end
+    ingestion_collection("/UserInstitution/GetUserInstitutionAccounts",
+      { UserInstitutionID: user_institution_id }, keys: %i[accounts Accounts])
+  end
+
+  def get_ingestion_transactions(account_id, start_date:, end_date:, cursor: nil)
+    unless cursor.nil? && account_id.is_a?(String) && account_id.present? &&
+        start_date.instance_of?(Date) && end_date.instance_of?(Date) && start_date <= end_date
+      raise Error.new("Invalid transaction window", :invalid_response)
+    end
+    ingestion_collection("/Transaction/GetTransactionsByTransactionDate",
+      { AccountID: account_id, StartDate: start_date.iso8601, EndDate: end_date.iso8601 }, keys: %i[transactions Transactions])
+  end
+
   private
+
+    def ingestion_collection(path, body, keys:)
+      uri = URI.parse(base_url)
+      unless uri.is_a?(URI::HTTPS) && uri.host.present? && uri.userinfo.nil? && uri.query.nil? && uri.fragment.nil?
+        raise Error.new("Invalid Sophtron ingestion endpoint", :configuration_error)
+      end
+      response = self.class.post("#{base_url}#{path}", headers: auth_headers(method: :post, api_path: path), body: JSON.generate(body))
+      unless [ 200, 201 ].include?(response.code.to_i)
+        type = { 400 => :bad_request, 401 => :unauthorized, 403 => :access_forbidden, 404 => :not_found,
+          429 => :rate_limited }.fetch(response.code.to_i, :fetch_failed)
+        raise Error.new("Sophtron ingestion request failed (#{type})", type), cause: nil
+      end
+      parsed = JSON.parse(response.body, symbolize_names: true, decimal_class: BigDecimal)
+      if parsed.is_a?(Array)
+        rows = parsed
+      elsif parsed.is_a?(Hash)
+        collections = keys.select { |key| parsed.key?(key) }
+        raise Error.new("Invalid Sophtron collection", :invalid_response) unless collections.one?
+        rows = parsed.fetch(collections.first)
+      end
+      unless rows.is_a?(Array) && rows.all? { |row| row.is_a?(Hash) }
+        raise Error.new("Invalid Sophtron collection", :invalid_response)
+      end
+      if parsed.is_a?(Hash)
+        partial = %i[next_cursor NextCursor next_page NextPage ContinuationToken continuation_token error Error].any? { |key| parsed[key].present? }
+        counts = %i[total Total total_count TotalCount].filter_map { |key| parsed[key] if parsed.key?(key) }
+        if partial || counts.any? { |count| !count.is_a?(Integer) || count != rows.size }
+          raise Error.new("Incomplete Sophtron collection", :invalid_response)
+        end
+      end
+      { items: rows, next_cursor: nil, evidence: parsed }
+    rescue JSON::ParserError, URI::InvalidURIError, TypeError
+      raise Error.new("Invalid Sophtron ingestion response", :invalid_response), cause: nil
+    rescue SocketError, Net::OpenTimeout, Net::ReadTimeout
+      raise Error.new("Sophtron ingestion network request failed", :request_failed), cause: nil
+    end
 
     def default_error_transformer(error)
       return error if error.is_a?(Error)

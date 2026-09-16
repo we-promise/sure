@@ -1,107 +1,140 @@
 class SimplefinAccount::Investments::HoldingsProcessor
-  def initialize(simplefin_account)
+  def initialize(simplefin_account, request: nil)
     @simplefin_account = simplefin_account
+    @request = request
   end
 
   def process
-    return if holdings_data.empty?
-    return unless [ "Investment", "Crypto" ].include?(account&.accountable_type)
-
-    holdings_data.each do |simplefin_holding|
-      begin
-        symbol = simplefin_holding["symbol"].presence
-        holding_id = simplefin_holding["id"]
-        description = simplefin_holding["description"].to_s.strip
-
-        Rails.logger.debug({ event: "simplefin.holding.start", sfa_id: simplefin_account.id, account_id: account&.id, id: holding_id, symbol: symbol, raw: simplefin_holding }.to_json)
-
-        unless holding_id.present?
-          Rails.logger.debug({ event: "simplefin.holding.skip", reason: "missing_id", id: holding_id, symbol: symbol }.to_json)
-          next
-        end
-
-        # If symbol is missing but we have a description, create a synthetic ticker
-        # This allows tracking holdings like 401k funds that don't have standard symbols
-        # Append a hash suffix to ensure uniqueness for similar descriptions
-        if symbol.blank? && description.present?
-          normalized = description.gsub(/[^a-zA-Z0-9]/, "_").upcase.truncate(24, omission: "")
-          hash_suffix = Digest::MD5.hexdigest(description)[0..4].upcase
-          symbol = "CUSTOM:#{normalized}_#{hash_suffix}"
-          Rails.logger.info("SimpleFin: using synthetic ticker #{symbol} for holding #{holding_id} (#{description})")
-        end
-
-        unless symbol.present?
-          Rails.logger.debug({ event: "simplefin.holding.skip", reason: "no_symbol_or_description", id: holding_id }.to_json)
-          next
-        end
-
-        security = resolve_security(symbol, simplefin_holding["description"])
-        unless security.present?
-          Rails.logger.debug({ event: "simplefin.holding.skip", reason: "unresolved_security", id: holding_id, symbol: symbol }.to_json)
-          next
-        end
-
-        # Parse provider data with robust fallbacks across SimpleFin sources
-        # NOTE: "value" is intentionally excluded from the market_value fallback chain
-        # because some brokerages (e.g. Vanguard, Fidelity) use "value" to mean cost basis,
-        # which would cause the system to display average cost as current price. (GH #1182)
-        qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
-        market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
-        raw_cost_basis, cost_basis_source_key = cost_basis_from(simplefin_holding)
-        cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key, institution_reports_total_basis?)
-
-        # Derive price from market_value when possible; otherwise fall back to any price field
-        fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
-        price = if qty > 0 && market_value > 0
-          market_value / qty
-        else
-          fallback_price || 0
-        end
-
-        # Compute an amount we can persist (some providers omit market_value)
-        computed_amount = if market_value > 0
-          market_value
-        elsif qty > 0 && price > 0
-          qty * price
-        else
-          0
-        end
-
-        # SimpleFIN holdings represent a current snapshot, not historical positions.
-        # Always use today's date regardless of the `created` timestamp (which is when
-        # the holding was first seen by SimpleFIN, not when we observed it).
-        holding_date = Date.current
-
-        # Skip zero positions with no value to avoid invisible rows
-        next if qty.to_d.zero? && computed_amount.to_d.zero?
-
-        saved = import_adapter.import_holding(
-          security: security,
-          quantity: qty,
-          amount: computed_amount,
-          currency: simplefin_holding["currency"].presence || "USD",
-          date: holding_date,
-          price: price,
-          cost_basis: cost_basis,
-          external_id: "simplefin_#{holding_id}",
-          account_provider_id: simplefin_account.account_provider&.id,
-          source: "simplefin",
-          delete_future_holdings: false  # SimpleFin tracks each holding uniquely
-        )
-
-        Rails.logger.debug({ event: "simplefin.holding.saved", account_id: account&.id, holding_id: saved.id, security_id: saved.security_id, qty: saved.qty.to_s, amount: saved.amount.to_s, currency: saved.currency, date: saved.date, external_id: saved.external_id }.to_json)
-      rescue => e
-        ctx = (defined?(symbol) && symbol.present?) ? " #{symbol}" : ""
-        Rails.logger.error "Error processing SimpleFin holding#{ctx}: #{e.message}"
-      end
+    SimplefinItem::LegacyAccess.with_account(simplefin_account) do |current|
+      self.class.new(current, request: @request).send(:process_admitted)
     end
   end
 
   private
+
+    def process_admitted
+      if @request
+        selected = account
+        raise SimplefinItem::LegacyAccess::Fence::OwnershipChanged, "SimpleFIN holdings request lost its account" unless selected
+        @simplefin_account = SimplefinItem::LegacyAccess.with_publication(simplefin_account, expected_account: selected) do |fresh, financial|
+          @request.verify!(fresh, financial)
+          fresh
+        end
+      end
+      return if holdings_data.empty?
+      selected_account = account
+      return unless [ "Investment", "Crypto" ].include?(selected_account&.accountable_type)
+
+      # Security resolution may perform HTTP. Retain the originally selected
+      # owner and link across that work without holding financial row locks.
+      expected_account = Account.instantiate(selected_account.attributes.deep_dup)
+      expected_selection = publication_selection(simplefin_account, expected_account)
+
+      holdings_data.each do |simplefin_holding|
+        begin
+          symbol = simplefin_holding["symbol"].presence
+          holding_id = simplefin_holding["id"]
+          description = simplefin_holding["description"].to_s.strip
+
+          Rails.logger.debug({ event: "simplefin.holding.start", sfa_id: simplefin_account.id, account_id: account&.id, id: holding_id, symbol: symbol, raw: simplefin_holding }.to_json)
+
+          unless holding_id.present?
+            Rails.logger.debug({ event: "simplefin.holding.skip", reason: "missing_id", id: holding_id, symbol: symbol }.to_json)
+            next
+          end
+
+          # If symbol is missing but we have a description, create a synthetic ticker
+          # This allows tracking holdings like 401k funds that don't have standard symbols
+          # Append a hash suffix to ensure uniqueness for similar descriptions
+          if symbol.blank? && description.present?
+            normalized = description.gsub(/[^a-zA-Z0-9]/, "_").upcase.truncate(24, omission: "")
+            hash_suffix = Digest::MD5.hexdigest(description)[0..4].upcase
+            symbol = "CUSTOM:#{normalized}_#{hash_suffix}"
+            Rails.logger.info("SimpleFin: using synthetic ticker #{symbol} for holding #{holding_id} (#{description})")
+          end
+
+          unless symbol.present?
+            Rails.logger.debug({ event: "simplefin.holding.skip", reason: "no_symbol_or_description", id: holding_id }.to_json)
+            next
+          end
+
+          security = resolve_security(symbol, simplefin_holding["description"])
+          unless security.present?
+            Rails.logger.debug({ event: "simplefin.holding.skip", reason: "unresolved_security", id: holding_id, symbol: symbol }.to_json)
+            next
+          end
+
+          # Parse provider data with robust fallbacks across SimpleFin sources
+          # NOTE: "value" is intentionally excluded from the market_value fallback chain
+          # because some brokerages (e.g. Vanguard, Fidelity) use "value" to mean cost basis,
+          # which would cause the system to display average cost as current price. (GH #1182)
+          qty = parse_decimal(any_of(simplefin_holding, %w[shares quantity qty units]))
+          market_value = parse_decimal(any_of(simplefin_holding, %w[market_value current_value]))
+          raw_cost_basis, cost_basis_source_key = cost_basis_from(simplefin_holding)
+          cost_basis = normalize_cost_basis(raw_cost_basis, qty, cost_basis_source_key, institution_reports_total_basis?)
+
+          # Derive price from market_value when possible; otherwise fall back to any price field
+          fallback_price = parse_decimal(any_of(simplefin_holding, %w[purchase_price price unit_price average_cost avg_cost]))
+          price = if qty > 0 && market_value > 0
+            market_value / qty
+          else
+            fallback_price || 0
+          end
+
+          # Compute an amount we can persist (some providers omit market_value)
+          computed_amount = if market_value > 0
+            market_value
+          elsif qty > 0 && price > 0
+            qty * price
+          else
+            0
+          end
+
+          # SimpleFIN holdings represent a current snapshot, not historical positions.
+          # Always use today's date regardless of the `created` timestamp (which is when
+          # the holding was first seen by SimpleFIN, not when we observed it).
+          holding_date = Date.current
+
+          # Skip zero positions with no value to avoid invisible rows
+          next if qty.to_d.zero? && computed_amount.to_d.zero?
+
+          saved = SimplefinItem::LegacyAccess.with_publication(simplefin_account, expected_account: expected_account) do |fresh, financial|
+            @request&.verify!(fresh, financial)
+            unless publication_selection(fresh, financial) == expected_selection
+              raise SimplefinItem::LegacyAccess::Fence::OwnershipChanged, "SimpleFIN holding source selection changed during security resolution"
+            end
+            Account::ProviderImportAdapter.new(financial).import_holding(
+              security: security,
+              quantity: qty,
+              amount: computed_amount,
+              currency: simplefin_holding["currency"].presence || "USD",
+              date: holding_date,
+              price: price,
+              cost_basis: cost_basis,
+              external_id: "simplefin_#{holding_id}",
+              account_provider_id: fresh.account_provider&.id,
+              source: "simplefin",
+              delete_future_holdings: false  # SimpleFin tracks each holding uniquely
+            )
+          end
+
+          Rails.logger.debug({ event: "simplefin.holding.saved", account_id: account&.id, holding_id: saved.id, security_id: saved.security_id, qty: saved.qty.to_s, amount: saved.amount.to_s, currency: saved.currency, date: saved.date, external_id: saved.external_id }.to_json)
+        rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+          raise
+        rescue => e
+          ctx = (defined?(symbol) && symbol.present?) ? " #{symbol}" : ""
+          Rails.logger.error "Error processing SimpleFin holding#{ctx}: #{e.message}"
+        end
+      end
+    end
+
     attr_reader :simplefin_account
 
-    def import_adapter
-      @import_adapter ||= Account::ProviderImportAdapter.new(account)
+    def publication_selection(source, financial)
+      {
+        link: source.account_provider&.attributes&.slice(*SimplefinItem::LegacyAccess::LINK_COLUMNS.map(&:to_s)),
+        direct_source_id: financial.simplefin_account_id
+      }
     end
 
     def account
@@ -192,6 +225,8 @@ class SimplefinAccount::Investments::HoldingsProcessor
           raise "Custom ticker - skipping resolver"
         end
         Security::Resolver.new(sym).resolve
+      rescue *SimplefinItem::LegacyAccess::DENIAL_ERRORS
+        raise
       rescue => e
         # If provider search fails or any unexpected error occurs, fall back to an offline security
         Rails.logger.warn "SimpleFin: resolver failed for symbol=#{sym}: #{e.class} - #{e.message}; falling back to offline security" unless is_custom

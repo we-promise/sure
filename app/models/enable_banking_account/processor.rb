@@ -4,11 +4,21 @@ class EnableBankingAccount::Processor
 
   attr_reader :enable_banking_account
 
-  def initialize(enable_banking_account)
+  def initialize(enable_banking_account, expected_context: nil, expected_item_context: nil)
     @enable_banking_account = enable_banking_account
+    @expected_context = expected_context || EnableBankingItem::LegacyAccess.source_context(enable_banking_account)
+    @expected_item_context = expected_item_context || EnableBankingItem::LegacyAccess.transport_context(enable_banking_account.enable_banking_item)
   end
 
   def process
+    EnableBankingItem::LegacyAccess.with_account(enable_banking_account) do |current|
+      EnableBankingItem::LegacyAccess.verify_source!(current, @expected_context)
+      EnableBankingItem::LegacyAccess.verify_transport!(current.enable_banking_item, @expected_item_context)
+      self.class.new(current, expected_context: @expected_context, expected_item_context: @expected_item_context).send(:process_admitted)
+    end
+  end
+
+  private def process_admitted
     unless enable_banking_account.current_account.present?
       Rails.logger.info "EnableBankingAccount::Processor - No linked account for enable_banking_account #{enable_banking_account.id}, skipping processing"
       return
@@ -17,7 +27,17 @@ class EnableBankingAccount::Processor
     Rails.logger.info "EnableBankingAccount::Processor - Processing enable_banking_account #{enable_banking_account.id} (uid #{enable_banking_account.uid})"
 
     begin
-      process_account!
+      transaction_processor = EnableBankingItem::LegacyAccess.with_publication(enable_banking_account,
+        expected_account: enable_banking_account.current_account, resource: "balances") do |fresh, _financial|
+        EnableBankingItem::LegacyAccess.verify_source!(fresh, @expected_context)
+        EnableBankingItem::LegacyAccess.verify_transport!(fresh.enable_banking_item, @expected_item_context)
+        self.class.new(fresh).send(:process_account!)
+        # Pin the resulting currency/link/cache while the original owner is still
+        # locked; later transaction publication must not adopt another update.
+        EnableBankingAccount::Transactions::Processor.new(fresh, expected_item_context: @expected_item_context)
+      end
+    rescue *EnableBankingItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue StandardError => e
       Rails.logger.error "EnableBankingAccount::Processor - Failed to process account #{enable_banking_account.id}: #{e.message}"
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
@@ -25,7 +45,7 @@ class EnableBankingAccount::Processor
       raise
     end
 
-    process_transactions
+    transaction_processor.process
   end
 
   private
@@ -65,6 +85,7 @@ class EnableBankingAccount::Processor
         balance = balance.abs
 
         if account.accountable_type == "CreditCard"
+          account.accountable&.lock!("FOR UPDATE NOWAIT")
           balance, available_credit, skip_balance_update = interpret_credit_card_balance(account, balance)
         end
       end
@@ -161,12 +182,6 @@ class EnableBankingAccount::Processor
           enable_banking_item_id: enable_banking_account.enable_banking_item_id
         }
       )
-    end
-
-    def process_transactions
-      EnableBankingAccount::Transactions::Processor.new(enable_banking_account).process
-    rescue => e
-      report_exception(e, "transactions")
     end
 
     def report_exception(error, context)

@@ -1,12 +1,18 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../../support/mercury_fixture_fence_helper"
 
 class MercuryItem::ImporterTest < ActiveSupport::TestCase
+  include MercuryFixtureFenceHelper
   setup do
     @family = families(:dylan_family)
     @item   = MercuryItem.create!(family: @family, name: "Mercury", token: "tok")
     @provider = mock
+    # These transaction-scoped mapping examples use only the fake transport.
+    # The real-session suite asserts the public transport boundary separately.
+    MercuryItem::LegacyAccess.stubs(:assert_transport!).returns(true)
+    Provider::Mercury.stubs(:new).returns(@provider)
     @provider.stubs(:get_accounts).returns({ accounts: [] })
     @provider.stubs(:get_account_transactions).returns({ transactions: [] })
   end
@@ -94,7 +100,7 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
     _account, mercury_account = create_linked_account("acc_resync",
       raw_transactions: [ tx_payload("existing_tx") ])
 
-    @item.stubs(:last_synced_at).returns(ten_days_ago)
+    @item.syncs.create!(status: "completed", completed_at: ten_days_ago)
     @provider.stubs(:get_accounts).returns({ accounts: [ account_payload("acc_resync", "Checking") ] })
 
     captured_start = nil
@@ -126,7 +132,7 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
   private
 
     def run_import
-      MercuryItem::Importer.new(@item, mercury_provider: @provider).import
+      MercuryItem::Importer.new(@item).import
     end
 
     def create_linked_account(account_id, raw_transactions: [])

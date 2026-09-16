@@ -191,6 +191,137 @@ class Provider::UpTest < ActiveSupport::TestCase
     end
   end
 
+  test "bounded account reads return one page without following the continuation" do
+    next_url = "https://api.up.com.au/api/v1/accounts?page%5Bafter%5D=second"
+    response = FakeResponse.new(code: 200, message: "OK", body: {
+      data: [ { id: "acc_123", type: "accounts", attributes: { displayName: "Spending" } } ],
+      links: { next: next_url }
+    }.to_json)
+    requests = []
+
+    Provider::Up.stub(:get, ->(url, headers:, query: nil) {
+      requests << { url: url, headers: headers, query: query }
+      response
+    }) do
+      page = Provider::Up.new("up-access-token").get_accounts_page
+
+      assert_equal [ "acc_123" ], page[:items].map { |item| item[:id] }
+      assert_equal "Spending", page[:items].first[:displayName]
+      assert_equal next_url, page[:next_cursor]
+    end
+
+    assert_equal 1, requests.size
+    assert_equal "https://api.up.com.au/api/v1/accounts", requests.first[:url]
+    assert_equal "Bearer up-access-token", requests.first[:headers]["Authorization"]
+  end
+
+  test "bounded transaction reads encode account IDs apply date filters and retain relationship hints" do
+    response = FakeResponse.new(code: 200, message: "OK", body: {
+      data: [ {
+        id: "tx_123", type: "transactions", attributes: { status: "HELD" },
+        relationships: {
+          account: { data: { id: "account/with space" } }, category: { data: { id: "groceries" } },
+          transferAccount: { data: { id: "acc_saver" } }
+        }
+      } ], links: { next: nil }
+    }.to_json)
+    requests = []
+
+    Provider::Up.stub(:get, ->(url, headers:, query: nil) {
+      requests << { url: url, query: query }
+      response
+    }) do
+      page = Provider::Up.new("up-access-token").get_account_transactions_page(
+        account_id: "account/with space", since: Date.new(2026, 1, 1), until_date: Date.new(2026, 1, 31)
+      )
+
+      assert_nil page[:next_cursor]
+      assert_equal "HELD", page[:items].first[:status]
+      assert_equal "account/with space", page[:items].first[:account_id]
+      assert_equal "groceries", page[:items].first[:category_id]
+      assert_equal "acc_saver", page[:items].first[:transfer_account_id]
+    end
+
+    assert_equal 1, requests.size
+    assert_equal "https://api.up.com.au/api/v1/accounts/account%2Fwith%20space/transactions", requests.first[:url]
+    assert_equal({ "page[size]" => 100, "filter[since]" => "2026-01-01T00:00:00Z", "filter[until]" => "2026-01-31T00:00:00Z" }, requests.first[:query])
+  end
+
+  test "bounded continuation requests use only the opaque cursor URL" do
+    cursor = "https://api.up.com.au/api/v1/accounts/acc_123/transactions?page%5Bafter%5D=second"
+    response = FakeResponse.new(code: 200, message: "OK", body: { data: [], links: { next: nil } }.to_json)
+    requests = []
+
+    Provider::Up.stub(:get, ->(url, headers:, query: nil) {
+      requests << { url: url, query: query }
+      response
+    }) do
+      page = Provider::Up.new("up-access-token").get_account_transactions_page(
+        account_id: "acc_123", cursor: cursor, since: Date.new(2026, 1, 1), until_date: Date.new(2026, 1, 31)
+      )
+      assert_empty page[:items]
+      assert_nil page[:next_cursor]
+    end
+
+    assert_equal [ { url: cursor, query: nil } ], requests
+  end
+
+  test "bounded reads reject malformed pagination envelopes before returning success" do
+    malformed_payloads = [
+      {}, { data: [], links: {} }, { data: nil, links: { next: nil } },
+      { data: [], links: { next: false } }, { data: [], links: { next: "" } },
+      { data: [], links: { next: 123 } }, { data: [ nil ], links: { next: nil } },
+      { data: [ { type: "transactions", attributes: {} } ], links: { next: nil } },
+      { data: [ { type: "accounts", attributes: nil } ], links: { next: nil } }
+    ]
+
+    malformed_payloads.each do |payload|
+      response = FakeResponse.new(code: 200, message: "OK", body: payload.to_json)
+      Provider::Up.stub(:get, ->(_url, headers:, query: nil) { response }) do
+        error = assert_raises(Provider::Up::UpError) { Provider::Up.new("up-access-token").get_accounts_page }
+        assert_equal :invalid_response, error.error_type
+      end
+    end
+  end
+
+  test "bounded reads reject foreign continuations before persisting their cursor" do
+    [ "https://evil.example.test/accounts", "http://api.up.com.au/api/v1/accounts" ].each do |cursor|
+      response = FakeResponse.new(code: 200, message: "OK", body: { data: [], links: { next: cursor } }.to_json)
+      requested_urls = []
+      Provider::Up.stub(:get, ->(url, headers:, query: nil) {
+        requested_urls << url
+        response
+      }) do
+        error = assert_raises(Provider::Up::UpError) { Provider::Up.new("up-access-token").get_accounts_page }
+        assert_equal :invalid_url, error.error_type
+      end
+
+      assert_equal [ "https://api.up.com.au/api/v1/accounts" ], requested_urls
+    end
+  end
+
+  test "bounded reads reject an untrusted initial cursor without sending credentials" do
+    Provider::Up.expects(:get).never
+
+    error = assert_raises(Provider::Up::UpError) do
+      Provider::Up.new("up-access-token").get_accounts_page(cursor: "https://evil.example.test/accounts")
+    end
+
+    assert_equal :invalid_url, error.error_type
+  end
+
+  test "bounded reads preserve rate limit and authentication failures" do
+    { 401 => :unauthorized, 429 => :rate_limited }.each do |status, expected_type|
+      response = FakeResponse.new(code: status, message: "Failure", body: "{}")
+      Provider::Up.stub(:get, ->(_url, headers:, query: nil) { response }) do
+        error = assert_raises(Provider::Up::UpError) do
+          Provider::Up.new("up-access-token").get_account_transactions_page(account_id: "acc_123")
+        end
+        assert_equal expected_type, error.error_type
+      end
+    end
+  end
+
   test "raises configuration error when token blank" do
     error = assert_raises Provider::Up::UpError do
       Provider::Up.new("")

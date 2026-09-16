@@ -24,6 +24,14 @@ class UpItem::Syncer
   # Run the full sync: import, account setup detection, transaction processing,
   # balance sync scheduling, and stats/health collection. Raises on failures.
   def perform_sync(sync)
+    Provider::AccountData::LegacyWriterFence.with_item(up_item, operation: :sync) do |current|
+      scoped_sync = Provider::AccountData::LegacyWriterFence.scoped_sync!(current, sync)
+      raise Provider::AccountData::LegacyWriterFence::InvalidSource, "Up sync is required" unless scoped_sync
+      self.class.new(current).send(:perform_sync_admitted, scoped_sync)
+    end
+  end
+
+  def perform_sync_admitted(sync)
     sync.update!(status_text: "Importing accounts from Up...") if sync.respond_to?(:status_text)
     import_result = up_item.import_latest_up_data
     raise_if_failed_result!(import_result, stage: "Up import")
@@ -62,6 +70,8 @@ class UpItem::Syncer
     end
 
     collect_health_stats(sync, errors: nil)
+  rescue Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::Busy
+    raise
   rescue SyncError => e
     collect_health_stats(sync, errors: e.sync_errors)
     raise
@@ -79,6 +89,7 @@ class UpItem::Syncer
     collect_health_stats(sync, errors: [ { message: safe_message, category: "sync_error" } ])
     raise SafeSyncError.new(safe_message), cause: nil
   end
+  private :perform_sync_admitted
 
   # Post-sync hook (no work required for Up).
   def perform_post_sync

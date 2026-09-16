@@ -108,6 +108,22 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_url(@entry.account)
   end
 
+  test "failed protection rolls back the complete trade edit and field locks together" do
+    before = [ @entry.reload.attributes, @entry.trade.reload.attributes ]
+    Entry.any_instance.expects(:mark_user_modified!).raises(RuntimeError, "Protection failed")
+
+    assert_no_enqueued_jobs do
+      assert_raises(RuntimeError) do
+        patch trade_url(@entry), params: {
+          entry: { currency: "USD", nature: "outflow",
+            entryable_attributes: { id: @entry.entryable_id, qty: 20, price: 20, fee: 1 } }
+        }
+      end
+    end
+
+    assert_equal before, [ @entry.reload.attributes, @entry.trade.reload.attributes ]
+  end
+
   test "creates deposit entry" do
     from_account = accounts(:depository) # Account the deposit is coming from
 

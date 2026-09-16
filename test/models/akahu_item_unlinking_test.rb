@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../support/akahu_fixture_fence_helper"
 
 class AkahuItemUnlinkingTest < ActiveSupport::TestCase
+  include AkahuFixtureFenceHelper
   test "unlink all only detaches holdings for the current family account provider links" do
     current_family = families(:dylan_family)
     other_family = families(:empty)
@@ -71,7 +73,7 @@ class AkahuItemUnlinkingTest < ActiveSupport::TestCase
       account_provider: other_link
     )
 
-    current_item.unlink_all!(dry_run: false)
+    current_item.unlink_all!(dry_run: false, actor: users(:family_admin))
 
     assert_nil current_holding.reload.account_provider_id
     assert_not AccountProvider.exists?(current_link.id)

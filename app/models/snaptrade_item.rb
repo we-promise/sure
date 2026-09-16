@@ -1,5 +1,5 @@
 class SnaptradeItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -244,4 +244,6 @@ class SnaptradeItem < ApplicationRecord
       I18n.t("snaptrade_item.brokerage_summary.count", count: brokerages.count)
     end
   end
+
+  guard_legacy_writes import_latest_snaptrade_data: :ingest, process_accounts: :publish
 end

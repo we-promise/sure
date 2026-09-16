@@ -1,31 +1,25 @@
 class SimplefinConnectionUpdateJob < ApplicationJob
   queue_as :high_priority
+  self.log_arguments = false
+  # Unexpected failures must remain visible without Sidekiq replaying a claim
+  # that may already have consumed the setup token.
+  sidekiq_options retry: false
 
-  # Disable automatic retries for this job since the setup token is single-use.
-  # If the token claim succeeds but sync fails, retrying would fail at claim.
-  discard_on Provider::Simplefin::SimplefinError do |job, error|
+  # Override ApplicationJob's deadlock retry: the claim may already have consumed
+  # the token before saving credentials or scheduling the subsequent sync fails.
+  # A failed/ambiguous claim requires reconciliation, not a whole-job replay.
+  discard_on Provider::Simplefin::SimplefinError, ActiveRecord::Deadlocked do |job, error|
     Rails.logger.error(
-      "SimplefinConnectionUpdateJob discarded: #{error.class} - #{error.message} " \
-      "(family_id=#{job.arguments.first[:family_id]}, item_id=#{job.arguments.first[:old_simplefin_item_id]})"
+      "SimplefinConnectionUpdateJob discarded: #{error.class} " \
+      "(family_id=#{job.arguments.first[:family_id]}, claim_id=#{job.arguments.first[:claim_id]})"
     )
   end
 
-  def perform(family_id:, old_simplefin_item_id:, setup_token:)
-    family = Family.find(family_id)
-    simplefin_item = family.simplefin_items.find(old_simplefin_item_id)
-
-    # Step 1: Claim the new token and update the existing item's access_url.
-    # This preserves all existing account linkages - no need to transfer anything.
-    simplefin_item.update_access_url!(setup_token: setup_token)
-
-    # Step 2: Sync the item to import fresh data.
-    # The existing repair_stale_linkages logic handles cases where SimpleFIN
-    # account IDs changed (e.g., user re-added institution in SimpleFIN Bridge).
-    simplefin_item.sync_later
-
-    Rails.logger.info(
-      "SimplefinConnectionUpdateJob: Successfully updated SimplefinItem #{simplefin_item.id} " \
-      "with new access_url for family #{family_id}"
-    )
+  def perform(family_id:, claim_id: nil, old_simplefin_item_id: nil, setup_token: nil)
+    if claim_id.blank? || old_simplefin_item_id || setup_token
+      raise Provider::AccountData::LegacyWriterFence::OwnershipChanged,
+        "SimpleFIN reconnect requires its original prepared claim"
+    end
+    SimplefinItem::ConnectionUpdate.perform(claim_id: claim_id, family_id: family_id)
   end
 end

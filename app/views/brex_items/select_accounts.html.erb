@@ -13,6 +13,7 @@
                       data: { turbo_frame: "_top" },
                       class: "space-y-4" do %>
           <%= hidden_field_tag :brex_item_id, @brex_item.id %>
+          <%= hidden_field_tag :selection_token, @selection_token %>
           <%= hidden_field_tag :accountable_type, @accountable_type %>
           <%= hidden_field_tag :return_to, @return_to %>
 

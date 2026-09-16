@@ -89,7 +89,37 @@ class EnableBankingAccount < ApplicationRecord
     CASH_ACCOUNT_TYPE_MAP[account_type&.upcase]&.dig(:subtype)
   end
 
-  def upsert_enable_banking_snapshot!(account_snapshot)
+  def upsert_enable_banking_snapshot!(account_snapshot = nil, expected_context: nil, expected_item_context: nil, **snapshot_fields)
+    unless snapshot_fields.empty?
+      raise ArgumentError, "Expected one Enable Banking snapshot" unless account_snapshot.nil?
+      account_snapshot = snapshot_fields
+    end
+    data = account_snapshot.with_indifferent_access
+    remote = (data[:identification_hash].presence || data[:uid].presence)&.to_s
+    raise ArgumentError, "Enable Banking snapshot requires its source identity" if remote.blank?
+    if persisted?
+      EnableBankingItem::LegacyAccess.with_source_snapshot(self, expected_context: expected_context, expected_item_context: expected_item_context) do |current|
+        unless [ current.uid, *Array(current.identification_hashes) ].include?(remote)
+          raise EnableBankingItem::LegacyAccess::Fence::OwnershipChanged, "Enable Banking snapshot belongs to another source"
+        end
+        current.send(:persist_enable_banking_snapshot!, account_snapshot)
+      end
+    else
+      raise EnableBankingItem::LegacyAccess::Fence::InvalidSource, "Cannot restore a removed Enable Banking source" if destroyed?
+      EnableBankingItem::LegacyAccess.with_snapshot(enable_banking_item, expected_context: expected_item_context) do |item|
+        if item.enable_banking_accounts.exists?(uid: remote)
+          raise EnableBankingItem::LegacyAccess::Fence::OwnershipChanged, "Enable Banking source appeared after discovery"
+        end
+        current = item.enable_banking_accounts.build(uid: remote)
+        current.send(:persist_enable_banking_snapshot!, account_snapshot)
+        self.id = current.id
+      end
+    end
+    reload
+    true
+  end
+
+  private def persist_enable_banking_snapshot!(account_snapshot)
     snapshot = account_snapshot.with_indifferent_access
 
     raw_account_id = snapshot[:account_id]
@@ -131,12 +161,12 @@ class EnableBankingAccount < ApplicationRecord
     )
   end
 
-  def upsert_enable_banking_transactions_snapshot!(transactions_snapshot)
-    assign_attributes(
-      raw_transactions_payload: transactions_snapshot
-    )
-
-    save!
+  def upsert_enable_banking_transactions_snapshot!(transactions_snapshot, expected_context: nil, expected_item_context: nil)
+    EnableBankingItem::LegacyAccess.with_source_snapshot(self, expected_context: expected_context, expected_item_context: expected_item_context) do |current|
+      current.update!(raw_transactions_payload: transactions_snapshot)
+    end
+    reload
+    true
   end
 
   private

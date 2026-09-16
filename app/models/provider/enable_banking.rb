@@ -74,12 +74,13 @@ class Provider::EnableBanking
     response = self.class.post(
       "#{BASE_URL}/auth",
       headers: auth_headers.merge("Content-Type" => "application/json"),
-      body: body.to_json
+      body: body.to_json,
+      max_retries: 0, follow_redirects: false
     )
 
     handle_response(response)
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
-    raise EnableBankingError.new("Exception during POST request: #{e.message}", :request_failed)
+    raise EnableBankingError.new("Enable Banking consent POST failed", :request_failed)
   end
 
   # Exchange authorization code for a session
@@ -93,12 +94,13 @@ class Provider::EnableBanking
     response = self.class.post(
       "#{BASE_URL}/sessions",
       headers: auth_headers.merge("Content-Type" => "application/json"),
-      body: body.to_json
+      body: body.to_json,
+      max_retries: 0, follow_redirects: false
     )
 
     handle_response(response)
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
-    raise EnableBankingError.new("Exception during POST request: #{e.message}", :request_failed)
+    raise EnableBankingError.new("Enable Banking consent POST failed", :request_failed)
   end
 
   # Get session information
@@ -120,12 +122,13 @@ class Provider::EnableBanking
   def delete_session(session_id:)
     response = self.class.delete(
       "#{BASE_URL}/sessions/#{session_id}",
-      headers: auth_headers
+      headers: auth_headers,
+      max_retries: 0, follow_redirects: false
     )
 
     handle_response(response)
   rescue SocketError, Net::OpenTimeout, Net::ReadTimeout => e
-    raise EnableBankingError.new("Exception during DELETE request: #{e.message}", :request_failed)
+    raise EnableBankingError.new("Enable Banking consent DELETE failed", :request_failed)
   end
 
   # Get account details
@@ -204,7 +207,78 @@ class Provider::EnableBanking
     raise EnableBankingError.new("Exception during GET request: #{e.message}", :request_failed)
   end
 
+  # Native ingestion readers preserve exact JSON numbers and expose the effective
+  # request window. They do not hide a failed continuation behind a complete page.
+  def get_ingestion_session(session_id:)
+    ingestion_get("/sessions/#{CGI.escape(session_id.to_s)}")
+  end
+
+  def get_ingestion_account_details(account_id:, psu_headers: {})
+    ingestion_get("/accounts/#{CGI.escape(account_id.to_s)}/details", psu_headers: psu_headers)
+  end
+
+  def get_ingestion_account_balances(account_id:, psu_headers: {})
+    ingestion_get("/accounts/#{CGI.escape(account_id.to_s)}/balances", psu_headers: psu_headers)
+  end
+
+  def get_ingestion_transactions_page(account_id:, date_from: nil, date_to: nil,
+      continuation_key: nil, transaction_status: "BOOK", psu_headers: {}, reference_date:)
+    unless %w[BOOK PDNG].include?(transaction_status) && reference_date.instance_of?(Date) &&
+        [ date_from, date_to ].all? { |date| date.nil? || date.instance_of?(Date) } &&
+        (continuation_key.nil? || (continuation_key.is_a?(String) && continuation_key.present?))
+      raise EnableBankingError.new("Invalid ingestion request", :invalid_response)
+    end
+    requested_start = date_from
+    attempts = 0
+    begin
+      query = { transaction_status: transaction_status, date_from: date_from&.iso8601,
+        date_to: date_to&.iso8601, continuation_key: continuation_key }.compact
+      data = ingestion_get("/accounts/#{CGI.escape(account_id.to_s)}/transactions", query: query, psu_headers: psu_headers)
+    rescue EnableBankingError => error
+      # Changing the window underneath a continuation invalidates its meaning.
+      raise unless continuation_key.nil? && error.wrong_transactions_period? && attempts <= FALLBACK_TRANSACTIONS_DATE_FROM_DAYS.length
+      corrected = attempts.zero? ? error.corrected_date_from : nil
+      candidates = [ corrected, *FALLBACK_TRANSACTIONS_DATE_FROM_DAYS.map { |days| reference_date - days } ].compact
+      next_start = candidates.find { |candidate| (date_from.nil? || candidate > date_from) && (date_to.nil? || candidate <= date_to) }
+      raise unless next_start
+      date_from = next_start
+      attempts += 1
+      retry
+    end
+    rows = data[:transactions]
+    cursor = data[:continuation_key]
+    unless rows.is_a?(Array) && rows.all? { |row| row.is_a?(Hash) } &&
+        (cursor.nil? || (cursor.is_a?(String) && cursor.present? && cursor != continuation_key))
+      raise EnableBankingError.new("Invalid transaction response", :invalid_response)
+    end
+    { items: rows, next_cursor: cursor, date_from: date_from, date_to: date_to,
+      narrowed_window: requested_start != date_from, evidence: data }
+  end
+
   private
+
+    def ingestion_get(path, query: nil, psu_headers: {})
+      unless psu_headers.is_a?(Hash) && psu_headers.all? { |key, value| key.to_s.match?(/\APsu-[A-Za-z-]+\z/i) && value.is_a?(String) && !value.match?(/[\r\n]/) }
+        raise EnableBankingError.new("Invalid PSU context", :invalid_response)
+      end
+      response = self.class.get("#{BASE_URL}#{path}", headers: auth_headers.merge(psu_headers), query: query)
+      begin
+        data = response.body.present? ? JSON.parse(response.body, symbolize_names: true, decimal_class: BigDecimal) : {}
+      rescue JSON::ParserError
+        raise if [ 200, 201 ].include?(response.code)
+        data = {}
+      end
+      raise EnableBankingError.new("Invalid API response", :invalid_response) unless data.is_a?(Hash)
+      return data if [ 200, 201 ].include?(response.code)
+
+      type = { 400 => :bad_request, 401 => :unauthorized, 403 => :access_forbidden, 404 => :not_found,
+        408 => :timeout, 422 => :validation_error, 429 => :rate_limited }.fetch(response.code, :fetch_failed)
+      raise EnableBankingError.new("Enable Banking request failed (#{type})", type, response_data: data), cause: nil
+    rescue JSON::ParserError, TypeError, ArgumentError
+      raise EnableBankingError.new("Invalid API response", :parse_error), cause: nil
+    rescue SocketError, Net::OpenTimeout, Net::ReadTimeout
+      raise EnableBankingError.new("Enable Banking network request failed", :request_failed), cause: nil
+    end
 
     # Decides the next date_from to retry a transactions fetch with after an
     # ASPSP rejects the requested window with WRONG_TRANSACTIONS_PERIOD.
@@ -315,7 +389,7 @@ class Provider::EnableBanking
 
       JSON.parse(response.body, symbolize_names: true)
     rescue JSON::ParserError => e
-      Rails.logger.error "Enable Banking API: Failed to parse response: #{e.message}"
+      Rails.logger.error "Enable Banking API returned invalid JSON"
       raise EnableBankingError.new("Failed to parse API response", :parse_error)
     end
 

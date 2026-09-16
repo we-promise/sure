@@ -4,6 +4,8 @@ module Account::Linkable
   included do
     # New generic provider association
     has_many :account_providers, dependent: :destroy
+    has_many :source_policies, class_name: "Account::SourcePolicy", dependent: :restrict_with_error
+    has_many :source_records, dependent: :restrict_with_error
 
     # Legacy provider associations - kept for backward compatibility during migration
     belongs_to :plaid_account, optional: true
@@ -33,12 +35,17 @@ module Account::Linkable
   end
   alias_method :manual?, :unlinked?
 
-  # Returns the primary provider adapter for this account
-  # If multiple providers exist, returns the first one
+  # Shared ingestion chooses its balance provider explicitly. Removing that
+  # selection must not promote another linked source through the legacy fallback.
   def provider
     return nil unless linked?
 
-    @provider ||= account_providers.first&.adapter
+    policies = source_policies.where(resource: "balances")
+    policy = policies.active.first
+    return policy.account_provider&.adapter if policy
+    return nil if policies.exists?
+
+    account_providers.first&.adapter
   end
 
   # Returns all provider adapters for this account
@@ -83,7 +90,8 @@ module Account::Linkable
   def supports_category_matcher?
     return true if plaid_account.present?
 
-    account_providers.exists?(provider_type: CATEGORY_MATCHER_PROVIDER_TYPES)
+    account_providers.exists?(provider_type: CATEGORY_MATCHER_PROVIDER_TYPES) ||
+      account_providers.where.not(external_account_id: nil).exists?(provider_key: %w[plaid up monobank])
   end
 
   # Check if holdings can be deleted

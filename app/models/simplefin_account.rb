@@ -36,22 +36,15 @@ class SimplefinAccount < ApplicationRecord
   # Ensure there is an AccountProvider link for this SimpleFin account and its current Account.
   # Safe and idempotent; returns the AccountProvider or nil if no account is associated yet.
   def ensure_account_provider!
-    acct = current_account
-    return nil unless acct
-
-    provider = AccountProvider
-      .find_or_initialize_by(provider_type: "SimplefinAccount", provider_id: id)
-      .tap do |p|
-        p.account = acct
-        p.save!
-      end
-
-    # Reload the association so future accesses don't return stale/nil value
+    provider = SimplefinItem::LegacyAccess.ensure_link(self)
     reload_account_provider
-
     provider
+  rescue Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::InvalidSource
+    raise
   rescue => e
-    Rails.logger.warn("SimplefinAccount##{id}: failed to ensure AccountProvider link: #{e.class} - #{e.message}")
+    DebugLogEntry.capture(category: "provider_sync_error", level: "warn", message: "SimpleFIN provider link repair failed",
+      source: self.class.name, provider_key: "simplefin", family: simplefin_item.family,
+      metadata: { simplefin_account_id: id, error_class: e.class.name })
     nil
   end
 

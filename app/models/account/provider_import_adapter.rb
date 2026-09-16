@@ -36,16 +36,21 @@ class Account::ProviderImportAdapter
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, resolved_entry: nil, native_identity: false)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
+    raise ArgumentError, "Resolved identities require native import" if resolved_entry && !native_identity
 
     Account.transaction do
       # Find or initialize by both external_id AND source
       # This allows multiple providers to sync same account with separate entries
-      entry = account.entries.find_or_initialize_by(external_id: external_id, source: source) do |e|
-        e.entryable = Transaction.new
+      entry = if resolved_entry
+        Ingestion::MappedEntryResolver.for_import!(resolved_entry, account: account, external_id: external_id, source: source, entryable_type: "Transaction")
+      else
+        account.entries.find_or_initialize_by(external_id: external_id, source: source) { |e| e.entryable = Transaction.new }
       end
+      entry.lock! if native_identity && entry.persisted? && !resolved_entry
+      ensure_native_identity_available!(entry, external_id, source) if native_identity
 
       # === TYPE COLLISION CHECK: Must happen before protection check ===
       # If entry exists but is a different type (e.g., Trade), that's an error.
@@ -53,6 +58,7 @@ class Account::ProviderImportAdapter
       if entry.persisted? && !entry.entryable.is_a?(Transaction)
         raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
       end
+      entry.entryable.lock! if native_identity && entry.persisted? && !resolved_entry
 
       # Determine early whether the incoming transaction is pending — needed by both
       # the protection check (pending→booked bypass) and the auto-claim path below.
@@ -64,12 +70,33 @@ class Account::ProviderImportAdapter
           boolean_type.cast(pending_extra.dig(provider, "pending"))
         end
       end
+      transition = resolved_entry&.pending_transition?
+      raise ArgumentError, "A pending identity cannot be promoted by another pending observation" if transition && incoming_pending
+      if transition && pending_transaction_id != resolved_entry.previous_external_id
+        raise Ingestion::MappedEntryResolver::Conflict, "Pending transition must match the provider's explicit linking identity"
+      end
+      skip_reason = entry.persisted? && determine_skip_reason(entry, native_identity: native_identity)
+      if native_identity && entry.persisted? && !skip_reason
+        locked_date = if transition || entry.transaction.extra&.key?("auto_claimed_pending_ids")
+          entry.date
+        else
+          date
+        end
+        assert_native_locked_fields!(entry, amount: amount, currency: currency, date: locked_date)
+      end
+      if native_identity && entry.persisted?
+        assert_native_transaction_extra!(entry, extra: extra, incoming_pending: incoming_pending,
+          skip_reason: skip_reason, previous_id: transition ? resolved_entry.previous_external_id : nil)
+      end
+      if transition
+        pending_entry_date = entry.date
+        promote_native_pending_identity!(entry, external_id: external_id, source: source, previous_id: resolved_entry.previous_external_id)
+      end
 
       # === PROTECTION CHECK: Skip entries that should not be overwritten ===
       # Check persisted Transaction entries for protection flags before making changes.
       # This prevents sync from overwriting user edits, CSV imports, or excluded entries.
       if entry.persisted?
-        skip_reason = determine_skip_reason(entry)
         if skip_reason
           # Pending→booked bypass for user_modified entries: clear the stale pending flag
           # when the provider delivers a booked version of the same transaction.
@@ -94,14 +121,18 @@ class Account::ProviderImportAdapter
       # before linking their account to a provider
       # Note: We don't pass name here to allow matching even when provider formats names differently
       if entry.new_record?
-        duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
+        duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency, unclaimed_only: native_identity)
         if duplicate
-          # Check if duplicate is protected - if so, link but don't modify
-          if duplicate.protected_from_sync?
+          lock_native_duplicate!(duplicate, date: date, amount: amount, currency: currency) if native_identity
+          # Check protection again after the native row lock. A manual statement
+          # match can adopt the identity while preserving its reconciled values.
+          if duplicate.protected_from_sync? || (native_identity && duplicate.reconciled?)
             duplicate.update!(external_id: external_id, source: source)
-            record_skip(duplicate, determine_skip_reason(duplicate) || "protected")
+            record_skip(duplicate, determine_skip_reason(duplicate, native_identity: native_identity) || "protected")
             return duplicate
           end
+
+          assert_native_transaction_extra!(duplicate, extra: extra, incoming_pending: incoming_pending) if native_identity
 
           # "Claim" the unprotected duplicate by updating its external_id and source
           # This prevents future duplicate checks from matching it again
@@ -110,7 +141,7 @@ class Account::ProviderImportAdapter
         end
       end
 
-      if entry.new_record? && !incoming_pending
+      if entry.new_record? && !incoming_pending && !native_identity
         pending_match = nil
 
         # PRIORITY 1: Use Plaid's pending_transaction_id if provided (most reliable)
@@ -231,7 +262,7 @@ class Account::ProviderImportAdapter
         auto_kind = "funds_movement"
       elsif detected_label == "Contribution"
         auto_kind = "investment_contribution"
-        auto_category = account.family.investment_contributions_category
+        auto_category = account.family.investment_contributions_category unless native_identity && entry.transaction.locked?(:category_id)
       elsif account.accountable_type == "Loan" && amount.negative?
         auto_kind = "loan_payment"
       end
@@ -239,15 +270,16 @@ class Account::ProviderImportAdapter
 
       # Set investment activity label, kind, and category if detected
       if entry.entryable.is_a?(Transaction)
-        if detected_label.present? && entry.transaction.investment_activity_label.blank?
+        if detected_label.present? && entry.transaction.investment_activity_label.blank? &&
+            (!native_identity || !entry.transaction.locked?(:investment_activity_label))
           entry.transaction.assign_attributes(investment_activity_label: detected_label)
         end
 
-        if auto_kind.present?
+        if auto_kind.present? && (!native_identity || !entry.transaction.locked?(:kind))
           entry.transaction.assign_attributes(kind: auto_kind)
         end
 
-        if auto_category.present? && entry.transaction.category_id.blank?
+        if auto_category.present? && entry.transaction.category_id.blank? && (!native_identity || !entry.transaction.locked?(:category_id))
           entry.transaction.assign_attributes(category: auto_category)
         end
       end
@@ -400,7 +432,7 @@ class Account::ProviderImportAdapter
   # @param account_provider_id [String, nil] The AccountProvider ID that owns this holding (optional)
   # @param delete_future_holdings [Boolean] Whether to delete holdings after this date (default: false)
   # @return [Holding] The created or updated holding
-  def import_holding(security:, quantity:, amount:, currency:, date:, price: nil, cost_basis: nil, external_id: nil, source:, account_provider_id: nil, delete_future_holdings: false)
+  def import_holding(security:, quantity:, amount:, currency:, date:, price: nil, cost_basis: nil, external_id: nil, source:, account_provider_id: nil, delete_future_holdings: false, strict_identity: false)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -471,6 +503,10 @@ class Account::ProviderImportAdapter
         )
       end
 
+      if strict_identity && holding.persisted? && holding.external_id.present? && holding.external_id != external_id
+        raise ArgumentError, "Position components require explicit identity reconciliation"
+      end
+
       # Early cross-provider composite-key conflict guard: avoid attempting a write
       # that would violate a unique index on (account_id, security_id, date, currency).
       if external_id.present?
@@ -484,6 +520,7 @@ class Account::ProviderImportAdapter
            account_provider_id.present? &&
            existing_composite.account_provider_id.present? &&
            existing_composite.account_provider_id != account_provider_id
+          raise ArgumentError, "Position belongs to another source" if strict_identity
           Rails.logger.warn(
             "ProviderImportAdapter: cross-provider holding collision for account=#{account.id} security=#{security.id} date=#{date} currency=#{currency}; returning existing id=#{existing_composite.id}"
           )
@@ -530,6 +567,7 @@ class Account::ProviderImportAdapter
           holding.save!
         end
       rescue ActiveRecord::RecordNotUnique => e
+        raise if strict_identity
         # Handle unique index collisions on (account_id, security_id, date, currency)
         # that can occur when another provider (or concurrent import) already
         # created a row for this composite key. Use the existing row and keep
@@ -636,9 +674,11 @@ class Account::ProviderImportAdapter
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
   # @param exchange_rate [BigDecimal, Numeric, nil] Optional provider-supplied FX rate into the account currency
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil, notes: nil, fee: nil, extra: nil, resolved_entry: nil, native_identity: false)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
+    raise ArgumentError, "Resolved identities require native import" if resolved_entry && !native_identity
+    raise ArgumentError, "Native trade identity is required" if native_identity && external_id.blank?
 
     Account.transaction do
       # Generate name if not provided
@@ -650,7 +690,9 @@ class Account::ProviderImportAdapter
       end
 
       # Use find_or_initialize_by with external_id if provided, otherwise create new
-      entry = if external_id.present?
+      entry = if resolved_entry
+        Ingestion::MappedEntryResolver.for_import!(resolved_entry, account: account, external_id: external_id, source: source, entryable_type: "Trade")
+      elsif external_id.present?
         # Find or initialize by both external_id AND source
         # This allows multiple providers to sync same account with separate entries
         account.entries.find_or_initialize_by(external_id: external_id, source: source) do |e|
@@ -662,10 +704,17 @@ class Account::ProviderImportAdapter
           source: source
         )
       end
+      entry.lock! if native_identity && entry.persisted? && !resolved_entry
+      ensure_native_identity_available!(entry, external_id, source) if native_identity
 
       # Validate entryable type matches to prevent external_id collisions
       if entry.persisted? && !entry.entryable.is_a?(Trade)
         raise ArgumentError, "Entry with external_id '#{external_id}' already exists with different entryable type: #{entry.entryable_type}"
+      end
+      entry.entryable.lock! if native_identity && entry.persisted? && !resolved_entry
+      if native_identity && entry.persisted? && (skip_reason = determine_skip_reason(entry, native_identity: true))
+        record_skip(entry, skip_reason)
+        return entry
       end
 
       # Always update Trade attributes (works for both new and existing records)
@@ -677,15 +726,32 @@ class Account::ProviderImportAdapter
         investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell")
       }
       trade_attributes[:exchange_rate] = exchange_rate unless exchange_rate.nil?
+      trade_attributes[:fee] = fee unless fee.nil?
+
+      if native_identity && entry.persisted?
+        # Check the complete incoming financial tuple before changing either
+        # model. Keeping just one locked quantity/unit/price would mix user and
+        # provider values into an inconsistent trade.
+        candidate = entry.trade.dup
+        candidate.assign_attributes(trade_attributes)
+        candidate.extra = (candidate.extra || {}).deep_merge(extra.deep_stringify_keys) if extra.present?
+        assert_native_locked_fields!(entry, date: date, amount: amount, currency: currency)
+        assert_native_locked_fields!(entry.trade, candidate.attributes.slice("security_id", "qty", "price", "currency", "fee", "extra", "investment_activity_label"))
+        assert_native_locked_fields!(entry.trade, exchange_rate: candidate.exchange_rate)
+      end
 
       entry.entryable.assign_attributes(trade_attributes)
+      entry.trade.extra = (entry.trade.extra || {}).deep_merge(extra.deep_stringify_keys) if extra.present?
 
-      entry.assign_attributes(
+      entry_attributes = {
         date: date,
         amount: amount,
         currency: currency,
         name: trade_name
-      )
+      }
+      entry_attributes.delete(:name) if native_identity && entry.locked?(:name)
+      entry.assign_attributes(entry_attributes)
+      entry.notes = notes unless notes.nil? || (native_identity && entry.locked?(:notes))
 
       entry.save!
       entry
@@ -734,7 +800,7 @@ class Account::ProviderImportAdapter
   #   provider sync: a provider must not claim another provider's entry. A
   #   statement import passes true, because the whole question it is asking is
   #   whether this transaction already arrived via sync.
-  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil, date_window: 0, include_provider_entries: false)
+  def find_duplicate_transaction(date:, amount:, currency:, name: nil, exclude_entry_ids: nil, date_window: 0, include_provider_entries: false, unclaimed_only: false)
     # Convert date to Date object if it's a string
     date = Date.parse(date.to_s) unless date.is_a?(Date)
 
@@ -759,6 +825,11 @@ class Account::ProviderImportAdapter
     end
 
     query = query.where(external_id: nil) unless include_provider_entries
+    if unclaimed_only
+      provider_entries = EntrySource.joins(:source_record).where(account_id: account.id).where.not(entry_id: nil)
+        .where.not(source_records: { external_account_id: nil }).select(:entry_id)
+      query = query.where(external_id: nil, source: [ nil, "" ], plaid_id: nil).where.not(id: provider_entries)
+    end
 
     # Add name filter if provided
     query = query.where(name: name) if name.present?
@@ -1001,7 +1072,10 @@ class Account::ProviderImportAdapter
   #
   # @param entry [Entry] The entry to check
   # @return [String, nil] Skip reason or nil if entry can be synced
-  def determine_skip_reason(entry)
+  def determine_skip_reason(entry, native_identity: false)
+    # Reconciliation may be recorded independently of the legacy protection
+    # flags. In native imports it also prevents the pending-clear exception.
+    return "reconciled" if native_identity && entry.reconciled?
     return "excluded" if entry.excluded?
     return "user_modified" if entry.user_modified?
     return "import_locked" if entry.import_locked?
@@ -1023,6 +1097,77 @@ class Account::ProviderImportAdapter
   end
 
   private
+
+    def lock_native_duplicate!(entry, date:, amount:, currency:)
+      entry.lock!
+      entry.entryable&.lock!
+      observed_date = date.is_a?(Date) ? date.to_date : Date.parse(date.to_s)
+      provider_evidence = EntrySource.joins(:source_record).where(entry_id: entry.id)
+        .where.not(source_records: { external_account_id: nil })
+      unless entry.account_id == account.id && entry.transaction? && entry.entryable.is_a?(Transaction) &&
+          entry.external_id.nil? && entry.plaid_id.nil? && [ nil, "" ].include?(entry.source) &&
+          entry.date == observed_date && entry.amount == amount && entry.currency == currency && !provider_evidence.exists?
+        raise Ingestion::MappedEntryResolver::Conflict, "Manual transaction changed before provider adoption"
+      end
+    rescue ActiveRecord::RecordNotFound
+      raise Ingestion::MappedEntryResolver::Conflict, "Manual transaction no longer exists", cause: nil
+    end
+
+    def assert_native_locked_fields!(record, attributes)
+      conflict = attributes.any? do |attribute, incoming|
+        value = record.has_attribute?(attribute) ? record.class.type_for_attribute(attribute.to_s).cast(incoming) : incoming
+        record.locked?(attribute) && record.public_send(attribute) != value
+      end
+      if conflict
+        raise Ingestion::MappedEntryResolver::Conflict, "Provider update conflicts with locked financial fields"
+      end
+    end
+
+    def assert_native_transaction_extra!(entry, extra:, incoming_pending:, skip_reason: nil, previous_id: nil)
+      transaction = entry.transaction
+      return unless transaction.locked?(:extra) || transaction.locked?(:exchange_rate)
+
+      # Project the same metadata changes as the import, including the identity
+      # alias and the user_modified pending-clear exception, before either model
+      # is saved. A locked JSON field cannot leave a half-promoted identity.
+      projected = previous_id ? native_pending_identity_extra(entry, previous_id: previous_id) : transaction.extra.deep_dup
+      if !incoming_pending && (!skip_reason || skip_reason == "user_modified") &&
+          Transaction::PENDING_PROVIDERS.any? { |provider| projected&.dig(provider, "pending") }
+        projected = clear_pending_flags_from_extra(projected)
+      end
+      if !skip_reason && extra.present?
+        incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
+        projected = (projected || {}).deep_merge(incoming)
+      end
+      assert_native_locked_fields!(transaction, extra: projected, exchange_rate: projected&.dig("exchange_rate"))
+    end
+
+    def ensure_native_identity_available!(entry, external_id, source)
+      return unless source == "plaid" && external_id.present?
+      others = account.entries.where(plaid_id: external_id)
+      others = others.where.not(id: entry.id) if entry.persisted?
+      if others.exists?
+        raise Ingestion::MappedEntryResolver::Conflict, "Legacy Plaid identity requires reviewed financial evidence"
+      end
+    end
+
+    # This changes identity evidence only. Protection was inspected before this
+    # point; the caller still skips every protected financial field afterward.
+    def promote_native_pending_identity!(entry, external_id:, source:, previous_id:)
+      data = native_pending_identity_extra(entry, previous_id: previous_id)
+      entry.update!(external_id: external_id, source: source)
+      entry.transaction.update!(extra: data)
+    end
+
+    def native_pending_identity_extra(entry, previous_id:)
+      data = (entry.transaction.extra || {}).deep_dup
+      aliases = data["auto_claimed_pending_ids"] || []
+      unless aliases.is_a?(Array) && aliases.all? { |value| value.is_a?(String) && value.present? }
+        raise Ingestion::MappedEntryResolver::Conflict, "Pending identity evidence is malformed"
+      end
+      data["auto_claimed_pending_ids"] = (aliases + [ previous_id ]).uniq
+      data
+    end
 
     # Memoized per adapter instance (which is per-account). Membership in
     # goal_accounts is stable across a sync batch.

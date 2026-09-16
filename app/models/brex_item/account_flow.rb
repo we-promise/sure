@@ -34,30 +34,34 @@ class BrexItem::AccountFlow
     def success? = success
   end
 
-  attr_reader :family, :brex_item_id, :brex_item, :credentialed_items
+  attr_reader :family, :brex_item_id, :brex_item, :credentialed_items, :selection_token
 
-  def initialize(family:, brex_item_id: nil, brex_item: nil)
+  def initialize(family:, brex_item_id: nil, brex_item: nil, actor: Current.user, selection_token: nil)
     @family = family
+    @actor, @submitted_selection_token = actor, selection_token
     @brex_item_id = brex_item_id.to_s.strip.presence
     @credentialed_items = family.brex_items.active.with_credentials.ordered
     @brex_item = brex_item || BrexItem.resolve_for(family: family, brex_item_id: @brex_item_id)
+    if @brex_item && @brex_item.family_id != family.id
+      raise Provider::AccountData::LegacyWriterFence::OwnershipChanged, "Brex source belongs to another family"
+    end
   end
 
   def self.cache_key(family, brex_item)
-    "brex_accounts_#{family.id}_#{brex_item.id}"
+    raise Provider::AccountData::LegacyWriterFence::OwnershipChanged unless brex_item.family_id == family.id
+    BrexItem::Selection.cache_key(brex_item)
   end
 
   def self.cache_sensitive_update?(permitted_params)
     permitted_params.key?(:token) || permitted_params.key?(:base_url)
   end
 
-  def self.update_item_with_cache_expiration(brex_item, family:, attributes:)
-    expire_accounts_cache = cache_sensitive_update?(attributes)
-    updated = brex_item.update(attributes)
-
-    Rails.cache.delete(cache_key(family, brex_item)) if updated && expire_accounts_cache
-
-    updated
+  def self.update_item_with_cache_expiration(brex_item, family:, attributes:, actor: Current.user)
+    raise Provider::AccountData::LegacyWriterFence::OwnershipChanged unless brex_item.family_id == family.id
+    current = BrexItem::Lifecycle.new(item: brex_item, actor: actor).update_settings(attributes)
+    brex_item.assign_attributes(current.attributes.except("id"))
+    current.errors.each { |error| brex_item.errors.add(error.attribute, error.message) }
+    current.errors.empty?
   end
 
   def selected?
@@ -72,11 +76,10 @@ class BrexItem::AccountFlow
     return selection_error_payload if !selected?
     return { success: false, error: "no_credentials", has_accounts: false } unless brex_item.credentials_configured?
 
-    cached_accounts = Rails.cache.read(cache_key)
-    cached = !cached_accounts.nil?
-    available_accounts = cached ? cached_accounts : fetch_and_cache_accounts
-
-    { success: true, has_accounts: available_accounts.any?, cached: cached }
+    result = lifecycle.discover
+    { success: true, has_accounts: result.fetch(:accounts).any?, cached: result.fetch(:cached) }
+  rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+    raise
   rescue NoApiTokenError
     { success: false, error: "no_api_token", has_accounts: false }
   rescue Provider::Brex::BrexError => e
@@ -97,13 +100,11 @@ class BrexItem::AccountFlow
   end
 
   def select_existing_account_result(account:)
-    return linked_account_result if account.account_providers.exists?
-
     selection_result_for(
       scope: "brex_items.select_existing_account",
       accountable_type: account.accountable_type,
       empty_message_key: "all_accounts_already_linked",
-      log_context: "select_existing_account"
+      log_context: "select_existing_account", account_id: account.id
     )
   end
 
@@ -113,6 +114,8 @@ class BrexItem::AccountFlow
     return navigation(:settings_providers, :alert, I18n.t("brex_items.link_accounts.select_connection")) unless selected?
 
     link_navigation_result(link_new_accounts!(account_ids: account_ids, accountable_type: accountable_type))
+  rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+    raise
   rescue NoApiTokenError
     navigation(:new_account, :alert, I18n.t("brex_items.link_accounts.no_api_token"))
   rescue Provider::Brex::BrexError => e
@@ -131,6 +134,8 @@ class BrexItem::AccountFlow
     link_existing_account!(account: account, brex_account_id: brex_account_id)
 
     navigation(:return_to_or_accounts, :notice, I18n.t("brex_items.link_existing_account.success", account_name: account.name))
+  rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+    raise
   rescue NoApiTokenError
     navigation(:accounts, :alert, I18n.t("brex_items.link_existing_account.no_api_token"))
   rescue AccountNotFoundError
@@ -149,79 +154,21 @@ class BrexItem::AccountFlow
 
   def link_new_accounts!(account_ids:, accountable_type:)
     raise ArgumentError, "Unsupported Brex account type: #{accountable_type}" unless supported_account_type?(accountable_type)
-
-    created_accounts = []
-    already_linked_names = []
-    invalid_account_ids = []
-    accounts_by_id = indexed_accounts
-
-    ActiveRecord::Base.transaction do
-      account_ids.each do |account_id|
-        account_data = accounts_by_id[account_id.to_s]
-        next unless account_data
-
-        account_name = BrexAccount.name_for(account_data)
-
-        if account_name.blank?
-          invalid_account_ids << account_id
-          Rails.logger.warn "BrexItem::AccountFlow - Skipping account #{account_id} with blank name"
-          next
-        end
-
-        brex_account = upsert_brex_account!(account_id, account_data)
-
-        if brex_account.account_provider.present?
-          already_linked_names << account_name
-          next
-        end
-
-        account = Account.create_and_sync(
-          {
-            family: family,
-            name: account_name,
-            balance: 0,
-            currency: BrexAccount.currency_for(account_data),
-            accountable_type: accountable_type,
-            accountable_attributes: BrexAccount.default_accountable_attributes(accountable_type)
-          },
-          skip_initial_sync: true
-        )
-
-        AccountProvider.create!(account: account, provider: brex_account)
-        created_accounts << account
-      end
-    end
-
-    brex_item.sync_later if created_accounts.any?
-
-    LinkAccountsResult.new(
-      created_accounts: created_accounts,
-      already_linked_names: already_linked_names,
-      invalid_account_ids: invalid_account_ids
-    )
+    result = lifecycle.link_accounts(account_ids: account_ids, account_type: accountable_type, selection: selection(:link_accounts))
+    LinkAccountsResult.new(created_accounts: result.fetch(:created_accounts),
+      already_linked_names: result.fetch(:already_linked_accounts), invalid_account_ids: result.fetch(:invalid_accounts))
   end
 
   def link_existing_account!(account:, brex_account_id:)
-    account_data = indexed_accounts[brex_account_id.to_s]
-    raise AccountNotFoundError unless account_data
-
-    account_name = BrexAccount.name_for(account_data)
-    raise InvalidAccountNameError if account_name.blank?
-
-    brex_account = nil
-
-    ActiveRecord::Base.transaction do
-      brex_account = upsert_brex_account!(brex_account_id, account_data)
-      raise AccountAlreadyLinkedError if brex_account.account_provider.present?
-
-      AccountProvider.create!(account: account, provider: brex_account)
+    result = lifecycle.link_existing_account(account_id: account.id, brex_account_id: brex_account_id,
+      selection: selection(:link_existing_account, account_id: account.id))
+    case result[:error]
+    when :account_already_linked, :brex_account_already_linked then raise AccountAlreadyLinkedError
+    when :brex_account_not_found then raise AccountNotFoundError
+    when :invalid_account_name then raise InvalidAccountNameError
     end
-
-    brex_item.sync_later
-
-    brex_account
+    result.fetch(:account).account_providers.find_by!(provider_type: "BrexAccount").provider
   end
-
   private
 
     def selection_error_payload
@@ -264,10 +211,12 @@ class BrexItem::AccountFlow
       end
     end
 
-    def selection_result_for(scope:, accountable_type:, empty_message_key:, log_context:)
+    def selection_result_for(scope:, accountable_type:, empty_message_key:, log_context:, account_id: nil)
       return selection_failure_result(scope, accountable_type: accountable_type) unless selected?
-
-      available_accounts = filter_accounts(unlinked_available_accounts, accountable_type)
+      result = lifecycle.discover(flow: account_id ? :link_existing_account : :link_accounts, account_id: account_id)
+      return linked_account_result if result[:account_already_linked]
+      @brex_item, @selection_token = result.values_at(:item, :selection_token)
+      available_accounts = filter_accounts(result.fetch(:accounts), accountable_type)
       if available_accounts.empty?
         return selection_result(
           status: :empty,
@@ -277,6 +226,8 @@ class BrexItem::AccountFlow
       end
 
       selection_result(status: :success, accountable_type: accountable_type, available_accounts: available_accounts)
+    rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+      raise
     rescue NoApiTokenError
       selection_result(
         status: :no_api_token,
@@ -365,35 +316,6 @@ class BrexItem::AccountFlow
       self.class.cache_key(family, brex_item)
     end
 
-    def fetch_accounts
-      provider = brex_item&.brex_provider
-      raise NoApiTokenError unless provider.present?
-
-      accounts_data = provider.get_accounts
-      accounts_data[:accounts] || []
-    end
-
-    def accounts
-      cached_accounts = Rails.cache.read(cache_key)
-      return cached_accounts unless cached_accounts.nil?
-
-      fetch_and_cache_accounts
-    end
-
-    def fetch_and_cache_accounts
-      available_accounts = fetch_accounts
-      Rails.cache.write(cache_key, available_accounts, expires_in: CACHE_TTL)
-      available_accounts
-    end
-
-    def unlinked_available_accounts
-      linked_account_ids = brex_item.brex_accounts
-                                   .joins(:account_provider)
-                                   .pluck("#{BrexAccount.table_name}.account_id")
-                                   .map(&:to_s)
-      accounts.reject { |account| linked_account_ids.include?(account.with_indifferent_access[:id].to_s) }
-    end
-
     def filter_accounts(accounts, accountable_type)
       return [] unless Provider::BrexAdapter.supported_account_types.include?(accountable_type)
 
@@ -409,14 +331,12 @@ class BrexItem::AccountFlow
       end
     end
 
-    def indexed_accounts
-      accounts.index_by { |account| account.with_indifferent_access[:id].to_s }
+    def lifecycle
+      BrexItem::Lifecycle.new(item: brex_item, actor: @actor)
     end
 
-    def upsert_brex_account!(account_id, account_data)
-      brex_account = brex_item.brex_accounts.find_or_initialize_by(account_id: account_id.to_s)
-      brex_account.upsert_brex_snapshot!(account_data)
-      brex_account
+    def selection(flow, account_id: nil)
+      BrexItem::Selection.from_token(@submitted_selection_token, flow: flow, account_id: account_id)
     end
 
     def supported_account_type?(accountable_type)

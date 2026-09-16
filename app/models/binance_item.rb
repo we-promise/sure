@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class BinanceItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -166,4 +166,6 @@ class BinanceItem < ApplicationRecord
       institution_color: "#F0B90B"
     )
   end
+
+  guard_legacy_writes import_latest_binance_data: :ingest, process_accounts: :publish
 end

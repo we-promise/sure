@@ -12,6 +12,9 @@ class UpAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
       accountable: Depository.new(subtype: "checking"), balance: 100, currency: "AUD"
     )
     AccountProvider.create!(account: @account, provider: @up_account)
+    # Focus this transactional test on categorization; the source boundary has
+    # committed-database coverage in UpItem::LegacyWriterTest.
+    UpItem::LegacyWriter.stubs(:with_account).with(@up_account).yields(@up_account)
   end
 
   # Importing must not create categories as a side effect: a family that has none

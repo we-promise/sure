@@ -10,6 +10,13 @@ class BrexItem::Syncer
   end
 
   def perform_sync(sync)
+    BrexItem::LegacyAccess.with_item(brex_item, operation: :sync, sync: sync) do |current, current_sync|
+      @brex_item = current
+      perform_sync_admitted(current_sync)
+    end
+  end
+
+  private def perform_sync_admitted(sync)
     sync_errors = []
 
     # Phase 1: Import data from Brex API
@@ -35,10 +42,10 @@ class BrexItem::Syncer
 
     # Set pending_account_setup if there are unlinked accounts
     if unlinked_count.positive?
-      brex_item.update!(pending_account_setup: true)
+      BrexItem::LegacyAccess.with_snapshot(brex_item) { |fresh| fresh.update!(pending_account_setup: true) }
       update_status(sync, :accounts_need_setup, count: unlinked_count)
     else
-      brex_item.update!(pending_account_setup: false)
+      BrexItem::LegacyAccess.with_snapshot(brex_item) { |fresh| fresh.update!(pending_account_setup: false) }
     end
 
     # Phase 3: Process transactions for linked accounts only
@@ -71,6 +78,8 @@ class BrexItem::Syncer
 
     # Mark sync health
     collect_health_stats(sync, errors: sync_errors.presence)
+  rescue *BrexItem::LegacyAccess::DENIAL_ERRORS
+    raise
   rescue => e
     safe_message = user_safe_error_message(e)
     Rails.logger.error "BrexItem::Syncer - sync failed for Brex item #{brex_item.id}: #{e.class} - #{e.message}"

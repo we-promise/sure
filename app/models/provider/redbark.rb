@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "bigdecimal"
+
 class Provider::Redbark
   include HTTParty
 
@@ -89,6 +91,36 @@ class Provider::Redbark
     )
   end
 
+  # Shared ingestion reads exactly one response at a time. It durably records
+  # limit/offset progression and date-window recovery before requesting more.
+  def list_accounts_page(offset: 0)
+    snapshot_request("accounts", query: { limit: ACCOUNTS_PAGE_SIZE, offset: snapshot_offset(offset) })
+  end
+
+  def list_connections_snapshot
+    snapshot_request("connections")
+  end
+
+  def get_balances_snapshot(account_ids:)
+    unless account_ids.is_a?(Array) && account_ids.size.between?(1, ACCOUNTS_PAGE_SIZE) &&
+        account_ids.all? { |id| id.is_a?(String) && id.present? && !id.include?(",") }
+      raise ArgumentError, "Expected a bounded list of Redbark account identifiers"
+    end
+    snapshot_request("balances", query: { accountIds: account_ids.join(",") })
+  end
+
+  def get_transactions_page(connection_id:, account_id:, start_date:, end_date:, include_pending:, offset: 0)
+    unless [ connection_id, account_id ].all? { |id| id.is_a?(String) && id.present? } &&
+        [ start_date, end_date ].all? { |date| date.instance_of?(Date) } && start_date <= end_date &&
+        [ true, false ].include?(include_pending)
+      raise ArgumentError, "Invalid Redbark transaction request scope"
+    end
+    query = { connectionId: connection_id, accountId: account_id, from: start_date.iso8601,
+      to: end_date.iso8601, limit: TRANSACTIONS_PAGE_SIZE, offset: snapshot_offset(offset) }
+    query[:includePending] = "true" if include_pending
+    snapshot_request("transactions", query: query)
+  end
+
   private
 
     RETRYABLE_ERRORS = [
@@ -100,6 +132,41 @@ class Provider::Redbark
     INITIAL_RETRY_DELAY = 2 # seconds
     MAX_PAGES = 50 # safety cap so a bad hasMore can never loop forever
     MAX_WINDOW_SPLITS = 6 # bounds recursion when halving a truncated date window
+
+    def snapshot_offset(value)
+      raise ArgumentError, "Invalid Redbark page offset" unless value.is_a?(Integer) && value >= 0
+      value
+    end
+
+    def snapshot_request(resource, query: {})
+      with_retries("account_data_#{resource}", redact_errors: true) do
+        response = self.class.get("#{BASE_URL}/#{resource}", headers: auth_headers, query: query)
+        body = snapshot_response(response)
+        { "response" => body, "pagination_headers" => {
+          "x-redbark-truncated" => response.headers["x-redbark-truncated"]&.to_s
+        }.compact }
+      end
+    end
+
+    def snapshot_response(response)
+      case response.code
+      when 200, 201
+        parsed = JSON.parse(response.body, decimal_class: BigDecimal)
+        raise Error.new("Invalid Redbark response envelope", :invalid_response) unless parsed.is_a?(Hash)
+        parsed
+      when 401, 403
+        raise AuthenticationError.new("Redbark authentication failed", response.code == 401 ? :unauthorized : :access_forbidden)
+      when 429
+        raise RateLimitError.new("Redbark request rate limited", :rate_limited)
+      when 500..599
+        raise ServerError.new("Redbark service unavailable", :server_error)
+      else
+        type = { 400 => :bad_request, 404 => :not_found, 410 => :bad_request }.fetch(response.code, :unknown)
+        raise Error.new("Redbark account data request failed", type)
+      end
+    rescue JSON::ParserError, TypeError
+      raise Error.new("Invalid Redbark JSON response", :invalid_response), cause: nil
+    end
 
     def validate_configuration!
       raise ConfigurationError, "Api key is required" if @api_key.blank?
@@ -186,27 +253,32 @@ class Provider::Redbark
       [ results, false ]
     end
 
-    def with_retries(operation_name, max_retries: MAX_RETRIES)
+    def with_retries(operation_name, max_retries: MAX_RETRIES, redact_errors: false)
       retries = 0
 
       begin
         yield
       rescue *RETRYABLE_ERRORS, RateLimitError, ServerError => e
         retries += 1
+        description = redact_errors ? e.class.name : "#{e.class}: #{e.message}"
 
         if retries <= max_retries
           delay = calculate_retry_delay(retries)
           Rails.logger.warn(
             "Redbark API: #{operation_name} failed (attempt #{retries}/#{max_retries}): " \
-            "#{e.class}: #{e.message}. Retrying in #{delay}s..."
+            "#{description}. Retrying in #{delay}s..."
           )
           sleep(delay)
           retry
         else
           Rails.logger.error(
             "Redbark API: #{operation_name} failed after #{max_retries} retries: " \
-            "#{e.class}: #{e.message}"
+            "#{description}"
           )
+          if redact_errors
+            error = e.is_a?(Error) ? e : Error.new("Redbark network request failed", :network_error)
+            raise error, cause: nil
+          end
           raise e if e.is_a?(Error)
           raise Error.new("Network error after #{max_retries} retries: #{e.message}", :network_error)
         end

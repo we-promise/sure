@@ -9,13 +9,13 @@ class Provider::QuestradeTest < ActiveSupport::TestCase
   test "authenticate! sends the refresh token in the POST body, not the URL" do
     token_payload = {
       access_token: "access-123",
-      api_server: "https://api01.example.com/",
+      api_server: "https://api01.iq.questrade.com/",
       refresh_token: "rotated-456",
       expires_in: 1800
     }.to_json
 
     Provider::Questrade.expects(:post)
-      .with(Provider::Questrade::LOGIN_URL, body: { grant_type: "refresh_token", refresh_token: "secret-rt" })
+      .with(Provider::Questrade::LOGIN_URL, body: { grant_type: "refresh_token", refresh_token: "secret-rt" }, max_retries: 0, follow_redirects: false)
       .returns(OpenStruct.new(code: 200, body: token_payload))
     # Guard against regressing to a GET that carries the token in the query string.
     Provider::Questrade.expects(:get).never
@@ -29,7 +29,7 @@ class Provider::QuestradeTest < ActiveSupport::TestCase
   # must spend the freshest persisted token (see provided.rb#synchronize_exchange).
   test "authenticate! spends the freshest token inside synchronize_exchange" do
     token_payload = {
-      access_token: "at", api_server: "https://api01.example.com/",
+      access_token: "at", api_server: "https://api01.iq.questrade.com/",
       refresh_token: "rotated", expires_in: 1800
     }.to_json
 
@@ -39,7 +39,7 @@ class Provider::QuestradeTest < ActiveSupport::TestCase
 
     # The exchange must use the locked/fresh token, not the stale initial one.
     Provider::Questrade.expects(:post)
-      .with(Provider::Questrade::LOGIN_URL, body: { grant_type: "refresh_token", refresh_token: "fresh-from-lock" })
+      .with(Provider::Questrade::LOGIN_URL, body: { grant_type: "refresh_token", refresh_token: "fresh-from-lock" }, max_retries: 0, follow_redirects: false)
       .returns(OpenStruct.new(code: 200, body: token_payload))
 
     provider = Provider::Questrade.new(refresh_token: "stale-initial", synchronize_exchange: sync)
@@ -52,7 +52,7 @@ class Provider::QuestradeTest < ActiveSupport::TestCase
   test "retries network errors and raises Error after max retries exhausted" do
     provider = Provider::Questrade.new(refresh_token: "test-rt")
     # Authenticate first to set api_server and access_token
-    auth_payload = { access_token: "at", api_server: "https://api01.example.com/", refresh_token: "rt2", expires_in: 1800 }.to_json
+    auth_payload = { access_token: "at", api_server: "https://api01.iq.questrade.com/", refresh_token: "rt2", expires_in: 1800 }.to_json
     Provider::Questrade.stubs(:post).returns(OpenStruct.new(code: 200, body: auth_payload))
     provider.send(:authenticate!)
 
@@ -72,7 +72,7 @@ class Provider::QuestradeTest < ActiveSupport::TestCase
 
   test "retries on 429 rate limit and raises Error after max retries exhausted" do
     provider = Provider::Questrade.new(refresh_token: "test-rt")
-    auth_payload = { access_token: "at", api_server: "https://api01.example.com/", refresh_token: "rt2", expires_in: 1800 }.to_json
+    auth_payload = { access_token: "at", api_server: "https://api01.iq.questrade.com/", refresh_token: "rt2", expires_in: 1800 }.to_json
     Provider::Questrade.stubs(:post).returns(OpenStruct.new(code: 200, body: auth_payload))
     provider.send(:authenticate!)
 
@@ -91,7 +91,7 @@ class Provider::QuestradeTest < ActiveSupport::TestCase
 
   test "retries on 5xx server error and raises Error after max retries exhausted" do
     provider = Provider::Questrade.new(refresh_token: "test-rt")
-    auth_payload = { access_token: "at", api_server: "https://api01.example.com/", refresh_token: "rt2", expires_in: 1800 }.to_json
+    auth_payload = { access_token: "at", api_server: "https://api01.iq.questrade.com/", refresh_token: "rt2", expires_in: 1800 }.to_json
     Provider::Questrade.stubs(:post).returns(OpenStruct.new(code: 200, body: auth_payload))
     provider.send(:authenticate!)
 

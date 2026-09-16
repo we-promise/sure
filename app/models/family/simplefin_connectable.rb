@@ -10,16 +10,7 @@ module Family::SimplefinConnectable
   end
 
   def create_simplefin_item!(setup_token:, item_name: nil)
-    simplefin_provider = Provider::Simplefin.new
-    access_url = simplefin_provider.claim_access_url(setup_token)
-
-    simplefin_item = simplefin_items.create!(
-      name: item_name || "SimpleFin Connection",
-      access_url: access_url
-    )
-
-    simplefin_item.sync_later
-
-    simplefin_item
+    claim = SimplefinItem::ConnectionUpdate.prepare_new(self, setup_token: setup_token, item_name: item_name)
+    SimplefinItem::ConnectionUpdate.perform(claim_id: claim.id, family_id: id)
   end
 end

@@ -1,935 +1,217 @@
-# Rails `Provider` Generator Guide
+# Account data provider generator
 
-This guide explains how to use the `Provider` generators, which make it easy to add new
-integrations with either **global** or **per-family** scope credentials.
+The account-data generator creates an integration package over a shared normalization
+contract. It replaces the old generator that copied item/account tables, processing
+and sync classes, controllers, jobs and views and patched shared application files.
 
-## Table of Contents
-1. [Quick Start](#quick-start)
-2. [Global vs Per-Family: Which to Use?](#global-vs-per-family-which-to-use)
-3. [Provider:Family Generator](#providerfamily-generator)
-4. [Provider:Global Generator](#providerglobal-generator)
-5. [Comparison Table](#comparison-table)
-6. [Examples](#examples)
+The [architecture and rollout plan](../architecture/bank-data-providers.md) describes
+shared persistence, synchronization and provider cutover gates. **The generator does
+not activate an integration or migrate existing data.**
+Generated packages are drafts and fail explicitly until their transport and
+normalization are implemented and their runtime acceptance checks pass.
+The [migration matrix](../architecture/bank-data-provider-migration-matrix.md)
+covers every current bank, brokerage and crypto account integration.
 
----
+## Usage
 
-## Quick Start
+```sh
+bin/rails generate provider:account_data acme_bank api_key:text:secret \
+  base_url:string:default=https://api.example.test --type=banking
 
-### Two Generators Available
+bin/rails generate provider:account_data acme_broker token:text:secret --type=investment
 
-```bash
-# Per-Family Provider (each family has separate credentials)
-rails g provider:family <PROVIDER_NAME> field:type[:secret] ...
-
-# Global Provider (all families share site-wide credentials)
-rails g provider:global <PROVIDER_NAME> field:type[:secret] ...
+# Existing entry points delegate to the canonical account-data generator:
+bin/rails generate provider:bank_data acme_bank api_key:text:secret
+bin/rails generate provider:family acme_bank api_key:text:secret
+bin/rails generate provider:global acme_bank client_id:string secret:text:secret
 ```
 
-### Quick Examples
+`provider:account_data`, `provider:bank_data` and `provider:family` default declared
+fields to `connection` scope. `provider:global` defaults them to `application` scope.
+Either can be set
+explicitly using `--credential-scope=connection|application`. All provider connections
+remain family-owned. Installation credentials and per-connection tokens can coexist;
+the scope controls this declaration, not the ownership of a provider connection. Before
+activating a mixed-auth provider, extend its definition with both credential sets
+as part of the shared credential/authentication runtime.
 
-```bash
-# Per-family: Each family has their own Lunchflow API key
-rails g provider:family lunchflow api_key:text:secret base_url:string
+These generators are for account ingestion. Use the existing
+[securities provider guide](../llm-guides/adding-a-securities-provider.md) for market
+data; do not create bank connections for exchange-rate, LLM or property providers.
 
-# Global: All families share the same Plaid credentials
-rails g provider:global plaid \
-  client_id:string:secret \
-  secret:string:secret \
-  environment:string:default=sandbox
-```
+`Provider::AccountData` is the canonical integration namespace for bank, brokerage
+and crypto accounts. `Provider::BankData` remains an alias of the same module;
+existing adapter definitions and exception handling keep working. Both provider
+namespaces expose `Record` as a compatibility alias of the source-independent
+`Ingestion::Record`, which can also carry normalized values from file imports.
 
----
+## Output
 
-## Global vs Per-Family: Which to Use?
+For `acme_bank`, exactly four integration-owned files are generated:
 
-### Use `provider:global` When:
-- ✅ One set of credentials serves the entire application
-- ✅ Provider charges per-application (not per-customer)
-- ✅ You control the API account (self-hosted or managed mode)
-- ✅ All families can safely share access
-- ✅ Examples: Plaid, OpenAI, exchange rate services
+| Path | Responsibility |
+| --- | --- |
+| `app/models/provider/account_data/acme_bank.rb` | Definition and adapter normalization |
+| `app/models/provider/account_data/acme_bank/client.rb` | Injected upstream transport |
+| `test/models/provider/account_data/acme_bank_test.rb` | Identity/privacy checks and deliberately failing implementation acceptance tests |
+| `docs/providers/acme_bank.md` | Configuration and implementation checklist |
 
-### Use `provider:family` When:
-- ✅ Each family/customer needs their own credentials
-- ✅ Provider charges per-customer
-- ✅ Users bring their own API keys
-- ✅ Data isolation required between families
-- ✅ Examples: Lunch Flow, SimpleFIN, YNAB, personal bank APIs
+There are no per-provider migrations, models for persisted connections/accounts,
+routes, UI fragments or edits to shared enums/controllers. The former family
+default of investment has changed to **banking**; select investment explicitly.
+Legacy `--skip-migration`, `--skip-models`, `--skip-routes`, `--skip-controller`,
+`--skip-view` and `--skip-adapter` options are rejected: the generator no longer
+owns those surfaces. `--pretend`, `--skip`, `--force`, destination roots and Rails
+generator revocation use ordinary Thor file actions. Review `--force` output before
+overwriting an implemented integration.
 
----
+## Fields and defaults
 
-## Provider:Family Generator
+Use a lowercase snake_case provider key without slashes, namespaces or punctuation.
+Fields require `name:type[:secret][:default=value]`:
 
-### Usage
+- Supported types: `string`, `text`, `integer`, `boolean`.
+- Names must be snake_case and unique within the declaration.
+- Provider keys cannot shadow contract classes, the registry or errors, including
+  `record`, `registry`, `migration_cutover`, `invalid_response`, `stale_writer`
+  and `incomplete_page`. This also applies to `--force` and generator revocation.
+  The generator test inventories shared runtime files to catch newly added names
+  that have not been reserved.
+- `secret` describes encrypted runtime credential storage; it never masks an
+  otherwise plaintext value or permits committing a real credential.
+- Secret defaults are rejected. Supply secrets at runtime.
+- Boolean defaults are exactly `true` or `false`; integer defaults are decimal
+  integers. String defaults retain colons, quotes, newlines and URL punctuation
+  through Ruby string escaping. No default is evaluated as Ruby.
+- These are field declarations, not database columns. Configuration can use names
+  such as `institution_id` without colliding with shared relational fields.
 
-```bash
-rails g provider:family <PROVIDER_NAME> field:type[:secret][:default=value] ...
-```
+## Normalization contract
 
-### Example: Adding a MyBank Provider
+`Provider::AccountData::Definition` declares the stable key, existing ingestion
+`source`, scope, fields and capabilities. Source is distinct from key so that
+migrations preserve namespaces such as Plaid's `plaid` across region variants.
+`Adapter` receives an injected client and performs no persistence or scheduling.
 
-```bash
-rails g provider:family my_bank \
-  api_key:text:secret \
-  base_url:string:default=https://api.mybank.com \
-  refresh_token:text:secret
-```
+The [shared account setup command](../architecture/provider-native-account-setup.md)
+owns discovery presentation, authorized account creation/linking and source policy
+selection. An adapter opts in separately through `self.account_setup_types`; the
+default is empty. `self.account_setup_resources` defaults to balances plus declared
+capabilities; a provider requiring historical balances must declare that resource
+too. Review retained unlinked history, account-type/balance semantics and the native
+lifecycle before opting in. Generating a package never creates provider-specific
+setup controllers or permits secondary sources to replace existing authority.
 
-### What Gets Generated
+Optional `self.account_setup_defaults(account:, accountable_type:)` receives
+frozen nonsecret source context. It may return a valid `subtype` and decimal-string
+`cash_balance` for a new account; the shared command validates and signs those
+values. It cannot override explicitly entered account values or mutate existing
+accounts. Leave the inherited empty defaults unless the integration needs them.
 
-This single command generates:
-- ✅ Migration for `my_bank_items` and `my_bank_accounts` tables **with credential fields**
-- ✅ Models: `MyBankItem`, `MyBankAccount`, and `MyBankItem::Provided` concern
-- ✅ Adapter class for provider integration
-- ✅ Simple manual panel view for provider settings
-- ✅ Controller with CRUD actions and Turbo Stream support
-- ✅ Routes
-- ✅ Updates to settings controller and view
+Scope follows the upstream protocol, regardless of whether the source is a direct
+institution or an aggregator. Ordinary transaction/activity methods are account
+scoped. A connection-wide feed declares `transaction_scope` or `activity_scope`
+as `:connection` and implements the corresponding group method. Activity groups
+carry resource `activities`; their shared barrier is distinct from transaction
+groups and holdings snapshots. Resuming a captured activity prefix requires an
+explicit `resumable_activity_groups?` contract. See the [generation
+protocol](../architecture/connection-change-sets.md) before enabling that behavior.
 
-### Key Characteristics
-- **Credentials**: Stored in `my_bank_items` table (encrypted)
-- **Isolation**: Each family has completely separate credentials
-- **UI**: Manual form panel at `/settings/providers`
-- **Configuration**: Per-family, self-service
+An integration with a different initial transaction-history boundary can override
+the pure `initial_history_start(account:, observed_at:)` adapter method. Its
+default is 90 days; `nil` means accessible history without an initial start date.
+Declare any metadata inputs through `self.initial_history_metadata_keys` so the
+runtime can pin them when selecting and admitting the request. Explicit dates and
+completed checkpoint coverage take precedence. See the
+[history-window contract](../architecture/provider-history-windows.md); test through
+the shared syncer because a direct adapter call can hide an overridden default.
 
----
-
-## Provider:Global Generator
-
-### Usage
-
-```bash
-rails g provider:global <PROVIDER_NAME> field:type[:secret][:default=value] ...
-```
-
-### Example: Adding a Plaid Provider
-
-```bash
-rails g provider:global plaid \
-  client_id:string:secret \
-  secret:string:secret \
-  environment:string:default=sandbox
-```
-
-### What Gets Generated
-
-This single command generates:
-- ✅ Migration for `plaid_items` and `plaid_accounts` tables **without credential fields**
-- ✅ Models: `PlaidItem`, `PlaidAccount`, and `PlaidItem::Provided` concern
-- ✅ Adapter with `Provider::Configurable`
-- ❌ No controller (credentials managed globally)
-- ❌ No view (UI auto-generated by `Provider::Configurable`)
-- ❌ No routes (no CRUD needed)
-
-### Key Characteristics
-- **Credentials**: Stored in `settings` table (global, not encrypted)
-- **Sharing**: All families use the same credentials
-- **UI**: Auto-generated at `/settings/providers` (self-hosted mode only)
-- **Configuration**: ENV variables or admin settings
-
-### Important Notes
-- Credentials are shared by **all families** - use only for trusted services
-- Only available in **self-hosted mode** (admin-only access)
-- No per-family credential management needed
-- Simpler implementation (fewer files generated)
-
----
-
-## Comparison Table
-
-| Aspect | `provider:family` | `provider:global` |
-|--------|------------------|------------------|
-| **Credentials storage** | `provider_items` table (per-family) | `settings` table (global) |
-| **Credential encryption** | ✅ Yes (ActiveRecord encryption) | ❌ No (plaintext in settings) |
-| **Family isolation** | ✅ Complete (each family has own credentials) | ❌ None (all families share) |
-| **Files generated** | 9+ files | 5 files |
-| **Migration includes credentials** | ✅ Yes | ❌ No |
-| **Controller** | ✅ Yes (simple CRUD) | ❌ No |
-| **View** | ✅ Manual form panel | ❌ Auto-generated |
-| **Routes** | ✅ Yes | ❌ No |
-| **UI location** | `/settings/providers` (always) | `/settings/providers` (self-hosted only) |
-| **ENV variable support** | ❌ No (per-family can't use ENV) | ✅ Yes (fallback) |
-| **Use case** | User brings own API key | Platform provides API access |
-| **Examples** | Lunch Flow, SimpleFIN, YNAB | Plaid, OpenAI, TwelveData |
-
----
-
-## What Gets Generated (Detailed)
-
-### 1. Migration
-
-**File:** `db/migrate/xxx_create_my_bank_tables_and_accounts.rb`
-
-Creates two complete tables with all necessary fields:
+Account-scoped fetch methods return `Provider::AccountData::Page`:
 
 ```ruby
-class CreateMyBankTablesAndAccounts < ActiveRecord::Migration[7.2]
-  def change
-    # Create provider items table (stores per-family connection credentials)
-    create_table :my_bank_items, id: :uuid do |t|
-      t.references :family, null: false, foreign_key: true, type: :uuid
-      t.string :name
+transaction = Ingestion::Record.transaction(
+  external_id: "existing_provider_prefix_123",
+  name: "Coffee",
+  date: Date.new(2026, 9, 14),
+  amount: BigDecimal("4.25"),
+  currency: "USD",
+  pending: false,
+  metadata: { "provider_namespace" => { "pending" => false } }
+)
 
-      # Institution metadata
-      t.string :institution_id
-      t.string :institution_name
-      t.string :institution_domain
-      t.string :institution_url
-      t.string :institution_color
-
-      # Status and lifecycle
-      t.string :status, default: "good"
-      t.boolean :scheduled_for_deletion, default: false
-      t.boolean :pending_account_setup, default: false
-
-      # Sync settings
-      t.datetime :sync_start_date
-
-      # Raw data storage
-      t.jsonb :raw_payload
-      t.jsonb :raw_institution_payload
-
-      # Provider-specific credential fields
-      t.text :api_key
-      t.string :base_url
-      t.text :refresh_token
-
-      t.timestamps
-    end
-
-    add_index :my_bank_items, :family_id
-    add_index :my_bank_items, :status
-
-    # Create provider accounts table (stores individual account data from provider)
-    create_table :my_bank_accounts, id: :uuid do |t|
-      t.references :my_bank_item, null: false, foreign_key: true, type: :uuid
-
-      # Account identification
-      t.string :name
-      t.string :account_id
-
-      # Account details
-      t.string :currency
-      t.decimal :current_balance, precision: 19, scale: 4
-      t.string :account_status
-      t.string :account_type
-      t.string :provider
-
-      # Metadata and raw data
-      t.jsonb :institution_metadata
-      t.jsonb :raw_payload
-      t.jsonb :raw_transactions_payload
-
-      t.timestamps
-    end
-
-    add_index :my_bank_accounts, :account_id
-    add_index :my_bank_accounts, :my_bank_item_id
-  end
-end
+Provider::AccountData::Page.new(
+  records: [transaction],
+  mode: "delta",
+  complete: true,
+  removed_ids: [],
+  coverage: { "start" => "2026-09-01", "end" => "2026-09-14" }
+)
 ```
 
-### 2. Models
-
-**File:** `app/models/my_bank_item.rb`
-
-The item model stores per-family connection credentials:
-
-```ruby
-class MyBankItem < ApplicationRecord
-  include Syncable, Provided
-
-  enum :status, { good: "good", requires_update: "requires_update" }, default: :good
-
-  # Encryption for secret fields
-  if Rails.application.credentials.active_record_encryption.present?
-    encrypts :api_key, :refresh_token, deterministic: true
-  end
-
-  validates :name, presence: true
-  validates :api_key, presence: true, on: :create
-  validates :refresh_token, presence: true, on: :create
-
-  belongs_to :family
-  has_one_attached :logo
-  has_many :my_bank_accounts, dependent: :destroy
-  has_many :accounts, through: :my_bank_accounts
-
-  scope :active, -> { where(scheduled_for_deletion: false) }
-  scope :ordered, -> { order(created_at: :desc) }
-  scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
-
-  def credentials_configured?
-    api_key.present? && refresh_token.present?
-  end
-
-  def effective_base_url
-    base_url.presence || "https://api.mybank.com"
-  end
-end
-```
-
-**File:** `app/models/my_bank_account.rb`
-
-The account model stores individual account data from the provider:
-
-```ruby
-class MyBankAccount < ApplicationRecord
-  include CurrencyNormalizable
-
-  belongs_to :my_bank_item
-
-  # Association through account_providers for linking to internal accounts
-  has_one :account_provider, as: :provider, dependent: :destroy
-  has_one :account, through: :account_provider, source: :account
-
-  validates :name, :currency, presence: true
-
-  def upsert_my_bank_snapshot!(account_snapshot)
-    update!(
-      current_balance: account_snapshot[:balance],
-      currency: parse_currency(account_snapshot[:currency]) || "USD",
-      name: account_snapshot[:name],
-      account_id: account_snapshot[:id]&.to_s,
-      account_status: account_snapshot[:status],
-      raw_payload: account_snapshot
-    )
-  end
-end
-```
-
-**File:** `app/models/my_bank_item/provided.rb`
-
-The Provided concern connects the item to its provider SDK:
-
-```ruby
-module MyBankItem::Provided
-  extend ActiveSupport::Concern
-
-  def my_bank_provider
-    return nil unless credentials_configured?
-
-    Provider::MyBank.new(
-      api_key,
-      base_url: effective_base_url,
-      refresh_token: refresh_token
-    )
-  end
-end
-```
-
-### 3. Adapter
-
-**File:** `app/models/provider/my_bank_adapter.rb`
-
-```ruby
-class Provider::MyBankAdapter < Provider::Base
-  include Provider::Syncable
-  include Provider::InstitutionMetadata
-
-  # Register this adapter with the factory
-  Provider::Factory.register("MyBankAccount", self)
-
-  def provider_name
-    "my_bank"
-  end
-
-  # Build a My Bank provider instance with family-specific credentials
-  def self.build_provider(family:)
-    return nil unless family.present?
-
-    # Get family-specific credentials
-    my_bank_item = family.my_bank_items.where.not(api_key: nil).first
-    return nil unless my_bank_item&.credentials_configured?
-
-    # TODO: Implement provider initialization
-    Provider::MyBank.new(
-      my_bank_item.api_key,
-      base_url: my_bank_item.effective_base_url,
-      refresh_token: my_bank_item.refresh_token
-    )
-  end
-
-  def sync_path
-    Rails.application.routes.url_helpers.sync_my_bank_item_path(item)
-  end
-
-  def item
-    provider_account.my_bank_item
-  end
-
-  def can_delete_holdings?
-    false
-  end
-
-  def institution_domain
-    metadata = provider_account.institution_metadata
-    return nil unless metadata.present?
-    metadata["domain"]
-  end
-
-  def institution_name
-    metadata = provider_account.institution_metadata
-    return nil unless metadata.present?
-    metadata["name"] || item&.institution_name
-  end
-
-  def institution_url
-    metadata = provider_account.institution_metadata
-    return nil unless metadata.present?
-    metadata["url"] || item&.institution_url
-  end
-
-  def institution_color
-    item&.institution_color
-  end
-end
-```
-
-### 4. Panel View
-
-**File:** `app/views/settings/providers/_my_bank_panel.html.erb`
-
-A simple manual form for configuring My Bank credentials:
-
-```erb
-<div class="space-y-4">
-  <div class="prose prose-sm text-secondary">
-    <p class="text-primary font-medium">Setup instructions:</p>
-    <ol>
-      <li>Visit your My Bank dashboard to get your credentials</li>
-      <li>Enter your credentials below and click the Save button</li>
-      <li>After a successful connection, go to the Accounts tab to set up new accounts</li>
-    </ol>
-
-    <p class="text-primary font-medium">Field descriptions:</p>
-    <ul>
-      <li><strong>API Key:</strong> Your My Bank API key (required)</li>
-      <li><strong>Base URL:</strong> Your My Bank base URL (optional, defaults to https://api.mybank.com)</li>
-      <li><strong>Refresh Token:</strong> Your My Bank refresh token (required)</li>
-    </ul>
-  </div>
-
-  <% error_msg = local_assigns[:error_message] || @error_message %>
-  <% if error_msg.present? %>
-    <div class="p-2 rounded-md bg-destructive/10 text-destructive text-sm">
-      <%= error_msg %>
-    </div>
-  <% end %>
-
-  <%
-    # Get or initialize a my_bank_item for this family
-    my_bank_item = Current.family.my_bank_items.first_or_initialize(name: "My Bank Connection")
-    is_new_record = my_bank_item.new_record?
-  %>
-
-  <%= styled_form_with model: my_bank_item,
-                       url: is_new_record ? my_bank_items_path : my_bank_item_path(my_bank_item),
-                       scope: :my_bank_item,
-                       method: is_new_record ? :post : :patch,
-                       data: { turbo: true },
-                       class: "space-y-3" do |form| %>
-    <%= form.text_field :api_key,
-                        label: "API Key",
-                        type: :password %>
-
-    <%= form.text_field :base_url,
-                        label: "Base URL (Optional)",
-                        placeholder: "https://api.mybank.com (default)",
-                        value: my_bank_item.base_url %>
-
-    <%= form.text_field :refresh_token,
-                        label: "Refresh Token",
-                        type: :password %>
-
-    <div class="flex justify-end">
-      <%= form.submit is_new_record ? "Save Configuration" : "Update Configuration",
-                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 transition-colors" %>
-    </div>
-  <% end %>
-
-  <% items = local_assigns[:my_bank_items] || @my_bank_items || Current.family.my_bank_items.where.not(api_key: nil) %>
-  <% if items&.any? %>
-    <div class="flex items-center gap-2">
-      <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary">Configured and ready to use. Visit the <a href="<%= accounts_path %>" class="link">Accounts</a> tab to manage and set up accounts.</p>
-    </div>
-  <% end %>
-</div>
-```
-
-### 5. Controller
-
-**File:** `app/controllers/my_bank_items_controller.rb`
-
-A simple controller with CRUD actions and Turbo Stream support:
-
-```ruby
-class MyBankItemsController < ApplicationController
-  before_action :set_my_bank_item, only: [:update, :destroy, :sync]
-
-  def create
-    @my_bank_item = Current.family.my_bank_items.build(my_bank_item_params)
-    @my_bank_item.name ||= "My Bank Connection"
-
-    if @my_bank_item.save
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully configured My Bank.")
-        @my_bank_items = Current.family.my_bank_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "my-bank-providers-panel",
-            partial: "settings/providers/my_bank_panel",
-            locals: { my_bank_items: @my_bank_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
-    else
-      @error_message = @my_bank_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "my-bank-providers-panel",
-          partial: "settings/providers/my_bank_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
-    end
-  end
-
-  def update
-    if @my_bank_item.update(my_bank_item_params)
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully updated My Bank configuration.")
-        @my_bank_items = Current.family.my_bank_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "my-bank-providers-panel",
-            partial: "settings/providers/my_bank_panel",
-            locals: { my_bank_items: @my_bank_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
-    else
-      @error_message = @my_bank_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "my-bank-providers-panel",
-          partial: "settings/providers/my_bank_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
-    end
-  end
-
-  def destroy
-    @my_bank_item.destroy_later
-    redirect_to settings_providers_path, notice: t(".success", default: "Scheduled My Bank connection for deletion.")
-  end
-
-  def sync
-    unless @my_bank_item.syncing?
-      @my_bank_item.sync_later
-    end
-
-    respond_to do |format|
-      format.html { redirect_back_or_to accounts_path }
-      format.json { head :ok }
-    end
-  end
-
-  private
-
-  def set_my_bank_item
-    @my_bank_item = Current.family.my_bank_items.find(params[:id])
-  end
-
-  def my_bank_item_params
-    params.require(:my_bank_item).permit(
-      :name,
-      :sync_start_date,
-      :api_key,
-      :base_url,
-      :refresh_token
-    )
-  end
-end
-```
-
-### 6. Routes
-
-**File:** `config/routes.rb` (updated)
-
-```ruby
-resources :my_bank_items, only: [:create, :update, :destroy] do
-  member do
-    post :sync
-  end
-end
-```
-
-### 7. Settings Updates
-
-**File:** `app/controllers/settings/providers_controller.rb` (updated)
-- Excludes `my_bank` from global provider configurations
-- Adds `@my_bank_items` instance variable
-
-**File:** `app/views/settings/providers/show.html.erb` (updated)
-- Adds My Bank section with turbo frame
-
----
-
-## Customization
-
-After generation, you'll typically want to customize three files:
-
-### 1. Customize the Adapter
-
-Implement the `build_provider` method in `app/models/provider/my_bank_adapter.rb`:
-
-```ruby
-def self.build_provider(family:)
-  return nil unless family.present?
-
-  # Get the family's credentials
-  my_bank_item = family.my_bank_items.where.not(api_key: nil).first
-  return nil unless my_bank_item&.credentials_configured?
-
-  # Initialize your provider SDK with the credentials
-  Provider::MyBank.new(
-    my_bank_item.api_key,
-    base_url: my_bank_item.effective_base_url,
-    refresh_token: my_bank_item.refresh_token
-  )
-end
-```
-
-### 2. Update the Model
-
-Add custom validations, helper methods, and business logic in `app/models/my_bank_item.rb`:
-
-```ruby
-class MyBankItem < ApplicationRecord
-  include Syncable, Provided
-
-  belongs_to :family
-
-  # Validations (the generator adds basic ones, customize as needed)
-  validates :name, presence: true
-  validates :api_key, presence: true, on: :create
-  validates :refresh_token, presence: true, on: :create
-  validates :base_url, format: { with: URI::DEFAULT_PARSER.make_regexp }, allow_blank: true
-
-  # Add custom business logic
-  def refresh_oauth_token!
-    # Implement OAuth token refresh logic
-    provider = my_bank_provider
-    return false unless provider
-
-    new_token = provider.refresh_token!(refresh_token)
-    update(refresh_token: new_token)
-  rescue Provider::MyBank::AuthenticationError
-    update(status: :requires_update)
-    false
-  end
-
-  # Override effective methods for better defaults
-  def effective_base_url
-    base_url.presence || "https://api.mybank.com"
-  end
-end
-```
-
-### 3. Customize the View
-
-Edit the generated panel view `app/views/settings/providers/_my_bank_panel.html.erb` to add custom content:
-
-```erb
-<div class="space-y-4">
-  <%# Add custom header %>
-  <div class="flex items-center gap-3">
-    <%= image_tag "my_bank_logo.svg", class: "w-8 h-8" %>
-    <h3 class="text-lg font-semibold">My Bank Integration</h3>
-  </div>
-
-  <%# The generated form content goes here... %>
-
-  <%# Add custom help section %>
-  <div class="mt-4 p-4 bg-subtle rounded-lg">
-    <p class="text-sm text-secondary">
-      Need help? Visit <a href="https://help.mybank.com" class="link">My Bank Help Center</a>
-    </p>
-  </div>
-</div>
-```
-
----
-
-## Examples
-
-### Example 1: Simple API Key Provider
-
-```bash
-rails g provider:family coinbase api_key:text:secret
-```
-
-Result: Basic provider with just an API key field.
-
-### Example 2: OAuth Provider
-
-```bash
-rails g provider:family stripe \
-  client_id:string:secret \
-  client_secret:string:secret \
-  access_token:text:secret \
-  refresh_token:text:secret
-```
-
-Then customize the adapter to implement OAuth flow.
-
-### Example 3: Complex Provider
-
-```bash
-rails g provider:family enterprise_bank \
-  api_key:text:secret \
-  environment:string \
-  base_url:string \
-  webhook_secret:text:secret \
-  rate_limit:integer
-```
-
-Then add custom validations and logic in the model:
-
-```ruby
-class EnterpriseBankItem < ApplicationRecord
-  # ... (basic setup)
-
-  validates :environment, inclusion: { in: %w[sandbox production] }
-  validates :rate_limit, numericality: { greater_than: 0 }, allow_nil: true
-
-  def effective_rate_limit
-    rate_limit || 100  # Default to 100 requests/minute
-  end
-end
-```
-
----
-
-## Tips & Best Practices
-
-### 1. Always Run Migrations
-
-```bash
-rails db:migrate
-```
-
-### 2. Test in Console
-
-```ruby
-# Check if adapter is registered
-Provider::Factory.adapters
-# => { ... "MyBankAccount" => Provider::MyBankAdapter, ... }
-
-# Test provider building
-family = Family.first
-item = family.my_bank_items.create!(name: "Test", api_key: "test_key", refresh_token: "test_refresh")
-provider = Provider::MyBankAdapter.build_provider(family: family)
-```
-
-### 3. Use Proper Encryption
-
-Always check that encryption is set up:
-
-```ruby
-# In your model
-if Rails.application.credentials.active_record_encryption.present?
-  encrypts :api_key, :refresh_token, deterministic: true
-else
-  Rails.logger.warn "ActiveRecord encryption not configured for #{self.name}"
-end
-```
-
-### 4. Implement Proper Error Handling
-
-```ruby
-def self.build_provider(family:)
-  return nil unless family.present?
-
-  item = family.my_bank_items.where.not(api_key: nil).first
-  return nil unless item&.credentials_configured?
-
-  begin
-    Provider::MyBank.new(item.api_key)
-  rescue Provider::MyBank::ConfigurationError => e
-    Rails.logger.error("MyBank provider configuration error: #{e.message}")
-    nil
-  end
-end
-```
-
-### 5. Add Integration Tests
-
-```ruby
-# test/models/provider/my_bank_adapter_test.rb
-class Provider::MyBankAdapterTest < ActiveSupport::TestCase
-  test "builds provider with valid credentials" do
-    family = families(:family_one)
-    item = family.my_bank_items.create!(
-      name: "Test Bank",
-      api_key: "test_key"
-    )
-
-    provider = Provider::MyBankAdapter.build_provider(family: family)
-    assert_not_nil provider
-    assert_instance_of Provider::MyBank, provider
-  end
-
-  test "returns nil without credentials" do
-    family = families(:family_one)
-    provider = Provider::MyBankAdapter.build_provider(family: family)
-    assert_nil provider
-  end
-end
-```
-
----
-
-## Troubleshooting
-
-### Panel Not Showing
-
-1. Check that the provider is excluded in `settings/providers_controller.rb`:
-   ```ruby
-   @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
-     config.provider_key.to_s.casecmp("my_bank").zero?
-   end
-   ```
-
-2. Check that the instance variable is set:
-   ```ruby
-   @my_bank_items = Current.family.my_bank_items.ordered.select(:id)
-   ```
-
-3. Check that the section exists in `settings/providers/show.html.erb`:
-   ```erb
-   <%= settings_section title: "My Bank" do %>
-     <turbo-frame id="my-bank-providers-panel">
-       <%= render "settings/providers/my_bank_panel" %>
-     </turbo-frame>
-   <% end %>
-   ```
-
-### Form Not Submitting
-
-1. Check routes are properly added:
-   ```bash
-   rails routes | grep my_bank
-   ```
-
-2. Check turbo frame ID matches:
-   - View: `<turbo-frame id="my-bank-providers-panel">`
-   - Controller: Uses `"my-bank-providers-panel"` in turbo_stream.replace
-
-### Encryption Not Working
-
-1. Check credentials are configured:
-   ```bash
-   rails credentials:edit
-   ```
-
-2. Add encryption keys if missing:
-   ```yaml
-   active_record_encryption:
-     primary_key: (generate with: rails db:encryption:init)
-     deterministic_key: (generate with: rails db:encryption:init)
-     key_derivation_salt: (generate with: rails db:encryption:init)
-   ```
-
-3. Or use environment variables:
-   ```bash
-   export ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY="..."
-   export ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY="..."
-   export ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT="..."
-   ```
-
----
-
-## Advanced: Creating a Provider SDK
-
-For complex providers, consider creating a separate SDK class:
-
-```ruby
-# app/models/provider/my_bank.rb
-class Provider::MyBank
-  class AuthenticationError < StandardError; end
-  class RateLimitError < StandardError; end
-
-  def initialize(api_key, base_url: "https://api.mybank.com")
-    @api_key = api_key
-    @base_url = base_url
-    @client = HTTP.headers(
-      "Authorization" => "Bearer #{api_key}",
-      "User-Agent" => "MyApp/1.0"
-    )
-  end
-
-  def get_accounts
-    response = @client.get("#{@base_url}/accounts")
-    handle_response(response)
-  end
-
-  def get_transactions(account_id, start_date: nil, end_date: nil)
-    params = { account_id: account_id }
-    params[:start_date] = start_date.iso8601 if start_date
-    params[:end_date] = end_date.iso8601 if end_date
-
-    response = @client.get("#{@base_url}/transactions", params: params)
-    handle_response(response)
-  end
-
-  private
-
-  def handle_response(response)
-    case response.code
-    when 200...300
-      JSON.parse(response.body, symbolize_names: true)
-    when 401, 403
-      raise AuthenticationError, "Invalid API key"
-    when 429
-      raise RateLimitError, "Rate limit exceeded"
-    else
-      raise StandardError, "API error: #{response.code} #{response.body}"
-    end
-  end
-end
-```
-
----
-
-## Summary
-
-The per-family `Provider` Rails generator system provides:
-  - ✅ **Fast development** - Generate in seconds, not hour
-  - ✅ **Consistency** - All providers follow the same pattern
-  - ✅ **Maintainability** - Clear structure and conventions
-  - ✅ **Flexibility** - Easy to customize for complex needs
-  - ✅ **Security** - Built-in encryption for sensitive fields
-  - ✅ **Documentation** - Self-documenting with descriptions
-
-Use it whenever you need to add a new provider where each family needs their own credentials.
+Use `Ingestion::Record.account`, `.transaction`, `.holding` and `.activity` to construct
+immutable typed values. Required fields are defined in
+[`Ingestion::Record`](../../app/models/ingestion/record.rb). Monetary amounts,
+quantities and prices require finite `BigDecimal`; record dates require `Date`.
+Unknown balances/prices may be omitted, and must not be replaced with zero.
+Metadata preserves namespaced pending/FX fields. The domain bridge must
+map these values to the existing import adapter and extend investment contracts
+where a provider needs additional semantics.
+
+`Page` distinguishes snapshot from delta, explicit completeness, an opaque next
+page cursor, a separate `checkpoint_cursor` for the next sync, removals, actual
+coverage and recoverable warnings. A complete result may carry a checkpoint (for
+example an account history checkpoint), but cannot also have a next page. The runtime
+commits that checkpoint only after durable application. Fetch methods also accept
+`window:` for the requested `start`/`end` dates; the runtime must validate this
+request context and adapters report the actual coverage. Incomplete results may
+have no continuation when the
+upstream response is partial. Only the shared runtime can establish that
+an entire snapshot chain is authoritative, apply removal policies, persist batches
+or commit checkpoints. The presence of `complete: true` alone does not authorize
+deleting financial records.
+
+An incomplete page can also supply `progress_cursor` to retain partial fetch
+progress without advancing completed coverage. By default that progress can resume
+in a later sync. Override `progress_cursor_scope(stream:)` to return `:sync` for
+offsets tied to one captured snapshot: retries of that logical Sync resume the
+offset, while a new Sync starts from the last completed checkpoint. The runtime
+retains the previous batches and verifies the actual checkpoint before replacing
+progress. This scope does not change a completed `checkpoint_cursor`'s lifetime;
+do not put a snapshot-specific offset in that field. On-chain inventory and
+activities use this contract. Behavioral verification remains pending.
+
+For a connection-wide transaction log, override `transaction_scope` to return
+`:connection` and implement `fetch_transaction_group(start_cursor:, generation_id:,
+cursor:)`. Return an immutable `Provider::AccountData::TransactionGroup` containing
+the account pages and original/request/next cursors. Its individual pages are
+provisional. The shared runner captures the complete generation, seals bounded
+account batches and promotes the connection cursor only after all children commit.
+An interrupted provisional fetch restarts at the committed cursor; a sealed
+generation resumes publication from stored evidence. See the
+[generation protocol and its remaining acceptance gates](../architecture/connection-change-sets.md).
+Plaid's item-wide cursor uses this contract. Do not initialize account-scoped
+cursors from it or wrap the same cursor in separate per-account checkpoints.
+
+Unhandled methods raise `Provider::AccountData::NotImplementedError`, a regular
+`StandardError`, so they cannot silently turn into empty successful imports.
+Unsupported optional resources raise `UnsupportedCapability`. Transport failures
+must raise sanitized errors; the runtime will capture support-relevant incidents
+with `DebugLogEntry.capture` and family/connection context.
+
+## Verification and activation
+
+Replace each generated failing test with fixture/VCR assertions for real responses.
+Cover identity replay, sign/currency/FX normalization, account discovery, pending
+settlement, pagination, removals, complete empty versus partial results, rate limits
+and authentication failures. Investment adapters also need holdings and activity
+parity. Preserve existing provider SDKs where useful.
+
+Run the focused generated tests and the repository's
+[required checks](../llm-guides/development.md#before-opening-a-pull-request).
+Activation additionally requires the architecture's persistence, authorization,
+credential, registry, shared UI and sync gates; migration requires each provider's
+copy verification and rollback gates. Existing account archives also require the
+[retained ownership index](../architecture/provider-retained-account-index.md),
+including older versions, before copy/preparation coverage can be accepted.
+Generating four files is the beginning of an
+integration, not evidence that a provider or its existing data has migrated.

@@ -5,18 +5,30 @@ class AkahuAccount::Processor
 
   attr_reader :akahu_account
 
-  def initialize(akahu_account)
+  def initialize(akahu_account, pending_inventory: nil, expected_context: nil)
     @akahu_account = akahu_account
+    @pending_inventory = pending_inventory
+    @expected_context = expected_context || AkahuItem::LegacyAccess.source_context(akahu_account)
   end
 
   def process
-    unless akahu_account.current_account.present?
-      Rails.logger.info "AkahuAccount::Processor - No linked account for akahu_account #{akahu_account.id}, skipping processing"
-      return
+    AkahuItem::LegacyAccess.with_account(akahu_account) do |current|
+      AkahuItem::LegacyAccess.verify_source!(current, @expected_context)
+      expected = current.current_account
+      next unless expected
+      publication_source, publication_context = nil, nil
+      AkahuItem::LegacyAccess.with_publication(current, expected_account: expected, resource: "balances") do |fresh, _financial|
+        AkahuItem::LegacyAccess.verify_source!(fresh, @expected_context)
+        self.class.new(fresh).send(:process_account!)
+        # Balance publication can legitimately establish the source currency.
+        # Pin the resulting financial core before proceeding to transaction work.
+        publication_source = fresh
+        publication_context = AkahuItem::LegacyAccess.source_context(fresh)
+      end
+      process_transactions(publication_source, publication_context)
     end
-
-    process_account!
-    process_transactions
+  rescue *AkahuItem::LegacyAccess::DENIAL_ERRORS
+    raise
   rescue StandardError => e
     Rails.logger.error "AkahuAccount::Processor - Failed to process account akahu_account_id=#{akahu_account.id} error_class=#{e.class.name}"
     report_exception(e, "account")
@@ -40,11 +52,14 @@ class AkahuAccount::Processor
       )
     end
 
-    def process_transactions
-      AkahuAccount::Transactions::Processor.new(akahu_account).process
-    rescue => e
-      report_exception(e, "transactions")
-      Rails.logger.error "AkahuAccount::Processor - Failed to process transactions akahu_account_id=#{akahu_account.id} error_class=#{e.class.name}"
+    def process_transactions(source, expected_context)
+      AkahuAccount::Transactions::Processor.new(source, pending_inventory: @pending_inventory,
+        expected_context: expected_context).process
+    rescue *AkahuItem::LegacyAccess::DENIAL_ERRORS
+      raise
+    rescue StandardError => error
+      report_exception(error, "transactions")
+      Rails.logger.error "AkahuAccount::Processor - Failed to process transactions akahu_account_id=#{akahu_account.id} error_class=#{error.class.name}"
       { success: false, failed: 1, errors: [ { error: I18n.t("akahu_item.errors.account_processing_failed") } ] }
     end
 

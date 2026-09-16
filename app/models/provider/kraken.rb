@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "bigdecimal"
+require "json"
+
 class Provider::Kraken
   include HTTParty
   extend SslConfigurable
@@ -74,9 +77,94 @@ class Provider::Kraken
     public_get("OHLC", params)
   end
 
+  # Each native reader returns one original envelope. Ingestion owns durable
+  # pagination and retries; a fresh signed request always allocates a nonce.
+  def get_api_key_info_snapshot
+    private_snapshot("GetApiKeyInfo")
+  end
+
+  def get_extended_balance_snapshot
+    private_snapshot("BalanceEx")
+  end
+
+  def get_asset_info_snapshot
+    public_snapshot("Assets")
+  end
+
+  def get_asset_pairs_snapshot
+    public_snapshot("AssetPairs")
+  end
+
+  # The public all-market response avoids an HTTP request per owned asset.
+  def get_ticker_snapshot
+    public_snapshot("Ticker")
+  end
+
+  # https://docs.kraken.com/api-reference/account-data/get-trades-history
+  def get_trades_history_page(start: nil, end_at:, offset: 0)
+    private_snapshot("TradesHistory", native_history_params(start, end_at, offset).merge("limit" => "50", "consolidate_taker" => "true"))
+  end
+
+  # https://docs.kraken.com/api-reference/account-data/get-ledgers-info
+  def get_ledgers_page(start: nil, end_at:, offset: 0)
+    private_snapshot("Ledgers", native_history_params(start, end_at, offset))
+  end
+
   private
 
     attr_reader :nonce_generator
+
+    def native_history_params(start, finish, offset)
+      unless (start.nil? || (start.is_a?(Integer) && start >= 0)) && finish.is_a?(Integer) && finish.positive? &&
+          (start.nil? || start < finish) && offset.is_a?(Integer) && offset >= 0
+        raise ArgumentError, "Invalid Kraken history request scope"
+      end
+      { "start" => start&.to_s, "end" => finish.to_s, "ofs" => offset.to_s, "without_count" => "false" }.compact
+    end
+
+    def public_snapshot(method)
+      snapshot_response(self.class.get("#{PUBLIC_PREFIX}/#{method}", query: {}))
+    rescue SocketError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError, SystemCallError, EOFError
+      raise ApiError, "Kraken network request failed", cause: nil
+    end
+
+    def private_snapshot(method, params = {})
+      unless api_key.is_a?(String) && api_key.present? && api_secret.is_a?(String) && api_secret.present?
+        raise AuthenticationError, "Kraken credentials are required"
+      end
+      begin
+        raise ArgumentError if Base64.strict_decode64(api_secret).empty?
+      rescue ArgumentError
+        raise AuthenticationError, "Invalid Kraken credential encoding", cause: nil
+      end
+      nonce = nonce_generator.call.to_s
+      unless nonce.match?(/\A[0-9]+\z/) && nonce.to_i.positive? && nonce.to_i <= 9_223_372_036_854_775_807
+        raise NonceError, "Invalid Kraken nonce allocation"
+      end
+      path = "#{PRIVATE_PREFIX}/#{method}"
+      request_params = { "nonce" => nonce }.merge(params)
+      snapshot_response(self.class.post(path, body: URI.encode_www_form(request_params),
+        headers: auth_headers(path, request_params).merge("Content-Type" => "application/x-www-form-urlencoded")))
+    rescue SocketError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError, SystemCallError, EOFError
+      raise ApiError, "Kraken network request failed", cause: nil
+    end
+
+    def snapshot_response(response)
+      raise ApiError, "Kraken HTTP request failed" unless response.code.between?(200, 299)
+      parsed = JSON.parse(response.body, decimal_class: BigDecimal)
+      unless parsed.is_a?(Hash) && parsed["error"].is_a?(Array) && parsed["error"].all? { |value| value.is_a?(String) }
+        raise ApiError, "Invalid Kraken response envelope"
+      end
+      errors = parsed["error"].reject(&:blank?)
+      if errors.any?
+        classified = classified_error(errors)
+        raise classified.class, "Kraken account data request failed", cause: nil
+      end
+      raise ApiError, "Invalid Kraken result" unless parsed["result"].is_a?(Hash)
+      parsed
+    rescue JSON::ParserError, TypeError
+      raise ApiError, "Invalid Kraken JSON response", cause: nil
+    end
 
     def public_get(method, params = {})
       response = self.class.get("#{PUBLIC_PREFIX}/#{method}", query: params)

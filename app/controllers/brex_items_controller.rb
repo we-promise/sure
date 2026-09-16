@@ -1,9 +1,14 @@
 class BrexItemsController < ApplicationController
+  include RetiredProviderRouting
+  self.retired_provider_key = "brex"
+
   before_action :set_brex_item, only: [ :show, :edit, :update, :destroy, :sync ]
   before_action :require_admin!, only: [ :new, :create, :edit, :update, :destroy, :sync ]
+  rescue_from(*BrexItem::LegacyAccess::DENIAL_ERRORS, with: :render_ownership_changed)
+  rescue_from ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved, with: :render_ownership_changed
 
   def index
-    @brex_items = Current.family.brex_items.active.ordered
+    @brex_items = legacy_brex_items
     render layout: "settings"
   end
 
@@ -15,11 +20,8 @@ class BrexItemsController < ApplicationController
   end
 
   def create
-    @brex_item = Current.family.brex_items.build(brex_item_params)
-    @brex_item.name = t("brex_items.default_connection_name") if @brex_item.name.blank?
-
-    if @brex_item.save
-      @brex_item.sync_later
+    @brex_item = BrexItem::Lifecycle.create(family: Current.family, actor: Current.user, attributes: brex_item_params)
+    if @brex_item.persisted?
       render_provider_panel_success(t(".success"))
     else
       render_provider_panel_error
@@ -27,10 +29,16 @@ class BrexItemsController < ApplicationController
   end
 
   def edit
+    connection = Current.family.provider_connections.where(provider_key: "brex")
+      .joins(:provider_migration_control).find_by(provider_migration_controls: {
+        family_id: Current.family.id, legacy_type: "BrexItem", legacy_id: @brex_item.id, state: ProviderMigrationControl::NATIVE_STATES
+      })
+    redirect_to edit_provider_connection_path(connection) if connection
   end
 
   def update
-    if BrexItem::AccountFlow.update_item_with_cache_expiration(@brex_item, family: Current.family, attributes: brex_item_params)
+    @brex_item = BrexItem::Lifecycle.new(item: @brex_item, actor: Current.user).update_settings(brex_item_params)
+    if @brex_item.errors.empty?
       render_provider_panel_success(t(".success"))
     else
       render_provider_panel_error
@@ -38,13 +46,12 @@ class BrexItemsController < ApplicationController
   end
 
   def destroy
-    @brex_item.unlink_all!(dry_run: false)
-    @brex_item.destroy_later
+    BrexItem::Lifecycle.new(item: @brex_item, actor: Current.user).disconnect
     redirect_to accounts_path, notice: t(".success")
   end
 
   def sync
-    @brex_item.sync_later unless @brex_item.syncing?
+    BrexItem::SyncRequest.new(item: @brex_item, actor: Current.user).call
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -54,11 +61,30 @@ class BrexItemsController < ApplicationController
 
   private
 
+    def render_ownership_changed(error)
+      capture_ownership_failure(error)
+      redirect_to settings_providers_path, alert: t("brex_items.lifecycle.unavailable"), status: :see_other
+    end
+
+    def capture_ownership_failure(error)
+      DebugLogEntry.capture(category: "provider_sync_error", level: "warning", message: "Brex connection management refused",
+        source: self.class.name, provider_key: "brex", family: Current.family,
+        metadata: { action: action_name, brex_item_id: @brex_item&.id, error_class: error.class.name })
+    rescue StandardError
+      nil
+    end
+
+    def legacy_brex_items
+      native_ids = ProviderMigrationControl.where(family: Current.family, legacy_type: "BrexItem",
+        provider_key: "brex", state: ProviderMigrationControl::NATIVE_STATES).select(:legacy_id)
+      Current.family.brex_items.active.where.not(id: native_ids).ordered
+    end
+
     def render_provider_panel_success(message)
       return redirect_to accounts_path, notice: message, status: :see_other unless turbo_frame_request?
 
       flash.now[:notice] = message
-      @brex_items = Current.family.brex_items.active.ordered.includes(:syncs, :brex_accounts)
+      @brex_items = legacy_brex_items.includes(:syncs, :brex_accounts)
       render_brex_provider_panel(locals: { brex_items: @brex_items }, include_flash: true)
     end
 

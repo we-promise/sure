@@ -1,5 +1,5 @@
 class IbkrItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, LegacyWriterGuard
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -121,4 +121,6 @@ class IbkrItem < ApplicationRecord
   def institution_display_name
     I18n.t("ibkr_items.defaults.name")
   end
+
+  guard_legacy_writes import_latest_ibkr_data: :ingest, process_accounts: :publish
 end

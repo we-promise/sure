@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../support/sophtron_fixture_fence_helper"
 
 class SophtronAccountTest < ActiveSupport::TestCase
+  include SophtronFixtureFenceHelper
   test "upsert_sophtron_snapshot stores owning item institution metadata fallback" do
     item = families(:dylan_family).sophtron_items.create!(
       name: "Sophtron Connection",

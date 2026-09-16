@@ -1,6 +1,8 @@
 ---
 en:
   mercury_items:
+    lifecycle:
+      unavailable: This Mercury connection is unavailable or has changed. Reopen it in Provider Settings and try again.
     api_error:
       title: Mercury Connection Error
       unable_to_connect: Unable to connect to Mercury

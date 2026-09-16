@@ -1,6 +1,8 @@
 require "test_helper"
+require_relative "../support/akahu_fixture_fence_helper"
 
 class AkahuAccountTest < ActiveSupport::TestCase
+  include AkahuFixtureFenceHelper
   setup do
     @family = families(:dylan_family)
     @item = AkahuItem.create!(
@@ -64,6 +66,9 @@ class AkahuAccountTest < ActiveSupport::TestCase
       .raises(StandardError.new(raw_message))
 
     AccountProvider.create!(account: accounts(:investment), provider: @account)
+    # This processor-behavior test keeps fixture transactions; the real permit
+    # and fresh-receiver boundary are exercised by LegacyWriterFenceTest.
+    Provider::AccountData::LegacyWriterFence.expects(:with_item).with(@item, operation: :publish).yields(@item)
     result = @item.process_accounts.first
 
     assert_equal false, result[:success]
@@ -88,6 +93,7 @@ class AkahuAccountTest < ActiveSupport::TestCase
     )
 
     AccountProvider.create!(account: accounts(:investment), provider: @account)
+    Provider::AccountData::LegacyWriterFence.expects(:with_item).with(@item, operation: :publish).yields(@item)
     result = @item.process_accounts.first
 
     assert_equal @account.id, result[:akahu_account_id]

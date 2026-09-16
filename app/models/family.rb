@@ -34,6 +34,7 @@ class Family < ApplicationRecord
 
   has_many :users, dependent: :destroy
   has_many :accounts, dependent: :destroy
+  has_many :provider_connections, dependent: :restrict_with_error
   has_many :invitations, dependent: :destroy
 
   has_many :imports, dependent: :destroy
@@ -56,6 +57,14 @@ class Family < ApplicationRecord
   has_many :budget_categories, through: :budgets
 
   has_many :goals, dependent: :destroy
+
+  # Admission must precede Rails' dependent callbacks, including remote Plaid
+  # removal and subscription cancellation. A callback-only guard is too late.
+  def destroy
+    return super if new_record? || destroyed?
+
+    Family::LegacyDestruction.new(self).with_admission { super }
+  end
 
   # Net inflow into every depository account linked to any primary-currency
   # goal, over the given window. Transfers between linked accounts net to zero

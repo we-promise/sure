@@ -14,8 +14,9 @@ class SophtronAccount::Processor
   # Initializes a new processor for a Sophtron account.
   #
   # @param sophtron_account [SophtronAccount] The account to process
-  def initialize(sophtron_account)
+  def initialize(sophtron_account, sync: nil, allow_completed: false)
     @sophtron_account = sophtron_account
+    @sync, @allow_completed = sync, allow_completed
   end
 
   # Processes the account to update balances and transactions.
@@ -28,25 +29,33 @@ class SophtronAccount::Processor
   # @return [Hash, nil] Transaction processing result hash or nil if no linked account
   # @raise [StandardError] if processing fails (errors are logged and reported to Sentry)
   def process
-    unless sophtron_account.current_account.present?
-      Rails.logger.info "SophtronAccount::Processor - No linked account for sophtron_account #{sophtron_account.id}, skipping processing"
-      return
+    SophtronItem::LegacyAccess.with_account(sophtron_account, sync: @sync, allow_completed: @allow_completed) do |current, sync|
+      self.class.new(current, sync: sync, allow_completed: @allow_completed).send(:process_admitted)
     end
-
-    Rails.logger.info "SophtronAccount::Processor - Processing sophtron_account #{sophtron_account.id} (account #{sophtron_account.account_id})"
-    begin
-      process_account!
-    rescue StandardError => e
-      Rails.logger.error "SophtronAccount::Processor - Failed to process account #{sophtron_account.id}: #{e.message}"
-      Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
-      report_exception(e, "account")
-      raise
-    end
-
-    process_transactions
   end
 
   private
+
+    def process_admitted
+      unless sophtron_account.current_account.present?
+        Rails.logger.info "SophtronAccount::Processor - No linked account for sophtron_account #{sophtron_account.id}, skipping processing"
+        return
+      end
+
+      Rails.logger.info "SophtronAccount::Processor - Processing sophtron_account #{sophtron_account.id} (account #{sophtron_account.account_id})"
+      begin
+        process_account!
+      rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+        raise
+      rescue StandardError => e
+        Rails.logger.error "SophtronAccount::Processor - Failed to process account #{sophtron_account.id}: #{e.message}"
+        Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
+        report_exception(e, "account")
+        raise
+      end
+
+      process_transactions
+    end
 
     # Updates the linked Maybe Account's balance from Sophtron data.
     #
@@ -95,7 +104,9 @@ class SophtronAccount::Processor
     # @return [void]
     # @raise [StandardError] if transaction processing fails
     def process_transactions
-      SophtronAccount::Transactions::Processor.new(sophtron_account).process
+      SophtronAccount::Transactions::Processor.new(sophtron_account, sync: @sync, allow_completed: @allow_completed).process
+    rescue Provider::AccountData::LegacyWriterFence::Busy, Provider::AccountData::LegacyWriterFence::OwnershipChanged, Provider::AccountData::LegacyWriterFence::InvalidSource
+      raise
     rescue StandardError => e
       Rails.logger.error "SophtronAccount::Processor - Failed to process transactions for sophtron_account #{sophtron_account.id}: #{e.message}"
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
