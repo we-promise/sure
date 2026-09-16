@@ -93,8 +93,17 @@ class Account::ProviderImportAdapter
             # work gives no reason to withhold this data. Without this, a
             # transaction the user touched before this metadata existed
             # would never receive it, even on later syncs.
+            #
+            # #compact drops nil values before merging, deliberately unlike
+            # EnableBankingEntry::Processor#extra (which always assigns these
+            # keys, even to nil, so a corrected/removed counterparty reaches
+            # the *unprotected* update path and clears the stale value): this
+            # branch only runs for already-protected (user_modified) entries,
+            # where the point is strictly additive backfill of data the user
+            # never had a chance to see -- not applying a provider's later
+            # correction, which nil here would otherwise silently do.
             if extra.is_a?(Hash)
-              counterparty_updates = extra.with_indifferent_access.slice("counterparty_iban", "counterparty_account_id")
+              counterparty_updates = extra.with_indifferent_access.slice("counterparty_iban", "counterparty_account_id").compact
               if counterparty_updates.present?
                 updated_extra = (updated_extra || {}).deep_merge(counterparty_updates.deep_stringify_keys)
               end

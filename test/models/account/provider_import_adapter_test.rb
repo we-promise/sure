@@ -1644,4 +1644,41 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_equal "AT611904300234573201", updated_entry.transaction.extra["counterparty_iban"] # pipelock:ignore IBAN
     end
   end
+
+  test "does not clobber a backfilled counterparty iban with a later nil on a user-modified entry" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_user_mod_iban_then_nil",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Old Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+    )
+    assert_equal "AT611904300234573201", entry.transaction.extra["counterparty_iban"] # pipelock:ignore IBAN
+
+    entry.mark_user_modified!
+    assert entry.reload.user_modified?, "entry should be marked user-modified"
+
+    # A later sync's payload doesn't carry counterparty data this time (e.g. a
+    # re-delivery through a path that doesn't populate it) -- this is a purely
+    # additive backfill for a protected entry, so it must not erase data a
+    # previous sync already filled in.
+    assert_no_difference "@account.entries.count" do
+      updated_entry = @adapter.import_transaction(
+        external_id: "eb_user_mod_iban_then_nil",
+        amount: 20.0,
+        currency: "EUR",
+        date: Date.today - 5.days,
+        name: "Old Landlord Payment",
+        source: "enable_banking",
+        extra: { "counterparty_iban" => nil }
+      )
+
+      assert_equal entry.id, updated_entry.id
+      updated_entry.reload
+      assert_equal "AT611904300234573201", updated_entry.transaction.extra["counterparty_iban"], # pipelock:ignore IBAN
+        "a nil counterparty_iban on a later sync must not clobber an already-backfilled value on a protected entry"
+    end
+  end
 end

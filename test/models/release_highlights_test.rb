@@ -26,6 +26,14 @@ class ReleaseHighlightsTest < ActiveSupport::TestCase
     assert_nil ReleaseHighlights.pending_tag_for(nil)
   end
 
+  test "no pending tag when the user already saw a newer release than the currently deployed one" do
+    # Simulates a rolling deploy/rollback: the user's browser already marked
+    # a release newer than what this app instance is running right now.
+    @user.mark_release_seen!("v999.0.0")
+
+    assert_nil ReleaseHighlights.pending_tag_for(@user)
+  end
+
   test "unparseable local version yields no pending tag" do
     Sure.stubs(:version).raises(ArgumentError)
 
