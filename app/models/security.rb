@@ -49,6 +49,16 @@ class Security < ApplicationRecord
   #
   # Schema only for now: nothing writes these columns yet, so every security
   # is unclassified (NULL) until a later drop populates them.
+  #
+  # The migration repeats these lists rather than reading them from here, so
+  # that it produces the same schema whenever it runs. Changing a list is
+  # therefore a two-file edit, and "the model taxonomy and the database
+  # constraint list the same values" fails if only one side moves.
+  #
+  # `sector`, `industry` and `region` have no constants and no validation on
+  # purpose: they hold provider vocabulary, which no two providers agree on.
+  # An `inclusion` rule there would reject a value a provider legitimately
+  # returns.
   ASSET_CLASSES = %w[
     alternative_investment commodity equity fixed_income liquidity real_estate
   ].freeze

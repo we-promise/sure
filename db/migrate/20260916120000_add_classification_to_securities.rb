@@ -21,6 +21,20 @@
 class AddClassificationToSecurities < ActiveRecord::Migration[8.1]
   disable_ddl_transaction!
 
+  # These lists are deliberately repeated here rather than read from
+  # `Security::ASSET_CLASSES` and friends. A migration has to produce the same
+  # schema whenever it is run -- on a fresh install today, on a self-hosted
+  # instance upgrading in a year -- and a constant it borrowed from a model
+  # would produce a different constraint once the model's list changed. That is
+  # the usual reason migrations do not reference application code, and it
+  # applies here rather than being a copy-paste.
+  #
+  # The cost is that growing the taxonomy is a two-file edit. `SecurityTest`
+  # "the model taxonomy and the database constraint list the same values" reads
+  # the rendered constraint back out of the catalog and compares it to the
+  # model's constants, so the two cannot silently diverge -- a change to one
+  # without the other fails that test rather than shipping.
+
   ASSET_CLASSES = %w[
     alternative_investment commodity equity fixed_income liquidity real_estate
   ].freeze
@@ -46,6 +60,12 @@ class AddClassificationToSecurities < ActiveRecord::Migration[8.1]
   def up
     add_column :securities, :asset_class, :string, if_not_exists: true
     add_column :securities, :asset_sub_class, :string, if_not_exists: true
+    # Free text, and deliberately so: these come from providers, each with its
+    # own vocabulary (EODHD's `General.Sector` is not GICS, and no two agree on
+    # region). There is no constraint and no `inclusion` validation on purpose
+    # -- adding one would reject a value a provider legitimately returns and
+    # break classification ingestion for that provider. Normalisation, if it
+    # ever happens, belongs above these columns rather than in them.
     add_column :securities, :sector, :string, if_not_exists: true
     add_column :securities, :industry, :string, if_not_exists: true
     add_column :securities, :region, :string, if_not_exists: true
@@ -54,6 +74,12 @@ class AddClassificationToSecurities < ActiveRecord::Migration[8.1]
     # PostgreSQL 11+; existing rows are not rewritten. The project ships
     # PostgreSQL 16 (compose.example.yml, .devcontainer) and the existing
     # loans migrations rely on the same behaviour.
+    #
+    # `null: false` means an explicit nil write raises rather than falling back
+    # to the default -- `update_column(:classification_locked, nil)` and any
+    # other ORM bypass included. That is intended: "locked" is a yes or no, and
+    # a third state would leave a later writer guessing whether it may replace
+    # a user's classification.
     add_column :securities, :classification_locked, :boolean, null: false, default: false, if_not_exists: true
 
     CONSTRAINTS.each do |name, (column, values)|
