@@ -13,9 +13,8 @@ class McpController < ApplicationController
   SUPPORTED_PROTOCOL_VERSIONS = [ LEGACY_PROTOCOL_VERSION, PROTOCOL_VERSION, MODERN_PROTOCOL_VERSION ].freeze
   MCP_SESSION_TTL = 1.day
   SERVER_INFO = { name: "sure", version: "1.0" }.freeze
-  # The same two scopes Doorkeeper is configured with — see
-  # authenticate_via_env_token below.
-  MCP_API_TOKEN_SCOPES = %w[read read_write].freeze
+  # See authenticate_via_env_token below.
+  MCP_API_TOKEN_SCOPES = OauthBase.mcp_scopes
 
   # Skip session-based auth and CSRF — this is a token-authenticated API
   skip_authentication
