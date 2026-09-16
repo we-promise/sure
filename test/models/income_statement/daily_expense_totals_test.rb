@@ -43,11 +43,14 @@ class IncomeStatement::DailyExpenseTotalsTest < ActiveSupport::TestCase
     assert_equal 10, daily_series.first.total
   end
 
-  test "counts loan payments and investment contributions as expenses" do
+  test "excludes loan payments and investment contributions from the daily expense series" do
+    # A transfer to an investment/crypto account or a loan principal payment
+    # is not consumption, so it shouldn't spike the dashboard's cumulative
+    # spending chart (see Transaction::NON_OPERATING_KINDS).
     create_transaction(account: @checking, amount: -200, date: Date.current, kind: "loan_payment")
     create_transaction(account: @checking, amount: -300, date: Date.current, kind: "investment_contribution")
 
-    assert_equal 500, daily_series.first.total
+    assert_empty daily_series
   end
 
   test "converts foreign currency amounts at the day's exchange rate" do

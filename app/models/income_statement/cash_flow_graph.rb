@@ -9,7 +9,18 @@ class IncomeStatement::CashFlowGraph
     {
       as_of: @as_of.iso8601, time_zone: @time_zone, currency: @statement.family.currency,
       period: { start_date: @period.start_date.iso8601, end_date: @period.end_date.iso8601 },
-      sankey: IncomeStatement::Sankey.new(@statement, period: @period).as_json
+      sankey: IncomeStatement::Sankey.new(@statement, period: @period).as_json,
+      # Same non-operating cash outflows CashFlow#as_json reports (see
+      # Transaction::NON_OPERATING_KINDS): real money leaving an account, but
+      # not consumption, so it's surfaced here too rather than only in the
+      # public API's month-based CashFlow response.
+      investment_contributions: decimal(@statement.investment_contribution_totals(period: @period).total),
+      debt_principal_payments: decimal(@statement.debt_principal_totals(period: @period).total)
     }
   end
+
+  private
+    def decimal(value)
+      value.to_d.to_s("F")
+    end
 end

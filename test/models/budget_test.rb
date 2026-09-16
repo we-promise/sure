@@ -191,6 +191,27 @@ class BudgetTest < ActiveSupport::TestCase
     )
   end
 
+  test "actual_spending excludes investment contributions and loan principal" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Checking", currency: "USD", balance: 5000, accountable: Depository.new)
+    groceries = family.categories.create!(name: "Groceries", color: "#e74c3c")
+
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+
+    Entry.create!(account: account, entryable: Transaction.create!(category: groceries),
+                  date: Date.current, name: "Groceries", amount: 200, currency: "USD")
+    Entry.create!(account: account, entryable: Transaction.create!(category: nil, kind: "investment_contribution"),
+                  date: Date.current, name: "Kraken transfer", amount: 60_000, currency: "USD")
+    Entry.create!(account: account, entryable: Transaction.create!(category: nil, kind: "loan_payment"),
+                  date: Date.current, name: "Mortgage principal", amount: 500, currency: "USD")
+
+    # The budget's own "total spent this month" headline must not be
+    # swallowed by a transfer to an investment account or a loan principal
+    # payment -- same fix as net income/savings rate, since Budget reads
+    # from the same IncomeStatement totals (income_statement.rb).
+    assert_equal 200, budget.actual_spending
+  end
+
   test "budget_category_actual_spending does not go below zero" do
     family = families(:dylan_family)
     budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)

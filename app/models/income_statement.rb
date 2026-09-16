@@ -26,12 +26,35 @@ class IncomeStatement
 
     total_income = result.select { |t| t.classification == "income" }.sum(&:total)
     total_expense = result.select { |t| t.classification == "expense" }.sum(&:total)
+    total_investment_contribution = result.select { |t| t.classification == "investment_contribution" }.sum(&:total)
+    total_debt_principal = result.select { |t| t.classification == "debt_principal" }.sum(&:total)
 
     ScopeTotals.new(
       transactions_count: result.sum(&:transactions_count),
       income_money: Money.new(total_income, family.currency),
-      expense_money: Money.new(total_expense, family.currency)
+      expense_money: Money.new(total_expense, family.currency),
+      investment_contribution_money: Money.new(total_investment_contribution, family.currency),
+      debt_principal_money: Money.new(total_debt_principal, family.currency)
     )
+  end
+
+  # Category-level breakdown of investment contributions for the period --
+  # the dashboard counterpart to expense_totals/income_totals, for surfaces
+  # that want to show "Investments" as its own line instead of folding it
+  # into spending (see IncomeStatement::ScopedTransactionsQuery#classification_sql).
+  def investment_contribution_totals(period: Period.current_month)
+    key = period_cache_key(period)
+    @investment_contribution_totals_by_period ||= {}
+    @investment_contribution_totals_by_period[key] ||= build_period_total(classification: "investment_contribution", period: period)
+  end
+
+  # Category-level breakdown of loan principal payments for the period.
+  # Interest is a standard-kind expense and already included in expense_totals;
+  # this is principal only (see Transaction::NON_OPERATING_KINDS).
+  def debt_principal_totals(period: Period.current_month)
+    key = period_cache_key(period)
+    @debt_principal_totals_by_period ||= {}
+    @debt_principal_totals_by_period[key] ||= build_period_total(classification: "debt_principal", period: period)
   end
 
   def expense_totals(period: Period.current_month)
@@ -178,7 +201,7 @@ class IncomeStatement
   end
 
   private
-    ScopeTotals = Data.define(:transactions_count, :income_money, :expense_money)
+    ScopeTotals = Data.define(:transactions_count, :income_money, :expense_money, :investment_contribution_money, :debt_principal_money)
     PeriodTotal = Data.define(:classification, :total, :currency, :category_totals)
     CategoryTotal = Data.define(:category, :total, :currency, :weight)
     NetCategoryTotals = Data.define(:net_expense_categories, :net_income_categories, :total_net_expense, :total_net_income, :currency)

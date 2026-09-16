@@ -10,16 +10,25 @@
 # aliases (`ae`, `a`). The including class must set `@family`.
 module IncomeStatement::ScopedTransactionsQuery
   private
-    # Contributions and loan payments are cash outflows recorded as negative
-    # amounts, so they always classify as expense; other negative amounts
-    # classify as income.
+    # Investment contributions and loan payments (principal) are real cash
+    # outflows, but they reallocate net worth (cash -> another asset, or
+    # cash -> lower liability) rather than consuming it. Classifying them as
+    # "expense" would corrupt net income, savings rate, and spending-anomaly
+    # detection for anyone who moves a meaningful amount into an investment/
+    # crypto account or pays down a loan (see Transaction::NON_OPERATING_KINDS).
+    #
+    # They get their own classification value (the kind name itself) instead,
+    # so every classification_sql/converted_amount_sql caller automatically
+    # keeps them out of "income"/"expense" sums while still returning their
+    # rows (categorizable, drilldown-visible, and summable separately via
+    # IncomeStatement#investment_contribution_totals / #debt_principal_totals).
     def classification_sql(t)
-      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
+      "CASE WHEN #{t}.kind = 'investment_contribution' THEN 'investment_contribution' WHEN #{t}.kind = 'loan_payment' THEN 'debt_principal' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
     end
 
     # Entry amount converted to the family currency at the day's exchange
-    # rate. Contribution/loan-payment outflows are flipped positive so they
-    # add to expense totals.
+    # rate. Contribution/loan-payment outflows are flipped positive (they're
+    # always cash leaving an account, same convention as "expense" amounts).
     def converted_amount_sql(t)
       "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END"
     end
