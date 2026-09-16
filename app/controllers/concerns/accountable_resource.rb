@@ -41,10 +41,12 @@ module AccountableResource
     rescue Date::Error
       nil
     end || (Time.zone.today - 2.years)
+    create_params = account_params.except(:return_to, :opening_balance_date)
+    create_params = resolve_write_only_iban(create_params, clear_flag: create_params[:remove_iban]).except(:remove_iban)
     begin
       Account.transaction do
         @account = Current.family.accounts.create_and_sync(
-          account_params.except(:return_to, :opening_balance_date).merge(owner: Current.user),
+          create_params.merge(owner: Current.user),
           opening_balance_date: opening_balance_date
         )
         @account.lock_saved_attributes!
@@ -54,7 +56,7 @@ module AccountableResource
       # requests both passed the Rails uniqueness validation before either
       # committed, so it surfaces from the adapter instead of being caught
       # above. Same user-facing outcome, just a different failure point.
-      @account = Current.family.accounts.build(account_params.except(:return_to, :opening_balance_date))
+      @account = Current.family.accounts.build(create_params)
       @account.errors.add(:iban, :taken)
       @error_message = @account.errors.full_messages.join(", ")
       set_link_options
