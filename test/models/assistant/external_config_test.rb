@@ -61,6 +61,7 @@ class Assistant::ExternalConfigTest < ActiveSupport::TestCase
 
   test "build_conversation_messages trims to the configured token budget, keeping the newest" do
     chat = chats(:one)
+    chat.messages.destroy_all
 
     # ~40 tokens per message (see Assistant::TokenEstimator); a tight budget
     # should drop the oldest ones rather than truncating by a flat count.
@@ -85,6 +86,7 @@ class Assistant::ExternalConfigTest < ActiveSupport::TestCase
 
   test "build_conversation_messages keeps everything when the budget is generous" do
     chat = chats(:one)
+    chat.messages.destroy_all
 
     5.times do |i|
       role_class = i.even? ? UserMessage : AssistantMessage

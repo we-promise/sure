@@ -25,6 +25,18 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
       scopes: "read_write"
     )
 
+    # For endpoint coverage that must go through the API-key auth path
+    # (see docs/llm-guides/api-endpoint-consistency.md) rather than OAuth.
+    @user.api_keys.active.destroy_all
+    @api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read Key",
+      scopes: [ "read" ],
+      source: "web",
+      display_key: "test_ro_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{@api_key.id}")
+
     @chat = chats(:one)
   end
 
@@ -62,7 +74,7 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index pagination reports the actual page limit" do
-    get "/api/v1/chats", headers: bearer_auth_header(@read_token)
+    get "/api/v1/chats", headers: api_headers(@api_key)
     assert_response :success
 
     response_body = JSON.parse(response.body)
@@ -70,7 +82,7 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show pagination reports the actual page limit" do
-    get "/api/v1/chats/#{@chat.id}", headers: bearer_auth_header(@read_token)
+    get "/api/v1/chats/#{@chat.id}", headers: api_headers(@api_key)
     assert_response :success
 
     response_body = JSON.parse(response.body)
@@ -85,7 +97,7 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
       role_class.create!(chat: @chat, content: "msg #{i}", ai_model: "test", created_at: i.minutes.from_now)
     end
 
-    get "/api/v1/chats/#{@chat.id}", headers: bearer_auth_header(@read_token)
+    get "/api/v1/chats/#{@chat.id}", headers: api_headers(@api_key)
     assert_response :success
 
     response_body = JSON.parse(response.body)
