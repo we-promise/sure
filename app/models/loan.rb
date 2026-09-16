@@ -380,6 +380,13 @@ class Loan < ApplicationRecord
     ]
   end
 
+  # The same segments as JSON, which is what the shared donut-chart controller
+  # reads. Mirrors Budget#to_donut_segments_json so the two ring call sites
+  # hand the controller the same shape.
+  def to_donut_segments_json
+    to_donut_segments&.to_json
+  end
+
   def initial_leverage_ratio
     return nil unless down_payment&.positive?
 
