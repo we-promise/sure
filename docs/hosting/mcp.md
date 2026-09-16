@@ -109,12 +109,12 @@ Recommended setups:
 - **ChatGPT via OAuth (recommended):** register it with the default scope
   (`read`) — no environment variable needed. See
   [Authentication Modes](#authentication-modes).
-- **ChatGPT via the static token, keeping another client (e.g. Claude)
-  read-write:** there is only one `MCP_API_TOKEN` per install, so this only
-  works if ChatGPT uses OAuth (`read` scope) and the static token — with
-  `MCP_API_TOKEN_SCOPE` unset or `read_write` — is reserved for Claude. Two
-  *static* tokens at different scopes are not supported; use OAuth for
-  whichever client needs a scope different from the static token's.
+- **Claude via the static token, keeping ChatGPT read-only:** there is only
+  one `MCP_API_TOKEN` per install, so this only works if ChatGPT uses OAuth
+  (`read` scope) and the static token — with `MCP_API_TOKEN_SCOPE` unset or
+  `read_write` — is reserved for Claude. Two *static* tokens at different
+  scopes are not supported; use OAuth for whichever client needs a scope
+  different from the static token's.
 - **Lock down `/mcp` entirely, regardless of who connects:**
   ```bash
   MCP_READ_ONLY=true
