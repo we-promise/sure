@@ -5,6 +5,22 @@ selection and `Provided` concerns. For a new securities price provider, follow
 [the complete workflow](adding-a-securities-provider.md), including response
 types, MIC mapping, currency handling, settings encryption, UI, locales and tests.
 
+## Provider logos
+
+A provider's logo comes from [`ProviderLogo`](../../app/components/provider_logo.rb): the
+Brandfetch icon for the `domain` in its
+[`Provider::Metadata::REGISTRY`](../../app/models/provider/metadata.rb) entry, falling back
+to `logo_icon`, then `logo_text` initials on `logo_color`. Anything identifying a provider
+renders `render ProviderLogo.new(provider_key: :<x>)` — the `_<x>_item` card on Accounts,
+the Bank Sync cards and connection rows, and the connection rows in
+`settings/providers/_<x>_panel` — rather than a hand-built badge or the first letter of a
+connection name. A panel's setup form and instructions carry no logo.
+
+Give each new provider a registry entry with a brand domain. Only a provider with no single
+brand behind it (on-chain wallets) omits the domain and sets `logo_icon` instead.
+Institution logos are a separate concept and belong on accounts through
+`Account#logo_url`, never on a provider.
+
 ## Support diagnostics
 
 When a provider sync/import path encounters a recoverable error, suspicious partial
