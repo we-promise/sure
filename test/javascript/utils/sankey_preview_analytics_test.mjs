@@ -89,3 +89,24 @@ test("self-hosted feedback disables automatic collection and strips incidental S
   assert.equal(sanitizeSelfHostedFeedback({ event: "survey sent", properties: { [responseKey]: "Labels overlap" } }).properties[responseKey], "Labels overlap");
   assert.equal(sanitizeSelfHostedFeedback({ event: "survey shown", properties: { [responseKey]: "Not submitted" } }).properties[responseKey], undefined);
 });
+
+test("comparison events send only the outcome and preview version", async () => {
+  const { captureSankeyComparison } = await import("../../../app/javascript/utils/sankey_preview_analytics.mjs");
+  for (const result of ["match", "mismatch"]) {
+    const events = [];
+    const sdk = { __loaded: true, capture: (...args) => { events.push(args); return {}; } };
+    assert.equal(captureSankeyComparison(sdk, result), true);
+    assert.deepEqual(events, [[`new_sankey_${result}`, { preview_version: "cash_flow_v1" }]]);
+    const sanitized = sanitizeSelfHostedFeedback({ event: `new_sankey_${result}`, properties: { preview_version: "cash_flow_v1", nodes: ["private"], amount: 123, user_id: "private" } });
+    assert.deepEqual(sanitized.properties, { preview_version: "cash_flow_v1", $geoip_disable: true, $process_person_profile: false });
+  }
+});
+
+test("comparison waits for analytics and preserves invalid, opted-out and failed captures for retry", async () => {
+  const { captureSankeyComparison } = await import("../../../app/javascript/utils/sankey_preview_analytics.mjs");
+  for (const sdk of [undefined, { __loaded: false }, { __loaded: true, has_opted_out_capturing: () => true }, { __loaded: true, capture: () => undefined }, { __loaded: true, capture: () => { throw Error("blocked"); } }]) {
+    assert.equal(captureSankeyComparison(sdk, "match"), false);
+  }
+  const sdk = { __loaded: true, capture: () => assert.fail("must not capture") };
+  assert.equal(captureSankeyComparison(sdk, null), false);
+});

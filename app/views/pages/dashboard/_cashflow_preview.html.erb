@@ -1,10 +1,11 @@
-<%# locals: (period:) %>
+<%# locals: (period:, legacy_data:) %>
 <% feedback = feedback_config(:sankey) %>
 <% if feedback[:api_key].present? %>
   <%= render "shared/posthog_bootstrap" %>
 <% end %>
-<section id="cashflow-preview" class="mt-6 border-t border-primary pt-4 space-y-4"
+<section id="cashflow-preview" class="mt-6 border-t border-primary pt-4 space-y-4 ph-no-capture group/sankey-preview"
   data-controller="sankey-preview"
+  data-sankey-preview-legacy-data-value="<%= legacy_data.to_json %>"
   data-sankey-preview-self-hosted-value="<%= self_hosted? %>"
   data-sankey-preview-feedback-key-value="<%= feedback[:api_key] %>"
   data-sankey-preview-feedback-host-value="<%= feedback[:host] %>"
@@ -13,12 +14,11 @@
   <header class="px-4 flex flex-wrap items-center justify-between gap-2">
     <div class="flex flex-wrap items-center gap-2">
       <h3 class="font-medium text-primary"><%= t("pages.dashboard.cashflow_preview.title") %></h3>
-      <%= render DS::Pill.new(label: t("pages.dashboard.cashflow_preview.preview")) %>
+      <%= render DS::Pill.new(label: t("pages.dashboard.cashflow_preview.preview"), title: t("pages.dashboard.cashflow_preview.preview_tooltip")) %>
     </div>
-    <%= render DS::Button.new(icon: "maximize-2", text: t("global.expand"), variant: :ghost, disabled: true,
+    <%= render DS::Button.new(icon: "maximize-2", text: nil, variant: :ghost, disabled: true, aria: { label: t("global.expand") },
       data: { action: "sankey-preview#expand", sankey_preview_target: "expandButton" }) %>
   </header>
-  <p class="px-4 text-sm text-secondary"><%= t("pages.dashboard.cashflow_preview.description") %></p>
   <div data-controller="cash-flow" data-sankey-preview-target="display" class="ph-no-capture"
     data-action="turbo:before-cache@document->cash-flow#clear"
     data-cash-flow-url-value="<%= dashboard_cash_flow_path(start_date: period.start_date.iso8601, end_date: period.end_date.iso8601) %>">
@@ -38,16 +38,19 @@
           </div>
         <% end %>
       <% end %>
-      <p class="px-4 text-xs text-secondary"><%= t("pages.dashboard.cashflow_sankey.basis") %></p>
     </div>
     <p data-cash-flow-target="empty" hidden class="p-4 text-secondary"><%= t("pages.dashboard.cashflow_sankey.no_data_title") %></p>
   </div>
-  <div class="px-4 flex flex-wrap items-center gap-2 ph-no-capture">
+  <div class="px-4 space-y-2 ph-no-capture">
     <p class="text-sm text-secondary"><%= t("pages.dashboard.cashflow_preview.feedback_prompt") %></p>
-    <%= render DS::Button.new(icon: "thumbs-up", text: t("pages.dashboard.cashflow_preview.positive"), variant: :outline,
-      data: { action: "sankey-preview#feedback", sankey_preview_rating_param: "positive" }) %>
-    <%= render DS::Button.new(icon: "thumbs-down", text: t("pages.dashboard.cashflow_preview.negative"), variant: :outline,
-      data: { action: "sankey-preview#feedback", sankey_preview_rating_param: "negative" }) %>
+    <div class="flex items-center justify-end gap-2">
+      <%= render DS::Button.new(icon: "thumbs-down", text: t("pages.dashboard.cashflow_preview.negative"), variant: :outline,
+        class: "group-data-[sankey-comparison=mismatch]/sankey-preview:bg-destructive/10 group-data-[sankey-comparison=mismatch]/sankey-preview:text-destructive group-data-[sankey-comparison=mismatch]/sankey-preview:border-destructive group-data-[sankey-comparison=mismatch]/sankey-preview:hover:bg-destructive/20 group-data-[sankey-comparison=mismatch]/sankey-preview:[&_svg]:text-destructive",
+        data: { action: "sankey-preview#feedback", sankey_preview_rating_param: "negative" }) %>
+      <%= render DS::Button.new(icon: "thumbs-up", text: t("pages.dashboard.cashflow_preview.positive"), variant: :outline,
+        class: "group-data-[sankey-comparison=match]/sankey-preview:bg-success/10 group-data-[sankey-comparison=match]/sankey-preview:text-success group-data-[sankey-comparison=match]/sankey-preview:border-success group-data-[sankey-comparison=match]/sankey-preview:hover:bg-success/20 group-data-[sankey-comparison=match]/sankey-preview:[&_svg]:text-success",
+        data: { action: "sankey-preview#feedback", sankey_preview_rating_param: "positive" }) %>
+    </div>
   </div>
   <%= render DS::Dialog.new(id: "cashflow-preview-feedback-dialog", auto_open: false, disable_frame: true,
     data: { sankey_preview_target: "feedbackDialog", action: "close->sankey-preview#dismiss" }) do |dialog| %>

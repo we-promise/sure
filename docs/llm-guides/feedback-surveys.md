@@ -36,7 +36,8 @@ must not change this destination.
 
 Unknown features, blank survey IDs, or a missing ID for the selected destination
 return `{}`. There is no fallback to another feature's survey or another project.
-Self-hosted configuration also returns `{}` outside production or when
+Self-hosted configuration also returns `{}` outside production (unless development explicitly opts in with
+`POSTHOG_DEVELOPMENT_ENABLED=true`) or when
 `POSTHOG_FEEDBACK_ENABLED=false`. This switch is specific to the shared
 self-hosted feedback connection; managed deployments retain their existing rules.
 

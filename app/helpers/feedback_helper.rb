@@ -1,8 +1,12 @@
 module FeedbackHelper
+  def posthog_enabled?
+    Rails.env.production? || (Rails.env.development? && Rails.configuration.x.posthog.development_enabled)
+  end
+
   def feedback_config(feature)
     config = Rails.configuration.x.posthog
     destination = self_hosted? ? :self_hosted : :managed
-    return {} if destination == :self_hosted && !(Rails.env.production? && config.feedback_enabled)
+    return {} if destination == :self_hosted && !(posthog_enabled? && config.feedback_enabled)
 
     survey_id = config.feedback_surveys.dig(feature, destination).presence
     return {} unless survey_id

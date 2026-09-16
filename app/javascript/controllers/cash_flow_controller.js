@@ -50,16 +50,18 @@ export default class extends Controller {
           JSON.stringify(data),
         );
       });
-      this.show(data.links.length ? "content" : "empty");
+      this.show(data.links.length ? "content" : "empty", data);
     } catch {
       if (this.request === request) this.show("error");
     }
   }
 
-  show(state) {
+  show(state, graph = null) {
     for (const name of ["loading", "error", "empty", "content"]) {
       this[`${name}Target`].hidden = name !== state;
     }
-    this.dispatch("state", { detail: { state, ready: state === "content" } });
+    this.dispatch("state", {
+      detail: { state, ready: state === "content", graph },
+    });
   }
 }

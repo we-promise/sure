@@ -3,6 +3,7 @@ require "test_helper"
 class CashFlowPreviewTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
+    Rails.configuration.x.posthog.stubs(:development_enabled).returns(false)
   end
 
   test "preview opt-in adds the web chart below identical legacy chart data" do
@@ -51,6 +52,36 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
       get root_path
       assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value=''][data-sankey-preview-survey-id-value='']"
     end
+  end
+
+  test "self-hosted development renders bundled feedback only with testing override" do
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    config = Rails.configuration.x.posthog
+    config.stubs(:api_key).returns(nil)
+    config.stubs(:feedback_enabled).returns(true)
+    stub_managed_survey(nil)
+    Rails.env.stubs(:development?).returns(true)
+    with_self_hosting do
+      get root_path
+      assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value=''][data-sankey-preview-survey-id-value='']"
+      config.stubs(:development_enabled).returns(true)
+      get root_path
+      assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value^='phc_'][data-sankey-preview-survey-id-value='01a0a162-73a2-0000-9402-ffab5bc45b4a']"
+      assert_select "script", text: /window.posthog=e/
+      config.stubs(:feedback_enabled).returns(false)
+      get root_path
+      assert_select "#cashflow-preview[data-sankey-preview-feedback-key-value=''][data-sankey-preview-survey-id-value='']"
+    end
+  end
+
+  test "development loads configured popup surveys only with testing override" do
+    Rails.env.stubs(:development?).returns(true)
+    Rails.configuration.x.posthog.stubs(:api_key).returns("configured-test-project")
+    get root_path
+    assert_select "head script", text: /posthog.init\('configured-test-project'/, count: 0
+    Rails.configuration.x.posthog.stubs(:development_enabled).returns(true)
+    get root_path
+    assert_select "head script", text: /posthog.init\('configured-test-project'/
   end
 
   test "managed app and demo use the configured environment survey without the shared feedback client" do

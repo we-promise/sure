@@ -1,6 +1,8 @@
 require "posthog"
 
 Rails.configuration.x.posthog = ActiveSupport::OrderedOptions.new
+# Explicit opt-in for local browser testing; production behavior is unchanged.
+Rails.configuration.x.posthog.development_enabled = ActiveModel::Type::Boolean.new.cast(ENV.fetch("POSTHOG_DEVELOPMENT_ENABLED", "false"))
 Rails.configuration.x.posthog.api_key = ENV["POSTHOG_KEY"].presence
 Rails.configuration.x.posthog.host = ENV.fetch("POSTHOG_HOST", "https://us.i.posthog.com")
 Rails.configuration.x.posthog.feedback_enabled = ActiveModel::Type::Boolean.new.cast(ENV.fetch("POSTHOG_FEEDBACK_ENABLED", "true"))

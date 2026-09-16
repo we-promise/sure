@@ -6,7 +6,7 @@
   data-preview-sankey-chart-labels-value="<%= t("pages.dashboard.cashflow_preview.node_labels").to_json %>"
   data-preview-sankey-chart-start-date-value="<%= period.start_date&.iso8601 %>"
   data-preview-sankey-chart-end-date-value="<%= period.end_date&.iso8601 %>"
-  class="w-full min-w-lg h-full privacy-sensitive flex flex-col gap-2">
+  class="w-full min-w-0 h-full privacy-sensitive flex flex-col gap-2">
   <div class="flex justify-start px-4">
     <%= render DS::Button.new(
       variant: :icon,
