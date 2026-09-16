@@ -573,4 +573,30 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_select "form[action='#{loans_path}']", count: 1
   end
+
+  test "a raw unique-index race on create still renders the loan-specific rate fields" do
+    # Regression: building @account straight from create_params in the
+    # RecordNotUnique rescue skipped the accountable setup create_and_sync
+    # normally does, leaving @account.accountable nil -- loans/_form.html.erb's
+    # fields_for :accountable block silently disappears in that case instead
+    # of showing what the user typed.
+    Account.any_instance.stubs(:save!).raises(
+      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+    )
+
+    # No accountable_attributes at all -- the minimal request shape that
+    # actually exposes the gap: create_and_sync always defaults it to {},
+    # but building @account directly from create_params in the rescue does
+    # not, so this is the case where @account.accountable used to end up nil.
+    assert_no_difference "Account.count" do
+      post loans_path, params: { account: {
+        name: "Race Loan", balance: 50_000, currency: "USD", accountable_type: "Loan",
+        iban: "DE89370400440532013000" # pipelock:ignore IBAN
+      } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "form[action='#{loans_path}']", count: 1
+    assert_select "input[name='account[accountable_attributes][interest_rate]']", count: 1
+  end
 end
