@@ -118,14 +118,14 @@ class Holding::ReverseCalculator
           if trade.qty.positive?
             open_unknown_start[security_id] ||= trade_entry.date
           else
-            trackers[security_id].apply(converted_trade_price(trade), trade.qty)
+            trackers[security_id].apply(converted_trade_price(trade, trade_entry.date), trade.qty)
             @cost_basis_snapshots[security_id] << [ trade_entry.date, trackers[security_id].average_cost ]
           end
         else
           tracker = trackers[security_id]
           # Buys raise the basis; sells relieve quantity at the running average, and a
           # full liquidation resets it so a later repurchase starts from a clean basis.
-          tracker.apply(converted_trade_price(trade), trade.qty)
+          tracker.apply(converted_trade_price(trade, trade_entry.date), trade.qty)
 
           # Record the basis after each trade — including nil once a position is fully
           # closed — so cost_basis_for returns nil for the sold-out span instead of a

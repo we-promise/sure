@@ -227,6 +227,45 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_holdings(expected, calculated)
   end
 
+  # A foreign-currency trade's price is a historical fact denominated on its own
+  # date, so it must be converted at that date's rate -- not today's -- or the
+  # cost basis drifts as FX moves.
+  test "converts a foreign-currency trade at the trade-date rate" do
+    sap = Security.create!(ticker: "SAP", name: "SAP SE")
+    Security::Price.create!(security: sap, date: 3.days.ago.to_date, price: 100)
+    Security::Price.create!(security: sap, date: Date.current, price: 100)
+
+    # The EUR->USD rate on the trade date differs from today's.
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: 3.days.ago.to_date, rate: 1.1)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
+
+    create_trade(sap, qty: 10, date: 3.days.ago.to_date, price: 100, currency: "EUR", account: @account)
+
+    current = Holding::ForwardCalculator.new(@account).calculate
+      .find { |h| h.security_id == sap.id && h.date == Date.current }
+
+    # 100 EUR x 1.1 (trade-date rate) = 110 USD, not x 1.5 (today) = 150.
+    assert_equal BigDecimal("110"), current.cost_basis
+  end
+
+  # A rate carried on the trade itself (e.g. a provider import's executed rate) is
+  # preferred over a stored daily rate.
+  test "prefers a trade's own exchange rate over a stored daily rate" do
+    sap = Security.create!(ticker: "SAP", name: "SAP SE")
+    Security::Price.create!(security: sap, date: 3.days.ago.to_date, price: 100)
+    Security::Price.create!(security: sap, date: Date.current, price: 100)
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: 3.days.ago.to_date, rate: 1.1)
+
+    create_trade(sap, qty: 10, date: 3.days.ago.to_date, price: 100, currency: "EUR", exchange_rate: 1.25, account: @account)
+
+    current = Holding::ForwardCalculator.new(@account).calculate
+      .find { |h| h.security_id == sap.id && h.date == Date.current }
+
+    # 100 EUR x 1.25 (the trade's own rate) = 125 USD, not x 1.1 (the DB rate).
+    assert_equal BigDecimal("125"), current.cost_basis
+  end
+
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
