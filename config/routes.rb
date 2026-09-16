@@ -334,6 +334,7 @@ Rails.application.routes.draw do
   get "release_highlight", to: "release_highlights#show"
   patch "release_highlight/dismiss", to: "release_highlights#dismiss"
   get "feedback", to: "pages#feedback"
+  get "dashboard/cash_flow", to: "cash_flows#show", as: :dashboard_cash_flow
   patch "dashboard/preferences", to: "pages#update_preferences"
 
   resource :current_session, only: %i[update]
@@ -909,6 +910,21 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :fio_items, only: %i[create update destroy] do
+    collection do
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   resources :sophtron_items, only: %i[index new create show edit update destroy] do
     collection do
       get :preload_accounts
@@ -982,6 +998,7 @@ Rails.application.routes.draw do
     # so name it explicitly.
     resource :system_health, only: :show, controller: "system_health" do
       post :verify_worker_ai
+      post :send_test_push
     end
   end
 
