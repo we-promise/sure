@@ -71,11 +71,11 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
   test "codespaces still requires a valid CSRF token" do
     with_codespaces_origin_check do
-      assert_raises(ActionController::InvalidAuthenticityToken) do
-        post sessions_url,
-          params: { email: @user.email, password: user_password_test },
-          headers: { "Origin" => "https://localhost:3000" }
-      end
+      post sessions_url,
+        params: { email: @user.email, password: user_password_test },
+        headers: { "Origin" => "https://localhost:3000" }
+
+      assert_response :unprocessable_content
     end
   end
 
@@ -84,11 +84,11 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
       get new_session_url
       token = css_select("input[name=authenticity_token]").first["value"]
 
-      assert_raises(ActionController::InvalidAuthenticityToken) do
-        post sessions_url,
-          params: { email: @user.email, password: user_password_test, authenticity_token: token },
-          headers: { "Origin" => "https://attacker.example" }
-      end
+      post sessions_url,
+        params: { email: @user.email, password: user_password_test, authenticity_token: token },
+        headers: { "Origin" => "https://attacker.example" }
+
+      assert_response :unprocessable_content
     end
   end
 
