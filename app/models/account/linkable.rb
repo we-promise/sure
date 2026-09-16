@@ -33,6 +33,11 @@ module Account::Linkable
     @linked = nil
   end
 
+  def reload(*)
+    reset_linked_cache
+    super
+  end
+
   # An "offline" or "unlinked" account is one where the user tracks values and
   # adds transactions manually, without the help of a data provider
   def unlinked?
