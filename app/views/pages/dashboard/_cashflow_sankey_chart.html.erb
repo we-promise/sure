@@ -1,11 +1,12 @@
-<%# locals: (sankey_data:, period:) %>
+<%# locals: (period:) %>
 <div
   data-controller="sankey-chart"
-  data-sankey-chart-data-value="<%= sankey_data.to_json %>"
-  data-sankey-chart-currency-symbol-value="<%= sankey_data[:currency_symbol] %>"
+  data-action="turbo:before-cache@document->sankey-chart#clear"
+  data-cash-flow-target="chart"
+  data-sankey-chart-labels-value="<%= t("pages.dashboard.cashflow_sankey.node_labels").to_json %>"
   data-sankey-chart-start-date-value="<%= period.start_date&.iso8601 %>"
   data-sankey-chart-end-date-value="<%= period.end_date&.iso8601 %>"
-  class="w-full h-full privacy-sensitive flex flex-col gap-2">
+  class="w-full min-w-0 h-full privacy-sensitive flex flex-col gap-2">
   <div class="flex justify-start px-4">
     <%= render DS::Button.new(
       variant: :icon,

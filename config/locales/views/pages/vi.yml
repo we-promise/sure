@@ -35,11 +35,6 @@ vi:
       heading: Điều khoản dịch vụ
       placeholder: Nội dung điều khoản dịch vụ sẽ được hiển thị ở đây.
     dashboard:
-      cashflow_preview:
-        node_labels:
-          cash_flow: "Dòng tiền"
-          surplus: "Thặng dư"
-          deficit: "Thâm hụt"
       welcome: "Chào mừng trở lại, %{name}"
       subtitle: "Đây là tình hình tài chính của bạn"
       new: "Mới"
@@ -67,6 +62,10 @@ vi:
           asset: "Tài sản"
           liability: "Nợ phải trả"
       cashflow_sankey:
+        node_labels:
+          cash_flow: "Dòng tiền"
+          surplus: "Thặng dư"
+          deficit: "Thâm hụt"
         title: "Dòng tiền"
         zoom_out: "Quay lại toàn bộ dòng tiền"
         no_data_title: "Không có dữ liệu dòng tiền cho khoảng thời gian này"

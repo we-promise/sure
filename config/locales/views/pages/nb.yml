@@ -4,7 +4,7 @@ nb:
     changelog:
       title: Hva er nytt
     dashboard:
-      cashflow_preview:
+      cashflow_sankey:
         node_labels:
           cash_flow: "Kontantstrøm"
           surplus: "Overskudd"

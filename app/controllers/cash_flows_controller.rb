@@ -1,6 +1,4 @@
 class CashFlowsController < ApplicationController
-  before_action :require_preview_features!
-
   def show
     response.headers["Cache-Control"] = "private, no-store"
     start_date, end_date = parse_date(params[:start_date]), parse_date(params[:end_date])

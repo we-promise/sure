@@ -4,11 +4,6 @@ ro:
     changelog:
       title: Ce e nou
     dashboard:
-      cashflow_preview:
-        node_labels:
-          cash_flow: "Flux de numerar"
-          surplus: "Excedent"
-          deficit: "Deficit"
       welcome: "Bun venit, %{name}"
       subtitle: "Iată ce se întâmplă cu finanțele tale"
       new: "Nou"
@@ -23,6 +18,10 @@ ro:
         no_items: "Niciun %{name} încă"
         add_accounts: "Adaugă conturile tale de %{name} pentru a vedea o defalcare completă"
       cashflow_sankey:
+        node_labels:
+          cash_flow: "Flux de numerar"
+          surplus: "Excedent"
+          deficit: "Deficit"
         title: "Flux de numerar"
         no_data_title: "Nu există date despre fluxul de numerar pentru această perioadă"
         no_data_description: "Adaugă tranzacții pentru a afișa datele despre fluxul de numerar sau extinde perioada de timp"

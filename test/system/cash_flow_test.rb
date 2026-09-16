@@ -6,7 +6,7 @@ class CashFlowTest < ApplicationSystemTestCase
   setup do
     @user = users(:family_admin)
     @month = Date.current.beginning_of_month
-    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => false))
     parent = @user.family.categories.create!(name: "Sankey Shopping", color: "#123456")
     child = @user.family.categories.create!(name: "Sankey Groceries", parent: parent)
     account = @user.family.accounts.create!(name: "Sankey checking", currency: "USD", balance: 0, accountable: Depository.new)
@@ -17,32 +17,32 @@ class CashFlowTest < ApplicationSystemTestCase
   test "loads the dashboard graph, expands, zooms, and preserves transaction date filters" do
     sign_in @user
     visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
-    chart = find("#cashflow-preview [data-preview-sankey-chart-target='chart']", match: :first)
-    assert_selector "#cashflow-preview svg .sankey-link"
+    chart = find("#cashflow-sankey [data-sankey-chart-target='chart']", match: :first)
+    assert_selector "#cashflow-sankey svg .sankey-link"
     assert page.evaluate_script("performance.getEntriesByType('resource').some(e => e.name.includes('/dashboard/cash_flow?'))")
-    within "#cashflow-preview" do
+    within "#cashflow-sankey" do
       click_button "Expand", enable_aria_label: true
     end
-    within "#cashflow-preview-expanded-dialog" do
+    within "#cashflow-sankey-expanded-dialog" do
       assert_selector "svg .sankey-link"
     end
     gradients = page.evaluate_script(<<~JS)
-      Array.from(document.querySelectorAll('#cashflow-preview linearGradient')).map(g => g.id)
+      Array.from(document.querySelectorAll('#cashflow-sankey linearGradient')).map(g => g.id)
     JS
-    assert_selector "#cashflow-preview [data-preview-sankey-chart-target='chart'] svg", count: 2
+    assert_selector "#cashflow-sankey [data-sankey-chart-target='chart'] svg", count: 2
     assert gradients.any?
     assert_equal gradients.uniq, gradients
     assert page.evaluate_script(<<~JS)
-      Array.from(document.querySelectorAll('#cashflow-preview .sankey-link')).every(link => {
+      Array.from(document.querySelectorAll('#cashflow-sankey .sankey-link')).every(link => {
         const id = link.getAttribute('stroke').slice(5, -1);
         return link.ownerSVGElement.querySelector(`[id="${id}"]`);
       })
     JS
-    page.execute_script("document.querySelector('#cashflow-preview-expanded-dialog').close()")
+    page.execute_script("document.querySelector('#cashflow-sankey-expanded-dialog').close()")
     parent = chart.find("svg text", text: "Sankey Shopping", match: :first)
     parent.find(:xpath, "..").find("path").click
-    assert_selector "[data-preview-sankey-chart-target='zoomOutButton']:not([hidden])"
-    find("[data-preview-sankey-chart-target='zoomOutButton']", match: :first).click
+    assert_selector "[data-sankey-chart-target='zoomOutButton']:not([hidden])"
+    find("[data-sankey-chart-target='zoomOutButton']", match: :first).click
     chart.find("svg text", text: "Sankey Groceries", match: :first).find(:xpath, "..").find("path").click
     assert_current_path(%r{/transactions\?})
     query = Rack::Utils.parse_nested_query(URI.parse(page.current_url).query)
@@ -55,13 +55,13 @@ class CashFlowTest < ApplicationSystemTestCase
     sign_in @user
     [ :bar, :label, :enter, :space ].each do |activation|
       visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
-      chart = find("#cashflow-preview [data-preview-sankey-chart-target='chart']", match: :first)
+      chart = find("#cashflow-sankey [data-sankey-chart-target='chart']", match: :first)
       parent = chart.find("g[role='button'][tabindex='0'][aria-label^='Sankey Shopping,']")
       activate_node(parent, activation)
-      assert_selector "[data-preview-sankey-chart-target='zoomOutButton']:not([hidden])"
+      assert_selector "[data-sankey-chart-target='zoomOutButton']:not([hidden])"
       assert_selector "g[aria-label^='Sankey Shopping,']:focus" if [ :enter, :space ].include?(activation)
       assert_equal "false", find("[data-section-key='cashflow_sankey']")["aria-grabbed"]
-      find("[data-preview-sankey-chart-target='zoomOutButton']", match: :first).send_keys(:enter)
+      find("[data-sankey-chart-target='zoomOutButton']", match: :first).send_keys(:enter)
       assert_selector "g[aria-label^='Sankey Shopping,']:focus"
       leaf = chart.find("g[role='link'][tabindex='0'][aria-label^='Sankey Groceries,']")
       activate_node(leaf, activation)
@@ -77,9 +77,9 @@ class CashFlowTest < ApplicationSystemTestCase
     sign_in @user
     [ :escape, :close_button ].each do |closing|
       visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
-      expand = find("#cashflow-preview [data-sankey-preview-target='expandButton']")
+      expand = find("#cashflow-sankey [data-sankey-visualization-target='expandButton']")
       expand.send_keys(:enter)
-      within "#cashflow-preview-expanded-dialog[open]" do
+      within "#cashflow-sankey-expanded-dialog[open]" do
         find("g[role='button'][aria-label^='Sankey Shopping,']").send_keys(:enter)
         assert_selector "g[aria-label^='Sankey Shopping,']:focus"
         if closing == :escape
@@ -88,8 +88,8 @@ class CashFlowTest < ApplicationSystemTestCase
           find("button[data-action='DS--dialog#close']").click
         end
       end
-      assert_no_selector "#cashflow-preview-expanded-dialog[open]"
-      assert_selector "#cashflow-preview [data-sankey-preview-target='expandButton']:focus"
+      assert_no_selector "#cashflow-sankey-expanded-dialog[open]"
+      assert_selector "#cashflow-sankey [data-sankey-visualization-target='expandButton']:focus"
       assert_equal "true", find("[data-section-key='cashflow_sankey']")["draggable"]
     end
   end
@@ -101,9 +101,9 @@ class CashFlowTest < ApplicationSystemTestCase
     create_transaction(account: account, category: category, amount: 160, date: date)
     sign_in @user
     visit root_path(start_date: date.iso8601, end_date: date.iso8601)
-    chart = find("#cashflow-preview [data-preview-sankey-chart-target='chart']", match: :first)
+    chart = find("#cashflow-sankey [data-sankey-chart-target='chart']", match: :first)
     [ "Deficit", "Cash Flow", "Sankey Shopping" ].each do |name|
-      assert_selector "#cashflow-preview g[aria-label='#{name}, $160.00']"
+      assert_selector "#cashflow-sankey g[aria-label='#{name}, $160.00']"
     end
     links = chart.all(".sankey-link").map do |link|
       assert link["d"].present?
@@ -118,21 +118,21 @@ class CashFlowTest < ApplicationSystemTestCase
   test "preview structural labels and tooltips use the user locale" do
     @user.update!(locale: "es")
     sign_in @user
-    chart = find("#cashflow-preview [data-preview-sankey-chart-target='chart']", match: :first)
-    assert_selector "#cashflow-preview svg text", text: "Flujo de caja"
-    assert_selector "#cashflow-preview svg text", text: "Déficit"
+    chart = find("#cashflow-sankey [data-sankey-chart-target='chart']", match: :first)
+    assert_selector "#cashflow-sankey svg text", text: "Flujo de caja"
+    assert_selector "#cashflow-sankey svg text", text: "Déficit"
     chart.find("svg text", text: "Déficit", match: :first).hover
     assert_selector ".chart-tooltip.ph-no-capture", text: "Déficit"
-    assert_selector "#cashflow-preview svg text", text: "Sankey Groceries"
+    assert_selector "#cashflow-sankey svg text", text: "Sankey Groceries"
     account = @user.family.accounts.find_by!(name: "Sankey checking")
     create_transaction(account: account, amount: -1000, date: @month)
     visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
-    assert_selector "#cashflow-preview svg text", text: "Superávit"
+    assert_selector "#cashflow-sankey svg text", text: "Superávit"
   end
 
   test "failed load can retry and an empty range clears old chart data" do
     sign_in @user
-    assert_selector "#cashflow-preview svg .sankey-link"
+    assert_selector "#cashflow-sankey svg .sankey-link"
     page.execute_script(<<~JS)
       window.originalCashFlowFetch = window.fetch;
       window.fetch = (url, options) => String(url).includes('/dashboard/cash_flow')
@@ -140,137 +140,87 @@ class CashFlowTest < ApplicationSystemTestCase
       document.querySelector('[data-action="cash-flow#load"]').click();
     JS
     assert_selector "[data-cash-flow-target='error']:not([hidden])"
-    assert_selector "#cashflow-sankey-chart svg .sankey-link"
-    assert_no_selector "[data-preview-sankey-chart-target='chart'] svg"
+    assert_no_selector "#cashflow-sankey-chart svg .sankey-link"
+    assert_no_selector "[data-sankey-chart-target='chart'] svg"
     page.execute_script("window.fetch = window.originalCashFlowFetch")
     within "[data-cash-flow-target='error']" do
       click_button "Try again"
     end
-    assert_selector "#cashflow-preview svg .sankey-link"
+    assert_selector "#cashflow-sankey svg .sankey-link"
     visit root_path(start_date: "1900-01-01", end_date: "1900-01-02")
     assert_selector "[data-cash-flow-target='empty']:not([hidden])"
     assert_no_selector "#cashflow-sankey-chart svg .sankey-link"
-    assert_no_selector "[data-preview-sankey-chart-target='chart'] svg"
+    assert_no_selector "[data-sankey-chart-target='chart'] svg"
   end
 
-  test "preview displays are counted once and feedback uses PostHog survey question IDs" do
+  test "visualization displays are counted once and expansion is tracked" do
     sign_in @user
-    assert_selector "#cashflow-preview svg .sankey-link"
+    assert_selector "#cashflow-sankey svg .sankey-link"
     install_posthog_fake
-    find("#cashflow-preview").scroll_to(:center)
-    assert_selector "#cashflow-preview [data-preview-sankey-chart-target='chart'] svg"
+    find("#cashflow-sankey").scroll_to(:center)
+    assert_selector "#cashflow-sankey [data-sankey-chart-target='chart'] svg"
     assert_event_count "sankey_preview_displayed", 1
     page.execute_script("document.dispatchEvent(new Event('posthog:ready'))")
     assert_event_count "sankey_preview_displayed", 1
 
-    within "#cashflow-preview" do
+    within "#cashflow-sankey" do
       click_button "Expand", enable_aria_label: true
     end
-    assert_selector "#cashflow-preview-expanded-dialog[open] svg .sankey-link"
+    assert_selector "#cashflow-sankey-expanded-dialog[open] svg .sankey-link"
     assert_equal "false", find("[data-section-key='cashflow_sankey']")["draggable"]
     assert_event_count "sankey_preview_displayed", 2
-    within "#cashflow-preview-expanded-dialog" do
+    within "#cashflow-sankey-expanded-dialog" do
       find("button[data-action='DS--dialog#close']").click
     end
     assert_equal "true", find("[data-section-key='cashflow_sankey']")["draggable"]
 
-    [ "Looks right", "Something looks wrong" ].each_with_index do |rating, index|
-      within "#cashflow-preview" do
-        click_button rating
-      end
-      within "#cashflow-preview-feedback-dialog" do
-        fill_in "What did not show correctly?", with: "Labels overlap"
-        click_button "Send feedback"
-        assert_text "Thanks for helping improve the chart!"
-        find("button[data-action='DS--dialog#close']").click
-      end
-      assert_event_count "survey sent", index + 1
-      response = page.evaluate_script("window.sankeyEvents.filter(e => e.event === 'survey sent').at(-1).properties")
-      assert_equal rating, response.fetch("$survey_response_rating-id")
-      assert_equal "Labels overlap", response.fetch("$survey_response_feedback-id")
-      assert_equal "test-survey", response.fetch("$survey_id")
-    end
-    assert_event_count "survey shown", 2
-    assert_event_count "survey dismissed", 0
+    assert_equal [ "sankey_preview_displayed" ], page.evaluate_script("[...new Set(window.sankeyEvents.map(e => e.event))]")
   end
 
-  test "dismissing feedback does not submit it and absent analytics keeps both charts usable" do
+  test "collapsed visualizations do not count until visible and keyboard expansion preserves section order" do
     sign_in @user
-    assert_selector "#cashflow-preview svg .sankey-link"
-    within "#cashflow-preview" do
-      click_button "Something looks wrong"
-    end
-    within "#cashflow-preview-feedback-dialog" do
-      assert_text "Feedback isn't available right now"
-      find("button[data-action='DS--dialog#close']").click
-    end
-    install_posthog_fake
-    within "#cashflow-preview" do
-      click_button "Something looks wrong"
-    end
-    within "#cashflow-preview-feedback-dialog" do
-      fill_in "What did not show correctly?", with: "Not submitted"
-      find("button[data-action='DS--dialog#close']").click
-    end
-    assert_event_count "survey dismissed", 1
-    assert_event_count "survey sent", 0
-    assert_selector "#cashflow-sankey-chart svg .sankey-link"
-    assert_selector "#cashflow-preview svg .sankey-link"
-  end
-
-  test "collapsed previews do not count until visible and keyboard expansion preserves section order" do
-    sign_in @user
-    assert_selector "#cashflow-preview svg .sankey-link"
+    assert_selector "#cashflow-sankey svg .sankey-link"
     section = find("[data-section-key='cashflow_sankey']")
     section.find("[data-dashboard-section-target='button']").click
-    assert_no_selector "#cashflow-preview"
+    assert_no_selector "#cashflow-sankey-chart"
     install_posthog_fake
     assert_event_count "sankey_preview_displayed", 0
     section.find("[data-dashboard-section-target='button']").click
-    find("#cashflow-preview").scroll_to(:center)
+    find("#cashflow-sankey").scroll_to(:center)
     assert_event_count "sankey_preview_displayed", 1
-    within "#cashflow-preview" do
+    within "#cashflow-sankey" do
       find_button("Expand", enable_aria_label: true).send_keys(:enter)
     end
-    assert_selector "#cashflow-preview-expanded-dialog[open]"
+    assert_selector "#cashflow-sankey-expanded-dialog[open]"
     assert_equal "false", section["aria-grabbed"]
     assert_event_count "sankey_preview_displayed", 2
   end
 
-  test "Turbo snapshots clear preview graphs, floating tooltips, and unsubmitted feedback" do
+  test "Turbo snapshots clear graphs and floating tooltips" do
     sign_in @user
-    assert_selector "#cashflow-preview svg .sankey-link"
+    assert_selector "#cashflow-sankey svg .sankey-link"
     install_posthog_fake
-    find("#cashflow-preview svg text", text: "Sankey Shopping", match: :first).hover
+    find("#cashflow-sankey svg text", text: "Sankey Shopping", match: :first).hover
     assert_selector ".chart-tooltip.ph-no-capture", text: "Sankey Shopping"
-    within "#cashflow-preview" do
-      click_button "Something looks wrong"
-    end
-    within "#cashflow-preview-feedback-dialog" do
-      fill_in "What did not show correctly?", with: "Not submitted"
-    end
     snapshot = page.evaluate_script(<<~JS)
       (() => {
         document.dispatchEvent(new Event('turbo:before-cache'));
         const copy = document.body.cloneNode(true);
         return {
-          previewGraphs: copy.querySelectorAll('#cashflow-preview svg .sankey-link').length,
-          tooltips: copy.querySelectorAll('.chart-tooltip.ph-no-capture').length,
-          feedback: copy.querySelector('#cashflow-preview-feedback').value,
-          legacyGraph: !!copy.querySelector('#cashflow-sankey-chart svg .sankey-link')
+          previewGraphs: copy.querySelectorAll('#cashflow-sankey svg .sankey-link').length,
+          tooltips: copy.querySelectorAll('.chart-tooltip.ph-no-capture').length
         };
       })()
     JS
-    assert_equal({ "previewGraphs" => 0, "tooltips" => 0, "feedback" => "", "legacyGraph" => true }, snapshot)
+    assert_equal({ "previewGraphs" => 0, "tooltips" => 0 }, snapshot)
     assert_event_count "survey sent", 0
-    assert_event_count "survey dismissed", 1
   end
 
-  test "self-hosted displays and feedback use only the separate project" do
+  test "self-hosted displays use only the separate project" do
     with_self_hosting do
       sign_in @user
       visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
-      assert_selector "#cashflow-preview svg .sankey-link"
+      assert_selector "#cashflow-sankey svg .sankey-link"
       install_posthog_fake
       page.execute_script(<<~JS)
         const shared = window.posthog;
@@ -278,114 +228,19 @@ class CashFlowTest < ApplicationSystemTestCase
           __loaded: true,
           has_opted_out_capturing: () => false,
           capture: () => { throw new Error('Wrong analytics destination'); },
-          getSurveys: () => { throw new Error('Wrong survey destination'); },
           sankeyFeedback: shared
         };
         document.dispatchEvent(new Event('posthog:ready'));
       JS
-      find("#cashflow-preview").scroll_to(:center)
+      find("#cashflow-sankey").scroll_to(:center)
       assert_event_count "sankey_preview_displayed", 1
-      within "#cashflow-preview" do
+      within "#cashflow-sankey" do
         click_button "Expand", enable_aria_label: true
       end
       assert_event_count "sankey_preview_displayed", 2
-      find("#cashflow-preview-expanded-dialog").find("button[data-action='DS--dialog#close']").click
-      within "#cashflow-preview" do
-        click_button "Something looks wrong"
-      end
-      fill_in "cashflow-preview-feedback", with: "The labels overlap"
-      click_button "Send feedback"
-      assert_event_count "survey sent", 1
-      assert page.evaluate_script("window.sankeyEvents.some(e => e.event === 'survey sent' && e.properties.$survey_id === 'test-survey')")
-      find("#cashflow-preview-feedback-dialog").find("button[data-action='DS--dialog#close']").click
-      page.execute_script("document.querySelector('#cashflow-preview').setAttribute('data-sankey-preview-feedback-key-value', '')")
-      within "#cashflow-preview" do
-        click_button "Looks right"
-      end
-      assert_selector "#cashflow-preview-feedback-dialog[open] [role='status']", text: "Feedback isn't available right now"
-      assert_event_count "survey shown", 1
-      assert_event_count "survey sent", 1
+      find("#cashflow-sankey-expanded-dialog").find("button[data-action='DS--dialog#close']").click
+      assert_equal [ "sankey_preview_displayed" ], page.evaluate_script("[...new Set(window.sankeyEvents.map(e => e.event))]")
     end
-  end
-
-  test "captures once per graph load and compares each selected period independently" do
-    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
-    # A previous lifetime marker must no longer suppress comparisons.
-    @user.update!(preferences: @user.preferences.merge("sankey_comparison_result" => "mismatch"))
-    sign_in @user
-    visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
-    assert_selector "#cashflow-preview svg .sankey-link"
-    install_posthog_fake
-    # Expense-only input adds an explicit deficit in the new graph.
-    assert_event_count "new_sankey_mismatch", 1
-    page.execute_script("document.dispatchEvent(new Event('posthog:ready'))")
-    find("#cashflow-preview [data-sankey-preview-target='expandButton']").click
-    find("#cashflow-preview-expanded-dialog").find("button[data-action='DS--dialog#close']").click
-    assert_event_count "new_sankey_mismatch", 1
-    properties = page.evaluate_script("window.sankeyEvents.find(e => e.event === 'new_sankey_mismatch').properties")
-    assert_equal({ "preview_version" => "cash_flow_v1" }, properties)
-
-    # Retrying data within the same controller permits one new comparison.
-    page.execute_script(<<~JS)
-      const preview = document.querySelector('#cashflow-preview');
-      const loader = window.Stimulus.getControllerForElementAndIdentifier(preview.querySelector('[data-controller="cash-flow"]'), 'cash-flow');
-      loader.load();
-    JS
-    assert_event_count "new_sankey_mismatch", 2
-
-    visit root_path(start_date: "1900-01-01", end_date: "1900-01-02")
-    assert_selector "#cashflow-preview[data-sankey-comparison='match']"
-    install_posthog_fake
-    assert_event_count "new_sankey_match", 1
-    assert_event_count "new_sankey_mismatch", 0
-    page.execute_script("document.dispatchEvent(new Event('posthog:ready'))")
-    assert_event_count "new_sankey_match", 1
-  end
-
-  test "feedback buttons highlight the current comparison without analytics and reset on loading" do
-    sign_in @user
-    visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
-    assert_selector "#cashflow-preview[data-sankey-comparison='mismatch']"
-    positive = "#cashflow-preview button[data-sankey-preview-rating-param='positive']"
-    negative = "#cashflow-preview button[data-sankey-preview-rating-param='negative']"
-    background = ->(selector) { page.evaluate_script("getComputedStyle(document.querySelector(#{selector.to_json})).backgroundColor") }
-    neutral = background.call(positive)
-    assert_not_equal neutral, background.call(negative)
-    page.execute_script(<<~JS)
-      const preview = document.querySelector('#cashflow-preview');
-      const graph = JSON.parse(preview.querySelector('[data-preview-sankey-chart-data-value]').getAttribute('data-preview-sankey-chart-data-value'));
-      preview.setAttribute('data-sankey-preview-legacy-data-value', JSON.stringify(graph));
-      preview.dispatchEvent(new CustomEvent('cash-flow:state', { detail: { state: 'content', ready: true, graph } }));
-    JS
-    assert_selector "#cashflow-preview[data-sankey-comparison='match']"
-    assert_not_equal neutral, background.call(positive)
-    assert_equal neutral, background.call(negative)
-    page.execute_script(<<~JS)
-      document.querySelector('#cashflow-preview').dispatchEvent(new CustomEvent('cash-flow:state', { detail: { state: 'loading', ready: false } }));
-    JS
-    assert_selector "#cashflow-preview[data-sankey-comparison='']"
-    assert_equal neutral, background.call(positive)
-    assert_equal neutral, background.call(negative)
-  end
-
-  test "feedback refreshes stale cached survey definitions on each click" do
-    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
-    sign_in @user
-    visit root_path(start_date: @month.iso8601, end_date: Date.current.iso8601)
-    assert_selector "#cashflow-preview svg .sankey-link"
-    install_posthog_fake
-    page.execute_script(<<~JS)
-      const getCurrentSurveys = window.posthog.getSurveys;
-      window.posthog.getSurveys = (callback, forceReload) => {
-        if (forceReload) getCurrentSurveys(callback);
-        else callback([]);
-      };
-    JS
-    within "#cashflow-preview" do
-      click_button "Looks right"
-    end
-    assert_selector "#cashflow-preview-feedback-dialog textarea"
-    assert_event_count "survey shown", 1
   end
 
   private
@@ -404,16 +259,8 @@ class CashFlowTest < ApplicationSystemTestCase
           __loaded: true,
           has_opted_out_capturing: () => false,
           capture: (event, properties) => { window.sankeyEvents.push({event, properties}); return {}; },
-          getSurveys: callback => callback([{
-            id: 'test-survey', type: 'api', start_date: '2026-09-14', end_date: null,
-            questions: [
-              {id: 'feedback-id', type: 'open', question: 'What did not show correctly?', optional: true},
-              {id: 'rating-id', type: 'single_choice', choices: ['Looks right', 'Something looks wrong']}
-            ]
-          }])
         };
-        document.querySelector('#cashflow-preview').setAttribute('data-sankey-preview-survey-id-value', 'test-survey');
-        document.querySelector('#cashflow-preview').setAttribute('data-sankey-preview-feedback-key-value', 'test-public-token');
+        document.querySelector('#cashflow-sankey').setAttribute('data-sankey-visualization-feedback-key-value', 'test-public-token');
         document.dispatchEvent(new Event('posthog:ready'));
       JS
     end

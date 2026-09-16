@@ -41,12 +41,24 @@
   <% if accessible_accounts.any? %>
     <% @dashboard_sections.each do |section| %>
       <% next unless section[:visible] %>
+      <% tracking = section[:key] == "cashflow_sankey" ? sankey_tracking_config : {} %>
+      <% if tracking[:api_key].present? %>
+        <%= render "shared/posthog_bootstrap" %>
+      <% end %>
       <section
+        <% if section[:key] == "cashflow_sankey" %>
+          id="cashflow-sankey"
+        <% end %>
         class="bg-container rounded-xl shadow-border-xs transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2<%= " 2xl:col-span-2" if two_column && section[:layout][:col_span] == "full" %>"
         style="<%= "--dash-widget-h: #{section[:layout][:height_px]}px;" if section[:layout][:grow] %>"
         data-dashboard-sortable-target="section"
         data-section-key="<%= section[:key] %>"
-        data-controller="dashboard-section<%= " cashflow-expand" if section[:key] == "cashflow_sankey" %>"
+        data-controller="dashboard-section<%= " sankey-visualization" if section[:key] == "cashflow_sankey" %>"
+        <% if section[:key] == "cashflow_sankey" %>
+          data-sankey-visualization-self-hosted-value="<%= self_hosted? %>"
+          data-sankey-visualization-feedback-key-value="<%= tracking[:api_key] %>"
+          data-sankey-visualization-feedback-host-value="<%= tracking[:host] %>"
+        <% end %>
         data-dashboard-section-section-key-value="<%= section[:key] %>"
         data-dashboard-section-collapsed-value="<%= Current.user.dashboard_section_collapsed?(section[:key]) %>"
         draggable="true"
@@ -55,6 +67,7 @@
         aria-grabbed="false"
         aria-label="<%= t(section[:title]) %> section. Press Enter or Space to grab for reordering, then use arrow keys to move."
         data-action="
+          <%= "cash-flow:state->sankey-visualization#update posthog:ready@document->sankey-visualization#trackDisplay visibilitychange@document->sankey-visualization#trackDisplay turbo:before-cache@document->sankey-visualization#clear" if section[:key] == "cashflow_sankey" %>
           dragstart->dashboard-sortable#dragStart
           dragend->dashboard-sortable#dragEnd
           touchstart->dashboard-sortable#touchStart
@@ -94,14 +107,10 @@
                 <span data-icon="collapse" aria-hidden="true" style="display:none"><%= icon("chevrons-down-up", size: "sm", class: "!w-3.5 !h-3.5") %></span>
               </button>
             <% end %>
-            <% if section[:key] == "cashflow_sankey" && section[:locals][:sankey_data][:links].present? %>
-              <button
-                type="button"
-                class="flex items-center justify-center w-6 h-6 rounded-md text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100 ml-auto lg:ml-0"
-                data-action="click->cashflow-expand#open"
-                aria-label="<%= t("global.expand") %>">
-                <%= icon("maximize-2", size: "sm", class: "!w-3.5 !h-3.5") %>
-              </button>
+            <% if section[:key] == "cashflow_sankey" %>
+              <%= render DS::Button.new(icon: "maximize-2", variant: :ghost, disabled: true,
+                aria: { label: t("global.expand") },
+                data: { action: "sankey-visualization#expand keydown->sankey-visualization#stopKeydown", sankey_visualization_target: "expandButton" }) %>
             <% end %>
             <% layout = section[:layout] %>
             <% show_width = layout[:width_toggle] && two_column %>
@@ -169,9 +178,6 @@
         </div>
         <div class="py-4" data-dashboard-section-target="content">
           <%= render partial: section[:partial], locals: section[:locals] %>
-          <% if section[:key] == "cashflow_sankey" && preview_features_enabled? %>
-            <%= render "pages/dashboard/cashflow_preview", period: @period, legacy_data: section[:locals][:sankey_data] %>
-          <% end %>
         </div>
       </section>
     <% end %>

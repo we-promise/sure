@@ -78,24 +78,11 @@ en:
           liability: "Liabilities"
       insights_feed:
         title: "Insights"
-      cashflow_preview:
+      cashflow_sankey:
         node_labels:
           cash_flow: "Cash Flow"
           surplus: "Surplus"
           deficit: "Deficit"
-        title: "New Sankey chart"
-        preview: "Preview"
-        preview_tooltip: "This will replace the above visualization as it uses a new shared API with the mobile Swift client."
-        feedback_prompt: "Compare this chart with the original above and let us know if it looks different other than sorting."
-        positive: "Looks right"
-        negative: "Something looks wrong"
-        feedback_title: "Cash flow chart feedback"
-        feedback_loading: "Loading feedback form…"
-        feedback_unavailable: "Feedback isn't available right now. Please try again later."
-        feedback_thanks: "Thanks for helping improve the chart!"
-        feedback_privacy: "Your response is sent to PostHog. Describe the issue without account numbers, balances, or other private financial details."
-        feedback_submit: "Send feedback"
-      cashflow_sankey:
         loading: "Loading cash flow…"
         load_error: "Cash flow could not be loaded. Please try again."
         retry: "Try again"

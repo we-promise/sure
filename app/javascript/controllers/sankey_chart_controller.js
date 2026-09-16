@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 import { sankey } from "d3-sankey";
+import { formatCashFlowCurrency } from "utils/cash_flow_chart_data";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 import { sankeyNodeHasChildren, zoomSankeyData } from "utils/sankey_zoom";
 import {
@@ -8,15 +9,18 @@ import {
   isNavigableCategoryNode,
 } from "utils/transactions_filter_url";
 
-// Connects to data-controller="sankey-chart"
+let nextChartId = 0;
+
+// Render the same cash-flow graph used by the mobile client.
 export default class extends Controller {
   static targets = ["chart", "zoomOutButton"];
 
   static values = {
     data: Object,
+    labels: Object,
     nodeWidth: { type: Number, default: 15 },
     nodePadding: { type: Number, default: 20 },
-    currencySymbol: { type: String, default: "$" },
+    currency: { type: String, default: "USD" },
     startDate: String,
     endDate: String,
   };
@@ -39,6 +43,7 @@ export default class extends Controller {
   static MIN_LABEL_SPACING = 28; // Minimum vertical space needed for labels (2 lines)
 
   connect() {
+    this.gradientPrefix ||= `sankey-${++nextChartId}`;
     this.connected = true;
     this.zoomRootId = null;
     this.resizeObserver = new ResizeObserver(() => this.#draw());
@@ -65,9 +70,17 @@ export default class extends Controller {
     this.tooltip = null;
   }
 
+  clear() {
+    clearTimeout(this.drawTimeout);
+    this.tooltip?.remove();
+    this.tooltip = null;
+    d3.select(this.#chartElement()).selectAll("svg").interrupt().remove();
+  }
+
   zoomOut() {
     if (!this.zoomRootId) return;
 
+    this.focusAfterDraw = this.zoomRootId;
     this.zoomRootId = null;
     this.#syncZoomControls();
     this.#draw({ animate: true });
@@ -75,16 +88,23 @@ export default class extends Controller {
 
   #draw({ animate = false } = {}) {
     const { nodes = [], links = [] } = this.#visibleData();
-    if (!nodes.length || !links.length) return;
 
     // Hide tooltip and reset any hover states before redrawing
     this.#hideTooltip();
 
     const chartElement = this.#chartElement();
+    const focusedNode = document.activeElement?.closest("[data-node-id]");
+    if (chartElement.contains(focusedNode))
+      this.focusAfterDraw ||= focusedNode.dataset.nodeId;
     const chart = d3.select(chartElement);
 
     clearTimeout(this.drawTimeout);
     chart.selectAll("svg").interrupt();
+
+    if (!nodes.length || !links.length) {
+      chart.selectAll("svg").remove();
+      return;
+    }
 
     if (animate) {
       chart
@@ -164,25 +184,32 @@ export default class extends Controller {
     if (!node.id || !sankeyNodeHasChildren(this.#visibleData(), node.id))
       return;
 
+    if (this.element.contains(document.activeElement))
+      this.focusAfterDraw = node.id;
     this.zoomRootId = node.id;
     this.#syncZoomControls();
     this.#draw({ animate: true });
   }
 
-  #navigateToTransactions(d) {
-    if (!isNavigableCategoryNode(d.id)) {
-      // Structural node (Cash Flow / Surplus): keep current zoom behavior.
-      this.#zoomIn(d);
-      return;
-    }
+  #nodeAction(node) {
+    if (sankeyNodeHasChildren(this.#visibleData(), node.id)) return "button";
+    if (isNavigableCategoryNode(node.id) && node.filter_value) return "link";
+    return null;
+  }
 
-    Turbo.visit(
-      buildCategoryTransactionsUrl({
-        filterValue: d.filter_value,
-        startDate: this.startDateValue,
-        endDate: this.endDateValue,
-      }),
-    );
+  #activateNode(node) {
+    const action = this.#nodeAction(node);
+    if (action === "button") {
+      this.#zoomIn(node);
+    } else if (action === "link") {
+      Turbo.visit(
+        buildCategoryTransactionsUrl({
+          filterValue: node.filter_value,
+          startDate: this.startDateValue,
+          endDate: this.endDateValue,
+        }),
+      );
+    }
   }
 
   // Dynamic padding prevents padding from dominating when there are many nodes
@@ -210,7 +237,11 @@ export default class extends Controller {
       ]);
 
     return sankeyGenerator({
-      nodes: nodes.map((d) => ({ ...d })),
+      nodes: nodes.map((d) => ({
+        ...d,
+        // Structural labels belong to the UI locale, not the API fallback name.
+        name: this.labelsValue[d.kind] || d.name,
+      })),
       links: links.map((d) => ({ ...d })),
     });
   }
@@ -240,7 +271,7 @@ export default class extends Controller {
   }
 
   #gradientId(link, index) {
-    return `link-gradient-${link.source.index}-${link.target.index}-${index}`;
+    return `${this.gradientPrefix}-link-gradient-${link.source.index}-${link.target.index}-${index}`;
   }
 
   #colorWithOpacity(nodeColor, opacity = 0.1) {
@@ -484,19 +515,33 @@ export default class extends Controller {
         this.#hideTooltip();
       });
 
-    // Hover on node rectangles (not just text)
+    // One focus target per node; its bar and label share the same action.
     nodeGroups
-      .selectAll("path")
-      .style("cursor", (d) =>
-        sankeyNodeHasChildren(this.#visibleData(), d.id)
-          ? "pointer"
-          : "default",
-      )
-      .on("mouseenter", (event, d) => {
-        const connectedLinks = sankeyData.links.filter(
-          (l) => l.source === d || l.target === d,
+      .attr("data-node-id", (d) => d.id)
+      .attr("tabindex", (d) => (this.#nodeAction(d) ? 0 : null))
+      .attr("role", (d) => this.#nodeAction(d))
+      .attr("aria-label", (d) => `${d.name}, ${this.#formatCurrency(d.value)}`)
+      .style("cursor", (d) => (this.#nodeAction(d) ? "pointer" : "default"))
+      .on("click", (event, d) => {
+        event.stopPropagation();
+        this.#activateNode(d);
+      })
+      .on("keydown", (event, d) => {
+        if (!["Enter", " "].includes(event.key) || !this.#nodeAction(d)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.#activateNode(d);
+      })
+      .on("focus", (event, d) => {
+        applyHover(
+          sankeyData.links.filter((l) => l.source === d || l.target === d),
         );
-        applyHover(connectedLinks);
+      })
+      .on("blur", resetHover)
+      .on("mouseenter", (event, d) => {
+        applyHover(
+          sankeyData.links.filter((l) => l.source === d || l.target === d),
+        );
         this.#showTooltip(
           event,
           d.value,
@@ -505,44 +550,19 @@ export default class extends Controller {
         );
       })
       .on("mousemove", (event) => this.#updateTooltipPosition(event))
-      .on("click", (event, d) => {
-        event.stopPropagation();
-        this.#zoomIn(d);
-      })
       .on("mouseleave", () => {
         resetHover();
         this.#hideTooltip();
       });
+    nodeGroups.selectAll("text").style("cursor", "inherit");
 
-    nodeGroups
-      .selectAll("text")
-      .style("cursor", (d) =>
-        isNavigableCategoryNode(d.id) ||
-        sankeyNodeHasChildren(this.#visibleData(), d.id)
-          ? "pointer"
-          : "default",
-      )
-      .on("mouseenter", (event, d) => {
-        const connectedLinks = sankeyData.links.filter(
-          (l) => l.source === d || l.target === d,
-        );
-        applyHover(connectedLinks);
-        this.#showTooltip(
-          event,
-          d.value,
-          d.percentage,
-          this.#tooltipContext(this.#esc(d.name)),
-        );
-      })
-      .on("mousemove", (event) => this.#updateTooltipPosition(event))
-      .on("click", (event, d) => {
-        event.stopPropagation();
-        this.#navigateToTransactions(d);
-      })
-      .on("mouseleave", () => {
-        resetHover();
-        this.#hideTooltip();
-      });
+    if (this.focusAfterDraw) {
+      nodeGroups
+        .filter((d) => d.id === this.focusAfterDraw)
+        .node()
+        ?.focus();
+      this.focusAfterDraw = null;
+    }
   }
 
   // Tooltip methods
@@ -554,7 +574,7 @@ export default class extends Controller {
       .append("div")
       // Shared visual contract + this chart's positioning class; opacity is
       // toggled via inline style below.
-      .attr("class", `${CHART_TOOLTIP_CLASSES} top-0`)
+      .attr("class", `${CHART_TOOLTIP_CLASSES} top-0 ph-no-capture`)
       .style("opacity", 0)
       .style("pointer-events", "none");
   }
@@ -565,7 +585,13 @@ export default class extends Controller {
     return String(s).replace(
       /[&<>"']/g,
       (c) =>
-        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[c],
     );
   }
 
@@ -621,10 +647,6 @@ export default class extends Controller {
   }
 
   #formatCurrency(value) {
-    const formatted = Number.parseFloat(value).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return this.currencySymbolValue + formatted;
+    return formatCashFlowCurrency(value, this.currencyValue);
   }
 }

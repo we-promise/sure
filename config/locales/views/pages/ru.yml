@@ -4,11 +4,6 @@ ru:
     changelog:
       title: Что нового
     dashboard:
-      cashflow_preview:
-        node_labels:
-          cash_flow: "Денежный поток"
-          surplus: "Профицит"
-          deficit: "Дефицит"
       balance_sheet:
         add_accounts: Добавьте счета %{name}, чтобы увидеть разбивку
         add_asset_accounts: Добавьте счета активов
@@ -24,6 +19,10 @@ ru:
         value: Сумма
         weight: Доля
       cashflow_sankey:
+        node_labels:
+          cash_flow: "Денежный поток"
+          surplus: "Профицит"
+          deficit: "Дефицит"
         add_transaction: Добавить операцию
         no_data_description: Добавьте операции или измените период
         no_data_title: Нет данных за период

@@ -35,11 +35,6 @@ zh-CN:
       heading: 服务条款
       placeholder: 服务条款内容将显示在这里。
     dashboard:
-      cashflow_preview:
-        node_labels:
-          cash_flow: "现金流"
-          surplus: "盈余"
-          deficit: "赤字"
       welcome: 欢迎回来，%{name}
       subtitle: 以下是您的财务状况概览
       new: 新建
@@ -67,6 +62,10 @@ zh-CN:
           asset: 资产
           liability: 负债
       cashflow_sankey:
+        node_labels:
+          cash_flow: "现金流"
+          surplus: "盈余"
+          deficit: "赤字"
         title: 现金流
         zoom_out: 返回完整现金流
         no_data_title: 此时间段内没有现金流数据
