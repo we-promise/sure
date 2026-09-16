@@ -121,6 +121,27 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     assert_nil Portfolio::Xirr.rate_or_nil(flows)
   end
 
+  # The third rescue branch, which no fixture reaches: bisection searches
+  # [-0.999999, 1e7], and a series that changes sign almost always puts a root
+  # somewhere in it -- I tried three shapes built to defeat both methods (a
+  # bigger outflow after an inflow, an alternating series, a near-zero terminal
+  # value) and all three converged. What is pinned here is the CONTRACT rather
+  # than a numeric case: when neither method solves, the answer is an error and
+  # a nil, never the last guess either method held.
+  test "a series neither method solves has no rate, not the guess it stopped on" do
+    flows = [
+      [ Date.new(2026, 1, 1), -1_000 ],
+      [ Date.new(2027, 1, 1), 2_000 ]
+    ]
+
+    Portfolio::Xirr.any_instance.stubs(:newton_rate).returns(nil)
+    Portfolio::Xirr.any_instance.stubs(:bisection_rate).returns(nil)
+
+    assert_raises(Portfolio::Xirr::ConvergenceError) { Portfolio::Xirr.rate(flows) }
+    assert_nil Portfolio::Xirr.rate_or_nil(flows),
+               "the render path degrades to nil here too, or it raises in a view"
+  end
+
   test "ignores zero amounts" do
     rate = Portfolio::Xirr.rate([
       [ Date.new(2026, 1, 1), -1_000 ],

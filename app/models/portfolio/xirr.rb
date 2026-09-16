@@ -16,6 +16,14 @@
 # in. This is the deliberate exception to the BigDecimal rule the money figures
 # elsewhere follow.
 #
+# MULTIPLE ROOTS. The present value is a generalised polynomial in the rate, so
+# a series that changes sign more than once can cross zero twice inside the
+# bracket, and two rates are then equally "the" answer. This returns whichever
+# one the search reaches first. An ordinary portfolio -- money in, money out,
+# a terminal value -- changes sign once and has one root, but a caller feeding
+# it a series that alternates should know the figure is one of several rather
+# than the only one.
+#
 # No gem: AGENTS.md asks for Rails and few dependencies, and this is eighty
 # lines of arithmetic with no upstream to track.
 class Portfolio::Xirr
