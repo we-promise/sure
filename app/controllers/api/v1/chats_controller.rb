@@ -8,12 +8,21 @@ class Api::V1::ChatsController < Api::V1::BaseController
   before_action :set_chat, only: [ :show, :update, :destroy ]
 
   def index
-    @pagy, @chats = pagy(current_resource_owner.chats.ordered, items: 20)
+    @pagy, @chats = pagy(current_resource_owner.chats.ordered, limit: 20)
   end
 
   def show
     return unless @chat
-    @pagy, @messages = pagy(@chat.messages.ordered, items: 50)
+
+    # Paginate newest-first so the default (unpaginated) request surfaces the
+    # latest messages instead of stalling on the oldest page once a chat grows
+    # past one page — older history stays reachable via subsequent pages.
+    # Re-sorted back to chronological order for display afterwards.
+    @pagy, @messages = pagy(
+      @chat.messages.includes(:tool_calls).order(created_at: :desc),
+      limit: 50
+    )
+    @messages = @messages.reverse
   end
 
   def create
