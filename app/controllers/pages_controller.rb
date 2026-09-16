@@ -264,9 +264,9 @@ class PagesController < ApplicationController
       links = []
       node_indices = {}
 
-      add_node = ->(unique_key, display_name, value, percentage, color) {
+      add_node = ->(unique_key, display_name, value, percentage, color, filter_value = nil) {
         node_indices[unique_key] ||= begin
-          nodes << { id: unique_key, name: display_name, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
+          nodes << { id: unique_key, name: display_name, filter_value: filter_value, value: value.to_f.round(2), percentage: percentage.to_f.round(1), color: color }
           nodes.size - 1
         end
       }
@@ -375,7 +375,7 @@ class PagesController < ApplicationController
         opposite_subs = all_subs.select { |s| s[:net_direction] != matching_direction }
 
         if same_side_subs.any?
-          parent_idx = add_node.call(node_key, ct.category.name, val, percentage, color)
+          parent_idx = add_node.call(node_key, ct.category.name, val, percentage, color, ct.category.filter_value)
 
           if flow_direction == :inbound
             links << { source: parent_idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }
@@ -388,7 +388,7 @@ class PagesController < ApplicationController
             sub_pct = val.zero? ? 0 : (sub_val / val * 100).round(1)
             sub_color = sub[:category].color.presence || color
             sub_key = "#{prefix}_sub_#{sub[:category].id}"
-            sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color)
+            sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color, sub[:category].filter_value)
 
             if flow_direction == :inbound
               links << { source: sub_idx, target: parent_idx, value: sub_val, color: sub_color, percentage: sub_pct }
@@ -397,7 +397,7 @@ class PagesController < ApplicationController
             end
           end
         else
-          idx = add_node.call(node_key, ct.category.name, val, percentage, color)
+          idx = add_node.call(node_key, ct.category.name, val, percentage, color, ct.category.filter_value)
 
           if flow_direction == :inbound
             links << { source: idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }
@@ -415,7 +415,7 @@ class PagesController < ApplicationController
           sub_pct = total.zero? ? 0 : (sub_val / total * 100).round(1)
           sub_color = sub[:category].color.presence || color
           sub_key = "#{opposite_prefix}_sub_#{sub[:category].id}"
-          sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color)
+          sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color, sub[:category].filter_value)
 
           # Opposite direction: if parent is outbound (expense), this sub is inbound (income)
           if flow_direction == :inbound
@@ -438,6 +438,7 @@ class PagesController < ApplicationController
           {
             id: ct.category.id,
             name: ct.category.name,
+            filter_value: ct.category.filter_value,
             amount: ct.total.to_f.round(2),
             currency: ct.currency,
             percentage: ct.weight.round(1),
@@ -481,7 +482,9 @@ class PagesController < ApplicationController
 
     # Cumulative daily spending for the selected month (capped at today while
     # the month is in progress) against the previous month's full curve, so
-    # the two lines share one day-of-month axis.
+    # the two lines share one day-of-month axis. The header totals compare the
+    # same number of elapsed days; only the chart draws the previous month out
+    # to its final day.
     def build_spending_trend_data(income_statement, selected_month)
       month_start = selected_month.beginning_of_month
       month_end = month_start.end_of_month
@@ -493,40 +496,86 @@ class PagesController < ApplicationController
       current_daily = income_statement.daily_expense_series(period: current_period).index_by(&:date)
       previous_daily = income_statement.daily_expense_series(period: previous_period).index_by(&:date)
 
+      # The selected month always owns the axis: when the previous month is
+      # longer, its extra days fold into the final visible point so the curve
+      # still ends at the full-month total without the axis rolling into
+      # previous-month dates (e.g. a September view ends at "Sep 30", not
+      # "Aug 31").
+      axis_days = month_end.day
+
       current_series = cumulative_spending_series(current_period, current_daily)
-      previous_series = cumulative_spending_series(previous_period, previous_daily)
+      previous_header_series = cumulative_spending_series(previous_period, previous_daily)
+      previous_series = fold_extra_days(previous_header_series, axis_days)
 
       current_total = current_series.last&.fetch(:value) || 0
-      previous_total = previous_series.last&.fetch(:value) || 0
+      comparison_days = if month_start == Date.current.beginning_of_month
+        [ current_series.size, previous_header_series.size ].min
+      else
+        previous_header_series.size
+      end
+      previous_total = comparison_days.positive? ? previous_header_series[comparison_days - 1][:value] : 0
+      previous_comparison_day = comparison_days if comparison_days.positive? && comparison_days < previous_header_series.size
       currency = income_statement.family.currency
 
-      # The axis spans the longer of the two months so both curves share it.
-      axis_days = [ month_end.day, previous_period.end_date.day ].max
 
       {
         month: month_start,
         current_period: current_period,
         previous_period: previous_period,
         days: axis_days,
-        axis_labels: spending_trend_axis_labels(month_start, previous_month_start, axis_days),
+        current_days: month_end.day,
+        axis_labels: spending_trend_axis_labels(month_start, axis_days),
         current: current_series,
         previous: previous_series,
         current_total: Money.new(current_total, currency),
         previous_total: Money.new(previous_total, currency),
-        delta: Money.new(current_total - previous_total, currency)
+        delta: Money.new(current_total - previous_total, currency),
+        previous_label: I18n.l(previous_month_start, format: :month_year).capitalize,
+        previous_comparison_day: previous_comparison_day,
+        date_range_short: spending_trend_compact_date_range(current_period)
       }
     end
 
-    # Localized tick labels, one per axis day. The selected month owns the
-    # axis up to its length; when the previous month is longer, its dates
-    # label the tail so a tick never rolls past month-end into the next month
-    # (e.g. day 31 of a February view is "Jan 31", not "Mar 3").
-    def spending_trend_axis_labels(month_start, previous_month_start, days)
-      month_length = month_start.end_of_month.day
+    # Compact range for narrow viewports ("Sep 01 - 6, 2026"). The period
+    # never spans months, so the end date only needs its day.
+    def spending_trend_compact_date_range(period)
+      date_range = period.date_range
 
+      if date_range.begin == date_range.end
+        t("pages.dashboard.spending_trend.date_range_short_single",
+          date: I18n.l(date_range.begin, format: :short),
+          year: date_range.end.year)
+      else
+        t("pages.dashboard.spending_trend.date_range_short",
+          start_date: I18n.l(date_range.begin, format: :short),
+          end_day: date_range.end.day,
+          year: date_range.end.year)
+      end
+    end
+
+    # Localized tick labels, one per axis day. The axis always spans exactly
+    # the selected month, so labels never roll into the previous month.
+    def spending_trend_axis_labels(month_start, days)
       (1..days).map do |day|
-        date = day <= month_length ? month_start + (day - 1) : previous_month_start + (day - 1)
-        I18n.l(date, format: :short)
+        I18n.l(month_start + (day - 1), format: :short)
+      end
+    end
+
+    # A longer previous month's curve is clipped to the axis, with the extra
+    # days' spend folded into the final visible point, so the curve still
+    # ends at the full-month total shown in the header. The folded point
+    # keeps its axis slot (day) for positioning but carries the true
+    # endpoint's date metadata, so the tooltip says what the value actually
+    # contains (e.g. "Jan 31" and the total through Jan 31).
+    def fold_extra_days(series, axis_days)
+      return series if series.size <= axis_days
+
+      series.first(axis_days).tap do |folded|
+        folded[-1] = folded[-1].merge(
+          value: series.last[:value],
+          date: series.last[:date],
+          date_formatted: series.last[:date_formatted]
+        )
       end
     end
 

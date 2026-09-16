@@ -4,4 +4,5 @@ pl:
     errors:
       models:
         indexa_capital_item:
-          credentials_required: "Wymagana jest zmienna środowiskowa INDEXA_API_TOKEN lub dane uwierzytelniające (nazwa użytkownika/dokument/hasło)"
+          credentials_required: Wymagana jest zmienna środowiskowa INDEXA_API_TOKEN
+            lub dane uwierzytelniające (nazwa użytkownika/dokument/hasło)

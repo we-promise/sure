@@ -33,6 +33,15 @@ fr:
       label: Montant
     preview: Aperçu
     require_admin: Seuls les administrateurs peuvent effectuer cette action
+    sidekiq_health_banner:
+      body: 'Les tâches en arrière-plan ne sont pas traitées : les soldes, le patrimoine net et les synchronisations de comptes peuvent donc être obsolètes ou absents.'
+      cta: Voir la santé du système
+      reasons:
+        no_worker_processes: Aucun processus worker Sidekiq n'est connecté. Démarrez le conteneur worker ou l'unité systemd.
+        queue_backed_up: La plus ancienne tâche en file d'attente attend au-delà du budget de latence. Le worker est actif mais prend du retard.
+        redis_unreachable: L'application ne parvient pas à joindre Redis. Vérifiez votre REDIS_URL et que Redis fonctionne.
+        stale_heartbeat: Le worker Sidekiq n'a pas envoyé de signal de vie récemment. Il est peut-être bloqué ou a planté.
+      title: Certaines données sont peut-être obsolètes
     sync_toast:
       message: Nouvelles données disponibles
       refresh: Actualiser

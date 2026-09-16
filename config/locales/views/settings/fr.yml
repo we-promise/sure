@@ -36,6 +36,49 @@ fr:
         disable_modal_click_outside_description: Empêche les fenêtres modales de se fermer en cliquant à l'extérieur. Utile pour éviter de perdre accidentellement des modifications non sauvegardées.
         transactions_title: Transactions
         transactions_subtitle: Personnalisez l'affichage des transactions
+    background_jobs:
+      cancel:
+        cancelled: "L'opération a été marquée comme annulée."
+        cancelled_error: "Marqué en échec par un administrateur : la tâche en arrière-plan a été présumée perdue."
+        not_cancellable: Cette opération ne peut pas être modifiée pour l'instant, sa tâche est peut-être encore en file d'attente ou en cours. Réessayez après 30 minutes d'inactivité.
+      operation:
+        actions:
+          mark_failed: Marquer en échec
+          mark_stale: Marquer comme obsolète
+          release_claim: Libérer la réservation
+        ago: il y a %{time}
+        confirm: Marquer cette opération comme perdue ? L'enregistrement passe à un statut terminal afin de pouvoir être relancé. Les données sous-jacentes ne sont pas modifiées.
+        missing_value: "-"
+        queued: En file d'attente
+        recent: Récente
+        running: En cours
+        stuck: Bloquée, présumée perdue
+        sync_label: Synchronisation · %{type}
+        unknown: Inconnu
+      show:
+        empty: Aucune opération en cours.
+        missing_value: "-"
+        operations_subtitle: Synchronisations, imports et exports de toutes les familles n'ayant pas atteint un statut terminal. Les opérations inactives depuis plus de 30 minutes sans tâche visible sont présumées perdues et peuvent être marquées comme telles.
+        operations_title: Opérations en cours
+        page_title: Tâches en arrière-plan
+        redis_unreachable: L'état de Sidekiq est indisponible (Redis injoignable). L'activité ne peut pas être déterminée, les actions sont donc désactivées.
+        stats:
+          busy: Occupés
+          dead: Abandonnées
+          enqueued: En file d'attente
+          queue_label: "%{name} : %{size} · %{latency} s de latence"
+          retries: Nouvelles tentatives
+          scheduled: Planifiées
+          workers: Workers
+        subtitle: "État d'exécution de Sidekiq en direct : processus workers, profondeur des files d'attente et ensembles de nouvelles tentatives et de tâches abandonnées."
+        table:
+          action: Action
+          family: Famille
+          last_activity: Dernière activité
+          liveness: Activité
+          status: Statut
+          type: Opération
+        title: État des workers
     debugs:
       show:
         context:
@@ -260,13 +303,13 @@ fr:
         connect_button: Connecter Binance
         disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter Binance ?
         historical_import: Paramètres d'importation historique
-        ip_hint_body: 'Ajoutez l''IP de sortie du serveur de l''application à la liste blanche de la clé API Binance :'
+        ip_hint_body: "Ajoutez l'IP de sortie du serveur de l'application à la liste blanche de la clé API Binance :"
         ip_hint_contact_admin: Contactez votre administrateur pour obtenir l'adresse IP de sortie du serveur de l'application.
         ip_hint_title: Liste blanche d'IP requise
         no_withdraw_body: N'activez pas les permissions de retrait lors de la création de votre clé API Binance. Sure requiert uniquement un accès en lecture.
         no_withdraw_title: Clé en lecture seule uniquement
-        no_withdraw_warning: 'Attention : n''activez PAS les permissions de retrait'
-        setup_instructions: 'Pour connecter Binance, créez une clé API en lecture seule :'
+        no_withdraw_warning: "Attention : n'activez PAS les permissions de retrait"
+        setup_instructions: "Pour connecter Binance, créez une clé API en lecture seule :"
         step1_html: Allez dans la <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Gestion des API Binance</a>
         step2: Créez une nouvelle clé API avec la permission Enable Reading uniquement
         step3: Collez votre clé API et votre secret ci-dessous
@@ -282,7 +325,7 @@ fr:
         api_secret_placeholder: Entrez votre secret API Coinbase
         connect_button: Connecter Coinbase
         disconnect_confirm: Êtes-vous sûr(e) de vouloir déconnecter cette connexion Coinbase ? Vos comptes synchronisés deviendront des comptes manuels.
-        setup_instructions: 'Pour connecter Coinbase :'
+        setup_instructions: "Pour connecter Coinbase :"
         step1_html: Allez dans les <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Paramètres API de Coinbase</a>
         step2: Créez une nouvelle clé API avec des permissions en lecture seule (voir les comptes, voir les transactions)
         step3: Copiez votre clé API et votre secret API et collez-les ci-dessous
@@ -290,6 +333,7 @@ fr:
         syncing: Synchronisation…
       connect: Se connecter
       drawer_trust_statement: Accès en lecture seule. Sure ne peut jamais déplacer d'argent, et vos identifiants sont stockés de manière chiffrée.
+      drawer_trust_statement_encryption_unconfigured: Accès en lecture seule. Sure ne peut jamais déplacer d'argent. Configurez des clés de chiffrement explicites avant de stocker des identifiants de fournisseurs en production.
       empty_filter: Aucun fournisseur ne correspond à votre filtre.
       enable_banking_panel:
         add_connection: Ajouter une connexion
@@ -313,7 +357,7 @@ fr:
         save_and_connect: Enregistrer et connecter
         select_country: Sélectionner le pays...
         session_expired_reconnect: Session expirée - reconnecter
-        session_expires: 'La session expire le : %{date}'
+        session_expires: "La session expire le : %{date}"
         step_1_html: Allez sur %{link} et récupérez vos identifiants de développeur.
         step_2: Choisissez votre pays et collez l'identifiant de l'application (Application ID) et le certificat client ci-dessous.
         step_3: Enregistrez, puis utilisez Ajouter une connexion pour lier votre banque.
@@ -337,13 +381,13 @@ fr:
         accounts_tab: Comptes
         configuration:
           all_other_options: 'All other configuration options : "No"'
-          date_format: 'Date Format : yyyy-MM-dd'
-          date_time_separator: 'Date/Time Separator : ; (semi-colon)'
-          format: 'Format : XML'
-          models: 'Models : Optional'
-          period: 'Period : Last 365 Calendar Days'
-          profit_and_loss: 'Profit and Loss : Default'
-          time_format: 'Time Format : HH:mm:ss'
+          date_format: "Date Format : yyyy-MM-dd"
+          date_time_separator: "Date/Time Separator : ; (semi-colon)"
+          format: "Format : XML"
+          models: "Models : Optional"
+          period: "Period : Last 365 Calendar Days"
+          profit_and_loss: "Profit and Loss : Default"
+          time_format: "Time Format : HH:mm:ss"
         disconnect_confirm: Déconnecter Interactive Brokers ?
         flex_query_details:
           configuration_heading: Définissez ces options de requête
@@ -358,23 +402,23 @@ fr:
         report_window_note: Les rapports IBKR Flex sont limités à la fenêtre de requête que vous avez configurée dans IBKR. Sure importera la totalité des positions actuelles ainsi que jusqu'aux 365 derniers jours d'activité de ce rapport.
         save_configuration: Enregistrer la configuration
         sections:
-          account_information: 'Account Information: Account ID, Currency'
-          cash_report: 'Cash Report :'
-          cash_report_fields: 'Fields : Currency, Ending Cash'
-          cash_report_options: 'Options : None'
-          cash_transactions: 'Cash Transactions :'
-          cash_transactions_fields: 'Fields : Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type'
-          cash_transactions_options: 'Options : Dividends, Deposits & Withdrawals, Detail'
-          change_in_position_value_summary: 'Change In Position Value Summary : Currency, End Of Period Value'
-          net_asset_value: 'Net Asset Value (NAV) in Base :'
-          net_asset_value_fields: 'Fields : Currency, Report Date, Total'
-          net_asset_value_options: 'Options : None'
-          open_positions: 'Open Positions :'
-          open_positions_fields: 'Fields : Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol'
-          open_positions_options: 'Options : Summary'
-          trades: 'Trades :'
-          trades_fields: 'Fields : Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID'
-          trades_options: 'Options : Execution'
+          account_information: "Account Information: Account ID, Currency"
+          cash_report: "Cash Report :"
+          cash_report_fields: "Fields : Currency, Ending Cash"
+          cash_report_options: "Options : None"
+          cash_transactions: "Cash Transactions :"
+          cash_transactions_fields: "Fields : Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type"
+          cash_transactions_options: "Options : Dividends, Deposits & Withdrawals, Detail"
+          change_in_position_value_summary: "Change In Position Value Summary : Currency, End Of Period Value"
+          net_asset_value: "Net Asset Value (NAV) in Base :"
+          net_asset_value_fields: "Fields : Currency, Report Date, Total"
+          net_asset_value_options: "Options : None"
+          open_positions: "Open Positions :"
+          open_positions_fields: "Fields : Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol"
+          open_positions_options: "Options : Summary"
+          trades: "Trades :"
+          trades_fields: "Fields : Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID"
+          trades_options: "Options : Execution"
         status_configured_prefix: "%{summary}. Visitez l'onglet"
         status_configured_suffix: pour gérer les comptes découverts.
         steps:
@@ -434,6 +478,21 @@ fr:
         sync_error: Erreur de synchro
       not_authorized: Non autorisé
       not_found: Fournisseur non trouvé.
+      onchain_wallet_panel:
+        add_wallet: Ajouter un portefeuille
+        advanced: Avancé
+        disconnect_all: Déconnecter tous les portefeuilles
+        disconnect_all_confirm: Cette action supprime toutes les adresses suivies et leurs comptes. Continuer ?
+        etherscan_api_key_label: Clé d'API Etherscan (facultative)
+        etherscan_api_key_placeholder: Collez une clé d'API Etherscan
+        etherscan_hint: La lecture d'Ethereum fonctionne sans clé. Ajouter une clé Etherscan ne fait qu'augmenter la limite de débit pour Ethereum.
+        keep_etherscan_api_key: Laissez vide pour conserver la clé existante
+        keyless_body: Sure ne lit que des données publiques de la chaîne. Aucune clé, phrase de récupération ni signature n'est en jeu, et rien ne peut être dépensé.
+        keyless_title: Lecture seule, aucune clé requise
+        manage_wallets: Gérer les portefeuilles
+        save: Enregistrer
+        sync_start_date_hint: Les transferts antérieurs à cette date sont ignorés. Laissez vide pour importer tout ce que l'explorateur remonte.
+        sync_start_date_label: Ignorer les transferts avant le
       plaid_eu_panel:
         step_1_html: Ouvrez %{link} et copiez votre EU Client ID et Secret Key.
       plaid_panel:
@@ -442,6 +501,9 @@ fr:
         step_3: Collez vos identifiants ci-dessous et connectez-vous.
       provider_form:
         save_and_connect: Enregistrer et connecter
+      provider_setup_encryption_warning:
+        message: Cette installation auto-hébergée n'a pas de clés de chiffrement Active Record explicites. Configurez primary_key, deterministic_key et key_derivation_salt avant d'enregistrer des identifiants de fournisseurs en production.
+        title: Clés de chiffrement manquantes
       recently_synced: Synchronisé récemment. Réessayez dans un instant.
       search_filters:
         aria_label: Rechercher des fournisseurs
@@ -465,7 +527,8 @@ fr:
         step_3: Ensuite, allez dans Comptes pour lier vos comptes synchronisés.
       status:
         err: Erreur
-        'false': Non configuré
+        "false": Non configuré
+        "off": Non configuré
         ok: Connecté
         warn: Action nécessaire
       sync_all: Tout synchroniser
@@ -486,13 +549,93 @@ fr:
         kraken: Synchronisez vos soldes Kraken et transactions spot à l'aide d'une clé API en lecture seule.
         lunchflow: Connectez plus de 20k banques dans plus de 40 pays (UK, UE, USA, etc.)
         mercury: Synchronisez automatiquement vos comptes professionnels Mercury.
+        onchain_wallet: Suivez vos portefeuilles Bitcoin, EVM et Solana en autoconservation à partir de leurs adresses publiques.
         plaid: Connectez des milliers d'institutions financières américaines via Plaid.
         plaid_eu: Connectez des institutions financières européennes via Plaid (PSD2 / Open Banking).
         questrade: Synchronisez directement vos comptes d'investissement Questrade via l'API Questrade.
+        redbark: Synchronisez des comptes bancaires australiens via l'open banking Redbark.
         simplefin: Connectez des comptes bancaires américains via le protocole ouvert SimpleFIN.
         snaptrade: Connectez vos comptes de courtage via le réseau d'agrégation SnapTrade.
         sophtron: Connectez vos banques et services publics américains et canadiens.
+        trade_republic: Synchronisez votre compte d'investissement Trade Republic via une connexion web sécurisée en lecture seule.
+        trading212: Synchronisez votre portefeuille d'investissement Trading 212 à l'aide d'une clé d'API en lecture seule.
         wise: Synchronisez automatiquement vos soldes multi-devises Wise et vos transferts internationaux.
+      trade_republic_panel:
+        accounts_discovered:
+          one: 1 compte Trade Republic détecté.
+          other: "%{count} comptes Trade Republic détectés."
+        accounts_tab: Comptes
+        approval_pending: Connexion lancée. Approuvez-la dans l'application Trade Republic ; Sure vérifie automatiquement.
+        authenticator_code_label: Code d'authentification (si demandé)
+        authenticator_code_notice: Saisissez le code de votre application d'authentification.
+        authenticator_code_placeholder: Code à 6 chiffres
+        awaiting_authenticator_code: Code d'authentification requis.
+        awaiting_confirmation: L'approbation dans l'application Trade Republic est en attente.
+        check_login_status: Vérifier maintenant
+        complete_login: Continuer
+        confirm_login: Vérifier la connexion
+        connect: Se connecter
+        connection_success:
+          close: Terminé
+          description: Sure synchronise désormais vos données Trade Republic en arrière-plan.
+          message: Votre connexion Trade Republic est prête.
+          title: Trade Republic connecté avec succès
+        currency_label: Devise du compte
+        disconnect: Déconnecter Trade Republic
+        disconnect_confirm: Déconnecter Trade Republic ? Vos comptes synchronisés deviendront des comptes manuels.
+        encryption_warning:
+          message: Les identifiants et les données de session Trade Republic ne peuvent pas être stockés de façon sécurisée tant que le chiffrement Active Record n'est pas configuré.
+          title: Le chiffrement n'est pas configuré
+        login_expired: La demande d'approbation a expiré.
+        not_configured: Non configuré.
+        phone_number_label: Numéro de téléphone
+        phone_number_placeholder_existing: Laissez vide pour conserver le numéro actuel
+        phone_number_placeholder_new: "+33 6 12 34 56 78"
+        pin_label: Code PIN
+        pin_placeholder_existing: Laissez vide pour conserver le code PIN actuel
+        pin_placeholder_new: Le code PIN de votre application Trade Republic
+        push_login_notice: Approuvez la connexion dans votre application Trade Republic dès maintenant. Sure vérifie automatiquement en arrière-plan. Vous pouvez aussi vérifier l'état vous-même.
+        qr_back_to_credentials: Revenir au numéro de téléphone et au code PIN
+        qr_cancel: Annuler la connexion par QR code
+        qr_error: La connexion par QR code n'a pas pu être lancée. Veuillez réessayer.
+        qr_instruction: Scannez le QR code avec votre application Trade Republic et approuvez la connexion.
+        qr_loading: Préparation du QR code …
+        qr_login: Se connecter avec un QR code
+        qr_success: Connexion approuvée. Sure actualise la page du fournisseur.
+        restart_login: Relancer la connexion
+        save_configuration: Enregistrer et lancer la connexion
+        setup_accounts: Configurer les comptes
+        status_configured_prefix: Connecté. Ouvrez l'onglet
+        status_configured_suffix: pour gérer les comptes détectés.
+        steps:
+          step_1: Saisissez le numéro de téléphone et le code PIN que vous utilisez pour l'application Trade Republic, puis enregistrez.
+          step_2: Saisissez le code de votre application d'authentification lorsqu'il vous est demandé.
+          step_3: Approuvez la connexion dans votre application Trade Republic lorsque vous y êtes invité.
+        sync: Synchroniser
+        update_configuration: Mettre à jour la configuration
+      trading212_panel:
+        accounts_tab: Comptes
+        api_key_label: Identifiant d'API
+        api_key_placeholder_existing: Laissez vide pour conserver l'identifiant d'API actuel
+        api_key_placeholder_new: Collez votre identifiant d'API Trading 212
+        api_secret_label: Clé secrète
+        api_secret_placeholder_existing: Laissez vide pour conserver la clé secrète actuelle
+        api_secret_placeholder_new: Collez votre clé secrète Trading 212
+        currency_label: Devise du compte
+        disconnect_confirm: Déconnecter Trading 212 ?
+        environment_demo: Compte de démonstration
+        environment_label: Environnement
+        environment_live: Compte réel
+        not_configured: Non configuré.
+        save_configuration: Enregistrer la configuration
+        status_configured_prefix: Configuré. Ouvrez l'onglet
+        status_configured_suffix: pour gérer les comptes détectés.
+        steps:
+          step_1: Ouvrez Trading 212 → Paramètres → API (application web ou mobile).
+          step_2: "Générez une nouvelle clé d'API : Trading 212 vous affichera un identifiant d'API et une clé secrète."
+          step_3: Collez les deux ci-dessous, sélectionnez votre environnement et la devise du compte, puis enregistrez.
+        sync: Synchroniser
+        update_configuration: Mettre à jour la configuration
       up_panel:
         step_1_html: Allez sur %{link} et générez un jeton d'accès personnel.
         step_2: Copiez votre jeton d'accès personnel.
@@ -506,12 +649,12 @@ fr:
         disable_mfa_confirm: Voulez-vous vraiment désactiver l'authentification à deux facteurs ?
         enable_mfa: Activer la 2FA
         encryption_warning:
-          generate: 'Générez un ensemble avec : bin/rails db:encryption:init'
-          intro: 'Les données sensibles (clés API, jetons de fournisseur, secrets MFA et PII) sont stockées non chiffrées au repos. Pour activer le chiffrement, définissez les clés suivantes dans vos variables d''environnement ou identifiants Rails :'
+          generate: "Générez un ensemble avec : bin/rails db:encryption:init"
+          intro: "Les données sensibles (clés API, jetons de fournisseur, secrets MFA et PII) sont stockées non chiffrées au repos. Pour activer le chiffrement, définissez les clés suivantes dans vos variables d'environnement ou identifiants Rails :"
           keys:
-          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
-          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
-          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
           title: Clés de chiffrement manquantes
         mfa_description: Ajoutez une couche de sécurité supplémentaire à votre compte en exigeant un code de votre application d'authentification lors de la connexion
         mfa_title: Authentification à deux facteurs
@@ -535,6 +678,7 @@ fr:
       api_key_label: Clé API
       api_keys_label: Clés API
       appearance_label: Apparence
+      background_jobs_label: Tâches en arrière-plan
       bank_sync_label: Synchronisation bancaire
       categories_label: Catégories
       debug_label: Débogage
@@ -558,6 +702,7 @@ fr:
       self_hosting_label: Auto-hébergement
       sso_providers_label: Fournisseurs SSO
       statement_vault_label: Coffre des relevés
+      system_health_label: Santé du système
       tags_label: Étiquettes
       transactions_section_title: Transactions
       users_label: Utilisateurs
