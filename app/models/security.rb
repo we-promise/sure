@@ -41,6 +41,28 @@ class Security < ApplicationRecord
     Setting.brand_fetch_icon_url(base_asset, namespace: "crypto")
   end
 
+  # Classification taxonomy: the six-class / twelve-sub-class scheme other
+  # portfolio trackers use, so an import maps onto it without a translation
+  # table. The database enforces the same sets (chk_securities_asset_class,
+  # chk_securities_asset_sub_class, chk_securities_classification_source);
+  # adding a value means changing both, deliberately.
+  #
+  # Schema only for now: nothing writes these columns yet, so every security
+  # is unclassified (NULL) until a later drop populates them.
+  ASSET_CLASSES = %w[
+    alternative_investment commodity equity fixed_income liquidity real_estate
+  ].freeze
+
+  ASSET_SUB_CLASSES = %w[
+    bond cash collectible commodity cryptocurrency etf loan mutual_fund
+    precious_metal private_equity real_estate stock
+  ].freeze
+
+  # Same shape as Holding's cost-basis provenance: who set the classification,
+  # so a later writer knows whether it may replace it. `classification_locked`
+  # is the user's veto over every source.
+  CLASSIFICATION_SOURCES = %w[provider manual ai default].freeze
+
   before_validation :upcase_symbols
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
   before_save :reset_first_provider_price_on_if_provider_changed
@@ -52,6 +74,9 @@ class Security < ApplicationRecord
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
   validates :kind, inclusion: { in: KINDS }
   validates :price_provider, inclusion: { in: ->(_) { Security.valid_price_providers } }, allow_nil: true
+  validates :asset_class, inclusion: { in: ASSET_CLASSES }, allow_nil: true
+  validates :asset_sub_class, inclusion: { in: ASSET_SUB_CLASSES }, allow_nil: true
+  validates :classification_source, inclusion: { in: CLASSIFICATION_SOURCES }, allow_nil: true
 
   scope :online, -> { where(offline: false) }
   scope :standard, -> { where(kind: "standard") }
