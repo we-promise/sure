@@ -31,15 +31,23 @@
 
     <% tabs.with_panel(tab_id: "asset") do %>
       <div class="space-y-2">
-        <%= render DS::Link.new(
-          text: t("accounts.sidebar.new_asset"),
-          variant: "ghost",
-          href: new_account_path(step: "method_select", classification: "asset"),
-          icon: "plus",
-          frame: :modal,
-          full_width: true,
-          class: "justify-start"
-        ) %>
+        <div class="flex items-center gap-2">
+          <%= render DS::Link.new(
+            text: t("accounts.sidebar.new_asset"),
+            variant: "ghost",
+            href: new_account_path(step: "method_select", classification: "asset"),
+            icon: "plus",
+            frame: :modal,
+            class: "flex-1 justify-start"
+          ) %>
+
+          <%= render DS::ExpandToggle.new(
+            expand_label: t("accounts.sidebar.expand_all"),
+            collapse_label: t("accounts.sidebar.collapse_all"),
+            data: { account_sidebar_expand_all: true },
+            class_name: "shrink-0"
+          ) %>
+        </div>
 
         <div>
           <% family.balance_sheet.assets.account_groups.each do |group| %>
@@ -51,15 +59,23 @@
 
     <% tabs.with_panel(tab_id: "liability") do %>
       <div class="space-y-2">
-        <%= render DS::Link.new(
-            text: t("accounts.sidebar.new_debt"),
-            variant: "ghost",
-            href: new_account_path(step: "method_select", classification: "liability"),
-            icon: "plus",
-            frame: :modal,
-            full_width: true,
-            class: "justify-start"
+        <div class="flex items-center gap-2">
+          <%= render DS::Link.new(
+              text: t("accounts.sidebar.new_debt"),
+              variant: "ghost",
+              href: new_account_path(step: "method_select", classification: "liability"),
+              icon: "plus",
+              frame: :modal,
+              class: "flex-1 justify-start"
+            ) %>
+
+          <%= render DS::ExpandToggle.new(
+            expand_label: t("accounts.sidebar.expand_all"),
+            collapse_label: t("accounts.sidebar.collapse_all"),
+            data: { account_sidebar_expand_all: true },
+            class_name: "shrink-0"
           ) %>
+        </div>
 
         <div>
           <% family.balance_sheet.liabilities.account_groups.each do |group| %>
@@ -71,15 +87,23 @@
 
     <% tabs.with_panel(tab_id: "all") do %>
       <div class="space-y-2">
-        <%= render DS::Link.new(
-            text: t("accounts.sidebar.new_account"),
-            variant: "ghost",
-            full_width: true,
-            href: new_account_path(step: "method_select"),
-            icon: "plus",
-            frame: :modal,
-            class: "justify-start"
+        <div class="flex items-center gap-2">
+          <%= render DS::Link.new(
+              text: t("accounts.sidebar.new_account"),
+              variant: "ghost",
+              href: new_account_path(step: "method_select"),
+              icon: "plus",
+              frame: :modal,
+              class: "flex-1 justify-start"
+            ) %>
+
+          <%= render DS::ExpandToggle.new(
+            expand_label: t("accounts.sidebar.expand_all"),
+            collapse_label: t("accounts.sidebar.collapse_all"),
+            data: { account_sidebar_expand_all: true },
+            class_name: "shrink-0"
           ) %>
+        </div>
 
         <div>
           <% family.balance_sheet.account_groups.each do |group| %>
@@ -90,4 +114,68 @@
     <% end %>
   <% end %>
 </div>
+<%= javascript_tag nonce: true do %>
+  // Expand/Collapse all for the account sidebar. Event-delegated on document
+  // so it works for both the desktop and mobile sidebar instances and survives
+  // Turbo re-renders. Wrapped in javascript_tag for CSP nonce compliance
+  // (matches the dashboard balance sheet).
+  (function () {
+    function setLabel(btn, expanded) {
+      btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+      btn.setAttribute("aria-label", expanded ? btn.dataset.collapseLabel : btn.dataset.expandLabel);
+      // Swap the visible icon via inline display (not a Tailwind
+      // group-aria-expanded: variant, which is absent from the precompiled
+      // bundle shipped in the Docker image).
+      var expandIcon = btn.querySelector('[data-icon="expand"]');
+      var collapseIcon = btn.querySelector('[data-icon="collapse"]');
+      if (expandIcon) expandIcon.style.display = expanded ? "none" : "";
+      if (collapseIcon) collapseIcon.style.display = expanded ? "" : "none";
+    }
+
+    // A mixed open/closed panel shows "Expand all" (a click expands the closed
+    // ones); only an all-open panel shows "Collapse all".
+    function syncPanel(panel) {
+      var btn = panel.querySelector("[data-account-sidebar-expand-all]");
+      if (!btn) return;
+      var details = Array.prototype.slice.call(panel.querySelectorAll("details"));
+      // Hide the control when the panel has no groups (e.g. assets but no
+      // debts) so it never renders as a dead button. Matches the dashboard.
+      btn.style.display = details.length ? "" : "none";
+      if (!details.length) return;
+      setLabel(btn, details.every(function (d) { return d.open; }));
+    }
+
+    // One-time event binding (document delegation survives Turbo re-renders
+    // and covers both the desktop and mobile sidebar instances).
+    if (!window.__sidebarExpandAllBound) {
+      window.__sidebarExpandAllBound = true;
+
+      document.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-account-sidebar-expand-all]");
+        if (!btn) return;
+        var panel = btn.closest("[role=tabpanel]");
+        if (!panel) return;
+        var details = Array.prototype.slice.call(panel.querySelectorAll("details"));
+        if (!details.length) return;
+        var anyClosed = details.some(function (d) { return !d.open; });
+        details.forEach(function (d) { d.open = anyClosed; });
+        setLabel(btn, anyClosed);
+      });
+
+      // Keep the label in sync when a group is opened/closed manually.
+      // `toggle` does not bubble, so listen in the capture phase.
+      document.addEventListener("toggle", function (e) {
+        var panel = e.target.closest("[role=tabpanel]");
+        if (panel) syncPanel(panel);
+      }, true);
+    }
+
+    // Per-render label sync (idempotent): runs on every render, including after
+    // Turbo navigations, so a freshly rendered sidebar reflects its groups'
+    // current open/closed state.
+    Array.prototype.slice.call(document.querySelectorAll("[role=tabpanel]")).forEach(function (panel) {
+      syncPanel(panel);
+    });
+  })();
+<% end %>
 <% end %>

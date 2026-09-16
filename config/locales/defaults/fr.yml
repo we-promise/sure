@@ -168,6 +168,10 @@ fr:
       create: Créer un(e) %{model}
       submit: Enregistrer ce(tte) %{model}
       update: Modifier ce(tte) %{model}
+  mcp:
+    errors:
+      invalid_session_id: Identifiant de session MCP invalide
+      unsupported_protocol_version: 'Version du protocole MCP non prise en charge : %{version}'
   number:
     currency:
       format:

@@ -43,7 +43,12 @@ module AccountsHelper
       active_tab,
       mobile,
       I18n.locale,
-      sidebar_active_account_id
+      sidebar_active_account_id,
+      # Fold the per-user "start expanded by default" preference into the key
+      # so toggling it in Settings busts the 12h fragment cache immediately
+      # (this partial renders with skip_digest: true, so the template digest
+      # would not otherwise reflect the change).
+      Current.user&.always_expanded_account_groups&.sort
     ]
   end
 end

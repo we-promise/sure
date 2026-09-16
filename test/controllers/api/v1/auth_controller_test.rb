@@ -345,6 +345,72 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert existing_token.revoked?
   end
 
+  test "should not login a deactivated user even with correct password" do
+    user = users(:family_admin)
+    user.update_column(:active, false)
+
+    assert_no_difference([ "MobileDevice.count", "Doorkeeper::AccessToken.count" ]) do
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: user_password_test,
+        device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+  end
+
+  test "should not login a user deactivated between the initial check and token issuance" do
+    user = users(:family_admin)
+
+    # Simulate deactivation landing after the early active? check but before
+    # the token is actually minted — device validation runs in that window
+    # in the real flow, so hook the deactivation there.
+    Api::V1::AuthController.any_instance.stubs(:valid_device_info?).with do
+      user.update_column(:active, false)
+      true
+    end.returns(true)
+
+    assert_no_difference([ "MobileDevice.count", "Doorkeeper::AccessToken.count" ]) do
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: user_password_test,
+        device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+  end
+
+  test "should not login a user deactivated between device upsert and token issuance" do
+    user = users(:family_admin)
+    # Pre-create the real device so the stub below can return it as-is —
+    # this isolates the test to the gap between upsert_device! and
+    # issue_token!, not the earlier device-creation step.
+    device = MobileDevice.upsert_device!(user, @device_info)
+
+    MobileDevice.stubs(:upsert_device!).with do |*_args|
+      user.update_column(:active, false)
+      true
+    end.returns(device)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: {
+        email: user.email,
+        password: user_password_test,
+        device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+  end
+
   test "should not login with invalid password" do
     user = users(:family_admin)
 
@@ -450,6 +516,34 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert initial_token.revoked?
   end
 
+  test "should not refresh for a deactivated user" do
+    user = users(:family_admin)
+    device = user.mobile_devices.create!(@device_info)
+
+    initial_token = Doorkeeper::AccessToken.create!(
+      application: @shared_app,
+      resource_owner_id: user.id,
+      mobile_device_id: device.id,
+      expires_in: 30.days.to_i,
+      scopes: "read_write",
+      use_refresh_token: true
+    )
+
+    user.update_column(:active, false)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/refresh", params: {
+        refresh_token: initial_token.refresh_token,
+        device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "Invalid refresh token", response_data["error"]
+    assert_not initial_token.reload.revoked?, "the still-valid old token should be left alone, not silently revoked"
+  end
+
   test "should not refresh with invalid refresh token" do
     assert_no_difference("Doorkeeper::AccessToken.count") do
       post "/api/v1/auth/refresh", params: {
@@ -461,30 +555,6 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
     response_data = JSON.parse(response.body)
     assert_equal "Invalid refresh token", response_data["error"]
-  end
-
-  test "should not refresh a token after its user is deactivated" do
-    user = users(:family_admin)
-    device = user.mobile_devices.create!(@device_info)
-    initial_token = Doorkeeper::AccessToken.create!(
-      application: @shared_app,
-      resource_owner_id: user.id,
-      mobile_device_id: device.id,
-      expires_in: 30.days.to_i,
-      scopes: "read_write",
-      use_refresh_token: true
-    )
-    user.update_column(:active, false)
-
-    assert_no_difference("Doorkeeper::AccessToken.count") do
-      post "/api/v1/auth/refresh", params: {
-        refresh_token: initial_token.refresh_token,
-        device: @device_info
-      }
-    end
-
-    assert_response :unauthorized
-    assert_equal "Invalid refresh token", JSON.parse(response.body)["error"]
   end
 
   test "should not refresh without refresh token" do
@@ -573,6 +643,124 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
   end
 
+  test "should reject SSO link for a deactivated user even with correct password" do
+    user = users(:family_admin)
+    user.update_column(:active, false)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-deactivated",
+      email: "google-deactivated@example.com",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference("OidcIdentity.count") do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+
+    # Linking code should NOT be consumed on rejection
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive a rejected link attempt"
+  end
+
+  test "should reject SSO link for a user deactivated between the initial check and token issuance" do
+    user = users(:family_admin)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-race",
+      email: "google-race@example.com",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    # Simulate deactivation landing after the initial active? check but
+    # before issue_token! actually mints a token — SsoAuditLog.log_link!
+    # runs in that window in the real flow, so hook the deactivation there.
+    SsoAuditLog.stubs(:log_link!).with do |**kwargs|
+      kwargs[:user].update_column(:active, false)
+      true
+    end
+
+    # The identity, the device, and the token mint all run in the same
+    # transaction as the locked active? recheck, so a deactivation landing
+    # in that window must roll all of it back — nothing may survive a
+    # rejected request.
+    assert_no_difference [ "OidcIdentity.count", "MobileDevice.count", "Doorkeeper::AccessToken.count" ] do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+
+    # The code was already consumed before the rejected transaction; it
+    # must be restored so the user can retry instead of restarting the
+    # whole SSO flow from the IdP.
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to be restored after a rejected request"
+  end
+
+  test "should restore the linking code when device registration fails during sso_link" do
+    user = users(:family_admin)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    invalid_device_info = @device_info.merge(device_type: "invalid-type")
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-device-failure",
+      email: "google-device-failure@example.com",
+      device_info: invalid_device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_no_difference [ "OidcIdentity.count", "MobileDevice.count" ] do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert_equal "Failed to register device", response_data["error"]
+
+    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to be restored after a rejected request"
+  end
+
+  test "login rejects a user purged between authentication and the reload fast-path" do
+    user = users(:family_admin)
+    User.stubs(:find_by).with(email: user.email).returns(user)
+    user.stubs(:reload).raises(ActiveRecord::RecordNotFound)
+
+    post "/api/v1/auth/login", params: {
+      email: user.email,
+      password: user_password_test,
+      device: @device_info
+    }
+
+    # Must fall through to the same "deactivated" response every other
+    # rejection on this endpoint uses, not BaseController's generic
+    # record_not_found handler.
+    assert_response :unauthorized
+    response_data = JSON.parse(response.body)
+    assert_equal "This account has been deactivated. Please contact an administrator.", response_data["error"]
+  end
+
   test "should reject SSO link with invalid password" do
     user = users(:family_admin)
 
@@ -599,31 +787,6 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Linking code should NOT be consumed on failed password
     assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive a failed attempt"
-  end
-
-  test "should reject SSO link for an inactive user" do
-    user = users(:family_admin)
-    user.update_column(:active, false)
-    linking_code = SecureRandom.urlsafe_base64(32)
-    Rails.cache.write("mobile_sso_link:#{linking_code}", {
-      provider: "google_oauth2",
-      uid: "google-uid-inactive",
-      email: "inactive@example.com",
-      device_info: @device_info.stringify_keys,
-      allow_account_creation: true
-    }, expires_in: 10.minutes)
-
-    assert_no_difference "OidcIdentity.count" do
-      post "/api/v1/auth/sso_link", params: {
-        linking_code: linking_code,
-        email: user.email,
-        password: user_password_test
-      }
-    end
-
-    assert_response :unauthorized
-    assert_equal "Invalid email or password", JSON.parse(response.body)["error"]
-    assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?
   end
 
   test "should reject SSO link when user has MFA enabled" do

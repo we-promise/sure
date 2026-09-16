@@ -147,6 +147,8 @@ en:
       new_debt: New debt
       new_account: New account
       new_account_group: "New %{account_group}"
+      expand_all: Expand all
+      collapse_all: Collapse all
     types:
       depository: Cash
       investment: Investment

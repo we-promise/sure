@@ -106,12 +106,13 @@ class UpEntry::Processor
     end
 
     # The id of the Sure category that Up's category slug maps to, or nil when no
-    # matcher was injected, the transaction has no Up category (transfers/income), or
-    # the slug has no confident equivalent among the family's categories. The import
-    # adapter applies this via enrich_attribute, so it never overwrites a category the
-    # user has set or locked.
+    # matcher was injected, the account has category matching switched off, the
+    # transaction has no Up category (transfers/income), or the slug has no confident
+    # equivalent among the family's categories. The import adapter applies this via
+    # enrich_attribute, so it never overwrites a category the user has set or locked.
     def matched_category_id
       return nil unless @category_matcher
+      return nil unless account&.enable_category_matcher?
 
       @category_matcher.match(data[:category_id])&.id
     end
