@@ -588,15 +588,23 @@ class EnableBankingItem::Importer
       keyed_with_index = normalized.each_with_index.group_by do |tx, _index|
         base_key = build_transaction_base_key(tx)
         if distinct_ibans_by_base_key[base_key].size >= 2
-          # A blank-IBAN row (e.g. a pending duplicate that hasn't gained
-          # account data yet) can't be attributed to any one of the split
-          # transactions, but it must still collapse into ONE of them
-          # rather than forming a third, phantom transaction -- so it
-          # aliases to the first (sorted) IBAN bucket in the group. It's
-          # ranked below any real member of that bucket just below, so it
-          # only "wins" the bucket when no fuller row claims it.
-          iban = counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator]) || distinct_ibans_by_base_key[base_key].first
-          "#{base_key}\x1F#{iban}"
+          iban = counterparty_iban_for_content_key(tx, tx[:credit_debit_indicator])
+          if iban
+            "#{base_key}\x1F#{iban}"
+          else
+            # A blank-IBAN row can't be attributed to any ONE of the >=2
+            # distinct real transactions sharing this content pattern --
+            # picking one (e.g. alphabetically) risks silently merging it
+            # into the wrong transaction (or dropping it if it's actually a
+            # third, distinct payee that also lacks IBAN data), which is
+            # worse than the alternative. It's kept apart from both real
+            # IBAN buckets in its own shared bucket instead: if there turn
+            # out to be several such ambiguous rows, they still collapse
+            # into each other (the "several blank rows can never be told
+            # apart, so nothing is lost by merging them" case), but never
+            # into a bucket with a known, different counterparty.
+            "#{base_key}\x1Fambiguous"
+          end
         else
           base_key
         end
