@@ -43,6 +43,24 @@ class Category < ApplicationRecord
   scope :incomes, -> { all }
   scope :expenses, -> { all }
 
+  # A renamed legacy investment-contributions category must only contain
+  # confirmed investment contribution transactions. A matching category with
+  # any other transaction may be a user category that happens to retain the
+  # old default color and icon.
+  scope :legacy_investment_contribution_candidates, -> {
+    confirmed_contribution_ids = Transaction.joins(:transfer_as_outflow)
+      .where(kind: "investment_contribution", transfers: { status: "confirmed" })
+      .select(:id)
+
+    non_contribution_category_ids = Transaction
+      .where.not(category_id: nil)
+      .where.not(id: confirmed_contribution_ids)
+      .select(:category_id)
+
+    where(id: Transaction.where(id: confirmed_contribution_ids).select(:category_id))
+      .where.not(id: non_contribution_category_ids)
+  }
+
   COLORS = %w[#e99537 #4da568 #6471eb #db5a54 #df4e92 #c44fe9 #eb5429 #61c9ea #805dee #6ad28a]
 
   UNCATEGORIZED_COLOR = "#737373"
@@ -235,9 +253,7 @@ class Category < ApplicationRecord
 
         if default_key && category.nil?
           candidates = where(color: "#0d9488", lucide_icon: "trending-up", parent_id: nil)
-            .where(id: Transaction.joins(:transfer_as_outflow)
-              .where(kind: "investment_contribution", transfers: { status: "confirmed" })
-              .select(:category_id))
+            .legacy_investment_contribution_candidates
           category = candidates.first if candidates.one?
         end
 

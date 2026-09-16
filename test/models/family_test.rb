@@ -137,7 +137,7 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal Category::INVESTMENT_CONTRIBUTIONS_DEFAULT_KEY, result.default_key
   end
 
-  test "investment_contributions_category does not claim an unrelated matching category" do
+  test "investment_contributions_category does not claim a matching category with unrelated transactions" do
     family = families(:dylan_family)
     family.categories.where(name: Category.all_investment_contributions_names).destroy_all
     unrelated_category = family.categories.create!(
@@ -145,6 +145,20 @@ class FamilyTest < ActiveSupport::TestCase
       color: "#0d9488",
       lucide_icon: "trending-up"
     )
+    source = family.accounts.create!(
+      name: "Checking", currency: family.currency, balance: 0, accountable: Depository.new
+    )
+    investment = family.accounts.create!(
+      name: "Investment", currency: family.currency, balance: 0, accountable: Investment.new
+    )
+    contribution = create_transaction(
+      account: source, amount: 100, category: unrelated_category, kind: "investment_contribution"
+    )
+    inflow = create_transaction(account: investment, amount: -100, kind: "funds_movement")
+    Transfer.create!(
+      outflow_transaction: contribution.entryable, inflow_transaction: inflow.entryable, status: "confirmed"
+    )
+    create_transaction(account: source, amount: 25, category: unrelated_category, kind: "standard")
 
     result = family.investment_contributions_category
 

@@ -433,13 +433,12 @@ class Family < ApplicationRecord
 
     # A renamed legacy default category has no key to identify it. The default
     # color/icon are retained by the category editor, so use them only when
-    # they identify one unambiguous root category with a confirmed contribution.
+    # they identify one unambiguous root category containing only confirmed
+    # investment contributions.
     if legacy.empty?
       candidates = categories
         .where(color: "#0d9488", lucide_icon: "trending-up", parent_id: nil)
-        .where(id: Transaction.joins(:transfer_as_outflow)
-          .where(kind: "investment_contribution", transfers: { status: "confirmed" })
-          .select(:category_id))
+        .legacy_investment_contribution_candidates
       legacy = [ candidates.first ] if candidates.one?
     end
 

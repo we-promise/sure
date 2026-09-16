@@ -1,17 +1,33 @@
 require "test_helper"
 
 class CategoryTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   def setup
     @family = families(:dylan_family)
   end
 
-  test "bootstrap does not claim an unrelated matching category" do
+  test "bootstrap does not claim a matching category with unrelated transactions" do
     family = Family.create!(name: "Category bootstrap family")
     unrelated = family.categories.create!(
       name: "Growth",
       color: "#0d9488",
       lucide_icon: "trending-up"
     )
+    source = family.accounts.create!(
+      name: "Checking", currency: family.currency, balance: 0, accountable: Depository.new
+    )
+    investment = family.accounts.create!(
+      name: "Investment", currency: family.currency, balance: 0, accountable: Investment.new
+    )
+    contribution = create_transaction(
+      account: source, amount: 100, category: unrelated, kind: "investment_contribution"
+    )
+    inflow = create_transaction(account: investment, amount: -100, kind: "funds_movement")
+    Transfer.create!(
+      outflow_transaction: contribution.entryable, inflow_transaction: inflow.entryable, status: "confirmed"
+    )
+    create_transaction(account: source, amount: 25, category: unrelated, kind: "standard")
 
     family.categories.bootstrap!
 
