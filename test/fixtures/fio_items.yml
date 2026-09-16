@@ -1,0 +1,10 @@
+one:
+  family: dylan_family
+
+  name: "Test Fio Connection"
+  token: "fio-test-token"
+  institution_id: "2010"
+  institution_name: "Fio banka"
+  institution_domain: "fio.cz"
+  institution_url: "https://fio.cz"
+  status: good

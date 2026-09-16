@@ -1924,6 +1924,147 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal tag.id, condition.value
   end
 
+  test "reuses a category created for an earlier rule within the same import" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "First coffee rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "coffee" }
+          ],
+          actions: [
+            { action_type: "set_transaction_category", value: "Coffee Shops" }
+          ]
+        }
+      },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Second coffee rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "latte" }
+          ],
+          actions: [
+            { action_type: "set_transaction_category", value: "Coffee Shops" }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+
+    assert_difference -> { @family.categories.where(name: "Coffee Shops").count }, 1 do
+      importer.import!
+    end
+
+    category = @family.categories.find_by!(name: "Coffee Shops")
+    first_rule = @family.rules.find_by!(name: "First coffee rule")
+    second_rule = @family.rules.find_by!(name: "Second coffee rule")
+    assert_equal category.id, first_rule.actions.first.value
+    assert_equal category.id, second_rule.actions.first.value
+  end
+
+  test "reuses a merchant created for an earlier rule within the same import" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "First coffee merchant rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "coffee" }
+          ],
+          actions: [
+            { action_type: "set_transaction_merchant", value: "Blue Bottle" }
+          ]
+        }
+      },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Second coffee merchant rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "latte" }
+          ],
+          actions: [
+            { action_type: "set_transaction_merchant", value: "Blue Bottle" }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+
+    assert_difference -> { @family.merchants.where(name: "Blue Bottle").count }, 1 do
+      importer.import!
+    end
+
+    merchant = @family.merchants.find_by!(name: "Blue Bottle")
+    first_rule = @family.rules.find_by!(name: "First coffee merchant rule")
+    second_rule = @family.rules.find_by!(name: "Second coffee merchant rule")
+    assert_equal merchant.id, first_rule.actions.first.value
+    assert_equal merchant.id, second_rule.actions.first.value
+  end
+
+  test "reuses a tag created for an earlier rule within the same import" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "First coffee tag rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "coffee" }
+          ],
+          actions: [
+            { action_type: "set_transaction_tags", value: "Recurring" }
+          ]
+        }
+      },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Second coffee tag rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "latte" }
+          ],
+          actions: [
+            { action_type: "set_transaction_tags", value: "Recurring" }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+
+    assert_difference -> { @family.tags.where(name: "Recurring").count }, 1 do
+      importer.import!
+    end
+
+    tag = @family.tags.find_by!(name: "Recurring")
+    first_rule = @family.rules.find_by!(name: "First coffee tag rule")
+    second_rule = @family.rules.find_by!(name: "Second coffee tag rule")
+    assert_equal [ tag.id ], first_rule.actions.first.value.split(",")
+    assert_equal [ tag.id ], second_rule.actions.first.value.split(",")
+  end
+
   test "session rule reimport only replaces current family conditions and actions" do
     rule = @family.rules.build(name: "Original Rule", resource_type: "transaction", active: true)
     rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "old")
