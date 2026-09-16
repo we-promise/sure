@@ -21,7 +21,7 @@ class CashFlowTest < ApplicationSystemTestCase
     assert_selector "#cashflow-preview svg .sankey-link"
     assert page.evaluate_script("performance.getEntriesByType('resource').some(e => e.name.includes('/dashboard/cash_flow?'))")
     within "#cashflow-preview" do
-      click_button "Expand"
+      click_button "Expand", enable_aria_label: true
     end
     within "#cashflow-preview-expanded-dialog" do
       assert_selector "svg .sankey-link"
@@ -164,7 +164,7 @@ class CashFlowTest < ApplicationSystemTestCase
     assert_event_count "sankey_preview_displayed", 1
 
     within "#cashflow-preview" do
-      click_button "Expand"
+      click_button "Expand", enable_aria_label: true
     end
     assert_selector "#cashflow-preview-expanded-dialog[open] svg .sankey-link"
     assert_equal "false", find("[data-section-key='cashflow_sankey']")["draggable"]
@@ -230,7 +230,7 @@ class CashFlowTest < ApplicationSystemTestCase
     find("#cashflow-preview").scroll_to(:center)
     assert_event_count "sankey_preview_displayed", 1
     within "#cashflow-preview" do
-      find_button("Expand").send_keys(:enter)
+      find_button("Expand", enable_aria_label: true).send_keys(:enter)
     end
     assert_selector "#cashflow-preview-expanded-dialog[open]"
     assert_equal "false", section["aria-grabbed"]
@@ -286,7 +286,7 @@ class CashFlowTest < ApplicationSystemTestCase
       find("#cashflow-preview").scroll_to(:center)
       assert_event_count "sankey_preview_displayed", 1
       within "#cashflow-preview" do
-        click_button "Expand"
+        click_button "Expand", enable_aria_label: true
       end
       assert_event_count "sankey_preview_displayed", 2
       find("#cashflow-preview-expanded-dialog").find("button[data-action='DS--dialog#close']").click
