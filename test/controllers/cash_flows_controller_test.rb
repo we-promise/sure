@@ -14,12 +14,12 @@ class CashFlowsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
   end
 
-  test "requires the current user's preview opt-in" do
+  test "serves the chart without preview opt-in" do
     sign_in @user
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => false))
     users(:family_member).update!(preferences: { "preview_features_enabled" => true })
     get dashboard_cash_flow_path, params: @dates
-    assert_redirected_to root_path
+    assert_response :success
   end
 
   test "retains ordinary onboarding and inactive-session checks" do

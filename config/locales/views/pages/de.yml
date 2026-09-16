@@ -38,12 +38,11 @@ de:
         no_liability: Noch keine Verbindlichkeiten
         value: Wert
         weight: Anteil
-      cashflow_preview:
+      cashflow_sankey:
         node_labels:
           cash_flow: "Zahlungsfluss"
           surplus: "Überschuss"
           deficit: "Fehlbetrag"
-      cashflow_sankey:
         title: "Cashflow"
         no_data_title: "Keine Cashflow-Daten für diesen Zeitraum"
         no_data_description: "Füge Transaktionen hinzu, um Cashflow-Daten anzuzeigen, oder erweitere den Zeitraum."

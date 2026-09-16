@@ -4,11 +4,6 @@ tr:
     changelog:
       title: Yenilikler
     dashboard:
-      cashflow_preview:
-        node_labels:
-          cash_flow: "Nakit akışı"
-          surplus: "Fazla"
-          deficit: "Açık"
       balance_sheet:
         add_accounts: Tam bir döküm görmek için %{name} hesaplarınızı ekleyin
         add_asset_accounts: Tam bir döküm görmek için varlık hesaplarınızı ekleyin
@@ -25,6 +20,10 @@ tr:
         value: Değer
         weight: Ağırlık
       cashflow_sankey:
+        node_labels:
+          cash_flow: "Nakit akışı"
+          surplus: "Fazla"
+          deficit: "Açık"
         add_transaction: İşlem ekle
         no_data_description: Nakit akışı verilerini görüntülemek için işlem ekleyin
           veya zaman aralığını genişletin

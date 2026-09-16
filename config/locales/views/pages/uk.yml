@@ -37,11 +37,6 @@ uk:
       heading: Умови надання послуг
       placeholder: Тут буде відображено вміст умов надання послуг.
     dashboard:
-      cashflow_preview:
-        node_labels:
-          cash_flow: "Грошовий потік"
-          surplus: "Профіцит"
-          deficit: "Дефіцит"
       welcome: "З поверненням, %{name}"
       subtitle: "Ось що відбувається з вашими фінансами"
       new: "Нове"
@@ -81,6 +76,10 @@ uk:
       insights_feed:
         title: "Аналітика"
       cashflow_sankey:
+        node_labels:
+          cash_flow: "Грошовий потік"
+          surplus: "Профіцит"
+          deficit: "Дефіцит"
         title: "Грошовий потік"
         zoom_out: "Повернутися до повного грошового потоку"
         no_data_title: "Немає даних про грошовий потік за цей період часу"

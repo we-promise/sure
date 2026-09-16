@@ -4,11 +4,6 @@ pt-BR:
     changelog:
       title: Novidades
     dashboard:
-      cashflow_preview:
-        node_labels:
-          cash_flow: "Fluxo de caixa"
-          surplus: "Superávit"
-          deficit: "Déficit"
       welcome: "Bem-vindo(a) de volta, %{name}"
       subtitle: "Veja o que está acontecendo com suas finanças"
       new: "Novo"
@@ -26,6 +21,10 @@ pt-BR:
         no_items: "Nenhuma %{name} ainda"
         add_accounts: "Adicione suas contas de %{name} para ver um detalhamento completo"
       cashflow_sankey:
+        node_labels:
+          cash_flow: "Fluxo de caixa"
+          surplus: "Superávit"
+          deficit: "Déficit"
         title: "Fluxo de Caixa"
         no_data_title: "Sem dados de fluxo de caixa para este período"
         no_data_description: "Adicione transações para exibir dados de fluxo de caixa ou expanda o período de tempo"

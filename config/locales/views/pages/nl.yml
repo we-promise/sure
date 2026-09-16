@@ -4,11 +4,6 @@ nl:
     changelog:
       title: Wat is er nieuw
     dashboard:
-      cashflow_preview:
-        node_labels:
-          cash_flow: "Kasstroom"
-          surplus: "Overschot"
-          deficit: "Tekort"
       welcome: "Welkom terug, %{name}"
       subtitle: "Dit gebeurt er met uw financiën"
       new: "Nieuw"
@@ -26,6 +21,10 @@ nl:
         no_items: "Nog geen %{name}"
         add_accounts: "Voeg uw %{name} accounts toe om een volledig overzicht te zien"
       cashflow_sankey:
+        node_labels:
+          cash_flow: "Kasstroom"
+          surplus: "Overschot"
+          deficit: "Tekort"
         title: "Cashflow"
         no_data_title: "Geen cashflow gegevens voor deze periode"
         no_data_description: "Voeg transacties toe om cashflow gegevens weer te geven of vergroot de periode"
