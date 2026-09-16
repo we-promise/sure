@@ -70,6 +70,9 @@ namespace :security do
     results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:mercury_accounts] = backfill_model(MercuryAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
 
+    # SSO provider client secret
+    results[:sso_providers] = backfill_model(SsoProvider, %i[client_secret], batch_size, dry_run)
+
     puts({
       ok: true,
       dry_run: dry_run,
