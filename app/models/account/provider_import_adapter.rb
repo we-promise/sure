@@ -47,14 +47,7 @@ class Account::ProviderImportAdapter
 
       # Determine early whether the incoming transaction is pending — needed by both
       # the protection check (pending→booked bypass) and the auto-claim path below.
-      incoming_pending = false
-      if extra.is_a?(Hash)
-        pending_extra = extra.with_indifferent_access
-        boolean_type = ActiveModel::Type::Boolean.new
-        incoming_pending = Transaction::PENDING_PROVIDERS.any? do |provider|
-          boolean_type.cast(pending_extra.dig(provider, "pending"))
-        end
-      end
+      incoming_pending = extra.is_a?(Hash) && Transaction.pending_extra?(extra.with_indifferent_access)
 
       # === PROTECTION CHECK: Skip entries that should not be overwritten ===
       # Check persisted Transaction entries for protection flags before making changes.
@@ -70,8 +63,7 @@ class Account::ProviderImportAdapter
           # (setting user_modified=true) would see the pending badge stuck forever.
           # Excluded and import_locked entries are intentionally left untouched.
           if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
-            entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
-            if entry_is_pending
+            if entry.transaction.pending?
               entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
             end
           end
@@ -150,7 +142,7 @@ class Account::ProviderImportAdapter
       # must clear the stale pending flag here before the final save.
       # (The auto-claim path already clears it in-memory, so this is a no-op there.)
       if !incoming_pending && entry.entryable.is_a?(Transaction)
-        if Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
+        if entry.transaction.pending?
           entry.transaction.extra = clear_pending_flags_from_extra(entry.transaction.extra)
         end
       end

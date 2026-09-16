@@ -172,6 +172,25 @@ class Transaction < ApplicationRecord
     "NOT (#{pending_sql(table_alias, providers: providers)})"
   end
 
+  # The Ruby form of the same decision, over a provider metadata hash rather
+  # than a record. #pending? is this method; the import adapter also needs it
+  # before any record exists, for the payload it is about to write.
+  #
+  # Reads keys as strings, so pass string-keyed metadata or a
+  # HashWithIndifferentAccess. A provider key holding anything but an object
+  # says nothing about that provider and is skipped, as pending_sql skips it:
+  # Hash#dig would instead raise on a scalar and take the whole caller with it.
+  def self.pending_extra?(extra)
+    return false unless extra.is_a?(Hash)
+
+    PENDING_PROVIDERS.any? do |provider|
+      provider_data = extra[provider]
+      provider_data.is_a?(Hash) && PENDING_FLAG_TYPE.cast(provider_data["pending"])
+    end
+  rescue StandardError
+    false
+  end
+
   # Pending transaction scopes - filter based on provider pending flags in extra JSONB
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
   scope :pending, -> { where(Transaction.pending_sql) }
@@ -215,16 +234,7 @@ class Transaction < ApplicationRecord
   end
 
   def pending?
-    extra_data = extra.is_a?(Hash) ? extra : {}
-    PENDING_PROVIDERS.any? do |provider|
-      # A provider key holding anything but an object says nothing about that
-      # provider. Skip it, as pending_sql does, rather than let Hash#dig raise
-      # and the rescue below hide every other provider's flag.
-      provider_data = extra_data[provider]
-      provider_data.is_a?(Hash) && PENDING_FLAG_TYPE.cast(provider_data["pending"])
-    end
-  rescue StandardError
-    false
+    self.class.pending_extra?(extra)
   end
 
   def activity_security_id
