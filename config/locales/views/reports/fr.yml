@@ -175,6 +175,8 @@ fr:
     summary:
       budget_performance: Performance budgétaire
       income_minus_expenses: Revenus moins dépenses
+      investment_contributions: Contributions aux investissements
+      investment_contributions_description: Toujours à vous, pas une dépense
       net_savings: Épargne nette
       no_budget_data: Aucune donnée budgétaire pour cette période
       of_budget_used: du budget utilisé
@@ -221,6 +223,8 @@ fr:
           other: "%{count} entrées"
         expense: Dépenses
         income: Revenus
+        investment_contribution: Contributions aux investissements
+        debt_principal: Remboursements de capital
         percentage: "% du total"
         type: Type
         uncategorized: Non catégorisé

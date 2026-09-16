@@ -38,6 +38,8 @@ en:
       total_income: Total Income
       total_expenses: Total Expenses
       net_savings: Net Savings
+      investment_contributions: Investment Contributions
+      investment_contributions_description: Still yours, not spending
       budget_performance: Budget Performance
       vs_previous: vs previous period
       income_minus_expenses: Income minus expenses
@@ -118,6 +120,8 @@ en:
         type: Type
         expense: Expenses
         income: Income
+        investment_contribution: Investment Contributions
+        debt_principal: Debt Principal Payments
         uncategorized: Uncategorized
         entries:
           one: "%{count} entry"

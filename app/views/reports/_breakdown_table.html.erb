@@ -1,10 +1,10 @@
-<%# Renders a breakdown table for income or expense groups %>
-<%# Local variables: groups, total, type (:income or :expense), amount_sort_params, current_sort_by, current_sort_direction, start_date, end_date %>
+<%# Renders a breakdown table for income, expense, investment_contribution or debt_principal groups %>
+<%# Local variables: groups, total, type, amount_sort_params, current_sort_by, current_sort_direction, start_date, end_date %>
 
 <%
   color_class = type == :income ? "text-success" : "text-primary"
-  icon_name = type == :income ? "trending-up" : "trending-down"
-  title_key = type == :income ? "reports.transactions_breakdown.table.income" : "reports.transactions_breakdown.table.expense"
+  icon_name = { income: "trending-up", expense: "trending-down", investment_contribution: "landmark", debt_principal: "credit-card" }.fetch(type)
+  title_key = "reports.transactions_breakdown.table.#{type}"
 %>
 
 <div>
