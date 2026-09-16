@@ -40,6 +40,24 @@ class Account::ProviderImportAdapter
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
+    # counterparty_iban/counterparty_account_id describe a third party's own
+    # bank account -- unlike everything else callers pass through `extra`,
+    # they get their own deterministically encrypted transaction columns
+    # (see Transaction), not the plain jsonb `extra` column. Popped out here,
+    # before any of the jsonb-merging logic below runs, so they never land in
+    # the unencrypted column even transiently. `key?`, not `present?`: a
+    # caller (EnableBankingEntry::Processor) that explicitly includes one of
+    # these keys with a nil value means "no counterparty for this sync,
+    # clear any stale value" -- a caller that omits the keys entirely (every
+    # other provider) must leave the columns untouched.
+    counterparty_keys_present = extra.is_a?(Hash) && (extra.with_indifferent_access.key?(:counterparty_iban) || extra.with_indifferent_access.key?(:counterparty_account_id))
+    if extra.is_a?(Hash)
+      extra = extra.with_indifferent_access
+      incoming_counterparty_iban = IbanNormalizable.normalize(extra[:counterparty_iban])
+      incoming_counterparty_account_id = extra[:counterparty_account_id].presence
+      extra = extra.except(:counterparty_iban, :counterparty_account_id)
+    end
+
     Account.transaction do
       # Find or initialize by both external_id AND source
       # This allows multiple providers to sync same account with separate entries
@@ -78,11 +96,35 @@ class Account::ProviderImportAdapter
           # through the auto-claim path. Without this, a user who categorised a pending entry
           # (setting user_modified=true) would see the pending badge stuck forever.
           # Excluded and import_locked entries are intentionally left untouched.
-          if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
-            entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
-            if entry_is_pending
-              entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
+          if skip_reason == "user_modified" && entry.entryable.is_a?(Transaction)
+            updated_extra = entry.transaction.extra
+
+            if !incoming_pending
+              entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| updated_extra&.dig(p, "pending") }
+              updated_extra = clear_pending_flags_from_extra(updated_extra) if entry_is_pending
             end
+
+            if updated_extra != entry.transaction.extra
+              entry.transaction.extra = updated_extra
+            end
+
+            # counterparty_iban/counterparty_account_id have no corresponding
+            # UI field, so backfilling them here doesn't risk reverting a
+            # user edit the way overwriting name/category/notes would --
+            # unlike those, protecting the user's work gives no reason to
+            # withhold this data. Without this, a transaction the user
+            # touched before this metadata existed would never receive it,
+            # even on later syncs. Purely additive (only fills a currently
+            # blank column), deliberately unlike the unprotected path below,
+            # which always assigns -- even nil -- so a later correction can
+            # clear a stale value there. A protected entry's already-set
+            # value must never be touched, correction or not.
+            if counterparty_keys_present
+              entry.transaction.counterparty_iban = incoming_counterparty_iban if entry.transaction.counterparty_iban.blank?
+              entry.transaction.counterparty_account_id = incoming_counterparty_account_id if entry.transaction.counterparty_account_id.blank?
+            end
+
+            entry.transaction.save! if entry.transaction.changed?
           end
           record_skip(entry, skip_reason)
           return entry
@@ -205,11 +247,23 @@ class Account::ProviderImportAdapter
       end
 
       # Persist extra provider metadata on the transaction (non-enriched; always merged)
-      if extra.present? && entry.entryable.is_a?(Transaction)
-        existing = entry.transaction.extra || {}
-        incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
-        entry.transaction.extra = existing.deep_merge(incoming)
-        entry.transaction.save!
+      if entry.entryable.is_a?(Transaction)
+        if extra.present?
+          existing = entry.transaction.extra || {}
+          incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
+          entry.transaction.extra = existing.deep_merge(incoming)
+        end
+
+        # Always assigned -- even to nil -- unlike the protected path above:
+        # a corrected or removed counterparty on a later sync must actually
+        # clear a stale value here, not leave it in place. See
+        # EnableBankingEntry::Processor#extra for why this is deliberate.
+        if counterparty_keys_present
+          entry.transaction.counterparty_iban = incoming_counterparty_iban
+          entry.transaction.counterparty_account_id = incoming_counterparty_account_id
+        end
+
+        entry.transaction.save! if entry.transaction.changed?
       end
 
       # Auto-detect investment activity labels for investment accounts
@@ -627,7 +681,7 @@ class Account::ProviderImportAdapter
   # @param security [Security] The security object
   # @param quantity [BigDecimal, Numeric] Number of shares (negative for sells, positive for buys)
   # @param price [BigDecimal, Numeric] Price per share
-  # @param amount [BigDecimal, Numeric] Total trade value
+  # @param amount [BigDecimal, Numeric] Total cash impact of the trade, fee included
   # @param currency [String] Currency code
   # @param date [Date, String] Trade date
   # @param name [String, nil] Optional custom name for the trade
@@ -635,8 +689,9 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
   # @param exchange_rate [BigDecimal, Numeric, nil] Optional provider-supplied FX rate into the account currency
+  # @param fee [BigDecimal, Numeric, nil] Optional provider-reported transaction fee, already included in `amount`
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil, fee: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -677,6 +732,7 @@ class Account::ProviderImportAdapter
         investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell")
       }
       trade_attributes[:exchange_rate] = exchange_rate unless exchange_rate.nil?
+      trade_attributes[:fee] = fee unless fee.nil?
 
       entry.entryable.assign_attributes(trade_attributes)
 
