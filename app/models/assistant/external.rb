@@ -38,6 +38,7 @@ class Assistant::External < Assistant::Base
       )
     end
 
+    # The token budget for conversation history sent to the external agent.
     # `.to_i` on a non-numeric string is 0 rather than raising, unlike
     # Kernel#Integer (which also honors base prefixes like "010" => 8) — safer
     # for an ENV value a self-hoster might typo.
@@ -102,12 +103,14 @@ class Assistant::External < Assistant::Base
       )
     end
 
-    # Fetches a generous window of recent complete messages, then trims to the
-    # configured token budget — bounding both the AI's lost context (was a
-    # flat 20-message cap, unrelated to actual content size) and the query's
-    # memory footprint on pathologically long chats.
+    # Upper bound on rows fetched from the DB before token-trimming, so a
+    # pathologically long chat can't load its entire history into memory.
     MAX_FETCHED_MESSAGES = 500
 
+    # Builds the message history sent to the external agent: fetches a
+    # generous window of recent complete messages, then trims to the
+    # configured token budget — bounding the AI's lost context (was a flat
+    # 20-message cap, unrelated to actual content size).
     def build_conversation_messages
       recent = chat.conversation_messages.where(status: "complete")
         .ordered.last(MAX_FETCHED_MESSAGES)

@@ -7,20 +7,21 @@ class Api::V1::ChatsController < Api::V1::BaseController
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]
   before_action :set_chat, only: [ :show, :update, :destroy ]
 
+  # Lists the current user's chats, most recently updated first.
   def index
     @pagy, @chats = pagy(current_resource_owner.chats.ordered, limit: 20)
   end
 
+  # Shows a chat with its messages, paginated newest-first so the default
+  # (unpaginated) request surfaces the latest messages instead of stalling on
+  # the oldest page once a chat grows past one page — older history stays
+  # reachable via subsequent pages. Re-sorted back to chronological order for
+  # display afterwards. id: :desc is a secondary sort key so page boundaries
+  # stay stable when two messages share a created_at tick (same-millisecond
+  # writes are common for paired user/assistant messages).
   def show
     return unless @chat
 
-    # Paginate newest-first so the default (unpaginated) request surfaces the
-    # latest messages instead of stalling on the oldest page once a chat grows
-    # past one page — older history stays reachable via subsequent pages.
-    # Re-sorted back to chronological order for display afterwards.
-    # id: :desc as a secondary key keeps page boundaries stable when two
-    # messages share a created_at tick (same-millisecond writes are common
-    # for paired user/assistant messages).
     @pagy, @messages = pagy(
       @chat.messages.includes(:tool_calls).order(created_at: :desc, id: :desc),
       limit: 50
