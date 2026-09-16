@@ -7,8 +7,14 @@ require "application_system_test_case"
 # into any page load, without a single request having been made.
 class SidebarSparklinesTest < ApplicationSystemTestCase
   SPARKLINE_FRAME = "#sidebar-scroll turbo-frame[data-controller='turbo-frame-timeout']"
-  TIMEOUT_BADGE = "#{SPARKLINE_FRAME} p"
   BADGE_TEXT = "Timeout"
+
+  # The group total in the <summary> renders the same chart as the rows inside
+  # the disclosure and is on screen from the start, so "a sparkline loaded" has
+  # to say which one: the rows are `dom_id(account, :sparkline)`, the total is
+  # "#{account_group.key}_sparkline".
+  ACCOUNT_SPARKLINE_FRAME = "#{SPARKLINE_FRAME}[id^='sparkline_account_']"
+  GROUP_SPARKLINE_FRAME = "#{SPARKLINE_FRAME}[id$='_sparkline']"
 
   # The shipped window is ten seconds. Outliving it for real would add most of
   # a minute to the system suite for a cosmetic badge, so the frames render
@@ -50,15 +56,16 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
       # The group's own sparkline sits in the <summary>, so it is on screen and
       # Turbo does fetch it: the page is working, the collapsed rows below are
       # simply never asked for.
-      assert_selector "#{SPARKLINE_FRAME}[complete]", minimum: 1
+      assert_selector "#{GROUP_SPARKLINE_FRAME}[complete]", minimum: 1
 
       wait_out_timeout_window
 
-      assert_no_selector TIMEOUT_BADGE, text: BADGE_TEXT, visible: :all
+      # No badge anywhere in the sidebar, group totals included.
+      assert_no_selector "#{SPARKLINE_FRAME} p", text: BADGE_TEXT, visible: :all
 
       # The rows nobody asked for still hold their loading placeholder, which
       # is an honest description of what they are doing.
-      assert_selector "#{SPARKLINE_FRAME} .bg-loader", visible: :all, minimum: 1
+      assert_selector "#{ACCOUNT_SPARKLINE_FRAME} .bg-loader", visible: :all, minimum: 1
     end
   end
 
@@ -68,11 +75,11 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
 
       expand_first_group
 
-      assert_selector "#{SPARKLINE_FRAME}[complete] [data-controller='time-series-chart']", minimum: 1
+      assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[complete] [data-controller='time-series-chart']", minimum: 1
 
       wait_out_timeout_window
 
-      assert_no_selector TIMEOUT_BADGE, text: BADGE_TEXT, visible: :all
+      assert_no_selector "#{SPARKLINE_FRAME} p", text: BADGE_TEXT, visible: :all
     end
   end
 
@@ -83,7 +90,9 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
       with_stalled_sparkline_responses do
         expand_first_group
 
-        assert_selector TIMEOUT_BADGE, text: BADGE_TEXT, minimum: 1
+        # On the rows that were stalled, not on a group total that loaded long
+        # before the stall was in place.
+        assert_selector "#{ACCOUNT_SPARKLINE_FRAME} p", text: BADGE_TEXT, minimum: 1
       end
     end
   end
