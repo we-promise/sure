@@ -81,7 +81,7 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     target_account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
-    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89 3704 0044 0532 0130 00" })
+    outflow_entry.entryable.update!(counterparty_iban: "DE89 3704 0044 0532 0130 00")
 
     get new_transaction_transfer_match_path(outflow_entry)
 
@@ -92,7 +92,7 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
 
   test "new does not suggest an account when no iban matches" do
     outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
-    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "AT611904300234573201" }) # pipelock:ignore IBAN
+    outflow_entry.entryable.update!(counterparty_iban: "AT611904300234573201") # pipelock:ignore IBAN
 
     get new_transaction_transfer_match_path(outflow_entry)
 
@@ -105,7 +105,7 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     target_account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
-    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
     # A real matching inflow already exists on the target account, so this
     # is a normal match, not a "missing counterpart" situation.
     create_transaction(amount: -100, account: target_account)
@@ -121,7 +121,7 @@ class TransferMatchesControllerTest < ActionDispatch::IntegrationTest
     target_account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     outflow_entry = create_transaction(amount: 100, account: accounts(:depository))
-    outflow_entry.entryable.update!(extra: { "counterparty_iban" => "DE89370400440532013000" }) # pipelock:ignore IBAN
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     post dismiss_suggestion_transaction_transfer_match_path(outflow_entry)
 

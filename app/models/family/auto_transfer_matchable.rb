@@ -144,7 +144,7 @@ module Family::AutoTransferMatchable
     return nil if transaction.transfer?
     return nil if transaction.extra&.dig("counterparty_transfer_suggestion_dismissed") == true
 
-    counterparty_iban = transaction.extra&.dig("counterparty_iban")
+    counterparty_iban = transaction.counterparty_iban
     return nil if counterparty_iban.blank?
 
     accounts.writable_by(user).visible.where.not(id: entry.account_id).find_by(iban: normalize_iban(counterparty_iban))
