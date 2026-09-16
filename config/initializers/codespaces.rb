@@ -19,9 +19,4 @@ if Rails.env.development? && ENV["CODESPACES"] == "true"
     key: "_app_session",
     same_site: :none,
     secure: true
-
-  # The Codespaces proxy can preserve an https://localhost:<port> browser Origin
-  # while forwarding the request under its public app.github.dev host. The
-  # controller accepts only that exact development-only pairing; normal CSRF
-  # token and origin validation remain enabled for every other request.
 end
