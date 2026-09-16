@@ -10,10 +10,11 @@ types, MIC mapping, currency handling, settings encryption, UI, locales and test
 A provider's logo comes from [`ProviderLogo`](../../app/components/provider_logo.rb): the
 Brandfetch icon for the `domain` in its
 [`Provider::Metadata::REGISTRY`](../../app/models/provider/metadata.rb) entry, falling back
-to `logo_icon`, then `logo_text` initials on `logo_color`. Every surface that stands for a
-provider renders `render ProviderLogo.new(provider_key: :<x>)` — the `_<x>_item` card on
-Accounts and the connection rows in `settings/providers/_<x>_panel` included — rather than a
-hand-built badge or the first letter of a connection name.
+to `logo_icon`, then `logo_text` initials on `logo_color`. Anything identifying a provider
+renders `render ProviderLogo.new(provider_key: :<x>)` — the `_<x>_item` card on Accounts,
+the Bank Sync cards and connection rows, and the connection rows in
+`settings/providers/_<x>_panel` — rather than a hand-built badge or the first letter of a
+connection name. A panel's setup form and instructions carry no logo.
 
 Give each new provider a registry entry with a brand domain. Only a provider with no single
 brand behind it (on-chain wallets) omits the domain and sets `logo_icon` instead.
