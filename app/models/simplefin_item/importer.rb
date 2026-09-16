@@ -1328,16 +1328,14 @@ class SimplefinItem::Importer
     end
 
     # Track stale pending transactions that couldn't be matched (for user awareness)
-    # These are >8 days old, still pending, and have no duplicate suggestion
+    # These are >8 days old, still pending, and have no duplicate suggestion.
+    # Pending under any provider, as exclude_and_track_stale_pending decides it.
     def track_stale_unmatched_pending(account)
       stale_unmatched = account.entries
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where(excluded: false)
         .where("entries.date < ?", 8.days.ago.to_date)
-        .where(<<~SQL.squish)
-          (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-          OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        SQL
+        .where(Transaction.pending_sql)
         .where(<<~SQL.squish)
           transactions.extra -> 'potential_posted_match' IS NULL
         SQL

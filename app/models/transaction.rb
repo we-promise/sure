@@ -114,31 +114,93 @@ class Transaction < ApplicationRecord
   # Providers that support pending transaction flags
   PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark].freeze
 
-  # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
-  # Stored as a constant so static analysis can verify it contains no user input.
-  PENDING_CHECK_SQL = PENDING_PROVIDERS
-    .map { |p| "(t.extra -> '#{p}' ->> 'pending')::boolean = true" }
-    .join(" OR ")
-    .freeze
+  # Stored flag values that do not mark a transaction pending: the strings
+  # ActiveModel::Type::Boolean casts to false, plus "" (which it casts to nil).
+  # Any other present value is pending, as #pending? decides.
+  PENDING_FLAG_FALSE_VALUES = (ActiveModel::Type::Boolean::FALSE_VALUES.grep(String) + [ "" ]).uniq.freeze
+  PENDING_FLAG_TYPE = ActiveModel::Type::Boolean.new.freeze
+
+  # PENDING_FLAG_FALSE_VALUES as a list of SQL string literals. Built from the
+  # constant alone, so class loading needs no database connection, and shared by
+  # pending_sql and PENDING_CHECK_SQL so the two cannot quote the values
+  # differently.
+  PENDING_FLAG_FALSE_VALUES_SQL = PENDING_FLAG_FALSE_VALUES.map { |value| "'#{value.gsub("'", "''")}'" }.join(", ").freeze
+
+  # Canonical reusable SQL form of the pending? decision. Callers that inspect
+  # only provider namespaces they own can pass that subset in `providers:`.
+  #
+  # Deliberately not `(... ->> 'pending')::boolean`. PostgreSQL raises
+  # PG::InvalidTextRepresentation on a value it cannot parse ("maybe"), which
+  # aborts the whole query rather than one row, and it reads "no", "False" and
+  # "Off" as false where ActiveModel reads them as true. Providers write JSON
+  # booleans, which ->> renders as 'true', 'false' or NULL and both rules
+  # classify alike, so only other values are affected.
+  #
+  # COALESCE maps a missing flag or JSON null to "", a false value, so no
+  # provider's term is ever NULL and NOT (...) is exact.
+  #
+  # A JSON number 0.0 renders as '0.0' and is pending here; #pending? agrees,
+  # because FALSE_VALUES is a Set keyed by eql? and 0.0 is not eql? to 0. The
+  # parity test carries the case.
+  def self.pending_sql(table_alias = "transactions", providers: PENDING_PROVIDERS)
+    quoted_table = connection.quote_table_name(table_alias)
+    selected_providers = Array(providers).map(&:to_s).uniq & PENDING_PROVIDERS
+    return "FALSE" if selected_providers.empty?
+
+    selected_providers
+      .map do |provider|
+        "COALESCE(#{quoted_table}.extra -> #{connection.quote(provider)} ->> #{connection.quote("pending")}, #{connection.quote("")}) NOT IN (#{PENDING_FLAG_FALSE_VALUES_SQL})"
+      end
+      .join(" OR ")
+      .then { |predicate| "(#{predicate})" }
+  end
+
+  # Fixed-alias fragment for correlated SQL. Build from model constants without
+  # borrowing a database connection during class loading.
+  PENDING_CHECK_SQL = begin
+    PENDING_PROVIDERS
+      .map do |provider|
+        "COALESCE(t.extra -> '#{provider}' ->> 'pending', '') NOT IN (#{PENDING_FLAG_FALSE_VALUES_SQL})"
+      end
+      .join(" OR ")
+      .then { |predicate| "(#{predicate})" }
+      .freeze
+  end
+
+  # The negation of pending_sql, for queries that must leave pending rows out.
+  def self.not_pending_sql(table_alias = "transactions", providers: PENDING_PROVIDERS)
+    "NOT (#{pending_sql(table_alias, providers: providers)})"
+  end
+
+  # The Ruby form of the same decision, over a provider metadata hash rather
+  # than a record. #pending? is this method; the import adapter also needs it
+  # before any record exists, for the payload it is about to write.
+  #
+  # Reads keys as strings, so pass string-keyed metadata or a
+  # HashWithIndifferentAccess. A provider key holding anything but an object
+  # says nothing about that provider and is skipped, as pending_sql skips it:
+  # Hash#dig would instead raise on a scalar and take the whole caller with it.
+  def self.pending_extra?(extra)
+    return false unless extra.is_a?(Hash)
+
+    PENDING_PROVIDERS.any? do |provider|
+      provider_data = extra[provider]
+      provider_data.is_a?(Hash) && PENDING_FLAG_TYPE.cast(provider_data["pending"])
+    end
+  rescue StandardError
+    false
+  end
 
   # Pending transaction scopes - filter based on provider pending flags in extra JSONB
   # Works with any provider that stores pending status in extra["provider_name"]["pending"]
-  scope :pending, -> {
-    conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean = true" }
-    where(conditions.join(" OR "))
-  }
+  scope :pending, -> { where(Transaction.pending_sql) }
 
-  scope :excluding_pending, -> {
-    conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true" }
-    where(conditions.join(" AND "))
-  }
+  scope :excluding_pending, -> { where(Transaction.not_pending_sql) }
 
   # SQL snippet for raw queries that must exclude pending transactions.
   # Use in income statements, balance sheets, and raw analytics.
-  def self.pending_providers_sql(table_alias = "t")
-    PENDING_PROVIDERS.map do |provider|
-      "AND (#{table_alias}.extra -> '#{provider}' ->> 'pending')::boolean IS DISTINCT FROM true"
-    end.join("\n")
+  def self.pending_providers_sql(table_alias = "t", providers: PENDING_PROVIDERS)
+    "AND #{not_pending_sql(table_alias, providers: providers)}"
   end
 
   # Family-scoped query for Enrichable#clear_ai_cache
@@ -172,12 +234,7 @@ class Transaction < ApplicationRecord
   end
 
   def pending?
-    extra_data = extra.is_a?(Hash) ? extra : {}
-    PENDING_PROVIDERS.any? do |provider|
-      ActiveModel::Type::Boolean.new.cast(extra_data.dig(provider, "pending"))
-    end
-  rescue StandardError
-    false
+    self.class.pending_extra?(extra)
   end
 
   def activity_security_id
@@ -378,13 +435,11 @@ class Transaction < ApplicationRecord
     currency = entry.currency
 
     # Find recent posted transactions from the same account
-    conditions = PENDING_PROVIDERS.map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean IS NOT TRUE" }
-
     account.entries
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
       .where.not(id: entry.id)
       .where(currency: currency)
-      .where(conditions.join(" AND "))
+      .where(Transaction.not_pending_sql)
       .order(date: :desc, created_at: :desc)
       .limit(limit)
       .offset(offset)
