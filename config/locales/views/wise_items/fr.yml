@@ -24,6 +24,9 @@ fr:
     entries:
       default_name: Transaction Wise
       fee_name: Frais Wise
+    generate_sca_keypair:
+      failed: Impossible de générer une nouvelle paire de clés SCA. Veuillez réessayer.
+      success: Nouvelle paire de clés SCA générée. Enregistrez la clé publique auprès de Wise pour terminer l'activation.
     link_accounts:
       failed: Échec de la liaison du solde Wise. Veuillez réessayer.
       not_found: Solde Wise introuvable.
@@ -55,6 +58,16 @@ fr:
       connect: Connecter Wise
       connection_name_label: Nom de la connexion
       connection_name_placeholder: Wise Personnel
+      sca:
+        copied: Copié !
+        copy: Copier
+        description: Wise exige un défi signé à jeton unique pour lire les relevés de transactions complets, y compris les paiements entrants. Générez ici une paire de clés et enregistrez la clé publique auprès de Wise pour l'activer.
+        generate: Générer une paire de clés
+        public_key_label: Clé publique (PEM)
+        regenerate: Régénérer la paire de clés
+        regenerate_confirm: Cette action génère une nouvelle paire de clés. Wise continuera d'accepter la clé publique précédente tant que vous ne l'aurez pas supprimée vous-même dans votre compte Wise ; Sure n'a aucun moyen de la révoquer à distance. Vous devrez enregistrer la nouvelle clé publique auprès de Wise avant que les relevés puissent se synchroniser de nouveau. Continuer ?
+        registered_help_html: 'Enregistrez cette clé auprès de Wise : Paramètres → Connecter et gérer les applications → Outils développeur → Clés publiques → Ajouter une clé publique.'
+        title: Authentification forte du client (SCA)
       sync_start_date_label: Importer les transactions à partir de
       sync_start_date_help: Les relevés Wise sont importés à partir de cette date. Conservez la valeur par défaut pour importer jusqu'à un an d'historique.
       import_all_history_label: Importer tout l'historique des transactions

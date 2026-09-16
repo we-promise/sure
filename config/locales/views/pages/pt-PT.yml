@@ -38,6 +38,11 @@ pt-PT:
       heading: Termos de Serviço
       placeholder: O conteúdo dos termos de serviço será apresentado aqui.
     dashboard:
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Fluxo de caixa"
+          surplus: "Excedente"
+          deficit: "Défice"
       welcome: "Bem-vindo(a) de volta, %{name}"
       subtitle: "Acompanhe a evolução das suas finanças"
       new: "Novo"

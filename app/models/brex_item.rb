@@ -1,5 +1,5 @@
 class BrexItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   BLANK_TOKEN_SENTINELS = [ "", " ", "  ", "   ", "\t", "\n", "\r" ].freeze
 
@@ -38,11 +38,6 @@ class BrexItem < ApplicationRecord
 
     credentialed_items = family.brex_items.active.with_credentials.ordered
     credentialed_items.first if credentialed_items.one?
-  end
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
   end
 
   def import_latest_brex_data(sync_start_date: nil)

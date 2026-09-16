@@ -74,6 +74,8 @@ module Assistant
         Function::GetMerchants,
         Function::GetUncategorizedTransactions,
         Function::UpdateTransaction,
+        Function::CreateTransaction,
+        Function::DeleteTransaction,
         Function::UpdateBudget
       ]
 
