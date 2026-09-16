@@ -1,11 +1,14 @@
 import { Controller } from "@hotwired/stimulus";
 import {
   capturePreviewEvent,
+  captureSankeyComparison,
   feedbackClient,
   initializeSelfHostedFeedback,
   sankeyFeedbackResponse,
   sankeyFeedbackSurvey,
 } from "utils/sankey_preview_analytics";
+
+import { compareSankeyData } from "utils/sankey_comparison";
 
 export default class extends Controller {
   static targets = [
@@ -18,6 +21,7 @@ export default class extends Controller {
   ];
   static values = {
     surveyId: String,
+    legacyData: Object,
     selfHosted: Boolean,
     feedbackKey: String,
     feedbackHost: String,
@@ -32,6 +36,9 @@ export default class extends Controller {
         () => document.dispatchEvent(new Event("posthog:ready")),
       );
     }
+    this.comparisonDone = false;
+    this.comparisonResult = null;
+    delete this.element.dataset.sankeyComparison;
     this.displays = new Set();
     this.state = "loading";
     this.active = true;
@@ -55,6 +62,8 @@ export default class extends Controller {
   clear() {
     this.dismiss();
     this.active = false;
+    this.comparisonResult = null;
+    delete this.element.dataset.sankeyComparison;
     this.feedbackRequest = null;
     clearTimeout(this.feedbackTimeout);
     this.expandedDialogTarget.close();
@@ -65,13 +74,29 @@ export default class extends Controller {
   }
 
   update({ detail }) {
-    if (detail.state === "loading") this.displays.clear();
+    if (detail.state === "loading") {
+      this.displays.clear();
+      this.comparisonDone = false;
+    }
     this.state = detail.state;
+    this.comparisonResult = detail.graph
+      ? compareSankeyData(this.legacyDataValue, detail.graph)
+      : null;
+    this.element.dataset.sankeyComparison = this.comparisonResult || "";
     this.expandButtonTarget.disabled = !detail.ready;
     this.trackDisplay();
   }
 
+  trackComparison() {
+    if (!this.active || this.comparisonDone || !this.comparisonResult) return;
+    this.comparisonDone = captureSankeyComparison(
+      this.posthog,
+      this.comparisonResult,
+    );
+  }
+
   trackDisplay() {
+    this.trackComparison();
     if (
       !this.active ||
       document.hidden ||
@@ -170,7 +195,7 @@ export default class extends Controller {
           $survey_id: this.survey.id,
         });
         input.focus();
-      });
+      }, true); // Fetch current questions instead of a cached pre-launch/edit definition.
     } catch {
       this.unavailable();
     }
