@@ -20,6 +20,28 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     OmniAuth.config.mock_auth[:openid_connect] = nil
   end
 
+  def with_origin_check
+    original = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+    yield
+  ensure
+    ActionController::Base.allow_forgery_protection = original
+  end
+
+  def with_codespaces_origin_check(&block)
+    with_env_overrides(
+      CODESPACES: "true",
+      GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN: "app.github.dev",
+      CODESPACE_NAME: "shiny-guide-6vj6x5qpjf5wpv",
+      PORT: "3000"
+    ) do
+      Rails.env.stubs(:development?).returns(true)
+      host! "shiny-guide-6vj6x5qpjf5wpv-3000.app.github.dev"
+      https!
+      with_origin_check(&block)
+    end
+  end
+
   def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil)
     OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
       provider: provider,
@@ -31,6 +53,59 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
         last_name: last_name
       }.compact
     })
+  end
+
+  test "codespaces accepts its localhost preview origin with a valid CSRF token" do
+    with_codespaces_origin_check do
+      get new_session_url
+      token = css_select("input[name=authenticity_token]").first["value"]
+
+      post sessions_url,
+        params: { email: @user.email, password: user_password_test, authenticity_token: token },
+        headers: { "Origin" => "https://localhost:3000" }
+
+      assert_redirected_to root_url
+      assert Session.exists?(user_id: @user.id)
+    end
+  end
+
+  test "codespaces still requires a valid CSRF token" do
+    with_codespaces_origin_check do
+      assert_raises(ActionController::InvalidAuthenticityToken) do
+        post sessions_url,
+          params: { email: @user.email, password: user_password_test },
+          headers: { "Origin" => "https://localhost:3000" }
+      end
+    end
+  end
+
+  test "codespaces still rejects unrelated origins" do
+    with_codespaces_origin_check do
+      get new_session_url
+      token = css_select("input[name=authenticity_token]").first["value"]
+
+      assert_raises(ActionController::InvalidAuthenticityToken) do
+        post sessions_url,
+          params: { email: @user.email, password: user_password_test, authenticity_token: token },
+          headers: { "Origin" => "https://attacker.example" }
+      end
+    end
+  end
+
+  test "ordinary local development keeps standard same-origin validation" do
+    Rails.env.stubs(:development?).returns(true)
+
+    with_origin_check do
+      host! "localhost:3000"
+      get new_session_url
+      token = css_select("input[name=authenticity_token]").first["value"]
+
+      post sessions_url,
+        params: { email: @user.email, password: user_password_test, authenticity_token: token },
+        headers: { "Origin" => "http://localhost:3000" }
+
+      assert_redirected_to root_url
+    end
   end
 
   test "login page" do

@@ -20,6 +20,8 @@ if Rails.env.development? && ENV["CODESPACES"] == "true"
     same_site: :none,
     secure: true
 
-  # Behind the proxy, Origin can differ; relax the origin check instead of disabling CSRF entirely.
-  Rails.application.config.action_controller.forgery_protection_origin_check = false
+  # The Codespaces proxy can preserve an https://localhost:<port> browser Origin
+  # while forwarding the request under its public app.github.dev host. The
+  # controller accepts only that exact development-only pairing; normal CSRF
+  # token and origin validation remain enabled for every other request.
 end
