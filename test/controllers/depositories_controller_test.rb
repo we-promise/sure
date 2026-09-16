@@ -48,6 +48,17 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "DE89370400440532013000", created.iban # pipelock:ignore IBAN
   end
 
+  test "create does not choke on a stray remove_iban param" do
+    assert_difference -> { Account.count } => 1 do
+      post depositories_path, params: {
+        account: { name: "No Iban Checking", currency: "USD", balance: 100, accountable_type: "Depository", remove_iban: "1" }
+      }
+    end
+
+    created = Account.order(:created_at).last
+    assert_nil created.iban
+  end
+
   test "create re-renders the form instead of a 500 when the iban is already used in the family" do
     @account.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
