@@ -15,7 +15,7 @@ class AddFamilyScopedIbanUniquenessToMerchants < ActiveRecord::Migration[7.2]
     # put it back in plaintext) rather than surfacing PostgreSQL's raw
     # unique-violation message.
     conflicting_merchant_ids = select_rows(<<~SQL.squish)
-      SELECT ARRAY_AGG(id::text ORDER BY id)
+      SELECT STRING_AGG(id::text, ',' ORDER BY id)
       FROM merchants
       WHERE type = 'FamilyMerchant' AND iban IS NOT NULL
       GROUP BY family_id, iban
@@ -23,7 +23,7 @@ class AddFamilyScopedIbanUniquenessToMerchants < ActiveRecord::Migration[7.2]
     SQL
 
     if conflicting_merchant_ids.any?
-      ids = conflicting_merchant_ids.flat_map { |row| row.first.tr("{}", "").split(",") }
+      ids = conflicting_merchant_ids.flat_map { |row| row.first.split(",") }
       raise "Cannot add the family-scoped iban uniqueness index: " \
             "FamilyMerchant rows #{ids.join(', ')} already share an iban within " \
             "the same family. Resolve the duplicates (merge or clear iban on " \
