@@ -24,7 +24,8 @@
             country_options,
             :last,
             :first,
-            { label: t(".country"), searchable: true } %>
+            { label: t(".country"), searchable: true },
+            { data: { auto_submit_form_target: "auto" } } %>
         <p class="text-xs italic pl-2 text-secondary"><%= t(".translations_notice") %></p>
       <% end %>
     <% end %>
