@@ -129,6 +129,9 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
   # is required for the assertion to mean anything: without one `ledger_explains?` is never
   # consulted and the anchor lands on Date.current whichever order the two steps run in.
   test "processor anchors the reported balance after a successful transaction import" do
+    # Sliding the anchor forward instead of freezing it is gated on BALANCE_REUSE_EXPLAINED_ANCHOR.
+    Rails.configuration.x.balance.stubs(:reuse_explained_anchor).returns(true)
+
     anchor_date = 2.days.ago.to_date
     @account.entries.create!(
       date: anchor_date,

@@ -20,6 +20,9 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
     # accounts(:connected) is the depository linked to plaid_accounts(:one); asserted rather
     # than assumed, since every balance below is derived from the ledger this test builds.
     assert_equal 0, accounts(:connected).entries.count
+
+    # The reuse of an explained anchor is gated on BALANCE_REUSE_EXPLAINED_ANCHOR (default off).
+    Rails.configuration.x.balance.stubs(:reuse_explained_anchor).returns(true)
   end
 
   # A. The reported bug. Freezing day one's MID-DAY reading (1000) as an end-of-day waypoint

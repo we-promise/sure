@@ -11,6 +11,9 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
       provider_type: "PlaidAccount",
       provider_id: plaid_accounts(:one).id
     )
+
+    # The reuse of an explained anchor is gated on BALANCE_REUSE_EXPLAINED_ANCHOR (default off).
+    Rails.configuration.x.balance.stubs(:reuse_explained_anchor).returns(true)
   end
 
   # -------------------------------------------------------------------------------------------------
@@ -280,6 +283,38 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
       assert_equal Date.current, moved.entry.date
       assert_equal 1, @linked_account.valuations.current_anchor.count
       assert_empty @linked_account.valuations.reconciliation
+    end
+  end
+
+  # With BALANCE_REUSE_EXPLAINED_ANCHOR off (the default), the ledger is never consulted and
+  # every stale anchor rotates into a reconciliation waypoint, as it did before this gate.
+  test "preserves a stale anchor as a waypoint when the explained-anchor reuse flag is off" do
+    Rails.configuration.x.balance.stubs(:reuse_explained_anchor).returns(false)
+
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      @linked_account.entries.create!(
+        date: day_one,
+        name: "Card payment",
+        amount: 400,
+        currency: "USD",
+        entryable: Transaction.new
+      )
+
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(600).success?
+
+      preserved = Valuation.find(stale_id)
+      assert_equal "reconciliation", preserved.kind
+      assert_equal 1000, preserved.entry.amount
+      assert_equal day_one, preserved.entry.date
+
+      anchors = @linked_account.valuations.current_anchor
+      assert_equal 1, anchors.count
+      assert_equal 600, anchors.first.entry.amount
+      assert_equal Date.current, anchors.first.entry.date
     end
   end
 
