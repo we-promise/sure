@@ -51,6 +51,41 @@
     <% end %>
   </div>
 
+  <div class="flex items-center justify-between">
+    <div class="space-y-1">
+      <p class="text-sm"><%= t(".market_data_sync_label") %></p>
+      <p class="text-secondary text-sm"><%= t(".market_data_sync_description") %></p>
+    </div>
+
+    <%= styled_form_with model: Setting.new,
+                         url: settings_hosting_path,
+                         method: :patch,
+                         data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.toggle :market_data_sync_enabled,
+                      checked: Setting.market_data_sync_enabled,
+                      data: { auto_submit_form_target: "auto" } %>
+    <% end %>
+  </div>
+
+  <div class="flex items-center justify-between">
+    <div class="space-y-1">
+      <p class="text-sm"><%= t(".market_data_sync_time_label") %></p>
+      <p class="text-secondary text-sm"><%= t(".market_data_sync_time_description") %></p>
+    </div>
+
+    <%= form_with model: Setting.new,
+                        url: settings_hosting_path,
+                        method: :patch,
+                        data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+      <%= form.label :market_data_sync_time, t(".market_data_sync_time_label"), class: "sr-only" %>
+      <%= form.time_field :market_data_sync_time,
+                          value: Setting.market_data_sync_time,
+                          disabled: !Setting.market_data_sync_enabled,
+                          class: "rounded-lg border border-primary px-3 py-2 text-sm bg-container text-primary w-full",
+                          data: { auto_submit_form_target: "auto" } %>
+    <% end %>
+  </div>
+
   <% if env_configured %>
     <%= render DS::Alert.new(message: t(".env_configured_message"), variant: :warning) %>
   <% end %>

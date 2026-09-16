@@ -259,6 +259,10 @@ en:
         auto_sync_description: When enabled, all accounts will be automatically synced daily at the specified time.
         auto_sync_time_label: Sync time (HH:MM)
         auto_sync_time_description: Specify the time of day when automatic sync should occur.
+        market_data_sync_label: Enable daily market data import
+        market_data_sync_description: When enabled, security prices are imported automatically once a day (Monday-Friday) at the specified time.
+        market_data_sync_time_label: Market data import time (HH:MM)
+        market_data_sync_time_description: Specify the time of day when the daily security price import should run — e.g. shortly after your primary exchange closes.
         include_pending_label: Include pending transactions
         include_pending_description: When enabled, pending (uncleared) transactions will be imported and automatically reconciled when they post. Disable if your bank provides unreliable pending data.
         env_configured_message: This setting is disabled because a provider environment variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING) is set. Remove it to enable this setting.

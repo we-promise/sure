@@ -339,7 +339,21 @@ class Provider::TwelveData < Provider
       when Faraday::TooManyRequestsError
         RateLimitError.new("TwelveData rate limit exceeded", details: error.response&.dig(:body))
       when Faraday::Error
-        self.class::Error.new(error.message, details: error.response&.dig(:body))
+        body = error.response&.dig(:body)
+        # Faraday's `raise_error` middleware raises before our own
+        # `JSON.parse(response.body); check_api_error!(parsed)` code runs, so
+        # for any 4xx/5xx we'd otherwise only ever see Faraday's generic
+        # "the server responded with status ..." message — never TwelveData's
+        # actual JSON error body (which is what plan_upgrade_required? needs
+        # to detect plan-tier restrictions). Parse it here instead.
+        parsed_body = begin
+          body.is_a?(String) ? JSON.parse(body) : body
+        rescue JSON::ParserError
+          nil
+        end
+        api_message = parsed_body.is_a?(Hash) ? parsed_body["message"] : nil
+
+        self.class::Error.new(api_message.presence || error.message, details: body)
       else
         self.class::Error.new(error.message)
       end
