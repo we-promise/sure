@@ -105,37 +105,46 @@ namespace :security do
         next if dry_run
 
         begin
-          # Read plaintext values safely
-          plaintext_values = {}
-          fields.each do |field|
-            value = safe_read_field(record, field)
-            plaintext_values[field] = value unless value.nil?
+          # A concurrently reachable path (e.g. EnableBankingAccount's provider
+          # sync writing a fresher iban via upsert_enable_banking_snapshot!)
+          # could otherwise land between the plaintext read below and the
+          # update_columns write, and this backfill would clobber it with
+          # stale encrypted data. #with_lock takes a row lock (reloading the
+          # record from the DB first), so the plaintext read inside the block
+          # is guaranteed current as of the moment we hold the lock.
+          record.with_lock do
+            # Read plaintext values safely
+            plaintext_values = {}
+            fields.each do |field|
+              value = safe_read_field(record, field)
+              plaintext_values[field] = value unless value.nil?
+            end
+
+            next if plaintext_values.empty?
+
+            # Use a temporary instance to encrypt values (avoids triggering
+            # validations/callbacks that might read other encrypted fields)
+            encryptor = model_class.new
+            plaintext_values.each do |field, value|
+              # EnableBankingAccount#iban is the one legacy-plaintext IBAN column
+              # here; Account/Merchant#iban are new columns with no legacy rows.
+              # Normalizing on write, bypassing validations/callbacks as above,
+              # matches the normalize_iban callback so find_by(iban:) with a
+              # canonical value still matches a formatted/lowercase legacy row.
+              value = IbanNormalizable.normalize(value) if field == :iban
+              encryptor.send("#{field}=", value)
+            end
+
+            # Extract the encrypted values from the temporary instance
+            encrypted_attrs = {}
+            plaintext_values.keys.each do |field|
+              encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
+            end
+
+            # Write directly to database, bypassing callbacks/validations
+            record.update_columns(encrypted_attrs)
+            updated += 1
           end
-
-          next if plaintext_values.empty?
-
-          # Use a temporary instance to encrypt values (avoids triggering
-          # validations/callbacks that might read other encrypted fields)
-          encryptor = model_class.new
-          plaintext_values.each do |field, value|
-            # EnableBankingAccount#iban is the one legacy-plaintext IBAN column
-            # here; Account/Merchant#iban are new columns with no legacy rows.
-            # Normalizing on write, bypassing validations/callbacks as above,
-            # matches the normalize_iban callback so find_by(iban:) with a
-            # canonical value still matches a formatted/lowercase legacy row.
-            value = IbanNormalizable.normalize(value) if field == :iban
-            encryptor.send("#{field}=", value)
-          end
-
-          # Extract the encrypted values from the temporary instance
-          encrypted_attrs = {}
-          plaintext_values.keys.each do |field|
-            encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
-          end
-
-          # Write directly to database, bypassing callbacks/validations
-          record.update_columns(encrypted_attrs)
-          updated += 1
         rescue => e
           failed << { id: record.id, error: e.class.name, message: e.message }
         end
