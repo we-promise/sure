@@ -9,6 +9,7 @@ en:
     expand: "Expand"
   mcp:
     errors:
+      header_mismatch: "%{header} header does not match the request (expected %{expected})"
       invalid_session_id: "Invalid MCP session id"
       protocol_version_mismatch: "MCP-Protocol-Version header (%{header}) and _meta protocolVersion (%{meta}) disagree"
       unsupported_protocol_version: "Unsupported MCP protocol version: %{version}"
