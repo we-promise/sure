@@ -67,7 +67,11 @@ class SecurityTest < ActiveSupport::TestCase
       "chk_securities_classification_source" => Security::CLASSIFICATION_SOURCES
     }.each do |name, values|
       expression = constraints.fetch(name).expression
-      assert_equal values.sort, expression.scan(/'([a-z_]+)'/).flatten.sort,
+      # Capture whole quoted literals rather than `[a-z_]+`: a value carrying a
+      # digit or a hyphen would not match that class at all, so it would vanish
+      # from the scan and fail this test even though the constant and the
+      # constraint agree -- a spurious failure every time the taxonomy grows.
+      assert_equal values.sort, expression.scan(/'([^']+)'/).flatten.sort,
         "#{name} and the model constant have drifted apart"
     end
   end
