@@ -804,6 +804,42 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "positional (array-valued) JSON-RPC params degrade to no named params instead of crashing" do
+    with_mcp_env do
+      # JSON-RPC 2.0 allows "params" to be an Array; nothing Sure implements
+      # uses positional params, but tools/list needs none, so this must not
+      # 500 on Array#dig receiving a String key.
+      post "/mcp", params: { jsonrpc: "2.0", id: 70, method: "tools/list", params: [] }.to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      assert_equal 70, body["id"]
+      assert_kind_of Array, body["result"]["tools"]
+    end
+  end
+
+  test "a 2026-07-28 request ignores a stray Mcp-Session-Id instead of validating or echoing it" do
+    with_mcp_cache do
+      with_mcp_env do
+        post "/mcp", params: jsonrpc_request("initialize").to_json,
+             headers: mcp_headers(@token)
+        assert_response :ok
+        legacy_session_id = response.headers["Mcp-Session-Id"]
+        assert legacy_session_id.present?
+
+        post "/mcp", params: jsonrpc_request("tools/list").to_json,
+             headers: mcp_headers(@token).merge(
+               "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+               "Mcp-Session-Id" => legacy_session_id
+             )
+
+        assert_response :ok
+        assert_nil response.headers["Mcp-Session-Id"], "2026-07-28 has no session concept and must not echo one back"
+      end
+    end
+  end
+
   test "legacy 2025-03-26 workflow is unchanged: initialize, notifications/initialized, tools/list, tools/call" do
     with_mcp_cache do
       with_mcp_env do
