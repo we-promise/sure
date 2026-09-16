@@ -74,6 +74,11 @@ es:
         classifications:
           asset: Activos
           liability: Pasivos
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Flujo de caja"
+          surplus: "Superávit"
+          deficit: "Déficit"
       cashflow_sankey:
         title: Flujo de caja
         zoom_out: Volver al flujo de caja completo

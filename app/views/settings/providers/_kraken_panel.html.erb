@@ -28,9 +28,7 @@
           <% disclosure.with_summary_content do %>
             <div class="flex items-center justify-between gap-3 w-full">
               <div class="flex items-center gap-3 min-w-0">
-                <div class="flex items-center justify-center h-8 w-8 rounded-full bg-surface-inset">
-                  <%= icon "waves", size: "sm", class: "text-primary" %>
-                </div>
+                <%= render ProviderLogo.new(provider_key: :kraken) %>
                 <div class="min-w-0">
                   <p class="font-medium text-primary truncate"><%= item.name %></p>
                   <p class="text-xs text-secondary">

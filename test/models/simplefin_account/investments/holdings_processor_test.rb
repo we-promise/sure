@@ -177,4 +177,104 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_nil source_key
     assert_nil cost_basis
   end
+
+  test "lots of the same security combine into one position" do
+    # SimpleFIN reports one record per lot. A 401k splitting employee deferral
+    # from employer match sends two records for the same fund, and `holdings` is
+    # uniquely indexed on (account_id, security_id, date, currency), so importing
+    # them separately made the second overwrite the first.
+    security = securities(:aapl)
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+
+    processor.stubs(:holdings_data).returns([
+      { "id" => "lot-b", "symbol" => "AAPL", "shares" => "11.891485", "market_value" => "3070.14", "cost_basis" => "200.00" },
+      { "id" => "lot-a", "symbol" => "AAPL", "shares" => "2.378397",  "market_value" => "614.05",  "cost_basis" => "250.00" }
+    ])
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:resolve_security).returns(security)
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+
+    # The processor logs simplefin_account.id per lot, so the stub has to
+    # answer it as well as account_provider.
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
+    )
+
+    # A plain recorder rather than a mocha argument matcher, so the assertions
+    # read against the real keyword arguments.
+    recorder = Class.new do
+      attr_reader :calls
+
+      def initialize = @calls = []
+
+      def import_holding(**kwargs)
+        @calls << kwargs
+        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
+              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
+                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
+      end
+    end.new
+
+    processor.stubs(:import_adapter).returns(recorder)
+
+    processor.process
+
+    assert_equal 1, recorder.calls.size, "expected the two lots to collapse into a single position"
+
+    position = recorder.calls.first
+    assert_in_delta 14.269882, position[:quantity].to_f, 0.000001
+    assert_in_delta 3684.19,   position[:amount].to_f,   0.01
+
+    # cost_basis is stored per share, so lots combine as a share-weighted
+    # average: (11.891485*200 + 2.378397*250) / 14.269882
+    assert_in_delta 208.333, position[:cost_basis].to_f, 0.01
+
+    # price is re-derived from the combined position
+    assert_in_delta 258.1781, position[:price].to_f, 0.01
+  end
+
+  test "a position with any unknown-basis lot reports no aggregate basis" do
+    # Averaging only the lots that reported a basis would apply that figure to
+    # shares whose cost is unknown, fabricating cost and gain/loss.
+    security = securities(:aapl)
+    processor = SimplefinAccount::Investments::HoldingsProcessor.new(nil)
+
+    processor.stubs(:holdings_data).returns([
+      { "id" => "lot-known",   "symbol" => "AAPL", "shares" => "10", "market_value" => "2000.00", "cost_basis" => "100.00" },
+      { "id" => "lot-unknown", "symbol" => "AAPL", "shares" => "10", "market_value" => "2000.00" }
+    ])
+    processor.stubs(:account).returns(accounts(:investment))
+    processor.stubs(:resolve_security).returns(security)
+    processor.stubs(:institution_reports_total_basis?).returns(false)
+    processor.stubs(:simplefin_account).returns(
+      stub(id: "sfa-test", name: "Test Investment Account", account_provider: nil)
+    )
+
+    recorder = Class.new do
+      attr_reader :calls
+
+      def initialize = @calls = []
+
+      def import_holding(**kwargs)
+        @calls << kwargs
+        Struct.new(:id, :security_id, :qty, :amount, :currency, :date, :external_id)
+              .new("h", kwargs[:security].id, kwargs[:quantity], kwargs[:amount],
+                   kwargs[:currency], kwargs[:date], kwargs[:external_id])
+      end
+    end.new
+
+    processor.stubs(:import_adapter).returns(recorder)
+
+    processor.process
+
+    assert_equal 1, recorder.calls.size
+    position = recorder.calls.first
+
+    # quantity and value still aggregate
+    assert_in_delta 20.0,   position[:quantity].to_f, 0.000001
+    assert_in_delta 4000.0, position[:amount].to_f,   0.01
+
+    # but the basis is unknown for the position as a whole, NOT $100/share
+    assert_nil position[:cost_basis]
+  end
 end

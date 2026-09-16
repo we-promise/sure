@@ -2,6 +2,47 @@
 de:
   admin:
     system_health:
+      push_notifications:
+        send_test: "Testbenachrichtigung senden"
+        queueing: "Wird eingereiht…"
+        title: "Push-Benachrichtigungen"
+        requested_at: "Letzter Test angefordert am %{time}"
+        result_help: "Die Annahme durch APNs bestätigt nicht die Zustellung auf deinem Gerät. Aktualisiere die Ergebnisse, um den Worker-Status zu sehen. Ergebnisse werden 24 Stunden gespeichert."
+        device: "Gerät %{number}"
+        pending: "Ausstehend"
+        refresh: "Ergebnisse aktualisieren"
+        columns:
+          device: "Gerät"
+          environment: "APNs-Umgebung"
+          status: "Ergebnis"
+          checked_at: "Letzte Aktualisierung"
+        environments:
+          sandbox: "Sandbox"
+          production: "Produktion"
+        messages:
+          enqueue_failed: "Der Test konnte nicht eingereiht werden. Prüfe Sidekiq und aktualisiere die Ergebnisse unten."
+          ready: "Sende eine Testbenachrichtigung an die für dein Konto registrierten, aktivierten iOS-Geräte."
+          queued: "Testbenachrichtigung eingereiht. Aktualisiere die Ergebnisse unten, um den Status zu prüfen."
+          hosted_only: "Push-Benachrichtigungen sind nur im gehosteten Modus verfügbar."
+          ineligible: "Nur ein aktiver Super-Admin kann eine Testbenachrichtigung senden."
+          no_devices: "Aktiviere Push-Benachrichtigungen in der Sure-iOS-App für dieses Konto, um einen Test zu senden."
+          disabled: "Der Betreiber hat den Push-Versand deaktiviert."
+          not_configured: "Die APNs-Zugangsdaten sind nicht konfiguriert."
+          cooldown: "Bitte warte 30 Sekunden, bevor du einen weiteren Test sendest."
+          storage_unavailable: "Die Testanfrage konnte nicht gespeichert werden. Prüfe die Konfiguration des gemeinsamen Caches."
+        statuses:
+          queued: "Eingereiht"
+          accepted: "Von APNs angenommen"
+          skipped: "Übersprungen: nicht mehr berechtigt"
+          rejected: "Von APNs abgelehnt; Push-Debug-Protokolle prüfen"
+          unregistered: "Geräteregistrierung ist nicht mehr gültig"
+          retrying: "Vorübergehender Fehler; erneuter Versuch"
+          failed: "Fehlgeschlagen; Push-Debug-Protokolle prüfen"
+          enqueue_failed: "Einreihen fehlgeschlagen; Sidekiq prüfen"
+          expired: "Ohne abschließendes Ergebnis abgelaufen"
+      push_notification:
+        title: "Sure-Testbenachrichtigung"
+        body: "Dies ist eine Testbenachrichtigung für dein Sure-Konto."
       verify_worker_ai:
         queued: Die Worker-Prüfung wurde in die Warteschlange gestellt. Das Ergebnis erscheint unten, sobald ein Worker-Prozess die Prüfung übernimmt – normalerweise innerhalb weniger Sekunden.
       show:
@@ -37,6 +78,23 @@ de:
           seconds: "%{seconds} s"
           no_queues: Es sind keine Warteschlangen registriert. Möglicherweise läuft der Worker nicht.
         ai:
+          labels:
+            failure_reason: Fehlerursache
+            function_calling_failure_reason: Fehlerursache beim Funktionsaufruf
+            pdf_text_extraction_failure_reason: Fehlerursache bei der Textextraktion
+            pdf_vision_processing_failure_reason: Fehlerursache bei der Bildverarbeitung oder nativen Dokumentverarbeitung
+          failure_codes:
+            model_not_available: Das konfigurierte Modell wurde vom Anbieter nicht zurückgegeben
+            no_tool_call: Das Modell hat geantwortet, ohne das Prüfwerkzeug aufzurufen
+            tools_refused: Der Dienst hat dieselbe Anfrage ohne Werkzeuge beantwortet, sie mit Werkzeugen jedoch abgelehnt
+            invalid_response: Der Dienst hat eine unerwartete Antwort zurückgegeben
+            dimensions_mismatch: Die Dimensionen des Embedding-Vektors stimmen nicht mit den konfigurierten Dimensionen überein
+            extension_not_enabled: Die PostgreSQL-Erweiterung vector ist nicht aktiviert
+            table_not_found: Die Tabelle vector_store_chunks wurde nicht gefunden
+            render_missing_binary: Der Renderer pdftoppm (poppler-utils) ist in diesem Container nicht verfügbar
+            timeout: Der Dienst hat nicht innerhalb des Zeitlimits für die Prüfung geantwortet
+            request_failed: Die Anfrage an den Dienst ist fehlgeschlagen
+            unsupported_provider: Der Anbieter unterstützt diese Prüfung nicht
           worker:
             title: Worker-Verifikation
             description: Die obigen Prüfungen wurden in diesem Web-Prozess ausgeführt. Die meisten KI-Aufgaben – Antworten des Assistenten, PDF-Verarbeitung, Embeddings, automatische Kategorisierung und Händlererkennung – laufen jedoch in einem Sidekiq-Worker-Prozess. Dessen Netzwerkzugriff, DNS, Proxy-Regeln oder geladene Zugangsdaten können abweichen. Stelle eine Prüfung in die Warteschlange, um die Konfiguration und Erreichbarkeit aus Sicht eines Workers zu prüfen.
