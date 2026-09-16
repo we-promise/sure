@@ -1,12 +1,13 @@
 class OauthRegistrationController < ApplicationController
+  include OauthBase
+
   LOOPBACK_HOSTS = [ "localhost", "127.0.0.1", "::1" ].freeze
   # Schemes that can execute script, read local files, invoke device handlers,
   # or are not OAuth redirects.
   FORBIDDEN_SCHEMES = %w[javascript data file about blob ws wss ftp mailto tel sms intent].freeze
   SCHEME_PATTERN = /\A[a-z][a-z0-9+\-.]*\z/.freeze
 
-  # The only two scopes Doorkeeper is configured with (config/initializers/doorkeeper.rb).
-  VALID_SCOPES = %w[read read_write].freeze
+  VALID_SCOPES = OauthBase.mcp_scopes
   # Least privilege by default: a client that does not ask for read_write does
   # not get it. A client that wants MCP writes must say so explicitly.
   DEFAULT_SCOPE = "read"

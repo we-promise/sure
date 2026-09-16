@@ -1,8 +1,7 @@
 class OauthMetadataController < ApplicationController
   include OauthBase
 
-  # The only two scopes Doorkeeper is configured with (config/initializers/doorkeeper.rb).
-  MCP_SCOPES = %w[read read_write].freeze
+  MCP_SCOPES = OauthBase.mcp_scopes
 
   skip_authentication
   skip_before_action :verify_authenticity_token
