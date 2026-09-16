@@ -1,0 +1,25 @@
+<%# locals: (period:) %>
+<div
+  data-controller="preview-sankey-chart"
+  data-action="turbo:before-cache@document->preview-sankey-chart#clear"
+  data-cash-flow-target="chart"
+  data-preview-sankey-chart-labels-value="<%= t("pages.dashboard.cashflow_preview.node_labels").to_json %>"
+  data-preview-sankey-chart-start-date-value="<%= period.start_date&.iso8601 %>"
+  data-preview-sankey-chart-end-date-value="<%= period.end_date&.iso8601 %>"
+  class="w-full min-w-lg h-full privacy-sensitive flex flex-col gap-2">
+  <div class="flex justify-start px-4">
+    <%= render DS::Button.new(
+      variant: :icon,
+      icon: "arrow-left",
+      type: "button",
+      title: t("pages.dashboard.cashflow_sankey.zoom_out"),
+      aria: { label: t("pages.dashboard.cashflow_sankey.zoom_out") },
+      hidden: true,
+      data: {
+        preview_sankey_chart_target: "zoomOutButton",
+        action: "preview-sankey-chart#zoomOut"
+      }
+    ) %>
+  </div>
+  <div data-preview-sankey-chart-target="chart" class="min-h-0 flex-1"></div>
+</div>
