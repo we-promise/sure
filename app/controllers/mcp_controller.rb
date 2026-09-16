@@ -128,7 +128,7 @@ class McpController < ApplicationController
         }
       end
 
-      modern_complete_result({ tools: tools })
+      modern_cacheable_result({ tools: tools })
     end
 
     def handle_tools_call(request_id, params)
@@ -300,11 +300,13 @@ class McpController < ApplicationController
         return false
       end
 
-      # 2026-07-28 has no session concept at all (see the dialect note above) —
-      # ignore a stray Mcp-Session-Id rather than validating and echoing it
-      # back, so a modern request never carries session state its own
-      # protocol version says doesn't exist.
-      return true if modern_mcp_request?
+      if modern_mcp_request?
+        # 2026-07-28 has no session concept at all (see the dialect note
+        # above) — never validate or echo back Mcp-Session-Id for it, so a
+        # modern request never carries session state its own protocol
+        # version says doesn't exist.
+        return modern_routing_headers_valid?(request_id, method, params)
+      end
 
       session_id = mcp_request_header("Mcp-Session-Id").presence
       return true unless session_id
@@ -344,6 +346,42 @@ class McpController < ApplicationController
       true
     end
 
+    # HeaderMismatchError, -32020 in the 2026-07-28 error-code allocation.
+    HEADER_MISMATCH_ERROR_CODE = -32020
+
+    # 2026-07-28 requires Mcp-Method (and, for tools/call, Mcp-Name) on every
+    # request as a header-level echo of what the JSON-RPC body already says —
+    # a proxy or client that rewrites one without the other is caught here
+    # rather than silently routing on whichever one is wrong.
+    def modern_routing_headers_valid?(request_id, method, params)
+      header_method = mcp_request_header("Mcp-Method")
+      unless header_method == method
+        render_jsonrpc_error(
+          request_id,
+          HEADER_MISMATCH_ERROR_CODE,
+          t("mcp.errors.header_mismatch", header: "Mcp-Method", expected: method),
+          status: :bad_request
+        )
+        return false
+      end
+
+      return true unless method == "tools/call"
+
+      tool_name = params["name"]
+      header_name = mcp_request_header("Mcp-Name")
+      unless header_name.present? && header_name == tool_name
+        render_jsonrpc_error(
+          request_id,
+          HEADER_MISMATCH_ERROR_CODE,
+          t("mcp.errors.header_mismatch", header: "Mcp-Name", expected: tool_name.to_s),
+          status: :bad_request
+        )
+        return false
+      end
+
+      true
+    end
+
     def negotiated_protocol_version(params)
       requested_version = params&.dig("protocolVersion").presence || PROTOCOL_VERSION
       return requested_version if SUPPORTED_PROTOCOL_VERSIONS.include?(requested_version)
@@ -373,6 +411,19 @@ class McpController < ApplicationController
         resultType: "complete",
         _meta: { "io.modelcontextprotocol/serverInfo" => SERVER_INFO }
       )
+    end
+
+    # CacheableResult (2026-07-28): required on list-shaped results only —
+    # tools/list here, never tools/call. ttlMs: 0 is an honest "don't cache
+    # this": the tool surface depends on the caller's own scope and the
+    # preview-features/MCP_READ_ONLY toggles, and Sure has no listChanged
+    # notification to invalidate a client's cache if either changes mid-session.
+    # cacheScope: "private" keeps a shared intermediary from serving one
+    # caller's tool list to another.
+    def modern_cacheable_result(payload)
+      return payload unless modern_mcp_request?
+
+      modern_complete_result(payload).merge(ttlMs: 0, cacheScope: "private")
     end
 
     # scope="read" tells a client what to request first: the minimum needed to
