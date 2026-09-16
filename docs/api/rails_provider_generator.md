@@ -86,6 +86,10 @@ This single command generates:
 - ✅ Routes
 - ✅ Updates to settings controller and view
 
+The generated item partial renders the provider's logo with `ProviderLogo`. That reads the
+provider's `Provider::Metadata::REGISTRY` entry, which the generator does not create, so add
+one with a brand `domain` in `app/models/provider/metadata.rb`.
+
 ### Key Characteristics
 - **Credentials**: Stored in `my_bank_items` table (encrypted)
 - **Isolation**: Each family has completely separate credentials
