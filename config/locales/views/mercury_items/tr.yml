@@ -1,0 +1,231 @@
+---
+tr:
+  mercury_items:
+    api_error:
+      check_provider_settings: Sağlayıcı Ayarlarını Kontrol Et
+      common_issues: 'Yaygın Sorunlar:'
+      expired_credentials_desc: Mercury'den yeni bir API token'ı oluşturun
+      expired_credentials_label: Süresi Dolmuş Kimlik Bilgileri
+      insufficient_permissions_desc: Token'ınızın salt okunur erişime sahip olduğundan
+        emin olun
+      insufficient_permissions_label: Yetersiz İzinler
+      invalid_api_token_desc: Sağlayıcı Ayarlarında API token'ınızı kontrol edin
+      invalid_api_token_label: Geçersiz API Token
+      network_issue_desc: İnternet bağlantınızı kontrol edin
+      network_issue_label: Ağ Sorunu
+      service_down_desc: Mercury API geçici olarak kullanılamıyor olabilir
+      service_down_label: Servis Kapalı
+      title: Mercury Bağlantı Hatası
+      unable_to_connect: Mercury'ye bağlanılamıyor
+    complete_account_setup:
+      all_skipped: Tüm hesaplar atlandı. Hiçbir hesap oluşturulmadı.
+      creation_failed: 'Hesaplar oluşturulamadı: %{error}'
+      no_accounts: Kurulacak hesap yok.
+      success: "%{count} hesap başarıyla oluşturuldu."
+    create:
+      success: Mercury bağlantısı başarıyla oluşturuldu
+    destroy:
+      success: Mercury bağlantısı kaldırıldı
+    index:
+      title: Mercury Bağlantıları
+    link_accounts:
+      all_already_linked:
+        one: Seçilen hesap (%{names}) zaten bağlı
+        other: "%{count} seçilen hesabın tümü zaten bağlı: %{names}"
+      api_error: 'API hatası: %{message}'
+      invalid_account_names:
+        one: Boş isimli hesap bağlanamaz
+        other: Boş isimli %{count} hesap bağlanamaz
+      link_failed: Hesaplar bağlanamadı
+      no_accounts_selected: Lütfen en az bir hesap seçin
+      no_api_token: Mercury API token'ı bulunamadı. Lütfen Sağlayıcı Ayarlarında yapılandırın.
+      partial_invalid: "%{created_count} hesap başarıyla bağlandı, %{already_linked_count}
+        hesap zaten bağlıydı, %{invalid_count} hesabın adı geçersizdi"
+      partial_success: "%{created_count} hesap başarıyla bağlandı. %{already_linked_count}
+        hesap zaten bağlıydı: %{already_linked_names}"
+      select_connection: Hesapları bağlamadan önce bir Mercury bağlantısı seçin.
+      success:
+        one: "%{count} hesap başarıyla bağlandı"
+        other: "%{count} hesap başarıyla bağlandı"
+    link_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
+      api_error: 'API hatası: %{message}'
+      invalid_account_name: Boş isimli hesap bağlanamaz
+      mercury_account_already_linked: Bu Mercury hesabı zaten başka bir hesaba bağlı
+      mercury_account_not_found: Mercury hesabı bulunamadı
+      missing_parameters: Gerekli parametreler eksik
+      no_api_token: Mercury API token'ı bulunamadı. Lütfen Sağlayıcı Ayarlarında yapılandırın.
+      select_connection: Hesapları bağlamadan önce bir Mercury bağlantısı seçin.
+      success: "%{account_name} Mercury ile başarıyla bağlandı"
+    loading:
+      loading_message: Mercury hesapları yükleniyor...
+      loading_title: Yükleniyor
+    mercury_item:
+      accounts_need_setup: Hesapların kurulumu gerekiyor
+      delete: Bağlantıyı sil
+      deletion_in_progress: silme işlemi devam ediyor...
+      error: Hata
+      no_accounts_description: Bu bağlantının henüz bağlı hesabı yok.
+      no_accounts_title: Hesap yok
+      setup_action: Yeni Hesapları Kur
+      setup_description: "%{total} hesaptan %{linked} tanesi bağlandı. Yeni içe aktarılan
+        Mercury hesaplarınız için hesap türlerini seçin."
+      setup_needed: Kurulmaya hazır yeni hesaplar var
+      status: "%{timestamp} önce eşitlendi"
+      status_never: Hiç eşitlenmedi
+      status_with_summary: Son eşitleme %{timestamp} önce - %{summary}
+      syncing: Eşitleniyor...
+      total: Toplam
+      unlinked: Bağlantısız
+    mercury_item_selection_error_payload:
+      select_connection: Hesapları yüklemeden önce bir Mercury bağlantısı seçin.
+    provider_connection:
+      default_description: Mercury üzerinden bankanıza bağlanın
+      default_name: Mercury
+      description: "%{name} kullanarak bağlan"
+      name: Mercury - %{name}
+    provider_panel:
+      add_connection: Mercury bağlantısı ekle
+      base_url_label: Temel URL (isteğe bağlı)
+      base_url_placeholder: https://api.mercury.com/api/v1 (varsayılan)
+      connection_name_label: Bağlantı adı
+      connection_name_placeholder: İşletme vadesiz hesabı
+      default_connection_name: Mercury Bağlantısı
+      disconnect_confirm: "%{name} bağlantısı kesilsin mi?"
+      instructions:
+        copy_token_html: "<strong>Tam token'ı</strong> (<code>secret-token:</code>
+          ön ekiyle birlikte) kopyalayın ve aşağıya adlandırılmış bir bağlantı olarak
+          ekleyin"
+        create_token: '"Salt Okunur" erişimle yeni bir API token''ı oluşturun'
+        open_tokens: Ayarlar > Geliştirici > API Token'ları bölümüne gidin
+        sign_in_html: "%{link} adresini ziyaret edin ve bağlamak istediğiniz hesaba
+          giriş yapın"
+        whitelist_ip_html: "<strong>Önemli:</strong> Sunucunuzun IP adresini token'ın
+          beyaz listesine ekleyin"
+      keep_token_placeholder: Mevcut token'ı korumak için boş bırakın
+      sandbox_note_html: Senkronize etmek istediğiniz her Mercury girişi/API token'ı
+        için ayrı, adlandırılmış bir bağlantı kullanın. Sandbox testi için Temel URL
+        olarak <code>https://api-sandbox.mercury.com/api/v1</code> kullanın. Mercury,
+        IP beyaz listeye alınmasını gerektirir - IP'nizi Mercury panosuna eklediğinizden
+        emin olun.
+      setup_accounts: Hesapları kur
+      setup_title: 'Kurulum talimatları:'
+      sync: Eşitle
+      token_label: Token
+      token_placeholder: Token'ı buraya yapıştırın
+      update_connection: Bağlantıyı güncelle
+    render_mercury_item_selection_failure:
+      no_credentials_configured: Lütfen önce Sağlayıcı Ayarlarında Mercury API token'ınızı
+        yapılandırın.
+      select_connection: Sağlayıcı Ayarlarında bir Mercury bağlantısı seçin.
+    select_accounts:
+      accounts_selected: hesap seçildi
+      api_error: 'API hatası: %{message}'
+      cancel: İptal
+      configure_name_in_mercury: İçe aktarılamıyor - lütfen Mercury'de hesap adını
+        yapılandırın
+      description: "%{product_name} hesabınıza bağlamak istediğiniz hesapları seçin."
+      link_accounts: Seçilen hesapları bağla
+      no_accounts_found: Hesap bulunamadı. Lütfen API token yapılandırmanızı kontrol
+        edin.
+      no_api_token: Mercury API token'ı yapılandırılmamış. Lütfen Ayarlar'da yapılandırın.
+      no_credentials_configured: Lütfen önce Sağlayıcı Ayarlarında Mercury API token'ınızı
+        yapılandırın.
+      no_name_placeholder: "(İsim yok)"
+      select_connection: Sağlayıcı Ayarlarında bir Mercury bağlantısı seçin.
+      title: Mercury Hesaplarını Seç
+    select_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
+      all_accounts_already_linked: Tüm Mercury hesapları zaten bağlı
+      api_error: 'API hatası: %{message}'
+      cancel: İptal
+      configure_name_in_mercury: İçe aktarılamıyor - lütfen Mercury'de hesap adını
+        yapılandırın
+      description: Bu hesapla bağlamak için bir Mercury hesabı seçin. İşlemler otomatik
+        olarak eşitlenecek ve yinelenenler kaldırılacaktır.
+      link_account: Hesabı bağla
+      no_account_specified: Hesap belirtilmedi
+      no_accounts_found: Mercury hesabı bulunamadı. Lütfen API token yapılandırmanızı
+        kontrol edin.
+      no_api_token: Mercury API token'ı yapılandırılmamış. Lütfen Ayarlar'da yapılandırın.
+      no_credentials_configured: Lütfen önce Sağlayıcı Ayarlarında Mercury API token'ınızı
+        yapılandırın.
+      no_name_placeholder: "(İsim yok)"
+      select_connection: Sağlayıcı Ayarlarında bir Mercury bağlantısı seçin.
+      title: "%{account_name} hesabını Mercury ile bağla"
+    setup_accounts:
+      account_type_label: 'Hesap Türü:'
+      account_types:
+        credit_card: Kredi Kartı
+        depository: Vadesiz veya Vadeli Hesap
+        investment: Yatırım Hesabı
+        loan: Kredi veya İpotek
+        other_asset: Diğer Varlık
+        skip: Bu hesabı atla
+      all_accounts_linked: Tüm Mercury hesaplarınız zaten kuruldu.
+      api_error: 'API hatası: %{message}'
+      balance: Bakiye
+      cancel: İptal
+      choose_account_type: 'Her Mercury hesabı için doğru hesap türünü seçin:'
+      create_accounts: Hesapları Oluştur
+      creating_accounts: Hesaplar Oluşturuluyor...
+      fetch_failed: Hesaplar Getirilemedi
+      historical_data_range: 'Geçmiş Veri Aralığı:'
+      no_accounts_to_setup: Kurulacak Hesap Yok
+      no_api_token: Mercury API token'ı yapılandırılmamış. Lütfen bağlantı ayarlarınızı
+        kontrol edin.
+      subtitle: İçe aktarılan hesaplarınız için doğru hesap türlerini seçin
+      subtype_labels:
+        credit_card: ''
+        depository: 'Hesap Alt Türü:'
+        investment: 'Yatırım Türü:'
+        loan: 'Kredi Türü:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Kredi kartları otomatik olarak kredi kartı hesapları olarak kurulacaktır.
+        other_asset: Diğer Varlıklar için ek seçenek gerekmez.
+      subtypes:
+        depository:
+          cd: Vadeli Mevduat Sertifikası
+          checking: Vadesiz Hesap
+          hsa: Sağlık Tasarruf Hesabı
+          money_market: Para Piyasası
+          savings: Tasarruf Hesabı
+        investment:
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: 529 Plan
+          angel: Melek Yatırım
+          brokerage: Aracı Kurum Hesabı
+          hsa: Sağlık Tasarruf Hesabı
+          ira: Geleneksel IRA
+          mutual_fund: Yatırım Fonu
+          pension: Emeklilik
+          retirement: Emeklilik Hesabı
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: Thrift Savings Plan
+        loan:
+          auto: Taşıt Kredisi
+          mortgage: İpotek
+          other: Diğer Kredi
+          student: Öğrenci Kredisi
+      sync_start_date_help: İşlem geçmişini ne kadar geriye kadar eşitlemek istediğinizi
+        seçin. En fazla 3 yıllık geçmiş mevcuttur.
+      sync_start_date_label: 'İşlemleri şu tarihten itibaren eşitlemeye başla:'
+      title: Mercury Hesaplarınızı Kurun
+    setup_required:
+      api_token_description: Mercury hesaplarını bağlayabilmeniz için önce Mercury
+        API token'ınızı yapılandırmanız gerekir.
+      api_token_not_configured: API Token Yapılandırılmamış
+      go_to_provider_settings: Sağlayıcı Ayarlarına Git
+      setup_step_1_html: "<strong>Ayarlar > Sağlayıcılar</strong> bölümüne gidin"
+      setup_step_2_html: "<strong>Mercury</strong> bölümünü bulun"
+      setup_step_3: Mercury API token'ınızı girin
+      setup_step_4: Hesaplarınızı bağlamak için buraya dönün
+      setup_steps_title: 'Kurulum Adımları:'
+      title: Mercury Kurulumu Gerekli
+    sync:
+      success: Eşitleme başlatıldı
+    update:
+      success: Mercury bağlantısı güncellendi

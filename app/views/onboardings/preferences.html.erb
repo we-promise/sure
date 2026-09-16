@@ -8,7 +8,15 @@
   <%= render "onboardings/logout" %>
 <% end %>
 
-<div class="grow max-w-lg w-full mx-auto bg-surface flex flex-col justify-center md:py-0 py-6 px-4 md:px-0" data-controller="onboarding">
+<% currency_override = Family.normalize_currency_code(params[:currency]) %>
+<% saved_currency = @user.family.primary_currency_code if @user.set_onboarding_preferences_at? %>
+<% selected_currency = currency_override || saved_currency || @user.family.default_currency_for_country %>
+
+<div class="grow max-w-lg w-full mx-auto bg-surface flex flex-col justify-center md:py-0 py-6 px-4 md:px-0"
+  data-controller="onboarding"
+  data-onboarding-country-value="<%= @user.family.country %>"
+  data-onboarding-country-currencies-value="<%= Family.default_currency_by_country.to_json %>"
+  data-onboarding-currency-override-value="<%= currency_override.present? || saved_currency.present? %>">
   <div>
     <div class="space-y-1 mb-6">
       <h1 class="text-2xl font-medium"><%= t(".title") %></h1>
@@ -19,10 +27,10 @@
       <div class="bg-container p-4 rounded-lg flex gap-8 shadow-border-xs">
         <div class="space-y-2">
           <%= tag.p t(".example"), class: "text-secondary text-sm" %>
-          <%= tag.p format_money(Money.new(2325.25, params[:currency] || @user.family.currency)), class: "text-primary font-medium text-2xl" %>
+          <%= tag.p format_money(Money.new(2325.25, selected_currency)), class: "text-primary font-medium text-2xl" %>
           <p class="text-sm">
-            <span class="text-green-500 font-medium">+<%= format_money(Money.new(78.90, params[:currency] || @user.family.currency)) %></span>
-            <span class="text-green-500 font-medium">(+<%= format_money(Money.new(6.39, params[:currency] || @user.family.currency)) %>)</span>
+            <span class="text-green-500 font-medium">+<%= format_money(Money.new(78.90, selected_currency)) %></span>
+            <span class="text-green-500 font-medium">(+<%= format_money(Money.new(6.39, selected_currency)) %>)</span>
             <span class="text-secondary">as of <%= format_date(Date.parse("2024-10-23"), :default, format_code: params[:date_format] || @user.family.date_format) %></span>
           </p>
         </div>
@@ -81,8 +89,8 @@
 
           <%= family_form.select :currency,
                                  Money::Currency.as_options.map { |currency| [ "#{currency.name} (#{currency.iso_code})", currency.iso_code ] },
-                                 { label: t(".currency"), required: true, selected: params[:currency] || @user.family.currency },
-                                 { data: { action: "onboarding#setCurrency" } } %>
+                                 { label: t(".currency"), required: true, selected: selected_currency },
+                                 { data: { action: "onboarding#setCurrency", onboarding_target: "currencyField" } } %>
 
           <%= family_form.select :date_format,
                                  Family::DATE_FORMATS,

@@ -64,6 +64,37 @@ class Provider::Anthropic::ChatParserTest < ActiveSupport::TestCase
     assert_equal "toolu_42", parsed.function_requests.first.call_id
   end
 
+  test "normalizes empty-string tool input to an empty JSON object" do
+    raw = build_message(
+      id: "msg_5",
+      model: "claude-sonnet-4-6",
+      content: [
+        OpenStruct.new(type: :tool_use, id: "toolu_noargs", name: "get_categories", input: "")
+      ]
+    )
+
+    parsed = Provider::Anthropic::ChatParser.new(raw).parsed
+
+    req = parsed.function_requests.first
+    assert_equal "{}", req.function_args
+    # Must survive the downstream JSON.parse that fulfills the tool call.
+    assert_equal({}, JSON.parse(req.function_args))
+  end
+
+  test "normalizes nil tool input to an empty JSON object" do
+    raw = build_message(
+      id: "msg_6",
+      model: "claude-sonnet-4-6",
+      content: [
+        OpenStruct.new(type: :tool_use, id: "toolu_nil", name: "get_categories", input: nil)
+      ]
+    )
+
+    parsed = Provider::Anthropic::ChatParser.new(raw).parsed
+
+    assert_equal "{}", parsed.function_requests.first.function_args
+  end
+
   test "accepts hash-shaped content blocks" do
     raw = OpenStruct.new(
       id: "msg_4",

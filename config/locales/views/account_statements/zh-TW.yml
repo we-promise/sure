@@ -1,0 +1,117 @@
+---
+zh-TW:
+  account_statements:
+    account_tab:
+      coverage_title: 對帳單涵蓋範圍
+      coverage_description: 這些月份已上傳對帳單，餘額也已核對。
+      coverage_range: '%{start} - %{end}'
+      empty: 這個帳戶還沒有連結任何對帳單。
+      open_inbox: 收件匣
+      statements_title: 對帳單
+      year_label: 涵蓋年份
+    balance:
+      unknown: 未知
+    coverage:
+      status:
+        ambiguous: 無法判斷
+        covered: 已涵蓋
+        duplicate: 重複
+        mismatched: 不相符
+        missing: 缺漏
+        not_expected: 不適用
+    create:
+      duplicates:
+        one: 已跳過 1 份重複的對帳單。
+        other: 已跳過 %{count} 份重複的對帳單。
+      invalid_file_type: 請上傳未超過大小上限的 PDF、CSV 或 XLSX 對帳單。
+      no_files: 請至少選擇一個對帳單檔案。
+      success:
+        one: 已上傳 1 份對帳單。
+        other: 已上傳 %{count} 份對帳單。
+    destroy:
+      failure: 對帳單無法刪除。
+      success: 對帳單已刪除。
+    form:
+      account_upload: 上傳對帳單
+      files_hint: PDF、CSV 或 XLSX，每個檔案最大 %{max_size}MB。
+      files_label: 對帳單檔案
+      inbox_upload: 上傳
+    index:
+      account_label: 帳戶
+      confidence: '%{confidence} 相符度'
+      empty_linked: 還沒有已連結的對帳單。
+      empty_unmatched: 對帳單收件匣目前沒有待配對項目。
+      leave_unmatched: 維持未配對
+      linked_title: 已連結的對帳單
+      no_suggestion: 沒有建議
+      storage_used: 已用儲存空間
+      title: 對帳單管理
+      unmatched_title: 未配對收件匣
+      upload_description: 把對帳單上傳到收件匣，或直接選擇一個帳戶立即連結。
+      upload_title: 上傳對帳單
+    link:
+      no_account: 連結這份對帳單前，請先選擇一個帳戶。
+      success: 已將對帳單連結到 %{account}。
+    period:
+      unknown: 期間不明
+    reconciliation:
+      checks:
+        closing_balance: 期末餘額
+        opening_balance: 期初餘額
+        period_movement: 期間變動
+        unknown_check: 未知的檢查項目
+      matched: 相符
+      mismatched: 不相符
+      unavailable: 未檢查
+    reject:
+      success: 已拒絕此對帳單的配對建議。
+    show:
+      account_label: 帳戶
+      account_last4_hint: 帳號末四碼
+      account_name_hint: 帳戶名稱提示
+      closing_balance: 期末餘額
+      currency: 幣別
+      delete: 刪除
+      difference: 差額
+      download: 下載
+      institution_name_hint: 機構名稱提示
+      ledger_amount: Sure 帳務紀錄
+      linked_to: 已連結到 %{account}。
+      linking_title: 帳戶連結
+      link_suggestion: 連結建議
+      metadata_title: 對帳單中繼資料
+      no_suggestion: 還沒有帳戶建議。
+      opening_balance: 期初餘額
+      period_end_on: 期間結束
+      period_start_on: 期間開始
+      reconciliation_title: 對帳
+      reconciliation_unavailable: 請填入對帳單期間以及期初或期末餘額，並確認 Sure 有這些日期的餘額歷史資料。
+      reject: 拒絕
+      save: 儲存對帳單
+      statement_amount: 對帳單
+      suggested_account: 建議的帳戶是 %{account}（相符度 %{confidence}）。
+      title: 對帳單
+      unlink: 取消連結
+      unmatched_account: 未配對收件匣
+      unknown_value: 未知
+    status:
+      linked: 已連結
+      rejected: 已拒絕
+      unmatched: 未配對
+    table:
+      account: 帳戶
+      actions: 操作
+      download: 下載
+      edit: 編輯
+      file: 檔案
+      link_suggestion: 連結建議
+      period: 期間
+      reconciliation: 對帳
+      reject: 拒絕這個建議
+      suggestion: 建議
+      unlink: 取消連結
+      view: 檢視
+    unlink:
+      success: 對帳單已移回未配對收件匣。
+    update:
+      success: 對帳單已更新。

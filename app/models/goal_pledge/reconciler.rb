@@ -1,8 +1,13 @@
 class GoalPledge::Reconciler
   attr_reader :entry
 
-  def initialize(entry)
+  # `valuation_delta` is the contribution (new_balance − prior_balance) for
+  # Valuation entries, supplied by Account::ReconciliationManager which knows
+  # the prior balance. It is ignored for Transaction entries, whose own
+  # amount is already the contribution.
+  def initialize(entry, valuation_delta: nil)
     @entry = entry
+    @valuation_delta = valuation_delta
   end
 
   def run
@@ -17,7 +22,7 @@ class GoalPledge::Reconciler
       .where("expires_at >= ?", Time.current)
       .order(:created_at, :id)
       .each do |pledge|
-      next unless pledge.matches?(entry)
+      next unless pledge.matches?(entry, valuation_delta: @valuation_delta)
 
       begin
         if entry.entryable.is_a?(Transaction)

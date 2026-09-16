@@ -31,6 +31,7 @@ de:
           queued: In Warteschlange
           processed: Verarbeitet
           modified: Geändert
+          blocked: Blockiert
       execution_types:
         manual: Manuell
         scheduled: Geplant
@@ -50,3 +51,67 @@ de:
         expense: Ausgabe
         transfer: Überweisung
         equal_to: Gleich
+    confirm:
+      ai_cost_no_estimate_html: Damit kategorisiert die KI %{count} Transaktion(en).
+      ai_cost_title: Geschätzte KI-Kosten
+      ai_cost_with_estimate_html: 'Damit kategorisiert die KI %{count} Transaktion(en). Geschätzte Kosten: <span class="font-semibold">~$%{cost}</span>'
+      apply_notice_html: Du wendest diese Regel gleich auf <span class="text-primary font-medium">%{count} %{resource}</span> an, die den Bedingungen entsprechen. Bestätige, wenn du fortfahren willst.
+      confirm_changes: Änderungen bestätigen
+      cost_unavailable_model: Für das Modell „%{model}“ gibt es keine Kostenschätzung.
+      cost_unavailable_no_provider: Keine Kostenschätzung möglich (kein LLM-Anbieter eingerichtet).
+      cost_warning: Es können Kosten entstehen. Die aktuellen Preise findest du beim Modellanbieter.
+      title: Änderungen bestätigen
+      title_with_name: Änderungen an „%{name}“ bestätigen
+      view_usage_history: Nutzungsverlauf ansehen
+    destroy:
+      success: Regel gelöscht
+    destroy_all:
+      success: Alle Regeln gelöscht
+    form:
+      add_action: Aktion hinzufügen
+      add_condition: Bedingung hinzufügen
+      add_condition_group: Bedingungsgruppe hinzufügen
+      all_past_and_future: Alle bisherigen und künftigen %{resource}
+      rule_name_label: Regelname (optional)
+      rule_name_placeholder: Gib dieser Regel einen Namen
+      starting_from: Ab dem
+      then: DANN
+    index:
+      ai_cost_warning: Regelaktionen mit KI kosten Geld. Filtere so eng wie möglich, damit keine unnötigen Kosten entstehen.
+      delete_all_rules: Alle Regeln löschen
+      new_rule: Neue Regel
+      no_rules_description: Mit Regeln bearbeitest du Transaktionen und andere Daten automatisch bei jedem Konto-Sync.
+      no_rules_title: Noch keine Regeln
+      page_title: Regeln
+      rules_heading: Regeln
+      sort_by: 'Sortieren nach:'
+      sort_name: Name
+      sort_updated_at: Geändert am
+      toggle_sort_direction: Sortierrichtung umschalten
+    rule:
+      action_label_to: "%{label} auf %{value}"
+      all_past_and_future: Alle bisherigen und künftigen %{resource}
+      and_more_actions:
+        one: und 1 weitere Aktion
+        other: und %{count} weitere Aktionen
+      and_more_conditions:
+        one: und 1 weitere Bedingung
+        other: und %{count} weitere Bedingungen
+      delete: Löschen
+      edit: Bearbeiten
+      on_or_after: "%{resource} ab dem %{date}"
+      re_apply_rule: Regel erneut anwenden
+      then: DANN
+    update:
+      success: Regel aktualisiert
+  rule:
+    conditions:
+      condition:
+        value_placeholder: Wert eingeben
+      condition_group:
+        add_condition: Bedingung hinzufügen
+        all: alle
+        and_prefix: und
+        any: beliebige
+        match: erfüllen
+        of_the_following_conditions: der folgenden Bedingungen

@@ -104,4 +104,49 @@ class BudgetsHelperTest < ActionView::TestCase
     assert_equal [ child.id ], group.budget_subcategories.map(&:category_id)
     assert group.budget_subcategories.first.any_over_budget?
   end
+
+  test "budget has over budget when uncategorized spending exceeds its allocation" do
+    family = Family.create!(name: "Helper Budget Repro", currency: "USD")
+    account = Account.create!(
+      family: family,
+      accountable: Depository.new,
+      name: "Checking",
+      status: "active",
+      currency: "USD",
+      balance: 0
+    )
+
+    category = Category.create!(
+      name: "Helper Groceries #{SecureRandom.hex(4)}",
+      family: family,
+      color: "#407706",
+      lucide_icon: "shopping-bag"
+    )
+
+    budget = Budget.create!(
+      family: family,
+      start_date: Date.current.beginning_of_month,
+      end_date: Date.current.end_of_month,
+      currency: "USD",
+      budgeted_spending: 100
+    )
+
+    BudgetCategory.create!(
+      budget: budget,
+      category: category,
+      budgeted_spending: 100,
+      currency: "USD"
+    )
+
+    Entry.create!(
+      account: account,
+      entryable: Transaction.create!(category: nil),
+      date: Date.current,
+      name: "Helper Uncategorized Over Budget",
+      amount: 125,
+      currency: "USD"
+    )
+
+    assert budget_has_over_budget?(Budget.find(budget.id))
+  end
 end

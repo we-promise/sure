@@ -6,6 +6,8 @@ es:
       error: 'Error al crear la etiqueta: %{error}'
     destroy:
       deleted: Etiqueta eliminada
+    destroy_all:
+      all_deleted: Todas las etiquetas eliminadas
     edit:
       edit: Editar etiqueta
     form:
@@ -14,6 +16,7 @@ es:
       empty: Aún no hay etiquetas
       new: Nueva etiqueta
       tags: Etiquetas
+      delete_all: Eliminar todas
     new:
       new: Nueva etiqueta
     tag:

@@ -2,12 +2,6 @@
 zh-CN:
   snaptrade_items:
     default_name: "SnapTrade 连接"
-    link_accounts:
-      use_setup_flow: 请改用账户设置流程
-    create:
-      success: SnapTrade 配置成功。
-    update:
-      success: SnapTrade 配置已更新。
     destroy:
       success: SnapTrade 连接已安排删除。
     connect:
@@ -52,9 +46,6 @@ zh-CN:
       failed: 删除连接失败：%{message}
       missing_authorization_id: 缺少授权 ID
       api_deletion_failed: 无法从 SnapTrade 删除连接 - 缺少凭据。该连接可能仍存在于您的 SnapTrade 账户中。
-    delete_orphaned_user:
-      success: 孤立注册已成功删除。
-      failed: 删除孤立注册失败。
     setup_accounts:
       title: 设置 SnapTrade 账户
       header: 设置您的 SnapTrade 账户
@@ -116,24 +107,10 @@ zh-CN:
       name: "SnapTrade"
       connection_description: 通过 SnapTrade 连接您的券商（支持 25+ 券商）
       description: "SnapTrade 连接 25+ 主流券商（Fidelity、Vanguard、Schwab、Robinhood 等），并提供带活动标签和成本基础的完整交易历史。"
-      setup_title: "设置说明："
-      step_1_html: "在 <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a> 创建账户"
-      step_2: "从仪表盘复制您的 Client ID 和 Consumer Key"
-      step_3: "在下方输入您的凭据并点击保存"
-      step_4: "前往账户页面，使用“连接另一个券商”来关联您的投资账户"
       free_tier_warning: "SnapTrade 免费套餐覆盖 5 个券商连接。更多功能请在 SnapTrade 升级。"
-      client_id_label: "Client ID"
-      client_id_placeholder: "输入您的 SnapTrade Client ID"
-      client_id_update_placeholder: "输入新的 Client ID 以更新"
-      consumer_key_label: "Consumer Key"
-      consumer_key_placeholder: "输入您的 SnapTrade Consumer Key"
-      consumer_key_update_placeholder: "输入新的 Consumer Key 以更新"
-      save_button: "保存配置"
-      update_button: "更新配置"
       status_connected:
         one: "%{count} 个来自 SnapTrade 的账户"
         other: "%{count} 个来自 SnapTrade 的账户"
-      status_needs_registration: "凭据已保存。完成设置后即可连接券商。"
       needs_setup:
         one: "%{count} 个需要设置"
         other: "%{count} 个需要设置"
@@ -154,15 +131,6 @@ zh-CN:
       delete_connection_title: "删除券商连接？"
       delete_connection_body: "这将永久从 SnapTrade 中移除 %{brokerage} 连接。该券商的所有账户都会取消关联。您需要重新连接才能再次同步这些账户。"
       delete_connection_confirm: "删除连接"
-      orphaned_users_title:
-        one: "%{count} 个孤立注册"
-        other: "%{count} 个孤立注册"
-      orphaned_users_description: "这些是之前使用您连接名额的 SnapTrade 用户注册。删除它们可释放名额。"
-      orphaned_user: "孤立注册"
-      delete_orphaned_user: "删除"
-      delete_orphaned_user_title: "删除孤立注册？"
-      delete_orphaned_user_body: "这将永久删除该孤立的 SnapTrade 用户及其所有券商连接，释放连接名额。"
-      delete_orphaned_user_confirm: "删除注册"
   snaptrade_item:
     sync_status:
       no_accounts: "未找到账户"

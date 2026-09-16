@@ -53,15 +53,11 @@ class DS::SearchInput < DesignSystemComponent
         "h-10 pl-10 w-full border-none rounded-lg " \
         "focus:outline-hidden focus:ring-0"
     else
-      # `focus-visible:outline-*` matches the focus-ring pattern from
-      # DS::Button (base.css) so every interactive surface in the design
-      # system uses the same ring token. Replaces the broken
-      # `focus:ring-gray-500` from the inline callsites — that utility
-      # had no backing token and rendered invisibly on the bordered
-      # bg-container surface.
+      # Canonical `.focus-ring` (#2136) — one shared keyboard-focus
+      # indicator across every DS primitive. Replaces the earlier neutral
+      # `outline-gray-900 / theme-dark:outline-white` pair.
       "block w-full border border-secondary rounded-md py-2.5 pl-10 pr-3 bg-container text-base sm:text-sm " \
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-900 " \
-        "theme-dark:focus-visible:outline-white"
+        "focus-ring"
     end
   end
 

@@ -23,3 +23,13 @@ tr:
       trend: Eğilim
       unknown: Bilinmiyor
       year: Yıl
+    tabs:
+      overview:
+        current_price: Güncel Fiyat
+        edit_account_details: Hesap detaylarını düzenle
+        make_model: Marka & Model
+        mileage: Kilometre
+        purchase_price: Satın Alma Fiyatı
+        trend: Eğilim
+        unknown: Bilinmiyor
+        year: Yıl

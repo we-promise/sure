@@ -1,0 +1,41 @@
+uk:
+  oidc_accounts:
+    link:
+      no_pending_oidc: Не знайдено очікуваної автентифікації OIDC
+      title_link: Пов'язати обліковий запис OIDC
+      title_create: Створити обліковий запис
+      verify_heading: Підтвердьте свою особу
+      verify_description_html: "Щоб пов'язати свій обліковий запис %{provider}%{email_suffix}, будь ласка, підтвердьте свою особу, ввівши свій пароль."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: Електронна пошта
+      email_placeholder: Введіть свою електронну пошту
+      password_label: Пароль
+      password_placeholder: Введіть свій пароль
+      verify_hint: Це допомагає переконатися, що лише ви можете пов'язувати зовнішні облікові записи зі своїм профілем.
+      submit_link: Пов'язати обліковий запис
+      create_heading: Створити новий обліковий запис
+      create_description_html: "Обліковий запис з електронною поштою <strong>%{email}</strong> не знайдено. Натисніть нижче, щоб створити новий обліковий запис, використовуючи свою особу %{provider}."
+      info_email: "Електронна пошта:"
+      info_name: "Ім'я:"
+      submit_create: Створити обліковий запис
+      submit_accept_invitation: Прийняти запрошення
+      account_creation_disabled: Створення нового облікового запису через єдиний вхід вимкнено. Будь ласка, зверніться до адміністратора, щоб створити свій обліковий запис.
+      cancel: Скасувати
+    create_link:
+      no_pending_oidc: Не знайдено очікуваної автентифікації OIDC
+    new_user:
+      no_pending_oidc: Не знайдено очікуваної автентифікації OIDC
+      title: Завершіть свій обліковий запис
+      heading: Створіть свій обліковий запис
+      description: Будь ласка, підтвердьте свої дані, щоб завершити створення облікового запису за допомогою вашої особи %{provider}.
+      email_label: Електронна пошта (від постачальника SSO)
+      first_name_label: Ім'я
+      first_name_placeholder: Введіть своє ім'я
+      last_name_label: Прізвище
+      last_name_placeholder: Введіть своє прізвище
+      submit: Створити обліковий запис
+      cancel: Скасувати
+    create_user:
+      no_pending_oidc: Не знайдено очікуваної автентифікації OIDC
+      account_creation_disabled: Створення облікового запису SSO вимкнено. Будь ласка, зверніться до адміністратора.
+      account_created: "Ласкаво просимо! Ваш обліковий запис створено."

@@ -3,85 +3,528 @@ tr:
   import:
     cleans:
       show:
+        all_rows: Tüm satırlar
+        data_cleaned: Verileriniz temizlendi
         description: Aşağıdaki tabloda verilerinizi düzenleyin. Kırmızı hücreler geçersizdir.
-        errors_notice: Verilerinizde hatalar var. Detayları görmek için hatanın üzerine gelin.
-        errors_notice_mobile: Verilerinizde hatalar var. Detayları görmek için hata simgesine dokunun.
+        error_rows: Hatalı satırlar
+        errors_notice: Verilerinizde hatalar var. Detayları görmek için hatanın üzerine
+          gelin.
+        errors_notice_mobile: Verilerinizde hatalar var. Detayları görmek için hata
+          simgesine dokunun.
+        next_step: Sonraki adım
+        not_configured: Devam etmeden önce lütfen içe aktarmanızı yapılandırın.
         title: Verilerinizi temizleyin
     configurations:
+      account_import:
+        apply_configuration: Yapılandırmayı uygula
+        balance: Bakiye
+        balance_date: Bakiye Tarihi
+        currency: Para Birimi
+        date_format: Tarih Formatı
+        default: Varsayılan
+        entity_type: Varlık Türü
+        leave_empty: Boş bırak
+        name: Ad
+        select_format: Format seçin
+      actual_import:
+        account_label: Hesap (isteğe bağlı)
+        amount_label: Tutar
+        apply_configuration: Yapılandırmayı uygula
+        category_label: Kategori (isteğe bağlı)
+        date_format_label: Tarih formatı
+        date_label: Tarih
+        incomes_are_negative: Gelirler negatiftir
+        incomes_are_positive: Gelirler pozitiftir
+        leave_empty: Boş bırak
+        name_label: Alıcı (isteğe bağlı)
+        notes_label: Notlar (isteğe bağlı)
+        preconfigured_notice: Actual Budget içe aktarmanızı sizin için önceden yapılandırdık.
+          Lütfen sonraki adıma geçin.
+        signage_convention_label: İşaret kuralı
+      category_import:
+        button_label: Devam et
+        description: Basit bir CSV dosyası yükleyin (verilerinizi dışa aktardığınızda
+          oluşturduğumuz dosya gibi). Sütunları sizin için otomatik olarak eşleştireceğiz.
+        instructions: CSV'nizi ayrıştırmak ve temizleme adımına geçmek için devam'ı
+          seçin.
+      merchant_import:
+        button_label: Devam et
+        description: Satıcılarınızın bulunduğu bir CSV dosyası yükleyin. Sütunları
+          sizin için otomatik olarak eşleştireceğiz.
+        instructions: CSV'nizi ayrıştırmak ve temizleme adımına geçmek için devam'ı
+          seçin.
       mint_import:
         date_format_label: Tarih formatı
+      rule_import:
+        description: Kural içe aktarmanızı yapılandırın. Kurallar CSV verilerine göre
+          oluşturulacak veya güncellenecektir.
+        process_button: Kuralları İşle
+        process_help: CSV'nizi işlemek ve kural satırları oluşturmak için aşağıdaki
+          düğmeye tıklayın.
       show:
         description: CSV dosyanızdaki her alan için karşılık gelen sütunları seçin.
         title: İçe aktarmayı yapılandırın
       trade_import:
+        account_label: Hesap
+        apply_configuration: Yapılandırmayı uygula
+        buys_are_negative: Alışlar negatif miktardır
+        buys_are_positive: Alışlar pozitif miktardır
+        currency_label: Para Birimi
         date_format_label: Tarih formatı
+        date_label: Tarih
+        default: Varsayılan
+        format_label: Format
+        leave_empty: Boş bırak
+        name_label: Ad
+        no_security_provider_warning: Menkul kıymet fiyat sağlayıcısı yapılandırılmamış.
+          Alım satım içe aktarmalarınız çalışacak, ancak Sure geçmiş fiyat verilerini
+          geriye dönük olarak doldurmayacaktır. Bunu yapılandırmak için lütfen ayarlarınıza
+          gidin.
+        note_label: Not
+        price_label: Fiyat
+        quantity_label: Miktar
+        select_column: Sütun seçin
+        select_format: Format seçin
+        stock_exchange_code_label: Borsa kodu
+        ticker_label: Sembol
       transaction_import:
+        account_label: Hesap
+        amount_label: Tutar
+        amount_type_label: Tutar türü
+        amount_type_strategy_label: Tutar türü stratejisi
+        apply_configuration: Yapılandırmayı uygula
+        as_amount_type_column: tutar türü sütunu olarak
+        as_identifier_value: tanımlayıcı değer olarak
+        category_label: Kategori
+        currency_label: Para Birimi
         date_format_label: Tarih formatı
+        date_label: Tarih
+        default: Varsayılan
+        expense_outflow: Gider (çıkış)
+        format_label: Format
+        income_inflow: Gelir (giriş)
+        incomes_are_negative: Gelirler negatiftir
+        incomes_are_positive: Gelirler pozitiftir
+        leave_empty: Boş bırak
+        name_label: Ad
+        notes_label: Notlar
+        rows_to_skip_label: İlk n satırı atla
+        select_column: Sütun seçin
+        select_convention: Kural seçin
+        select_format: Format seçin
+        select_strategy: Strateji seçin
+        select_type: Tür seçin
+        select_value: Değer seçin
+        set: Ayarla
+        tags_label: Etiketler
+        treat_as_html: '"<span class="font-medium">%{value}</span>" ifadesini şu şekilde
+          ele al'
+      update:
+        success: İçe aktarma başarıyla yapılandırıldı.
+      ynab_import:
+        account_label: Hesap (isteğe bağlı)
+        amount_notice: Tutarlar, Çıkış ve Giriş sütunlarından otomatik olarak algılanır.
+        apply_configuration: Yapılandırmayı uygula
+        category_label: Kategori (isteğe bağlı)
+        date_format_label: Tarih formatı
+        date_label: Tarih
+        leave_empty: Boş bırak
+        name_label: Alıcı (isteğe bağlı)
+        notes_label: Not (isteğe bağlı)
+        preconfigured_notice: YNAB içe aktarmanızı sizin için önceden yapılandırdık.
+          Lütfen sonraki adıma geçin.
     confirms:
       mappings:
         create_account: Hesap oluştur
         csv_mapping_label: CSV'de %{mapping}
-        sure_mapping_label: "%{product_name}'de %{mapping}"
-        no_accounts: Henüz hiç hesabınız yok. Lütfen CSV'nizdeki (atanmamış) satırlar için kullanabileceğimiz bir hesap oluşturun veya Temizle adımına geri dönüp kullanabileceğimiz bir hesap adı girin.
+        next: İleri
+        no_accounts: Henüz hiç hesabınız yok. Lütfen CSV'nizdeki (atanmamış) satırlar
+          için kullanabileceğimiz bir hesap oluşturun veya Temizle adımına geri dönüp
+          kullanabileceğimiz bir hesap adı girin.
         rows_label: Satırlar
-        unassigned_account: Atanmamış satırlar için yeni bir hesap oluşturmak ister misiniz?
+        sure_mapping_label: "%{product_name}'de %{mapping}"
+        unassigned_account: Atanmamış satırlar için yeni bir hesap oluşturmak ister
+          misiniz?
       show:
-        account_mapping_description: "İçe aktardığınız dosyadaki tüm hesapları %{product_name}'deki mevcut hesaplara eşleyin. Ayrıca yeni hesaplar ekleyebilir veya kategorize etmeden bırakabilirsiniz."
+        account_mapping_description: İçe aktardığınız dosyadaki tüm hesapları %{product_name}'deki
+          mevcut hesaplara eşleyin. Ayrıca yeni hesaplar ekleyebilir veya kategorize
+          etmeden bırakabilirsiniz.
         account_mapping_title: Hesaplarınızı eşleyin
-        account_type_mapping_description: "İçe aktardığınız dosyadaki tüm hesap türlerini %{product_name}'deki hesap türlerine eşleyin."
+        account_type_mapping_description: İçe aktardığınız dosyadaki tüm hesap türlerini
+          %{product_name}'deki hesap türlerine eşleyin.
         account_type_mapping_title: Hesap türlerinizi eşleyin
-        category_mapping_description: "İçe aktardığınız dosyadaki tüm kategorileri %{product_name}'deki mevcut kategorilere eşleyin. Ayrıca yeni kategoriler ekleyebilir veya kategorize etmeden bırakabilirsiniz."
+        category_mapping_description: İçe aktardığınız dosyadaki tüm kategorileri
+          %{product_name}'deki mevcut kategorilere eşleyin. Ayrıca yeni kategoriler
+          ekleyebilir veya kategorize etmeden bırakabilirsiniz.
         category_mapping_title: Kategorilerinizi eşleyin
-        tag_mapping_description: "İçe aktardığınız dosyadaki tüm etiketleri %{product_name}'deki mevcut etiketlere eşleyin. Ayrıca yeni etiketler ekleyebilir veya kategorize etmeden bırakabilirsiniz."
+        invalid_data: Geçersiz verileriniz var, lütfen tüm hatalar giderilene kadar
+          düzenleyin
+        tag_mapping_description: İçe aktardığınız dosyadaki tüm etiketleri %{product_name}'deki
+          mevcut etiketlere eşleyin. Ayrıca yeni etiketler ekleyebilir veya kategorize
+          etmeden bırakabilirsiniz.
         tag_mapping_title: Etiketlerinizi eşleyin
-    uploads:
+      sure_import:
+        cancel: İptal
+        description: Dışa aktarma dosyanızdan içe aktarılacak verileri inceleyin.
+        empty_summary: Bu dosyada içe aktarılabilir herhangi bir kayıt bulamadık.
+          Dosya boş olabilir veya satırlar beklenen dışa aktarma biçimiyle eşleşmiyor
+          olabilir (her satır, bu içe aktarmanın desteklediği türleri kullanan "type"
+          ve "data" anahtarlarına sahip bir JSON nesnesi olmalıdır).
+        publish_button: İçe aktarmayı başlat
+        summary: İçe aktarma özeti
+        title: İçe aktarmanızı onaylayın
+    qif_category_selections:
       show:
-        description: CSV dosyanızı aşağıya yapıştırın veya yükleyin. Başlamadan önce lütfen aşağıdaki tablodaki talimatları inceleyin.
+        categories_found:
+          one: 1 kategori bulundu
+          other: "%{count} kategori bulundu"
+        categories_heading: Kategoriler
+        category_name_col: Kategori adı
+        description: Algılanan tarih formatını inceleyin, ardından QIF dosyanızdaki
+          hangi kategori ve etiketlerin %{product_name}'e aktarılacağını seçin.
+        empty_state_primary: Bu QIF dosyasında hiç kategori veya etiket bulunamadı.
+        empty_state_secondary: Tüm işlemler kategori veya etiket olmadan içe aktarılacaktır.
+        split_badge: bölünmüş
+        split_warning_description: Bu QIF dosyası bölünmüş işlemler içeriyor. Bölünmüş
+          işlemler henüz desteklenmediğinden, her bölünmüş işlem tam tutarıyla ve
+          kategorisiz tek bir işlem olarak içe aktarılacaktır. Ayrı bölünme dökümleri
+          korunmayacaktır.
+        split_warning_title: Bölünmüş işlemler tespit edildi
+        submit: İncelemeye devam et
+        tag_name_col: Etiket adı
+        tags_found:
+          one: 1 etiket bulundu
+          other: "%{count} etiket bulundu"
+        tags_heading: Etiketler
+        title: Yapılandır ve seç
+        transactions_col: İşlemler
+        txn_count:
+          one: 1 işlem
+          other: "%{count} işlem"
+      update:
+        success: Kategoriler ve etiketler kaydedildi.
+    uploads:
+      handle_qif_upload:
+        qif_uploaded: QIF dosyası başarıyla yüklendi.
+      show:
+        account_optional_label: Hesap (isteğe bağlı)
+        browse: Gözat
+        copy_paste_tab: Kopyala ve Yapıştır
+        csv_file_prompt: CSV dosyanızı buraya eklemek için
+        csv_invalid: Başlıklara ve en az bir satır veriye sahip geçerli bir CSV olmalıdır
+        description: CSV dosyanızı aşağıya yapıştırın veya yükleyin. Başlamadan önce
+          lütfen aşağıdaki tablodaki talimatları inceleyin.
+        download_sample_csv: Örnek bir CSV indirin
+        drop_csv_subtitle: Dosyanız otomatik olarak yüklenecektir
+        drop_csv_title: Yüklemek için CSV'yi buraya bırakın
         instructions_1: Aşağıda içe aktarılabilir sütunlara sahip örnek bir CSV bulunmaktadır.
         instructions_2: CSV'nizin bir başlık satırı olmalıdır
-        instructions_3: Sütunlarınıza istediğiniz ismi verebilirsiniz. Bunları sonraki adımda eşleyeceksiniz.
+        instructions_3: Sütunlarınıza istediğiniz ismi verebilirsiniz. Bunları sonraki
+          adımda eşleyeceksiniz.
         instructions_4: Yıldız (*) ile işaretli sütunlar zorunlu verilerdir.
         instructions_5: Sayılarda virgül, para birimi simgesi veya parantez kullanmayın.
+        multi_account_import: Çoklu hesap içe aktarma
+        paste_csv_placeholder: CSV dosya içeriğinizi buraya yapıştırın
+        qif_account_label: Hesap
+        qif_account_placeholder: Bir hesap seçin…
+        qif_description: Bu QIF dosyasının ait olduğu hesabı seçin, ardından Quicken'dan
+          dışa aktardığınız .qif dosyasını yükleyin.
+        qif_file_hint: Yalnızca .qif dosyaları
+        qif_file_prompt: QIF dosyanızı buraya eklemek için
+        qif_submit: QIF Yükle
+        qif_title: QIF dosyası yükle
         title: Verilerinizi içe aktarın
+        to_see_format: gerekli CSV formatını görmek için
+        upload_csv_button: CSV Yükle
+        upload_csv_tab: CSV Yükle
+      sure_import:
+        browse: Gözat
+        browse_hint: all.ndjson dosyanızı buraya eklemek için
+        description: Hesaplarınızı, işlemlerinizi, kategorilerinizi ve daha fazlasını
+          geri yüklemek için veri dışa aktarmanızdaki all.ndjson dosyasını yükleyin.
+        drop_subtitle: Dosyanız otomatik olarak yüklenecektir
+        drop_title: Yüklemek için NDJSON'u buraya bırakın
+        hint_html: Veri dışa aktarma ZIP dosyanızdaki <strong>all.ndjson</strong>
+          dosyasını yükleyin
+        ndjson_invalid: En az bir kayıt içeren geçerli bir NDJSON olmalıdır
+        title: Dışa aktarmadan içe aktar
+        upload_button: NDJSON Yükle
+      update:
+        qif_uploaded: QIF dosyası başarıyla yüklendi.
   imports:
+    apply_template:
+      no_template_found: Şablon bulunamadı, lütfen içe aktarmanızı manuel olarak yapılandırın.
+      template_applied: Şablon uygulandı.
+    cancel:
+      cancelled: İçe aktarma başarısız olarak işaretlendi. İçe aktarma sayfasından
+        tekrar deneyebilirsiniz.
+      not_cancellable: Bu içe aktarma şu anda başarısız olarak işaretlenemez — işi
+        hâlâ çalışıyor olabilir. Bir saat boyunca etkin olmadıktan sonra tekrar deneyin.
+    column_labels:
+      account: Hesap
+      amount: Tutar
+      category: Kategori
+      category_color: Renk
+      category_icon: Lucide simgesi
+      category_parent: Üst kategori
+      currency: Para Birimi
+      date: Tarih
+      entity_type: Tür
+      exchange: Borsa
+      merchant_color: Renk
+      merchant_website: Web sitesi URL'si
+      name: Ad
+      notes: Notlar
+      price: Fiyat
+      qty: Miktar
+      tags: Etiketler
+      ticker: Sembol
+    create:
+      csv_uploaded: CSV başarıyla yüklendi.
+      document_provider_not_configured: Belge yüklemeleri için hiçbir vektör deposu
+        yapılandırılmamış.
+      document_too_large: Belge dosyası çok büyük. Maksimum boyut %{max_size}MB'dir.
+      document_upload_failed: Belgeyi vektör deposuna yükleyemedik. Lütfen tekrar
+        deneyin.
+      document_uploaded: Belge başarıyla yüklendi.
+      duplicate_pdf_unavailable: Bu PDF, erişemediğiniz bir ekstre olarak zaten kaydedilmiş.
+      file_too_large: Dosya çok büyük. Maksimum boyut %{max_size}MB'dir.
+      invalid_document_file_type: Aktif vektör deposu için geçersiz belge dosya türü.
+      invalid_file_type: Geçersiz dosya türü. Lütfen bir CSV dosyası yükleyin.
+      invalid_ndjson_file_type: Geçersiz dosya türü veya biçimi. Lütfen geçerli bir
+        .ndjson veya .json dışa aktarma dosyası yükleyin.
+      invalid_pdf: Yüklenen dosya geçerli bir PDF değil.
+      ndjson_uploaded: NDJSON dosyası başarıyla yüklendi.
+      pdf_processing: PDF'iniz işleniyor. Analiz tamamlandığında bir e-posta alacaksınız.
+      pdf_too_large: PDF dosyası çok büyük. Maksimum boyut %{max_size}MB'dir.
+    date_format:
+      description: Tarih formatı dosyanızdan otomatik olarak algılandı. Tarihler yanlış
+        görünüyorsa değiştirin.
+      error_description: Desteklenen tarih formatlarının hiçbiri bu dosyadaki tarihleri
+        ayrıştıramadı. Lütfen dosyanın geçerli tarih girişleri içerdiğinden emin olun.
+      error_title: Tarih formatı algılanamadı
+      heading: Tarih formatı
+      preview: Ayrıştırılan ilk tarih
+    destroy:
+      deleted: İçe aktarmanız silindi.
+    document_types:
+      bank_statement: Banka Ekstresi
+      contract: Sözleşme
+      credit_card_statement: Kredi Kartı Ekstresi
+      financial_document: Finansal Belge
+      investment_statement: Yatırım Ekstresi
+      other: Diğer Belge
+      unknown: Bilinmeyen Belge
+    dry_run_resources:
+      accounts: Hesaplar
+      balances: Bakiyeler
+      budget_categories: Bütçe Kategorileri
+      budgets: Bütçeler
+      categories: Kategoriler
+      holdings: Varlıklar
+      merchants: Satıcılar
+      recurring_transactions: Yinelenen İşlemler
+      rejected_transfers: Reddedilen Transferler
+      rules: Kurallar
+      tags: Etiketler
+      trades: Alım Satımlar
+      transactions: İşlemler
+      transfers: Transferler
+      valuations: Değerlemeler
+    empty:
+      message: İçe aktarma bulunamadı.
+    errors:
+      custom_column_requires_inflow: Özel sütun içe aktarmaları için bir giriş sütunu
+        seçilmesi gerekir
+      presumed_lost: Arka plan işinin kaybolduğu varsayıldığından başarısız olarak
+        işaretlendi. İçe aktarılan veriler geri alındı — güvenle tekrar deneyebilirsiniz.
+    failure:
+      description: Lütfen dosya biçiminizi, olası hataları ve tüm zorunlu alanların
+        doldurulduğunu kontrol edin, ardından geri dönüp tekrar deneyin.
+      title: İçe aktarma başarısız oldu
+      try_again: Tekrar dene
+    importing:
+      back_to_dashboard: Panele dön
+      check_status: Durumu kontrol et
+      description: İçe aktarmanız devam ediyor. Durum güncellemeleri için içe aktarmalar
+        menüsünü kontrol edin veya sayfayı yenilemek için 'Durumu Kontrol Et' butonuna
+        tıklayın. Uygulamayı kullanmaya devam edebilirsiniz.
+      title: İçe aktarma devam ediyor
     index:
-      title: İçe aktarmalar
       new: Yeni İçe Aktarma
-    table:
       title: İçe aktarmalar
+    mapping_labels:
+      account: Hesap
+      account_type: Hesap Türü
+      category: Kategori
+      tag: Etiket
+    new:
+      description: Farklı veri türlerini CSV ile manuel olarak içe aktarabilir veya
+        Mint gibi içe aktarma şablonlarımızı kullanabilirsiniz.
+      import_accounts: Hesapları içe aktar
+      import_actual: Actual Budget'ten içe aktar
+      import_categories: Kategorileri içe aktar
+      import_file: Belge içe aktar
+      import_file_description: PDF'ler için yapay zeka destekli analiz ve aranabilir
+        dosya yükleme
+      import_merchants: Satıcıları içe aktar
+      import_mint: Mint'ten içe aktar
+      import_portfolio: Yatırımları içe aktar
+      import_qif: Quicken'dan içe aktar (QIF)
+      import_rules: Kuralları içe aktar
+      import_sure: Sure'dan içe aktar
+      import_sure_description: Tam dışa aktarma .ndjson dosyası
+      import_transactions: İşlemleri içe aktar
+      import_ynab: YNAB'dan içe aktar
+      requires_account: Bu seçeneğin kilidini açmak için önce hesapları içe aktarın.
+      resume: "%{type} işlemini sürdür"
+      sources: Kaynaklar
+      tab_financial_tools: Finansal Araçlar ve Dosyalar
+      tab_raw_data: Ham Veri
+      title: Yeni CSV İçe Aktarma
+    pdf_import:
+      back_to_dashboard: Panele dön
+      back_to_imports: İçe aktarmalara dön
+      check_status: Durumu kontrol et
+      complete_description: PDF'inizi analiz ettik, işte bulduklarımız.
+      complete_title: Belge analiz edildi
+      create_account: Hesap Oluştur
+      delete_import: İçe aktarmayı sil
+      document_type_label: Belge Türü
+      email_sent_notice: Sonraki adımlarla ilgili size bir e-posta gönderildi.
+      failed_description: PDF belgenizi işleyemedik. Lütfen tekrar deneyin veya destekle
+        iletişime geçin.
+      failed_title: İşleme başarısız oldu
+      no_accounts: Kullanılabilir hesap yok. Lütfen önce bir hesap oluşturun.
+      processing_description: Belgenizi yapay zeka kullanarak analiz ediyoruz. Bu
+        biraz zaman alabilir. Analiz tamamlandığında bir e-posta alacaksınız.
+      processing_failed_generic: 'İşleme başarısız oldu: %{error}'
+      processing_failed_with_message: "%{message}"
+      processing_title: PDF'iniz işleniyor
+      publish_transactions:
+        one: "%{count} İşlemi Yayınla"
+        other: "%{count} İşlemi Yayınla"
+      ready_for_review_description: Ekstrenizden %{count} işlem çıkardık. Hesabınıza
+        eklemek için inceleyin ve yayınlayın.
+      ready_for_review_title: İncelemeye Hazır
+      review_transactions: İşlemleri İncele
+      save_account: Kaydet
+      select_account: Hesaba İçe Aktar
+      select_account_hint: Bu işlemleri hangi hesaba aktaracağınızı seçin.
+      select_account_placeholder: Bir hesap seçin...
+      select_account_to_continue: Devam etmek için lütfen yukarıdan bir hesap seçin.
+      source_statement: Kaynak ekstre
+      summary_label: Özet
+      transactions_extracted: Çıkarılan İşlemler
+      transactions_extracted_count:
+        one: "%{count} işlem"
+        other: "%{count} işlem"
+      try_again: Tekrar dene
+      unknown_document_type: Bilinmeyen
+      unknown_state_description: Bu içe aktarma beklenmeyen bir durumda. Lütfen içe
+        aktarmalara geri dönün.
+      unknown_state_title: Bilinmeyen durum
+    publish:
+      max_rows_exceeded: İçe aktarmanız maksimum %{max} satır sayısını aşıyor.
+      started: İçe aktarmanız arka planda başlatıldı.
+    ready:
+      back_to_imports: İçe aktarmalara dön
+      description: Bu içe aktarmayı yayınladığınızda hesabınıza eklenecek yeni öğelerin
+        özeti aşağıdadır.
+      empty_summary: Bu dosyada içe aktarılabilir kayıt bulunamadı. Dosya boş olabilir
+        veya satırlar beklenen dışa aktarma biçimiyle eşleşmiyor (her satır, bu içe
+        aktarmanın desteklediği türlerle «type» ve «data» anahtarlarına sahip bir
+        JSON nesnesi olmalıdır).
+      publish_import: İçe aktarmayı yayınla
+      summary_count_label: Adet
+      summary_item_label: Öğe
+      title: İçe aktarma verilerinizi onaylayın
+    revert:
+      started: İçe aktarma arka planda geri alınıyor.
+    revert_failure:
+      description: Lütfen tekrar deneyin
+      title: İçe aktarmayı geri alma başarısız oldu
+      try_again: Tekrar dene
+    show:
+      finalize_mappings: Devam etmeden önce lütfen eşlemelerinizi tamamlayın.
+      finalize_upload: Lütfen dosya yüklemenizi tamamlayın.
+    steps:
+      clean: Temizle
+      configure: Yapılandır
+      confirm: Onayla
+      map: Eşle
+      progress: Adım %{step}/%{total}
+      select: Seç
+      upload: Yükle
+    success:
+      back_to_dashboard: Panele dön
+      description: İçe aktarılan verileriniz uygulamaya başarıyla eklendi ve artık
+        kullanıma hazır.
+      title: İçe aktarma başarılı
+      verification:
+        checked: Kontrol edildi
+        mismatches: Uyuşmazlıklar
+        status:
+          failed: Başarısız
+          matched: Eşleşti
+          mismatch: Uyuşmazlık
+          not_verified: Doğrulanmadı
+          reverted: Geri alındı
+        title: Geri okuma doğrulaması
+    table:
+      empty: Henüz hiç içe aktarma yok.
       header:
+        actions: Eylemler
         date: Tarih
         operation: Operasyon
         status: Durum
-        actions: Eylemler
       row:
+        actions:
+          confirm_mark_failed: Bu içe aktarma bir süredir etkin değil ve arka plan
+            işi muhtemelen kesintiye uğradı. Tekrar deneyebilmeniz için başarısız
+            olarak mı işaretlensin? Hiçbir içe aktarılan veri saklanmaz.
+          confirm_revert: Bu işlem, içe aktarılan işlemleri silecektir, ancak verilerinizi
+            istediğiniz zaman inceleyebilir ve yeniden içe aktarabilirsiniz.
+          delete: Sil
+          mark_failed: Başarısız olarak işaretle
+          revert: Geri al
+          view: Görüntüle
         status:
-          in_progress: Devam ediyor
-          uploading: Satırlar işleniyor
-          reverting: Geri alınıyor
-          revert_failed: Geri alma başarısız
           complete: Tamamlandı
           failed: Başarısız
-        actions:
-          revert: Geri al
-          confirm_revert: Bu işlem, içe aktarılan işlemleri silecektir, ancak verilerinizi istediğiniz zaman inceleyebilir ve yeniden içe aktarabilirsiniz.
-          delete: Sil
-          view: Görüntüle
-      empty: Henüz hiç içe aktarma yok.
-    new:
-      description: Farklı veri türlerini CSV ile manuel olarak içe aktarabilir veya Mint gibi içe aktarma şablonlarımızı kullanabilirsiniz.
-      import_accounts: Hesapları içe aktar
-      import_mint: Mint'ten içe aktar
-      import_portfolio: Yatırımları içe aktar
-      import_transactions: İşlemleri içe aktar
-      resume: "%{type} işlemini sürdür"
-      sources: Kaynaklar
-      title: Yeni CSV İçe Aktarma
-    ready:
-      description: Bu içe aktarmayı yayınladığınızda hesabınıza eklenecek yeni öğelerin özeti aşağıdadır.
-      title: İçe aktarma verilerinizi onaylayın
-      summary_item_label: Öğe
-      summary_count_label: Adet
-      empty_summary: Bu dosyada içe aktarılabilir kayıt bulunamadı. Dosya boş olabilir veya satırlar beklenen dışa aktarma biçimiyle eşleşmiyor (her satır, bu içe aktarmanın desteklediği türlerle «type» ve «data» anahtarlarına sahip bir JSON nesnesi olmalıdır).
-      publish_import: İçe aktarmayı yayınla
-      back_to_imports: İçe aktarmalara dön
+          in_progress: Devam ediyor
+          revert_failed: Geri alma başarısız
+          reverting: Geri alınıyor
+          uploading: Satırlar işleniyor
+        type_labels:
+          account_import: Hesap
+          actual_import: Actual
+          category_import: Kategori
+          document_import: Belge
+          merchant_import: Satıcı
+          mint_import: Mint
+          pdf_import: PDF
+          qif_import: QIF
+          rule_import: Kural
+          sure_import: Sure
+          trade_import: Alım Satım
+          transaction_import: İşlem
+          ynab_import: YNAB
+      title: İçe aktarmalar
+    type_labels:
+      account_import: Hesap içe aktarma
+      actual_import: Actual içe aktarma
+      category_import: Kategori içe aktarma
+      document_import: Belge içe aktarma
+      merchant_import: Satıcı içe aktarma
+      mint_import: Mint içe aktarma
+      pdf_import: PDF içe aktarma
+      qif_import: QIF içe aktarma
+      rule_import: Kural içe aktarma
+      sure_import: Sure içe aktarma
+      trade_import: Alım satım içe aktarma
+      transaction_import: İşlem içe aktarma
+      ynab_import: YNAB içe aktarma
+    update:
+      account_saved: Hesap kaydedildi.
+      invalid_account: Hesap bulunamadı.

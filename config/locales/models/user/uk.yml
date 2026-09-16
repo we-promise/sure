@@ -1,0 +1,20 @@
+---
+uk:
+  activerecord:
+    attributes:
+      user:
+        email: "Електронна пошта"
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        first_name: "Ім'я"
+        last_name: "Прізвище"
+        password: "Пароль"
+        password_confirmation: "Підтвердження пароля"
+    errors:
+      models:
+        user:
+          attributes:
+            base:
+              cannot_deactivate_admin_with_other_users: "Адміністратор не може видалити обліковий запис, поки присутні інші користувачі. Будь ласка, спочатку видаліть усіх учасників."
+            profile_image:
+              invalid_file_size: "розмір файлу має бути меншим за %{max_megabytes}MB"

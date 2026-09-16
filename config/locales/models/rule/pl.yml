@@ -1,0 +1,12 @@
+---
+pl:
+  activerecord:
+    errors:
+      models:
+        rule:
+          duplicate_actions: Reguła nie może mieć zduplikowanych akcji %{types}
+          min_actions: musi mieć co najmniej jedną akcję
+          nested_conditions: Warunki złożone nie mogą być zagnieżdżone
+  rule:
+    conditions:
+      unsupported_label: Nieobsługiwane (%{type})

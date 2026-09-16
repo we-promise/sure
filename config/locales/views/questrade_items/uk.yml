@@ -1,0 +1,251 @@
+uk:
+  questrade_items:
+    default_name: "З'єднання Questrade"
+    # Model method strings (i18n for item_model.rb)
+    sync_status:
+      no_accounts: "Рахунки не знайдено"
+      synced:
+        one: "%{count} рахунок синхронізовано"
+        other: "%{count} рахунків синхронізовано"
+      synced_with_setup: "%{linked} синхронізовано, %{unlinked} потребує налаштування"
+    institution_summary:
+      none: "Жодної установи не підключено"
+      count:
+        one: "%{count} установа"
+        other: "%{count} установ"
+    errors:
+      provider_not_configured: "Постачальник Questrade не налаштовано"
+
+    # Syncer status messages
+    sync:
+      status:
+        importing: "Імпорт рахунків з Questrade..."
+        processing: "Обробка активів та діяльності..."
+        calculating: "Розрахунок балансів..."
+        importing_data: "Імпорт даних рахунку..."
+        checking_setup: "Перевірка налаштувань рахунку..."
+        needs_setup: "%{count} рахунків потребують налаштування..."
+      success: "Синхронізацію розпочато"
+
+    # Panel (settings view)
+    panel:
+      setup_instructions: "Інструкції з налаштування:"
+      step_1: "Відвідайте свою панель керування Questrade, щоб отримати свої облікові дані"
+      step_2: "Введіть свої облікові дані нижче та натисніть кнопку Зберегти"
+      step_3: "Після успішного підключення перейдіть на вкладку Рахунки, щоб налаштувати нові рахунки"
+      field_descriptions: "Описи полів:"
+      optional: "(необов'язково)"
+      required: "(обов'язково)"
+      optional_with_default: "(необов'язково, за замовчуванням %{default_value})"
+      save_button: "Зберегти конфігурацію"
+      update_button: "Оновити конфігурацію"
+      token_refresh_hint: "Токени Questrade автоматично оновлюються щоразу, коли ваші рахунки синхронізуються. Якщо з'єднання не використовується більше 7 днів і стає застарілим, вставте сюди новий токен, щоб повторно активувати його без відключення."
+      status_configured_html: "Налаштовано та готово до використання. Відвідайте вкладку <a href=\"%{accounts_path}\" class=\"link\">Рахунки</a>, щоб керувати та налаштовувати рахунки."
+      status_not_configured: "Не налаштовано"
+      fields:
+        refresh_token:
+          label: "Токен оновлення"
+          description: "Ваш токен оновлення Questrade"
+          placeholder_new: "Вставте токен оновлення тут"
+          placeholder_update: "Введіть новий токен оновлення для оновлення"
+        api_server:
+          label: "Сервер API"
+          description: "Ваш сервер API Questrade"
+          placeholder_new: "Вставте сервер API тут"
+          placeholder_update: "Введіть новий сервер API для оновлення"
+
+    # CRUD success messages
+    create:
+      success: "З'єднання Questrade успішно створено"
+    update:
+      success: "З'єднання Questrade оновлено"
+    destroy:
+      success: "З'єднання Questrade видалено"
+    index:
+      title: "З'єднання Questrade"
+
+    # Loading states
+    loading:
+      loading_message: "Завантаження рахунків Questrade..."
+      loading_title: "Завантаження"
+
+    # Account linking
+    link_accounts:
+      all_already_linked:
+        one: "Вибраний рахунок (%{names}) вже пов'язано"
+        other: "Усі %{count} вибраних рахунків вже пов'язано: %{names}"
+      api_error: "Помилка API: %{message}"
+      invalid_account_names:
+        one: "Неможливо пов'язати рахунок з порожньою назвою"
+        other: "Неможливо пов'язати %{count} рахунків з порожніми назвами"
+      link_failed: "Не вдалося пов'язати рахунки"
+      no_accounts_selected: "Будь ласка, виберіть принаймні один рахунок"
+      no_api_key: "Ключ API Questrade не знайдено. Будь ласка, налаштуйте його в налаштуваннях постачальника."
+      partial_invalid: "Успішно пов'язано %{created_count} рахунок(и), %{already_linked_count} вже було пов'язано, %{invalid_count} рахунок(и) мав(ли) недійсні назви"
+      partial_success: "Успішно пов'язано %{created_count} рахунок(и). %{already_linked_count} рахунок(и) вже було пов'язано: %{already_linked_names}"
+      success:
+        one: "Успішно пов'язано %{count} рахунок"
+        other: "Успішно пов'язано %{count} рахунків"
+
+    # Provider item display (used in _item partial)
+    questrade_item:
+      kind: Брокерський
+      accounts_need_setup: "Рахунки потребують налаштування"
+      delete: "Видалити з'єднання"
+      deletion_in_progress: "видалення триває..."
+      error: "Помилка"
+      more_accounts_available:
+        one: "%{count} ще один доступний рахунок"
+        other: "%{count} ще доступних рахунків"
+      no_accounts_description: "Це з'єднання ще не має пов'язаних рахунків."
+      no_accounts_title: "Немає рахунків"
+      provider_name: "Questrade"
+      requires_update: "З'єднання потребує оновлення"
+      setup_action: "Налаштувати нові рахунки"
+      setup_description: "%{linked} з %{total} рахунків пов'язано. Виберіть типи рахунків для ваших щойно імпортованих рахунків Questrade."
+      setup_needed: "Нові рахунки готові до налаштування"
+      status: "Синхронізовано %{timestamp} тому"
+      status_never: "Ніколи не синхронізовано"
+      status_with_summary: "Остання синхронізація %{timestamp} тому - %{summary}"
+      syncing: "Синхронізація..."
+      total: "Усього"
+      unlinked: "Непов'язано"
+      update_credentials: "Оновити облікові дані"
+
+    # Select accounts view
+    select_accounts:
+      accounts_selected: "вибрано рахунків"
+      api_error: "Помилка API: %{message}"
+      cancel: "Скасувати"
+      configure_name_in_provider: "Неможливо імпортувати - будь ласка, налаштуйте назву рахунку в Questrade"
+      description: "Виберіть рахунки, які ви хочете пов'язати зі своїм рахунком %{product_name}."
+      link_accounts: "Пов'язати вибрані рахунки"
+      no_accounts_found: "Рахунки не знайдено. Перевірте конфігурацію вашого ключа API."
+      no_api_key: "Ключ API Questrade не налаштовано. Будь ласка, налаштуйте його в налаштуваннях."
+      no_credentials_configured: "Будь ласка, спочатку налаштуйте свої облікові дані Questrade в налаштуваннях постачальника."
+      no_name_placeholder: "(Без назви)"
+      title: "Виберіть рахунки Questrade"
+
+    # Select existing account view
+    select_existing_account:
+      account_already_linked: "Цей рахунок вже пов'язано з постачальником"
+      all_accounts_already_linked: "Усі рахунки Questrade вже пов'язано"
+      api_error: "Помилка API: %{message}"
+      balance_label: "Баланс:"
+      cancel: "Скасувати"
+      cancel_button: "Скасувати"
+      configure_name_in_provider: "Неможливо імпортувати - будь ласка, налаштуйте назву рахунку в Questrade"
+      connect_hint: "Підключіть обліковий запис Questrade, щоб увімкнути автоматичну синхронізацію."
+      description: "Виберіть обліковий запис Questrade для пов'язування з цим обліковим записом. Транзакції будуть синхронізуватися та дедуплікуватися автоматично."
+      header: "Пов'язати з Questrade"
+      link_account: "Пов'язати рахунок"
+      link_button: "Пов'язати цей рахунок"
+      linking_to: "Пов'язування з:"
+      no_account_specified: "Рахунок не вказано"
+      no_accounts: "Не знайдено непов'язаних рахунків Questrade."
+      no_accounts_found: "Рахунки Questrade не знайдено. Перевірте конфігурацію вашого ключа API."
+      no_api_key: "Ключ API Questrade не налаштовано. Будь ласка, налаштуйте його в налаштуваннях."
+      no_credentials_configured: "Будь ласка, спочатку налаштуйте свої облікові дані Questrade в налаштуваннях постачальника."
+      no_name_placeholder: "(Без назви)"
+      settings_link: "Перейти до налаштувань постачальника"
+      subtitle: "Виберіть обліковий запис Questrade"
+      title: "Пов'язати %{account_name} з Questrade"
+
+    # Link existing account
+    link_existing_account:
+      account_already_linked: "Цей рахунок вже пов'язано з постачальником"
+      api_error: "Помилка API: %{message}"
+      invalid_account_name: "Неможливо пов'язати рахунок з порожньою назвою"
+      provider_account_already_linked: "Цей обліковий запис Questrade вже пов'язано з іншим обліковим записом"
+      provider_account_not_found: "Обліковий запис Questrade не знайдено"
+      missing_parameters: "Відсутні обов'язкові параметри"
+      no_api_key: "Ключ API Questrade не знайдено. Будь ласка, налаштуйте його в налаштуваннях постачальника."
+      success: "Успішно пов'язано %{account_name} з Questrade"
+
+    # Setup accounts wizard
+    setup_accounts:
+      account_type_label: "Тип рахунку:"
+      accounts_count:
+        one: "%{count} доступний рахунок"
+        other: "%{count} доступних рахунків"
+      all_accounts_linked: "Усі ваші рахунки Questrade вже налаштовано."
+      api_error: "Помилка API: %{message}"
+      creating: "Створення рахунків..."
+      fetch_failed: "Не вдалося завантажити рахунки"
+      import_selected: "Імпортувати вибрані рахунки"
+      instructions: "Виберіть рахунки, які ви хочете імпортувати з Questrade. Ви можете вибрати кілька рахунків."
+      no_accounts: "Не знайдено непов'язаних рахунків з цього з'єднання Questrade."
+      no_accounts_to_setup: "Немає рахунків для налаштування"
+      no_api_key: "Ключ API Questrade не налаштовано. Перевірте налаштування з'єднання."
+      select_all: "Вибрати все"
+      account_types:
+        skip: "Пропустити цей рахунок"
+        depository: "Розрахунковий або ощадний рахунок"
+        credit_card: "Кредитна картка"
+        investment: "Інвестиційний рахунок"
+        crypto: "Криптовалютний рахунок"
+        loan: "Позика або іпотека"
+        other_asset: "Інший актив"
+      subtype_labels:
+        depository: "Підтип рахунку:"
+        credit_card: ""
+        investment: "Тип інвестицій:"
+        crypto: ""
+        loan: "Тип позики:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Кредитні картки будуть автоматично налаштовані як рахунки кредитних карток."
+        other_asset: "Для інших активів не потрібні додаткові опції."
+        crypto: "Криптовалютні рахунки будуть налаштовані для відстеження активів та транзакцій."
+      subtypes:
+        depository:
+          checking: "Розрахунковий"
+          savings: "Ощадний"
+          hsa: "Рахунок для заощаджень на здоров'я"
+          cd: "Депозитний сертифікат"
+          money_market: "Грошовий ринок"
+        investment:
+          brokerage: "Брокерський"
+          pension: "Пенсійний"
+          retirement: "Пенсійний"
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: "План заощаджень Thrift"
+          "529_plan": "План 529"
+          hsa: "Рахунок для заощаджень на здоров'я"
+          mutual_fund: "Взаємний фонд"
+          ira: "Традиційний IRA"
+          roth_ira: "Roth IRA"
+          angel: "Ангел"
+        loan:
+          mortgage: "Іпотека"
+          student: "Студентська позика"
+          auto: "Автокредит"
+          other: "Інша позика"
+      balance: "Баланс"
+      cancel: "Скасувати"
+      choose_account_type: "Виберіть правильний тип рахунку для кожного рахунку Questrade:"
+      create_accounts: "Створити рахунки"
+      creating_accounts: "Створення рахунків..."
+      historical_data_range: "Діапазон історичних даних:"
+      subtitle: "Виберіть правильні типи рахунків для ваших імпортованих рахунків"
+      sync_start_date_help: "Виберіть, наскільки далеко назад ви хочете синхронізувати історію транзакцій."
+      sync_start_date_label: "Почати синхронізацію транзакцій з:"
+      title: "Налаштуйте свої рахунки Questrade"
+
+    # Complete account setup
+    setup_required:
+      title: Спочатку підключіть Questrade
+      not_configured_title: Questrade ще не підключено
+      not_configured_description: Додайте своє з'єднання Questrade в налаштуваннях постачальника, а потім поверніться сюди, щоб пов'язати рахунки.
+      go_to_provider_settings: Перейти до налаштувань постачальника
+    complete_account_setup:
+      all_skipped: "Усі рахунки було пропущено. Жоден рахунок не було створено."
+      creation_failed: "Не вдалося створити рахунки: %{error}"
+      no_accounts: "Немає рахунків для налаштування."
+      success: "Успішно створено %{count} рахунок(и)."
+
+    # Preload accounts
+    preload_accounts:
+      no_credentials_configured: "Будь ласка, спочатку налаштуйте свої облікові дані Questrade в налаштуваннях постачальника."

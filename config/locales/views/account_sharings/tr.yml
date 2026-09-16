@@ -1,0 +1,30 @@
+---
+tr:
+  account_sharings:
+    show:
+      exclude_from_finances: Bütçelerimden ve raporlarımdan hariç tut
+      finance_toggle_description: Bu hesabı net değerinizde, bütçelerinizde ve raporlarınızda
+        sayın
+      include_in_finances: Bütçelerime ve raporlarıma dahil et
+      member: Üye
+      no_members: "%{moniker} hesabınızda paylaşacak başka üye yok"
+      owner_label: 'Sahip: %{name}'
+      permission: İzin
+      permissions:
+        full_control: Tam kontrol
+        full_control_description: İşlemleri görüntüleyebilir, düzenleyebilir ve yönetebilir
+        read_only: Yalnızca görüntüleme
+        read_only_description: Yalnızca hesap verilerini görüntüleyebilir
+        read_write: Not ekleyebilir
+        read_write_description: Kategorilendirebilir, etiketleyebilir ve not ekleyebilir
+      save: Paylaşım ayarlarını kaydet
+      shared: Paylaşıldı
+      shared_with_count:
+        one: 1 üyeyle paylaşıldı
+        other: "%{count} üyeyle paylaşıldı"
+      subtitle: Bu hesabı kimlerin görüp etkileşime girebileceğini kontrol edin
+      title: Hesap Paylaşımı
+    update:
+      finance_toggle_success: Finansal dahil etme tercihi güncellendi
+      not_owner: Paylaşımı yalnızca hesap sahibi yönetebilir
+      success: Paylaşım ayarları güncellendi

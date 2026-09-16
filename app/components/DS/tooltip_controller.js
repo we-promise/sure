@@ -38,19 +38,18 @@ export default class extends Controller {
     this.element.addEventListener("keydown", this.handleKeydown);
 
     // `as: :span` renders a non-focusable trigger inside an
-    // already-focusable ancestor (typically `<summary>`). When the
-    // ancestor receives keyboard focus the `focusin` event fires on
-    // *it* and bubbles UP to the document — it never reaches a
-    // descendant span. Without a listener on the ancestor itself,
-    // the tooltip stays hidden for keyboard users on in-summary rows.
-    // Bind the same handlers on the closest `<summary>` (if any) so
-    // focusing the disclosure reveals the tooltip and Esc still
-    // dismisses it.
-    this.summaryAncestor = this.element.closest("summary");
-    if (this.summaryAncestor) {
-      this.summaryAncestor.addEventListener("focusin", this.show);
-      this.summaryAncestor.addEventListener("focusout", this.hide);
-      this.summaryAncestor.addEventListener("keydown", this.handleKeydown);
+    // already-focusable ancestor (`<summary>`, icon-only `<a>`, …).
+    // When the ancestor receives keyboard focus the `focusin` event
+    // fires on *it* and bubbles UP to the document — it never reaches
+    // a descendant span. Without a listener on the ancestor itself,
+    // the tooltip stays hidden for keyboard users. Bind the same
+    // handlers on the closest interactive ancestor (if any) so
+    // focusing it reveals the tooltip and Esc still dismisses it.
+    this.focusableAncestor = this.element.closest("summary, a");
+    if (this.focusableAncestor) {
+      this.focusableAncestor.addEventListener("focusin", this.show);
+      this.focusableAncestor.addEventListener("focusout", this.hide);
+      this.focusableAncestor.addEventListener("keydown", this.handleKeydown);
     }
   }
 
@@ -61,11 +60,11 @@ export default class extends Controller {
     this.element.removeEventListener("focusout", this.hide);
     this.element.removeEventListener("keydown", this.handleKeydown);
 
-    if (this.summaryAncestor) {
-      this.summaryAncestor.removeEventListener("focusin", this.show);
-      this.summaryAncestor.removeEventListener("focusout", this.hide);
-      this.summaryAncestor.removeEventListener("keydown", this.handleKeydown);
-      this.summaryAncestor = null;
+    if (this.focusableAncestor) {
+      this.focusableAncestor.removeEventListener("focusin", this.show);
+      this.focusableAncestor.removeEventListener("focusout", this.hide);
+      this.focusableAncestor.removeEventListener("keydown", this.handleKeydown);
+      this.focusableAncestor = null;
     }
   }
 

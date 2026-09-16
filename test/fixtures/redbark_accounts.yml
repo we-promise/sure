@@ -1,0 +1,7 @@
+savings_account:
+  redbark_item: one
+  redbark_account_id: "rb_acc_savings_1"
+  connection_id: "rb_conn_1"
+  name: "Test Bank - Everyday Saver"
+  currency: AUD
+  current_balance: 2500.00

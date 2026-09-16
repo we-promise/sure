@@ -1,0 +1,8 @@
+---
+tr:
+  admin:
+    invitations:
+      destroy:
+        success: Davet silindi.
+      destroy_all:
+        success: Bu aileye ait tüm davetler silindi.

@@ -1,0 +1,36 @@
+uk:
+  plaid_items:
+    create:
+      success: Рахунок успішно пов'язано. Будь ласка, зачекайте, поки рахунки синхронізуються.
+    destroy:
+      success: Рахунки заплановано на видалення.
+    errors:
+      link_token_generic: Наразі ми не можемо відкрити Plaid. Будь ласка, спробуйте ще раз, і якщо проблема не зникне, перевірте журнали сервера для отримання докладної інформації.
+      link_token_with_message: "Plaid не зміг відкрити з'єднання: %{message}"
+    plaid_item:
+      add_new: Додати нове з'єднання
+      confirm_accept: Видалити установу
+      confirm_body: Це назавжди видалить усі рахунки в цій групі та всі пов'язані дані.
+      confirm_title: Видалити установу?
+      connection_lost: З'єднання втрачено
+      connection_lost_description: Це з'єднання більше не дійсне. Вам потрібно буде видалити це з'єднання та додати його знову, щоб продовжити синхронізацію даних.
+      delete: Видалити
+      deletion_in_progress: (видалення триває...)
+      error: Сталася помилка під час синхронізації даних
+      no_accounts_description: Ми не змогли завантажити жодного рахунку з цієї фінансової установи.
+      no_accounts_title: Рахунки не знайдено
+      requires_update: Перепідключити
+      status: Остання синхронізація %{timestamp} тому
+      status_never: Потребує синхронізації даних
+      syncing: Синхронізація...
+      update: Оновити
+    select_existing_account:
+      no_available_accounts: Немає доступних рахунків Plaid для пов'язування. Будь ласка, спочатку підключіть новий рахунок Plaid.
+      title: "Пов'язати %{account_name} з Plaid"
+      description: Виберіть рахунок Plaid для пов'язування з вашим існуючим рахунком
+      cancel: Скасувати
+      link_account: Пов'язати рахунок
+    link_existing_account:
+      invalid_account: Вибрано недійсний рахунок Plaid
+      already_linked: Цей рахунок Plaid вже пов'язано
+      success: Рахунок успішно пов'язано з Plaid

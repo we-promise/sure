@@ -6,7 +6,42 @@ module Syncable
   end
 
   def syncing?
-    syncs.visible.any?
+    if Current.respond_to?(:syncing_by_syncable) && (syncing_by_syncable = Current.syncing_by_syncable)
+      key = [ self.class.base_class.name, id ]
+      return !!syncing_by_syncable[key] if syncing_by_syncable.key?(key)
+    end
+
+    if association(:syncs).loaded?
+      syncs.any?(&:visible?)
+    else
+      syncs.visible.any?
+    end
+  end
+
+  def latest_sync_record
+    if Current.respond_to?(:latest_sync_by_syncable) && (latest_sync_by_syncable = Current.latest_sync_by_syncable)
+      key = [ self.class.base_class.name, id ]
+      return latest_sync_by_syncable[key] if latest_sync_by_syncable.key?(key)
+    end
+
+    if association(:syncs).loaded?
+      syncs.max_by { |sync| [ sync.created_at, sync.id ] }
+    else
+      syncs.ordered.first
+    end
+  end
+
+  def latest_completed_sync_record
+    if Current.respond_to?(:latest_completed_sync_by_syncable) && (latest_completed_sync_by_syncable = Current.latest_completed_sync_by_syncable)
+      key = [ self.class.base_class.name, id ]
+      return latest_completed_sync_by_syncable[key] if latest_completed_sync_by_syncable.key?(key)
+    end
+
+    if association(:syncs).loaded?
+      syncs.select(&:completed?).max_by { |sync| [ sync.created_at, sync.id ] }
+    else
+      syncs.completed.ordered.first
+    end
   end
 
   # Schedules a sync for syncable.  If there is an existing sync pending/syncing for this syncable,
@@ -56,24 +91,24 @@ module Syncable
   end
 
   def sync_error
-    latest_sync&.error || latest_sync&.children&.map(&:error)&.compact&.first
+    latest_sync_record&.error || latest_sync_record&.children&.map(&:error)&.compact&.first
   end
 
   def last_synced_at
-    latest_completed_sync&.completed_at
+    latest_completed_sync_record&.completed_at
   end
 
   def last_sync_created_at
-    latest_sync&.created_at
+    latest_sync_record&.created_at
   end
 
   private
     def latest_sync
-      syncs.ordered.first
+      latest_sync_record
     end
 
     def latest_completed_sync
-      syncs.completed.ordered.first
+      latest_completed_sync_record
     end
 
     def syncer

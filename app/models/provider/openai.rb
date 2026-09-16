@@ -5,6 +5,8 @@ class Provider::Openai < Provider
   Error = Class.new(Provider::Error)
 
   DEFAULT_MODEL = "gpt-4.1".freeze
+  DEFAULT_REQUEST_TIMEOUT = 60
+  MIN_REQUEST_TIMEOUT = 1
   SUPPORTED_MODELS = %w[gpt-4 gpt-5 o1 o3].freeze
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
 
@@ -18,12 +20,59 @@ class Provider::Openai < Provider
     ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
   end
 
+  # Effective per-request HTTP timeout for OpenAI-compatible calls.
+  # Precedence matches other self-hosting settings: ENV > Setting > default.
+  #
+  # @return [Integer] timeout in seconds, at least MIN_REQUEST_TIMEOUT
+  def self.request_timeout
+    configured = ENV["OPENAI_REQUEST_TIMEOUT"].to_s.strip.to_i
+    configured = Setting.openai_request_timeout.to_i unless configured.positive?
+    return DEFAULT_REQUEST_TIMEOUT unless configured.positive?
+
+    [ configured, MIN_REQUEST_TIMEOUT ].max
+  end
+
+  # Extra HTTP headers for OpenAI-compatible requests, parsed from the
+  # OPENAI_EXTRA_HEADERS env var (a JSON object). ENV-only: no Setting
+  # fallback. Keys and values are stringified for Faraday; blank values are
+  # dropped. Nested JSON values are Ruby-inspect-stringified, not
+  # JSON-serialized. Fail-closed: any parse problem yields {} plus an error
+  # log (raw value never logged) so chat never breaks from bad config.
+  #
+  # @return [Hash<String, String>] parsed headers, {} when unset or invalid
+  def self.extra_headers
+    raw = ENV["OPENAI_EXTRA_HEADERS"].presence
+    return {} unless raw
+
+    parsed = JSON.parse(raw)
+    unless parsed.is_a?(Hash)
+      Rails.logger.error("OPENAI_EXTRA_HEADERS must be a JSON object; ignoring")
+      return {}
+    end
+    parsed.transform_keys(&:to_s).transform_values(&:to_s).compact_blank
+  rescue JSON::ParserError, TypeError
+    Rails.logger.error("OPENAI_EXTRA_HEADERS is not valid JSON; ignoring")
+    {}
+  end
+
+  # Builds a client that uses the effective request timeout for every OpenAI call.
+  # Static extra headers from OPENAI_EXTRA_HEADERS are attached at construction;
+  # session-valued headers are withheld for per-request resolution.
+  #
+  # @param access_token [String] API token for the OpenAI-compatible endpoint
+  # @param uri_base [String, nil] custom endpoint base URL (OpenAI when nil)
+  # @param model [String, nil] default model; required when uri_base is set
+  # @return [void]
   def initialize(access_token, uri_base: nil, model: nil)
     client_options = { access_token: access_token }
     llm_uri_base = uri_base.presence
     llm_model = model.presence
     client_options[:uri_base] = llm_uri_base if llm_uri_base.present?
-    client_options[:request_timeout] = ENV.fetch("OPENAI_REQUEST_TIMEOUT", 60).to_i
+    client_options[:request_timeout] = self.class.request_timeout
+    parsed_headers = self.class.extra_headers
+    @session_extra_headers = parsed_headers.select { |_, value| value.include?("{session_id}") }
+    static_headers = parsed_headers.except(*@session_extra_headers.keys)
+    client_options[:extra_headers] = static_headers if static_headers.present?
 
     @client = ::OpenAI::Client.new(**client_options)
     @uri_base = llm_uri_base
@@ -73,21 +122,47 @@ class Provider::Openai < Provider
   # out of the box. Users on larger-context cloud models can raise via ENV or
   # via the Self-Hosting settings page.
   def context_window
-    positive_budget(ENV["LLM_CONTEXT_WINDOW"], Setting.llm_context_window, 2048)
+    # Single source of truth shared with prompt assembly, so the assistant's
+    # collapse-to-counts decision always agrees with the window used here.
+    Assistant::TokenBudget.context_window
   end
 
   def max_response_tokens
     positive_budget(ENV["LLM_MAX_RESPONSE_TOKENS"], Setting.llm_max_response_tokens, 512)
   end
 
+  # The response cap is only sent to the provider when someone explicitly
+  # configured it (ENV or a stored Setting). The 512 fallback above exists for
+  # budget math and must not silently truncate replies on stock installs.
+  def explicit_max_response_tokens
+    explicit = ENV["LLM_MAX_RESPONSE_TOKENS"].to_s.strip.to_i
+    return explicit if explicit.positive?
+
+    from_setting = Setting.llm_max_response_tokens.to_i
+    return from_setting if from_setting.positive?
+
+    nil
+  end
+
   def system_prompt_reserve
     positive_budget(ENV["LLM_SYSTEM_PROMPT_RESERVE"], nil, 256)
   end
 
-  def max_history_tokens
+  def max_history_tokens(instructions: nil)
     explicit = ENV["LLM_MAX_HISTORY_TOKENS"].presence&.to_i
     return explicit if explicit&.positive?
-    [ context_window - max_response_tokens - system_prompt_reserve, 256 ].max
+
+    # When the actual instructions are in hand, budget against their real
+    # estimated size instead of the flat reserve; the prompt with session
+    # context routinely exceeds the historical 256-token figure.
+    prompt_reserve =
+      if instructions.present?
+        Assistant::TokenEstimator.estimate(instructions.to_s)
+      else
+        system_prompt_reserve
+      end
+
+    [ context_window - max_response_tokens - prompt_reserve, 256 ].max
   end
 
   # Budget available for a one-shot (non-chat) request's full input,
@@ -134,6 +209,31 @@ class Provider::Openai < Provider
       end
 
       upsert_langfuse_trace(trace: trace, output: result.map(&:to_h))
+
+      result
+    end
+  end
+
+  def suggest_bill_setup(charges: [], categories: [], current_config: nil, model: "", family: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "openai.suggest_bill_setup",
+        input: { charges: charges, configure_mode: current_config.present? }
+      )
+
+      result = BillSetupSuggester.new(
+        client,
+        model: effective_model,
+        charges: charges,
+        categories: categories,
+        current_config: current_config,
+        langfuse_trace: trace,
+        family: family
+      ).suggest
+
+      upsert_langfuse_trace(trace: trace, output: result.to_h)
 
       result
     end
@@ -263,6 +363,7 @@ class Provider::Openai < Provider
     instructions: nil,
     functions: [],
     function_results: [],
+    tool_choice: nil,
     messages: nil,
     conversation_history: [],
     streamer: nil,
@@ -281,6 +382,7 @@ class Provider::Openai < Provider
         instructions: instructions,
         functions: functions,
         function_results: function_results,
+        tool_choice: tool_choice,
         streamer: streamer,
         previous_response_id: previous_response_id,
         session_id: session_id,
@@ -294,6 +396,7 @@ class Provider::Openai < Provider
         instructions: instructions,
         functions: functions,
         function_results: function_results,
+        tool_choice: tool_choice,
         messages: messages,
         streamer: streamer,
         session_id: session_id,
@@ -305,6 +408,26 @@ class Provider::Openai < Provider
 
   private
     attr_reader :client
+
+    # Substitutes {session_id} into session-valued extra headers for this chat
+    # request. Static headers were already set at construction; a session
+    # header without a session_id is simply never applied. Returns a
+    # request-scoped client copy carrying the resolved headers — session
+    # headers must not persist on the shared client, so later batch requests
+    # (which reuse this provider instance's client) never see them.
+    #
+    # @param session_id [String, nil] chat session UUID to substitute
+    # @return [OpenAI::Client] scoped copy when session headers apply, otherwise
+    #   the shared client
+    def with_session_headers(session_id:)
+      return client if @session_extra_headers.blank? || session_id.blank?
+
+      session_client = client.dup
+      session_client.add_headers(
+        @session_extra_headers.transform_values { |value| value.gsub("{session_id}") { session_id } }
+      )
+      session_client
+    end
 
     # Returns the first positive integer among env, setting, default. Treats
     # zero or negative values as "unset" and falls through — a 0-token budget
@@ -335,6 +458,7 @@ class Provider::Openai < Provider
       instructions: nil,
       functions: [],
       function_results: [],
+      tool_choice: nil,
       streamer: nil,
       previous_response_id: nil,
       session_id: nil,
@@ -342,6 +466,8 @@ class Provider::Openai < Provider
       family: nil
     )
       with_provider_response do
+        session_client = with_session_headers(session_id: session_id)
+
         chat_config = ChatConfig.new(
           functions: functions,
           function_results: function_results
@@ -366,14 +492,18 @@ class Provider::Openai < Provider
         input_payload = chat_config.build_input(prompt: prompt)
 
         begin
-          raw_response = client.responses.create(parameters: {
+          request_params = {
             model: model,
             input: input_payload,
             instructions: instructions,
             tools: chat_config.tools,
             previous_response_id: previous_response_id,
             stream: stream_proxy
-          })
+          }
+          request_params[:tool_choice] = "none" if tool_choice == :none && chat_config.tools.present?
+          request_params[:max_output_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
+
+          raw_response = session_client.responses.create(parameters: request_params)
 
           # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
           # for the "response chunk" in the stream and return it (it is already parsed)
@@ -438,6 +568,7 @@ class Provider::Openai < Provider
       instructions: nil,
       functions: [],
       function_results: [],
+      tool_choice: nil,
       messages: nil,
       streamer: nil,
       session_id: nil,
@@ -445,6 +576,8 @@ class Provider::Openai < Provider
       family: nil
     )
       with_provider_response do
+        session_client = with_session_headers(session_id: session_id)
+
         messages = build_generic_messages(
           prompt: prompt,
           instructions: instructions,
@@ -460,9 +593,11 @@ class Provider::Openai < Provider
           messages: messages
         }
         params[:tools] = tools if tools.present?
+        params[:tool_choice] = "none" if tool_choice == :none && tools.present?
+        params[:max_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
 
         begin
-          raw_response = client.chat(parameters: params)
+          raw_response = session_client.chat(parameters: params)
 
           parsed = GenericChatParser.new(raw_response).parsed
 
@@ -521,7 +656,7 @@ class Provider::Openai < Provider
       # LocalAI) don't silently truncate. tool_call/tool_result pairs are
       # preserved atomically by HistoryTrimmer.
       if messages.present?
-        trimmed = Assistant::HistoryTrimmer.new(messages, max_tokens: max_history_tokens).call
+        trimmed = Assistant::HistoryTrimmer.new(messages, max_tokens: max_history_tokens(instructions: instructions)).call
         payload.concat(trimmed)
       elsif prompt.present?
         payload << { role: "user", content: prompt }

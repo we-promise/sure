@@ -1,0 +1,23 @@
+uk:
+  transfer_matches:
+    create:
+      success: Переказ створено
+    new:
+      header:
+        title: Зіставте переказ або платіж
+        subtitle: Зіставте відповідну транзакцію в іншому рахунку або створіть її, якщо вона не існує.
+      from_account: З рахунку
+      from_account_named: "З рахунку: %{name}"
+      to_account: На рахунок
+      to_account_named: "На рахунок: %{name}"
+      outflow_transaction: Вихідна транзакція
+      inflow_transaction: Вхідна транзакція
+      create_transfer_match: Створити відповідність переказу
+    matching_fields:
+      select_method: Виберіть метод для зіставлення ваших транзакцій.
+      match_existing_recommended: Зіставити існуючу транзакцію (рекомендовано)
+      create_new_transaction: Створити нову транзакцію
+      matching_method: Метод зіставлення
+      matching_transaction: Транзакція для зіставлення
+      target_account: Цільовий рахунок
+      no_matching_transactions: Ми не змогли знайти жодних транзакцій для зіставлення з ваших інших рахунків. Виберіть рахунок, і ми створимо для вас нову вхідну транзакцію.

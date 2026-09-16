@@ -288,6 +288,14 @@ zh-CN:
         status_filter:
           confirmed: 已确认
           pending: 待处理
+        account_filter:
+          filter_accounts: 筛选账户
+        category_filter:
+          filter_category: 筛选分类
+        merchant_filter:
+          filter_merchants: 筛选商户
+        tag_filter:
+          filter_tags: 筛选标签
       menu:
         account_filter: 账户
         amount_filter: 金额
@@ -326,3 +334,16 @@ zh-CN:
         other: 文件（%{count}）
       browse_to_add: 浏览并添加文件
       max_reached: 已达到最大文件数（%{count}/%{max}）。删除现有文件后才能上传另一个。
+    potential_duplicate_description: 这笔待处理交易可能与下方已入账交易相同。如是，请合并以避免重复计算。
+    transaction:
+      pending: 待处理
+      pending_tooltip: 待处理交易，入账后可能变化
+      linked_with_provider: 已关联 %{provider}
+      activity_type_tooltip: 投资活动类型
+      possible_duplicate: 重复？
+      potential_duplicate_tooltip: 这可能是另一笔交易的重复项
+      review_recommended: 查看
+      review_recommended_tooltip: 金额差异较大，建议检查是否重复
+      split: 拆分
+      split_tooltip: 此交易已拆分为多条记录
+      split_child_tooltip: 拆分交易的一部分

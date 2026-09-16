@@ -88,6 +88,18 @@ class SimplefinItem::ImporterPartialErrorsTest < ActiveSupport::TestCase
     assert_equal "requires_update", @item.status
   end
 
+  test "previously requires_update item is cleared after successful partial import with institution auth error" do
+    @item.update!(status: :requires_update)
+
+    @importer.send(:record_errors, [
+      "Connection to Cash App may need attention. Auth required"
+    ])
+    @importer.send(:maybe_clear_requires_update_status)
+
+    assert_equal "good", @item.reload.status,
+      "expected successful SimpleFIN import to clear item-level reconnect even when one institution needs auth"
+  end
+
   test "non-auth partial errors don't flip status" do
     @importer.send(:record_errors, [
       "Timed out fetching transactions from Chase",

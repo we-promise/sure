@@ -1,0 +1,10 @@
+---
+ru:
+  passwords:
+    edit:
+      password: Новый пароль
+      password_challenge: Текущий пароль
+      submit: Сбросить пароль
+      title: Обновить пароль
+    update:
+      success: Ваш пароль был сброшен.

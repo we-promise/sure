@@ -1,0 +1,60 @@
+<%# Shared by initial linking and the later "review tokens" action, which is the %>
+<%# same screen with the address left alone. %>
+<% turbo_frame = local_assigns.fetch(:turbo_frame, "_top") %>
+<%= styled_form_with url: url,
+                     method: :post,
+                     data: { turbo_frame: turbo_frame },
+                     class: "space-y-4" do |form| %>
+  <%= hidden_field_tag :chain, chain %>
+  <%= hidden_field_tag :address, address %>
+
+  <%= render "onchain_wallet_items/price_provider_warning" %>
+
+  <%= render DS::Alert.new(variant: :info, message: t("onchain_wallet_items.token_review_form.explanation")) %>
+
+  <% if local_assigns[:assets_truncated] %>
+    <%= render DS::Alert.new(
+          variant: :warning,
+          message: t("onchain_wallet_items.token_review_form.assets_truncated", count: Onchain::AssetBudget.tokens)
+        ) %>
+  <% end %>
+
+  <% if review.rows.empty? %>
+    <p class="text-sm text-secondary py-4"><%= t("onchain_wallet_items.token_review_form.nothing_found") %></p>
+  <% else %>
+    <div class="space-y-2 max-h-96 overflow-y-auto">
+      <% review.rows.each do |row| %>
+        <label for="asset_<%= row.key.parameterize %>"
+               class="flex items-center gap-3 p-3 border border-primary rounded-lg hover:bg-surface cursor-pointer">
+          <%= check_box_tag "assets[]", row.key, row.preselected?,
+                            id: "asset_#{row.key.parameterize}",
+                            class: "checkbox checkbox--dark" %>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-primary truncate">
+              <%= row.asset.symbol %>
+              <% if row.native? %>
+                <span class="text-xs text-secondary"><%= t("onchain_wallet_items.token_review_form.native") %></span>
+              <% end %>
+            </p>
+            <p class="text-xs text-secondary truncate"><%= row.asset.name %></p>
+            <% unless row.priceable %>
+              <p class="text-xs text-warning"><%= t("onchain_wallet_items.token_review_form.no_price") %></p>
+            <% end %>
+          </div>
+          <p class="text-sm font-medium text-primary shrink-0 tabular-nums">
+            <%= number_with_delimiter(row.asset.quantity.round(8).to_s("F")) %>
+          </p>
+        </label>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="flex justify-end gap-2">
+    <%= render DS::Link.new(
+          text: t("onchain_wallet_items.token_review_form.cancel"),
+          variant: "secondary",
+          href: local_assigns.fetch(:cancel_path, settings_providers_path)
+        ) %>
+    <%= form.submit submit_label %>
+  </div>
+<% end %>

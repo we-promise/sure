@@ -2,7 +2,7 @@
 zh-CN:
   valuations:
     confirmation_contents:
-      this_will: 这将把账户价值在
+      this_will: 这将%{action_verb}账户在
       to_colon: 改为：
       total_account_value: 账户总价值
       holdings_value: 持仓价值
@@ -16,7 +16,7 @@ zh-CN:
       asset_value: 资产价值
       liability_balance: 负债余额
       balance: 余额
-      on: 在
+      "on": 在
       to: 到
       recalculate_notice: 所有未来的交易和余额都将根据此%{change_or_update}重新计算。
       change: 变更
@@ -42,6 +42,8 @@ zh-CN:
       value: 价值
     new:
       title: 新余额
+      amount: 金额
+      submit: 保存估值
     show:
       amount: 金额
       amount_label: 此日期的账户价值

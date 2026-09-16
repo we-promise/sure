@@ -1,0 +1,15 @@
+<%# locals: (entry:, claimed_by: nil) %>
+<%# A whole-row link back into the add dialog through the entry_id prefill
+    path -- the same mechanism the candidate strip uses. %>
+<%= link_to new_recurring_transaction_path(entry_id: entry.id, income: params[:income].presence),
+      class: "flex items-center justify-between gap-3 px-3 py-3 hover:bg-surface-inset" do %>
+  <span class="min-w-0">
+    <span class="block text-sm text-primary truncate"><%= entry.name %></span>
+    <span class="block text-xs text-secondary truncate">
+      <%= l(entry.date, format: :short) %><% if entry.account %> &middot; <%= entry.account.name %><% end %><% if claimed_by %> &middot; <%= t(".claimed", name: claimed_by) %><% end %>
+    </span>
+  </span>
+  <span class="text-sm text-primary privacy-sensitive shrink-0">
+    <%= format_money(entry.amount_money.abs) %>
+  </span>
+<% end %>

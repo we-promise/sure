@@ -1,0 +1,311 @@
+uk:
+  sophtron_items:
+    defaults:
+      name: З'єднання Sophtron
+    new:
+      title: Підключити Sophtron
+      user_id: ID користувача
+      user_id_placeholder: вставте свій ID користувача Sophtron
+      access_key: Ключ доступу
+      access_key_placeholder: вставте свій ключ доступу Sophtron
+      connect: Підключити
+      cancel: Скасувати
+    create:
+      success: З'єднання Sophtron успішно створено
+    destroy:
+      success: З'єднання Sophtron видалено
+    update:
+      success: З'єднання Sophtron успішно оновлено! Ваші рахунки перепідключаються.
+      errors:
+        blank_user_id: Будь ласка, введіть ID користувача Sophtron.
+        invalid_user_id: Недійсний ID користувача. Перевірте, чи ви скопіювали повний ID користувача з Sophtron.
+        user_id_compromised: ID користувача може бути скомпрометований, прострочений або вже використаний. Будь ласка, створіть новий.
+        blank_access_key: Будь ласка, введіть ключ доступу Sophtron.
+        invalid_access_key: Недійсний ключ доступу. Перевірте, чи ви скопіювали повний ключ доступу з Sophtron.
+        access_key_compromised: Ключ доступу може бути скомпрометований, прострочений або вже використаний. Будь ласка, створіть новий.
+        update_failed: "Не вдалося оновити з'єднання: %{message}"
+        unexpected: Сталася несподівана помилка. Спробуйте ще раз або зверніться до служби підтримки.
+    edit:
+      user_id:
+        label: "ID користувача Sophtron:"
+        placeholder: "Вставте свій ID користувача Sophtron тут..."
+        help_text: "ID користувача має бути довгим рядком, що починається з літер і цифр"
+      access_key:
+        label: "Ключ доступу Sophtron:"
+        placeholder: "Вставте свій ключ доступу Sophtron тут..."
+        help_text: "Ключ доступу має бути довгим рядком, що починається з літер і цифр"
+    index:
+      title: З'єднання Sophtron
+    loading:
+      loading_message: Завантаження рахунків Sophtron...
+      loading_title: Завантаження
+    link_accounts:
+      all_already_linked:
+        one: "Вибраний рахунок (%{names}) вже пов'язано"
+        other: "Усі %{count} вибраних рахунків вже пов'язано: %{names}"
+      api_error: "Помилка з'єднання API"
+      invalid_account_names:
+        one: "Неможливо пов'язати рахунок з порожньою назвою"
+        other: "Неможливо пов'язати %{count} рахунків з порожніми назвами"
+      link_failed: Не вдалося пов'язати рахунки
+      no_accounts_selected: Будь ласка, виберіть принаймні один рахунок
+      partial_invalid: "Успішно пов'язано %{created_count} рахунок(и), %{already_linked_count} вже було пов'язано, %{invalid_count} рахунок(и) мав(ли) недійсні назви"
+      partial_success: "Успішно пов'язано %{created_count} рахунок(и). %{already_linked_count} рахунок(и) вже було пов'язано: %{already_linked_names}"
+      success:
+        one: "Успішно пов'язано %{count} рахунок"
+        other: "Успішно пов'язано %{count} рахунків"
+      no_credentials_configured: "Будь ласка, спочатку налаштуйте свій ID користувача та ключ доступу Sophtron API у налаштуваннях провайдера."
+      no_accounts_found: Рахунки не знайдено. Перевірте конфігурацію вашого ключа API.
+      no_access_key: Ключ доступу Sophtron не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
+      no_user_id: ID користувача Sophtron не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
+      no_institution_connected: Будь ласка, спочатку підключіть банківську установу до Sophtron.
+    connect:
+      cancel: Скасувати
+      captcha: Captcha
+      connect: Підключити
+      institution_search_label: Установа
+      institution_search_placeholder: Пошук за назвою банку
+      no_institutions: Не знайдено відповідних установ.
+      password: Пароль
+      search: Пошук
+      search_too_short: Введіть принаймні два символи для пошуку.
+      title: Підключити установу Sophtron
+      username: Ім'я користувача
+    connect_institution:
+      api_error: "Помилка з'єднання Sophtron: %{message}"
+      missing_parameters: Виберіть установу та введіть свої облікові дані для входу в банк.
+    connection_status:
+      api_error: "Помилка з'єднання API: %{message}"
+      attempt: "Спроба %{attempt} з %{max}"
+      check_again: Перевірити ще раз
+      failed: Sophtron не зміг завершити це з'єднання з установою.
+      failed_timeout: Sophtron перевищив час очікування, поки установа завершувала вхід.
+      timeout: Sophtron не завершив підключення протягом очікуваного часу. Ви можете перевірити ще раз або спробувати перепідключитися пізніше.
+      title: Підключення до Sophtron
+      waiting: Sophtron все ще підключається до вашої установи.
+    mfa:
+      captcha: Текст Captcha
+      captcha_alt: Sophtron captcha
+      phone_confirmed: Я підтвердив по телефону
+      submit: Надіслати
+      title: Верифікація Sophtron
+      token: Код верифікації
+    submit_mfa:
+      api_error: "Верифікація не вдалася: %{message}"
+      invalid_security_answers: Відповіді на секретні питання відсутні або занадто довгі.
+      unknown_challenge: Невідомий крок верифікації Sophtron.
+    sophtron_item:
+      accounts_need_setup: Рахунки потребують налаштування
+      automatic_sync: Використовувати автоматичну синхронізацію
+      delete: Видалити з'єднання
+      deletion_in_progress: видалення триває...
+      error: Помилка
+      no_accounts_description: Це з'єднання ще не має пов'язаних рахунків.
+      no_accounts_title: Немає рахунків
+      manual_sync: Ручна синхронізація
+      manual_sync_action: Вимагати ручну синхронізацію
+      manual_sync_action_for: "Вимагати ручну синхронізацію для %{institution}"
+      automatic_sync_for: "Використовувати автоматичну синхронізацію для %{institution}"
+      setup_action: Налаштувати нові рахунки
+      setup_description: "%{linked} з %{total} рахунків пов'язано. Виберіть типи рахунків для ваших щойно імпортованих рахунків Sophtron."
+      setup_needed: Нові рахунки готові до налаштування
+      status: "Синхронізовано %{timestamp} тому"
+      status_never: Ніколи не синхронізовано
+      status_with_summary: "Остання синхронізація %{timestamp} тому • %{summary}"
+      sync_now: Синхронізувати зараз
+      syncing: Синхронізація...
+      total: Всього
+      unlinked: Непов'язано
+    preload_accounts:
+      preload_accounts: попередньо завантажити рахунки
+      api_error: "Помилка з'єднання API"
+      unexpected_error: "Сталася несподівана помилка"
+      no_credentials_configured: "Будь ласка, спочатку налаштуйте свій ID користувача та ключ доступу Sophtron API у налаштуваннях провайдера."
+      no_accounts_found: Рахунки не знайдено. Перевірте конфігурацію вашого ключа API.
+      no_access_key: Ключ доступу Sophtron не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
+      no_user_id: ID користувача Sophtron не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
+    select_accounts:
+      accounts_selected: вибрано рахунків
+      api_error: "Помилка з'єднання API"
+      unexpected_error: "Сталася несподівана помилка"
+      cancel: Скасувати
+      configure_name_in_sophtron: Неможливо імпортувати - будь ласка, налаштуйте назву рахунку в Sophtron
+      description: Виберіть рахунки, які ви хочете пов'язати зі своїм рахунком %{product_name}.
+      link_accounts: Пов'язати вибрані рахунки
+      no_accounts_found: Рахунки не знайдено. Перевірте конфігурацію вашого ключа API.
+      no_access_key: Ключ доступу Sophtron не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
+      no_user_id: ID користувача Sophtron не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
+      no_credentials_configured: "Будь ласка, спочатку налаштуйте свій ID користувача та ключ доступу Sophtron API у налаштуваннях провайдера."
+      no_institution_connected: Будь ласка, спочатку підключіть банківську установу до Sophtron.
+      no_name_placeholder: "(Без назви)"
+      title: Виберіть рахунки Sophtron
+    select_existing_account:
+      account_already_linked: Цей рахунок вже пов'язано з провайдером
+      all_accounts_already_linked: Усі рахунки Sophtron вже пов'язано
+      api_error: "Помилка з'єднання API"
+      cancel: Скасувати
+      configure_name_in_sophtron: Неможливо імпортувати - будь ласка, налаштуйте назву рахунку в Sophtron
+      description: Виберіть рахунок Sophtron для пов'язування з цим рахунком. Транзакції будуть синхронізуватися та дедуплікуватися автоматично.
+      link_account: Пов'язати рахунок
+      no_account_specified: Рахунок не вказано
+      no_accounts_found: Рахунки Sophtron не знайдено. Перевірте конфігурацію вашого ключа API.
+      no_access_key: Ключ доступу Sophtron не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
+      no_user_id: ID користувача Sophtron не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
+      no_institution_connected: Будь ласка, спочатку підключіть банківську установу до Sophtron.
+      no_name_placeholder: "(Без назви)"
+      title: "Пов'язати %{account_name} з Sophtron"
+      unexpected_error: "Сталася несподівана помилка"
+    link_existing_account:
+      account_already_linked: Цей рахунок вже пов'язано з провайдером
+      api_error: "Помилка з'єднання API"
+      unexpected_error: "Сталася несподівана помилка"
+      invalid_account_name: Неможливо пов'язати рахунок з порожньою назвою
+      sophtron_account_already_linked: Цей рахунок Sophtron вже пов'язано з іншим рахунком
+      sophtron_account_not_found: Рахунок Sophtron не знайдено
+      missing_parameters: Відсутні обов'язкові параметри
+      no_institution_connected: Будь ласка, спочатку підключіть банківську установу до Sophtron.
+      success: "Успішно пов'язано %{account_name} з Sophtron"
+    setup_accounts:
+      account_type_label: "Тип рахунку:"
+      all_accounts_linked: "Усі ваші рахунки Sophtron вже налаштовано."
+      api_error: "Помилка з'єднання API"
+      unexpected_error: "Сталася несподівана помилка"
+      fetch_failed: "Не вдалося завантажити рахунки"
+      no_accounts_to_setup: "Немає рахунків для налаштування"
+      no_access_key: "Ключ доступу Sophtron не налаштовано. Перевірте налаштування з'єднання."
+      no_user_id: "ID користувача Sophtron не налаштовано. Перевірте налаштування з'єднання."
+      no_institution_connected: "Установа Sophtron ще не підключена."
+      account_types:
+        skip: Пропустити цей рахунок
+        depository: Розрахунковий або ощадний рахунок
+        credit_card: Кредитна картка
+        investment: Інвестиційний рахунок
+        loan: Позика або іпотека
+        other_asset: Інший актив
+      subtype_labels:
+        depository: "Підтип рахунку:"
+        credit_card: ""
+        investment: "Тип інвестицій:"
+        loan: "Тип позики:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Кредитні картки будуть автоматично налаштовані як рахунки кредитних карток."
+        other_asset: "Для інших активів не потрібні додаткові опції."
+      balance: Баланс
+      cancel: Скасувати
+      choose_account_type: "Виберіть правильний тип рахунку для кожного рахунку Sophtron:"
+      create_accounts: Створити рахунки
+      creating_accounts: Створення рахунків...
+      historical_data_range: "Діапазон історичних даних:"
+      sync_start_date_help: Виберіть, наскільки далеко назад ви хочете синхронізувати історію транзакцій. Доступна історія максимум за 3 роки.
+      sync_start_date_label: "Почати синхронізацію транзакцій з:"
+      title: Налаштуйте свої рахунки Sophtron
+    complete_account_setup:
+      all_skipped: "Усі рахунки було пропущено. Жоден рахунок не було створено."
+      creation_failed: "Не вдалося створити рахунки"
+      api_error: "Помилка з'єднання API"
+      unexpected_error: "Сталася несподівана помилка"
+      no_accounts: "Немає рахунків для налаштування."
+      success: "Успішно створено %{count} рахунок(и)."
+    sync:
+      already_running: Ручна синхронізація Sophtron вже триває.
+      api_error: "Ручна синхронізація Sophtron не вдалася: %{message}"
+      failed: Ручна синхронізація Sophtron не вдалася
+      no_linked_accounts: Ця установа Sophtron не має пов'язаних рахунків для синхронізації.
+      processing_failed: Ручна синхронізація Sophtron не змогла обробити оновлені транзакції.
+      success: Синхронізацію розпочато
+    toggle_manual_sync:
+      success_disabled: Установа Sophtron буде синхронізуватися автоматично.
+      success_enabled: Установа Sophtron тепер вимагає ручної синхронізації.
+    manual_sync_complete:
+      close: Закрити
+      description: Баланси рахунків завершать оновлення у фоновому режимі.
+      message: Транзакції було завантажено після верифікації Sophtron.
+      title: Синхронізацію Sophtron розпочато
+    sophtron_setup_required:
+      title: Потрібне налаштування Sophtron
+      message: >
+        Щоб завершити налаштування з'єднання Sophtron, перейдіть на сторінку налаштувань провайдера та дотримуйтесь інструкцій для авторизації та налаштування з'єднання Sophtron.
+      go_to_provider_settings: Перейти до налаштувань провайдера
+      heading: "ID користувача та ключ доступу не налаштовано"
+      description: "Перш ніж ви зможете пов'язати рахунки Sophtron, вам потрібно налаштувати свій ID користувача та ключ доступу Sophtron."
+      setup_steps_title: "Кроки налаштування:"
+      step_1_html: "Перейдіть до <strong>Налаштування → Провайдери синхронізації з банком</strong>"
+      step_2_html: "Знайдіть розділ <strong>Sophtron</strong>"
+      step_3_html: "Введіть свій ID користувача та ключ доступу Sophtron"
+      step_4: "Поверніться сюди, щоб пов'язати свої рахунки"
+    api_error:
+      title: "Помилка з'єднання Sophtron"
+      unable_to_connect: "Неможливо підключитися до Sophtron"
+      institution_unable_to_connect: "Неможливо підключитися до установи"
+      common_issues_title: "Поширені проблеми:"
+      incorrect_user_id: "Неправильний ID користувача: перевірте свій ID користувача в налаштуваннях провайдера"
+      invalid_access_key: "Недійсний ключ доступу: перевірте свій ключ доступу в налаштуваннях провайдера"
+      expired_credentials: "Прострочені облікові дані: згенеруйте новий ID користувача та ключ доступу з Sophtron"
+      network_issue: "Проблема з мережею: перевірте своє інтернет-з'єднання"
+      service_down: "Сервіс не працює: API Sophtron може бути тимчасово недоступним"
+      bad_credentials: "Банківські облікові дані: перевірте правильність імені користувача та пароля"
+      verification_code: "Код верифікації: переконайтеся, що останній код було введено до закінчення терміну його дії"
+      institution_timeout: "Тайм-аут установи: сторінка входу в банк не завершилася вчасно"
+      unsupported_mfa: "Підтримка MFA: Sophtron може не підтримувати поточний потік верифікації цієї установи"
+      check_provider_settings: "Перевірити налаштування провайдера"
+      try_again: "Спробуйте підключитися ще раз"
+    select_option: "Вибрати %{type}"
+    subtype: "підтип"
+    type: "тип"
+    sophtron_panel:
+      setup_instructions_title: "Інструкції з налаштування:"
+      setup_instructions:
+        step_1_html: 'Відвідайте <a href="%{url}" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a>, щоб отримати свої облікові дані API'
+        step_2: "Скопіюйте свій ID користувача та ключ доступу з налаштувань вашого облікового запису Sophtron"
+        step_3: "Вставте облікові дані нижче та натисніть Зберегти; Sure автоматично створить або повторно використає ваш ID клієнта Sophtron"
+      field_descriptions_title: "Описи полів:"
+      field_descriptions:
+        user_id_html: "<strong>ID користувача:</strong> Ваш обліковий запис ID користувача Sophtron"
+        access_key_html: "<strong>Ключ доступу:</strong> Ваш обліковий запис ключа доступу Sophtron"
+        base_url_html: "<strong>Базова URL-адреса:</strong> URL-адреса кінцевої точки API Sophtron, зазвичай https://api.sophtron.com/api"
+      fields:
+        user_id:
+          label: "ID користувача"
+          placeholder_new: "Вставте свій ID користувача Sophtron"
+          placeholder_edit: "••••••••"
+        access_key:
+          label: "Ключ доступу"
+          placeholder_new: "Вставте свій ключ доступу Sophtron"
+          placeholder_edit: "••••••••"
+        base_url:
+          label: "Базова URL-адреса"
+          placeholder: "https://api.sophtron.com/api"
+      save: "Зберегти конфігурацію"
+      update: "Оновити конфігурацію"
+    syncer:
+      manual_sync_required: "Для цієї установи потрібна ручна синхронізація Sophtron; пропуск цих рахунків під час автоматичної синхронізації."
+      importing_accounts: "Імпорт рахунків з Sophtron..."
+      checking_account_configuration: "Перевірка конфігурації рахунку..."
+      accounts_need_setup: "%{count} рахунок(и) потребує налаштування"
+      processing_transactions: "Обробка транзакцій для пов'язаних рахунків..."
+      calculating_balances: "Розрахунок балансів для пов'язаних рахунків..."
+    sophtron_entry:
+      processor:
+        unknown_transaction: "Невідома транзакція"
+    render_connection_timeout:
+      timeout: "Час з'єднання минув. Спробуйте ще раз."
+    redirect_after_account_link:
+      invalid_account_names:
+        one: "Неможливо пов'язати %{count} рахунок з порожньою назвою"
+        other: "Неможливо пов'язати %{count} рахунків з порожніми назвами"
+      partial_invalid: "Пов'язано %{created_count} рахунок(и). %{already_linked_count} вже пов'язано, %{invalid_count} мав(ли) недійсні назви."
+      partial_success: "Пов'язано %{created_count} рахунок(и). %{already_linked_count} рахунок(и) вже було пов'язано."
+      success:
+        one: "Успішно пов'язано %{count} рахунок."
+        other: "Успішно пов'язано %{count} рахунків."
+      all_already_linked:
+        one: "Вибраний рахунок вже пов'язано"
+        other: "Усі %{count} вибраних рахунків вже пов'язано"
+      link_failed: "Не вдалося пов'язати рахунки"
+    start_manual_sync:
+      already_running: "Синхронізація вже триває."
+      no_linked_accounts: "Немає пов'язаних рахунків для синхронізації."
+      api_error: "Помилка API: %{message}"
+    start_manual_sync_for_account:
+      failed: "Не вдалося синхронізувати рахунок"

@@ -1,0 +1,26 @@
+---
+it:
+  tags:
+    create:
+      created: Etichetta creata
+      error: "Errore nella creazione dell'etichetta: %{error}"
+    destroy:
+      deleted: Etichetta eliminata
+    destroy_all:
+      all_deleted: Tutte le etichette eliminate
+    edit:
+      edit: Modifica etichetta
+    form:
+      placeholder: Nome etichetta
+    index:
+      empty: Nessuna etichetta ancora
+      new: Nuova etichetta
+      tags: Etichette
+      delete_all: Elimina tutto
+    new:
+      new: Nuova etichetta
+    tag:
+      delete: Elimina
+      edit: Modifica
+    update:
+      updated: Etichetta aggiornata

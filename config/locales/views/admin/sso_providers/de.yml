@@ -5,11 +5,11 @@ de:
     sso_providers:
       index:
         title: "SSO-Provider"
-        description: "Single-Sign-On-Authentifizierungsprovider für Ihre Instanz verwalten"
+        description: Single-Sign-On-Authentifizierungsprovider für deine Instanz verwalten
         add_provider: "Provider hinzufügen"
         no_providers_title: "Keine SSO-Provider"
-        no_providers_message: "Fügen Sie Ihren ersten SSO-Provider hinzu."
-        note: "Änderungen an SSO-Providern erfordern einen Neustart des Servers. Alternativ aktivieren Sie das Feature AUTH_PROVIDERS_SOURCE=db, um Provider dynamisch aus der Datenbank zu laden."
+        no_providers_message: Füg deinen ersten SSO-Provider hinzu.
+        note: Änderungen an SSO-Providern erfordern einen Neustart des Servers. Alternativ aktivier das Feature AUTH_PROVIDERS_SOURCE=db, um Provider dynamisch aus der Datenbank zu laden.
         table:
           name: "Name"
           strategy: "Strategie"
@@ -19,26 +19,41 @@ de:
           enabled: "Aktiviert"
           disabled: "Deaktiviert"
         legacy_providers_title: "Umgebungskonfigurierte Provider"
-        legacy_providers_notice: "Diese Provider werden über Umgebungsvariablen oder YAML konfiguriert und können nicht über diese Oberfläche verwaltet werden. Zur Verwaltung hier migrieren Sie sie zu datenbankgestützten Providern (AUTH_PROVIDERS_SOURCE=db) und legen Sie sie in der Oberfläche neu an."
+        legacy_providers_notice: Diese Provider werden über Umgebungsvariablen oder YAML konfiguriert und können nicht über diese Oberfläche verwaltet werden. Zur Verwaltung hier migrier sie zu datenbankgestützten Providern (AUTH_PROVIDERS_SOURCE=db) und leg sie in der Oberfläche neu an.
         env_configured: "Env/YAML"
+        configuration_mode: Konfigurationsmodus
+        configured_providers: Eingerichtete Anbieter
+        db_backed_providers: Anbieter aus der Datenbank
+        db_backed_providers_description: Anbieter aus der Datenbank laden statt aus der YAML-Konfiguration
+        db_backed_providers_help_html: Setz <code class="bg-surface px-1 py-0.5 rounded text-xs">AUTH_PROVIDERS_SOURCE=db</code>, um Anbieter aus der Datenbank zu laden. Dann greifen Änderungen ohne Server-Neustart.
+        delete: Löschen
+        disable: Deaktivieren
+        disabled: Inaktiv
+        edit: Bearbeiten
+        enable: Aktivieren
+        enabled: Aktiv
+        page_title: SSO-Anbieter
+        restart_required: Die Änderungen greifen erst nach einem Neustart des Servers.
       new:
         title: "SSO-Provider hinzufügen"
         description: "Neuen Single-Sign-On-Authentifizierungsprovider konfigurieren"
+        provider_configuration: Anbieter-Konfiguration
       edit:
         title: "SSO-Provider bearbeiten"
         description: "Konfiguration für %{label} aktualisieren"
+        provider_configuration: Anbieter-Konfiguration
       create:
         success: "SSO-Provider wurde erfolgreich erstellt."
       update:
         success: "SSO-Provider wurde erfolgreich aktualisiert."
       destroy:
         success: "SSO-Provider wurde erfolgreich gelöscht."
-        confirm: "Möchten Sie diesen Provider wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+        confirm: Willst du diesen Provider wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
       toggle:
         success_enabled: "SSO-Provider wurde erfolgreich aktiviert."
         success_disabled: "SSO-Provider wurde erfolgreich deaktiviert."
-        confirm_enable: "Möchten Sie diesen Provider aktivieren?"
-        confirm_disable: "Möchten Sie diesen Provider deaktivieren?"
+        confirm_enable: Willst du diesen Provider aktivieren?
+        confirm_disable: Willst du diesen Provider deaktivieren?
       form:
         basic_information: "Grundinformationen"
         oauth_configuration: "OAuth/OIDC-Konfiguration"
@@ -60,7 +75,7 @@ de:
         issuer_help: "OIDC-Issuer-URL (validiert .well-known/openid-configuration)"
         client_id_label: "Client ID"
         client_id_placeholder: "your-client-id"
-        client_id_help: "OAuth-Client-ID Ihres Identitätsanbieters"
+        client_id_help: OAuth-Client-ID deines Identitätsanbieters
         client_secret_label: "Client Secret"
         client_secret_placeholder_new: "your-client-secret"
         client_secret_placeholder_existing: "••••••••••••••••"
@@ -72,7 +87,9 @@ de:
         copy_button: "Kopieren"
         cancel: "Abbrechen"
         submit: "Provider speichern"
-        errors_title: "%{count} Fehler verhinderte das Speichern dieses Providers:"
+        errors_title:
+          one: 'Ein Fehler verhindert das Speichern dieses Anbieters:'
+          other: "%{count} Fehler verhindern das Speichern dieses Anbieters:"
         provisioning_title: "Benutzer-Bereitstellung"
         default_role_label: "Standardrolle für neue Benutzer"
         default_role_help: "Rolle für per JIT-SSO bereitgestellte Benutzer. Standard: Mitglied."
@@ -100,7 +117,7 @@ de:
         test_connection: "Verbindung testen"
         saml_configuration: "SAML-Konfiguration"
         idp_metadata_url: "IdP-Metadaten-URL"
-        idp_metadata_url_help: "URL zu den SAML-Metadaten Ihres IdP. Andere SAML-Einstellungen werden dann automatisch gesetzt."
+        idp_metadata_url_help: URL zu den SAML-Metadaten deines IdP. Andere SAML-Einstellungen werden dann automatisch gesetzt.
         manual_saml_config: "Manuelle Konfiguration (ohne Metadaten-URL)"
         manual_saml_help: "Nur verwenden, wenn Ihr IdP keine Metadaten-URL bereitstellt."
         idp_sso_url: "IdP-SSO-URL"
@@ -113,3 +130,11 @@ de:
         name_id_persistent: "Persistent"
         name_id_transient: "Transient"
         name_id_unspecified: "Nicht angegeben"
+        create_provider: Anbieter anlegen
+        saml_sp_callback_url_help: Trag diese URL bei deinem IdP als Assertion Consumer Service URL ein
+        saml_sp_callback_url_label: SP-Callback-URL (ACS-URL)
+        strategy_github: GitHub
+        strategy_google_oauth2: Google OAuth2
+        strategy_openid_connect: OpenID Connect
+        strategy_saml: SAML 2.0
+        update_provider: Anbieter aktualisieren

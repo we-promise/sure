@@ -17,7 +17,7 @@ de:
     protection:
       tooltip: Vor Sync geschützt
       title: Vor Sync geschützt
-      description: Ihre Änderungen an dieser Buchung werden nicht durch den Provider-Sync überschrieben.
+      description: Deine Änderungen an dieser Buchung werden vom Anbieter-Sync nicht überschrieben.
       locked_fields_label: "Gesperrte Felder:"
       unlock_button: Sync-Updates zulassen
-      unlock_confirm: Soll der Sync diese Buchung aktualisieren dürfen? Ihre Änderungen können beim nächsten Sync überschrieben werden.
+      unlock_confirm: Soll der Sync diese Buchung aktualisieren dürfen? Deine Änderungen können beim nächsten Sync überschrieben werden.

@@ -109,7 +109,7 @@
 
     <div class="overflow-x-auto">
       <table class="w-full">
-        <thead class="bg-surface-default border-b border-primary">
+        <thead class="bg-surface border-b border-primary">
           <tr>
             <th class="px-4 py-3 text-left text-xs font-medium text-secondary uppercase tracking-wider">
               <%= t("rules.recent_runs.columns.date_time") %>
@@ -133,9 +133,9 @@
             </th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100">
+        <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
           <% @recent_runs.each do |run| %>
-            <tr class="<%= "bg-red-50 theme-dark:bg-red-950/30" if run.failed? %>">
+            <tr class="<%= "bg-red-tint-5 theme-dark:bg-red-tint-10" if run.failed? %>">
               <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
                 <%= run.executed_at.strftime("%b %d, %Y %I:%M %p") %>
               </td>
@@ -147,21 +147,15 @@
               <td class="px-4 py-3 text-sm text-center">
                 <div class="flex items-center justify-center gap-2">
                   <% if run.pending? %>
-                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-50 text-yellow-700 theme-dark:bg-yellow-950/30 theme-dark:text-yellow-400">
-                      <%= t("rules.recent_runs.statuses.#{run.status}") %>
-                    </span>
+                    <%= render DS::Pill.new(label: t("rules.recent_runs.statuses.#{run.status}"), tone: :warning, marker: false) %>
                   <% elsif run.success? %>
-                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 theme-dark:bg-green-950/30 theme-dark:text-green-400">
-                      <%= t("rules.recent_runs.statuses.#{run.status}") %>
-                    </span>
+                    <%= render DS::Pill.new(label: t("rules.recent_runs.statuses.#{run.status}"), tone: :success, marker: false) %>
                   <% else %>
-                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-50 text-red-700 theme-dark:bg-red-950/30 theme-dark:text-red-400">
-                      <%= t("rules.recent_runs.statuses.#{run.status}") %>
-                    </span>
+                    <%= render DS::Pill.new(label: t("rules.recent_runs.statuses.#{run.status}"), tone: :error, marker: false) %>
                   <% end %>
                   <% if run.failed? && run.error_message.present? %>
                     <div data-controller="tooltip" data-tooltip-content-value="<%= run.error_message %>">
-                      <%= icon("info", size: "sm", class: "text-red-500") %>
+                      <%= icon("info", size: "sm", color: "destructive") %>
                     </div>
                   <% end %>
                 </div>

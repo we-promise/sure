@@ -13,3 +13,13 @@ de:
       success: Sitzung verlassen
     reject:
       success: Anfrage abgelehnt
+    super_admin_bar:
+      impersonating: Sitzung übernommen
+      jobs: Jobs
+      join: Übernehmen
+      join_a_session: Sitzung übernehmen
+      leave: Verlassen
+      request_impersonation: Übernahme anfragen
+      super_admin: Super-Admin
+      terminate: Beenden
+      uuid_placeholder: UUID

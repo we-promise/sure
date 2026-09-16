@@ -1,0 +1,30 @@
+---
+zh-TW:
+  activerecord:
+    attributes:
+      account_statement:
+        account: 帳戶
+        account_last4_hint: 帳號末四碼
+        account_name_hint: 帳戶名稱提示
+        closing_balance: 期末餘額
+        content_sha256: 內容摘要
+        currency: 幣別
+        filename: 檔案名稱
+        institution_name_hint: 機構名稱提示
+        opening_balance: 期初餘額
+        original_file: 對帳單檔案
+        period_end_on: 期間結束
+        period_start_on: 期間開始
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: 已經在這個家庭中上傳過了
+            content_sha256:
+              duplicate_statement_file: 已經在這個家庭中上傳過了
+            original_file:
+              invalid_format: 必須是 PDF、CSV 或 XLSX 檔案
+              too_large: 太大了，上限為 %{max_mb}MB
+            period_end_on:
+              on_or_after_start: 必須等於或晚於期間開始日

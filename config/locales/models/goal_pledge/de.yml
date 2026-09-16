@@ -1,0 +1,20 @@
+---
+de:
+  activerecord:
+    attributes:
+      goal_pledge:
+        account: Konto
+        amount: Betrag
+        currency: Währung
+        expires_at: Läuft ab am
+        kind: Art
+        status: Status
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Wähl eines der mit dem Ziel verknüpften Konten.
+            currency:
+              must_match_goal: Die Währung der Zusage muss zur Währung des Ziels passen.
+          duplicate_open_pledge: Für diesen Betrag gibt es auf diesem Konto bereits eine offene Zusage. Zieh sie zurück oder verlänger sie, bevor du eine neue erfasst.

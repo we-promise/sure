@@ -11,6 +11,15 @@ class Demo::DataCleaner
     # Clear SSO audit logs first (they reference users)
     SsoAuditLog.destroy_all
 
+    # ApiKey#prevent_demo_monitoring_key_destroy! throws :abort to stop the demo
+    # monitoring key being revoked from the UI. That abort silently no-ops the
+    # entire Family.destroy_all cascade below (accounts/entries/trades all
+    # survive), which only then surfaces as a NOT NULL crash in
+    # `Security.destroy_all`. Safe to bypass here: this class only runs in
+    # dev/test (see #ensure_safe_environment!).
+
+    ApiKey.where(display_key: ApiKey::DEMO_MONITORING_KEY).delete_all
+
     Family.destroy_all
     Setting.destroy_all
     InviteCode.destroy_all

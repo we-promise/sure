@@ -1,0 +1,54 @@
+---
+tr:
+  period:
+    all_time:
+      comparison_label: Başlangıca göre
+      label: Tüm Zamanlar
+      label_short: Tümü
+    current_month:
+      comparison_label: Ay başına göre
+      label: Bu Ay
+      label_short: BA
+    current_week:
+      comparison_label: Hafta başına göre
+      label: Bu Hafta
+      label_short: BH
+    current_year:
+      comparison_label: Yıl başına göre
+      label: Bu Yıl
+      label_short: BY
+    custom:
+      label: Özel Dönem
+      label_short: Özel
+    last_10_years:
+      comparison_label: 10 yıl öncesine göre
+      label: Son 10 Yıl
+      label_short: 10Y
+    last_30_days:
+      comparison_label: Son 30 güne göre
+      label: Son 30 Gün
+      label_short: 30G
+    last_365_days:
+      comparison_label: 1 yıl öncesine göre
+      label: Son 365 Gün
+      label_short: 365G
+    last_5_years:
+      comparison_label: 5 yıl öncesine göre
+      label: Son 5 Yıl
+      label_short: 5Y
+    last_7_days:
+      comparison_label: Geçen haftaya göre
+      label: Son 7 Gün
+      label_short: 7G
+    last_90_days:
+      comparison_label: Geçen çeyreğe göre
+      label: Son 90 Gün
+      label_short: 90G
+    last_day:
+      comparison_label: Düne göre
+      label: Son Gün
+      label_short: 1G
+    last_month:
+      comparison_label: Geçen aya göre
+      label: Geçen Ay
+      label_short: GA

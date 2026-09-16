@@ -1,0 +1,21 @@
+---
+tr:
+  activerecord:
+    attributes:
+      goal_pledge:
+        account: Hesap
+        amount: Tutar
+        currency: Para Birimi
+        expires_at: Son geçerlilik tarihi
+        kind: Tür
+        status: Durum
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Hedefe bağlı hesaplardan birini seçin.
+            currency:
+              must_match_goal: Taahhüt para birimi, hedefin para birimiyle eşleşmelidir.
+          duplicate_open_pledge: Bu hesapta bu tutar için zaten açık bir taahhüdünüz
+            var. Yeni bir taahhüt kaydetmeden önce mevcut olanı iptal edin veya uzatın.

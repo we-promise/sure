@@ -42,6 +42,55 @@ class Account::LinkableTest < ActiveSupport::TestCase
     refute @account.linked_to?("SimplefinAccount")
   end
 
+  test "supports_category_matcher? returns true for Plaid-linked accounts" do
+    plaid_account = plaid_accounts(:one)
+    AccountProvider.create!(account: @account, provider: plaid_account)
+
+    assert @account.supports_category_matcher?
+  end
+
+  test "supports_category_matcher? returns true for legacy plaid_account_id links" do
+    plaid_account = plaid_accounts(:one)
+    @account.update!(plaid_account: plaid_account)
+
+    assert @account.supports_category_matcher?
+  end
+
+  test "supports_category_matcher? returns true for Up-linked accounts" do
+    up_item = UpItem.create!(family: @family, name: "Test Up", access_token: "up-access-token")
+    up_account = UpAccount.create!(up_item: up_item, name: "Up Spending", account_id: "up_acc_1", currency: "AUD")
+    AccountProvider.create!(account: @account, provider: up_account)
+
+    assert @account.supports_category_matcher?
+  end
+
+  test "supports_category_matcher? returns true for Monobank-linked accounts" do
+    AccountProvider.create!(account: @account, provider: monobank_accounts(:black_card))
+
+    assert @account.supports_category_matcher?
+  end
+
+  test "supports_category_matcher? returns false for unlinked accounts and providers without a matcher" do
+    refute @account.supports_category_matcher?
+
+    simplefin_item = SimplefinItem.create!(
+      family: @family,
+      name: "Test SimpleFin",
+      access_url: "https://example.com/access_token"
+    )
+    simplefin_account = SimplefinAccount.create!(
+      simplefin_item: simplefin_item,
+      name: "Test Account",
+      account_id: "test-acct",
+      currency: "USD",
+      account_type: "checking",
+      current_balance: 0
+    )
+    @account.update!(simplefin_account: simplefin_account)
+
+    refute @account.supports_category_matcher?
+  end
+
   test "can_delete_holdings? returns true for unlinked accounts" do
     assert @account.unlinked?
     assert @account.can_delete_holdings?

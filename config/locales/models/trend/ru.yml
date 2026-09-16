@@ -1,0 +1,17 @@
+---
+ru:
+  activemodel:
+    errors:
+      models:
+        trend:
+          attributes:
+            current:
+              must_be_of_the_same_type_as_previous: должен быть того же типа, что
+                и предыдущий
+              must_be_of_type_money_numeric_or_nil: должен быть типа Деньги, Числовой
+                или nil
+            previous:
+              must_be_of_the_same_type_as_current: должен быть того же типа, что и
+                текущий
+              must_be_of_type_money_numeric_or_nil: должен быть типа Деньги, Числовой
+                или nil

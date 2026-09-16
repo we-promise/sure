@@ -5,8 +5,8 @@ zh-CN:
       account:
         balance: 余额
         currency: 币种
-        family: 家庭
-        family_id: 家庭
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         name: 名称
         subtype: 子类型
     models:
@@ -19,3 +19,16 @@ zh-CN:
       account/other_liability: 其他负债
       account/property: 房产/房地产
       account/vehicle: 车辆
+  account_order:
+    balance_asc:
+      label: 余额（从低到高）
+      label_short: 余额 ↑
+    balance_desc:
+      label: 余额（从高到低）
+      label_short: 余额 ↓
+    name_asc:
+      label: 名称（A-Z）
+      label_short: 名称 ↑
+    name_desc:
+      label: 名称（Z-A）
+      label_short: 名称 ↓

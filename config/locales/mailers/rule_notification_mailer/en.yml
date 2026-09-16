@@ -1,0 +1,16 @@
+---
+en:
+  rule_notification_mailer:
+    digest:
+      subject:
+        one: "1 new transaction matched your rule on %{product_name}"
+        other: "%{count} new transactions matched your rule on %{product_name}"
+      heading:
+        one: "1 new transaction matched your rule"
+        other: "%{count} new transactions matched your rule"
+      intro: 'These transactions matched the rule "%{rule}":'
+      date: "Date"
+      name: "Name"
+      account: "Account"
+      amount: "Amount"
+      cta: "View transactions"

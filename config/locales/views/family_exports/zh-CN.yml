@@ -29,3 +29,15 @@ zh-CN:
           delete: 删除
           download: 下载
       empty: 暂无导出记录
+    new:
+      dialog_title: 导出你的数据
+      dialog_subtitle: 下载此家庭的财务数据副本。
+      whats_included: 包含内容：
+      accounts_and_balances: 所有账户和余额
+      transaction_history: 交易历史
+      investment_trades: 投资交易
+      categories_tags_rules: 分类、标签和规则
+      note_label: 说明
+      note_description: 导出文件可能包含敏感财务信息，请妥善保管。
+      cancel: 取消
+      export_data: 导出数据

@@ -1,0 +1,34 @@
+uk:
+  sessions:
+    create:
+      invalid_credentials: Неправильна електронна пошта або пароль.
+      local_login_disabled: Локальний вхід за паролем вимкнено. Будь ласка, використовуйте єдиний вхід.
+    destroy:
+      logout_successful: Ви успішно вийшли.
+    post_logout:
+      logout_successful: Ви успішно вийшли.
+    openid_connect:
+      account_linked: "Обліковий запис успішно пов'язано з %{provider}"
+      failed: Не вдалося автентифікуватися через OpenID Connect.
+    failure:
+      failed: Не вдалося автентифікуватися.
+      sso_provider_unavailable: "Постачальник SSO наразі недоступний. Спробуйте ще раз пізніше або зверніться до адміністратора."
+      sso_invalid_response: "Отримано недійсну відповідь від постачальника SSO. Будь ласка, спробуйте ще раз."
+      sso_failed: "Автентифікація єдиного входу не вдалася. Будь ласка, спробуйте ще раз."
+    mobile_sso_start:
+      redirecting_html: "Перенаправлення на сторінку входу... <a href=\"%{url}\">Натисніть тут</a>, якщо не перенаправлено."
+    new:
+      email: Адреса електронної пошти
+      email_placeholder: you@example.com
+      forgot_password: Забули пароль?
+      password: Пароль
+      submit: Увійти
+      title: Sure
+      password_placeholder: Введіть свій пароль
+      openid_connect: Увійти за допомогою OpenID Connect
+      oidc: Увійти за допомогою OpenID Connect
+      google_auth_connect: Увійти за допомогою Google
+      local_login_admin_only: Локальний вхід обмежений для адміністраторів.
+      no_auth_methods_enabled: Наразі не ввімкнено жодного методу автентифікації. Будь ласка, зверніться до адміністратора.
+      demo_banner_title: "Активний демонстраційний режим"
+      demo_banner_message: "Це демонстраційне середовище. Облікові дані для входу попередньо заповнені для вашої зручності. Будь ласка, не вводьте реальну або конфіденційну інформацію."

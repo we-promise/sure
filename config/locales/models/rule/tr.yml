@@ -1,0 +1,9 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        rule:
+          duplicate_actions: Kural, %{types} işlemlerini yinelenen olarak içeremez
+          min_actions: en az bir işlem içermelidir
+          nested_conditions: Bileşik koşullar iç içe olamaz

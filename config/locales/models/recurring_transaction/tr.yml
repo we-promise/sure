@@ -1,0 +1,7 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        recurring_transaction:
+          merchant_or_name_required: Satıcı veya ad bilgisinden biri mutlaka bulunmalıdır

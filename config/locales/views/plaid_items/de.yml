@@ -6,6 +6,7 @@ de:
     destroy:
       success: Konten zur Löschung vorgemerkt
     plaid_item:
+      add_accounts: Konten hinzufügen
       add_new: Neue Verbindung hinzufügen
       confirm_accept: Institut löschen
       confirm_body: Dadurch werden alle Konten dieser Gruppe und alle zugehörigen Daten dauerhaft gelöscht
@@ -21,8 +22,17 @@ de:
       status_never: Synchronisierung erforderlich
       syncing: Wird synchronisiert...
       update: Verbindung aktualisieren
+      deletion_in_progress: "(wird gelöscht …)"
     select_existing_account:
       title: "%{account_name} mit Plaid verknüpfen"
-      description: Wählen Sie ein Plaid-Konto zur Verknüpfung mit Ihrem bestehenden Konto
+      description: Wähl ein Plaid-Konto zur Verknüpfung mit deinem bestehenden Konto
       cancel: Abbrechen
       link_account: Konto verknüpfen
+      no_available_accounts: Keine Plaid-Konten zum Verknüpfen verfügbar. Verbinde zuerst ein neues Plaid-Konto.
+    errors:
+      link_token_generic: Plaid ließ sich gerade nicht öffnen. Versuch es noch einmal; bleibt es dabei, sieh in den Server-Logs nach.
+      link_token_with_message: 'Plaid konnte die Verbindung nicht öffnen: %{message}'
+    link_existing_account:
+      already_linked: Dieses Plaid-Konto ist bereits verknüpft
+      invalid_account: Ungültiges Plaid-Konto gewählt
+      success: Konto mit Plaid verknüpft

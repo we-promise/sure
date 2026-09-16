@@ -1,0 +1,164 @@
+---
+uk:
+  UI:
+    period_picker:
+      aria_label: "Період часу: %{period}"
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: "Перемкнути прапорці вибору"
+      balance_reconciliation:
+        labels:
+          adjustments: "Коригування"
+          buys: "Покупки"
+          change_in_brokerage_cash: "Зміна готівки в брокерському рахунку"
+          change_in_holdings_market: "Зміна в активах (ринкова цінова активність)"
+          change_in_holdings_trades: "Зміна в активах (покупки/продажі)"
+          charges: "Списання"
+          end_balance: "Кінцевий баланс"
+          end_principal: "Кінцева основна сума"
+          end_value: "Кінцева вартість"
+          final_balance: "Остаточний баланс"
+          final_principal: "Остаточна основна сума"
+          final_value: "Остаточна вартість"
+          market_changes: "Ринкові зміни"
+          net_cash_flow: "Чистий грошовий потік"
+          net_principal_change: "Чиста зміна основної суми"
+          net_value_change: "Чиста зміна вартості"
+          payments: "Платежі"
+          sells: "Продажі"
+          start_balance: "Початковий баланс"
+          start_principal: "Початкова основна сума"
+          start_value: "Початкова вартість"
+        tooltips:
+          adjustments: "Ручні звірки або інші коригування"
+          adjustments_asset: "Ручні коригування вартості або оцінки"
+          buys: "Покупки криптовалюти протягом дня"
+          change_in_brokerage_cash: "Чиста зміна готівки від депозитів, зняття та торгів"
+          change_in_holdings_market: "Зміна вартості активів через рух ринкових цін"
+          change_in_holdings_trades: "Вплив на активи від купівлі та продажу цінних паперів"
+          charges: "Нові списання, зроблені протягом дня"
+          end_balance: "Розрахований баланс після всіх транзакцій"
+          end_balance_investment: "Розрахований баланс після всієї активності"
+          end_principal: "Розрахована основна сума після всіх транзакцій"
+          end_value: "Розрахована вартість після всіх змін"
+          final_balance: "Остаточний баланс рахунку за день"
+          final_balance_credit: "Остаточний борг за день"
+          final_balance_crypto: "Остаточна вартість криптовалютних активів за день"
+          final_balance_investment: "Остаточна вартість портфеля за день"
+          final_principal: "Остаточний баланс основної суми за день"
+          final_value: "Остаточна вартість активу за день"
+          market_changes: "Зміни вартості через рух ринкових цін"
+          net_cash_flow: "Чиста зміна балансу від усіх транзакцій протягом дня"
+          net_principal_change: "Платежі за основною сумою та нові запозичення протягом дня"
+          net_value_change: "Всі зміни вартості, включаючи поліпшення та амортизацію"
+          payments: "Платежі, зроблені на картку протягом дня"
+          sells: "Продажі криптовалюти протягом дня"
+          start_balance: "Баланс рахунку на початок цього дня"
+          start_balance_credit: "Борг на початок цього дня"
+          start_balance_crypto: "Вартість криптовалютних активів на початок цього дня"
+          start_balance_investment: "Загальна вартість портфеля на початок цього дня"
+          start_principal: "Баланс основної суми на початок цього дня"
+          start_value: "Вартість активу на початок цього дня"
+      chart:
+        no_data_available: "Дані недоступні"
+        title:
+          balance: "Баланс"
+          cash_value: "Готівкова вартість"
+          debt_balance: "Борговий баланс"
+          estimated_property_value: "Оціночна вартість нерухомості"
+          estimated_vehicle_value: "Оціночна вартість транспортного засобу"
+          holdings_value: "Вартість активів"
+          remaining_principal_balance: "Залишок основної суми боргу"
+          total_account_value: "Загальна вартість рахунку"
+        views:
+          cash: "Готівка"
+          holdings: "Активи"
+          total_value: "Загальна вартість"
+        vs_available_history: "проти доступної історії"
+      activity_date:
+        balance_tooltip: "Баланс на кінець дня, після всіх транзакцій та коригувань"
+        no_balance_data: "Немає даних про баланс за цю дату"
+  ds:
+    alert:
+      variants:
+        info: "Інформація"
+        success: "Успіх"
+        warning: "Попередження"
+        error: "Помилка"
+        destructive: "Помилка"
+    pill:
+      aria_label: "%{label}"
+      default_label: "Попередній перегляд"
+    dialog:
+      close: "Закрити"
+    popover:
+      avatar_default_label: "Відкрити меню"
+    tooltip:
+      trigger_label: "Більше інформації"
+    link:
+      opens_in_new_tab: "(відкриється в новій вкладці)"
+  provider_sync_summary:
+    title: "Підсумок синхронізації"
+    last_sync: "Остання синхронізація: %{time_ago} тому"
+    accounts:
+      title: "Рахунки"
+      total: "Всього: %{count}"
+      linked: "Прив'язано: %{count}"
+      unlinked: "Неприв'язано: %{count}"
+      institutions: "Установи: %{count}"
+    transactions:
+      title: "Транзакції"
+      seen: "Переглянуто: %{count}"
+      imported: "Імпортовано: %{count}"
+      updated: "Оновлено: %{count}"
+      skipped: "Пропущено: %{count}"
+      fetching: "Отримання з брокерського рахунку..."
+      protected:
+        one: "%{count} запис захищено (не перезаписано)"
+        other: "%{count} записів захищено (не перезаписано)"
+      view_protected: "Переглянути захищені записи"
+    skip_reasons:
+      excluded: "Виключено"
+      user_modified: "Змінено користувачем"
+      import_locked: "Імпорт CSV"
+      protected: "Захищено"
+    holdings:
+      title: "Активи"
+      found: "Знайдено: %{count}"
+      processed: "Оброблено: %{count}"
+    trades:
+      title: "Угоди"
+      imported: "Імпортовано: %{count}"
+      skipped: "Пропущено: %{count}"
+      fetching: "Отримання активності з брокерського рахунку..."
+    health:
+      title: "Здоров'я"
+      view_error_details: "Переглянути деталі помилки"
+      rate_limited: "Обмеження швидкості %{time_ago}"
+      recently: "нещодавно"
+      errors: "Помилки: %{count}"
+      pending_reconciled:
+        one: "%{count} дублікат незавершеної транзакції звірено"
+        other: "%{count} дублікатів незавершених транзакцій звірено"
+      view_reconciled: "Переглянути звірені транзакції"
+      duplicate_suggestions:
+        one: "%{count} можливий дублікат потребує перевірки"
+        other: "%{count} можливих дублікатів потребують перевірки"
+      view_duplicate_suggestions: "Переглянути запропоновані дублікати"
+      stale_pending:
+        one: "%{count} застаріла незавершена транзакція (виключено з бюджетів)"
+        other: "%{count} застарілих незавершених транзакцій (виключено з бюджетів)"
+      view_stale_pending: "Переглянути зачеплені рахунки"
+      stale_pending_count:
+        one: "%{count} транзакція"
+        other: "%{count} транзакцій"
+      stale_unmatched:
+        one: "%{count} незавершена транзакція потребує ручної перевірки"
+        other: "%{count} незавершених транзакцій потребують ручної перевірки"
+      view_stale_unmatched: "Переглянути транзакції, що потребують перевірки"
+      stale_unmatched_count:
+        one: "%{count} транзакція"
+        other: "%{count} транзакцій"
+      data_warnings: "Попередження щодо даних: %{count}"
+      notices: "Повідомлення: %{count}"
+      view_data_quality: "Переглянути деталі якості даних"

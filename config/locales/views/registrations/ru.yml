@@ -1,0 +1,32 @@
+---
+ru:
+  helpers:
+    label:
+      user:
+        invite_code: Код приглашения
+    submit:
+      user:
+        create: Продолжить
+  registrations:
+    closed: Регистрация в данный момент закрыта.
+    create:
+      failure: Произошла ошибка при регистрации.
+      invalid_invite_code: Неверный код приглашения, попробуйте снова.
+      success: Вы успешно зарегистрировались.
+    new:
+      invitation_message: "%{inviter} пригласил вас присоединиться в качестве %{role}"
+      join_family_title: Присоединиться к %{family} %{moniker}
+      password_placeholder: Введите ваш пароль
+      password_requirements:
+        case: Заглавные и строчные буквы
+        length: Минимум 8 символов
+        number: Цифра (0-9)
+        special: 'Специальный символ (!, @, #, $, %, и т.д.)'
+      role_admin: администратор
+      role_guest: гость
+      role_member: участник
+      submit: Создать аккаунт
+      title: Создайте ваш аккаунт
+      welcome_body: Чтобы начать, вам необходимо зарегистрировать новый аккаунт. Затем
+        вы сможете настроить дополнительные параметры в приложении.
+      welcome_title: Добро пожаловать в %{product_name} (self-hosted)!

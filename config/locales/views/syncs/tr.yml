@@ -1,0 +1,7 @@
+---
+tr:
+  syncs:
+    cancel:
+      cancelled: Senkronizasyon iptal edildi. Zaten senkronize edilenler korunur;
+        sıradaki işler durduruldu.
+      not_cancellable: Bu senkronizasyon zaten tamamlandı.

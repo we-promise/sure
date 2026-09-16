@@ -1,0 +1,111 @@
+---
+en:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Activity found
+      explanation: This address format is used by more than one network, and the balances on each are different. Pick the one you want to track.
+      no_activity_found: Nothing found
+      subtitle: "%{address}"
+      title: Which network?
+    destroy:
+      success: Scheduled the self-custody connection for deletion.
+    disconnect_asset:
+      success: "Stopped tracking %{symbol}. Its account and history were kept."
+    disconnect_wallet:
+      success:
+        one: Stopped tracking 1 asset at that address.
+        other: "Stopped tracking %{count} assets at that address."
+    enable_crypto_prices:
+      not_self_hosted: Market data providers are configured by the instance operator on this deployment.
+      success: Crypto prices are enabled. Wallet values appear after the next sync.
+    errors:
+      address_required: Enter a wallet address.
+      already_linked: That address is already being tracked on this network. Use Review tokens to change which assets are tracked.
+      chain_unreachable: The public explorer for this network could not be reached. Try again in a moment.
+      rate_limited: The public explorer is rate limiting requests right now. Try again in a few minutes.
+      unexpected: Something went wrong reading this wallet. The details were recorded for support.
+      unrecognized_address: That does not look like an address on any supported network.
+      wallet_not_found: That wallet is not tracked by this connection.
+    link_wallet:
+      errors:
+        none_tracked: "Nothing was tracked: %{assets} could not be added. Try again in a moment."
+        nothing_selected: Pick at least one asset to track.
+        some_failed: "%{assets} could not be tracked and was left out."
+      success:
+        one: Tracking 1 asset from this wallet.
+        other: "Tracking %{count} assets from this wallet."
+    manage:
+      assets_truncated: "This address holds more tokens than one read surfaces, so only the %{count} most credible are listed. Anything already tracked keeps syncing."
+      disconnect_asset: Stop tracking
+      disconnect_asset_confirm: "Stop tracking %{symbol}? Its account and history are kept and stop updating."
+      disconnect_wallet: Disconnect wallet
+      disconnect_wallet_confirm: Stop tracking every asset at this address?
+      history_note: Disconnecting keeps the accounts and their history; they simply stop updating.
+      history_truncated: Not every transfer for this address could be read — there is more history than one sync covers, or the explorer refused it. Balances are complete; some transfers are missing.
+      native: Native
+      no_wallets: No wallets are tracked yet.
+      review_tokens: Review tokens
+      subtitle: Every address this connection reads, and what it tracks at each.
+      title: Manage self-custody wallets
+    new_wallet:
+      address_label: Wallet address
+      address_placeholder: bc1..., 0x..., or a Solana address
+      bitcoin_single_address_note: Bitcoin is tracked one address at a time. Extended keys (xpub/ypub/zpub) are not supported, so a wallet that spreads funds across derived addresses will show only the balance of the address you enter.
+      chain_auto_detect: Detect automatically
+      chain_label: Network
+      continue: Continue
+      read_only_note: Only public chain data is read. Never enter a seed phrase or private key.
+      subtitle: Track a wallet you hold the keys to, from its public address.
+      title: Add a self-custody wallet
+    onchain_wallet_item:
+      assets_tracked:
+        one: 1 asset tracked
+        other: "%{count} assets tracked"
+      sync: Sync now
+      syncing: Syncing...
+    wallet_card:
+      addresses_tracked:
+        one: 1 address tracked
+        other: "%{count} addresses tracked"
+      deletion_in_progress: Removing...
+      delete: Remove connection
+      needs_attention: Needs attention
+      no_wallets_message: Link an address from the provider settings to see it here.
+      no_wallets_title: No wallets linked yet
+      status: Synced %{timestamp} ago
+      sync: Sync now
+      status_never: Not synced yet
+      syncing: Syncing...
+    price_provider_warning:
+      body: No enabled market data provider can price crypto, so these wallets track quantities but show a value of zero.
+      enable: Enable crypto prices
+      exchange_rate_body: "Crypto is priced in USD, and no exchange rate provider is configured to convert it into %{currency}, so these wallets track quantities but show a value of zero. Set EXCHANGE_RATE_PROVIDER — Frankfurter needs no API key."
+      exchange_rate_title: No exchange rate provider is configured
+      link: Open market data settings
+      title: Crypto prices are not configured
+    provider_connection:
+      description: Track a wallet you hold the keys to, from its public address.
+      name: Self-custody wallet
+    review_tokens:
+      save: Save tracked assets
+      subtitle: "%{chain} · %{address}"
+      title: Review tracked assets
+    token_review:
+      import_selected: Track selected assets
+      subtitle: "%{chain} · %{address}"
+      title: Choose what to track
+    token_review_form:
+      assets_truncated: "This address holds more tokens than one read surfaces, so only the %{count} most credible are listed."
+      cancel: Cancel
+      explanation: Assets with a known price are ticked. Anything else is left unticked — wallets collect spam airdrops, and tracking one has no value attached to it.
+      native: Native
+      no_price: No price available; tracked by quantity only
+      nothing_found: This address holds nothing we can see on this network.
+    update:
+      success: Updated the self-custody connection.
+    update_tokens:
+      errors:
+        no_changes: Nothing changed; the same assets are still ticked.
+        none_tracked: "Nothing changed: %{assets} could not be added. Try again in a moment."
+        some_failed: "%{assets} could not be tracked and was left out."
+      success: "Tracked assets updated (%{created} added, %{removed} removed)."

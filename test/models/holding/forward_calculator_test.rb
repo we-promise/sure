@@ -111,6 +111,103 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_holdings(expected, calculated)
   end
 
+  # Cost basis is a per-share weighted average that only changes on buy trades,
+  # so it must carry forward (LOCF) onto gap-filled non-trade dates rather than
+  # resetting to nil/zero.
+  test "carries cost basis forward onto gap-filled dates" do
+    load_prices
+
+    create_trade(@wmt, qty: 100, date: 3.days.ago.to_date, price: 100, account: @account)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+
+    wmt_holdings = calculated.select { |h| h.security_id == @wmt.id && h.qty.positive? }
+
+    assert wmt_holdings.any?, "expected WMT holdings to be generated"
+    wmt_holdings.each do |holding|
+      assert_equal 100, holding.cost_basis, "Cost basis should carry forward on #{holding.date}"
+    end
+  end
+
+  # Regression: selling a position to zero must relieve the cost-basis tracker so
+  # that a later repurchase is not averaged against the already-sold lots.
+  test "cost basis resets after a position is fully sold and repurchased" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 4.days.ago.to_date, price: 460, account: @account)
+    create_trade(@voo, qty: -10, date: 3.days.ago.to_date, price: 480, account: @account) # fully sold
+    create_trade(@voo, qty: 10, date: 1.day.ago.to_date, price: 490, account: @account)    # repurchased
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    # Only the repurchased lot is held, so cost basis is $490 — not the
+    # buggy (460 + 490) / 2 = $475 averaged over the sold-off shares.
+    assert_equal BigDecimal("490"), current.cost_basis
+  end
+
+  # An outbound transfer removes units without a cost; it must relieve the tracker
+  # (not stay in the average) while leaving the basis known, unlike an inbound one.
+  test "an outbound transfer relieves the tracker instead of contaminating a later buy" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 4.days.ago.to_date, price: 460, account: @account)
+    transfer_out = create_trade(@voo, qty: -10, date: 3.days.ago.to_date, price: 470, account: @account)
+    transfer_out.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # transferred out, not sold
+    create_trade(@voo, qty: 10, date: 1.day.ago.to_date, price: 490, account: @account)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    # Repurchased lot stands alone at $490, not (460 + 490) / 2 = $475.
+    assert_equal BigDecimal("490"), current.cost_basis
+    assert_not current.cost_basis_unknown, "an outbound-only transfer should not mark the basis unknown"
+  end
+
+  # An inbound transfer marks the basis unknown while those units are held, but once
+  # the position is fully closed and repurchased the new lot must read as known again.
+  test "an inbound transfer stops shadowing the basis once the position is closed and repurchased" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 4.days.ago.to_date, price: 460, account: @account)
+    transfer_in = create_trade(@voo, qty: 5, date: 3.days.ago.to_date, price: 470, account: @account)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # moved in, unknown cost
+    create_trade(@voo, qty: -15, date: 2.days.ago.to_date, price: 480, account: @account) # fully closed
+    create_trade(@voo, qty: 10, date: 1.day.ago.to_date, price: 490, account: @account)     # repurchased
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+
+    # While the transferred-in units are held, the basis is unknown.
+    while_held = calculated.find { |h| h.security_id == @voo.id && h.date == 3.days.ago.to_date }
+    assert while_held.cost_basis_unknown
+    assert_nil while_held.cost_basis
+
+    # After the position is fully closed and bought again, the new lot is known.
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+    assert_not current.cost_basis_unknown
+    assert_equal BigDecimal("490"), current.cost_basis
+  end
+
+  # A same-day sell-to-zero and repurchase nets back to a positive end-of-day
+  # quantity, so the release has to run per trade, not just on the day's net.
+  test "an inbound transfer is released even when the position crosses zero within a day" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 4.days.ago.to_date, price: 460, account: @account)
+    # All on the same day: transfer in, sell the whole position to zero, buy back.
+    transfer_in = create_trade(@voo, qty: 5, date: 2.days.ago.to_date, price: 480, account: @account)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    create_trade(@voo, qty: -15, date: 2.days.ago.to_date, price: 480, account: @account)
+    create_trade(@voo, qty: 10, date: 2.days.ago.to_date, price: 480, account: @account)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    # The intra-day liquidation released the mark, so the repurchase is known.
+    assert_not current.cost_basis_unknown
+    assert_equal BigDecimal("480"), current.cost_basis
+  end
+
   test "offline tickers sync holdings based on most recent trade price" do
     offline_security = Security.create!(ticker: "OFFLINE", name: "Offline Ticker")
 
@@ -133,11 +230,11 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
   private
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
-        calculated_entry = calculated.find { |c| c.security == expected_entry.security && c.date == expected_entry.date }
+        calculated_entry = calculated.find { |c| c.security_id == expected_entry.security_id && c.date == expected_entry.date }
 
-        assert_equal expected_entry.qty, calculated_entry.qty, "Qty mismatch for #{expected_entry.security.ticker} on #{expected_entry.date}"
-        assert_equal expected_entry.price, calculated_entry.price, "Price mismatch for #{expected_entry.security.ticker} on #{expected_entry.date}"
-        assert_equal expected_entry.amount, calculated_entry.amount, "Amount mismatch for #{expected_entry.security.ticker} on #{expected_entry.date}"
+        assert_equal expected_entry.qty, calculated_entry.qty, "Qty mismatch for security_id=#{expected_entry.security_id} on #{expected_entry.date}"
+        assert_equal expected_entry.price, calculated_entry.price, "Price mismatch for security_id=#{expected_entry.security_id} on #{expected_entry.date}"
+        assert_equal expected_entry.amount, calculated_entry.amount, "Amount mismatch for security_id=#{expected_entry.security_id} on #{expected_entry.date}"
       end
     end
 

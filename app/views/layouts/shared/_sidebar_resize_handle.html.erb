@@ -1,0 +1,18 @@
+<%# locals: (side:) %>
+<%#
+  Draggable divider for a resizable sidebar.
+  `side` is "left" (accounts) or "right" (assistant). Drives sidebar_resize_controller.
+%>
+<% suffix = side.capitalize %>
+<% edge = side == "left" ? "right-0 translate-x-1/2" : "left-0 -translate-x-1/2" %>
+<%= tag.div(
+  class: class_names("group absolute inset-y-0 z-20 hidden w-2 cursor-col-resize lg:block", edge),
+  role: "separator",
+  tabindex: "0",
+  aria: { orientation: "vertical", label: t("layouts.application.resize_#{side}_sidebar") },
+  data: {
+    action: "pointerdown->sidebar-resize#start#{suffix} keydown->sidebar-resize#key#{suffix} dblclick->sidebar-resize#reset#{suffix}"
+  }
+) do %>
+  <span class="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-transparent transition-colors group-hover:bg-loader group-focus-visible:bg-loader"></span>
+<% end %>

@@ -1,0 +1,11 @@
+---
+uk:
+  address:
+    attributes:
+      country: "Країна"
+      line1: "Адреса, рядок 1"
+      line2: "Адреса, рядок 2"
+      locality: "Населений пункт"
+      postal_code: "Поштовий індекс"
+      region: "Регіон"
+    format: "%{line1} %{line2}, %{locality}, %{region} %{postal_code} %{country}"

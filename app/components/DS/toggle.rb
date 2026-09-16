@@ -27,11 +27,10 @@ class DS::Toggle < DesignSystemComponent
        "after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:shadow-sm",
        "motion-safe:after:transition-transform motion-safe:after:duration-300 motion-safe:after:ease-in-out",
        "peer-checked:bg-success peer-checked:after:translate-x-4",
-       # Focus ring driven from the sr-only input via `peer-focus-visible:`.
-       # Offset places the ring outside the track so it lands on the
-       # surrounding chrome regardless of theme.
-       "peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2",
-       "peer-focus-visible:ring-alpha-black-300 theme-dark:peer-focus-visible:ring-alpha-white-300",
+       # Canonical focus ring (#2136), driven from the sr-only input via
+       # `peer-focus-visible:`. outline-offset places it just outside the track
+       # so it lands on surrounding chrome in either theme.
+       "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus-ring",
        "peer-disabled:opacity-70 peer-disabled:cursor-not-allowed"
     )
   end

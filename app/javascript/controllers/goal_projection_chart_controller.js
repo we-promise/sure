@@ -1,5 +1,10 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
+import {
+  createChartTooltip,
+  CHART_TOOLTIP_CONTEXT_CLASSES,
+  CHART_TOOLTIP_VALUE_CLASSES,
+} from "utils/chart_tooltip";
 
 // Projection chart for a goal. Renders:
 //   - Saved area + line from goal creation → today (solid)
@@ -10,6 +15,18 @@ import * as d3 from "d3";
 //
 // Data shape passed via `data-goal-projection-chart-data-value`
 // matches Goal#projection_payload.
+
+// Ceiling on how far the y-axis may stretch past the goal's own scale to fit a
+// taller savings history, as a multiple of that scale.
+//
+// Every value the chart reasons about — the target, the projection, the
+// required path, today's balance — sits at or below that scale, so any headroom
+// above it is spent purely on historical peaks. Keep it small: at 2 the target
+// line never falls below half the plot height, while a history that overshoots
+// the target up to twofold (having saved past it, the ordinary case) still
+// shows in full.
+const SAVED_HEADROOM_FACTOR = 2;
+
 export default class extends Controller {
   static values = {
     data: Object,
@@ -18,6 +35,7 @@ export default class extends Controller {
     todayLabel: { type: String, default: "Today" },
     projectedTemplate: { type: String, default: "Projected: {amount}" },
     savedTemplate: { type: String, default: "Saved: {amount}" },
+    targetRelationTemplate: { type: String, default: "{percent}% of {target} target" },
   };
 
   connect() {
@@ -153,7 +171,26 @@ export default class extends Controller {
         ]
       : [];
 
-    const yMax = Math.max(targetAmount * 1.05, projectionEnd, requiredEnd, currentAmount, 1);
+    // The scale the goal's own content needs: target, projection, required path
+    // and where the balance stands today.
+    const goalBand = Math.max(targetAmount * 1.05, projectionEnd, requiredEnd, currentAmount, 1);
+
+    // The saved history used to be left out of the domain entirely, so a
+    // balance that ever rose above the target was drawn above the plot — the
+    // line escaped the chart and painted over the legend before the SVG edge
+    // cut it off. Include it, with headroom so the peak's stroke isn't shaved
+    // in half at the top.
+    //
+    // But do not let it set the scale without limit. A goal funded from a
+    // current account sees the whole balance as "saved", so a 700 target
+    // against a salary that lands and clears can be an order of magnitude
+    // apart; scaled to that peak, the target line and both projection lines
+    // collapse into the floor and the chart stops answering "am I on track".
+    // Past SAVED_HEADROOM_FACTOR the history is clipped instead — deliberately,
+    // inside the plot (see the clip path below), rather than bleeding out of
+    // it. Clipped peaks are still readable on hover.
+    const savedMax = d3.max(savedSeries, (d) => d.value) || 0;
+    const yMax = Math.min(Math.max(goalBand, savedMax * 1.05), goalBand * SAVED_HEADROOM_FACTOR);
 
     const x = d3.scaleTime().domain([start, endDate]).range([margin.left, margin.left + innerWidth]);
     const y = d3.scaleLinear().domain([0, yMax]).range([margin.top + innerHeight, margin.top]);
@@ -180,6 +217,24 @@ export default class extends Controller {
       .attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
     gradient.append("stop").attr("offset", "0%").attr("stop-color", textPrimary).attr("stop-opacity", 0.22);
     gradient.append("stop").attr("offset", "100%").attr("stop-color", textPrimary).attr("stop-opacity", 0);
+
+    // Everything driven by the saved series is confined to the plot box. The
+    // domain above already covers the common case, but this is the structural
+    // guarantee: a value outside it — a balance past the headroom ceiling, or a
+    // linked current account that went overdrawn and dipped below zero — stops
+    // at the plot edge instead of painting over the legend above or the date
+    // axis below. Bounds are exact vertically; a couple of pixels of horizontal
+    // bleed keep the stroke's round cap from being shaved at the left edge.
+    const clipId = `plot-clip-${this._id()}`;
+    defs
+      .append("clipPath")
+      .attr("id", clipId)
+      .append("rect")
+      .attr("x", margin.left - 2)
+      .attr("y", margin.top)
+      .attr("width", innerWidth + 4)
+      .attr("height", innerHeight);
+    const plotClip = `url(#${clipId})`;
 
     const COLLISION_PX = 18;
     const targetY = targetAmount > 0 ? y(targetAmount) : null;
@@ -264,6 +319,7 @@ export default class extends Controller {
       .append("path")
       .datum(savedSeries)
       .attr("fill", `url(#saved-fill-${this._id()})`)
+      .attr("clip-path", plotClip)
       .attr("d", area);
 
     svg
@@ -274,6 +330,7 @@ export default class extends Controller {
       .attr("stroke-width", 2)
       .attr("stroke-linejoin", "round")
       .attr("stroke-linecap", "round")
+      .attr("clip-path", plotClip)
       .attr("d", line);
 
     if (requiredSeries.length) {
@@ -415,6 +472,10 @@ export default class extends Controller {
       .attr("pointer-events", "none")
       .style("display", "none");
 
+    // Clipped like the line it rides on: hovering a point above the headroom
+    // ceiling would otherwise park the dot outside the plot. The tooltip still
+    // reports that point's real amount, which is how a clipped peak stays
+    // readable.
     const hoverSavedDot = svg
       .append("circle")
       .attr("r", 4)
@@ -422,6 +483,7 @@ export default class extends Controller {
       .attr("stroke", containerBg)
       .attr("stroke-width", 2)
       .attr("pointer-events", "none")
+      .attr("clip-path", plotClip)
       .style("display", "none");
 
     const hoverProjDot = svg
@@ -439,10 +501,38 @@ export default class extends Controller {
     // clobber a stylesheet `position: fixed/sticky/absolute` with our
     // own `relative`. Read the computed style instead.
     if (getComputedStyle(root).position === "static") root.style.position = "relative";
-    const tooltip = document.createElement("div");
-    tooltip.className = "bg-container text-primary text-sm font-sans absolute p-2 border border-secondary rounded-lg pointer-events-none z-50 privacy-sensitive";
-    tooltip.style.display = "none";
-    root.appendChild(tooltip);
+    // Shared visual contract (utils/chart_tooltip) — this used to be a
+    // hand-copied class string that drifted from the other charts the moment
+    // the contract changed.
+    const tooltip = createChartTooltip(root);
+    // This tooltip snaps between discrete dates (not raw cursor positions),
+    // so the glide reads as easing, not lag. Cursor-following tooltips must
+    // not do this — see the .chart-tooltip comment in components.css.
+    tooltip.style.transition = "left 80ms ease-out, top 80ms ease-out";
+    const tooltipDate = document.createElement("div");
+    tooltipDate.className = CHART_TOOLTIP_CONTEXT_CLASSES;
+    const tooltipValue = document.createElement("div");
+    tooltipValue.className = CHART_TOOLTIP_VALUE_CLASSES;
+    // Relation line: where this value sits against the goal target. Tertiary
+    // so the hierarchy stays date < value > relation; hidden when the goal
+    // has no positive target to compare against.
+    const tooltipRelation = document.createElement("div");
+    tooltipRelation.className = "text-xs text-subdued mt-0.5";
+    tooltip.replaceChildren(tooltipDate, tooltipValue, tooltipRelation);
+
+    const setRelation = (amount) => {
+      // `targetAmount` is _draw()'s outer const (data.target_amount) — no
+      // local copy, which previously shadowed the `target` date const.
+      if (targetAmount <= 0 || !data.target_amount_short_label) {
+        tooltipRelation.style.display = "none";
+        return;
+      }
+      const percent = Math.round((amount / targetAmount) * 100);
+      tooltipRelation.textContent = this.targetRelationTemplateValue
+        .replace("{percent}", percent)
+        .replace("{target}", data.target_amount_short_label);
+      tooltipRelation.style.display = "";
+    };
 
     const overlay = svg
       .append("rect")
@@ -485,7 +575,7 @@ export default class extends Controller {
       const hoverX = x(hoverDate);
       crosshair.attr("x1", hoverX).attr("x2", hoverX).style("display", null);
 
-      const lines = [dateFmt(hoverDate)];
+      tooltipDate.textContent = dateFmt(hoverDate);
 
       if (future) {
         // Projection segment: interpolate along the dashed line; saved dot
@@ -494,7 +584,8 @@ export default class extends Controller {
         const projValue = currentAmount + tFrac * (projectionEnd - currentAmount);
         hoverProjDot.attr("cx", hoverX).attr("cy", y(projValue)).style("display", null);
         hoverSavedDot.style("display", "none");
-        lines.push(this.projectedTemplateValue.replace("{amount}", this._fmtMoney(projValue, data.currency)));
+        tooltipValue.textContent = this.projectedTemplateValue.replace("{amount}", this._fmtMoney(projValue, data.currency));
+        setRelation(projValue);
       } else {
         // Saved segment: hoverDate is already snapped to nearest savedSeries
         // entry above, so reuse that entry directly instead of running
@@ -502,11 +593,10 @@ export default class extends Controller {
         const savedPoint = savedSeries.find((p) => p.date.getTime() === hoverDate.getTime()) || savedSeries[savedSeries.length - 1];
         hoverSavedDot.attr("cx", x(savedPoint.date)).attr("cy", y(savedPoint.value)).style("display", null);
         hoverProjDot.style("display", "none");
-        lines.push(this.savedTemplateValue.replace("{amount}", this._fmtMoney(savedPoint.value, data.currency)));
+        tooltipValue.textContent = this.savedTemplateValue.replace("{amount}", this._fmtMoney(savedPoint.value, data.currency));
+        setRelation(savedPoint.value);
       }
 
-      tooltip.textContent = lines.join("\n");
-      tooltip.style.whiteSpace = "pre";
       tooltip.style.display = "block";
       const tipRect = tooltip.getBoundingClientRect();
       const left = Math.min(width - tipRect.width - 4, Math.max(4, xPos + 12));

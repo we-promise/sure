@@ -112,6 +112,94 @@ module ImportInterfaceTest
     assert_equal "1234.56", row.amount
   end
 
+  test "parses French/Scandinavian format with non-breaking-space thousands separator" do
+    import = imports(:transaction)
+    import.update!(
+      number_format: "1 234,56",
+      amount_col_label: "amount",
+      date_col_label: "date",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y"
+    )
+
+    # Real-world European CSV exports use a non-breaking space (U+00A0) as the
+    # thousands separator rather than a plain ASCII space.
+    csv_data = "date,amount,name\n01/01/2024,\"1 234,56\",Test"
+    import.update!(raw_file_str: csv_data)
+    import.generate_rows_from_csv
+    import.reload
+
+    row = import.rows.first
+    assert_equal "1234.56", row.amount
+  end
+
+  test "parses French/Scandinavian format with narrow no-break-space thousands separator" do
+    import = imports(:transaction)
+    import.update!(
+      number_format: "1 234,56",
+      amount_col_label: "amount",
+      date_col_label: "date",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y"
+    )
+
+    # Some locales/exporters use a narrow no-break space (U+202F) as the
+    # thousands separator, which Ruby's \s also does not match.
+    csv_data = "date,amount,name\n01/01/2024,\"1 234,56\",Test"
+    import.update!(raw_file_str: csv_data)
+    import.generate_rows_from_csv
+    import.reload
+
+    row = import.rows.first
+    assert_equal "1234.56", row.amount
+  end
+
+  test "rejects US-punctuation values under the French/Scandinavian format" do
+    import = imports(:transaction)
+    import.update!(
+      number_format: "1 234,56",
+      amount_col_label: "amount",
+      date_col_label: "date",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y"
+    )
+
+    # A misconfigured/mixed row using US separators ("1,234.56") must not be
+    # silently reinterpreted as 1.23456 under a space-delimited format; the
+    # unexpected period keeps it invalid so it surfaces as blank instead.
+    csv_data = "date,amount,name\n01/01/2024,\"1,234.56\",Test"
+    import.update!(raw_file_str: csv_data)
+    import.generate_rows_from_csv
+    import.reload
+
+    row = import.rows.first
+    assert_equal "", row.amount
+  end
+
+  test "strips leading/trailing currency junk under the French/Scandinavian format" do
+    import = imports(:transaction)
+    import.update!(
+      number_format: "1 234,56",
+      amount_col_label: "amount",
+      date_col_label: "date",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y"
+    )
+
+    # Currency symbols/codes at the edges (issue #2537's "1 234,56 kr" row) are
+    # stripped; the amount still parses. Interior junk is not stripped (covered
+    # by the mixed-punctuation rejection test above).
+    csv_data = "date,amount,name\n" \
+               "01/01/2024,\"1 234,56 kr\",Suffix\n" \
+               "01/02/2024,\"€1 234,56\",Prefix"
+    import.update!(raw_file_str: csv_data)
+    import.generate_rows_from_csv
+    import.reload
+
+    assert_equal "1234.56", import.rows.first.amount
+    assert_equal "1234.56", import.rows.second.amount
+  end
+
   test "parses zero-decimal currency format correctly" do
     import = imports(:transaction)
     import.update!(

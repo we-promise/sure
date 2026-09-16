@@ -45,7 +45,6 @@ class Api::V1::UsersController < Api::V1::BaseController
     user = current_resource_owner
 
     if user.deactivate
-      Current.session&.destroy
       render json: { message: "Account has been deleted" }
     else
       render json: { error: "Failed to delete account", details: user.errors.full_messages }, status: :unprocessable_entity

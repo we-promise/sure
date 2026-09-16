@@ -1,0 +1,253 @@
+---
+tr:
+  questrade_items:
+    complete_account_setup:
+      all_skipped: Tüm hesaplar atlandı. Hesap oluşturulmadı.
+      creation_failed: 'Hesaplar oluşturulamadı: %{error}'
+      no_accounts: Kurulacak hesap yok.
+      success: "%{count} hesap başarıyla oluşturuldu."
+    create:
+      success: Questrade bağlantısı başarıyla oluşturuldu
+    default_name: Questrade Bağlantısı
+    destroy:
+      success: Questrade bağlantısı kaldırıldı
+    errors:
+      provider_not_configured: Questrade sağlayıcısı yapılandırılmamış
+    index:
+      title: Questrade Bağlantıları
+    institution_summary:
+      count:
+        one: "%{count} kurum"
+        other: "%{count} kurum"
+      none: Bağlı kurum yok
+    link_accounts:
+      all_already_linked:
+        one: Seçilen hesap (%{names}) zaten bağlı
+        other: 'Seçilen %{count} hesabın tümü zaten bağlı: %{names}'
+      api_error: 'API hatası: %{message}'
+      invalid_account_names:
+        one: Adı boş olan hesap bağlanamaz
+        other: Adı boş olan %{count} hesap bağlanamaz
+      link_failed: Hesaplar bağlanamadı
+      no_accounts_selected: Lütfen en az bir hesap seçin
+      no_api_key: Questrade API anahtarı bulunamadı. Lütfen Sağlayıcı Ayarları'nda
+        yapılandırın.
+      partial_invalid: "%{created_count} hesap başarıyla bağlandı, %{already_linked_count}
+        hesap zaten bağlıydı, %{invalid_count} hesabın adı geçersizdi"
+      partial_success: "%{created_count} hesap başarıyla bağlandı. %{already_linked_count}
+        hesap zaten bağlıydı: %{already_linked_names}"
+      success:
+        one: "%{count} hesap başarıyla bağlandı"
+        other: "%{count} hesap başarıyla bağlandı"
+    link_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
+      api_error: 'API hatası: %{message}'
+      invalid_account_name: Adı boş olan hesap bağlanamaz
+      missing_parameters: Gerekli parametreler eksik
+      no_api_key: Questrade API anahtarı bulunamadı. Lütfen Sağlayıcı Ayarları'nda
+        yapılandırın.
+      provider_account_already_linked: Bu Questrade hesabı zaten başka bir hesaba
+        bağlı
+      provider_account_not_found: Questrade hesabı bulunamadı
+      success: "%{account_name} Questrade ile başarıyla bağlandı"
+    loading:
+      loading_message: Questrade hesapları yükleniyor...
+      loading_title: Yükleniyor
+    panel:
+      field_descriptions: 'Alan açıklamaları:'
+      fields:
+        api_server:
+          description: Questrade API sunucunuz
+          label: API Sunucusu
+          placeholder_new: API sunucusunu buraya yapıştırın
+          placeholder_update: Güncellemek için yeni API sunucusu girin
+        refresh_token:
+          description: Questrade yenileme anahtarınız
+          label: Yenileme Anahtarı
+          placeholder_new: Yenileme anahtarını buraya yapıştırın
+          placeholder_update: Güncellemek için yeni yenileme anahtarı girin
+      optional: "(İsteğe bağlı)"
+      optional_with_default: "(isteğe bağlı, varsayılan: %{default_value})"
+      required: "(zorunlu)"
+      save_button: Yapılandırmayı Kaydet
+      setup_instructions: 'Kurulum talimatları:'
+      status_configured_html: Yapılandırıldı ve kullanıma hazır. Hesapları yönetmek
+        ve kurmak için <a href="%{accounts_path}" class="link">Hesaplar</a> sekmesini
+        ziyaret edin.
+      status_not_configured: Yapılandırılmadı
+      step_1: Kimlik bilgilerinizi almak için Questrade panelinizi ziyaret edin
+      step_2: Kimlik bilgilerinizi aşağıya girin ve Kaydet düğmesine tıklayın
+      step_3: Başarılı bir bağlantıdan sonra yeni hesapları kurmak için Hesaplar sekmesine
+        gidin
+      token_refresh_hint: Questrade anahtarları hesaplarınız her senkronize edildiğinde
+        otomatik olarak yenilenir. Bir bağlantı 7 günden fazla kullanılmadıysa ve
+        eskidiyse, bağlantıyı kesmeden yeniden devreye almak için buraya yeni bir
+        anahtar yapıştırın.
+      update_button: Yapılandırmayı Güncelle
+    preload_accounts:
+      no_credentials_configured: Lütfen önce Questrade kimlik bilgilerinizi Sağlayıcı
+        Ayarları'nda yapılandırın.
+    questrade_item:
+      accounts_need_setup: Hesapların kurulması gerekiyor
+      delete: Bağlantıyı sil
+      deletion_in_progress: siliniyor...
+      error: Hata
+      kind: Aracılık
+      more_accounts_available:
+        one: "%{count} hesap daha kullanılabilir"
+        other: "%{count} hesap daha kullanılabilir"
+      no_accounts_description: Bu bağlantıda henüz bağlı hesap yok.
+      no_accounts_title: Hesap yok
+      provider_name: Questrade
+      requires_update: Bağlantının güncellenmesi gerekiyor
+      setup_action: Yeni Hesapları Kur
+      setup_description: "%{total} hesabın %{linked} tanesi bağlı. Yeni içe aktarılan
+        Questrade hesaplarınız için hesap türlerini seçin."
+      setup_needed: Yeni hesaplar kurulmaya hazır
+      status: "%{timestamp} önce senkronize edildi"
+      status_never: Hiç senkronize edilmedi
+      status_with_summary: 'Son senkronizasyon: %{timestamp} önce - %{summary}'
+      syncing: Senkronize ediliyor...
+      total: Toplam
+      unlinked: Bağlı değil
+      update_credentials: Kimlik bilgilerini güncelle
+    select_accounts:
+      accounts_selected: hesap seçildi
+      api_error: 'API hatası: %{message}'
+      cancel: İptal
+      configure_name_in_provider: İçe aktarılamıyor - lütfen Questrade'de hesap adını
+        yapılandırın
+      description: "%{product_name} hesabınıza bağlamak istediğiniz hesapları seçin."
+      link_accounts: Seçili hesapları bağla
+      no_accounts_found: Hesap bulunamadı. Lütfen API anahtar yapılandırmanızı kontrol
+        edin.
+      no_api_key: Questrade API anahtarı yapılandırılmamış. Lütfen Ayarlar'da yapılandırın.
+      no_credentials_configured: Lütfen önce Questrade kimlik bilgilerinizi Sağlayıcı
+        Ayarları'nda yapılandırın.
+      no_name_placeholder: "(Adsız)"
+      title: Questrade Hesaplarını Seç
+    select_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
+      all_accounts_already_linked: Tüm Questrade hesapları zaten bağlı
+      api_error: 'API hatası: %{message}'
+      balance_label: 'Bakiye:'
+      cancel: İptal
+      cancel_button: İptal
+      configure_name_in_provider: İçe aktarılamıyor - lütfen Questrade'de hesap adını
+        yapılandırın
+      connect_hint: Otomatik senkronizasyonu etkinleştirmek için bir Questrade hesabı
+        bağlayın.
+      description: Bu hesaba bağlamak için bir Questrade hesabı seçin. İşlemler otomatik
+        olarak senkronize edilir ve tekilleştirilir.
+      header: Questrade ile bağla
+      link_account: Hesabı bağla
+      link_button: Bu hesabı bağla
+      linking_to: 'Bağlanıyor:'
+      no_account_specified: Hesap belirtilmedi
+      no_accounts: Bağlı olmayan Questrade hesabı bulunamadı.
+      no_accounts_found: Questrade hesabı bulunamadı. Lütfen API anahtar yapılandırmanızı
+        kontrol edin.
+      no_api_key: Questrade API anahtarı yapılandırılmamış. Lütfen Ayarlar'da yapılandırın.
+      no_credentials_configured: Lütfen önce Questrade kimlik bilgilerinizi Sağlayıcı
+        Ayarları'nda yapılandırın.
+      no_name_placeholder: "(Adsız)"
+      settings_link: Sağlayıcı Ayarlarına Git
+      subtitle: Bir Questrade hesabı seçin
+      title: "%{account_name} hesabını Questrade ile bağla"
+    setup_accounts:
+      account_type_label: 'Hesap Türü:'
+      account_types:
+        credit_card: Kredi Kartı
+        crypto: Kripto Para Hesabı
+        depository: Vadesiz veya Tasarruf Hesabı
+        investment: Yatırım Hesabı
+        loan: Kredi veya İpotek
+        other_asset: Diğer Varlık
+        skip: Bu hesabı atla
+      accounts_count:
+        one: "%{count} hesap kullanılabilir"
+        other: "%{count} hesap kullanılabilir"
+      all_accounts_linked: Tüm Questrade hesaplarınız zaten kuruldu.
+      api_error: 'API hatası: %{message}'
+      balance: Bakiye
+      cancel: İptal
+      choose_account_type: 'Her Questrade hesabı için doğru hesap türünü seçin:'
+      create_accounts: Hesapları Oluştur
+      creating: Hesaplar oluşturuluyor...
+      creating_accounts: Hesaplar Oluşturuluyor...
+      fetch_failed: Hesaplar Getirilemedi
+      historical_data_range: 'Geçmiş Veri Aralığı:'
+      import_selected: Seçili hesapları içe aktar
+      instructions: Questrade'den içe aktarmak istediğiniz hesapları seçin. Birden
+        fazla hesap seçebilirsiniz.
+      no_accounts: Bu Questrade bağlantısında bağlı olmayan hesap bulunamadı.
+      no_accounts_to_setup: Kurulacak Hesap Yok
+      no_api_key: Questrade API anahtarı yapılandırılmamış. Lütfen bağlantı ayarlarınızı
+        kontrol edin.
+      select_all: Tümünü seç
+      subtitle: İçe aktarılan hesaplarınız için doğru hesap türlerini seçin
+      subtype_labels:
+        credit_card: ''
+        crypto: ''
+        depository: 'Hesap Alt Türü:'
+        investment: 'Yatırım Türü:'
+        loan: 'Kredi Türü:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Kredi kartları otomatik olarak kredi kartı hesapları olarak kurulacaktır.
+        crypto: Kripto para hesapları varlıkları ve işlemleri takip edecek şekilde
+          kurulacaktır.
+        other_asset: Diğer Varlıklar için ek seçenek gerekmez.
+      subtypes:
+        depository:
+          cd: Vadeli Mevduat Sertifikası
+          checking: Vadesiz
+          hsa: Sağlık Tasarruf Hesabı
+          money_market: Para Piyasası
+          savings: Tasarruf
+        investment:
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: 529 Planı
+          angel: Melek
+          brokerage: Aracılık
+          hsa: Sağlık Tasarruf Hesabı
+          ira: Geleneksel IRA
+          mutual_fund: Yatırım Fonu
+          pension: Emeklilik
+          retirement: Emeklilik
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: Tasarruf Planı
+        loan:
+          auto: Araç Kredisi
+          mortgage: İpotek
+          other: Diğer Kredi
+          student: Öğrenci Kredisi
+      sync_start_date_help: İşlem geçmişinizin ne kadar geriye senkronize edilmesini
+        istediğinizi seçin.
+      sync_start_date_label: 'İşlemleri şu tarihten itibaren senkronize et:'
+      title: Questrade Hesaplarınızı Kurun
+    setup_required:
+      go_to_provider_settings: Sağlayıcı ayarlarına git
+      not_configured_description: Questrade bağlantınızı Sağlayıcı ayarları altında
+        ekleyin, ardından hesapları bağlamak için buraya geri dönün.
+      not_configured_title: Questrade henüz bağlı değil
+      title: Önce Questrade'i bağlayın
+    sync:
+      status:
+        calculating: Bakiyeler hesaplanıyor...
+        checking_setup: Hesap yapılandırması kontrol ediliyor...
+        importing: Questrade'den hesaplar içe aktarılıyor...
+        importing_data: Hesap verileri içe aktarılıyor...
+        needs_setup: "%{count} hesabın kurulması gerekiyor..."
+        processing: Varlıklar ve işlemler işleniyor...
+      success: Senkronizasyon başladı
+    sync_status:
+      no_accounts: Hesap bulunamadı
+      synced:
+        one: "%{count} hesap senkronize edildi"
+        other: "%{count} hesap senkronize edildi"
+      synced_with_setup: "%{linked} senkronize edildi, %{unlinked} kurulmayı bekliyor"
+    update:
+      success: Questrade bağlantısı güncellendi

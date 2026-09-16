@@ -1,0 +1,28 @@
+<%# locals: (occurrence:) %>
+<% series = occurrence.recurring_transaction %>
+<%
+  # Monarch-style state vocabulary: paid as expected (green), paid at a
+  # different amount than expected (amber), skipped (muted), overdue
+  # (destructive), otherwise upcoming (neutral).
+  chip_classes =
+    if occurrence.paid?
+      if (occurrence.confirmed_allocated - occurrence.resolved_expected_amount).abs > RecurringOccurrence::CLOSE_EPSILON
+        "bg-warning/10 text-warning"
+      else
+        "bg-success/10 text-success"
+      end
+    elsif occurrence.skipped? || occurrence.missed?
+      "bg-surface-inset text-subdued line-through"
+    elsif occurrence.derived_state == :overdue
+      "bg-destructive/10 text-destructive"
+    else
+      "bg-surface-inset text-primary"
+    end
+%>
+<%= link_to recurring_occurrence_path(occurrence),
+      data: { turbo_frame: :drawer },
+      class: "block rounded px-1.5 py-0.5 text-xs truncate hover:opacity-80 #{chip_classes}",
+      title: series.display_name do %>
+  <span class="privacy-sensitive"><%= format_money(occurrence.resolved_expected_amount_money) %></span>
+  <%= series.display_name %>
+<% end %>

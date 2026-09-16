@@ -1,0 +1,34 @@
+uk:
+  vehicles:
+    edit:
+      edit: Редагувати %{account}
+    form:
+      make: Марка
+      make_placeholder: Toyota
+      mileage: Пробіг
+      mileage_placeholder: '15000'
+      mileage_unit: Одиниця
+      model: Модель
+      model_placeholder: Camry
+      year: Рік
+      year_placeholder: '2023'
+    new:
+      title: Введіть дані про транспортний засіб
+    overview:
+      current_price: Поточна ціна
+      make_model: Марка та модель
+      mileage: Пробіг
+      purchase_price: Ціна покупки
+      trend: Тренд
+      unknown: Невідомо
+      year: Рік
+    tabs:
+      overview:
+        current_price: Поточна ціна
+        make_model: Марка та модель
+        mileage: Пробіг
+        purchase_price: Ціна покупки
+        trend: Тренд
+        unknown: Невідомо
+        year: Рік
+        edit_account_details: "Редагувати дані облікового запису"

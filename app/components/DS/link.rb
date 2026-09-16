@@ -6,12 +6,9 @@ class DS::Link < DS::Buttonish
   VARIANTS = VARIANTS.reverse_merge(
     default: {
       # Underline + `text-link` so the link is distinguishable by more
-      # than color alone (WCAG 1.4.1). Focus ring uses the established
-      # alpha-ring DS pattern (also used by DS::Toggle, DS::Tooltip,
-      # provider_card, form-field) so theming stays centralized.
-      container_classes: "text-link underline underline-offset-2 hover:no-underline " \
-                         "focus-visible:ring-2 focus-visible:ring-alpha-black-300 " \
-                         "theme-dark:focus-visible:ring-alpha-white-300",
+      # than color alone (WCAG 1.4.1). Keyboard focus uses the canonical
+      # `.focus-ring` (#2136) so every primitive shares one indicator.
+      container_classes: "text-link underline underline-offset-2 hover:no-underline focus-ring",
       icon_classes: "text-secondary"
     }
   ).freeze
@@ -22,6 +19,13 @@ class DS::Link < DS::Buttonish
 
     if frame
       data = data.merge(turbo_frame: frame)
+    end
+
+    # `link_to method:` has been inert since the UJS removal -- Turbo drives
+    # non-GET links via `data-turbo-method` instead. Translate so a caller
+    # writing the natural `method: :post` gets a real POST, not a silent GET.
+    if (http_method = merged_opts.delete(:method))
+      data = data.merge(turbo_method: http_method)
     end
 
     # External link hardening: `target="_blank"` without `rel="noopener"`

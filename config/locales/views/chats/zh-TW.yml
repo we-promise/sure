@@ -1,6 +1,45 @@
 ---
 zh-TW:
   chats:
-    demo_banner_message: "您正在使用由 Cloudflare Workers AI 提供額度的開源權重 Qwen3 大語言模型。由於程式碼庫主要在 `gpt-4.1` 上測試，結果可能有所不同，但您的令牌不會被用於其他地方進行訓練！🤖"
-    demo_banner_title: 演示模式已啟動
-    thinking: "處理中 ..."
+    demo_banner_title: 示範模式已啟用
+    demo_banner_message: 您正在使用由 Cloudflare Workers AI 提供額度的大型語言模型。由於程式碼庫是在 `gpt-4.1` 上測試，結果可能有所不同，但您的 Token 不會被送到其他地方用於訓練！🤖
+    thinking: 思考中...
+    worker_unhealthy_warning: AI 回應目前可能無法送達 — 背景工作似乎未執行或積壓中。請確認您的 Sidekiq worker 正在執行。
+    ai_greeting:
+      greeting: 嗨 %{name}！我是能協助您理財的 AI 大型語言模型。我可以存取網路以及您的帳戶資料。
+      there: 朋友
+      commands_hint_html: 您可以用 <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> 叫出指令
+      questions_intro: 以下是幾個您可以問的問題：
+      evaluate_portfolio: 評估投資組合
+      spending_insights: 顯示支出洞察
+      unusual_patterns: 找出異常的模式
+    chat:
+      edit_chat_title: 編輯對話標題
+      delete_chat: 刪除對話
+    chat_nav:
+      all_chats: 所有對話
+      start_new_chat: 開始新對話
+      edit_chat_title: 編輯對話標題
+      delete_chat: 刪除對話
+    error:
+      retry: 重試
+    destroy:
+      notice: 對話刪除成功
+    index:
+      chats: 對話
+      new_chat: 新對話
+    update:
+      success: 對話已更新
+    ai_consent:
+      title: 啟用 AI 對話
+      available_description: AI 對話可以回答理財問題，並根據您的資料提供洞察。這項功能需要由您明確啟用才會生效。
+      unavailable_description_html: 要使用 AI 助手，您需要設定 <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> 環境變數，或在您執行個體的「自行代管」設定中設定它。
+      enable_button: 啟用 AI 對話
+      disable_note: 隨時可以停用。所有送到我們 LLM 供應商的資料都經過匿名處理。
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: 助手的推理過程
+    tool_calls:
+      tool_calls: 工具呼叫
+      function: 函式：
+      arguments: 參數：

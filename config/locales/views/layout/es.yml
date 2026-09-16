@@ -3,12 +3,15 @@ es:
   layouts:
     application:
       privacy_mode: Alternar modo de privacidad
+      resize_left_sidebar: Redimensionar la barra lateral de cuentas
+      resize_right_sidebar: Redimensionar la barra lateral del asistente
       skip_to_main: Saltar al contenido principal
       nav:
         assistant: Asistente
         budgets: Presupuestos
         home: Inicio
         reports: Informes
+        goals: Objetivos
         transactions: Transacciones
     auth:
       existing_account: ¿Ya tienes una cuenta?
@@ -19,6 +22,10 @@ es:
       footer:
         privacy_policy: Política de privacidad
         terms_of_service: Términos de servicio
+      confirm_dialog:
+        are_you_sure: ¿Estás seguro?
+        cannot_be_undone: Esta acción no se puede deshacer.
+        confirm: Confirmar
     trial:
       open_demo: Demo pública
       data_deleted_in_days: Los datos se eliminarán en %{days} días

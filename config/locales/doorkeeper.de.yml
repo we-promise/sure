@@ -65,12 +65,15 @@ de:
         authorize: 'Autorisieren'
         deny: 'Ablehnen'
       error:
+        go_back: 'Zurück'
         title: 'Ein Fehler ist aufgetreten'
       new:
         title: 'Autorisierung erforderlich'
         prompt: '%{client_name} Zugriff auf dein Konto erlauben?'
         able_to: 'Diese Anwendung kann Folgendes tun'
       show:
+        authorization_code_label: 'Autorisierungscode:'
+        copy_instructions: 'Kopiere diesen Code und füge ihn in der Anwendung ein.'
         title: 'Autorisierungscode'
       form_post:
         title: 'Dieses Formular absenden'

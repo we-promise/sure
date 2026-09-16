@@ -1,0 +1,115 @@
+uk:
+  providers:
+    up:
+      name: Up
+      description: Підключіть австралійські банківські рахунки Up за допомогою персонального токена доступу
+  family:
+    up:
+      create_up_item:
+        default_name: З'єднання Up
+  up_account:
+    fallback: Рахунок Up
+  up_item:
+    errors:
+      account_processing_failed: Не вдалося синхронізувати рахунок Up
+      account_sync_schedule_failed: Не вдалося запланувати синхронізацію рахунку Up
+      transactions_failed: Не вдалося завантажити транзакції Up
+      sync_failed: Не вдалося синхронізувати з'єднання Up
+    sync_status:
+      no_accounts: Рахунки не знайдено
+      all_synced:
+        one: 1 рахунок синхронізовано
+        other: "%{count} рахунків синхронізовано"
+      partial: "%{linked} синхронізовано, %{unlinked} потребує налаштування"
+    institution_summary:
+      none: Жодної установи не підключено
+      one: 1 установа
+      count:
+        one: 1 установа
+        other: "%{count} установ"
+  up_items:
+    provider_panel:
+      default_connection_name: З'єднання Up
+      add_connection: Додати з'єднання Up
+      update_connection: Оновити з'єднання
+      connection_name_label: Назва з'єднання
+      connection_name_placeholder: Main Up
+      access_token_label: Персональний токен доступу
+      access_token_placeholder: Вставте свій персональний токен доступу Up
+      keep_access_token_placeholder: Залиште порожнім, щоб зберегти існуючий токен
+      setup_accounts: Налаштувати рахунки
+      syncing: Синхронізація...
+      sync: Синхронізувати
+      disconnect: Відключити
+      disconnect_confirm: "Ви впевнені, що хочете відключити %{name}?"
+    create:
+      success: З'єднання Up збережено.
+    update:
+      success: З'єднання Up оновлено.
+    destroy:
+      success: Заплановано видалення з'єднання Up.
+      unlink_failed: Не вдалося відключити з'єднання Up
+    select_accounts:
+      title: Пов'язати рахунки Up
+      description: Виберіть рахунки Up для додавання.
+      no_accounts_found: Не знайдено непов'язаних рахунків Up.
+      no_credentials_configured: Спочатку налаштуйте Up у налаштуваннях провайдера.
+      cancel: Скасувати
+      link_accounts: Пов'язати рахунки
+    link_accounts:
+      success:
+        one: Пов'язано 1 рахунок Up.
+        other: "Пов'язано %{count} рахунків Up."
+      no_accounts_selected: Виберіть принаймні один рахунок.
+      no_credentials_configured: Спочатку налаштуйте Up у налаштуваннях провайдера.
+      unsupported_account_type: Up не підтримує цей тип рахунку.
+      link_failed: Жоден рахунок не було пов'язано.
+    select_existing_account:
+      title: "Пов'язати рахунок Up з %{account_name}"
+      description: Виберіть непов'язаний рахунок Up для підключення до цього рахунку.
+      no_accounts_found: Не знайдено непов'язаних рахунків Up.
+      no_credentials_configured: Спочатку налаштуйте Up у налаштуваннях провайдера.
+      account_already_linked: Цей рахунок вже пов'язано з провайдером.
+      cancel: Скасувати
+      link_account: Пов'язати рахунок
+    link_existing_account:
+      success: "Пов'язано рахунок Up з %{account_name}."
+      account_already_linked: Цей рахунок вже пов'язано з провайдером.
+      up_account_already_linked: Цей рахунок Up вже пов'язано.
+      no_account_selected: Виберіть рахунок Up для пов'язування.
+    setup_accounts:
+      title: Пов'язати рахунки Up
+      subtitle: Виберіть, як кожен рахунок Up має відображатися в Sure.
+      no_credentials: Спочатку налаштуйте облікові дані Up.
+      api_error: Не вдалося завантажити рахунки Up.
+      fetch_failed: Не вдалося завантажити рахунки
+      no_accounts_to_setup: Немає рахунків для налаштування
+      all_accounts_linked: Усі рахунки Up вже пов'язано.
+      choose_account_type: Виберіть тип рахунку
+      choose_account_type_description: Пропустіть рахунки, які ви не хочете відстежувати.
+      account_type_label: Тип рахунку
+      account_types:
+        skip: Пропустити
+        depository: Готівка
+        loan: Позика
+      create_accounts: Створити рахунки
+      cancel: Скасувати
+    complete_account_setup:
+      success:
+        one: Створено 1 рахунок Up.
+        other: "Створено %{count} рахунків Up."
+      all_skipped: Жоден рахунок Up не було створено.
+      no_accounts: Жоден рахунок Up не було вибрано.
+      creation_failed: Не вдалося створити рахунки Up.
+    up_item:
+      deletion_in_progress: Видалення триває
+      syncing: Синхронізація
+      error: Помилка
+      status_with_summary: "Синхронізовано %{timestamp} тому · %{summary}"
+      status_never: Ніколи не синхронізовано
+      delete: Видалити
+      setup_needed: Потрібне налаштування рахунку
+      setup_description: "%{linked} з %{total} рахунків пов'язано."
+      setup_action: Налаштувати рахунки
+      no_accounts_title: Ще немає імпортованих рахунків
+      no_accounts_description: Завантажте рахунки Up і виберіть, які з них пов'язати.

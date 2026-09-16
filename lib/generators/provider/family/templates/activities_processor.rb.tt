@@ -131,9 +131,9 @@ class <%= class_name %>Account::ActivitiesProcessor
 
       # Get the activity date
       # TODO: Customize date field names
-      activity_date = parse_date(data[:settlement_date]) ||
-                      parse_date(data[:trade_date]) ||
-                      parse_date(data[:date]) ||
+      activity_date = parse_date(data[:settlement_date], family: account&.family) ||
+                      parse_date(data[:trade_date], family: account&.family) ||
+                      parse_date(data[:date], family: account&.family) ||
                       Date.current
 
       currency = extract_currency(data, fallback: account.currency)
@@ -165,9 +165,9 @@ class <%= class_name %>Account::ActivitiesProcessor
 
       # Get the activity date
       # TODO: Customize date field names
-      activity_date = parse_date(data[:settlement_date]) ||
-                      parse_date(data[:trade_date]) ||
-                      parse_date(data[:date]) ||
+      activity_date = parse_date(data[:settlement_date], family: account&.family) ||
+                      parse_date(data[:trade_date], family: account&.family) ||
+                      parse_date(data[:date], family: account&.family) ||
                       Date.current
 
       # Build description

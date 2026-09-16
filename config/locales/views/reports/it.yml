@@ -1,0 +1,244 @@
+---
+it:
+  reports:
+    index:
+      title: Rapporti
+      subtitle: Analisi approfondita della tua salute finanziaria
+      export: Esporta CSV
+      print_report: Stampa rapporto
+      drag_to_reorder: "Trascina per riordinare la sezione"
+      toggle_section: "Mostra/nascondi sezione"
+      periods:
+        monthly: Mensile
+        quarterly: Trimestrale
+        ytd: Da inizio anno
+        last_6_months: Ultimi 6 mesi
+        custom: Intervallo personalizzato
+      date_range:
+        from: Da
+        to: A
+      showing_period: "Visualizzazione dati dal %{start} al %{end}"
+      previous_period: "Periodo precedente"
+      next_period: "Periodo successivo"
+      today: "Oggi"
+      period_label:
+        quarterly: "T%{quarter} %{year}"
+        ytd: "YTD %{year}"
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
+      period_picker:
+        quarter: "T%{quarter} %{year}"
+        ytd: "YTD %{year}"
+      previous_year: "Anno precedente"
+      next_year: "Anno successivo"
+      previous_decade: "Decennio precedente"
+      next_decade: "Decennio successivo"
+    invalid_date_range: "La data di fine non può essere precedente alla data di inizio. Le date sono state scambiate."
+    summary:
+      total_income: Entrate totali
+      total_expenses: Spese totali
+      net_savings: Risparmio netto
+      budget_performance: Performance budget
+      vs_previous: vs periodo precedente
+      income_minus_expenses: Entrate meno spese
+      of_budget_used: del budget utilizzato
+      no_budget_data: Nessun dato budget per questo periodo
+    budget_performance:
+      title: Performance budget
+      spent: Speso
+      budgeted: Pianificato
+      remaining: Rimanente
+      over_by: In eccesso di
+      shared: condiviso
+      suggested_daily: "%{amount} suggeriti al giorno per i %{days} giorni rimanenti"
+      no_budgets: Nessuna categoria budget configurata per questo mese
+      status:
+        good: In regola
+        warning: Vicino al limite
+        over: Oltre il budget
+    trends:
+      title: Tendenze e Approfondimenti
+      monthly_breakdown: Ripartizione mensile
+      month: Mese
+      income: Entrate
+      expenses: Spese
+      net: Netto
+      savings_rate: Tasso di risparmio
+      current: corrente
+      avg_monthly_income: Entrate medie mensili
+      avg_monthly_expenses: Spese medie mensili
+      avg_monthly_savings: Risparmio medio mensile
+      no_data: Nessun dato di tendenza disponibile
+      spending_patterns: Schemi di spesa
+      weekday_spending: Spese nei giorni feriali
+      weekend_spending: Spese nel weekend
+      total: Totale
+      avg_per_transaction: Media per transazione
+      transactions: Transazioni
+      insight_title: Analisi
+      insight_higher_weekend: "Spendi il %{percent}%% in più per transazione nel weekend rispetto ai giorni feriali"
+      insight_higher_weekday: "Spendi il %{percent}%% in più per transazione nei giorni feriali rispetto al weekend"
+      insight_similar: "La tua spesa per transazione è simile nei giorni feriali e nel weekend"
+      no_spending_data: Nessun dato di spesa disponibile per questo periodo
+    empty_state:
+      title: Nessun dato disponibile
+      description: Inizia a monitorare le tue finanze aggiungendo transazioni o collegando i tuoi conti per vedere rapporti completi
+      add_transaction: Aggiungi transazione
+      add_account: Aggiungi conto
+    transactions_breakdown:
+      title: Ripartizione attività
+      no_transactions: Nessuna attività trovata per il periodo e i filtri selezionati
+      filters:
+        title: Filtri
+        category: Categoria
+        account: Conto
+        tag: Etichetta
+        amount_min: Importo minimo
+        amount_max: Importo massimo
+        date_range: Intervallo date
+        all_categories: Tutte le categorie
+        all_accounts: Tutti i conti
+        all_tags: Tutte le etichette
+        apply: Applica filtri
+        clear: Rimuovi filtri
+      sort:
+        label: Ordina per
+        date_desc: Data (più recente)
+        amount_desc: Importo (dal più alto)
+        amount_asc: Importo (dal più basso)
+      export:
+        label: Esporta
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Apri in Google Sheets
+      table:
+        category: Categoria
+        amount: Importo
+        type: Tipo
+        expense: Spese
+        income: Entrate
+        uncategorized: Non categorizzate
+        entries:
+          one: "%{count} voce"
+          other: "%{count} voci"
+        percentage: "% del totale"
+      pagination:
+        showing:
+          one: Visualizzazione di %{count} voce
+          other: Visualizzazione di %{count} voci
+        previous: Precedente
+        next: Successivo
+    net_worth:
+      title: Patrimonio netto
+      current_net_worth: Patrimonio netto attuale
+      period_change: Variazione del periodo
+      assets_vs_liabilities: Attività vs passività
+      total_assets: Attività
+      total_liabilities: Passività
+      no_assets: Nessuna attività
+      no_liabilities: Nessuna passività
+    investment_performance:
+      title: Performance investimenti
+      portfolio_value: Valore portafoglio
+      total_return: Rendimento totale
+      period_return: Rendimento del periodo
+      contributions: Contributi del periodo
+      withdrawals: Prelievi del periodo
+      top_holdings: Posizioni principali
+      holding: Posizione
+      weight: Peso
+      value: Valore
+      return: Rendimento
+      accounts: Conti di investimento
+      gains_by_tax_treatment: Guadagni per trattamento fiscale
+      unrealized_gains: Plusvalenze non realizzate
+      realized_gains: Plusvalenze realizzate
+      total_gains: Guadagni totali
+      taxable_realized_note: Questi guadagni potrebbero essere soggetti a tassazione
+      no_data: "-"
+      view_details: Vedi dettagli
+      holdings_count:
+        one: "%{count} posizione"
+        other: "%{count} posizioni"
+      sells_count:
+        one: "%{count} vendita"
+        other: "%{count} vendite"
+      holdings: Posizioni
+      sell_trades: Operazioni di vendita
+      and_more: "+%{count} altre"
+    investment_flows:
+      title: Flussi di investimento
+      description: Monitora il denaro che entra ed esce dai tuoi conti di investimento tramite contributi e prelievi.
+      contributions: Contributi
+      contributions_description: Denaro aggiunto agli investimenti
+      withdrawals: Prelievi
+      withdrawals_description: Denaro prelevato dagli investimenti
+      net_flow: Flusso netto
+      net_flow_description: Variazione netta totale
+    google_sheets_instructions:
+      title_with_key: "✅ Copia URL per Google Sheets"
+      title_no_key: "⚠️ Chiave API richiesta"
+      ready: Il tuo URL CSV (con chiave API) è pronto.
+      steps: "Per importare in Google Sheets:\n1. Crea un nuovo Google Sheet\n2. Nella cella A1, inserisci la formula mostrata sotto\n3. Premi Invio"
+      security_warning: "Questo URL include la tua chiave API. Tienila al sicuro!"
+      need_key: Per importare dati in Google Sheets, hai bisogno di una chiave API.
+      step1: "Vai su Impostazioni → Chiavi API"
+      step2: "Crea una nuova chiave API con permesso \"lettura\""
+      step3: Copia la chiave API
+      step4: "Aggiungila a questo URL come: ?api_key=LA_TUA_CHIAVE"
+      example: Esempio
+      then_use: Poi usa l'URL completo con =IMPORTDATA() in Google Sheets.
+      open_sheets: Apri Google Sheets
+      go_to_api_keys: Vai alle chiavi API
+      close: Capito
+    print:
+      document_title: Rapporto finanziario
+      title: Rapporto finanziario
+      generated_on: "Generato il %{date}"
+      summary:
+        title: Riepilogo
+        income: Entrate
+        expenses: Spese
+        net_savings: Risparmio netto
+        budget: Budget
+        vs_prior: "%{percent}%% vs precedente"
+        of_income: "%{percent}%% delle entrate"
+        used: utilizzato
+      net_worth:
+        title: Patrimonio netto
+        current_balance: Saldo attuale
+        this_period: questo periodo
+        assets: Attività
+        liabilities: Passività
+        no_liabilities: Nessuna passività
+      trends:
+        title: Tendenze mensili
+        month: Mese
+        income: Entrate
+        expenses: Spese
+        net: Netto
+        savings_rate: Tasso di risparmio
+        average: Media
+        current_month_note: "* Mese corrente (dati parziali)"
+      investments:
+        title: Investimenti
+        portfolio_value: Valore portafoglio
+        total_return: Rendimento totale
+        period_return: Rendimento del periodo
+        contributions: Contributi
+        withdrawals: Prelievi
+        this_period: questo periodo
+        top_holdings: Posizioni principali
+        holding: Posizione
+        weight: Peso
+        value: Valore
+        return: Rendimento
+      spending:
+        title: Spese per categoria
+        income: Entrate
+        expenses: Spese
+        category: Categoria
+        amount: Importo
+        percent: "%"
+        more_categories: "+ %{count} altre categorie"

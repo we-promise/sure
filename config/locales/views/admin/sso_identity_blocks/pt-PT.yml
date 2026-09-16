@@ -1,0 +1,6 @@
+---
+pt-PT:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: "A identidade SSO já pode iniciar sessão ou criar uma conta novamente."

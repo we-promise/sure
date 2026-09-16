@@ -236,7 +236,11 @@ class AkahuItem::Importer
       if has_stored_transactions && akahu_item.last_synced_at
         akahu_item.last_synced_at - 7.days
       else
-        90.days.ago
+        # Initial sync: omit the start date entirely. Akahu's transactions
+        # endpoint defaults to the full accessible range when no start is given,
+        # so this pulls the connection's complete history instead of clamping it
+        # to a fixed lookback window (which truncated apps with >5 years of data).
+        nil
       end
     end
 

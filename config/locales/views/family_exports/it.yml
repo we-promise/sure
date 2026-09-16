@@ -1,0 +1,43 @@
+---
+it:
+  family_exports:
+    access_denied: Accesso negato
+    create:
+      success: Esportazione avviata. Potrai scaricarla a breve.
+    delete_confirmation: Sei sicuro di voler eliminare questa esportazione? Questa azione non può essere annullata.
+    delete_failed_confirmation: Sei sicuro di voler eliminare questa esportazione fallita?
+    destroy:
+      success: Esportazione eliminata con successo
+    export_not_ready: Esportazione non pronta per il download
+    exporting: Esportazione in corso...
+    new:
+      dialog_title: Esporta i tuoi dati
+      dialog_subtitle: Scarica tutti i tuoi dati finanziari
+      whats_included: "Cosa è incluso:"
+      accounts_and_balances: Tutti i conti e i saldi
+      transaction_history: Cronologia transazioni
+      investment_trades: Movimenti di investimento
+      categories_tags_rules: Categorie, etichette e regole
+      note_label: Nota
+      note_description: Questa esportazione include tutti i tuoi dati, ma solo alcuni possono essere reimportati tramite la funzione di importazione CSV. Supportiamo l'importazione di conti, transazioni (con categoria ed etichette) e movimenti. Altri dati del conto non possono essere importati e sono solo per i tuoi archivi.
+      cancel: Annulla
+      export_data: Esporta dati
+    index:
+      title: Esportazioni
+      new: Nuova esportazione
+    table:
+      title: Esportazioni
+      header:
+        date: Data
+        filename: Nome file
+        status: Stato
+        actions: Azioni
+      row:
+        status:
+          in_progress: In corso
+          complete: Completata
+          failed: Fallita
+        actions:
+          delete: Elimina
+          download: Scarica
+      empty: Nessuna esportazione ancora.

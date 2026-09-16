@@ -248,7 +248,6 @@ jobs:
             -destination 'generic/platform=iOS' \
             MARKETING_VERSION="$IOS_VERSION" \
             CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER" \
-            PRODUCT_BUNDLE_IDENTIFIER="$APP_BUNDLE_ID" \
             archive
 
           mkdir -p "$EXPORT_PATH"

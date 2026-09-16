@@ -10,7 +10,7 @@
 
   <%= form.fields_for :accountable do |property_form| %>
     <%= property_form.select :subtype,
-                Property::SUBTYPES.map { |k, v| [v[:long], k] },
+                Property.subtype_options_for_select,
                 { prompt: t(".subtype_prompt"), label: t(".property_type_label") }, required: true %>
 
     <div class="flex items-center gap-2">

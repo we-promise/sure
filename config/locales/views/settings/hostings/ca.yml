@@ -57,9 +57,9 @@ ca:
         url_label: URL de l'endpoint
         url_placeholder: https://your-agent-host/v1/chat
       brand_fetch_settings:
-        description: Introdueix el Client ID proporcionat per Brand Fetch
-        env_configured_message: Has configurat correctament el teu Client ID de Brand
-          Fetch mitjançant la variable d'entorn BRAND_FETCH_CLIENT_ID.
+        description: Introdueix el Client ID proporcionat per Brandfetch
+        env_configured_message: Has configurat correctament el teu Client ID de Brandfetch
+          mitjançant la variable d'entorn BRAND_FETCH_CLIENT_ID.
         high_res_description: Quan està activat, els logotips es recuperaran amb resolució
           120×120 en lloc de 40×40. Això proporciona imatges més nítides en pantalles
           d'alta densitat.
@@ -68,13 +68,13 @@ ca:
         placeholder: Introdueix aquí el teu Client ID
         setup_step_1_html: Visita <a href="https://brandfetch.com/developers" target="_blank"
           rel="noopener noreferrer" class="underline">brandfetch.com</a> i crea un
-          compte de desenvolupador gratuït de Brand Fetch.
+          compte de desenvolupador gratuït de Brandfetch.
         setup_step_2_html: Ves a la pàgina <a href="https://developers.brandfetch.com/dashboard/logo-api"
           target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
         setup_step_3: Toca la icona de l'ull a la secció "Your Client ID" per revelar
           el teu Client ID i enganxa'l a sota.
         show_details: "(mostra detalls)"
-        title: Configuració de Brand Fetch
+        title: Configuració de Brandfetch
       clear_cache:
         cache_cleared: La memòria cau de dades s'ha netejat. Pot trigar uns instants
           a completar-se.
@@ -153,6 +153,7 @@ ca:
         uri_base_placeholder: https://api.openai.com/v1 (per defecte)
       provider_selection:
         binance_public_hint: gratuït, sense clau API — només cripto (BTC, ETH, etc.)
+        moex_public_hint: gratuït, sense clau API — accions, fons i bons russos (MOEX), inclou canvi RUB
         description: Tria un únic proveïdor per obtenir tipus de canvi de divisa.
         env_configured_message: La selecció de proveïdor està desactivada perquè hi
           ha variables d'entorn configurades. Per activar la selecció aquí, elimina
@@ -165,6 +166,7 @@ ca:
         providers:
           alpha_vantage: Alpha Vantage
           binance_public: Binance
+          moex_public: MOEX
           eodhd: EODHD
           mfapi: MFAPI.in
           tiingo: Tiingo

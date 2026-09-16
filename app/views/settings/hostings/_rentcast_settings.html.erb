@@ -1,0 +1,30 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if ENV["RENTCAST_API_KEY"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+    <% else %>
+      <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+    <% end %>
+    <% if @rentcast_usage&.success? %>
+      <p class="text-sm text-secondary"><%= t(".usage", used: @rentcast_usage.data.used, limit: @rentcast_usage.data.limit) %></p>
+    <% end %>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <% has_key = ENV["RENTCAST_API_KEY"].present? || Setting.rentcast_api_key.present? %>
+    <%= form.text_field :rentcast_api_key,
+                        label: t(".label"),
+                        type: "password",
+                        placeholder: t(".placeholder"),
+                        value: has_key ? "********" : "",
+                        disabled: ENV["RENTCAST_API_KEY"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+  <% end %>
+</div>

@@ -1,0 +1,21 @@
+---
+pl:
+  activerecord:
+    attributes:
+      goal_pledge:
+        account: Konto
+        amount: Kwota
+        currency: Waluta
+        expires_at: Wygasa
+        kind: Rodzaj
+        status: Status
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Wybierz jedno z połączonych kont celu.
+            currency:
+              must_match_goal: Waluta zobowiązania musi być zgodna z walutą celu.
+          duplicate_open_pledge: Masz już otwarte zobowiązanie na tę kwotę na tym
+            koncie. Anuluj lub przedłuż istniejące przed dodaniem kolejnego.

@@ -116,6 +116,47 @@ class Api::V1::BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "validation_failed", response_data["error"]
   end
 
+  test "excludes another family member's personal budget" do
+    @family.update!(personal_budgets: true)
+
+    other_member_budget = @family.budgets.create!(
+      user: users(:family_member),
+      start_date: 5.months.ago.beginning_of_month.to_date,
+      end_date: 5.months.ago.end_of_month.to_date,
+      budgeted_spending: 800,
+      currency: "USD"
+    )
+
+    get api_v1_budgets_url, headers: api_headers(@api_key)
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert_not_includes response_data["budgets"].map { |budget| budget["id"] }, other_member_budget.id
+
+    get api_v1_budget_url(other_member_budget.id), headers: api_headers(@api_key)
+    assert_response :not_found
+  end
+
+  test "includes another family member's personal budget once they share it" do
+    @family.update!(personal_budgets: true)
+
+    other_member_budget = @family.budgets.create!(
+      user: users(:family_member),
+      start_date: 5.months.ago.beginning_of_month.to_date,
+      end_date: 5.months.ago.end_of_month.to_date,
+      budgeted_spending: 800,
+      currency: "USD"
+    )
+    BudgetShare.create!(owner: users(:family_member), viewer: @user, permission: "read_only")
+
+    get api_v1_budgets_url, headers: api_headers(@api_key)
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert_includes response_data["budgets"].map { |budget| budget["id"] }, other_member_budget.id
+
+    get api_v1_budget_url(other_member_budget.id), headers: api_headers(@api_key)
+    assert_response :success
+  end
+
   test "requires authentication" do
     get api_v1_budgets_url
 

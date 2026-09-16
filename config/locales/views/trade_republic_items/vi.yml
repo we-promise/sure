@@ -1,0 +1,106 @@
+---
+vi:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: "Kết nối tài khoản đầu tư Trade Republic bằng đăng nhập web an toàn"
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: "Tài khoản môi giới"
+      private_markets: "Thị trường tư nhân"
+      interest_products: "Sản phẩm lãi suất"
+      crypto_wallet: "Ví tiền mã hóa"
+    trade_republic_item:
+      syncing: "Đang đồng bộ"
+      requires_update: "Cần xác thực lại"
+      error: "Lỗi"
+      synced: "Đã đồng bộ %{time} trước. %{summary}."
+      setup_accounts: "Thiết lập tài khoản"
+      delete: "Xóa"
+      accounts_need_setup: "Tài khoản cần được thiết lập"
+      accounts_need_setup_description: "Tài khoản Trade Republic của bạn cần được liên kết với tài khoản Sure."
+      no_accounts_discovered: "Chưa phát hiện tài khoản Trade Republic."
+      no_accounts_discovered_description: "Hoàn tất đăng nhập và chạy đồng bộ để phát hiện tài khoản."
+      data_quality:
+        title: "Chất lượng dữ liệu và chi tiết đồng bộ"
+        repair: "Sửa dữ liệu đã nhập"
+        positions:
+          one: "%{count} vị thế"
+          other: "%{count} vị thế"
+        unpriced:
+          one: "%{count} chưa có giá hiện tại"
+          other: "%{count} chưa có giá hiện tại"
+        events:
+          one: "%{count} hoạt động"
+          other: "%{count} hoạt động"
+        unknown:
+          one: "%{count} hoạt động không xác định"
+          other: "%{count} hoạt động không xác định"
+        expenses:
+          one: "%{count} khoản chi trong 30 ngày qua (%{amount})"
+          other: "%{count} khoản chi trong 30 ngày qua (%{amount})"
+        reconciliation: "%{matched}/%{total} số dư tài khoản đã được đối soát"
+        sync_history: Các lần đồng bộ gần đây
+        sync_status:
+          completed: Hoàn tất
+          failed: Thất bại
+          pending: Đang chờ
+          syncing: Đang đồng bộ
+          stale: Cũ
+    setup_accounts:
+      page_title: "Thiết lập tài khoản Trade Republic"
+      subtitle: "Liên kết tài khoản đầu tư Trade Republic."
+      available_accounts:
+        account_type_investment: "Investment portfolio"
+        account_type_cash: "Cash account"
+      buttons:
+        refresh: "Làm mới"
+        cancel: "Hủy"
+        link: "Liên kết"
+        done: "Xong"
+    sync:
+      errors:
+        phone_number_missing: "Thiếu số điện thoại Trade Republic."
+        reauthentication_required: "Phiên Trade Republic bị thiếu hoặc đã hết hạn. Kết nối lại từ Cài đặt > Nhà cung cấp."
+      status:
+        checking_credentials: "Đang kiểm tra thông tin xác thực Trade Republic..."
+        importing_account: "Đang nhập tài khoản Trade Republic..."
+        processing_activity: "Đang xử lý vị thế và hoạt động..."
+        calculating_balances: "Đang tính số dư..."
+    repair:
+      scheduled: "Đã lên lịch sửa dữ liệu Trade Republic."
+    select_existing_account:
+      title: "Liên kết tài khoản Trade Republic"
+      link: "Liên kết"
+      cancel: "Hủy"
+    initiate_login:
+      verification_required: "Đã bắt đầu đăng nhập. Xác nhận qua %{method}, sau đó nhấn Xác nhận đăng nhập."
+    complete_login:
+      approval_pending: "Chưa được xác nhận. Hãy phê duyệt đăng nhập trong ứng dụng Trade Republic rồi thử lại."
+      success: "Đã kết nối Trade Republic thành công."
+      login_expired: "Yêu cầu đăng nhập đã hết hạn. Hãy bắt đầu lại."
+    link_existing_account:
+      not_found: "Không tìm thấy tài khoản hoặc cấu hình Trade Republic."
+      success: "Đã liên kết tài khoản với Trade Republic."
+    complete_account_setup:
+      success:
+        one: "Đã tạo thành công %{count} tài khoản Trade Republic."
+        other: "Đã tạo thành công %{count} tài khoản Trade Republic."
+      none_created: "Không có tài khoản nào được tạo."
+      partial_failure:
+        one: "Không thể hoàn tất một tài khoản Trade Republic đã chọn. Kiểm tra nhật ký gỡ lỗi và thử lại."
+        other: "Không thể hoàn tất %{count} tài khoản Trade Republic đã chọn. Kiểm tra nhật ký gỡ lỗi và thử lại."
+    activities:
+      labels:
+        contribution: Nạp tiền
+        withdrawal: Rút tiền
+        interest: Tiền lãi
+        dividend: Cổ tức
+        card_payment: Thanh toán bằng thẻ
+        cash_withdrawal: Rút tiền mặt
+        card_fee: Phí thẻ
+        card_refund: Hoàn tiền thẻ
+        tax_refund: Hoàn thuế
+        buy: Mua
+        sell: Bán

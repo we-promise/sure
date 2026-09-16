@@ -1,0 +1,89 @@
+---
+it:
+  properties:
+    edit:
+      edit: Modifica %{account}
+    form:
+      address_line1: Indirizzo
+      address_line1_placeholder: Via Roma, 1
+      area: Superficie abitabile
+      area_placeholder: '80'
+      area_unit: Unità di misura
+      country: Paese
+      country_placeholder: IT
+      locality: Città
+      locality_placeholder: Milano
+      none: Nessuno
+      postal_code: CAP
+      postal_code_placeholder: '20100'
+      region: Provincia/Regione
+      region_placeholder: MI
+      subtype_prompt: Seleziona tipo di proprietà
+      year_built: Anno di costruzione
+      year_built_placeholder: '2000'
+    new:
+      title: Inserisci la proprietà manualmente
+      next: "Avanti"
+    address:
+      title: "Inserisci la proprietà manualmente"
+      address_line1_label: "Indirizzo"
+      address_line1_placeholder: "Via Roma, 1"
+      city_label: "Città"
+      city_placeholder: "Milano"
+      state_region_label: "Provincia/Regione"
+      state_region_placeholder: "MI"
+      postal_code_label: "CAP"
+      postal_code_placeholder: "20100"
+      country_label: "Paese"
+      country_placeholder: "Italia"
+      save: "Salva"
+    balances:
+      title: "Inserisci la proprietà manualmente"
+      market_value_label: "Valore di mercato stimato"
+      market_value_tooltip: "Il valore di mercato stimato della tua proprietà. Questo numero può spesso essere trovato su siti come Immobiliare.it o Idealista, e non è mai un numero esatto."
+      save: "Salva"
+      next: "Avanti"
+    overview_fields:
+      name_label: "Nome"
+      name_placeholder: "Casa vacanze"
+      subtype_prompt: "Seleziona tipo"
+      property_type_label: "Tipo di proprietà"
+      year_built_label: "Anno di costruzione (facoltativo)"
+      year_built_placeholder: "1990"
+      area_label: "Superficie (facoltativo)"
+      area_placeholder: "80"
+      square_feet: "Piedi quadrati"
+      square_meters: "Metri quadrati"
+      area_unit_label: "Unità superficie"
+    overview:
+      living_area: Superficie
+      market_value: Valore di Mercato
+      purchase_price: Prezzo di Acquisto
+      trend: Tendenza
+      unknown: Sconosciuto
+      year_built: Anno di Costruzione
+    tabs:
+      overview:
+        living_area: Superficie
+        market_value: Valore di Mercato
+        purchase_price: Prezzo di Acquisto
+        trend: Tendenza
+        unknown: Sconosciuto
+        year_built: Anno di Costruzione
+        edit_account_details: "Modifica dettagli conto"
+    subtypes:
+      apartment:
+        short: Appartamento
+        long: Appartamento
+      plot:
+        short: Terreno
+        long: Terreno / Lotto
+      commercial:
+        short: Commerciale
+        long: Proprietà Commerciale
+      rented:
+        short: In Affitto
+        long: Proprietà in Affitto
+      agri_land:
+        short: Terreno Agric.
+        long: Terreno Agricolo

@@ -4,7 +4,6 @@ class SureImport < Import
 
   DEFAULT_MAX_NDJSON_SIZE_MB = 10
   DEFAULT_MAX_ROW_COUNT = 100_000
-  MAX_NDJSON_SIZE = DEFAULT_MAX_NDJSON_SIZE_MB.megabytes
   IMPORTABLE_NDJSON_TYPES = {
     "Account" => :accounts,
     "Balance" => :balances,

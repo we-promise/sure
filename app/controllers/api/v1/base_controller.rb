@@ -24,6 +24,10 @@ class Api::V1::BaseController < ApplicationController
   before_action :force_json_format
   # Use our custom authentication that supports both OAuth and API keys
   before_action :authenticate_request!
+  # Localize registers this before API authentication in ApplicationController.
+  # Resolve the family zone only after the API identity has populated Current.
+  skip_around_action :switch_timezone
+  around_action :switch_timezone
   before_action :check_api_key_rate_limit
   before_action :log_api_access
 
@@ -310,23 +314,15 @@ class Api::V1::BaseController < ApplicationController
 
     # Set up Current context for API requests since we don't use session-based auth
     def setup_current_context_for_api
-      # For API requests, we need to create a minimal session-like object
-      # or find/create an actual session for this user to make Current.user work
-      if @current_user
-        # Try to find an existing session for this user, or create a temporary one
-        session = @current_user.sessions.first
-        if session
-          Current.session = session
-        else
-          # Create a temporary session for this API request
-          # This won't be persisted but will allow Current.user to work
-          session = @current_user.sessions.build(
-            user_agent: request.user_agent,
-            ip_address: request.ip
-          )
-          Current.session = session
-        end
-      end
+      return unless @current_user
+
+      # Build a fresh unsaved session so API requests never reuse an existing
+      # web session that may already carry impersonation state.
+      Current.session = @current_user.sessions.build(
+        user_agent: request.user_agent,
+        ip_address: request.ip
+      )
+      Current.session.active_impersonator_session = nil
     end
 
     # Check if AI features are enabled for the current user

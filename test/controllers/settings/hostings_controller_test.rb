@@ -10,8 +10,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     @provider = mock
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(@provider)
 
-    @provider.stubs(:healthy?).returns(true)
+    @provider.stubs(:health_status).returns(:healthy)
     Provider::Registry.stubs(:get_provider).with(:yahoo_finance).returns(@provider)
+    Provider::Registry.stubs(:get_provider).with(:rentcast).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:realie).returns(nil)
     @provider.stubs(:usage).returns(provider_success_response(
       OpenStruct.new(
         used: 10,
@@ -20,6 +22,14 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
         plan: "free",
       )
     ))
+  end
+
+  teardown do
+    # These tests persist global Setting.* values; reset them so state can't
+    # leak into later (order-dependent) tests.
+    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout external_assistant_token rentcast_api_key realie_api_key].each do |key|
+      Setting.public_send("#{key}=", nil)
+    end
   end
 
   test "cannot edit when self hosting is disabled" do
@@ -42,10 +52,155 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "renders OpenAI model and timeout guidance in German" do
+    sign_in users(:sure_support_staff)
+
+    with_self_hosting do
+      get settings_hosting_url(locale: :de)
+
+      assert_response :success
+      assert_includes response.body, "Konfiguriertes Modell prüfen"
+      assert_includes response.body, "Tools beziehungsweise Function Calling unterstützt"
+      assert_includes response.body, "Zeitlimits"
+      assert_includes response.body, "Anfragezeitlimit in Sekunden (optional)"
+      assert_includes response.body, "OPENAI_REQUEST_TIMEOUT"
+      assert_includes response.body, "Antwortzeitlimit in Sekunden (optional)"
+      assert_includes response.body, "(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × Anfragezeitlimit"
+      assert_includes response.body, "AI_RESPONSE_TIMEOUT"
+      refute_includes response.body, "Request Timeout in Seconds"
+    end
+
+    %w[
+      model_function_calling_help
+      model_function_calling_link
+      timeout_heading
+      timeout_description
+      openai_request_timeout_label
+      openai_request_timeout_help
+      ai_response_timeout_label
+      ai_response_timeout_help
+    ].each do |key|
+      assert I18n.exists?("settings.hostings.openai_settings.#{key}", :de, fallback: false)
+    end
+  end
+
+  test "can update rentcast api key when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { rentcast_api_key: "rentcast-token" } }
+
+      assert_equal "rentcast-token", Setting.rentcast_api_key
+    end
+  end
+
+  test "can update realie api key when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { realie_api_key: "realie-token" } }
+
+      assert_equal "realie-token", Setting.realie_api_key
+    end
+  end
+
+  test "shows Yahoo Finance rate limiting as a warning" do
+    @provider.stubs(:health_status).returns(:rate_limited)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "div[class~=?]", "bg-warning/10"
+        assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
+        assert_includes response.body, "Yahoo Finance rate limit reached."
+        assert_includes response.body, "No action is required."
+        assert_not_includes response.body, "firewall"
+      end
+    end
+  end
+
+  test "renders healthy unavailable and unknown Yahoo Finance states" do
+    @provider.stubs(:health_status).returns(:healthy, :unavailable, :unknown)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url
+        assert_includes response.body, "Yahoo Finance is active and working."
+        assert_select "div[class~=?]", "bg-success"
+
+        get settings_hosting_url
+        assert_includes response.body, "Yahoo Finance is currently unavailable."
+        assert_includes response.body, "Could not verify Yahoo Finance."
+        assert_includes response.body, "Check your internet connection and try again later."
+        assert_not_includes response.body, "firewall"
+        assert_select "div[class~=?]", "bg-destructive"
+
+        get settings_hosting_url
+        assert_includes response.body, "Yahoo Finance status is being checked."
+        assert_not_includes response.body, "Could not verify Yahoo Finance."
+        assert_not_includes response.body, "Yahoo Finance rate limit reached."
+        assert_select "div[class~=?]", "bg-surface-inset"
+      end
+    end
+  end
+
+  test "renders Spanish Yahoo Finance health guidance" do
+    @provider.stubs(:health_status).returns(:rate_limited, :unavailable, :unknown)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url(locale: :es)
+        assert_includes response.body, "Yahoo Finance está limitando temporalmente las solicitudes."
+        assert_includes response.body, "No es necesario realizar ninguna acción."
+
+        get settings_hosting_url(locale: :es)
+        assert_includes response.body, "Yahoo Finance no está disponible en este momento."
+        assert_includes response.body, "Comprueba tu conexión a internet"
+
+        get settings_hosting_url(locale: :es)
+        assert_includes response.body, "Se está comprobando el estado de Yahoo Finance."
+      end
+    end
+  end
+
+  # Italian translates part of yahoo_finance_settings but not the rate-limited
+  # strings this path renders (status_rate_limited, rate_limited_title,
+  # rate_limited_message), which is what makes it exercise the fallback. Move to
+  # another such locale if it gains them, rather than dropping the coverage.
+  test "falls back to English for untranslated Yahoo Finance health guidance" do
+    @provider.stubs(:health_status).returns(:rate_limited)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
+      with_self_hosting do
+        get settings_hosting_url(locale: :it)
+
+        assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
+        assert_not_includes response.body, "translation missing"
+      end
+    end
+  end
+
   test "can update settings when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
 
+      assert_equal "1234567890", Setting.twelve_data_api_key
+    end
+  end
+
+  test "can clear an encrypted api key by submitting a blank value" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
+      assert_equal "1234567890", Setting.twelve_data_api_key
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "" } }
+      assert_nil Setting.twelve_data_api_key
+    end
+  end
+
+  test "submitting the masked placeholder leaves an encrypted api key unchanged" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "********" } }
       assert_equal "1234567890", Setting.twelve_data_api_key
     end
   end
@@ -71,6 +226,135 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { openai_access_token: "token" } }
 
       assert_equal "token", Setting.openai_access_token
+    end
+  end
+
+  # Regression: issue #2465 symptom for the OpenAI token. Blanking the field
+  # (the form auto-submits on blur) must clear the stored value, not silently
+  # keep the old one.
+  test "can clear openai access token by submitting a blank value" do
+    with_self_hosting do
+      Setting.openai_access_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { openai_access_token: "" } }
+
+      assert_nil Setting.openai_access_token
+    end
+  end
+
+  test "ignores redacted openai token placeholder" do
+    with_self_hosting do
+      Setting.openai_access_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { openai_access_token: "********" } }
+
+      assert_equal "previous-token", Setting.openai_access_token
+    end
+  end
+
+  test "can update anthropic access token when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { anthropic_access_token: "fake-anthropic-key-for-tests" } }
+
+      assert_equal "fake-anthropic-key-for-tests", Setting.anthropic_access_token
+    end
+  end
+
+  # Regression: issue #2465 symptom for the Anthropic token.
+  test "can clear anthropic access token by submitting a blank value" do
+    with_self_hosting do
+      Setting.anthropic_access_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { anthropic_access_token: "" } }
+
+      assert_nil Setting.anthropic_access_token
+    end
+  end
+
+  test "ignores redacted anthropic token placeholder" do
+    with_self_hosting do
+      Setting.anthropic_access_token = "previous-token"
+
+      patch settings_hosting_url, params: { setting: { anthropic_access_token: "********" } }
+
+      assert_equal "previous-token", Setting.anthropic_access_token
+    end
+  end
+
+  test "can update anthropic base_url and model" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { anthropic_base_url: "https://bedrock.example.com", anthropic_model: "claude-opus-4-7" } }
+
+      assert_equal "https://bedrock.example.com", Setting.anthropic_base_url
+      assert_equal "claude-opus-4-7", Setting.anthropic_model
+    end
+  end
+
+  test "rejects non-URL anthropic base_url" do
+    with_self_hosting do
+      Setting.anthropic_base_url = nil
+
+      patch settings_hosting_url, params: { setting: { anthropic_base_url: "not-a-url" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Anthropic Base URL must be an http/, flash[:alert])
+      assert_nil Setting.anthropic_base_url
+    end
+  end
+
+  test "clears anthropic base_url when blank value submitted" do
+    with_self_hosting do
+      Setting.anthropic_base_url = "https://bedrock.example.com"
+
+      patch settings_hosting_url, params: { setting: { anthropic_base_url: "" } }
+
+      assert_nil Setting.anthropic_base_url
+    end
+  end
+
+  test "requires anthropic model when a custom base_url is set" do
+    with_self_hosting do
+      Setting.anthropic_base_url = nil
+      Setting.anthropic_model = nil
+
+      patch settings_hosting_url, params: { setting: { anthropic_base_url: "https://bedrock.example.com" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Anthropic Model is required/, flash[:alert])
+      assert_nil Setting.anthropic_base_url
+    end
+  end
+
+  test "can update llm_provider to anthropic" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { llm_provider: "anthropic" } }
+
+      assert_equal "anthropic", Setting.llm_provider
+    end
+  end
+
+  test "falls back to openai when stored llm_provider is invalid" do
+    with_self_hosting do
+      Setting.llm_provider = "bogus"
+      Provider::Openai.stubs(:configured?).returns(false)
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "select[name=?] option[selected][value=?]", "setting[llm_provider]", "openai"
+      assert_no_match(/translation missing/i, @response.body)
+    end
+  ensure
+    Setting.llm_provider = nil
+  end
+
+  test "rejects unknown llm_provider values" do
+    with_self_hosting do
+      Setting.llm_provider = "openai"
+
+      patch settings_hosting_url, params: { setting: { llm_provider: "bogus" } }
+
+      assert_equal "openai", Setting.llm_provider
     end
   end
 
@@ -250,6 +534,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.external_assistant_token = nil
   end
 
+  # Regression: issue #2465 symptom for the external assistant token.
+  test "can clear external assistant token by submitting a blank value" do
+    with_self_hosting do
+      Setting.external_assistant_token = "real-secret"
+
+      patch settings_hosting_url, params: { setting: { external_assistant_token: "" } }
+
+      assert_nil Setting.external_assistant_token
+    end
+  ensure
+    Setting.external_assistant_token = nil
+  end
+
   test "disconnect external assistant clears settings and resets type" do
     with_self_hosting do
       with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil) do
@@ -289,28 +586,38 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: {
         llm_context_window: "4096",
         llm_max_response_tokens: "1024",
-        llm_max_items_per_call: "40"
+        llm_max_items_per_call: "40",
+        openai_request_timeout: "180",
+        ai_response_timeout: "240"
       } }
 
       assert_redirected_to settings_hosting_url
       assert_equal 4096, Setting.llm_context_window
       assert_equal 1024, Setting.llm_max_response_tokens
       assert_equal 40, Setting.llm_max_items_per_call
+      assert_equal 180, Setting.openai_request_timeout
+      assert_equal 240, Setting.ai_response_timeout
 
       patch settings_hosting_url, params: { setting: {
         llm_context_window: "",
         llm_max_response_tokens: "",
-        llm_max_items_per_call: ""
+        llm_max_items_per_call: "",
+        openai_request_timeout: "",
+        ai_response_timeout: ""
       } }
 
       assert_nil Setting.llm_context_window
       assert_nil Setting.llm_max_response_tokens
       assert_nil Setting.llm_max_items_per_call
+      assert_nil Setting.openai_request_timeout
+      assert_nil Setting.ai_response_timeout
     end
   ensure
     Setting.llm_context_window = nil
     Setting.llm_max_response_tokens = nil
     Setting.llm_max_items_per_call = nil
+    Setting.openai_request_timeout = nil
+    Setting.ai_response_timeout = nil
   end
 
   test "rejects llm budget below field minimum" do
@@ -332,11 +639,33 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
       assert_match(/must be a whole number/, flash[:alert])
       assert_nil Setting.llm_max_items_per_call
+
+      patch settings_hosting_url, params: { setting: { openai_request_timeout: "0" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/must be a whole number/, flash[:alert])
+      assert_nil Setting.openai_request_timeout
     end
   ensure
     Setting.llm_context_window = nil
     Setting.llm_max_response_tokens = nil
     Setting.llm_max_items_per_call = nil
+    Setting.openai_request_timeout = nil
+  end
+
+  test "shows environment backed OpenAI request timeout when field is disabled" do
+    with_self_hosting do
+      Setting.openai_request_timeout = 180
+
+      with_env_overrides("OPENAI_REQUEST_TIMEOUT" => "300") do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "input[name='setting[openai_request_timeout]'][value='300'][disabled='disabled']"
+      end
+    end
+  ensure
+    Setting.openai_request_timeout = nil
   end
 
   test "can clear data only when admin" do
@@ -417,5 +746,93 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   ensure
     Setting.securities_providers = ""
+  end
+
+  test "unchecking every securities provider does not re-enable twelve_data via the legacy fallback" do
+    with_self_hosting do
+      # Start from the out-of-the-box default (only twelve_data enabled)
+      assert_equal [ "twelve_data" ], Setting.enabled_securities_providers
+
+      patch settings_hosting_url, params: { setting: { securities_providers: [] } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal [], Setting.enabled_securities_providers
+    end
+  ensure
+    # Explicitly restore the real default value rather than assigning nil —
+    # rails-settings-cached's cache layer doesn't reliably invalidate on
+    # delete within a single test process, so a later test can still read
+    # back the just-deleted blank override instead of falling through to
+    # the field's default.
+    Setting.securities_providers = ""
+    Setting.securities_provider = "twelve_data"
+  end
+
+  # --- T-Invest visibility (issue #3089) ---
+
+  test "hides T-Invest settings when neither tinkoff_invest nor moex_public is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data" ] } }
+
+      get settings_hosting_url
+
+      assert_response :success
+      # "T-Invest (T-Bank)" also appears as a checkbox label in the always-rendered
+      # securities checklist, so assert on the settings block's own field instead.
+      assert_select "input[name='setting[tinkoff_invest_api_key]']", false
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "shows T-Invest settings when tinkoff_invest is enabled, without the moex-only notice" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "tinkoff_invest" ] } }
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[tinkoff_invest_api_key]']"
+      assert_not_includes response.body, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice")
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "shows T-Invest settings with the moex-only notice when moex_public is enabled, even without tinkoff_invest" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "moex_public" ] } }
+
+      notices = {
+        en: "Not enabled for prices above — T-Invest is used to fetch brand logos for all your securities whenever a token is configured, independent of the checkbox above.",
+        de: "Oben nicht für Kursdaten aktiviert – sobald ein Token eingerichtet ist, ruft T-Invest unabhängig vom obigen Kontrollkästchen Logos für alle deine Wertpapiere ab."
+      }
+      notices.each do |locale, notice|
+        get settings_hosting_url(locale: locale)
+
+        assert_response :success
+        assert_select "input[name='setting[tinkoff_invest_api_key]']"
+        assert_includes response.body, notice
+        assert_equal notice, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice", locale: locale, fallback: false, raise: true)
+      end
+    end
+  ensure
+    Setting.securities_providers = ""
+  end
+
+  test "shows T-Invest settings when a token is already configured, even with neither checkbox enabled" do
+    with_self_hosting do
+      Setting.tinkoff_invest_api_key = "some-token"
+      patch settings_hosting_url, params: { setting: { securities_providers: [ "twelve_data" ] } }
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[tinkoff_invest_api_key]']"
+      assert_includes response.body, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice")
+    end
+  ensure
+    Setting.securities_providers = ""
+    Setting.tinkoff_invest_api_key = nil
   end
 end

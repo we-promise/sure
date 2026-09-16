@@ -1,0 +1,5 @@
+---
+en:
+  passkey_sessions:
+    invalid_credential: Could not sign in with that passkey. Please try again or
+      use your password.

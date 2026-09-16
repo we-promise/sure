@@ -1,0 +1,124 @@
+---
+pl:
+  family:
+    up:
+      create_up_item:
+        default_name: Połączenie Up
+  providers:
+    up:
+      description: Połącz australijskie konta bankowe Up przez osobisty token dostępowy
+      name: Up
+  up_account:
+    fallback: Konto Up
+  up_item:
+    errors:
+      account_processing_failed: Nie można zsynchronizować konta Up
+      account_sync_schedule_failed: Nie można zaplanować synchronizacji konta Up
+      sync_failed: Nie można zsynchronizować połączenia Up
+      transactions_failed: Nie można pobrać transakcji Up
+    institution_summary:
+      count:
+        few: "%{count} instytucje"
+        many: "%{count} instytucji"
+        one: 1 instytucja
+        other: "%{count} instytucji"
+      none: Brak połączonych instytucji
+      one: 1 instytucja
+    sync_status:
+      all_synced:
+        few: "%{count} konta zsynchronizowane"
+        many: "%{count} kont zsynchronizowanych"
+        one: 1 konto zsynchronizowane
+        other: "%{count} kont zsynchronizowanych"
+      no_accounts: Nie znaleziono kont
+      partial: "%{linked} zsynchronizowanych, %{unlinked} wymaga konfiguracji"
+  up_items:
+    complete_account_setup:
+      all_skipped: Nie utworzono żadnych kont Up.
+      creation_failed: Nie można utworzyć kont Up.
+      no_accounts: Nie wybrano żadnych kont Up.
+      success:
+        few: Utworzono %{count} konta Up.
+        many: Utworzono %{count} kont Up.
+        one: Utworzono 1 konto Up.
+        other: Utworzono %{count} kont Up.
+    create:
+      success: Połączenie Up zapisane.
+    destroy:
+      success: Zaplanowano usunięcie połączenia Up.
+      unlink_failed: Nie można rozłączyć połączenia Up
+    link_accounts:
+      link_failed: Nie połączono żadnych kont.
+      no_accounts_selected: Wybierz co najmniej jedno konto.
+      no_credentials_configured: Skonfiguruj Up w ustawieniach dostawcy.
+      success:
+        few: Połączono %{count} konta Up.
+        many: Połączono %{count} kont Up.
+        one: Połączono 1 konto Up.
+        other: Połączono %{count} kont Up.
+      unsupported_account_type: Up nie obsługuje tego typu konta.
+    link_existing_account:
+      account_already_linked: To konto jest już połączone z dostawcą.
+      no_account_selected: Wybierz konto Up do połączenia.
+      success: Połączono konto Up z %{account_name}.
+      up_account_already_linked: To konto Up jest już połączone.
+    provider_panel:
+      access_token_label: Osobisty token dostępowy
+      access_token_placeholder: Wklej swój osobisty token dostępowy Up
+      add_connection: Dodaj połączenie Up
+      connection_name_label: Nazwa połączenia
+      connection_name_placeholder: Główne Up
+      default_connection_name: Połączenie Up
+      disconnect: Rozłącz
+      disconnect_confirm: Czy na pewno chcesz rozłączyć %{name}?
+      keep_access_token_placeholder: Pozostaw puste, aby zachować istniejący token
+      setup_accounts: Konfiguruj konta
+      sync: Synchronizuj
+      syncing: Synchronizowanie...
+      update_connection: Aktualizuj połączenie
+    select_accounts:
+      cancel: Anuluj
+      description: Wybierz konta Up do dodania.
+      link_accounts: Połącz konta
+      no_accounts_found: Nie znaleziono niepołączonych kont Up.
+      no_credentials_configured: Skonfiguruj Up w ustawieniach dostawcy.
+      title: Połącz konta Up
+    select_existing_account:
+      account_already_linked: To konto jest już połączone z dostawcą.
+      cancel: Anuluj
+      description: Wybierz niepołączone konto Up do połączenia z tym kontem.
+      link_account: Połącz konto
+      no_accounts_found: Nie znaleziono niepołączonych kont Up.
+      no_credentials_configured: Skonfiguruj Up w ustawieniach dostawcy.
+      title: Połącz konto Up z %{account_name}
+    setup_accounts:
+      account_type_label: Typ konta
+      account_types:
+        depository: Gotówkowe
+        loan: Pożyczka
+        skip: Pomiń
+      all_accounts_linked: Wszystkie konta Up są już połączone.
+      api_error: Nie można pobrać kont Up.
+      cancel: Anuluj
+      choose_account_type: Wybierz typ konta
+      choose_account_type_description: Pomiń konta, których nie chcesz śledzić.
+      create_accounts: Utwórz konta
+      fetch_failed: Nie można pobrać kont
+      no_accounts_to_setup: Brak kont do skonfigurowania
+      no_credentials: Najpierw skonfiguruj dane uwierzytelniające Up.
+      subtitle: Wybierz, jak każde konto Up ma być wyświetlane w Sure.
+      title: Połącz konta Up
+    up_item:
+      delete: Usuń
+      deletion_in_progress: Trwa usuwanie
+      error: Błąd
+      no_accounts_description: Pobierz konta Up i wybierz, które połączyć.
+      no_accounts_title: Brak zaimportowanych kont
+      setup_action: Konfiguruj konta
+      setup_description: "%{linked} z %{total} kont połączonych."
+      setup_needed: Wymagana konfiguracja konta
+      status_never: Nigdy nie synchronizowano
+      status_with_summary: Zsynchronizowano %{timestamp} temu · %{summary}
+      syncing: Synchronizowanie
+    update:
+      success: Połączenie Up zaktualizowane.

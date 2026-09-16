@@ -2,7 +2,7 @@ class FamilyExportsController < ApplicationController
   include StreamExtensions
 
   before_action :require_admin
-  before_action :set_export, only: [ :download, :destroy ]
+  before_action :set_export, only: [ :download, :destroy, :cancel ]
 
   def new
     # Modal view for initiating export
@@ -44,6 +44,14 @@ class FamilyExportsController < ApplicationController
   def destroy
     @export.destroy
     redirect_to family_exports_path, notice: t("family_exports.destroy.success")
+  end
+
+  def cancel
+    if @export.force_fail!
+      redirect_to family_exports_path, notice: t(".cancelled")
+    else
+      redirect_to family_exports_path, alert: t(".not_cancellable")
+    end
   end
 
   private

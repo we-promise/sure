@@ -8,4 +8,5 @@ zh-CN:
       show:
         clear: 清空分类
         no_categories: 暂无分类
+        recent: 最近使用
         search_placeholder: 搜索分类

@@ -13,3 +13,13 @@ tr:
       success: Oturumdan ayrıldınız
     reject:
       success: İstek reddedildi
+    super_admin_bar:
+      impersonating: Taklit ediliyor
+      jobs: Görevler
+      join: Katıl
+      join_a_session: Oturuma katıl
+      leave: Ayrıl
+      request_impersonation: Taklit İsteği Gönder
+      super_admin: Süper Yönetici
+      terminate: Sonlandır
+      uuid_placeholder: UUID

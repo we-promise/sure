@@ -8,4 +8,5 @@ hu:
       show:
         clear: Kategória törlése
         no_categories: Nem található kategória
+        recent: Legutóbbiak
         search_placeholder: Keresés

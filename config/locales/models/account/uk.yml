@@ -1,0 +1,34 @@
+---
+uk:
+  account_order:
+    balance_asc:
+      label: "Баланс (від низького до високого)"
+      label_short: "Баланс ↑"
+    balance_desc:
+      label: "Баланс (від високого до низького)"
+      label_short: "Баланс ↓"
+    name_asc:
+      label: "Назва (А-Я)"
+      label_short: "Назва ↑"
+    name_desc:
+      label: "Назва (Я-А)"
+      label_short: "Назва ↓"
+  activerecord:
+    attributes:
+      account:
+        balance: "Баланс"
+        currency: "Валюта"
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        name: "Назва"
+        subtype: "Підтип"
+    models:
+      account: "Рахунок"
+      account/credit: "Кредитна картка"
+      account/depository: "Банківський рахунок"
+      account/investment: "Інвестиція"
+      account/loan: "Позика"
+      account/other_asset: "Інший актив"
+      account/other_liability: "Інше зобов'язання"
+      account/property: "Нерухомість"
+      account/vehicle: "Транспортний засіб"

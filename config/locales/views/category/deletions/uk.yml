@@ -1,0 +1,13 @@
+---
+uk:
+  category:
+    deletions:
+      create:
+        success: "Категорію транзакції успішно видалено"
+      new:
+        category: "Категорія"
+        delete_and_leave_uncategorized: "Видалити «%{category_name}» та залишити без категорії"
+        delete_and_recategorize: "Видалити «%{category_name}» та призначити нову категорію"
+        delete_category: "Видалити категорію?"
+        explanation: "Видаляючи цю категорію, кожна транзакція, що має категорію «%{category_name}», залишиться без категорії. Замість того, щоб залишати їх без категорії, ви також можете призначити нову категорію нижче."
+        replacement_category_prompt: "Вибрати категорію"

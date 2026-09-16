@@ -1,0 +1,27 @@
+---
+tr:
+  activerecord:
+    attributes:
+      goal:
+        color: Renk
+        currency: Para Birimi
+        linked_accounts: Bağlı hesaplar
+        name: Ad
+        notes: Notlar
+        state: Durum
+        target_amount: Hedef tutar
+        target_date: Hedef tarih
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Bu hedefi finanse etmek için en
+                az bir hesap seçin.
+            currency:
+              locked_after_linked: Hedef hesaplara bağlandıktan sonra para birimi
+                değiştirilemez.
+            linked_accounts:
+              currency_mismatch: Bağlı tüm hesaplar aynı para birimini kullanmalıdır.
+              must_be_fundable: Bağlı tüm hesaplar nakit veya yatırım hesabı olmalıdır.
+              must_belong_to_family: Bağlı hesaplar, hedefle aynı aileye ait olmalıdır.

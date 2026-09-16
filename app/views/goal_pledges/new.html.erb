@@ -7,7 +7,11 @@
 
     <%
       account_options = @goal.linked_accounts.map do |a|
-        [ a.name, a.id, { data: { manual: a.manual?.to_s } } ]
+        # `manual` drives the "update your manual balance" helper copy. Key it
+        # off the pledge kind actually saved (default_pledge_kind), so a manual
+        # investment account — which pledges via transfer — shows the transfer
+        # helper, not the manual one.
+        [ a.name, a.id, { data: { manual: (a.default_pledge_kind == "manual_save").to_s } } ]
       end
     %>
 

@@ -1,0 +1,10 @@
+---
+it:
+  invite_codes:
+    create:
+      success: "Codice generato"
+    destroy:
+      success: "Codice eliminato"
+    index:
+      invite_code_description: Genera un nuovo codice per vederlo visualizzato qui. I codici generati che sono stati utilizzati non verranno più mostrati.
+      no_invite_codes: Nessun codice da mostrare

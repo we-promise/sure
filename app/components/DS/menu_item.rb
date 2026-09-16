@@ -81,7 +81,7 @@ class DS::MenuItem < DesignSystemComponent
 
     def container_classes
       [
-        "flex items-center gap-2 p-2 rounded-md w-full",
+        "flex items-center gap-2 p-2 rounded-md w-full focus-ring",
         destructive? ? "hover:bg-red-tint-5 theme-dark:hover:bg-red-tint-10" : "hover:bg-container-hover"
       ].join(" ")
     end

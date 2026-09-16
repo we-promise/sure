@@ -1,0 +1,8 @@
+---
+ru:
+  admin:
+    invitations:
+      destroy:
+        success: Приглашение удалено.
+      destroy_all:
+        success: Все приглашения для этой семьи удалены.

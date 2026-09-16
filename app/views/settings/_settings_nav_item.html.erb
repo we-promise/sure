@@ -1,7 +1,7 @@
 <%# locals: (name:, path:, icon:) %>
 
 <%= link_to path, class: class_names(
-  "flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm",
+  "flex items-center gap-2 whitespace-nowrap px-3 py-2 rounded-lg text-sm focus-ring",
   page_active?(path) ? "text-primary bg-container shadow-border-xs" : "text-secondary hover:bg-surface-hover border-transparent"
 ), aria: { current: ("page" if page_active?(path)) } do %>
   <%= icon(icon) if icon %>

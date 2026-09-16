@@ -1,0 +1,277 @@
+---
+nl:
+  brex_items:
+    default_connection_name: Brex-verbinding
+    account_metadata:
+      provider: Brex
+      separator: " • "
+    kinds:
+      cash: Contant
+      card: Kaart
+    statuses:
+      ACTIVE: Actief
+      active: Actief
+      CLOSED: Gesloten
+      closed: Gesloten
+      frozen: Bevroren
+      FROZEN: Bevroren
+    create:
+      success: Brex-verbinding succesvol aangemaakt
+    default_card_name: Brex-kaart
+    default_cash_name: "Brex Cash %{id}"
+    destroy:
+      success: Brex-verbinding verwijderd
+    index:
+      title: Brex-verbindingen
+    institution_summary:
+      none: Geen instellingen verbonden
+      one: "%{name}"
+      count:
+        one: "%{count} instelling"
+        other: "%{count} instellingen"
+    sync_status:
+      no_accounts: Geen accounts gevonden
+      all_synced:
+        one: "%{count} account gesynchroniseerd"
+        other: "%{count} accounts gesynchroniseerd"
+      partial_setup: "%{synced} gesynchroniseerd, %{pending} moeten worden ingesteld"
+    api_error:
+      common_issues: "Veelvoorkomende problemen:"
+      expired_credentials: Genereer een nieuw API-token bij Brex.
+      expired_credentials_label: "Verlopen inloggegevens:"
+      heading: Kan geen verbinding maken met Brex
+      invalid_token: Controleer uw API-token in de Provider-instellingen.
+      invalid_token_label: "Ongeldig API-token:"
+      network: Controleer uw internetverbinding.
+      network_label: "Netwerkprobleem:"
+      permissions: Zorg ervoor dat uw token over de vereiste alleen-lezen-scopes voor account en transacties beschikt.
+      permissions_label: "Onvoldoende rechten:"
+      service: De Brex-API is mogelijk tijdelijk niet beschikbaar.
+      service_label: "Dienst niet beschikbaar:"
+      settings_link: Provider-instellingen controleren
+      title: Brex-verbindingsfout
+    errors:
+      unexpected_error: Er is een onverwachte fout opgetreden. Probeer het later opnieuw.
+    entries:
+      default_name: Brex-transactie
+    loading:
+      loading_message: Brex-accounts laden...
+      loading_title: Laden
+    link_accounts:
+      all_already_linked:
+        one: "Het geselecteerde account (%{names}) is al gekoppeld"
+        other: "Alle %{count} geselecteerde accounts zijn al gekoppeld: %{names}"
+      api_error: "API-fout: %{message}"
+      invalid_account_names:
+        one: "Kan account met lege naam niet koppelen"
+        other: "Kan %{count} accounts met lege namen niet koppelen"
+      invalid_account_type: Niet-ondersteund Brex-accounttype
+      link_failed: Accounts koppelen mislukt
+      no_accounts_selected: Selecteer ten minste één account
+      no_api_token: Brex-API-token niet gevonden. Configureer het in de Provider-instellingen.
+      partial_invalid: "%{created_count} account(s) succesvol gekoppeld, %{already_linked_count} account(s) waren al gekoppeld, %{invalid_count} account(s) hadden ongeldige namen"
+      partial_success: "%{created_count} account(s) succesvol gekoppeld. %{already_linked_count} account(s) waren al gekoppeld: %{already_linked_names}"
+      select_connection: Kies een Brex-verbinding voordat u accounts koppelt.
+      success:
+        one: "%{count} account succesvol gekoppeld"
+        other: "%{count} accounts succesvol gekoppeld"
+    brex_item:
+      accounts_need_setup: Accounts moeten worden ingesteld
+      delete: Verbinding verwijderen
+      deletion_in_progress: verwijderen bezig...
+      error: Fout
+      no_accounts_description: Deze verbinding heeft nog geen gekoppelde accounts.
+      no_accounts_title: Geen accounts
+      setup_action: Nieuwe accounts instellen
+      setup_description: "%{linked} van %{total} accounts gekoppeld. Kies accounttypes voor uw nieuw geïmporteerde Brex-accounts."
+      setup_needed: Nieuwe accounts klaar om in te stellen
+      status: "Gesynchroniseerd %{timestamp} geleden"
+      status_never: Nooit gesynchroniseerd
+      status_with_summary: "Laatst gesynchroniseerd %{timestamp} geleden - %{summary}"
+      syncing: Synchroniseren...
+      total: Totaal
+      unlinked: Niet gekoppeld
+    provider_panel:
+      accounts_link: Accounts
+      add_connection: Brex-verbinding toevoegen
+      base_url_label: Basis-URL (optioneel)
+      base_url_placeholder: https://api.brex.com
+      configured_html: "Geconfigureerd en klaar voor gebruik. Ga naar het tabblad %{accounts_link} om accounts te beheren en in te stellen."
+      connection_name_label: Verbindingsnaam
+      connection_name_placeholder: Zakelijke betaalrekening
+      default_connection_name: Brex-verbinding
+      disconnect_label: "%{name} loskoppelen"
+      disconnect_confirm: "%{name} loskoppelen?"
+      encryption_warning:
+        title: Databaseversleuteling is niet geconfigureerd
+        message: Configureer de Active Record-versleutelingssleutels voordat u Brex-tokens in productie toevoegt. Zonder versleutelingssleutels slaat Sure de Brex-provider-inloggegevens en momentopnamen op in platte tekst, net als andere providerrecords.
+      instructions:
+        copy_token_html: "Kopieer het token en voeg het hieronder toe als een benoemde verbinding. Sure bewaart het token alleen om dit gezin te synchroniseren."
+        create_token: "Maak een API-token met deze alleen-lezen-scopes: accounts.cash.readonly, accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly"
+        open_tokens: Ga naar de Brex-instellingen voor ontwikkelaars-/API-tokens voor het bedrijf dat u wilt verbinden
+        sign_in_html: "Ga naar %{link} en log in op het account dat u wilt verbinden"
+      keep_token_placeholder: Laat leeg om het huidige token te behouden
+      not_configured: Niet geconfigureerd
+      sandbox_note_html: "Gebruik een aparte benoemde verbinding voor elk Brex-bedrijf/API-token dat u wilt synchroniseren. Laat de Basis-URL leeg voor productie. Staging is beperkt tot door Brex goedgekeurde tests en werkt niet met klanttokens."
+      setup_accounts: Accounts instellen
+      setup_title: "Installatie-instructies:"
+      sync: Synchroniseren
+      token_label: Token
+      token_placeholder: Plak het token hier
+      update_connection: Verbinding bijwerken
+    provider_connection:
+      default_description: Verbinden met uw Brex-account
+      default_name: Brex
+      description: "Verbinden via %{name}"
+      name: "Brex - %{name}"
+    select_accounts:
+      accounts_selected: accounts geselecteerd
+      api_error: "API-fout: %{message}"
+      cancel: Annuleren
+      configure_name_in_brex: "Kan niet importeren - configureer de accountnaam in Brex"
+      description: Selecteer de accounts die u wilt koppelen aan uw %{product_name}-account.
+      link_accounts: Geselecteerde accounts koppelen
+      no_accounts_found: Geen accounts gevonden. Controleer uw API-tokenconfiguratie.
+      no_api_token: Brex-API-token niet gevonden. Configureer het in de Provider-instellingen.
+      no_credentials_configured: Configureer eerst uw Brex-API-token in de Provider-instellingen.
+      no_name_placeholder: "(Geen naam)"
+      select_connection: Kies een Brex-verbinding in de Provider-instellingen.
+      title: Brex-accounts selecteren
+      unexpected_error: Er is een onverwachte fout opgetreden. Probeer het later opnieuw.
+    select_existing_account:
+      account_already_linked: Dit account is al gekoppeld aan een provider
+      all_accounts_already_linked: Alle Brex-accounts zijn al gekoppeld
+      api_error: "API-fout: %{message}"
+      cancel: Annuleren
+      configure_name_in_brex: "Kan niet importeren - configureer de accountnaam in Brex"
+      description: Selecteer een Brex-account om aan dit account te koppelen. Transacties worden automatisch gesynchroniseerd en ontdubbeld.
+      link_account: Account koppelen
+      no_account_specified: Geen account opgegeven
+      no_accounts_found: Geen Brex-accounts gevonden. Controleer uw API-tokenconfiguratie.
+      no_api_token: Brex-API-token niet gevonden. Configureer het in de Provider-instellingen.
+      no_credentials_configured: Configureer eerst uw Brex-API-token in de Provider-instellingen.
+      no_name_placeholder: "(Geen naam)"
+      select_connection: Kies een Brex-verbinding in de Provider-instellingen.
+      title: "%{account_name} koppelen aan Brex"
+      unexpected_error: Er is een onverwachte fout opgetreden. Probeer het later opnieuw.
+    setup_required:
+      description: Voordat u Brex-accounts kunt koppelen, moet u uw Brex-API-token configureren.
+      heading: API-token niet geconfigureerd
+      settings_link: Ga naar Provider-instellingen
+      setup_steps: "Installatiestappen:"
+      steps:
+        enter_token: Voer uw Brex-API-token in
+        find_section_html: "Zoek het gedeelte <strong>Brex</strong>"
+        open_settings_html: "Ga naar <strong>Instellingen > Providers</strong>"
+        return_to_link: Kom hier terug om uw accounts te koppelen
+      title: Brex-installatie vereist
+    subtype_select:
+      placeholder:
+        subtype: Selecteer subtype
+        type: Selecteer type
+    link_existing_account:
+      account_already_linked: Dit account is al gekoppeld aan een provider
+      api_error: "API-fout: %{message}"
+      invalid_account_name: Kan account met lege naam niet koppelen
+      missing_parameters: Vereiste parameters ontbreken
+      no_account_specified: Geen account opgegeven
+      no_api_token: Brex-API-token niet gevonden. Configureer het in de Provider-instellingen.
+      provider_account_already_linked: Dit Brex-account is al gekoppeld aan een ander account
+      provider_account_not_found: Brex-account niet gevonden
+      select_connection: Kies een Brex-verbinding voordat u accounts koppelt.
+      success: "%{account_name} succesvol gekoppeld aan Brex"
+    setup_accounts:
+      account_type_label: "Accounttype:"
+      all_accounts_linked: "Al uw Brex-accounts zijn al ingesteld."
+      api_error: "API-fout: %{message}"
+      fetch_failed: "Accounts ophalen mislukt"
+      no_accounts_to_setup: "Geen accounts om in te stellen"
+      no_api_token: Brex-API-token niet gevonden. Configureer het in de Provider-instellingen.
+      account_types:
+        skip: Dit account overslaan
+        depository: Betaal- of spaarrekening
+        credit_card: Creditcard
+        investment: Beleggingsaccount
+        loan: Lening of hypotheek
+        other_asset: Overig actief
+      subtype_labels:
+        depository: "Accountsubtype:"
+        credit_card: ""
+        investment: "Beleggingstype:"
+        loan: "Leningtype:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Creditcards worden automatisch ingesteld als creditcardaccounts."
+        other_asset: "Voor overige activa zijn geen aanvullende opties nodig."
+      subtypes:
+        depository:
+          checking: Betaalrekening
+          savings: Spaarrekening
+          hsa: Zorgspaarrekening
+          cd: Termijndeposito
+          money_market: Geldmarktrekening
+        investment:
+          brokerage: Effectenrekening
+          pension: Pensioen
+          retirement: Pensioenvoorziening
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "529-plan"
+          hsa: Zorgspaarrekening
+          mutual_fund: Beleggingsfonds
+          ira: Traditionele IRA
+          roth_ira: Roth IRA
+          angel: Angel
+        loan:
+          mortgage: Hypotheek
+          student: Studielening
+          auto: Autolening
+          other: Overige lening
+      balance: Saldo
+      cancel: Annuleren
+      choose_account_type: "Kies het juiste accounttype voor elk Brex-account:"
+      create_accounts: Accounts aanmaken
+      creating_accounts: Accounts aanmaken...
+      historical_data_range: "Historisch gegevensbereik:"
+      subtitle: Kies de juiste accounttypes voor uw geïmporteerde accounts
+      sync_start_date_help: Selecteer hoe ver terug u de transactiegeschiedenis wilt synchroniseren. Maximaal 3 jaar geschiedenis beschikbaar.
+      sync_start_date_label: "Transacties synchroniseren vanaf:"
+      title: Stel uw Brex-accounts in
+    complete_account_setup:
+      all_skipped: "Alle accounts zijn overgeslagen. Er zijn geen accounts aangemaakt."
+      creation_failed: "Accounts konden niet worden aangemaakt: %{error}"
+      creation_failed_count: "%{count} account(s) konden niet worden aangemaakt."
+      no_accounts: "Geen accounts om in te stellen."
+      partial_skipped: "%{created_count} account(s) succesvol aangemaakt; %{skipped_count} account(s) zijn overgeslagen."
+      partial_success: "%{created_count} account(s) succesvol aangemaakt, maar %{failed_count} account(s) mislukten."
+      success: "%{count} account(s) succesvol aangemaakt."
+      unexpected_error: Er is een onverwachte fout opgetreden.
+    sync:
+      success: Synchronisatie gestart
+    syncer:
+      account_processing_failed:
+        one: "%{count} Brex-account mislukte tijdens de verwerking."
+        other: "%{count} Brex-accounts mislukten tijdens de verwerking."
+      account_sync_failed:
+        one: "%{count} Brex-accountsynchronisatie kon niet worden ingepland."
+        other: "%{count} Brex-accountsynchronisaties konden niet worden ingepland."
+      accounts_need_setup:
+        one: "%{count} account moet worden ingesteld..."
+        other: "%{count} accounts moeten worden ingesteld..."
+      accounts_failed:
+        one: "%{count} Brex-account kon niet worden geïmporteerd."
+        other: "%{count} Brex-accounts konden niet worden geïmporteerd."
+      calculating_balances: Saldi berekenen...
+      checking_account_configuration: Accountconfiguratie controleren...
+      credentials_invalid: Ongeldig Brex-API-token of onvoldoende accountrechten
+      failed: Synchronisatie mislukt. Probeer het opnieuw of neem contact op met de ondersteuning.
+      import_failed: Brex-import mislukt.
+      importing_accounts: Accounts importeren vanuit Brex...
+      processing_transactions: Transacties verwerken...
+      transactions_failed:
+        one: "%{count} Brex-account had fouten bij het importeren van transacties."
+        other: "%{count} Brex-accounts hadden fouten bij het importeren van transacties."
+    update:
+      success: Brex-verbinding bijgewerkt

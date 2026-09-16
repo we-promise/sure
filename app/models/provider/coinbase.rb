@@ -131,21 +131,27 @@ class Provider::Coinbase
       results.first(limit)
     end
 
-    # Generate JWT token for CDP API authentication
-    # Uses Ed25519 signing algorithm
-    def generate_jwt(method, path)
-      # Decode the base64 private key
-      private_key_bytes = Base64.decode64(api_secret)
+    # Parses a PEM EC private key, normalizing literal \n sequences to real
+    # newlines. Coinbase CDP keys are often stored or pasted as a single-line
+    # string with escaped newlines (e.g. copied directly from the JSON download
+    # file). Both forms are accepted.
+    def parse_ec_private_key(pem)
+      OpenSSL::PKey::EC.new(pem.to_s.gsub('\n', "\n"))
+    end
 
-      # Create Ed25519 signing key
-      signing_key = Ed25519::SigningKey.new(private_key_bytes[0, 32])
+    # Generate JWT token for CDP API authentication.
+    # Uses ES256 (ECDSA P-256) signing — matches the key format Coinbase CDP
+    # issues. api_secret must be a PEM EC private key
+    # (-----BEGIN EC PRIVATE KEY-----) either with real newlines or literal \n.
+    def generate_jwt(method, path)
+      private_key = parse_ec_private_key(api_secret)
 
       now = Time.now.to_i
       uri = "#{method} api.coinbase.com#{path}"
 
       # JWT header
       header = {
-        alg: "EdDSA",
+        alg: "ES256",
         kid: api_key,
         nonce: SecureRandom.hex(16),
         typ: "JWT"
@@ -164,10 +170,15 @@ class Provider::Coinbase
       encoded_header = Base64.urlsafe_encode64(header.to_json, padding: false)
       encoded_payload = Base64.urlsafe_encode64(payload.to_json, padding: false)
 
-      # Sign
+      # Sign with ECDSA SHA-256
       message = "#{encoded_header}.#{encoded_payload}"
-      signature = signing_key.sign(message)
-      encoded_signature = Base64.urlsafe_encode64(signature, padding: false)
+      der_sig = private_key.sign(OpenSSL::Digest::SHA256.new, message)
+
+      # Convert DER-encoded signature to raw r||s (required by JWT spec)
+      asn1 = OpenSSL::ASN1.decode(der_sig)
+      r = asn1.value[0].value.to_s(2).rjust(32, "\x00")[-32..]
+      s = asn1.value[1].value.to_s(2).rjust(32, "\x00")[-32..]
+      encoded_signature = Base64.urlsafe_encode64(r + s, padding: false)
 
       "#{message}.#{encoded_signature}"
     end

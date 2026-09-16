@@ -8,4 +8,5 @@ es:
       show:
         clear: Limpiar categoría
         no_categories: No se encontraron categorías
+        recent: Recientes
         search_placeholder: Buscar

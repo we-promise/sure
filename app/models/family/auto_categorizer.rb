@@ -9,6 +9,12 @@ class Family::AutoCategorizer
   def auto_categorize
     raise Error, "No LLM provider for auto-categorization" unless llm_provider
 
+    protected_ids = protected_transaction_ids
+    cached_ids = cached_transaction_ids
+    blocked_ids = protected_ids - cached_ids
+    log_cache_usage(cached_ids) if cached_ids.any?
+    log_blocked_transactions(blocked_ids) if blocked_ids.any?
+
     if scope.none?
       Rails.logger.info("No transactions to auto-categorize for family #{family.id}")
       return 0
@@ -19,8 +25,20 @@ class Family::AutoCategorizer
     categories_input = user_categories_input
 
     if categories_input.empty?
-      Rails.logger.error("Cannot auto-categorize transactions for family #{family.id}: no categories available")
-      return 0
+      message = "Cannot auto-categorize transactions for family #{family.id}: no categories available"
+      Rails.logger.error(message)
+      DebugLogEntry.capture(
+        category: "auto_categorization",
+        level: "error",
+        message: "AI categorization failed: no categories available",
+        source: self.class.name,
+        family: family,
+        provider: llm_provider,
+        metadata: {
+          requested_transaction_ids: transaction_ids
+        }
+      )
+      raise Error, "No categories available for auto-categorization"
     end
 
     result = llm_provider.auto_categorize(
@@ -30,17 +48,18 @@ class Family::AutoCategorizer
     )
 
     unless result.success?
-      Rails.logger.error("Failed to auto-categorize transactions for family #{family.id}: #{result.error.message}")
-      return 0
+      raise Error, "Failed to auto-categorize transactions: #{result.error.message}"
     end
 
     modified_count = 0
+    categorized_transaction_ids = []
     scope.each do |transaction|
       auto_categorization = result.data.find { |c| c.transaction_id == transaction.id }
 
       category_id = categories_input.find { |c| c[:name] == auto_categorization&.category_name }&.dig(:id)
 
       if category_id.present?
+        categorized_transaction_ids << transaction.id
         was_modified = transaction.enrich_attribute(
           :category_id,
           category_id,
@@ -52,19 +71,33 @@ class Family::AutoCategorizer
       end
     end
 
+    DebugLogEntry.capture(
+      category: "auto_categorization",
+      level: "info",
+      message: "AI categorization completed",
+      source: self.class.name,
+      family: family,
+      provider: llm_provider,
+      metadata: {
+        requested_transaction_ids: transaction_ids,
+        categorized_transaction_ids: categorized_transaction_ids,
+        cached_transaction_ids: cached_ids,
+        blocked_transaction_ids: blocked_ids,
+        modified_count: modified_count
+      }
+    )
+
     modified_count
   end
 
   private
     attr_reader :family, :transaction_ids
 
-    # TODO(#2113): hardcoded to OpenAI. Provider::Anthropic now
-    # implements auto_categorize (PR #1984), so this should honor
-    # Setting.llm_provider the way chat does, instead of always routing batch
-    # categorization to OpenAI. Until then, Anthropic batch ops are only
-    # reachable directly / via the eval runner, not this family flow.
+    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
+    # auto_categorize (PR #1984), so batch categorization routes to the configured
+    # provider, with fallback handled by Provider::Registry.preferred_llm_provider.
     def llm_provider
-      Provider::Registry.get_provider(:openai)
+      Provider::Registry.preferred_llm_provider
     end
 
     def user_categories_input
@@ -88,6 +121,51 @@ class Family::AutoCategorizer
           merchant: transaction.merchant&.name
         }
       end
+    end
+
+    def cached_transaction_ids
+      protected_transactions
+            .joins(:data_enrichments)
+            .where(data_enrichments: { attribute_name: "category_id", source: "ai" })
+            .where(Arel.sql("data_enrichments.value = to_jsonb(transactions.category_id::text)"))
+            .distinct
+            .pluck(:id)
+    end
+
+    def protected_transaction_ids
+      protected_transactions.pluck(:id)
+    end
+
+    def protected_transactions
+      family.transactions
+            .where(id: transaction_ids)
+            .where(Arel.sql("transactions.locked_attributes ? :attribute"), attribute: "category_id")
+    end
+
+    def log_cache_usage(cached_transaction_ids)
+      DebugLogEntry.capture(
+        category: "auto_categorization",
+        level: "info",
+        message: "AI categorization cache used",
+        source: self.class.name,
+        family: family,
+        metadata: {
+          cached_transaction_ids: cached_transaction_ids
+        }
+      )
+    end
+
+    def log_blocked_transactions(blocked_transaction_ids)
+      DebugLogEntry.capture(
+        category: "auto_categorization",
+        level: "info",
+        message: "AI categorization blocked by enrichment protection",
+        source: self.class.name,
+        family: family,
+        metadata: {
+          blocked_transaction_ids: blocked_transaction_ids
+        }
+      )
     end
 
     def scope

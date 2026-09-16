@@ -17,6 +17,7 @@ hu:
       name_label: Név
       unassigned: "(nincs hozzárendelve)"
       parent_category_label: "Szülőkategória (nem kötelező)"
+      trigger_label: Szín és ikon választása
       color: Szín
       icon: Ikon
       poor_contrast: "Gyenge kontraszt, válassz sötétebb színt vagy"

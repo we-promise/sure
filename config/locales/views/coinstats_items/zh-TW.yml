@@ -1,0 +1,75 @@
+---
+zh-TW:
+  coinstats_items:
+    create:
+      success: CoinStats 供應商連線設定成功。
+      default_name: CoinStats 連線
+      errors:
+        validation_failed: 驗證失敗：%{message}。
+    update:
+      success: CoinStats 供應商連線更新成功。
+      errors:
+        validation_failed: 驗證失敗：%{message}。
+    destroy:
+      success: 已排定刪除這個 CoinStats 供應商連線。
+    link_wallet:
+      success: 已成功連結 %{count} 個加密貨幣錢包。
+      missing_params: 缺少必要參數：位址與區塊鏈。
+      failed: 加密貨幣錢包連結失敗。
+      error: 加密貨幣錢包連結失敗：%{message}。
+    link_exchange:
+      success: 已連結 %{name} 交易所。
+      missing_params: 必須填寫交易所與憑證。
+      invalid_exchange: 所選的交易所已不再支援。
+      failed: 連結交易所失敗。
+      error: 連結交易所失敗：%{message}。
+    new:
+      title: 透過 CoinStats 連結加密貨幣
+      blockchain_fetch_error: 載入區塊鏈清單失敗，請稍後再試。
+      link_wallet_title: 連結錢包位址
+      link_wallet_description: 透過 CoinStats 追蹤自託管錢包或單一鏈上位址。
+      address_label: 位址
+      address_placeholder: 必填
+      blockchain_label: 區塊鏈
+      blockchain_placeholder: 必填
+      blockchain_select_blank: 選擇一條區塊鏈
+      link_wallet_submit: 連結加密貨幣錢包
+      link_exchange_title: 連結交易所 API
+      link_exchange_description: 使用唯讀的交易所 API 金鑰，讓 CoinStats 可以從 Bitvavo、Binance 及其他支援的交易所同步餘額與交易。
+      link_exchange_note: 如果您的交易所需要啟用 API 金鑰或進行電子郵件確認，請先完成那個步驟再回來連結。
+      exchange_select_blank: 選擇一家交易所
+      exchange_label: 交易所
+      link_exchange_submit: 連結交易所
+      not_configured_title: 尚未設定 CoinStats 供應商連線
+      not_configured_message: 要連結加密貨幣錢包或交易所，您必須先設定 CoinStats 供應商連線。
+      not_configured_step1_html: 前往 <strong>設定 → 供應商</strong>
+      not_configured_step2_html: 找到 <strong>CoinStats</strong> 供應商
+      not_configured_step3_html: 依照提供的<strong>設定說明</strong>完成供應商設定
+      go_to_settings: 前往供應商設定
+      setup_instructions: 設定說明：
+      step1_html: 前往 <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> 取得一組 API 金鑰。
+      step2: 在下方輸入您的 API 金鑰，然後點選「設定」。
+      step3_html: 連線成功後，前往<a href="%{accounts_url}" class="link" data-turbo-frame="_top">帳戶管理</a>分頁設定您的加密貨幣帳戶。
+      api_key_label: API 金鑰
+      api_key_placeholder: 必填
+      configure: 設定
+      update_configuration: 重新設定
+      default_name: CoinStats 連線
+    coinstats_item:
+      deletion_in_progress: 正在刪除加密貨幣錢包資料...
+      provider_name: CoinStats
+      syncing: 同步中...
+      sync_status:
+        no_accounts: 找不到加密貨幣錢包
+        all_synced:
+          one: 已同步 %{count} 個加密貨幣錢包
+          other: 已同步 %{count} 個加密貨幣錢包
+        partial_sync: 已同步 %{linked_count} 個加密貨幣錢包，%{unlinked_count} 個需要設定
+      reconnect: 重新連線
+      status: 上次同步於 %{timestamp}前
+      status_never: 從未同步
+      status_with_summary: 上次同步於 %{timestamp}前 • %{summary}
+      update_api_key: 更新 API 金鑰
+      delete: 刪除
+      no_wallets_title: 沒有已連結的加密貨幣錢包
+      no_wallets_message: 目前沒有任何加密貨幣錢包連結到 CoinStats。

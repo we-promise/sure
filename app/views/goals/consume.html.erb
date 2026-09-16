@@ -1,0 +1,52 @@
+<%# Rendered into the modal frame by the "I used some of this" action on the
+    goal page. DS::Dialog rather than a hand-rolled one — the component carries
+    focus trapping, Escape, click-outside and focus restore. %>
+<%= render DS::Dialog.new(width: "sm") do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle", goal: @goal.name)) %>
+
+  <% dialog.with_body do %>
+    <%= styled_form_with url: consume_goal_path(@goal), method: :post, class: "space-y-4" do |f| %>
+      <div class="space-y-1">
+        <%= label_tag :amount, t(".amount_label"), class: "text-sm text-secondary" %>
+        <%= number_field_tag :amount, nil,
+                             step: Money::Currency.new(@goal.currency).step,
+                             min: Money::Currency.new(@goal.currency).step,
+                             max: (@goal.target_amount.to_d - @goal.consumed_amount.to_d).to_f,
+                             required: true,
+                             autocomplete: "off",
+                             autofocus: true,
+                             class: "form-field__input w-full text-right tabular-nums privacy-sensitive" %>
+        <p class="text-xs text-secondary">
+          <%= t(".amount_hint", saved: @goal.current_balance_money.format(precision: 0)) %>
+        </p>
+      </div>
+
+      <%# Only asked when there is a choice to make. With one link the model
+          takes it on its own, and a select of one is a question with no answer. %>
+      <%# The viewer's eligible links, not the goal's. Listing all of them
+          would name private accounts the reader may not know exist, and offer
+          options the controller then refuses. %>
+      <% if @consumption_accounts.size > 1 %>
+        <%# DS::Select, not a bare select_tag: the design system already has the
+            primitive and hand-rolling an input shape is how a page stops
+            matching the rest of the app. %>
+        <%= render DS::Select.new(
+              form: f,
+              method: :account_id,
+              items: @consumption_accounts.map { |account| { label: account.name, value: account.id } },
+              label: t(".account_label")
+            ) %>
+      <% end %>
+
+      <p class="text-xs text-secondary"><%= t(".earmark_note") %></p>
+
+      <div class="flex justify-end gap-2 pt-1">
+        <%= render DS::Button.new(text: t(".cancel"),
+                                  variant: "secondary",
+                                  type: "button",
+                                  data: { action: "DS--dialog#close" }) %>
+        <%= render DS::Button.new(text: t(".submit"), type: "submit") %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

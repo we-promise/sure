@@ -1,0 +1,128 @@
+---
+tr:
+  akahu_account:
+    fallback: Akahu hesabı
+  akahu_entry:
+    notes:
+      code: Kod
+      other_account: Diğer hesap
+      particulars: Ayrıntılar
+      reference: Referans
+  akahu_item:
+    errors:
+      account_processing_failed: Akahu hesabı senkronize edilemedi
+      account_sync_schedule_failed: Akahu hesap senkronizasyonu zamanlanamadı
+      pending_transactions_failed: Bekleyen Akahu işlemleri alınamadı
+      sync_failed: Akahu bağlantısı senkronize edilemedi
+      transactions_failed: Akahu işlemleri alınamadı
+    institution_summary:
+      count:
+        one: 1 kurum
+        other: "%{count} kurum"
+      none: Bağlı kurum yok
+      one: 1 kurum
+    sync_status:
+      all_synced:
+        one: 1 hesap senkronize edildi
+        other: "%{count} hesap senkronize edildi"
+      no_accounts: Hesap bulunamadı
+      partial: "%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor"
+  akahu_items:
+    akahu_item:
+      delete: Sil
+      deletion_in_progress: Silme işlemi devam ediyor
+      error: Hata
+      no_accounts_description: Akahu hesaplarını getirin ve bağlamak istediklerinizi
+        seçin.
+      no_accounts_title: Henüz içe aktarılmış hesap yok
+      setup_action: Hesapları kur
+      setup_description: "%{total} hesaptan %{linked} tanesi bağlandı."
+      setup_needed: Hesap kurulumu gerekiyor
+      status_never: Hiç senkronize edilmedi
+      status_with_summary: 'Senkronize edildi: %{timestamp} önce · %{summary}'
+      syncing: Senkronize ediliyor
+    complete_account_setup:
+      all_skipped: Hiç Akahu hesabı oluşturulmadı.
+      creation_failed: Akahu hesapları oluşturulamadı.
+      no_accounts: Hiç Akahu hesabı seçilmedi.
+      success:
+        one: 1 Akahu hesabı oluşturuldu.
+        other: "%{count} Akahu hesabı oluşturuldu."
+    create:
+      success: Akahu bağlantısı kaydedildi.
+    destroy:
+      success: Akahu bağlantısı silinmek üzere zamanlandı.
+      unlink_failed: Akahu bağlantısı kesilemedi
+    link_accounts:
+      link_failed: Hiç hesap bağlanmadı.
+      no_accounts_selected: En az bir hesap seçin.
+      no_credentials_configured: Önce sağlayıcı ayarlarında Akahu'yu yapılandırın.
+      success:
+        one: 1 Akahu hesabı bağlandı.
+        other: "%{count} Akahu hesabı bağlandı."
+      unsupported_account_type: Akahu bu hesap türünü desteklemiyor.
+    link_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı.
+      akahu_account_already_linked: Bu Akahu hesabı zaten bağlı.
+      success: Akahu hesabı %{account_name} ile bağlandı.
+    provider_panel:
+      add_connection: Akahu bağlantısı ekle
+      app_token_label: Uygulama Jetonu
+      app_token_placeholder: Akahu uygulama jetonunuzu yapıştırın
+      connection_name_label: Bağlantı adı
+      connection_name_placeholder: Ana Akahu
+      default_connection_name: Akahu Bağlantısı
+      disconnect: Bağlantıyı kes
+      disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?"
+      keep_app_token_placeholder: Mevcut uygulama jetonunu korumak için boş bırakın
+      keep_user_token_placeholder: Mevcut kullanıcı jetonunu korumak için boş bırakın
+      setup_accounts: Hesapları kur
+      sync: Senkronize et
+      syncing: Senkronize ediliyor...
+      update_connection: Bağlantıyı güncelle
+      user_token_label: Kullanıcı Jetonu
+      user_token_placeholder: Akahu kullanıcı jetonunuzu yapıştırın
+    select_accounts:
+      cancel: İptal
+      description: Eklemek istediğiniz Akahu hesaplarını seçin.
+      link_accounts: Hesapları bağla
+      no_accounts_found: Bağlı olmayan Akahu hesabı bulunamadı.
+      no_credentials_configured: Önce sağlayıcı ayarlarında Akahu'yu yapılandırın.
+      title: Akahu hesaplarını bağla
+    select_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı.
+      cancel: İptal
+      description: Bu hesaba bağlamak için bağlı olmayan bir Akahu hesabı seçin.
+      link_account: Hesabı bağla
+      no_accounts_found: Bağlı olmayan Akahu hesabı bulunamadı.
+      no_credentials_configured: Önce sağlayıcı ayarlarında Akahu'yu yapılandırın.
+      title: Akahu hesabını %{account_name} ile bağla
+    setup_accounts:
+      account_type_label: Hesap türü
+      account_types:
+        credit_card: Kredi Kartı
+        depository: Nakit
+        investment: Yatırım
+        loan: Kredi
+        skip: Atla
+      all_accounts_linked: Tüm Akahu hesapları zaten bağlı.
+      api_error: Akahu hesapları alınamadı.
+      cancel: İptal
+      choose_account_type: Bir hesap türü seçin
+      choose_account_type_description: Takip etmek istemediğiniz hesapları atlayın.
+      create_accounts: Hesapları oluştur
+      fetch_failed: Hesaplar alınamadı
+      no_accounts_to_setup: Kurulacak hesap yok
+      no_credentials: Önce Akahu kimlik bilgilerini yapılandırın.
+      subtitle: Her Akahu hesabının Sure'da nasıl görüneceğini seçin.
+      title: Akahu Hesaplarını Kurun
+    update:
+      success: Akahu bağlantısı güncellendi.
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Akahu Bağlantısı
+  providers:
+    akahu:
+      description: Akahu üzerinden Yeni Zelanda banka hesaplarınızı bağlayın
+      name: Akahu

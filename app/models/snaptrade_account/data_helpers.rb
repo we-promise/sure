@@ -105,6 +105,7 @@ module SnaptradeAccount::DataHelpers
 
     def extract_exchange(symbol_data)
       exchange = symbol_data[:exchange] || symbol_data["exchange"]
+      return exchange.presence if exchange.is_a?(String)
       return nil unless exchange.is_a?(Hash)
 
       exchange.with_indifferent_access[:mic_code] || exchange.with_indifferent_access[:id]
@@ -127,6 +128,19 @@ module SnaptradeAccount::DataHelpers
       else
         nil
       end
+    end
+
+    # Security metadata sits under `instrument`, or under `symbol.symbol` in
+    # payloads persisted to raw_holdings_payload before the /positions/all
+    # migration, which are re-read until the next sync overwrites them.
+    def extract_symbol_data(data)
+      instrument = data[:instrument] || data["instrument"]
+      return instrument.with_indifferent_access if instrument.is_a?(Hash)
+
+      symbol_wrapper = data[:symbol].is_a?(Hash) ? data[:symbol].with_indifferent_access : {}
+      raw_symbol_data = symbol_wrapper[:symbol]
+
+      raw_symbol_data.is_a?(Hash) ? raw_symbol_data.with_indifferent_access : {}
     end
 
     def extract_currency(data, symbol_data = {}, fallback_currency = nil)

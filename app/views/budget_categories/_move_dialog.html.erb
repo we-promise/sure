@@ -1,0 +1,80 @@
+<%# locals: (budget:, budget_categories:) %>
+
+<%# One dialog for the whole page — every row's button fills it in. The list can
+    hold dozens of categories and they would all be identical but for the
+    source, so a per-row dialog would be dozens of copies of the same markup.
+
+    Rendered with DS::Dialog rather than a bare <dialog>: the component already
+    carries focus trapping, Escape, click-outside, focus restore on close and
+    the design-system chrome, and hand-rolling those is how they end up subtly
+    wrong. `auto_open: false` because this one is opened by a row button rather
+    than by landing in the modal frame, and `disable_frame: true` because it
+    lives on the page instead of inside that frame. %>
+<%= render DS::Dialog.new(
+      auto_open: false,
+      disable_frame: true,
+      width: "sm",
+      data: { budget_move_target: "dialog" }
+    ) do |dialog| %>
+  <% dialog.with_header(title: t("budget_categories.move.dialog_title")) %>
+
+  <% dialog.with_body do %>
+    <%# `turbo:submit-end` rather than a blind close on submit: a rejected move
+        (amount above the source's own allocation, say) re-renders the form with
+        its error, and closing the dialog would hide the reason. %>
+    <%= form_with url: move_budget_budget_categories_path(budget, **budget_owner_query),
+                  method: :post,
+                  class: "space-y-4",
+                  data: { action: "turbo:submit-end->budget-move#submitEnd" } do |f| %>
+      <%= hidden_field_tag "from_id", nil, data: { budget_move_target: "fromId" } %>
+
+      <p class="text-sm text-secondary">
+        <span class="text-primary font-medium" data-budget-move-target="fromName"></span>
+        ·
+        <span class="tabular-nums privacy-sensitive" data-budget-move-target="available"></span>
+      </p>
+
+      <div class="space-y-1">
+        <%= label_tag "budget_category_move_amount", t("budget_categories.move.amount_label"), class: "text-sm text-secondary" %>
+        <%= number_field_tag "budget_category_move[amount]", nil,
+                             id: "budget_category_move_amount",
+                             step: Money::Currency.new(budget.currency).step,
+                             min: Money::Currency.new(budget.currency).step,
+                             required: true,
+                             autocomplete: "off",
+                             class: "form-field__input w-full text-right tabular-nums privacy-sensitive",
+                             data: { budget_move_target: "amount" } %>
+      </div>
+
+      <div class="space-y-1">
+        <%= label_tag "to_id", t("budget_categories.move.to_label"), class: "text-sm text-secondary" %>
+        <%= select_tag "to_id",
+                       safe_join(budget_categories.map { |bc|
+                         tag.option(bc.category.display_name,
+                                    value: bc.id,
+                                    data: { category_id: bc.category_id, parent_id: bc.category.parent_id })
+                       }),
+                       class: "form-field__input w-full",
+                       data: { budget_move_target: "toSelect" } %>
+      </div>
+
+      <%# Shown when the source has nowhere to send money: the only other
+          envelopes are its own parent or children, which the server refuses
+          because a parent's allocation is derived from its children's. Saying
+          so beats an enabled button that can only fail. %>
+      <p class="hidden text-sm text-secondary" data-budget-move-target="noDestination">
+        <%= t("budget_categories.move.no_destination") %>
+      </p>
+
+      <div class="flex justify-end gap-2 pt-1">
+        <%= render DS::Button.new(text: t("budget_categories.move.cancel"),
+                                  variant: "secondary",
+                                  type: "button",
+                                  data: { action: "budget-move#close" }) %>
+        <%= render DS::Button.new(text: t("budget_categories.move.submit"),
+                                  type: "submit",
+                                  data: { budget_move_target: "submit" }) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

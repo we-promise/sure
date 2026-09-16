@@ -142,6 +142,99 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal true, sf["pending"], "expected pending flag to be true when posted==0 and/or pending=true"
   end
 
+  test "skips pending transactions when pending inclusion is disabled" do
+    Setting.stubs(:syncs_include_pending).returns(false)
+
+    tx = {
+      id: "tx_pending_disabled_1",
+      amount: "-30.00",
+      currency: "USD",
+      payee: "Test Store",
+      description: "Auth hold",
+      posted: Date.current.to_s,
+      transacted_at: (Date.current - 1).to_s,
+      pending: true
+    }
+
+    # Clear the env var so this only exercises the Setting fallback branch of pending_enabled?
+    with_env_overrides SIMPLEFIN_INCLUDE_PENDING: nil do
+      assert_no_difference "@account.entries.count" do
+        SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      end
+    end
+  end
+
+  test "still imports posted transactions when pending inclusion is disabled" do
+    Setting.stubs(:syncs_include_pending).returns(false)
+
+    tx = {
+      id: "tx_posted_disabled_1",
+      amount: "-30.00",
+      currency: "USD",
+      payee: "Test Store",
+      description: "Settled",
+      posted: Date.current.to_s,
+      transacted_at: (Date.current - 1).to_s,
+      pending: false
+    }
+
+    with_env_overrides SIMPLEFIN_INCLUDE_PENDING: nil do
+      assert_difference "@account.entries.count", 1 do
+        SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      end
+    end
+  end
+
+  test "SIMPLEFIN_INCLUDE_PENDING env var takes precedence over Setting" do
+    # Setting says "skip pending", but the env var (mirrored via the boot-time config it
+    # populates) says "include pending" - env var must win, matching
+    # SimplefinItem::Importer#fetch_accounts_data's effective_pending resolution.
+    Setting.stubs(:syncs_include_pending).returns(false)
+    Rails.configuration.x.simplefin.stubs(:include_pending).returns(true)
+
+    tx = {
+      id: "tx_pending_env_override_1",
+      amount: "-30.00",
+      currency: "USD",
+      payee: "Test Store",
+      description: "Auth hold",
+      posted: Date.current.to_s,
+      transacted_at: (Date.current - 1).to_s,
+      pending: true
+    }
+
+    with_env_overrides SIMPLEFIN_INCLUDE_PENDING: "1" do
+      assert_difference "@account.entries.count", 1 do
+        SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      end
+    end
+  end
+
+  test "SIMPLEFIN_INCLUDE_PENDING env var disabling pending takes precedence over a permissive Setting" do
+    # Mirror of the test above: this is the actual real-world guard scenario the PR
+    # fixes - a self-hoster sets SIMPLEFIN_INCLUDE_PENDING=0 while the Setting (UI
+    # toggle) still says "include pending". The env var must win and skip the row.
+    Setting.stubs(:syncs_include_pending).returns(true)
+    Rails.configuration.x.simplefin.stubs(:include_pending).returns(false)
+
+    tx = {
+      id: "tx_pending_env_disable_1",
+      amount: "-30.00",
+      currency: "USD",
+      payee: "Test Store",
+      description: "Auth hold",
+      posted: Date.current.to_s,
+      transacted_at: (Date.current - 1).to_s,
+      pending: true
+    }
+
+    with_env_overrides SIMPLEFIN_INCLUDE_PENDING: "0" do
+      assert_no_difference "@account.entries.count" do
+        SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+      end
+    end
+  end
+
   test "infers pending when posted is explicitly 0 and transacted_at present (no explicit pending flag)" do
     # Some SimpleFIN banks indicate pending by sending posted=0 + transacted_at, without pending flag
     t_epoch = (Date.current - 1).to_time.to_i
@@ -162,5 +255,28 @@ class SimplefinEntry::ProcessorTest < ActiveSupport::TestCase
     entry = @account.entries.find_by!(external_id: "simplefin_tx_inferred_pending_1", source: "simplefin")
     sf = entry.transaction.extra.fetch("simplefin")
     assert_equal true, sf["pending"], "expected pending to be inferred from posted=0 + transacted_at present"
+  end
+
+  test "does not treat a non-numeric posted value as epoch-zero pending" do
+    # Regression: `posted_val.to_i.zero?` would also match malformed strings like
+    # "unavailable" (String#to_i coerces non-numeric input to 0), wrongly flagging a
+    # settled transaction as pending. Only literal 0 / "0" should count as epoch-zero.
+    tx = {
+      id: "tx_malformed_posted_1",
+      amount: "-11.00",
+      currency: "USD",
+      payee: "Test Store",
+      description: "Settled",
+      memo: "",
+      posted: "unavailable",
+      transacted_at: (Date.current - 1).to_s
+      # Note: NO pending flag set
+    }
+
+    SimplefinEntry::Processor.new(tx, simplefin_account: @simplefin_account).process
+
+    entry = @account.entries.find_by!(external_id: "simplefin_tx_malformed_posted_1", source: "simplefin")
+    sf = entry.transaction.extra.fetch("simplefin")
+    assert_equal false, sf["pending"], "expected a non-numeric posted value to not be inferred as pending"
   end
 end

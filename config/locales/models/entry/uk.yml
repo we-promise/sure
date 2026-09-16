@@ -1,0 +1,9 @@
+---
+uk:
+  activerecord:
+    errors:
+      models:
+        entry:
+          attributes:
+            base:
+              invalid_sell_quantity: "неможливо продати %{sell_qty} акцій %{ticker}, оскільки у вас є лише %{current_qty} акцій"

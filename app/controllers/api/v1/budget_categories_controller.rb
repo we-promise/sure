@@ -4,6 +4,7 @@ class Api::V1::BudgetCategoriesController < Api::V1::BaseController
   include Pagy::Backend
 
   before_action :ensure_read_scope
+  before_action :refresh_rollover_chains
   before_action :set_budget_category, only: :show
 
   def index
@@ -36,11 +37,37 @@ class Api::V1::BudgetCategoriesController < Api::V1::BaseController
       authorize_scope!(:read)
     end
 
+    # `rolled_over_amount` is materialized, and the web pages that show it
+    # recompute on the way in — every one of them goes through
+    # Budget.find_or_bootstrap. This endpoint reads the column straight, so
+    # without this it is the one surface that can serve a carry left stale by
+    # a sync or a recategorisation touching an earlier month.
+    #
+    # A read that writes is a smell, but the alternative is recomputing on
+    # every transaction change, which is the cost this design deliberately
+    # refused: the chain is walked per family, and for a family that never
+    # turned rollover on the calculator's leading EXISTS makes it one query
+    # that writes nothing. Same bargain the budget page already makes, applied
+    # to the surface that was missed.
+    def refresh_rollover_chains
+      visible_owner_ids.each do |owner_id|
+        Budget::RolloverCalculator.new(
+          family: current_resource_owner.family,
+          user: owner_id && User.find_by(id: owner_id)
+        ).recompute!
+      end
+    end
+
     def budget_categories_scope
       BudgetCategory
         .joins(:budget, :category)
-        .where(budgets: { family_id: current_resource_owner.family_id })
+        .where(budgets: { family_id: current_resource_owner.family_id, user_id: visible_owner_ids })
         .includes({ budget: { budget_categories: { category: :parent } } }, category: :parent)
+    end
+
+    def visible_owner_ids
+      shared_with_me = BudgetShare.where(viewer_id: current_resource_owner.id).pluck(:owner_id)
+      [ nil, current_resource_owner.id, *shared_with_me ]
     end
 
     def apply_filters(query)

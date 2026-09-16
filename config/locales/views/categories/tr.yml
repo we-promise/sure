@@ -10,25 +10,62 @@ tr:
       success: Kategori başarıyla oluşturuldu
     destroy:
       success: Kategori başarıyla silindi
+    destroy_all:
+      success: Tüm kategoriler silindi
     edit:
       edit: Kategoriyi düzenle
     form:
+      auto_adjust: otomatik ayarla.
+      color: Renk
+      icon: Simge
+      name_label: Ad
+      parent_category_label: Üst kategori (isteğe bağlı)
       placeholder: Kategori adı
+      poor_contrast: Zayıf kontrast, daha koyu bir renk seçin veya
+      unassigned: "(atanmamış)"
     index:
       bootstrap: Varsayılanları kullan (önerilir)
       categories: Kategoriler
       categories_expenses: Gider kategorileri
       categories_incomes: Gelir kategorileri
+      delete_all: Tümünü sil
       empty: Hiç kategori bulunamadı
+      merge: Kategorileri birleştir
       new: Yeni kategori
     menu:
       loading: Yükleniyor...
+    merge:
+      description: Hedef bir kategori ve bu kategoriyle birleştirilecek kategorileri
+        seçin. Eşleşen işlemler ve bütçe satırları hedefe taşınacaktır.
+      select_target: Hedef kategori seçin...
+      sources_hint: Seçilen kategoriler, işlemleri ve bütçe satırları hedefe taşındıktan
+        sonra silinecektir. Hedefi kaynak olarak seçmeyin.
+      sources_label: Birleştirilecek kategoriler
+      submit: Seçilenleri birleştir
+      target_label: Şu kategoriyle birleştir (hedef)
+      title: Kategorileri birleştir
     new:
       new_category: Yeni kategori
+    perform_merge:
+      invalid_categories: Geçersiz kategoriler seçildi
+      no_categories_selected: Birleştirmek için kategori seçilmedi
+      success:
+        one: "%{count} kategori başarıyla birleştirildi"
+        other: "%{count} kategori başarıyla birleştirildi"
+      target_not_found: Hedef kategori bulunamadı
+      target_selected_as_source: Hedef ve kaynaklar için farklı kategoriler seçin.
     update:
       success: Kategori başarıyla güncellendi
+    virtual:
+      payment: Ödeme
+      trade: Alım/Satım
+      transfer: Transfer
   category:
     dropdowns:
       show:
         bootstrap: Varsayılan kategorileri oluştur
         empty: Hiç kategori bulunamadı
+        expense: gider
+        income: gelir
+        match_transfer: Eşleşen transfer/ödeme
+        one_time: Tek seferlik %{type}

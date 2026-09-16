@@ -1,0 +1,26 @@
+---
+it:
+  depositories:
+    edit:
+      edit: Modifica %{account}
+    form:
+      none: Nessuno
+      subtype_prompt: Seleziona tipo di conto
+    new:
+      title: Inserisci il saldo del conto
+    subtypes:
+      cd:
+        long: Certificato di Deposito
+        short: CD
+      checking:
+        long: Conto Corrente
+        short: Corrente
+      hsa:
+        long: Conto Risparmio Sanitario
+        short: HSA
+      money_market:
+        long: Mercato Monetario
+        short: MM
+      savings:
+        long: Conto Risparmio
+        short: Risparmio

@@ -1,0 +1,25 @@
+<%# locals: (notice:, urgent: false) %>
+
+<div class="flex items-center justify-between gap-3 <%= urgent ? "px-4 py-2.5" : "py-2" %>">
+  <p class="<%= urgent ? "text-sm text-primary font-medium" : "text-sm text-secondary" %>">
+    <% case notice.kind %>
+    <% when :trial %>
+      <%= t("bills.index.notice_trial", name: notice.series.display_name, date: l(notice.date, format: :long)) %>
+    <% when :renewal %>
+      <%= t("bills.index.notice_renewal", name: notice.series.display_name, date: l(notice.date, format: :long)) %>
+    <% when :price %>
+      <span class="privacy-sensitive">
+        <%# The percentage is the part that tells you whether to care. A dollar
+            on a ten-dollar subscription reads very differently from a dollar
+            on the rent, and from to alone never said which this was. %>
+        <%= t("bills.index.notice_price",
+              name: notice.series.display_name,
+              from: format_money(notice.detail.previous_amount_money),
+              to: format_money(notice.detail.new_amount_money),
+              percent: "#{"+" if notice.price_percent.positive?}#{number_to_percentage(notice.price_percent, precision: 0, format: "%n%")}") %>
+      </span>
+    <% end %>
+  </p>
+  <%= link_to t("bills.manage"), bill_path(notice.series),
+        class: "text-xs text-link hover:underline shrink-0" %>
+</div>

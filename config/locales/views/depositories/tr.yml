@@ -8,3 +8,19 @@ tr:
       subtype_prompt: Hesap türünü seçin
     new:
       title: Hesap bakiyesini girin
+    subtypes:
+      cd:
+        long: Mevduat Sertifikası
+        short: CD
+      checking:
+        long: Vadesiz Hesap
+        short: Vadesiz Hesap
+      hsa:
+        long: Sağlık Tasarruf Hesabı
+        short: HSA
+      money_market:
+        long: Para Piyasası
+        short: Para Piyasası
+      savings:
+        long: Tasarruf Hesabı
+        short: Tasarruf Hesabı

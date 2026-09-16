@@ -24,7 +24,7 @@
   <% end %>
 
   <div class="space-y-3">
-    <% turbo_disabled = params[:redirect_uri]&.start_with?("sureapp://") || params[:display] == "mobile" %>
+    <% turbo_disabled = params[:redirect_uri]&.start_with?("sureapp://") || params[:display] == "mobile" || !params[:redirect_uri]&.start_with?(root_url) %>
     <%= form_tag oauth_authorization_path, method: :post, class: "w-full", data: { turbo: !turbo_disabled } do %>
       <%= hidden_field_tag :client_id, @pre_auth.client.uid, id: nil %>
       <%= hidden_field_tag :redirect_uri, @pre_auth.redirect_uri, id: nil %>

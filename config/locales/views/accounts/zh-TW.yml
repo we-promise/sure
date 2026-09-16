@@ -1,81 +1,134 @@
 ---
 zh-TW:
+  account:
+    entries:
+      destroy:
+        success: 紀錄已成功刪除。
   accounts:
+    not_authorized: 您沒有管理這個帳戶的權限
     account:
+      complete_setup: 完成設定
+      edit: 編輯
       link_lunchflow: 連結 Lunch Flow
-      link_provider: 連結服務提供商
-      unlink_provider: 解除服務提供商連結
+      link_provider: 連結服務供應商
+      unlink_provider: 解除與服務供應商的連結
+      change_simplefin_account: 更換 SimpleFIN 帳戶
       troubleshoot: 疑難排解
+      enable: 啟用帳戶
+      disable: 停用帳戶
+      exclude_from_reports: 從所有報表中排除
+      include_in_reports: 納入報表
+      excluded_from_reports_indicator: 已從報表中排除
+      set_default: 設為預設
+      remove_default: 取消預設
+      default_label: 預設
+      delete: 刪除帳戶
+      sharing: 共享
     chart:
       data_not_available: 所選時段內無資料
     create:
-      success: "%{type} 帳戶已建立"
+      success: '%{type} 帳戶已建立'
+    set_default:
+      depository_only: 只有現金與信用卡帳戶可以設為預設。
     destroy:
-      success: "%{type} 帳戶已排定刪除"
-      cannot_delete_linked: "無法刪除已連結的帳戶。請先解除連結。"
+      success: '%{type} 帳戶已排定刪除'
+      cannot_delete_linked: 無法刪除已連結的帳戶。請先解除連結。
+      failed: 資源刪除失敗，請稍後再試。
     empty:
       empty_message: 請透過連線、匯入或手動輸入來新增帳戶。
       new_account: 新增帳戶
       no_accounts: 尚無帳戶
     form:
-      balance: 目前餘額
+      balance: 該日期的餘額：
+      opening_balance_date_label: 期初餘額日期
       name_label: 帳戶名稱
       name_placeholder: 例如：薪資帳戶
       additional_details: 額外詳細資訊
       institution_name_label: 金融機構名稱
       institution_name_placeholder: 例如：玉山銀行
       institution_domain_label: 機構網域
-      institution_domain_placeholder: e.g., esunbank.com.tw
+      institution_domain_placeholder: 例如：esunbank.com.tw
       notes_label: 備註
       notes_placeholder: 儲存額外資訊，例如帳號、分行代碼、IBAN、銀行轉帳號碼 (Routing numbers) 等。
+      exclude_from_reports: 從所有報表中排除
+      enable_category_matcher_label: 啟用分類比對
+      enable_category_matcher_hint: 啟用後，供應商建議的分類會套用到匯入的交易。停用則新交易會維持未分類。
     index:
       accounts: 帳戶管理
+      cancel_sync: 取消同步
       manual_accounts:
         other_accounts: 其他帳戶
       new_account: 新增帳戶
       sync: 全部同步
     sync_all:
-      syncing: "正在同步帳戶..."
+      syncing: 正在同步帳戶...
     new:
       import_accounts: 匯入帳戶
+      container:
+        select: 選擇
+        navigate: 前往
+        close: 關閉
       method_selector:
         connected_entry: 連結帳戶
         connected_entry_eu: 連結歐盟 (EU) 帳戶
-        link_with_provider: "與 %{provider} 連結"
+        link_with_provider: 與 %{provider} 連結
         lunchflow_entry: 連結 Lunch Flow 帳戶
         manual_entry: 輸入帳戶餘額
         title: 您想如何新增？
       title: 您想新增什麼內容？
     show:
+      limited_fx_history_warning: 匯率歷史只有 %{date}之後的資料。當匯率供應商只提供有限的歷史區間時，這個日期之前的交易會改用近似的匯率換算。
+      tabs:
+        activity: 活動紀錄
+        holdings: 持股
+        overview: 概覽
+        statements: 對帳單
       activity:
         amount: 金額
         balance: 餘額
+        confirmed: 已確認
         date: 日期
         entries: 筆紀錄
         entry: 筆紀錄
+        filter: 篩選
         new: 新增
-        new_balance: 新餘額
+        new_activity: 新增活動
+        new_balance: 新增餘額
+        new_trade: 新增證券交易
         new_transaction: 新增交易
+        new_transfer: 新增轉帳
         no_entries: 找不到任何紀錄
+        pending: 待處理
         search:
           placeholder: 以名稱搜尋紀錄
+        search_placeholder: 以名稱搜尋紀錄
+        status: 狀態
         title: 活動紀錄
       chart:
         balance: 餘額
         owed: 欠款金額
+      header:
+        complete_setup: 完成設定
       menu:
         confirm_accept: 刪除「%{name}」
-        confirm_body_html: "<p>刪除此帳戶將會抹除其價值歷史紀錄，並影響您帳戶的各個層面。這將直接影響您的淨值計算和帳戶圖表。</p><br /> <p>刪除後將無法還原帳戶資訊，若需找回則必須重新新增為新帳戶。</p>"
+        confirm_body_html: <p>刪除這個帳戶會抹除它的價值歷史紀錄，並影響您帳戶的各個層面，也會直接影響您的淨資產計算與帳戶圖表。</p><br /> <p>帳戶資料一旦刪除就無法復原，之後若要使用只能重新建立新帳戶。</p>
         confirm_title: 確定要刪除帳戶嗎？
+        delete_account: 刪除帳戶
         edit: 編輯
         import: 匯入交易
+        import_trades: 匯入證券交易
+        import_transactions: 匯入交易
         manage: 管理帳戶
+        sharing: 共享
+        statements: 對帳單
+        exclude_from_reports: 從所有報表中排除
+        include_in_reports: 納入報表
     update:
-      success: "%{type} 帳戶已更新"
+      success: '%{type} 帳戶已更新'
     sidebar:
       missing_data: 缺少歷史資料
-      missing_data_description: "%{product} 使用第三方提供商來獲取歷史匯率、證券價格等資訊。這些資料是用於計算準確歷史帳戶餘額所必需的。"
-      configure_providers: 在此設定您的提供商。
+      missing_data_description: '%{product} 會向第三方供應商取得歷史匯率、證券價格等資料。要算出正確的歷史餘額就需要這些資料。'
+      configure_providers: 在此設定您的供應商。
       tabs:
         all: 全部
         assets: 資產
@@ -83,8 +136,18 @@ zh-TW:
       new_asset: 新增資產
       new_debt: 新增負債
       new_account: 新增帳戶
-      new_account_group: "新增 %{account_group}"
+      new_account_group: 新增%{account_group}
     types:
+      depository: 現金/存款
+      investment: 投資
+      crypto: 加密貨幣
+      property: 不動產
+      vehicle: 車輛
+      other_asset: 其他資產
+      credit_card: 信用卡
+      loan: 貸款
+      other_liability: 其他負債
+    types_plural:
       depository: 現金/存款
       investment: 投資
       crypto: 加密貨幣
@@ -94,26 +157,43 @@ zh-TW:
       credit_card: 信用卡
       loan: 貸款
       other_liability: 其他負債
+    tax_treatments:
+      taxable: 應稅
+      tax_deferred: 遞延課稅
+      tax_exempt: 免稅
+      tax_advantaged: 稅務優惠
+    tax_treatment_descriptions:
+      taxable: 獲利在實現時課稅
+      tax_deferred: 提撥可扣抵，提領時課稅
+      tax_exempt: 以稅後資金投入，獲利免稅
+      tax_advantaged: 有條件的特殊稅務優惠
+    subtype_regions:
+      us: 美國
+      uk: 英國
+      ca: 加拿大
+      au: 澳洲
+      eu: 歐洲
+      in: 印度
+      generic: 一般
     confirm_unlink:
-      title: 解除帳戶與提供商的連結？
-      description_html: "您即將解除 <strong>%{account_name}</strong> 與 <strong>%{provider_name}</strong> 的連結。這會將其轉換為手動管理的帳戶。"
+      title: 解除帳戶與供應商的連結？
+      description_html: 您即將解除 <strong>%{account_name}</strong> 與 <strong>%{provider_name}</strong> 的連結。解除後這個帳戶會改為手動管理。
       warning_title: 這代表什麼
-      warning_no_sync: 帳戶將不再與您的銀行自動同步
+      warning_no_sync: 帳戶將不再與您的供應商自動同步
       warning_manual_updates: 您將需要手動新增交易並更新餘額
       warning_transactions_kept: 所有現有的交易和餘額紀錄將會保留
-      warning_can_delete: 解除連結後，您將可以根據需要刪除該帳戶
+      warning_can_delete: 解除連結後，您就可以視需要刪除這個帳戶
       confirm_button: 確認並解除連結
     unlink:
-      success: "帳戶連結已成功解除。現在這是一個手動管理的帳戶。"
-      not_linked: "帳戶未與任何提供商連結"
-      error: "解除連結失敗：%{error}"
-      generic_error: "發生預期之外的錯誤。請再試一次。"
+      success: 帳戶連結已成功解除。此帳戶現在改為手動管理。
+      not_linked: 帳戶未與任何供應商連結
+      error: 解除連結失敗：%{error}
+      generic_error: 發生未預期的錯誤。請再試一次。
     select_provider:
-      title: 選擇要連結的提供商
-      description: "選擇您想用來連結 %{account_name} 的提供商"
-      already_linked: "帳戶已經與提供商連結"
-      no_providers: "目前未設定任何提供商"
-
+      title: 選擇要連結的供應商
+      description: 選擇您想用來連結 %{account_name} 的供應商
+      already_linked: 帳戶已經與供應商連結
+      no_providers: 目前未設定任何供應商
   email_confirmations:
     new:
       invalid_token: 無效或已過期的驗證連結。

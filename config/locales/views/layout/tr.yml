@@ -2,24 +2,32 @@
 tr:
   layouts:
     application:
-      privacy_mode: Gizlilik modunu değiştir
-      skip_to_main: Ana içeriğe atla
+      insights: İçgörüler
       nav:
         assistant: Asistan
         budgets: Bütçeler
+        goals: Hedefler
         home: Ana Sayfa
         reports: Raporlar
         transactions: İşlemler
+      privacy_mode: Gizlilik modunu değiştir
+      resize_left_sidebar: Hesaplar kenar çubuğunu yeniden boyutlandır
+      resize_right_sidebar: Asistan kenar çubuğunu yeniden boyutlandır
+      skip_to_main: Ana içeriğe atla
     auth:
       existing_account: Zaten bir hesabınız var mı?
       no_account: "%{product_name}'ye yeni misiniz?"
       sign_in: Giriş yap
       sign_up: Hesap oluştur
     shared:
+      confirm_dialog:
+        are_you_sure: Emin misiniz?
+        cannot_be_undone: Bu işlem geri alınamaz.
+        confirm: Onayla
       footer:
         privacy_policy: Gizlilik Politikası
         terms_of_service: Hizmet Şartları
     trial:
-      open_demo: Açık demo
-      data_deleted_in_days: Veriler %{days} gün içinde silinecek
       contribute: Katkıda bulun
+      data_deleted_in_days: Veriler %{days} gün içinde silinecek
+      open_demo: Açık demo

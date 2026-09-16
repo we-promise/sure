@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 class AiDisabledEmptyState extends StatelessWidget {
   const AiDisabledEmptyState({super.key});
@@ -6,6 +7,7 @@ class AiDisabledEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l = AppLocalizations.of(context);
 
     return Center(
       child: Padding(
@@ -20,13 +22,13 @@ class AiDisabledEmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'AI is not enabled yet',
+              l.aiDisabledEmptyTitle,
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'When AI is enabled for this account, your chats with Sure will appear here.',
+              l.aiDisabledEmptySubtitle,
               style: TextStyle(color: colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),

@@ -44,6 +44,42 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal "Test Header Title", content_for(:header_title)
   end
 
+  test "#sidekiq_web_available? returns true when the route is mounted" do
+    named_routes = Struct.new(:defined) do
+      def route_defined?(name)
+        defined.fetch(name)
+      end
+    end
+
+    Rails.application.routes.stub(:named_routes, named_routes.new({ sidekiq_web_path: true })) do
+      assert sidekiq_web_available?
+    end
+  end
+
+  test "#sidekiq_web_available? returns false when the route is unavailable" do
+    named_routes = Struct.new(:defined) do
+      def route_defined?(name)
+        defined.fetch(name, false)
+      end
+    end
+
+    Rails.application.routes.stub(:named_routes, named_routes.new({})) do
+      assert_not sidekiq_web_available?
+    end
+  end
+
+  test "#sidekiq_web_available? returns true when only the url helper is defined" do
+    named_routes = Struct.new(:defined) do
+      def route_defined?(name)
+        defined.fetch(name, false)
+      end
+    end
+
+    Rails.application.routes.stub(:named_routes, named_routes.new({ sidekiq_web_url: true })) do
+      assert sidekiq_web_available?
+    end
+  end
+
   def setup
     @account1 = Account.new(currency: "USD", balance: 1)
     @account2 = Account.new(currency: "USD", balance: 2)

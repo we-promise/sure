@@ -1,0 +1,11 @@
+---
+ru:
+  invite_codes:
+    create:
+      success: Код создан
+    destroy:
+      success: Код удалён
+    index:
+      invite_code_description: Создайте новый код, чтобы он отобразился здесь. Использованные
+        коды больше не будут отображаться.
+      no_invite_codes: Нет кодов для отображения

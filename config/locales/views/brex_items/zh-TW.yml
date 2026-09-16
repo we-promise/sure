@@ -1,0 +1,277 @@
+---
+zh-TW:
+  brex_items:
+    default_connection_name: Brex 連線
+    account_metadata:
+      provider: Brex
+      separator: ' • '
+    kinds:
+      cash: 現金/存款
+      card: 卡片
+    statuses:
+      ACTIVE: 啟用中
+      active: 啟用中
+      CLOSED: 已關閉
+      closed: 已關閉
+      frozen: 已凍結
+      FROZEN: 已凍結
+    create:
+      success: Brex 連線建立成功
+    default_card_name: Brex 卡片
+    default_cash_name: Brex 現金 %{id}
+    destroy:
+      success: 已移除 Brex 連線
+    index:
+      title: Brex 連線
+    institution_summary:
+      none: 沒有已連線的機構
+      one: '%{name}'
+      count:
+        one: '%{count} 個機構'
+        other: '%{count} 個機構'
+    sync_status:
+      no_accounts: 找不到帳戶
+      all_synced:
+        one: 已同步 %{count} 個帳戶
+        other: 已同步 %{count} 個帳戶
+      partial_setup: 已同步 %{synced} 個，%{pending} 個需要設定
+    api_error:
+      common_issues: 常見問題：
+      expired_credentials: 請從 Brex 產生一組新的 API Token。
+      expired_credentials_label: 憑證已過期：
+      heading: 無法連線到 Brex
+      invalid_token: 請在供應商設定中檢查您的 API Token。
+      invalid_token_label: API Token 無效：
+      network: 請檢查您的網路連線。
+      network_label: 網路問題：
+      permissions: 請確認您的 Token 具備必要的唯讀帳戶與交易 scope。
+      permissions_label: 權限不足：
+      service: Brex API 可能暫時無法使用。
+      service_label: 服務中斷：
+      settings_link: 檢查供應商設定
+      title: Brex 連線錯誤
+    errors:
+      unexpected_error: 發生非預期的錯誤，請稍後再試。
+    entries:
+      default_name: Brex 交易
+    loading:
+      loading_message: 正在載入 Brex 帳戶...
+      loading_title: 載入中
+    link_accounts:
+      all_already_linked:
+        one: 所選的帳戶 (%{names}) 已經連結
+        other: 所有 %{count} 個選定的帳戶都已經連結：%{names}
+      api_error: API 錯誤：%{message}
+      invalid_account_names:
+        one: 無法連結名稱空白的帳戶
+        other: 無法連結 %{count} 個名稱空白的帳戶
+      invalid_account_type: 不支援的 Brex 帳戶類型
+      link_failed: 連結帳戶失敗
+      no_accounts_selected: 請至少選擇一個帳戶
+      no_api_token: 找不到 Brex API Token，請在供應商設定中設定。
+      partial_invalid: 成功連結 %{created_count} 個帳戶，%{already_linked_count} 個帳戶原本就已連結，%{invalid_count} 個帳戶的名稱無效
+      partial_success: 已成功連結 %{created_count} 個帳戶。另有 %{already_linked_count} 個帳戶原本就已連結：%{already_linked_names}
+      select_connection: 連結帳戶前，請先選擇一個 Brex 連線。
+      success:
+        one: 已成功連結 %{count} 個帳戶
+        other: 已成功連結 %{count} 個帳戶
+    brex_item:
+      accounts_need_setup: 帳戶需要設定
+      delete: 刪除連線
+      deletion_in_progress: 正在刪除...
+      error: 錯誤
+      no_accounts_description: 此連線尚未連結任何帳戶。
+      no_accounts_title: 無帳戶
+      setup_action: 設定新帳戶
+      setup_description: 已連結 %{total} 個帳戶中的 %{linked} 個。請為新匯入的 Brex 帳戶選擇帳戶類型。
+      setup_needed: 有新帳戶可以設定
+      status: '%{timestamp}前已同步'
+      status_never: 從未同步
+      status_with_summary: 上次同步於 %{timestamp}前 - %{summary}
+      syncing: 同步中...
+      total: 總計
+      unlinked: 未連結
+    provider_panel:
+      accounts_link: 帳戶管理
+      add_connection: 新增 Brex 連線
+      base_url_label: Base URL（選填）
+      base_url_placeholder: https://api.brex.com
+      configured_html: 已設定完成，可以開始使用。請前往 %{accounts_link} 分頁管理並設定帳戶。
+      connection_name_label: 連線名稱
+      connection_name_placeholder: 公司支票帳戶
+      default_connection_name: Brex 連線
+      disconnect_label: 中斷 %{name}
+      disconnect_confirm: 確定要中斷 %{name} 嗎？
+      encryption_warning:
+        title: 資料庫加密未設定
+        message: 在正式環境加入 Brex Token 之前，請先設定 Active Record 加密金鑰。沒有加密金鑰時，Sure 會像其他供應商的紀錄一樣，以明文儲存 Brex 的憑證與快照。
+      instructions:
+        copy_token_html: 複製 Token，並在下方新增成一個具名連線。Sure 只會為了同步這個家庭而儲存這組 Token。
+        create_token: 建立一組具備這些唯讀 scope 的 API Token：accounts.cash.readonly、accounts.card.readonly、transactions.cash.readonly、transactions.card.readonly
+        open_tokens: 前往您想連結的那家公司的 Brex 開發者／API Token 設定
+        sign_in_html: 前往 %{link} 並登入您想連結的帳號
+      keep_token_placeholder: 留白以保留目前的 Token
+      not_configured: 未設定
+      sandbox_note_html: 每一組您想同步的 Brex 公司／API Token，都請使用各自獨立的具名連線。正式環境請把 Base URL 留白。Staging 環境僅限 Brex 核可的測試使用，無法搭配客戶的 Token。
+      setup_accounts: 設定帳戶
+      setup_title: 設定說明：
+      sync: 同步
+      token_label: 權杖 (Token)
+      token_placeholder: 在此貼上 Token
+      update_connection: 更新連線
+    provider_connection:
+      default_description: 連結您的 Brex 帳戶
+      default_name: Brex
+      description: 使用 %{name} 連線
+      name: Brex - %{name}
+    select_accounts:
+      accounts_selected: 個帳戶已選擇
+      api_error: API 錯誤：%{message}
+      cancel: 取消
+      configure_name_in_brex: 無法匯入 - 請先在 Brex 中設定帳戶名稱
+      description: 選擇您想要連結到 %{product_name} 的帳戶。
+      link_accounts: 連結所選帳戶
+      no_accounts_found: 找不到任何帳戶，請檢查您的 API Token 設定。
+      no_api_token: 找不到 Brex API Token，請在供應商設定中設定。
+      no_credentials_configured: 請先在供應商設定中設定您的 Brex API Token。
+      no_name_placeholder: （無名稱）
+      select_connection: 請在供應商設定中選擇一個 Brex 連線。
+      title: 選擇 Brex 帳戶
+      unexpected_error: 發生非預期的錯誤，請稍後再試。
+    select_existing_account:
+      account_already_linked: 此帳戶已與供應商連結
+      all_accounts_already_linked: 所有 Brex 帳戶都已經連結過了
+      api_error: API 錯誤：%{message}
+      cancel: 取消
+      configure_name_in_brex: 無法匯入 - 請先在 Brex 中設定帳戶名稱
+      description: 選擇一個要與這個帳戶連結的 Brex 帳戶。交易會自動同步並去除重複。
+      link_account: 連結帳戶
+      no_account_specified: 未指定帳戶
+      no_accounts_found: 找不到任何 Brex 帳戶，請檢查您的 API Token 設定。
+      no_api_token: 找不到 Brex API Token，請在供應商設定中設定。
+      no_credentials_configured: 請先在供應商設定中設定您的 Brex API Token。
+      no_name_placeholder: （無名稱）
+      select_connection: 請在供應商設定中選擇一個 Brex 連線。
+      title: 將 %{account_name} 與 Brex 連結
+      unexpected_error: 發生非預期的錯誤，請稍後再試。
+    setup_required:
+      description: 連結 Brex 帳戶之前，您需要先設定您的 Brex API Token。
+      heading: 尚未設定 API Token
+      settings_link: 前往供應商設定
+      setup_steps: 設定步驟：
+      steps:
+        enter_token: 輸入您的 Brex API Token
+        find_section_html: 找到 <strong>Brex</strong> 區塊
+        open_settings_html: 前往 <strong>設定 > 供應商</strong>
+        return_to_link: 回到這裡連結您的帳戶
+      title: 需要設定 Brex
+    subtype_select:
+      placeholder:
+        subtype: 選擇子類型
+        type: 選擇類型
+    link_existing_account:
+      account_already_linked: 此帳戶已與供應商連結
+      api_error: API 錯誤：%{message}
+      invalid_account_name: 無法連結名稱空白的帳戶
+      missing_parameters: 缺少必要參數
+      no_account_specified: 未指定帳戶
+      no_api_token: 找不到 Brex API Token，請在供應商設定中設定。
+      provider_account_already_linked: 這個 Brex 帳戶已經連結到另一個帳戶了
+      provider_account_not_found: 找不到 Brex 帳戶
+      select_connection: 連結帳戶前，請先選擇一個 Brex 連線。
+      success: 已成功將 %{account_name} 與 Brex 連結
+    setup_accounts:
+      account_type_label: 帳戶類型：
+      all_accounts_linked: 您所有的 Brex 帳戶都已經設定完成了。
+      api_error: API 錯誤：%{message}
+      fetch_failed: 取得帳戶失敗
+      no_accounts_to_setup: 沒有需要設定的帳戶
+      no_api_token: 找不到 Brex API Token，請在供應商設定中設定。
+      account_types:
+        skip: 跳過此帳戶
+        depository: 支票或儲蓄帳戶
+        credit_card: 信用卡
+        investment: 投資帳戶
+        loan: 貸款或房屋貸款
+        other_asset: 其他資產
+      subtype_labels:
+        depository: 帳戶子類型：
+        credit_card: ''
+        investment: 投資類型：
+        loan: 貸款類型：
+        other_asset: ''
+      subtype_messages:
+        credit_card: 信用卡將自動設定為信用卡帳戶。
+        other_asset: 其他資產不需要額外選項。
+      subtypes:
+        depository:
+          checking: 支票帳戶 (Checking)
+          savings: 儲蓄帳戶 (Savings)
+          hsa: 健康儲蓄帳戶 (HSA)
+          cd: 定期存款 (CD)
+          money_market: 貨幣市場帳戶
+        investment:
+          brokerage: 證券帳戶
+          pension: 退休金
+          retirement: 退休帳戶
+          401k: 401(k)
+          roth_401k: Roth 401(k)
+          403b: 403(b)
+          tsp: 節儉儲蓄計畫 (TSP)
+          529_plan: 529 教育儲蓄計畫
+          hsa: 健康儲蓄帳戶 (HSA)
+          mutual_fund: 共同基金
+          ira: 傳統 IRA
+          roth_ira: Roth IRA
+          angel: 天使投資
+        loan:
+          mortgage: 房屋貸款
+          student: 學生貸款
+          auto: 汽車貸款
+          other: 其他貸款
+      balance: 餘額
+      cancel: 取消
+      choose_account_type: 請為每個 Brex 帳戶選擇正確的帳戶類型：
+      create_accounts: 建立帳戶
+      creating_accounts: 正在建立帳戶...
+      historical_data_range: 歷史資料範圍：
+      subtitle: 為您匯入的帳戶選擇正確的帳戶類型
+      sync_start_date_help: 選擇您想要同步交易紀錄的追溯時間。最多可提供 3 年的歷史紀錄。
+      sync_start_date_label: 開始同步交易的日期：
+      title: 設定您的 Brex 帳戶
+    complete_account_setup:
+      all_skipped: 已跳過所有帳戶。未建立任何帳戶。
+      creation_failed: 建立帳戶失敗：%{error}
+      creation_failed_count: 有 %{count} 個帳戶建立失敗。
+      no_accounts: 沒有需要設定的帳戶。
+      partial_skipped: 成功建立 %{created_count} 個帳戶；跳過 %{skipped_count} 個帳戶。
+      partial_success: 成功建立 %{created_count} 個帳戶，但有 %{failed_count} 個帳戶失敗。
+      success: 已成功建立 %{count} 個帳戶。
+      unexpected_error: 發生非預期的錯誤。
+    sync:
+      success: 同步已開始
+    syncer:
+      account_processing_failed:
+        one: 有 %{count} 個 Brex 帳戶在處理時失敗。
+        other: 有 %{count} 個 Brex 帳戶在處理時失敗。
+      account_sync_failed:
+        one: 有 %{count} 個 Brex 帳戶的同步無法排程。
+        other: 有 %{count} 個 Brex 帳戶的同步無法排程。
+      accounts_need_setup:
+        one: '%{count} 個帳戶需要設定...'
+        other: '%{count} 個帳戶需要設定...'
+      accounts_failed:
+        one: 有 %{count} 個 Brex 帳戶匯入失敗。
+        other: 有 %{count} 個 Brex 帳戶匯入失敗。
+      calculating_balances: 正在計算餘額...
+      checking_account_configuration: 正在檢查帳戶設定...
+      credentials_invalid: Brex API Token 或帳戶權限無效
+      failed: 同步失敗。請重試或聯絡支援。
+      import_failed: Brex 匯入失敗。
+      importing_accounts: 正在從 Brex 匯入帳戶...
+      processing_transactions: 正在處理交易...
+      transactions_failed:
+        one: 有 %{count} 個 Brex 帳戶的交易匯入失敗。
+        other: 有 %{count} 個 Brex 帳戶的交易匯入失敗。
+    update:
+      success: Brex 連線已更新

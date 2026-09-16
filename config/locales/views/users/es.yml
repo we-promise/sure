@@ -5,8 +5,7 @@ es:
       success: Tu cuenta ha sido eliminada.
     update:
       email_change_failed: No se pudo cambiar la dirección de correo electrónico.
-      email_change_initiated: Por favor, revisa tu nueva dirección de correo electrónico
-       para obtener instrucciones de confirmación.
+      email_change_initiated: Por favor, revisa tu nueva dirección de correo electrónico para obtener instrucciones de confirmación.
       success: Tu perfil ha sido actualizado.
     resend_confirmation_email:
       success: Se ha puesto en cola el envío de un nuevo correo de confirmación.
@@ -15,5 +14,16 @@ es:
       success: Tu cuenta ha sido restablecida. Los datos se eliminarán en segundo plano en algún momento.
       unauthorized: No estás autorizado para realizar esta acción.
     reset_with_sample_data:
-      success: Tu cuenta ha sido restablecida y se están preparando datos de muestra. 
-        Verás datos de demostración en breve.
+      success: Tu cuenta ha sido restablecida y se están preparando datos de muestra. Verás datos de demostración en breve.
+    roles:
+      admin: Admin
+      member: Miembro
+      super_admin: Super admin
+    user_menu:
+      aria_label: Abrir menú de la cuenta
+      version: Versión
+      settings: Ajustes
+      changelog: Novedades
+      feedback: Sugerencias
+      contact: Contacto
+      log_out: Cerrar sesión

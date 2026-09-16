@@ -13,6 +13,8 @@ zh-TW:
       expiration_date: 到期日期
       minimum_payment: 最低還款額
       minimum_payment_placeholder: '100'
+      treat_balance_as_available_credit_description: 如果您的銀行是以剩餘可用額度而非應付金額來回報這張卡的餘額，請啟用此選項。負債金額會改由銀行回報的信用額度推算；若銀行未提供，則由「可用額度」欄位推算。
+      treat_balance_as_available_credit_label: 餘額為可用額度
     new:
       title: 請輸入信用卡詳細資訊
     overview:
@@ -20,6 +22,7 @@ zh-TW:
       annual_fee: 年費
       apr: 年利率
       available_credit: 可用額度
+      edit_account_details: 編輯帳戶詳細資料
       expiration_date: 到期日期
       minimum_payment: 最低還款額
       unknown: 未知

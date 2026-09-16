@@ -20,7 +20,7 @@
 
     <%= link_to new_transactions_bulk_update_path,
                 class: "p-1.5 group/edit hover:bg-inverse flex items-center justify-center rounded-md",
-                title: "Edit",
+                title: t("transactions.selection_bar.edit"),
                 data: { turbo_frame: "bulk_transaction_edit_drawer" } do %>
       <%= icon "pencil-line", class: "group-hover/edit:text-inverse" %>
     <% end %>

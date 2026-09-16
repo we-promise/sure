@@ -1,0 +1,7 @@
+uk:
+  password_mailer:
+    password_reset:
+      cta: Скинути пароль
+      ignore_if_not_requested: Якщо ви не робили цього запиту, ви можете проігнорувати цей лист.
+      request_made: Було зроблено запит на скидання пароля %{product_name}. Натисніть на посилання, щоб скинути його.
+      subject: '%{product_name}: Скиньте свій пароль'

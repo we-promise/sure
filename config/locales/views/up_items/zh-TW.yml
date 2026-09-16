@@ -1,0 +1,116 @@
+---
+zh-TW:
+  providers:
+    up:
+      name: Up
+      description: 透過 Personal Access Token 連接澳洲 Up 銀行帳戶
+  family:
+    up:
+      create_up_item:
+        default_name: Up 連線
+  up_account:
+    fallback: Up 帳戶
+  up_item:
+    errors:
+      account_processing_failed: 無法同步 Up 帳戶
+      account_sync_schedule_failed: 無法排程 Up 帳戶同步
+      transactions_failed: 無法取得 Up 交易
+      sync_failed: 無法同步 Up 連線
+    sync_status:
+      no_accounts: 找不到帳戶
+      all_synced:
+        one: 已同步 1 個帳戶
+        other: 已同步 %{count} 個帳戶
+      partial: 已同步 %{linked} 個，%{unlinked} 個需要設定
+    institution_summary:
+      none: 沒有已連線的機構
+      one: 1 個機構
+      count:
+        one: 1 個機構
+        other: '%{count} 個機構'
+  up_items:
+    provider_panel:
+      default_connection_name: Up 連線
+      add_connection: 新增 Up 連線
+      update_connection: 更新連線
+      connection_name_label: 連線名稱
+      connection_name_placeholder: 主要 Up
+      access_token_label: 個人存取權杖 (Personal Access Token)
+      access_token_placeholder: 貼上您的 Up Personal Access Token
+      keep_access_token_placeholder: 留白則沿用現有的 Token
+      setup_accounts: 設定帳戶
+      syncing: 同步中...
+      sync: 同步
+      disconnect: 中斷連線
+      disconnect_confirm: 確定要中斷 %{name} 嗎？
+    create:
+      success: 已儲存 Up 連線。
+    update:
+      success: 已更新 Up 連線。
+    destroy:
+      success: 已排程刪除 Up 連線。
+      unlink_failed: 無法中斷 Up 連線
+    select_accounts:
+      title: 連結 Up 帳戶
+      description: 選擇要新增的 Up 帳戶。
+      no_accounts_found: 找不到未連結的 Up 帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Up。
+      cancel: 取消
+      link_accounts: 連結帳戶
+    link_accounts:
+      success:
+        one: 已連結 1 個 Up 帳戶。
+        other: 已連結 %{count} 個 Up 帳戶。
+      no_accounts_selected: 請選擇至少一個帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Up。
+      unsupported_account_type: Up 不支援該帳戶類型。
+      link_failed: 沒有連結任何帳戶。
+    select_existing_account:
+      title: 將 Up 帳戶連結至 %{account_name}
+      description: 選擇一個未連結的 Up 帳戶來連接此帳戶。
+      no_accounts_found: 找不到未連結的 Up 帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Up。
+      account_already_linked: 此帳戶已連結到供應商。
+      cancel: 取消
+      link_account: 連結帳戶
+    link_existing_account:
+      success: 已將 Up 帳戶連結至 %{account_name}。
+      account_already_linked: 此帳戶已連結到供應商。
+      up_account_already_linked: 此 Up 帳戶已連結。
+      no_account_selected: 請選擇要連結的 Up 帳戶。
+    setup_accounts:
+      title: 連結 Up 帳戶
+      subtitle: 選擇每個 Up 帳戶要如何顯示在 Sure 中。
+      no_credentials: 請先設定 Up 憑證。
+      api_error: 無法取得 Up 帳戶。
+      fetch_failed: 無法取得帳戶
+      no_accounts_to_setup: 沒有需要設定的帳戶
+      all_accounts_linked: 所有 Up 帳戶都已連結。
+      choose_account_type: 選擇帳戶類型
+      choose_account_type_description: 跳過不想追蹤的帳戶。
+      account_type_label: 帳戶類型
+      account_types:
+        skip: 跳過
+        depository: 現金/存款
+        loan: 貸款
+      create_accounts: 建立帳戶
+      cancel: 取消
+    complete_account_setup:
+      success:
+        one: 已建立 1 個 Up 帳戶。
+        other: 已建立 %{count} 個 Up 帳戶。
+      all_skipped: 沒有建立任何 Up 帳戶。
+      no_accounts: 沒有選擇任何 Up 帳戶。
+      creation_failed: 無法建立 Up 帳戶。
+    up_item:
+      deletion_in_progress: 正在刪除
+      syncing: 正在同步
+      error: 錯誤
+      status_with_summary: '%{timestamp}前已同步 · %{summary}'
+      status_never: 從未同步
+      delete: 刪除
+      setup_needed: 需要設定帳戶
+      setup_description: 已連結 %{linked}/%{total} 個帳戶。
+      setup_action: 設定帳戶
+      no_accounts_title: 尚未匯入帳戶
+      no_accounts_description: 取得 Up 帳戶並選擇要連結的項目。

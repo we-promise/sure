@@ -1,0 +1,21 @@
+---
+zh-TW:
+  pending_duplicate_merges:
+    create:
+      no_posted_selected: 請選擇一筆要合併的已入帳交易
+      invalid_transaction: 所選要合併的交易無效
+      merge_success: 待處理交易已與已入帳交易合併
+      merge_failed: 無法合併交易
+    set_transaction:
+      pending_only: 這項功能只適用於待處理交易
+    new:
+      title: 與已入帳交易合併
+      warning_title: 手動合併重複交易
+      warning_description: 用這個功能手動把待處理交易和它已入帳的版本合併。這會刪除待處理的那一筆，只保留已入帳的。
+      pending_transaction: 待處理交易
+      select_posted: 選擇要合併的已入帳交易
+      showing_range: 顯示 %{start} - %{end}
+      previous: ← 前 10 筆
+      next: 後 10 筆 →
+      no_candidates: 這個帳戶中找不到已入帳的交易。
+      submit_button: 合併交易

@@ -1,4 +1,4 @@
-<%# locals: (entry:, open:) %>
+<%# locals: (entry:, open:, provider_setup_encryption_warning: false) %>
 <%
   status        = entry[:summary][:status]
   meta          = entry[:summary][:meta]
@@ -22,6 +22,7 @@
       <%= icon "chevron-right", size: "sm", class: "!w-3.5 !h-3.5 text-secondary group-open:rotate-90 transition-transform" %>
       <div class="flex items-center flex-wrap gap-2 min-w-0 flex-1">
         <div class="flex items-center gap-2 shrink-0 flex-1">
+          <%= render ProviderLogo.new(provider_key: entry[:provider_key], class_name: "w-7 h-7 rounded-lg") %>
           <h3 class="text-sm font-medium text-primary"><%= entry[:title] %></h3>
           <%= render "settings/providers/maturity_badge", label: maturity_lbl %>
         </div>
@@ -39,7 +40,9 @@
   </summary>
   <div class="space-y-4 mt-4 px-4 pb-4">
     <% if entry[:configuration] %>
-      <%= render "settings/providers/provider_form", configuration: entry[:configuration] %>
+      <%= render "settings/providers/provider_form",
+                 configuration: entry[:configuration],
+                 provider_setup_encryption_warning: provider_setup_encryption_warning %>
     <% else %>
       <turbo-frame id="<%= entry[:turbo_id] %>-providers-panel">
         <%= render "settings/providers/#{entry[:partial]}" %>

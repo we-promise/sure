@@ -1,0 +1,28 @@
+<h1><%= t(".heading", count: @transactions.size) %></h1>
+
+<p><%= t(".intro", rule: @rule.name.presence || @rule.primary_condition_title) %></p>
+
+<table class="email-table">
+  <thead>
+    <tr>
+      <th><%= t(".date") %></th>
+      <th><%= t(".name") %></th>
+      <th><%= t(".account") %></th>
+      <th class="text-right"><%= t(".amount") %></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @transactions.each do |txn| %>
+      <tr>
+        <td><%= I18n.l(txn.entry.date, format: :long) %></td>
+        <td><%= txn.entry.name %></td>
+        <td><%= txn.entry.account.name %></td>
+        <td class="text-right"><%= txn.entry.amount_money.format %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<p style="margin-top: 16px;">
+  <%= link_to t(".cta"), @transactions_url, class: "button" %>
+</p>

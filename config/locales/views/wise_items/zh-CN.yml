@@ -1,0 +1,5 @@
+zh-CN:
+  wise_items:
+    provider_panel:
+      instructions:
+        open_tokens: 前往 Settings → Connect and manage apps → Developer tools → API tokens

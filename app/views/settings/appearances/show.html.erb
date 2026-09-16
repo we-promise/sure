@@ -31,17 +31,61 @@
 <%= settings_section title: t(".dashboard_title"), subtitle: t(".dashboard_subtitle") do %>
   <div>
     <%= form_with url: settings_appearance_path, method: :patch,
-          class: "p-3",
+          class: "p-3 space-y-4",
           data: { controller: "auto-submit-form" } do |f| %>
       <div class="flex cursor-pointer items-center gap-4 justify-between">
         <div class="text-sm space-y-1">
-          <h4 class="text-primary"><%= t(".dashboard_two_column_title") %></h4>
+          <p class="text-primary font-medium"><%= t(".dashboard_two_column_title") %></p>
           <p class="text-secondary"><%= t(".dashboard_two_column_description") %></p>
         </div>
         <%= render DS::Toggle.new(
               id: "user_dashboard_two_column",
               name: "user[dashboard_two_column]",
               checked: @user.dashboard_two_column?,
+              data: { auto_submit_form_target: "auto" }
+        ) %>
+      </div>
+
+      <div class="border-t border-primary pt-4">
+        <div class="text-sm space-y-1 mb-3">
+          <p class="text-primary font-medium"><%= t(".dashboard_account_groups_title") %></p>
+          <p class="text-secondary"><%= t(".dashboard_account_groups_description") %></p>
+        </div>
+        <div class="grid gap-2 sm:grid-cols-2">
+          <% selected = @user.always_expanded_account_groups %>
+          <% Accountable::TYPES.each do |type| %>
+            <% key = type.underscore %>
+            <% checked = selected.include?(key) %>
+            <label class="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-surface-inset transition-colors"
+                   for="user_account_groups_<%= key %>">
+              <%= hidden_field_tag "user[account_groups][]", "", id: nil %>
+              <%= check_box_tag "user[account_groups][]", key, checked,
+                    id: "user_account_groups_#{key}",
+                    class: "checkbox checkbox--light mt-0.5",
+                    data: { auto_submit_form_target: "auto" } %>
+              <span class="text-sm text-primary"><%= Accountable.from_type(type).display_name %></span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<%= settings_section title: t(".modals_title"), subtitle: t(".modals_subtitle") do %>
+  <div>
+    <%= form_with url: settings_appearance_path, method: :patch,
+          class: "p-3",
+          data: { controller: "auto-submit-form" } do |f| %>
+      <div class="flex cursor-pointer items-center gap-4 justify-between">
+        <div class="text-sm space-y-1">
+          <h4 class="text-primary"><%= t(".disable_modal_click_outside_title") %></h4>
+          <p class="text-secondary"><%= t(".disable_modal_click_outside_description") %></p>
+        </div>
+        <%= render DS::Toggle.new(
+              id: "user_disable_modal_click_outside",
+              name: "user[disable_modal_click_outside]",
+              checked: @user.disable_modal_click_outside?,
               data: { auto_submit_form_target: "auto" }
         ) %>
       </div>
@@ -56,7 +100,7 @@
           data: { controller: "auto-submit-form" } do |f| %>
       <div class="flex cursor-pointer items-center gap-4 justify-between">
         <div class="text-sm space-y-1">
-          <h4 class="text-primary"><%= t(".split_grouped_title") %></h4>
+          <p class="text-primary font-medium"><%= t(".split_grouped_title") %></p>
           <p class="text-secondary"><%= t(".split_grouped_description") %></p>
         </div>
         <%= render DS::Toggle.new(

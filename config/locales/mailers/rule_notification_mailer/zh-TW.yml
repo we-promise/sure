@@ -1,0 +1,16 @@
+---
+zh-TW:
+  rule_notification_mailer:
+    digest:
+      subject:
+        one: 有 1 筆新交易符合您在 %{product_name} 的規則
+        other: 有 %{count} 筆新交易符合您在 %{product_name} 的規則
+      heading:
+        one: 有 1 筆新交易符合您的規則
+        other: 有 %{count} 筆新交易符合您的規則
+      intro: 以下交易符合規則「%{rule}」：
+      date: 日期
+      name: 名稱
+      account: 帳戶
+      amount: 金額
+      cta: 查看交易

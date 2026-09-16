@@ -1,7 +1,7 @@
 <span id="category_name_mobile_<%= transaction.id %>" class="text-secondary lg:hidden min-w-0 truncate">
   <% if transaction.transfer&.categorizable? || transaction.transfer.nil? %>
-    <%= transaction.category&.name || Category.uncategorized.name %>
+    <%= transaction.category&.display_name || Category.uncategorized.display_name %>
   <% else %>
-    <%= transaction.transfer&.payment? ? payment_category.name :  transfer_category.name %>
+    <%= transaction.transfer&.payment? ? payment_category.display_name :  transfer_category.display_name %>
   <% end %>
 </span>

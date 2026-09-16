@@ -1,6 +1,31 @@
 ---
 es:
   valuations:
+    confirmation_contents:
+      this_will: Esto %{action_verb} el valor de la cuenta el
+      to_colon: 'a:'
+      total_account_value: Valor total de la cuenta
+      holdings_value: Valor de las posiciones
+      brokerage_cash: Efectivo del bróker
+      account_balance: el saldo de la cuenta
+      credit_card_balance: el saldo de la tarjeta de crédito
+      loan_balance: el saldo del préstamo
+      property_value: el valor de la propiedad
+      vehicle_value: el valor del vehículo
+      crypto_balance: el saldo de criptomonedas
+      asset_value: el valor del activo
+      liability_balance: el saldo del pasivo
+      balance: el saldo
+      'on': el
+      to: a
+      recalculate_notice: Todas las transacciones y saldos futuros se recalcularán en función de este %{change_or_update}.
+      change: cambio
+      update: actualización
+    create:
+      account_updated: Cuenta actualizada
+    update:
+      account_updated: Cuenta actualizada
+      entry_updated: Registro actualizado
     errors:
       amount_required: El importe es obligatorio
     form:
@@ -19,6 +44,7 @@ es:
       title: Nuevo saldo
     show:
       amount: Importe
+      amount_label: Valor de la cuenta en la fecha
       date_label: Fecha
       delete: Eliminar
       delete_subtitle: Esta acción no se puede deshacer
@@ -31,3 +57,4 @@ es:
       overview: Resumen
       settings: Configuración
       opening_balance: Saldo inicial
+      update_value: Actualizar valor

@@ -1,0 +1,8 @@
+---
+it:
+  invitation_mailer:
+    invite_email:
+      accept_button: Accetta invito
+      body: "%{inviter} ti ha invitato a unirti alla %{family} %{moniker} su %{product_name}!"
+      expiry_notice: Questo invito scadrà tra %{days} giorni
+      greeting: Benvenuto su %{product_name}!

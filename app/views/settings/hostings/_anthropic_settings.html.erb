@@ -1,0 +1,53 @@
+<div class="space-y-4">
+  <div>
+    <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+    <% if ENV["ANTHROPIC_ACCESS_TOKEN"].present? || ENV["ANTHROPIC_API_KEY"].present? %>
+      <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+    <% else %>
+      <p class="text-secondary text-sm mb-4"><%= t(".description") %></p>
+    <% end %>
+  </div>
+
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       class: "space-y-4",
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "blur"
+                       } do |form| %>
+    <%= form.password_field :anthropic_access_token,
+                            label: t(".access_token_label"),
+                            placeholder: t(".access_token_placeholder"),
+                            value: (Setting.anthropic_access_token.present? ? "********" : nil),
+                            autocomplete: "off",
+                            autocapitalize: "none",
+                            spellcheck: "false",
+                            inputmode: "text",
+                            disabled: ENV["ANTHROPIC_ACCESS_TOKEN"].present? || ENV["ANTHROPIC_API_KEY"].present?,
+                            data: { "auto-submit-form-target": "auto" } %>
+
+    <%= form.text_field :anthropic_base_url,
+                        label: t(".base_url_label"),
+                        placeholder: t(".base_url_placeholder"),
+                        value: @anthropic_base_url_input || Setting.anthropic_base_url,
+                        autocomplete: "off",
+                        autocapitalize: "none",
+                        spellcheck: "false",
+                        inputmode: "url",
+                        disabled: ENV["ANTHROPIC_BASE_URL"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+
+    <%= form.text_field :anthropic_model,
+                        label: t(".model_label"),
+                        placeholder: t(".model_placeholder"),
+                        value: @anthropic_model_input || Setting.anthropic_model,
+                        autocomplete: "off",
+                        autocapitalize: "none",
+                        spellcheck: "false",
+                        inputmode: "text",
+                        disabled: ENV["ANTHROPIC_MODEL"].present?,
+                        data: { "auto-submit-form-target": "auto" } %>
+    <p class="text-xs text-secondary mt-1"><%= t(".model_help") %></p>
+  <% end %>
+</div>

@@ -88,6 +88,29 @@ module LedgerTestingHelper
           currency: currency,
           entryable: trade
         )
+      when "income_trade"
+        security = Security.find_or_create_by!(ticker: entry_data[:ticker]) do |s|
+          s.name = entry_data[:ticker]
+        end
+
+        currency = entry_data[:currency] || created_account.currency
+
+        trade = Trade.new(
+          qty: 0,
+          security: security,
+          price: 0,
+          fee: 0,
+          currency: currency,
+          investment_activity_label: entry_data[:label] || "Interest"
+        )
+
+        created_account.entries.create!(
+          name: "#{entry_data[:label] || 'Interest'}: #{entry_data[:ticker]}",
+          date: entry_data[:date],
+          amount: -(entry_data[:amount].to_d),
+          currency: currency,
+          entryable: trade
+        )
       end
     end
 

@@ -5,14 +5,25 @@ tr:
       success: Hesap başarıyla bağlandı. Lütfen hesapların senkronize olmasını bekleyin.
     destroy:
       success: Hesaplar silinmek üzere sıraya alındı.
+    errors:
+      link_token_generic: Şu anda Plaid açılamadı. Lütfen tekrar deneyin, sorun devam
+        ederse ayrıntılar için sunucu günlüklerini kontrol edin.
+      link_token_with_message: 'Plaid bağlantıyı açamadı: %{message}'
+    link_existing_account:
+      already_linked: Bu Plaid hesabı zaten bağlı
+      invalid_account: Geçersiz Plaid hesabı seçildi
+      success: Hesap başarıyla Plaid'e bağlandı
     plaid_item:
       add_new: Yeni bağlantı ekle
       confirm_accept: Kurumu sil
-      confirm_body: Bu işlem, bu gruptaki tüm hesapları ve ilişkili tüm verileri kalıcı olarak silecektir.
+      confirm_body: Bu işlem, bu gruptaki tüm hesapları ve ilişkili tüm verileri kalıcı
+        olarak silecektir.
       confirm_title: Kurum silinsin mi?
       connection_lost: Bağlantı kayboldu
-      connection_lost_description: Bu bağlantı artık geçerli değil. Verileri senkronize etmeye devam etmek için bu bağlantıyı silip tekrar eklemeniz gerekecek.
+      connection_lost_description: Bu bağlantı artık geçerli değil. Verileri senkronize
+        etmeye devam etmek için bu bağlantıyı silip tekrar eklemeniz gerekecek.
       delete: Sil
+      deletion_in_progress: "(silme işlemi devam ediyor...)"
       error: Veriler senkronize edilirken bir hata oluştu
       no_accounts_description: Bu finansal kurumdan herhangi bir hesap yüklenemedi.
       no_accounts_title: Hesap bulunamadı
@@ -21,3 +32,10 @@ tr:
       status_never: Veri senkronizasyonu gerekli
       syncing: Senkronize ediliyor...
       update: Bağlantıyı güncelle
+    select_existing_account:
+      cancel: İptal
+      description: Mevcut hesabınıza bağlamak için bir Plaid hesabı seçin
+      link_account: Hesabı bağla
+      no_available_accounts: Bağlanacak uygun Plaid hesabı yok. Lütfen önce yeni bir
+        Plaid hesabı bağlayın.
+      title: "%{account_name} hesabını Plaid'e bağla"

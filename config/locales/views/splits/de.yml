@@ -3,7 +3,7 @@ de:
   splits:
     new:
       title: Transaktion aufteilen
-      description: Teilen Sie diese Transaktion in mehrere Einträge mit unterschiedlichen Kategorien und Beträgen auf.
+      description: Teil diese Transaktion in mehrere Einträge mit eigenen Kategorien und Beträgen auf.
       submit: Transaktion aufteilen
       cancel: Abbrechen
       add_row: Aufteilung hinzufügen
@@ -28,14 +28,14 @@ de:
       title: Aufgeteilte Einträge
       description: Diese Transaktion wurde in die folgenden Einträge aufgeteilt.
       button_title: Transaktion aufteilen
-      button_description: Teilen Sie diese Transaktion in mehrere Einträge mit unterschiedlichen Kategorien und Beträgen auf.
+      button_description: Teil diese Transaktion in mehrere Einträge mit eigenen Kategorien und Beträgen auf.
       button: Aufteilen
       unsplit_title: Aufteilung aufheben
       unsplit_button: Aufteilung aufheben
       unsplit_confirm: Dadurch werden alle aufgeteilten Einträge entfernt und die ursprüngliche Transaktion wiederhergestellt.
     edit:
       title: Aufteilung bearbeiten
-      description: Bearbeiten Sie die aufgeteilten Einträge für diese Transaktion.
+      description: Bearbeite die aufgeteilten Einträge dieser Transaktion.
       submit: Aufteilung aktualisieren
       not_split: Diese Transaktion ist nicht aufgeteilt.
     update:

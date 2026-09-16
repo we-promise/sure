@@ -2,20 +2,20 @@
 de:
   enable_banking_items:
     authorize:
-      authorization_failed: Autorisierung konnte nicht gestartet werden
-      bank_required: Bitte wählen Sie eine Bank.
-      invalid_redirect: Die erhaltene Autorisierungs-URL ist ungültig. Bitte versuchen Sie es erneut.
-      redirect_uri_not_allowed: Weiterleitung nicht erlaubt. Konfigurieren Sie %{callback_url} in den Enable-Banking-App-Einstellungen.
-      unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.
+      authorization_failed: 'Die Freigabe ist fehlgeschlagen: %{message}'
+      bank_required: Wähl eine Bank.
+      invalid_redirect: Die erhaltene Autorisierungs-URL ist ungültig. Versuch es noch einmal.
+      redirect_uri_not_allowed: Weiterleitung nicht erlaubt. Trag %{callback_url} in den Einstellungen deiner Enable-Banking-App ein.
+      unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Versuch es noch einmal.
     callback:
       authorization_error: Autorisierung fehlgeschlagen
       invalid_callback: Ungültige Callback-Parameter.
       item_not_found: Verbindung nicht gefunden.
       session_failed: Autorisierung konnte nicht abgeschlossen werden
-      success: Erfolgreich mit Ihrer Bank verbunden. Ihre Konten werden synchronisiert.
-      unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.
+      success: Mit deiner Bank verbunden. Deine Konten werden abgeglichen.
+      unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Versuch es noch einmal.
     complete_account_setup:
-      all_skipped: Alle Konten wurden übersprungen. Sie können sie später auf der Konten-Seite einrichten.
+      all_skipped: Alle Konten wurden übersprungen. Du kannst sie später auf der Konten-Seite einrichten.
       no_accounts: Keine Konten zum Einrichten verfügbar.
       success: "%{count} Konten wurden erfolgreich angelegt!"
     create:
@@ -26,7 +26,7 @@ de:
       already_linked: Die ausgewählten Konten sind bereits verknüpft.
       link_failed: Konten konnten nicht verknüpft werden
       no_accounts_selected: Keine Konten ausgewählt.
-      no_session: Keine aktive Enable-Banking-Verbindung. Bitte verbinden Sie zuerst eine Bank.
+      no_session: Keine aktive Enable-Banking-Verbindung. Bitte verbinde zuerst eine Bank.
       success: "%{count} Konten wurden erfolgreich verknüpft."
     link_existing_account:
       success: Konto erfolgreich mit Enable-Banking verknüpft
@@ -35,15 +35,82 @@ de:
         invalid_enable_banking_account: Ungültiges Enable-Banking-Konto ausgewählt
     new:
       link_enable_banking_title: Enable-Banking verknüpfen
+      add_connection: Verbindung hinzufügen
+      configured: Eingerichtet
+      connect_bank: Bank verbinden
+      connected_bank: Verbundene Bank
+      connection: Verbindung
+      go_to_provider_settings: Zu den Anbietereinstellungen
+      not_configured: Enable-Banking-Verbindung nicht eingerichtet
+      not_configured_description: Bevor du Enable-Banking-Konten verknüpfen kannst, musst du deine Enable-Banking-Verbindung einrichten.
+      ready_to_connect: Bereit, eine Bank zu verbinden
+      reconnect: Neu verbinden
+      remove: Entfernen
+      remove_confirm: Diese Verbindung wirklich entfernen?
+      session_expired: Sitzung abgelaufen – erneute Freigabe nötig
+      session_expires: Sitzung läuft ab
+      setup_step_1_html: Geh zu <strong>Einstellungen → Anbieter</strong>
+      setup_step_2_html: Such den Abschnitt <strong>Enable Banking</strong>
+      setup_step_3: Trag deine Enable-Banking-Zugangsdaten ein
+      setup_step_4: Komm hierher zurück, um deine Konten zu verknüpfen
+      setup_steps_title: 'So richtest du es ein:'
+      sync: Sync
+      unknown: Unbekannt
     reauthorize:
-      invalid_redirect: Die erhaltene Autorisierungs-URL ist ungültig. Bitte versuchen Sie es erneut.
+      invalid_redirect: Die erhaltene Autorisierungs-URL ist ungültig. Versuch es noch einmal.
       reauthorization_failed: Erneute Autorisierung fehlgeschlagen
     select_bank:
       cancel: Abbrechen
-      check_country: Bitte prüfen Sie Ihre Ländereinstellungen.
-      credentials_required: Bitte konfigurieren Sie zuerst Ihre Enable-Banking-Zugangsdaten.
-      description: Wählen Sie die Bank, die Sie mit Ihren Konten verbinden möchten.
-      no_banks: Für diese Region/Land sind keine Banken verfügbar.
-      title: Wählen Sie Ihre Bank
+      check_country: Prüf deine Ländereinstellungen.
+      credentials_required: Richte zuerst deine Enable-Banking-Zugangsdaten ein.
+      description: Wähl die Bank, die du mit deinen Konten verbinden willst.
+      no_banks: Für diese Region oder dieses Land sind keine Banken verfügbar.
+      title: Wähl deine Bank
+      beta_label: Beta
+      no_search_results: Keine Bank passt zu deiner Suche.
+      search_label: Bank suchen
+      search_placeholder: Bank suchen …
     update:
       success: Enable-Banking-Konfiguration aktualisiert.
+    enable_banking_item:
+      delete: Löschen
+      deletion_in_progress: Wird gelöscht
+      last_synced: Sync vor %{time}
+      never_synced: Noch nie synchronisiert
+      no_accounts_found: Keine Konten gefunden
+      no_accounts_found_description: Über Enable Banking wurden keine Konten gefunden. Versuch den Sync noch einmal.
+      provider_name: Enable Banking
+      reconnect: Neu verbinden
+      set_up_accounts: Konten einrichten
+      setup_needed: Einrichtung nötig
+      setup_needed_description:
+        one: 1 aus Enable Banking importiertes Konto muss noch eingerichtet werden
+        other: "%{count} aus Enable Banking importierte Konten müssen noch eingerichtet werden"
+      syncing: Sync läuft …
+      update: Aktualisieren
+    errors:
+      api_error: Bei der Kommunikation mit der Bank ist ein Fehler aufgetreten.
+      network_unreachable: Der Bankdienst ist vorübergehend nicht erreichbar. Versuch es später noch einmal.
+      session_invalid: Sitzung abgelaufen. Verbinde deine Bank neu.
+      unexpected: Beim Abgleich ist ein unerwarteter Fehler aufgetreten.
+    select_existing_account:
+      all_linked: Es sieht so aus, als wären bereits alle Enable-Banking-Konten verknüpft.
+      balance: Saldo
+      cancel: Abbrechen
+      link: Verknüpfen
+      title: Enable-Banking-Konto verknüpfen
+      try_after_sync: Wenn du gerade verbunden oder synchronisiert hast, versuch es nach dem Sync noch einmal.
+      unlink_to_move: Um ein anderes Konto zu verknüpfen, löse die bestehende Verknüpfung zuerst über das Aktionsmenü des Kontos.
+    setup_accounts:
+      account_type_label: 'Kontoart:'
+      balance: Saldo
+      cancel: Abbrechen
+      choose_account_type: 'Wähl für jedes Enable-Banking-Konto die passende Kontoart:'
+      create_accounts: Konten anlegen
+      creating_accounts: Konten werden angelegt …
+      header_subtitle: Wähl die passende Kontoart für deine importierten Konten
+      historical_data_range: 'Zeitraum der Historie:'
+      psd2_savings_notice: 'Hinweis: Einige regulierte französische Sparkonten (Livret A, PEL, LEP, LDDS) sind über Open Banking (PSD2) nur eingeschränkt oder gar nicht verfügbar. Wenn ein Sparkonto fehlt, kannst du es manuell hinzufügen.'
+      sync_start_date_help: Wähl, wie weit zurück die Transaktionshistorie geholt werden soll. Verfügbar sind maximal 2 Jahre.
+      sync_start_date_label: 'Transaktionen synchronisieren ab:'
+      title: Enable-Banking-Konten einrichten

@@ -14,6 +14,38 @@ class TransferTest < ActiveSupport::TestCase
     end
   end
 
+  test "destroy! clears the idempotency key so a retried request can create a new transfer" do
+    idempotency_key = SecureRandom.uuid
+
+    transfer = Transfer::Creator.new(
+      family: families(:dylan_family),
+      source_account_id: accounts(:depository).id,
+      destination_account_id: accounts(:credit_card).id,
+      date: Date.current,
+      amount: 100,
+      idempotency_key: idempotency_key
+    ).create
+
+    transfer.destroy!
+
+    assert_nil transfer.outflow_transaction.entry.reload.idempotency_key
+    assert_nil transfer.inflow_transaction.entry.reload.idempotency_key
+
+    # A retry of the original create request (e.g. the user resubmits after
+    # rejecting/undoing the first transfer) must not find a stale entry with
+    # this key and raise RecordNotUnique - it should create a fresh transfer.
+    assert_difference "Transfer.count", 1 do
+      Transfer::Creator.new(
+        family: families(:dylan_family),
+        source_account_id: accounts(:depository).id,
+        destination_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100,
+        idempotency_key: idempotency_key
+      ).create
+    end
+  end
+
   test "transfer has different accounts, opposing amounts, and within 4 days of each other" do
     outflow_entry = create_transaction(date: 1.day.ago.to_date, account: accounts(:depository), amount: 500)
     inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
@@ -123,5 +155,34 @@ class TransferTest < ActiveSupport::TestCase
 
   test "kind_for_account returns funds_movement for depository accounts" do
     assert_equal "funds_movement", Transfer.kind_for_account(accounts(:depository))
+  end
+
+  test "has_source_fee? returns true when source fee present" do
+    transfer = transfers(:one)
+    entry = accounts(:depository).entries.create!(name: "Fee", date: Date.current, amount: 5, currency: "USD", entryable: Transaction.new(kind: "standard"))
+    transfer.fee_transactions << entry.entryable
+    assert transfer.has_source_fee?
+    assert transfer.has_fees?
+  end
+
+  test "has_destination_fee? returns true when destination fee present" do
+    transfer = transfers(:one)
+    entry = accounts(:credit_card).entries.create!(name: "Fee", date: Date.current, amount: 5, currency: "USD", entryable: Transaction.new(kind: "standard"))
+    transfer.fee_transactions << entry.entryable
+    assert transfer.has_destination_fee?
+    assert transfer.has_fees?
+  end
+
+  test "has_fees? returns false when no fees" do
+    transfer = transfers(:one)
+    refute transfer.has_fees?
+  end
+
+  test "total_fee sums source and destination fees" do
+    transfer = transfers(:one)
+    entry1 = accounts(:depository).entries.create!(name: "Fee", date: Date.current, amount: 3, currency: "USD", entryable: Transaction.new(kind: "standard"))
+    entry2 = accounts(:credit_card).entries.create!(name: "Fee", date: Date.current, amount: 2, currency: "USD", entryable: Transaction.new(kind: "standard"))
+    transfer.fee_transactions << entry1.entryable << entry2.entryable
+    assert_equal 5, transfer.total_fee
   end
 end

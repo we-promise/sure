@@ -1,0 +1,112 @@
+<%# The month as one surface rather than a row of statistics.
+
+    It used to be a big number, two small ones, and a ring reading 0% -- a
+    generic KPI card that answered "how far along am I" (which nobody asked)
+    more loudly than "what do I owe" (which everybody does).
+
+    It now reads as one sentence: this month, this much left, this much late,
+    this much due soon, and here is what happens next. %>
+
+<%# Slice math lives with BillsHelper#bills_month_progress: the bar reads
+    paid | overdue | still to come, overdue being a subset of what remains. %>
+<% progress = bills_month_progress(
+     paid: @paid_this_month_total&.amount,
+     remaining: @remaining_this_month&.amount,
+     overdue: @past_due_total&.amount
+   ) %>
+
+<div class="bg-container rounded-xl shadow-border-xs p-5 space-y-4">
+  <div class="flex items-baseline justify-between gap-3">
+    <p class="text-xs font-medium uppercase tracking-wide text-secondary"><%= l(Date.current, format: "%B") %></p>
+    <p class="text-xs text-secondary"><%= t(".bill_count", count: @month_bill_count) %></p>
+  </div>
+
+  <%# The one figure the page exists to state. %>
+  <div>
+    <p class="text-3xl font-medium text-primary privacy-sensitive leading-tight">
+      <%= @remaining_this_month ? format_money(@remaining_this_month) : "–" %>
+    </p>
+    <p class="text-sm text-secondary"><%= t(".left_to_pay") %></p>
+  </div>
+
+  <%# Supporting, not competing: one line of three, each a figure and a word. %>
+  <div class="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+    <p>
+      <span class="font-medium text-primary privacy-sensitive"><%= format_money(@paid_this_month_total || Money.new(0, Current.family.currency)) %></span>
+      <span class="text-secondary"><%= t(".pulse_paid") %></span>
+    </p>
+    <% if @past_due_total && @past_due_total.amount.positive? %>
+      <p class="text-destructive">
+        <span class="font-medium privacy-sensitive"><%= format_money(@past_due_total) %></span>
+        <%= t(".pulse_overdue") %>
+      </p>
+    <% end %>
+    <% if @due_next_seven && @due_next_seven.amount.positive? %>
+      <p>
+        <span class="font-medium text-primary privacy-sensitive"><%= format_money(@due_next_seven) %></span>
+        <span class="text-secondary"><%= t(".pulse_next_seven") %></span>
+      </p>
+    <% end %>
+  </div>
+
+  <%# Progress reports, it does not prompt: a 6px rule, not a centrepiece. %>
+  <% if progress[:total].positive? %>
+    <div class="flex h-1.5 rounded-full overflow-hidden bg-surface-inset"
+         role="img"
+         aria-label="<%= t(".pulse_bar_aria", percent: progress[:paid_pct].round) %>">
+      <% if progress[:paid_pct].positive? %>
+        <div class="bg-success" style="width: <%= progress[:paid_pct].round(2) %>%"></div>
+      <% end %>
+      <% if progress[:overdue_pct].positive? %>
+        <div class="bg-destructive" style="width: <%= progress[:overdue_pct].round(2) %>%"></div>
+      <% end %>
+      <% if progress[:upcoming_pct].positive? %>
+        <div class="bg-secondary opacity-30" style="width: <%= progress[:upcoming_pct].round(2) %>%"></div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if @unconvertible_count.positive? %>
+    <p class="text-xs text-warning"><%= t(".unconvertible", count: @unconvertible_count) %></p>
+  <% end %>
+
+  <%# What happens next, which is what makes this header operational rather
+      than statistical. Items open the bill's page: the row expansion belongs
+      to a row, and expanding one further down the page while you are reading
+      the top of it would be a jump with no explanation. %>
+  <% if @next_up.any? %>
+    <div class="pt-3 border-t border-subdued space-y-2">
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-xs font-medium uppercase tracking-wide text-secondary"><%= t(".next_up") %></p>
+        <%= link_to t(".view_upcoming"), bills_path(view: "calendar"),
+              class: "text-xs text-link hover:underline shrink-0" %>
+      </div>
+
+      <%# A horizontal strip where there is room, a scrollable one where there
+          is not. Four columns at 375px would be four unreadable slivers. %>
+      <div class="flex gap-2 overflow-x-auto no-scrollbar sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-4">
+        <% @next_up.each do |occurrence| %>
+          <% series = occurrence.recurring_transaction %>
+          <%= link_to bill_path(series),
+                class: "shrink-0 w-36 sm:w-auto rounded-lg px-2 py-1.5 -mx-2 hover:bg-surface-hover group" do %>
+            <p class="text-xs text-secondary truncate">
+              <%= bills_next_up_date(occurrence) %>
+              <% if series.autopay? %>
+                &middot; <%= t("recurring_transactions.pay_action.autopay") %>
+              <% end %>
+            </p>
+            <p class="text-sm text-primary truncate group-hover:underline"><%= series.display_name %></p>
+            <p class="text-sm font-medium text-primary privacy-sensitive">
+              <% if occurrence.partially_paid? %>
+                <%= format_money(occurrence.remaining_amount_money) %>
+                <span class="text-xs font-normal text-secondary"><%= t("bills.remaining_label") %></span>
+              <% else %>
+                <%= "~" if occurrence_amount_estimated?(occurrence) %><%= format_money(occurrence.resolved_expected_amount_money) %>
+              <% end %>
+            </p>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

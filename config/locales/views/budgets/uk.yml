@@ -1,0 +1,98 @@
+---
+uk:
+  budgets:
+    budget_donut:
+      spent: "Витрачено"
+      new_budget: "Новий бюджет"
+      of_budget: "з %{amount}"
+      unused: "Невикористано"
+    budget_header:
+      today: "Сьогодні"
+    budget_nav:
+      categories: "Категорії"
+      setup: "Налаштування"
+    over_allocation_warning:
+      over_allocated_message: "Ви перевищили свій бюджет. Будь ласка, виправте свої асигнування."
+      fix_allocations: "Виправити асигнування"
+    actuals_summary:
+      income: "Дохід"
+      expenses: "Витрати"
+    budgeted_summary:
+      expected_income: "Очікуваний дохід"
+      budgeted: "Заплановано"
+      earned: "%{amount} зароблено"
+      over: "%{amount} понад"
+      left: "%{amount} залишилось"
+      spent: "%{amount} витрачено"
+    edit:
+      setup_title: "Налаштуйте свій бюджет"
+      setup_description: "Введіть свої щомісячні доходи та заплановані витрати нижче, щоб налаштувати свій бюджет."
+      budgeted_spending: "Заплановані витрати"
+      expected_income: "Очікуваний дохід"
+      autosuggest_title: "Автоматично запропонувати бюджет доходів і витрат"
+      autosuggest_description: "Це буде базуватися на історії транзакцій. ШІ може робити помилки, перевірте перед продовженням."
+      continue: "Продовжити"
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    show:
+      categories:
+        amount: "Сума"
+        edit: "Редагувати"
+        title: "Категорії"
+      on_track_categories:
+        short_title: "За планом"
+        title: "За планом"
+      over_budget_categories:
+        short_title: "Понад бюджет"
+        title: "Понад бюджет"
+      filter:
+        all: "Всі"
+        aria_label: "Фільтрувати категорії бюджету"
+        on_track: "За планом"
+        over_budget: "Понад бюджет"
+      tabs:
+        actual: "Фактичний"
+        budgeted: "Запланований"
+    copy_previous_prompt:
+      title: "Налаштуйте свій бюджет"
+      description: "Ви можете скопіювати свій бюджет з %{source_name} або почати з нуля."
+      copy_button: "Копіювати з %{source_name}"
+      fresh_button: "Почати з нуля"
+    copy_previous:
+      success: "Бюджет скопійовано з %{source_name}"
+      no_source: "Не знайдено попереднього бюджету для копіювання"
+      already_initialized: "Цей бюджет уже налаштовано"
+  budget_categories:
+    allocation_progress:
+      budget_exceeded_html: 'Бюджет перевищено на <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      left_to_allocate: "залишилося розподілити"
+      over_set: "> 100% встановлено"
+      percent_set: "%{percent} встановлено"
+    budget_category_form:
+      monthly_average: "%{amount}/міс. сер."
+      shared_placeholder: "Спільний"
+      shared_title: "Залиште порожнім, щоб використовувати бюджет батьківської категорії"
+    confirm_button:
+      confirm: "Підтвердити"
+    no_categories:
+      oops: "Ой!"
+      no_categories_message: "Ви ще не створили або не призначили жодних категорій витрат для своїх транзакцій."
+      use_defaults: "Використовувати за замовчуванням (рекомендовано)"
+      new_category: "Нова категорія"
+    index:
+      title: "Редагуйте бюджети категорій"
+      description: "Налаштуйте бюджети категорій, щоб встановити ліміти витрат. Нерозподілені кошти будуть автоматично віднесені до категорії 'Без категорії'."
+    show:
+      category: "Категорія"
+      overview: "Огляд"
+      spending: "Витрати за %{date}"
+      status: "Статус"
+      overspent: "перевитрачено"
+      left: "залишилося"
+      budgeted: "Заплановано"
+      monthly_average_spending: "Середньомісячні витрати"
+      monthly_median_spending: "Медіанні щомісячні витрати"
+      recent_transactions: "Останні транзакції"
+      view_all_transactions: "Переглянути всі транзакції категорії"
+      no_transactions: "За цей бюджетний період транзакцій не знайдено."

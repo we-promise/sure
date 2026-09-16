@@ -134,6 +134,45 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert existing_user.ai_enabled?
   end
 
+  test "re-inviting an email whose prior invitation expired succeeds instead of 500ing" do
+    email = "expired-reinvite-ctrl@example.com"
+    expired = @admin.family.invitations.create!(email: email, role: "member", inviter: @admin)
+    expired.update_column(:expires_at, 1.day.ago)
+
+    post invitations_url, params: {
+      invitation: {
+        email: email,
+        role: "member"
+      }
+    }
+
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.create.success"), flash[:notice]
+    assert_not Invitation.exists?(expired.id), "stale expired invitation should be replaced"
+
+    new_invitation = @admin.family.invitations.find_by(email: email)
+    assert new_invitation.present?
+    assert new_invitation.pending?
+  end
+
+  test "raced unique-index violation on save is handled as a failure, not a 500" do
+    # Simulate a concurrent double-submit that slips past the pending-invite
+    # validation and hits the partial unique index at INSERT time.
+    Invitation.any_instance.stubs(:save).raises(ActiveRecord::RecordNotUnique)
+
+    assert_no_difference("Invitation.count") do
+      post invitations_url, params: {
+        invitation: {
+          email: "raced@example.com",
+          role: "member"
+        }
+      }
+    end
+
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.create.failure"), flash[:alert]
+  end
+
   test "should handle invalid invitation creation" do
     assert_no_difference("Invitation.count") do
       post invitations_url, params: {

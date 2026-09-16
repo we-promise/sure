@@ -150,4 +150,111 @@ class ChatTest < ActiveSupport::TestCase
     assert_equal I18n.t("chat.errors.rate_limited"), chat.presentable_error_message
     assert_equal "OpenAI API error 429: rate limit exceeded", chat.technical_error_message
   end
+
+  test "handle_undelivered_response! clears a blank pending bubble and records an error + debug log" do
+    BackgroundJobHealth.stubs(:snapshot).returns({ healthy: false, workers: 0 })
+    BackgroundJobHealth.stubs(:summary).returns("workers=0")
+
+    chat = chats(:two)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+
+    assert_difference -> { DebugLogEntry.count } => 1, -> { Message.count } => -1 do
+      assert chat.handle_undelivered_response!(pending)
+    end
+
+    assert_not Message.exists?(pending.id)
+    assert_equal I18n.t("chat.errors.no_response"), chat.reload.presentable_error_message
+  end
+
+  test "handle_undelivered_response! demotes a partially-streamed pending bubble to failed" do
+    BackgroundJobHealth.stubs(:snapshot).returns({})
+    BackgroundJobHealth.stubs(:summary).returns("")
+
+    chat = chats(:two)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "partial answer", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+
+    assert_no_difference -> { Message.count } do
+      assert chat.handle_undelivered_response!(pending)
+    end
+
+    assert_equal "failed", pending.reload.status
+  end
+
+  test "handle_undelivered_response! ignores a pending bubble younger than the server timeout" do
+    chat = chats(:two)
+    fresh = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.seconds.ago)
+
+    assert_no_difference [ "DebugLogEntry.count", "Message.count" ] do
+      assert_not chat.handle_undelivered_response!(fresh)
+    end
+
+    assert fresh.reload.pending?
+  end
+
+  test "handle_undelivered_response! is a no-op for non-pending messages" do
+    chat = chats(:one)
+    complete = chat.messages.create!(type: "AssistantMessage", content: "done", ai_model: "gpt-4.1", status: :complete)
+
+    assert_no_difference [ "DebugLogEntry.count", "Message.count" ] do
+      assert_not chat.handle_undelivered_response!(complete)
+    end
+  end
+
+  # `Chat.response_timeout` reads ENV ahead of Setting, so every assertion about
+  # the Setting, the default or the floor has to clear AI_RESPONSE_TIMEOUT first —
+  # otherwise an environment that happens to define it silently decides the result.
+  def with_setting_timeout(value)
+    Setting.stubs(:ai_response_timeout).returns(value)
+    with_env_overrides("AI_RESPONSE_TIMEOUT" => nil) { yield }
+  end
+
+  test "response_timeout falls back to the default when unconfigured" do
+    with_setting_timeout(nil) do
+      assert_equal Chat::DEFAULT_RESPONSE_TIMEOUT, Chat.response_timeout
+    end
+  end
+
+  test "response_timeout prefers ENV over Setting" do
+    with_setting_timeout(120) do
+      assert_equal 120.seconds, Chat.response_timeout
+    end
+
+    Setting.stubs(:ai_response_timeout).returns(120)
+    with_env_overrides("AI_RESPONSE_TIMEOUT" => "300") do
+      assert_equal 300.seconds, Chat.response_timeout
+    end
+  end
+
+  test "response_timeout ignores non-positive values and enforces a floor" do
+    with_setting_timeout(0) do
+      assert_equal Chat::DEFAULT_RESPONSE_TIMEOUT, Chat.response_timeout
+    end
+
+    with_setting_timeout(5) do
+      assert_equal Chat::MIN_RESPONSE_TIMEOUT, Chat.response_timeout
+    end
+  end
+
+  # An early report is refused by the server, and `report_timeout` answers 409 so
+  # the watchdog retries. The grace window keeps those retries rare for a client
+  # whose clock is modestly ahead.
+  test "undelivered_response_timeout stays below the client timeout" do
+    with_setting_timeout(300) do
+      assert_equal 290.seconds, Chat.undelivered_response_timeout
+      assert Chat.undelivered_response_timeout < Chat.response_timeout
+    end
+  end
+
+  test "handle_undelivered_response! respects a raised timeout" do
+    chat = chats(:two)
+    pending = chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+
+    with_setting_timeout(600) do
+      assert_no_difference [ "DebugLogEntry.count", "Message.count" ] do
+        assert_not chat.handle_undelivered_response!(pending)
+      end
+    end
+
+    assert pending.reload.pending?
+  end
 end

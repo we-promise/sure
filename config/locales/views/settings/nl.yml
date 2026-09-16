@@ -43,6 +43,12 @@ nl:
         theme_system: Systeem
         theme_title: Thema
         timezone: Tijdzone
+    appearances:
+      show:
+        modals_title: Modals
+        modals_subtitle: Gedrag van modals aanpassen
+        disable_modal_click_outside_title: Modals open houden bij klikken buiten
+        disable_modal_click_outside_description: Voorkomt dat modals sluiten bij klikken buiten. Handig om te voorkomen dat niet-opgeslagen wijzigingen per ongeluk verloren gaan.
     profiles:
       destroy:
         cannot_remove_self: U kunt uzelf niet van het account verwijderen.

@@ -137,7 +137,7 @@ class Provider::Akahu
             "Akahu API: #{operation_name} failed (attempt #{retries}/#{max_retries}): " \
             "#{e.class}: #{e.message}. Retrying in #{delay}s..."
           )
-          Kernel.sleep(delay)
+          sleep(delay)
           retry
         end
 

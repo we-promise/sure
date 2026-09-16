@@ -7,6 +7,13 @@ en:
       close: "Close"
   global:
     expand: "Expand"
+  mcp:
+    errors:
+      invalid_session_id: "Invalid MCP session id"
+      unsupported_protocol_version: "Unsupported MCP protocol version: %{version}"
+  oauth:
+    registration:
+      invalid_redirect_uris: "redirect_uris must use https, loopback http, or a native app URI scheme"
   activerecord:
     errors:
       messages:
@@ -51,6 +58,7 @@ en:
       short: "%b %d"
       month_year: "%B %Y"
       short_month_year: "%b %Y"
+      short_with_year: "%b %d, %Y"
     month_names:
     -
     - January

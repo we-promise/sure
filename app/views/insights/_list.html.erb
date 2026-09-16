@@ -1,0 +1,16 @@
+<%# locals: (insights:, unread_ids:) %>
+
+<div id="insights-list" class="space-y-3">
+  <% if insights.any? %>
+    <% insights.each do |insight| %>
+      <%= render "insights/insight_card", insight: insight, unread: unread_ids.include?(insight.id) %>
+    <% end %>
+  <% else %>
+    <%= render DS::EmptyState.new(
+      icon: "icon-assistant",
+      icon_custom: true,
+      title: t("insights.index.empty.title"),
+      description: t("insights.index.empty.description")
+    ) %>
+  <% end %>
+</div>

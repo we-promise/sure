@@ -1,0 +1,327 @@
+---
+ru:
+  brex_items:
+    account_metadata:
+      provider: Brex
+      separator: " • "
+    api_error:
+      common_issues: 'Общие проблемы:'
+      expired_credentials: Создайте новый API токен в Brex.
+      expired_credentials_label: 'Истёкшие учётные данные:'
+      heading: Не удалось подключиться к Brex
+      invalid_token: Проверьте ваш API токен в настройках провайдера.
+      invalid_token_label: 'Неверный API токен:'
+      network: Проверьте ваше интернет-соединение.
+      network_label: 'Проблема с сетью:'
+      permissions: Убедитесь, что ваш токен имеет необходимые права только для чтения
+        счетов и операций.
+      permissions_label: 'Недостаточно прав:'
+      service: API Brex может быть временно недоступен.
+      service_label: 'Сервис недоступен:'
+      settings_link: Проверьте настройки провайдера
+      title: Ошибка подключения Brex
+    brex_item:
+      accounts_need_setup: Счета требуют настройки
+      delete: Удалить подключение
+      deletion_in_progress: удаление в процессе...
+      error: Ошибка
+      no_accounts_description: Это подключение ещё не имеет связанных счетов.
+      no_accounts_title: Нет счетов
+      setup_action: Настроить новые счета
+      setup_description: "%{linked} из %{total} счетов связаны. Выберите типы счетов
+        для ваших новых импортированных счетов Brex."
+      setup_needed: Новые счета готовы к настройке
+      status: Синхронизировано %{timestamp} назад
+      status_never: Никогда не синхронизировалось
+      status_with_summary: Последняя синхронизация %{timestamp} назад - %{summary}
+      syncing: Синхронизация...
+      total: Всего
+      unlinked: Несвязанные
+    complete_account_setup:
+      all_skipped: Все счета были пропущены. Счета не были созданы.
+      creation_failed: 'Не удалось создать счета: %{error}'
+      creation_failed_count: Не удалось создать %{count} счёт(ов).
+      no_accounts: Нет счетов для настройки.
+      partial_skipped: Успешно создано %{created_count} счёт(ов); %{skipped_count}
+        счёт(ов) были пропущены.
+      partial_success: Успешно создано %{created_count} счёт(ов), но %{failed_count}
+        счёт(ов) не удалось создать.
+      success: Успешно создано %{count} счёт(ов).
+      unexpected_error: Произошла непредвиденная ошибка.
+    create:
+      success: Подключение Brex успешно создано
+    default_card_name: Карта Brex
+    default_cash_name: Наличные Brex %{id}
+    default_connection_name: Подключение Brex
+    destroy:
+      success: Подключение Brex удалено
+    entries:
+      default_name: Операция Brex
+    errors:
+      unexpected_error: Произошла непредвиденная ошибка. Пожалуйста, попробуйте позже.
+    index:
+      title: Подключения Brex
+    institution_summary:
+      count:
+        few: "%{count} учреждения"
+        many: "%{count} учреждений"
+        one: "%{count} учреждение"
+        other: "%{count} учреждения"
+      none: Нет подключённых учреждений
+      one: "%{name}"
+    kinds:
+      card: Карта
+      cash: Наличные
+    link_accounts:
+      all_already_linked:
+        few: "%{count} выбранных счёта уже связаны: %{names}"
+        many: "%{count} выбранных счетов уже связаны: %{names}"
+        one: Выбранный счёт (%{names}) уже связан
+        other: "%{count} выбранных счёта уже связаны: %{names}"
+      api_error: 'Ошибка API: %{message}'
+      invalid_account_names:
+        few: Невозможно связать %{count} счёта с пустыми именами
+        many: Невозможно связать %{count} счетов с пустыми именами
+        one: Невозможно связать счёт с пустым именем
+        other: Невозможно связать %{count} счёта с пустыми именами
+      invalid_account_type: Неподдерживаемый тип счёта Brex
+      link_failed: Не удалось связать счета
+      no_accounts_selected: Пожалуйста, выберите хотя бы один счёт
+      no_api_token: API токен Brex не найден. Пожалуйста, настройте его в настройках
+        провайдера.
+      partial_invalid: Успешно связано %{created_count} счёт(ов), %{already_linked_count}
+        счёт(ов) уже были связаны, %{invalid_count} счёт(ов) имели недопустимые имена
+      partial_success: 'Успешно связано %{created_count} счёт(ов). %{already_linked_count}
+        счёт(ов) уже были связаны: %{already_linked_names}'
+      select_connection: Выберите подключение Brex перед связыванием счетов.
+      success:
+        few: Успешно связаны %{count} счёта
+        many: Успешно связано %{count} счетов
+        one: Успешно связан %{count} счёт
+        other: Успешно связаны %{count} счёта
+    link_existing_account:
+      account_already_linked: Этот счёт уже связан с провайдером
+      api_error: 'Ошибка API: %{message}'
+      invalid_account_name: Невозможно связать счёт с пустым именем
+      missing_parameters: Отсутствуют необходимые параметры
+      no_account_specified: Счёт не указан
+      no_api_token: API токен Brex не найден. Пожалуйста, настройте его в настройках
+        провайдера.
+      provider_account_already_linked: Этот счёт Brex уже связан с другим счётом
+      provider_account_not_found: Счёт Brex не найден
+      select_connection: Выберите подключение Brex перед связыванием счетов.
+      success: Успешно связан %{account_name} с Brex
+    loading:
+      loading_message: Загрузка счетов Brex...
+      loading_title: Загрузка
+    provider_connection:
+      default_description: Подключитесь к вашему аккаунту Brex
+      default_name: Brex
+      description: Подключитесь, используя %{name}
+      name: Brex - %{name}
+    provider_panel:
+      accounts_link: Счета
+      add_connection: Добавить подключение Brex
+      base_url_label: Базовый URL (необязательно)
+      base_url_placeholder: https://api.brex.com
+      configured_html: Настроено и готово к использованию. Посетите вкладку %{accounts_link}
+        для управления и настройки счетов.
+      connection_name_label: Имя подключения
+      connection_name_placeholder: Бизнес-счёт
+      default_connection_name: Подключение Brex
+      disconnect_confirm: Отключить %{name}?
+      disconnect_label: Отключить %{name}
+      encryption_warning:
+        message: Настройте ключи шифрования Active Record перед добавлением токенов
+          Brex в продакшн. Без ключей шифрования Sure хранит учётные данные провайдера
+          Brex и снимки в открытом виде, как и другие записи провайдера.
+        title: Шифрование базы данных не настроено
+      instructions:
+        copy_token_html: Скопируйте токен и добавьте его как именованное подключение
+          ниже. Sure хранит токен только для синхронизации этой семьи.
+        create_token: 'Создайте API токен с этими правами только для чтения: accounts.cash.readonly,
+          accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly'
+        open_tokens: Перейдите в настройки разработчика/API токена Brex для компании,
+          которую хотите подключить
+        sign_in_html: Посетите %{link} и войдите в аккаунт, который хотите подключить
+      keep_token_placeholder: Оставьте пустым, чтобы сохранить текущий токен
+      not_configured: Не настроено
+      sandbox_note_html: Используйте отдельное именованное подключение для каждой
+        компании Brex/API токена, который вы хотите синхронизировать. Оставьте базовый
+        URL пустым для продакшн. Стадия ограничена тестированием, одобренным Brex,
+        и не работает с клиентскими токенами.
+      setup_accounts: Настроить счета
+      setup_title: 'Инструкции по настройке:'
+      sync: Синхронизировать
+      token_label: Токен
+      token_placeholder: Вставьте токен здесь
+      update_connection: Обновить подключение
+    select_accounts:
+      accounts_selected: выбрано счетов
+      api_error: 'Ошибка API: %{message}'
+      cancel: Отмена
+      configure_name_in_brex: Невозможно импортировать - пожалуйста, настройте имя
+        счёта в Brex
+      description: Выберите счета, которые вы хотите связать с вашим аккаунтом %{product_name}.
+      link_accounts: Связать выбранные счета
+      no_accounts_found: Счета не найдены. Пожалуйста, проверьте конфигурацию вашего
+        API токена.
+      no_api_token: API токен Brex не найден. Пожалуйста, настройте его в настройках
+        провайдера.
+      no_credentials_configured: Пожалуйста, сначала настройте ваш API токен Brex
+        в настройках провайдера.
+      no_name_placeholder: "(Без имени)"
+      select_connection: Выберите подключение Brex в настройках провайдера.
+      title: Выберите счета Brex
+      unexpected_error: Произошла непредвиденная ошибка. Пожалуйста, попробуйте позже.
+    select_existing_account:
+      account_already_linked: Этот счёт уже связан с провайдером
+      all_accounts_already_linked: Все счета Brex уже связаны
+      api_error: 'Ошибка API: %{message}'
+      cancel: Отмена
+      configure_name_in_brex: Невозможно импортировать - пожалуйста, настройте имя
+        счёта в Brex
+      description: Выберите счёт Brex для связывания с этим счётом. Операции будут
+        синхронизированы и дубли удалены автоматически.
+      link_account: Связать счёт
+      no_account_specified: Счёт не указан
+      no_accounts_found: Счета Brex не найдены. Пожалуйста, проверьте конфигурацию
+        вашего API токена.
+      no_api_token: API токен Brex не найден. Пожалуйста, настройте его в настройках
+        провайдера.
+      no_credentials_configured: Пожалуйста, сначала настройте ваш API токен Brex
+        в настройках провайдера.
+      no_name_placeholder: "(Без имени)"
+      select_connection: Выберите подключение Brex в настройках провайдера.
+      title: Связать %{account_name} с Brex
+      unexpected_error: Произошла непредвиденная ошибка. Пожалуйста, попробуйте позже.
+    setup_accounts:
+      account_type_label: 'Тип счёта:'
+      account_types:
+        credit_card: Кредитная карта
+        depository: Расчётный или сберегательный счёт
+        investment: Инвестиционный счёт
+        loan: Кредит или ипотека
+        other_asset: Другой актив
+        skip: Пропустить этот счёт
+      all_accounts_linked: Все ваши счета Brex уже настроены.
+      api_error: 'Ошибка API: %{message}'
+      balance: Баланс
+      cancel: Отмена
+      choose_account_type: 'Выберите правильный тип счёта для каждого счёта Brex:'
+      create_accounts: Создать счета
+      creating_accounts: Создание счетов...
+      fetch_failed: Не удалось получить счета
+      historical_data_range: 'Диапазон исторических данных:'
+      no_accounts_to_setup: Нет счетов для настройки
+      no_api_token: API токен Brex не найден. Пожалуйста, настройте его в настройках
+        провайдера.
+      subtitle: Выберите правильные типы счетов для ваших импортированных счетов
+      subtype_labels:
+        credit_card: ''
+        depository: 'Подтип счёта:'
+        investment: 'Тип инвестиции:'
+        loan: 'Тип кредита:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Кредитные карты будут автоматически настроены как кредитные счета.
+        other_asset: Дополнительные параметры для других активов не требуются.
+      subtypes:
+        depository:
+          cd: Депозитный сертификат
+          checking: Расчётный
+          hsa: Счёт медицинских сбережений
+          money_market: Денежный рынок
+          savings: Сберегательный
+        investment:
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: План 529
+          angel: Ангельский
+          brokerage: Брокерский
+          hsa: Счёт медицинских сбережений
+          ira: Традиционная IRA
+          mutual_fund: Паевой инвестиционный фонд
+          pension: Пенсионный
+          retirement: Пенсионный
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: План сбережений
+        loan:
+          auto: Автокредит
+          mortgage: Ипотека
+          other: Другой кредит
+          student: Студенческий кредит
+      sync_start_date_help: Выберите, насколько далеко назад вы хотите синхронизировать
+        историю операций. Максимум доступно 3 года истории.
+      sync_start_date_label: 'Начать синхронизацию операций с:'
+      title: Настройте ваши счета Brex
+    setup_required:
+      description: Прежде чем вы сможете связать счета Brex, вам нужно настроить ваш
+        API токен Brex.
+      heading: API токен не настроен
+      settings_link: Перейти в настройки провайдера
+      setup_steps: 'Шаги настройки:'
+      steps:
+        enter_token: Введите ваш API токен Brex
+        find_section_html: Найдите раздел <strong>Brex</strong>
+        open_settings_html: Перейдите в <strong>Настройки > Провайдеры</strong>
+        return_to_link: Вернитесь сюда, чтобы связать ваши счета
+      title: Требуется настройка Brex
+    statuses:
+      ACTIVE: Активен
+      CLOSED: Закрыт
+      FROZEN: Заморожен
+      active: Активен
+      closed: Закрыт
+      frozen: Заморожен
+    subtype_select:
+      placeholder:
+        subtype: Выберите подтип
+        type: Выберите тип
+    sync:
+      success: Синхронизация начата
+    sync_status:
+      all_synced:
+        few: Синхронизированы %{count} счёта
+        many: Синхронизировано %{count} счетов
+        one: Синхронизирован %{count} счёт
+        other: Синхронизированы %{count} счёта
+      no_accounts: Счета не найдены
+      partial_setup: "%{synced} синхронизировано, %{pending} требует настройки"
+    syncer:
+      account_processing_failed:
+        few: "%{count} счёта Brex не удалось обработать."
+        many: "%{count} счетов Brex не удалось обработать."
+        one: "%{count} счёт Brex не удалось обработать."
+        other: "%{count} счёта Brex не удалось обработать."
+      account_sync_failed:
+        few: Синхронизацию %{count} счёта Brex не удалось запланировать.
+        many: Синхронизацию %{count} счетов Brex не удалось запланировать.
+        one: Синхронизацию %{count} счёта Brex не удалось запланировать.
+        other: Синхронизацию %{count} счёта Brex не удалось запланировать.
+      accounts_failed:
+        few: "%{count} счёта Brex не удалось импортировать."
+        many: "%{count} счетов Brex не удалось импортировать."
+        one: "%{count} счёт Brex не удалось импортировать."
+        other: "%{count} счёта Brex не удалось импортировать."
+      accounts_need_setup:
+        few: "%{count} счёта требуют настройки..."
+        many: "%{count} счетов требуют настройки..."
+        one: "%{count} счёт требует настройки..."
+        other: "%{count} счёта требуют настройки..."
+      calculating_balances: Расчёт балансов...
+      checking_account_configuration: Проверка конфигурации счёта...
+      credentials_invalid: Неверный API токен Brex или права доступа к счёту
+      failed: Синхронизация не удалась. Пожалуйста, попробуйте снова или свяжитесь
+        с поддержкой.
+      import_failed: Импорт Brex не удался.
+      importing_accounts: Импорт счетов из Brex...
+      processing_transactions: Обработка операций...
+      transactions_failed:
+        few: У %{count} счетов Brex произошли ошибки импорта операций.
+        many: У %{count} счетов Brex произошли ошибки импорта операций.
+        one: У %{count} счёта Brex произошла ошибка импорта операций.
+        other: У %{count} счетов Brex произошли ошибки импорта операций.
+    update:
+      success: Подключение Brex обновлено

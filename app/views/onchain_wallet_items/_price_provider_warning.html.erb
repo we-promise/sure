@@ -1,0 +1,46 @@
+<%# Shown before linking, not after: with either of these missing, every wallet %>
+<%# is valued at zero, which reads as a broken sync rather than a setting the %>
+<%# user never made. %>
+<% missing = Onchain::Pricing.missing_for(Current.family.currency) %>
+<% if missing.any? %>
+  <% if missing.include?(:crypto_provider) %>
+    <%= render DS::Alert.new(
+          variant: :warning,
+          title: t("onchain_wallet_items.price_provider_warning.title"),
+          message: t("onchain_wallet_items.price_provider_warning.body")
+        ) %>
+  <% end %>
+
+  <% if missing.include?(:exchange_rate) %>
+    <%= render DS::Alert.new(
+          variant: :warning,
+          title: t("onchain_wallet_items.price_provider_warning.exchange_rate_title"),
+          message: t("onchain_wallet_items.price_provider_warning.exchange_rate_body", currency: Current.family.currency)
+        ) %>
+  <% end %>
+
+  <%# Self-hosted admins only: these are site-wide settings, so on a managed %>
+  <%# instance it is the operator's call, not a family's — and the settings page %>
+  <%# itself is gated the same way, so offering either control to anyone else is %>
+  <%# a dead end. The warning text stands on its own. %>
+  <% if self_hosted? && Current.user.admin? %>
+    <div class="flex flex-wrap items-center gap-2 -mt-2">
+    <% if missing.include?(:crypto_provider) %>
+      <%= render DS::Button.new(
+            text: t("onchain_wallet_items.price_provider_warning.enable"),
+            icon: "zap",
+            variant: :outline,
+            size: :sm,
+            href: enable_crypto_prices_onchain_wallet_items_path,
+            method: :post,
+            frame: "_top"
+          ) %>
+    <% end %>
+
+      <%= link_to t("onchain_wallet_items.price_provider_warning.link"),
+                  settings_hosting_path,
+                  class: "text-sm underline text-secondary hover:text-primary",
+                  data: { turbo_frame: "_top" } %>
+    </div>
+  <% end %>
+<% end %>

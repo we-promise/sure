@@ -1,12 +1,6 @@
 vi:
   snaptrade_items:
     default_name: "Kết nối SnapTrade"
-    link_accounts:
-      use_setup_flow: Sử dụng luồng thiết lập tài khoản
-    create:
-      success: "Đã cấu hình SnapTrade thành công."
-    update:
-      success: "Đã cập nhật cấu hình SnapTrade thành công."
     destroy:
       success: "Đã lên lịch xóa kết nối SnapTrade."
     connect:
@@ -51,9 +45,6 @@ vi:
       failed: "Xóa kết nối thất bại: %{message}"
       missing_authorization_id: "Thiếu ID ủy quyền"
       api_deletion_failed: "Không thể xóa kết nối khỏi SnapTrade - thiếu thông tin xác thực. Kết nối có thể vẫn tồn tại trong tài khoản SnapTrade của bạn."
-    delete_orphaned_user:
-      success: "Đã xóa đăng ký mồ côi thành công."
-      failed: "Xóa đăng ký mồ côi thất bại."
     setup_accounts:
       title: "Thiết lập tài khoản SnapTrade"
       header: "Thiết lập tài khoản SnapTrade của bạn"
@@ -116,24 +107,10 @@ vi:
       name: "SnapTrade"
       connection_description: "Kết nối với brokerage qua SnapTrade (hỗ trợ 25+ sàn)"
       description: "SnapTrade kết nối với 25+ brokerage lớn (Fidelity, Vanguard, Schwab, Robinhood, v.v.) và cung cấp lịch sử giao dịch đầy đủ với nhãn hoạt động và cơ sở chi phí."
-      setup_title: "Hướng dẫn thiết lập:"
-      step_1_html: "Tạo tài khoản tại <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">dashboard.snaptrade.com</a>"
-      step_2: "Sao chép Client ID và Consumer Key từ bảng điều khiển"
-      step_3: "Nhập thông tin xác thực bên dưới và nhấn Lưu"
-      step_4: "Đi đến trang Tài khoản và dùng 'Kết nối thêm brokerage' để liên kết tài khoản đầu tư"
       free_tier_warning: "Gói miễn phí SnapTrade hỗ trợ 5 kết nối brokerage. Nâng cấp trên SnapTrade để có thêm."
-      client_id_label: "Client ID"
-      client_id_placeholder: "Nhập Client ID SnapTrade của bạn"
-      client_id_update_placeholder: "Nhập Client ID mới để cập nhật"
-      consumer_key_label: "Consumer Key"
-      consumer_key_placeholder: "Nhập Consumer Key SnapTrade của bạn"
-      consumer_key_update_placeholder: "Nhập Consumer Key mới để cập nhật"
-      save_button: "Lưu cấu hình"
-      update_button: "Cập nhật cấu hình"
       status_connected:
         one: "%{count} tài khoản từ SnapTrade"
         other: "%{count} tài khoản từ SnapTrade"
-      status_needs_registration: "Đã lưu thông tin xác thực. Hoàn tất thiết lập để kết nối brokerage."
       needs_setup:
         one: "%{count} cần thiết lập"
         other: "%{count} cần thiết lập"
@@ -154,15 +131,6 @@ vi:
       delete_connection_title: "Xóa kết nối Brokerage?"
       delete_connection_body: "Thao tác này sẽ xóa vĩnh viễn kết nối %{brokerage} khỏi SnapTrade. Tất cả tài khoản từ brokerage này sẽ bị hủy liên kết. Bạn cần kết nối lại để đồng bộ các tài khoản này."
       delete_connection_confirm: "Xóa kết nối"
-      orphaned_users_title:
-        one: "%{count} đăng ký mồ côi"
-        other: "%{count} đăng ký mồ côi"
-      orphaned_users_description: "Đây là các đăng ký người dùng SnapTrade cũ đang sử dụng slot kết nối của bạn. Xóa chúng để giải phóng slot."
-      orphaned_user: "Đăng ký mồ côi"
-      delete_orphaned_user: "Xóa"
-      delete_orphaned_user_title: "Xóa đăng ký mồ côi?"
-      delete_orphaned_user_body: "Thao tác này sẽ xóa vĩnh viễn người dùng SnapTrade mồ côi này và tất cả kết nối brokerage của họ, giải phóng slot kết nối."
-      delete_orphaned_user_confirm: "Xóa đăng ký"
 
   snaptrade_item:
     sync_status:

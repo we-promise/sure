@@ -1,0 +1,132 @@
+---
+name: chat_golden_v2
+description: >
+  Golden dataset exercising the production system prompt and full tool
+  registry: request classification (CHAT questions must use no tools),
+  specific-tool preference (aggregates via statements, not transaction
+  paging), and the newer analytical tools. Note the harness is single-shot;
+  it observes the first round's function selection and text, it does not
+  execute tools, so assertions here are about routing and phrasing rather
+  than final numbers.
+eval_type: chat
+version: "1.0"
+metadata:
+  created_at: "2026-08-16"
+  source: manual_curation
+
+samples:
+  # ===== Classification: CHAT means no tools =====
+  - id: chat_v2_class_001
+    difficulty: easy
+    tags: [classification, no_tools]
+    input:
+      prompt: "Thanks, that was helpful!"
+    expected:
+      functions: []
+      response_contains: []
+
+  - id: chat_v2_class_002
+    difficulty: easy
+    tags: [classification, no_tools]
+    input:
+      prompt: "What does APR mean on a credit card?"
+    expected:
+      functions: []
+      response_contains: ["annual"]
+
+  - id: chat_v2_class_003
+    difficulty: medium
+    tags: [classification, no_tools]
+    input:
+      prompt: "In general, how does compound interest work?"
+    expected:
+      functions: []
+      response_contains: ["interest"]
+
+  # ===== Specific-tool preference =====
+  - id: chat_v2_route_001
+    difficulty: medium
+    tags: [get_income_statement, tool_preference]
+    input:
+      prompt: "How much did I spend this year?"
+    expected:
+      functions:
+        - name: "get_income_statement"
+      response_contains: []
+
+  - id: chat_v2_route_002
+    difficulty: medium
+    tags: [get_balance_sheet, tool_preference]
+    input:
+      prompt: "How has my net worth changed over the last year?"
+    expected:
+      functions:
+        - name: "get_balance_sheet"
+      response_contains: []
+
+  - id: chat_v2_route_003
+    difficulty: easy
+    tags: [get_transactions, tool_preference]
+    input:
+      prompt: "Find my transactions at Costco last month"
+    expected:
+      functions:
+        - name: "get_transactions"
+      response_contains: []
+
+  # ===== New analytical tools =====
+  - id: chat_v2_new_001
+    difficulty: easy
+    tags: [get_recurring_transactions]
+    input:
+      prompt: "What subscriptions am I paying for?"
+    expected:
+      functions:
+        - name: "get_recurring_transactions"
+      response_contains: []
+
+  - id: chat_v2_new_002
+    difficulty: medium
+    tags: [get_recurring_transactions]
+    input:
+      prompt: "Which bills are coming up in the next two weeks?"
+    expected:
+      functions:
+        - name: "get_recurring_transactions"
+          params:
+            upcoming_within_days: 14
+      response_contains: []
+
+  - id: chat_v2_new_003
+    difficulty: easy
+    tags: [get_merchants]
+    input:
+      prompt: "Which merchants do I shop at?"
+    expected:
+      functions:
+        - name: "get_merchants"
+      response_contains: []
+
+  - id: chat_v2_new_004
+    difficulty: medium
+    tags: [get_income_statement, trends]
+    input:
+      prompt: "Show my spending month by month for this year"
+    expected:
+      functions:
+        - name: "get_income_statement"
+          params:
+            group_by: "month"
+      response_contains: []
+
+  - id: chat_v2_new_005
+    difficulty: medium
+    tags: [get_transactions, sorting]
+    input:
+      prompt: "What were my five largest expenses this month?"
+    expected:
+      functions:
+        - name: "get_transactions"
+          params:
+            sort_by: "amount"
+      response_contains: []

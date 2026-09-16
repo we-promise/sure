@@ -1,0 +1,29 @@
+---
+it:
+  users:
+    destroy:
+      success: Il tuo account è stato eliminato.
+    update:
+      email_change_failed: Impossibile cambiare l'indirizzo email.
+      email_change_initiated: Controlla il tuo nuovo indirizzo email per le istruzioni di conferma.
+      success: Il tuo profilo è stato aggiornato.
+    resend_confirmation_email:
+      success: Una nuova email di conferma è in coda per essere inviata.
+      no_pending_change: Nessuna modifica email attualmente in sospeso!
+    reset:
+      success: Il tuo account è stato ripristinato. I dati verranno eliminati in background tra un po'.
+      unauthorized: Non sei autorizzato a eseguire questa azione
+    reset_with_sample_data:
+      success: Il tuo account è stato ripristinato e i dati di esempio sono in fase di preparazione. Vedrai i dati demo a breve.
+    roles:
+      admin: Amministratore
+      member: Membro
+      super_admin: Super amministratore
+    user_menu:
+      aria_label: Apri menu account
+      version: Versione
+      settings: Impostazioni
+      changelog: Registro modifiche
+      feedback: Feedback
+      contact: Contatto
+      log_out: Disconnetti

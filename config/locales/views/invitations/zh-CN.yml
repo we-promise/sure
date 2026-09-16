@@ -11,6 +11,7 @@ zh-CN:
       existing_user_added: 用户已添加到您的家庭中。
       failure: 无法发送邀请
       success: 邀请已成功发送
+      existing_user_has_family_data: 此用户已有家庭数据，无法接受该邀请。
     destroy:
       failure: 移除邀请时出现问题。
       not_authorized: 您无权管理邀请。

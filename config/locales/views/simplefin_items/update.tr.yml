@@ -1,0 +1,9 @@
+---
+tr:
+  simplefin_items:
+    update:
+      errors:
+        blank_token: Eksik SimpleFIN erişim jetonu. Lütfen bir jeton sağlayın veya
+          devam etmek için Mevcut Hesapları Bağla'yı kullanın.
+        update_failed: 'SimpleFIN bağlantısı güncellenemedi: %{message}'
+      success: SimpleFIN bağlantısı güncellendi.

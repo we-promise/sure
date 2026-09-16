@@ -8,6 +8,18 @@ class BinanceAccount::Processor
   # the most common pairs are tried first and rate-limit weight is front-loaded.
   TRADE_QUOTE_CURRENCIES = %w[USDT BUSD FDUSD BTC ETH BNB].freeze
 
+  # Binance caps the startTime/endTime span per trade-history endpoint: 24h for
+  # spot myTrades, 7 days for futures userTrades. Because fromId cannot be
+  # combined with startTime/endTime, the initial history sync walks forward one
+  # window at a time from the configured start date.
+  TRADE_WINDOW_MS = { spot: 24 * 60 * 60 * 1000, futures: 7 * 24 * 60 * 60 * 1000 }.freeze
+
+  # Futures userTrades only serves the past 6 months, so the initial window walk
+  # is clamped to that lookback regardless of the configured start date.
+  FUTURES_MAX_LOOKBACK_MS = 6 * 30 * 24 * 60 * 60 * 1000
+
+  TRADE_PAGE_LIMIT = 1000
+
   attr_reader :binance_account
 
   def initialize(binance_account)
@@ -119,34 +131,81 @@ class BinanceAccount::Processor
     end
 
     # Fetches only trades newer than what is already cached for the given pair.
-    # On the first sync (no cached trades) fetches the most recent page.
-    # On subsequent syncs starts from max_cached_id + 1 and paginates forward.
+    # On subsequent syncs (trades already cached) it paginates forward by trade id
+    # from max_cached_id + 1. On the first sync it walks forward through Binance's
+    # per-endpoint time windows from the configured start date, because fromId
+    # cannot be combined with startTime/endTime.
     def fetch_new_trades(provider, pair, cached_trades, market_type)
-      limit = 1000
       max_cached_id = cached_trades&.map { |t| t["id"].to_i }&.max
 
-      from_id = max_cached_id ? max_cached_id + 1 : nil
-      start_time = nil
-      unless max_cached_id
-        start_time = binance_account.binance_item&.sync_start_date&.to_time&.to_i&.*(1000)
+      if max_cached_id
+        fetch_trades_from_id(provider, pair, market_type, max_cached_id + 1)
+      else
+        fetch_trades_in_windows(provider, pair, market_type)
       end
+    end
+
+    # Incremental sync: fromId alone is a supported Binance combination, so we
+    # paginate forward by id until a partial page signals the end.
+    def fetch_trades_from_id(provider, pair, market_type, from_id)
       all_new = []
 
       loop do
-        page = if market_type == :spot
-          provider.get_spot_trades(pair, limit: limit, from_id: from_id, startTime: start_time)
-        else
-          provider.get_futures_trades(pair, limit: limit, from_id: from_id, startTime: start_time)
-        end
+        page = request_trades(provider, pair, market_type, from_id: from_id)
         break if page.blank?
 
         all_new.concat(page)
-        break if page.size < limit
+        break if page.size < TRADE_PAGE_LIMIT
 
         from_id = page.map { |t| t["id"].to_i }.max + 1
       end
 
       all_new
+    end
+
+    # Initial sync: walk forward from the configured start date in fixed windows
+    # (24h spot / 7d futures). If a window yields a full page there may be more
+    # trades inside it, so we advance the cursor past the last trade and re-scan
+    # the same window before moving on.
+    def fetch_trades_in_windows(provider, pair, market_type)
+      window = TRADE_WINDOW_MS[market_type]
+      now_ms = Time.current.to_i * 1000
+
+      configured_start = binance_account.binance_item&.sync_start_date&.to_time&.to_i
+      cursor = configured_start ? configured_start * 1000 : now_ms - window
+
+      # Futures history is only available for the last 6 months.
+      if market_type == :futures
+        cursor = [ cursor, now_ms - FUTURES_MAX_LOOKBACK_MS ].max
+      end
+
+      all_new = []
+
+      while cursor <= now_ms
+        window_end = [ cursor + window - 1, now_ms ].min
+        page = request_trades(provider, pair, market_type, start_time: cursor, end_time: window_end)
+
+        if page.present?
+          all_new.concat(page)
+
+          if page.size >= TRADE_PAGE_LIMIT
+            cursor = page.map { |t| t["time"].to_i }.max + 1
+            next
+          end
+        end
+
+        cursor = window_end + 1
+      end
+
+      all_new
+    end
+
+    def request_trades(provider, pair, market_type, from_id: nil, start_time: nil, end_time: nil)
+      if market_type == :spot
+        provider.get_spot_trades(pair, limit: TRADE_PAGE_LIMIT, from_id: from_id, start_time: start_time, end_time: end_time)
+      else
+        provider.get_futures_trades(pair, limit: TRADE_PAGE_LIMIT, from_id: from_id, start_time: start_time, end_time: end_time)
+      end
     end
 
     def fetch_new_p2p_trades(provider, cached_p2p)

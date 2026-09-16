@@ -1,0 +1,18 @@
+<div id="trading212-providers-panel" class="space-y-4">
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t(".steps.step_1"),
+               t(".steps.step_2"),
+               t(".steps.step_3")
+             ] %>
+
+  <%= render Trading212::AccountEditorComponent.new(
+               items: local_assigns[:trading212_items] || @trading212_items,
+               family: Current.family
+             ) %>
+</div>

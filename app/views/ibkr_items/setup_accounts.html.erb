@@ -123,7 +123,7 @@
                   <p class="text-xs text-primary mb-1"><%= ibkr_account.name %></p>
                   <div class="flex items-center gap-2">
                     <%= link_form.select :account_id,
-                          options_for_select(@linkable_accounts.map { |account| [t(".link_existing.manual_account_option", name: account.name, balance: number_to_currency(account.balance, unit: Money::Currency.new(account.currency || 'USD').symbol)), account.id] }),
+                          options_for_select(@linkable_accounts.map { |account| [t(".link_existing.manual_account_option", name: account.name, balance: number_to_currency(account.balance, unit: Money::Currency.new(account.currency || "USD").symbol)), account.id] }),
                           { prompt: t(".link_existing.select_prompt") },
                           class: "bg-container border border-primary rounded px-2 py-1 text-sm text-primary flex-1 min-w-0" %>
                     <%= render DS::Button.new(
@@ -140,7 +140,7 @@
         <% end %>
 
         <% if @linked_accounts.any? %>
-          <div class="<%= 'border-t border-primary pt-6 mt-4' if @unlinked_accounts.any? %>">
+          <div class="<%= "border-t border-primary pt-6 mt-4" if @unlinked_accounts.any? %>">
             <h3 class="font-medium text-primary mb-4"><%= t(".linked_accounts.title") %></h3>
             <% @linked_accounts.each do |ibkr_account| %>
               <div class="border border-success/20 bg-success/5 rounded-lg p-4 mb-2">

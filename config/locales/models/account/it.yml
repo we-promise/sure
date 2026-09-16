@@ -1,0 +1,34 @@
+---
+it:
+  account_order:
+    balance_asc:
+      label: Saldo (dal più basso)
+      label_short: Saldo ↑
+    balance_desc:
+      label: Saldo (dal più alto)
+      label_short: Saldo ↓
+    name_asc:
+      label: Nome (A-Z)
+      label_short: Nome ↑
+    name_desc:
+      label: Nome (Z-A)
+      label_short: Nome ↓
+  activerecord:
+    attributes:
+      account:
+        balance: Saldo
+        currency: Valuta
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        name: Nome
+        subtype: Sottotipo
+    models:
+      account: Conto
+      account/credit: Carta di credito
+      account/depository: Conto bancario
+      account/investment: Investimento
+      account/loan: Prestito
+      account/other_asset: Altro asset
+      account/other_liability: Altra passività
+      account/property: Immobile
+      account/vehicle: Veicolo

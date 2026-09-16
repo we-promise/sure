@@ -1,0 +1,115 @@
+---
+it:
+  enable_banking_items:
+    errors:
+      api_error: "Si è verificato un errore di comunicazione con la banca."
+      network_unreachable: "Il servizio bancario è temporaneamente irraggiungibile. Riprova più tardi."
+      session_invalid: "Sessione scaduta. Riconnetti la tua banca."
+      unexpected: "Si è verificato un errore imprevisto durante la sincronizzazione."
+    authorize:
+      authorization_failed: "Impossibile avviare l'autorizzazione: %{message}"
+      bank_required: Seleziona una banca.
+      invalid_redirect: L'URL di autorizzazione ricevuto non è valido. Riprova.
+      redirect_uri_not_allowed: Reindirizzamento non consentito. Configura `%{callback_url}` nelle impostazioni dell'app Enable Banking.
+      unexpected_error: Si è verificato un errore imprevisto. Riprova.
+    callback:
+      authorization_error: Autorizzazione fallita
+      invalid_callback: Parametri di callback non validi.
+      item_not_found: Connessione non trovata.
+      session_failed: Impossibile completare l'autorizzazione
+      success: Connessione alla banca riuscita. I tuoi conti vengono sincronizzati.
+      unexpected_error: Si è verificato un errore imprevisto. Riprova.
+    complete_account_setup:
+      all_skipped: Tutti i conti sono stati saltati. Puoi configurarli in seguito nella pagina dei conti.
+      no_accounts: Nessun conto disponibile da configurare.
+      success: Creati con successo %{count} conti!
+    create:
+      success: Configurazione Enable Banking riuscita.
+    destroy:
+      success: La connessione Enable Banking è stata messa in coda per l'eliminazione.
+    link_accounts:
+      already_linked: I conti selezionati sono già collegati.
+      link_failed: Collegamento conti fallito
+      no_accounts_selected: Nessun conto selezionato.
+      no_session: Nessuna connessione Enable Banking attiva. Connettiti prima a una banca.
+      success: Collegati con successo %{count} conti.
+    link_existing_account:
+      success: Conto collegato con successo a Enable Banking
+      errors:
+        only_manual: Solo i conti manuali possono essere collegati
+        invalid_enable_banking_account: Conto Enable Banking selezionato non valido
+    enable_banking_item:
+      deletion_in_progress: Eliminazione in corso
+      provider_name: Enable Banking
+      syncing: Sincronizzazione in corso...
+      reconnect: Riconnetti
+      last_synced: Ultima sincronizzazione %{time} fa
+      never_synced: Mai sincronizzato
+      update: Aggiorna
+      delete: Elimina
+      setup_needed: Configurazione necessaria
+      setup_needed_description:
+        one: 1 conto importato da Enable Banking deve essere configurato
+        other: "%{count} conti importati da Enable Banking devono essere configurati"
+      set_up_accounts: Configura conti
+      no_accounts_found: Nessun conto trovato
+      no_accounts_found_description: Nessun conto trovato da Enable Banking. Prova a sincronizzare di nuovo.
+    select_existing_account:
+      title: Collega conto Enable Banking
+      all_linked: Tutti i conti Enable Banking sembrano già collegati.
+      try_after_sync: Se hai appena connesso o sincronizzato, riprova dopo il completamento della sincronizzazione.
+      unlink_to_move: Per collegare un conto diverso, prima scollegalo dal menu azioni del conto.
+      balance: Saldo
+      link: Collega
+      cancel: Annulla
+    setup_accounts:
+      title: Configura i tuoi conti Enable Banking
+      header_subtitle: Scegli i tipi di conto corretti per i conti importati
+      choose_account_type: "Scegli il tipo di conto corretto per ogni conto Enable Banking:"
+      historical_data_range: "Intervallo dati storici:"
+      sync_start_date_label: "Inizia la sincronizzazione delle transazioni dal:"
+      sync_start_date_help: Seleziona quanto indietro vuoi sincronizzare la cronologia delle transazioni. Massimo 2 anni di cronologia disponibile.
+      account_type_label: "Tipo di conto:"
+      balance: Saldo
+      create_accounts: Crea conti
+      creating_accounts: Creazione conti in corso...
+      cancel: Annulla
+    new:
+      link_enable_banking_title: Collega Enable Banking
+      session_expired: Sessione scaduta - è necessaria la riautorizzazione
+      connected_bank: Banca connessa
+      session_expires: "Sessione scade"
+      unknown: Sconosciuto
+      connection: Connessione
+      configured: Configurato
+      ready_to_connect: Pronto per connettere una banca
+      sync: Sincronizza
+      reconnect: Riconnetti
+      connect_bank: Connetti banca
+      remove_confirm: Sei sicuro di voler rimuovere questa connessione?
+      remove: Rimuovi
+      add_connection: Aggiungi connessione
+      not_configured: Connessione Enable Banking non configurata
+      not_configured_description: Prima di poter collegare i conti Enable Banking, devi configurare la tua connessione Enable Banking.
+      setup_steps_title: "Passi di configurazione:"
+      setup_step_1_html: "Vai su <strong>Impostazioni → Provider</strong>"
+      setup_step_2_html: "Trova la sezione <strong>Enable Banking</strong>"
+      setup_step_3: Inserisci le tue credenziali Enable Banking
+      setup_step_4: Torna qui per collegare i tuoi conti
+      go_to_provider_settings: Vai alle Impostazioni provider
+    reauthorize:
+      invalid_redirect: L'URL di autorizzazione ricevuto non è valido. Riprova.
+      reauthorization_failed: Riautorizzazione fallita
+    select_bank:
+      beta_label: Beta
+      cancel: Annulla
+      check_country: Controlla le impostazioni del tuo codice paese.
+      credentials_required: Configura prima le tue credenziali Enable Banking.
+      description: Seleziona la banca che vuoi connettere ai tuoi conti.
+      no_banks: Nessuna banca disponibile per questo paese/regione.
+      no_search_results: Nessuna banca corrisponde alla ricerca.
+      search_label: Cerca la tua banca
+      search_placeholder: Cerca la tua banca...
+      title: Seleziona la tua banca
+    update:
+      success: Configurazione Enable Banking aggiornata.

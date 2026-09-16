@@ -24,7 +24,8 @@ class Rule::ActionExecutor::SetInvestmentActivityLabel < Rule::ActionExecutor
       txn.enrich_attribute(
         :investment_activity_label,
         value,
-        source: "rule"
+        source: "rule",
+        ignore_locks: ignore_attribute_locks
       )
     end
   end

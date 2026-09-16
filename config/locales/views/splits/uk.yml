@@ -1,0 +1,46 @@
+uk:
+  splits:
+    new:
+      title: Розділити транзакцію
+      description: Розділіть цю транзакцію на кілька записів з різними категоріями та сумами.
+      submit: Розділити транзакцію
+      cancel: Скасувати
+      add_row: Додати розділення
+      remove_row: Видалити
+      remaining: Залишок
+      amounts_must_match: Суми розділення повинні дорівнювати початковій сумі транзакції.
+      name_label: Назва
+      name_placeholder: Назва розділення
+      amount_label: Сума
+      category_label: Категорія
+      uncategorized: "(без категорії)"
+      original_name: "Назва:"
+      original_date: "Дата:"
+      original_amount: "Сума"
+      split_number: "Розділення #%{number}"
+    create:
+      success: Транзакцію успішно розділено
+      not_splittable: Цю транзакцію неможливо розділити.
+    destroy:
+      success: Транзакцію успішно об'єднано
+    show:
+      title: Розділені записи
+      description: Цю транзакцію розділено на наступні записи.
+      button_title: Розділити транзакцію
+      button_description: Розділіть цю транзакцію на кілька записів з різними категоріями та сумами.
+      button: Розділити
+      unsplit_title: Об'єднати транзакцію
+      unsplit_button: Об'єднати
+      unsplit_confirm: Це видалить усі розділені записи та відновить початкову транзакцію.
+    edit:
+      title: Редагувати розділення
+      description: Змініть розділені записи для цієї транзакції.
+      submit: Оновити розділення
+      not_split: Ця транзакція не розділена.
+    update:
+      success: Розділення успішно оновлено
+    child:
+      title: Частина розділення
+      description: Цей запис є частиною розділеної транзакції.
+      edit_split: Редагувати розділення
+      unsplit: Об'єднати

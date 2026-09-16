@@ -1,0 +1,23 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title")) %>
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <%= render DS::Alert.new(
+              title: t(".not_configured_title"),
+              message: t(".not_configured_description"),
+              variant: :warning
+            ) %>
+
+        <div class="flex justify-end">
+          <%= render DS::Link.new(
+                text: t(".go_to_provider_settings"),
+                href: settings_providers_path,
+                variant: :primary,
+                data: { turbo: false }
+              ) %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

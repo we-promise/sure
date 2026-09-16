@@ -280,6 +280,86 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     account.update!(raw_payload: original_payload)
   end
 
+  test "redbark item credentials and payloads are encrypted" do
+    skip "No redbark items in fixtures" unless RedbarkItem.any?
+
+    item = RedbarkItem.first
+    original_payload = item.raw_payload
+
+    # Should be able to read
+    assert item.api_key.present? || item.raw_payload.present?
+
+    # Update payload
+    item.update!(raw_payload: { test: "data" })
+    item.reload
+
+    assert_equal({ "test" => "data" }, item.raw_payload)
+
+    # Restore
+    item.update!(raw_payload: original_payload)
+  end
+
+  test "redbark account payloads are encrypted" do
+    skip "No redbark accounts in fixtures" unless RedbarkAccount.any?
+
+    account = RedbarkAccount.first
+    original_payload = account.raw_payload
+
+    # Should be able to read encrypted fields without error
+    account.reload
+    assert_nothing_raised { account.raw_payload }
+    assert_nothing_raised { account.raw_transactions_payload }
+
+    # Update and verify
+    account.update!(raw_payload: { account_test: "value" })
+    account.reload
+
+    assert_equal({ "account_test" => "value" }, account.raw_payload)
+
+    # Restore
+    account.update!(raw_payload: original_payload)
+  end
+
+  test "monobank item credentials and payloads are encrypted" do
+    skip "No monobank items in fixtures" unless MonobankItem.any?
+
+    item = MonobankItem.first
+    item.update!(access_token: "mono-token-plaintext-probe", raw_payload: { test: "data" })
+    item.reload
+
+    # The accessor round-trips...
+    assert_equal "mono-token-plaintext-probe", item.access_token
+    assert_equal({ "test" => "data" }, item.raw_payload)
+
+    # ...but the column must not hold the value verbatim. Without this the assertions
+    # above pass just as happily against plaintext columns.
+    assert_column_not_plaintext(MonobankItem, item.id, :access_token, "mono-token-plaintext-probe")
+    assert_column_not_plaintext(MonobankItem, item.id, :raw_payload, "test")
+  end
+
+  test "monobank account payloads and identifiers are encrypted" do
+    skip "No monobank accounts in fixtures" unless MonobankAccount.any?
+
+    account = MonobankAccount.first
+    account.update!(
+      raw_payload: { account_test: "value" },
+      raw_transactions_payload: [ { id: "tx_probe" } ],
+      masked_pan: "537541******9999",
+      iban: "UA-TEST-IBAN-ENCRYPTION-PROBE"
+    )
+    account.reload
+
+    assert_equal({ "account_test" => "value" }, account.raw_payload)
+    assert_equal "537541******9999", account.masked_pan
+    assert_equal "UA-TEST-IBAN-ENCRYPTION-PROBE", account.iban
+
+    # A partial card number and an IBAN are exactly the fields worth proving opaque.
+    assert_column_not_plaintext(MonobankAccount, account.id, :masked_pan, "537541******9999")
+    assert_column_not_plaintext(MonobankAccount, account.id, :iban, "UA-TEST-IBAN-ENCRYPTION-PROBE")
+    assert_column_not_plaintext(MonobankAccount, account.id, :raw_payload, "account_test")
+    assert_column_not_plaintext(MonobankAccount, account.id, :raw_transactions_payload, "tx_probe")
+  end
+
   # ============================================================================
   # DATABASE VERIFICATION TESTS
   # ============================================================================
@@ -304,4 +384,19 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
 
     user.destroy
   end
+
+  private
+
+    # Reads +column+ straight from the database, bypassing the model, and asserts the
+    # stored bytes do not contain +value+. An accessor round-trip alone cannot tell
+    # encryption from plaintext; this can.
+    def assert_column_not_plaintext(model, id, column, value)
+      raw = ActiveRecord::Base.connection.select_value(
+        model.where(id: id).select(column).to_sql
+      )
+
+      assert raw.present?, "expected #{model}##{column} to be stored"
+      assert_not_includes raw.to_s, value,
+        "#{model}##{column} should be encrypted at rest, but the raw column contains #{value.inspect}"
+    end
 end

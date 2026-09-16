@@ -1,25 +1,131 @@
 ---
 tr:
+  rule:
+    conditions:
+      condition_group:
+        add_condition: Koşul ekle
+        all: tümü
+        and_prefix: ve
+        any: herhangi biri
+        match: eşleşsin
+        of_the_following_conditions: aşağıdaki koşullardan
   rules:
+    actions:
+      value_placeholder: Bir değer girin
+    apply_all:
+      ai_cost_message: Bu işlem, %{transactions} adede kadar işlemi kategorize etmek
+        için yapay zeka kullanacak.
+      ai_cost_title: Yapay Zeka Maliyet Tahmini
+      button: Tümünü Uygula
+      confirm_button: Onayla ve Tümünü Uygula
+      confirm_message: "%{transactions} benzersiz işlemi etkileyen %{count} kuralı
+        uygulamak üzeresiniz. Devam etmek istediğinizi onaylayın."
+      confirm_title: Tüm Kuralları Uygula
+      cost_unavailable_model: '"%{model}" modeli için maliyet tahmini kullanılamıyor.'
+      cost_unavailable_no_provider: Maliyet tahmini kullanılamıyor (LLM sağlayıcısı
+        yapılandırılmamış).
+      cost_warning: Ek maliyetler oluşabilir, güncel fiyatlar için lütfen model sağlayıcısına
+        danışın.
+      estimated_cost: 'Tahmini maliyet: ~$%{cost}'
+      success: Tüm kurallar çalıştırılmak üzere sıraya alındı
+      view_usage: Kullanım geçmişini görüntüle
+    clear_ai_cache:
+      button: Yapay zeka önbelleğini sıfırla
+      confirm_body: Yapay zeka önbelleğini sıfırlamak istediğinizden emin misiniz?
+        Bu işlem, yapay zeka kurallarının tüm işlemleri yeniden işlemesine izin verecektir.
+        Bu, ek API maliyetlerine neden olabilir.
+      confirm_button: Önbelleği Sıfırla
+      confirm_title: Yapay zeka önbelleği sıfırlansın mı?
+      success: Yapay zeka önbelleği temizleniyor. Bu birkaç dakika sürebilir.
+    condition_filters:
+      transaction_type:
+        equal_to: Eşittir
+        expense: Gider
+        income: Gelir
+        transfer: Transfer
+    confirm:
+      ai_cost_no_estimate_html: Bu işlem, %{count} işlemi kategorize etmek için yapay
+        zeka kullanacak.
+      ai_cost_title: Yapay Zeka Maliyet Tahmini
+      ai_cost_with_estimate_html: 'Bu işlem, %{count} işlemi kategorize etmek için
+        yapay zeka kullanacak. Tahmini maliyet: <span class="font-semibold">~$%{cost}</span>'
+      apply_notice_html: Belirtilen kural kriterlerini karşılayan <span class="text-primary
+        font-medium">%{count} %{resource}</span> öğesine bu kuralı uygulamak üzeresiniz.
+        Bu değişiklikle devam etmek istediğinizi onaylayın.
+      confirm_changes: Değişiklikleri onayla
+      cost_unavailable_model: '"%{model}" modeli için maliyet tahmini kullanılamıyor.'
+      cost_unavailable_no_provider: Maliyet tahmini kullanılamıyor (LLM sağlayıcısı
+        yapılandırılmamış).
+      cost_warning: Ek maliyetler oluşabilir, güncel fiyatlar için lütfen model sağlayıcısına
+        danışın.
+      title: Değişiklikleri onayla
+      title_with_name: '"%{name}" için değişiklikleri onayla'
+      view_usage_history: Kullanım geçmişini görüntüle
+    destroy:
+      success: Kural silindi
+    destroy_all:
+      success: Tüm kurallar silindi
+    form:
+      add_action: Eylem ekle
+      add_condition: Koşul ekle
+      add_condition_group: Koşul grubu ekle
+      all_past_and_future: Geçmişteki ve gelecekteki tüm %{resource}
+      rule_name_label: Kural adı (isteğe bağlı)
+      rule_name_placeholder: Bu kural için bir ad girin
+      starting_from: Başlangıç
+      then: SONRA
+    index:
+      ai_cost_warning: Yapay zeka destekli kural eylemleri ücrete tabidir. Gereksiz
+        maliyetlerden kaçınmak için mümkün olduğunca dar bir filtreleme yaptığınızdan
+        emin olun.
+      delete_all_rules: Tüm kuralları sil
+      new_rule: Yeni kural
+      no_rules_description: Her hesap senkronizasyonunda işlemleriniz ve diğer verileriniz
+        üzerinde eylemler gerçekleştirmek için kurallar oluşturun.
+      no_rules_title: Henüz kural yok
+      page_title: Kurallar
+      rules_heading: Kurallar
+      sort_by: 'Sırala:'
+      sort_name: Ad
+      sort_updated_at: Güncellenme Tarihi
+      toggle_sort_direction: Sıralama yönünü değiştir
     no_action: İşlem yok
     no_condition: Koşul yok
     recent_runs:
-      title: Son Çalıştırmalar
-      description: Başarı/başarısızlık durumu ve işlem sayıları dahil olmak üzere kurallarınızın yürütme geçmişini görüntüleyin.
-      unnamed_rule: İsimsiz Kural
       columns:
         date_time: Tarih/Saat
         execution_type: Tür
-        status: Durum
         rule_name: Kural Adı
+        status: Durum
         transactions_counts:
-          queued: Kuyruğa Alındı
-          processed: İşlendi
+          blocked: Engellendi
           modified: Değiştirildi
+          processed: İşlendi
+          queued: Kuyruğa Alındı
+      description: Başarı/başarısızlık durumu ve işlem sayıları dahil olmak üzere
+        kurallarınızın yürütme geçmişini görüntüleyin.
       execution_types:
         manual: Manuel
         scheduled: Zamanlanmış
       statuses:
+        failed: Başarısız
         pending: Beklemede
         success: Başarılı
-        failed: Başarısız
+      title: Son Çalıştırmalar
+      unnamed_rule: İsimsiz Kural
+    rule:
+      action_label_to: "%{label} - %{value}"
+      all_past_and_future: Geçmişteki ve gelecekteki tüm %{resource}
+      and_more_actions:
+        one: ve 1 eylem daha
+        other: ve %{count} eylem daha
+      and_more_conditions:
+        one: ve 1 koşul daha
+        other: ve %{count} koşul daha
+      delete: Sil
+      edit: Düzenle
+      on_or_after: "%{date} tarihinde veya sonrasındaki %{resource}"
+      re_apply_rule: Kuralı yeniden uygula
+      then: SONRA
+    update:
+      success: Kural güncellendi

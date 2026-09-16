@@ -30,6 +30,28 @@ require "rails/generators/active_record"
 class Provider::FamilyGenerator < Rails::Generators::NamedBase
   include Rails::Generators::Migration
 
+  # Columns the migration template already defines on the items table. A provider whose
+  # API happens to use one of these names (institution_id is the obvious one) would
+  # otherwise emit a duplicate t.string and abort db:migrate with
+  # "you can't define an already defined column".
+  #
+  # Declaring one is rejected rather than silently dropped. parsed_fields feeds eight
+  # other templates (model validations and encryption, panel form inputs, controller
+  # params, locale strings, adapter, SDK), so filtering it out of the migration alone
+  # would leave the field generating a form input and a validation with no column of the
+  # declared type behind it: `institution_id:integer` would render a numeric input over
+  # the built-in string column. Rejecting keeps the generated code self-consistent.
+  #
+  # family_id is listed, family is NOT: the template writes `t.references :family`, which
+  # creates the family_id column, so a field literally named family is not a collision.
+  RESERVED_ITEM_COLUMNS = %w[
+    family_id name
+    institution_id institution_name institution_domain institution_url institution_color
+    status scheduled_for_deletion pending_account_setup
+    sync_start_date raw_payload raw_institution_payload
+    created_at updated_at id
+  ].freeze
+
   source_root File.expand_path("templates", __dir__)
 
   argument :fields, type: :array, default: [], banner: "field:type[:secret] field:type[:secret]"
@@ -46,6 +68,15 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   def validate_fields
     if parsed_fields.empty?
       say "Warning: No fields specified. You'll need to add them manually later.", :yellow
+    end
+
+    reserved = parsed_fields.map { |f| f[:name] } & RESERVED_ITEM_COLUMNS
+    if reserved.any?
+      raise Thor::Error,
+            "#{reserved.join(', ')} #{reserved.one? ? 'is' : 'are'} already provided by the " \
+            "items table. Remove #{reserved.one? ? 'it' : 'them'} from the command: the " \
+            "standard column serves the same purpose, and redeclaring would abort db:migrate " \
+            "with \"you can't define an already defined column\"."
     end
 
     # Validate field types
@@ -613,6 +644,48 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     ActiveRecord::Generators::Base.next_migration_number(dirname)
   end
 
+  # Appends `name` as the final entry of the `enum :source, { ... }` hash in `content`.
+  # Returns the updated source, or nil when no such hash is present.
+  #
+  # Pure string transformation, extracted from the generator so the comma and
+  # indentation handling can be tested directly. Both are easy to get wrong and fail as
+  # a SyntaxError in an unrelated file rather than anything pointing back here:
+  #
+  #   - appending before the closing brace of a MULTI-LINE hash puts the entry on its own
+  #     line after Ruby has already ended the expression
+  #   - a hash written with a TRAILING COMMA already supplies the separator, so adding
+  #     another yields `redbark: "redbark",,`
+  #   - an EMPTY hash needs no separator, so adding one yields `{, gocardless: "..."}`
+  def self.append_source_enum_entry(content, name)
+    match = content.match(/(enum :source, \{)([^}]*)(\})/m)
+    return nil unless match
+
+    prefix, body, suffix = match[1], match[2], match[3]
+
+    trailing = body[/\s*\z/] || ""
+    core = body[0...(body.length - trailing.length)]
+    entry = "#{name}: \"#{name}\""
+
+    # A hash written with a trailing comma already supplies the separator, and an empty
+    # hash needs none at all. Emitting one regardless yields `redbark: "redbark",,` or
+    # `{, gocardless: "gocardless"}`: the same class of syntax error this method exists
+    # to prevent.
+    separator = (core.empty? || core.end_with?(",")) ? "" : ","
+
+    new_body =
+      if trailing.include?("\n")
+        # Multi-line: indent to match the last entry, not the closing brace.
+        indent = core[/\n([ \t]*)[^\n]*\z/, 1] || "    "
+        "#{core}#{separator}\n#{indent}#{entry}#{trailing}"
+      else
+        "#{core}#{separator} #{entry}#{trailing}"
+      end
+
+    # Block form: a string replacement would interpret any backslash sequence in the
+    # captured hash body as a backreference.
+    content.sub(/(enum :source, \{)([^}]*)(\})/m) { prefix + new_body + suffix }
+  end
+
   private
 
     def update_source_enum(model_path)
@@ -627,15 +700,10 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
         return
       end
 
-      # Find the enum :source line and add the new provider
-      # Pattern: enum :source, { key: "value", ... }
-      if content =~ /(enum :source, \{[^}]+)(})/
-        # Insert the new provider before the closing brace
-        updated_content = content.sub(
-          /(enum :source, \{[^}]+)(})/,
-          "\\1, #{file_name}: \"#{file_name}\"\\2"
-        )
-        write_file(model_path, updated_content)
+      updated = self.class.append_source_enum_entry(content, file_name)
+
+      if updated
+        write_file(model_path, updated)
         say "Added #{file_name} to #{model_name} source enum", :green
       else
         say "Could not find source enum in #{model_name}", :yellow
@@ -810,6 +878,7 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     def investment_provider?
       options[:type] == "investment"
     end
+
 
     def parsed_fields
       @parsed_fields ||= fields.map do |field_def|

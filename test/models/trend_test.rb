@@ -31,10 +31,28 @@ class TrendTest < ActiveSupport::TestCase
   test "infinitely up" do
     trend = Trend.new(current: 100, previous: 0)
     assert_equal "up", trend.direction
+    assert_equal Float::INFINITY, trend.percent
   end
 
   test "infinitely down" do
     trend = Trend.new(current: 0, previous: 100)
     assert_equal "down", trend.direction
+  end
+
+  test "percent sign tracks direction when the base is negative" do
+    # Net worth improving from -100 to -50 is a +50% change, not -50%.
+    improving = Trend.new(current: -50, previous: -100)
+    assert_equal "up", improving.direction
+    assert_equal 50.0, improving.percent
+
+    # Net worth worsening from -100 to -150 is a -50% change.
+    worsening = Trend.new(current: -150, previous: -100)
+    assert_equal "down", worsening.direction
+    assert_equal(-50.0, worsening.percent)
+  end
+
+  test "percent carries the sign of current when the base is zero" do
+    assert_equal(-Float::INFINITY, Trend.new(current: -100, previous: 0).percent)
+    assert_equal Float::INFINITY, Trend.new(current: 100, previous: 0).percent
   end
 end

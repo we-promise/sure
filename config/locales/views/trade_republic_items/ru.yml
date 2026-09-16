@@ -1,0 +1,80 @@
+---
+ru:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: "Подключите инвестиционный счёт Trade Republic через безопасный веб-вход"
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: "Брокерский счёт"
+      private_markets: "Частные рынки"
+      interest_products: "Процентные продукты"
+      crypto_wallet: "Криптокошелёк"
+    trade_republic_item:
+      syncing: "Синхронизация"
+      requires_update: "Требуется повторная аутентификация"
+      error: "Ошибка"
+      synced: "Синхронизировано %{time} назад. %{summary}."
+      setup_accounts: "Настроить счета"
+      delete: "Удалить"
+      accounts_need_setup: "Требуется настройка счёта"
+      accounts_need_setup_description: "Ваш счёт Trade Republic нужно связать со счётом Sure."
+      no_accounts_discovered: "Счёт Trade Republic ещё не найден."
+      no_accounts_discovered_description: "Завершите вход и запустите синхронизацию, чтобы найти счёт."
+      data_quality:
+        title: "Качество данных и сведения о синхронизации"
+        repair: "Исправить импортированные данные"
+    setup_accounts:
+      page_title: "Настроить счёт Trade Republic"
+      subtitle: "Свяжите инвестиционный счёт Trade Republic."
+      buttons:
+        refresh: "Обновить"
+        cancel: "Отмена"
+        link: "Связать"
+        done: "Готово"
+    sync:
+      errors:
+        phone_number_missing: "Не указан номер телефона Trade Republic."
+        reauthentication_required: "Сеанс Trade Republic отсутствует или истёк. Подключитесь заново в разделе Настройки > Провайдеры."
+      status:
+        checking_credentials: "Проверка учётных данных Trade Republic..."
+        importing_account: "Импорт счёта Trade Republic..."
+        processing_activity: "Обработка позиций и операций..."
+        calculating_balances: "Расчёт балансов..."
+    repair:
+      scheduled: "Исправление данных Trade Republic запланировано."
+    select_existing_account:
+      title: "Связать счёт Trade Republic"
+      link: "Связать"
+      cancel: "Отмена"
+    initiate_login:
+      verification_required: "Вход начат. Подтвердите его через %{method}, затем нажмите «Подтвердить вход»."
+    complete_login:
+      approval_pending: "Ещё не подтверждено. Одобрите вход в приложении Trade Republic и повторите попытку."
+      success: "Trade Republic успешно подключён."
+      login_expired: "Запрос на вход истёк. Начните заново."
+    link_existing_account:
+      not_found: "Счёт или конфигурация Trade Republic не найдены."
+      success: "Счёт успешно связан с Trade Republic."
+    complete_account_setup:
+      success:
+        one: "Успешно создан %{count} счёт Trade Republic."
+        other: "Успешно создано %{count} счетов Trade Republic."
+      none_created: "Счета не созданы."
+      partial_failure:
+        one: "Не удалось полностью настроить один выбранный счёт Trade Republic. Проверьте журнал отладки и повторите попытку."
+        other: "Не удалось полностью настроить %{count} выбранных счетов Trade Republic. Проверьте журнал отладки и повторите попытку."
+    activities:
+      labels:
+        contribution: Пополнение
+        withdrawal: Вывод средств
+        interest: Проценты
+        dividend: Дивиденды
+        card_payment: Оплата картой
+        cash_withdrawal: Снятие наличных
+        card_fee: Комиссия по карте
+        card_refund: Возврат на карту
+        tax_refund: Налоговый возврат
+        buy: Покупка
+        sell: Продажа

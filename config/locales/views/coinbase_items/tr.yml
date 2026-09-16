@@ -1,0 +1,82 @@
+---
+tr:
+  coinbase_item:
+    syncer:
+      accounts_need_setup:
+        one: "%{count} hesabın kurulumu gerekiyor"
+        other: "%{count} hesabın kurulumu gerekiyor"
+      calculating_balances: Bakiyeler hesaplanıyor...
+      checking_configuration: Hesap yapılandırması kontrol ediliyor...
+      checking_credentials: Kimlik bilgileri kontrol ediliyor...
+      credentials_invalid: Geçersiz API kimlik bilgileri. Lütfen API anahtarınızı
+        ve gizli anahtarınızı kontrol edin.
+      importing_accounts: Hesaplar Coinbase'den içe aktarılıyor...
+      processing_accounts: Hesap verileri işleniyor...
+  coinbase_items:
+    coinbase_item:
+      delete: Sil
+      deletion_in_progress: Siliniyor...
+      import_wallets_menu: Cüzdanları İçe Aktar
+      more_wallets_available:
+        one: İçe aktarılabilecek %{count} cüzdan daha var
+        other: İçe aktarılabilecek %{count} cüzdan daha var
+      no_accounts_message: Coinbase cüzdanlarınız senkronizasyondan sonra burada görünecektir.
+      no_accounts_title: Hesap bulunamadı
+      provider_name: Coinbase
+      reconnect: Kimlik bilgilerinin güncellenmesi gerekiyor
+      setup_action: Cüzdanları İçe Aktar
+      setup_description: Takip etmek istediğiniz Coinbase cüzdanlarını seçin.
+      setup_needed: İçe aktarılmaya hazır cüzdanlar
+      status: Son senkronizasyon %{timestamp} önce
+      status_never: Hiç senkronize edilmedi
+      status_with_summary: Son senkronizasyon %{timestamp} önce - %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} hesap senkronize edildi"
+          other: "%{count} hesap senkronize edildi"
+        no_accounts: Hesap bulunamadı
+        partial_sync: "%{linked_count} senkronize edildi, %{unlinked_count} kurulum
+          gerekiyor"
+      syncing: Senkronize ediliyor...
+      update_credentials: Kimlik bilgilerini güncelle
+    complete_account_setup:
+      no_accounts: İçe aktarılacak cüzdan yok
+      none_selected: Cüzdan seçilmedi
+      success:
+        one: "%{count} cüzdan içe aktarıldı"
+        other: "%{count} cüzdan içe aktarıldı"
+    create:
+      default_name: Coinbase
+      success: Coinbase'e başarıyla bağlanıldı! Hesaplarınız senkronize ediliyor.
+    destroy:
+      success: Coinbase bağlantısı silinmek üzere planlandı.
+    link_existing_account:
+      errors:
+        invalid_coinbase_account: Geçersiz Coinbase hesabı
+        only_manual: Yalnızca manuel hesaplar Coinbase'e bağlanabilir
+      success: Coinbase hesabına başarıyla bağlanıldı
+    select_existing_account:
+      balance: Bakiye
+      cancel: İptal
+      check_provider_health: Coinbase API kimlik bilgilerinizin geçerli olduğunu kontrol
+        edin
+      currently_linked_to: 'Şu anda bağlı olduğu hesap: %{account_name}'
+      link: Bağla
+      no_accounts_found: Coinbase hesabı bulunamadı.
+      title: Coinbase Hesabını Bağla
+      wait_for_sync: Coinbase'in senkronizasyonu bitirmesini bekleyin
+    setup_accounts:
+      accounts_count:
+        one: "%{count} cüzdan mevcut"
+        other: "%{count} cüzdan mevcut"
+      cancel: İptal
+      creating: İçe aktarılıyor...
+      import_selected: Seçilenleri İçe Aktar
+      instructions: İçe aktarmak istediğiniz cüzdanları seçin. Seçilmeyen cüzdanlar,
+        daha sonra eklemek isterseniz kullanılabilir olarak kalacaktır.
+      no_accounts: Tüm cüzdanlar içe aktarıldı.
+      select_all: Tümünü seç
+      subtitle: Takip edilecek cüzdanları seçin
+      title: Coinbase Cüzdanlarını İçe Aktar
+    update:
+      success: Coinbase yapılandırması başarıyla güncellendi.

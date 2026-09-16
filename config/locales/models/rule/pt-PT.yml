@@ -1,0 +1,12 @@
+---
+pt-PT:
+  activerecord:
+    errors:
+      models:
+        rule:
+          min_actions: "tem de ter pelo menos uma ação"
+          duplicate_actions: "Uma regra não pode ter ações duplicadas %{types}"
+          nested_conditions: "As condições compostas não podem estar aninhadas"
+  rule:
+    conditions:
+      unsupported_label: "Não suportado (%{type})"

@@ -89,4 +89,42 @@ class ProviderConnectionStatusTest < ActiveSupport::TestCase
     refute_includes kraken_status.keys, :api_secret
     assert_equal true, kraken_status[:credentials_configured]
   end
+
+  test "simplefin provider status does not require setup token after partial account sync" do
+    family = families(:dylan_family)
+    item = SimplefinItem.create!(
+      family: family,
+      name: "SimpleFIN",
+      access_url: "https://example.com/access",
+      status: :requires_update,
+      pending_account_setup: true
+    )
+    completed_sync = item.syncs.create!(
+      status: "completed",
+      created_at: Time.current,
+      completed_at: Time.current,
+      sync_stats: {
+        total_accounts: 18,
+        linked_accounts: 17,
+        unlinked_accounts: 1,
+        error_buckets: { auth: 1 }
+      }
+    )
+    provider = ProviderConnectionStatus::PROVIDERS.find { |entry| entry[:association] == :simplefin_items }
+
+    item.expects(:syncs).never
+
+    status = ProviderConnectionStatus.new(
+      provider,
+      item,
+      latest_sync: completed_sync,
+      latest_completed_sync: completed_sync,
+      syncing: false
+    ).to_h
+
+    assert_equal "good", status[:status]
+    assert_equal false, status[:requires_update]
+    assert_equal true, status[:pending_account_setup]
+    assert_equal "17 synced, 1 need setup", status.dig(:sync, :status_summary)
+  end
 end

@@ -14,6 +14,20 @@ class FamilyExportTest < ActiveSupport::TestCase
     assert_equal "pending", @export.status
   end
 
+  test "force_fail! fails a lost export but refuses fresh or terminal ones" do
+    @export.update_columns(status: "processing", updated_at: 2.hours.ago)
+    assert @export.force_fail!
+    assert_equal "failed", @export.reload.status
+
+    fresh = @family.family_exports.create!
+    fresh.update_columns(status: "processing", updated_at: 5.minutes.ago)
+    assert_not fresh.force_fail!
+    assert_equal "processing", fresh.reload.status
+
+    assert_not @export.force_fail!
+    assert_equal "failed", @export.reload.status
+  end
+
   test "can have export file attached" do
     @export.export_file.attach(
       io: StringIO.new("test content"),
@@ -127,5 +141,16 @@ class FamilyExportTest < ActiveSupport::TestCase
     assert_equal 2, ordered_exports.length
     assert_equal new_export.id, ordered_exports.first.id
     assert_equal old_export.id, ordered_exports.last.id
+  end
+
+  test "clean isolates a record whose update! fails so the sweep does not abort" do
+    @export.update_columns(status: "processing", updated_at: 3.hours.ago)
+
+    # A validation/DB error on one stuck record must not abort the sweep for
+    # the rest (mirrors Import.clean's per-record rescue).
+    FamilyExport.any_instance.stubs(:update!).raises(ActiveRecord::RecordInvalid.new(FamilyExport.new))
+
+    assert_nothing_raised { FamilyExport.clean }
+    assert_equal "processing", @export.reload.status
   end
 end

@@ -110,6 +110,32 @@ class InvitationTest < ActiveSupport::TestCase
     assert invitation.valid?
   end
 
+  test "re-inviting an email with an expired unaccepted invitation replaces it without raising" do
+    email = "expired-reinvite@example.com"
+
+    expired = @family.invitations.create!(email: email, role: "member", inviter: @inviter)
+    expired.update_column(:expires_at, 1.day.ago)
+
+    invitation = nil
+    assert_nothing_raised do
+      invitation = @family.invitations.create!(email: email, role: "admin", inviter: @inviter)
+    end
+
+    assert invitation.pending?
+    assert_not Invitation.exists?(expired.id), "stale expired invitation should be removed"
+    assert_equal 1, @family.invitations.where(email: email).count
+  end
+
+  test "re-invite does not remove a still-pending duplicate (validation blocks first)" do
+    email = "still-pending@example.com"
+    pending = @family.invitations.create!(email: email, role: "member", inviter: @inviter)
+
+    duplicate = @family.invitations.build(email: email, role: "admin", inviter: @inviter)
+    assert_not duplicate.valid?
+
+    assert Invitation.exists?(pending.id), "an unexpired pending invitation must be preserved"
+  end
+
   test "can create invitation in same family (uniqueness scoped to family)" do
     email = "same-family-test@example.com"
 
@@ -202,5 +228,48 @@ class InvitationTest < ActiveSupport::TestCase
     assert_not user.show_sidebar?
     assert_not user.show_ai_sidebar?
     assert user.ai_enabled?
+  end
+
+  test "accept_for auto-shares existing family accounts when family shares by default" do
+    @family.update!(default_account_sharing: "shared")
+    user = users(:empty)
+    user.update_columns(family_id: families(:empty).id, role: "admin")
+    invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
+
+    expected_ids = @family.accounts.where.not(owner_id: user.id).pluck(:id).sort
+    assert expected_ids.any?
+
+    assert invitation.accept_for(user)
+
+    assert_equal expected_ids, AccountShare.where(user: user).pluck(:account_id).sort
+  end
+
+  test "accept_for auto-shares read_only for guest invitations" do
+    @family.update!(default_account_sharing: "shared")
+    user = users(:empty)
+    user.update_columns(family_id: families(:empty).id, role: "admin")
+    invitation = @family.invitations.create!(email: user.email, role: "guest", inviter: @inviter)
+
+    expected_ids = @family.accounts.where.not(owner_id: user.id).pluck(:id).sort
+    assert expected_ids.any?
+
+    assert invitation.accept_for(user)
+
+    user.reload
+    shares = AccountShare.where(user: user)
+    assert_equal "guest", user.role
+    assert_equal expected_ids, shares.pluck(:account_id).sort
+    assert shares.all?(&:read_only?), "guest invitation shares must grant read_only"
+  end
+
+  test "accept_for does not auto-share when family sharing is private" do
+    @family.update!(default_account_sharing: "private")
+    user = users(:empty)
+    user.update_columns(family_id: families(:empty).id, role: "admin")
+    invitation = @family.invitations.create!(email: user.email, role: "member", inviter: @inviter)
+
+    assert_no_difference "AccountShare.count" do
+      assert invitation.accept_for(user)
+    end
   end
 end

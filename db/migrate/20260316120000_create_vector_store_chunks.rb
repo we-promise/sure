@@ -28,14 +28,20 @@ class CreateVectorStoreChunks < ActiveRecord::Migration[7.2]
 
   private
 
-    # Only run this migration when pgvector is explicitly configured as the
-    # vector store provider AND the extension is actually available on the
-    # PostgreSQL server. Previously we only checked server availability,
-    # which caused failures in production Docker environments where the
-    # extension may be present but the DB user lacks superuser privileges
+    # Only run this migration when pgvector is the effective vector store AND
+    # the extension is actually available on the PostgreSQL server.
+    #
+    # Provider selection goes through VectorStore::Registry.pgvector_effective?
+    # (the single source of truth) rather than a raw VECTOR_STORE_PROVIDER check,
+    # so an Anthropic-default install — which selects pgvector implicitly via
+    # Setting.llm_provider without setting VECTOR_STORE_PROVIDER — still
+    # provisions the table instead of failing later on a missing relation.
+    #
+    # The server-availability check stays: production Docker environments may
+    # have the extension present but the DB user may lack superuser privileges
     # to enable it.
     def pgvector_available?
-      return false unless ENV["VECTOR_STORE_PROVIDER"].to_s.downcase == "pgvector"
+      return false unless VectorStore::Registry.pgvector_effective?
 
       result = ActiveRecord::Base.connection.execute(
         "SELECT 1 FROM pg_available_extensions WHERE name = 'vector' LIMIT 1"

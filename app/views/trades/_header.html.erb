@@ -4,9 +4,16 @@
   <%= tag.header class: "mb-4 space-y-1" do %>
     <% label = entry.trade.investment_activity_label %>
     <% income_trade = %w[Dividend Interest].include?(label) %>
+    <%# The label is what the importer actually recorded, so it wins over the
+        amount's sign: a transfer between two accounts you own is neither a
+        purchase nor a sale, and calling it one misreads the event. The sign is
+        still the fallback for trades that carry no label at all, and for a
+        label this view has no wording for. %>
+    <% activity_key = label.presence&.parameterize(separator: "_") %>
+    <% named_activity = activity_key.present? && I18n.exists?("trades.header.#{activity_key}") %>
     <span class="text-secondary text-sm">
-      <% if income_trade %>
-        <%= t(".#{label.downcase}") %>
+      <% if named_activity %>
+        <%= t(".#{activity_key}") %>
       <% else %>
         <%= entry.amount.positive? ? t(".buy") : t(".sell") %>
       <% end %>

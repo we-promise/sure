@@ -1,0 +1,11 @@
+<%# locals: (scopes:) %>
+<div class="flex flex-wrap gap-2">
+  <% scopes.each do |scope| %>
+    <% label = case scope
+               when "read" then t("settings.api_keys.shared.scope_read_only")
+               when "read_write" then t("settings.api_keys.shared.scope_read_write")
+               else t("settings.api_keys.shared.scopes.#{scope}", default: scope.humanize)
+               end %>
+    <%= render DS::Pill.new(label: label, icon: "shield-check", tone: :indigo, style: :soft, marker: false) %>
+  <% end %>
+</div>

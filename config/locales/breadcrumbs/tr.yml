@@ -1,6 +1,88 @@
 ---
 tr:
   breadcrumbs:
+    account_sharings: Hesap paylaşımı
+    account_statements: Ekstre kasası
+    accounts: Hesaplar
+    ai_prompts: AI İstemleri
+    api_key: API Anahtarı
+    api_keys: API Anahtarları
+    appearance: Görünüm
+    appearances: Görünüm
+    bank_sync: Banka Senkronizasyonu
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Bütçe kategorileri
+    budgets: Bütçeler
+    categories: Kategoriler
+    categorize: Kategorize et
+    chats: Sohbetler
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Kredi kartları
+    cryptos: Kripto
+    dashboard: Panel
+    debug: Hata Ayıklama
+    debugs: Hata Ayıklama
+    depositories: Nakit hesaplar
+    enable_banking_items: Enable Banking
     exports: Dışa Aktarmalar
+    family_exports: Dışa Aktarmalar
+    family_merchants: Satıcılar
+    guides: Kılavuzlar
+    holdings: Varlıklar
     home: Ana Sayfa
+    hostings: Kendi Barındırma
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Taklit Oturumları
     imports: İçe Aktarmalar
+    indexa_capital_items: Indexa Capital
+    intro: Giriş
+    investments: Yatırımlar
+    invitations: Davetler
+    invite_codes: Davet kodları
+    kraken_items: Kraken
+    llm_usage: LLM Kullanımı
+    llm_usages: LLM Kullanımı
+    loans: Krediler
+    lunchflow_items: Lunch Flow
+    mcp: MCP Sunucusu
+    merchants: Satıcılar
+    mercury_items: Mercury
+    messages: Mesajlar
+    mfa: İki faktörlü kimlik doğrulama
+    oidc_accounts: SSO hesapları
+    onboardings: Kurulum
+    other_assets: Diğer varlıklar
+    other_liabilities: Diğer borçlar
+    payments: Ödemeler
+    pending_duplicate_merges: Kopya inceleme
+    plaid_items: Plaid
+    preferences: Tercihler
+    profile: Profil Bilgisi
+    profiles: Profil Bilgisi
+    properties: Mülkler
+    providers: Sağlayıcılar
+    recurring_transactions: Yinelenen
+    registrations: Hesap oluştur
+    reports: Raporlar
+    rules: Kurallar
+    securities: Güvenlik
+    security: Güvenlik
+    self_hosting: Kendi Barındırma
+    sessions: Giriş yap
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Bölme
+    sso_identities: SSO bağlantıları
+    sso_providers: SSO sağlayıcıları
+    subscriptions: Abonelik
+    tags: Etiketler
+    trades: Alım Satımlar
+    transactions: İşlemler
+    transfer_matches: Transfer eşleşmeleri
+    transfers: Transferler
+    users: Kullanıcılar
+    valuations: Değerlemeler
+    vehicles: Araçlar

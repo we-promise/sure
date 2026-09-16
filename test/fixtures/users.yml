@@ -1,10 +1,19 @@
+# password_digest is BCrypt::Password.create(user_password_test, cost: BCrypt::Engine::MIN_COST).
+# Keep MIN_COST here: verification cost is embedded in the digest, so a
+# production-cost digest adds ~230ms of CPU to every sign_in in tests.
+
 empty:
   family: empty
   first_name: User
   last_name: One
   email: user1@example.com
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
   onboarded_at: <%= 3.days.ago %>
+  # Explicit created_at so this admin sorts before the other admin fixture
+  # (sso_only) in family "empty" — without it, both rows get the same
+  # fixture-load timestamp and Account#assign_default_owner's
+  # order(:created_at).first becomes non-deterministic (test/models/account_test.rb).
+  created_at: <%= 4.days.ago %>
   role: admin
   ai_enabled: true
   show_sidebar: true
@@ -16,7 +25,7 @@ sure_support_staff:
   first_name: Support
   last_name: Admin
   email: support@sure.am
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
   role: super_admin
   onboarded_at: <%= 3.days.ago %>
   ai_enabled: true
@@ -29,7 +38,7 @@ family_admin:
   first_name: Bob
   last_name: Dylan
   email: bob@bobdylan.com
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
   role: admin
   onboarded_at: <%= 3.days.ago %>
   ai_enabled: true
@@ -42,7 +51,7 @@ family_member:
   first_name: Jakob
   last_name: Dylan
   email: jakobdylan@yahoo.com
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
   onboarded_at: <%= 3.days.ago %>
   role: member
   ai_enabled: true
@@ -56,7 +65,7 @@ new_email:
   last_name: User
   email: user@example.com
   unconfirmed_email: new@example.com
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
   onboarded_at: <%= Time.current %>
   role: member
   ai_enabled: true
@@ -69,7 +78,7 @@ intro_user:
   first_name: Intro
   last_name: User
   email: intro@example.com
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
   onboarded_at: <%= 1.day.ago %>
   role: guest
   ai_enabled: true
@@ -82,7 +91,7 @@ inactive_trial_user:
   first_name: Inactive
   last_name: User
   email: inactive@example.com
-  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  password_digest: $2a$04$deKu1NIqviMgrl.4NkXcieFkAmLa33RN9Tw/R/Llr22eMd4x/o/RO
   role: admin
   onboarded_at: <%= 90.days.ago %>
   ai_enabled: true
@@ -97,6 +106,32 @@ sso_only:
   last_name: User
   email: sso-user@example.com
   password_digest: ~
-  role: admin
+  role: member
   onboarded_at: <%= 1.day.ago %>
   ai_enabled: true
+
+# Additional test users expected by PersonalBudgetTest
+josh:
+  family: empty
+  first_name: Josh
+  last_name: Tester
+  email: josh@example.com
+  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  onboarded_at: <%= 2.days.ago %>
+  role: member
+  ai_enabled: true
+  show_sidebar: true
+  show_ai_sidebar: true
+
+ann:
+  family: empty
+  first_name: Ann
+  last_name: Tester
+  email: ann@example.com
+  password_digest: $2a$12$XoNBo/cMCyzpYtvhrPAhsubG21mELX48RAcjSVCRctW8dG8wrDIla
+  onboarded_at: <%= 2.days.ago %>
+  role: member
+  ai_enabled: true
+  show_sidebar: true
+  show_ai_sidebar: true
+

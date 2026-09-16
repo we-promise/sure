@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class <%= class_name %>Item < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -35,14 +35,13 @@ class <%= class_name %>Item < ApplicationRecord
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
+  # Family::Syncer discovers provider items reflectively and calls `syncable` on every
+  # `*_items` association whose model includes Syncable. Omitting this scope breaks the
+  # whole nightly family sync, not just this provider.
+  scope :syncable, -> { active }
 
   def syncer
     <%= class_name %>Item::Syncer.new(self)
-  end
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
   end
 
 <% if investment_provider? -%>

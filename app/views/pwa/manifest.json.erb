@@ -1,3 +1,25 @@
+<%#
+  Icon safe areas — read before regenerating any of these PNGs.
+
+  A `maskable` icon is cropped by the launcher to its own shape (circle,
+  squircle, teardrop…). Per the W3C spec only the centred circle of diameter
+  80% of the icon is guaranteed to survive. One file may serve both purposes
+  (an icon can declare `"any maskable"`), but only if its artwork already sits
+  inside that circle — a full-bleed image cannot. Ours is full-bleed at the
+  `any` size, so maskable gets its own more-padded file; pointing both at the
+  one full-bleed image is what clipped the wordmark's outer letters on Android.
+
+  Current geometry (artwork is 160x145, from public/logo-offline.svg):
+    any / apple-touch  -> artwork at 72% of the canvas (~14% side margin)
+    maskable           -> artwork at 59%, so its corners need a 79.6% circle
+                          and clear the 80% safe zone
+
+  iOS reads this file (manifest `icons` since 15.4), but the
+  <link rel="apple-touch-icon"> tags in layouts/shared/_head.html.erb take
+  precedence for the Home Screen icon, so in practice those are what ship.
+  iOS reserves no safe area and composites transparency onto black, so they
+  must stay opaque and self-padded.
+%>
 {
   "name": "<%= j product_name %>",
   "short_name": "<%= j product_name %>",
@@ -13,7 +35,7 @@
       "sizes": "512x512"
     },
     {
-      "src": "/logo-pwa.png",
+      "src": "/logo-pwa-maskable.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"

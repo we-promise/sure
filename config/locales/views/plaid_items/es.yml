@@ -5,6 +5,9 @@ es:
       success: Cuenta vinculada con éxito. Por favor, espere mientras se sincronizan las cuentas.
     destroy:
       success: Cuentas programadas para eliminación.
+    errors:
+      link_token_generic: No hemos podido abrir Plaid en este momento. Inténtalo de nuevo y, si el problema persiste, revisa los registros del servidor para más detalles.
+      link_token_with_message: 'Plaid no pudo abrir la conexión: %{message}'
     plaid_item:
       add_new: Añadir nueva conexión
       confirm_accept: Eliminar institución
@@ -13,6 +16,7 @@ es:
       connection_lost: Conexión perdida
       connection_lost_description: Esta conexión ya no es válida. Necesitarás eliminar esta conexión y añadirla de nuevo para continuar sincronizando los datos.
       delete: Eliminar
+      deletion_in_progress: (eliminación en curso...)
       error: Ocurrió un error mientras se sincronizaban los datos
       no_accounts_description: No pudimos cargar ninguna cuenta de esta institución financiera.
       no_accounts_title: No se encontraron cuentas
@@ -22,7 +26,12 @@ es:
       syncing: Sincronizando...
       update: Actualizar conexión
     select_existing_account:
-      title: "Vincular %{account_name} a Plaid"
+      no_available_accounts: No hay cuentas de Plaid disponibles para vincular. Conecta primero una nueva cuenta de Plaid.
+      title: Vincular %{account_name} a Plaid
       description: Selecciona una cuenta de Plaid para vincularla a tu cuenta existente
       cancel: Cancelar
       link_account: Vincular cuenta
+    link_existing_account:
+      invalid_account: La cuenta de Plaid seleccionada no es válida
+      already_linked: Esta cuenta de Plaid ya está vinculada
+      success: Cuenta vinculada correctamente a Plaid

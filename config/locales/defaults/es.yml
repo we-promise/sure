@@ -1,10 +1,12 @@
 ---
 es:
   defaults:
-    brand_name: "%{brand_name}"
-    product_name: "%{product_name}"
+    brand_name: '%{brand_name}'
+    product_name: '%{product_name}'
+    common:
+      close: Cerrar
   global:
-    expand: "Expandir"
+    expand: Expandir
   activerecord:
     errors:
       messages:
@@ -44,9 +46,11 @@ es:
     - viernes
     - sábado
     formats:
-      default: "%-d/%-m/%Y"
-      long: "%-d de %B de %Y"
-      short: "%-d de %b"
+      default: '%-d/%-m/%Y'
+      long: '%-d de %B de %Y'
+      short: '%-d de %b'
+      month_year: '%B de %Y'
+      short_month_year: '%b %Y'
     month_names:
     -
     - enero
@@ -90,20 +94,20 @@ es:
         one: más de %{count} año
         other: más de %{count} años
       x_days:
-        one: "%{count} día"
-        other: "%{count} días"
+        one: '%{count} día'
+        other: '%{count} días'
       x_minutes:
-        one: "%{count} minuto"
-        other: "%{count} minutos"
+        one: '%{count} minuto'
+        other: '%{count} minutos'
       x_months:
-        one: "%{count} mes"
-        other: "%{count} meses"
+        one: '%{count} mes'
+        other: '%{count} meses'
       x_seconds:
-        one: "%{count} segundo"
-        other: "%{count} segundos"
+        one: '%{count} segundo'
+        other: '%{count} segundos'
       x_years:
-        one: "%{count} año"
-        other: "%{count} años"
+        one: '%{count} año'
+        other: '%{count} años'
     prompts:
       day: Día
       hour: Hora
@@ -112,11 +116,11 @@ es:
       second: Segundo
       year: Año
   errors:
-    format: "%{attribute} %{message}"
+    format: '%{attribute} %{message}'
     messages:
       accepted: debe ser aceptado
       blank: no puede estar en blanco
-      confirmation: no coincide
+      confirmation: no coincide con %{attribute}
       empty: no puede estar vacío
       equal_to: debe ser igual a %{count}
       even: debe ser par
@@ -162,23 +166,23 @@ es:
   number:
     currency:
       format:
-        delimiter: "."
-        format: "%n %u"
-        precision: 2
-        separator: ","
         significant: false
         strip_insignificant_zeros: false
-        unit: "€"
+        delimiter: .
+        format: '%n %u'
+        precision: 2
+        separator: ','
+        unit: €
     format:
-      delimiter: "."
+      delimiter: .
       precision: 3
       round_mode: default
-      separator: ","
+      separator: ','
       significant: false
       strip_insignificant_zeros: false
     human:
       decimal_units:
-        format: "%n %u"
+        format: '%n %u'
         units:
           billion: mil millones
           million:
@@ -196,7 +200,7 @@ es:
         significant: true
         strip_insignificant_zeros: true
       storage_units:
-        format: "%n %u"
+        format: '%n %u'
         units:
           byte:
             one: Byte
@@ -210,19 +214,19 @@ es:
     percentage:
       format:
         delimiter: ''
-        format: "%n %"
+        format: '%n %'
     precision:
       format:
         delimiter: ''
   support:
     array:
-      last_word_connector: " y "
-      two_words_connector: " y "
-      words_connector: ", "
+      last_word_connector: ' y '
+      two_words_connector: ' y '
+      words_connector: ', '
   time:
     am: am
     formats:
-      default: "%A, %-d de %B de %Y %H:%M:%S %z"
-      long: "%-d de %B de %Y %H:%M"
-      short: "%-d de %b %H:%M"
+      default: '%A, %-d de %B de %Y %H:%M:%S %z'
+      long: '%-d de %B de %Y %H:%M'
+      short: '%-d de %b %H:%M'
     pm: pm

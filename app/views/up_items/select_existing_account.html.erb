@@ -1,0 +1,50 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title", account_name: @account.name)) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <% if @api_error.present? %>
+          <%= render DS::Alert.new(message: @api_error, variant: :error) %>
+        <% elsif @up_accounts.empty? %>
+          <p class="text-sm text-secondary"><%= t(".no_accounts_found") %></p>
+        <% else %>
+          <p class="text-sm text-secondary"><%= t(".description") %></p>
+
+          <%= form_with url: link_existing_account_up_items_path,
+                        method: :post,
+                        data: { turbo_frame: "_top" },
+                        class: "space-y-4" do %>
+            <%= hidden_field_tag :up_item_id, @up_item.id %>
+            <%= hidden_field_tag :account_id, @account.id %>
+            <%= hidden_field_tag :return_to, @return_to %>
+
+            <div class="space-y-2">
+              <% @up_accounts.each do |up_account| %>
+                <label class="flex items-start gap-3 p-3 border border-primary rounded-lg hover:bg-surface cursor-pointer transition-colors">
+                  <%= radio_button_tag "up_account_id", up_account.id, false, class: "mt-1", required: true %>
+                  <div class="flex-1">
+                    <div class="font-medium text-sm text-primary"><%= up_account.name %></div>
+                    <div class="text-xs text-secondary mt-1">
+                      <%= [up_account.currency, up_account.account_type].compact.join(" · ") %>
+                    </div>
+                  </div>
+                </label>
+              <% end %>
+            </div>
+
+            <div class="flex gap-2 justify-end pt-4">
+              <%= render DS::Link.new(
+                text: t(".cancel"),
+                href: @return_to || accounts_path,
+                variant: :secondary,
+                data: { turbo_frame: "_top", action: "DS--dialog#close" }
+              ) %>
+              <%= render DS::Button.new(text: t(".link_account"), type: "submit") %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

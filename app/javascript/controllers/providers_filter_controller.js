@@ -58,10 +58,7 @@ export default class extends Controller {
     if (!this.hasChipTarget) return;
     this.chipTargets.forEach((chip) => {
       const active = chip.dataset.kind === this.kindValue;
-      chip.classList.toggle("bg-container", active);
-      chip.classList.toggle("shadow-border-xs", active);
-      chip.classList.toggle("text-primary", active);
-      chip.classList.toggle("text-secondary", !active);
+      chip.classList.toggle("segmented-control__segment--active", active);
       chip.setAttribute("aria-pressed", active ? "true" : "false");
     });
   }

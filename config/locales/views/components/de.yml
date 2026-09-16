@@ -65,3 +65,105 @@ de:
       data_warnings: "Datenwarnungen: %{count}"
       notices: "Hinweise: %{count}"
       view_data_quality: Datenqualitätsdetails anzeigen
+  UI:
+    account:
+      activity_date:
+        balance_tooltip: Der Kontostand am Tagesende, nach allen Transaktionen und Anpassungen
+        no_balance_data: Für dieses Datum liegen keine Saldodaten vor
+      activity_feed:
+        toggle_selection_checkboxes: Auswahl umschalten
+      balance_reconciliation:
+        labels:
+          adjustments: Anpassungen
+          buys: Käufe
+          change_in_brokerage_cash: Veränderung der Barmittel im Depot
+          change_in_holdings_market: Veränderung der Bestände (Kursbewegung)
+          change_in_holdings_trades: Veränderung der Bestände (Käufe/Verkäufe)
+          charges: Belastungen
+          end_balance: Endsaldo
+          end_principal: Restschuld am Ende
+          end_value: Endwert
+          final_balance: Schlusssaldo
+          final_principal: Endgültige Restschuld
+          final_value: Endgültiger Wert
+          market_changes: Kursveränderungen
+          net_cash_flow: Netto-Zahlungsfluss
+          net_principal_change: Netto-Veränderung der Restschuld
+          net_value_change: Netto-Wertveränderung
+          payments: Zahlungen
+          sells: Verkäufe
+          start_balance: Anfangssaldo
+          start_principal: Restschuld am Anfang
+          start_value: Anfangswert
+        tooltips:
+          adjustments: Manuelle Abgleiche oder andere Anpassungen
+          adjustments_asset: Manuelle Wertanpassungen oder Gutachten
+          buys: Krypto-Käufe an diesem Tag
+          change_in_brokerage_cash: Netto-Veränderung der Barmittel durch Ein- und Auszahlungen sowie Trades
+          change_in_holdings_market: Wertveränderung der Bestände durch Kursbewegungen
+          change_in_holdings_trades: Auswirkung von Käufen und Verkäufen auf die Bestände
+          charges: Neue Belastungen an diesem Tag
+          end_balance: Der errechnete Saldo nach allen Transaktionen
+          end_balance_investment: Der errechnete Saldo nach allen Bewegungen
+          end_principal: Die errechnete Restschuld nach allen Transaktionen
+          end_value: Der errechnete Wert nach allen Veränderungen
+          final_balance: Der Kontostand am Ende des Tages
+          final_balance_credit: Der Schuldenstand am Ende des Tages
+          final_balance_crypto: Der Wert der Krypto-Bestände am Ende des Tages
+          final_balance_investment: Der Depotwert am Ende des Tages
+          final_principal: Die Restschuld am Ende des Tages
+          final_value: Der Vermögenswert am Ende des Tages
+          market_changes: Wertveränderungen durch Kursbewegungen
+          net_cash_flow: Netto-Veränderung des Saldos durch alle Transaktionen des Tages
+          net_principal_change: Tilgungen und neue Kreditaufnahmen an diesem Tag
+          net_value_change: Alle Wertveränderungen, auch durch Verbesserungen und Abnutzung
+          payments: Zahlungen auf die Karte an diesem Tag
+          sells: Krypto-Verkäufe an diesem Tag
+          start_balance: Der Kontostand zu Beginn dieses Tages
+          start_balance_credit: Der Schuldenstand zu Beginn dieses Tages
+          start_balance_crypto: Der Wert der Krypto-Bestände zu Beginn dieses Tages
+          start_balance_investment: Der gesamte Depotwert zu Beginn dieses Tages
+          start_principal: Die Restschuld zu Beginn dieses Tages
+          start_value: Der Vermögenswert zu Beginn dieses Tages
+      chart:
+        no_data_available: Keine Daten vorhanden
+        title:
+          balance: Saldo
+          cash_value: Barmittel
+          debt_balance: Schuldenstand
+          estimated_property_value: Geschätzter Immobilienwert
+          estimated_vehicle_value: Geschätzter Fahrzeugwert
+          holdings_value: Wert der Bestände
+          remaining_principal_balance: Verbleibende Restschuld
+          total_account_value: Gesamtwert des Kontos
+          total_gains: Gesamtgewinn
+        views:
+          cash: Barmittel
+          gains: Gewinn / ROI
+          holdings: Bestände
+          total_value: Gesamtwert
+        vs_available_history: vs. verfügbarer Verlauf
+    period_picker:
+      aria_label: 'Zeitraum: %{period}'
+  ds:
+    alert:
+      variants:
+        destructive: Fehler
+        error: Fehler
+        info: Info
+        success: Erfolg
+        warning: Warnung
+    dialog:
+      close: Schließen
+    link:
+      opens_in_new_tab: "(öffnet in neuem Tab)"
+    icon_picker:
+      no_matching_icons: Keine passenden Symbole
+      search_placeholder: Symbole suchen ...
+    pill:
+      aria_label: "%{label}"
+      default_label: Vorschau
+    popover:
+      avatar_default_label: Menü öffnen
+    tooltip:
+      trigger_label: Mehr Infos

@@ -1,9 +1,11 @@
 class Provider::Openai::PdfProcessor
   include Provider::Openai::Concerns::UsageRecorder
 
-  attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :max_response_tokens
+  attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :max_response_tokens,
+              :processing_mode
 
-  def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil, max_response_tokens:)
+  def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil,
+                 max_response_tokens:, processing_mode: :auto)
     @client = client
     @model = model
     @pdf_content = pdf_content
@@ -11,6 +13,7 @@ class Provider::Openai::PdfProcessor
     @langfuse_trace = langfuse_trace
     @family = family
     @max_response_tokens = max_response_tokens
+    @processing_mode = processing_mode
   end
 
   def process
@@ -21,17 +24,26 @@ class Provider::Openai::PdfProcessor
 
     # Try text extraction first (works with all models)
     # Fall back to vision API with images if text extraction fails (for scanned PDFs)
-    response = begin
+    response = case processing_mode
+    when :text
       process_with_text_extraction
-    rescue Provider::Openai::Error => e
-      Rails.logger.warn("Text extraction failed: #{e.message}, trying vision API with images")
+    when :vision
       process_with_vision
+    when :auto
+      begin
+        process_with_text_extraction
+      rescue Provider::Openai::Error => e
+        Rails.logger.warn("Text extraction failed: #{e.message}, trying vision API with images")
+        process_with_vision
+      end
+    else
+      raise ArgumentError, "Unknown PDF processing mode: #{processing_mode.inspect}"
     end
 
     span&.end(output: response.to_h)
     response
   rescue => e
-    span&.end(output: { error: e.message }, level: "ERROR")
+    span&.end(output: { error: e.message, error_detail: safe_error_detail(e) }, level: "ERROR")
     raise
   end
 
@@ -193,6 +205,11 @@ class Provider::Openai::PdfProcessor
       parse_response_generic(response)
     end
 
+    # Render each PDF page to a base64-encoded PNG using pdftoppm
+    # (poppler-utils). Distinguishes "renderer binary absent" (raise a coded
+    # Provider::Openai::Error with failure_code :render_missing_binary) from
+    # "renderer ran but rejected the input" (return [] so the caller can
+    # degrade to the text-extraction path unchanged).
     def convert_pdf_to_images
       return [] if pdf_content.blank?
 
@@ -200,19 +217,34 @@ class Provider::Openai::PdfProcessor
         pdf_path = File.join(tmpdir, "input.pdf")
         File.binwrite(pdf_path, pdf_content)
 
-        # Convert PDF to PNG images using pdftoppm
+        # Render via pdftoppm (poppler-utils). Kernel#system returns `nil` when
+        # the executable cannot be started (binary not installed) and `false`
+        # when it runs but exits non-zero (present but rejected the input).
         output_prefix = File.join(tmpdir, "page")
-        system("pdftoppm", "-png", "-r", "150", pdf_path, output_prefix)
+        rendered = system("pdftoppm", "-png", "-r", "150", pdf_path, output_prefix)
+        raise binary_missing_error if rendered.nil?
 
-        # Read all generated images
+        # Read all generated images (empty array when pdftoppm exited non-zero)
         image_files = Dir.glob(File.join(tmpdir, "page-*.png")).sort
         image_files.map do |img_path|
           Base64.strict_encode64(File.binread(img_path))
         end
       end
+    rescue Provider::Openai::Error
+      raise
     rescue => e
       Rails.logger.error("Failed to convert PDF to images: #{e.message}")
       []
+    end
+
+    # Coded error for the "pdftoppm not installed" case so the admin AI status
+    # page can show a concrete, actionable failure reason instead of a generic
+    # service error.
+    def binary_missing_error
+      Provider::Openai::Error.new(
+        "Could not convert PDF to images: pdftoppm (poppler-utils) is not installed",
+        failure_code: :render_missing_binary
+      )
     end
 
     def parse_response_generic(response)

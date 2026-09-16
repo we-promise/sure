@@ -19,11 +19,22 @@ de:
       type_dividend: Dividende
       type_interest: Zinsen
       dividend_requires_security: Für Dividenden ist ein Wertpapier erforderlich
+      fee: Transaktionsgebühr
+      trade_requires_security: Für Käufe und Verkäufe ist ein Wertpapier (Ticker) nötig
     header:
       buy: Kaufen
       sell: Verkaufen
       dividend: Dividende
       interest: Zinsen
+      contribution: Einlage
+      exchange: Umtausch
+      fee: Gebühr
+      other: Sonstige
+      reinvestment: Reinvestition
+      sweep_in: Sweep In
+      sweep_out: Sweep Out
+      transfer: Überweisung
+      withdrawal: Entnahme
       current_market_price_label: Aktueller Marktpreis
       overview: Übersicht
       purchase_price_label: Kaufpreis
@@ -52,3 +63,5 @@ de:
       sell: Verkaufen
       settings: Einstellungen
       type_label: Typ
+      fee_label: Transaktionsgebühr
+      provider_disabled_warning: Kursaktualisierung pausiert – der Anbieter %{provider} ist deaktiviert. Aktivier ihn in den Einstellungen wieder oder ordne die Position einem anderen Anbieter zu.

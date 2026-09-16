@@ -1,0 +1,116 @@
+---
+ru:
+  family:
+    up:
+      create_up_item:
+        default_name: Up Connection
+  providers:
+    up:
+      description: Connect Australian Up bank accounts via a personal access token
+      name: Up
+  up_account:
+    fallback: Up account
+  up_item:
+    errors:
+      account_processing_failed: Could not sync Up account
+      account_sync_schedule_failed: Could not schedule Up account sync
+      sync_failed: Could not sync Up connection
+      transactions_failed: Could not fetch Up transactions
+    institution_summary:
+      count:
+        one: 1 institution
+        other: "%{count} institutions"
+      none: No institutions connected
+      one: 1 institution
+    sync_status:
+      all_synced:
+        one: 1 account synced
+        other: "%{count} accounts synced"
+      no_accounts: No accounts found
+      partial: "%{linked} synced, %{unlinked} need setup"
+  up_items:
+    complete_account_setup:
+      all_skipped: No Up accounts were created.
+      creation_failed: Could not create Up accounts.
+      no_accounts: No Up accounts were selected.
+      success:
+        one: Created 1 Up account.
+        other: Created %{count} Up accounts.
+    create:
+      success: Up connection saved.
+    destroy:
+      success: Scheduled Up connection for deletion.
+      unlink_failed: Could not disconnect Up connection
+    link_accounts:
+      link_failed: No accounts were linked.
+      no_accounts_selected: Select at least one account.
+      no_credentials_configured: Configure Up in provider settings first.
+      success:
+        one: Linked 1 Up account.
+        other: Linked %{count} Up accounts.
+      unsupported_account_type: Up does not support that account type.
+    link_existing_account:
+      account_already_linked: This account is already linked to a provider.
+      no_account_selected: Select an Up account to link.
+      success: Linked Up account to %{account_name}.
+      up_account_already_linked: This Up account is already linked.
+    provider_panel:
+      access_token_label: Personal Access Token
+      access_token_placeholder: Paste your Up personal access token
+      add_connection: Add Up connection
+      connection_name_label: Connection name
+      connection_name_placeholder: Main Up
+      default_connection_name: Up Connection
+      disconnect: Disconnect
+      disconnect_confirm: Are you sure you want to disconnect %{name}?
+      keep_access_token_placeholder: Leave blank to keep the existing token
+      setup_accounts: Setup accounts
+      sync: Sync
+      syncing: Syncing...
+      update_connection: Update connection
+    select_accounts:
+      cancel: Cancel
+      description: Choose the Up accounts to add.
+      link_accounts: Link accounts
+      no_accounts_found: No unlinked Up accounts were found.
+      no_credentials_configured: Configure Up in provider settings first.
+      title: Link Up accounts
+    select_existing_account:
+      account_already_linked: This account is already linked to a provider.
+      cancel: Cancel
+      description: Choose an unlinked Up account to connect to this account.
+      link_account: Link account
+      no_accounts_found: No unlinked Up accounts were found.
+      no_credentials_configured: Configure Up in provider settings first.
+      title: Link Up account to %{account_name}
+    setup_accounts:
+      account_type_label: Account type
+      account_types:
+        depository: Cash
+        loan: Loan
+        skip: Skip
+      all_accounts_linked: All Up accounts are already linked.
+      api_error: Could not fetch Up accounts.
+      cancel: Cancel
+      choose_account_type: Choose an account type
+      choose_account_type_description: Skip accounts you do not want to track.
+      create_accounts: Create accounts
+      fetch_failed: Could not fetch accounts
+      no_accounts_to_setup: No accounts to set up
+      no_credentials: Configure Up credentials first.
+      subtitle: Choose how each Up account should appear in Sure.
+      title: Link Up Accounts
+    up_item:
+      delete: Delete
+      deletion_in_progress: Deletion in progress
+      error: Error
+      no_accounts_description: Fetch Up accounts and choose which ones to link.
+      no_accounts_title: No accounts imported yet
+      setup_action: Setup accounts
+      setup_description: "%{linked} of %{total} accounts linked."
+      setup_needed: Account setup needed
+      status_never: Never synced
+      status_with_summary: Synced %{timestamp} ago · %{summary}
+      syncing: Syncing
+    update:
+      success: Up connection updated.

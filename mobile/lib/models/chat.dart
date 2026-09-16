@@ -45,11 +45,11 @@ class Chat {
       'id': id,
       'title': title,
       'error': error,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': updatedAt.toUtc().toIso8601String(),
       'messages': messages.map((m) => m.toJson()).toList(),
       'message_count': messageCount,
-      'last_message_at': lastMessageAt?.toIso8601String(),
+      'last_message_at': lastMessageAt?.toUtc().toIso8601String(),
     };
   }
 

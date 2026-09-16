@@ -1,5 +1,11 @@
----
 uk:
+  defaults:
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
+    common:
+      close: "Закрити"
+  global:
+    expand: "Розгорнути"
   activerecord:
     errors:
       messages:
@@ -179,6 +185,8 @@ uk:
   helpers:
     select:
       prompt: 'Оберіть: '
+      search_placeholder: "Пошук"
+      default_label: "Вибрати..."
     submit:
       create: Створити %{model}
       submit: Зберегти %{model}
@@ -196,6 +204,7 @@ uk:
     format:
       delimiter: " "
       precision: 3
+      round_mode: default
       separator: ","
       significant: false
       strip_insignificant_zeros: false
@@ -242,13 +251,16 @@ uk:
             many: байтів
             one: байт
             other: байту
+          eb: ЕБ
           gb: ГБ
           kb: кБ
           mb: МБ
+          pb: ПБ
           tb: ТБ
     percentage:
       format:
         delimiter: ''
+        format: "%n%"
     precision:
       format:
         delimiter: ''

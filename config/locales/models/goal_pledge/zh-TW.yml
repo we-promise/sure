@@ -1,0 +1,20 @@
+---
+zh-TW:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: 金額
+        currency: 幣別
+        account: 帳戶
+        kind: 種類
+        status: 狀態
+        expires_at: 到期時間
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: 請選擇一個已連結至此目標的帳戶。
+            currency:
+              must_match_goal: 投入的幣別必須與目標幣別一致。
+          duplicate_open_pledge: 此帳戶已有一筆相同金額的未完成的投入紀錄。請先取消或延長現有紀錄，再建立新的一筆。

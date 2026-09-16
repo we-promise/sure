@@ -4,68 +4,155 @@ zh-TW:
     new:
       title: 連結 SimpleFIN
       setup_token: 設定權杖 (Setup token)
-      setup_token_placeholder: 貼上您的 SimpleFIN 設定權杖
+      setup_token_placeholder: 貼上您的 SimpleFIN Setup Token
       connect: 連結
       cancel: 取消
     create:
       success: SimpleFIN 連線已成功新增！您的帳戶將在背景同步完成後顯示。
       errors:
-        blank_token: 請輸入 SimpleFIN 設定權杖。
-        invalid_token: 權杖無效。請確認您從 SimpleFIN Bridge 複製的是完整的權杖。
-        token_compromised: 此權杖可能已外洩、過期或已被使用。請建立一個新權杖。
-        create_failed: "連結失敗：%{message}"
-        unexpected: 發生預期之外的錯誤。請再試一次或聯絡支援團隊。
+        blank_token: 請輸入 SimpleFIN Setup Token。
+        invalid_token: Token 無效。請確認您從 SimpleFIN Bridge 複製的是完整的 Token。
+        token_compromised: 此 Token 可能已外洩、過期或已被使用。請建立一個新 Token。
+        create_failed: 連結失敗：%{message}
+        unexpected: 發生預期之外的錯誤。請再試一次。
     destroy:
-      success: SimpleFIN 連線將被移除
+      success: SimpleFIN 連線已排定移除。
     update:
-      success: SimpleFIN 連線已成功更新！您的帳戶正在重新連線。
+      success: SimpleFIN 連線已更新。
       errors:
-        blank_token: 請輸入 SimpleFIN 設定權杖。
-        invalid_token: 權杖無效。請確認您從 SimpleFIN Bridge 複製的是完整的權杖。
-        token_compromised: 此權杖可能已外洩、過期或已被使用。請建立一個新權杖。
-        update_failed: "更新連線失敗：%{message}"
-        unexpected: 發生預期之外的錯誤。請再試一次或聯絡支援團隊。
+        blank_token: 缺少 SimpleFIN Access Token。請提供一組 Token，或改用「連結現有帳戶」繼續。
+        invalid_token: Token 無效。請確認您從 SimpleFIN Bridge 複製的是完整的 Token。
+        token_compromised: 此 Token 可能已外洩、過期或已被使用。請建立一個新 Token。
+        update_failed: 更新 SimpleFIN 連線失敗：%{message}
+        unexpected: 發生預期之外的錯誤。請再試一次。
     edit:
       setup_token:
-        label: "SimpleFIN 設定權杖："
-        placeholder: "在此貼上您的 SimpleFIN 設定權杖..."
-        help_text: "權杖應為一串由字母和數字組成的長字串"
+        label: SimpleFIN 設定權杖 (Setup Token)：
+        placeholder: 在此貼上您的 SimpleFIN Setup Token...
+        help_text: Token 應為一串由字母和數字組成的長字串
+      title: 更新 SimpleFin 連線
+      header_subtitle: 取得一組新的 Setup Token 以重新連線您的 SimpleFIN 帳戶
+      connection_needs_update: 您的 SimpleFIN 連線需要更新：
+      step_1_html: 前往 <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> 建立一組新的 Setup Token
+      step_2: 複製 Token 並貼到下方
+      step_3: 點選「更新」以恢復存取權
+      update: 更新
+      cancel: 取消
+    setup_accounts:
+      title: 設定您的 SimpleFin 帳戶
+      header_subtitle: 為您匯入的帳戶選擇正確的帳戶類型
+      choose_account_type: 請為每個 SimpleFin 帳戶選擇正確的帳戶類型：
+      account_type_checking_savings: 支票或儲蓄
+      account_type_checking_savings_desc: 一般的銀行帳戶
+      account_type_credit_card: 信用卡
+      account_type_credit_card_desc: 信用卡帳戶
+      account_type_investment: 投資帳戶
+      account_type_investment_desc: 證券帳戶、401(k)、IRA 等帳戶
+      account_type_loan: 貸款或房屋貸款
+      account_type_loan_desc: 負債帳戶
+      account_type_other_asset: 其他資產
+      account_type_other_asset_desc: 其他所有類型
+      transaction_history_title: 交易紀錄：
+      transaction_history_description_html: SimpleFin 通常提供 <strong>60 至 90 天</strong>的交易紀錄，實際天數視您的銀行而定。完成初次設定後，新的交易就會自動同步。歷史資料的可取得範圍會因機構與帳戶類型而異。
+      account_type_label: 帳戶類型：
+      create_accounts: 建立帳戶
+      creating_accounts: 正在建立帳戶...
+      cancel: 取消
+      account_card:
+        balance: 餘額
+      activity:
+        recent:
+          one: 1 筆交易 • 最近一筆 %{when}
+          other: '%{count} 筆交易 • 最近一筆 %{when}'
+        dormant: '%{days} 天內沒有任何活動'
+        empty: 還沒有匯入任何交易
+        likely_closed: 近期沒有活動且餘額為零 - 這張卡可能已經關閉或被換發
+        today: 今天
+        yesterday: 昨天
+        days_ago:
+          one: 1 天前
+          other: '%{count} 天前'
+      stale_accounts:
+        title: SimpleFIN 中已不存在的帳戶
+        description: 這些帳戶還在您的資料庫中，但 SimpleFIN 已經不再提供。上游的帳戶設定有變動時就可能發生這種情況。
+        action_prompt: 您想要怎麼處理？
+        action_delete: 刪除帳戶與所有交易
+        action_move: 把交易移到：
+        action_skip: 暫時跳過
+        transaction_count:
+          one: '%{count} 筆交易'
+          other: '%{count} 筆交易'
     complete_account_setup:
-      all_skipped: "已跳過所有帳戶。未建立任何帳戶。"
-      no_accounts: "沒有需要設定的帳戶。"
-      success: "已成功建立 %{count} 個 SimpleFIN 帳戶！您的交易紀錄與持倉資料正在背景匯入中。"
+      all_skipped: 已跳過所有帳戶。未建立任何帳戶。
+      no_accounts: 沒有需要設定的帳戶。
+      success:
+        one: 成功建立 %{count} 個 SimpleFIN 帳戶！您的交易與持股正在背景匯入中。
+        other: 成功建立 %{count} 個 SimpleFIN 帳戶！您的交易與持股正在背景匯入中。
+      stale_accounts_processed: 失效帳戶：已刪除 %{deleted} 個，已移轉 %{moved} 個。
+      stale_accounts_errors:
+        one: 有 %{count} 個失效帳戶的處理失敗，詳情請查看紀錄檔。
+        other: 有 %{count} 個失效帳戶的處理失敗，詳情請查看紀錄檔。
     simplefin_item:
       add_new: 新增連線
       confirm_accept: 刪除連線
       confirm_body: 這將永久刪除此群組中的所有帳戶及相關資料。
       confirm_title: 確定要刪除 SimpleFIN 連線嗎？
       delete: 刪除
-      deletion_in_progress: "(正在刪除...)"
+      deletion_in_progress: （正在刪除...）
       error: 同步資料時發生錯誤
       no_accounts_description: 此連線目前尚無任何已同步的帳戶。
       no_accounts_title: 找不到帳戶
       requires_update: 重新連線
-      setup_needed: 新帳戶已準備好進行設定
+      setup_needed: 有新帳戶可以設定
       setup_description: 請為您新匯入的 SimpleFIN 帳戶選擇帳戶類型。
       setup_action: 設定新帳戶
-      status: "%{timestamp} 前已同步"
+      setup_accounts_menu: 設定帳戶
+      more_accounts_available:
+        one: 另有 %{count} 個帳戶可以設定
+        other: 另有 %{count} 個帳戶可以設定
+      accounts_skipped_tooltip: 有些帳戶因為同步時發生錯誤而被跳過
+      accounts_skipped_label: 已跳過：%{count}
+      rate_limited_ago: 遭到用量限制（%{time}前）
+      rate_limited_recently: 最近遭到用量限制
+      status: 上次同步於 %{timestamp}前
       status_never: 從未同步
-      status_with_summary: "最後同步於 %{timestamp} 前 • %{summary}"
+      status_with_summary: 上次同步於 %{timestamp}前 • %{summary}
       syncing: 同步中...
       update: 更新
+      stale_pending_note: （不列入預算）
+      stale_pending_accounts: 位於：%{accounts}
+      reconciled_details_note: （詳情請見同步摘要）
+      duplicate_accounts_skipped: 有些帳戶因為重複而被跳過 - 請用「連結現有帳戶」來合併。
     select_existing_account:
-      title: "將 %{account_name} 連結至 SimpleFIN"
+      title: 將 %{account_name} 連結至 SimpleFIN
       description: 選擇一個 SimpleFIN 帳戶來連結至您現有的帳戶
       cancel: 取消
       link_account: 連結帳戶
-      no_accounts_found: 此家庭中找不到任何 SimpleFIN 帳戶。
+      no_accounts_found: 此%{moniker}中找不到任何 SimpleFIN 帳戶。
       wait_for_sync: 如果您剛完成連線或同步，請在同步完成後再試一次。
       unlink_to_move: 若要更改連結，請先從帳戶的操作選單中解除連結。
       all_accounts_already_linked: 所有的 SimpleFIN 帳戶似乎都已連結。
-      currently_linked_to: "目前連結至：%{account_name}"
-
+      currently_linked_to: 目前連結至：%{account_name}
     link_existing_account:
       success: 帳戶已成功連結至 SimpleFIN
       errors:
         only_manual: 僅能連結手動管理的帳戶
+        different_provider: 這個帳戶已連結到別的供應商。請先取消該連結，再連結到 SimpleFIN。
         invalid_simplefin_account: 所選的 SimpleFIN 帳戶無效
+    dismiss_replacement_suggestion:
+      dismissed: 已忽略換卡建議
+    replacement_prompt:
+      title: 您的 %{institution} 卡片可能已被換發
+      description: 「%{account_name}」目前連結到「%{old_name}」，該卡近期沒有活動且餘額為零。同一機構下有一張新卡「%{new_name}」已經啟用。重新連結就能完整保留您的紀錄。
+      relink: 重新連結到新卡
+      confirm_title: 要重新連結到新卡嗎？
+      confirm_body: 「%{account_name}」會改為連結到「%{new_name}」。您的交易紀錄會保留，之後的交易則來自新卡。
+      dismiss_aria: 忽略換卡建議
+    reconciled_status:
+      message:
+        one: 已對帳 %{count} 筆重複的待處理交易
+        other: 已對帳 %{count} 筆重複的待處理交易
+    stale_pending_status:
+      message:
+        one: 有 %{count} 筆待處理交易超過 %{days} 天
+        other: 有 %{count} 筆待處理交易超過 %{days} 天

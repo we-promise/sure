@@ -1,0 +1,75 @@
+---
+it:
+  coinstats_items:
+    create:
+      success: Connessione provider CoinStats configurata con successo.
+      default_name: Connessione CoinStats
+      errors:
+        validation_failed: "Validazione fallita: %{message}."
+    update:
+      success: Connessione provider CoinStats aggiornata con successo.
+      errors:
+        validation_failed: "Validazione fallita: %{message}."
+    destroy:
+      success: Connessione provider CoinStats pianificata per l'eliminazione.
+    link_wallet:
+      success: "%{count} portafoglio/i crypto collegato/i con successo."
+      missing_params: "Parametri obbligatori mancanti: indirizzo e blockchain."
+      failed: Collegamento portafoglio crypto fallito.
+      error: "Collegamento portafoglio crypto fallito: %{message}."
+    link_exchange:
+      success: "Exchange %{name} collegato."
+      missing_params: Exchange e credenziali sono obbligatori.
+      invalid_exchange: L'exchange selezionato non è più supportato.
+      failed: Collegamento exchange fallito.
+      error: "Collegamento exchange fallito: %{message}."
+    new:
+      title: Collega Crypto con CoinStats
+      blockchain_fetch_error: Caricamento blockchain fallito. Riprova più tardi.
+      link_wallet_title: Collega indirizzo portafoglio
+      link_wallet_description: Traccia un portafoglio self-custody o un singolo indirizzo on-chain tramite CoinStats.
+      address_label: Indirizzo
+      address_placeholder: Obbligatorio
+      blockchain_label: Blockchain
+      blockchain_placeholder: Obbligatorio
+      blockchain_select_blank: Seleziona una Blockchain
+      link_wallet_submit: Collega portafoglio Crypto
+      link_exchange_title: Collega API Exchange
+      link_exchange_description: Usa una chiave API di exchange in sola lettura così CoinStats può sincronizzare saldi e transazioni da Bitvavo, Binance e altri exchange supportati.
+      link_exchange_note: Se il tuo exchange richiede l'attivazione della chiave API o la conferma email, completa quel passaggio prima di collegarti qui.
+      exchange_select_blank: Seleziona un exchange
+      exchange_label: Exchange
+      link_exchange_submit: Collega Exchange
+      not_configured_title: Connessione provider CoinStats non configurata
+      not_configured_message: Per collegare un portafoglio crypto o exchange, devi prima configurare la connessione provider CoinStats.
+      not_configured_step1_html: Vai su <strong>Impostazioni → Provider</strong>
+      not_configured_step2_html: Trova il provider <strong>CoinStats</strong>
+      not_configured_step3_html: Segui le <strong>istruzioni di configurazione</strong> fornite per completare la configurazione del provider
+      go_to_settings: Vai alle Impostazioni provider
+      setup_instructions: "Istruzioni di configurazione:"
+      step1_html: Visita la <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">Dashboard API pubblica CoinStats</a> per ottenere una chiave API.
+      step2: Inserisci la tua chiave API qui sotto e clicca Configura.
+      step3_html: Dopo una connessione riuscita, visita la scheda <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Conti</a> per configurare i tuoi conti crypto.
+      api_key_label: Chiave API
+      api_key_placeholder: Obbligatorio
+      configure: Configura
+      update_configuration: Riconfigura
+      default_name: Connessione CoinStats
+    coinstats_item:
+      deletion_in_progress: I dati del portafoglio crypto vengono eliminati…
+      provider_name: CoinStats
+      syncing: Sincronizzazione in corso…
+      sync_status:
+        no_accounts: Nessun portafoglio crypto trovato
+        all_synced:
+          one: "%{count} portafoglio crypto sincronizzato"
+          other: "%{count} portafogli crypto sincronizzati"
+        partial_sync: "%{linked_count} portafogli crypto sincronizzati, %{unlinked_count} da configurare"
+      reconnect: Riconnetti
+      status: Ultima sincronizzazione %{timestamp} fa
+      status_never: Mai sincronizzato
+      status_with_summary: "Ultima sincronizzazione %{timestamp} fa • %{summary}"
+      update_api_key: Aggiorna chiave API
+      delete: Elimina
+      no_wallets_title: Nessun portafoglio crypto connesso
+      no_wallets_message: Nessun portafoglio crypto è attualmente connesso a CoinStats.

@@ -2,13 +2,18 @@
 zh-TW:
   layouts:
     application:
+      insights: 洞察
       privacy_mode: 切換隱私模式
+      resize_left_sidebar: 調整帳戶側邊欄寬度
+      resize_right_sidebar: 調整助手側邊欄寬度
       skip_to_main: 跳至主要內容
       nav:
         assistant: 助手
         budgets: 預算
         home: 首頁
+        plan: 規劃
         reports: 報表
+        goals: 目標
         transactions: 交易紀錄
     auth:
       existing_account: 已經有帳號了？
@@ -19,6 +24,10 @@ zh-TW:
       footer:
         privacy_policy: 隱私權政策
         terms_of_service: 服務條款
+      confirm_dialog:
+        are_you_sure: 您確定嗎？
+        cannot_be_undone: 這個動作無法復原。
+        confirm: 確認
     trial:
       open_demo: 開放示範
       data_deleted_in_days: 資料將在 %{days} 天後刪除

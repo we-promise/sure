@@ -1,0 +1,95 @@
+<%# locals: (insights:, **args) %>
+
+<%# Mirrors the outflows/balance-sheet list idiom: an inset well with an
+    uppercase mini-header, white rows inside, tinted icon circles, and
+    right-aligned figures. Each row links through to /insights and carries its
+    own acknowledge control. Prefetch is disabled because Turbo would serve the
+    hover-prefetched response on click, skipping the mark-as-read in
+    InsightsController#index (it deliberately ignores prefetch requests). %>
+<%# -mt-2 evens the frame: the section shell gives 24px above the content but
+    only 16px at the sides and bottom, and with the well as the sole content
+    the asymmetry shows. %>
+<div id="insights-feed" class="px-4 -mt-2">
+  <div class="bg-container-inset rounded-xl p-1 space-y-1">
+    <div class="px-4 py-2 flex items-center justify-between uppercase text-xs font-medium text-secondary">
+      <% new_count = insights.count(&:active?) %>
+      <div class="flex items-center gap-2">
+        <% if new_count.positive? %>
+          <p><%= t("insights.feed.header_new") %><span class="text-subdued mx-1">&middot;</span><%= new_count %></p>
+        <% else %>
+          <p><%= t("insights.feed.header") %></p>
+        <% end %>
+        <%= render DS::Pill.new(label: t("shared.preview")) %>
+      </div>
+
+      <%= render DS::Link.new(
+        text: t("insights.feed.view_all"),
+        href: insights_path,
+        variant: "ghost",
+        size: "sm",
+        class: "normal-case",
+        data: { turbo_prefetch: false }
+      ) %>
+    </div>
+
+    <div class="py-1.5 shadow-border-xs rounded-lg bg-container text-sm">
+      <% insights.each do |insight| %>
+        <%# Stretched link rather than a link wrapping the row, because the
+            acknowledge control is a button_to — a <form>, which cannot be
+            nested inside an <a>. Same idiom as the outflows rows. %>
+        <div class="relative flex items-center mx-3 px-3 py-2.5 rounded-lg gap-3 group/insight">
+          <%# Empty body with an aria-label: the visible title is a sibling, and
+              passing a name would render it as link text on top of the row. %>
+          <%= link_to "", insights_path,
+                class: "absolute inset-0 rounded-lg cursor-pointer",
+                aria: { label: insight.title },
+                data: { turbo_prefetch: false } %>
+
+          <div class="h-7 w-7 shrink-0 rounded-full flex justify-center items-center group-hover/insight:scale-105 transition-all duration-300"
+               style="background-color: color-mix(in oklab, <%= insight_icon_css_color(insight) %> 10%, transparent); color: <%= insight_icon_css_color(insight) %>;">
+            <%= icon(insight_icon_key(insight), color: "current", size: "sm") %>
+          </div>
+
+          <div class="min-w-0 grow">
+            <%# No per-row "New" pill: the well's header already counts the
+                unread ones ("New · 3"), and with only three rows the pill was
+                usually on all of them — saying the same thing twice while
+                crowding the title. %>
+            <span class="text-sm font-medium text-primary truncate block"><%= insight_privacy_text(insight.title) %></span>
+            <p class="text-sm text-secondary truncate"><%= insight_privacy_text(insight.body) %></p>
+          </div>
+
+          <% if (figure = insight_key_figure(insight)) %>
+            <div class="text-right shrink-0">
+              <p class="text-sm font-medium whitespace-nowrap privacy-sensitive <%= insight_sentiment(insight) == :positive ? "text-success" : "text-primary" %>"><%= figure.first %></p>
+              <p class="text-xs text-secondary whitespace-nowrap"><%= figure.last %></p>
+            </div>
+          <% end %>
+
+          <%# Acknowledging used to be possible only on /insights, so the surface
+              people actually look at couldn't clear anything. `relative z-10`
+              lifts this above the stretched link. Visibility is progressive and
+              never hover-only: pointer hover, keyboard focus, and always shown
+              on touch, where there is no hover to reveal it. No gesture, so the
+              section's drag-to-reorder handlers are untouched.
+
+              The group is *named*: the dashboard <section> wrapping this widget
+              is itself a `.group` (for its header controls), and a bare
+              `group-hover:` matches any ancestor group — so hovering one row, or
+              even the section header, revealed the control on every row. %>
+          <div class="relative z-10 shrink-0 opacity-0 group-hover/insight:opacity-100 group-focus-within/insight:opacity-100 pointer-coarse:opacity-100 transition-opacity">
+            <%= render DS::Button.new(
+              variant: "icon",
+              size: "sm",
+              icon: "check",
+              href: acknowledge_insight_path(insight),
+              method: :patch,
+              title: t("insights.card.acknowledge"),
+              aria_label: t("insights.feed.acknowledge_aria", title: insight.title)
+            ) %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

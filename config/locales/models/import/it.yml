@@ -1,0 +1,18 @@
+---
+it:
+  activerecord:
+    attributes:
+      import:
+        col_sep: Separatore colonne
+        col_seps:
+          comma: Virgola (,)
+          semicolon: Punto e virgola (;)
+        currency: Valuta
+        number_format: Formato numeri
+    errors:
+      models:
+        import:
+          duplicate_headers: "Le intestazioni CSV si normalizzano in colonne duplicate: %{columns}"
+          attributes:
+            raw_file_str:
+              invalid_csv_format: non è un formato CSV valido

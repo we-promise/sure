@@ -3,13 +3,29 @@ tr:
   users:
     destroy:
       success: Hesabınız silindi.
-    update:
-      email_change_failed: E-posta adresi değiştirilemedi.
-      email_change_initiated: Lütfen yeni e-posta adresinizi kontrol edin ve onay talimatlarını izleyin.
-      success: Profiliniz güncellendi.
+    resend_confirmation_email:
+      no_pending_change: Şu anda bekleyen bir e-posta değişikliği yok!
+      success: Yeni bir onay e-postası gönderilmek üzere sıraya alındı.
     reset:
       success: Hesabınız sıfırlandı. Verileriniz arka planda bir süre sonra silinecek.
       unauthorized: Bu işlemi gerçekleştirmeye yetkiniz yok.
     reset_with_sample_data:
-      success: Hesabınız sıfırlandı ve örnek veriler hazırlanıyor. Kısa süre içinde demo verileri göreceksiniz.
-
+      success: Hesabınız sıfırlandı ve örnek veriler hazırlanıyor. Kısa süre içinde
+        demo verileri göreceksiniz.
+    roles:
+      admin: Yönetici
+      member: Üye
+      super_admin: Süper yönetici
+    update:
+      email_change_failed: E-posta adresi değiştirilemedi.
+      email_change_initiated: Lütfen yeni e-posta adresinizi kontrol edin ve onay
+        talimatlarını izleyin.
+      success: Profiliniz güncellendi.
+    user_menu:
+      aria_label: Hesap menüsünü aç
+      changelog: Yenilikler
+      contact: İletişim
+      feedback: Geri bildirim
+      log_out: Çıkış yap
+      settings: Ayarlar
+      version: Sürüm

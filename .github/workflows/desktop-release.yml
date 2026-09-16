@@ -1,0 +1,82 @@
+name: Desktop Build
+
+# Build the macOS desktop app as part of the normal Sure release. The caller
+# supplies the v* release ref, so desktop versions cannot diverge independently.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build macOS Desktop App
+    runs-on: macos-latest # Apple Silicon runner; cross-builds the x86_64 slice
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Resolve and verify release version
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '[:space:]' < .sure-version)"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+
+          if [ -z "$VERSION" ]; then
+            echo "::error::.sure-version is empty or unreadable"
+            exit 1
+          fi
+          if [ "$VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::.sure-version ($VERSION) does not match release tag (v$TAG_VERSION)"
+            exit 1
+          fi
+          echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$' \
+            || { echo "::error::invalid version '$VERSION'"; exit 1; }
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp desktop version for the build
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          npm version "$VERSION" --no-git-tag-version --allow-same-version --prefix desktop
+          tmp="$(mktemp)"
+          jq --arg v "$VERSION" '.version = $v' desktop/src-tauri/tauri.conf.json > "$tmp"
+          mv "$tmp" desktop/src-tauri/tauri.conf.json
+          perl -0pi -e 's/(^version = ").*?(")/$1$ENV{VERSION}$2/m' desktop/src-tauri/Cargo.toml
+          perl -0pi -e 's/(name = "sure-desktop"\nversion = ").*?(")/$1$ENV{VERSION}$2/' desktop/src-tauri/Cargo.lock
+
+      # No dependency/build caches on the release workflow: a poisoned Actions
+      # cache written by another workflow must never flow into a published .dmg.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Install frontend dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build universal unsigned DMG
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: desktop
+          includeUpdaterJson: false
+          args: --target universal-apple-darwin
+
+      - name: Upload desktop DMG
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: desktop-release-dmg
+          path: desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 1

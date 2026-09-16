@@ -1,0 +1,15 @@
+---
+it:
+  password_resets:
+    disabled: Il reset della password tramite Sure è disabilitato. Reimposta la password tramite il tuo provider di identità.
+    sso_only_user: Il tuo account usa SSO per l'autenticazione. Contatta il tuo amministratore per gestire le credenziali.
+    edit:
+      title: Reimposta password
+    new:
+      requested: Controlla la tua email per un link per reimpostare la password.
+      submit: Reimposta password
+      title: Reimposta password
+      back: Indietro
+    update:
+      invalid_token: Token non valido.
+      success: La tua password è stata reimpostata.

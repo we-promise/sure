@@ -69,6 +69,7 @@ class PlaidEntry::Processor
 
     def matched_category
       return nil unless detailed_category
+      return nil unless account&.enable_category_matcher?
       @matched_category ||= category_matcher.match(detailed_category)
     end
 

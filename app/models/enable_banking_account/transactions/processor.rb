@@ -23,6 +23,11 @@ class EnableBankingAccount::Transactions::Processor
       Account::ProviderImportAdapter.new(enable_banking_account.current_account)
     end
 
+    # Fetch once per sync batch rather than once per transaction (each row gets its
+    # own Processor instance below) -- avoids repeating the same family-scoped
+    # merchant queries for every imported row.
+    shared_known_merchant_names = enable_banking_account.current_account&.family&.known_merchant_names || []
+
     # Pre-fetch external_ids that must not be re-imported.
     # One query per category per sync; O(1) Set lookup per transaction — avoids N+1.
     excluded_ids = if enable_banking_account.current_account
@@ -85,7 +90,8 @@ class EnableBankingAccount::Transactions::Processor
         result = EnableBankingEntry::Processor.new(
           transaction_data,
           enable_banking_account: enable_banking_account,
-          import_adapter: shared_adapter
+          import_adapter: shared_adapter,
+          known_merchant_names: shared_known_merchant_names
         ).process
 
         if result.nil?

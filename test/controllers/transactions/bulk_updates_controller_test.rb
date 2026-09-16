@@ -33,6 +33,24 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "bulk update preloads transaction records" do
+    transaction_ids = @user.family.entries.transactions.limit(4).pluck(:id)
+
+    queries = capture_sql_queries do
+      post transactions_bulk_update_url, params: {
+        bulk_update: {
+          entry_ids: transaction_ids,
+          notes: "Updated in bulk"
+        }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_empty queries.grep(
+      /SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/
+    )
+  end
+
   test "bulk update preserves tags when tag_ids not provided" do
     transaction_entry = @user.family.entries.transactions.first
     original_tags = [ Tag.first, Tag.second ]

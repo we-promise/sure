@@ -1,5 +1,5 @@
 class PlaidItem < ApplicationRecord
-  include Syncable, Provided, Encryptable
+  include Syncable, Provided, Encryptable, DestroyableLater
 
   enum :plaid_region, { us: "us", eu: "eu" }
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -27,22 +27,24 @@ class PlaidItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
+  TRANSACTIONS_REFRESH_COOLDOWN = 5.minutes
+
   # Get accounts from both new and legacy systems
   def accounts
-    # Preload associations to avoid N+1 queries
-    plaid_accounts
+    @accounts ||= plaid_accounts
       .includes(:account, account_provider: :account)
       .map(&:current_account)
       .compact
       .uniq
   end
 
-  def get_update_link_token(webhooks_url:, redirect_url:)
+  def get_update_link_token(webhooks_url:, redirect_url:, account_selection_enabled: false)
     family.get_link_token(
       webhooks_url: webhooks_url,
       redirect_url: redirect_url,
       region: plaid_region,
-      access_token: access_token
+      access_token: access_token,
+      account_selection_enabled: account_selection_enabled
     )
   rescue Plaid::ApiError => e
     error_body = begin
@@ -65,9 +67,43 @@ class PlaidItem < ApplicationRecord
     end
   end
 
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
+  # Queue a fresh import after an in-flight sync. Plaid Link can finish adding
+  # accounts after the active sync already fetched its account list.
+  def sync_later_with_follow_up
+    active_sync = syncs.visible.ordered.first
+    sync_later
+
+    return unless active_sync&.reload&.in_progress?
+
+    PlaidFollowUpSyncJob.set(wait: PlaidFollowUpSyncJob::RETRY_DELAY).perform_later(self, active_sync_id: active_sync.id)
+  end
+
+  def request_transactions_refresh_later
+    return unless supports_product?("transactions")
+    return unless shared_transactions_refresh_cache?
+
+    refresh_requested = Rails.cache.write(
+      transactions_refresh_cache_key,
+      true,
+      expires_in: TRANSACTIONS_REFRESH_COOLDOWN,
+      unless_exist: true
+    )
+
+    return unless refresh_requested
+
+    enqueued_job = begin
+      PlaidTransactionsRefreshJob.perform_later(self)
+    rescue
+      Rails.cache.delete(transactions_refresh_cache_key)
+      raise
+    end
+
+    Rails.cache.delete(transactions_refresh_cache_key) unless enqueued_job
+  end
+
+  def sync_later_with_provider_refresh
+    request_transactions_refresh_later
+    sync_later_with_follow_up
   end
 
   def import_latest_plaid_data
@@ -122,6 +158,19 @@ class PlaidItem < ApplicationRecord
   end
 
   private
+    def transactions_refresh_cache_key
+      "plaid_item:#{id}:transactions_refresh_requested"
+    end
+
+    def shared_transactions_refresh_cache?
+      shared_cache = Rails.cache.is_a?(ActiveSupport::Cache::RedisCacheStore) ||
+        Rails.cache.is_a?(ActiveSupport::Cache::MemCacheStore) ||
+        Rails.cache.class.name == "SolidCache::Store"
+
+      Rails.logger.warn("Plaid transaction refresh requires a shared Rails cache store") unless shared_cache
+      shared_cache
+    end
+
     def remove_plaid_item
       return unless plaid_provider.present?
 
@@ -144,10 +193,22 @@ class PlaidItem < ApplicationRecord
       end
     end
 
-    # Plaid returns mutually exclusive arrays here.  If the item has made a request for a product,
-    # it is put in the billed_products array.  If it is supported, but not yet used, it goes in the
-    # available_products array.
+    # Plaid splits an item's products across three arrays. If the item has made a
+    # request for a product, it is put in the billed_products array. If it is
+    # supported but not yet used, it goes in available_products. Products granted
+    # through Link's `additional_consented_products` appear in neither -- they are
+    # reported in consented_products until the first call actually bills them.
+    #
+    # That third array matters because it is how we request `transactions` for
+    # liability accounts: Provider::Plaid#get_primary_product returns "liabilities"
+    # for CreditCard/Loan, so `transactions` can only arrive as an additionally
+    # consented product. Omitting it made supports_product?("transactions") false
+    # for every Plaid-linked credit card, so PlaidItem::AccountsSnapshot skipped
+    # the transactions fetch entirely and those accounts imported balances and
+    # liabilities but no transactions at all.
     def supported_products
-      available_products + billed_products
+      consented = raw_payload.is_a?(Hash) ? Array(raw_payload["consented_products"]) : []
+
+      (available_products + billed_products + consented).map(&:to_s).uniq
     end
 end

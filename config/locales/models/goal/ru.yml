@@ -1,0 +1,28 @@
+---
+ru:
+  activerecord:
+    attributes:
+      goal:
+        color: Цвет
+        currency: Валюта
+        linked_accounts: Связанные счета
+        name: Название
+        notes: Заметки
+        state: Статус
+        target_amount: Целевая сумма
+        target_date: Дата достижения
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Выберите хотя бы один счёт для
+                накоплений.
+            currency:
+              locked_after_linked: Нельзя изменить валюту после привязки счетов к цели.
+            linked_accounts:
+              currency_mismatch: Все связанные счета должны быть в одной валюте.
+              must_be_fundable: Все связанные счета должны быть денежными или 
+                инвестиционными.
+              must_belong_to_family: Связанные счета должны принадлежать той же группе, 
+                что и цель.

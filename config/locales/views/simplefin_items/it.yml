@@ -1,0 +1,158 @@
+---
+it:
+  simplefin_items:
+    new:
+      title: Connetti SimpleFIN
+      setup_token: Token di configurazione
+      setup_token_placeholder: incolla il tuo token di configurazione SimpleFIN
+      connect: Connetti
+      cancel: Annulla
+    create:
+      success: Connessione SimpleFIN aggiunta con successo! I tuoi conti appariranno a breve mentre vengono sincronizzati in background.
+      errors:
+        blank_token: Inserisci un token di configurazione SimpleFIN.
+        invalid_token: Token di configurazione non valido. Verifica di aver copiato il token completo da SimpleFIN Bridge.
+        token_compromised: Il token di configurazione potrebbe essere compromesso, scaduto o già utilizzato. Creane uno nuovo.
+        create_failed: "Connessione fallita: %{message}"
+        unexpected: Si è verificato un errore imprevisto. Riprova.
+    destroy:
+      success: La connessione SimpleFIN verrà rimossa
+    update:
+      success: Connessione SimpleFIN aggiornata con successo! I tuoi conti vengono riconnessi.
+      errors:
+        blank_token: Inserisci un token di configurazione SimpleFIN.
+        invalid_token: Token di configurazione non valido. Verifica di aver copiato il token completo da SimpleFIN Bridge.
+        token_compromised: Il token di configurazione potrebbe essere compromesso, scaduto o già utilizzato. Creane uno nuovo.
+        update_failed: "Aggiornamento connessione fallito: %{message}"
+        unexpected: Si è verificato un errore imprevisto. Riprova.
+    edit:
+      setup_token:
+        label: "Token di configurazione SimpleFIN:"
+        placeholder: "Incolla qui il tuo token di configurazione SimpleFIN..."
+        help_text: "Il token deve essere una stringa lunga che inizia con lettere e numeri"
+      title: Aggiorna connessione SimpleFIN
+      header_subtitle: Ottieni un nuovo token di configurazione per riconnettere il tuo account SimpleFIN
+      connection_needs_update: "La tua connessione SimpleFIN deve essere aggiornata:"
+      step_1_html: "Visita <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> per creare un nuovo token di configurazione"
+      step_2: Copia il token e incollalo qui sotto
+      step_3: "Clicca \"Aggiorna\" per ripristinare l'accesso"
+      update: Aggiorna
+      cancel: Annulla
+    setup_accounts:
+      title: Configura i tuoi conti SimpleFIN
+      header_subtitle: Scegli i tipi di conto corretti per i conti importati
+      choose_account_type: "Scegli il tipo di conto corretto per ogni conto SimpleFIN:"
+      account_type_checking_savings: Conto corrente o risparmio
+      account_type_checking_savings_desc: Conti bancari ordinari
+      account_type_credit_card: Carta di credito
+      account_type_credit_card_desc: Conti carta di credito
+      account_type_investment: Investimento
+      account_type_investment_desc: "Conti brokerage, 401(k), IRA"
+      account_type_loan: Prestito o mutuo
+      account_type_loan_desc: Conti debiti
+      account_type_other_asset: Altro asset
+      account_type_other_asset_desc: Tutto il resto
+      transaction_history_title: "Cronologia transazioni:"
+      transaction_history_description_html: "SimpleFIN fornisce tipicamente <strong>60-90 giorni</strong> di cronologia transazioni, a seconda della banca. Dopo la configurazione iniziale, le nuove transazioni verranno sincronizzate automaticamente. La disponibilità dei dati storici varia per istituzione e tipo di conto."
+      account_type_label: "Tipo di conto:"
+      create_accounts: Crea conti
+      creating_accounts: Creazione conti in corso...
+      cancel: Annulla
+      account_card:
+        balance: "Saldo"
+      activity:
+        recent:
+          one: "1 transazione • ultima %{when}"
+          other: "%{count} transazioni • ultima %{when}"
+        dormant: "Nessuna attività negli ultimi %{days} giorni"
+        empty: "Nessuna transazione importata ancora"
+        likely_closed: "Nessuna attività recente e saldo zero — questo potrebbe essere un conto chiuso o sostituito"
+        today: "oggi"
+        yesterday: "ieri"
+        days_ago:
+          one: "1 giorno fa"
+          other: "%{count} giorni fa"
+      stale_accounts:
+        title: "Conti non più in SimpleFIN"
+        description: "Questi conti esistono nel database ma non vengono più forniti da SimpleFIN. Questo può succedere quando le configurazioni dei conti cambiano a monte."
+        action_prompt: "Cosa vuoi fare?"
+        action_delete: "Elimina conto e tutte le transazioni"
+        action_move: "Sposta le transazioni in:"
+        action_skip: "Salta per ora"
+        transaction_count:
+          one: "%{count} transazione"
+          other: "%{count} transazioni"
+    complete_account_setup:
+      all_skipped: "Tutti i conti sono stati saltati. Nessun conto è stato creato."
+      no_accounts: "Nessun conto da configurare."
+      success:
+        one: "Creato con successo %{count} conto SimpleFIN! Le tue transazioni e posizioni vengono importate in background."
+        other: "Creati con successo %{count} conti SimpleFIN! Le tue transazioni e posizioni vengono importate in background."
+      stale_accounts_processed: "Conti inattivi: %{deleted} eliminati, %{moved} spostati."
+      stale_accounts_errors:
+        one: "%{count} azione su conto inattivo è fallita. Controlla i log per i dettagli."
+        other: "%{count} azioni su conti inattivi sono fallite. Controlla i log per i dettagli."
+    simplefin_item:
+      add_new: Aggiungi nuova connessione
+      confirm_accept: Elimina connessione
+      confirm_body: Questo eliminerà definitivamente tutti i conti in questo gruppo e tutti i dati associati.
+      confirm_title: Eliminare la connessione SimpleFIN?
+      delete: Elimina
+      deletion_in_progress: "(eliminazione in corso...)"
+      error: Si è verificato un errore durante la sincronizzazione dei dati
+      no_accounts_description: Questa connessione non ha ancora conti sincronizzati.
+      no_accounts_title: Nessun conto trovato
+      requires_update: Riconnetti
+      setup_needed: Nuovi conti pronti per la configurazione
+      setup_description: Scegli i tipi di conto per i tuoi nuovi conti SimpleFIN importati.
+      setup_action: Configura nuovi conti
+      setup_accounts_menu: Configura conti
+      more_accounts_available:
+        one: "%{count} altro conto disponibile da configurare"
+        other: "%{count} altri conti disponibili da configurare"
+      accounts_skipped_tooltip: "Alcuni conti sono stati saltati a causa di errori durante la sincronizzazione"
+      accounts_skipped_label: "Saltati: %{count}"
+      rate_limited_ago: "Limite di frequenza (%{time} fa)"
+      rate_limited_recently: "Limite di frequenza raggiunto di recente"
+      status: Ultima sincronizzazione %{timestamp} fa
+      status_never: Mai sincronizzato
+      status_with_summary: "Ultima sincronizzazione %{timestamp} fa • %{summary}"
+      syncing: Sincronizzazione in corso...
+      update: Aggiorna
+      stale_pending_note: "(escluso dai budget)"
+      stale_pending_accounts: "in: %{accounts}"
+      reconciled_details_note: "(vedi riepilogo sincronizzazione per i dettagli)"
+      duplicate_accounts_skipped: "Alcuni conti sono stati saltati come duplicati — usa 'Collega conti esistenti' per unirli."
+    select_existing_account:
+      title: "Collega %{account_name} a SimpleFIN"
+      description: Seleziona un conto SimpleFIN da collegare al tuo conto esistente
+      cancel: Annulla
+      link_account: Collega conto
+      no_accounts_found: "Nessun conto SimpleFIN trovato per questo %{moniker}."
+      wait_for_sync: Se hai appena connesso o sincronizzato, riprova dopo il completamento della sincronizzazione.
+      unlink_to_move: Per spostare un collegamento, prima scollegalo dal menu azioni del conto.
+      all_accounts_already_linked: Tutti i conti SimpleFIN sembrano già collegati.
+      currently_linked_to: "Attualmente collegato a: %{account_name}"
+    link_existing_account:
+      success: Conto collegato con successo a SimpleFIN
+      errors:
+        only_manual: Solo i conti manuali possono essere collegati
+        different_provider: Questo conto è collegato a un provider diverso. Prima scollegalo da quel provider, poi collegalo a SimpleFIN.
+        invalid_simplefin_account: Conto SimpleFIN selezionato non valido
+    dismiss_replacement_suggestion:
+      dismissed: Suggerimento di sostituzione ignorato
+    replacement_prompt:
+      title: "La tua carta %{institution} potrebbe essere stata sostituita"
+      description: "\"%{account_name}\" è collegato a \"%{old_name}\", che non ha avuto attività recente e ha saldo zero. Una nuova carta, \"%{new_name}\", è ora attiva presso la stessa istituzione. Ricollega per mantenere la tua cronologia intatta."
+      relink: Ricollega alla nuova carta
+      confirm_title: Ricollega alla nuova carta?
+      confirm_body: "\"%{account_name}\" verrà collegato a \"%{new_name}\". La cronologia delle transazioni rimane; le future vengono dalla nuova carta."
+      dismiss_aria: Ignora suggerimento di sostituzione
+    reconciled_status:
+      message:
+        one: "%{count} transazione in sospeso duplicata riconciliata"
+        other: "%{count} transazioni in sospeso duplicate riconciliate"
+    stale_pending_status:
+      message:
+        one: "%{count} transazione in sospeso più vecchia di %{days} giorni"
+        other: "%{count} transazioni in sospeso più vecchie di %{days} giorni"

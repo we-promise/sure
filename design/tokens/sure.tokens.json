@@ -11,6 +11,10 @@
     "mono": {
       "$value": "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
       "$type": "fontFamily"
+    },
+    "weight": {
+      "medium": { "$value": 500, "$type": "fontWeight" },
+      "semibold": { "$value": 600, "$type": "fontWeight" }
     }
   },
 
@@ -20,11 +24,12 @@
 
     "success":     { "$value": "{color.green.700}",  "$type": "color", "$extensions": { "sure.dark": "{color.green.400}" } },
     "warning":     { "$value": "{color.yellow.600}", "$type": "color", "$extensions": { "sure.dark": "{color.yellow.400}" } },
-    "destructive": { "$value": "{color.red.600}",    "$type": "color", "$extensions": { "sure.dark": "{color.red.400}" } },
+    "destructive": { "$value": "{color.red.500}",    "$type": "color", "$extensions": { "sure.dark": "{color.red.400}" } },
     "info":        { "$value": "{color.blue.600}",   "$type": "color", "$extensions": { "sure.dark": "{color.blue.500}" } },
     "shadow":      { "$value": "{color.black|6%}",   "$type": "color", "$extensions": { "sure.dark": "{color.white|8%}" } },
 
     "link":                  { "$value": "{color.blue.600}",         "$type": "color", "$extensions": { "sure.dark": "{color.blue.500}" } },
+    "focus-ring":            { "$value": "{color.alpha-black.700}",  "$type": "color", "$extensions": { "sure.dark": "{color.alpha-white.700}" } },
     "tertiary":              { "$value": "{color.alpha-black.100}",  "$type": "color", "$extensions": { "sure.dark": "{color.alpha-white.200}" } },
     "surface":               { "$value": "{color.gray.50}",          "$type": "color", "$extensions": { "sure.dark": "{color.black}" } },
     "surface-hover":         { "$value": "{color.gray.100}",         "$type": "color", "$extensions": { "sure.dark": "{color.gray.800}" } },
@@ -269,6 +274,7 @@
   "utility": {
     "bg-inverse":             { "$type": "utility", "$value": "{color.gray.800}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.white}" } },
     "bg-inverse-hover":       { "$type": "utility", "$value": "{color.gray.700}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.100}" } },
+    "bg-subdued":             { "$type": "utility", "$value": "{color.gray.400}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.400}" } },
     "bg-overlay": {
       "$type": "utility",
       "$value": "{color.gray.100|50%}",
@@ -333,8 +339,10 @@
     "border-divider":     { "$type": "utility", "$value": "border-tertiary" },
     "border-subdued":     { "$type": "utility", "$value": "{color.alpha-black.50}",  "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-white.200}" } },
     "border-solid":       { "$type": "utility", "$value": "{color.black}",           "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.white}" } },
-    "border-destructive": { "$type": "utility", "$value": "{color.red.600}",         "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.red.400}" } },
+    "border-destructive": { "$type": "utility", "$value": "{color.red.500}",         "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.red.400}" } },
     "border-inverse":     { "$type": "utility", "$value": "{color.alpha-white.200}", "$extensions": { "sure.utility": { "prefix": "border" }, "sure.dark": "{color.alpha-black.300}" } },
+
+    "divide-subdued":     { "$type": "utility", "$value": "{color.alpha-black.50}",  "$extensions": { "sure.utility": { "prefix": "divide" }, "sure.dark": "{color.alpha-white.200}" } },
 
     "button-bg-primary":           { "$type": "utility", "$value": "{color.gray.900}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.white}" } },
     "button-bg-primary-hover":     { "$type": "utility", "$value": "{color.gray.800}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.50}" } },
@@ -347,6 +355,8 @@
     "button-bg-destructive-hover": { "$type": "utility", "$value": "{color.red.700}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.red.500}" } },
     "button-bg-ghost-hover":       { "$type": "utility", "$value": "{color.gray.50}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "bg-gray-800 text-inverse" } },
     "button-bg-outline-hover":     { "$type": "utility", "$value": "{color.gray.100}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
+    "button-bg-accent":            { "$type": "utility", "$value": "{color.blue.tint-5}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.blue.tint-5}" } },
+    "button-bg-accent-hover":      { "$type": "utility", "$value": "{color.blue.tint-10}", "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.blue.tint-10}" } },
 
     "tab-item-active":  { "$type": "utility", "$value": "{color.white}",     "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.700}" } },
     "tab-item-hover":   { "$type": "utility", "$value": "{color.gray.200}",  "$extensions": { "sure.utility": { "prefix": "bg" }, "sure.dark": "{color.gray.800}" } },

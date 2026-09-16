@@ -1,0 +1,26 @@
+---
+pt-PT:
+  activerecord:
+    errors:
+      models:
+        transfer:
+          attributes:
+            base:
+              inflow_cannot_be_in_multiple_transfers: A transação de entrada não pode fazer
+                parte de múltiplas transferências
+              must_be_from_different_accounts: A transferência deve ter contas diferentes
+              must_be_from_same_family: A transferência deve ser da mesma família
+              must_be_within_date_range: As datas das transações de transferência devem estar
+                dentro de 4 dias uma da outra
+              must_have_opposite_amounts: As transações de transferência devem ter montantes
+                opostos
+              must_have_single_currency: A transferência deve ter uma única moeda
+              outflow_cannot_be_in_multiple_transfers: A transação de saída não pode
+                fazer parte de múltiplas transferências
+          different_accounts: "Tem de ser de contas diferentes"
+          same_family: "Tem de ser da mesma família"
+          opposite_amounts: "Tem de ter montantes opostos"
+          within_days: "Tem de ser dentro de %{count} dias"
+  transfer:
+    name: Transferência para %{to_account}
+    payment_name: Pagamento para %{to_account}

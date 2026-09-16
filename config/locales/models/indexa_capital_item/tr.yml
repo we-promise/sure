@@ -1,0 +1,8 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: INDEXA_API_TOKEN ortam değişkeni veya kullanıcı adı/belge/parola
+            kimlik bilgilerinden biri gereklidir

@@ -225,31 +225,40 @@ class Eval::Runners::ChatRunner < Eval::Runners::Base
       end
     end
 
+    # The real static prompt plus a fixed synthetic session context, so evals
+    # measure the prompt users actually run. The previous hardcoded stand-in
+    # (four fake permissive tool schemas, its own instructions) scored a
+    # fiction that could pass while the shipped prompt regressed.
     def build_instructions
-      # Simple instructions for evaluation - we don't have a real user/family context
       <<~PROMPT
-      You are a financial assistant helping users understand their financial data.
-      Use the functions available to answer questions about accounts, transactions, and financial statements.
-      Today's date is #{Date.current}.
-    PROMPT
+        #{Assistant::Configurable::STATIC_INSTRUCTIONS}
+        ## Session context
+
+        - Today's date: #{Date.current}. For functions that require dates, use it as your reference point.
+        - Date format: %m-%d-%Y
+        - Preferred currency: USD (symbol $, precision 2, format %u%n, separator ".", delimiter ",")
+      PROMPT
     end
 
+    # Real definitions from the registry. Most schemas are user-independent
+    # now, but a few (get_holdings, update_tag) still embed small family
+    # scoped enums, so definitions build against a reference user; a class
+    # whose schema cannot build without one is skipped with a log line rather
+    # than silently faked.
     def build_function_definitions
-      # Return the function definitions that the chat would normally have
-      [
-        build_function_definition("get_transactions", "Get paginated transactions with optional filters"),
-        build_function_definition("get_accounts", "Get all accounts with balances and historical data"),
-        build_function_definition("get_balance_sheet", "Get current net worth, assets, and liabilities"),
-        build_function_definition("get_income_statement", "Get income and expenses by category for a period")
-      ]
+      user = reference_user
+
+      Assistant.function_classes(user).filter_map do |fn_class|
+        begin
+          fn_class.new(user).to_definition
+        rescue StandardError => e
+          log_progress("Skipping #{fn_class.name} definition: #{e.message}")
+          nil
+        end
+      end
     end
 
-    def build_function_definition(name, description)
-      {
-        name: name,
-        description: description,
-        params_schema: { type: "object", properties: {}, additionalProperties: true },
-        strict: false
-      }
+    def reference_user
+      @reference_user ||= User.order(:created_at).first
     end
 end

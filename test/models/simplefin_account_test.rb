@@ -44,6 +44,25 @@ class SimplefinAccountTest < ActiveSupport::TestCase
     assert_includes account.errors[:base], I18n.t("activerecord.errors.models.simplefin_account.no_balance")
   end
 
+  test "accepts only supported balance sign overrides" do
+    @simplefin_account.balance_sign_override = "credit"
+    assert @simplefin_account.valid?
+
+    @simplefin_account.balance_sign_override = "debt"
+    assert @simplefin_account.valid?
+
+    @simplefin_account.balance_sign_override = "unsupported"
+    refute @simplefin_account.valid?
+  end
+
+  test "database rejects an unsupported balance sign override" do
+    @simplefin_account.balance_sign_override = "unsupported"
+
+    assert_raises ActiveRecord::StatementInvalid do
+      @simplefin_account.save!(validate: false)
+    end
+  end
+
   test "can upsert snapshot data" do
     balance_date = "2024-01-15T10:30:00Z"
     snapshot = {
@@ -69,6 +88,23 @@ class SimplefinAccountTest < ActiveSupport::TestCase
     assert_equal({ "account_number_last_4" => "1234" }, @simplefin_account.extra)
     assert_equal({ "domain" => "testbank.com", "name" => "Test Bank" }, @simplefin_account.org_data)
     assert_equal snapshot, @simplefin_account.raw_payload
+  end
+
+  test "parses numeric-string epoch balance-date in snapshot" do
+    epoch_string = Time.utc(2026, 6, 17, 12, 34, 56).to_i.to_s
+    snapshot = {
+      "balance" => 2000.0,
+      "available-balance" => 1800.0,
+      "balance-date" => epoch_string,
+      "currency" => "USD",
+      "type" => "investment",
+      "name" => "Traditional IRA",
+      "id" => "trad_ira_1"
+    }
+
+    @simplefin_account.upsert_simplefin_snapshot!(snapshot)
+
+    assert_equal Time.at(epoch_string.to_i).utc, @simplefin_account.balance_date
   end
 
   test "can upsert transactions" do

@@ -43,6 +43,8 @@ Join us!
 ## Hosting Sure
 
 Sure is a fully working personal finance app that can be [self hosted with Docker](docs/hosting/docker.md).
+Sure can be accessed from a browser, the macOS desktop app, the mobile app, API
+clients, and LLM agents. See [Sure Clients](docs/clients.md) for an overview.
 
 ## Forking and Attribution
 
@@ -105,12 +107,9 @@ For further instructions, see guides below.
 
 [![Run on PikaPods](https://www.pikapods.com/static/run-button.svg)](https://www.pikapods.com/pods?run=sure)
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/T_draF?referralCode=CW_fPQ)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sure?referralCode=CW_fPQ)
 
-### Managed OpenClaw for Sure Finances
-
-<a href="https://kilocode.pxf.io/repo-readme"><img src="https://kilo.ai/kiloclaw/partner-resources/kiloclaw-logo-yellow-bg-typography.png" alt="Managed OpenClaw for Sure Finances" width="185"/></a>
-
+[![Deploy on Hostim](https://hostim.dev/img/deploy-button.svg)](https://console.hostim.dev/dashboard?preview=1&modal=1&template=sure)
 
 ## License and Trademarks
 
@@ -118,5 +117,3 @@ Maybe and Sure are both distributed under
 an [AGPLv3 license](https://github.com/we-promise/sure/blob/main/LICENSE).
 - "Maybe" is a trademark of Maybe Finance, Inc.
 - "Sure" is not, and refers to this community fork.
-
-![Alt](https://repobeats.axiom.co/api/embed/3a9753cff07501fba8a6749d0ebd567ff63848c8.svg "Repobeats analytics image")

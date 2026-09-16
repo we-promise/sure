@@ -1,0 +1,189 @@
+---
+it:
+  investments:
+    edit:
+      edit: Modifica %{account}
+    form:
+      none: Nessuno
+      subtype_prompt: Seleziona tipo di investimento
+    new:
+      title: Inserisci saldo conto
+    show:
+      chart_title: Valore totale
+    subtypes:
+      brokerage:
+        short: Intermediario
+        long: Conto intermediario
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan
+      ira:
+        short: IRA
+        long: IRA Tradizionale
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: Piano 529
+        long: Piano di risparmio 529 per l'istruzione
+      hsa:
+        short: HSA
+        long: Conto di risparmio sanitario
+      ugma:
+        short: UGMA
+        long: Conto custodiale UGMA
+      utma:
+        short: UTMA
+        long: Conto custodiale UTMA
+      isa:
+        short: ISA
+        long: Conto di risparmio individuale
+      lisa:
+        short: LISA
+        long: Lifetime ISA
+      sipp:
+        short: SIPP
+        long: Pensione personale autogestita
+      workplace_pension_uk:
+        short: Pensione
+        long: Pensione aziendale
+      rrsp:
+        short: RRSP
+        long: Piano di risparmio pensionistico registrato
+      tfsa:
+        short: TFSA
+        long: Conto di risparmio esente da imposte
+      resp:
+        short: RESP
+        long: Piano di risparmio per l'istruzione registrato
+      lira:
+        short: LIRA
+        long: Conto pensionistico vincolato
+      rrif:
+        short: RRIF
+        long: Fondo di reddito pensionistico registrato
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Fondo pensione autogestito
+      pea:
+        short: PEA
+        long: Piano di risparmio in azioni (PEA)
+      pillar_3a:
+        short: Pilastro 3a
+        long: Pensione privata (Pilastro 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      nps:
+        short: NPS
+        long: Sistema pensionistico nazionale
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      indian_stocks:
+        short: Azioni indiane
+        long: Azioni indiane (Demat)
+      indian_equity:
+        short: Equity indiana
+        long: Equity indiana
+      indian_etf:
+        short: ETF indiano
+        long: ETF indiano
+      life_insurance:
+        short: Assicurazione vita
+        long: Assicurazione vita
+      ppf:
+        short: PPF
+        long: Fondo di previdenza pubblica
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: Certificato di risparmio nazionale
+      scss:
+        short: SCSS
+        long: Schema di risparmio per anziani
+      fd:
+        short: FD
+        long: Deposito vincolato
+      rd:
+        short: RD
+        long: Deposito ricorrente
+      pomis:
+        short: POMIS
+        long: Schema di reddito mensile postale
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: ETF oro
+        long: ETF oro
+      gold_mf:
+        short: Fondo oro
+        long: Fondo comune oro
+      sgb:
+        short: SGB
+        long: Obbligazione oro sovrana
+      g_sec:
+        short: G-Sec
+        long: Titoli di Stato
+      sdl:
+        short: SDL
+        long: Prestiti per lo sviluppo statale
+      corporate_bond:
+        short: Obbligazione aziendale
+        long: Obbligazione aziendale
+      infrastructure_bond:
+        short: Obbligazione infrastrutture
+        long: Obbligazione infrastrutture
+      tax_free_bond:
+        short: Obbligazione esente
+        long: Obbligazione esente da imposte
+      pension:
+        short: Pensione
+        long: Pensione
+      retirement:
+        short: Previdenza
+        long: Conto previdenziale
+      mutual_fund:
+        short: Fondo comune
+        long: Fondo comune di investimento
+      gold:
+        short: Oro
+        long: Oro (fisico o digitale)
+      angel:
+        short: Angel
+        long: Investimento angel
+      trust:
+        short: Trust
+        long: Trust
+      other:
+        short: Altro
+        long: Altro investimento
+    value_tooltip:
+      cash: Liquidità
+      holdings: Posizioni
+      total: Saldo portafoglio
+      total_value_tooltip: Il saldo totale del portafoglio è la somma della liquidità del broker (disponibile per il trading) e del valore di mercato attuale delle posizioni.

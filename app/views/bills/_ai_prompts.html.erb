@@ -1,0 +1,21 @@
+<%# locals: (prompts:) %>
+<%# Quick prompts that seed the chat sidebar with a bills question. Each chip
+    POSTs chats#create into the sidebar frame (the same mechanism the chat's
+    own sample questions use) and makes sure the sidebar is visible. Hidden
+    entirely without AI consent + a configured provider. %>
+<% if bills_one_shot_ai_available? %>
+  <div class="flex flex-wrap items-center gap-2">
+    <% prompts.each do |prompt| %>
+      <%= render DS::Button.new(
+            variant: :outline,
+            text: t(".#{prompt}"),
+            icon: "sparkles",
+            href: chats_path,
+            class: "rounded-full",
+            params: { chat: { content: t(".#{prompt}"), ai_model: default_ai_model } },
+            form: { data: { turbo_frame: chat_frame } },
+            data: { action: "app-layout#openRightSidebar" }
+          ) %>
+    <% end %>
+  </div>
+<% end %>

@@ -2,30 +2,56 @@
 tr:
   family_exports:
     access_denied: Erişim reddedildi
+    cancel:
+      cancelled: Dışa aktarma başarısız olarak işaretlendi. Hemen yeni bir dışa aktarma
+        oluşturabilirsiniz.
+      not_cancellable: Bu dışa aktarma şu anda başarısız olarak işaretlenemez — işi
+        hâlâ çalışıyor olabilir. Bir saat boyunca etkin olmadıktan sonra tekrar deneyin.
     create:
       success: Dışa aktarma başladı. Kısa süre içinde indirebileceksiniz.
-    delete_confirmation: Bu dışa aktarma işlemini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
-    delete_failed_confirmation: Bu başarısız dışa aktarma işlemini silmek istediğinizden emin misiniz?
+    delete_confirmation: Bu dışa aktarma işlemini silmek istediğinizden emin misiniz?
+      Bu işlem geri alınamaz.
+    delete_failed_confirmation: Bu başarısız dışa aktarma işlemini silmek istediğinizden
+      emin misiniz?
     destroy:
       success: Dışa aktarma başarıyla silindi
     export_not_ready: Dışa aktarma henüz indirmeye hazır değil
     exporting: Dışa aktarılıyor...
     index:
-      title: Dışa aktarmalar
       new: Yeni Dışa Aktarma
-    table:
       title: Dışa aktarmalar
+    new:
+      accounts_and_balances: Tüm hesaplar ve bakiyeler
+      cancel: İptal
+      categories_tags_rules: Kategoriler, etiketler ve kurallar
+      dialog_subtitle: Tüm finansal verilerinizi indirin
+      dialog_title: Verilerinizi dışa aktarın
+      export_data: Verileri dışa aktar
+      investment_trades: Yatırım işlemleri
+      note_description: Bu dışa aktarma tüm verilerinizi içerir, ancak yalnızca bazı
+        veriler CSV içe aktarma özelliği ile geri içe aktarılabilir. Hesap, işlem
+        (kategori ve etiketlerle birlikte) ve alım satım içe aktarımlarını destekliyoruz.
+        Diğer hesap verileri içe aktarılamaz ve yalnızca kayıtlarınız içindir.
+      note_label: Not
+      transaction_history: İşlem geçmişi
+      whats_included: 'Neler dahil:'
+    table:
+      empty: Henüz hiç dışa aktarma yok.
       header:
+        actions: Eylemler
         date: Tarih
         filename: Dosya adı
         status: Durum
-        actions: Eylemler
       row:
+        actions:
+          confirm_mark_failed: Bu dışa aktarma bir süredir etkin değil ve arka plan
+            işi büyük olasılıkla kesintiye uğradı. Başarısız olarak işaretlensin mi?
+            Hemen yeni bir dışa aktarma oluşturabilirsiniz.
+          delete: Sil
+          download: İndir
+          mark_failed: Başarısız olarak işaretle
         status:
-          in_progress: Devam ediyor
           complete: Tamamlandı
           failed: Başarısız
-        actions:
-          delete: Sil
-          download: İndirmek
-      empty: Henüz hiç dışa aktarma yok.
+          in_progress: Devam ediyor
+      title: Dışa aktarmalar

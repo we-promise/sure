@@ -1,0 +1,279 @@
+---
+zh-TW:
+  goals:
+    color_picker:
+      trigger_label: 選擇顏色與圖示
+      color_heading: 顏色
+      icon_heading: 圖示
+      poor_contrast: 對比不足，請選擇較深的顏色或
+      auto_adjust: 自動調整
+    index:
+      title: 目標
+      subtitle: 為重要的事情存錢。
+      new_goal: 新增目標
+      empty_filtered: 沒有符合的目標。
+      pending_pledges_callout: 您有待確認投入，Sure 會在下次同步時確認。
+      kpi:
+        contributed_label: 已投入 · 近 30 天
+        velocity_delta_up: ↑ 比前 30 天多 %{percent}%%
+        velocity_delta_down: ↓ 比前 30 天少 %{percent}%%
+        velocity_delta_flat: 與前 30 天相比
+        velocity_delta_zero_base: 頭 30 天的紀錄
+        needs_this_month_label: 本月需要
+        needs_this_month_sub:
+          one: 1 個目標落後進度
+          other: '%{count} 個目標落後進度'
+        needs_this_month_zero_sub: 沒有目標落後進度
+        on_track_label: 進度正常的目標
+        on_track_value: '%{total} 個中有 %{on_track} 個'
+        on_track_sub_parts:
+          reached:
+            one: 1 個已達成
+            other: '%{count} 個已達成'
+          behind:
+            one: 1 個落後
+            other: '%{count} 個落後'
+          no_date:
+            one: 1 個未設期限
+            other: '%{count} 個未設期限'
+          paused:
+            one: 1 個已暫停
+            other: '%{count} 個已暫停'
+        on_track_sub_all_good: 所有進行中的目標都跟得上進度
+        on_track_all_caught_up: 全部都跟上了
+      goals_section:
+        heading: 目標
+        subtitle: 為重要的事情存錢。
+      ongoing_section:
+        heading: 目標
+      archived_section:
+        heading: 已封存
+      search:
+        placeholder: 搜尋目標...
+        aria_label: 搜尋目標
+        empty: 沒有符合的目標。
+        empty_with_query: 沒有符合「%{query}」的目標。
+        empty_with_filter: 沒有符合這個篩選條件的目標。
+        empty_with_both: 在這個篩選條件下，沒有符合「%{query}」的目標。
+        clear_search: 清除搜尋
+        show_all: 顯示全部
+      chips:
+        all: 全部
+        on_track: 進度正常
+        behind: 落後
+        no_target_date: 未設期限
+        paused: 已暫停
+        completed: 已完成
+    new:
+      heading: 新增目標
+      subtitle: 為某個具體的目標存錢。
+    edit:
+      heading: 編輯目標
+      save: 儲存變更
+    create:
+      success: 目標已建立。
+    update:
+      success: 目標已更新。
+    destroy:
+      success: 目標已刪除。
+    pause:
+      success: 目標已暫停。
+      invalid_transition: 目標在目前的狀態下無法暫停。
+    resume:
+      success: 目標已恢復。
+      invalid_transition: 目標在目前的狀態下無法恢復。
+    complete:
+      success: 目標已標示為完成。
+      invalid_transition: 目標在目前的狀態下無法標示為完成。
+    archive:
+      success: 目標已封存。
+      invalid_transition: 目標在目前的狀態下無法封存。
+    unarchive:
+      success: 目標已還原。
+      invalid_transition: 目標在目前的狀態下無法還原。
+    reopen:
+      success: 目標已重新開啟。
+      invalid_transition: 目標在目前的狀態下無法重新開啟。
+    show:
+      edit: 編輯
+      pause: 暫停
+      resume: 恢復
+      complete: 標示為完成
+      archive: 封存
+      unarchive: 還原
+      reopen: 重新開啟目標
+      delete: 刪除
+      record_pledge_cta: 記錄投入
+      pledge_just_transferred: 記錄一筆您已完成的轉帳
+      pledge_just_saved: 記錄一筆您已存起來的錢
+      funding_accounts_heading: 資金帳戶
+      funding_accounts:
+        earmarked_of: '%{balance} 中已指定 %{earmarked}'
+        empty:
+          heading: 尚未連結任何資金帳戶
+          body: 編輯這個目標，連結您用來存錢的存款帳戶。
+      notes: 備註
+      funding_last_30d: 近 30 天
+      funding_last_90d: 近 90 天
+      status_callout:
+        behind: 每月多存 %{amount} 就能追上
+        behind_covered: 待確認投入補上了這個缺口
+        on_track: 大約在 %{date} 達成目標
+        no_target_date: 設定目標日期就能推算完成時間
+      pending_pledge:
+        title:
+          zero: 待確認：%{amount} 存入 %{account} · 今天到期
+          one: 待確認：%{amount} 存入 %{account} · 剩 1 天
+          other: 待確認：%{amount} 存入 %{account} · 剩 %{count} 天
+        body_transfer: Sure 在下次同步發現相符的存入時會自動確認。
+        body_manual: 會在您下次手動編輯餘額時確認。
+        pledged_at: '%{time_ago}前記錄'
+        extend: 延長 7 天
+        cancel: 取消
+        confirm_cancel_title: 要取消這筆投入紀錄嗎？
+        confirm_cancel_body: 這筆 %{amount} 的投入紀錄會被移除。您隨時可以再記錄一筆。
+        confirm_cancel_cta: 取消投入紀錄
+      header:
+        target: 目標 %{amount}
+        target_by: 目標 %{amount}，期限 %{date}
+        target_by_past: 目標 %{amount} · 原定期限 %{date}
+      ring:
+        saved: 已存
+        of: ／%{target}
+        to_go: 還差 %{amount}
+        of_target: 佔目標比例
+        market_value: 市值 %{amount}
+        aria_label: 目標已完成 %{percent}%。目標 %{target} 中已存 %{amount}。
+      projection:
+        heading: 預測
+        legend_saved: 已存
+        legend_projection: 預測
+        legend_required: 所需
+        reached: 您已經達標了，不需要預測。
+        no_target_date: 尚未設定目標日期。設定之後就能推算完成時間。
+        no_pace: 還沒有任何存入。先存錢到已連結的帳戶，才能開始預測。
+        behind: 以目前的速度會達不到目標。
+        on_track_html: 以您目前的速度，大約會在 <strong class="text-primary whitespace-nowrap">%{date}</strong> 達成這個目標。
+        aria_label: '%{name} 的預測圖表'
+        today_marker: 今天
+        tooltip_projected: 預測：%{amount}
+        tooltip_saved: 已存：%{amount}
+        tooltip_target_relation: 佔 %{target} 目標的 %{percent}%
+      catch_up:
+        title: 每月多存 %{amount} 就能追上
+        body: 目前速度每月 %{avg} · 要達標每月需要 %{required}。
+        adjust_target_cta: 改為調整目標
+      confirm_complete_title: 要把這個目標標示為完成嗎？
+      confirm_complete_body: 這個目標會從「進行中」清單移除。之後仍可以封存或重新開啟。
+      confirm_complete_body_short: 您目前在 %{progress}%，目標 %{target} 中已存 %{saved}。標示為完成會把這個數字記錄成您的成果，而不是原本的目標。要繼續，還是關閉這裡改為調整目標？
+      confirm_complete_cta: 標示為完成
+      confirm_archive_title: 要封存這個目標嗎？
+      confirm_archive_body: 封存的目標不會出現在主清單中，您之後可以再還原。
+      confirm_archive_cta: 封存
+      confirm_delete_title: 要刪除這個目標嗎？
+      confirm_delete_body: "%{name} 和它的投入紀錄會被永久移除。您已連結的帳戶、餘額與交易都不會受到影響。若想保留成紀錄，請改為封存。"
+      confirm_delete_cta: 刪除目標
+      paused_banner:
+        title: 這個目標已暫停
+        body: 恢復它就能繼續追蹤您的進度。
+        resume_cta: 恢復目標
+      archived_banner:
+        title: 這個目標已封存
+        body: 還原它就能繼續投入，或是留著當作紀錄。
+        restore_cta: 還原目標
+      celebration:
+        heading: 目標達成，做得好。
+        body: 目標在 %{target} 中存到 %{saved} 時結束。留著當紀錄，或是現在就封存。
+        archive_cta: 封存目標
+      inactive:
+        heading_paused: 這個目標已暫停
+        heading_archived: 這個目標已封存
+        body: 目前目標 %{target} 中已存 %{saved}。
+      no_target_date:
+        heading: 加上目標日期
+        body: 設定期限就能推算完成時間並追蹤所需的存錢速度。
+        cta: 設定目標日期
+      empty:
+        heading: 還沒有任何存入
+        body: 轉一筆錢到您已連結的帳戶，Sure 會在下次同步時抓到。或者直接更新您手動帳戶的餘額。
+    errors:
+      not_found: 找不到這個目標，它可能已經被刪除了。
+    states:
+      active: 進行中
+      paused: 已暫停
+      completed: 已完成
+      archived: 已封存
+    status:
+      on_track: 進度正常
+      behind: 落後
+      reached: 已達成
+      completed: 已完成
+      no_target_date: 未設期限
+      paused: 已暫停
+      archived: 已封存
+    empty_state:
+      heading: 還沒有任何目標
+      body: 設定一個目標，連結您用來存錢的帳戶，看著進度一點一點累積。
+      subtitle: 設定一個目標，開始為它存錢。
+      new_goal: 建立您的第一個目標
+      no_depository_accounts: 建立目標前，您至少需要有一個存款類帳戶（支票、儲蓄、HSA、定存、貨幣市場）。
+      add_account: 新增帳戶
+    goal_card:
+      no_accounts: 沒有已連結的帳戶
+      n_accounts: '%{first} +%{count}'
+      left: 剩餘
+      aria_progress: 佔 %{target} 的 %{percent}%
+      accounts:
+        one: 1 個帳戶
+        other: '%{count} 個帳戶'
+      no_target_date: 未設期限
+      completed: 已完成
+      past_due: 已逾期
+      days_left:
+        one: 剩餘 1 天
+        other: 剩餘 %{count} 天
+      pace_with_target: 每月 %{avg} · 目標每月 %{target}
+      pace_no_target: 平均每月 %{avg}
+      footer_paused: 已暫停
+      footer_archived: 已封存
+      footer_reached: 目標達成
+      footer_catch_up: 每月存 %{amount} 就能追上
+      footer_no_deadline: 未設期限
+      pending_pledge: 待確認投入
+      pending_count:
+        one: 1 筆待確認
+        other: '%{count} 筆待確認'
+      footer_no_pledges: 還沒有配對成功的投入
+      footer_last_today: 最近一筆投入在今天配對成功
+      footer_last_days:
+        one: 最近一筆投入在 1 天前配對成功
+        other: 最近一筆投入在 %{count} 天前配對成功
+    form:
+      create: 建立目標
+      save: 儲存變更
+      suggested_with_date: 在 {accounts} 中每月存 {monthly}，就能準時達標。
+      suggested_no_date: 設定目標日期就能推算完成時間。
+      errors:
+        name_required: 請為您的目標取個名稱。
+        amount_required: 請設定一個大於零的目標金額。
+        accounts_required: 請至少選擇一個資金帳戶。
+      fields:
+        name: 名稱
+        name_placeholder: 緊急預備金、購屋頭期款...
+        target_amount: 目標金額
+        target_date: 目標日期
+        color: 顏色
+        notes: 備註（選填）
+        notes_placeholder: 留給未來的自己的提醒...
+        funding_accounts: 資金帳戶
+        funding_accounts_hint: 這個目標的餘額，就是這些帳戶的餘額（或其中指定的部分）。
+        whole_balance: 全部餘額
+        earmark_for: 為 %{account} 指定金額
+        earmark_hint: 把金額留白，就會把該帳戶的全部餘額都投入這個目標。
+      subtypes:
+        checking: 支票帳戶 (Checking)
+        savings: 儲蓄帳戶 (Savings)
+        hsa: 健康儲蓄帳戶 (HSA)
+        cd: 定期存款 (CD)
+        money_market: 貨幣市場帳戶
+        other: 其他

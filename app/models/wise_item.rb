@@ -1,0 +1,222 @@
+# frozen_string_literal: true
+
+class WiseItem < ApplicationRecord
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
+
+  SCA_PRIVATE_KEY_ATTRIBUTE = "sca_private_key"
+
+  # Raised rather than returned so no caller can mistake "not stored" for
+  # "stored"; the controller turns it into the same panel error as any other
+  # keypair failure.
+  class SCAEncryptionUnavailable < StandardError; end
+
+  enum :status, { good: "good", requires_update: "requires_update" }, default: :good
+  enum :profile_type, { personal: "personal", business: "business" }
+
+  if encryption_ready?
+    encrypts :token, deterministic: true
+    encrypts :raw_payload
+    encrypts :sca_private_key
+  end
+
+  validates :name, :profile_id, :profile_type, presence: true
+  validates :token, presence: true, on: :create
+  validates :profile_id, uniqueness: { scope: :family_id }
+
+  # An SCA private key signs balance-statement requests to Wise, so plaintext
+  # at rest is not an acceptable degraded mode the way an unencrypted display
+  # name would be. Without ActiveRecord encryption configured, `encrypts` above
+  # never runs and the PEM would land in the column as-is, so the key is simply
+  # refused instead.
+  validate :sca_private_key_requires_encryption
+
+  before_validation :normalize_token
+
+  belongs_to :family
+
+  has_many :wise_accounts, dependent: :destroy
+  has_many :accounts, through: :wise_accounts
+
+  scope :active, -> { where(scheduled_for_deletion: false) }
+  scope :syncable, -> { active }
+  scope :ordered, -> { order(created_at: :desc) }
+  scope :needs_update, -> { where(status: :requires_update) }
+
+  def import_latest_wise_data(sync_start_date: nil)
+    provider = wise_provider
+    unless provider
+      Rails.logger.error "WiseItem #{id} - Cannot import: provider not configured"
+      raise Provider::Wise::WiseError.new("Wise provider is not configured", :not_configured)
+    end
+
+    WiseItem::Importer.new(self, wise_provider: provider, sync_start_date: sync_start_date).import
+  rescue => e
+    Rails.logger.error "WiseItem #{id} - Failed to import data: #{e.message}"
+    raise
+  end
+
+  def process_accounts
+    return [] if wise_accounts.empty?
+
+    results = []
+    wise_accounts.joins(:account).merge(Account.visible).each do |wise_account|
+      begin
+        result = WiseAccount::Processor.new(wise_account).process
+        results << { wise_account_id: wise_account.id, success: true, result: result }
+      rescue => e
+        Rails.logger.error "WiseItem #{id} - Failed to process account #{wise_account.id}: #{e.message}"
+        results << { wise_account_id: wise_account.id, success: false, error: e.message }
+      end
+    end
+
+    results
+  end
+
+  # Finds interbalance entry pairs (JAR inflow ↔ STANDARD outflow) and links them as Transfers.
+  def link_jar_transfers!
+    account_ids = accounts.pluck(:id)
+    return if account_ids.empty?
+
+    inflow_entries = Entry.where(source: "wise", account_id: account_ids)
+                         .where("external_id LIKE 'wise_interbalance_%_inflow'")
+
+    inflow_entries.each do |inflow_entry|
+      resource_id = inflow_entry.external_id.sub("wise_interbalance_", "").sub("_inflow", "")
+      outflow_entry = Entry.where(source: "wise", account_id: account_ids,
+                                  external_id: "wise_interbalance_#{resource_id}_outflow").first
+
+      next unless outflow_entry
+      next unless inflow_entry.entryable.is_a?(Transaction) && outflow_entry.entryable.is_a?(Transaction)
+
+      inflow_txn  = inflow_entry.entryable
+      outflow_txn = outflow_entry.entryable
+
+      next if Transfer.exists?(inflow_transaction_id: inflow_txn.id)
+      next if Transfer.exists?(outflow_transaction_id: outflow_txn.id)
+
+      transfer = Transfer.new(inflow_transaction: inflow_txn, outflow_transaction: outflow_txn, status: "confirmed")
+      unless transfer.save
+        Rails.logger.warn "WiseItem #{id} - Could not link interbalance #{resource_id}: #{transfer.errors.full_messages.join(", ")}"
+      end
+    rescue => e
+      Rails.logger.error "WiseItem #{id} - Error linking interbalance #{resource_id}: #{e.message}"
+    end
+  end
+
+  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
+    return [] if accounts.empty?
+
+    results = []
+    accounts.visible.each do |account|
+      begin
+        account.sync_later(
+          parent_sync: parent_sync,
+          window_start_date: window_start_date,
+          window_end_date: window_end_date
+        )
+        results << { account_id: account.id, success: true }
+      rescue => e
+        Rails.logger.error "WiseItem #{id} - Failed to schedule sync for account #{account.id}: #{e.message}"
+        results << { account_id: account.id, success: false, error: e.message }
+      end
+    end
+
+    results
+  end
+
+  def has_completed_initial_setup?
+    accounts.any?
+  end
+
+  def credentials_configured?
+    token.to_s.strip.present?
+  end
+
+  # True only when there's a private key AND it actually parses -- a stored
+  # key that's corrupted or unparsable (e.g. an encryption misconfig or a
+  # manual DB edit) should fall back to the "not configured" UI state rather
+  # than rendering a blank public key box.
+  def sca_configured?
+    sca_public_key.present?
+  end
+
+  # Generates a new RSA keypair for Wise's Strong Customer Authentication (SCA)
+  # flow, used to sign the one-time-token challenge on the balance-statement
+  # endpoint. The private key stays here (encrypted at rest); the public key
+  # must be registered with Wise by the user (Settings > API tokens > Public keys).
+  def generate_sca_keypair!
+    raise SCAEncryptionUnavailable, "Active Record encryption is not configured" unless sca_encryption_available?
+
+    key = OpenSSL::PKey::RSA.generate(2048)
+    update!(sca_private_key: key.to_pem)
+    sca_public_key
+  end
+
+  def sca_encryption_available?
+    self.class.encryption_ready? &&
+      Array(self.class.encrypted_attributes).map(&:to_s).include?(SCA_PRIVATE_KEY_ATTRIBUTE)
+  end
+
+  def sca_public_key
+    return nil unless sca_private_key.present?
+
+    OpenSSL::PKey::RSA.new(sca_private_key).public_key.to_pem
+  rescue OpenSSL::PKey::RSAError
+    nil
+  end
+
+  def sync_status_summary
+    total = total_accounts_count
+    linked = linked_accounts_count
+    unlinked = unlinked_accounts_count
+
+    if total == 0
+      I18n.t("wise_items.sync_status.no_accounts")
+    elsif unlinked == 0
+      I18n.t("wise_items.sync_status.all_synced", count: linked)
+    else
+      I18n.t("wise_items.sync_status.partial_setup", synced: linked, pending: unlinked)
+    end
+  end
+
+  def linked_accounts_count
+    wise_accounts.joins(:account_provider).count
+  end
+
+  def unlinked_accounts_count
+    wise_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).count
+  end
+
+  def total_accounts_count
+    wise_accounts.count
+  end
+
+  def institution_display_name
+    "Wise"
+  end
+
+  def wise_provider
+    return nil unless credentials_configured?
+
+    Provider::Wise.new(token.to_s.strip, base_url: Rails.configuration.x.wise.base_url, sca_private_key: sca_private_key)
+  end
+
+  private
+
+    def normalize_token
+      self.token = token&.strip
+    end
+
+    # Scoped to writes of the key itself. An install that generated a key
+    # before this validation existed still has that value in the column, so
+    # validating on every save would reject every later write to the record,
+    # such as renaming the connection. (DestroyableLater sets the deletion flag
+    # with update_column, so deleting it no longer depends on this.) Refusing a
+    # NEW key is the point; refusing to let go of an old one is not.
+    def sca_private_key_requires_encryption
+      return unless will_save_change_to_sca_private_key?
+      return if sca_private_key.blank? || sca_encryption_available?
+
+      errors.add(:sca_private_key, :encryption_unavailable)
+    end
+end

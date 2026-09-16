@@ -1,0 +1,11 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        transaction:
+          attributes:
+            attachments:
+              invalid_format: "%{index} numaralı dosyanın biçimi desteklenmiyor (%{file_format})"
+              too_large: "%{index} numaralı dosya çok büyük (maksimum %{max_mb}MB)"
+              too_many: işlem başına %{max} dosyayı aşamaz

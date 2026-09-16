@@ -1,0 +1,20 @@
+<%# locals: (pending: false) %>
+
+<div id="insights-refresh">
+  <% if pending %>
+    <%= render DS::Button.new(
+      text: t("insights.refresh.checking"),
+      variant: "outline",
+      icon: "loader-circle",
+      disabled: true
+    ) %>
+  <% else %>
+    <%= render DS::Button.new(
+      text: t("insights.index.refresh"),
+      variant: "outline",
+      icon: "refresh-cw",
+      href: refresh_insights_path,
+      method: :post
+    ) %>
+  <% end %>
+</div>

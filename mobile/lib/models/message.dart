@@ -74,8 +74,8 @@ class Message {
       'role': role,
       'content': content,
       'model': model,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': updatedAt.toUtc().toIso8601String(),
       'tool_calls': toolCalls?.map((tc) => tc.toJson()).toList(),
     };
   }

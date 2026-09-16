@@ -161,7 +161,7 @@ true
 {{/* Pipelock image string */}}
 {{- define "sure.pipelockImage" -}}
 {{- $repo := "ghcr.io/luckypipewrench/pipelock" -}}
-{{- $tag := "latest" -}}
+{{- $tag := "2.8.0" -}}
 {{- if .Values.pipelock.image -}}
 {{- $repo = .Values.pipelock.image.repository | default $repo -}}
 {{- $tag = .Values.pipelock.image.tag | default $tag -}}

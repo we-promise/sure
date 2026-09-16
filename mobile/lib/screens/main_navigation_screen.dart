@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
-import '../constants/ai_messages.dart';
 import '../providers/auth_provider.dart';
+import '../providers/privacy_provider.dart';
+import '../widgets/sure_logo.dart';
 import 'chat_list_screen.dart';
 import 'dashboard_screen.dart';
 import 'intro_screen.dart';
 import 'more_screen.dart';
 import 'settings_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -74,43 +75,43 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     await _handleDestinationSelected(settingsIndex, authProvider, introLayout);
   }
 
-  List<NavigationDestination> _buildDestinations(bool introLayout) {
+  List<NavigationDestination> _buildDestinations(bool introLayout, AppLocalizations l) {
     final destinations = <NavigationDestination>[];
 
     if (!introLayout) {
       destinations.add(
-        const NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home),
-          label: 'Home',
+        NavigationDestination(
+          icon: const Icon(Icons.home_outlined),
+          selectedIcon: const Icon(Icons.home),
+          label: l.navHome,
         ),
       );
     }
 
     if (introLayout) {
       destinations.add(
-        const NavigationDestination(
-          icon: Icon(Icons.auto_awesome_outlined),
-          selectedIcon: Icon(Icons.auto_awesome),
-          label: 'Intro',
+        NavigationDestination(
+          icon: const Icon(Icons.auto_awesome_outlined),
+          selectedIcon: const Icon(Icons.auto_awesome),
+          label: l.navIntro,
         ),
       );
     }
 
     destinations.add(
-      const NavigationDestination(
-        icon: Icon(Icons.chat_bubble_outline),
-        selectedIcon: Icon(Icons.chat_bubble),
-        label: 'Assistant',
+      NavigationDestination(
+        icon: const Icon(Icons.chat_bubble_outline),
+        selectedIcon: const Icon(Icons.chat_bubble),
+        label: l.navAssistant,
       ),
     );
 
     if (!introLayout) {
       destinations.add(
-        const NavigationDestination(
-          icon: Icon(Icons.more_horiz),
-          selectedIcon: Icon(Icons.more_horiz),
-          label: 'More',
+        NavigationDestination(
+          icon: const Icon(Icons.more_horiz),
+          selectedIcon: const Icon(Icons.more_horiz),
+          label: l.navMore,
         ),
       );
     }
@@ -130,16 +131,33 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         width: 60,
         height: 60,
         alignment: Alignment.topLeft,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 12, left: 12),
-          child: SvgPicture.asset(
-            'assets/images/logomark.svg',
-            width: 36,
-            height: 36,
-          ),
+        child: const Padding(
+          padding: EdgeInsets.only(top: 12, left: 12),
+          child: SureLogo(),
         ),
       ),
       actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: Center(
+            child: Tooltip(
+              message: 'Toggle privacy',
+              child: InkWell(
+                onTap: () => context.read<PrivacyProvider>().toggle(),
+                child: SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: Icon(
+                    context.watch<PrivacyProvider>().hidden
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    semanticLabel: 'Toggle privacy',
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.only(right: 12),
           child: Center(
@@ -162,11 +180,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   void _showAiDisabledMessage() {
     if (!mounted) return;
 
+    final l = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          aiDisabledAccountMessage,
-        ),
+      SnackBar(
+        content: Text(l.chatAiDisabledMessage),
       ),
     );
   }
@@ -217,6 +234,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Consumer<AuthProvider>(
       builder: (context, authProvider, _) {
         final introLayout = authProvider.isIntroLayout;
@@ -225,7 +243,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           introLayout,
           () => _handleDestinationSelected(chatIndex, authProvider, introLayout),
         );
-        final destinations = _buildDestinations(introLayout);
+        final destinations = _buildDestinations(introLayout, l);
         final currentIndex = _resolveCurrentIndex(
           screenCount: screens.length,
           aiEnabled: authProvider.aiEnabled,

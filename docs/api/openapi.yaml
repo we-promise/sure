@@ -301,6 +301,98 @@ components:
             "$ref": "#/components/schemas/ChatSummary"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    Insight:
+      type: object
+      required:
+      - id
+      - type
+      - title
+      - body
+      - priority
+      - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        priority:
+          type: string
+          enum:
+          - high
+          - medium
+          - low
+        status:
+          type: string
+          enum:
+          - active
+          - read
+        generated_at:
+          type: string
+          format: date-time
+          nullable: true
+    InsightCollection:
+      type: object
+      required:
+      - insights
+      properties:
+        insights:
+          type: array
+          items:
+            "$ref": "#/components/schemas/Insight"
+    PushSubscriptionRegistration:
+      type: object
+      required:
+      - token
+      - environment
+      - platform
+      properties:
+        token:
+          type: string
+          maxLength: 2048
+          pattern: "^(?:[0-9a-fA-F]{2})+$"
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        platform:
+          type: string
+          enum:
+          - ios
+        device_key:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+          description: Optional 256-bit installation secret, unique per server and
+            kept in device secure storage. Required proof to replace another user’s
+            registration for this device. Never returned.
+    PushSubscription:
+      type: object
+      required:
+      - id
+      - environment
+      - platform
+      - last_registered_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        environment:
+          type: string
+          enum:
+          - sandbox
+          - production
+        platform:
+          type: string
+          enum:
+          - ios
+        last_registered_at:
+          type: string
+          format: date-time
     RetryResponse:
       type: object
       required:
@@ -600,6 +692,7 @@ components:
       - currency
       - subcategory
       - inherits_parent_budget
+      - rollover_enabled
       - category
       - created_at
       - updated_at
@@ -615,6 +708,8 @@ components:
         subcategory:
           type: boolean
         inherits_parent_budget:
+          type: boolean
+        rollover_enabled:
           type: boolean
         budgeted_spending:
           type: string
@@ -659,6 +754,7 @@ components:
       - currency
       - subcategory
       - inherits_parent_budget
+      - rollover_enabled
       - category
       - created_at
       - updated_at
@@ -675,6 +771,8 @@ components:
           type: boolean
         inherits_parent_budget:
           type: boolean
+        rollover_enabled:
+          type: boolean
         budgeted_spending:
           type: string
         budgeted_spending_cents:
@@ -686,6 +784,10 @@ components:
         actual_spending:
           type: string
         actual_spending_cents:
+          type: integer
+        rolled_over_amount:
+          type: string
+        rolled_over_amount_cents:
           type: integer
         available_to_spend:
           type: string
@@ -1005,6 +1107,23 @@ components:
         updated_at:
           type: string
           format: date-time
+    MerchantImportResult:
+      type: object
+      required:
+      - imported
+      - skipped
+      - merchants
+      properties:
+        imported:
+          type: integer
+          description: Number of merchants successfully created
+        skipped:
+          type: integer
+          description: Number of rows skipped (duplicates or invalid)
+        merchants:
+          type: array
+          items:
+            "$ref": "#/components/schemas/MerchantDetail"
     Tag:
       type: object
       required:
@@ -1351,8 +1470,11 @@ components:
         status:
           type: string
           enum:
+          - suggested
           - active
+          - paused
           - inactive
+          - ended
         occurrence_count:
           type: integer
           minimum: 0
@@ -1361,6 +1483,98 @@ components:
           nullable: true
         manual:
           type: boolean
+        payment_url:
+          type: string
+          nullable: true
+          description: Link to the biller portal where this bill is paid. Only http
+            and https are accepted; a bare host is stored as https.
+        autopay:
+          type: boolean
+          description: Whether this bill pays itself automatically.
+        notes:
+          type: string
+          nullable: true
+          description: Free-text notes shown alongside the bill.
+        bill_type:
+          type: string
+          enum:
+          - bill
+          - subscription
+          - installment
+          - income
+          - transfer
+          - other
+          description: What kind of obligation this is.
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        anchor_date:
+          type: string
+          format: date
+          nullable: true
+          description: Reference occurrence that phases every-N cadences.
+        weekend_adjust:
+          type: string
+          enum:
+          - none
+          - skip
+          - before
+          - after
+        end_mode:
+          type: string
+          enum:
+          - never
+          - on_date
+          - after_count
+        end_on:
+          type: string
+          format: date
+          nullable: true
+        end_after_count:
+          type: integer
+          nullable: true
+        renews_on:
+          type: string
+          format: date
+          nullable: true
+        trial_ends_on:
+          type: string
+          format: date
+          nullable: true
+        cancelled_on:
+          type: string
+          format: date
+          nullable: true
+        recurrence_rules:
+          type: array
+          description: Repetition patterns; multiple rows express semimonthly and
+            similar multi-pattern cadences. Empty means legacy monthly on expected_day_of_month.
+          items:
+            type: object
+            properties:
+              frequency:
+                type: string
+                enum:
+                - weekly
+                - monthly
+                - yearly
+              interval:
+                type: integer
+              day_of_month:
+                type: integer
+                nullable: true
+                description: "-1 means the last day of the month."
+              weekday:
+                type: integer
+                nullable: true
+              weekday_ordinal:
+                type: integer
+                nullable: true
+                description: "-1 means the last such weekday."
+              month_of_year:
+                type: integer
+                nullable: true
         expected_amount_min:
           type: string
           nullable: true
@@ -1441,6 +1655,8 @@ components:
         source:
           type: string
           nullable: true
+        user_modified:
+          type: boolean
         classification:
           type: string
         account:
@@ -1566,6 +1782,20 @@ components:
         notes:
           type: string
           nullable: true
+        source_fee_amount:
+          type: string
+          nullable: true
+          description: Fee charged to the source account
+        source_fee_currency:
+          type: string
+          nullable: true
+        destination_fee_amount:
+          type: string
+          nullable: true
+          description: Fee deducted from the destination account
+        destination_fee_currency:
+          type: string
+          nullable: true
         inflow_transaction:
           "$ref": "#/components/schemas/TransferTransactionSide"
         outflow_transaction:
@@ -1676,6 +1906,46 @@ components:
       properties:
         message:
           type: string
+    TransactionResponse:
+      type: object
+      required:
+      - id
+      - date
+      - amount
+      - currency
+      - name
+      - entryable_type
+      - account
+      properties:
+        id:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+        currency:
+          type: string
+        name:
+          type: string
+        entryable_type:
+          type: string
+        account:
+          type: object
+          required:
+          - id
+          - name
+          - account_type
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            account_type:
+              type: string
+              nullable: true
     ImportConfiguration:
       type: object
       properties:
@@ -1869,8 +2139,12 @@ components:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
         valid:
           type: boolean
@@ -1957,8 +2231,12 @@ components:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
         status:
           type: string
@@ -2010,8 +2288,12 @@ components:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
         status:
           type: string
@@ -2924,6 +3206,215 @@ components:
         formatted:
           type: string
           description: Locale-formatted money string
+    FinancialPeriod:
+      type: object
+      required:
+      - start_date
+      - end_date
+      properties:
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+    SpendingPoint:
+      type: object
+      required:
+      - date
+      - amount
+      properties:
+        date:
+          type: string
+          format: date
+        amount:
+          type: string
+          description: Cumulative decimal amount in family currency
+    CashFlowSankey:
+      type: object
+      required:
+      - basis
+      - income
+      - spending
+      - net_savings
+      - nodes
+      - links
+      description: Refunds net within each category. Parent direct amounts exclude
+        child totals before partitioning by direction. Graph income/spending may differ
+        from gross monthly totals; net savings agrees. Decimal strings retain FX precision.
+        Empty flow has empty nodes and links.
+      properties:
+        basis:
+          type: string
+          enum:
+          - net_by_category
+        income:
+          type: string
+        spending:
+          type: string
+        net_savings:
+          type: string
+        nodes:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - name
+            - kind
+            - value
+            - percentage
+            - category_id
+            - filter_value
+            - color
+            properties:
+              id:
+                type: string
+                description: Stable direction-prefixed category identifier or structural
+                  identifier
+              name:
+                type: string
+              kind:
+                type: string
+                enum:
+                - income
+                - expense
+                - cash_flow
+                - surplus
+                - deficit
+              value:
+                type: string
+                description: Nonnegative decimal in envelope currency
+              percentage:
+                type: string
+                description: Percentage of parent, or side total for root categories;
+                  structural balancing nodes use central capacity
+              category_id:
+                type: string
+                format: uuid
+                nullable: true
+              filter_value:
+                type: string
+                nullable: true
+                description: Web transaction category filter; null means no category
+                  drill-down
+              color:
+                type: string
+                nullable: true
+                description: User category color; structural colors belong to the
+                  client
+        links:
+          type: array
+          items:
+            type: object
+            required:
+            - source
+            - target
+            - value
+            - percentage
+            properties:
+              source:
+                type: integer
+                minimum: 0
+                description: Zero-based nodes index
+              target:
+                type: integer
+                minimum: 0
+                description: Zero-based nodes index
+              value:
+                type: string
+                description: Positive decimal in envelope currency
+              percentage:
+                type: string
+    CashFlowGraph:
+      type: object
+      required:
+      - as_of
+      - time_zone
+      - currency
+      - period
+      - sankey
+      properties:
+        as_of:
+          type: string
+          format: date
+        time_zone:
+          type: string
+        currency:
+          type: string
+        period:
+          "$ref": "#/components/schemas/FinancialPeriod"
+        sankey:
+          "$ref": "#/components/schemas/CashFlowSankey"
+    CashFlow:
+      type: object
+      required:
+      - month
+      - as_of
+      - time_zone
+      - currency
+      - period
+      - income
+      - spending
+      - net_savings
+      - savings_rate
+      - spending_comparison
+      properties:
+        month:
+          type: string
+          format: date
+        as_of:
+          type: string
+          format: date
+        time_zone:
+          type: string
+        currency:
+          type: string
+        period:
+          "$ref": "#/components/schemas/FinancialPeriod"
+        income:
+          type: string
+        spending:
+          type: string
+        net_savings:
+          type: string
+        sankey:
+          "$ref": "#/components/schemas/CashFlowSankey"
+        savings_rate:
+          type: string
+          nullable: true
+          description: Percentage points; null when income is nonpositive. May be
+            negative.
+        spending_comparison:
+          type: object
+          required:
+          - previous_period
+          - current_total
+          - comparison_total
+          - comparison_end_date
+          - delta
+          - current
+          - previous
+          properties:
+            previous_period:
+              "$ref": "#/components/schemas/FinancialPeriod"
+            current_total:
+              type: string
+            comparison_total:
+              type: string
+            delta:
+              type: string
+            comparison_end_date:
+              type: string
+              format: date
+            current:
+              type: array
+              items:
+                "$ref": "#/components/schemas/SpendingPoint"
+            previous:
+              type: array
+              items:
+                "$ref": "#/components/schemas/SpendingPoint"
     BalanceSheet:
       type: object
       required:
@@ -3220,6 +3711,9 @@ paths:
       summary: Sign up a new user
       tags:
       - Auth
+      description: Creates a new user and family. The first user on a fresh instance
+        is assigned the super_admin role; later family creators are assigned an admin
+        role.
       parameters: []
       responses:
         '201':
@@ -3368,7 +3862,7 @@ paths:
                       ai_enabled:
                         type: boolean
         '401':
-          description: invalid credentials or MFA required
+          description: invalid credentials, MFA required, or account deactivated
           content:
             application/json:
               schema:
@@ -3501,7 +3995,7 @@ paths:
                   created_at:
                     type: integer
         '401':
-          description: invalid refresh token
+          description: invalid or revoked refresh token, or account deactivated
           content:
             application/json:
               schema:
@@ -3585,13 +4079,19 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '401':
-          description: invalid credentials or expired linking code
+          description: invalid credentials, expired linking code, or account deactivated
           content:
             application/json:
               schema:
                 oneOf:
                 - "$ref": "#/components/schemas/ErrorResponse"
                 - "$ref": "#/components/schemas/MfaRequiredResponse"
+        '403':
+          description: SSO identity removed by an administrator
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
       requestBody:
         content:
           application/json:
@@ -3621,7 +4121,9 @@ paths:
       description: Creates a new user and family from a previously issued linking
         code. Links the SSO identity via OidcIdentity, logs the JIT account creation
         via SsoAuditLog, and issues mobile OAuth tokens. The linking code must have
-        allow_account_creation enabled.
+        allow_account_creation enabled. The first user on a fresh instance is assigned
+        the super_admin role; later family creators are assigned an admin-capable
+        role.
       parameters: []
       responses:
         '200':
@@ -3673,7 +4175,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: account creation disabled
+          description: SSO identity removed or account creation disabled
           content:
             application/json:
               schema:
@@ -4099,6 +4601,81 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: budget not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/cash_flow":
+    get:
+      summary: Show cash flow and optional Sankey graph
+      tags:
+      - Cash Flow
+      description: Server-calculated income, spending, savings, and daily cumulative
+        comparison in family currency. Uses the authenticated user’s finance accounts
+        and Sure reporting rules. Browser sessions do not authenticate this public
+        API.
+      parameters:
+      - name: month
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Non-future first day YYYY-MM-01; defaults to the current month
+          in the family time zone.
+      - name: include
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - sankey
+        description: Append server-calculated graph to the monthly summary; cannot
+          combine with view.
+      - name: view
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - sankey
+        description: Graph-only envelope; omits daily comparison. Accepts month or
+          an explicit date range; cannot combine with include.
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Inclusive ISO date. Requires end_date and view=sankey; cannot
+          combine with month.
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Inclusive ISO date at or after start_date. Explicit ranges preserve
+          their bounds, including future dates.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: summary returned
+          content:
+            application/json:
+              schema:
+                anyOf:
+                - "$ref": "#/components/schemas/CashFlow"
+                - "$ref": "#/components/schemas/CashFlowGraph"
+        '422':
+          description: invalid query
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: unauthorized
           content:
             application/json:
               schema:
@@ -5030,8 +5607,12 @@ paths:
           - AccountImport
           - MintImport
           - ActualImport
+          - YnabImport
           - CategoryImport
           - RuleImport
+          - MerchantImport
+          - PdfImport
+          - QifImport
           - SureImport
       responses:
         '200':
@@ -5089,8 +5670,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type (defaults to TransactionImport)
                 account_id:
@@ -5196,8 +5781,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type (defaults to TransactionImport)
                 account_id:
@@ -5434,8 +6023,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -5545,8 +6138,12 @@ paths:
                   - AccountImport
                   - MintImport
                   - ActualImport
+                  - YnabImport
                   - CategoryImport
                   - RuleImport
+                  - MerchantImport
+                  - PdfImport
+                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -5635,6 +6232,26 @@ paths:
                   type: string
                   description: CSV imports only. Column value that marks an amount
                     as an inflow when using custom_column strategy
+  "/api/v1/insights":
+    get:
+      summary: List proactive insights
+      tags:
+      - Insights
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: insights listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/InsightCollection"
+        '403':
+          description: preview features disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/merchants":
     get:
       summary: List merchants
@@ -5651,6 +6268,45 @@ paths:
                 type: array
                 items:
                   "$ref": "#/components/schemas/MerchantDetail"
+    post:
+      summary: Import merchants from CSV
+      tags:
+      - Merchants
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: merchants imported
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/MerchantImportResult"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: missing file or invalid CSV
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+        required: true
+        description: 'CSV file with columns: name* (required), color, website_url'
   "/api/v1/merchants/{id}":
     parameters:
     - name: id
@@ -5707,6 +6363,65 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/push_subscriptions":
+    post:
+      summary: Register an APNs device token
+      description: Available only in hosted (managed) mode. Requires write scope.
+      tags:
+      - Push Subscriptions
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '403':
+          description: push unavailable in self-hosted mode or insufficient write
+            scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '201':
+          description: token registered
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/PushSubscription"
+        '422':
+          description: invalid or conflicting subscription
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/PushSubscriptionRegistration"
+        required: true
+  "/api/v1/push_subscriptions/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    delete:
+      summary: Unregister an APNs device token
+      description: Available only in hosted (managed) mode. Requires write scope.
+      tags:
+      - Push Subscriptions
+      security:
+      - apiKeyAuth: []
+      responses:
+        '403':
+          description: push unavailable in self-hosted mode or insufficient write
+            scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '204':
+          description: token unregistered
   "/api/v1/recurring_transactions":
     get:
       summary: List recurring transactions
@@ -5844,6 +6559,18 @@ paths:
                       minimum: 0
                     manual:
                       type: boolean
+                    payment_url:
+                      type: string
+                      nullable: true
+                      description: Link to the biller portal. Only http and https
+                        are accepted; a bare host is stored as https.
+                    autopay:
+                      type: boolean
+                      description: Whether this bill pays itself automatically.
+                    notes:
+                      type: string
+                      nullable: true
+                      description: Free-text notes shown alongside the bill.
                     expected_amount_min:
                       type: number
                       nullable: true
@@ -5959,6 +6686,19 @@ paths:
                     next_expected_date:
                       type: string
                       format: date
+                    payment_url:
+                      type: string
+                      nullable: true
+                      description: Link to the biller portal. Only http and https
+                        are accepted; a bare host is stored as https. Send an empty
+                        string to clear it.
+                    autopay:
+                      type: boolean
+                      description: Whether this bill pays itself automatically.
+                    notes:
+                      type: string
+                      nullable: true
+                      description: Free-text notes shown alongside the bill.
         required: true
     delete:
       summary: Delete recurring transaction
@@ -6868,9 +7608,21 @@ paths:
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/Trade"
+                "$ref": "#/components/schemas/TransactionResponse"
+        '403':
+          description: forbidden - api key missing read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: unauthorized - missing api key
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
-          description: validation error - missing security identifier
+          description: invalid trade request
           content:
             application/json:
               schema:
@@ -6900,15 +7652,30 @@ paths:
                       description: Trade date (required)
                     qty:
                       type: number
-                      description: Quantity (required)
+                      description: Quantity (required for buy/sell/sweep_in/sweep_out/reinvestment)
                     price:
                       type: number
-                      description: Price (required)
+                      description: Price (required for buy/sell/sweep_in/sweep_out/reinvestment)
+                    amount:
+                      type: number
+                      description: Amount (required for dividend, deposit, withdrawal,
+                        interest, fee)
+                    fee:
+                      type: number
+                      description: Optional fee (buy/sell/sweep_in/sweep_out/reinvestment)
                     type:
                       type: string
                       enum:
                       - buy
                       - sell
+                      - sweep_in
+                      - sweep_out
+                      - dividend
+                      - reinvestment
+                      - interest
+                      - fee
+                      - deposit
+                      - withdrawal
                       description: Trade type (required)
                     security_id:
                       type: string
@@ -6931,11 +7698,13 @@ paths:
                       type: string
                       format: uuid
                       description: Category ID
+                    transfer_account_id:
+                      type: string
+                      format: uuid
+                      description: Destination/source account ID for linked transfers
                   required:
                   - account_id
                   - date
-                  - qty
-                  - price
                   - type
               required:
               - trade
@@ -6987,6 +7756,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Trade"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - api key missing read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: trade not found
           content:
@@ -7014,6 +7795,9 @@ paths:
                       enum:
                       - buy
                       - sell
+                      - sweep_in
+                      - sweep_out
+                      - reinvestment
                     nature:
                       type: string
                       enum:
@@ -7044,6 +7828,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/DeleteResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: forbidden - api key missing read_write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: trade not found
           content:
@@ -7252,6 +8048,10 @@ paths:
                       type: string
                       description: Optional source namespace for external_id. Requires
                         external_id and defaults to api when external_id is provided
+                    user_modified:
+                      type: boolean
+                      description: Whether provider syncs should preserve user-supplied
+                        transaction changes
                     tag_ids:
                       type: array
                       items:
@@ -7358,6 +8158,10 @@ paths:
                         format: uuid
                       description: Array of tag IDs to assign. Omit to preserve existing
                         tags; use [] to clear all tags.
+                    user_modified:
+                      type: boolean
+                      description: Whether provider syncs should preserve user-supplied
+                        transaction changes
         required: true
     delete:
       summary: Delete a transaction

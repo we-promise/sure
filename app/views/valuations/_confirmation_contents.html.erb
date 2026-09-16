@@ -5,7 +5,7 @@
     <% brokerage_cash = reconciliation_dry_run.new_cash_balance || 0 %>
     <% holdings_value = reconciliation_dry_run.new_balance - brokerage_cash %>
 
-    <p><%= t(".this_will", action_verb: action_verb) %> <span class="font-medium text-primary"><%= entry.date.strftime("%B %d, %Y") %></span> <%= t(".to_colon") %></p>
+    <p><%= t(".this_will", action_verb: action_verb) %> <span class="font-medium text-primary"><%= l(entry.date, format: :long) %></span> <%= t(".to_colon") %></p>
 
     <div class="bg-container rounded-lg p-4 space-y-2 border border-primary">
       <div class="flex justify-between">
@@ -42,7 +42,7 @@
       <% else %>
         <%= t(".balance") %>
       <% end %>
-      <%= t(".on") %> <span class="font-medium text-primary"><%= entry.date.strftime("%B %d, %Y") %></span> <%= t(".to") %>
+      <%= t(".on") %> <span class="font-medium text-primary"><%= l(entry.date, format: :long) %></span> <%= t(".to") %>
       <span class="font-medium text-primary"><%= entry.amount_money.format %></span>.
     </p>
   <% end %>

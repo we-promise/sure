@@ -1,0 +1,14 @@
+---
+uk:
+  tag:
+    deletions:
+      create:
+        deleted: "Тег видалено"
+      new:
+        delete_and_leave_uncategorized: "Видалити «%{tag_name}»"
+        delete_and_recategorize: "Видалити «%{tag_name}» та призначити новий тег"
+        delete_and_reassign: "Видалити та перепризначити"
+        delete_tag: "Видалити тег?"
+        explanation: "Тег «%{tag_name}» буде видалено з транзакцій та інших сутностей, що підлягають тегуванню. Замість того, щоб залишати їх без тегів, ви також можете призначити новий тег нижче."
+        replacement_tag_prompt: "Вибрати тег"
+        tag: "Тег"

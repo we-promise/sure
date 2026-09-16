@@ -10,9 +10,11 @@ class Assistant::HistoryTrimmer
     kept = []
     tokens = 0
 
-    group_tool_pairs(@messages).reverse_each do |group|
+    group_tool_pairs(@messages).reverse_each.with_index do |group, index|
       group_tokens = Assistant::TokenEstimator.estimate(group)
-      break if tokens + group_tokens > @max_tokens
+      # The newest group always survives: dropping it would discard the very
+      # message the model is being asked to answer.
+      break if index.positive? && tokens + group_tokens > @max_tokens
 
       kept.unshift(*group)
       tokens += group_tokens

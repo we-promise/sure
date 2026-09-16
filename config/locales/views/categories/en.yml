@@ -17,6 +17,7 @@ en:
       name_label: Name
       unassigned: "(unassigned)"
       parent_category_label: "Parent category (optional)"
+      trigger_label: Choose color and icon
       color: Color
       icon: Icon
       auto_adjust: auto-adjust.

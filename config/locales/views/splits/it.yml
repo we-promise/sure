@@ -1,0 +1,47 @@
+---
+it:
+  splits:
+    new:
+      title: Dividi transazione
+      description: Dividi questa transazione in più voci con categorie e importi diversi.
+      submit: Dividi transazione
+      cancel: Annulla
+      add_row: Aggiungi divisione
+      remove_row: Rimuovi
+      remaining: Rimanente
+      amounts_must_match: Gli importi delle divisioni devono essere uguali all'importo della transazione originale.
+      name_label: Nome
+      name_placeholder: Nome divisione
+      amount_label: Importo
+      category_label: Categoria
+      uncategorized: "(non categorizzata)"
+      original_name: "Nome:"
+      original_date: "Data:"
+      original_amount: "Importo"
+      split_number: "Divisione n.%{number}"
+    create:
+      success: Transazione divisa con successo
+      not_splittable: Questa transazione non può essere divisa.
+    destroy:
+      success: Divisione transazione annullata con successo
+    show:
+      title: Voci divise
+      description: Questa transazione è stata divisa nelle seguenti voci.
+      button_title: Dividi transazione
+      button_description: Dividi questa transazione in più voci con categorie e importi diversi.
+      button: Dividi
+      unsplit_title: Annulla divisione
+      unsplit_button: Annulla divisione
+      unsplit_confirm: Questo rimuoverà tutte le voci divise e ripristinerà la transazione originale.
+    edit:
+      title: Modifica divisione
+      description: Modifica le voci divise per questa transazione.
+      submit: Aggiorna divisione
+      not_split: Questa transazione non è divisa.
+    update:
+      success: Divisione aggiornata con successo
+    child:
+      title: Parte di una divisione
+      description: Questa voce fa parte di una transazione divisa.
+      edit_split: Modifica divisione
+      unsplit: Annulla divisione

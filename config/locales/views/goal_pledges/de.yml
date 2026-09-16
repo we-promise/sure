@@ -1,0 +1,20 @@
+---
+de:
+  goal_pledges:
+    create:
+      success: Zusage erfasst. Sure bestätigt sie beim nächsten Sync.
+    destroy:
+      not_open: Nur offene Zusagen lassen sich zurückziehen.
+      success: Zusage zurückgezogen.
+    new:
+      account_label: Auf Konto
+      amount_label: Betrag
+      helper_manual: Sure erfasst das beim nächsten Mal, wenn du den Saldo selbst anpasst, und bestätigt den Beitrag.
+      helper_transfer: Sure sucht nach einer passenden Einzahlung auf deinem verknüpften Konto. Die Zusage bleibt 7 Tage offen und bestätigt sich automatisch, sobald Sure sie findet.
+      preview_nonzero: Erreicht {percent} %, also {newTotal} von {target}.
+      preview_reached: Erreicht dein Ziel von {target}. Geschafft.
+      preview_zero: Derzeit {current} von {target} gespart.
+      submit: Zusage erfassen
+    renew:
+      not_open: Nur offene Zusagen lassen sich verlängern.
+      success: Zusage um 7 Tage verlängert.

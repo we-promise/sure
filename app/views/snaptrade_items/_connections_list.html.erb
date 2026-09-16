@@ -1,10 +1,10 @@
-<%# locals: (connections:, orphaned_users: [], snaptrade_item:, error: nil) %>
+<%# locals: (connections:, snaptrade_item:, error: nil) %>
 
 <% if error.present? %>
   <div class="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
     <%= t("providers.snaptrade.connections_error", message: error) %>
   </div>
-<% elsif connections.empty? && orphaned_users.empty? %>
+<% elsif connections.empty? %>
   <p class="text-sm text-secondary py-2">
     <%= t("providers.snaptrade.no_connections") %>
   </p>
@@ -65,50 +65,14 @@
       </div>
     <% end %>
 
-    <%# Orphaned users (from previous registrations) %>
-    <% if orphaned_users.any? %>
-      <div class="border-t border-secondary pt-3 mt-3">
-        <p class="text-xs text-warning font-medium mb-2">
-          <%= icon "alert-triangle", size: "xs", class: "inline-block mr-1" %>
-          <%= t("providers.snaptrade.orphaned_users_title", count: orphaned_users.size) %>
-        </p>
-        <p class="text-xs text-secondary mb-3">
-          <%= t("providers.snaptrade.orphaned_users_description") %>
-        </p>
-
-        <% orphaned_users.each do |orphan| %>
-          <div id="orphaned_user_<%= orphan[:user_id].parameterize %>"
-               class="border rounded-lg p-3 border-warning/50 bg-warning/5 mb-2">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-warning">
-                  <%= t("providers.snaptrade.orphaned_user") %>
-                </p>
-                <p class="text-xs text-secondary font-mono truncate" title="<%= orphan[:user_id] %>">
-                  <%= orphan[:display_name] %>
-                </p>
-              </div>
-
-              <%= render DS::Menu.new do |menu| %>
-                <% menu.with_item(
-                  variant: "button",
-                  text: t("providers.snaptrade.delete_orphaned_user"),
-                  icon: "trash-2",
-                  href: delete_orphaned_user_snaptrade_item_path(snaptrade_item, user_id: orphan[:user_id]),
-                  method: :delete,
-                  confirm: CustomConfirm.new(
-                    title: t("providers.snaptrade.delete_orphaned_user_title"),
-                    body: t("providers.snaptrade.delete_orphaned_user_body"),
-                    btn_text: t("providers.snaptrade.delete_orphaned_user_confirm"),
-                    destructive: true,
-                    high_severity: true
-                  )
-                ) %>
-              <% end %>
-            </div>
-          </div>
-        <% end %>
-      </div>
-    <% end %>
+    <div class="border-t border-secondary pt-3 mt-3">
+      <%= render DS::Link.new(
+        text: t("providers.snaptrade.manage_at_snaptrade"),
+        icon: "external-link",
+        variant: :ghost,
+        href: Provider::Snaptrade::DASHBOARD_URL,
+        target: "_blank"
+      ) %>
+    </div>
   </div>
 <% end %>

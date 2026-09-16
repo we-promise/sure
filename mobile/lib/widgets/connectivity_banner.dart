@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/connectivity_service.dart';
 import '../providers/transactions_provider.dart';
 import '../providers/auth_provider.dart';
+import '../l10n/app_localizations.dart';
 
 class ConnectivityBanner extends StatefulWidget {
   const ConnectivityBanner({super.key});
@@ -15,11 +16,14 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   bool _isSyncing = false;
 
   Future<void> _handleSync(BuildContext context, String? accessToken, TransactionsProvider transactionsProvider) async {
+    // Capture context-derived objects before the async gap so we never touch
+    // `context` after an await.
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     if (accessToken == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please sign in to sync transactions'),
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l.connectivitySignInToSync),
           backgroundColor: Colors.orange,
         ),
       );
@@ -35,17 +39,17 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
       await transactionsProvider.syncTransactions(accessToken: accessToken);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Transactions synced successfully'),
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l.connectivitySyncSuccess),
           backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to sync transactions. Please try again.'),
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l.connectivitySyncFailed),
           backgroundColor: Colors.red,
         ),
       );
@@ -62,6 +66,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
   Widget build(BuildContext context) {
     return Consumer2<ConnectivityService, TransactionsProvider>(
       builder: (context, connectivityService, transactionsProvider, _) {
+        final l = AppLocalizations.of(context);
         final isOffline = connectivityService.isOffline;
         final hasPending = transactionsProvider.hasPendingTransactions;
         final pendingCount = transactionsProvider.pendingCount;
@@ -87,8 +92,8 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
                 Expanded(
                   child: Text(
                     isOffline
-                        ? 'You are offline. Changes will sync when online.'
-                        : '$pendingCount transaction${pendingCount == 1 ? '' : 's'} pending sync',
+                        ? l.connectivityOffline
+                        : l.connectivityPendingSync(pendingCount),
                     style: TextStyle(
                       color: isOffline ? Colors.orange.shade900 : Colors.blue.shade900,
                       fontSize: 14,
@@ -113,8 +118,8 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
                                 } catch (e) {
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Unable to authenticate. Please try again.'),
+                                    SnackBar(
+                                      content: Text(l.connectivityAuthFailed),
                                       backgroundColor: Colors.red,
                                     ),
                                   );
@@ -145,7 +150,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
                                   valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade900),
                                 ),
                               )
-                            : const Text('Sync Now'),
+                            : Text(l.connectivitySyncNow),
                       );
                     },
                   ),

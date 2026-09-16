@@ -1,0 +1,7 @@
+---
+it:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Impossibile scollegare l'ultima identità
+        success: Operazione riuscita

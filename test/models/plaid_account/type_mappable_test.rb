@@ -32,4 +32,18 @@ class PlaidAccount::TypeMappableTest < ActiveSupport::TestCase
     assert_equal "other", @mock_processor.map_subtype("depository", nil)
     assert_equal "other", @mock_processor.map_subtype("depository", "unknown")
   end
+
+  test "every mapped subtype is a valid subtype of its accountable" do
+    PlaidAccount::TypeMappable::TYPE_MAPPING.each do |plaid_type, config|
+      accountable_class = config[:accountable]
+      next unless accountable_class.const_defined?(:SUBTYPES)
+
+      config[:subtype_mapping].each do |plaid_subtype, subtype|
+        assert_includes accountable_class::SUBTYPES.keys, subtype,
+          "TYPE_MAPPING maps #{plaid_type}/#{plaid_subtype.inspect} to #{subtype.inspect}, " \
+          "which is not a valid #{accountable_class} subtype — syncing such an account fails " \
+          "with 'Validation failed: Accountable subtype is not included in the list'"
+      end
+    end
+  end
 end

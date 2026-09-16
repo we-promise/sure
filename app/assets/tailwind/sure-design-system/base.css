@@ -11,10 +11,21 @@
   }
 
   button {
-    @apply cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-alpha-black-300;
+    @apply cursor-pointer;
 
-    @variant theme-dark {
-      @apply focus-visible:ring-alpha-white-300;
+    /* Canonical keyboard-focus indicator (#2136) — the same recipe as
+       `.focus-ring` in components.css, applied here so every <button> gets
+       it by default. This used to be a `ring-2 ring-offset-2` box-shadow,
+       which double-painted alongside the `.focus-ring` outline on DS
+       primitives (Buttonish, tabs, popover, tooltip): box-shadow and
+       outline are independent properties, so the components-layer class
+       could never clear it. Transparent resting outline for the same
+       transition reasoning as `.focus-ring`. */
+    outline: 2px solid transparent;
+    outline-offset: 0;
+
+    &:focus-visible {
+      outline-color: var(--color-focus-ring);
     }
   }
 

@@ -43,6 +43,12 @@ ro:
         theme_system: Sistem
         theme_title: Temă
         timezone: Fus orar
+    appearances:
+      show:
+        modals_title: Ferestre modale
+        modals_subtitle: Personalizați comportamentul ferestrelor modale
+        disable_modal_click_outside_title: Mențineți ferestrele modale deschise la clic exterior
+        disable_modal_click_outside_description: Previne închiderea ferestrelor modale la clic în afara lor. Util pentru a evita pierderea accidentală a modificărilor nesalvate.
     profiles:
       destroy:
         cannot_remove_self: Nu te poți elimina singur din cont.

@@ -1,0 +1,24 @@
+---
+zh-TW:
+  transfer_matches:
+    create:
+      success: 轉帳已建立
+    new:
+      header:
+        title: 配對轉帳或付款
+        subtitle: 配對另一個帳戶中對應的那筆交易，如果不存在就建立一筆。
+      from_account: 來源帳戶
+      from_account_named: 來源帳戶：%{name}
+      to_account: 目標帳戶
+      to_account_named: 目標帳戶：%{name}
+      outflow_transaction: 流出交易
+      inflow_transaction: 流入交易
+      create_transfer_match: 建立轉帳配對
+    matching_fields:
+      select_method: 選擇交易的配對方式。
+      match_existing_recommended: 配對現有交易（建議）
+      create_new_transaction: 建立新交易
+      matching_method: 配對方式
+      matching_transaction: 配對的交易
+      target_account: 目標帳戶
+      no_matching_transactions: 我們在您其他帳戶中找不到可以配對的交易。請選擇一個帳戶，我們會為您建立一筆新的流入交易。

@@ -38,7 +38,18 @@ class LunchflowAccount::Processor
 
       # Update account balance from latest Lunchflow data
       account = lunchflow_account.current_account
-      balance = lunchflow_account.current_balance || 0
+      balance = lunchflow_account.current_balance
+
+      # A nil current_balance means this sync's balance fetch did not succeed:
+      # upsert_lunchflow_snapshot! clears it (the accounts endpoint carries no
+      # balance) and only a successful balance fetch repopulates it. Coercing
+      # nil to 0 here would persist a zero balance (and the USD currency
+      # fallback) onto a healthy account whenever the provider has a
+      # transient failure, so leave the account untouched instead.
+      if balance.nil?
+        Rails.logger.warn("LunchflowAccount::Processor - No balance available for lunchflow_account #{lunchflow_account.id} (balance fetch failed or not yet run), skipping account update")
+        return
+      end
 
       # LunchFlow balance convention matches our app convention:
       # - Positive balance = debt (you owe money)

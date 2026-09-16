@@ -10,9 +10,9 @@ class SnaptradeItem::Syncer
   def perform_sync(sync)
     Rails.logger.info "SnaptradeItem::Syncer - Starting sync for item #{snaptrade_item.id}"
 
-    # Verify user is registered
-    unless snaptrade_item.user_registered?
-      raise StandardError, "User not registered with SnapTrade"
+    # Verify the item is authorized
+    unless snaptrade_item.oauth_configured?
+      raise StandardError, "SnapTrade is not authorized"
     end
 
     # Phase 1: Import data from SnapTrade API
@@ -45,6 +45,7 @@ class SnaptradeItem::Syncer
     end
 
     # Mark sync health
+    snaptrade_item.update!(status: :good) if snaptrade_item.requires_update?
     collect_health_stats(sync, errors: nil)
   rescue Provider::Snaptrade::AuthenticationError => e
     snaptrade_item.update!(status: :requires_update)

@@ -22,7 +22,7 @@
                     { label: t(".date_label"), prompt: t(".select_column") },
                     required: true %>
     <%= form.select :date_format,
-                    Family::DATE_FORMATS,
+                    Family::DATE_FORMATS + Import::CSV_ONLY_DATE_FORMATS,
                     { label: t(".date_format_label"), prompt: t(".select_format") },
                     required: true %>
   </div>

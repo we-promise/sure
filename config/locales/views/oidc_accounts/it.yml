@@ -1,0 +1,42 @@
+---
+it:
+  oidc_accounts:
+    link:
+      no_pending_oidc: Nessuna autenticazione OIDC in sospeso trovata
+      title_link: Collega account OIDC
+      title_create: Crea account
+      verify_heading: Verifica la tua identità
+      verify_description_html: "Per collegare il tuo account %{provider}%{email_suffix}, verifica la tua identità inserendo la tua password."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: Email
+      email_placeholder: Inserisci la tua email
+      password_label: Password
+      password_placeholder: Inserisci la tua password
+      verify_hint: Questo aiuta a garantire che solo tu possa collegare account esterni al tuo profilo.
+      submit_link: Collega account
+      create_heading: Crea nuovo account
+      create_description_html: "Nessun account trovato con l'email <strong>%{email}</strong>. Clicca qui sotto per creare un nuovo account usando la tua identità %{provider}."
+      info_email: "Email:"
+      info_name: "Nome:"
+      submit_create: Crea account
+      submit_accept_invitation: Accetta invito
+      account_creation_disabled: La creazione di nuovi account tramite single sign-on è disabilitata. Contatta un amministratore per creare il tuo account.
+      cancel: Annulla
+    create_link:
+      no_pending_oidc: Nessuna autenticazione OIDC in sospeso trovata
+    new_user:
+      no_pending_oidc: Nessuna autenticazione OIDC in sospeso trovata
+      title: Completa il tuo account
+      heading: Crea il tuo account
+      description: Conferma i tuoi dettagli per completare la creazione dell'account con la tua identità %{provider}.
+      email_label: Email (dal provider SSO)
+      first_name_label: Nome
+      first_name_placeholder: Inserisci il tuo nome
+      last_name_label: Cognome
+      last_name_placeholder: Inserisci il tuo cognome
+      submit: Crea account
+      cancel: Annulla
+    create_user:
+      no_pending_oidc: Nessuna autenticazione OIDC in sospeso trovata
+      account_creation_disabled: La creazione di account SSO è disabilitata. Contatta un amministratore.
+      account_created: "Benvenuto! Il tuo account è stato creato."

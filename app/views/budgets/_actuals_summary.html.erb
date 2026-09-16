@@ -20,7 +20,7 @@
           <% budget.income_category_totals.each do |category_total| %>
             <div class="flex items-center gap-1.5">
               <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: <%= category_total.category.color %>"></div>
-              <span class="text-secondary"><%= category_total.category.name %></span>
+              <span class="text-secondary"><%= category_total.category.display_name %></span>
               <span class="text-primary"><%= number_to_percentage(category_total.weight, precision: 0) %></span>
             </div>
           <% end %>
@@ -46,7 +46,7 @@
           <% budget.expense_category_totals.each do |category_total| %>
             <div class="flex items-center gap-1.5">
               <div class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: <%= category_total.category.color %>"></div>
-              <span class="text-secondary"><%= category_total.category.name %></span>
+              <span class="text-secondary"><%= category_total.category.display_name %></span>
               <span class="text-primary"><%= number_to_percentage(category_total.weight, precision: 0) %></span>
             </div>
           <% end %>

@@ -1,0 +1,165 @@
+uk:
+  lunchflow_items:
+    api_error:
+      title: Помилка з'єднання Lunch Flow
+      unable_to_connect: Неможливо підключитися до Lunch Flow
+      common_issues: "Поширені проблеми:"
+      invalid_api_key_label: Недійсний ключ API
+      invalid_api_key_desc: Перевірте свій ключ API в налаштуваннях постачальника
+      expired_credentials_label: Прострочені облікові дані
+      expired_credentials_desc: Згенеруйте новий ключ API з Lunch Flow
+      network_issue_label: Проблема з мережею
+      network_issue_desc: Перевірте своє інтернет-з'єднання
+      service_down_label: Сервіс не працює
+      service_down_desc: API Lunch Flow може бути тимчасово недоступним
+      check_provider_settings: Перевірити налаштування постачальника
+    setup_required:
+      title: Потрібне налаштування Lunch Flow
+      api_key_not_configured: Ключ API не налаштовано
+      api_key_description: Перш ніж ви зможете пов'язати облікові записи Lunch Flow, вам потрібно налаштувати свій ключ API Lunch Flow.
+      setup_steps_title: "Кроки налаштування:"
+      setup_step_1_html: "Перейдіть до <strong>Налаштування → Постачальники</strong>"
+      setup_step_2_html: "Знайдіть розділ <strong>Lunch Flow</strong>"
+      setup_step_3: Введіть свій ключ API Lunch Flow
+      setup_step_4: Поверніться сюди, щоб пов'язати свої облікові записи
+      go_to_provider_settings: Перейти до налаштувань постачальника
+    create:
+      success: З'єднання Lunch Flow успішно створено
+    destroy:
+      success: З'єднання Lunch Flow видалено
+    index:
+      title: З'єднання Lunch Flow
+    loading:
+      loading_message: Завантаження облікових записів Lunch Flow...
+      loading_title: Завантаження
+    link_accounts:
+      all_already_linked:
+        one: "Вибраний обліковий запис (%{names}) вже пов'язано"
+        other: "Усі %{count} вибраних облікових записів вже пов'язано: %{names}"
+      api_error: "Помилка API: %{message}"
+      invalid_account_names:
+        one: "Неможливо пов'язати обліковий запис з порожньою назвою"
+        other: "Неможливо пов'язати %{count} облікових записів з порожніми назвами"
+      link_failed: Не вдалося пов'язати облікові записи
+      no_accounts_selected: Будь ласка, виберіть принаймні один обліковий запис
+      partial_invalid: "Успішно пов'язано %{created_count} обліковий(і) запис(и), %{already_linked_count} вже було пов'язано, %{invalid_count} обліковий(і) запис(и) мав(ли) недійсні назви"
+      partial_success: "Успішно пов'язано %{created_count} обліковий(і) запис(и). %{already_linked_count} обліковий(і) запис(и) вже було пов'язано: %{already_linked_names}"
+      success:
+        one: "Успішно пов'язано %{count} обліковий запис"
+        other: "Успішно пов'язано %{count} облікових записів"
+    lunchflow_item:
+      accounts_need_setup: Облікові записи потребують налаштування
+      delete: Видалити з'єднання
+      deletion_in_progress: видалення триває...
+      error: Помилка
+      no_accounts_description: Це з'єднання ще не має пов'язаних облікових записів.
+      no_accounts_title: Немає облікових записів
+      setup_action: Налаштувати нові облікові записи
+      setup_description: "%{linked} з %{total} облікових записів пов'язано. Виберіть типи облікових записів для ваших щойно імпортованих облікових записів Lunch Flow."
+      setup_needed: Нові облікові записи готові до налаштування
+      status: "Синхронізовано %{timestamp} тому"
+      status_never: Ніколи не синхронізовано
+      status_with_summary: "Остання синхронізація %{timestamp} тому • %{summary}"
+      syncing: Синхронізація...
+      total: Усього
+      unlinked: Непов'язано
+    select_accounts:
+      accounts_selected: вибрано облікових записів
+      api_error: "Помилка API: %{message}"
+      cancel: Скасувати
+      configure_name_in_lunchflow: Неможливо імпортувати - будь ласка, налаштуйте назву облікового запису в Lunchflow
+      description: Виберіть облікові записи, які ви хочете пов'язати зі своїм обліковим записом %{product_name}.
+      link_accounts: Пов'язати вибрані облікові записи
+      no_accounts_found: Облікових записів не знайдено. Перевірте конфігурацію вашого ключа API.
+      no_api_key: Ключ API Lunch Flow не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
+      no_name_placeholder: "(Без назви)"
+      title: Виберіть облікові записи Lunch Flow
+    select_existing_account:
+      account_already_linked: Цей обліковий запис вже пов'язано з постачальником
+      all_accounts_already_linked: Усі облікові записи Lunch Flow вже пов'язано
+      api_error: "Помилка API: %{message}"
+      cancel: Скасувати
+      configure_name_in_lunchflow: Неможливо імпортувати - будь ласка, налаштуйте назву облікового запису в Lunchflow
+      description: Виберіть обліковий запис Lunch Flow для пов'язування з цим обліковим записом. Транзакції будуть синхронізуватися та дедуплікуватися автоматично.
+      link_account: Пов'язати обліковий запис
+      no_account_specified: Обліковий запис не вказано
+      no_accounts_found: Облікових записів Lunch Flow не знайдено. Перевірте конфігурацію вашого ключа API.
+      no_api_key: Ключ API Lunch Flow не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
+      no_name_placeholder: "(Без назви)"
+      title: "Пов'язати %{account_name} з Lunch Flow"
+    link_existing_account:
+      account_already_linked: Цей обліковий запис вже пов'язано з постачальником
+      api_error: "Помилка API: %{message}"
+      invalid_account_name: Неможливо пов'язати обліковий запис з порожньою назвою
+      lunchflow_account_already_linked: Цей обліковий запис Lunch Flow вже пов'язано з іншим обліковим записом
+      lunchflow_account_not_found: Обліковий запис Lunch Flow не знайдено
+      missing_parameters: Відсутні обов'язкові параметри
+      success: "Успішно пов'язано %{account_name} з Lunch Flow"
+    setup_accounts:
+      account_type_label: "Тип рахунку:"
+      all_accounts_linked: "Усі ваші облікові записи Lunch Flow вже налаштовано."
+      api_error: "Помилка API: %{message}"
+      fetch_failed: "Не вдалося завантажити облікові записи"
+      no_accounts_to_setup: "Немає облікових записів для налаштування"
+      no_api_key: "Ключ API Lunch Flow не налаштовано. Перевірте налаштування з'єднання."
+      account_types:
+        skip: Пропустити цей обліковий запис
+        depository: Розрахунковий або ощадний рахунок
+        credit_card: Кредитна картка
+        investment: Інвестиційний рахунок
+        loan: Позика або іпотека
+        other_asset: Інший актив
+      subtype_labels:
+        depository: "Підтип рахунку:"
+        credit_card: ""
+        investment: "Тип інвестицій:"
+        loan: "Тип позики:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Кредитні картки будуть автоматично налаштовані як рахунки кредитних карток."
+        other_asset: "Для інших активів не потрібні додаткові опції."
+      subtypes:
+        depository:
+          checking: Розрахунковий
+          savings: Ощадний
+          hsa: Рахунок для заощаджень на здоров'я
+          cd: Депозитний сертифікат
+          money_market: Грошовий ринок
+        investment:
+          brokerage: Брокерський
+          pension: Пенсійний
+          retirement: Пенсійний
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: План заощаджень Thrift
+          "529_plan": "План 529"
+          hsa: Рахунок для заощаджень на здоров'я
+          mutual_fund: Взаємний фонд
+          ira: Традиційний IRA
+          roth_ira: Roth IRA
+          angel: Ангел
+        loan:
+          mortgage: Іпотека
+          student: Студентська позика
+          auto: Автокредит
+          other: Інша позика
+      balance: Баланс
+      cancel: Скасувати
+      choose_account_type: "Виберіть правильний тип рахунку для кожного облікового запису Lunch Flow:"
+      create_accounts: Створити облікові записи
+      creating_accounts: Створення облікових записів...
+      historical_data_range: "Діапазон історичних даних:"
+      subtitle: Виберіть правильні типи облікових записів для ваших імпортованих облікових записів
+      sync_start_date_help: Виберіть, наскільки далеко назад ви хочете синхронізувати історію транзакцій. Доступна історія максимум за 3 роки.
+      sync_start_date_label: "Почати синхронізацію транзакцій з:"
+      title: Налаштуйте свої облікові записи Lunch Flow
+    complete_account_setup:
+      all_skipped: "Усі облікові записи було пропущено. Жоден обліковий запис не було створено."
+      creation_failed: "Не вдалося створити облікові записи: %{error}"
+      no_accounts: "Немає облікових записів для налаштування."
+      success: "Успішно створено %{count} обліковий(і) запис(и)."
+    sync:
+      success: Синхронізацію розпочато
+    update:
+      success: З'єднання Lunch Flow оновлено

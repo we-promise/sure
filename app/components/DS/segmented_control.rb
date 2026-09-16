@@ -10,8 +10,11 @@ class DS::SegmentedControl < DesignSystemComponent
   # `full_width: true` stretches segments to equal width (the "equal-footprint"
   # the #2137 audit asked for); default is content width.
   renders_many :segments, ->(label, active: false, href: nil, **opts) do
+    # `focus-ring` is for link segments — button segments already get the
+    # canonical outline from the base-layer button rule (it's an idempotent
+    # duplicate there).
     classes = class_names(
-      "segmented-control__segment",
+      "segmented-control__segment focus-ring",
       ("flex-1" if full_width),
       ("segmented-control__segment--active" if active),
       opts.delete(:class)

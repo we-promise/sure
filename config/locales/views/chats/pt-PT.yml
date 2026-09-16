@@ -1,0 +1,45 @@
+---
+pt-PT:
+  chats:
+    demo_banner_title: "Modo de Demonstração ativo"
+    demo_banner_message: "Está a utilizar modelos IA através de créditos disponibilizados pelo Cloudflare Workers AI. Os resultados podem variar, uma vez que a base de código foi testada com `gpt-4.1`, mas os seus tokens não são utilizados para treinar outros modelos! 🤖"
+    thinking: "A pensar ..."
+    worker_unhealthy_warning: "As respostas de IA podem não ser entregues neste momento — o worker em segundo plano parece estar em baixo ou sobrecarregado. Verifique se o seu worker Sidekiq está a funcionar."
+    ai_greeting:
+      greeting: "Olá %{name}! Sou um modelo de IA que pode ajudar com as suas finanças. Tenho acesso à web e aos dados da sua conta."
+      there: "aí"
+      commands_hint_html: "Pode utilizar <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> para aceder aos comandos"
+      questions_intro: "Aqui estão algumas perguntas que pode fazer:"
+      evaluate_portfolio: "Avaliar carteira de investimentos"
+      spending_insights: "Mostrar informações sobre gastos"
+      unusual_patterns: "Encontrar padrões invulgares"
+    chat:
+      edit_chat_title: "Editar título do chat"
+      delete_chat: "Eliminar chat"
+    chat_nav:
+      all_chats: "Todos os chats"
+      start_new_chat: "Iniciar novo chat"
+      edit_chat_title: "Editar título do chat"
+      delete_chat: "Eliminar chat"
+    error:
+      retry: "Repetir"
+    destroy:
+      notice: "O chat foi eliminado com sucesso"
+    index:
+      chats: "Chats"
+      new_chat: "Novo chat"
+    update:
+      success: "Chat atualizado"
+    ai_consent:
+      title: "Ativar Chats de IA"
+      available_description: "O chat de IA pode responder a perguntas financeiras e fornecer informações com base nos seus dados. Para utilizar esta funcionalidade, terá de a ativar."
+      unavailable_description_html: "Para utilizar o assistente de IA, terá de definir a variável de ambiente <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> ou configurá-la nas definições de Self-Hosting da sua instância."
+      enable_button: "Ativar Chats de IA"
+      disable_note: "Pode desativar esta funcionalidade a qualquer momento. Todos os dados enviados para os serviços de IA que utilizamos são anonimizados."
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: "Raciocínio do assistente"
+    tool_calls:
+      tool_calls: "Chamadas de ferramentas"
+      function: "Função:"
+      arguments: "Argumentos:"

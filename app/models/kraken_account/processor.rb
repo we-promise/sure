@@ -15,6 +15,7 @@ class KrakenAccount::Processor
     KrakenAccount::HoldingsProcessor.new(kraken_account).process
     process_account!
     process_trades
+    KrakenAccount::LedgerProcessor.new(kraken_account).process
   end
 
   private

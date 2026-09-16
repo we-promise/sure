@@ -1,0 +1,78 @@
+<%# locals: (recurring_transaction:, show_add: true, show_state: true) %>
+
+<%#
+  The row's primary action, which depends on state rather than being the same
+  control every time. With a link saved, the thing you want is to go and pay, and
+  editing is rare enough to belong in the overflow menu. With no link saved, the
+  only useful action is adding one.
+
+  The scheme allowlist is re-applied here as well as in the model, because a row
+  can also arrive by NDJSON import, by the v1 API, or by a direct database write.
+  `DS::Link` supplies rel="noopener noreferrer" and the "opens in new tab" cue for
+  `_blank` targets.
+%>
+
+<% has_link = RecurringTransaction.valid_payment_url?(recurring_transaction.payment_url) %>
+
+<% if recurring_transaction.autopay? %>
+  <%# Autopay is information, not a task, so it never renders as a call to action. The
+      portal stays reachable when a link exists -- you still want to check a charge --
+      but demoted to a quiet control rather than something demanding to be clicked.
+
+      show_state: false is passed by surfaces that already say "Autopay" on the
+      bill's own line. Repeating it in the action slot spends the row's one verb
+      position on a state, so there it shrinks to the portal link alone. %>
+  <% if has_link && !show_state %>
+    <%# Deliberately NOT labelled "Pay": autopay means the charge is already
+        handled, so the only thing left to offer is the door to the provider --
+        for checking a charge, not for making one. The label says so. %>
+    <%= render DS::Link.new(
+          icon: "external-link",
+          variant: "icon",
+          href: recurring_transaction.payment_url,
+          target: "_blank",
+          title: t(".open_site"),
+          aria: { label: t(".autopay_aria", name: recurring_transaction.display_name) }
+        ) %>
+  <% elsif has_link %>
+    <%= render DS::Link.new(
+          text: t(".autopay"),
+          href: recurring_transaction.payment_url,
+          icon: "refresh-cw",
+          variant: "ghost",
+          size: "sm",
+          target: "_blank",
+          aria: { label: t(".autopay_aria", name: recurring_transaction.display_name) }
+        ) %>
+  <% elsif show_state %>
+    <span class="inline-flex items-center gap-1 px-2 py-1 text-sm text-secondary">
+      <%= icon "refresh-cw", size: "sm", color: "current" %>
+      <%= t(".autopay") %>
+    </span>
+  <% end %>
+<% elsif has_link %>
+  <%= render DS::Link.new(
+        text: t(".pay"),
+        href: recurring_transaction.payment_url,
+        icon: "external-link",
+        icon_position: :right,
+        variant: "accent",
+        size: "sm",
+        target: "_blank",
+        aria: { label: t(".pay_aria", name: recurring_transaction.display_name) }
+      ) %>
+<% elsif show_add %>
+  <%# Dashed outline reads as "nothing here yet", the same cue the split editor uses
+      for its add-another-split control. Suppressed on read-only forecasts, which
+      should not nag about every bill that has no link yet. %>
+  <%= render DS::Link.new(
+        text: t(".add_link"),
+        href: edit_recurring_transaction_path(recurring_transaction),
+        icon: "link",
+        variant: "outline_muted",
+        size: "sm",
+        frame: :modal,
+        class: "border-dashed",
+        aria: { label: t(".add_link_aria", name: recurring_transaction.display_name) }
+      ) %>
+<% end %>

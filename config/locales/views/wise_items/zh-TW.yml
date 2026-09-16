@@ -1,0 +1,150 @@
+---
+zh-TW:
+  wise_items:
+    profile_types:
+      personal: 個人
+      business: 企業
+    entries:
+      default_name: Wise 交易
+      fee_name: Wise 手續費
+    activities:
+      jar_deposit: 轉入 Jar
+      jar_withdrawal: 從 Jar 轉出
+      transfer_to_jar: 轉入 %{jar}
+      transfer_from_jar: 從 %{jar} 轉出
+      interest: Wise 利息
+      asset_fee: Wise Assets 手續費
+      default_name: Wise 活動
+    sync_status:
+      no_accounts: 找不到帳戶
+      all_synced:
+        one: 已同步 %{count} 個帳戶
+        other: 已同步 %{count} 個帳戶
+      partial_setup: 已同步 %{synced} 個，%{pending} 個需要設定
+    create:
+      no_profiles_found: 找不到任何 Wise 個人檔案。請檢查您的 API Token。
+      invalid_token: API Token 無效。請檢查後再試一次。
+      connection_failed: 無法連線至 Wise。請稍後再試。
+    destroy:
+      success: 已移除 Wise 連線
+    update:
+      success: 已更新 Wise 連線
+    sync:
+      success: 同步已開始
+    syncer:
+      importing_accounts: 正在從 Wise 匯入帳戶...
+      checking_account_configuration: 正在檢查帳戶設定...
+      accounts_need_setup:
+        one: '%{count} 個帳戶需要設定...'
+        other: '%{count} 個帳戶需要設定...'
+      processing_transactions: 正在處理交易...
+      calculating_balances: 正在計算餘額...
+      credentials_invalid: Wise API Token 無效或權限不足
+      failed: 同步失敗。請重試或聯絡支援。
+      import_failed: Wise 匯入失敗。
+      accounts_failed:
+        one: '%{count} 個餘額匯入失敗。'
+        other: '%{count} 個餘額匯入失敗。'
+      transactions_failed:
+        one: '%{count} 個餘額有交易匯入失敗。'
+        other: '%{count} 個餘額有交易匯入失敗。'
+      account_processing_failed:
+        one: '%{count} 個 Wise 帳戶處理失敗。'
+        other: '%{count} 個 Wise 帳戶處理失敗。'
+      account_sync_failed:
+        one: '%{count} 個 Wise 帳戶同步無法排程。'
+        other: '%{count} 個 Wise 帳戶同步無法排程。'
+    provider_panel:
+      setup_title: 設定說明：
+      add_connection: 新增 Wise 連線
+      token_label: API 權杖 (API Token)
+      token_placeholder: 貼上您的 Wise 個人 API Token
+      keep_token_placeholder: 留白以保留目前的 Token
+      connection_name_label: 連線名稱
+      connection_name_placeholder: Wise Personal
+      connect: 連接 Wise
+      update_connection: 更新連線
+      setup_accounts: 設定帳戶
+      sync: 同步
+      disconnect: 中斷連線
+      disconnect_label: 中斷 %{name}
+      disconnect_confirm: 確定要中斷 %{name} 的連線嗎？這會移除所有已同步的帳戶資料。
+      accounts_link: 帳戶管理
+      configured_html: 已連線並同步中。請前往 %{accounts_link} 分頁管理您的帳戶。
+      not_configured: 未設定
+      sandbox_note_html: 測試時請使用 <strong>sandbox</strong> 基礎網址（<code>https://api.sandbox.transferwise.tech</code>）。在環境變數中設定 <code>WISE_BASE_URL</code>。
+      encryption_warning:
+        title: 資料庫加密未設定
+        message: 在正式環境加入 Wise Token 之前，請先設定 Active Record 加密金鑰。未加密時 Token 會以明文儲存。
+      instructions:
+        sign_in_html: 前往 %{link} 並登入您的帳號
+        open_tokens: 前往 Settings → API tokens
+        create_token: 建立一個唯讀存取的個人 API Token
+        copy_token_html: 複製 Token 並貼到下方。Sure 只會用它來同步您的餘額與交易。
+    provider_connection:
+      default_name: Wise
+      default_description: 連接您的 Wise 多幣別帳戶
+      name: Wise — %{name}
+      description: 使用 %{name} 連線
+    link_profiles:
+      session_expired: 工作階段已逾時。請重新連接。
+      no_profiles_selected: 請至少選擇一個個人檔案。
+      already_connected: 所選的個人檔案都已連接。
+      success:
+        one: 已成功連接 %{count} 個 Wise 個人檔案
+        other: 已成功連接 %{count} 個 Wise 個人檔案
+    select_profiles:
+      session_expired: 工作階段已逾時。請重新連接。
+      title: 選擇 Wise 個人檔案
+      subtitle: 選擇要連接的個人檔案
+      description: 您的 Wise 帳戶有多個個人檔案。請選擇要與 Sure 同步的項目。
+      unnamed_profile: （未命名的個人檔案）
+      already_connected_label: 已連接
+      connect: 連接所選的個人檔案
+      cancel: 取消
+    wise_item:
+      deletion_in_progress: 正在刪除...
+      syncing: 同步中...
+      error: 同步錯誤
+      status: '%{timestamp}前已同步'
+      status_never: 從未同步
+      status_with_summary: 上次同步於 %{timestamp}前 — %{summary}
+      delete: 中斷連線
+      setup_needed: 有新帳戶可以設定
+      setup_description: 已連結 %{total} 個帳戶中的 %{linked} 個。為您的 Wise 幣別餘額建立 Sure 帳戶。
+      setup_action: 設定帳戶
+      no_accounts_title: 尚未連結任何帳戶
+      no_accounts_description: 執行一次同步以偵測您的 Wise 餘額，再連結到 Sure 帳戶。
+    setup_accounts:
+      title: 設定 Wise 帳戶
+      subtitle: 連結您的 Wise 幣別餘額
+      description: 為每個您想追蹤的 Wise 幣別餘額建立一個 Sure 帳戶。每種幣別各自成為一個帳戶。
+      no_accounts_to_setup: 所有帳戶都已設定完成
+      all_accounts_linked: 您所有的 Wise 幣別餘額都已連結到 Sure 帳戶。
+      create_account: 建立帳戶
+      done: 完成
+    select_accounts:
+      title: 選擇 Wise 餘額
+      description: 選擇您想連結到 %{product_name} 帳戶的 Wise 幣別餘額。
+      no_accounts_found: 所有 Wise 餘額都已連結到 Sure 帳戶。
+      no_connection: 找不到 Wise 連線。請先在供應商設定中連接 Wise。
+      link_account: 連結餘額
+      cancel: 取消
+    select_existing_account:
+      title: 將 %{account_name} 與 Wise 連結
+      description: 選擇要與此帳戶連結的 Wise 幣別餘額。交易將會自動同步。
+      no_accounts_found: 找不到未連結的 Wise 餘額。
+      link_account: 連結餘額
+      cancel: 取消
+    link_accounts:
+      not_found: 找不到 Wise 餘額。
+      success: 已成功將 Wise 餘額連結到帳戶。
+      failed: 無法連結 Wise 餘額。請再試一次。
+    link_existing_account:
+      not_found: 找不到帳戶或 Wise 餘額。
+      success: 已成功將 %{account_name} 與 Wise 連結
+      failed: 無法連結帳戶。請再試一次。
+    complete_account_setup:
+      not_found: 找不到 Wise 餘額。
+      success: 帳戶已建立並連結成功。
+      failed: 無法建立帳戶。請再試一次。

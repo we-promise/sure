@@ -1,0 +1,53 @@
+---
+it:
+  admin:
+    users:
+      index:
+        title: "Gestione utenti"
+        description: "Gestisci i ruoli utente per la tua istanza. I super amministratori possono accedere alle impostazioni del provider SSO e alla gestione utenti."
+        section_title: "Famiglie / Gruppi"
+        you: "(Tu)"
+        trial_ends_at: "Prova scade"
+        not_available: "n/d"
+        no_users: "Nessun utente trovato."
+        unnamed_family: "Famiglia/Gruppo senza nome"
+        no_subscription: "Nessun abbonamento"
+        family_summary: "%{members} membri · %{accounts} conti · %{transactions} transazioni"
+        filters:
+          role: "Ruolo"
+          role_all: "Tutti i ruoli"
+          trial_status: "Stato prova"
+          trial_all: "Tutti"
+          trial_expiring_soon: "In scadenza in 7 giorni"
+          trial_trialing: "In prova"
+          submit: "Filtra"
+        summary:
+          trials_expiring_7_days: "Prove in scadenza nei prossimi 7 giorni"
+        table:
+          user: "Utente"
+          trial_ends_at: "Prova scade"
+          family_accounts: "Conti famiglia"
+          family_transactions: "Transazioni famiglia"
+          last_login: "Ultimo accesso"
+          session_count: "Numero sessioni"
+          never: "Mai"
+          role: "Ruolo"
+        role_descriptions_title: "Descrizioni ruoli"
+        roles:
+          guest: "Ospite"
+          member: "Membro"
+          admin: "Amministratore"
+          super_admin: "Super amministratore"
+        role_descriptions:
+          guest: "Esperienza assistente-first con permessi volutamente limitati per i flussi di introduzione."
+          member: "Accesso utente base. Può gestire i propri conti, transazioni e impostazioni."
+          admin: "Amministratore famiglia. Può accedere alle impostazioni avanzate come chiavi API, importazioni e prompt AI."
+          super_admin: "Amministratore istanza. Può gestire provider SSO, ruoli utente e impersonare utenti per supporto."
+        invitations:
+          pending_label: "Invitato (in attesa)"
+          expires: "Scade %{date}"
+          delete: "Elimina"
+          delete_all: "Elimina tutto"
+      update:
+        success: "Ruolo utente aggiornato con successo."
+        failure: "Aggiornamento ruolo utente fallito."
