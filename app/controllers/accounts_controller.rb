@@ -349,6 +349,7 @@ class AccountsController < ApplicationController
     def visible_provider_items(items)
       items.select do |item|
         Current.user.admin? ||
+          (item.respond_to?(:owned_by?) && item.owned_by?(Current.user)) ||
           (item.respond_to?(:accounts) && (item.accounts.map(&:id) & @accessible_account_ids).any?)
       end
     end
