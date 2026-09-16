@@ -17,6 +17,11 @@ pub fn is_attachment(content_disposition: &str) -> bool {
 #[cfg(target_os = "macos")]
 pub use macos::save_attachments;
 
+/// The delegate is specific to WKWebView, so other platforms keep wry's own
+/// download handling.
+#[cfg(not(target_os = "macos"))]
+pub fn save_attachments(_window: &tauri::WebviewWindow) {}
+
 #[cfg(target_os = "macos")]
 mod macos {
     use std::ffi::c_void;

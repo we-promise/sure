@@ -14,16 +14,21 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   # The desktop app clones these into the tray when a download such as the CSV
-  # export ends, since it has no download list of its own.
+  # export ends, since it has no download list of its own, and reads their data
+  # attributes for its native notification.
   test "index provides the download toasts the desktop app shows" do
     get reports_path
 
     assert_response :ok
+    scope = "layouts.shared.notification_tray"
     assert_select "template#desktop-download-complete", 1
     assert_select "template#desktop-download-failed", 1
-    assert_includes response.body, I18n.t("layouts.shared.notification_tray.download_complete")
-    assert_includes response.body, I18n.t("layouts.shared.notification_tray.download_location")
-    assert_includes response.body, I18n.t("layouts.shared.notification_tray.download_failed")
+    assert_select "template#desktop-download-complete[data-message=?][data-description=?]",
+      I18n.t("#{scope}.download_complete"), I18n.t("#{scope}.download_location")
+    assert_select "template#desktop-download-failed[data-message=?]", I18n.t("#{scope}.download_failed")
+    assert_includes response.body, I18n.t("#{scope}.download_complete")
+    assert_includes response.body, I18n.t("#{scope}.download_location")
+    assert_includes response.body, I18n.t("#{scope}.download_failed")
   end
 
   test "index with monthly period" do

@@ -281,10 +281,53 @@ fn on_download(
     }
 }
 
+/// What the toast script reports: whether it showed Sure's toast, and the
+/// toast's text in the page's language, for the native notification.
+#[derive(Debug, Default, PartialEq, serde::Deserialize)]
+pub struct DownloadToast {
+    #[serde(default)]
+    pub shown: bool,
+    pub message: Option<String>,
+    pub description: Option<String>,
+}
+
+impl DownloadToast {
+    /// Read the script's result. `null`, from a page without the template (an
+    /// older server), or any other unexpected value means no toast and no text.
+    pub fn from_script_result(result: &str) -> Self {
+        serde_json::from_str::<Option<Self>>(result)
+            .ok()
+            .flatten()
+            .unwrap_or_default()
+    }
+}
+
+/// Title and body of the native notification for a finished download: the
+/// toast's own text when the page provides it, English otherwise.
+pub fn download_notification(success: bool, toast: &DownloadToast) -> (String, String) {
+    let message = toast.message.clone().filter(|text| !text.is_empty());
+    let description = toast.description.clone().filter(|text| !text.is_empty());
+    match (message, description) {
+        (Some(message), Some(description)) => (message, description),
+        (Some(message), None) => ("Sure".to_string(), message),
+        // macOS does not return a path in Finished. Wry saves downloads to the
+        // Downloads directory and adds a suffix when a filename already exists.
+        (None, _) if success => (
+            "Sure".to_string(),
+            "Download complete. The file is in your Downloads folder.".to_string(),
+        ),
+        (None, _) => (
+            "Sure".to_string(),
+            "Download failed. Please try again.".to_string(),
+        ),
+    }
+}
+
 /// Confirm a finished download with Sure's own toast, cloned from a template the
 /// page renders. A native notification replaces it when no visible window can
 /// show it or the page has no such template, as with an older server, and is
-/// sent as well when the window is not in front.
+/// sent as well when the window is not in front. It reuses the toast's text, so
+/// it is in the page's language whenever the page provides the template.
 fn report_download(webview: &tauri::Webview, success: bool) {
     let app = webview.app_handle().clone();
     // A popup hidden because its address was the file shows nothing.
@@ -294,11 +337,13 @@ fn report_download(webview: &tauri::Webview, success: bool) {
         app.get_webview_window("main")
             .map(|main| main.as_ref().clone())
     };
-    // A toast added to a hidden window would only show up, stale, on reopening.
-    let Some(target) = target.filter(|target| target.window().is_visible().unwrap_or(false)) else {
-        return notify_download(&app, success);
+    let Some(target) = target else {
+        return notify_download(&app, success, &DownloadToast::default());
     };
-    let in_front = target.window().is_focused().unwrap_or(false);
+    // A toast added to a hidden window would only show up, stale, on reopening,
+    // so there the script only reads the text.
+    let visible = target.window().is_visible().unwrap_or(false);
+    let in_front = visible && target.window().is_focused().unwrap_or(false);
     let template = if success {
         DOWNLOAD_COMPLETE_TOAST
     } else {
@@ -307,32 +352,32 @@ fn report_download(webview: &tauri::Webview, success: bool) {
     let script = format!(
         "(() => {{
           const template = document.getElementById({template:?});
+          if (!(template instanceof HTMLTemplateElement)) return null;
           const tray = document.getElementById(\"notification-tray\");
-          if (!(template instanceof HTMLTemplateElement) || !tray) return false;
-          tray.append(template.content.cloneNode(true));
-          return true;
+          const shown = {visible} && tray !== null;
+          if (shown) tray.append(template.content.cloneNode(true));
+          return {{
+            shown,
+            message: template.dataset.message ?? null,
+            description: template.dataset.description ?? null,
+          }};
         }})()"
     );
     let notify_app = app.clone();
-    let evaluated = target.eval_with_callback(script, move |shown| {
-        if shown != "true" || !in_front {
-            notify_download(&notify_app, success);
+    let evaluated = target.eval_with_callback(script, move |result| {
+        let toast = DownloadToast::from_script_result(&result);
+        if !toast.shown || !in_front {
+            notify_download(&notify_app, success, &toast);
         }
     });
     if evaluated.is_err() {
-        notify_download(&app, success);
+        notify_download(&app, success, &DownloadToast::default());
     }
 }
 
-fn notify_download(app: &AppHandle, success: bool) {
-    // macOS does not return a path in Finished. Wry saves downloads to the
-    // Downloads directory and adds a suffix when a filename already exists.
-    let body = if success {
-        "Download complete. The file is in your Downloads folder."
-    } else {
-        "Download failed. Please try again."
-    };
-    if let Err(error) = app.notification().builder().title("Sure").body(body).show() {
+fn notify_download(app: &AppHandle, success: bool, toast: &DownloadToast) {
+    let (title, body) = download_notification(success, toast);
+    if let Err(error) = app.notification().builder().title(title).body(body).show() {
         eprintln!("[sure] failed to show download notification: {error}");
     }
 }
