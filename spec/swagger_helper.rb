@@ -1769,7 +1769,9 @@ RSpec.configure do |config|
             properties: {
               as_of: { type: :string, format: :date }, time_zone: { type: :string }, currency: { type: :string },
               period: { '$ref' => '#/components/schemas/FinancialPeriod' },
-              sankey: { '$ref' => '#/components/schemas/CashFlowSankey' }
+              sankey: { '$ref' => '#/components/schemas/CashFlowSankey' },
+              investment_contributions: { type: :string, description: 'Cash moved into investment/crypto accounts this period. Excluded from the sankey spending figure: it reallocates net worth rather than consuming it.' },
+              debt_principal_payments: { type: :string, description: 'Loan principal paid down this period. Excluded from the sankey spending figure for the same reason as investment_contributions; interest remains part of spending.' }
             }
           },
           CashFlow: {
@@ -1782,6 +1784,8 @@ RSpec.configure do |config|
               income: { type: :string }, spending: { type: :string }, net_savings: { type: :string },
               sankey: { '$ref' => '#/components/schemas/CashFlowSankey' },
               savings_rate: { type: :string, nullable: true, description: 'Percentage points; null when income is nonpositive. May be negative.' },
+              investment_contributions: { type: :string, description: 'Cash moved into investment/crypto accounts this period. Excluded from spending and savings_rate: it reallocates net worth rather than consuming it.' },
+              debt_principal_payments: { type: :string, description: 'Loan principal paid down this period. Excluded from spending and savings_rate for the same reason as investment_contributions; interest remains part of spending.' },
               spending_comparison: {
                 type: :object,
                 required: %w[previous_period current_total comparison_total comparison_end_date delta current previous],
