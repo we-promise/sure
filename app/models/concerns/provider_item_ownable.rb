@@ -24,6 +24,16 @@ module ProviderItemOwnable
 
   CREDENTIAL_SCOPES = %i[per_connection tenant_wide].freeze
 
+  # Item classes that carry an owner. Listed explicitly rather than discovered,
+  # so it does not depend on autoload order -- add a provider here when wiring
+  # one up. Callers that must sweep ownership across providers (a user changing
+  # families, say) iterate this.
+  OWNED_ITEM_CLASS_NAMES = %w[PlaidItem].freeze
+
+  def self.owned_item_classes
+    OWNED_ITEM_CLASS_NAMES.map(&:constantize)
+  end
+
   included do
     class_attribute :declared_credential_scope, instance_writer: false, default: :tenant_wide
 

@@ -789,6 +789,63 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     ActionView::Base.logger = original_view_logger
     Rails.logger = original_rails_logger
   end
+
+  # --- member-owned connections (issue #3579) ------------------------------
+
+  test "an owned connection card shows only accounts the viewer may see" do
+    member = users(:family_member)
+    family = families(:dylan_family)
+    item = PlaidItem.create!(
+      family: family, plaid_id: "item_card_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Owned Bank", owner: member
+    )
+    hidden = Account.create!(
+      family: family, owner: users(:family_admin), name: "Not Shared With Member",
+      balance: 100, currency: "USD", accountable: Depository.new
+    )
+    hidden.account_shares.destroy_all
+    plaid_account = PlaidAccount.create!(
+      plaid_item: item, name: "Hidden Feed", plaid_id: "acct_card_#{SecureRandom.hex(4)}",
+      plaid_type: "depository", plaid_subtype: "checking", currency: "USD",
+      current_balance: 100, available_balance: 100
+    )
+    AccountProvider.create!(account: hidden, provider: plaid_account)
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    # The card is visible because the member owns the connection, but an
+    # account they have no access to must not be rendered on it.
+    assert_no_match(/Not Shared With Member/, response.body)
+  end
+
+  test "an owner sees the management controls on their own connection card" do
+    member = users(:family_member)
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_ctrl_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Controls Bank", owner: member
+    )
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 1
+  end
+
+  test "a member sees no controls on a connection someone else owns" do
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_noctrl_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Admin Bank", owner: users(:family_admin)
+    )
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
+  end
 end
 
 class AccountsControllerSimplefinCtaTest < ActionDispatch::IntegrationTest
