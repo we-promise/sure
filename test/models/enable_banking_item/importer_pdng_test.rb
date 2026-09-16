@@ -188,4 +188,50 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
     assert result[:success]
     assert_nil @enable_banking_account.raw_transactions_payload
   end
+
+  test "fetch_and_store_transactions replaces a stored row when the ASPSP redelivers the same id with corrected counterparty data" do
+    # A prior sync stored this row with a counterparty IBAN. On a later sync
+    # the same transaction_id comes back with that IBAN removed (the bank
+    # corrected/retracted it) -- the stale stored row must be replaced, not
+    # kept forever just because its external id was already "seen".
+    @importer.stubs(:include_pending?).returns(false)
+
+    # determine_sync_start_date looks back only 30 days (no last_synced_at yet)
+    # once stored transactions already exist -- keep the fixture inside that
+    # incremental window so it isn't itself excluded by the post-fetch date filter.
+    recent_booking_date = 5.days.ago.to_date.iso8601
+
+    @enable_banking_account.update!(
+      raw_transactions_payload: [
+        {
+          entry_reference: "tx_ref",
+          transaction_id: "tx_id",
+          booking_date: recent_booking_date,
+          transaction_amount: { amount: "10.00", currency: "EUR" },
+          credit_debit_indicator: "DBIT",
+          creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+          status: "BOOK"
+        }
+      ]
+    )
+
+    resynced_tx = {
+      entry_reference: "tx_ref",
+      transaction_id: "tx_id",
+      booking_date: recent_booking_date,
+      transaction_amount: { amount: "10.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      status: "BOOK"
+    }
+
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ resynced_tx ])
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+    stored = @enable_banking_account.raw_transactions_payload
+    assert_equal 1, stored.size
+    assert_nil stored.first.with_indifferent_access.dig(:creditor_account, :iban),
+      "the corrected (iban-less) redelivery must replace the stale stored row instead of being discarded as not new"
+  end
 end
