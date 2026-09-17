@@ -85,11 +85,14 @@ class GenerateInsightsJob < ApplicationJob
 
     def upsert_insights(family, generated_insights)
       writer = Insight::BodyWriter.new(family)
+      existing_by_key = family.insights
+                              .where(dedup_key: generated_insights.map(&:dedup_key))
+                              .index_by(&:dedup_key)
 
       generated_insights.filter_map do |generated|
         metadata = normalize_json(generated.metadata)
         facts = normalize_json(generated.facts)
-        existing = family.insights.find_by(dedup_key: generated.dedup_key)
+        existing = existing_by_key[generated.dedup_key]
 
         if existing.nil?
           family.insights.create!(
