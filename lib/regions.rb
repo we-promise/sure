@@ -1,0 +1,79 @@
+class Regions
+  @data = nil
+  @data_mutex = Mutex.new
+
+  class << self
+    def initialize_once
+      return @data if @data
+
+      @data_mutex ||= Mutex.new
+      @data_mutex.synchronize do
+        @data ||= load_regions
+      end
+    end
+
+    def country_to_region(country_code)
+      initialize_once
+      country_code = country_code.upcase if country_code.present?
+
+      @data[:country_region_map][country_code]
+    end
+
+    def currency_to_region(currency_code)
+      initialize_once
+      currency_code = currency_code&.upcase
+
+      @data[:currency_region_map][currency_code]
+    end
+
+    def region_for(country: nil, currency: nil)
+      initialize_once
+
+      # Prefer country if provided, but fall back to currency when unmapped
+      if country.present?
+        country_region = country_to_region(country)
+        return country_region if country_region.present?
+      end
+
+      # Fallback to currency
+      currency_to_region(currency) if currency.present?
+    end
+
+    private
+
+      def load_regions
+        config = YAML.safe_load(
+          File.read(Rails.root.join("config/regions.yml")),
+          permitted_classes: [ Symbol ]
+        )
+
+        # Build country -> region map
+        country_region_map = {}
+        (config["regions"] || {}).each do |region, data|
+          (data["countries"] || []).compact.select { |c| c.is_a?(String) }.each do |country|
+            country_region_map[country.upcase] = region
+          end
+        end
+
+        # Build currency -> region map
+        currency_region_map = (config["currencies"] || {}).transform_keys { |k| k.to_s.upcase }
+
+        {
+          country_region_map: country_region_map,
+          currency_region_map: currency_region_map
+        }
+      rescue Errno::ENOENT, Psych::SyntaxError => e
+        Rails.logger.error("Regions: failed loading config/regions.yml (#{e.class}: #{e.message})")
+        {
+          country_region_map: {},
+          currency_region_map: {}
+        }
+      rescue StandardError => e
+        Rails.logger.error("Regions: unexpected error loading regions config (#{e.class}: #{e.message})")
+        {
+          country_region_map: {},
+          currency_region_map: {}
+        }
+      end
+  end
+end
