@@ -29,6 +29,24 @@ class Insight::Generators::BalanceDiscrepancyGeneratorTest < ActiveSupport::Test
     assert_equal Money.new(50, account.currency).format, insight.facts[:difference]
   end
 
+  test "stores the account's own currency on the insight, not the family's" do
+    account = accounts(:connected)
+    account.update!(currency: "EUR")
+    assert_not_equal @family.currency, account.currency, "test requires a genuine mismatch"
+    build_waypoints(account, [
+      { type: "opening_anchor", date: 10.days.ago.to_date, balance: 1000 },
+      { type: "reconciliation", date: 5.days.ago.to_date, balance: 1050 },
+      { type: "reconciliation", date: 4.days.ago.to_date, balance: 1050 },
+      { type: "reconciliation", date: 3.days.ago.to_date, balance: 1050 },
+      { type: "reconciliation", date: 2.days.ago.to_date, balance: 1050 }
+    ])
+
+    insight = generate.first
+
+    assert insight, "expected a discrepancy to be detected"
+    assert_equal "EUR", insight.currency
+  end
+
   test "says nothing about an account with no gap" do
     account = accounts(:connected)
     build_waypoints(account, [

@@ -236,4 +236,37 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     assert_equal 10.days.ago.to_date, gap.first_open_waypoint.date
     assert_equal 8, (gap.latest_waypoint.date - gap.first_open_waypoint.date).to_i
   end
+
+  # Regression: two waypoints landing on the same date (no DB constraint
+  # forbids it, only an app-level uniqueness validation a concurrent write
+  # could race) must not make latest_flagged_gap key off the date alone —
+  # otherwise a later, same-date waypoint that actually resolves the gap
+  # could be shadowed by an earlier one on that date that didn't.
+  test "a same-date waypoint that resolves the gap is not shadowed by an earlier one on the same date" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 10.days.ago.to_date, balance: 1000 },
+        { type: "reconciliation", date: 6.days.ago.to_date, balance: 1050 },
+        { type: "reconciliation", date: 5.days.ago.to_date, balance: 1050 },
+        { type: "reconciliation", date: 4.days.ago.to_date, balance: 1050 }
+      ]
+    )
+    # Simulate two Valuation waypoints landing on the same date: the first
+    # still shows the gap (1050), the second (inserted right after, so it
+    # sorts later via the :id tiebreaker) resolves it (matches the implied
+    # balance of 1000 exactly). validate: false bypasses the date-uniqueness
+    # validation to construct this otherwise-blocked race.
+    account.entries.create!(
+      name: "Valuation", date: 3.days.ago.to_date, amount: 1050, currency: "USD",
+      entryable: Valuation.new(kind: "reconciliation")
+    )
+    account.entries.build(
+      name: "Valuation", date: 3.days.ago.to_date, amount: 1000, currency: "USD",
+      entryable: Valuation.new(kind: "reconciliation")
+    ).save!(validate: false)
+
+    assert_nil Balance::IntegrityChecker.new(account).latest_flagged_gap,
+      "the same-date waypoint that actually resolves the gap must win, not an earlier one sharing its date"
+  end
 end

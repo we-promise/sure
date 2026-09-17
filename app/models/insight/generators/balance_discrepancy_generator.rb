@@ -4,12 +4,24 @@
 # absorbed instead of recording. Only meaningful for automatically
 # synchronized accounts: on a manual account, a balance/transaction mismatch
 # is the user's own deliberate choice, not a data error.
+#
+# Known limitation: Balance::IntegrityChecker needs 2+ Valuation waypoints to
+# say anything at all. Several linked providers (e.g. SimpleFin, Up, Fio,
+# Monobank, Wise, Brex, Mercury) update `accounts.balance` directly in their
+# processors instead of rotating an anchor via Account#set_current_balance,
+# so their accounts never accumulate waypoints and this generator silently
+# never flags them — not a false positive, just no coverage yet. Fixing that
+# means touching each provider's processor and is out of scope here.
 class Insight::Generators::BalanceDiscrepancyGenerator < Insight::Generator
   produces "balance_discrepancy"
 
   # Realistically only ever a handful of accounts per family are linked +
   # Depository/CreditCard at all; matches the cap style of other generators
-  # (IdleCashGenerator uses 2) without needing to be that tight here.
+  # (IdleCashGenerator uses 2) without needing to be that tight here. Ordering
+  # eligible_accounts deterministically (see below) means the same accounts
+  # are always the ones capped out if this is ever exceeded, rather than an
+  # unstable pick that could make an unrelated account's still-open insight
+  # flap between active and expired from one nightly run to the next.
   MAX_INSIGHTS = 5
 
   def generate
@@ -17,9 +29,16 @@ class Insight::Generators::BalanceDiscrepancyGenerator < Insight::Generator
   end
 
   private
+    # `.select` (Ruby, not SQL) runs one extra query per linked account to
+    # check single_currency?, and Balance::IntegrityChecker#latest_flagged_gap
+    # itself runs 2+ queries per account — so this generator's DB cost scales
+    # with the family's linked-account count, not just MAX_INSIGHTS. Accepted
+    # for now per the docstring's "realistically only a handful" assumption;
+    # revisit if that stops holding in practice.
     def eligible_accounts
       family.accounts.visible.linked
         .where(accountable_type: %w[Depository CreditCard])
+        .order(:created_at, :id) # stable order: see MAX_INSIGHTS comment above
         .select { |a| single_currency?(a) }
     end
 
@@ -54,7 +73,8 @@ class Insight::Generators::BalanceDiscrepancyGenerator < Insight::Generator
           days_open: days_open
         },
         metadata: { account_id: account.id, since_date: since_date.to_s, difference: round(gap.difference, 2) },
-        dedup_key: "balance_discrepancy:#{account.id}:#{since_date}"
+        dedup_key: "balance_discrepancy:#{account.id}:#{since_date}",
+        currency: account.currency
       )
     end
 end

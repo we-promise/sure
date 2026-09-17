@@ -77,6 +77,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
 
   test "end-to-end: a real balance gap on a linked account produces an active balance_discrepancy insight, which expires once the gap is fixed" do
     account = accounts(:connected)
+    account.update!(currency: "EUR") # deliberately different from @family.currency (USD)
     waypoint = ->(date, balance, kind = "reconciliation") do
       account.entries.create!(
         name: "Valuation", date: date, amount: balance, currency: account.currency,
@@ -96,6 +97,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert insight, "expected a balance_discrepancy insight to be generated"
     assert insight.active?
     assert_equal "balance_discrepancy", insight.insight_type
+    assert_equal "EUR", insight.currency, "persisted currency must be the account's, not the family's"
 
     # User finds and enters the missing transaction; the books catch up to
     # what the bank has been reporting all along.

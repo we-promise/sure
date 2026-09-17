@@ -32,16 +32,23 @@ class Balance::IntegrityChecker
     gaps = []
     anchor = wps.first
     first_open_waypoint = nil
+    # Accumulated net flow since `anchor`, built up one (small, non-overlapping)
+    # interval per iteration instead of re-summing the whole anchor..b range on
+    # every step — while a gap stays open across many waypoints, that rescan
+    # would otherwise cost O(waypoints) per waypoint.
+    accumulated_flow = 0.to_d
 
-    wps.each_cons(2) do |_, b|
-      implied = anchor.value + net_flow_between(anchor.date, b.date)
-      # Recomputed from `anchor`, not from the previous pair — residual is
-      # cumulative since the last point everything matched, not a per-pair delta.
+    wps.each_cons(2) do |a, b|
+      accumulated_flow += net_flow_between(a.date, b.date)
+      implied = anchor.value + accumulated_flow
+      # Residual is cumulative since the last point everything matched, not a
+      # per-pair delta.
       residual = b.value - implied
 
       if residual.abs <= tolerance
         anchor = b
         first_open_waypoint = nil
+        accumulated_flow = 0.to_d
         next
       end
 
@@ -71,8 +78,14 @@ class Balance::IntegrityChecker
     gaps = flagged_gaps
     return nil if gaps.empty?
 
-    last = gaps.max_by { |g| g.latest_waypoint.date }
-    return nil unless last.latest_waypoint.date == waypoints.last&.date
+    # gaps is built in wps traversal order, so the last entry is always the
+    # most recent one — no need to re-derive that via max_by. Comparing the
+    # whole Waypoint (not just its date) against the true last waypoint also
+    # keeps this correct if two waypoints ever land on the same date (no DB
+    # constraint enforces the model-level date-uniqueness validation, so a
+    # concurrent write is a theoretical race, not an impossibility).
+    last = gaps.last
+    return nil unless last.latest_waypoint == waypoints.last
     last
   end
 
@@ -83,8 +96,12 @@ class Balance::IntegrityChecker
     # :entryable) returns bare Valuation records, but the valuations table
     # only has id/kind/timestamps — date/amount live on entries. Query
     # through Entry instead, joined to valuations only for the kind filter.
+    #
+    # Memoized: both flagged_gaps and latest_flagged_gap read this, and this
+    # object is instantiated fresh per account per nightly run, so there's no
+    # staleness concern within its lifetime.
     def waypoints
-      account.entries
+      @waypoints ||= account.entries
         .where(entryable_type: "Valuation")
         .preload(:entryable) # avoids one query per waypoint for e.entryable.kind below
         .joins("INNER JOIN valuations ON valuations.id = entries.entryable_id")
