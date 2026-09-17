@@ -130,7 +130,8 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
       { "domain" => "vanguard.com" }                    => true,
       { "domain" => "401k.fidelity.com" }               => true,
       { "name" => "Charles Schwab", "domain" => "schwab.com" } => true,
-      { "name" => "E*Trade", "domain" => "us.etrade.com" } => true,
+      { "name" => "E*Trade" }                           => true,
+      { "domain" => "us.etrade.com" }                   => true,
       { "name" => "Chase" }                             => false,
       {}                                                => false
     }
