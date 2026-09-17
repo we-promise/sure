@@ -88,6 +88,52 @@ class Trade < ApplicationRecord
     Trend.new(current: current_value, previous: cost_basis)
   end
 
+  # Set by callers that list many disposals, so the proceeds conversion below
+  # reads one preloaded set instead of a query per foreign disposal. Keyed
+  # `[from, to, date]`.
+  #
+  # NOT authoritative when a key is absent, unlike preloaded_holdings: the
+  # preload keys the basis side on the ACCOUNT's currency, which is what the
+  # sync and import paths write a holding in, and a holding carried in some
+  # other currency would miss the preload. Treating that as "no rate" would
+  # exclude a disposal that is perfectly measurable, so a miss falls back to
+  # the single lookup rather than to a wrong answer.
+  def preloaded_exchange_rates=(value)
+    @preloaded_exchange_rates = value
+    remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
+  end
+
+  # One query for every rate a set of disposals can need, instead of one per
+  # disposal. The date set and the currency sets are each small; the product is
+  # a superset of the pairs actually wanted, which is cheaper to fetch than to
+  # describe pair by pair in SQL.
+  def self.preload_exchange_rates(trades)
+    return if trades.empty?
+
+    wanted = trades.filter_map do |trade|
+      from = trade.currency
+      to = trade.entry.account.currency
+      next if from.blank? || to.blank? || from == to
+
+      [ from, to, trade.entry.date ]
+    end
+
+    if wanted.empty?
+      trades.each { |trade| trade.preloaded_exchange_rates = {} }
+      return
+    end
+
+    rates = ExchangeRate
+      .where(
+        from_currency: wanted.map(&:first).uniq,
+        to_currency: wanted.map(&:second).uniq,
+        date: wanted.map(&:third).uniq
+      )
+      .to_h { |rate| [ [ rate.from_currency, rate.to_currency, rate.date ], rate.rate ] }
+
+    trades.each { |trade| trade.preloaded_exchange_rates = rates }
+  end
+
   # Calculates realized gain/loss for sell trades based on avg_cost at time of sale
   # Returns nil for buy trades or when cost basis cannot be determined
   def realized_gain_loss
@@ -141,8 +187,48 @@ class Trade < ApplicationRecord
       return nil unless holding&.avg_cost
 
       cost_basis = holding.avg_cost * qty.abs
-      sale_proceeds = price_money * qty.abs
+      sale_proceeds = converted_to_basis_currency(price_money * qty.abs, cost_basis.currency)
+
+      # No rate for that day means the gain is unknown, not zero and not the
+      # figure a rate of 1.0 would give.
+      return nil if sale_proceeds.nil?
 
       Trend.new(current: sale_proceeds, previous: cost_basis)
+    end
+
+    # The proceeds are priced in the security's currency; the basis is carried
+    # in the one the position is held in. `Trend#value` is `current - previous`
+    # and `Money#-` keeps the left operand's currency while taking the right
+    # one's bare amount, so without this the two were subtracted as plain
+    # numbers and the difference was then labelled with the disposal's
+    # currency -- an error that scaled with the rate and changed sign either
+    # side of parity.
+    #
+    # Converted in THIS direction, and not the other, because it is the
+    # direction the data holds: MarketDataImporter's first required pair is
+    # every entry currency against its account's, so a EUR disposal in a USD
+    # account has a EUR->USD row for the day it happened, while USD->EUR is
+    # only ever there by accident of another account.
+    #
+    # Exact date, exact direction, no parity fallback and no nearest-rate
+    # lookback. A disposal happened on one known day; the rate for that day is
+    # the rate, and its absence is a fact to report rather than a 1.0 nobody
+    # can see.
+    def converted_to_basis_currency(proceeds, basis_currency)
+      from = proceeds.currency.iso_code
+      to = basis_currency.iso_code
+      return proceeds if from == to
+
+      rate = preloaded_rate(from, to) ||
+             ExchangeRate.find_by(from_currency: from, to_currency: to, date: entry.date)&.rate
+      return nil if rate.nil?
+
+      Money.new(proceeds.amount * rate, to)
+    end
+
+    def preloaded_rate(from, to)
+      return nil unless defined?(@preloaded_exchange_rates)
+
+      (@preloaded_exchange_rates || {})[[ from, to, entry.date ]]
     end
 end
