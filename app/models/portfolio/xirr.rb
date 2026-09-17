@@ -89,7 +89,9 @@ class Portfolio::Xirr
   attr_reader :flows, :days_per_unit
 
   # `flows` is any enumerable of objects answering `date` and `amount`, or
-  # [date, amount] pairs. Sign convention: money leaving the investor is
+  # [date, amount] pairs. Those two shapes only -- a Hash of
+  # `{ date:, amount: }` is neither, and fails on `to_date` with a
+  # NoMethodError rather than with anything that names the problem. Sign convention: money leaving the investor is
   # negative, money returning to them is positive. The terminal value of the
   # portfolio is the final positive flow.
   #
@@ -142,7 +144,14 @@ class Portfolio::Xirr
 
   # The money-weighted rate per `days_per_unit`, as a BigDecimal
   # (0.0725 == 7.25%). Annualised unless the caller said otherwise.
+  # Memoised on success. The search is deterministic for a given series, so a
+  # second call re-solves to the same answer at full cost -- `sign_changes` was
+  # already memoised and this was not. A raise is not memoised: the two guards
+  # that raise are O(1), and the third only fires after a search that did not
+  # converge, which is rare enough not to cache.
   def rate
+    return @rate if defined?(@rate)
+
     # Duration is checked first, and against the caller's dates rather than the
     # summed ones. "You gave me no time span" is prior to "money only went one
     # way": without a span no rate exists whatever the signs do. It also keeps
@@ -154,7 +163,7 @@ class Portfolio::Xirr
     result = newton_rate || bisection_rate
     raise ConvergenceError, "XIRR did not converge" if result.nil?
 
-    BigDecimal(result.to_s)
+    @rate = BigDecimal(result.to_s)
   end
 
   # Non-raising variant for render paths: returns nil where #rate would raise.
