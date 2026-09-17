@@ -39,6 +39,22 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal [ "has already been taken" ], duplicate.errors[:ticker]
   end
 
+  test "canonicalizes WAR to XWAR on save" do
+    security = Security.create!(ticker: "KTY", exchange_operating_mic: "WAR")
+
+    assert_equal "XWAR", security.exchange_operating_mic
+  end
+
+  test "find_by_ticker_and_exchange upgrades legacy WAR and avoids duplicates" do
+    legacy = Security.create!(ticker: "KTY", exchange_operating_mic: "XWAR")
+    legacy.update_columns(exchange_operating_mic: "WAR")
+
+    found = Security.find_by_ticker_and_exchange(ticker: "KTY", exchange_operating_mic: "XWAR")
+
+    assert_equal legacy.id, found.id
+    assert_equal "XWAR", found.reload.exchange_operating_mic
+  end
+
   test "cash_for lazily creates a per-account synthetic cash security" do
     account = accounts(:investment)
 
@@ -101,6 +117,29 @@ class SecurityTest < ActiveSupport::TestCase
     )
   end
 
+  # The symbol lands in a URL path segment and comes from provider data — an
+  # on-chain token can be called whatever its deployer chose. These would not
+  # merely break the link: the slash points the path elsewhere on the CDN, and
+  # the hash pushes the client id into a fragment Brandfetch never sees.
+  test "brandfetch_crypto_url refuses a symbol carrying URL delimiters" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    [ "BTC/../ETH", "BTC?c=leak", "BTC#frag", "BTC ETH", "..", ".BTC", "BTC%2F" ].each do |symbol|
+      assert_nil Security.brandfetch_crypto_url(symbol), "#{symbol.inspect} reached the URL"
+    end
+  end
+
+  # Real tickers carry dots and dashes — USDC.e before canonicalisation, and
+  # dashed pairs from some providers. The guard must not swallow them.
+  test "brandfetch_crypto_url still accepts the punctuation real tickers use" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    [ "BTC", "USDC.E", "WSTETH", "1INCH", "BTC-B" ].each do |symbol|
+      assert_not_nil Security.brandfetch_crypto_url(symbol), "#{symbol.inspect} was refused"
+    end
+  end
   test "brandfetch_crypto_url returns nil when Brandfetch is not configured" do
     Setting.stubs(:brand_fetch_client_id).returns(nil)
     assert_nil Security.brandfetch_crypto_url("BTC")

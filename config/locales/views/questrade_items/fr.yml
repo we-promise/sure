@@ -56,6 +56,9 @@ fr:
       loading_message: Chargement des comptes Questrade…
       loading_title: Chargement
     panel:
+      disconnect: Déconnecter
+      disconnect_confirm: Déconnecter Questrade ? Cette action supprime la connexion et délie les comptes qu'elle synchronisait.
+      eyebrow: Configuration · ordinateur uniquement
       field_descriptions: 'Description des champs :'
       fields:
         api_server:
@@ -69,6 +72,7 @@ fr:
           placeholder_new: Collez le jeton de rafraîchissement ici
           placeholder_update: Saisissez un nouveau jeton de rafraîchissement pour
             mettre à jour
+      help_text: Documentation de l'API Questrade
       optional: "(Facultatif)"
       optional_with_default: "(facultatif, valeur par défaut : %{default_value})"
       required: "(obligatoire)"
@@ -83,6 +87,13 @@ fr:
       step_2: Saisissez vos identifiants ci-dessous et cliquez sur le bouton Enregistrer
       step_3: Après une connexion réussie, rendez-vous sur l'onglet Comptes pour
         configurer les nouveaux comptes
+      steps:
+        s1_html: Connectez-vous au <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">portail Questrade</a> depuis un navigateur sur ordinateur. Les paramètres d'API ne sont pas disponibles dans l'application mobile.
+        s2: Ouvrez les paramètres, puis, dans les paramètres généraux, modifiez les paramètres de l'API IQ.
+        s3_html: Dans la fenêtre d'accès à l'API, cliquez sur <strong>Manage</strong> sous <strong>My applications</strong>.
+        s4: Enregistrez une application personnelle avec un nom et une description, puis validez.
+        s5: Ajoutez un nouvel appareil et générez un jeton.
+        s6: Collez le jeton généré ci-dessous et enregistrez.
       token_refresh_hint: Les jetons Questrade se renouvellent automatiquement à
         chaque synchronisation de vos comptes. Si une connexion reste inutilisée
         pendant plus de 7 jours et devient obsolète, collez un nouveau jeton ici
@@ -137,6 +148,9 @@ fr:
       all_accounts_already_linked: Tous les comptes Questrade sont déjà liés
       api_error: 'Erreur API : %{message}'
       balance_label: 'Solde :'
+      buttons:
+        cancel: Annuler
+        link: Lier
       cancel: Annuler
       cancel_button: Annuler
       configure_name_in_provider: Impossible d'importer - veuillez configurer le
@@ -145,9 +159,11 @@ fr:
         automatique.
       description: Sélectionnez un compte Questrade à lier avec ce compte. Les transactions
         seront synchronisées et dédupliquées automatiquement.
+      dialog_title: Lier à un compte Questrade
       header: Lier avec Questrade
       link_account: Lier le compte
       link_button: Lier ce compte
+      linking_label: Liaison
       linking_to: 'Liaison à :'
       no_account_specified: Aucun compte spécifié
       no_accounts: Aucun compte Questrade non lié trouvé.
@@ -158,6 +174,8 @@ fr:
       no_credentials_configured: Veuillez d'abord configurer vos identifiants Questrade
         dans les paramètres du fournisseur.
       no_name_placeholder: "(Sans nom)"
+      none_available: Aucun compte Questrade non lié n'est disponible.
+      page_title: Lier un compte Questrade
       settings_link: Aller aux paramètres du fournisseur
       subtitle: Choisissez un compte Questrade
       title: Lier %{account_name} avec Questrade
@@ -175,16 +193,23 @@ fr:
         one: "%{count} compte disponible"
         other: "%{count} comptes disponibles"
       all_accounts_linked: Tous vos comptes Questrade ont déjà été configurés.
+      all_linked: Tous les comptes Questrade sont déjà liés.
       api_error: 'Erreur API : %{message}'
       balance: Solde
+      buttons:
+        cancel: Annuler
+        create: Créer les comptes
+        done: Terminé
       cancel: Annuler
       choose_account_type: 'Choisissez le type de compte correct pour chaque compte
         Questrade :'
       create_accounts: Créer les comptes
       creating: Création des comptes…
       creating_accounts: Création des comptes…
+      dialog_title: Configurer vos comptes Questrade
       fetch_failed: Échec de la récupération des comptes
       historical_data_range: 'Plage de données historiques :'
+      import_as: Importer en tant que
       import_selected: Importer les comptes sélectionnés
       instructions: Sélectionnez les comptes que vous souhaitez importer depuis Questrade.
         Vous pouvez choisir plusieurs comptes.
@@ -192,6 +217,7 @@ fr:
       no_accounts_to_setup: Aucun compte à configurer
       no_api_key: La clé API Questrade n'est pas configurée. Veuillez vérifier les
         paramètres de connexion.
+      page_title: Configurer les comptes Questrade
       select_all: Tout sélectionner
       subtitle: Choisissez les types de compte corrects pour vos comptes importés
       subtype_labels:
@@ -238,6 +264,10 @@ fr:
       sync_start_date_label: 'Commencer la synchronisation des transactions à partir
         de :'
       title: Configurer vos comptes Questrade
+      types:
+        depository: Trésorerie
+        investment: Investissement
+        skip: Ignorer ce compte
     setup_required:
       go_to_provider_settings: Aller aux paramètres du fournisseur
       not_configured_description: Ajoutez votre connexion Questrade dans les paramètres

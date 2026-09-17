@@ -111,8 +111,13 @@ class McpController < ApplicationController
 
       { content: [ { type: "text", text: result.to_json } ] }
     rescue => e
-      Rails.logger.error "MCP tools/call error: #{e.message}"
-      { content: [ { type: "text", text: { error: e.message }.to_json } ], isError: true }
+      Rails.logger.error "MCP tools/call error: #{e.class}: #{e.message}"
+
+      # Whatever the tool raised, its message was written for a log, not for an
+      # external client: a RecordNotFound carries the access-control SQL, and a
+      # PG range error carries the column definition. The full text stays in the
+      # log above, where an operator can read it.
+      { content: [ { type: "text", text: { error: "The tool failed to run", tool: name }.to_json } ], isError: true }
     end
 
     def authenticate_mcp_token!

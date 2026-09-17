@@ -43,6 +43,9 @@ zh-CN:
       unknown: --
       no_cost_basis: 没有成本基础
     index:
+      positions:
+        one: "%{count} 个持仓"
+        other: "%{count} 个持仓"
       average_cost: 平均成本
       holdings: 持仓
       name: 名称

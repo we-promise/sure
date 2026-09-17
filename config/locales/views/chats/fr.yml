@@ -2,7 +2,7 @@
 fr:
   assistant_messages:
     assistant_message:
-      assistant_reasoning: Assistant de raisonnement
+      assistant_reasoning: Raisonnement de l'assistant
     tool_calls:
       arguments: 'Arguments :'
       function: 'Fonction :'
@@ -39,6 +39,8 @@ fr:
     index:
       chats: Discussions
       new_chat: Nouvelle discussion
+    new:
+      default_title: Nouvelle discussion %{timestamp}
     thinking: Traitement en cours ...
     update:
       success: Chat mis à jour

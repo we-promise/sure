@@ -24,6 +24,7 @@ class PlaidItemsController < ApplicationController
     @link_token = @plaid_item.get_update_link_token(
       webhooks_url: webhooks_url,
       redirect_url: accounts_url,
+      account_selection_enabled: @plaid_item.us? && params[:add_accounts] == "true",
     )
   rescue Plaid::ApiError => e
     handle_link_token_error(e)
@@ -45,9 +46,7 @@ class PlaidItemsController < ApplicationController
   end
 
   def sync
-    unless @plaid_item.syncing?
-      @plaid_item.sync_later
-    end
+    @plaid_item.sync_later_with_provider_refresh
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }

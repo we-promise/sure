@@ -15,6 +15,3 @@ en:
     movement:
       received: "Received %{quantity} %{symbol}"
       sent: "Sent %{quantity} %{symbol}"
-    trade:
-      buy: "Buy %{quantity} %{symbol}"
-      sell: "Sell %{quantity} %{symbol}"

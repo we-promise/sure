@@ -628,6 +628,33 @@ class SureImportTest < ActiveSupport::TestCase
     assert_includes result.warnings.map { |warning| warning[:code] }, "skipped_missing_reference"
   end
 
+  test "preflight localizes missing reference messages in German" do
+    attach_ndjson(build_ndjson([
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "missing-account",
+        date: "2026-01-02",
+        amount: "-5"
+      } },
+      { type: "RejectedTransfer", data: {
+        id: "rejected-transfer-1",
+        inflow_transaction_id: "missing-inflow",
+        outflow_transaction_id: "missing-outflow"
+      } }
+    ]))
+
+    result = I18n.with_locale(:de) { @import.sure_preflight }
+
+    assert_includes result.errors, {
+      code: "missing_reference",
+      message: 'Zeile 1: Transaction verweist über account_id="missing-account" auf einen nicht vorhandenen Datensatz.'
+    }
+    assert_includes result.warnings, {
+      code: "skipped_missing_reference",
+      message: 'Zeile 2: RejectedTransfer verweist über inflow_transaction_id="missing-inflow" auf einen nicht vorhandenen Datensatz. Der Datensatz in dieser Zeile wird beim Import übersprungen.'
+    }
+  end
+
   test "preflight rejects invalid accountable types through explicit allowlist" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {

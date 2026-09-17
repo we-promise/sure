@@ -66,9 +66,18 @@ class OnchainWalletItemTest < ActiveSupport::TestCase
   test "family only reports linked addresses it actually tracks" do
     assert_not @family.onchain_address_linked?(OnchainTestHelper::FAKE_CHAIN, OnchainTestHelper::FAKE_ADDRESS)
 
-    create_onchain_wallet_account(item: @item)
+    link_onchain_wallet_account!(create_onchain_wallet_account(item: @item))
 
     assert @family.onchain_address_linked?(OnchainTestHelper::FAKE_CHAIN, OnchainTestHelper::FAKE_ADDRESS)
     assert_not @family.onchain_address_linked?(OnchainTestHelper::FAKE_CHAIN, OnchainTestHelper::FAKE_ADDRESS_ALT)
+  end
+
+  test "an address whose row tracks nothing is free to be added again" do
+    onchain_account = create_onchain_wallet_account(item: @item)
+
+    # No account behind it: it syncs nothing and appears nowhere, so reporting
+    # the address as taken would refuse it with nothing to show the user.
+    assert_not @family.onchain_address_linked?(OnchainTestHelper::FAKE_CHAIN, OnchainTestHelper::FAKE_ADDRESS)
+    assert OnchainWalletAccount.exists?(onchain_account.id)
   end
 end

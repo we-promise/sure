@@ -1,0 +1,106 @@
+---
+ca:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: "Connecta un compte d'inversió de Trade Republic mitjançant un inici de sessió web segur"
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: "Compte de corretatge"
+      private_markets: "Mercats privats"
+      interest_products: "Productes d'interès"
+      crypto_wallet: "Cartera de criptomonedes"
+    trade_republic_item:
+      syncing: "S'està sincronitzant"
+      requires_update: "Cal tornar a autenticar-se"
+      error: "Error"
+      synced: "Sincronitzat fa %{time}. %{summary}."
+      setup_accounts: "Configura els comptes"
+      delete: "Suprimeix"
+      accounts_need_setup: "El compte necessita configuració"
+      accounts_need_setup_description: "El teu compte de Trade Republic s'ha d'enllaçar amb un compte de Sure."
+      no_accounts_discovered: "Encara no s'ha descobert cap compte de Trade Republic."
+      no_accounts_discovered_description: "Completa l'inici de sessió i executa una sincronització per descobrir el compte."
+      data_quality:
+        title: "Qualitat de les dades i detalls de sincronització"
+        repair: "Repara les dades importades"
+        positions:
+          one: "%{count} posició"
+          other: "%{count} posicions"
+        unpriced:
+          one: "%{count} sense preu actual"
+          other: "%{count} sense preu actual"
+        events:
+          one: "%{count} activitat"
+          other: "%{count} activitats"
+        unknown:
+          one: "%{count} activitat desconeguda"
+          other: "%{count} activitats desconegudes"
+        expenses:
+          one: "%{count} despesa durant els darrers 30 dies (%{amount})"
+          other: "%{count} despeses durant els darrers 30 dies (%{amount})"
+        reconciliation: "%{matched}/%{total} saldos de compte conciliats"
+        sync_history: Sincronitzacions recents
+        sync_status:
+          completed: Completada
+          failed: Fallida
+          pending: Pendent
+          syncing: Sincronitzant
+          stale: Obsoleta
+    setup_accounts:
+      page_title: "Configura el compte de Trade Republic"
+      subtitle: "Enllaça el teu compte d'inversió de Trade Republic."
+      available_accounts:
+        account_type_investment: "Cartera d'inversió"
+        account_type_cash: "Compte d'efectiu"
+      buttons:
+        refresh: "Actualitza"
+        cancel: "Cancel·la"
+        link: "Enllaça"
+        done: "Fet"
+    sync:
+      errors:
+        phone_number_missing: "Falta el número de telèfon de Trade Republic."
+        reauthentication_required: "La sessió de Trade Republic falta o ha caducat. Torna a connectar-la des d'Arranjament > Proveïdors."
+      status:
+        checking_credentials: "Comprovant les credencials de Trade Republic..."
+        importing_account: "Important el compte de Trade Republic..."
+        processing_activity: "Processant les posicions i l'activitat..."
+        calculating_balances: "Calculant els saldos..."
+    repair:
+      scheduled: "La reparació de les dades de Trade Republic s'ha programat."
+    select_existing_account:
+      title: "Enllaça el compte de Trade Republic"
+      link: "Enllaça"
+      cancel: "Cancel·la"
+    initiate_login:
+      verification_required: "Inicia la sessió i confirma-la mitjançant %{method}, després prem Confirma l'inici de sessió."
+    complete_login:
+      approval_pending: "Encara no s'ha confirmat. Aprova l'inici de sessió a l'aplicació de Trade Republic i torna-ho a provar."
+      success: "Trade Republic s'ha connectat correctament."
+      login_expired: "La sol·licitud d'inici de sessió ha caducat. Torna-ho a provar."
+    link_existing_account:
+      not_found: "Compte o configuració de Trade Republic no trobats."
+      success: "Enllaçat correctament amb el compte de Trade Republic."
+    complete_account_setup:
+      success:
+        one: "S'ha creat correctament %{count} compte de Trade Republic."
+        other: "S'han creat correctament %{count} comptes de Trade Republic."
+      none_created: "No s'ha creat cap compte."
+      partial_failure:
+        one: "No s'ha pogut completar un compte de Trade Republic seleccionat. Revisa el registre de depuració i torna-ho a provar."
+        other: "No s'han pogut completar %{count} comptes de Trade Republic seleccionats. Revisa el registre de depuració i torna-ho a provar."
+    activities:
+      labels:
+        contribution: Aportació
+        withdrawal: Retirada
+        interest: Interessos
+        dividend: Dividend
+        card_payment: Pagament amb targeta
+        cash_withdrawal: Retirada d'efectiu
+        card_fee: Comissió de targeta
+        card_refund: Reemborsament de targeta
+        tax_refund: Devolució d'impostos
+        buy: Compra
+        sell: Venda

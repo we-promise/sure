@@ -3,7 +3,7 @@ module Money::Formatting
 
   # Locale groups by formatting pattern
   # European style: dot as thousands delimiter, comma as decimal separator, symbol after number
-  EUROPEAN_SYMBOL_AFTER = %i[de es it tr ca ro].freeze
+  EUROPEAN_SYMBOL_AFTER = %i[de es it tr ca ro pt-PT].freeze
   # Scandinavian/Eastern European: space as thousands delimiter, comma as decimal separator, symbol after number
   SPACE_DELIMITER_SYMBOL_AFTER = %i[pl nb hu].freeze
   # European style: dot as thousands delimiter, comma as decimal separator, symbol before number

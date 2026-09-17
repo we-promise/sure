@@ -4,34 +4,39 @@ class DemoFamilyRefreshJob < ApplicationJob
   def perform
     return unless Rails.application.config.app_mode.managed?
 
-    period_end = Time.current
-    period_start = period_end - 24.hours
-
-    demo_email = Rails.application.config_for(:demo).with_indifferent_access.fetch(:email)
-    demo_user = User.find_by(email: demo_email)
-    old_family = demo_user&.family
-
-    old_family_session_count = sessions_count_for(old_family, period_start:, period_end:)
-    newly_created_families_count = Family.where(created_at: period_start...period_end).count
-
-    if old_family
-      delete_old_family_monitoring_key!(old_family)
-      anonymize_family_emails!(old_family)
-      DestroyJob.perform_later(old_family)
+    with_advisory_lock do
+      refresh_demo_family
     end
-
-    Demo::Generator.new.generate_default_data!(skip_clear: true, email: demo_email)
-
-    notify_super_admins!(
-      old_family:,
-      old_family_session_count:,
-      newly_created_families_count:,
-      period_start:,
-      period_end:
-    )
   end
 
   private
+    def refresh_demo_family
+      period_end = Time.current
+      period_start = period_end - 24.hours
+
+      demo_email = Rails.application.config_for(:demo).with_indifferent_access.fetch(:email)
+      demo_user = User.find_by(email: demo_email)
+      old_family = demo_user&.family
+
+      old_family_session_count = sessions_count_for(old_family, period_start:, period_end:)
+      newly_created_families_count = Family.where(created_at: period_start...period_end).count
+
+      if old_family
+        anonymize_family_emails!(old_family)
+      end
+
+      Demo::Generator.new.generate_default_data!(skip_clear: true, email: demo_email)
+
+      DestroyJob.perform_later(old_family) if old_family
+
+      notify_super_admins!(
+        old_family:,
+        old_family_session_count:,
+        newly_created_families_count:,
+        period_start:,
+        period_end:
+      )
+    end
 
     def sessions_count_for(family, period_start:, period_end:)
       return 0 unless family
@@ -45,12 +50,6 @@ class DemoFamilyRefreshJob < ApplicationJob
     end
 
 
-    def delete_old_family_monitoring_key!(family)
-      ApiKey
-        .where(user_id: family.users.select(:id), display_key: ApiKey::DEMO_MONITORING_KEY)
-        .delete_all
-    end
-
     def anonymize_family_emails!(family)
       family.users.find_each do |user|
         user.update_columns(
@@ -59,6 +58,30 @@ class DemoFamilyRefreshJob < ApplicationJob
           updated_at: Time.current
         )
       end
+    end
+
+    def with_advisory_lock
+      lock_key = advisory_lock_key
+      acquired = ActiveRecord::Base.connection.select_value(
+        ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?)", lock_key ])
+      )
+
+      unless acquired
+        Rails.logger.warn("Skipped demo family refresh: advisory lock unavailable")
+        return
+      end
+
+      begin
+        yield
+      ensure
+        ActiveRecord::Base.connection.execute(
+          ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", lock_key ])
+        )
+      end
+    end
+
+    def advisory_lock_key
+      Digest::MD5.hexdigest("demo_family_refresh").to_i(16) % (2**62)
     end
 
     def deleted_email_for(user)

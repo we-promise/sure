@@ -178,6 +178,21 @@ class InsightsHelperTest < ActionView::TestCase
     assert_nil insight_action(dangling)
   end
 
+  test "maintained reserve metadata and action render in German" do
+    family = families(:dylan_family)
+    goal = family.goals.first
+    insight = build_insight("maintained_goal_depleted", metadata: { "goal_id" => goal.id })
+
+    I18n.with_locale(:de) do
+      assert_equal "Rücklage", insight_meta_line(insight)
+      assert_equal "Rücklage ansehen", insight_action(insight)[:text]
+    end
+
+    %w[types actions titles templates].each do |scope|
+      assert I18n.exists?("insights.#{scope}.maintained_goal_depleted", :de, fallback: false)
+    end
+  end
+
   private
     def build_insight(insight_type, priority: "medium", metadata: {}, facts: {}, period_start: nil, period_end: nil)
       Insight.new(

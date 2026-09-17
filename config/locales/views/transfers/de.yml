@@ -6,6 +6,7 @@ de:
       exchange_rate_unavailable: Kein Wechselkurs für die gewählten Währungen und das
         Datum verfügbar
       date_invalid: ist ungültig
+      stale_form: Dieses Formular wurde bereits mit anderen Angaben übermittelt. Bitte lade die Seite neu und versuche es erneut.
     destroy:
       success: Überweisung entfernt
     form:

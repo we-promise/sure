@@ -109,6 +109,13 @@ class Transfer < ApplicationRecord
         next unless Transaction.exists?(transaction.id)
         begin
           transaction.update!(kind: "standard")
+          # The entry survives this destroy (only the Transfer join row and
+          # fee transactions go away), but its idempotency_key must not: a
+          # later retry of the original create request looks up that key,
+          # finds no Transfer anymore, and would otherwise hit the unique
+          # index on the stale entry and raise instead of creating a new
+          # transfer (see Transfer::Creator#find_existing_transfer).
+          transaction.entry.update!(idempotency_key: nil) if transaction.entry&.idempotency_key.present?
         rescue ActiveRecord::RecordNotFound
         rescue NoMethodError
           next

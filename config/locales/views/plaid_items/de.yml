@@ -6,6 +6,7 @@ de:
     destroy:
       success: Konten zur Löschung vorgemerkt
     plaid_item:
+      add_accounts: Konten hinzufügen
       add_new: Neue Verbindung hinzufügen
       confirm_accept: Institut löschen
       confirm_body: Dadurch werden alle Konten dieser Gruppe und alle zugehörigen Daten dauerhaft gelöscht

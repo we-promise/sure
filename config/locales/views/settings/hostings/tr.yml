@@ -71,8 +71,8 @@ tr:
         url_label: Uç Nokta URL'si
         url_placeholder: https://your-agent-host/v1/chat
       brand_fetch_settings:
-        description: Brand Fetch tarafından sağlanan İstemci Kimliğini girin
-        env_configured_message: Brand Fetch İstemci Kimliğinizi BRAND_FETCH_CLIENT_ID
+        description: Brandfetch tarafından sağlanan İstemci Kimliğini girin
+        env_configured_message: Brandfetch İstemci Kimliğinizi BRAND_FETCH_CLIENT_ID
           ortam değişkeni aracılığıyla başarıyla yapılandırdınız.
         high_res_description: Etkinleştirildiğinde, logolar 40x40 yerine 120x120 çözünürlükte
           alınır. Bu, yüksek DPI'lı ekranlarda daha net görüntüler sağlar.
@@ -81,14 +81,14 @@ tr:
         placeholder: İstemci Kimliğinizi buraya girin
         setup_step_1_html: <a href="https://brandfetch.com/developers" target="_blank"
           rel="noopener noreferrer" class="underline">brandfetch.com</a> adresini
-          ziyaret edin ve ücretsiz bir Brand Fetch Geliştirici hesabı oluşturun.
+          ziyaret edin ve ücretsiz bir Brandfetch Geliştirici hesabı oluşturun.
         setup_step_2_html: <a href="https://developers.brandfetch.com/dashboard/logo-api"
           target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>
           sayfasına gidin.
         setup_step_3: İstemci Kimliğinizi göstermek için "İstemci Kimliğiniz" bölümündeki
           göz simgesine dokunun ve aşağıya yapıştırın.
         show_details: "(detayları göster)"
-        title: Brand Fetch Ayarları
+        title: Brandfetch Ayarları
       clear_cache:
         cache_cleared: Veri önbelleği temizlendi. Bu işlemin tamamlanması birkaç dakika
           sürebilir.

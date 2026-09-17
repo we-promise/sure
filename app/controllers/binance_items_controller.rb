@@ -223,7 +223,7 @@ class BinanceItemsController < ApplicationController
       if parsed_date.present? && parsed_date <= Date.current
         @binance_item.update!(sync_start_date: parsed_date)
       else
-        flash.now[:alert] = "Sync start date must be a valid date in the past."
+        flash.now[:alert] = t(".invalid_sync_start_date")
       end
     end
 

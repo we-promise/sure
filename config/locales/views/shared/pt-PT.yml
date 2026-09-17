@@ -1,0 +1,55 @@
+---
+pt-PT:
+  concerns:
+    self_hostable:
+      redis_configured: "O Redis está agora configurado corretamente! Pode agora configurar a sua aplicação Sure."
+  shared:
+    preview: Preview
+    dot_separator: "·"
+    sync_toast:
+      message: "Novos dados disponíveis"
+      refresh: "Atualizar"
+    confirm_modal:
+      accept: Confirmar
+      body_html: "<p>Não poderá desfazer esta decisão</p>"
+      cancel: Cancelar
+      title: Tem a certeza?
+    money_field:
+      label: Montante
+    exchange_rate_tabs:
+      calculate_rate_tab: Calcular taxa de câmbio
+      convert_tab: Converter com taxa de câmbio
+      destination_amount: Montante de destino
+      exchange_rate: Taxa de câmbio
+      exchange_rate_help: Escolha como pretende introduzir o montante.
+    syncing_notice:
+      syncing: A sincronizar dados das contas...
+    require_admin: "Apenas administradores podem efetuar esta ação"
+    custom_confirm:
+      default_title: "Tem a certeza?"
+      default_body: "Esta ação não é reversível."
+      default_btn_text: "Confirmar"
+      resource_deletion_title: "Eliminar %{resource}?"
+      resource_deletion_body: "Tem a certeza de que pretende eliminar %{resource}? Esta ação não é reversível."
+      resource_deletion_btn_text: "Eliminar %{resource}"
+    family_moniker:
+      group_plural: Grupos
+      group_singular: Grupo
+      plural: Famílias
+      singular: Família
+    trend_change:
+      no_change: "sem alteração"
+    cancel: Cancelar
+    transaction_tabs:
+      expense: Despesa
+      income: Rendimento
+      transfer: Transferência
+    sidekiq_health_banner:
+      title: Alguns dados podem estar desatualizados
+      body: "Os trabalhos em segundo plano não estão a ser processados, pelo que os saldos, o património líquido e as sincronizações de contas podem estar obsoletos ou em falta."
+      cta: Ver estado do sistema
+      reasons:
+        redis_unreachable: "A aplicação não consegue contactar o Redis. Verifique a sua REDIS_URL e se o Redis está em execução."
+        no_worker_processes: "Nenhum processo de worker Sidekiq está ligado. Inicie o contentor do worker ou a unidade systemd."
+        stale_heartbeat: "O worker Sidekiq não reportou um heartbeat recentemente. Pode estar bloqueado ou ter falhado."
+        queue_backed_up: "O trabalho mais antigo enfileirado está à espera para além do orçamento de latência. O worker está ativo, mas está a ficar para trás."

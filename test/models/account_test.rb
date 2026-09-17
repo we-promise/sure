@@ -16,6 +16,55 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "default owner prefers a family admin before a super admin" do
+    family = families(:empty)
+    admin = users(:empty)
+    super_admin = users(:sure_support_staff)
+
+    # Fixtures stamp every row with one `created_at`, and this family holds a
+    # second admin (`sso_only`), so "the earliest admin" is only meaningful
+    # once the timestamps differ. Without this the assertion below rides on
+    # whichever admin the query plan happens to return first.
+    family.users.update_all(created_at: 1.hour.ago)
+    admin.update!(created_at: 2.hours.ago)
+
+    Current.reset
+
+    account = family.accounts.create!(
+      name: "Unowned test account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    assert_equal admin, account.owner
+    assert_not_equal super_admin, account.owner
+  end
+
+  test "default owner is stable when two admins share a created_at" do
+    family = families(:empty)
+    family.users.where(role: "admin").update_all(created_at: 1.hour.ago)
+
+    Current.reset
+
+    owners = 2.times.map do |i|
+      family.accounts.create!(
+        name: "Unowned tie-break account #{i}",
+        balance: 0,
+        currency: "USD",
+        accountable: Depository.new
+      ).owner
+    end
+
+    # `id` breaks the tie, so the winner is the tied admin with the lowest id.
+    # Asserting only that the two calls agree would pass without the
+    # tie-breaker whenever the database returned the same tied row twice.
+    expected_owner = family.users.where(role: "admin").order(:id).first
+
+    assert_equal expected_owner, owners.first
+    assert_equal expected_owner, owners.last
+  end
+
   test "create_and_sync calls sync_later by default" do
     Account.any_instance.expects(:sync_later).once
 
@@ -75,6 +124,95 @@ class AccountTest < ActiveSupport::TestCase
     assert_not_nil opening_anchor
     assert_equal "GBP", opening_anchor.entry.currency
     assert_equal 1000, opening_anchor.entry.amount
+  end
+
+  test "create_and_sync keeps the entered current balance when it differs from the opening balance" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Student Loan",
+        balance: 8_000,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: 20_000, rate_type: "fixed", interest_rate: 4.5, term_months: 120 }
+      },
+      skip_initial_sync: true
+    )
+
+    assert_equal 20_000, account.valuations.opening_anchor.first.entry.amount
+    # Without a today anchor, the initial sync would walk forward from the
+    # opening valuation and overwrite the entered 8,000 with 20,000.
+    today_valuation = account.entries.valuations.find_by(date: Date.current)
+    assert_not_nil today_valuation
+    assert_equal 8_000, today_valuation.amount
+  end
+
+  test "create_and_sync leaves the opening anchor alone when the opening balance date is today" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Student Loan",
+        balance: 8_000,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: 20_000, rate_type: "fixed", interest_rate: 4.5, term_months: 120 }
+      },
+      skip_initial_sync: true,
+      opening_balance_date: Date.current
+    )
+
+    # Both balances land on the same day, so today's balance cannot be
+    # anchored without reusing (and overwriting) the opening anchor.
+    valuations = account.entries.valuations.where(date: Date.current)
+    assert_equal 1, valuations.count
+    assert_equal 20_000, valuations.first.amount
+    assert_equal "opening_anchor", valuations.first.entryable.kind
+  end
+
+  test "create_and_sync treats a blank initial balance as absent" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Student Loan",
+        balance: 8_000,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: "", rate_type: "fixed", interest_rate: 4.5, term_months: 120 }
+      },
+      skip_initial_sync: true
+    )
+
+    assert_equal 8_000, account.valuations.opening_anchor.first.entry.amount
+    assert_nil account.entries.valuations.find_by(date: Date.current)
+  end
+
+  test "create_and_sync treats a zero initial balance as a real opening balance" do
+    Account.any_instance.stubs(:sync_later)
+
+    account = Account.create_and_sync(
+      {
+        family: @family,
+        owner: @admin,
+        name: "Student Loan",
+        balance: 8_000,
+        currency: "USD",
+        accountable_type: "Loan",
+        accountable_attributes: { initial_balance: 0, rate_type: "fixed", interest_rate: 4.5, term_months: 120 }
+      },
+      skip_initial_sync: true
+    )
+
+    assert_equal 0, account.valuations.opening_anchor.first.entry.amount
+    assert_equal 8_000, account.entries.valuations.find_by(date: Date.current)&.amount
   end
 
   test "create_and_sync uses provided opening balance date" do
@@ -549,5 +687,237 @@ class AccountTest < ActiveSupport::TestCase
 
     outflow_transaction.reload
     assert_equal "standard", outflow_transaction.kind
+  end
+
+  test "cleanup transfers preloads transaction associations" do
+    counterparty = @family.accounts.create!(
+      owner: @admin,
+      name: "Transfer counterparty",
+      balance: 100,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    transfers = 3.times.map do |index|
+      create_transfer(
+        from_account: @account,
+        to_account: counterparty,
+        amount: 10 + index
+      )
+    end
+
+    queries = capture_sql_queries { @account.send(:cleanup_transfers) }
+
+    assert_empty queries.grep(/SELECT "transactions"\.\* FROM "transactions" WHERE "transactions"\."id" =/)
+    assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
+  end
+
+  test "history_start_date resolves to the earliest of opening anchor, entries, and balances" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "History Test Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    assert_nil account.history_start_date
+
+    anchor_date = 30.days.ago.to_date
+    account.set_opening_anchor_balance(balance: 100, date: anchor_date)
+    assert_equal anchor_date, account.history_start_date
+
+    earlier_entry_date = 45.days.ago.to_date
+    account.entries.create!(
+      name: "Past Entry",
+      date: earlier_entry_date,
+      amount: 50,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+    assert_equal earlier_entry_date, account.history_start_date
+  end
+
+  test "history_start_date returns nil when account has no opening anchor, entries, or balances" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Empty History Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    assert_nil account.history_start_date
+  end
+
+  test "history_start_date resolves to transaction date when there is no opening valuation" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Transaction Only Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    trade_date = 2.years.ago.to_date
+    account.entries.create!(
+      name: "Old Trade",
+      date: trade_date,
+      amount: 500,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    assert_equal trade_date, account.history_start_date
+  end
+
+  test "history_start_date resolves to balance date when there are no entries or opening valuation" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Balance Only Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    balance_date = 1.year.ago.to_date
+    account.balances.create!(
+      date: balance_date,
+      balance: 1000,
+      currency: "USD"
+    )
+
+    assert_equal balance_date, account.history_start_date
+  end
+
+  test "history_start_date prefers earlier transaction when valuation is added much later" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Late Valuation Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    trade_date = 2.years.ago.to_date
+    account.entries.create!(
+      name: "Initial Buy",
+      date: trade_date,
+      amount: 100,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    # Later reconciliation valuation added 6 months ago
+    account.set_opening_anchor_balance(balance: 500, date: 6.months.ago.to_date)
+
+    assert_equal trade_date, account.history_start_date
+  end
+
+  test "history_start_date handles transaction from 10 years ago" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Decade Old Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    ten_years_ago = 10.years.ago.to_date
+    account.entries.create!(
+      name: "Decade Ago Trade",
+      date: ten_years_ago,
+      amount: 250,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    assert_equal ten_years_ago, account.history_start_date
+  end
+
+  test "history_start_date ignores pending transactions" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Pending Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+    account.entries.destroy_all
+    account.balances.destroy_all
+
+    posted_date = 5.days.ago.to_date
+    account.entries.create!(
+      name: "Posted Entry",
+      date: posted_date,
+      amount: 100,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    account.entries.create!(
+      name: "Pending Entry",
+      date: 10.days.ago.to_date,
+      amount: 50,
+      currency: "USD",
+      entryable: Transaction.new(extra: { "plaid" => { "pending" => true } })
+    )
+
+    assert_equal posted_date, account.history_start_date
+  end
+
+  test "history_start_date on linked investment account resolves to provider activity ignoring default anchor" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Linked Investment Account",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new,
+      plaid_account: plaid_accounts(:one)
+    )
+    assert account.linked?
+
+    default_anchor_date = 2.years.ago.to_date
+    account.set_opening_anchor_balance(balance: 0, date: default_anchor_date)
+
+    recent_trade_date = 14.days.ago.to_date
+    account.entries.create!(
+      name: "Recent Provider Trade",
+      date: recent_trade_date,
+      amount: 100,
+      currency: "USD",
+      source: "plaid",
+      entryable: Transaction.new
+    )
+
+    assert_equal recent_trade_date, account.history_start_date
+  end
+
+  test "history_start_date on linked investment account returns nil when no provider activity exists" do
+    account = @family.accounts.create!(
+      owner: @admin,
+      name: "Fresh Linked Investment",
+      balance: 0,
+      currency: "USD",
+      accountable: Investment.new,
+      plaid_account: plaid_accounts(:one)
+    )
+    assert account.linked?
+
+    default_anchor_date = 2.years.ago.to_date
+    account.set_opening_anchor_balance(balance: 0, date: default_anchor_date)
+
+    assert_nil account.history_start_date
   end
 end

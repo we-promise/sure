@@ -1,0 +1,68 @@
+---
+pt-PT:
+  valuations:
+    confirmation_contents:
+      this_will: "Isto irá %{action_verb} o valor da conta em"
+      to_colon: "para:"
+      total_account_value: Valor total da conta
+      holdings_value: Valor das posições
+      brokerage_cash: Dinheiro da corretora
+      account_balance: saldo da conta
+      credit_card_balance: saldo do cartão de crédito
+      loan_balance: saldo do empréstimo
+      property_value: valor do imóvel
+      vehicle_value: valor do veículo
+      crypto_balance: saldo de cripto
+      asset_value: valor do ativo
+      liability_balance: saldo do passivo
+      balance: saldo
+      "on": "em"
+      to: "para"
+      recalculate_notice: "Todas as transações e saldos futuros serão recalculados com base nesta %{change_or_update}."
+      change: alteração
+      update: atualização
+      action_set: definir
+      action_update: atualizar
+    create:
+      account_updated: Conta atualizada
+    update:
+      account_updated: Conta atualizada
+      entry_updated: Registo atualizado
+    errors:
+      amount_required: O montante é obrigatório
+    form:
+      amount: Montante
+      submit: Adicionar atualização de saldo
+    header:
+      balance: Saldo
+    index:
+      change: alteração
+      date: data
+      new_entry: Novo registo
+      no_valuations: Ainda sem avaliações para esta conta
+      valuations: Valor
+      value: valor
+    new:
+      title: Novo saldo
+    show:
+      amount: Montante
+      amount_label: Valor da conta à data
+      date_label: Data
+      delete: Eliminar
+      delete_subtitle: Esta ação é irreversível
+      delete_title: Eliminar Registo
+      details: Detalhes
+      name_label: Designação
+      name_placeholder: Introduza uma designação para este registo
+      note_label: Notas
+      note_placeholder: Adicione detalhes adicionais sobre este registo
+      overview: Visão geral
+      settings: Definições
+      opening_balance: "Saldo inicial"
+      update_value: Atualizar valor
+    confirm_create:
+      confirm: Confirmar
+      title: Confirmar novo saldo
+    confirm_update:
+      title: Atualizar saldo
+      update: Atualizar

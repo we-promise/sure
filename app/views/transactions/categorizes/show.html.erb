@@ -120,20 +120,23 @@
               <p class="hidden text-sm text-secondary w-full py-2" data-list-filter-target="emptyMessage">
                 <%= t(".no_categories") %>
               </p>
-              <% @categories.each do |category| %>
-                <button type="submit"
-                        name="category_id"
-                        value="<%= category.id %>"
-                        class="filterable-item flex items-center gap-1 text-sm font-medium rounded-full px-2.5 py-1 border cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-offset-1"
-                        style="background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
-                               border-color: color-mix(in oklab, <%= category.color %> 20%, transparent);
-                               color: <%= category.color %>;"
-                        data-filter-name="<%= category.display_name %>">
-                  <% if category.lucide_icon.present? %>
-                    <%= icon(category.lucide_icon, size: "sm", color: "current") %>
-                  <% end %>
-                  <%= category.display_name %>
-                </button>
+              <% Category::Group.for(@categories).each do |group| %>
+                <% [ group.category, *group.subcategories ].each do |category| %>
+                  <% category_label = category.parent_id.present? ? category.display_name_with_parent : category.display_name %>
+                  <button type="submit"
+                          name="category_id"
+                          value="<%= category.id %>"
+                          class="filterable-item flex items-center gap-1 text-sm font-medium rounded-full px-2.5 py-1 border cursor-pointer hover:opacity-80 transition-opacity focus:outline-none focus:ring-2 focus:ring-offset-1"
+                          style="background-color: color-mix(in oklab, <%= category.color %> 10%, transparent);
+                                 border-color: color-mix(in oklab, <%= category.color %> 20%, transparent);
+                                 color: <%= category.color %>;"
+                          data-filter-name="<%= category_label %>">
+                    <% if category.lucide_icon.present? %>
+                      <%= icon(category.lucide_icon, size: "sm", color: "current") %>
+                    <% end %>
+                    <%= category_label %>
+                  </button>
+                <% end %>
               <% end %>
             </div>
           </div>

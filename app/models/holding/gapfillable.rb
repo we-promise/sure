@@ -28,7 +28,8 @@ module Holding::Gapfillable
               price: previous_holding.price,
               currency: previous_holding.currency,
               amount: previous_holding.amount,
-              cost_basis: previous_holding.cost_basis
+              cost_basis: previous_holding.cost_basis,
+              cost_basis_unknown: previous_holding.cost_basis_unknown
             )
           end
         end

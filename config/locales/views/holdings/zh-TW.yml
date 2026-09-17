@@ -43,6 +43,9 @@ zh-TW:
       unknown: --
       no_cost_basis: 沒有成本基礎
     index:
+      positions:
+        one: "%{count} 個持倉"
+        other: "%{count} 個持倉"
       average_cost: 平均成本
       holdings: 持股
       name: 名稱

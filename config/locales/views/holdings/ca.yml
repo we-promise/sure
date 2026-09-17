@@ -30,6 +30,9 @@ ca:
       shares: "%{qty} accions"
       unknown: "--"
     index:
+      positions:
+        one: "%{count} posició"
+        other: "%{count} posicions"
       average_cost: Cost mitjà
       holdings: Posicions
       name: Nom

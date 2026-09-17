@@ -32,7 +32,12 @@ pub struct ServerEntry {
     pub label: String,
 }
 
-pub fn normalize_server_url(input: &str) -> Result<String, ServerError> {
+/// Deepest mount path discovery supports, in path segments — a proxy mount is
+/// one or two deep in practice. Bounds the probing when the address is a link
+/// pasted from inside the app; a base typed exactly is probed at any depth.
+pub const MAX_MOUNT_DEPTH: usize = 3;
+
+fn split_base(input: &str) -> Result<(String, String), ServerError> {
     let trimmed = input.trim();
     if trimmed.is_empty() {
         return Err(ServerError::InvalidUrl("empty".into()));
@@ -52,7 +57,40 @@ pub fn normalize_server_url(input: &str) -> Result<String, ServerError> {
         Some(p) => format!("{scheme}://{host}:{p}"),
         None => format!("{scheme}://{host}"),
     };
-    Ok(origin)
+    Ok((origin, parsed.path().trim_end_matches('/').to_string()))
+}
+
+/// Canonical form of a server address: origin plus the path it is served under.
+/// The path is kept, so a Sure mounted under a prefix (`https://host/sure`)
+/// works; `base_candidates` is what still resolves a pasted deep link.
+pub fn normalize_server_url(input: &str) -> Result<String, ServerError> {
+    let (origin, path) = split_base(input)?;
+    Ok(format!("{origin}{path}"))
+}
+
+/// Bases to try for a normalized URL, most specific first and always ending at
+/// the origin. A prefix-mounted server and a pasted deep link are the same
+/// shape, so the server decides: the first candidate whose `/up` answers wins.
+///
+/// The address as typed comes first, so a base entered exactly is probed however
+/// deep it is. The rest are every mount depth up to `MAX_MOUNT_DEPTH`, which is
+/// what makes the walk finite for a link pasted from inside the app.
+pub fn base_candidates(normalized: &str) -> Vec<String> {
+    let Ok((origin, path)) = split_base(normalized) else {
+        return vec![normalized.to_string()];
+    };
+    let segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+    let base_at = |depth: usize| {
+        format!("{origin}{}", segments[..depth].iter().map(|s| format!("/{s}")).collect::<String>())
+    };
+    let mut candidates = vec![base_at(segments.len())];
+    candidates.extend(
+        (0..=segments.len().min(MAX_MOUNT_DEPTH))
+            .rev()
+            .filter(|&depth| depth != segments.len()) // already first
+            .map(base_at),
+    );
+    candidates
 }
 
 pub fn health_check_url(base: &str) -> String {
@@ -163,12 +201,18 @@ pub fn save_active(url: &str) -> Result<(), ServerError> {
     file_write("active_server", url)
 }
 
-/// True if `url` normalizes to a server the user has saved (or the active one).
+/// True if `url` is `base` itself or sits under it. The boundary check is what
+/// keeps `https://sure.example.com.evil.test` from passing as `https://sure.example.com`.
+pub fn base_covers(base: &str, url: &str) -> bool {
+    url == base || url.strip_prefix(base).is_some_and(|rest| rest.starts_with('/'))
+}
+
+/// True if `url` is served by a server the user has saved (or the active one).
 /// Gates deep-link navigation and SSO so only trusted origins can drive them.
 pub fn is_known_server(url: &str) -> bool {
     let Ok(canonical) = normalize_server_url(url) else {
         return false;
     };
-    ServerStore::load().iter().any(|e| e.url == canonical)
-        || load_active().as_deref() == Some(canonical.as_str())
+    ServerStore::load().iter().any(|e| base_covers(&e.url, &canonical))
+        || load_active().is_some_and(|active| base_covers(&active, &canonical))
 }

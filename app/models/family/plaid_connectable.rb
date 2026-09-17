@@ -29,7 +29,7 @@ module Family::PlaidConnectable
     plaid_item
   end
 
-  def get_link_token(webhooks_url:, redirect_url:, accountable_type: nil, region: :us, access_token: nil)
+  def get_link_token(webhooks_url:, redirect_url:, accountable_type: nil, region: :us, access_token: nil, account_selection_enabled: false)
     return nil unless plaid(region)
 
     plaid(region).get_link_token(
@@ -37,7 +37,8 @@ module Family::PlaidConnectable
       webhooks_url: webhooks_url,
       redirect_url: redirect_url,
       accountable_type: accountable_type,
-      access_token: access_token
+      access_token: access_token,
+      account_selection_enabled: account_selection_enabled
     ).link_token
   end
 

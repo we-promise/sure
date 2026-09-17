@@ -9,6 +9,12 @@ class Security < ApplicationRecord
   # Data stored in config/exchanges.yml
   EXCHANGES = YAML.safe_load_file(Rails.root.join("config", "exchanges.yml")).freeze
 
+  # Legacy non-ISO values previously persisted as exchange_operating_mic
+  # (e.g. raw EODHD exchange codes) mapped to their ISO MIC.
+  MIC_ALIASES = {
+    "WAR" => "XWAR"
+  }.freeze
+
   KINDS = %w[standard cash].freeze
 
   # Known securities provider keys — derived from the registry so adding a new
@@ -20,11 +26,19 @@ class Security < ApplicationRecord
 
   # Builds the Brandfetch crypto URL for a base asset (e.g. "BTC"). Returns
   # nil when Brandfetch isn't configured.
+  # The symbol goes into a URL path segment, and it comes from provider data —
+  # an on-chain token can be called anything its deployer chose. A slash, a
+  # question mark or a hash would not merely break the link: they would point
+  # the path elsewhere on the CDN, or push the client id into a fragment where
+  # Brandfetch never sees it. Guarded here rather than at each call site, since
+  # six of them reach this method from four different providers.
+  SAFE_CRYPTO_SYMBOL = /\A[A-Za-z0-9][A-Za-z0-9.\-]{0,31}\z/
+
   def self.brandfetch_crypto_url(base_asset)
     return nil if base_asset.blank?
-    return nil unless Setting.brand_fetch_client_id.present?
-    size = Setting.brand_fetch_logo_size
-    "https://cdn.brandfetch.io/crypto/#{base_asset}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
+    return nil unless base_asset.to_s.match?(SAFE_CRYPTO_SYMBOL)
+
+    Setting.brand_fetch_icon_url(base_asset, namespace: "crypto")
   end
 
   before_validation :upcase_symbols
@@ -110,6 +124,82 @@ class Security < ApplicationRecord
     EXCHANGES.dig(mic.upcase, "name") || mic.upcase
   end
 
+  def self.canonical_exchange_operating_mic(mic)
+    return nil if mic.blank?
+
+    key = mic.to_s.upcase
+    MIC_ALIASES.fetch(key, key)
+  end
+
+  # Values that should match the same venue for DB lookup (canonical + legacy aliases).
+  def self.exchange_operating_mic_lookup_values(mic)
+    return [] if mic.blank?
+
+    canonical = canonical_exchange_operating_mic(mic)
+    aliases = MIC_ALIASES.select { |_legacy, canon| canon == canonical }.keys
+    ([ canonical ] + aliases).uniq
+  end
+
+  # Finds a security by ticker + MIC, treating legacy MIC aliases as the same
+  # venue. When a legacy row is found, upgrades it to the canonical MIC unless
+  # a canonical row already exists (in which case the canonical row wins).
+  #
+  # When +exchange_operating_mic+ is blank:
+  # - match_blank_mic: true  → only rows with a blank MIC (find-or-initialize)
+  # - match_blank_mic: false → do not filter by MIC (exact DB match by ticker)
+  def self.find_by_ticker_and_exchange(ticker:, exchange_operating_mic: nil, country_code: nil, match_blank_mic: false)
+    return nil if ticker.blank?
+
+    scope = where("UPPER(ticker) = ?", ticker.to_s.upcase)
+
+    if exchange_operating_mic.present?
+      mics = exchange_operating_mic_lookup_values(exchange_operating_mic)
+      scope = scope.where("UPPER(exchange_operating_mic) IN (?)", mics)
+    elsif match_blank_mic
+      scope = scope.where(exchange_operating_mic: [ nil, "" ])
+    end
+
+    scope = scope.where(country_code: country_code) if country_code.present?
+
+    canonical = canonical_exchange_operating_mic(exchange_operating_mic)
+    security = if canonical.present?
+      scope.order(
+        Arel.sql(
+          sanitize_sql_array([
+            "CASE WHEN UPPER(COALESCE(exchange_operating_mic, '')) = ? THEN 0 ELSE 1 END",
+            canonical
+          ])
+        )
+      ).first
+    else
+      scope.first
+    end
+
+    return nil unless security
+    return security if canonical.blank?
+    return security if security.exchange_operating_mic.to_s.upcase == canonical
+
+    existing_canonical = find_by(ticker: security.ticker, exchange_operating_mic: canonical)
+    return existing_canonical if existing_canonical
+
+    security.update!(exchange_operating_mic: canonical)
+    security
+  end
+
+  def self.find_or_initialize_by_ticker_and_exchange(ticker:, exchange_operating_mic: nil)
+    existing = find_by_ticker_and_exchange(
+      ticker: ticker,
+      exchange_operating_mic: exchange_operating_mic,
+      match_blank_mic: exchange_operating_mic.blank?
+    )
+    return existing if existing
+
+    new(
+      ticker: ticker,
+      exchange_operating_mic: canonical_exchange_operating_mic(exchange_operating_mic)
+    )
+  end
+
   def exchange_name
     self.class.exchange_name_for(exchange_operating_mic)
   end
@@ -133,17 +223,10 @@ class Security < ApplicationRecord
   end
 
   def brandfetch_icon_url(width: nil, height: nil)
-    return nil unless Setting.brand_fetch_client_id.present?
-
-    w = width || Setting.brand_fetch_logo_size
-    h = height || Setting.brand_fetch_logo_size
-
     identifier = extract_domain(website_url) if website_url.present?
     identifier ||= ticker
 
-    return nil unless identifier.present?
-
-    "https://cdn.brandfetch.io/#{identifier}/icon/fallback/lettermark/w/#{w}/h/#{h}?c=#{Setting.brand_fetch_client_id}"
+    Setting.brand_fetch_icon_url(identifier, width: width, height: height)
   end
 
   private
@@ -158,7 +241,7 @@ class Security < ApplicationRecord
 
     def upcase_symbols
       self.ticker = ticker.upcase
-      self.exchange_operating_mic = exchange_operating_mic.upcase if exchange_operating_mic.present?
+      self.exchange_operating_mic = self.class.canonical_exchange_operating_mic(exchange_operating_mic) if exchange_operating_mic.present?
     end
 
     def should_generate_logo?

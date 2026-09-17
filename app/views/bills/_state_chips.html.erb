@@ -1,0 +1,19 @@
+<%# locals: (series:) %>
+<%# Trial, renewal and cancellation state, shared by the bill drawer and the
+    summary tab so the two never drift apart. Renders nothing when the series
+    carries none of the three. %>
+<% trial = series.trial_ends_on.present? && series.trial_ends_on >= Date.current %>
+<% renews = series.renews_on.present? && series.renews_on >= Date.current %>
+<% if trial || renews || series.cancelled_on.present? %>
+  <div class="flex flex-wrap items-center gap-2">
+    <% if trial %>
+      <%= render DS::Pill.new(label: t("bills.detail.trial_chip", date: l(series.trial_ends_on, format: :short)), tone: :warning, marker: false) %>
+    <% end %>
+    <% if renews %>
+      <%= render DS::Pill.new(label: t("bills.detail.renews_chip", date: l(series.renews_on, format: :short)), tone: :neutral, marker: false) %>
+    <% end %>
+    <% if series.cancelled_on.present? %>
+      <%= render DS::Pill.new(label: t("bills.detail.cancelled_chip", date: l(series.cancelled_on, format: :short)), tone: :neutral, marker: false) %>
+    <% end %>
+  </div>
+<% end %>

@@ -1,0 +1,10 @@
+---
+pt-PT:
+  password_mailer:
+    password_reset:
+      cta: Repor a minha palavra-passe
+      ignore_if_not_requested: Se não foi você que fez este pedido, pode ignorar este
+        e-mail.
+      request_made: Foi feito um pedido para repor a sua palavra-passe do %{product_name}. Clique
+        no link para a repor.
+      subject: '%{product_name}: Repor a sua palavra-passe'

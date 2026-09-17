@@ -78,6 +78,14 @@ class User < ApplicationRecord
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
   # get the specified admin-capable fallback role.
+  # Keep this one-key advisory lock stable across deploys so old and new app
+  # processes serialize first-user role selection on the same database lock.
+  FIRST_USER_ROLE_LOCK_KEY = 8_391_247
+
+  def self.lock_first_user_role!
+    connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?)", FIRST_USER_ROLE_LOCK_KEY ]))
+  end
+
   def self.role_for_new_family_creator(fallback_role: :admin)
     fallback_role = fallback_role.to_s.in?(%w[admin super_admin]) ? fallback_role : :admin
 
@@ -218,7 +226,7 @@ class User < ApplicationRecord
   # SSO-only users have OIDC identities but no local password.
   # They cannot use password reset or local login.
   def sso_only?
-    password_digest.nil? && oidc_identities.exists?
+    password_digest.nil? && oidc_identities.any?
   end
 
   # Check if user has a local password set (can authenticate locally)
@@ -231,23 +239,52 @@ class User < ApplicationRecord
 
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
+
+  # Super Admin Invariant
+  validate :ensure_not_last_super_admin, if: :losing_super_admin_privileges?
+  before_destroy :ensure_not_last_super_admin_on_destroy
+
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
+  after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
 
   def deactivate
     return true unless active?
 
     transaction do
-      if super_admin?
-        active_super_admins = User.where(role: :super_admin, active: true).lock.to_a
-        if active_super_admins.one?
-          errors.add(:base, :cannot_remove_last_super_admin)
-          raise ActiveRecord::Rollback
-        end
-      end
-
       update(active: false, email: deactivated_email)
     end || false
   end
+
+  private
+
+    def losing_super_admin_privileges?
+      (role_changed? && role_was == "super_admin" && role != "super_admin") ||
+        (active_changed? && active_was == true && !active && role == "super_admin")
+    end
+
+    def ensure_not_last_super_admin
+      return unless check_last_super_admin_invariant_failed?
+
+      attribute = role_changed? ? :role : :base
+      errors.add(attribute, :cannot_remove_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
+    end
+
+    def ensure_not_last_super_admin_on_destroy
+      return unless role == "super_admin" && active?
+
+      if check_last_super_admin_invariant_failed?
+        errors.add(:base, :cannot_remove_last_super_admin, message: I18n.t("admin.users.update.last_super_admin_error"))
+        throw(:abort)
+      end
+    end
+
+    def check_last_super_admin_invariant_failed?
+      # Lock all active super admins in a consistent order to prevent deadlocks
+      locked_ids = User.where(role: :super_admin, active: true).order(:id).lock.pluck(:id)
+      locked_ids.size <= 1 && locked_ids.include?(id)
+    end
+
+  public
 
   # Permanent removal of another user, initiated by a super admin from the
   # instance users page. Reuses the sanctioned deactivate -> UserPurgeJob path
@@ -287,6 +324,36 @@ class User < ApplicationRecord
     oidc_identities.destroy_all
   end
 
+  # Raised by #with_active_lock! to reject session/token issuance for a
+  # deactivated or concurrently-purged user. The one error contract every
+  # web/JSON/mobile/OAuth-adapter caller rescues, so a deactivation result
+  # can never be confused with an unrelated persistence failure.
+  class InactiveError < StandardError; end
+
+  # The one locked primitive for the actual authorization boundary: asserts
+  # this user is eligible for new session/token issuance *right now*, under
+  # a row lock, immediately before minting. Callers may additionally check
+  # #active? earlier for a fast, friendly rejection (skip an MFA/device
+  # round trip) — that's a UX optimization only, never a substitute for
+  # this check, however "obviously" already-checked the user seems.
+  def with_active_lock!
+    lock_acquired = false
+
+    with_lock do
+      lock_acquired = true
+      raise InactiveError unless active?
+      yield self
+    end
+  rescue ActiveRecord::RecordNotFound
+    # Only translate a RecordNotFound raised by with_lock's own reload (the
+    # row was deleted by a concurrent purge before we could lock it) into
+    # InactiveError. Once the lock is held, re-raise: a RecordNotFound from
+    # inside the caller's block is an unrelated failure and must not be
+    # misreported as "inactive" either.
+    raise if lock_acquired
+    raise InactiveError
+  end
+
   def can_deactivate
     if admin? && family.users.count > 1
       errors.add(:base, :cannot_deactivate_admin_with_other_users)
@@ -295,6 +362,82 @@ class User < ApplicationRecord
 
   def purge_later
     UserPurgeJob.perform_later(self)
+  end
+
+  def transfer_to_family!(new_family, role: self.role)
+    transaction do
+      lock!
+
+      accounts_to_move = owned_accounts.to_a
+      provider_items_to_move = provider_items_for_transfer(accounts_to_move)
+      moving_default_account = accounts_to_move.any? { |account| account.id == default_account_id }
+
+      account_shares.delete_all
+
+      update!(family: new_family, role: role, default_account: moving_default_account ? default_account : nil)
+
+      accounts_to_move.each do |account|
+        account.update!(family: new_family)
+      end
+
+      AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current) if accounts_to_move.any?
+
+      provider_items_to_move.each do |provider_item|
+        provider_item.update!(family: new_family)
+      end
+
+      new_family.auto_share_existing_accounts_with(self)
+    end
+  end
+
+  def provider_items_for_transfer(accounts_to_move)
+    account_ids_to_move = accounts_to_move.map(&:id)
+    provider_items = accounts_to_move.flat_map do |account|
+      account.account_providers.includes(:provider).filter_map do |account_provider|
+        provider_item_for(account_provider.provider)
+      end
+    end.uniq
+
+    provider_items.each do |provider_item|
+      linked_account_ids = provider_item.accounts.map(&:id)
+      next if linked_account_ids.all? { |account_id| account_ids_to_move.include?(account_id) }
+
+      errors.add(:base, :provider_item_has_other_accounts)
+      raise ActiveRecord::RecordInvalid, self
+    end
+
+    provider_items
+  end
+
+  def provider_item_for(provider)
+    item_association = provider.class.reflect_on_all_associations(:belongs_to).find do |association|
+      association.name.to_s.end_with?("_item") && provider.respond_to?(association.name)
+    end
+
+    provider.public_send(item_association.name) if item_association
+  end
+
+  # Revokes mobile/third-party API access alongside the web-session
+  # invalidation above. Without this, a deactivated user's existing
+  # Doorkeeper tokens and API keys stay valid on the wire — currently
+  # harmless only because Api::V1::BaseController/McpController re-check
+  # active? on every request, but that's a second, independent safeguard,
+  # not a substitute for actually revoking the credentials. Also revokes
+  # unexchanged OAuth authorization grants — /oauth/token doesn't go
+  # through the cookie authenticator, so a still-valid grant issued right
+  # before deactivation could otherwise be exchanged for a fresh token
+  # afterward.
+  def revoke_all_access_tokens
+    tokens_revoked = Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    grants_revoked = Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
+
+    if tokens_revoked > 0 || grants_revoked > 0 || keys_revoked > 0
+      Rails.logger.warn(
+        "[AUTH] Revoked #{tokens_revoked} access token(s), #{grants_revoked} authorization grant(s), " \
+        "and #{keys_revoked} API key(s) for deactivated user_id=#{id}"
+      )
+    end
   end
 
   def purge
@@ -391,6 +534,43 @@ class User < ApplicationRecord
     account
   end
 
+  # Release highlight ("What's new" popup) tracking. Account-level so every
+  # device the user signs in from stays in sync.
+  def last_seen_release_tag
+    preferences&.[]("last_seen_release_tag")
+  end
+
+  def mark_release_seen!(tag)
+    tag_version = parsed_release_tag_version!(tag)
+
+    with_lock do
+      current = last_seen_release_tag
+
+      # Never regress the marker: a stale tab (or an old app version during a
+      # rolling deploy) must not make an already-acknowledged release look
+      # unseen again. A previously stored malformed tag is overwritten by the
+      # next valid dismissal so the account can recover.
+      if current
+        current_version = parsed_release_tag_version(current)
+        next if current_version && tag_version < current_version
+      end
+
+      update!(preferences: (preferences || {}).merge("last_seen_release_tag" => tag))
+    end
+  end
+
+  def parsed_release_tag_version!(tag)
+    raise ArgumentError, "invalid release tag" unless tag.to_s.match?(/\Av\d+\.\d+\.\d+(?:[-+.][0-9A-Za-z.-]+)?\z/)
+
+    Semver.from_release_tag(tag).version
+  end
+
+  def parsed_release_tag_version(tag)
+    parsed_release_tag_version!(tag)
+  rescue ArgumentError
+    nil
+  end
+
   # Dashboard preferences management
   def dashboard_section_collapsed?(section_key)
     preferences&.dig("collapsed_sections", section_key) == true
@@ -465,10 +645,25 @@ class User < ApplicationRecord
     preferences&.dig("show_split_grouped") != false
   end
 
+  # Returns whether the user has enabled the two-column dashboard layout.
   def dashboard_two_column?
     preferences&.dig("dashboard_two_column") == true
   end
 
+  # Returns the accountable keys (e.g. "depository", "credit_card") that should
+  # start expanded in the sidebar and dashboard balance sheet, or an empty
+  # array when unset. Stored in the preferences JSONB column.
+  def always_expanded_account_groups
+    preferences&.dig("always_expanded_account_groups") || []
+  end
+
+  # Returns whether the given key (coerced to a string) is selected to start
+  # expanded in the sidebar and dashboard balance sheet.
+  def always_expanded_account_group?(account_group_key)
+    always_expanded_account_groups.include?(account_group_key.to_s)
+  end
+
+  # Returns whether clicking outside a modal is prevented from closing it.
   def disable_modal_click_outside?
     preferences&.dig("disable_modal_click_outside") == true
   end
