@@ -77,64 +77,46 @@ class Eval::Langfuse::Client
     get("/dataset-items", datasetName: dataset_name, page: page, limit: limit)
   end
 
-  # Dataset run operations (for experiments)
-  def create_dataset_run_item(run_name:, dataset_item_id:, trace_id: nil, observation_id: nil, metadata: {})
-    post("/dataset-run-items", {
-      runName: run_name,
-      datasetItemId: dataset_item_id,
+  def create_experiment_item(name:, input:, output:, expected_output:, experiment_id:, experiment_name:, dataset_id:, item_id:, metadata: {}, start_time: nil)
+    @tracing ||= LangfuseTracing.new(public_key: @public_key, secret_key: @secret_key, host: @base_url.delete_suffix("/api/public"), auto_flush: false)
+    observation = @tracing.trace(
+      name: name,
+      input: input,
+      environment: "experiment",
+      start_time: start_time,
+      attributes: {
+        "langfuse.experiment.id" => experiment_id,
+        "langfuse.experiment.name" => experiment_name,
+        "langfuse.experiment.dataset.id" => dataset_id,
+        "langfuse.experiment.item.id" => item_id,
+        "langfuse.experiment.item.expected_output" => expected_output.to_json
+      }
+    )
+    attributes = { "langfuse.experiment.item.root_observation_id" => observation.span_id }
+    metadata.each { |key, value| attributes["langfuse.experiment.item.metadata.#{key}"] = value.is_a?(String) ? value : value.to_json }
+    observation.set_attributes(attributes)
+    observation.end(output: output)
+    unless @tracing.flush == OpenTelemetry::SDK::Trace::Export::SUCCESS
+      raise ApiError, "Failed to export Langfuse experiment item"
+    end
+    observation
+  end
+
+  def create_score(trace_id:, observation_id:, name:, value:, comment: nil, data_type: "NUMERIC")
+    post("/scores", {
       traceId: trace_id,
       observationId: observation_id,
-      metadata: metadata
+      name: name,
+      value: value,
+      comment: comment,
+      dataType: data_type,
+      environment: "experiment"
     }.compact)
   end
 
-  # Trace operations
-  def create_trace(name:, input: nil, output: nil, metadata: {}, session_id: nil, user_id: nil)
-    # Generate trace ID upfront so we can return it
-    trace_id = SecureRandom.uuid
-
-    post("/ingestion", {
-      batch: [
-        {
-          id: SecureRandom.uuid,
-          type: "trace-create",
-          timestamp: Time.current.iso8601,
-          body: {
-            id: trace_id,
-            name: name,
-            input: input,
-            output: output,
-            metadata: metadata,
-            sessionId: session_id,
-            userId: user_id
-          }.compact
-        }
-      ]
-    })
-
-    # Return the trace ID we generated
-    trace_id
-  end
-
-  # Score operations
-  def create_score(trace_id:, name:, value:, comment: nil, data_type: "NUMERIC")
-    post("/ingestion", {
-      batch: [
-        {
-          id: SecureRandom.uuid,
-          type: "score-create",
-          timestamp: Time.current.iso8601,
-          body: {
-            id: SecureRandom.uuid,
-            traceId: trace_id,
-            name: name,
-            value: value,
-            comment: comment,
-            dataType: data_type
-          }.compact
-        }
-      ]
-    })
+  def shutdown
+    @tracing&.shutdown
+    @tracing = nil
   end
 
   def configured?

@@ -471,17 +471,31 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_equal "configured model: custom-model", custom_provider.supported_models_description
   end
 
-  test "upsert_langfuse_trace uses client trace upsert" do
-    trace = Struct.new(:id).new("trace_123")
-    fake_client = mock
-
-    fake_client.expects(:trace).with(id: "trace_123", output: { ok: true }, level: "ERROR")
-    @subject.stubs(:langfuse_client).returns(fake_client)
-
-    @subject.send(:upsert_langfuse_trace, trace: trace, output: { ok: true }, level: "ERROR")
+  test "finishes the root observation with output and error level" do
+    trace = mock
+    trace.expects(:end).with(output: { ok: true }, level: "ERROR")
+    @subject.send(:finish_langfuse_trace, trace: trace, output: { ok: true }, level: "ERROR")
   end
 
-  test "log_langfuse_generation upserts trace through client" do
+  test "configured tracing emits chat observations through the shared OpenTelemetry client" do
+    exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
+    tracing = LangfuseTracing.new(public_key: "pk-test", secret_key: "sk-test", host: "https://langfuse.test",
+      processor: OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(exporter))
+    Rails.configuration.x.stubs(:langfuse).returns(tracing)
+    with_env_overrides("LANGFUSE_PUBLIC_KEY" => "pk-test", "LANGFUSE_SECRET_KEY" => "sk-test") do
+      @subject.send(:log_langfuse_generation, name: "chat_response", model: "gpt-4.1", input: "Hi", output: "Hello",
+        usage: { "prompt_tokens" => 4, "completion_tokens" => 2 }, session_id: "chat-id", user_identifier: "hashed-id")
+    end
+    assert_equal 2, exporter.finished_spans.size
+    exporter.finished_spans.each do |span|
+      assert_equal "chat-id", span.attributes["langfuse.session.id"]
+      assert_equal "hashed-id", span.attributes["langfuse.user.id"]
+    end
+  ensure
+    tracing&.shutdown
+  end
+
+  test "log_langfuse_generation finishes generation and root observation" do
     trace = Struct.new(:id).new("trace_456")
     generation = mock
     fake_client = mock
@@ -489,7 +503,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject.stubs(:langfuse_client).returns(fake_client)
     @subject.stubs(:create_langfuse_trace).returns(trace)
 
-    fake_client.expects(:trace).with(id: "trace_456", output: "hello")
+    trace.expects(:end).with(output: "hello", level: nil)
     trace.expects(:generation).returns(generation)
     generation.expects(:end).with(output: "hello", usage: { "total_tokens" => 10 })
 

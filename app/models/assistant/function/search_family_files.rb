@@ -96,7 +96,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       error_msg = response.error&.message
       Rails.logger.debug("[SearchFamilyFiles] search failed: #{error_msg}")
       begin
-        langfuse_client&.trace(id: trace.id, output: { error: error_msg }, level: "ERROR") if trace
+        trace.end(output: { error: error_msg }, level: "ERROR") if trace
       rescue => e
         Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
       end
@@ -130,7 +130,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
 
     begin
       if trace
-        langfuse_client&.trace(id: trace.id, output: {
+        trace.end(output: {
           result_count: mapped.size,
           chunks: mapped.map { |r| { filename: r[:filename], score: r[:score], content_length: r[:content]&.length } }
         })
@@ -141,6 +141,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
 
     output
   rescue => e
+    trace&.end(output: { error: e.message }, level: "ERROR")
     Rails.logger.error("[SearchFamilyFiles] error: #{e.class.name} - #{e.message}")
     {
       success: false,
@@ -153,7 +154,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
     def langfuse_client
       return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
 
-      @langfuse_client ||= Langfuse.new
+      Rails.configuration.x.langfuse
     end
 
     def create_langfuse_trace(name:, input:)

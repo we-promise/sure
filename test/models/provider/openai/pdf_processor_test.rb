@@ -156,7 +156,7 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       span = mock
       span.expects(:end).with { |args| yield(args[:output]); true }
       trace = mock
-      trace.stubs(:span).returns(span)
+      trace.stubs(:generation).returns(span)
       trace
     end
 end

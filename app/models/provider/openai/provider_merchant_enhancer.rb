@@ -98,7 +98,7 @@ class Provider::Openai::ProviderMerchantEnhancer
   private
 
     def enhance_merchants_native
-      span = langfuse_trace&.span(name: "enhance_provider_merchants_api_call", input: {
+      span = langfuse_trace&.generation(name: "enhance_provider_merchants_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         merchants: merchants
       })
@@ -167,7 +167,7 @@ class Provider::Openai::ProviderMerchantEnhancer
     end
 
     def enhance_merchants_with_mode(mode)
-      span = langfuse_trace&.span(name: "enhance_provider_merchants_api_call", input: {
+      span = langfuse_trace&.generation(name: "enhance_provider_merchants_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         merchants: merchants,
         json_mode: mode
