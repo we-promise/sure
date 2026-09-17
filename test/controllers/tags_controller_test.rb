@@ -69,4 +69,18 @@ class TagsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to tags_url
     assert_equal "Tag updated", flash[:notice]
   end
+
+  test "destroying a tag destroys its linked pocket" do
+    tag = tags(:one)
+    pocket = pockets(:vacation)
+    assert_equal tag, pocket.tag
+
+    assert_difference "Pocket.count", -1 do
+      delete tag_url(tag)
+    end
+
+    assert_redirected_to tags_url
+    assert_equal "Tag deleted", flash[:notice]
+    assert_not Pocket.exists?(pocket.id)
+  end
 end

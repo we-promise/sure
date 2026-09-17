@@ -25,7 +25,9 @@ class DS::ProgressRing < DesignSystemComponent
 
   attr_reader :size, :stroke_width, :label, :show_percent
 
-  def initialize(percent:, size: 64, stroke_width: 6, tone: :neutral, label: nil, show_percent: true, track: DEFAULT_TRACK)
+  # `color` accepts an explicit CSS color (e.g. a domain color like a pocket's
+  # display_color) for callers that don't fit the fixed semantic `tone` palette.
+  def initialize(percent:, size: 64, stroke_width: 6, tone: :neutral, label: nil, show_percent: true, track: DEFAULT_TRACK, color: nil)
     @percent = percent
     @size = size
     @stroke_width = stroke_width
@@ -33,6 +35,7 @@ class DS::ProgressRing < DesignSystemComponent
     @label = label
     @show_percent = show_percent
     @track = track
+    @color = color
   end
 
   def clamped_percent
@@ -40,7 +43,7 @@ class DS::ProgressRing < DesignSystemComponent
   end
 
   def stroke_color
-    TONES.fetch(@tone, TONES[:neutral])
+    @color.presence || TONES.fetch(@tone, TONES[:neutral])
   end
 
   def track_color
