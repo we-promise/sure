@@ -35,6 +35,23 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "rejects transfers to Gems and Bullion accounts" do
+    account = Current.family.accounts.create!(name: "Gold collection", balance: 0, currency: "USD", accountable: Valuable.new)
+
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: account.id,
+          date: Date.current,
+          amount: 100
+        }
+      }
+    end
+
+    assert_response :not_found
+  end
+
   test "resubmitting the same idempotency key does not create a duplicate transfer" do
     idempotency_key = SecureRandom.uuid
     params = {

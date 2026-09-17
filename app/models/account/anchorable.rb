@@ -39,8 +39,8 @@ module Account::Anchorable
     end
   end
 
-  def set_current_balance(balance)
-    result = current_balance_manager.set_current_balance(balance)
+  def set_current_balance(balance, reconciliation_name: nil)
+    result = current_balance_manager.set_current_balance(balance, reconciliation_name:)
     sync_later if result.success?
     result
   end

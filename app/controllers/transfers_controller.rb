@@ -33,6 +33,8 @@ class TransfersController < ApplicationController
     source_account = accessible_accounts.find(transfer_params[:from_account_id])
     destination_account = accessible_accounts.find(transfer_params[:to_account_id])
 
+    raise ActiveRecord::RecordNotFound unless source_account.supports_manual_entries? && destination_account.supports_manual_entries?
+
     return unless require_account_permission!(source_account, redirect_path: transactions_path)
     return unless require_account_permission!(destination_account, redirect_path: transactions_path)
 
@@ -225,6 +227,7 @@ class TransfersController < ApplicationController
 
     def set_accounts
       @accounts = accessible_accounts
+        .where.not(accountable_type: "Valuable")
         .active
         .alphabetically
         .includes(

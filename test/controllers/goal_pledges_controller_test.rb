@@ -54,6 +54,20 @@ class GoalPledgesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "excludes Gems and Bullion accounts from pledge choices and rejects direct submission" do
+    account = @goal.family.accounts.create!(name: "Gold collection", balance: 0, currency: "USD", accountable: Valuable.new)
+    @goal.goal_accounts.create!(account: account)
+
+    get new_goal_pledge_url(@goal), headers: { "Turbo-Frame" => "modal" }
+    assert_select "option[value='#{account.id}']", count: 0
+
+    assert_no_difference "GoalPledge.count" do
+      post goal_pledges_url(@goal), params: { goal_pledge: { amount: "150", account_id: account.id } }
+    end
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Gems and Bullion accounts cannot receive pledges."
+  end
+
   test "extend pushes expires_at forward" do
     before = @pledge.expires_at
     patch renew_goal_pledge_url(@goal, @pledge)

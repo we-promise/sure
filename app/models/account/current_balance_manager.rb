@@ -30,11 +30,11 @@ class Account::CurrentBalanceManager
     end
   end
 
-  def set_current_balance(balance)
+  def set_current_balance(balance, reconciliation_name: nil)
     if account.linked?
       result = set_current_balance_for_linked_account(balance)
     else
-      result = set_current_balance_for_manual_account(balance)
+      result = set_current_balance_for_manual_account(balance, reconciliation_name:)
     end
 
     # Update cache field so changes appear immediately to the user
@@ -66,14 +66,14 @@ class Account::CurrentBalanceManager
     #                             date forward (not user's intent).
     #
     # For more documentation on these auto-update strategies, see the test cases.
-    def set_current_balance_for_manual_account(balance)
+    def set_current_balance_for_manual_account(balance, reconciliation_name:)
       # If we're dealing with a cash account that has no reconciliations, use "Transaction adjustment" strategy (update opening balance to "back in" to the desired current balance)
       if account.balance_type == :cash && account.valuations.reconciliation.empty?
         adjust_opening_balance_with_delta(new_balance: balance, old_balance: account.balance)
       else
         existing_reconciliation = account.entries.valuations.find_by(date: Date.current)
 
-        result = reconciliation_manager.reconcile_balance(balance: balance, date: Date.current, existing_valuation_entry: existing_reconciliation)
+        result = reconciliation_manager.reconcile_balance(balance: balance, date: Date.current, existing_valuation_entry: existing_reconciliation, name: reconciliation_name)
 
         # Normalize to expected result format
         Result.new(success?: result.success?, changes_made?: true, error: result.error_message)

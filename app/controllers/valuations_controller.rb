@@ -1,8 +1,14 @@
 class ValuationsController < ApplicationController
   include EntryableResource, StreamExtensions
 
+  def new
+    super
+    ensure_manual_entries_supported!(@entry.account) if @entry.account
+  end
+
   def confirm_create
     @account = accessible_accounts.find(params.dig(:entry, :account_id))
+    ensure_manual_entries_supported!(@account)
     return unless require_account_permission!(@account)
 
     @entry = @account.entries.build(entry_params.merge(currency: @account.currency))
@@ -24,6 +30,7 @@ class ValuationsController < ApplicationController
 
   def confirm_update
     @entry = Current.accessible_entries.find(params[:id])
+    ensure_manual_entries_supported!(@entry.account)
     return unless require_account_permission!(@entry.account)
 
     @account = @entry.account
@@ -48,6 +55,7 @@ class ValuationsController < ApplicationController
 
   def create
     account = accessible_accounts.find(params.dig(:entry, :account_id))
+    ensure_manual_entries_supported!(account)
     return unless require_account_permission!(account)
 
     result = account.create_reconciliation(
@@ -67,6 +75,7 @@ class ValuationsController < ApplicationController
   end
 
   def update
+    ensure_manual_entries_supported!(@entry.account)
     return unless require_account_permission!(@entry.account)
 
     # Notes updating is independent of reconciliation, just a simple CRUD operation
@@ -102,7 +111,16 @@ class ValuationsController < ApplicationController
     end
   end
 
+  def destroy
+    ensure_manual_entries_supported!(@entry.account)
+    super
+  end
+
   private
+    def ensure_manual_entries_supported!(account)
+      raise ActiveRecord::RecordNotFound unless account.supports_manual_entries?
+    end
+
     def entry_params
       params.require(:entry).permit(:date, :amount, :notes)
     end
