@@ -97,16 +97,64 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
     assert_equal "fixed", terms[:rate_type]
     assert terms[:monthly_payment].present?, "a fixed-rate loan has a computable payment"
     assert terms[:monthly_payment_formatted].present?
+    assert_not terms.key?(:base_interest_rate)
   end
 
-  test "omits monthly_payment for a variable-rate loan rather than reporting zero" do
-    accounts(:loan).loan.update!(rate_type: "variable")
+  # The loan's Overview tab quotes the rate and repayment in force today. Reading
+  # the interest_rate column instead told the assistant the loan still charged
+  # the rate it opened at, next to a schedule that no longer used it.
+  test "reports the rate and repayment in force for a variable-rate loan with a recorded change" do
+    loan = accounts(:loan).loan
+    base_payment = loan.monthly_payment.amount
+    loan.update!(
+      rate_type: "variable",
+      start_date: Date.current - 2.years,
+      rate_changes: [ { effective_date: (Date.current - 1.year).iso8601, rate: "5.0" } ]
+    )
 
     terms = @fn.call[:accounts].find { |a| a[:id] == accounts(:loan).id }[:terms]
 
     assert_equal "variable", terms[:rate_type]
-    assert_not terms.key?(:monthly_payment)
+    assert_equal 5.0, terms[:interest_rate].to_f
+    assert_equal 3.5, terms[:base_interest_rate].to_f
+    assert_equal loan.reload.amortization_schedule.payment_in_force(Date.current).amount, terms[:monthly_payment]
+    assert_operator terms[:monthly_payment], :>, base_payment, "the repayment is resized at the higher rate"
+    assert terms[:monthly_payment_formatted].present?
+  end
+
+  test "a variable-rate loan with no recorded change reports its base rate and repayment" do
+    loan = accounts(:loan).loan
+    base_payment = loan.monthly_payment.amount
+    loan.update!(rate_type: "variable")
+
+    terms = @fn.call[:accounts].find { |a| a[:id] == accounts(:loan).id }[:terms]
+
     assert_equal 3.5, terms[:interest_rate].to_f
+    assert_not terms.key?(:base_interest_rate)
+    assert_equal base_payment, terms[:monthly_payment]
+  end
+
+  test "omits monthly_payment for a variable-rate loan whose schedule has run out rather than reporting zero" do
+    accounts(:loan).loan.update!(rate_type: "variable", term_months: 12, start_date: Date.current - 3.years)
+
+    terms = @fn.call[:accounts].find { |a| a[:id] == accounts(:loan).id }[:terms]
+
+    assert_equal "variable", terms[:rate_type]
+    assert_equal 12, terms[:term_months]
+    assert_not terms.key?(:monthly_payment)
+    assert_not terms.key?(:monthly_payment_formatted)
+  end
+
+  # Switching a loan back to fixed keeps its recorded changes in the column so a
+  # later switch can reveal them. They must not leak into a fixed loan's terms.
+  test "a fixed-rate loan ignores rate changes left over from a variable period" do
+    accounts(:loan).loan.update!(rate_changes: [ { effective_date: (Date.current - 1.year).iso8601, rate: "5.0" } ])
+
+    terms = @fn.call[:accounts].find { |a| a[:id] == accounts(:loan).id }[:terms]
+
+    assert_equal "fixed", terms[:rate_type]
+    assert_equal 3.5, terms[:interest_rate].to_f
+    assert_not terms.key?(:base_interest_rate)
   end
 
   test "exposes a credit card's terms" do

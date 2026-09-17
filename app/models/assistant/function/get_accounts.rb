@@ -13,8 +13,19 @@ class Assistant::Function::GetAccounts < Assistant::Function
         Loan and credit card accounts also carry a `terms` object with the
         borrowing terms the user recorded (rate, term, monthly payment, APR,
         minimum payment). A key is absent when the user never entered it, so
-        treat a missing key as unknown rather than as zero. `monthly_payment` is
-        only computable for a fixed-rate loan.
+        treat a missing key as unknown rather than as zero.
+
+        A loan's `interest_rate` is the rate in force on `as_of_date`. When a
+        variable-rate loan's recorded rate changes have moved it,
+        `base_interest_rate` is the rate the loan started at.
+
+        For a fixed-rate loan, `monthly_payment` is the contracted repayment,
+        still reported after the term has ended. For a variable-rate loan it is
+        the next scheduled repayment on or after `as_of_date`, already sized at
+        every change recorded to take effect by that payment, so it can reflect
+        a change `interest_rate` does not show yet. It is absent once every
+        scheduled payment is past. A change the user has not recorded is not
+        reflected in either field.
 
         Note on `terms.available_credit`: providers disagree on its meaning
         (some report the credit limit, others the remaining credit), so confirm
@@ -50,9 +61,10 @@ class Assistant::Function::GetAccounts < Assistant::Function
   def call(params = {})
     include_series = params["include_balance_series"] == true
     period = series_period(params)
+    as_of_date = Date.current
 
     {
-      as_of_date: Date.current,
+      as_of_date: as_of_date,
       accounts: accounts_scope(include_series).map do |account|
         payload = {
           id: account.id,
@@ -69,7 +81,7 @@ class Assistant::Function::GetAccounts < Assistant::Function
           status: account.status
         }
 
-        terms = account_terms(account)
+        terms = account_terms(account, as_of_date)
         payload[:terms] = terms if terms.present?
 
         if include_series
@@ -94,23 +106,28 @@ class Assistant::Function::GetAccounts < Assistant::Function
     # the rate was sitting in the database. Only the types that carry financial
     # terms are serialized; the rest (Depository, Property, ...) return nil and
     # the key is omitted.
-    def account_terms(account)
+    def account_terms(account, as_of_date)
       case account.accountable
-      when Loan then loan_terms(account.accountable)
+      when Loan then loan_terms(account.accountable, as_of_date)
       when CreditCard then credit_card_terms(account.accountable)
       end
     end
 
     # `compact` throughout: a nil rate must read as "the user never entered it",
     # never as zero. An entirely empty hash is dropped by the caller.
-    def loan_terms(loan)
-      # Loan#monthly_payment returns nil unless rate_type is "fixed": a
-      # variable-rate loan has no single scheduled payment to report.
-      monthly_payment = loan.monthly_payment
+    #
+    # Rate and repayment are read the way the loan's Overview tab reads them, so
+    # the assistant never quotes a figure the user's own loan page contradicts.
+    # Once a variable loan has a recorded rate change, the `interest_rate` column
+    # is only the rate it started at, not the one it charges.
+    def loan_terms(loan, as_of_date)
+      interest_rate = loan.current_variable_rate(as_of_date)
+      monthly_payment = payment_in_force(loan, as_of_date)
       original_balance = loan.original_balance
 
       {
-        interest_rate: loan.interest_rate,
+        interest_rate: interest_rate,
+        base_interest_rate: (loan.interest_rate if loan.interest_rate != interest_rate),
         rate_type: loan.rate_type,
         term_months: loan.term_months,
         monthly_payment: monthly_payment&.amount,
@@ -118,6 +135,17 @@ class Assistant::Function::GetAccounts < Assistant::Function
         original_balance: original_balance&.amount,
         original_balance_formatted: original_balance&.format
       }.compact
+    end
+
+    # Loan#monthly_payment stays nil for a variable loan, which has no single
+    # contracted repayment. It always has the next one, though, sized at every
+    # change recorded before it, and that is what the Overview tab quotes. Nil
+    # when there is no schedule or it has run out, so the key is omitted rather
+    # than reported as zero.
+    def payment_in_force(loan, as_of_date)
+      return loan.monthly_payment unless loan.variable_rate_type?
+
+      loan.amortization_schedule&.payment_in_force(as_of_date)
     end
 
     def credit_card_terms(credit_card)
