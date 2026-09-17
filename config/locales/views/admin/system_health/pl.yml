@@ -1,0 +1,302 @@
+---
+pl:
+  admin:
+    system_health:
+      show:
+        ai:
+          adapters:
+            openai: Hostowany magazyn wektorowy OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          alerts:
+            custom_openai:
+              message: Skonfigurowany endpoint nie przeszedł testu dostępności /v1/vector_stores.
+                Większość lokalnych i kompatybilnych z OpenAI endpointów nie implementuje
+                tego API. Czat i przetwarzanie PDF mogą nadal działać. W typowej konfiguracji
+                lokalnej użyj pgvector z osobnym endpointem embeddingów. Błąd zapisano
+                w Ustawienia → Logi debugowania oraz w Rails.logger.
+              title: Test hostowanego magazynu wektorowego nie powiódł się dla tego
+                niestandardowego endpointu
+            embedding_dimensions_mismatch:
+              message: Endpoint embeddingów zwrócił wektor, którego długość nie zgadza
+                się z EMBEDDING_DIMENSIONS. Ustaw EMBEDDING_MODEL i EMBEDDING_DIMENSIONS
+                na udokumentowany rozmiar wektora danego modelu, zrestartuj Sure,
+                aby zmienne środowiskowe się utrwaliły, a następnie zmień lub odtwórz
+                kolumnę/tabelę embeddingów pgvector i ponownie wygeneruj embeddingi
+                dokumentów, jeśli istniejące dane używały innego rozmiaru.
+              title: Wymiary embeddingów się nie zgadzają
+            embedding_probe_failed:
+              message: Sure nie mógł utworzyć krótkiego testowego embeddingu przez
+                skonfigurowany endpoint i model. Sprawdź EMBEDDING_URI_BASE, EMBEDDING_MODEL,
+                EMBEDDING_ACCESS_TOKEN oraz logi dostawcy embeddingów. Błąd zapisano
+                w Ustawienia → Logi debugowania oraz w Rails.logger.
+              title: Test działania embeddingów nie powiódł się
+            embedding_probe_timeout:
+              message: Endpoint embeddingów nie odpowiedział przed upływem AI_HEALTH_PROBE_TIMEOUT.
+                Jeśli dostawca jest wolny, zwiększ ten limit czasu testu kondycji,
+                a następnie zrestartuj Sure, aby zmienne środowiskowe utrwaliły się
+                we wszystkich procesach. Jeśli zwykłe wywołania czatu AI również przekraczają
+                limit czasu, zwiększ osobno OPENAI_REQUEST_TIMEOUT.
+              title: Test działania embeddingów przekroczył limit czasu
+            function_calling_not_used:
+              message: Endpoint zaakceptował parametr tools, ale model odpowiedział
+                tekstem zamiast wywołać narzędzie testu kondycji. Asystent AI nie
+                może odczytać danych finansowych bez wywołań narzędzi, więc czat może
+                odpowiadać pustką albo zmyślonymi liczbami. Wybierz model, którego
+                dostawca dokumentuje obsługę wywoływania funkcji.
+              title: Model odpowiedział, nie wywołując narzędzia, o które go poproszono
+            function_calling_unsupported:
+              message: Endpoint obsłużył zwykłe żądanie czatu, ale odrzucił to samo
+                żądanie z parametrem tools. Asystent AI odczytuje konta, transakcje
+                i pozycje portfela przez wywołania funkcji, więc czat będzie zawodził
+                — często z niezbyt pomocnym błędem 404 — dopóki nie wybierzesz modelu
+                obsługującego narzędzia. Wybierz model, którego dostawca dokumentuje
+                obsługę wywoływania funkcji. Błąd zapisano w Ustawienia → Logi debugowania
+                oraz w Rails.logger.
+              title: Model nie obsługuje wywoływania funkcji
+            llm_model_not_available:
+              message: Endpoint odpowiedział, ale nie wymienił ani nie obsłużył skonfigurowanego
+                modelu. Wybierz aktywny model dla wybranego dostawcy, a następnie
+                uruchom testy ponownie. Dla Gemini przez warstwę zgodną z OpenAI użyj
+                aktualnie obsługiwanego modelu, np. gemini-2.5-flash.
+              title: Skonfigurowany model AI jest niedostępny
+            llm_probe_failed:
+              message: Sure nie mógł zweryfikować skonfigurowanego endpointu ani modelu.
+                Błąd zapisano w Ustawienia → Logi debugowania oraz w Rails.logger.
+              title: Test na żywo modelu LLM nie powiódł się
+            missing_vector_store:
+              message: Przesłanych dokumentów nie można zindeksować ani przeszukać,
+                dopóki nie skonfigurujesz adaptera magazynu wektorowego i jego wymagań.
+              title: Brak skonfigurowanego magazynu wektorowego
+            pdf_text_extraction_failed:
+              message: Sure nie ukończył ścieżki opartej na tekście, która lokalnie
+                wyodrębnia tekst z PDF i wysyła go do skonfigurowanego modelu. Żadne
+                dane klienta nie zostały wysłane. Błąd zapisano w Ustawienia → Logi
+                debugowania oraz w Rails.logger.
+              title: Test wyodrębniania tekstu z syntetycznego PDF nie powiódł się
+            pdf_vision_processing_failed:
+              message: Sure nie ukończył ścieżki obrazu lub natywnego dokumentu PDF
+                przez skonfigurowany model. Żadne dane klienta nie zostały wysłane.
+                Błąd zapisano w Ustawienia → Logi debugowania oraz w Rails.logger.
+              title: Test wizyjny/natywny syntetycznego PDF nie powiódł się
+            pgvector_extension_not_enabled:
+              message: Wybrano adapter pgvector, ale PostgreSQL nie ma włączonego
+                rozszerzenia vector dla tej bazy danych. Użyj obrazu PostgreSQL zawierającego
+                pgvector, włącz rozszerzenie jako właściciel bazy lub superużytkownik,
+                a następnie uruchom ponownie migracje z VECTOR_STORE_PROVIDER=pgvector.
+              title: Rozszerzenie vector PostgreSQL nie jest włączone
+            pgvector_probe_failed:
+              message: Sure nie mógł odpytać tabeli fragmentów pgvector. Sprawdź uprawnienia
+                PostgreSQL, rozszerzenie vector oraz migrację vector_store_chunks.
+                Błąd zapisano w Ustawienia → Logi debugowania oraz w Rails.logger.
+              title: Test magazynu pgvector nie powiódł się
+            pgvector_table_not_found:
+              message: Rozszerzenie pgvector jest włączone, ale nie znaleziono tabeli
+                fragmentów. Sprawdź stan migracji, a następnie uruchom ponownie migrację
+                magazynu wektorów z VECTOR_STORE_PROVIDER=pgvector, aby Sure mógł
+                utworzyć vector_store_chunks.
+              title: Brak tabeli vector_store_chunks
+            qdrant:
+              message: Adapter Qdrant jest przygotowany szkieletowo, ale przesyłanie
+                i wyszukiwanie dokumentów obecnie nie działa. Do wyszukiwania dokumentów
+                wybierz OpenAI lub pgvector.
+              title: Obsługa Qdrant nie jest jeszcze zaimplementowana
+            unavailable_vector_store:
+              message: Sprawdź wymagania adaptera poniżej. Dla pgvector baza danych
+                musi udostępniać rozszerzenie vector albo istniejącą tabelę vector_store_chunks.
+              title: Wybrany magazyn wektorowy jest niedostępny
+            vector_probe_failed:
+              message: Sure nie mógł zweryfikować wybranego magazynu wektorowego ani
+                wymaganych usług embeddingów. Błąd zapisano w Ustawienia → Logi debugowania
+                oraz w Rails.logger.
+              title: Test na żywo wyszukiwania dokumentów nie powiódł się
+          failure_codes:
+            dimensions_mismatch: Wymiary wektora embeddingu nie zgadzają się ze skonfigurowanymi
+              wymiarami
+            extension_not_enabled: Rozszerzenie vector w PostgreSQL nie jest włączone
+            invalid_response: Usługa zwróciła nieoczekiwaną odpowiedź
+            model_not_available: Dostawca nie zwrócił skonfigurowanego modelu
+            no_tool_call: Model odpowiedział bez wywołania narzędzia testu kondycji
+            render_missing_binary: Renderer pdftoppm (poppler-utils) jest niedostępny
+              w tym kontenerze
+            request_failed: Żądanie do usługi nie powiodło się
+            table_not_found: Nie znaleziono tabeli vector_store_chunks
+            timeout: Usługa nie odpowiedziała przed upływem limitu czasu testu
+            tools_refused: Usługa obsłużyła to samo żądanie bez narzędzi, a z narzędziami
+              je odrzuciła
+            unsupported_provider: Dostawca nie obsługuje tego testu
+          function_calling_statuses:
+            failing: Test na żywo nie powiódł się
+            not_checked: Nie sprawdzono
+            not_used: Narzędzia zaakceptowane, ale model żadnego nie wywołał
+            supported: Wywołanie narzędzia na żywo powiodło się
+            unavailable: Niedostępne, dopóki nie skonfigurowano dostawcy LLM
+            unsupported: Nieobsługiwane przez aktualnego dostawcę/model
+          labels:
+            adapter: Adapter
+            adapter_available: Adapter dostępny
+            anthropic_credentials: Poświadczenia Anthropic
+            effective_provider: Faktyczny dostawca
+            embedding_dimensions: Wymiary embeddingu
+            embedding_endpoint: Endpoint embeddingów
+            embedding_model: Model embeddingów
+            embedding_probe: Test endpointu embeddingów
+            endpoint: Endpoint
+            failure_reason: Przyczyna błędu
+            function_calling: Wywoływanie funkcji (narzędzia)
+            function_calling_failure_reason: Powód niepowodzenia wywoływania funkcji
+            llm_request_timeout: Limit czasu żądania LLM
+            model: Model
+            openai_compatible_credentials: Poświadczenia API kompatybilnego z OpenAI
+            openai_credentials: Poświadczenia OpenAI
+            pdf_text_extraction: Ścieżka wyodrębniania tekstu z PDF
+            pdf_text_extraction_failure_reason: Przyczyna błędu wyodrębniania tekstu
+            pdf_vision_processing: Ścieżka wizyjna/natywna PDF
+            pdf_vision_processing_failure_reason: Przyczyna błędu ścieżki wizyjnej/natywnej
+            pgvector_extension: Rozszerzenie vector w PostgreSQL
+            pgvector_table: Tabela fragmentów wektorowych
+            probe_request_timeout: Limit czasu testu kondycji
+            selected_provider: Wybrany dostawca
+            storage_probe: Test magazynu pgvector
+          last_checked: Testy na żywo zakończono %{time_ago} temu. Wyniki są krótko
+            przechowywane w pamięci podręcznej.
+          llm:
+            description: Testy na żywo weryfikują skonfigurowany model, a następnie
+              osobno sprawdzają wyodrębnianie tekstu i przetwarzanie wizyjne/natywne
+              na jednostronicowym syntetycznym PDF bez danych klienta. Wartości poświadczeń
+              nigdy nie są wyświetlane.
+            title: Przetwarzanie LLM i PDF
+          local_setup:
+            description: Uruchom LLM przez lokalny endpoint kompatybilny z OpenAI,
+              przechowuj wektory dokumentów w pgvector i skieruj ustawienia embeddingów
+              na endpoint embeddingów kompatybilny z OpenAI. Obraz PostgreSQL musi
+              zawierać rozszerzenie vector, a wymiary embeddingu muszą pasować do
+              wybranego modelu.
+            title: Zalecana konfiguracja lokalna
+          not_checked_help: Otwórz bezpośrednio URL statusu AI albo uruchom testy,
+            aby zweryfikować dostępność usługi.
+          pdf_statuses:
+            failing: Test syntetycznego PDF nie powiódł się
+            not_checked: Nie sprawdzono
+            supported: Test syntetycznego PDF przeszedł pomyślnie
+            unavailable: Niedostępne, dopóki nie skonfigurujesz dostawcy LLM
+            unsupported: Wyłączone lub nieobsługiwane przez aktualnego dostawcę/model
+          probe_statuses:
+            failing: Test na żywo nie powiódł się
+            not_checked: Nie sprawdzono
+            not_configured: Nie skonfigurowano
+            passing: Test na żywo przeszedł pomyślnie
+          providers:
+            anthropic: Anthropic
+            cloudflare: Cloudflare
+            custom_openai_compatible: Niestandardowy endpoint
+            kilo: Kilo
+            ollama: Ollama
+            openai: OpenAI
+            openai_compatible: Kompatybilny z OpenAI
+            openrouter: OpenRouter
+            together: Together
+          run_checks: Uruchom testy ponownie
+          values:
+            available: Dostępny
+            available_not_enabled: Dostępny, nie włączony
+            configured: Skonfigurowany
+            enabled: Włączony
+            fallback: "(rezerwowy)"
+            'no': Nie
+            not_available: Niedostępny
+            not_configured: Nie skonfigurowano
+            not_found: Nie znaleziono
+            not_set: Nie ustawiono
+            'yes': Tak
+          vector_statuses:
+            failing: Test na żywo nie powiódł się
+            missing: Nie skonfigurowano
+            not_checked: Nie sprawdzono
+            not_configured: Nie skonfigurowano
+            passing: Testy na żywo przeszły pomyślnie
+            scaffolded: Przygotowane szkieletowo
+          vector_store:
+            description: Test na żywo odpytuje hostowane API magazynu wektorowego
+              albo testuje tabelę pgvector i tworzy jeden krótki embedding bez zapisywania
+              go.
+            title: Magazyn wektorowy i wyszukiwanie dokumentów
+          worker:
+            configuration_statuses:
+              match: Zgodne z web
+              mismatch: Różni się od web
+            coverage_notice: Każdy test sprawdza dokładnie jeden proces workera —
+              ten, który go pobierze z kolejki. Przy więcej niż jednej replice workera
+              pozytywny wynik nie potwierdza, że wszystkie workery działają poprawnie
+              — uruchom test ponownie, żeby sprawdzić kolejny.
+            description: Powyższe testy uruchomiono z tego procesu web. Większość
+              pracy AI — odpowiedzi asystenta, przetwarzanie PDF, embeddingi, automatyczna
+              kategoryzacja i wykrywanie sprzedawcy — działa w rzeczywistości w procesie
+              workera Sidekiq, który może różnić się dostępem do sieci, DNS, regułami
+              proxy, a nawet wczytanymi poświadczeniami. Uruchom test, żeby zweryfikować
+              własną konfigurację i łączność workera.
+            empty:
+              description: Kliknij „Zweryfikuj konfigurację workera”, aby dodać do
+                kolejki asynchroniczny test. Wynik pojawi się tutaj, gdy proces workera
+                go podejmie.
+              title: Żaden worker jeszcze się nie zgłosił
+            labels:
+              checked_at: Sprawdzono
+              configuration: Konfiguracja
+              process: Proces workera
+            settings_origin:
+              database_backed: Ustawienia dostawcy, modelu i klucza API zmienione
+                w Ustawienia → Self-Hosting są zapisywane w bazie danych. rails-settings-cached
+                unieważnia współdzielony cache przy zapisie, więc zarówno web, jak
+                i worker odczytują nową wartość przy kolejnym żądaniu lub zadaniu
+                z kolejki — restart nie jest potrzebny.
+              env_backed: Konfiguracja embeddingów oraz każda wartość ustawiona wyłącznie
+                przez zmienną środowiskową jest utrwalana przy starcie każdego kontenera.
+                Rails nie może zmienić środowiska innego kontenera, więc zmiana tych
+                wartości wymaga zrestartowania lub odtworzenia zarówno usługi web,
+                jak i workera — a narzędzia wdrożeniowe restartujące tylko jedną z
+                nich (częściowy rollout, zaktualizowany Secret bez restartu poda)
+                nie uwzględnią zmiany.
+              title: Które ustawienia wymagają restartu?
+            statuses:
+              failing: Niepowodzenie
+              passing: Powodzenie
+              stale: Nieaktualne
+            title: Weryfikacja workera
+            verify_button: Zweryfikuj konfigurację workera
+        alert:
+          title: Zadania w tle nie działają
+        counters_section_description: Zagregowane liczniki Sidekiq ze wszystkich kolejek.
+        counters_section_title: Liczniki zadań
+        labels:
+          enqueued: W kolejce
+          failed: Nieudane
+          last_heartbeat: Ostatni sygnał życia
+          latency: Opóźnienie
+          max_queue_latency: Wiek najstarszego zadania
+          processed_total: Łącznie przetworzonych
+          processes: Procesy robocze
+          queue: Kolejka
+          retries: Ponowienia
+          size: Rozmiar
+          status: Status
+        queues_section_description: Głębokość i wiek najstarszego zadania w każdej
+          kolejce. Opóźnienie to liczba sekund oczekiwania najstarszego zadania.
+        queues_section_title: Kolejki
+        status_section_description: Aktualny stan procesu w tle, który obsługuje synchronizacje,
+          salda i obliczenia wartości netto.
+        status_section_title: Status Sidekiq
+        tabs:
+          ai: Status AI
+          background_jobs: Zadania w tle
+        title: Kondycja systemu
+        values:
+          healthy: Sprawny
+          never: Nigdy
+          no_queues: Brak zarejestrowanych kolejek. Proces roboczy może nie działać.
+          seconds: "%{seconds}s"
+          time_ago: "%{time_ago} temu"
+          unhealthy: Zdegradowany
+      verify_worker_ai:
+        queued: Test workera dodano do kolejki. Pojawi się poniżej, gdy proces workera
+          go podejmie, zwykle w ciągu kilku sekund.

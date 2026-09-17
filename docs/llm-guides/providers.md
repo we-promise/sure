@@ -5,6 +5,22 @@ selection and `Provided` concerns. For a new securities price provider, follow
 [the complete workflow](adding-a-securities-provider.md), including response
 types, MIC mapping, currency handling, settings encryption, UI, locales and tests.
 
+## Provider logos
+
+A provider's logo comes from [`ProviderLogo`](../../app/components/provider_logo.rb): the
+Brandfetch icon for the `domain` in its
+[`Provider::Metadata::REGISTRY`](../../app/models/provider/metadata.rb) entry, falling back
+to `logo_icon`, then `logo_text` initials on `logo_color`. Anything identifying a provider
+renders `render ProviderLogo.new(provider_key: :<x>)` — the `_<x>_item` card on Accounts,
+the Bank Sync cards and connection rows, and the connection rows in
+`settings/providers/_<x>_panel` — rather than a hand-built badge or the first letter of a
+connection name. A panel's setup form and instructions carry no logo.
+
+Give each new provider a registry entry with a brand domain. Only a provider with no single
+brand behind it (on-chain wallets) omits the domain and sets `logo_icon` instead.
+Institution logos are a separate concept and belong on accounts through
+`Account#logo_url`, never on a provider.
+
 ## Support diagnostics
 
 When a provider sync/import path encounters a recoverable error, suspicious partial
@@ -95,3 +111,10 @@ to Up; the SimpleFIN and Lunchflow flags do not provide the same environment gat
 [importer](../../app/models/monobank_item/importer.rb) dumps raw payloads only when
 `Rails.env.local?` is also true, because the dump contains PII (merchant and
 counterparty names, IBANs, amounts, account ids). Preserve that local-only guard.
+
+`FIO_DEBUG_RAW=1` has the same local-only guard in the
+[importer](../../app/models/fio_item/importer.rb). Fio additionally authenticates by
+putting the token in the **URL path**, so neither [the client](../../app/models/provider/fio.rb)
+nor the importer may put a resolved URL into an exception message, a log line or debug
+metadata; requests are labelled with a static operation name instead. Fio reports no
+pending state, so it is deliberately absent from `Transaction::PENDING_PROVIDERS`.

@@ -85,15 +85,15 @@ pt-PT:
           title: Desligar assistente externo?
           body: Isto removerá o URL, o token e o ID do agente guardados, e mudará para o assistente incorporado. Pode voltar a ligar-se mais tarde introduzindo novas credenciais.
       brand_fetch_settings:
-        description: Introduza o Client ID fornecido pela Brand Fetch
-        env_configured_message: Configurou com sucesso o seu Client ID da Brand Fetch através da variável de ambiente BRAND_FETCH_CLIENT_ID.
+        description: Introduza o Client ID fornecido pela Brandfetch
+        env_configured_message: Configurou com sucesso o seu Client ID da Brandfetch através da variável de ambiente BRAND_FETCH_CLIENT_ID.
         show_details: "(mostrar detalhes)"
-        setup_step_1_html: 'Visite <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> e crie uma conta gratuita de Developer da Brand Fetch.'
+        setup_step_1_html: 'Visite <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> e crie uma conta gratuita de Developer da Brandfetch.'
         setup_step_2_html: 'Vá para a página <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
         setup_step_3: 'Toque no ícone de olho na secção "Your Client ID" para revelar o seu Client ID e cole-o abaixo.'
         label: Client ID
         placeholder: Introduza o seu Client ID aqui
-        title: Definições da Brand Fetch
+        title: Definições da Brandfetch
         high_res_label: Ativar logótipos de alta resolução
         high_res_description: Quando ativado, os logótipos serão obtidos com resolução de 120x120 em vez de 40x40. Isto fornece imagens mais nítidas em ecrãs high-DPI.
       llm_provider_selector:
