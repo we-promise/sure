@@ -29,7 +29,7 @@ module ConnectorAuthorizable
     # are authenticating. Guests never may -- they are read-only by design.
     def require_connector_create!
       return if Current.user&.admin?
-      return if connector_item_class&.member_connectable? && Current.user&.role == "member"
+      return if connector_item_class&.member_connectable? && Current.user&.member?
 
       deny_connector_access!
     end

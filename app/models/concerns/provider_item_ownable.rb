@@ -73,7 +73,11 @@ module ProviderItemOwnable
     return false if user.blank?
     return true if user.admin?
 
-    self.class.member_connectable? && owned_by?(user)
+    # `user.member?` is re-checked rather than trusting ownership alone: a role
+    # can change under an existing owner (Admin::UsersController#update edits it
+    # in place), and a user demoted to guest must lose manage rights on a
+    # connection they added while they were a member.
+    self.class.member_connectable? && owned_by?(user) && user.member?
   end
 
   private

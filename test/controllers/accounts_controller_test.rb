@@ -792,7 +792,10 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
   # --- member-owned connections (issue #3579) ------------------------------
 
-  test "an owned connection card shows only accounts the viewer may see" do
+  test "an owner is not shown a connection carrying an account they cannot see" do
+    # Ownership must not widen exposure: the card renders the item's accounts
+    # unfiltered (and is re-rendered by a viewer-less broadcast), so the whole
+    # card is withheld rather than shown with a filtered list.
     member = users(:family_member)
     family = families(:dylan_family)
     item = PlaidItem.create!(
@@ -815,13 +818,25 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
 
     assert_response :success
-    # Assert the card renders BEFORE asserting the account is absent -- an
-    # absence check alone would also pass if the whole card disappeared.
-    assert_select "##{ActionView::RecordIdentifier.dom_id(item)}", count: 1
-    # The card is visible because the member owns the connection, but an
-    # account they have no access to must not be rendered on it.
+    assert_select "##{ActionView::RecordIdentifier.dom_id(item)}", count: 0
     assert_no_match(/Not Shared With Member/, response.body)
   end
+
+  test "an owner is shown their freshly connected item before it has any accounts" do
+    # The case ownership visibility exists for: just connected, nothing synced.
+    member = users(:family_member)
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_fresh_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Fresh Bank", owner: member
+    )
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{ActionView::RecordIdentifier.dom_id(item)}", count: 1
+  end
+
 
   test "an owner sees the management controls on their own connection card" do
     member = users(:family_member)
@@ -835,6 +850,21 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 1
+  end
+
+  test "a member demoted to guest loses the controls on a connection they own" do
+    member = users(:family_member)
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_demote_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Demoted Bank", owner: member
+    )
+    member.update!(role: :guest)
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
   end
 
   test "a member sees no controls on a connection someone else owns" do

@@ -83,17 +83,15 @@
 
     <% unless plaid_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <%# The card is visible to the item's owner even when they cannot
-            access every account on it (a share may have been revoked), so the
-            list is filtered to what this user may actually see. Admins keep
-            the full view. %>
-        <% visible_accounts = if Current.user&.admin?
-             plaid_item.accounts
-           else
-             plaid_item.accounts.select { |account| account.shared_with?(Current.user) }
-           end %>
-        <% if visible_accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+        <%# NOTE: no per-viewer filtering here. This partial is also rendered
+            by PlaidItem::SyncCompleteEvent from the sync job, where
+            Current.user is nil (same gotcha as accounts/_sync_controls), so a
+            viewer-dependent filter would empty the list for everyone on every
+            broadcast. Visibility is decided in AccountsController#visible_provider_items
+            instead, which only shows an owner a card whose accounts they can
+            already see. %>
+        <% if plaid_item.accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: plaid_item.accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
