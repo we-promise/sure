@@ -82,9 +82,10 @@ class Assistant::Function::GetDocumentText < Assistant::Function
     payload[:note] = result.note if result.note
     return payload unless result.extractable
 
-    # Floored at zero only: an upper bound here would strand the tail of any
+    # Floored at zero only: a fixed upper bound here would strand the tail of any
     # page longer than it, which is the exact failure the cursor exists to fix.
-    # An offset past the end of the page simply yields no text.
+    # An offset past the end of the page simply yields no text; page_window caps
+    # it at that page's length before slicing.
     from_char = [ Integer(params["from_char"].to_s, exception: false) || 0, 0 ].max
 
     payload.merge(page_window(result, from_page, from_char))
@@ -104,7 +105,13 @@ class Assistant::Function::GetDocumentText < Assistant::Function
       continuation_from = from_char
 
       while page_number <= result.page_count
-        remaining = result.pages[page_number - 1].to_s[offset..].to_s
+        page_text = result.pages[page_number - 1].to_s
+        # Capped at this page's own length, which strands nothing: past the end
+        # there is no text either way. Uncapped, an integer too large for a
+        # native long (the schema sets only a minimum) made String#[] raise
+        # RangeError and failed the whole call.
+        offset = [ offset, page_text.length ].min
+        remaining = page_text[offset..].to_s
 
         if remaining.length > MAX_CHARS
           # Only ever the first slot: a chunk this size fills the whole budget,

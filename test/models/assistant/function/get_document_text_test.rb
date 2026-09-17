@@ -157,6 +157,27 @@ class Assistant::Function::GetDocumentTextTest < ActiveSupport::TestCase
     assert_equal false, result[:has_more_pages]
   end
 
+  # The schema sets only a minimum, and Integer() turns an arbitrarily large
+  # cursor into a Bignum that String#[] rejects with RangeError, which failed the
+  # whole tool call instead of returning the empty rest of the page.
+  test "a cursor past the end of the page returns no text instead of raising" do
+    statement = create_statement
+
+    AccountStatement::TextExtractor.any_instance.stubs(:extract).returns(
+      AccountStatement::TextExtractor::Result.new(
+        pages: [ "page one", "page two" ], page_count: 2, extractable: true, note: nil
+      )
+    )
+
+    [ 100, 10**30, (10**30).to_s ].each do |from_char|
+      result = @fn.call("account_statement_id" => statement.id, "from_page" => 1, "from_char" => from_char)
+
+      assert_equal "", result[:pages].first[:text], "from_char=#{from_char}"
+      assert_equal "page two", result[:pages].last[:text]
+      assert_equal false, result[:has_more_pages]
+    end
+  end
+
   test "an oversized page hands the following pages back once it is exhausted" do
     max = Assistant::Function::GetDocumentText::MAX_CHARS
     statement = create_statement
