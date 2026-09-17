@@ -525,12 +525,18 @@ class Budget < ApplicationRecord
       family.accounts.where(owner_id: user_id).included_in_reports if user_id.present?
     end
 
+    # include_non_operating: true -- a budgeted, fully-contributed
+    # "Investment Contributions" category must show as fully spent here, or
+    # Budget::RolloverCalculator carries the allocation forward as unused
+    # surplus every month even though the user already moved the money (see
+    # PR #3609 review). Dashboard/report "spending" surfaces must NOT do
+    # this; that's the whole point of the classification split.
     def net_totals
-      @net_totals ||= income_statement.net_category_totals(period: period)
+      @net_totals ||= income_statement.net_category_totals(period: period, include_non_operating: true)
     end
 
     def expense_totals
-      @expense_totals ||= income_statement.expense_totals(period: period)
+      @expense_totals ||= income_statement.expense_totals(period: period, include_non_operating: true)
     end
 
     def income_totals
