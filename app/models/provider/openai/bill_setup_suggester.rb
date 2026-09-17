@@ -41,6 +41,7 @@ class Provider::Openai::BillSetupSuggester
         ]
       }
       params[:response_format] = response_format if response_format
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
 
       response = client.chat(parameters: params)
 

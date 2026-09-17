@@ -136,7 +136,7 @@ class Provider::Openai::AutoMerchantDetector
         user_merchants: user_merchants
       })
 
-      response = client.responses.create(parameters: {
+      params = {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         input: [ { role: "developer", content: developer_message } ],
         text: {
@@ -148,7 +148,10 @@ class Provider::Openai::AutoMerchantDetector
           }
         },
         instructions: instructions
-      })
+      }
+      params = Provider::Openai.apply_reasoning_effort(params, api: :responses)
+
+      response = client.responses.create(parameters: params)
 
       Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage", "total_tokens")}")
 
@@ -242,6 +245,7 @@ class Provider::Openai::AutoMerchantDetector
         params[:response_format] = { type: "json_object" }
         # JSON_MODE_NONE: no response_format constraint
       end
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
 
       response = client.chat(parameters: params)
 

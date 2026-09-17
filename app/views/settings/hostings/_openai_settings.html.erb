@@ -70,6 +70,16 @@
                     data: { "auto-submit-form-target": "auto" } } %>
   <p class="text-xs text-secondary mt-1"><%= t(".json_mode_help") %></p>
 
+  <%= form.select :openai_reasoning_effort,
+                  options_for_select(
+                    [[t(".reasoning_effort_default"), ""]] + Provider::Openai::REASONING_EFFORTS.map { |e| [t(".reasoning_effort_#{e}"), e] },
+                    Setting.openai_reasoning_effort
+                  ),
+                  { label: t(".reasoning_effort_label") },
+                  { disabled: ENV["OPENAI_REASONING_EFFORT"].present?,
+                    data: { "auto-submit-form-target": "auto" } } %>
+  <p class="text-xs text-secondary mt-1"><%= t(".reasoning_effort_help") %></p>
+
   <div class="pt-4 border-t border-secondary">
     <h3 class="font-medium mb-1"><%= t(".budget_heading") %></h3>
     <p class="text-xs text-secondary mb-3"><%= t(".budget_description") %></p>

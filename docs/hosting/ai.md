@@ -367,6 +367,7 @@ For self-hosted deployments, you can configure AI settings through the web inter
    - **API Base URL** - Custom endpoint (leave blank for OpenAI)
    - **Model** - Model name (required for custom endpoints)
    - **JSON Mode** - Structured-output format; `Auto` suits most models
+   - **Reasoning effort** - Sent as `reasoning_effort` on every OpenAI-compatible request (`reasoning: { effort }` for Responses-API calls). Lowers latency and output-budget use for reasoning models (e.g. Qwen3, gpt-oss, GPT-5). Leave on the default unless your model supports it — the official OpenAI API rejects it for non-reasoning models. Can also be set via `OPENAI_REASONING_EFFORT` (`none` | `minimal` | `low` | `medium` | `high`; unset means the parameter is not sent).
 4. Optionally tune **Token Budget** — Context Window, Max Response Tokens and Max Items Per Batch. The defaults are conservative so small-context local models work out of the box; raise them for cloud or large-context models.
 5. Optionally set **Chat Response Timeout** — how long the chat waits for a whole turn before showing a "no response" error (default 90s). Raise it for slow local models; see [Chat Errors While the Model Is Still Generating](#chat-errors-while-the-model-is-still-generating).
 

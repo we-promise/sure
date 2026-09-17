@@ -8,6 +8,102 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject_model = "gpt-4.1"
   end
 
+  test "reasoning_effort returns nil when unset" do
+    Setting.stubs(:openai_reasoning_effort).returns(nil)
+    with_env_overrides("OPENAI_REASONING_EFFORT" => nil) do
+      assert_nil Provider::Openai.reasoning_effort
+    end
+  end
+
+  test "reasoning_effort uses ENV when set" do
+    with_env_overrides("OPENAI_REASONING_EFFORT" => "low") do
+      assert_equal "low", Provider::Openai.reasoning_effort
+    end
+  end
+
+  test "reasoning_effort falls back to Setting when ENV is blank" do
+    Setting.stubs(:openai_reasoning_effort).returns("high")
+    with_env_overrides("OPENAI_REASONING_EFFORT" => "") do
+      assert_equal "high", Provider::Openai.reasoning_effort
+    end
+  end
+
+  test "reasoning_effort normalizes case and whitespace" do
+    with_env_overrides("OPENAI_REASONING_EFFORT" => "LOW ") do
+      assert_equal "low", Provider::Openai.reasoning_effort
+    end
+  end
+
+  test "reasoning_effort drops unsupported values without raising" do
+    with_env_overrides("OPENAI_REASONING_EFFORT" => "turbo") do
+      assert_nil Provider::Openai.reasoning_effort
+    end
+  end
+
+  test "apply_reasoning_effort adds reasoning_effort for chat api" do
+    with_env_overrides("OPENAI_REASONING_EFFORT" => "low") do
+      params = Provider::Openai.apply_reasoning_effort({ model: "x" }, api: :chat)
+      assert_equal "low", params[:reasoning_effort]
+    end
+  end
+
+  test "apply_reasoning_effort adds nested reasoning hash for responses api" do
+    with_env_overrides("OPENAI_REASONING_EFFORT" => "high") do
+      params = Provider::Openai.apply_reasoning_effort({ model: "x" }, api: :responses)
+      assert_equal({ effort: "high" }, params[:reasoning])
+    end
+  end
+
+  test "apply_reasoning_effort leaves params unchanged when unset" do
+    Setting.stubs(:openai_reasoning_effort).returns(nil)
+    with_env_overrides("OPENAI_REASONING_EFFORT" => nil) do
+      params = { model: "x" }
+      assert_equal params, Provider::Openai.apply_reasoning_effort(params, api: :chat)
+      assert_equal params, Provider::Openai.apply_reasoning_effort(params, api: :responses)
+    end
+  end
+
+  test "generic chat path sends reasoning_effort when configured" do
+    with_env_overrides(
+      "OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => "false",
+      "OPENAI_REASONING_EFFORT" => "low"
+    ) do
+      subject = Provider::Openai.new("test-token")
+      fake_client = mock
+      captured = nil
+      fake_client.expects(:chat).with { |args| captured = args[:parameters]; true }.returns(
+        { "choices" => [ { "message" => { "content" => "Yes" } } ], "usage" => { "total_tokens" => 1 } }
+      )
+      subject.stubs(:client).returns(fake_client)
+
+      response = subject.chat_response("hi", model: "gpt-4.1")
+
+      assert response.success?
+      assert_equal "low", captured[:reasoning_effort]
+    end
+  end
+
+  test "generic chat path omits reasoning_effort when unset" do
+    Setting.stubs(:openai_reasoning_effort).returns(nil)
+    with_env_overrides(
+      "OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => "false",
+      "OPENAI_REASONING_EFFORT" => nil
+    ) do
+      subject = Provider::Openai.new("test-token")
+      fake_client = mock
+      captured = nil
+      fake_client.expects(:chat).with { |args| captured = args[:parameters]; true }.returns(
+        { "choices" => [ { "message" => { "content" => "Yes" } } ], "usage" => { "total_tokens" => 1 } }
+      )
+      subject.stubs(:client).returns(fake_client)
+
+      response = subject.chat_response("hi", model: "gpt-4.1")
+
+      assert response.success?
+      assert_not captured.key?(:reasoning_effort)
+    end
+  end
+
   test "request_timeout uses ENV then Setting then default" do
     Setting.stubs(:openai_request_timeout).returns(nil)
     with_env_overrides("OPENAI_REQUEST_TIMEOUT" => nil) do

@@ -835,4 +835,38 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.securities_providers = ""
     Setting.tinkoff_invest_api_key = nil
   end
+
+  test "can update openai reasoning effort with a valid value" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { openai_reasoning_effort: "low" } }
+
+      assert_equal "low", Setting.openai_reasoning_effort
+    end
+  ensure
+    Setting.openai_reasoning_effort = nil
+  end
+
+  test "blank openai reasoning effort clears the setting" do
+    with_self_hosting do
+      Setting.openai_reasoning_effort = "low"
+
+      patch settings_hosting_url, params: { setting: { openai_reasoning_effort: "" } }
+
+      assert_nil Setting.openai_reasoning_effort
+    end
+  ensure
+    Setting.openai_reasoning_effort = nil
+  end
+
+  test "rejects invalid openai reasoning effort" do
+    with_self_hosting do
+      Setting.openai_reasoning_effort = nil
+
+      patch settings_hosting_url, params: { setting: { openai_reasoning_effort: "turbo" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Reasoning effort must be one of/, flash[:alert])
+      assert_nil Setting.openai_reasoning_effort
+    end
+  end
 end
