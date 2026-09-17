@@ -38,10 +38,38 @@ class TradeTest < ActiveSupport::TestCase
     assert_nil sell.realized_gain_loss, "a neighbouring day's rate is not this day's"
   end
 
+  # `ExchangeRate` validates presence only -- no positivity at the model, and
+  # `rate` is a plain `decimal, null: false` at the column -- so a provider or
+  # an import can leave a 0 or a negative behind. Multiplying by one is not a
+  # conversion: at 0 the 300 EUR of proceeds become nothing and the disposal
+  # reports a 200 USD total loss the user never took, and at -1.5 the proceeds
+  # go negative and the loss is 650. Neither is distinguishable on the page
+  # from a real one, and both are tax-relevant.
+  #
+  # A rate that cannot convert is the missing-rate case, whatever is stored in
+  # the row, so it takes the same exit as an absent one.
+  test "a disposal whose stored rate cannot convert has no figure" do
+    [ 0, -1.5 ].each do |stored|
+      # Each case needs the same EUR->USD date, which is unique per pair.
+      ExchangeRate.where(from_currency: "EUR", to_currency: "USD").delete_all
+      sell = cross_currency_disposal(rate: stored)
+
+      assert_nil sell.realized_gain_loss, "a rate of #{stored} converts nothing"
+    end
+  end
+
   # One query for the rates a whole page of disposals needs, rather than one
   # per foreign disposal. Each disposal falls on its own date, because
   # identical lookups are served by the query cache and a single-date fixture
   # reads as flat whether the preload runs or not.
+  #
+  # The preload runs INSIDE the capture, which is the difference between
+  # counting what the page costs and counting what is left after the expensive
+  # part already happened. With it outside, the assertion was "measuring
+  # disposals issues no further rate queries" -- true, and it would stay true
+  # if `preload_exchange_rates` itself issued one query per trade. One query
+  # for the whole set is the claim, so one query for the whole set is what is
+  # counted.
   test "preloading answers every disposal's rate in one query" do
     account, security = cross_currency_account
 
@@ -53,15 +81,19 @@ class TradeTest < ActiveSupport::TestCase
       create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR").entryable
     end
 
-    Trade.preload_exchange_rates(trades)
     # The ivar directly, as ReportsController does on this branch -- there is
-    # no public writer for it upstream yet.
-    trades.each { |trade| trade.instance_variable_set(:@preloaded_holdings, account.holdings.to_a) }
+    # no public writer for it upstream yet. Outside the capture on purpose: the
+    # cost being counted is the rates', not the holdings'.
+    holdings = account.holdings.to_a
+    trades.each { |trade| trade.instance_variable_set(:@preloaded_holdings, holdings) }
 
-    queries = capture_sql_queries { trades.each { |trade| trade.realized_gain_loss } }
-      .grep(/exchange_rates/)
+    queries = capture_sql_queries do
+      Trade.preload_exchange_rates(trades)
+      trades.each { |trade| trade.realized_gain_loss }
+    end.grep(/exchange_rates/)
 
-    assert_empty queries, "the preload already answered them"
+    assert_equal 1, queries.size,
+                 "four disposals on four dates cost one rate query, not one each"
     assert_equal [ BigDecimal(250) ] * 4, trades.map { |t| t.realized_gain_loss.value.amount }
   end
 

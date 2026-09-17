@@ -214,6 +214,14 @@ class Trade < ApplicationRecord
     # lookback. A disposal happened on one known day; the rate for that day is
     # the rate, and its absence is a fact to report rather than a 1.0 nobody
     # can see.
+    #
+    # A rate that is present but not positive is absent for this purpose.
+    # `ExchangeRate` validates presence only -- neither the model nor the
+    # column requires a positive number -- so a provider or an import can leave
+    # a 0 behind, and multiplying by it books the disposal as a total loss the
+    # user never made. A negative one is worse: it flips the sign. Both are the
+    # missing-rate case wearing a number, and reporting no figure is the whole
+    # point of the paragraph above.
     def converted_to_basis_currency(proceeds, basis_currency)
       from = proceeds.currency.iso_code
       to = basis_currency.iso_code
@@ -221,7 +229,7 @@ class Trade < ApplicationRecord
 
       rate = preloaded_rate(from, to) ||
              ExchangeRate.find_by(from_currency: from, to_currency: to, date: entry.date)&.rate
-      return nil if rate.nil?
+      return nil unless rate.to_d.positive?
 
       Money.new(proceeds.amount * rate, to)
     end
