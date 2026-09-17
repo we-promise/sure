@@ -97,6 +97,38 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal(250) ] * 4, trades.map { |t| t.realized_gain_loss.value.amount }
   end
 
+  # The preload keys its basis side on the ACCOUNT's currency; the conversion
+  # targets the currency the POSITION is carried in. Those differ in exactly the
+  # shape this change exists for -- a EUR disposal of a GBP position in a USD
+  # account -- so every such disposal missed the preload and issued the lookup
+  # the preload is here to remove. The keys have to come from the holding that
+  # `realized_gain_loss` will actually select.
+  test "preloading answers a disposal against a position carried in a third currency" do
+    account, security = cross_currency_account
+
+    trades = (0..3).map do |offset|
+      date = Date.new(2026, 3, 10) + offset
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "GBP", date: date, rate: 0.8)
+      account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                               amount: BigDecimal(750), currency: "GBP", cost_basis: 100)
+      create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR").entryable
+    end
+
+    holdings = account.holdings.to_a
+    trades.each { |trade| trade.instance_variable_set(:@preloaded_holdings, holdings) }
+
+    queries = capture_sql_queries do
+      Trade.preload_exchange_rates(trades)
+      trades.each { |trade| trade.realized_gain_loss }
+    end.grep(/exchange_rates/)
+
+    assert_equal 1, queries.size,
+                 "a position in a third currency costs one rate query for the set, not one each"
+    # 2 units at 150 EUR is 300 EUR of proceeds, 240 GBP at 0.8, against a basis
+    # of 2 x 100 GBP.
+    assert_equal [ BigDecimal(40) ] * 4, trades.map { |t| t.realized_gain_loss.value.amount }
+  end
+
   test "build_name generates buy trade name" do
     name = Trade.build_name("buy", 10, "AAPL")
     assert_equal "Buy 10.0 shares of AAPL", name

@@ -92,12 +92,12 @@ class Trade < ApplicationRecord
   # reads one preloaded set instead of a query per foreign disposal. Keyed
   # `[from, to, date]`.
   #
-  # NOT authoritative when a key is absent, unlike preloaded_holdings: the
-  # preload keys the basis side on the ACCOUNT's currency, which is what the
-  # sync and import paths write a holding in, and a holding carried in some
-  # other currency would miss the preload. Treating that as "no rate" would
-  # exclude a disposal that is perfectly measurable, so a miss falls back to
-  # the single lookup rather than to a wrong answer.
+  # NOT authoritative when a key is absent, unlike preloaded_holdings: a caller
+  # that preloads rates without preloading holdings leaves the basis side
+  # unknowable without a query, so the preload keys it on the account's
+  # currency and a position carried in another one misses. Treating a miss as
+  # "no rate" would exclude a disposal that is perfectly measurable, so it
+  # falls back to the single lookup rather than to a wrong answer.
   def preloaded_exchange_rates=(value)
     @preloaded_exchange_rates = value
     remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
@@ -110,12 +110,23 @@ class Trade < ApplicationRecord
   def self.preload_exchange_rates(trades)
     return if trades.empty?
 
-    wanted = trades.filter_map do |trade|
+    wanted = trades.flat_map do |trade|
       from = trade.currency
-      to = trade.entry.account.currency
-      next if from.blank? || to.blank? || from == to
+      next [] if from.blank?
 
-      [ from, to, trade.entry.date ]
+      # BOTH sides the conversion can target: the account's currency, which is
+      # what a position is usually carried in, and the holding's own where the
+      # caller preloaded holdings and it differs. The conversion targets the
+      # currency of the holding `realized_gain_loss` selects, so keying only on
+      # the account's left a GBP position in a USD account -- the shape this
+      # method exists to serve -- missing the preload and paying a lookup per
+      # disposal. Asking for a pair that turns out unused costs nothing: the
+      # query already fetches the product of the three sets.
+      [ trade.entry.account.currency, trade.preloaded_basis_currency ]
+        .compact_blank
+        .uniq
+        .reject { |to| to == from }
+        .map { |to| [ from, to, trade.entry.date ] }
     end
 
     if wanted.empty?
@@ -132,6 +143,17 @@ class Trade < ApplicationRecord
       .to_h { |rate| [ [ rate.from_currency, rate.to_currency, rate.date ], rate.rate ] }
 
     trades.each { |trade| trade.preloaded_exchange_rates = rates }
+  end
+
+  # The currency this disposal's basis is carried in, where it can be answered
+  # without a query. `Holding#avg_cost` is Money in the HOLDING's own currency,
+  # which is not always the account's, and that is what the proceeds are
+  # converted into. nil when holdings were not preloaded: the preloader above
+  # must not issue the queries it exists to avoid.
+  def preloaded_basis_currency
+    return nil unless defined?(@preloaded_holdings)
+
+    basis_holding&.currency
   end
 
   # Calculates realized gain/loss for sell trades based on avg_cost at time of sale
@@ -161,6 +183,29 @@ class Trade < ApplicationRecord
       end
     end
 
+    # The position the disposal is measured against: the latest snapshot for
+    # this security on or before the disposal's date.
+    #
+    # Uses preloaded holdings when the caller set them, and treats a
+    # defined-but-empty preload as authoritative rather than falling back to a
+    # query. `select` + `max_by` rather than `find`, so the answer does not
+    # depend on the order the caller's array happens to be in.
+    # Not memoised: `realized_gain_loss` already is, and a memo here would hold
+    # a holding selected before a caller set `@preloaded_holdings`.
+    def basis_holding
+      if defined?(@preloaded_holdings)
+        (@preloaded_holdings || [])
+          .select { |h| h.security_id == security_id && h.date <= entry.date }
+          .max_by(&:date)
+      else
+        entry.account.holdings
+          .where(security_id: security_id)
+          .where("date <= ?", entry.date)
+          .order(date: :desc)
+          .first
+      end
+    end
+
     def calculate_realized_gain_loss
       return nil unless sell?
       # Moving an asset to another account you own realises nothing. Without
@@ -168,21 +213,7 @@ class Trade < ApplicationRecord
       # difference is booked as a gain the user never made.
       return nil if internal_movement?
 
-      # Use preloaded holdings if available (set by reports controller to avoid N+1)
-      # Treat defined-but-empty preload as authoritative to prevent DB fallback
-      holding = if defined?(@preloaded_holdings)
-        # Use select + max_by for deterministic selection regardless of array order
-        (@preloaded_holdings || [])
-          .select { |h| h.security_id == security_id && h.date <= entry.date }
-          .max_by(&:date)
-      else
-        # Fall back to database query only when not preloaded
-        entry.account.holdings
-          .where(security_id: security_id)
-          .where("date <= ?", entry.date)
-          .order(date: :desc)
-          .first
-      end
+      holding = basis_holding
 
       return nil unless holding&.avg_cost
 
