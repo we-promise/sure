@@ -91,7 +91,14 @@ class Portfolio::Xirr
   # is outside what Newton reaches or what a Float holds, so the annual form of
   # a few days' return is unreliable where the period form is ordinary.
   def initialize(flows, days_per_unit: DAYS_PER_YEAR)
-    @flows = normalize(flows)
+    moves = parse(flows).reject { |flow| flow.amount.zero? }
+
+    # The caller's own dates, captured before same-date flows are summed.
+    # The duration contract is about the span handed over, and summing can
+    # empty a date out entirely -- -1000 and +1000 on one day net to nothing --
+    # which would otherwise turn "no time passes" into "no sign change".
+    @input_dates = moves.map(&:date).uniq
+    @flows = aggregate(moves)
     @days_per_unit = days_per_unit.to_f
 
     # Finite as well as positive: Float::INFINITY is positive, and it would make
@@ -124,9 +131,13 @@ class Portfolio::Xirr
   # The money-weighted rate per `days_per_unit`, as a BigDecimal
   # (0.0725 == 7.25%). Annualised unless the caller said otherwise.
   def rate
+    # Duration is checked first, and against the caller's dates rather than the
+    # summed ones. "You gave me no time span" is prior to "money only went one
+    # way": without a span no rate exists whatever the signs do. It also keeps
+    # -1000 and +1000 on a single date reporting the span problem, which is the
+    # useful diagnostic, rather than the empty series that summing leaves.
+    raise NoDurationError, "cash flows all fall on one date" if @input_dates.one?
     raise NoSignChangeError, "cash flows never change sign" unless sign_change?
-    # normalize sorts by date, so the first and last bracket every other one.
-    raise NoDurationError, "cash flows all fall on one date" if flows.first.date == flows.last.date
 
     result = newton_rate || bisection_rate
     raise ConvergenceError, "XIRR did not converge" if result.nil?
@@ -142,15 +153,38 @@ class Portfolio::Xirr
   end
 
   private
-    def normalize(flows)
-      Array(flows).map { |flow|
+    # Flows on the same date are summed into one, and a date whose flows net to
+    # nothing drops out with the zeros.
+    #
+    # Summing is not a tidy-up, it is what makes the sign-change contract mean
+    # anything. Two flows on one date share an exponent, so `present_value`
+    # cancels them however they were written -- but `sign_changes` counts them
+    # separately, and a pair that cancels looks like a sign change to it. So
+    # -1000 and +1000 on one day followed by +100 passed the "money has to go
+    # both ways" guard while presenting the solver with a series that is only
+    # +100, has no root, and cannot be refused for the reason it should be.
+    # It returned 15,118,284,881,800% rather than raising NoSignChangeError,
+    # which the same series written as a single netted row does raise.
+    #
+    # Money in and out on one day is ordinary -- a buy and a sell, a deposit
+    # spent the moment it lands -- so whether a caller pre-nets its rows is not
+    # something this class should give a different answer for.
+    def parse(flows)
+      Array(flows).map do |flow|
         if flow.respond_to?(:date) && flow.respond_to?(:amount)
           Flow.new(date: flow.date.to_date, amount: flow.amount.to_f)
         else
           date, amount = flow
           Flow.new(date: date.to_date, amount: amount.to_f)
         end
-      }.reject { |flow| flow.amount.zero? }.sort_by(&:date)
+      end
+    end
+
+    def aggregate(moves)
+      moves.group_by(&:date)
+           .map { |date, on_date| Flow.new(date: date, amount: on_date.sum(&:amount)) }
+           .reject { |flow| flow.amount.zero? }
+           .sort_by(&:date)
     end
 
     def sign_change?

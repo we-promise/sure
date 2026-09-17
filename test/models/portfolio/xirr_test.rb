@@ -121,6 +121,69 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     assert_nil Portfolio::Xirr.rate_or_nil(flows)
   end
 
+  # Two flows on one date share an exponent, so `present_value` cancels them
+  # however they were written -- but `sign_changes` counted them separately, and
+  # a pair that cancels looked like a sign change. So -1000 and +1000 on one day
+  # followed by +100 passed the "money has to go both ways" guard and handed the
+  # solver a series that is only +100 and has no root. It returned
+  # 15,118,284,881,800% rather than raising.
+  #
+  # Same-date flows are summed before any of that, so the guard now sees the
+  # series that actually exists.
+  test "flows on one date are summed before the sign-change guard" do
+    flows = [
+      [ Date.new(2026, 1, 1), -1_000 ],
+      [ Date.new(2026, 1, 1), 1_000 ],
+      [ Date.new(2027, 1, 1), 100 ]
+    ]
+
+    assert_raises Portfolio::Xirr::NoSignChangeError do
+      Portfolio::Xirr.rate(flows)
+    end
+    assert_nil Portfolio::Xirr.rate_or_nil(flows)
+  end
+
+  # The invariant behind that fix, and the one worth keeping: whether a caller
+  # pre-nets its rows must not change the answer. Money in and out on one day is
+  # ordinary -- a buy and a sell, a deposit spent the moment it lands -- and a
+  # caller that groups by date should not get a different figure from one that
+  # does not.
+  test "a netted series and the same series written out agree" do
+    start = Date.new(2026, 1, 1)
+    finish = Date.new(2027, 1, 1)
+
+    # The deposit is listed before the purchase it funds, so unsummed this
+    # reads +500, -1500, +2000 -- two sign changes, and therefore "ambiguous"
+    # -- where the series it describes changes sign once. Ordering rows within
+    # a day must not decide whether the caller is told its figure is one of
+    # several.
+    written_out = Portfolio::Xirr.new([
+      [ start, 500 ], [ start, -1_500 ], [ finish, 2_000 ]
+    ])
+    pre_netted = Portfolio::Xirr.new([ [ start, -1_000 ], [ finish, 2_000 ] ])
+
+    assert_in_delta pre_netted.rate.to_f, written_out.rate.to_f, 1e-12
+    assert_in_delta 1.0, written_out.rate.to_f, 0.0005, "and both are the doubling"
+
+    assert_equal pre_netted.sign_changes, written_out.sign_changes
+    assert_not written_out.ambiguous?, "one deposit and one withdrawal is one sign change"
+  end
+
+  # A date whose flows cancel contributes nothing and drops out with the zeros,
+  # so it cannot supply a phantom term to the present value.
+  test "a date whose flows net to nothing drops out" do
+    start = Date.new(2026, 1, 1)
+    xirr = Portfolio::Xirr.new([
+      [ start, -1_000 ],
+      [ Date.new(2026, 6, 1), 750 ],
+      [ Date.new(2026, 6, 1), -750 ],
+      [ Date.new(2027, 1, 1), 2_000 ]
+    ])
+
+    assert_equal [ start, Date.new(2027, 1, 1) ], xirr.flows.map(&:date)
+    assert_in_delta 1.0, xirr.rate.to_f, 0.0005
+  end
+
   # Every loss reaches bisection, so the low end of its bracket decides whether
   # an ordinary loss has a rate at all. A fixed -0.999999 floor meant dividing
   # by 1e-6 ** units, which underflows to zero past about 51 units and made the
