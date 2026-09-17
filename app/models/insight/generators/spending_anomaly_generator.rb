@@ -19,7 +19,12 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
     return [] if current.empty?
 
     baseline = baseline_spend(period)
-    pace_factor = period.days.to_f / elapsed_days
+    # The "current month" period ends today rather than at month end, so its own
+    # #days is the elapsed count and dividing by it would make the projection a
+    # no-op. Take the month's true length from its start date, which is also
+    # correct for families on a custom month start.
+    month_days = ((period.start_date + 1.month) - period.start_date).to_i
+    pace_factor = month_days.to_f / elapsed_days
 
     anomalies = current.filter_map do |category_id, data|
       baseline_amount = baseline[category_id]

@@ -97,6 +97,31 @@ class Provider::Anthropic < Provider
     end
   end
 
+  def suggest_bill_setup(charges: [], categories: [], current_config: nil, model: "", family: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+
+      trace = create_langfuse_trace(
+        name: "anthropic.suggest_bill_setup",
+        input: { charges: charges, configure_mode: current_config.present? }
+      )
+
+      result = BillSetupSuggester.new(
+        client,
+        model: effective_model,
+        charges: charges,
+        categories: categories,
+        current_config: current_config,
+        langfuse_trace: trace,
+        family: family
+      ).suggest
+
+      upsert_langfuse_trace(trace: trace, output: result.to_h)
+
+      result
+    end
+  end
+
   def auto_detect_merchants(transactions: [], user_merchants: [], model: "", family: nil, json_mode: nil)
     with_provider_response do
       raise Error, "Too many transactions to auto-detect merchants. Max is 25 per request." if transactions.size > 25

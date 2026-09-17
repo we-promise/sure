@@ -1,7 +1,7 @@
 // Injected into every page loaded in the main window (local onboarding + the
 // remote Sure site). Adds native-titlebar chrome, drags the window, forwards
-// notifications/badge to Rust, intercepts SSO into the system browser, and
-// navigates on server switches.
+// notifications/badge to Rust, enables report downloads, intercepts SSO into the
+// system browser, and navigates on server switches.
 (() => {
   const tauri = (window as any).__TAURI__;
 
@@ -15,6 +15,36 @@
     hasCore: !!tauri?.core,
     hasWindow: !!tauri?.window,
   });
+
+  // WKWebView needs the download attribute for renderable types such as CSV.
+  // Keep the request in this webview so its authenticated session is retained.
+  // Capture runs before Turbo, while leaving the native click action intact.
+  if (!(window as any).__sureReportDownloadHook) {
+    (window as any).__sureReportDownloadHook = true;
+    document.addEventListener(
+      "click",
+      (ev) => {
+        const link = (ev.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+        if (!link) return;
+        let url: URL;
+        try {
+          url = new URL(link.href, location.href);
+        } catch {
+          return;
+        }
+        if (
+          url.origin !== location.origin ||
+          !url.pathname.endsWith("/reports/export_transactions.csv")
+        ) {
+          return;
+        }
+        if (!link.hasAttribute("download")) link.setAttribute("download", "");
+        link.setAttribute("data-turbo", "false");
+        link.setAttribute("target", "_self");
+      },
+      true
+    );
+  }
 
   // Native titlebar chrome — offset the left icon rail so its logo clears the
   // traffic lights, and make the top ~34px band drag the window. Using a
@@ -74,15 +104,17 @@
         } catch {
           return;
         }
-        const m = path.match(/^\/auth\/([A-Za-z0-9_-]+)$/);
+        // Leading group is the base the server is mounted under: "" at a domain
+        // root, "/sure" behind a path-prefixing proxy.
+        const m = path.match(/^(.*)\/auth\/([A-Za-z0-9_-]+)$/);
         if (!m) return; // not an SSO provider form (e.g. /sessions, /auth/x/callback)
         ev.preventDefault();
         ev.stopImmediatePropagation();
         // Emit an event (remote pages can emit but not invoke custom commands);
         // Rust listens for "sure://start-sso" and opens the browser.
         // eslint-disable-next-line no-console
-        console.log("[sure] SSO intercept -> emit sure://start-sso", m[1]);
-        Promise.resolve(emit("sure://start-sso", { server: location.origin, provider: m[1] }))
+        console.log("[sure] SSO intercept -> emit sure://start-sso", m[2]);
+        Promise.resolve(emit("sure://start-sso", { server: location.origin + m[1], provider: m[2] }))
           // eslint-disable-next-line no-console
           .then(() => console.log("[sure] start-sso emitted"))
           // eslint-disable-next-line no-console

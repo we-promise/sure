@@ -5,6 +5,12 @@ class Budget < ApplicationRecord
 
   attr_accessor :current_user
 
+  # Overrides the account scope `income_statement` would otherwise infer.
+  # Budget::RolloverCalculator sets it on the household chain: the carry it
+  # stores is one shared row, so it must not be computed through whichever
+  # viewer's account access happened to trigger the recompute.
+  attr_writer :income_statement_accounts
+
   belongs_to :family
   belongs_to :user, optional: true
 
@@ -13,9 +19,11 @@ class Budget < ApplicationRecord
   validates :start_date, :end_date, presence: true
   validates :start_date, :end_date, uniqueness: { scope: [ :family_id, :user_id ] }
 
+  monetize :available_cash, :earmarked_for_goals, :free_cash
   monetize :budgeted_spending, :expected_income, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
-           :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income
+           :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income,
+           :total_rolled_over
 
   class << self
     def date_to_param(date)
@@ -75,6 +83,8 @@ class Budget < ApplicationRecord
         budget.current_user = user
         budget.sync_budget_categories
 
+        Budget::RolloverCalculator.new(family: family, user: owner).recompute!
+
         budget
       end
     end
@@ -112,16 +122,36 @@ class Budget < ApplicationRecord
     categories_to_remove = existing_budget_category_ids - current_category_ids
 
     # Create missing categories
+    inherited_rollover = inherited_rollover_flags(categories_to_add)
+
     categories_to_add.each do |category_id|
       budget_categories.create!(
         category: current_categories_by_id.fetch(category_id),
         budgeted_spending: 0,
-        currency: family.currency
+        currency: family.currency,
+        rollover_enabled: inherited_rollover.fetch(category_id, false)
       )
     end
 
     # Remove old categories
     budget_categories.where(category_id: categories_to_remove).destroy_all if categories_to_remove.any?
+  end
+
+  # Rollover is a standing choice about an envelope, not about one month: a
+  # user who switches it on for Vacations expects it to keep going, and a
+  # month bootstrapped with the flag off would silently break the chain. New
+  # rows therefore inherit it from the last initialized budget of the same
+  # owner -- the same chain the carry itself walks. Turning it off on a given
+  # month still overrides it from there on.
+  def inherited_rollover_flags(category_ids)
+    return {} if category_ids.empty?
+
+    source = most_recent_initialized_budget
+    return {} unless source
+
+    source.budget_categories
+      .where(category_id: category_ids, rollover_enabled: true)
+      .each_with_object({}) { |bc, flags| flags[bc.category_id] = true }
   end
 
   def uncategorized_budget_category
@@ -146,6 +176,72 @@ class Budget < ApplicationRecord
     end
 
     scope
+  end
+
+  # --- Cash on hand, next to the plan ---
+  #
+  # DELIBERATELY OUTSIDE the allocation arithmetic. `budgeted_spending`,
+  # `allocated_spending` and `available_to_allocate` keep their exact meaning:
+  # they answer "what did I plan to spend, and how much of it have I
+  # distributed". These three answer a different question — "what do I actually
+  # have" — and mixing the two is how a budget stops being readable. A page
+  # showing "expected income 3,000" beside "really free 1,600" leaves the user
+  # unsure which number drives the split.
+  #
+  # This is the whole of the compromise: the plan stays a forecast, and the
+  # cash is shown beside it rather than folded into it.
+
+  # Liquidity only. Cash held inside investment accounts (Account#cash_balance)
+  # is deliberately out: it is not money available to this month's budget.
+  #
+  # Scoped like #transactions — a personal budget sees only its owner's
+  # accounts, the household one what the viewer can see — because a figure
+  # labelled "available" must mean available to the person reading it.
+  def cash_accounts
+    scope = family.accounts.visible.included_in_reports.where(accountable_type: "Depository")
+
+    if user_id.present?
+      scope.where(owner_id: user_id)
+    elsif current_user
+      scope.accessible_by(current_user)
+    else
+      scope
+    end
+  end
+
+  def available_cash
+    @available_cash ||= cash_accounts.sum { |account| convert_to_budget_currency(account.balance, account.currency) }
+  end
+
+  # What goals have already spoken for, out of THE SAME accounts. Restricting
+  # to `cash_accounts` is the point: Goal::FUNDABLE_ACCOUNT_TYPES also includes
+  # Investment, and subtracting an earmark held on a brokerage account from a
+  # cash figure that never counted it would show a "really free" amount that is
+  # too low — or negative — with nothing on the page to explain why.
+  #
+  # Built from the shared pool rather than summing allocated_amount, because a
+  # whole-account link reserves no fixed slice and would otherwise count as
+  # zero while actually claiming the remainder.
+  def earmarked_for_goals
+    @earmarked_for_goals ||= begin
+      ids = cash_accounts.map(&:id)
+
+      if ids.empty?
+        0.to_d
+      else
+        # Converted per goal. `available_cash` converts each account balance
+        # into the budget currency, so summing backings in their own would
+        # subtract euros from dollars: a fully earmarked EUR 1,000 account in
+        # a USD budget would read 1,200 available, 1,000 earmarked and 200
+        # free, when none of it is free.
+        Goal.prepared_for(family, scope: family.goals.where.not(state: Goal::RELEASED_STATES))
+            .sum { |goal| convert_to_budget_currency(goal.backing_within(ids), goal.currency) }
+      end
+    end
+  end
+
+  def free_cash
+    [ available_cash - earmarked_for_goals, 0 ].max
   end
 
   def name
@@ -209,8 +305,18 @@ class Budget < ApplicationRecord
         target_bc = target_by_category[source_bc.category_id]
         next unless target_bc
 
-        target_bc.update!(budgeted_spending: source_bc.budgeted_spending)
+        # The toggle is a preference and travels with the copy; the amount
+        # is derived state that only Budget::RolloverCalculator may write.
+        target_bc.update!(
+          budgeted_spending: source_bc.budgeted_spending,
+          rollover_enabled: source_bc.rollover_enabled
+        )
       end
+
+      # Copying the toggle changes what the chain should hold, and this runs
+      # after find_or_bootstrap already recomputed it. Recompute again so the
+      # target doesn't sit on a zero carry until the next page load.
+      Budget::RolloverCalculator.new(family: family, user: user).recompute!
     end
   end
 
@@ -351,6 +457,15 @@ class Budget < ApplicationRecord
     (budgeted_spending || 0) - allocated_spending
   end
 
+  # Informational aggregate only -- deliberately kept out of
+  # `allocated_spending` and `available_to_allocate`, which stay a pure
+  # "what did I plan to spend this month" pair. Ring-fenced subcategories
+  # carry their own surplus and their parent's is net of theirs, so summing
+  # every non-inheriting category counts each amount once.
+  def total_rolled_over
+    budget_categories.reject(&:inherits_parent_budget?).sum(&:rolled_over_amount)
+  end
+
   def allocations_valid?
     initialized? && available_to_allocate >= 0 && allocated_spending > 0
   end
@@ -383,6 +498,18 @@ class Budget < ApplicationRecord
   end
 
   private
+    # `find_or_fetch_rate`, not `find_rate` — the latter does not exist, and
+    # every multi-currency family opening this page hit a NoMethodError.
+    #
+    # No rate for the day leaves the amount as it stands. A cash panel that
+    # renders with one figure unconverted is wrong by the spread; one that
+    # raises takes the whole budget page down with it.
+    def convert_to_budget_currency(amount, from_currency)
+      return amount.to_d if from_currency == currency
+
+      rate = ExchangeRate.find_or_fetch_rate(from: from_currency, to: currency, date: Date.current)&.rate
+      rate ? amount.to_d * rate : amount.to_d
+    end
     def income_statement
       @income_statement ||= family.income_statement(user: current_user, accounts: income_statement_accounts)
     end
@@ -393,6 +520,8 @@ class Budget < ApplicationRecord
     # viewer sees the owner's numbers, and household vs. personal actually
     # differ instead of both reflecting the viewer's full accessible set.
     def income_statement_accounts
+      return @income_statement_accounts if @income_statement_accounts
+
       family.accounts.where(owner_id: user_id).included_in_reports if user_id.present?
     end
 

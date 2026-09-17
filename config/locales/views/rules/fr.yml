@@ -2,6 +2,8 @@
 fr:
   rule:
     conditions:
+      condition:
+        value_placeholder: Saisissez une valeur
       condition_group:
         add_condition: Ajouter une condition
         all: tout
@@ -15,7 +17,7 @@ fr:
     apply_all:
       ai_cost_message: Cela utilisera l'IA pour catégoriser jusqu'à %{transactions}
         transactions.
-      ai_cost_title: Estimation du coût IA
+      ai_cost_title: Estimation des coûts de l'IA
       button: Appliquer tout
       confirm_button: Confirmer et appliquer tout
       confirm_message: Vous êtes sur le point d'appliquer %{count} règles affectant
@@ -40,20 +42,32 @@ fr:
       success: Le cache IA est en cours de suppression. Cela peut prendre quelques
         instants.
     condition_filters:
+      operators:
+        contains: Contient
+        does_not_contain: Ne contient pas
+        equal_to: Égal à
+        greater_or_equal_to: Supérieur ou égal à
+        greater_than: Supérieur à
+        is_empty: Est vide
+        is_equal_to: Est égal à
+        is_not_empty: N'est pas vide
+        less_than: Inférieur à
+        less_than_or_equal_to: Inférieur ou égal à
+        not_equal_to: Différent de
       transaction_type:
         equal_to: Égal à
         expense: Dépense
         income: Revenu
         transfer: Virement
     confirm:
-      ai_cost_no_estimate_html: Cela utilisera l’IA pour catégoriser les transactions
-        %{count}.
+      ai_cost_no_estimate_html:
+        one: Cela utilisera l’IA pour catégoriser %{count} transaction.
+        other: Cela utilisera l’IA pour catégoriser %{count} transactions.
       ai_cost_title: Estimation des coûts de l'IA
-      ai_cost_with_estimate_html: 'Cela utilisera l’IA pour catégoriser les transactions
-        %{count}. Coût estimé : <span class="font-semibold">~$%{cost}</span>'
+      ai_cost_with_estimate_html: 'Cela utilisera l’IA pour catégoriser %{count} transaction(s). Coût estimé : <span class="font-semibold">~$%{cost}</span>'
       apply_notice_html: Vous êtes sur le point d'appliquer cette règle aux <span
         class="text-primary font-medium">%{count} %{resource}</span> qui répondent
-        aux critères de règle spécifiés.  Veuillez confirmer si vous souhaitez procéder
+        aux critères de règle spécifiés. Veuillez confirmer si vous souhaitez procéder
         à ce changement.
       confirm_changes: Confirmer les modifications
       cost_unavailable_model: L'estimation des coûts n'est pas disponible pour le
@@ -79,7 +93,7 @@ fr:
       starting_from: À partir de
       then: ALORS
     index:
-      ai_cost_warning: Les actions de règles basées sur l’IA coûteront de l’argent.  Assurez-vous
+      ai_cost_warning: Les actions de règles basées sur l’IA coûteront de l’argent. Assurez-vous
         de filtrer le plus étroitement possible pour éviter des coûts inutiles.
       delete_all_rules: Supprimer toutes les règles
       new_rule: Nouvelle règle

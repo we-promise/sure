@@ -10,10 +10,10 @@ fr:
       balance_reconciliation:
         labels:
           adjustments: Ajustements
-          buys: Achète
+          buys: Achats
           change_in_brokerage_cash: Variation des liquidités de courtage
           change_in_holdings_market: Variation des holdings (activité des prix du marché)
-          change_in_holdings_trades: Evolution des holdings (achats/ventes)
+          change_in_holdings_trades: Évolution des holdings (achats/ventes)
           charges: Frais
           end_balance: Fin du solde
           end_principal: Fin du principal
@@ -26,7 +26,7 @@ fr:
           net_principal_change: Variation nette du capital
           net_value_change: Variation de la valeur nette
           payments: Paiements
-          sells: Vend
+          sells: Ventes
           start_balance: Début du solde
           start_principal: Démarrer le principal
           start_value: Valeur de départ
@@ -71,8 +71,10 @@ fr:
           holdings_value: Valeur des holdings
           remaining_principal_balance: Solde principal restant
           total_account_value: Valeur totale du compte
+          total_gains: Gains totaux
         views:
           cash: Espèces
+          gains: Gains / ROI
           holdings: Holdings
           total_value: Valeur totale
         vs_available_history: par rapport à l'historique disponible
@@ -88,6 +90,9 @@ fr:
         warning: Avertissement
     dialog:
       close: Fermer
+    icon_picker:
+      no_matching_icons: Aucune icône correspondante
+      search_placeholder: Rechercher des icônes...
     link:
       opens_in_new_tab: "(ouvre dans un nouvel onglet)"
     pill:

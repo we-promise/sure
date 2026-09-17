@@ -5,7 +5,7 @@
     </div>
 
     <%# A previous value of zero makes the percentage infinite, with nothing useful to print %>
-    <% if @series.trend.percent.finite? %>
+    <% if @series.trend && @series.trend.percent.finite? %>
       <%= tag.p @series.trend.percent_formatted,
                   style: "color: #{@series.trend.color}",
                   class: "font-mono text-right text-xs font-medium text-primary" %>

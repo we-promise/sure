@@ -1,0 +1,61 @@
+<%# locals: (suggested:) %>
+<%# Detection proposes, the user disposes. Rendered from both the Bills
+    overview and Settings -> Recurring, so every key is absolutely scoped.
+
+    Collapsible because this sits above the bills the user actually came to
+    see. Someone who is not ready to triage nine guesses should be able to fold
+    them away and still find their rent, and have that stick. %>
+<%= render DS::Disclosure.new(
+  variant: :card_inset,
+  open: true,
+  data: {
+    controller: "persisted-disclosure",
+    persisted_disclosure_key_value: "bills-suggested"
+  }
+) do |disclosure| %>
+  <% disclosure.with_summary_content do %>
+    <div class="flex items-center gap-2 select-none">
+      <%= icon "chevron-right", size: "sm",
+                class: "transition-transform group-open:rotate-90" %>
+
+      <p class="text-xs font-medium text-secondary uppercase">
+        <%= t("recurring_transactions.suggested.title") %>
+      </p>
+
+      <%= render DS::Pill.new(label: suggested.size.to_s, tone: :neutral, marker: false) %>
+
+      <p class="ml-auto text-xs text-subdued group-open:hidden">
+        <%= t("recurring_transactions.suggested.collapsed_hint") %>
+      </p>
+    </div>
+  <% end %>
+
+  <div class="bg-container rounded-lg divide-y divide-subdued">
+    <% suggested.each do |suggestion| %>
+      <div class="flex items-center justify-between gap-4 px-4 py-3">
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-primary truncate"><%= suggestion.display_name %></p>
+          <p class="text-xs text-secondary">
+            <span class="privacy-sensitive"><%= format_money(suggestion.amount_money.abs) %></span>
+            &middot; <%= frequency_label(suggestion) %>
+            &middot; <%= t("recurring_transactions.suggested.seen_count", count: suggestion.occurrence_count) %>
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <%= render DS::Link.new(
+            text: t("recurring_transactions.suggested.confirm"),
+            variant: "primary",
+            href: confirm_recurring_transaction_path(suggestion),
+            method: :post
+          ) %>
+          <%= render DS::Link.new(
+            text: t("recurring_transactions.suggested.dismiss"),
+            variant: "ghost",
+            href: dismiss_recurring_transaction_path(suggestion),
+            method: :post
+          ) %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

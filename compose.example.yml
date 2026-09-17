@@ -62,6 +62,12 @@ x-rails-env: &rails_env
   OPENAI_URI_BASE: ${OPENAI_URI_BASE:-}
   LLM_CONTEXT_WINDOW: ${LLM_CONTEXT_WINDOW:-}
   OPENAI_REQUEST_TIMEOUT: ${OPENAI_REQUEST_TIMEOUT:-60}
+  # Health-check probes (System Health → AI Status → "Run checks") bound each
+  # probe call. Distinct from OPENAI_REQUEST_TIMEOUT, which bounds real LLM
+  # calls the app makes; the probe default is 5s. AI_HEALTH_PROBE_CACHE_TTL
+  # controls how long probe results are cached (default 60s).
+  AI_HEALTH_PROBE_TIMEOUT: ${AI_HEALTH_PROBE_TIMEOUT:-}
+  AI_HEALTH_PROBE_CACHE_TTL: ${AI_HEALTH_PROBE_CACHE_TTL:-}
   # Seconds the chat waits for an assistant response before showing a "no response"
   # error. This covers the whole turn, so its worst case is a sum:
   #   (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) * OPENAI_REQUEST_TIMEOUT
@@ -135,19 +141,32 @@ services:
   backup:
     profiles:
       - backup
-    image: prodrigestivill/postgres-backup-local
+    image: alpine:3.20
     restart: unless-stopped
     volumes:
-      - /opt/sure-data/backups:/backups # Change this path to your desired backup location on the host machine
+      - ./bin/db-backup.sh:/usr/local/bin/db-backup.sh:ro
     environment:
       - POSTGRES_HOST=db
-      - POSTGRES_DB=${POSTGRES_DB:-sure_production}
-      - POSTGRES_USER=${POSTGRES_USER:-sure_user}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sure_password} # pipelock:ignore
-      - SCHEDULE=@daily # Runs once a day at midnight
-      - BACKUP_KEEP_DAYS=7 # Keeps the last 7 days of backups
-      - BACKUP_KEEP_WEEKS=4 # Keeps 4 weekly backups
-      - BACKUP_KEEP_MONTHS=6 # Keeps 6 monthly backups
+      - POSTGRES_DB
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD # pipelock:ignore
+      - BACKUP_SCHEDULE
+      - BACKUP_OVERWRITE
+      - BACKUP_KEEP_DAYS
+      - BACKUP_DESTINATION
+      - INSTANCE_ID
+      # Rclone Provider Config
+      # By default we map the S3 variables. If you use a different provider (e.g., gdrive), 
+      # replace these with the equivalent variables you added to your .env file.
+      - RCLONE_CONFIG_S3_TYPE
+      - RCLONE_CONFIG_S3_PROVIDER
+      - RCLONE_CONFIG_S3_ACCESS_KEY_ID
+      - RCLONE_CONFIG_S3_SECRET_ACCESS_KEY
+      - RCLONE_CONFIG_S3_ENDPOINT
+    command: >
+      sh -c "apk add --no-cache postgresql16-client~=16 rclone~=1.66 gzip~=1 &&
+             echo \"$${BACKUP_SCHEDULE:-0 2 * * *} /usr/local/bin/db-backup.sh\" > /etc/crontabs/root &&
+             crond -f -d 8"
     depends_on:
       - db
     networks:

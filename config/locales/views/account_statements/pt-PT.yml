@@ -1,0 +1,117 @@
+---
+pt-PT:
+  account_statements:
+    account_tab:
+      coverage_title: Cobertura de extratos
+      coverage_description: Meses históricos suportados por extratos carregados e verificações de saldo.
+      coverage_range: "%{start} - %{end}"
+      empty: Ainda não há extratos ligados a esta conta.
+      open_inbox: Caixa de entrada
+      statements_title: Extratos
+      year_label: Ano de cobertura
+    balance:
+      unknown: Desconhecido
+    coverage:
+      status:
+        ambiguous: Ambíguo
+        covered: Coberto
+        duplicate: Duplicado
+        mismatched: Divergente
+        missing: Em falta
+        not_expected: Não esperado
+    create:
+      duplicates:
+        one: 1 extrato duplicado foi ignorado.
+        other: "%{count} extratos duplicados foram ignorados."
+      invalid_file_type: Carregue um extrato em PDF, CSV ou XLSX dentro do limite de tamanho.
+      no_files: Selecione pelo menos um ficheiro de extrato.
+      success:
+        one: 1 extrato carregado.
+        other: "%{count} extratos carregados."
+    destroy:
+      failure: Não foi possível eliminar o extrato.
+      success: Extrato eliminado.
+    form:
+      account_upload: Carregar extrato
+      files_hint: PDF, CSV ou XLSX. Máx. %{max_size} MB por ficheiro.
+      files_label: Ficheiros de extrato
+      inbox_upload: Carregar
+    index:
+      account_label: Conta
+      confidence: "Correspondência de %{confidence}"
+      empty_linked: Ainda não há extratos ligados.
+      empty_unmatched: A caixa de entrada de extratos está vazia.
+      leave_unmatched: Deixar sem atribuição
+      linked_title: Extratos ligados
+      no_suggestion: Sem sugestão
+      storage_used: Armazenamento utilizado
+      title: Arquivo de extratos
+      unmatched_title: Caixa de entrada sem atribuição
+      upload_description: Carregue extratos para a caixa de entrada ou escolha uma conta para ligar imediatamente.
+      upload_title: Carregar extratos
+    link:
+      no_account: Escolha uma conta antes de ligar este extrato.
+      success: Extrato ligado a %{account}.
+    period:
+      unknown: Período desconhecido
+    reconciliation:
+      checks:
+        closing_balance: Saldo de fecho
+        opening_balance: Saldo de abertura
+        period_movement: Movimento do período
+        unknown_check: Verificação desconhecida
+      matched: Correspondente
+      mismatched: Divergente
+      unavailable: Não verificado
+    reject:
+      success: Correspondência de extrato rejeitada.
+    show:
+      account_label: Conta
+      account_last4_hint: Últimos quatro dígitos da conta
+      account_name_hint: Sugestão de nome da conta
+      closing_balance: Saldo de fecho
+      currency: Moeda
+      delete: Eliminar
+      difference: Diferença
+      download: Descarregar
+      institution_name_hint: Sugestão da instituição
+      ledger_amount: Registo do Sure
+      linked_to: Ligado a %{account}.
+      linking_title: Ligação de conta
+      link_suggestion: Sugestão de ligação
+      metadata_title: Metadados do extrato
+      no_suggestion: Ainda não há sugestão de conta.
+      opening_balance: Saldo de abertura
+      period_end_on: Fim do período
+      period_start_on: Início do período
+      reconciliation_title: Reconciliação
+      reconciliation_unavailable: Adicione um período de extrato e um saldo de abertura ou de fecho e certifique-se de que o Sure tem histórico de saldos para essas datas.
+      reject: Rejeitar
+      save: Guardar extrato
+      statement_amount: Extrato
+      suggested_account: A conta sugerida é %{account} (confiança de %{confidence}).
+      title: Extrato
+      unlink: Desligar
+      unmatched_account: Caixa de entrada sem atribuição
+      unknown_value: Desconhecido
+    status:
+      linked: Ligado
+      rejected: Rejeitado
+      unmatched: Sem atribuição
+    table:
+      account: Conta
+      actions: Ações
+      download: Descarregar
+      edit: Editar
+      file: Ficheiro
+      link_suggestion: Sugestão de ligação
+      period: Período
+      reconciliation: Reconciliação
+      reject: Rejeitar sugestão
+      suggestion: Sugestão
+      unlink: Desligar
+      view: Ver
+    unlink:
+      success: Extrato devolvido à caixa de entrada sem atribuição.
+    update:
+      success: Extrato atualizado.

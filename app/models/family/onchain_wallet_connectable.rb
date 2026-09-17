@@ -32,11 +32,15 @@ module Family::OnchainWalletConnectable
   end
 
   # True when an address is already tracked on this chain anywhere in the
-  # family, which is what makes re-linking it a duplicate.
+  # family, which is what makes re-linking it a duplicate. Tracked means linked,
+  # not merely present: a row whose account is gone syncs nothing and displays
+  # nowhere, so counting it here would refuse the address with nothing to show
+  # for it.
   def onchain_address_linked?(chain, address)
     OnchainWalletAccount
       .where(onchain_wallet_item: onchain_wallet_items.active)
       .for_wallet(chain, address)
+      .linked
       .exists?
   end
 end

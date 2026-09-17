@@ -522,22 +522,40 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "rule operand lookup matches uppercase UUID values" do
+    operand = @exporter.send(
+      :rule_operand,
+      @category.id.upcase,
+      type: "Category",
+      relation: :categories,
+      fallback_to_name: true
+    )
+
+    assert_equal "Test Category", operand[:value]
+    assert_equal({ type: "Category", id: @category.id, name: "Test Category" }, operand[:value_ref])
+  end
+
   test "rule operand lookup skips name fallback for stale UUID values" do
     stale_uuid = SecureRandom.uuid
-    relation = mock
-    relation.expects(:find_by).with(id: stale_uuid).once.returns(nil)
-    relation.expects(:find_by).with(name: stale_uuid).never
+    @exporter.expects(:operand_records_by_name).never
 
     operand = @exporter.send(
       :rule_operand,
       stale_uuid,
       type: "Category",
-      relation: relation,
+      relation: :categories,
       fallback_to_name: true
     )
 
     assert_equal stale_uuid, operand[:value]
     assert_nil operand[:value_ref]
+  end
+
+  test "operand id and name lookups for the same relation share a single query" do
+    assert_queries_count(1) do
+      @exporter.send(:operand_records_by_id, :categories)
+      @exporter.send(:operand_records_by_name, :categories)
+    end
   end
 
   test "exports rule actions and maps tag UUIDs to names" do
@@ -579,6 +597,146 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       # Should export tag name instead of UUID
       assert_equal "Test Tag", actions[0]["value"]
       assert_equal({ "type" => "Tag", "id" => @tag.id, "name" => "Test Tag" }, actions[0]["value_ref"])
+    end
+  end
+
+  test "exports rule actions with multiple tags and maps each tag UUID independently" do
+    second_tag = @family.tags.create!(name: "Second Tag", color: "#0000FF")
+
+    tag_rule = @family.rules.build(
+      name: "Multi Tag Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    tag_rule.conditions.build(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "test"
+    )
+    tag_rule.actions.build(
+      action_type: "set_transaction_tags",
+      value: [ @tag.id, second_tag.id ]
+    )
+    tag_rule.save!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Multi Tag Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      actions = rule_data["data"]["actions"]
+
+      assert_equal 1, actions.length
+      # Should export both tag names, comma-separated, not a single opaque id string
+      assert_equal "Test Tag,Second Tag", actions[0]["value"]
+      assert_equal(
+        [
+          { "type" => "Tag", "id" => @tag.id, "name" => "Test Tag" },
+          { "type" => "Tag", "id" => second_tag.id, "name" => "Second Tag" }
+        ],
+        actions[0]["value_ref"]
+      )
+    end
+  end
+
+  test "exports a multi-tag action's value CSV-quoted when a tag name contains a comma" do
+    comma_tag = @family.tags.create!(name: "Food, Dining", color: "#0000FF")
+
+    tag_rule = @family.rules.build(
+      name: "Comma Tag Name Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    tag_rule.conditions.build(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "test"
+    )
+    tag_rule.actions.build(
+      action_type: "set_transaction_tags",
+      value: [ @tag.id, comma_tag.id ]
+    )
+    tag_rule.save!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Comma Tag Name Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      actions = rule_data["data"]["actions"]
+
+      # The comma-containing name must be quoted so it round-trips as one
+      # name rather than splitting into "Food" and " Dining" on import.
+      assert_equal "Test Tag,\"Food, Dining\"", actions[0]["value"]
+      assert_equal [ "Test Tag", "Food, Dining" ], CSV.parse_line(actions[0]["value"])
+    end
+  end
+
+  test "exports a partially-orphaned multi-tag action's value_ref as an array" do
+    second_tag = @family.tags.create!(name: "Second Tag", color: "#0000FF")
+
+    tag_rule = @family.rules.build(
+      name: "Orphaned Multi Tag Rule",
+      resource_type: "transaction",
+      active: true
+    )
+    tag_rule.conditions.build(
+      condition_type: "transaction_name",
+      operator: "like",
+      value: "test"
+    )
+    tag_rule.actions.build(
+      action_type: "set_transaction_tags",
+      value: [ @tag.id, second_tag.id ]
+    )
+    tag_rule.save!
+
+    second_tag.destroy!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      ndjson_content = zip.read("all.ndjson")
+      lines = ndjson_content.split("\n")
+
+      rule_lines = lines.select do |line|
+        parsed = JSON.parse(line)
+        parsed["type"] == "Rule" && parsed["data"]["name"] == "Orphaned Multi Tag Rule"
+      end
+
+      assert rule_lines.any?
+
+      rule_data = JSON.parse(rule_lines.first)
+      actions = rule_data["data"]["actions"]
+
+      assert_equal 1, actions.length
+      # value_ref should stay an array (not collapse to a scalar Hash) even
+      # though only one of the two original tag ids still resolves, so the
+      # importer's array-handling branch keeps running instead of the
+      # legacy single-tag scalar branch.
+      assert_kind_of Array, actions[0]["value_ref"]
+      assert_equal(
+        [ { "type" => "Tag", "id" => @tag.id, "name" => "Test Tag" } ],
+        actions[0]["value_ref"]
+      )
     end
   end
 
@@ -674,6 +832,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       status: "active",
       occurrence_count: 6,
       manual: true,
+      payment_url: "https://pay.example.com/internet",
       expected_amount_min: -95,
       expected_amount_max: -85,
       expected_amount_avg: -89.99
@@ -695,6 +854,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal "-89.99", BigDecimal(recurring_data["data"]["amount"].to_s).to_s("F")
       assert_equal "active", recurring_data["data"]["status"]
       assert_equal true, recurring_data["data"]["manual"]
+      assert_equal "https://pay.example.com/internet", recurring_data["data"]["payment_url"]
       assert_not recurring_data["data"].key?("family_id")
     end
   end

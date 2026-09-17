@@ -2,6 +2,9 @@
 fr:
   transfers:
     create:
+      date_invalid: est invalide
+      exchange_rate_unavailable: Aucun taux de change disponible pour les devises et la date sélectionnées
+      stale_form: Ce formulaire a déjà été envoyé avec des informations différentes. Actualisez la page et réessayez.
       success: Transfert créé
     destroy:
       success: Transfert supprimé
@@ -30,9 +33,9 @@ fr:
       date: Date
       delete: Supprimer le transfert
       delete_subtitle:
-        Ce transfert est supprimé. Il ne supprimera pas les transactions
+        Ceci supprime le transfert. Cela ne supprimera pas les transactions
         sous-jacentes.
-      delete_title: Voulez-vous vraiment supprimer ce transfert?
+      delete_title: Voulez-vous vraiment supprimer ce transfert ?
       details: Détails
       from: De
       mark_recurring: Marquer comme récurrent

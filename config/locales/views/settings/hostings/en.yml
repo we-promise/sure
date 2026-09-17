@@ -85,15 +85,15 @@ en:
           title: Disconnect external assistant?
           body: This will remove the saved URL, token, and agent ID, and switch to the builtin assistant. You can reconnect later by entering new credentials.
       brand_fetch_settings:
-        description: Enter the Client ID provided by Brand Fetch
-        env_configured_message: You have successfully configured your Brand Fetch Client ID through the BRAND_FETCH_CLIENT_ID environment variable.
+        description: Enter the Client ID provided by Brandfetch
+        env_configured_message: You have successfully configured your Brandfetch Client ID through the BRAND_FETCH_CLIENT_ID environment variable.
         show_details: "(show details)"
-        setup_step_1_html: 'Visit <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> and create a free Brand Fetch Developer account.'
+        setup_step_1_html: 'Visit <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> and create a free Brandfetch Developer account.'
         setup_step_2_html: 'Go to the <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> page.'
         setup_step_3: 'Tap the eye icon under the "Your Client ID" section to reveal your Client ID and paste it below.'
         label: Client ID
         placeholder: Enter your Client ID here
-        title: Brand Fetch Settings
+        title: Brandfetch Settings
         high_res_label: Enable high-resolution logos
         high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
       llm_provider_selector:
@@ -127,6 +127,8 @@ en:
         uri_base_placeholder: "https://api.openai.com/v1 (default)"
         model_label: Model (Optional)
         model_placeholder: "gpt-4.1 (default)"
+        model_function_calling_help: "The AI assistant reads your data through function calls, so pick a model your provider documents as supporting tools/function calling. Models without it fail chat with an opaque provider error."
+        model_function_calling_link: Check the configured model
         json_mode_label: JSON Mode
         json_mode_auto: Auto (recommended)
         json_mode_strict: Strict (best for thinking models)
@@ -141,10 +143,12 @@ en:
         max_response_tokens_help: "Tokens reserved for the model's reply. Default: 512. Lower to free up room for longer history."
         max_items_per_call_label: Max Items Per Batch (Optional)
         max_items_per_call_help: "Upper bound for auto-categorize / merchant detection batches. Default: 25. Larger batches are auto-sliced to fit the context window."
-        ai_response_timeout_heading: Chat Response Timeout
-        ai_response_timeout_description: How long the chat waits for the assistant before showing a "no response" error. Raise this if you run a local model on slow hardware — responses from OpenAI-compatible providers are not streamed, and tool-call rounds display nothing, so the chat can sit on "Thinking…" for the whole turn.
+        timeout_heading: Timeouts
+        timeout_description: Controls how long OpenAI-compatible model calls may run before Sure gives up. Raise these if you run a local model on slow hardware.
+        openai_request_timeout_label: Request Timeout in Seconds (Optional)
+        openai_request_timeout_help: "Default: 60. Applies to each OpenAI-compatible HTTP request, including auto-categorization, merchant detection, chat, PDF processing, and vector-store calls. OPENAI_REQUEST_TIMEOUT overrides this field."
         ai_response_timeout_label: Response Timeout in Seconds (Optional)
-        ai_response_timeout_help: "Default: 90. This covers the whole turn, so size it as a sum: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT, plus tool execution and queue time. Lowering ASSISTANT_MAX_TOOL_CALL_ITERATIONS reduces how large this needs to be, and is often the better lever on slow hardware."
+        ai_response_timeout_help: "Default: 90. Applies only to chat's whole-turn watchdog, so size it as a sum: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × request timeout, plus tool execution and queue time. AI_RESPONSE_TIMEOUT overrides this field."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
@@ -184,6 +188,7 @@ en:
       tinkoff_invest_settings:
         title: T-Invest (T-Bank)
         description: Enter a read-only T-Invest API token. Used to fetch brand logos for securities (incl. funds and bonds, even when MOEX prices them) and, when enabled above, prices for Russian instruments.
+        moex_only_notice: Not enabled for prices above — T-Invest is used to fetch brand logos for all your securities whenever a token is configured, independent of the checkbox above.
         env_configured_message: Successfully configured through the TINKOFF_INVEST_API_KEY environment variable.
         label: API Token
         placeholder: Enter your T-Invest API token here

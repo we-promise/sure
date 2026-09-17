@@ -9,27 +9,12 @@ en:
       title: Which network?
     destroy:
       success: Scheduled the self-custody connection for deletion.
-    change_address:
-      errors:
-        already_linked: That address is already tracked on this network.
-        invalid_address: That is not a valid address on this network.
-        unchanged: That is the address already being tracked.
-      success: Address updated. The next sync will read the new address.
     disconnect_asset:
       success: "Stopped tracking %{symbol}. Its account and history were kept."
     disconnect_wallet:
       success:
         one: Stopped tracking 1 asset at that address.
         other: "Stopped tracking %{count} assets at that address."
-    edit_wallet:
-      cancel: Cancel
-      current_address: Currently tracking
-      history_preserved: The accounts, holdings and history stay as they are. Only the address being read changes.
-      new_address_label: New address
-      new_address_placeholder: Paste the corrected address
-      save: Update address
-      subtitle: "%{chain}"
-      title: Change wallet address
     enable_crypto_prices:
       not_self_hosted: Market data providers are configured by the instance operator on this deployment.
       success: Crypto prices are enabled. Wallet values appear after the next sync.
@@ -51,7 +36,6 @@ en:
         other: "Tracking %{count} assets from this wallet."
     manage:
       assets_truncated: "This address holds more tokens than one read surfaces, so only the %{count} most credible are listed. Anything already tracked keeps syncing."
-      change_address: Change address
       disconnect_asset: Stop tracking
       disconnect_asset_confirm: "Stop tracking %{symbol}? Its account and history are kept and stop updating."
       disconnect_wallet: Disconnect wallet
@@ -84,11 +68,12 @@ en:
         one: 1 address tracked
         other: "%{count} addresses tracked"
       deletion_in_progress: Removing...
-      manage: Manage
+      delete: Remove connection
       needs_attention: Needs attention
       no_wallets_message: Link an address from the provider settings to see it here.
       no_wallets_title: No wallets linked yet
       status: Synced %{timestamp} ago
+      sync: Sync now
       status_never: Not synced yet
       syncing: Syncing...
     price_provider_warning:

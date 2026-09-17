@@ -27,6 +27,22 @@ class Admin::SsoProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/name="sso_provider\[client_secret\]"[^>]*required/, response.body)
   end
 
+  test "new page localizes its heading and description" do
+    get new_admin_sso_provider_path(locale: "de")
+
+    assert_response :success
+    assert_select "h1", text: I18n.t("admin.sso_providers.new.title", locale: :de, fallback: false)
+    assert_select "p", text: I18n.t("admin.sso_providers.new.description", locale: :de, fallback: false)
+  end
+
+  test "edit page localizes its heading and description" do
+    get edit_admin_sso_provider_path(@provider, locale: "de")
+
+    assert_response :success
+    assert_select "h1", text: I18n.t("admin.sso_providers.edit.title", locale: :de, fallback: false)
+    assert_select "p", text: I18n.t("admin.sso_providers.edit.description", locale: :de, fallback: false, label: @provider.label)
+  end
+
   test "update persists nested default role setting" do
     patch admin_sso_provider_path(@provider), params: {
       sso_provider: valid_update_params(settings: { default_role: "guest" })

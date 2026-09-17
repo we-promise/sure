@@ -1,0 +1,21 @@
+---
+pt-PT:
+  pending_duplicate_merges:
+    create:
+      no_posted_selected: Selecione uma transação registada para fundir
+      invalid_transaction: Transação selecionada para fundir inválida
+      merge_success: Transação pendente fundida com a transação registada
+      merge_failed: Não foi possível fundir as transações
+    set_transaction:
+      pending_only: Esta funcionalidade está disponível apenas para transações pendentes
+    new:
+      title: Fundir com transação registada
+      warning_title: Fusão manual de duplicados
+      warning_description: Utilize isto para fundir manualmente uma transação pendente com a sua versão registada. Isto eliminará a transação pendente e manterá apenas a registada.
+      pending_transaction: Transação pendente
+      select_posted: Selecione a transação registada para fundir
+      showing_range: "A mostrar %{start} - %{end}"
+      previous: "← 10 anteriores"
+      next: "Próximas 10 →"
+      no_candidates: Não foram encontradas transações registadas nesta conta.
+      submit_button: Fundir transações

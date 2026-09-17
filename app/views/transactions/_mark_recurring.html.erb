@@ -6,15 +6,29 @@
       <%= @mark_recurring_subtitle %>
     </p>
   </div>
-  <%= render DS::Button.new(
-    text: t("transactions.show.mark_recurring"),
-    variant: "outline",
-    icon: "repeat",
-    href: @mark_recurring_href,
-    method: :post,
-    frame: "_top",
-    disabled: @mark_recurring_disabled,
-    title: @mark_recurring_title,
-    class: @mark_recurring_button_class
-  ) %>
+  <div class="flex items-center gap-2">
+    <%= render DS::Button.new(
+      text: t("transactions.show.mark_recurring"),
+      variant: "outline",
+      icon: "repeat",
+      href: @mark_recurring_href,
+      method: :post,
+      frame: "_top",
+      disabled: @mark_recurring_disabled,
+      title: @mark_recurring_title,
+      class: @mark_recurring_button_class
+    ) %>
+
+    <%# The declare dialog is part of the preview-gated bills surface, so the
+        action only appears for someone who has opted into it. %>
+    <% if preview_features_enabled? %>
+      <%= render DS::Button.new(
+        text: t("transactions.show.create_bill"),
+        variant: "outline",
+        icon: "receipt",
+        href: new_recurring_transaction_path(entry_id: entry.id),
+        frame: :modal
+      ) %>
+    <% end %>
+  </div>
 </div>

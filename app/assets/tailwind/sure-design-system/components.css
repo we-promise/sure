@@ -136,6 +136,10 @@
   .checkbox--light {
     &[type='checkbox'] {
       @apply border-alpha-black-200 checked:bg-gray-900 checked:ring-gray-900 focus:ring-gray-900 focus-visible:ring-gray-900 checked:hover:bg-gray-300 hover:bg-gray-300;
+      /* Tailwind Forms' default :indeterminate background is currentColor (plugin
+         default blue) — without this it would mismatch the gray-900 :checked color
+         above, e.g. on a cascading parent/subcategory checkbox tree. */
+      @apply indeterminate:bg-gray-900 indeterminate:ring-gray-900 indeterminate:hover:bg-gray-300;
     }
 
     &[type='checkbox']:disabled {

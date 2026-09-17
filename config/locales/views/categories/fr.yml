@@ -57,7 +57,7 @@ fr:
       success: Catégorie mise à jour avec succès
     virtual:
       payment: Paiement
-      trade: Commerce
+      trade: Transaction boursière
       transfer: Transfert
   category:
     dropdowns:

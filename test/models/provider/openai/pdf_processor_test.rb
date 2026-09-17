@@ -59,6 +59,83 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     assert_match(/detail unavailable/i, captured_output[:error_detail])
   end
 
+  test "text mode exercises only text extraction" do
+    expected = Provider::LlmConcept::PdfProcessingResult.new(
+      summary: "Synthetic PDF",
+      document_type: "other",
+      extracted_data: {}
+    )
+    processor = Provider::Openai::PdfProcessor.new(
+      mock,
+      model: "gpt-4.1",
+      pdf_content: @pdf_content,
+      max_response_tokens: 512,
+      processing_mode: :text
+    )
+    processor.expects(:process_with_text_extraction).returns(expected)
+    processor.expects(:process_with_vision).never
+
+    assert_equal expected, processor.process
+  end
+
+  test "vision mode exercises only vision processing" do
+    expected = Provider::LlmConcept::PdfProcessingResult.new(
+      summary: "Synthetic PDF",
+      document_type: "other",
+      extracted_data: {}
+    )
+    processor = Provider::Openai::PdfProcessor.new(
+      mock,
+      model: "gpt-4.1",
+      pdf_content: @pdf_content,
+      max_response_tokens: 512,
+      processing_mode: :vision
+    )
+    processor.expects(:process_with_text_extraction).never
+    processor.expects(:process_with_vision).returns(expected)
+
+    assert_equal expected, processor.process
+  end
+
+  test "convert_pdf_to_images raises a coded error when the pdftoppm binary is missing" do
+    processor = Provider::Openai::PdfProcessor.new(
+      mock,
+      model: "gpt-4.1",
+      pdf_content: @pdf_content,
+      max_response_tokens: 512,
+      processing_mode: :vision
+    )
+
+    # Simulate poppler-utils not being installed: Kernel#system returns `nil`
+    # (the executable cannot be started) rather than `false`.
+    processor.stubs(:system).returns(nil)
+
+    error = assert_raises(Provider::Openai::Error) do
+      processor.send(:convert_pdf_to_images)
+    end
+
+    assert_equal :render_missing_binary, error.failure_code
+    assert_match(/poppler-utils/, error.message)
+  end
+
+  test "convert_pdf_to_images still degrades to [] when pdftoppm is present but rejects the PDF" do
+    Rails.logger.stubs(:error)
+    processor = Provider::Openai::PdfProcessor.new(
+      mock,
+      model: "gpt-4.1",
+      pdf_content: @pdf_content,
+      max_response_tokens: 512,
+      processing_mode: :vision
+    )
+
+    # Binary is installed, but pdftoppm exits non-zero on bad input (system
+    # returns `false`): keep the pre-existing "return no pages" behavior (no
+    # coded error).
+    processor.stubs(:system).returns(false)
+
+    assert_equal [], processor.send(:convert_pdf_to_images)
+  end
+
   private
     def build_processor(error, trace)
       client = mock

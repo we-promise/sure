@@ -7,6 +7,7 @@ export default class extends Controller {
     "destroyField",
     "actionValue",
     "selectTemplate",
+    "multiSelectTemplate",
     "textTemplate"
   ];
 
@@ -32,6 +33,8 @@ export default class extends Controller {
 
     if (actionExecutor.type === "select") {
       this.#buildSelectFor(actionExecutor);
+    } else if (actionExecutor.type === "multi_select") {
+      this.#buildMultiSelectFor();
     } else if (actionExecutor.type === "text") {
       this.#buildTextInputFor();
     } else {
@@ -74,6 +77,17 @@ export default class extends Controller {
     }
 
     // Add the template content to the actionValue target and ensure it's visible
+    this.actionValueTarget.appendChild(template);
+    this.actionValueTarget.classList.remove("hidden");
+  }
+
+  #buildMultiSelectFor() {
+    // The tag list is baked into the server-rendered template (it doesn't
+    // depend on the selected executor like other select options do), so we
+    // just clone it as-is. The embedded tag-select Stimulus controller
+    // connects automatically once the clone is inserted into the DOM.
+    const template = this.multiSelectTemplateTarget.content.cloneNode(true);
+
     this.actionValueTarget.appendChild(template);
     this.actionValueTarget.classList.remove("hidden");
   }

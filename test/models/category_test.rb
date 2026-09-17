@@ -91,6 +91,30 @@ class CategoryTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects the reserved Uncategorized filter sentinel as a name" do
+    category = Category.new(name: Category::UNCATEGORIZED_FILTER_VALUE, color: "#123456", lucide_icon: "folder", family: @family)
+
+    assert_not category.valid?
+    assert_includes category.errors[:name], "is reserved"
+  end
+
+  test "filter_value returns the sentinel for the synthetic Uncategorized category and the name for real categories" do
+    assert_equal Category::UNCATEGORIZED_FILTER_VALUE, Category.uncategorized.filter_value
+    assert_equal categories(:food_and_drink).name, categories(:food_and_drink).filter_value
+  end
+
+  test "filter_value stays the sentinel even when read under a different locale than it was built in" do
+    # Regression test: filter_value must not rely on a locale-sensitive name
+    # comparison (uncategorized? checks name against I18n.t in the *current*
+    # locale), or a synthetic instance built under one locale and read under
+    # another would silently stop matching.
+    synthetic = I18n.with_locale(:"zh-CN") { Category.uncategorized }
+
+    I18n.with_locale(:en) do
+      assert_equal Category::UNCATEGORIZED_FILTER_VALUE, synthetic.filter_value
+    end
+  end
+
   test "display_name preserves custom category names" do
     category = Category.new(name: "School Supplies", color: "#123456", lucide_icon: "book", family: @family)
 
@@ -158,6 +182,17 @@ class CategoryTest < ActiveSupport::TestCase
 
     assert lookup.key?(category.id)
     assert_not lookup.key?(0)
+  end
+
+  test "alphabetically_by_hierarchy orders a category's subcategories immediately after it" do
+    ordered = @family.categories.alphabetically_by_hierarchy.to_a
+
+    parent_index = ordered.index(categories(:food_and_drink))
+    child_index = ordered.index(categories(:subcategory))
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
   end
 
   test "recently_used_for orders by last_used_at, most recent first" do

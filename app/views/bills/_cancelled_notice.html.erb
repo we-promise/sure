@@ -1,0 +1,18 @@
+<%# A subscription can carry a cancellation date while its schedule keeps
+    running, so the app ends up calling the same bill "Cancelled" on one
+    surface and "Overdue" on another. Say so plainly, and put the action
+    that actually stops it next to the sentence. %>
+<% if series.cancelled_on.present? && series.active? %>
+  <div class="flex items-center justify-between gap-3 bg-container-inset rounded-lg p-3">
+    <p class="text-xs text-secondary">
+      <%= t("bills.cancelled_still_scheduled", date: l(series.cancelled_on, format: :short)) %>
+    </p>
+    <%= render DS::Link.new(
+          text: t("recurring_transactions.actions.pause"),
+          variant: "outline",
+          href: toggle_status_recurring_transaction_path(series),
+          method: :post,
+          data: { turbo_frame: "_top" }
+        ) %>
+  </div>
+<% end %>

@@ -56,7 +56,21 @@ class Account::LinkableTest < ActiveSupport::TestCase
     assert @account.supports_category_matcher?
   end
 
-  test "supports_category_matcher? returns false for unlinked and non-Plaid accounts" do
+  test "supports_category_matcher? returns true for Up-linked accounts" do
+    up_item = UpItem.create!(family: @family, name: "Test Up", access_token: "up-access-token")
+    up_account = UpAccount.create!(up_item: up_item, name: "Up Spending", account_id: "up_acc_1", currency: "AUD")
+    AccountProvider.create!(account: @account, provider: up_account)
+
+    assert @account.supports_category_matcher?
+  end
+
+  test "supports_category_matcher? returns true for Monobank-linked accounts" do
+    AccountProvider.create!(account: @account, provider: monobank_accounts(:black_card))
+
+    assert @account.supports_category_matcher?
+  end
+
+  test "supports_category_matcher? returns false for unlinked accounts and providers without a matcher" do
     refute @account.supports_category_matcher?
 
     simplefin_item = SimplefinItem.create!(

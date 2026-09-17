@@ -1,0 +1,37 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: @is_income ? t(".income_title") : t(".title"), subtitle: t(".hint")) %>
+  <% dialog.with_body do %>
+    <div class="space-y-3">
+      <%# GETs this same dialog URL with ?q= and re-renders in the frame,
+          the same shape as the payment picker's search. Submit-on-Enter on
+          purpose: a frame replacement mid-typing destroys input focus. %>
+      <%= form_with url: new_recurring_transaction_path, method: :get, data: { turbo_frame: :modal } do %>
+        <%= hidden_field_tag :picker, "1" %>
+        <%= hidden_field_tag(:income, "1") if @is_income %>
+        <%= render DS::SearchInput.new(
+              name: "q",
+              value: @picker_query,
+              placeholder: t(".search_placeholder"),
+              autofocus: true
+            ) %>
+      <% end %>
+
+      <% if @picker_entries.any? %>
+        <div class="max-h-80 overflow-y-auto rounded-lg shadow-border-xs divide-y divide-divider">
+          <% @picker_entries.each do |entry| %>
+            <%= render "recurring_transactions/picker_row", entry: entry, claimed_by: @claimed_by[entry.id] %>
+          <% end %>
+        </div>
+        <% if @picker_capped %>
+          <p class="text-xs text-secondary"><%= t(".showing_recent", count: @picker_entries.size) %></p>
+        <% end %>
+      <% else %>
+        <p class="text-sm text-secondary"><%= t(".no_results", query: @picker_query) %></p>
+      <% end %>
+
+      <%= link_to t(".back"),
+            new_recurring_transaction_path(income: @is_income ? "1" : nil),
+            class: "block text-sm text-secondary hover:text-primary" %>
+    </div>
+  <% end %>
+<% end %>

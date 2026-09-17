@@ -48,22 +48,18 @@
      data-activity-label-quick-edit-convert-url-value="<%= convert_url %>"
      <% end %>>
 
-  <button type="button"
-          class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-1 <%= income_trade ? "cursor-default" : "cursor-pointer hover:opacity-80" %> transition-opacity"
-          style="<% if has_label %>
-            background-color: color-mix(in oklab, <%= color %> 15%, transparent);
-            border: 1px solid color-mix(in oklab, <%= color %> 25%, transparent);
-            color: <%= color %>;
-          <% else %>
-            background-color: var(--color-surface-inset);
-            border: 1px solid var(--color-border-secondary);
-            color: var(--color-text-secondary);
-          <% end %>"
-          <% unless income_trade %>
-          data-action="click->activity-label-quick-edit#toggle"
-          data-activity-label-quick-edit-target="badge"
-          <% end %>
-          title="<%= has_label ? t("transactions.transaction.activity_type_tooltip") : t("transactions.show.activity_type") %>">
+  <%# Dividend/Interest trades have no dropdown to open (income_trade), so this
+      renders as a plain <span> rather than a <button> — a real <button> with no
+      click handler would still be excluded from the row's whole-row click
+      delegation (clickable_row_controller.js excludes "a, button, input, select,
+      textarea, label"), creating a dead spot identical to the bug issue #3366
+      fixed for the rest of the row. %>
+  <%= content_tag(income_trade ? :span : :button,
+        type: income_trade ? nil : "button",
+        class: "inline-flex items-center gap-1 text-xs font-medium rounded-full px-2.5 py-1 #{income_trade ? "cursor-pointer" : "cursor-pointer hover:opacity-80"} transition-opacity",
+        style: (has_label ? "background-color: color-mix(in oklab, #{color} 15%, transparent); border: 1px solid color-mix(in oklab, #{color} 25%, transparent); color: #{color};" : "background-color: var(--color-surface-inset); border: 1px solid var(--color-border-secondary); color: var(--color-text-secondary);"),
+        data: (income_trade ? {} : { action: "click->activity-label-quick-edit#toggle", activity_label_quick_edit_target: "badge" }),
+        title: (has_label ? t("transactions.transaction.activity_type_tooltip") : t("transactions.show.activity_type"))) do %>
     <% if has_label %>
       <%= label %>
     <% else %>
@@ -73,7 +69,7 @@
     <% unless income_trade %>
       <%= icon "chevron-down", size: "xs", color: "current" %>
     <% end %>
-  </button>
+  <% end %>
 
   <% unless income_trade %>
     <!-- Dropdown menu -->

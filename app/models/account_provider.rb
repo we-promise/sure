@@ -46,9 +46,13 @@ class AccountProvider < ApplicationRecord
     end
 
     def destroy_onchain_provider_account
-      # The row destroys this link itself through dependent: :destroy, so
-      # answering that by destroying the row again would go round in circles.
-      return if destroyed_by_association
+      # Skipped only when the row is the one destroying this link, through its
+      # own dependent: :destroy — answering that by destroying the row again
+      # would go round in circles. The account destroys this link by association
+      # too, and there the row must follow: a guard reading nothing but
+      # `destroyed_by_association` could not tell the two apart, and left the
+      # row behind with no account to track.
+      return if destroyed_by_association&.active_record == OnchainWalletAccount
 
       provider&.destroy
     end

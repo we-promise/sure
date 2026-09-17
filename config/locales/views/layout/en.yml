@@ -7,8 +7,12 @@ en:
       resize_left_sidebar: Resize the accounts sidebar
       resize_right_sidebar: Resize the assistant sidebar
       skip_to_main: Skip to main content
+      release_highlight:
+        title: What's new
+        done: Got it
       nav:
         assistant: Assistant
+        bills: Bills
         budgets: Budgets
         home: Home
         plan: Plan

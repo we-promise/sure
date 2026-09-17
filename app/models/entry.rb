@@ -19,6 +19,9 @@ class Entry < ApplicationRecord
   validates :reconciled_at, presence: true, if: -> { reconciled_by_statement_id.present? }
 
   has_many :child_entries, class_name: "Entry", foreign_key: :parent_entry_id, dependent: :destroy
+  # Read side only, so a transaction can say which bills it paid. The foreign key
+  # already nullifies on delete, so this adds no lifecycle behaviour.
+  has_many :recurring_allocations, dependent: nil, inverse_of: :entry
 
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
   accepts_nested_attributes_for :entryable
@@ -99,18 +102,24 @@ class Entry < ApplicationRecord
     joins(:account).where(accounts: { family_id: family.id })
   end
 
-  # Uncategorized, non-transfer transaction entries on draft or active accounts.
+  # Uncategorized transaction entries on draft or active accounts.
   # Caller is responsible for scoping to accessible entries before applying this scope.
+  #
+  # Uses Transaction::UNCATEGORIZED_EXCLUDED_KINDS rather than TRANSFER_KINDS so
+  # the badge count and Quick Categorize wizard cover exactly what the
+  # Transactions "Uncategorized" filter lists — notably the budget-tracked
+  # loan_payment / investment_contribution transfers the dashboard already
+  # counts, which were previously uncategorizable from any surface (#2592).
   scope :uncategorized_transactions, -> {
     joins(:account)
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
       .where(accounts: { status: %w[draft active] })
       .where(transactions: { category_id: nil })
-      .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      .where.not(transactions: { kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS })
       .where(entries: { excluded: false })
   }
 
-  # Returns uncategorized, non-transfer entries whose name matches the given filter string.
+  # Returns uncategorized entries whose name matches the given filter string.
   # Used by the Quick Categorize Wizard to preview which transactions a rule would affect.
   # @param entries [ActiveRecord::Relation] pre-scoped entries (caller controls authorization)
   def self.uncategorized_matching(entries, filter, transaction_type = nil)
@@ -458,6 +467,9 @@ class Entry < ApplicationRecord
           name: split_attrs[:name],
           amount: split_attrs[:amount],
           currency: currency,
+          notes: split_attrs[:notes],
+          import: import,
+          import_locked: import_locked,
           excluded: TRUTHY_VALUES.include?(split_attrs[:excluded]),
           entryable: child_transaction
         )
