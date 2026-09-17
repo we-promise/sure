@@ -244,20 +244,22 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(900, @family.currency), totals.expense_money
   end
 
-  test "excludes loan principal payments from expense, reports them as debt_principal_money" do
-    # Loan principal reduces cash and reduces the loan liability by the same
-    # amount -- net worth is unchanged, so it isn't consumption. It's still
-    # budget-tracked (kind is not in BUDGET_EXCLUDED_KINDS, see #2592), just
-    # not folded into "expense".
+  test "includes loan payments as expenses in income statement" do
+    # loan_payment stays classified as a regular expense (unlike
+    # investment_contribution): neither the provider import path nor
+    # Transfer::Creator verify that a loan_payment transaction is
+    # principal-only, so a provider that bundles principal and interest into
+    # one posted payment would have its interest silently excluded from
+    # consumption too if this were treated as non-operating (see
+    # Transaction::NON_OPERATING_KINDS and PR #3609 review).
     create_transaction(account: @checking_account, amount: 1000, category: nil, kind: "loan_payment")
 
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
-    assert_equal 5, totals.transactions_count # row is present, just not classified as expense
+    assert_equal 5, totals.transactions_count
     assert_equal Money.new(1000, @family.currency), totals.income_money
-    assert_equal Money.new(900, @family.currency), totals.expense_money # unchanged: 200 + 300 + 400
-    assert_equal Money.new(1000, @family.currency), totals.debt_principal_money
+    assert_equal Money.new(1900, @family.currency), totals.expense_money # 900 + 1000
   end
 
   test "excludes one-time transactions from income statement calculations" do
@@ -450,7 +452,10 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(900, @family.currency), totals.expense_money
   end
 
-  test "loan repayment: principal is excluded from expense, interest remains a real expense" do
+  test "loan repayment: principal and interest both count as expense" do
+    # Unlike investment_contribution, loan_payment is NOT split out of
+    # "expense" -- see Transaction::NON_OPERATING_KINDS for why (no verified
+    # principal-only invariant on the ingestion side).
     interest_category = @family.categories.create!(name: "Loan Interest")
 
     create_transaction(account: @checking_account, amount: 250, category: nil, kind: "loan_payment") # principal
@@ -459,8 +464,7 @@ class IncomeStatementTest < ActiveSupport::TestCase
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)
 
-    assert_equal Money.new(1000, @family.currency), totals.expense_money # 900 + 100 interest, no principal
-    assert_equal Money.new(250, @family.currency), totals.debt_principal_money
+    assert_equal Money.new(1250, @family.currency), totals.expense_money # 900 + 250 principal + 100 interest
   end
 
   # Tax-Advantaged Account Exclusion Tests

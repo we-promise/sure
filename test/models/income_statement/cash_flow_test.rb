@@ -27,13 +27,10 @@ class IncomeStatement::CashFlowTest < ActiveSupport::TestCase
     pending.entryable.update!(extra: { "simplefin" => { "pending" => true } })
     result = summary
     assert_equal "1000.0", result[:income]
-    # loan_payment (principal) is a real cash outflow but net-worth-neutral,
-    # so it's reported separately and kept out of spending/savings_rate.
-    assert_equal "12.345", result[:spending]
-    assert_equal "20.0", result[:debt_principal_payments]
-    assert_equal "987.655", result[:net_savings]
-    assert_equal "12.345", result[:spending_comparison][:current_total]
-    assert_equal "98.7655", result[:savings_rate]
+    assert_equal "32.345", result[:spending]
+    assert_equal "967.655", result[:net_savings]
+    assert_equal "32.345", result[:spending_comparison][:current_total]
+    assert_equal "96.7655", result[:savings_rate]
   end
 
   test "reports investment contributions separately from spending" do

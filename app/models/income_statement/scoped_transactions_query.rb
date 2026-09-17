@@ -10,20 +10,20 @@
 # aliases (`ae`, `a`). The including class must set `@family`.
 module IncomeStatement::ScopedTransactionsQuery
   private
-    # Investment contributions and loan payments (principal) are real cash
-    # outflows, but they reallocate net worth (cash -> another asset, or
-    # cash -> lower liability) rather than consuming it. Classifying them as
-    # "expense" would corrupt net income, savings rate, and spending-anomaly
-    # detection for anyone who moves a meaningful amount into an investment/
-    # crypto account or pays down a loan (see Transaction::NON_OPERATING_KINDS).
+    # An investment contribution is a real cash outflow, but it reallocates
+    # net worth (cash -> another asset) rather than consuming it. Classifying
+    # it as "expense" would corrupt net income, savings rate, and
+    # spending-anomaly detection for anyone who moves a meaningful amount
+    # into an investment/crypto account (see Transaction::NON_OPERATING_KINDS
+    # for why loan_payment isn't given the same treatment).
     #
-    # They get their own classification value (the kind name itself) instead,
-    # so every classification_sql/converted_amount_sql caller automatically
-    # keeps them out of "income"/"expense" sums while still returning their
-    # rows (categorizable, drilldown-visible, and summable separately via
-    # IncomeStatement#investment_contribution_totals / #debt_principal_totals).
+    # It gets its own classification value instead, so every
+    # classification_sql/converted_amount_sql caller automatically keeps it
+    # out of "income"/"expense" sums while still returning its rows
+    # (categorizable, drilldown-visible, and summable separately via
+    # IncomeStatement#investment_contribution_totals).
     def classification_sql(t)
-      "CASE WHEN #{t}.kind = 'investment_contribution' THEN 'investment_contribution' WHEN #{t}.kind = 'loan_payment' THEN 'debt_principal' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
+      "CASE WHEN #{t}.kind = 'investment_contribution' THEN 'investment_contribution' WHEN #{t}.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
     end
 
     # Entry amount converted to the family currency at the day's exchange

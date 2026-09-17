@@ -3351,11 +3351,6 @@ components:
           description: 'Cash moved into investment/crypto accounts this period. Excluded
             from the sankey spending figure: it reallocates net worth rather than
             consuming it.'
-        debt_principal_payments:
-          type: string
-          description: Loan principal paid down this period. Excluded from the sankey
-            spending figure for the same reason as investment_contributions; interest
-            remains part of spending.
     CashFlow:
       type: object
       required:
@@ -3400,11 +3395,6 @@ components:
           description: 'Cash moved into investment/crypto accounts this period. Excluded
             from spending and savings_rate: it reallocates net worth rather than consuming
             it.'
-        debt_principal_payments:
-          type: string
-          description: Loan principal paid down this period. Excluded from spending
-            and savings_rate for the same reason as investment_contributions; interest
-            remains part of spending.
         spending_comparison:
           type: object
           required:

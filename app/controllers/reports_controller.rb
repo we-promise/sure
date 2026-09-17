@@ -435,11 +435,11 @@ class ReportsController < ApplicationController
       # Helper to process an entry (transaction or trade)
       # `kind` is nil for trades, which have no Transaction#kind.
       process_entry = ->(category, entry, is_trade, kind: nil) do
-        # A transfer to an investment/crypto account or a loan principal
-        # payment is a real cash outflow but not consumption (see
-        # Transaction::NON_OPERATING_KINDS): it must not land in "Expenses"
-        # here any more than it does in the summary cards above, so it gets
-        # its own group instead of the plain sign-based classification.
+        # A transfer to an investment/crypto account is a real cash outflow
+        # but not consumption (see Transaction::NON_OPERATING_KINDS): it must
+        # not land in "Expenses" here any more than it does in the summary
+        # cards above, so it gets its own group instead of the plain
+        # sign-based classification.
         type = if kind && Transaction::NON_OPERATING_KINDS.include?(kind)
           kind
         else
@@ -783,8 +783,8 @@ class ReportsController < ApplicationController
       transactions.each do |transaction|
         entry = transaction.entry
         # Same non-operating-kind carve-out as the on-screen breakdown (see
-        # Transaction::NON_OPERATING_KINDS): an investment contribution or
-        # loan principal payment is a real outflow but not consumption.
+        # Transaction::NON_OPERATING_KINDS): an investment contribution is a
+        # real outflow but not consumption.
         type = if Transaction::NON_OPERATING_KINDS.include?(transaction.kind)
           transaction.kind
         else
@@ -821,14 +821,12 @@ class ReportsController < ApplicationController
       income_data = result.select { |r| r[:type] == "income" }.sort_by { |r| -r[:total] }
       expense_data = result.select { |r| r[:type] == "expense" }.sort_by { |r| -r[:total] }
       investment_contribution_data = result.select { |r| r[:type] == "investment_contribution" }.sort_by { |r| -r[:total] }
-      debt_principal_data = result.select { |r| r[:type] == "loan_payment" }.sort_by { |r| -r[:total] }
 
       {
         months: months,
         income: income_data,
         expenses: expense_data,
-        investment_contributions: investment_contribution_data,
-        debt_principal_payments: debt_principal_data
+        investment_contributions: investment_contribution_data
       }
     end
 
@@ -903,13 +901,12 @@ class ReportsController < ApplicationController
         end
 
         csv_section(csv, "INVESTMENT CONTRIBUTIONS", @export_data[:investment_contributions], month_headers)
-        csv_section(csv, "DEBT PRINCIPAL PAYMENTS", @export_data[:debt_principal_payments], month_headers)
       end
     end
 
-    # Shared by generate_transactions_csv for the investment-contribution and
-    # debt-principal sections, which follow the same shape as INCOME/EXPENSES
-    # but are kept separate: real cash outflows, not consumption (see
+    # Shared by generate_transactions_csv for the investment-contribution
+    # section, which follows the same shape as INCOME/EXPENSES but is kept
+    # separate: a real cash outflow, not consumption (see
     # Transaction::NON_OPERATING_KINDS).
     def csv_section(csv, label, category_rows, month_headers)
       return if category_rows.blank?

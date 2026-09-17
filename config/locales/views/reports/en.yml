@@ -121,7 +121,6 @@ en:
         expense: Expenses
         income: Income
         investment_contribution: Investment Contributions
-        debt_principal: Debt Principal Payments
         uncategorized: Uncategorized
         entries:
           one: "%{count} entry"
@@ -247,6 +246,7 @@ en:
         title: Spending by Category
         income: Income
         expenses: Expenses
+        investment_contributions: Investment Contributions
         category: Category
         amount: Amount
         percent: "%"

@@ -14,8 +14,7 @@ class IncomeStatement::CashFlowGraph
       # Transaction::NON_OPERATING_KINDS): real money leaving an account, but
       # not consumption, so it's surfaced here too rather than only in the
       # public API's month-based CashFlow response.
-      investment_contributions: decimal(@statement.investment_contribution_totals(period: @period).total),
-      debt_principal_payments: decimal(@statement.debt_principal_totals(period: @period).total)
+      investment_contributions: decimal(@statement.investment_contribution_totals(period: @period).total)
     }
   end
 

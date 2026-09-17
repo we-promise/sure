@@ -19,7 +19,6 @@ class IncomeStatement::CashFlow
     income = totals.income_money.amount
     spending = totals.expense_money.amount
     investment_contributions = totals.investment_contribution_money.amount
-    debt_principal_payments = totals.debt_principal_money.amount
     current = cumulative_series(current_period)
     previous = cumulative_series(previous_period)
     comparison_day = @month == @as_of.beginning_of_month ? [ @as_of.day, previous.size ].min : previous.size
@@ -33,11 +32,10 @@ class IncomeStatement::CashFlow
       net_savings: decimal(income - spending),
       savings_rate: income.positive? ? decimal((income - spending) / income * 100) : nil,
       # Cash that left an account but didn't get consumed: it moved into an
-      # investment/crypto account or paid down a loan's principal. Real cash
-      # outflow, but net-worth-neutral, so it's kept out of `spending` /
-      # `savings_rate` and reported separately (see Transaction::NON_OPERATING_KINDS).
+      # investment/crypto account. Real cash outflow, but net-worth-neutral,
+      # so it's kept out of `spending` / `savings_rate` and reported
+      # separately (see Transaction::NON_OPERATING_KINDS).
       investment_contributions: decimal(investment_contributions),
-      debt_principal_payments: decimal(debt_principal_payments),
       spending_comparison: {
         previous_period: period_json(previous_period),
         current_total: decimal(current_total), comparison_total: decimal(previous_total),

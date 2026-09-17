@@ -150,6 +150,7 @@ fr:
         category: Catégorie
         expenses: Dépenses
         income: Revenus
+        investment_contributions: Contributions aux investissements
         more_categories: "+ %{count} autres catégories"
         percent: "%"
         title: Dépenses par catégorie
@@ -224,7 +225,6 @@ fr:
         expense: Dépenses
         income: Revenus
         investment_contribution: Contributions aux investissements
-        debt_principal: Remboursements de capital
         percentage: "% du total"
         type: Type
         uncategorized: Non catégorisé

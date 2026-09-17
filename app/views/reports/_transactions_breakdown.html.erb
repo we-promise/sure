@@ -35,13 +35,11 @@
       income_groups = transactions.select { |g| g[:type] == "income" }
       expense_groups = transactions.select { |g| g[:type] == "expense" }
       investment_contribution_groups = transactions.select { |g| g[:type] == "investment_contribution" }
-      debt_principal_groups = transactions.select { |g| g[:type] == "loan_payment" }
 
       # Calculate totals
       income_total = income_groups.sum { |g| g[:total] }
       expense_total = expense_groups.sum { |g| g[:total] }
       investment_contribution_total = investment_contribution_groups.sum { |g| g[:total] }
-      debt_principal_total = debt_principal_groups.sum { |g| g[:total] }
 
       # Determine sort direction for Amount column
       current_sort_by = params[:sort_by]
@@ -89,20 +87,6 @@
               groups: investment_contribution_groups,
               total: investment_contribution_total,
               type: :investment_contribution,
-              amount_sort_params: amount_sort_params,
-              current_sort_by: current_sort_by,
-              current_sort_direction: current_sort_direction,
-              start_date: start_date,
-              end_date: end_date %>
-      <% end %>
-
-      <%# Debt Principal Payments Section: same reasoning as investment
-          contributions -- principal reduces a liability, it isn't spending %>
-      <% if debt_principal_groups.any? %>
-        <%= render "reports/breakdown_table",
-              groups: debt_principal_groups,
-              total: debt_principal_total,
-              type: :debt_principal,
               amount_sort_params: amount_sort_params,
               current_sort_by: current_sort_by,
               current_sort_direction: current_sort_direction,
