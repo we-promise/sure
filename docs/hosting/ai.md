@@ -933,6 +933,8 @@ Langfuse helps you:
 
 4. Restart Sure
 
+Sure sends completed observations through Langfuse's v4 OpenTelemetry ingestion path. Existing keys and host settings still apply. See the [Langfuse migration and validation notes](langfuse.md#langfuse-v4) before upgrading an existing project.
+
 All LLM operations will now be logged to Langfuse, including:
 - Chat messages and responses
 - Auto-categorization requests
