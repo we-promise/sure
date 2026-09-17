@@ -35,6 +35,14 @@ class RecurringTransaction
     # Push-payment fingerprints in raw descriptors.
     ACH_MARKERS = %w[ach web\ pmt webpmt billpay bill\ pay online\ pmt e-pay epay].freeze
 
+    # Explicit autopay/autodraft wording banks stamp onto a descriptor when a
+    # biller is enrolled to auto-debit -- a direct signal, not an inference,
+    # so it overrides the bill_type-based default below even for a "bill".
+    AUTOPAY_MARKERS = %w[
+      autopay auto\ pay auto-pay autodraft auto\ draft auto-draft autodebit
+      auto\ debit auto-debit autopmt auto\ pmt
+    ].freeze
+
     # Above this, a flat recurring charge is more likely rent-or-service
     # than a streaming plan.
     SUBSCRIPTION_AMOUNT_CEILING = BigDecimal("150")
@@ -67,8 +75,10 @@ class RecurringTransaction
         bill_type: kind,
         category_id: modal_category_id,
         # Subscriptions and BNPL plans are auto-charges: on the list, not a
-        # task.
-        autopay: kind != "bill"
+        # task. A bill defaults to needing action, but explicit autopay
+        # wording in the descriptor overrides that default -- the biller told
+        # us directly, so no other heuristic gets a vote.
+        autopay: kind != "bill" || matches?(AUTOPAY_MARKERS)
       )
     end
 
