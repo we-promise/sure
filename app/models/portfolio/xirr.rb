@@ -31,10 +31,20 @@
 # sign twice, refuses most real portfolios: any account with a withdrawal
 # between two deposits changes sign twice.
 #
-# `#ambiguous?` is how a caller finds out. A figure from an ambiguous series is
-# one of several rates that fit, and a page that prints it as "the" money-
-# weighted return is overstating what was computed. The caller that renders
-# this is a later PR; the predicate is here so that PR has something to ask.
+# `#ambiguous?` is how a caller finds out, and it is a CONSERVATIVE bound
+# rather than a root count. Descartes' rule bounds the number of positive roots
+# from ABOVE by the sign-change count, so `false` guarantees the figure is the
+# only one that fits, while `true` means only that it MAY be one of several --
+# -1000, +2000, -1000 changes sign twice and yet has a single distinct root at
+# 0, with multiplicity two. Counting the distinct roots instead would mean
+# solving for all of them on a render path to answer a question whose honest
+# answer is "possibly".
+#
+# So a page printing an ambiguous figure as "the" money-weighted return may be
+# overstating what was computed, and the safe direction is to hedge: over-hedging
+# a unique figure is a smaller error than presenting one of several as the
+# answer. The caller that renders this is a later PR; the predicate is here so
+# that PR has something to ask.
 #
 # No gem: AGENTS.md asks for Rails and few dependencies, and this is eighty
 # lines of arithmetic with no upstream to track.
@@ -121,9 +131,11 @@ class Portfolio::Xirr
                            .count { |previous, current| previous != current }
   end
 
-  # More than one sign change admits more than one rate (Descartes' rule bounds
-  # the count by the number of changes), so the figure #rate returns is one of
-  # several that fit rather than the only one. See MULTIPLE ROOTS above.
+  # True when the series MAY have more than one rate -- a conservative upper
+  # bound, not a count. Descartes' rule bounds the root count from above by the
+  # sign-change count, so false is a guarantee of uniqueness and true is a
+  # "possibly": -1000, +2000, -1000 changes sign twice and has one distinct
+  # root. See MULTIPLE ROOTS above for why that is the direction to err in.
   def ambiguous?
     sign_changes > 1
   end

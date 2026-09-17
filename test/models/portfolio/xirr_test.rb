@@ -312,6 +312,27 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     assert_equal 2, xirr.sign_changes
   end
 
+  # The predicate is an upper bound, not a count, and this is the case that
+  # shows the difference: -1000, +2000, -1000 annually is -1000(x-1)**2 for
+  # x = 1/(1+r), so it has ONE distinct root at 0 with multiplicity two, and
+  # `ambiguous?` still reports true.
+  #
+  # That is the documented, deliberate direction -- counting distinct roots
+  # would mean solving for all of them on a render path -- and it is pinned
+  # here so the docs and the behaviour cannot drift apart again.
+  test "ambiguous? is an upper bound, so it can flag a series with one root" do
+    xirr = Portfolio::Xirr.new([
+      [ Date.new(2026, 1, 1), -1_000 ],
+      [ Date.new(2027, 1, 1), 2_000 ],
+      [ Date.new(2028, 1, 1), -1_000 ]
+    ])
+
+    assert_in_delta 0.0, xirr.send(:present_value, 0.0), 1e-9, "0 solves it"
+    assert_in_delta 0.0, xirr.rate.to_f, 1e-6, "and it is the only rate that does"
+    assert_equal 2, xirr.sign_changes
+    assert xirr.ambiguous?, "two sign changes, so the bound says 'possibly', not 'is'"
+  end
+
   # The ordinary shape -- money out, money back -- has one sign change and one
   # root, so nothing is hedged for the common case.
   test "an ordinary series is not ambiguous" do
