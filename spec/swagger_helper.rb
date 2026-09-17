@@ -1766,7 +1766,7 @@ RSpec.configure do |config|
             }
           },
           CashFlowGraph: {
-            type: :object, required: %w[as_of time_zone currency period sankey],
+            type: :object, required: %w[as_of time_zone currency period sankey investment_contributions],
             properties: {
               as_of: { type: :string, format: :date }, time_zone: { type: :string }, currency: { type: :string },
               period: { '$ref' => '#/components/schemas/FinancialPeriod' },
@@ -1776,7 +1776,7 @@ RSpec.configure do |config|
           },
           CashFlow: {
             type: :object,
-            required: %w[month as_of time_zone currency period income spending net_savings savings_rate spending_comparison],
+            required: %w[month as_of time_zone currency period income spending net_savings savings_rate spending_comparison investment_contributions],
             properties: {
               month: { type: :string, format: :date }, as_of: { type: :string, format: :date },
               time_zone: { type: :string }, currency: { type: :string },

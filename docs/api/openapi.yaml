@@ -3334,6 +3334,7 @@ components:
       - currency
       - period
       - sankey
+      - investment_contributions
       properties:
         as_of:
           type: string
@@ -3364,6 +3365,7 @@ components:
       - net_savings
       - savings_rate
       - spending_comparison
+      - investment_contributions
       properties:
         month:
           type: string
