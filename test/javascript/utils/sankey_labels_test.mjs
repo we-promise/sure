@@ -72,12 +72,14 @@ test("equal values fall back to vertical order deterministically", () => {
 
 test("large graphs keep tall-bar labels and use tighter spacing", () => {
   const nodes = column([
-    [300.0, 0, 60], // taller than spacing * 1.5 (19.6 * 1.5 = 29.4)
-    [200.0, 100, 110], // 75px from the tall bar's center; fails at 28, passes at 19.6
+    [300.0, 8, 38], // 18px from the higher-value node; needs the tall-bar override
+    [500.0, 0, 10], // highest value claims its label first
+    [200.0, 43, 53], // 25px from the tall bar; needs the reduced 19.6px spacing
   ]);
   const hidden = hiddenSankeyLabels(nodes, { height: 800, minSpacing: SPACING });
   assert.equal(hidden.has(0), false, "tall bar always labeled");
-  assert.equal(hidden.has(1), false, "tighter spacing in large graphs");
+  assert.equal(hidden.has(1), false, "highest-value node keeps its label");
+  assert.equal(hidden.has(2), false, "tighter spacing in large graphs");
 });
 
 test("hidden set uses node.index, not array position", () => {
