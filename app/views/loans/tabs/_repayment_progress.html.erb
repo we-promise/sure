@@ -1,0 +1,63 @@
+<%# locals: (loan:) %>
+
+<%# The repayment ring and the instalment the borrower is on. Rendered only
+    when the paydown can be measured -- an account with no balance to compare
+    against what was borrowed gets no ring rather than an empty one. %>
+<% segments = loan.to_donut_segments_json %>
+<% breakdown = loan.payment_breakdown %>
+
+<% if segments.present? || breakdown.present? %>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+    <% if segments.present? %>
+      <div class="bg-container rounded-lg border border-primary p-4">
+        <p class="text-sm text-secondary mb-2"><%= t(".repaid") %></p>
+
+        <%# The paid arc is declared as the controller's pass-through segment so
+            its `var(--color-warning)` reaches the SVG fill as written. Every
+            other segment goes through `d3.color()`, which returns null for a
+            CSS variable and takes the whole chart down with it. %>
+        <div class="relative h-40"
+             data-controller="donut-chart"
+             data-donut-chart-segments-value="<%= segments %>"
+             data-donut-chart-overage-segment-id-value="paid">
+          <div data-donut-chart-target="chartContainer" class="absolute inset-0 pointer-events-none"></div>
+
+          <div data-donut-chart-target="contentContainer" class="flex justify-center items-center h-full">
+            <div data-donut-chart-target="defaultContent" class="flex flex-col items-center">
+              <p class="text-3xl font-medium text-primary privacy-sensitive">
+                <%= number_to_percentage(loan.balance_paid_ratio * 100, precision: 0) %>
+              </p>
+              <p class="text-sm text-secondary"><%= t(".of_original", amount: format_money(loan.original_balance)) %></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <% if breakdown.present? %>
+      <div class="bg-container rounded-lg border border-primary p-4">
+        <p class="text-sm text-secondary mb-2">
+          <%= t(".instalment", number: breakdown[:number], date: l(breakdown[:date], format: :long)) %>
+        </p>
+
+        <dl class="space-y-2">
+          <% [ :principal, :interest, :insurance ].each do |part| %>
+            <% next if part == :insurance && breakdown[:insurance].zero? %>
+            <div class="flex items-center justify-between gap-2">
+              <dt class="text-sm text-secondary"><%= t(".#{part}") %></dt>
+              <dd class="text-sm text-primary privacy-sensitive tabular-nums">
+                <%= format_money(breakdown[part]) %>
+                <span class="text-secondary"><%= number_to_percentage(breakdown[:ratios][part] * 100, precision: 0) %></span>
+              </dd>
+            </div>
+          <% end %>
+
+          <div class="flex items-center justify-between gap-2 pt-2 border-t border-primary">
+            <dt class="text-sm text-secondary"><%= t(".total") %></dt>
+            <dd class="text-sm font-medium text-primary privacy-sensitive tabular-nums"><%= format_money(breakdown[:total]) %></dd>
+          </div>
+        </dl>
+      </div>
+    <% end %>
+  </div>
+<% end %>

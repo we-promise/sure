@@ -8,6 +8,32 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:loan)
   end
 
+  # The overview only shows what the loan actually records: a leverage figure
+  # needs a down payment, and an insurance card needs a premium. A loan with
+  # neither must not grow cards reading zero, which would say the borrower has
+  # insurance costing nothing rather than none.
+  test "the overview shows leverage and insurance once they are recorded" do
+    get account_path(@account)
+    assert_response :success
+    assert_no_match(/Leverage/, response.body, "nothing to compute a ratio from yet")
+    assert_no_match(/Insurance/, response.body, "and no premium recorded")
+
+    @account.loan.update!(
+      down_payment: 100_000, interest_rate: 5, term_months: 120, rate_type: "fixed",
+      start_date: 2.years.ago.to_date, insurance_rate: 0.36, insurance_rate_type: "level_term"
+    )
+
+    get account_path(@account)
+    assert_response :success
+
+    assert_match(/Leverage/, response.body)
+    assert_match(/5\.0x/, response.body, "500,000 borrowed against 100,000 put in")
+    assert_match(/Moderate/, response.body, "and the band that ratio sits in")
+    assert_match(/Insurance/, response.body)
+    assert_match(/Total Cost/, response.body)
+    assert_select "[data-controller='donut-chart']", count: 1, message: "the repayment ring"
+  end
+
   test "creates with loan details" do
     assert_difference -> { Account.count } => 1,
       -> { Loan.count } => 1,

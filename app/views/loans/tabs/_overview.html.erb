@@ -66,7 +66,36 @@
   <%= summary_card title: t(".type") do %>
     <%= account.loan.rate_type&.titleize || t(".unknown") %>
   <% end %>
+
+  <%# What the loan costs in total: what was borrowed, the interest on it, and
+      the premium charged beside it. Nil without a schedule to read interest
+      from, which is the same condition the payoff date above answers with. %>
+  <%= summary_card title: t(".total_cost") do %>
+    <% total_cost = account.loan.total_cost %>
+    <%= total_cost ? format_money(total_cost) : t(".unknown") %>
+  <% end %>
+
+  <%# Only for a loan carrying a premium. A card reading zero would say the
+      borrower has insurance costing nothing rather than none recorded. %>
+  <% if account.loan.insurance.present? %>
+    <%= summary_card title: t(".total_insurance") do %>
+      <%= format_money(account.loan.total_insurance) %>
+    <% end %>
+  <% end %>
+
+  <%# Leverage needs a down payment to be a ratio at all, and a loan with none
+      recorded is not unleveraged -- it is one nobody has told us about. %>
+  <% if account.loan.initial_leverage_ratio.present? %>
+    <%= summary_card title: t(".leverage") do %>
+      <span class="<%= loan_leverage_band_class(account.loan.leverage_band) %>">
+        <%= t(".leverage_multiple", ratio: number_with_precision(account.loan.initial_leverage_ratio, precision: 1)) %>
+        <span class="text-sm"><%= t(".leverage_band_#{account.loan.leverage_band}") %></span>
+      </span>
+    <% end %>
+  <% end %>
 </div>
+
+<%= render "loans/tabs/repayment_progress", loan: account.loan %>
 
 <div class="flex justify-center py-8">
   <%= render DS::Link.new(

@@ -33,6 +33,24 @@ class Loan < ApplicationRecord
   # charging a month's interest for the gap.
   validates :start_date, comparison: { less_than_or_equal_to: -> { Date.current } }, allow_nil: true
 
+  # What the borrower put in up front. Not part of the amortisation -- the loan
+  # amortises what was actually lent -- but it is what makes leverage readable:
+  # a 20,000 deposit against an 80,000 loan is a different position from the
+  # same loan against 5,000.
+  validates :down_payment, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+
+  validates :insurance_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :insurance_rate_type, inclusion: { in: Loan::Insurance::RATE_TYPES }, allow_nil: true
+
+  # How much was borrowed for every unit the borrower put in. Nil without a
+  # down payment recorded: a loan with no deposit is not infinitely leveraged,
+  # it is a loan whose leverage nobody has told us.
+  LEVERAGE_BANDS = {
+    conservative: 0..4,
+    moderate: 4..8,
+    high: 8..
+  }.freeze
+
   # The contracted repayment, for a loan that has exactly one.
   #
   # Deliberately still nil for a variable loan even though it now has a
@@ -224,13 +242,162 @@ class Loan < ApplicationRecord
   SCHEDULE_INPUTS.each do |input|
     define_method(:"#{input}=") do |value|
       @amortization_schedule = nil
+      @insurance = nil
+      super(value)
+    end
+  end
+
+  # The premium is charged against the schedule, so it goes stale for both its
+  # own inputs and the schedule's.
+  INSURANCE_INPUTS = %i[insurance_rate insurance_rate_type].freeze
+
+  INSURANCE_INPUTS.each do |input|
+    define_method(:"#{input}=") do |value|
+      @insurance = nil
       super(value)
     end
   end
 
   def reload(*)
     @amortization_schedule = nil
+    @insurance = nil
     super
+  end
+
+  # The insurance policy charged alongside this loan's instalments, or nil when
+  # no premium is recorded. Read #total_insurance for a figure that is always
+  # money.
+  def insurance
+    @insurance ||= Loan::Insurance.for(self)
+  end
+
+  def total_insurance
+    insurance&.total || Money.new(0, account.currency)
+  end
+
+  # Everything the loan costs the borrower: what was borrowed, the interest on
+  # it, and the premium charged alongside. Nil when there is no schedule to
+  # read an interest figure from, because a cost without interest in it would
+  # understate the loan rather than decline to answer.
+  def total_cost
+    schedule = amortization_schedule
+    return nil if schedule.nil?
+
+    original_balance + schedule.total_interest + total_insurance
+  end
+
+  # How far into the term the loan is, measured from origination rather than
+  # from `start_date` alone: a loan drawn down before the account tracking it
+  # was created has no start_date, and #origination_date already answers that
+  # from the account's first valuation.
+  #
+  # A month counts once it has been served in full, so a loan originated on the
+  # 15th is one month in on the 15th of the next month, not on the 1st. Clamped
+  # to the term: a loan running past its last payment is finished, not further
+  # in than it can be.
+  def months_elapsed(as_of: Date.current)
+    origin = origination_date
+    return 0 if origin.nil? || term_months.nil? || as_of < origin
+
+    months = (as_of.year * 12 + as_of.month) - (origin.year * 12 + origin.month)
+    months -= 1 if origin + months.months > as_of
+
+    months.clamp(0, term_months)
+  end
+
+  def remaining_months(as_of: Date.current)
+    return nil if term_months.nil?
+
+    [ term_months - months_elapsed(as_of: as_of), 0 ].max
+  end
+
+  def finished?(as_of: Date.current)
+    return nil if term_months.nil?
+
+    months_elapsed(as_of: as_of) >= term_months
+  end
+
+  # What is still owed after a given scheduled payment, read off the schedule
+  # rather than re-derived, so it cannot drift from the table beside it.
+  def remaining_balance_at(payment_number)
+    return nil unless payment_number&.positive?
+
+    amortization_schedule&.payments&.dig(payment_number - 1)&.ending_balance
+  end
+
+  # One instalment, split into what it repays, what it costs and what it
+  # insures, with each part as a share of the whole. Defaults to the payment
+  # the loan is currently on.
+  #
+  # The ratios are for a progress bar, so they are floats summing to 1 rather
+  # than money. A zero payment -- an interest-free loan repaid in full by its
+  # opening instalment -- gives zeroes rather than a division by zero.
+  def payment_breakdown(payment_number: nil)
+    schedule = amortization_schedule
+    return nil if schedule.nil?
+
+    payment_number ||= months_elapsed + 1
+    payment = schedule.payments[payment_number.clamp(1, schedule.payments.size) - 1]
+    return nil if payment.nil?
+
+    premium = insurance&.premium_for(payment.number)&.amount || Money.new(0, account.currency)
+    total = payment.principal + payment.interest + premium
+
+    {
+      number: payment.number,
+      date: payment.date,
+      principal: payment.principal,
+      interest: payment.interest,
+      insurance: premium,
+      total: total,
+      ratios: payment_ratios(payment, premium, total)
+    }
+  end
+
+  # How much of what was borrowed has been repaid, as a fraction, measured
+  # against the account's current balance rather than the schedule: the
+  # schedule says what was promised, the balance says what happened.
+  def balance_paid_ratio
+    borrowed = original_balance.amount
+    return nil unless borrowed.positive?
+
+    balance = account&.balance
+    return nil if balance.nil?
+
+    (1 - balance.abs.fdiv(borrowed)).clamp(0.0, 1.0)
+  end
+
+  # Segments for the repayment ring, in the shape the shared donut-chart
+  # controller takes. Nil when the paydown cannot be computed, which is the
+  # view's cue to leave the ring out rather than draw an empty one.
+  def to_donut_segments
+    ratio = balance_paid_ratio
+    return nil if ratio.nil?
+
+    [
+      { color: "var(--color-warning)", amount: ratio, id: "paid" },
+      { color: "var(--budget-unused-fill)", amount: 1 - ratio, id: "unused" }
+    ]
+  end
+
+  # The same segments as JSON, which is what the shared donut-chart controller
+  # reads. Mirrors Budget#to_donut_segments_json so the two ring call sites
+  # hand the controller the same shape.
+  def to_donut_segments_json
+    to_donut_segments&.to_json
+  end
+
+  def initial_leverage_ratio
+    return nil unless down_payment&.positive?
+
+    original_balance.amount.fdiv(down_payment)
+  end
+
+  def leverage_band
+    ratio = initial_leverage_ratio
+    return nil if ratio.nil?
+
+    LEVERAGE_BANDS.find { |_band, range| range.cover?(ratio) }&.first
   end
 
   # The date the loan was drawn down. Recorded explicitly when the borrower
@@ -243,6 +410,18 @@ class Loan < ApplicationRecord
 
   def original_balance
     Money.new(account.first_valuation_amount, account.currency)
+  end
+
+  private def payment_ratios(payment, premium, total)
+    return { principal: 0.0, interest: 0.0, insurance: 0.0 } unless total.amount.positive?
+
+    whole = total.amount.to_f
+
+    {
+      principal: payment.principal.amount.to_f / whole,
+      interest: payment.interest.amount.to_f / whole,
+      insurance: premium.amount.to_f / whole
+    }
   end
 
   class << self
