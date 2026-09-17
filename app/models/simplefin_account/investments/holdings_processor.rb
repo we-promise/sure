@@ -224,7 +224,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
     # field with the total position cost rather than the per-share value the
     # spec requires. Matched as case-insensitive substrings against the
     # account's stored org name and domain.
-    TOTAL_BASIS_INSTITUTIONS = %w[vanguard fidelity schwab].freeze
+    TOTAL_BASIS_INSTITUTIONS = %w[vanguard fidelity schwab etrade].freeze
 
     def institution_reports_total_basis?
       org = simplefin_account.respond_to?(:org_data) ? simplefin_account.org_data : nil

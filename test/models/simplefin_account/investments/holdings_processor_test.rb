@@ -122,7 +122,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     assert_equal BigDecimal("100.00"), cost_basis
   end
 
-  test "institution_reports_total_basis? matches Vanguard, Fidelity, and Schwab org metadata" do
+  test "institution_reports_total_basis? matches Vanguard, Fidelity, Schwab, and E*Trade org metadata" do
     cases = {
       { "name" => "Vanguard" }                          => true,
       { "name" => "VANGUARD BROKERAGE" }                => true,
@@ -130,6 +130,7 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
       { "domain" => "vanguard.com" }                    => true,
       { "domain" => "401k.fidelity.com" }               => true,
       { "name" => "Charles Schwab", "domain" => "schwab.com" } => true,
+      { "name" => "E*Trade", "domain" => "us.etrade.com" } => true,
       { "name" => "Chase" }                             => false,
       {}                                                => false
     }
@@ -163,6 +164,20 @@ class SimplefinAccount::Investments::HoldingsProcessorTest < ActiveSupport::Test
     )
 
     assert_in_delta 46.33, cost_basis.to_f, 0.01
+  end
+
+  test "cost_basis from E*Trade is divided by qty (#3618)" do
+    # Same failure mode as Vanguard/Fidelity (#1718) and Schwab (#2626):
+    # E*Trade's cost_basis is total position cost, not per-share.
+    cost_basis = @processor.send(
+      :normalize_cost_basis,
+      BigDecimal("3850.00"),
+      BigDecimal("100"),
+      "cost_basis",
+      true # institution_reports_total_basis?
+    )
+
+    assert_in_delta 38.50, cost_basis.to_f, 0.01
   end
 
   test "missing cost basis fields return nil" do
