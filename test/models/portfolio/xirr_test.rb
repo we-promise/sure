@@ -121,8 +121,71 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     assert_nil Portfolio::Xirr.rate_or_nil(flows)
   end
 
-  # The third rescue branch, which no fixture reaches: bisection searches
-  # [-0.999999, 1e7], and a series that changes sign almost always puts a root
+  # Every loss reaches bisection, so the low end of its bracket decides whether
+  # an ordinary loss has a rate at all. A fixed -0.999999 floor meant dividing
+  # by 1e-6 ** units, which underflows to zero past about 51 units and made the
+  # present value Infinity: bisection saw a non-finite endpoint and gave up, and
+  # `rate` reported "did not converge" for a series it had never searched.
+  #
+  # Both fixtures are ordinary shapes in the unit this class offers callers --
+  # a 30% loss over a year read weekly, a 50% loss over 100 days read daily --
+  # and both raised ConvergenceError before the endpoint was derived per series.
+  # Closed form: a single outlay A returning B after t units solves exactly at
+  # (B/A) ** (1/t) - 1, so the expected figures here are not the solver's own.
+  test "an ordinary loss is solved however many units it spans" do
+    start = Date.new(2026, 1, 1)
+
+    weekly = Portfolio::Xirr.rate(
+      [ [ start, -1_000 ], [ start + 364, 700 ] ], days_per_unit: 7
+    )
+    assert_in_delta (700.0 / 1_000)**(7.0 / 364) - 1, weekly.to_f, 1e-9,
+                    "52 weekly units: a 30% loss has a rate, and this is it"
+
+    daily = Portfolio::Xirr.rate(
+      [ [ start, -1_000 ], [ start + 100, 500 ] ], days_per_unit: 1
+    )
+    assert_in_delta (500.0 / 1_000)**(1.0 / 100) - 1, daily.to_f, 1e-9,
+                    "100 daily units: likewise"
+  end
+
+  # The other direction of the same defect. A fixed floor is not only too low
+  # for a long span, it is needlessly high for a short one: a near-total loss
+  # over a single year has a real rate below -99.9999%, and nothing about the
+  # arithmetic at one unit of span puts it out of reach. Deriving the endpoint
+  # from the series reaches it.
+  test "a near total loss over one unit is solved rather than refused" do
+    rate = Portfolio::Xirr.rate([
+      [ Date.new(2026, 1, 1), -1_000 ],
+      [ Date.new(2027, 1, 1), 0.0001 ]
+    ])
+
+    assert_in_delta(-0.9999999, rate.to_f, 1e-9, "0.0001 back on 1,000 in one year")
+  end
+
+  # The bracket only moves as far from -1 as the arithmetic forces it to, so a
+  # short span keeps an endpoint that a long one cannot afford. Pinning both
+  # ends stops a future "just use a safer constant" from quietly reintroducing
+  # either half of the defect above.
+  test "the low endpoint is derived from the series, not fixed" do
+    start = Date.new(2026, 1, 1)
+
+    short = Portfolio::Xirr.new([ [ start, -1_000 ], [ start + 365, 500 ] ])
+    long = Portfolio::Xirr.new([ [ start, -1_000 ], [ start + 365 * 60, 500 ] ])
+
+    assert_operator short.send(:low_endpoint), :<, -0.99999,
+                    "one unit of span can be evaluated hard against -1"
+    assert_operator long.send(:low_endpoint), :>, short.send(:low_endpoint),
+                    "sixty units cannot, and the endpoint has to back off"
+    assert_operator long.send(:low_endpoint), :<, 0.0,
+                    "but it is still a low end, not a positive rate"
+
+    assert Float::INFINITY > short.send(:present_value, short.send(:low_endpoint)).abs,
+           "the endpoint the bracket uses must be one the objective can be evaluated at"
+    assert Float::INFINITY > long.send(:present_value, long.send(:low_endpoint)).abs
+  end
+
+  # The third rescue branch, which no fixture reaches: bisection searches from a
+  # derived low endpoint up to 1e7, and a series that changes sign almost always puts a root
   # somewhere in it -- I tried three shapes built to defeat both methods (a
   # bigger outflow after an inflow, an alternating series, a near-zero terminal
   # value) and all three converged. What is pinned here is the CONTRACT rather
@@ -242,11 +305,10 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     assert_nil Portfolio::Xirr.rate_or_nil(flows), "the annual form is expected to be unreachable here"
     assert_in_delta 1.0, Portfolio::Xirr.rate(flows, days_per_unit: 1).to_f, 1e-9
 
-    # The render path is the one production takes: Performance#money_weighted
-    # calls rate_or_nil, not rate. A rate_or_nil that dropped the unit would
-    # return nil here -- the assertion above establishes that the annual form
-    # is unreachable on this fixture -- so this pins the forwarding that the
-    # only caller of this class depends on.
+    # rate_or_nil is the variant a render path calls, and it must forward the
+    # unit. One that dropped it would return nil here -- the assertion above
+    # establishes that the annual form is unreachable on this fixture -- so a
+    # silently-annualised rate_or_nil cannot pass this line.
     assert_in_delta 1.0, Portfolio::Xirr.rate_or_nil(flows, days_per_unit: 1).to_f, 1e-9
   end
 

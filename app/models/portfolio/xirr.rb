@@ -5,7 +5,10 @@
 # Newton-Raphson with a bisection fallback. Newton converges in a handful
 # of iterations on ordinary portfolios; bisection is slower but cannot diverge,
 # so it catches the pathological series -- large early withdrawals, near-zero
-# terminal values -- where Newton's derivative sends it off to infinity.
+# terminal values -- where Newton's derivative sends it off to infinity. Every
+# loss takes the bisection path, because Newton's first step from its 10% start
+# leaves the domain on one, so the bracket bisection searches is load-bearing
+# for a whole half of the ordinary cases rather than only for exotic ones.
 #
 # ARITHMETIC NOTE. Money in this codebase is BigDecimal, but root-finding
 # needs `(1 + r) ** (days / 365.0)` with a fractional exponent, which BigDecimal
@@ -62,12 +65,16 @@ class Portfolio::Xirr
   RESIDUAL_TOLERANCE = 1e-9
   RATE_TOLERANCE = 1e-9
 
-  # Widest bracket we will search. -0.999999 rather than -1 because the
-  # objective function is undefined at exactly -1 (a total loss of every
-  # future-dated flow). 1e7 is 1,000,000,000% -- absurd as a return, but the
-  # bracket only has to contain the root, not be plausible.
-  RATE_FLOOR = -0.999999
+  # The high end of the bracket we search. 1e7 is 1,000,000,000% -- absurd as
+  # a return, but the bracket only has to contain the root, not be plausible.
   RATE_CEILING = 1.0e7
+
+  # The low end is never -1, where the objective is undefined (a total loss of
+  # every future-dated flow), and it is not a constant either: how close to -1
+  # the arithmetic can get depends on the series. See #low_endpoint. The search
+  # starts one Float tick above -1 -- below EPSILON, `-1.0 + distance` IS -1.0
+  # -- and backs off from there.
+  NARROWEST_FLOOR_DISTANCE = Float::EPSILON
 
   attr_reader :flows, :days_per_unit
 
@@ -118,7 +125,8 @@ class Portfolio::Xirr
   # (0.0725 == 7.25%). Annualised unless the caller said otherwise.
   def rate
     raise NoSignChangeError, "cash flows never change sign" unless sign_change?
-    raise NoDurationError, "cash flows all fall on one date" if flows.map(&:date).uniq.one?
+    # normalize sorts by date, so the first and last bracket every other one.
+    raise NoDurationError, "cash flows all fall on one date" if flows.first.date == flows.last.date
 
     result = newton_rate || bisection_rate
     raise ConvergenceError, "XIRR did not converge" if result.nil?
@@ -153,24 +161,62 @@ class Portfolio::Xirr
       @first_date ||= flows.first.date
     end
 
-    # Units elapsed from the first flow, as a Float. One unit is a year unless
-    # the caller asked for a different one.
-    def units_for(flow)
-      (flow.date - first_date).to_i / days_per_unit
+    # Each flow as [units elapsed from the first flow, amount]. One unit is a
+    # year unless the caller asked for a different one.
+    #
+    # Computed once rather than per evaluation: the intervals do not move
+    # between iterations, and the two objective functions below are evaluated a
+    # few hundred times per solve.
+    def terms
+      @terms ||= flows.map { |flow| [ (flow.date - first_date).to_i / days_per_unit, flow.amount ] }
     end
 
     # Present value of every flow at `rate`. The root of this is the answer.
     def present_value(rate)
-      flows.sum { |flow| flow.amount / ((1 + rate)**units_for(flow)) }
+      terms.sum { |units, amount| amount / ((1 + rate)**units) }
     end
 
     def present_value_derivative(rate)
-      flows.sum do |flow|
-        units = units_for(flow)
+      terms.sum do |units, amount|
         next 0.0 if units.zero?
 
-        -units * flow.amount / ((1 + rate)**(units + 1))
+        -units * amount / ((1 + rate)**(units + 1))
       end
+    end
+
+    # The low end of the bracket: as close to -1 as this series' arithmetic can
+    # actually be evaluated, or nil if no endpoint below zero can be.
+    #
+    # `present_value` divides by `(1 + rate) ** units`. Near -1 that power is
+    # tiny, and once it underflows to zero the quotient is Infinity -- bisection
+    # sees a non-finite endpoint and abandons a series whose root is perfectly
+    # ordinary. Where the underflow starts depends on the span, so a single
+    # fixed floor is wrong in both directions. At -0.999999 it was too low for a
+    # long series -- a 30% loss over 52 weekly units, or a 50% loss over 100
+    # daily ones, both raised ConvergenceError although a rate exists and every
+    # loss reaches bisection -- and needlessly high for a short one, putting a
+    # near-total loss over a single year out of reach for no arithmetic reason.
+    #
+    # So derive it instead: start against -1 and back away until the objective
+    # can be evaluated. Doubling the distance reaches any usable endpoint in at
+    # most the ~52 steps it takes to cross from EPSILON to 1, and the endpoint
+    # is then within a factor of two of the closest one this series admits,
+    # which is ample for a bracket end. Giving up at a distance of 1 is giving
+    # up at a rate of 0: a series whose amounts overflow even there has no
+    # bracket to search, and nil says so rather than a fabricated figure.
+    def low_endpoint
+      return @low_endpoint if defined?(@low_endpoint)
+
+      distance = NARROWEST_FLOOR_DISTANCE
+
+      while distance < 1.0
+        candidate = -1.0 + distance
+        return @low_endpoint = candidate if present_value(candidate).finite?
+
+        distance *= 2.0
+      end
+
+      @low_endpoint = nil
     end
 
     def newton_rate
@@ -187,8 +233,10 @@ class Portfolio::Xirr
         next_rate = rate - step
 
         # Newton has left the domain; hand over to bisection rather than
-        # producing a NaN and calling it a return.
-        return nil if next_rate <= RATE_FLOOR || !next_rate.finite?
+        # producing a NaN and calling it a return. The floor is the endpoint
+        # bisection uses, so the two agree on where the domain ends instead of
+        # each carrying its own idea of it.
+        return nil if !next_rate.finite? || next_rate <= (low_endpoint || -1.0)
 
         # A step this small means Newton has stopped moving. That is NOT the
         # same as having solved: on a flat or ill-conditioned stretch it can
@@ -208,7 +256,9 @@ class Portfolio::Xirr
     end
 
     def bisection_rate
-      low = RATE_FLOOR
+      low = low_endpoint
+      return nil if low.nil?
+
       high = RATE_CEILING
 
       low_value = present_value(low)
