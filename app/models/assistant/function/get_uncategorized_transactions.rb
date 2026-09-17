@@ -45,8 +45,12 @@ class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
 
         Movements between the user's own accounts (funds_movement, cc_payment)
         and excluded rows are never listed: they are not missing a category.
-        Loan payments and investment contributions ARE listed, because Sure's
-        budget counts them as spending, so an uncategorized one is a real gap.
+        Every other kind is, as in Sure's own Uncategorized filter. Loan payments
+        and investment contributions ARE listed, because Sure's budget counts
+        them as spending, so an uncategorized one is a real gap. One-time
+        transactions are listed too because they still need a category, but
+        get_income_statement and budget figures leave them out, so they do not
+        understate those figures.
       INSTRUCTIONS
     end
   end
@@ -128,29 +132,22 @@ class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
       (Integer(params["limit"].to_s, exception: false) || 20).clamp(1, MAX_PAYEES)
     end
 
-    # Deliberately NOT Entry.uncategorized_transactions, which excludes every
-    # Transaction::TRANSFER_KINDS member. Two of those, loan_payment and
-    # investment_contribution, are counted as expenses by the budget model
-    # (BUDGET_EXCLUDED_KINDS is the smaller list), so reusing that scope made
-    # this tool understate the very gap it exists to surface. The shared scope
-    # is right for its own callers and is left alone.
+    # Entry.uncategorized_transactions, the scope behind the uncategorized badge
+    # count and the Quick Categorize wizard, so this tool counts rows the way they
+    # do. The Transactions page's Uncategorized filter shares only its kind list,
+    # Transaction::UNCATEGORIZED_EXCLUDED_KINDS, and still lists excluded rows.
+    # That list leaves out just the paired legs of a transfer: a loan payment, an
+    # investment contribution or a one-time row with no category is part of the gap.
     def uncategorized_entries(period, account_ids)
-      scope = Entry.where(account_id: accessible_account_ids(account_ids))
-                   .joins(:account)
-                   .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id " \
-                          "AND entries.entryable_type = 'Transaction'")
-                   .where(accounts: { status: %w[draft active] })
-                   .where(transactions: { category_id: nil })
-                   .where.not(transactions: { kind: Transaction::BUDGET_EXCLUDED_KINDS })
-                   .where(entries: { excluded: false })
-                   .where(entries: { date: period })
-                   # preload, not includes: the scope already carries a raw
-                   # INNER JOIN on transactions, and `includes` would try to
-                   # eager-load the polymorphic :entryable into that same query,
-                   # which Rails refuses.
-                   .preload(:account, entryable: :merchant)
-
-      scope.to_a
+      Entry.uncategorized_transactions
+           .where(account_id: accessible_account_ids(account_ids))
+           .where(entries: { date: period })
+           # preload, not includes: the scope already carries a raw
+           # INNER JOIN on transactions, and `includes` would try to
+           # eager-load the polymorphic :entryable into that same query,
+           # which Rails refuses.
+           .preload(:account, entryable: :merchant)
+           .to_a
     end
 
     def accessible_account_ids(requested)

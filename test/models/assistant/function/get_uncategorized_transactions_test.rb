@@ -74,10 +74,9 @@ class Assistant::Function::GetUncategorizedTransactionsTest < ActiveSupport::Tes
     assert_equal [ "GBP", @account.currency ].sort, blended.map { |p| p[:currency] }.sort
   end
 
-  # Entry.uncategorized_transactions drops every Transaction::TRANSFER_KINDS
-  # member, but the budget model only excludes BUDGET_EXCLUDED_KINDS. A loan
-  # payment IS spending here, so an uncategorized one is part of the gap this
-  # tool reports, and hiding it understates that gap silently.
+  # Only the paired legs of a transfer have nothing to categorize. A loan payment
+  # IS spending in the budget, so an uncategorized one is part of the gap this
+  # tool reports, and hiding it would understate that gap silently.
   test "lists the transfer kinds the budget counts as spending" do
     loan = create_uncategorized(name: "PRLV SEPA CREDIT AUTO", amount: 250)
     loan.entryable.update!(kind: "loan_payment")
@@ -121,9 +120,21 @@ class Assistant::Function::GetUncategorizedTransactionsTest < ActiveSupport::Tes
     assert_not_includes result[:payees].map { |p| p[:payee] }, "ANCIEN"
   end
 
+  # one_time is excluded from budget analytics, not from the Uncategorized
+  # bucket: it is still a row the user has to categorize.
+  test "lists a one-time transaction that has no category" do
+    one_time = create_uncategorized(name: "PRLV SEPA NOTAIRE", amount: 1200)
+    one_time.entryable.update!(kind: "one_time")
+
+    assert_includes @fn.call[:payees].map { |p| p[:payee] }, "NOTAIRE"
+  end
+
   test "never lists transfers or excluded rows" do
     transfer_entry = create_uncategorized(name: "PRLV SEPA INTERNAL MOVE", amount: 300)
     transfer_entry.entryable.update!(kind: "funds_movement")
+
+    card_payment = create_uncategorized(name: "PRLV SEPA CARD PAYOFF", amount: 500)
+    card_payment.entryable.update!(kind: "cc_payment")
 
     excluded_entry = create_uncategorized(name: "PRLV SEPA IGNORED ROW", amount: 400)
     excluded_entry.update!(excluded: true)
@@ -131,7 +142,28 @@ class Assistant::Function::GetUncategorizedTransactionsTest < ActiveSupport::Tes
     payees = @fn.call[:payees].map { |p| p[:payee] }
 
     assert_not_includes payees, "INTERNAL MOVE"
+    assert_not_includes payees, "CARD PAYOFF"
     assert_not_includes payees, "IGNORED ROW"
+  end
+
+  # The badge count and the Quick Categorize wizard answer "what has no category"
+  # through Entry.uncategorized_transactions. This tool used to carry a private
+  # copy of that query, which went stale when upstream changed the shared kind
+  # list (#3293), so the count is pinned to the shared scope.
+  test "counts exactly the rows of Sure's shared uncategorized definition" do
+    Transaction.kinds.each_key.with_index do |kind, index|
+      entry = create_uncategorized(name: "PRLV SEPA KIND#{index}", amount: 10 + index)
+      entry.entryable.update!(kind: kind)
+    end
+
+    result = @fn.call
+    period = result[:period][:start_date]..result[:period][:end_date]
+    expected = Entry.uncategorized_transactions
+                    .where(account_id: @user.accessible_accounts.visible.select(:id))
+                    .where(entries: { date: period })
+                    .count
+
+    assert_equal expected, result[:summary][:transaction_count]
   end
 
   test "honors the date window" do
