@@ -12,7 +12,14 @@
       <div class="bg-container rounded-lg border border-primary p-4">
         <p class="text-sm text-secondary mb-2"><%= t(".repaid") %></p>
 
-        <div class="relative h-40" data-controller="donut-chart" data-donut-chart-segments-value="<%= segments %>">
+        <%# The paid arc is declared as the controller's pass-through segment so
+            its `var(--color-warning)` reaches the SVG fill as written. Every
+            other segment goes through `d3.color()`, which returns null for a
+            CSS variable and takes the whole chart down with it. %>
+        <div class="relative h-40"
+             data-controller="donut-chart"
+             data-donut-chart-segments-value="<%= segments %>"
+             data-donut-chart-overage-segment-id-value="paid">
           <div data-donut-chart-target="chartContainer" class="absolute inset-0 pointer-events-none"></div>
 
           <div data-donut-chart-target="contentContainer" class="flex justify-center items-center h-full">
