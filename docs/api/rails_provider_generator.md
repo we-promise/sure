@@ -167,10 +167,11 @@ This single command generates:
 
 **File:** `db/migrate/xxx_create_my_bank_tables_and_accounts.rb`
 
-Creates two complete tables with all necessary fields. The migration version
-below is not fixed: the generator emits the Rails version in use at the time it
-runs (`Rails::VERSION::MAJOR.MINOR`), so this example shows `[8.1]` while the
-app is on Rails 8.1 and will read differently after an upgrade.
+Creates two complete tables with all necessary fields. The generator writes the
+Rails version in use when it runs (`Rails::VERSION::MAJOR.MINOR`), so a provider
+generated on a later Rails will show that version here instead of `[8.1]`. The
+version in any generated migration is then fixed — it pins the semantics the
+migration was written against and is not rewritten by later upgrades.
 
 ```ruby
 class CreateMyBankTablesAndAccounts < ActiveRecord::Migration[8.1]
