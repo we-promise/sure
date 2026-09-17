@@ -167,10 +167,13 @@ This single command generates:
 
 **File:** `db/migrate/xxx_create_my_bank_tables_and_accounts.rb`
 
-Creates two complete tables with all necessary fields:
+Creates two complete tables with all necessary fields. The migration version
+below is not fixed: the generator emits the Rails version in use at the time it
+runs (`Rails::VERSION::MAJOR.MINOR`), so this example shows `[8.1]` while the
+app is on Rails 8.1 and will read differently after an upgrade.
 
 ```ruby
-class CreateMyBankTablesAndAccounts < ActiveRecord::Migration[7.2]
+class CreateMyBankTablesAndAccounts < ActiveRecord::Migration[8.1]
   def change
     # Create provider items table (stores per-family connection credentials)
     create_table :my_bank_items, id: :uuid do |t|
