@@ -58,6 +58,29 @@ class SecurityTest < ActiveSupport::TestCase
     assert security.classification_locked?
   end
 
+  # The counterpart to the two taxonomy tests: sector, industry and region are
+  # free text ON PURPOSE, because each provider ships its own vocabulary and a
+  # constraint would reject a value one of them legitimately returns. That is an
+  # absence -- of a constraint and of an `inclusion` rule -- and an absence is
+  # exactly what no other test here would notice being filled in. Adding either
+  # one later breaks classification ingestion for a provider, and the first
+  # symptom would be in the provider, not in this file.
+  #
+  # Values chosen to be outside any plausible taxonomy and to carry the
+  # punctuation real provider strings do, since a normalising validation would
+  # pass a tidy string and fail on these.
+  test "sector, industry and region are unconstrained free text" do
+    security = securities(:aapl)
+    free_text = "Consumer Electronics & Durables -- EMEA/APAC (ex-Japan), 2nd tier"
+
+    security.assign_attributes(sector: free_text, industry: free_text, region: free_text)
+    assert security.valid?, "no inclusion validation belongs on these"
+
+    # And no check constraint either, which the model's validations cannot show.
+    security.update_columns(sector: free_text, industry: free_text, region: free_text)
+    assert_equal [ free_text ] * 3, security.reload.values_at(:sector, :industry, :region)
+  end
+
   test "the model taxonomy and the database constraint list the same values" do
     constraints = Security.connection.check_constraints(:securities).index_by(&:name)
 
