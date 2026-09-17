@@ -13,8 +13,17 @@
           </ul>
         </div>
       <% else %>
-        <%= form_with url: link_existing_account_enable_banking_items_path, method: :post, class: "space-y-4" do %>
+        <%= styled_form_with url: link_existing_account_enable_banking_items_path, method: :post, class: "space-y-4" do |form| %>
           <%= hidden_field_tag :account_id, @account.id %>
+          <div class="space-y-1">
+            <%= form.date_field :sync_start_date,
+                  label: t(".sync_start_date_label"),
+                  value: @sync_start_date,
+                  min: @sync_start_date_min,
+                  max: @sync_start_date_max,
+                  required: true %>
+            <p class="text-xs text-secondary"><%= t(".sync_start_date_help") %></p>
+          </div>
           <div class="space-y-2 max-h-64 overflow-auto">
             <% @available_enable_banking_accounts.each do |eba| %>
               <label class="flex items-center gap-3 p-2 rounded border border-secondary hover:border-primary cursor-pointer">
