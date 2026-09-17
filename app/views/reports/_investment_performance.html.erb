@@ -196,10 +196,12 @@
                       <p class="text-secondary font-medium"><%= t("reports.investment_performance.sell_trades") %></p>
                       <% data[:sell_trades].first(5).each do |trade| %>
                         <% gain = trade.realized_gain_loss %>
-                        <div class="flex justify-between pl-2">
+                        <%# Converted in the controller, at the trade's own date: gain.value is carried in the currency the position is held in, and labelling it family currency here was reporting a EUR figure as USD. %>
+                        <% amount = data[:realized_gain_by_trade][trade.id] %>
+                        <div class="flex justify-between pl-2" data-testid="realized-gain-line">
                           <span class="text-primary"><%= trade.security.ticker %></span>
-                          <span class="<%= gain ? "" : "text-secondary" %>" style="<%= gain ? "color: #{gain.color}" : "" %>">
-                            <%= gain ? format_money(Money.new(gain.value, Current.family.currency)) : t("reports.investment_performance.no_data") %>
+                          <span class="<%= amount ? "" : "text-secondary" %>" style="<%= amount ? "color: #{gain.color}" : "" %>">
+                            <%= amount ? format_money(amount) : t("reports.investment_performance.no_data") %>
                           </span>
                         </div>
                       <% end %>
