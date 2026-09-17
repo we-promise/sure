@@ -53,6 +53,15 @@ class Provider::Mansa < Provider
 
   MANSA_EXCHANGE_TO_MIC = MIC_TO_MANSA_EXCHANGE.invert.freeze
 
+  # The only exchange verified end-to-end (see above). Used to scope any
+  # search/quote request that doesn't specify a MIC we recognize — Sure's own
+  # trade-form combobox never passes exchange_operating_mic on search at all
+  # (see app/views/trades/_form.html.erb), so leaving this unscoped would let
+  # Mansa return matches from other African exchanges this adapter has no
+  # verified MIC mapping for, which would then persist Mansa's own exchange
+  # code (e.g. "JSE") into exchange_operating_mic instead of a real ISO MIC.
+  DEFAULT_MANSA_EXCHANGE = "NGX"
+
   def initialize(api_key)
     @api_key = api_key # pipelock:ignore
   end
@@ -90,11 +99,11 @@ class Provider::Mansa < Provider
       enforce_daily_limit!
       throttle_request
 
-      mansa_exchange = MIC_TO_MANSA_EXCHANGE[exchange_operating_mic]
+      mansa_exchange = MIC_TO_MANSA_EXCHANGE[exchange_operating_mic] || DEFAULT_MANSA_EXCHANGE
 
       response = client.get("#{base_url}/api/v1/markets/search") do |req|
         req.params["q"] = symbol
-        req.params["exchange"] = mansa_exchange if mansa_exchange
+        req.params["exchange"] = mansa_exchange
         req.params["limit"] = 25
       end
 
@@ -102,14 +111,21 @@ class Provider::Mansa < Provider
       check_api_error!(parsed)
       results = parsed.dig("data") || []
 
-      results.map do |security|
+      # Skip anything that doesn't map to a verified real MIC rather than
+      # falling back to Mansa's own exchange code — better to drop a result
+      # than to persist a non-ISO string into exchange_operating_mic. In
+      # practice this shouldn't happen since the request above is always
+      # explicitly scoped to a single exchange, but it's cheap insurance
+      # against Mansa's search ignoring/broadening the exchange filter.
+      results.filter_map do |security|
         mic = MANSA_EXCHANGE_TO_MIC[security.dig("exchange")]
+        next unless mic
 
         Security.new(
           symbol: security.dig("ticker"),
           name: security.dig("name"),
           logo_url: nil,
-          exchange_operating_mic: mic || security.dig("exchange"),
+          exchange_operating_mic: mic,
           country_code: nil,
           currency: security.dig("currency")
         )
@@ -190,7 +206,7 @@ class Provider::Mansa < Provider
       enforce_daily_limit!
       throttle_request
 
-      mansa_exchange = MIC_TO_MANSA_EXCHANGE[exchange_operating_mic] || exchange_operating_mic
+      mansa_exchange = MIC_TO_MANSA_EXCHANGE[exchange_operating_mic] || DEFAULT_MANSA_EXCHANGE
 
       response = client.get("#{base_url}/api/v1/markets/exchanges/#{mansa_exchange}/stocks/#{CGI.escape(symbol)}")
 

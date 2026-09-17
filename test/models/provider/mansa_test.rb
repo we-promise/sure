@@ -49,6 +49,57 @@ class Provider::MansaTest < ActiveSupport::TestCase
     assert_equal "NGN", security.currency
   end
 
+  test "search_securities always scopes to NGX even with no MIC given, matching the real controller call" do
+    # Sure's actual trade-form combobox never passes exchange_operating_mic on
+    # search (see app/views/trades/_form.html.erb) — this test calls the
+    # provider exactly that way, which the original PR's only search test
+    # didn't (it passed exchange_operating_mic: "XNSA" explicitly and so
+    # never exercised the real controller -> provider path).
+    body = {
+      success: true,
+      data: [
+        { ticker: "MTNN", name: "MTN Nigeria Communications Plc", exchange: "NGX", currency: "NGN" }
+      ]
+    }.to_json
+
+    mock_response = mock
+    mock_response.stubs(:body).returns(body)
+    fake_request = Struct.new(:params).new({})
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).yields(fake_request).returns(mock_response)
+
+    result = @provider.search_securities("MTNN")
+
+    assert result.success?
+    # The actual bug: without this, an unscoped search could return matches
+    # from other African exchanges this adapter has no verified MIC for.
+    assert_equal "NGX", fake_request.params["exchange"]
+    assert_equal "XNSA", result.data.first.exchange_operating_mic
+  end
+
+  test "search_securities drops a result on an exchange this adapter can't map to a real MIC" do
+    # Defensive: even though the request above always explicitly scopes to a
+    # single exchange, this proves a stray result from an unmapped exchange
+    # (e.g. Mansa's search broadening the filter) never gets saved with
+    # Mansa's own exchange code standing in for a real ISO MIC.
+    body = {
+      success: true,
+      data: [
+        { ticker: "SOMETICKER", name: "Some Johannesburg Company", exchange: "JSE", currency: "ZAR" }
+      ]
+    }.to_json
+
+    mock_response = mock
+    mock_response.stubs(:body).returns(body)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    result = @provider.search_securities("Some Johannesburg Company", exchange_operating_mic: "XNSA")
+
+    assert result.success?
+    assert_equal [], result.data
+  end
+
   test "fetch_security_price reads currency from meta, not data" do
     body = {
       success: true,
