@@ -184,6 +184,24 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     assert_in_delta 1.0, xirr.rate.to_f, 0.0005
   end
 
+  # A bracket endpoint can BE the root, and the sign test cannot see it: a
+  # residual of exactly zero makes the product zero rather than negative, so
+  # bisection walked past a solved endpoint and converged on whichever end the
+  # interval collapsed towards.
+  #
+  # -1 today and Float::EPSILON a year later is a total loss, and it solves
+  # exactly at the low endpoint. It returned RATE_CEILING -- a 1,000,000,000%
+  # gain reported for losing everything.
+  test "a root sitting exactly on a bracket endpoint is returned, not walked past" do
+    flows = [ [ Date.new(2026, 1, 1), -1 ], [ Date.new(2027, 1, 1), Float::EPSILON ] ]
+    xirr = Portfolio::Xirr.new(flows)
+
+    assert_in_delta 0.0, xirr.send(:present_value, xirr.send(:low_endpoint)), 1e-12,
+                    "the fixture must actually solve at the endpoint, or this proves nothing"
+    assert_operator xirr.rate.to_f, :<, -0.99,
+                    "losing everything is about -100%, not the top of the bracket"
+  end
+
   # Every loss reaches bisection, so the low end of its bracket decides whether
   # an ordinary loss has a rate at all. A fixed -0.999999 floor meant dividing
   # by 1e-6 ** units, which underflows to zero past about 51 units and made the

@@ -298,6 +298,16 @@ class Portfolio::Xirr
       low_value = present_value(low)
       high_value = present_value(high)
       return nil unless low_value.finite? && high_value.finite?
+
+      # An endpoint can BE the root, and the sign test below cannot see it: a
+      # residual of exactly zero makes the product zero, not negative, so
+      # bisection walked past a solved endpoint and converged on whichever end
+      # the interval collapsed towards. `[-1 today, +Float::EPSILON a year on]`
+      # solves exactly at the low endpoint and returned RATE_CEILING -- a
+      # 1,000,000,000% gain reported for a total loss.
+      return low if low_value.abs < RESIDUAL_TOLERANCE
+      return high if high_value.abs < RESIDUAL_TOLERANCE
+
       # The root is not inside the widest bracket we are willing to search.
       return nil if low_value * high_value > 0
 
