@@ -3,9 +3,7 @@ module Account::Linkable
 
   included do
     # New generic provider association
-    has_many :account_providers, dependent: :destroy,
-             after_add: :reset_linked_cache,
-             after_remove: :reset_linked_cache
+    has_many :account_providers, dependent: :destroy
 
     # Legacy provider associations - kept for backward compatibility during migration
     belongs_to :plaid_account, optional: true
@@ -25,17 +23,7 @@ module Account::Linkable
 
   # A "linked" account gets transaction and balance data from a third party like Plaid or SimpleFin
   def linked?
-    return @linked unless @linked.nil?
-    @linked = account_providers.any? || plaid_account.present? || simplefin_account.present?
-  end
-
-  def reset_linked_cache(_account_provider = nil)
-    @linked = nil
-  end
-
-  def reload(*)
-    reset_linked_cache
-    super
+    account_providers.any? || plaid_account.present? || simplefin_account.present?
   end
 
   # An "offline" or "unlinked" account is one where the user tracks values and
