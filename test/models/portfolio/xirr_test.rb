@@ -243,6 +243,54 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     assert_in_delta(-0.9999999, rate.to_f, 1e-9, "0.0001 back on 1,000 in one year")
   end
 
+  # The same defect once more, at the other end of the search. Backing away from
+  # -1 by doubling reaches -0.5 and then stops: the next distance is 1.0, the
+  # loop's own limit, so everything between -0.5 and 0 was never probed. That
+  # interval is where a long series' only evaluable endpoint lives, because
+  # 0.5 ** units underflows to zero past about 1,074 units and every candidate
+  # at or below -0.5 is Infinity.
+  #
+  # Both fixtures are ordinary shapes in the units this class offers: a 10%
+  # loss over three years read daily, and the same loss over twenty years read
+  # weekly. Newton cannot rescue either -- from its 10% start the derivative
+  # underflows to zero at these exponents -- so the endpoint decides whether
+  # there is an answer at all, and both raised ConvergenceError.
+  test "a span too long to evaluate at minus a half is solved above it" do
+    start = Date.new(2006, 1, 1)
+
+    daily = Portfolio::Xirr.rate(
+      [ [ start, -1_000 ], [ start + 1_095, 900 ] ], days_per_unit: 1
+    )
+    # RATE_TOLERANCE is the width bisection stops at, so 1e-9 is the accuracy
+    # the class offers and the closed form is what it is measured against.
+    assert_in_delta (900.0 / 1_000)**(1.0 / 1_095) - 1, daily.to_f, 1e-9,
+                    "1,095 daily units: a 10% loss over three years has a rate"
+
+    weekly = Portfolio::Xirr.rate(
+      [ [ start, -1_000 ], [ start + 7_600, 900 ] ], days_per_unit: 7
+    )
+    assert_in_delta (900.0 / 1_000)**(7.0 / 7_600) - 1, weekly.to_f, 1e-9,
+                    "1,085 weekly units: likewise"
+  end
+
+  # What the endpoint for such a series has to look like, so the fix above
+  # cannot be satisfied by widening the doubling loop's limit past 1.0 -- which
+  # would hand bisection a positive "low" end and a bracket that excludes every
+  # negative rate.
+  test "an endpoint above minus a half is still a negative rate the objective can be evaluated at" do
+    start = Date.new(2006, 1, 1)
+    xirr = Portfolio::Xirr.new([ [ start, -1_000 ], [ start + 1_095, 900 ] ], days_per_unit: 1)
+    endpoint = xirr.send(:low_endpoint)
+
+    assert_not_nil endpoint, "a series this class can solve must have an endpoint to solve it from"
+    assert_operator endpoint, :>, -0.5, "nothing at or below -0.5 can be evaluated at 1,095 units"
+    assert_operator endpoint, :<, 0.0, "it is still the low end of the bracket"
+    assert xirr.send(:present_value, endpoint).finite?,
+           "an endpoint bisection cannot evaluate is not an endpoint"
+    assert_operator endpoint, :<, xirr.rate.to_f,
+                    "and the root has to be inside the bracket it opens"
+  end
+
   # The bracket only moves as far from -1 as the arithmetic forces it to, so a
   # short span keeps an endpoint that a long one cannot afford. Pinning both
   # ends stops a future "just use a safer constant" from quietly reintroducing

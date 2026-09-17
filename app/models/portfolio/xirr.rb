@@ -271,6 +271,26 @@ class Portfolio::Xirr
         distance *= 2.0
       end
 
+      # Doubling from EPSILON lands on -1 + 2 ** -k, so the last candidate it
+      # reaches is -0.5 and the next distance is the loop's own limit. That
+      # leaves (-0.5, 0) unprobed, and for a long series it is the only place a
+      # usable endpoint exists: 0.5 ** units underflows to zero past about
+      # 1,074 units -- three years read daily, twenty read weekly -- so every
+      # candidate at or below -0.5 divides by zero and the series was refused
+      # although its rate is ordinary.
+      #
+      # Halving the remaining gap to zero covers that interval with the same
+      # number of steps and the same "within a factor of two of the closest
+      # usable endpoint" guarantee. It stops short of zero: a low end of zero
+      # is not a low end, and an endpoint that cannot be evaluated anywhere
+      # below it means there is no bracket to search.
+      gap = 0.5
+      while gap > NARROWEST_FLOOR_DISTANCE
+        gap /= 2.0
+        candidate = -gap
+        return @low_endpoint = candidate if present_value(candidate).finite?
+      end
+
       @low_endpoint = nil
     end
 
