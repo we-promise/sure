@@ -221,11 +221,18 @@ class Portfolio::Xirr
     # and a lost +1 is the difference between a series that solves and one that
     # is refused for never changing sign. Group order is input order, so the
     # order really is the caller's.
+    # Frozen, because `flows` is public and every figure on the instance is
+    # memoised from it -- sign_changes, terms, first_date, residual_tolerance
+    # and `rate` itself. Without this a caller could append a flow after asking
+    # for the rate and get an object that reports three rows, one sign change
+    # and the answer for two. `Flow` is a Data and already frozen, so the array
+    # is the whole of the mutable surface.
     def aggregate(moves)
       moves.group_by(&:date)
            .map { |date, on_date| Flow.new(date: date, amount: on_date.sum(&:amount)) }
            .reject { |flow| flow.amount.zero? }
            .sort_by(&:date)
+           .freeze
     end
 
     def sign_change?

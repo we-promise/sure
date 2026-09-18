@@ -543,6 +543,32 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     assert_not xirr.ambiguous?
   end
 
+  # `flows` is a public reader, and every derived figure on the instance is
+  # memoised from it: sign_changes, terms, first_date, residual_tolerance and
+  # rate itself. An exposed mutable array lets a caller change the flows the
+  # object reports while it goes on answering from the cache built before the
+  # change -- 1000 doubling over a year returns 100%, a third flow of -5000 is
+  # appended, and the instance still says 100% with one sign change while
+  # showing three rows.
+  #
+  # The Flow objects are Data and already frozen, so the array is the whole of
+  # the mutable surface.
+  test "the flows a caller can see cannot be changed underneath the figures" do
+    xirr = Portfolio::Xirr.new([
+      [ Date.new(2026, 1, 1), -1_000 ],
+      [ Date.new(2027, 1, 1), 2_000 ]
+    ])
+
+    assert_in_delta 1.0, xirr.rate.to_f, 0.0005
+
+    assert xirr.flows.frozen?, "the exposed array is the object's own state"
+    assert xirr.flows.all?(&:frozen?), "and so is every row in it"
+
+    assert_raises FrozenError do
+      xirr.flows << Portfolio::Xirr::Flow.new(date: Date.new(2028, 1, 1), amount: -5_000.0)
+    end
+  end
+
   test "ignores zero amounts" do
     rate = Portfolio::Xirr.rate([
       [ Date.new(2026, 1, 1), -1_000 ],
