@@ -1,7 +1,8 @@
 require "swagger_helper"
 
 RSpec.describe "Api::V1::Financekit", type: :request do
-  FINANCEKIT_SECURITY = [ { apiKeyAuth: [] }, { oauth2: %w[read_write] } ].freeze
+  FINANCEKIT_READ_SECURITY = [ { apiKeyAuth: [] }, { oauth2: %w[read] } ].freeze
+  FINANCEKIT_WRITE_SECURITY = [ { apiKeyAuth: [] }, { oauth2: %w[read_write] } ].freeze
 
   let(:family) do
     Family.create!(
@@ -88,7 +89,7 @@ RSpec.describe "Api::V1::Financekit", type: :request do
     get "Discover foreground FinanceKit sync support" do
       tags "FinanceKit"
       produces "application/json"
-      security FINANCEKIT_SECURITY
+      security FINANCEKIT_READ_SECURITY
       response "200", "Discover foreground FinanceKit sync support" do
         schema "$ref" => "#/components/schemas/FinancekitCapabilities"
         run_test!
@@ -101,7 +102,7 @@ RSpec.describe "Api::V1::Financekit", type: :request do
     post "Enroll a FinanceKit foreground sync connection" do
       tags "FinanceKit"
       produces "application/json"
-      security FINANCEKIT_SECURITY
+      security FINANCEKIT_WRITE_SECURITY
       consumes "application/json"
       parameter name: :body, in: :body, required: true, schema: { "$ref" => "#/components/schemas/FinancekitEnrollment" }
       response "201", "Enroll a FinanceKit foreground sync connection" do
@@ -123,7 +124,7 @@ RSpec.describe "Api::V1::Financekit", type: :request do
     get "Read connection health and paginated mappings" do
       tags "FinanceKit"
       produces "application/json"
-      security FINANCEKIT_SECURITY
+      security FINANCEKIT_READ_SECURITY
       parameter name: :page, in: :query, type: :integer
       parameter name: :per_page, in: :query, type: :integer
       response "200", "Read connection health and paginated mappings" do
@@ -136,7 +137,7 @@ RSpec.describe "Api::V1::Financekit", type: :request do
     delete "Revoke foreground sync access and retain existing financial history" do
       tags "FinanceKit"
       produces "application/json"
-      security FINANCEKIT_SECURITY
+      security FINANCEKIT_WRITE_SECURITY
       response "204", "Revoke foreground sync access and retain existing financial history" do
         run_test!
       end
@@ -151,7 +152,7 @@ RSpec.describe "Api::V1::Financekit", type: :request do
     put "Explicitly link or create a canonical account" do
       tags "FinanceKit"
       produces "application/json"
-      security FINANCEKIT_SECURITY
+      security FINANCEKIT_WRITE_SECURITY
       consumes "application/json"
       parameter name: :body, in: :body, required: true, schema: { "$ref" => "#/components/schemas/FinancekitMappingRequest" }
       response "200", "Explicitly link or create a canonical account" do
@@ -184,7 +185,7 @@ RSpec.describe "Api::V1::Financekit", type: :request do
     post "Import a foreground FinanceKit sync payload" do
       tags "FinanceKit"
       produces "application/json"
-      security FINANCEKIT_SECURITY
+      security FINANCEKIT_WRITE_SECURITY
       consumes "application/json"
       parameter name: :body, in: :body, required: true, schema: { "$ref" => "#/components/schemas/FinancekitPayload" }
       response "201", "Import a foreground FinanceKit sync payload" do

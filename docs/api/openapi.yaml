@@ -3804,6 +3804,33 @@ components:
       description: Create requires booked_balance and observed_at. Link requires account_id
         and writable same-family ownership. Existing mappings are immutable; retry
         with the same data.
+      oneOf:
+      - required:
+        - action
+        - booked_balance
+        - observed_at
+        properties:
+          action:
+            type: string
+            enum:
+            - create
+          booked_balance:
+            "$ref": "#/components/schemas/FinancekitMoney"
+          observed_at:
+            type: string
+            format: date-time
+      - required:
+        - action
+        - account_id
+        properties:
+          action:
+            type: string
+            enum:
+            - link
+          account_id:
+            type: string
+            format: uuid
+            pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
     FinancekitAccountUpsert:
       type: object
       additionalProperties: false
@@ -3889,6 +3916,28 @@ components:
           maxLength: 1000
       description: booked requires posted_at. Currency must match the explicitly mapped
         account. Amount is an unsigned exact decimal magnitude, never a JSON number.
+      oneOf:
+      - required:
+        - status
+        - posted_at
+        properties:
+          status:
+            type: string
+            enum:
+            - booked
+          posted_at:
+            type: string
+            format: date-time
+      - required:
+        - status
+        properties:
+          status:
+            type: string
+            enum:
+            - authorized
+            - pending
+            - rejected
+            - memo
     FinancekitTombstone:
       type: object
       additionalProperties: false
@@ -5667,7 +5716,7 @@ paths:
       security:
       - apiKeyAuth: []
       - oauth2:
-        - read_write
+        - read
       responses:
         '200':
           description: Discover foreground FinanceKit sync support
@@ -5840,7 +5889,7 @@ paths:
       security:
       - apiKeyAuth: []
       - oauth2:
-        - read_write
+        - read
       parameters:
       - name: page
         in: query

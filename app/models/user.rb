@@ -370,9 +370,12 @@ class User < ApplicationRecord
     transaction do
       lock!
 
-      accounts_to_move = owned_accounts.to_a
+      accounts_to_move = owned_accounts.order(:id).to_a
       provider_items_to_move = provider_items_for_transfer(accounts_to_move)
       moving_default_account = accounts_to_move.any? { |account| account.id == default_account_id }
+
+      provider_items_to_move.sort_by(&:id).each(&:lock!)
+      accounts_to_move.each(&:lock!)
 
       account_shares.delete_all
 

@@ -26,10 +26,15 @@ class Financekit::LifecycleTest < ActiveSupport::TestCase
 
   test "family reset removes source tombstones and import records but no foreign enrollment" do
     Provider::Plaid.any_instance.stubs(:remove_item)
+    other = users(:empty)
+    other.update!(preferences: other.preferences.merge("preview_features_enabled" => true))
+    other_item = Financekit::Enrollment.create!(other, { "enrollment_id" => SecureRandom.uuid, "protocol" => 1,
+      "consent" => { "version" => 1, "upload_authorized" => true, "enrichment_acknowledged" => true, "source_ids" => [ SecureRandom.uuid ] } })
     Financekit::Processor.new(@item).apply!(financekit_payload)
     Family::FinancialDataReset.new(family: @family, dry_run: false, confirmed: true).call
     assert_not FinancekitItem.exists?(@item.id)
     assert_not FinancekitTransaction.where(financekit_account_id: @source.id).exists?
+    assert FinancekitItem.exists?(other_item.id)
   end
 
   test "family sync does not manufacture a new Wallet fetch" do
@@ -55,6 +60,51 @@ class Financekit::LifecycleTest < ActiveSupport::TestCase
     assert_not @item.pending_account_setup?
     @source.account_provider.destroy!
     assert @item.reload.pending_account_setup?
+  end
+
+  test "consented sources without mapping records report pending setup" do
+    @item.update!(consent: @item.consent.merge("source_ids" => [ @source_id, SecureRandom.uuid ]))
+    assert @item.reload.pending_account_setup?
+  end
+
+  test "re-enrollment reuses source lineage and does not duplicate ledger entries" do
+    Financekit::Processor.new(@item).apply!(financekit_payload)
+    account = @source.account
+    entry = account.entries.sole
+
+    @item.disconnect!
+    replacement = Financekit::Enrollment.create!(@user, @enrollment.merge("enrollment_id" => SecureRandom.uuid))
+    replacement_source = FinancekitAccount.map!(replacement, @source_id,
+      @mapping_input.except("booked_balance", "observed_at").merge("action" => "link", "account_id" => account.id))
+
+    Financekit::Processor.new(replacement).apply!(financekit_payload)
+
+    assert_equal [ entry.id ], account.entries.reload.pluck(:id)
+    assert_equal replacement_source, FinancekitTransaction.find_by!(source_id: @transaction_id).financekit_account
+  end
+
+  test "re-enrollment preserves tombstones for source lineage" do
+    Financekit::Processor.new(@item).apply!(financekit_payload)
+    account = @source.account
+    tombstone_payload = financekit_payload.merge(
+      "captured_at" => 1.minute.from_now.iso8601,
+      "transactions" => [],
+      "tombstones" => [ { "source_id" => @transaction_id, "account_id" => @source_id, "mapping_version" => 1 } ])
+    Financekit::Processor.new(@item).apply!(tombstone_payload)
+
+    @item.disconnect!
+    replacement = Financekit::Enrollment.create!(@user, @enrollment.merge("enrollment_id" => SecureRandom.uuid))
+    replacement_source = FinancekitAccount.map!(replacement, @source_id,
+      @mapping_input.except("booked_balance", "observed_at").merge("action" => "link", "account_id" => account.id))
+    replay = financekit_payload.merge("captured_at" => 2.minutes.from_now.iso8601)
+
+    Financekit::Processor.new(replacement).apply!(replay)
+
+    identity = FinancekitTransaction.find_by!(source_id: @transaction_id)
+    assert_equal replacement_source, identity.financekit_account
+    assert identity.tombstoned_at?
+    assert identity.review_required?
+    assert_empty account.entries.reload
   end
 
   test "provider reassignment revalidates FinanceKit enrollment family" do
