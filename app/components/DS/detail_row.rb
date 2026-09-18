@@ -51,9 +51,14 @@ class DS::DetailRow < DesignSystemComponent
     class_names("text-secondary text-sm shrink-0")
   end
 
+  # min-w-0 is load bearing, not decoration. A flex item's automatic minimum
+  # width is its min-content width, and neither break-words nor truncate reduces
+  # that, so an opaque value like a provider reference with no spaces would push
+  # past the 550px drawer instead of wrapping, and truncate would never clip at
+  # all. Letting the cell shrink is what lets either behavior happen.
   def value_classes
     class_names(
-      "text-sm text-primary text-right",
+      "min-w-0 text-sm text-primary text-right",
       truncate ? "truncate" : "break-words",
       value_class
     )
