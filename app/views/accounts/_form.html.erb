@@ -34,6 +34,21 @@
       </div>
     <% end %>
 
+    <% if account.persisted? && account.linked? %>
+      <div class="space-y-2 rounded-lg border border-primary p-3">
+        <div class="space-y-1">
+          <p class="text-sm text-primary"><%= t(".provider_balance_adjustment_label") %></p>
+          <p class="text-secondary text-sm"><%= t(".provider_balance_adjustment_hint") %></p>
+        </div>
+        <%= form.money_field :provider_balance_adjustment,
+            label: t(".provider_balance_adjustment_amount_label"),
+            default_currency: account.currency %>
+        <%= form.text_field :provider_balance_adjustment_reason,
+            label: t(".provider_balance_adjustment_reason_label"),
+            placeholder: t(".provider_balance_adjustment_reason_placeholder") %>
+      </div>
+    <% end %>
+
     <details class="group">
       <summary class="cursor-pointer text-sm text-secondary hover:text-primary flex items-center gap-1 py-2">
         <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>

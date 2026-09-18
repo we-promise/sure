@@ -52,6 +52,6 @@ class QuestradeAccount::Processor
 
       # Current-balance anchor = the reported total (cash + holdings). The value
       # is composed from the holdings + per-currency cash, not a made-up figure.
-      account.set_current_balance(total)
+      account.set_current_balance(total, apply_provider_adjustment: true)
     end
 end
