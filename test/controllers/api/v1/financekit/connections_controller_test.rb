@@ -145,6 +145,45 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     assert_response :success
     assert_equal "resolved", conflict.reload.status
     assert_not conflict.financekit_transaction.reload.review_required?
+
+    get "/api/v1/financekit/connections/#{@item.id}/conflicts", headers: @headers
+    assert_response :success
+    assert_empty response.parsed_body.fetch("conflicts")
+  end
+
+  test "retry after repair resolution fences the publisher stream" do
+    first = accept_and_apply
+    @source.account.entries.sole.update!(import_locked: true)
+    tombstone = {
+      "kind" => "transaction_tombstone",
+      "tombstone" => {
+        "source_id" => @transaction_id,
+        "source_account_id" => @source_id,
+        "lineage_id" => @source.financekit_account_lineage_id,
+        "mapping_version" => @source.mapping_version
+      }
+    }
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest, events: [ tombstone ]))
+    queued, = accept_batch(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest, events: []))
+    conflict = @item.financekit_conflicts.sole
+    old_credential = @credential
+
+    patch "/api/v1/financekit/connections/#{@item.id}/conflicts/#{conflict.id}",
+      params: { resolution: "retry_after_repair" }, headers: @headers, as: :json
+    assert_response :success
+
+    assert_equal "resolved", conflict.reload.status
+    assert_equal "retry_after_repair", conflict.resolution
+    assert_equal "repair_required", @item.reload.status
+    assert_equal "conflict_retry_requested", @item.repair_reason
+    assert_nil @item.credential_digest
+    assert_equal "revoked", queued.reload.status
+    assert_equal "conflict_retry_requested", queued.error_code
+
+    payload = financekit_payload(sequence: 3, predecessor_digest: second.payload_digest, events: [])
+    post "/api/v1/financekit/publishers/#{@item.publisher_id}/batches", params: JSON.generate(payload),
+      headers: @publisher_headers.merge("Authorization" => "Bearer #{old_credential}")
+    assert_response :unauthorized
   end
 
   test "non-admin and foreign-family access is rejected" do

@@ -64,7 +64,7 @@ Balance observations are append-only source history. Only the newest booked obse
 
 Transaction identity is the stable account lineage plus the FinanceKit source UUID. The provider adapter disables heuristic amount/date matching. Same-ID pending-to-booked transitions are supported; a changed source UUID remains a separate identity. Source-only `rejected` and `memo` records do not invent ledger activity.
 
-Omission never deletes data, even for a complete snapshot. Only an explicit transaction tombstone may retract an unprotected FinanceKit-owned entry. User-edited, locked, reconciled, split, transferred, or otherwise protected records create a durable conflict instead. Conflicts are listed at `GET /connections/{connection_id}/conflicts` and resolved explicitly with `PATCH /connections/{connection_id}/conflicts/{id}`.
+Omission never deletes data, even for a complete snapshot. Only an explicit transaction tombstone may retract an unprotected FinanceKit-owned entry. User-edited, locked, reconciled, split, transferred, or otherwise protected records create a durable conflict instead. Open conflicts requiring review are listed at `GET /connections/{connection_id}/conflicts` and resolved explicitly with `PATCH /connections/{connection_id}/conflicts/{id}`. `keep_sure` closes the conflict while preserving the Sure ledger entry; `retry_after_repair` closes the conflict, fences the publisher into `repair_required`, revokes queued work and credentials, and requires the authenticated client to call `POST /repair` before uploads can resume.
 
 ## Health and recovery
 

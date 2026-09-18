@@ -1,6 +1,6 @@
 class Api::V1::Financekit::ConflictsController < Api::V1::Financekit::BaseController
   def index
-    conflicts = connection.financekit_conflicts.order(created_at: :desc)
+    conflicts = connection.financekit_conflicts.open.order(created_at: :desc)
       .offset((safe_page_param - 1) * safe_per_page_param).limit(safe_per_page_param)
     render_json({ conflicts: conflicts.map { |conflict| conflict_data(conflict) } })
   end

@@ -1009,6 +1009,7 @@
     "properties": {
       "resolution": {
         "type": "string",
+        "description": "`keep_sure` closes the conflict without mutating the publisher stream. `retry_after_repair` closes the conflict, moves the connection to repair_required, revokes queued work and credentials, and requires POST /repair before uploads resume.",
         "enum": [
           "keep_sure",
           "retry_after_repair"
