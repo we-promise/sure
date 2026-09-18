@@ -40,7 +40,18 @@ class Rule::ConditionFilter::TransactionName < Rule::ConditionFilter
 
   private
     # True when the name equals the value outright, or when a Plaid row's name is
-    # that value followed by the separator and the bank's description.
+    # exactly the value joined to the bank's description by the separator.
+    #
+    # The second arm rebuilds the name rather than pattern matching it. A
+    # `LIKE value || ' - %'` cannot tell the separator #name inserted from a dash
+    # the bank happened to write, and when Plaid resolves no merchant the name is
+    # the description alone, so an ACH row reading "ACH - PAYROLL DEPOSIT" would
+    # satisfy `= "ACH"` despite this change never touching its name. Comparing
+    # against the stored original_description makes the match exact, and only a
+    # genuinely combined name can satisfy it.
+    #
+    # Rows imported before that field was stored return NULL here and fall to the
+    # first arm, which is correct: their names were never combined.
     #
     # entries.source is nullable, so the Plaid arm evaluates to NULL for manual
     # rows; `NOT (FALSE OR NULL)` is NULL, which would drop every manual row out
@@ -48,9 +59,8 @@ class Rule::ConditionFilter::TransactionName < Rule::ConditionFilter
     # negation sees it — the same hazard `!=` handles with IS DISTINCT FROM in
     # Rule::ConditionFilter#sanitize_operator.
     #
-    # Every user-supplied value is bound, and the only interpolations are the
-    # field expression built from the "entries.name" literal by normalize_field
-    # and the two frozen constants, so the whole condition leaves here as one
+    # Every user-supplied value is bound, and the only interpolations are field
+    # expressions built here from literals, so the whole condition leaves as one
     # sanitized string.
     #
     # @param operator [String] "=" or "!="
@@ -59,15 +69,17 @@ class Rule::ConditionFilter::TransactionName < Rule::ConditionFilter
     def plaid_aware_name_condition(operator, value)
       normalized_value = normalize_value(value)
       field = normalize_field("entries.name")
+      # Normalized on both sides so stored whitespace matches the collapsed name.
+      composed = normalize_field("(? || ? || (transactions.extra -> 'plaid' ->> 'original_description'))")
 
-      # LIKE, not ILIKE: `=` is case-sensitive today and this must not loosen it.
-      match = "COALESCE(#{field} = ? OR (entries.source = ? AND #{field} LIKE ?), FALSE)"
+      match = "COALESCE(#{field} = ? OR (entries.source = ? AND #{field} = #{composed}), FALSE)"
 
       ActiveRecord::Base.sanitize_sql_for_conditions([
         operator == "=" ? match : "NOT (#{match})",
         normalized_value,
         PlaidEntry::Processor::SOURCE,
-        "#{ActiveRecord::Base.sanitize_sql_like(normalized_value)}#{PlaidEntry::Processor::NAME_SEPARATOR}%"
+        normalized_value,
+        PlaidEntry::Processor::NAME_SEPARATOR
       ])
     end
 end
