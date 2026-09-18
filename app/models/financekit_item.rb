@@ -1,6 +1,8 @@
 class FinancekitItem < ApplicationRecord
   include Syncable
 
+  before_destroy :release_orphaned_lineage_links
+
   belongs_to :family
   belongs_to :user
   belongs_to :replaces_financekit_item, class_name: "FinancekitItem", optional: true
@@ -116,7 +118,7 @@ class FinancekitItem < ApplicationRecord
     revoke_pending_batches!("connection_revoked")
     update!(status: "revoked", credential_digest: nil)
     financekit_account_lineages.distinct.where.not(id: release_lineages_except).find_each do |lineage|
-      lineage.account_provider&.destroy!
+      release_lineage_link!(lineage)
     end
   end
 
@@ -143,5 +145,16 @@ class FinancekitItem < ApplicationRecord
     def revoke_pending_batches!(code)
       financekit_batches.where(status: %w[accepted processing failed])
         .update_all(status: "revoked", error_code: code, payload: nil, updated_at: Time.current)
+    end
+
+    def release_orphaned_lineage_links
+      financekit_account_lineages.distinct.find_each { |lineage| release_lineage_link!(lineage) }
+    end
+
+    def release_lineage_link!(lineage)
+      other_active_writer = FinancekitAccount.joins(:financekit_item)
+        .where(financekit_account_lineage_id: lineage.id, financekit_items: { status: "active" })
+        .where.not(financekit_item_id: id).exists?
+      lineage.account_provider&.destroy! unless other_active_writer
     end
 end

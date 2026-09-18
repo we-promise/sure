@@ -55,7 +55,7 @@ class FinancekitBatch < ApplicationRecord
       batch_id: batch_id,
       sequence: sequence,
       payload_digest: payload_digest,
-      status: status,
+      status: "accepted",
       accepted_at: accepted_at
     }
   end

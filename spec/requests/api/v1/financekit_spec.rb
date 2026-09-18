@@ -44,28 +44,22 @@ RSpec.describe "Api::V1::Financekit", type: :request do
   shared_examples "financekit normal API errors" do
     response "400", "Malformed or unsupported protocol" do
       schema "$ref" => "#/components/schemas/FinancekitError"
-      it("documents response") { expect(true).to be(true) }
     end
     response "401", "Invalid or missing authentication" do
       schema "$ref" => "#/components/schemas/FinancekitError"
-      it("documents response") { expect(true).to be(true) }
     end
     response "403", "Insufficient permission or publisher eligibility" do
       schema "$ref" => "#/components/schemas/FinancekitError"
-      it("documents response") { expect(true).to be(true) }
     end
     response "409", "Enrollment, mapping, lineage, generation, or stream conflict" do
       schema "$ref" => "#/components/schemas/FinancekitError"
-      it("documents response") { expect(true).to be(true) }
     end
     response "422", "Invalid typed record or consent" do
       schema "$ref" => "#/components/schemas/FinancekitError"
-      it("documents response") { expect(true).to be(true) }
     end
     response "503", "Feature unavailable" do
       schema "$ref" => "#/components/schemas/FinancekitError"
       header "Retry-After", schema: { type: :integer }
-      it("documents response") { expect(true).to be(true) }
     end
   end
 
@@ -186,20 +180,16 @@ RSpec.describe "Api::V1::Financekit", type: :request do
       end
       response "401", "Invalid publisher credential" do
         schema "$ref" => "#/components/schemas/FinancekitError"
-        it("documents response") { expect(true).to be(true) }
       end
       response "409", "Digest, sequence, predecessor, generation, or idempotency conflict" do
         schema "$ref" => "#/components/schemas/FinancekitError"
-        it("documents response") { expect(true).to be(true) }
       end
       response "413", "Payload or record limit exceeded" do
         schema "$ref" => "#/components/schemas/FinancekitError"
-        it("documents response") { expect(true).to be(true) }
       end
       response "429", "Publisher inbox full" do
         schema "$ref" => "#/components/schemas/FinancekitError"
         header "Retry-After", schema: { type: :integer }
-        it("documents response") { expect(true).to be(true) }
       end
     end
   end

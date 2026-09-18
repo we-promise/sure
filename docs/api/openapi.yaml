@@ -4323,10 +4323,6 @@ components:
           type: string
           enum:
           - accepted
-          - processing
-          - applied
-          - failed
-          - revoked
         accepted_at:
           type: string
           format: date-time

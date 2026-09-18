@@ -75,15 +75,29 @@ class Financekit::LifecycleTest < ActiveSupport::TestCase
 
     accept_and_apply(payload, item: replacement)
 
+    @item.disconnect!
+
     assert_equal [ entry.id ], account.entries.reload.pluck(:id)
     assert_equal lineage, FinancekitTransaction.find_by!(source_id: @transaction_id).financekit_account_lineage
     assert_equal "revoked", @item.reload.status
+    assert_equal lineage, account.reload.account_providers.sole.provider
     assert_equal @item.generation + 1, replacement.generation
     error = assert_raises(Financekit::Error) do
       @item.update_column(:status, "repair_required")
       @item.repair!
     end
     assert_equal "lineage_writer_conflict", error.code
+  end
+
+  test "purging a publisher user releases provider links without another active writer" do
+    account = @source.account
+    lineage = @source.financekit_account_lineage
+
+    @user.purge
+
+    assert_not FinancekitItem.exists?(@item.id)
+    assert_nil lineage.reload.account_provider
+    assert_not account.reload.linked?
   end
 
   test "repair fences accepted work and starts a new generation and stream" do

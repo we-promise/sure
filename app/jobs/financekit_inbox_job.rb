@@ -15,7 +15,7 @@ class FinancekitInboxJob < ApplicationJob
 
       Financekit::Downstream.new(batch).perform!
     end
-    FinancekitBatch.where(status: %w[applied revoked]).where("updated_at < ?", 7.days.ago)
+    FinancekitBatch.where(status: %w[applied failed revoked]).where("updated_at < ?", 7.days.ago)
       .where.not(payload: nil).update_all(payload: nil, updated_at: Time.current)
   end
 end

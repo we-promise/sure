@@ -924,11 +924,7 @@
       "status": {
         "type": "string",
         "enum": [
-          "accepted",
-          "processing",
-          "applied",
-          "failed",
-          "revoked"
+          "accepted"
         ]
       },
       "accepted_at": {

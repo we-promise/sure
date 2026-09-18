@@ -48,7 +48,7 @@ The server validates the complete payload before durably storing the exact bytes
 
 The inbox worker applies only the next contiguous batch whose predecessor digest matches. Canonical changes, the applied receipt, and the stream cursor commit in one database transaction. A crash before commit leaves the batch retryable; a crash after commit leaves an applied receipt. Permanent validation or stream failure fences the generation, revokes later queued batches and the credential, and requires explicit repair.
 
-Payload bytes are removed seven days after application or revocation. Digests, typed source identities, balance observations, tombstones, receipts, and audit-safe error codes remain.
+Payload bytes are removed seven days after application, permanent failure, or revocation. Digests, typed source identities, balance observations, tombstones, receipts, and audit-safe error codes remain.
 
 ## Event and financial semantics
 

@@ -29,12 +29,15 @@ class Financekit::InboxTest < ActiveSupport::TestCase
   test "repeated delivery returns the original receipt without another batch" do
     payload = financekit_payload
     original, raw = accept_batch(payload)
+    accepted_receipt = original.receipt
+    assert Financekit::Processor.new(@item).apply_next!
 
     assert_no_difference "FinancekitBatch.count" do
       repeated = FinancekitBatch.accept!(@item, raw, claimed_digest: original.payload_digest,
         idempotency_key: payload.fetch("batch_id"))
       assert_equal original.id, repeated.id
-      assert_equal original.receipt, repeated.receipt
+      assert_equal accepted_receipt, repeated.receipt
+      assert_equal "accepted", repeated.receipt.fetch(:status)
     end
   end
 
@@ -74,5 +77,19 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_nil batch.reload.payload
     assert_equal "applied", batch.status
     assert_not_nil batch.payload_digest
+  end
+
+  test "payload bytes from permanently failed batches are removed after the bounded replay window" do
+    first, = accept_batch
+    second, = accept_batch(financekit_payload(sequence: 2, predecessor_digest: "0" * 64, events: []))
+    FinancekitInboxJob.perform_now(@item.id)
+    second.update_columns(updated_at: 8.days.ago)
+
+    FinancekitInboxJob.perform_now
+
+    assert_equal "applied", first.reload.status
+    assert_equal "failed", second.reload.status
+    assert_nil second.payload
+    assert_not_nil second.payload_digest
   end
 end
