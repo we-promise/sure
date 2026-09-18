@@ -58,7 +58,7 @@ class CoinstatsAccount::Processor
         currency: currency
       )
 
-      account.set_current_balance(balance)
+      account.set_current_balance(balance, apply_provider_adjustment: true)
     end
 
     # Delegates transaction processing to the specialized processor.

@@ -40,6 +40,11 @@ en:
       no_accounts: No accounts yet
     form:
       balance: "Balance on date:"
+      provider_balance_adjustment_label: Provider balance adjustment
+      provider_balance_adjustment_hint: Apply a temporary signed adjustment when the connected provider reports an incorrect balance. Use a negative amount to lower the balance. This does not create or change transactions.
+      provider_balance_adjustment_amount_label: Adjustment amount
+      provider_balance_adjustment_reason_label: Reason
+      provider_balance_adjustment_reason_placeholder: e.g. Disputed charge omitted by institution
       opening_balance_date_label: Opening balance date
       name_label: Account name
       name_placeholder: Example account name
@@ -79,6 +84,7 @@ en:
         title: How would you like to add it?
       title: What would you like to add?
     show:
+      provider_balance_adjustment_notice: "This balance includes a provider adjustment of %{amount}: %{reason}"
       limited_fx_history_warning: "Exchange rate history is only available from %{date} onwards. Transactions before this date use approximate currency conversions — this can happen when the FX provider only offers a limited historical window."
       tabs:
         activity: Activity

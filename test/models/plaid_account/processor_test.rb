@@ -71,6 +71,22 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal @plaid_account.current_balance, @plaid_account.current_account.balance # Overriden by processor
   end
 
+  test "applies linked account provider balance adjustment without changing raw Plaid balance" do
+    expect_default_subprocessor_calls
+    account = @plaid_account.current_account
+    account.update!(
+      provider_balance_adjustment: -25,
+      provider_balance_adjustment_reason: "Institution balance correction"
+    )
+
+    PlaidAccount::Processor.new(@plaid_account).process
+
+    assert_equal 1000, @plaid_account.reload.current_balance
+    assert_equal 975, account.reload.balance
+    assert_equal 975, account.cash_balance
+    assert_equal 975, account.current_anchor_balance
+  end
+
   test "account processing failure halts further processing" do
     Account.any_instance.stubs(:save!).raises(StandardError.new("Test error"))
 

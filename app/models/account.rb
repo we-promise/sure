@@ -9,6 +9,9 @@ class Account < ApplicationRecord
   after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
+  validates :provider_balance_adjustment, numericality: true
+  validates :provider_balance_adjustment_reason, presence: true, if: :provider_balance_adjusted?
+  validates :provider_balance_adjustment_reason, length: { maximum: 255 }, allow_blank: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
@@ -37,7 +40,7 @@ class Account < ApplicationRecord
            foreign_key: :destination_account_id,
            dependent: :destroy
 
-  monetize :balance, :cash_balance
+  monetize :balance, :cash_balance, :provider_balance_adjustment
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
@@ -665,6 +668,43 @@ class Account < ApplicationRecord
     else
       raise "Unknown account type: #{accountable_type}"
     end
+  end
+
+  def provider_balance_adjusted?
+    provider_balance_adjustment.to_d.nonzero?
+  end
+
+  def provider_adjusted_balance(provider_balance)
+    provider_balance.to_d + provider_balance_adjustment.to_d
+  end
+
+  def set_provider_balance_adjustment(amount:, reason:)
+    amount = amount.presence&.to_d || 0.to_d
+    return Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "Only linked accounts support provider balance adjustments") unless linked?
+
+    previous_adjustment = provider_balance_adjustment.to_d
+    provider_balance = balance.to_d - previous_adjustment
+    normalized_reason = amount.zero? ? nil : reason.presence
+
+    if amount == previous_adjustment && normalized_reason == provider_balance_adjustment_reason
+      return Account::CurrentBalanceManager::Result.new(success?: true, changes_made?: false, error: nil)
+    end
+
+    Account.transaction do
+      update!(
+        provider_balance_adjustment: amount,
+        provider_balance_adjustment_reason: normalized_reason
+      )
+
+      result = set_current_balance(provider_balance, apply_provider_adjustment: true)
+      raise Account::CurrentBalanceManager::InvalidOperation, result.error unless result.success?
+
+      result
+    end
+  rescue ActiveRecord::RecordInvalid => e
+    Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: e.record.errors.full_messages.join(", "))
+  rescue Account::CurrentBalanceManager::InvalidOperation => e
+    Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: e.message)
   end
 
   def owned_by?(user)

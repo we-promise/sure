@@ -31,6 +31,6 @@ class Trading212Account::Processor
         currency: trading212_account.currency
       )
       account.save!
-      account.set_current_balance(total_balance)
+      account.set_current_balance(total_balance, apply_provider_adjustment: true)
     end
 end
