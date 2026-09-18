@@ -197,8 +197,16 @@ class RecurringTransaction::FrequencyPresetTest < ActiveSupport::TestCase
                             interval_unit: found.interval_unit, weekday: found.weekday.to_s)
   end
 
-  test "apply interval rejects an out-of-range count or unknown unit" do
-    [ [ "0", "weekly" ], [ "", "monthly" ], [ (Preset::MAX_INTERVAL + 1).to_s, "monthly" ], [ "2", "daily" ] ].each do |interval, unit|
+  test "apply interval reads the count as a whole base-10 number" do
+    Preset.apply(@recurring, preset: "interval", interval: "08", interval_unit: "weekly", weekday: "5")
+    @recurring.save!
+
+    assert_equal 8, @recurring.recurrence_rules.reload.sole.interval, "a leading zero is not octal"
+  end
+
+  test "apply interval rejects an out-of-range, fractional or malformed count or an unknown unit" do
+    [ [ "0", "weekly" ], [ "", "monthly" ], [ (Preset::MAX_INTERVAL + 1).to_s, "monthly" ], [ "2", "daily" ],
+      [ "2.5", "monthly" ], [ "3abc", "weekly" ] ].each do |interval, unit|
       recurring = RecurringTransaction.find(@recurring.id)
 
       assert_not Preset.apply(recurring, preset: "interval", interval: interval, interval_unit: unit)
