@@ -116,10 +116,13 @@ class Account::CurrentBalanceManager
       error = nil
       historical = false
 
-      # Locked, with the anchor re-read inside it: everything below turns on
-      # which side of the anchor's date this statement falls, and a sync running
-      # beside this one can move that anchor between the read and the write.
-      account.with_lock do
+      ActiveRecord::Base.transaction do
+        # Two syncs for the same account can overlap, and both would judge the same anchor.
+        # Lock the row directly rather than with `lock!`, which reloads the account and
+        # raises when a processor left unsaved changes on it.
+        Account.where(id: account.id).lock.pick(:id)
+
+        # The memo can predate the other writer's commit, so read again under the lock.
         @current_anchor_valuation = nil
 
         if anchor_newer_than?(date)
