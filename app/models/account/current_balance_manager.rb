@@ -105,6 +105,20 @@ class Account::CurrentBalanceManager
       changes_made = false
 
       ActiveRecord::Base.transaction do
+        # Serialize concurrent writers on this account. Two syncs for the same provider item
+        # can overlap (Sync.visible stops matching a run older than Sync::VISIBLE_FOR, and
+        # also drops one whose cancel was requested while its job keeps going), and without
+        # this both read the same anchor and act on it: one can rotate the row the other just
+        # moved forward, leaving a waypoint holding an amount no provider ever reported.
+        #
+        # Locked via a bare query rather than `account.lock!`/`with_lock`: those reload the
+        # record and raise on unpersisted changes, so they would couple this to whatever state
+        # each of the eleven provider processors leaves on the account object. Locking the row
+        # directly takes the same FOR UPDATE without touching the caller's instance.
+        Account.where(id: account.id).lock.pick(:id)
+
+        # Re-read under the lock: the memo may predate another writer's commit.
+        @current_anchor_valuation = nil
         anchor = current_anchor_valuation
 
         if anchor && anchor.entry.date < Date.current && !ledger_explains?(anchor.entry, balance)
