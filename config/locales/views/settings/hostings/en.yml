@@ -47,7 +47,7 @@ en:
         binance_public_hint: free, no API key -- crypto only (BTC, ETH, etc.)
         moex_public_hint: free, no API key -- Russian stocks, funds & bonds (MOEX), incl. RUB FX
         tinkoff_invest_hint: requires read-only token -- Russian stocks/funds/bonds prices + brand logos
-        requires_api_key_mansa: requires API key, 100 calls/day free tier -- African exchanges (NGX, JSE, and others)
+        requires_api_key_mansa: requires API key, 100 calls/day free tier -- NGX (Nigerian Exchange) only
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -211,7 +211,7 @@ en:
         rate_limit_warning: "EODHD free tier is limited to 20 API calls per day. Best used as a supplementary provider for EU ETFs not available from other providers."
       mansa_settings:
         title: Mansa
-        description: Enter the API key from Mansa API. Supports African exchanges, including NGX (Nigerian Exchange), not covered by any other provider here.
+        description: Enter the API key from Mansa API. Supports NGX (Nigerian Exchange), not covered by any other provider here. Mansa covers other African exchanges too, but only NGX is verified against this integration.
         env_configured_message: Successfully configured through the MANSA_API_KEY environment variable.
         label: API Key
         placeholder: Enter your Mansa API key here

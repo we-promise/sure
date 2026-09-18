@@ -77,6 +77,20 @@ class Provider::MansaTest < ActiveSupport::TestCase
     assert_equal "XNSA", result.data.first.exchange_operating_mic
   end
 
+  test "search_securities returns nothing for an explicit MIC Mansa doesn't cover, rather than guessing NGX" do
+    # A blank MIC (no data to go on) falls back to NGX — but an explicit,
+    # present MIC we can't map (e.g. a caller checking a NYSE-listed security
+    # while Mansa happens to be enabled) must not silently search NGX and
+    # return unrelated results.
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).never
+
+    result = @provider.search_securities("AAPL", exchange_operating_mic: "XNYS")
+
+    assert result.success?
+    assert_equal [], result.data
+  end
+
   test "search_securities drops a result on an exchange this adapter can't map to a real MIC" do
     # Defensive: even though the request above always explicitly scopes to a
     # single exchange, this proves a stray result from an unmapped exchange
@@ -98,6 +112,21 @@ class Provider::MansaTest < ActiveSupport::TestCase
 
     assert result.success?
     assert_equal [], result.data
+  end
+
+  test "fetch_security_price rejects an explicit MIC Mansa doesn't cover, rather than mislabeling an NGX quote" do
+    # The actual bug this guards: without this check, a present-but-unmapped
+    # MIC would silently fetch NGX's quote and let the caller stamp it with
+    # whatever exchange was actually asked for — a real, wrong security price
+    # under someone else's exchange label.
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).never
+
+    result = @provider.fetch_security_price(symbol: "AAPL", exchange_operating_mic: "XNYS", date: Date.current)
+
+    assert_not result.success?
+    assert_instance_of Provider::Mansa::Error, result.error
+    assert_match(/does not support exchange XNYS/, result.error.message)
   end
 
   test "fetch_security_price reads currency from meta, not data" do

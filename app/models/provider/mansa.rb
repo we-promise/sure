@@ -99,7 +99,14 @@ class Provider::Mansa < Provider
       enforce_daily_limit!
       throttle_request
 
-      mansa_exchange = MIC_TO_MANSA_EXCHANGE[exchange_operating_mic] || DEFAULT_MANSA_EXCHANGE
+      mansa_exchange = MIC_TO_MANSA_EXCHANGE[exchange_operating_mic]
+      # A blank MIC (the real UI's normal case — see DEFAULT_MANSA_EXCHANGE's
+      # comment) falls back to NGX. A *present* MIC that isn't XNSA means the
+      # caller wants a specific exchange Mansa doesn't cover here — searching
+      # NGX anyway would silently return the wrong exchange's results, so
+      # return nothing instead of guessing.
+      next [] if exchange_operating_mic.present? && mansa_exchange.nil?
+      mansa_exchange ||= DEFAULT_MANSA_EXCHANGE
 
       response = client.get("#{base_url}/api/v1/markets/search") do |req|
         req.params["q"] = symbol
@@ -206,7 +213,15 @@ class Provider::Mansa < Provider
       enforce_daily_limit!
       throttle_request
 
-      mansa_exchange = MIC_TO_MANSA_EXCHANGE[exchange_operating_mic] || DEFAULT_MANSA_EXCHANGE
+      mansa_exchange = MIC_TO_MANSA_EXCHANGE[exchange_operating_mic]
+      # Same principle as search_securities: a present-but-unmapped MIC means
+      # don't silently fetch an NGX quote and let the caller mislabel it as
+      # coming from whatever exchange was actually asked for. Only a blank
+      # MIC (no data to go on at all) gets the NGX default.
+      if exchange_operating_mic.present? && mansa_exchange.nil?
+        raise InvalidSecurityPriceError, "Mansa does not support exchange #{exchange_operating_mic}"
+      end
+      mansa_exchange ||= DEFAULT_MANSA_EXCHANGE
 
       response = client.get("#{base_url}/api/v1/markets/exchanges/#{mansa_exchange}/stocks/#{CGI.escape(symbol)}")
 
