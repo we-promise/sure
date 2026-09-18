@@ -74,15 +74,38 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
   test "applies linked account provider balance adjustment without changing raw Plaid balance" do
     expect_default_subprocessor_calls
     account = @plaid_account.current_account
-    account.update!(
-      provider_balance_adjustment: -25,
-      provider_balance_adjustment_reason: "Institution balance correction"
+    account.update!(balance: 1000, cash_balance: 1000)
+    result = account.set_provider_balance_adjustment(
+      amount: -25,
+      reason: "Institution balance correction"
     )
+    assert result.success?
 
     PlaidAccount::Processor.new(@plaid_account).process
 
     assert_equal 1000, @plaid_account.reload.current_balance
     assert_equal 975, account.reload.balance
+    assert_equal 975, account.cash_balance
+    assert_equal 975, account.current_anchor_balance
+  end
+
+  test "stops applying an adjustment when Plaid incorporates the correction" do
+    expect_default_subprocessor_calls
+    account = @plaid_account.current_account
+    account.update!(balance: 1000, cash_balance: 1000)
+    result = account.set_provider_balance_adjustment(
+      amount: -25,
+      reason: "Institution balance correction"
+    )
+    assert result.success?
+
+    @plaid_account.update!(current_balance: 975, available_balance: 975)
+    PlaidAccount::Processor.new(@plaid_account).process
+
+    assert_equal 0, account.reload.provider_balance_adjustment
+    assert_equal(-25, account.provider_balance_adjustment_caught_up_amount)
+    assert account.provider_balance_adjustment_caught_up_at.present?
+    assert_equal 975, account.balance
     assert_equal 975, account.cash_balance
     assert_equal 975, account.current_anchor_balance
   end

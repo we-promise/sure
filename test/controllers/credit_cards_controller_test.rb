@@ -114,6 +114,8 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to @account
     assert_equal(-468.45, @account.reload.provider_balance_adjustment)
     assert_equal "Disputed charge omitted by institution", @account.provider_balance_adjustment_reason
+    assert_equal Date.current, @account.provider_balance_adjustment_effective_date
+    assert_equal 1000, @account.provider_balance_adjustment_provider_balance
     assert_equal 531.55, @account.balance
     assert_equal 531.55, @account.cash_balance
 
@@ -134,6 +136,8 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to @account
     assert_equal 0, @account.reload.provider_balance_adjustment
     assert_nil @account.provider_balance_adjustment_reason
+    assert_nil @account.provider_balance_adjustment_effective_date
+    assert_nil @account.provider_balance_adjustment_provider_balance
     assert_equal 1000, @account.balance
     assert_equal 1000, @account.cash_balance
   end

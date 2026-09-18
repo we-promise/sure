@@ -31,7 +31,7 @@ class Account::CurrentBalanceManager
   end
 
   def set_current_balance(balance, apply_provider_adjustment: false)
-    balance = account.provider_adjusted_balance(balance) if apply_provider_adjustment
+    balance = account.resolve_provider_balance_adjustment(balance) if apply_provider_adjustment
 
     if account.linked?
       result = set_current_balance_for_linked_account(balance)

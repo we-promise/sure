@@ -84,6 +84,7 @@ en:
         title: How would you like to add it?
       title: What would you like to add?
     show:
+      provider_balance_adjustment_caught_up_notice: "The provider balance appears to include the prior adjustment of %{amount}, so Sure stopped applying it: %{reason}"
       provider_balance_adjustment_notice: "This balance includes a provider adjustment of %{amount}: %{reason}"
       limited_fx_history_warning: "Exchange rate history is only available from %{date} onwards. Transactions before this date use approximate currency conversions — this can happen when the FX provider only offers a limited historical window."
       tabs:

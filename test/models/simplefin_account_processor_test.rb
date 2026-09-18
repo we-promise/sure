@@ -100,13 +100,16 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     acct.update!(
       simplefin_account: sfin_acct,
       provider_balance_adjustment: BigDecimal("-25"),
-      provider_balance_adjustment_reason: "Institution balance correction"
+      provider_balance_adjustment_reason: "Institution balance correction",
+      provider_balance_adjustment_effective_date: Date.current,
+      provider_balance_adjustment_provider_balance: BigDecimal("1000")
     )
 
     SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
 
     assert_equal BigDecimal("975.00"), acct.reload.balance
     assert_equal BigDecimal("975.00"), acct.cash_balance
+    assert_equal BigDecimal("975.00"), acct.current_anchor_balance
     assert_equal BigDecimal("1000.00"), sfin_acct.reload.current_balance
   end
 

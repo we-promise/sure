@@ -11,6 +11,7 @@ class Account < ApplicationRecord
   validates :name, :balance, :currency, presence: true
   validates :provider_balance_adjustment, numericality: true
   validates :provider_balance_adjustment_reason, presence: true, if: :provider_balance_adjusted?
+  validates :provider_balance_adjustment_effective_date, presence: true, if: :provider_balance_adjusted?
   validates :provider_balance_adjustment_reason, length: { maximum: 255 }, allow_blank: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
@@ -40,7 +41,7 @@ class Account < ApplicationRecord
            foreign_key: :destination_account_id,
            dependent: :destroy
 
-  monetize :balance, :cash_balance, :provider_balance_adjustment
+  monetize :balance, :cash_balance, :provider_balance_adjustment, :provider_balance_adjustment_caught_up_amount
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
@@ -678,6 +679,34 @@ class Account < ApplicationRecord
     provider_balance.to_d + provider_balance_adjustment.to_d
   end
 
+  def provider_balance_adjustment_caught_up?
+    provider_balance_adjustment_caught_up_at.present?
+  end
+
+  def resolve_provider_balance_adjustment(provider_balance)
+    provider_balance = provider_balance.to_d
+    return provider_balance unless provider_balance_adjusted?
+
+    previous_provider_balance = provider_balance_adjustment_provider_balance&.to_d
+    adjustment = provider_balance_adjustment.to_d
+
+    # If the raw provider balance moves by exactly the signed adjustment, the
+    # institution has incorporated the correction. Clear the active adjustment
+    # so it is not applied twice, while retaining an audit notice for the user.
+    if previous_provider_balance && (provider_balance - previous_provider_balance - adjustment).abs <= 0.01
+      update!(
+        provider_balance_adjustment: 0,
+        provider_balance_adjustment_provider_balance: provider_balance,
+        provider_balance_adjustment_caught_up_amount: adjustment,
+        provider_balance_adjustment_caught_up_at: Time.current
+      )
+      provider_balance
+    else
+      update_column(:provider_balance_adjustment_provider_balance, provider_balance) if provider_balance != previous_provider_balance
+      provider_balance + adjustment
+    end
+  end
+
   def set_provider_balance_adjustment(amount:, reason:)
     amount = amount.presence&.to_d || 0.to_d
     return Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "Only linked accounts support provider balance adjustments") unless linked?
@@ -693,7 +722,11 @@ class Account < ApplicationRecord
     Account.transaction do
       update!(
         provider_balance_adjustment: amount,
-        provider_balance_adjustment_reason: normalized_reason
+        provider_balance_adjustment_reason: normalized_reason,
+        provider_balance_adjustment_effective_date: amount.zero? ? nil : Date.current,
+        provider_balance_adjustment_provider_balance: amount.zero? ? nil : provider_balance,
+        provider_balance_adjustment_caught_up_amount: nil,
+        provider_balance_adjustment_caught_up_at: nil
       )
 
       result = set_current_balance(provider_balance, apply_provider_adjustment: true)

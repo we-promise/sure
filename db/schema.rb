@@ -118,6 +118,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_17_152000) do
     t.uuid "owner_id"
     t.uuid "plaid_account_id"
     t.decimal "provider_balance_adjustment", precision: 19, scale: 4, default: "0.0", null: false
+    t.decimal "provider_balance_adjustment_caught_up_amount", precision: 19, scale: 4
+    t.datetime "provider_balance_adjustment_caught_up_at"
+    t.date "provider_balance_adjustment_effective_date"
+    t.decimal "provider_balance_adjustment_provider_balance", precision: 19, scale: 4
     t.string "provider_balance_adjustment_reason"
     t.uuid "simplefin_account_id"
     t.string "status", default: "active"
