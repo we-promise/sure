@@ -93,6 +93,72 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "updates and clears a linked account provider balance adjustment" do
+    create_linked_plaid_account
+
+    get edit_credit_card_path(@account)
+    assert_response :success
+    assert_match "provider_balance_adjustment", response.body
+
+    assert_enqueued_with(job: SyncJob) do
+      patch credit_card_path(@account), params: {
+        account: {
+          name: @account.name,
+          accountable_type: "CreditCard",
+          provider_balance_adjustment: "-468.45",
+          provider_balance_adjustment_reason: "Disputed charge omitted by institution"
+        }
+      }
+    end
+
+    assert_redirected_to @account
+    assert_equal(-468.45, @account.reload.provider_balance_adjustment)
+    assert_equal "Disputed charge omitted by institution", @account.provider_balance_adjustment_reason
+    assert_equal Date.current, @account.provider_balance_adjustment_effective_date
+    assert_equal 1000, @account.provider_balance_adjustment_provider_balance
+    assert_equal 531.55, @account.balance
+    assert_equal 531.55, @account.cash_balance
+
+    get account_path(@account)
+    assert_response :success
+    assert_match "This balance includes a provider adjustment", response.body
+    assert_match "Disputed charge omitted by institution", response.body
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        provider_balance_adjustment: "0",
+        provider_balance_adjustment_reason: ""
+      }
+    }
+
+    assert_redirected_to @account
+    assert_equal 0, @account.reload.provider_balance_adjustment
+    assert_nil @account.provider_balance_adjustment_reason
+    assert_nil @account.provider_balance_adjustment_effective_date
+    assert_nil @account.provider_balance_adjustment_provider_balance
+    assert_equal 1000, @account.balance
+    assert_equal 1000, @account.cash_balance
+  end
+
+  test "requires a reason for a nonzero provider balance adjustment" do
+    create_linked_plaid_account
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        provider_balance_adjustment: "-10",
+        provider_balance_adjustment_reason: ""
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal 0, @account.reload.provider_balance_adjustment
+    assert_equal 1000, @account.balance
+  end
+
   test "updates enable banking balance interpretation flag when linked" do
     enable_banking_account = create_linked_enable_banking_account
 
@@ -241,6 +307,21 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def create_linked_plaid_account
+      plaid_account = PlaidAccount.create!(
+        plaid_item: plaid_items(:one),
+        plaid_id: "linked-credit-card",
+        name: "Linked card",
+        plaid_type: "credit",
+        plaid_subtype: "credit card",
+        currency: "USD",
+        current_balance: 1000,
+        available_balance: 4000
+      )
+      AccountProvider.create!(account: @account, provider: plaid_account)
+      plaid_account
+    end
+
     def create_linked_enable_banking_account
       enable_banking_item = EnableBankingItem.create!(
         family: @account.family,

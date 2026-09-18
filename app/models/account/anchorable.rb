@@ -39,8 +39,8 @@ module Account::Anchorable
     end
   end
 
-  def set_current_balance(balance)
-    result = current_balance_manager.set_current_balance(balance)
+  def set_current_balance(balance, apply_provider_adjustment: false)
+    result = current_balance_manager.set_current_balance(balance, apply_provider_adjustment: apply_provider_adjustment)
     sync_later if result.success?
     result
   end

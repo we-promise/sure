@@ -30,7 +30,9 @@ class Account::CurrentBalanceManager
     end
   end
 
-  def set_current_balance(balance)
+  def set_current_balance(balance, apply_provider_adjustment: false)
+    balance = account.resolve_provider_balance_adjustment(balance) if apply_provider_adjustment
+
     if account.linked?
       result = set_current_balance_for_linked_account(balance)
     else
@@ -38,7 +40,9 @@ class Account::CurrentBalanceManager
     end
 
     # Update cache field so changes appear immediately to the user
-    account.update!(balance: balance)
+    account_attrs = { balance: balance }
+    account_attrs[:cash_balance] = balance if apply_provider_adjustment && account.balance_type == :cash
+    account.update!(account_attrs)
 
     result
   rescue => e
