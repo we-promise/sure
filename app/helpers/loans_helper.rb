@@ -13,4 +13,13 @@ module LoansHelper
 
     options << [ loan.rate_type.titleize, loan.rate_type ]
   end
+
+  # Built from the model constant rather than listed here, so a convention the
+  # engine gains cannot be offered without a label -- a missing key raises in
+  # development rather than rendering a blank option.
+  def loan_day_count_convention_options
+    Loan::DAY_COUNT_CONVENTIONS.map do |convention|
+      [ t("loans.form.day_count_convention_#{convention}"), convention ]
+    end
+  end
 end

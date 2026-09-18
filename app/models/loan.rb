@@ -219,7 +219,14 @@ class Loan < ApplicationRecord
   # The columns AmortizationSchedule.for reads from the loan itself. Assigning
   # any of them drops the memoised schedule, as reload does, so a read after the
   # change answers with the new terms rather than the ones it was built from.
-  SCHEDULE_INPUTS = %i[interest_rate term_months rate_type start_date variable_rate_schedule].freeze
+  # Mirrored from the engine so the model and the simulator cannot drift: the
+  # engine owns what the conventions mean, the model owns what a user may store.
+  DAY_COUNT_CONVENTIONS = Simulator::DAY_COUNT_CONVENTIONS.map(&:to_s).freeze
+  DEFAULT_DAY_COUNT_CONVENTION = Simulator::DEFAULT_DAY_COUNT_CONVENTION.to_s
+
+  SCHEDULE_INPUTS = %i[interest_rate term_months rate_type start_date variable_rate_schedule day_count_convention].freeze
+
+  validates :day_count_convention, inclusion: { in: DAY_COUNT_CONVENTIONS }
 
   SCHEDULE_INPUTS.each do |input|
     define_method(:"#{input}=") do |value|

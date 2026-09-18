@@ -47,6 +47,19 @@ class Loan
     PERCENT = BigDecimal("100")
     MONTHS_PER_YEAR = BigDecimal("12")
 
+    # How a period's interest is measured against a year.
+    #
+    # `thirty_360` is the default because it IS the flat 1/12 this engine has
+    # always charged -- 30/360 reduces to 1/12 exactly -- so a loan that does
+    # not choose a convention produces the schedule it produced before, row for
+    # row. `actual_actual` is NOT a substitute for that: it charges 31/365 in
+    # January and 28/365 in February, and only reaches 1/12 when a whole
+    # calendar year is summed.
+    DAY_COUNT_CONVENTIONS = %i[thirty_360 actual_365 actual_actual].freeze
+    DEFAULT_DAY_COUNT_CONVENTION = :thirty_360
+    DAYS_PER_YEAR = BigDecimal("365")
+    DAYS_PER_LEAP_YEAR = BigDecimal("366")
+
     def initialize(
       starting_balance:,
       accrual_start_date:,
@@ -55,7 +68,8 @@ class Loan
       currency_precision:,
       re_amortisation_events: nil,
       payment_strategy: :reamortize,
-      settle_at_schedule_end: true
+      settle_at_schedule_end: true,
+      day_count_convention: DEFAULT_DAY_COUNT_CONVENTION
     )
       @starting_balance = BigDecimal(starting_balance.to_s)
       @accrual_start_date = accrual_start_date
@@ -67,6 +81,7 @@ class Loan
       @currency_precision = currency_precision
       @payment_strategy = payment_strategy.to_sym
       @settle_at_schedule_end = settle_at_schedule_end
+      @day_count_convention = (day_count_convention || DEFAULT_DAY_COUNT_CONVENTION).to_sym
 
       raise ArgumentError, "payment schedule must not be empty" if @payment_schedule.empty?
       if @payment_schedule.length > MAX_PERIODS
@@ -76,6 +91,11 @@ class Loan
       end
       unless PAYMENT_STRATEGIES.include?(@payment_strategy)
         raise ArgumentError, "unsupported payment strategy: #{@payment_strategy.inspect}"
+      end
+      unless DAY_COUNT_CONVENTIONS.include?(@day_count_convention)
+        raise ArgumentError,
+              "unsupported day-count convention: #{@day_count_convention.inspect} " \
+              "(expected one of #{DAY_COUNT_CONVENTIONS.join(', ')})"
       end
     end
 
@@ -92,7 +112,15 @@ class Loan
 
         # See the class comment: opening rate charges the period, closing rate
         # sizes the payment.
-        accrual_rate = monthly_rate(@accrual_rate_for.call(period_start))
+        #
+        # The day count applies to the charge, not to the sizing. `level_payment`
+        # is an annuity formula and assumes ONE constant periodic rate; a factor
+        # that moves with the length of the month would differ every period, so
+        # under :reamortize the payment would be recomputed every month and stop
+        # being level. Sizing therefore stays on the nominal monthly rate, which
+        # is also what the borrower's contracted payment is set from.
+        accrual_annual = @accrual_rate_for.call(period_start)
+        accrual_rate = accrual_factor(period_start, payment_date, accrual_annual)
         sizing_rate = monthly_rate(rate_on(payment_date))
 
         # Interest first, on the balance the period opened with: one charge
@@ -116,7 +144,11 @@ class Loan
             monthly_rate: sizing_rate,
             remaining_payments: @payment_schedule.length - index,
             currency_precision: @currency_precision,
-            first_period_interest: (interest if sizing_rate != accrual_rate)
+            # "Did the rate move mid-period?", asked of the rates themselves.
+            # Comparing the derived factors would answer "yes" every month once
+            # a day count is in play, because January and February differ by
+            # length rather than by rate.
+            first_period_interest: (interest if sizing_rate != monthly_rate(accrual_annual))
           )
         end
         previous_sizing_rate = sizing_rate
@@ -170,6 +202,23 @@ class Loan
       # `annual_percentage` is whatever the caller's rate callable returned --
       # an Integer in the tests, a BigDecimal from RateResolver -- so the
       # coercion at this boundary stays.
+      # 30/360 keeps the original two-step division untouched, so a default
+      # loan's figures are bit-identical rather than merely close.
+      def accrual_factor(period_start, period_end, annual_percentage)
+        return monthly_rate(annual_percentage) if @day_count_convention == :thirty_360
+
+        rate = BigDecimal(annual_percentage.to_s) / PERCENT
+        days = BigDecimal((period_end - period_start).to_i.to_s)
+        denominator =
+          if @day_count_convention == :actual_actual
+            Date.leap?(period_start.year) ? DAYS_PER_LEAP_YEAR : DAYS_PER_YEAR
+          else
+            DAYS_PER_YEAR
+          end
+
+        (rate * days) / denominator
+      end
+
       def monthly_rate(annual_percentage)
         (BigDecimal(annual_percentage.to_s) / PERCENT) / MONTHS_PER_YEAR
       end

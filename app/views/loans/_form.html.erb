@@ -56,6 +56,16 @@
                                  max: Loan::Simulator::MAX_PERIODS %>
       </div>
 
+      <div class="flex items-center gap-2">
+        <%# How the lender measures a period against a year. The default charges
+            a flat twelfth, which is what every existing loan was built on, so
+            leaving this alone changes nothing about the schedule. %>
+        <%= loan_form.select :day_count_convention,
+                           loan_day_count_convention_options,
+                           { label: t("loans.form.day_count_convention") } %>
+      </div>
+      <p class="text-xs text-secondary"><%= t("loans.form.day_count_convention_hint") %></p>
+
       <%# Rate changes only mean something for a loan whose rate can move. The
           section is rendered for every rate type, retained rows included, and
           for fixed it is hidden AND its inputs disabled -- here, server-side,
