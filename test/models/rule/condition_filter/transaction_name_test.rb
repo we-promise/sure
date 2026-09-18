@@ -95,10 +95,14 @@ class Rule::ConditionFilter::TransactionNameTest < ActiveSupport::TestCase
   end
 
   private
+    # @param name [String] the entry name to store
+    # @return [Entry] a row carrying Plaid provenance, so the source gated arm applies
     def plaid_entry(name:)
       create_transaction(account: @account, name: name, source: PlaidEntry::Processor::SOURCE, external_id: "ext-#{name.parameterize}")
     end
 
+    # @param name [String] the entry name to store
+    # @return [Entry] a row with no source, which is what makes entries.source NULL
     def manual_entry(name:)
       create_transaction(account: @account, name: name)
     end

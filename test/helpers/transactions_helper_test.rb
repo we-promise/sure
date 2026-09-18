@@ -63,6 +63,25 @@ class TransactionsHelperTest < ActionView::TestCase
     assert_nil details
   end
 
+  # SimpleFIN writes a pending flag on every transaction, so this is the common
+  # case rather than an edge one: without the guard the section opens empty.
+  test "returns nil when the SimpleFIN extra holds only a pending flag" do
+    details = build_transaction_extra_details(transaction_with({
+      "simplefin" => { "pending" => false }
+    }))
+
+    assert_nil details
+  end
+
+  test "still returns SimpleFIN details when the provider sent something to show" do
+    details = build_transaction_extra_details(transaction_with({
+      "simplefin" => { "pending" => false, "payee" => "Whole Foods" }
+    }))
+
+    assert_equal :simplefin, details[:kind]
+    assert_equal "Whole Foods", details[:simplefin][:payee]
+  end
+
   # Regression: the array branch used to hand provider_extra_row an
   # already-encoded string, which then got encoded a second time and rendered as
   # an escaped one-liner ("[\n  {\"a\": 1}\n]") instead of a formatted block.
