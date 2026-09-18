@@ -725,8 +725,18 @@ class UserTest < ActiveSupport::TestCase
     source_family = user.family
     new_family = Family.create!(name: "Transferred FinanceKit Family")
     user.update!(role: "admin", preferences: user.preferences.merge("preview_features_enabled" => true))
-    financekit_item = Financekit::Enrollment.create!(user, { "enrollment_id" => SecureRandom.uuid, "protocol" => 1,
-      "consent" => { "version" => 1, "upload_authorized" => true, "enrichment_acknowledged" => true, "source_ids" => [ SecureRandom.uuid ] } })
+    financekit_item = Financekit::Enrollment.create!(user, {
+      "enrollment_id" => SecureRandom.uuid,
+      "protocol_version" => Financekit::VERSION,
+      "consent" => {
+        "version" => 1,
+        "granted_at" => Time.current.iso8601,
+        "selected_source_account_ids" => [ SecureRandom.uuid ],
+        "upload_authorized" => true,
+        "family_visibility_acknowledged" => true,
+        "remote_processing_acknowledged" => true
+      }
+    }).item
 
     user.transfer_to_family!(new_family, role: "admin")
 
