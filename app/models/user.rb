@@ -413,13 +413,18 @@ class User < ApplicationRecord
     account_ids_to_move = accounts_to_move.map(&:id)
     provider_items = accounts_to_move.flat_map do |account|
       account.account_providers.includes(:provider).filter_map do |account_provider|
-        provider_item_for(account_provider.provider)
+        provider_items_for(account_provider.provider)
       end
-    end.uniq
+    end.flatten.uniq
     provider_items.concat(financekit_items)
     provider_items.uniq!
 
     provider_items.each do |provider_item|
+      if provider_item.is_a?(FinancekitItem) && provider_item.user_id != id
+        errors.add(:base, :provider_item_has_other_accounts)
+        raise ActiveRecord::RecordInvalid, self
+      end
+
       linked_account_ids = provider_item.accounts.map(&:id)
       next if linked_account_ids.all? { |account_id| account_ids_to_move.include?(account_id) }
 
@@ -430,17 +435,16 @@ class User < ApplicationRecord
     provider_items
   end
 
-  def provider_item_for(provider)
+  def provider_items_for(provider)
     if provider.is_a?(FinancekitAccountLineage)
-      return provider.financekit_accounts.joins(:financekit_item)
-        .where(financekit_items: { user_id: id }).order(created_at: :desc).first&.financekit_item
+      return provider.financekit_accounts.includes(:financekit_item).map(&:financekit_item).uniq
     end
 
     item_association = provider.class.reflect_on_all_associations(:belongs_to).find do |association|
       association.name.to_s.end_with?("_item") && provider.respond_to?(association.name)
     end
 
-    provider.public_send(item_association.name) if item_association
+    Array(provider.public_send(item_association.name)) if item_association
   end
 
   # Revokes mobile/third-party API access alongside the web-session

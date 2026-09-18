@@ -68,6 +68,19 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_nil @item.credential_digest
   end
 
+  test "unexpected processing errors are reported before retry" do
+    batch, = accept_batch
+    error = RuntimeError.new("financekit importer exploded")
+    Financekit::Payload.stubs(:validate_batch!).raises(error)
+    Rails.error.expects(:report).with(error, handled: true,
+      context: { financekit_item_id: @item.id, batch_id: batch.batch_id })
+
+    assert_not Financekit::Processor.new(@item).apply_next!
+
+    assert_equal "accepted", batch.reload.status
+    assert_equal "processing_error", batch.error_code
+  end
+
   test "payload bytes are removed after the bounded replay window" do
     batch = accept_and_apply
     batch.update_columns(updated_at: 8.days.ago)

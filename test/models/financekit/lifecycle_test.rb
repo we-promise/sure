@@ -117,6 +117,16 @@ class Financekit::LifecycleTest < ActiveSupport::TestCase
     assert_nil @item.predecessor_digest
   end
 
+  test "repair requires every selected mapping to still have an account" do
+    @source.financekit_account_lineage.update!(account: nil)
+    @item.update!(status: "repair_required")
+
+    error = assert_raises(Financekit::Error) { @item.repair! }
+
+    assert_equal "account_setup_required", error.code
+    assert_equal "repair_required", @item.reload.status
+  end
+
   test "background publisher is not part of server initiated family sync" do
     assert_empty @family.financekit_items.syncable
     assert_nil @item.last_imported_at

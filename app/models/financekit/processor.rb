@@ -35,7 +35,8 @@ class Financekit::Processor
   rescue Financekit::Error, ActiveRecord::RecordInvalid, JSON::ParserError => error
     fail_batch!(batch, error.is_a?(Financekit::Error) ? error.code : "import_validation", permanent: true)
     false
-  rescue StandardError
+  rescue StandardError => error
+    Rails.error.report(error, handled: true, context: { financekit_item_id: @item.id, batch_id: batch&.batch_id })
     fail_batch!(batch, "processing_error", permanent: false)
     false
   end

@@ -85,7 +85,10 @@ class FinancekitItem < ApplicationRecord
     family.with_lock do
       lock!
       Financekit.require!(%w[active repair_required].include?(status), "connection_revoked", 403)
-      Financekit.require!(!competing_active_writer?(selected_accounts, excluding: [ id ]),
+      Financekit.require!(!pending_account_setup?, "account_setup_required", 409)
+      mappings = selected_accounts.includes(financekit_account_lineage: :account).to_a
+      Financekit.require!(mappings.all?(&:account), "account_setup_required", 409)
+      Financekit.require!(!competing_active_writer?(mappings, excluding: [ id ]),
         "lineage_writer_conflict", 409)
       revoke_pending_batches!("generation_replaced")
       token = rotate_credential! # pipelock:ignore Credential in URL
