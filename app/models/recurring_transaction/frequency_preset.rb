@@ -7,7 +7,15 @@ class RecurringTransaction
     PRESETS = %w[monthly weekly biweekly semimonthly quarterly semiannual annual].freeze
     CUSTOM = "custom"
 
-    Detection = Data.define(:key, :day_of_month, :second_day_of_month, :weekday, :month_of_year)
+    # "Every N weeks, months or years": one rule of any interval, for the
+    # cadences no named preset covers. Kept out of PRESETS, which the AI tools
+    # publish as their frequency enum and which carries no interval.
+    INTERVAL = "interval"
+    INTERVAL_UNITS = %w[weekly monthly yearly].freeze
+    MAX_INTERVAL = 99
+
+    Detection = Data.define(:key, :day_of_month, :second_day_of_month, :weekday, :month_of_year,
+                            :interval, :interval_unit)
 
     class << self
       # Reads the series' rules back into picker values. Zero rules is the
@@ -38,16 +46,28 @@ class RecurringTransaction
       #
       # Returns true only when it actually rewrote the cadence, so a caller can
       # tell a deliberate schedule change from an unrelated edit.
-      def apply(recurring, preset:, day_of_month: nil, second_day_of_month: nil, weekday: nil, month_of_year: nil)
+      #
+      # An out-of-range interval or unknown unit is reported on the record and
+      # rewrites nothing; callers check errors before saving.
+      def apply(recurring, preset:, day_of_month: nil, second_day_of_month: nil, weekday: nil, month_of_year: nil,
+                interval: nil, interval_unit: nil)
         return false if preset.blank? || preset == CUSTOM
-        return false unless PRESETS.include?(preset)
+        return false unless PRESETS.include?(preset) || preset == INTERVAL
+
+        interval = strict_int(interval)
+        if preset == INTERVAL && !valid_interval?(interval, interval_unit)
+          recurring.errors.add(:frequency_interval, :invalid)
+          return false
+        end
 
         reference = recurring.anchor_date || recurring.last_occurrence_date || Date.current
         target = target_detection(recurring, reference, preset,
                                   day_of_month: presence_int(day_of_month),
                                   second_day_of_month: presence_int(second_day_of_month),
                                   weekday: presence_int(weekday),
-                                  month_of_year: presence_int(month_of_year))
+                                  month_of_year: presence_int(month_of_year),
+                                  interval: interval,
+                                  interval_unit: interval_unit)
         return false if target == detect(recurring)
 
         write(recurring, target, reference)
@@ -75,40 +95,49 @@ class RecurringTransaction
         when "annual"
           I18n.t("recurring_transactions.frequency.annual",
                  month: I18n.t("date.month_names")[found.month_of_year], day: day_phrase(found.day_of_month))
+        when INTERVAL
+          interval_label(found)
         else
           I18n.t("recurring_transactions.frequency.custom")
         end
       end
 
       private
-        def detection(key:, day_of_month: nil, second_day_of_month: nil, weekday: nil, month_of_year: nil)
-          Detection.new(key:, day_of_month:, second_day_of_month:, weekday:, month_of_year:)
+        def detection(key:, day_of_month: nil, second_day_of_month: nil, weekday: nil, month_of_year: nil,
+                      interval: nil, interval_unit: nil)
+          Detection.new(key:, day_of_month:, second_day_of_month:, weekday:, month_of_year:, interval:, interval_unit:)
         end
 
+        # Monthly and yearly rules anchored on an nth weekday ("3rd Friday")
+        # have no picker shape.
         def detect_single(rule)
-          case rule.frequency
-          when "weekly"
-            case rule.interval
-            when 1 then detection(key: "weekly", weekday: rule.weekday)
-            when 2 then detection(key: "biweekly", weekday: rule.weekday)
-            else detection(key: CUSTOM)
-            end
-          when "monthly"
-            return detection(key: CUSTOM) unless rule.day_of_month.present?
+          return detection(key: CUSTOM) if rule.frequency != "weekly" && rule.day_of_month.blank?
 
-            case rule.interval
-            when 1 then detection(key: "monthly", day_of_month: rule.day_of_month)
-            when 3 then detection(key: "quarterly", day_of_month: rule.day_of_month)
-            when 6 then detection(key: "semiannual", day_of_month: rule.day_of_month)
-            else detection(key: CUSTOM)
-            end
-          when "yearly"
-            if rule.interval == 1 && rule.day_of_month.present?
-              detection(key: "annual", day_of_month: rule.day_of_month, month_of_year: rule.month_of_year)
-            else
-              detection(key: CUSTOM)
-            end
+          every(rule.frequency, rule.interval, day_of_month: rule.day_of_month,
+                weekday: rule.weekday, month_of_year: rule.month_of_year)
+        end
+
+        # One rule of `interval` units, read as the named preset it is when one
+        # exists, so "every 3 months" and "quarterly" are the same schedule
+        # whichever way it was entered, and reapplying either is a no-op.
+        def every(unit, interval, day_of_month:, weekday:, month_of_year:)
+          case [ unit, interval ]
+          when [ "weekly", 1 ]  then detection(key: "weekly", weekday: weekday)
+          when [ "weekly", 2 ]  then detection(key: "biweekly", weekday: weekday)
+          when [ "monthly", 1 ] then detection(key: "monthly", day_of_month: day_of_month)
+          when [ "monthly", 3 ] then detection(key: "quarterly", day_of_month: day_of_month)
+          when [ "monthly", 6 ] then detection(key: "semiannual", day_of_month: day_of_month)
+          when [ "yearly", 1 ]  then detection(key: "annual", day_of_month: day_of_month, month_of_year: month_of_year)
+          else
+            detection(key: INTERVAL, interval: interval, interval_unit: unit,
+                      weekday: (weekday if unit == "weekly"),
+                      day_of_month: (day_of_month unless unit == "weekly"),
+                      month_of_year: (month_of_year if unit == "yearly"))
           end
+        end
+
+        def valid_interval?(interval, unit)
+          INTERVAL_UNITS.include?(unit) && interval.present? && interval.between?(1, MAX_INTERVAL)
         end
 
         def live_rules(recurring)
@@ -117,7 +146,8 @@ class RecurringTransaction
 
         # The Detection the submitted form values resolve to, with the same
         # defaulting write() will use, so equality against detect() is exact.
-        def target_detection(recurring, reference, preset, day_of_month:, second_day_of_month:, weekday:, month_of_year:)
+        def target_detection(recurring, reference, preset, day_of_month:, second_day_of_month:, weekday:, month_of_year:,
+                             interval:, interval_unit:)
           case preset
           when "monthly", "quarterly", "semiannual"
             detection(key: preset, day_of_month: day_of_month || recurring.expected_day_of_month)
@@ -133,6 +163,11 @@ class RecurringTransaction
           when "annual"
             detection(key: preset, day_of_month: day_of_month || reference.day,
                       month_of_year: month_of_year || reference.month)
+          when INTERVAL
+            every(interval_unit, interval,
+                  day_of_month: day_of_month || (interval_unit == "yearly" ? reference.day : recurring.expected_day_of_month),
+                  weekday: weekday || reference.wday,
+                  month_of_year: month_of_year || reference.month)
           end
         end
 
@@ -160,9 +195,14 @@ class RecurringTransaction
           when "annual"
             build_rule(recurring, frequency: "yearly", day_of_month: target.day_of_month,
                                   month_of_year: target.month_of_year)
+          when INTERVAL
+            recurring.anchor_date ||= reference
+            build_rule(recurring, frequency: target.interval_unit, interval: target.interval,
+                                  day_of_month: target.day_of_month, weekday: target.weekday,
+                                  month_of_year: target.month_of_year)
           end
 
-          recurring.expected_day_of_month = authoritative_day(target.key, target.day_of_month, reference)
+          recurring.expected_day_of_month = authoritative_day(target, reference)
         end
 
         # LAST sorts as the day it stands for, the end of the month, so
@@ -183,17 +223,30 @@ class RecurringTransaction
 
         # expected_day_of_month stays NOT NULL and authoritative for monthly
         # cadences; other cadences populate it but do not schedule from it.
-        def authoritative_day(preset, day, reference)
-          case preset
-          when "monthly", "semimonthly", "quarterly", "semiannual", "annual"
-            day == RecurrenceRule::LAST ? 31 : day
-          else
-            reference.day
+        def authoritative_day(target, reference)
+          day_anchored = case target.key
+          when "monthly", "semimonthly", "quarterly", "semiannual", "annual" then true
+          when INTERVAL then target.interval_unit != "weekly"
+          else false
           end
+
+          return reference.day unless day_anchored
+
+          target.day_of_month == RecurrenceRule::LAST ? 31 : target.day_of_month
         end
 
         def presence_int(value)
           value.present? ? value.to_i : nil
+        end
+
+        # The interval is typed, not picked from a list, so it is parsed whole:
+        # to_i would read "2.5" as 2 and "3abc" as 3 and save a cadence nobody
+        # asked for. Base 10 because Integer alone reads "010" as octal.
+        def strict_int(value)
+          return value if value.is_a?(Integer)
+          return nil if value.blank?
+
+          Integer(value.to_s, 10, exception: false)
         end
 
         def day_phrase(day)
@@ -204,6 +257,21 @@ class RecurringTransaction
 
         def weekday_name(weekday)
           I18n.t("date.day_names")[weekday]
+        end
+
+        def interval_label(found)
+          case found.interval_unit
+          when "weekly"
+            I18n.t("recurring_transactions.frequency.every_n_weeks",
+                   interval: found.interval, weekday: weekday_name(found.weekday))
+          when "monthly"
+            I18n.t("recurring_transactions.frequency.every_n_months",
+                   interval: found.interval, day: day_phrase(found.day_of_month))
+          when "yearly"
+            I18n.t("recurring_transactions.frequency.every_n_years",
+                   interval: found.interval, month: I18n.t("date.month_names")[found.month_of_year],
+                   day: day_phrase(found.day_of_month))
+          end
         end
     end
   end
