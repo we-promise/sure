@@ -83,8 +83,20 @@ class AddClassificationToSecurities < ActiveRecord::Migration[8.1]
     add_column :securities, :classification_locked, :boolean, null: false, default: false, if_not_exists: true
 
     CONSTRAINTS.each do |name, (column, values)|
+      # `if_not_exists: true` is not sufficient here, and this is the reason.
+      # It resolves through `CheckConstraintDefinition#defined_for?`, which
+      # compares `validate` alongside the name, so it only recognises an
+      # existing constraint that is *also* NOT VALID. One this migration has
+      # already created AND validated is not matched, the ADD is issued a
+      # second time, and PostgreSQL raises `PG::DuplicateObject`. That is a
+      # reachable state: `disable_ddl_transaction!` leaves a window between
+      # `validate_check_constraint` below and the schema_migrations write, and
+      # a process killed inside it leaves exactly this shape. Matching on the
+      # name alone is what "safe to run again" actually requires.
+      next if check_constraint_exists?(:securities, name: name)
+
       add_check_constraint :securities, "#{column} IN (#{values.map { |v| "'#{v}'" }.join(', ')})",
-        name: name, validate: false, if_not_exists: true
+        name: name, validate: false
     end
 
     CONSTRAINTS.each_key do |name|
