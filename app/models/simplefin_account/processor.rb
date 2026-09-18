@@ -186,8 +186,11 @@ class SimplefinAccount::Processor
         balance
       end
 
-      balance = account.provider_adjusted_balance(balance)
+      balance = account.resolve_provider_balance_adjustment(balance)
       cash_balance = balance if account.balance_type == :cash
+
+      result = account.set_current_balance(balance)
+      raise result.error unless result.success?
 
       account.update!(
         balance: balance,

@@ -4,7 +4,18 @@
   <%= tag.div class: "space-y-4 pb-5 lg:pb-32" do %>
     <%= render "accounts/show/header", account: account, title: title, subtitle: subtitle %>
 
-    <% if account.provider_balance_adjusted? %>
+    <% if account.provider_balance_adjustment_caught_up? %>
+      <div class="px-3">
+        <%= render DS::Alert.new(
+          message: t(
+            "accounts.show.provider_balance_adjustment_caught_up_notice",
+            amount: helpers.format_money(account.provider_balance_adjustment_caught_up_amount_money),
+            reason: account.provider_balance_adjustment_reason
+          ),
+          variant: :warning
+        ) %>
+      </div>
+    <% elsif account.provider_balance_adjusted? %>
       <div class="px-3">
         <%= render DS::Alert.new(
           message: t(
