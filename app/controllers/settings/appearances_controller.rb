@@ -33,6 +33,15 @@ class Settings::AppearancesController < ApplicationController
       end
       @user.update!(preferences: updated_prefs)
     end
+
+    # Family-wide (not a per-user preference, unlike the toggles above): it
+    # controls what gets written to shared transaction data regardless of
+    # which family member is logged in, so only an admin may change it --
+    # same restriction as the other family-level settings in UsersController.
+    if @user.admin? && params.dig(:family, :auto_generate_transaction_names)
+      Current.family.update!(auto_generate_transaction_names: params.dig(:family, :auto_generate_transaction_names) == "1")
+    end
+
     redirect_to settings_appearance_path
   end
 end
