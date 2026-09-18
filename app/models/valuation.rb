@@ -29,6 +29,13 @@ class Valuation < ApplicationRecord
     name = Valuation::Name.new(kind, entry.account.accountable_type)
     return entry.name unless entry.name == name.to_s
 
-    I18n.t("valuations.names.#{name.translation_key}")
+    translation_key = "valuations.names.#{name.translation_key}"
+    if opening_anchor? &&
+        !I18n.exists?(translation_key, I18n.locale, fallback: false) &&
+        I18n.exists?("valuations.show.opening_balance", I18n.locale, fallback: false)
+      return I18n.t("valuations.show.opening_balance")
+    end
+
+    I18n.t(translation_key)
   end
 end

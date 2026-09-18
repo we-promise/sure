@@ -16,4 +16,13 @@ class ValuationTest < ActiveSupport::TestCase
 
     assert_equal "Réévaluation annuelle", valuation.display_name(entry)
   end
+
+  test "uses the existing localized opening balance when the new name is unavailable" do
+    entry = Entry.new(name: "Opening balance", account: accounts(:depository))
+    valuation = Valuation.new(kind: "opening_anchor")
+
+    I18n.with_locale(:de) do
+      assert_equal "Eröffnungssaldo", valuation.display_name(entry)
+    end
+  end
 end
