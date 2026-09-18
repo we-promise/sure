@@ -8,8 +8,8 @@
 # every value stays NULL and the migration carries no data risk.
 #
 # The enumerated columns are plain strings with a check constraint, matching
-# `securities.kind` (`chk_securities_kind`) and `loans.day_count_convention`:
-# adding a value later is a constraint swap, not a type change. The permitted
+# `securities.kind` (`chk_securities_kind`): adding a value later is a
+# constraint swap, not a type change. The permitted
 # values are the six-class / twelve-sub-class taxonomy other portfolio trackers
 # use, so an import maps onto them without a translation table.
 #
