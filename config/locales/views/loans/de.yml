@@ -7,6 +7,14 @@ de:
       interest_rate: Zinssatz
       interest_rate_placeholder: '5,25'
       initial_balance: Ursprünglicher Kreditbetrag
+      day_count_convention: Zinsberechnungsmethode
+      day_count_convention_actual_365: Taggenau/365
+      day_count_convention_actual_actual: Taggenau/taggenau
+      day_count_convention_hint: Wie Ihr Kreditgeber jede Periode gegen ein Jahr
+        misst. Taggenau/365 berechnet nach der Länge des Monats und ist bei
+        britischen und australischen Hypotheken üblich. 30/360 berechnet ein
+        glattes Zwölftel, worauf dieser Kredit bisher beruht.
+      day_count_convention_thirty_360: 30/360 (glattes Zwölftel)
       rate_type: Zinssatztyp
       term_months: Laufzeit (Monate)
       term_months_placeholder: '360'

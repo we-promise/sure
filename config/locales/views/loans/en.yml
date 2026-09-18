@@ -7,6 +7,14 @@ en:
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'
       initial_balance: Original loan balance
+      day_count_convention: Interest basis
+      day_count_convention_actual_365: Actual/365
+      day_count_convention_actual_actual: Actual/actual
+      day_count_convention_hint: How your lender measures each period against a year.
+        Actual/365 charges by the length of the month and is standard for UK and
+        Australian mortgages. 30/360 charges a flat twelfth, which is what this
+        loan was built on.
+      day_count_convention_thirty_360: 30/360 (a flat twelfth)
       rate_type: Rate type
       term_months: Term (months)
       term_months_placeholder: '360'
