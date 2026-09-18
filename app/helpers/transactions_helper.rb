@@ -1,4 +1,6 @@
 module TransactionsHelper
+  # @return [Array<Hash>] the filters offered above the transaction list, each
+  #   with the key its partial is named for, a translated label and an icon
   def transaction_search_filters
     [
       { key: "account_filter", label: t("transactions.search.filters.account"), icon: "layers" },
@@ -12,14 +14,23 @@ module TransactionsHelper
     ]
   end
 
+  # @param filter [Hash] one entry from transaction_search_filters
+  # @return [String] the partial that renders that filter's controls
   def get_transaction_search_filter_partial_path(filter)
     "transactions/searches/filters/#{filter[:key]}"
   end
 
+  # @return [Hash] the filter shown when the user has not picked one
   def get_default_transaction_search_filter
     transaction_search_filters[0]
   end
 
+  # A split child is only folded under its parent when the user asked for
+  # grouping and the current view is rendering grouped.
+  #
+  # @param entry [Entry] the entry being rendered
+  # @param params_grouped [String, nil] the grouped param as it arrived
+  # @return [Boolean] whether to render this entry inside its split group
   def in_split_group?(entry, params_grouped)
     entry.split_child? && Current.user.show_split_grouped? && params_grouped == "true"
   end
@@ -58,6 +69,11 @@ module TransactionsHelper
           extras.concat(provider_extra_rows(provider_extra_field_label(k), v))
         end
       end
+
+      # Same rule as the Plaid branch below. SimpleFIN always writes a pending
+      # flag, so a transaction carrying nothing else would otherwise open an
+      # Additional details section with no details in it.
+      return nil if simple.blank? && extras.blank?
 
       {
         kind: :simplefin,
@@ -144,6 +160,14 @@ module TransactionsHelper
     end
   end
 
+  # Builds one row for the view. The key arrives already presentable and is not
+  # reformatted here, since a composed label is part translation and part
+  # provider identifier.
+  #
+  # @param key [String] the label to show
+  # @param value [Object] the provider value
+  # @param multiline [Boolean] render in a block rather than opposite the label
+  # @return [Hash] a row of { key:, value:, multiline: }
   def provider_extra_row(key, value, multiline: false)
     display = if multiline || value.is_a?(Hash) || value.is_a?(Array)
       pretty_json(value)
@@ -166,6 +190,11 @@ module TransactionsHelper
     t("transactions.show.provider_extra_fields.#{key}", default: key.to_s.humanize)
   end
 
+  # Provider payloads are arbitrary JSON, so anything that cannot be generated
+  # falls back to its string form rather than raising in a view.
+  #
+  # @param value [Object] any provider value
+  # @return [String] indented JSON, or the value's string form
   def pretty_json(value)
     JSON.pretty_generate(value)
   rescue StandardError

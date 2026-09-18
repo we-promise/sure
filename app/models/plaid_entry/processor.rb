@@ -13,6 +13,9 @@ class PlaidEntry::Processor
     @category_matcher = category_matcher
   end
 
+  # Upserts one Plaid transaction into the account.
+  #
+  # @return [Entry] the created or updated entry
   def process
     import_adapter.import_transaction(
       external_id: external_id,
@@ -35,14 +38,17 @@ class PlaidEntry::Processor
   private
     attr_reader :plaid_transaction, :plaid_account, :category_matcher
 
+    # @return [Account::ProviderImportAdapter] the upsert path shared by every provider
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
     end
 
+    # @return [Account] the account this Plaid account currently maps to
     def account
       plaid_account.current_account
     end
 
+    # @return [String] Plaid's transaction id, unique per account and source
     def external_id
       plaid_transaction["transaction_id"]
     end
@@ -101,6 +107,11 @@ class PlaidEntry::Processor
       { "plaid" => plaid }
     end
 
+    # Drops keys whose value carries nothing, recursing into nested hashes, so
+    # the stored snapshot holds only fields Plaid actually reported.
+    #
+    # @param value [Object] a provider hash, or anything else
+    # @return [Hash, nil] the compacted hash, or nil when nothing survived
     def compact_provider_hash(value)
       return nil unless value.is_a?(Hash)
 
@@ -127,6 +138,8 @@ class PlaidEntry::Processor
       false
     end
 
+    # @param value [Object] Plaid's counterparties array, or anything else
+    # @return [Array<Hash>, nil] compacted counterparties, or nil when none survived
     def compact_counterparties(value)
       return nil unless value.is_a?(Array)
 
@@ -142,10 +155,12 @@ class PlaidEntry::Processor
       plaid_transaction["amount"]
     end
 
+    # @return [String, nil] ISO currency code for the amount
     def currency
       plaid_transaction["iso_currency_code"]
     end
 
+    # @return [String, Date] the date Plaid reported for the transaction
     def date
       plaid_transaction["date"]
     end
@@ -156,16 +171,23 @@ class PlaidEntry::Processor
       plaid_transaction["pending_transaction_id"]
     end
 
+    # @return [String, nil] Plaid's detailed personal finance category, when present
     def detailed_category
       plaid_transaction.dig("personal_finance_category", "detailed")
     end
 
+    # @return [Category, nil] the family category matching Plaid's, when the
+    #   account has category matching enabled
     def matched_category
       return nil unless detailed_category
       return nil unless account&.enable_category_matcher?
       @matched_category ||= category_matcher.match(detailed_category)
     end
 
+    # Built from the cleaned merchant name on its own path, so merchant grouping
+    # and logos stay put even though #name now carries the description too.
+    #
+    # @return [ProviderMerchant, nil] the merchant for this transaction
     def merchant
       @merchant ||= import_adapter.find_or_create_merchant(
         provider_merchant_id: plaid_transaction["merchant_entity_id"],

@@ -11,6 +11,7 @@ class Account::ProviderImportAdapter
 
   attr_reader :account, :skipped_entries
 
+  # @param account [Account] the account every import through this adapter lands on
   def initialize(account)
     @account = account
     @skipped_entries = []
@@ -1079,6 +1080,12 @@ class Account::ProviderImportAdapter
       entry.transaction.save!
     end
 
+    # Removes the pending flag every provider writes under its own namespace,
+    # dropping a namespace that held nothing else. Used when a booked version of
+    # a transaction arrives and the stale flag would otherwise stick forever.
+    #
+    # @param extra [Hash, nil] the transaction's current extra
+    # @return [Hash] a copy with the pending flags removed
     def clear_pending_flags_from_extra(extra)
       ex = (extra || {}).deep_dup
       ex = {} unless ex.is_a?(Hash)

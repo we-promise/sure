@@ -39,14 +39,22 @@ class DS::DetailRow < DesignSystemComponent
     @opts = opts
   end
 
+  # @return [String] classes for the row, merging any class the caller passed
   def container_classes
     class_names("flex justify-between gap-2", "items-#{align}", opts[:class])
   end
 
+  # Caller options minus :class, which container_classes has already merged.
+  # Passing it twice would set the attribute twice.
+  #
+  # @return [Hash] attributes forwarded to the row element
   def container_opts
     opts.except(:class)
   end
 
+  # shrink-0 keeps the label whole so the value is the side that gives way.
+  #
+  # @return [String] classes for the <dt>
   def label_classes
     class_names("text-secondary text-sm shrink-0")
   end
