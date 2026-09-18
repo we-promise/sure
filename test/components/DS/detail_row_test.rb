@@ -17,13 +17,15 @@ class DS::DetailRowTest < ViewComponent::TestCase
     assert_selector "dd a[href='/accounts/1']", text: "Checking"
   end
 
-  test "wraps by default and truncates on request" do
+  # Both wrapping and truncating need the cell to shrink below its min-content
+  # width first, which a flex item will not do on its own.
+  test "wraps by default and truncates on request, and can shrink either way" do
     render_inline(DS::DetailRow.new(label: "Raw", value: "a very long provider value"))
-    assert_selector "dd.break-words"
+    assert_selector "dd.min-w-0.break-words"
     refute_selector "dd.truncate"
 
     render_inline(DS::DetailRow.new(label: "Raw", value: "a very long provider value", truncate: true))
-    assert_selector "dd.truncate"
+    assert_selector "dd.min-w-0.truncate"
     refute_selector "dd.break-words"
   end
 

@@ -63,10 +63,19 @@ class Rule::ConditionFilter::TransactionNameTest < ActiveSupport::TestCase
 
   # entries.source is NULL for manual rows, so the Plaid arm of the predicate is
   # NULL and a bare NOT(...) would discard them. Guards the COALESCE.
+  #
+  # The second row is the one that does the guarding. For "Rent insurance" the
+  # LIKE is false, and NULL AND FALSE is FALSE, so that row survives the negation
+  # with or without the COALESCE. Only a manual row shaped like a combined name
+  # makes the LIKE true, leaving NULL AND TRUE, which is NULL.
   test "a not-equal rule still returns manual rows" do
     manual = manual_entry(name: "Rent insurance")
+    combined_looking = manual_entry(name: "Target - APARTMENT 4B")
 
-    assert_includes matching_entry_ids(operator: "!=", value: "Target"), manual.id
+    matched = matching_entry_ids(operator: "!=", value: "Target")
+
+    assert_includes matched, manual.id
+    assert_includes matched, combined_looking.id
   end
 
   test "substring operators are untouched" do
