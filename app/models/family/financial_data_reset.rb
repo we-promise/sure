@@ -161,6 +161,7 @@ class Family::FinancialDataReset
       scope(:tags).destroy_all
       scope(:merchants).destroy_all
       delete_provider_items!
+      family.financekit_account_lineages.destroy_all
       scope(:accounts).destroy_all
     end
 

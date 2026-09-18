@@ -722,8 +722,12 @@ Rails.application.routes.draw do
         get "capabilities", to: "connections#capabilities"
         resources :connections, only: [ :create, :show, :destroy ] do
           put "account_mappings/:source_id", to: "connections#mapping"
-          post "syncs", to: "syncs#create"
+          post :activate, to: "connections#activate"
+          post :credential, to: "connections#credential"
+          post :repair, to: "connections#repair"
+          resources :conflicts, only: [ :index, :update ]
         end
+        post "publishers/:publisher_id/batches", to: "batches#create", as: :publisher_batches
       end
       # Authentication endpoints
       post "auth/signup", to: "auth#signup"

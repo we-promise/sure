@@ -32,6 +32,12 @@ RSpec.configure do |config|
             in: :header,
             description: 'API key for authentication. Generate one from your account settings.'
           },
+          financekitPublisher: {
+            type: :http,
+            scheme: :bearer,
+            bearerFormat: 'opaque publisher credential',
+            description: 'Revocable credential restricted to one FinanceKit publisher upload URL.'
+          },
           oauth2: {
             type: :oauth2,
             flows: {

@@ -41,9 +41,9 @@ class AccountProvider < ApplicationRecord
       # the race between FinanceKit mapping and another provider's setup flow.
       Account.where(id: account_id).lock.pick(:id)
       others = self.class.where(account_id: account_id).where.not(id: id)
-      conflict = provider_type == "FinancekitAccount" ? others.exists? : others.where(provider_type: "FinancekitAccount").exists?
+      conflict = provider_type == "FinancekitAccountLineage" ? others.exists? : others.where(provider_type: "FinancekitAccountLineage").exists?
       errors.add(:account, "already has an exclusive FinanceKit publisher") if conflict
-      if provider_type == "FinancekitAccount" && provider&.financekit_item&.family_id != account.family_id
+      if provider_type == "FinancekitAccountLineage" && provider&.family_id != account.family_id
         errors.add(:account, "must belong to the FinanceKit enrollment family")
       end
     end

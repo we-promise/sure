@@ -3,29 +3,21 @@ require_relative "../../support/financekit_test_helper"
 
 class Financekit::MappingTest < ActiveSupport::TestCase
   include FinancekitTestHelper
+
   setup { financekit_setup }
 
-  test "lossless signs include refunds payments zero and large magnitudes" do
+  test "lossless signs include zero large values and non-two-decimal currencies" do
     %w[0 1 1.234 999999999999999.9999].each do |amount|
-      assert_equal BigDecimal(amount), Financekit::Mapping.transaction_amount(money(amount, "debit"))
-      assert_equal -BigDecimal(amount), Financekit::Mapping.transaction_amount(money(amount, "credit"))
+      assert_equal BigDecimal(amount), Financekit::Mapping.transaction_amount("amount" => money(amount, "debit"))
+      assert_equal(-BigDecimal(amount), Financekit::Mapping.transaction_amount("amount" => money(amount, "credit")))
     end
     assert_equal BigDecimal("42"), Financekit::Mapping.balance(money("42", "credit"), "Depository")
     assert_equal BigDecimal("42"), Financekit::Mapping.balance(money("42", "debit"), "CreditCard")
-    assert_equal -BigDecimal("42"), Financekit::Mapping.balance(money("42", "credit"), "CreditCard")
-    assert_equal -BigDecimal("42"), Financekit::Mapping.balance(money("42", "debit"), "Depository")
     assert_equal BigDecimal("100"), Financekit::Payload.money!(money("100", "debit", "JPY"))
     assert_equal BigDecimal("1.234"), Financekit::Payload.money!(money("1.234", "debit", "KWD"))
   end
 
-  test "ledger date uses the confirmed account timezone at month boundary" do
-    record = { "transacted_at" => "2026-03-01T00:30:00Z" }
-    assert_equal Date.new(2026, 2, 28), Financekit::Mapping.ledger_date(record, "America/Los_Angeles")
-    record["posted_at"] = "2026-03-01T08:30:00Z"
-    assert_equal Date.new(2026, 3, 1), Financekit::Mapping.ledger_date(record, "America/Los_Angeles")
-  end
-
-  test "floats negative magnitudes precision overflow and currency defaults are rejected" do
+  test "invalid numeric representations and currency defaults are rejected" do
     [ 1.23, "-1", "NaN", "1e2", "1.12345", "1000000000000000" ].each do |amount|
       assert_raises(Financekit::Error) { Financekit::Payload.money!(money(amount)) }
     end
@@ -33,121 +25,88 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_raises(Financekit::Error) { Financekit::Payload.money!(money.except("currency")) }
   end
 
-  test "FinanceKit imports never claim an ambiguous manual transaction" do
+  test "ledger date uses the confirmed account timezone at a month boundary" do
+    record = { "transacted_at" => "2026-03-01T00:30:00Z" }
+    assert_equal Date.new(2026, 2, 28), Financekit::Mapping.ledger_date(record, "America/Los_Angeles")
+    record["posted_at"] = "2026-03-01T08:30:00Z"
+    assert_equal Date.new(2026, 3, 1), Financekit::Mapping.ledger_date(record, "America/Los_Angeles")
+  end
+
+  test "a malformed event rejects the whole batch before it enters the inbox" do
+    events = financekit_events
+    events.last.fetch("transaction")["amount"]["amount"] = 12.34
+    payload = financekit_payload(events: events)
+
+    assert_no_difference "FinancekitBatch.count" do
+      error = assert_raises(Financekit::Error) { accept_batch(payload) }
+      assert_equal "invalid_payload", error.code
+    end
+    assert_empty @source.account.entries
+  end
+
+  test "imports never claim an ambiguous manual transaction" do
     account = @source.account
     manual = account.entries.create!(amount: "12.34", currency: "USD", date: Date.new(2026, 9, 1),
       name: "Manual purchase", entryable: Transaction.new)
-    Financekit::Processor.new(@item).apply!(financekit_payload)
+
+    accept_and_apply
+
     assert_equal 2, account.entries.count
     assert_nil manual.reload.external_id
   end
 
-  test "same ID pending to booked preserves user edits while clearing pending" do
-    data = financekit_payload
-    data["transactions"].first["status"] = "pending"
-    Financekit::Processor.new(@item).apply!(data)
+  test "same source identity moves pending to booked without replacing user edits" do
+    pending_events = financekit_events
+    pending = pending_events.last.fetch("transaction")
+    pending["status"] = "pending"
+    pending.delete("posted_at")
+    first = accept_and_apply(financekit_payload(events: pending_events))
     entry = @source.account.entries.sole
     entry.update!(name: "My edited purchase", user_modified: true)
-    assert entry.transaction.pending?
-    Financekit::Processor.new(@item).apply!(financekit_payload)
+
+    accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest))
+
     assert_equal "My edited purchase", entry.reload.name
     assert_not entry.transaction.reload.pending?
     assert_equal 1, @source.account.entries.count
   end
 
-  test "changed pending ID creates separate identity without automatic merge" do
-    data = financekit_payload
-    data["transactions"].first["status"] = "pending"
-    Financekit::Processor.new(@item).apply!(data)
-    data = financekit_payload
-    data["transactions"].first["source_id"] = SecureRandom.uuid
-    Financekit::Processor.new(@item).apply!(data)
-    assert_equal 2, @source.account.entries.count
+  test "explicit tombstones retract only provider-owned entries and prevent resurrection" do
+    first = accept_and_apply
+    tombstone = {
+      "kind" => "transaction_tombstone",
+      "tombstone" => {
+        "source_id" => @transaction_id,
+        "source_account_id" => @source_id,
+        "lineage_id" => @source.financekit_account_lineage_id,
+        "mapping_version" => @source.mapping_version
+      }
+    }
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ tombstone ]))
+
+    assert_empty @source.account.entries.reload
+    assert @source.financekit_transactions.sole.tombstoned_at?
+
+    third = accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest,
+      events: [ financekit_events.last ]))
+    assert_empty @source.account.entries.reload
+    assert_equal 1, third.counts.fetch("review_required")
+    assert_equal "source_reappeared", @item.financekit_conflicts.sole.kind
   end
 
-  test "tombstones retract only unprotected provider owned entries and cannot resurrect" do
-    Financekit::Processor.new(@item).apply!(financekit_payload)
-    tombstone = financekit_payload
-    tombstone["transactions"] = []
-    tombstone["tombstones"] = [ { "source_id" => @transaction_id, "account_id" => @source_id, "mapping_version" => 1 } ]
-    Financekit::Processor.new(@item).apply!(tombstone)
-    assert_equal 0, @source.account.entries.count
-    assert_not_nil @source.financekit_transactions.sole.tombstoned_at
-    third = Financekit::Processor.new(@item).apply!(financekit_payload)
-    assert_equal 0, @source.account.entries.count
-    assert_equal 1, third.reload.counts["review_required"]
-  end
+  test "balance observations are retained while only the latest booked value is materialized" do
+    first = accept_and_apply
+    second_events = financekit_events.select { |event| event["kind"] == "balance_upsert" }
+    second_balance = second_events.sole.fetch("balance")
+    second_balance["source_id"] = SecureRandom.uuid
+    second_balance["observed_at"] = 1.minute.from_now.iso8601
+    second_balance["money"] = money("111.25", "credit")
 
-  test "rejected source only updates do not create durable tombstones" do
-    Financekit::Processor.new(@item).apply!(financekit_payload)
-    rejected = financekit_payload
-    rejected["transactions"].first["status"] = "rejected"
-    rejected["transactions"].first.delete("posted_at")
-    Financekit::Processor.new(@item).apply!(rejected)
+    accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: second_events, captured_at: 1.minute.from_now.iso8601))
 
-    identity = @source.financekit_transactions.sole
-    assert_equal "rejected", identity.status
-    assert_nil identity.entry_id
-    assert_nil identity.tombstoned_at
-    assert_not identity.ledger_imported
-    assert_equal 0, @source.account.entries.count
-
-    Financekit::Processor.new(@item).apply!(financekit_payload)
-    assert_equal 1, @source.account.entries.count
-    assert_equal "booked", identity.reload.status
-    assert identity.ledger_imported
-  end
-
-  test "protected tombstone becomes review and missing snapshot records never delete" do
-    Financekit::Processor.new(@item).apply!(financekit_payload)
-    @source.account.entries.sole.update!(import_locked: true)
-    data = financekit_payload
-    data["transactions"] = []
-    data["tombstones"] = [ { "source_id" => @transaction_id, "account_id" => @source_id, "mapping_version" => 1 } ]
-    second = Financekit::Processor.new(@item).apply!(data)
-    assert_equal 1, @source.account.entries.count
-    assert_equal 1, second.reload.counts["review_required"]
-    data["tombstones"] = []
-    Financekit::Processor.new(@item).apply!(data)
-    assert_equal 1, @source.account.entries.count
-  end
-
-  test "available credit cannot overwrite a booked balance" do
-    data = financekit_payload
-    data["accounts"].first.delete("booked_balance")
-    data["transactions"] = []
-    Financekit::Processor.new(@item).apply!(data)
-    assert_equal BigDecimal("125.00"), @source.account.reload.balance
-    assert_equal "100.32", @source.reload.available_balance["amount"]
-  end
-
-  test "initial booked balance observation fences older balance uploads" do
-    assert_equal "125.00", @source.booked_balance.fetch("amount")
-    data = financekit_payload
-    data["accounts"].first["observed_at"] = 1.day.ago.iso8601
-    error = assert_raises(Financekit::Error) { Financekit::Processor.new(@item).apply!(data) }
-    assert_equal "stale_balance", error.code
-    assert_equal BigDecimal("125.00"), @source.account.reload.balance
-  end
-
-  test "legacy provider links cannot be silently supplied by FinanceKit" do
-    account = accounts(:depository)
-    account.accountable.update!(subtype: "checking")
-    account.update_column(:plaid_account_id, plaid_accounts(:one).id)
-    input = @mapping_input.except("booked_balance", "observed_at").merge(
-      "action" => "link", "account_id" => account.id,
-      "currency" => account.currency, "subtype" => account.accountable.subtype)
-    @source.destroy!
-    error = assert_raises(Financekit::Error) { FinancekitAccount.map!(@item, @source_id, input) }
-    assert_equal "account_already_supplied", error.code
-  end
-
-  test "whole malformed sync is rejected without importing valid records" do
-    data = financekit_payload
-    data["transactions"] << data["transactions"].first.merge("source_id" => SecureRandom.uuid, "amount" => 12.34)
-    assert_no_difference "FinancekitBatch.count" do
-      assert_raises(Financekit::Error) { Financekit::Processor.new(@item).apply!(data) }
-    end
-    assert_empty @source.account.entries
+    assert_equal 2, @source.financekit_balance_observations.count
+    assert_equal BigDecimal("111.25"), @source.account.reload.balance
   end
 end

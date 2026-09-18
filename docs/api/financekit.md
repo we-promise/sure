@@ -1,112 +1,82 @@
-# FinanceKit foreground sync provider (draft protocol 1)
+# FinanceKit background device publisher (protocol 2)
 
 Related issue: [#3485](https://github.com/we-promise/sure/issues/3485).
 
-This draft intentionally uses a foreground "sync now" API. The native client
-collects FinanceKit data while the user is active, then sends the typed payload
-with the same authenticated Sure API mechanism used by other client requests.
-It does not define a background device-upload protocol, encrypted inbox,
-signed receipts, sequence/predecessor stream, or device replacement handshake.
+FinanceKit is modeled as a device publisher inside Sure's provider architecture. The iOS client reads explicitly authorized Apple Wallet accounts, persists an encrypted local outbox, and uploads bounded batches whenever iOS grants foreground or background execution. Sure remains the financial system of record after a batch is accepted and applied.
 
-All paths below start with `/api/v1/financekit`. Requests use Sure's existing
-OAuth bearer token or `X-Api-Key` over HTTPS. Write operations require
-`read_write`, an active family administrator, preview opt-in, and an explicit
-family allowlist.
+The protocol deliberately separates two trust domains:
 
-## Discovery and setup
+- Setup, account mapping, repair, conflict resolution, and disconnection use Sure's normal OAuth or `X-Api-Key` authentication.
+- Batch upload uses a random, revocable credential restricted to one publisher URL. It cannot read financial data or call any other API.
 
-`GET /capabilities` returns whether FinanceKit is available for the caller's
-family, supported protocol versions, the foreground delivery mode, record
-limits, amount precision, and supported transaction statuses. A server without
-these routes can return 404. `available: false` means the feature is disabled
-for this family; existing read-only API access remains usable.
+TLS protects transport. The server stores only a SHA-256 digest of the publisher credential. Financial payloads are never written to request logs, receipts, or diagnostics.
 
-Setup flow:
+## Eligibility and discovery
 
-1. Fetch `/capabilities` from the authenticated Sure instance.
-2. Ask the user for explicit FinanceKit upload consent.
-3. `POST /connections` with `FinancekitEnrollment`. The request contains a
-   stable client-generated `enrollment_id`, protocol version, and consent.
-   Repeating the same enrollment is idempotent; changing it returns 409.
-4. `PUT /connections/{id}/account_mappings/{source_id}` with
-   `FinancekitMappingRequest`. Choose `create` or `link` explicitly. Creation
-   requires subtype, currency, timezone, and an observed booked balance. Linking
-   requires a writable same-family account with matching type/subtype/currency.
-   Existing provider-backed accounts cannot be claimed.
+`GET /api/v1/financekit/capabilities` requires `read` access. It reports protocol version 2, `background_publisher` delivery, and server limits. Enrollment and management require `read_write`, an active family administrator, preview opt-in, `FINANCEKIT_ENABLED=true`, and an exact family allowlist match.
 
-`GET /connections/{id}` returns sanitized connection health and paginated
-mappings. `DELETE /connections/{id}` revokes future foreground syncs and leaves
-already-imported ledger data intact.
+A disabled capability does not affect the caller's existing read-only Sure access.
 
-## Foreground sync
+## Enrollment, mapping, and activation
 
-`POST /connections/{id}/syncs` accepts a JSON `FinancekitPayload` and imports it
-inside the foreground request. The whole payload validates before canonical
-ledger changes commit. A successful response returns `FinancekitSyncResult` with
-an import id, `applied` status, captured/applied timestamps, and counts.
+1. The client gets capabilities through the normal authenticated API.
+2. The user selects Wallet accounts and explicitly acknowledges family visibility and remote processing. The client sends that immutable consent record to `POST /connections` with a stable enrollment UUID.
+3. The client maps every selected FinanceKit account through `PUT /connections/{connection_id}/account_mappings/{source_id}`. It must explicitly create a canonical account or link a writable same-family account with the same currency and type.
+4. `POST /connections/{connection_id}/activate` returns the upload URL, publisher and stream identifiers, generation, stable account-lineage bindings, limits, and the one-purpose publisher credential. The plaintext credential is returned only when it is issued.
 
-Limits:
+Enrollment and mapping requests are idempotent for identical input. Conflicting reuse returns 409. A canonical account can have only one FinanceKit lineage writer and cannot be silently claimed from another provider.
 
-- Request body: 1 MiB.
-- Accounts per sync: 20.
-- Combined transaction upserts and tombstones per sync: 500.
+`POST /credential` rotates a lost publisher credential without changing the stream. `POST /repair` revokes queued work and credentials, increments the generation, and starts a new stream at sequence 1. `DELETE /connections/{id}` revokes publishing and releases provider links while retaining already imported ledger history.
 
-If a client loses the HTTP response, it may retry the same payload. Transaction
-identity is keyed by the FinanceKit source UUID and mapped account, so the retry
-does not duplicate ledger entries. The retry may create a second import summary,
-but canonical financial data remains idempotent.
+A replacement device enrolls with `replaces_connection_id`, maps to the prior lineage, then activates. Activation atomically revokes the old publisher. Lineage-owned transaction identities and tombstones survive, so replacement does not duplicate or resurrect financial activity.
 
-Sure records the last device contact, last imported timestamp, and last captured
-timestamp on the connection. Older capture or balance observations cannot
-overwrite newer state.
+## Ordered batch upload
 
-## Financial mapping
+`POST /publishers/{publisher_id}/batches` accepts `application/json` with the restricted bearer credential. The optional `Idempotency-Key` must equal `batch_id`; optional `X-Sure-Payload-SHA256` must match the exact request bytes.
 
-Amounts are unsigned exact base-10 strings with at most 15 integer digits and
-four fraction digits. JSON numbers, exponent notation, negative magnitudes,
-unknown currencies, precision overflow, and transaction/account currency
-disagreement are rejected. Credit/debit carries direction; Sure maps debit to
-positive expense and credit to negative income once.
+Each immutable batch contains:
 
-For asset balances, credit is money held and debit is an overdraft. For credit
-cards, debit is debt and credit is an overpayment. Booked and available balances
-are retained separately. Only booked balance updates the canonical account
-balance.
+- connection, publisher, generation, and stream identifiers;
+- a monotonically increasing sequence;
+- the previous batch's SHA-256 payload digest, except on sequence 1;
+- capture and chunk identifiers and indexes;
+- capture mode and completion metadata;
+- the exact selected account scope; and
+- up to 500 typed account, balance, transaction, or tombstone events.
 
-Timestamps require explicit ISO-8601 offsets. The canonical transaction date is
-the posted timestamp for booked records, otherwise transacted time, converted
-through the account's confirmed IANA timezone. Original timestamps, amount,
-currency, direction, status, type, merchant, and description remain source
-metadata.
+The server validates the complete payload before durably storing the exact bytes and returns 202 with a stable receipt. Retrying the same batch bytes returns the same receipt. Reusing its batch ID or stream position with different bytes returns 409. Up to 100 batches may wait per publisher, allowing later batches to arrive before a missing sequence.
 
-Supported transaction states are `authorized`, `pending`, `booked`, `rejected`,
-and `memo`. Authorized/pending records carry Sure's shared pending flag.
-Rejected/memo records are retained as source-only records rather than invented
-settled financial activity.
+The inbox worker applies only the next contiguous batch whose predecessor digest matches. Canonical changes, the applied receipt, and the stream cursor commit in one database transaction. A crash before commit leaves the batch retryable; a crash after commit leaves an applied receipt. Permanent validation or stream failure fences the generation, revokes later queued batches and the credential, and requires explicit repair.
 
-The provider import adapter disables heuristic matching for FinanceKit imports.
-No automatic manual/CSV or amount/date pending claims are made. Different source
-UUIDs remain different identities. Same-ID transitions respect user-edited,
-import-locked, excluded, split, reconciled, and transferred records.
+Payload bytes are removed seven days after application or revocation. Digests, typed source identities, balance observations, tombstones, receipts, and audit-safe error codes remain.
 
-Explicit tombstones retract only unprotected provider-owned entries. Protected
-entries remain for review. Identity and tombstone rows survive ledger deletion,
-preventing replay resurrection.
+## Event and financial semantics
 
-## Error contract
+The client receives a stable `lineage_id` and `mapping_version` for every selected FinanceKit source account. Every event repeats that binding. The server rejects stale or foreign mappings before import.
 
-- 400: malformed request, timestamp, or protocol.
-- 401: missing or invalid authentication.
-- 403: insufficient scope, preview/family gate, inactive member, account
-  permission, revoked connection, or missing consent.
-- 404: missing route, connection, or inaccessible resource.
-- 409: enrollment, mapping, stale capture, stale balance, or source identity
-  conflict.
-- 413: request or record limit exceeded.
-- 422: invalid typed records, consent, currency, precision, or subtype.
-- 429: normal API rate limiting; honor `Retry-After` when present.
-- 503: feature disabled or unconfigured; honor `Retry-After`.
+Amounts are unsigned exact decimal strings with explicit currency and `credit` or `debit` direction. JSON numbers, negative magnitudes, exponent notation, unknown currencies, and precision overflow are rejected. Sure normalizes signs once:
 
-OpenAPI schemas live in [schemas.json](financekit/schemas.json) and are loaded
-by `spec/swagger_helper.rb`. Request documentation is generated from
-`spec/requests/api/v1/financekit_spec.rb`.
+- transaction debit is positive expense and credit is negative income;
+- asset balance credit is money held and debit is overdraft;
+- credit-card balance debit is debt and credit is overpayment.
+
+Balance observations are append-only source history. Only the newest booked observation materializes the canonical account balance. Available balance never replaces booked balance.
+
+Transaction identity is the stable account lineage plus the FinanceKit source UUID. The provider adapter disables heuristic amount/date matching. Same-ID pending-to-booked transitions are supported; a changed source UUID remains a separate identity. Source-only `rejected` and `memo` records do not invent ledger activity.
+
+Omission never deletes data, even for a complete snapshot. Only an explicit transaction tombstone may retract an unprotected FinanceKit-owned entry. User-edited, locked, reconciled, split, transferred, or otherwise protected records create a durable conflict instead. Conflicts are listed at `GET /connections/{connection_id}/conflicts` and resolved explicitly with `PATCH /connections/{connection_id}/conflicts/{id}`.
+
+## Health and recovery
+
+`GET /connections/{id}` exposes separate timestamps for device contact, durable acceptance, canonical import, downstream scheduling, and capture time. This prevents a received batch from being presented as fully imported.
+
+The client should handle responses as follows:
+
+- 202: retain the receipt, then delete the matching local outbox batch.
+- 401: stop uploads and use normal authentication to rotate the publisher credential.
+- 403: publishing is revoked, ineligible, or requires repair; do not retry blindly.
+- 409: stop the stream and fetch connection health. Repair when the server reports `repair_required`.
+- 413: rebuild within the advertised byte and record limits.
+- 429 or 503: retain the exact bytes and retry after `Retry-After` with bounded backoff.
+
+OpenAPI schemas live in [schemas.json](financekit/schemas.json) and are loaded by `spec/swagger_helper.rb`.

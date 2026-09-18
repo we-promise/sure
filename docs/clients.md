@@ -108,60 +108,6 @@ All clients should connect to a Sure server the user controls or trusts. Native,
 mobile, API, and MCP clients do not replace the server; they are different ways
 to access it.
 
-## FinanceKit foreground sync (draft)
+## FinanceKit background publisher
 
-The native Apple client can discover the optional FinanceKit provider and use its
-scoped foreground sync API; it must not emulate provider ingestion with generic
-transaction writes. See [the draft contract](api/financekit.md) and
-[rollout/native-readiness gates](hosting/financekit.md). This backend draft is
-not yet a merged contract revision for native adoption.
-
-### Native reporting and device continuity
-
-Read monthly server-calculated totals and the daily spending comparison using
-[`GET /api/v1/cash_flow`](api/openapi.yaml). Native clients should
-use these values instead of rebuilding Sure's reporting rules from transactions.
-
-Structural node `name` values are fallback labels; clients should localize
-`cash_flow`, `surplus`, and `deficit` by `kind` at the presentation boundary.
-
-`include` and `view` are mutually exclusive; combining them returns `422 invalid_view`.
-
-Request `include=sankey` to append category nodes and links to the monthly
-summary. For arbitrary date filters, request
-`view=sankey&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` to receive only the graph
-and its currency, time zone, as-of date, and inclusive period. This avoids building
-a daily series for long date ranges. The default monthly response is unchanged.
-
-Graph values are decimal strings in family currency, with stable node IDs and
-zero-based link indices. Refunds are netted within each category; parent direct
-amounts exclude children before each direction is grouped. Graph income and
-spending can therefore differ from the gross monthly figures, while net savings
-agrees. Surplus and deficit nodes balance the central flow. Clients own layout,
-formatting, and structural colors; all financial aggregation stays on Sure.
-
-The public endpoint uses the standard OAuth/API-key authentication and does not
-accept browser sessions. Responses are private and not HTTP-cacheable; native
-clients retain their own authenticated, identity-scoped offline cache.
-
-The Turbo dashboard fetches `/dashboard/cash_flow` through a normal web controller,
-with session authentication, onboarding checks, and the current user's preview
-gate. It honors the impersonated browser identity and finance-account scope. Both
-endpoints use `IncomeStatement::CashFlowGraph` and `IncomeStatement::Sankey`, sharing
-the graph representation and aggregation without sharing authentication paths.
-
-The web dashboard keeps its original Sankey unchanged and renders the new
-server-calculated chart directly below it only for users with preview features
-enabled. See
-[Preview surveys and event capture](hosting/preview-feedback.md) for deployment
-configuration, survey behavior, and event definitions. Sankey is the first
-implementation of this feedback pattern.
-
-Push registration accepts an optional `device_key`: 32 securely random bytes
-encoded as 64 lowercase hex characters, generated independently per server and
-stored only in secure device storage. Preserve it across user logout. The server
-stores only its SHA-256 digest. If the APNs token already belongs to another user,
-a matching key allows atomic replacement with a **new subscription ID**, making
-old queued deliveries and deletes harmless. A missing or wrong proof returns 422.
-An existing registration without a digest must first be enrolled by its original
-owner or removed by that owner; knowing the APNs token alone never authorizes transfer.
+The native Apple client can enroll as a FinanceKit device publisher, map explicitly selected Wallet accounts, and upload an ordered local outbox during foreground or iOS-granted background execution. Setup and repair use normal Sure authentication; uploads use a revocable one-purpose credential that cannot read Sure data. Stable server-issued account lineages preserve identity across publisher replacement. See the [protocol contract](api/financekit.md) and [operator guide](hosting/financekit.md).

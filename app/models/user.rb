@@ -388,6 +388,11 @@ class User < ApplicationRecord
       AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current) if accounts_to_move.any?
 
       provider_items_to_move.each do |provider_item|
+        if provider_item.is_a?(FinancekitItem)
+          lineage_ids = provider_item.financekit_account_lineages.select(:id)
+          FinancekitAccountLineage.where(id: lineage_ids).update_all(family_id: new_family.id, updated_at: Time.current)
+          provider_item.financekit_conflicts.update_all(family_id: new_family.id, updated_at: Time.current)
+        end
         provider_item.update!(family: new_family)
       end
 
@@ -402,7 +407,7 @@ class User < ApplicationRecord
         provider_item_for(account_provider.provider)
       end
     end.uniq
-    provider_items.concat(financekit_items.left_joins(financekit_accounts: :account_provider).where(account_providers: { id: nil }))
+    provider_items.concat(financekit_items)
     provider_items.uniq!
 
     provider_items.each do |provider_item|
@@ -417,6 +422,11 @@ class User < ApplicationRecord
   end
 
   def provider_item_for(provider)
+    if provider.is_a?(FinancekitAccountLineage)
+      return provider.financekit_accounts.joins(:financekit_item)
+        .where(financekit_items: { user_id: id }).order(created_at: :desc).first&.financekit_item
+    end
+
     item_association = provider.class.reflect_on_all_associations(:belongs_to).find do |association|
       association.name.to_s.end_with?("_item") && provider.respond_to?(association.name)
     end

@@ -1,32 +1,20 @@
-# FinanceKit PR 3489 review and validation
+# FinanceKit protocol 2 design record
 
-Review baseline: `4bcd8afc27bdfce53fe5cf3e0dc442fe8f19f6ff`.
+Protocol 2 replaces the foreground-only draft from PR #3529. It keeps the parts that review established as safe: family/admin and preview gates, explicit mapping, complete typed validation, exact decimal money, deterministic sign normalization, disabled heuristic matching, same-ID pending transitions, protected-record checks, and explicit tombstones.
 
-This PR was simplified from a durable background upload inbox into a foreground
-sync draft. The current branch deliberately avoids custom JOSE encryption,
-device signatures, signed receipts, sequence/predecessor ordering, device
-replacement fencing, scheduled inbox processing, and downstream completion
-leases.
+The foreground draft was not sufficient for an iOS publisher. It coupled collection to a live user request, treated device-local FinanceKit IDs as if one enrollment owned them forever, could not acknowledge work durably before canonical import, and had no ordered replay, replacement fence, repair generation, or visible conflict workflow.
 
-## Current shape
+Protocol 2 adds:
 
-- Existing Sure API authentication protects all FinanceKit endpoints.
-- `GET /api/v1/financekit/capabilities` advertises `foreground_sync`.
-- `POST /api/v1/financekit/connections` enrolls a family-scoped connection with
-  explicit consent.
-- `PUT /api/v1/financekit/connections/{id}/account_mappings/{source_id}` creates
-  or links one canonical account at a time.
-- `POST /api/v1/financekit/connections/{id}/syncs` accepts typed JSON, validates
-  the whole payload, imports synchronously, and returns applied counts.
-- FinanceKit imports still disable heuristic matching, so one-card validation
-  does not claim unrelated manual or CSV transactions.
-- Family export no longer adds `financekit.json` in this draft.
+- a background-compatible one-purpose publisher credential;
+- durable immutable batches and stable receipts;
+- generation, stream, sequence, predecessor digest, capture, and chunk metadata;
+- a contiguous inbox worker with bounded retry and explicit repair;
+- stable family account lineages across device replacement;
+- append-only balance observations;
+- durable protected-entry conflicts and an authenticated resolution API; and
+- separate receipt, import, and downstream health.
 
-## Remaining acceptance work
+The earlier PR #3489 demonstrated useful durable-inbox and ordering concepts, but protocol 2 does not adopt its custom JOSE envelope. TLS already protects transport, Sure controls both endpoints, and envelope cryptography would add key rotation and recovery failure modes without protecting data after server acceptance. The design instead narrows credential authority, stores only its digest, redacts financial bodies, validates exact bytes before persistence, and deletes accepted payload bytes after a bounded replay window.
 
-Run the focused FinanceKit tests, full Minitest suite, API documentation
-generation, linting, and security checks on the pushed revision. Then validate
-one synthetic native foreground sync against a disposable HTTPS instance.
-
-Historical UUID reconciliation, mapping edits, and any future background/offline
-delivery protocol remain separate follow-up decisions.
+The protocol does not infer deletion from a snapshot, merge changed FinanceKit transaction UUIDs, or let a background credential read from Sure. Those choices preserve deterministic source identity and keep destructive reconciliation explicit.

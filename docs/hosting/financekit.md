@@ -1,56 +1,39 @@
-# Operating the FinanceKit foreground sync provider (draft)
+# Operating the FinanceKit background publisher
 
 FinanceKit is default-off and requires:
 
-- `FINANCEKIT_ENABLED=true`.
-- `FINANCEKIT_FAMILY_IDS`: comma-separated exact family UUID allowlist.
-- An active enrolling administrator with preview features enabled.
+- `FINANCEKIT_ENABLED=true`;
+- `FINANCEKIT_FAMILY_IDS`, a comma-separated exact family UUID allowlist;
+- an active enrolling family administrator with preview features enabled; and
+- the scheduled `FinancekitInboxJob` sweep in addition to jobs enqueued when a batch arrives.
 
-No FinanceKit-specific server signing key, encryption key, scheduled inbox job,
-or reverse-proxy exception is required in this foreground draft. Requests use
-the same authenticated HTTPS API path as other Sure clients.
+No Apple Wallet entitlement, private key, or FinanceKit framework is installed on the server. Sure never receives the user's Apple credentials. The iOS app obtains Wallet authorization directly from Apple and uploads only the accounts the user selected and consented to share.
 
-Deploy the migration and app code with the flag disabled, then enable only a
-disposable test family. The native client should perform FinanceKit collection
-while the user is active and call the foreground sync endpoint immediately.
+## Deployment
 
-## Testing
+Deploy the migration, application, worker, and scheduler with the feature flag disabled. The migration introduces publisher connections, stable account lineages, immutable batch receipts, source transaction identities, balance observations, and conflicts.
 
-Use a disposable family and synthetic data on an HTTPS instance. Record the exact
-backend revision (`git rev-parse HEAD`) in the native test notes.
+After deploy:
 
-1. Enable the global flag, allowlist only the test family, and enable preview
-   features for its administrator.
-2. Authenticate with the existing API and fetch `/api/v1/financekit/capabilities`.
-3. Enroll with explicit consent for one source UUID.
-4. Create or link one mapped Depository/CreditCard account with a confirmed
-   subtype, currency, ledger timezone, and observed booked balance.
-5. `POST /connections/{id}/syncs` with a bounded JSON `FinancekitPayload`.
-6. Verify normal account and transaction APIs show the imported transaction,
-   booked balance, pending state, and configured categorization.
-7. Retry the same payload and confirm no duplicate ledger transaction is created.
-8. Exercise invalid money, stale capture/balance, wrong mapping version, revoked
-   connection, and source tombstone behavior.
+1. Confirm the high-priority job queue and recurring scheduler are healthy.
+2. Enable only a disposable test family.
+3. Enroll and activate a synthetic publisher over HTTPS.
+4. Upload sequences 2 then 1 and confirm the inbox applies them in order.
+5. Retry identical bytes and confirm the receipt is stable and no ledger row duplicates.
+6. Rotate the credential and confirm the prior credential cannot upload or call normal APIs.
+7. Replace the publisher and confirm the canonical account, source identities, and tombstones are reused.
+8. Induce a bad predecessor and confirm the connection enters `repair_required`; repair must create a new generation and stream.
+9. Confirm health reports device contact, acceptance, import, and downstream completion separately.
+10. Confirm applied/revoked payload bytes are removed after seven days.
 
-The automated server counterpart is
-`test/controllers/api/v1/financekit/connections_controller_test.rb`, supported by
-the FinanceKit mapping/import model tests.
+Monitor queue depth, oldest accepted batch age, `repair_required` connections, and downstream lag. Diagnostics may include publisher, batch, sequence, generation, and typed error codes. They must not include credentials, raw request bodies, transaction descriptions, merchant names, amounts, account names, or server authentication headers.
 
-## Gates before native adoption
+## Capacity and retention
 
-This is still a draft, not a shipping native contract. Before moving it out of
-draft:
+Protocol 2 limits each publisher to 20 selected accounts, 500 events per batch, 1 MiB of JSON, and 100 accepted/processing batches. A client can upload any amount of history in consecutive chunks; the limits bound each transaction and inbox, not the total import.
 
-1. Run migrations with Ruby 3.4.9/Rails 8.1 and PostgreSQL.
-2. Run the focused FinanceKit controller/model tests, the full Minitest suite,
-   relevant system coverage, RuboCop, ERB lint, Biome, Brakeman, and OpenAPI
-   generation.
-3. Validate a synthetic native client against a disposable HTTPS instance using
-   one mapped card/account and normal foreground authentication.
-4. Decide whether background collection is actually needed. If it is, design it
-   as a separate protocol after the foreground mapping/import path is proven.
+Exact payload bytes are retained for seven days after apply or revocation for response-loss recovery and operational investigation. Canonical financial data and source identity records follow Sure's normal family retention and deletion behavior. Family financial-data reset removes FinanceKit connections, lineages, observations, identities, conflicts, and batch receipts for that family.
 
-Historical UUID reconciliation, mapping edits, and broader native UX remain
-separate product decisions. The first backend contract should prove that
-FinanceKit data maps cleanly into Sure without requiring background delivery,
-custom encryption, or exactly-once stream semantics.
+## Rollback
+
+Disable `FINANCEKIT_ENABLED` first. Existing Sure data remains readable, uploads return a retryable unavailable response, and workers stop applying FinanceKit batches. Do not drop the tables during an application rollback; keep receipts and lineage data until all deployed versions no longer reference them and the retention decision is explicit.

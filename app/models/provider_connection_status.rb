@@ -2,7 +2,7 @@
 
 class ProviderConnectionStatus
   PROVIDERS = [
-    { key: "financekit", type: "FinancekitItem", association: :financekit_items, accounts: :financekit_accounts },
+    { key: "financekit", type: "FinancekitItem", association: :financekit_items, accounts: :financekit_account_lineages },
     { key: "akahu", type: "AkahuItem", association: :akahu_items, accounts: :akahu_accounts },
     { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },
     { key: "monobank", type: "MonobankItem", association: :monobank_items, accounts: :monobank_accounts },
@@ -199,7 +199,7 @@ class ProviderConnectionStatus
 
     def sync_status_summary
       if provider[:key] == "financekit"
-        return item.last_imported_at ? "Foreground sync imported" : "Waiting for foreground sync"
+        return item.last_imported_at ? "Wallet publisher imported" : "Waiting for Wallet publisher"
       end
 
       stats = latest_completed_sync_stats
