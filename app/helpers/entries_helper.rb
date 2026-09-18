@@ -61,4 +61,39 @@ module EntriesHelper
       entry.name
     ].join(" • ")
   end
+
+  def entry_reconciliation_icon(state)
+    case state.to_sym
+    when :reconciled then "circle-check"
+    when :cleared then "check"
+    else "circle"
+    end
+  end
+
+  def entry_reconciliation_icon_color(state)
+    case state.to_sym
+    when :reconciled then "success"
+    when :cleared then "info"
+    else "default"
+    end
+  end
+
+  def entry_reconciliation_pill_tone(state)
+    case state.to_sym
+    when :reconciled then :success
+    when :cleared then :info
+    else :neutral
+    end
+  end
+
+  # Prefer a human period when the statement has dates; otherwise the filename.
+  def entry_reconciliation_statement_label(statement)
+    return nil if statement.blank?
+
+    if statement.period_start_on.present? && statement.period_end_on.present?
+      "#{l(statement.period_start_on)} – #{l(statement.period_end_on)}"
+    else
+      statement.filename
+    end
+  end
 end

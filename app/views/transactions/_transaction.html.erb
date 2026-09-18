@@ -103,6 +103,17 @@
                       ) %>
                     <% end %>
 
+                    <%# Reconciled only — cleared would badge nearly every synced row (#3119) %>
+                    <% if entry.reconciled? %>
+                      <%= render DS::Pill.new(
+                        label: t("transactions.transaction.reconciled"),
+                        tone: :success,
+                        marker: false,
+                        icon: "circle-check",
+                        title: t("transactions.transaction.reconciled_tooltip")
+                      ) %>
+                    <% end %>
+
                     <%# Potential duplicate indicator - different styling for low vs medium confidence %>
                     <% if transaction.has_potential_duplicate? %>
                       <% if transaction.low_confidence_duplicate? %>

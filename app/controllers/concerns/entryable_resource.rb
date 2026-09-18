@@ -48,6 +48,7 @@ module EntryableResource
       @entry = Current.family.entries
                  .joins(:account)
                  .merge(Account.accessible_by(Current.user))
+                 .includes(:reconciled_by_statement)
                  .find(params[:id])
     end
 
