@@ -383,7 +383,16 @@ class User < ApplicationRecord
       AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current) if accounts_to_move.any?
 
       provider_items_to_move.each do |provider_item|
-        provider_item.update!(family: new_family)
+        attrs = { family: new_family }
+
+        # provider_items_for_transfer only returns items whose accounts all
+        # belong to this user, so the connection genuinely follows them. Its
+        # owner has to follow too: the previous owner stays behind in the old
+        # family, and ProviderItemOwnable validates that an owner and its item
+        # share a family.
+        attrs[:owner] = self if provider_item.respond_to?(:owner_id)
+
+        provider_item.update!(**attrs)
       end
 
       new_family.auto_share_existing_accounts_with(self)

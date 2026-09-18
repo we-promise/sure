@@ -718,6 +718,10 @@ class UserTest < ActiveSupport::TestCase
     assert_equal new_family, account.reload.family
     assert_equal new_family, plaid_item.reload.family
     assert_equal new_family, statement.reload.family
+
+    # The connection's owner has to follow it across, or it would be left
+    # pointing at a user in the family it just left.
+    assert_equal user, plaid_item.owner
   end
 
   test "transfer_to_family! rejects provider items linked to accounts outside the transfer" do
