@@ -49,7 +49,7 @@ class Financekit::Processor
     end
 
     def import_transaction!(source, record, batch, counts)
-      identity = source.financekit_transactions.find_or_initialize_by(source_id: record["source_id"])
+      identity = transaction_identity_for(source, record["source_id"])
       existed = identity.persisted?
       identity.assign_attributes(status: record["status"], raw_payload: record)
       # An explicit removal (or a user deleting the ledger entry) is durable. A
@@ -69,7 +69,7 @@ class Financekit::Processor
       account = source.account
       account.with_lock do
         adapter = Account::ProviderImportAdapter.new(account)
-        entry = adapter.import_transaction(external_id: "#{source.id}:#{record.fetch('source_id')}",
+        entry = adapter.import_transaction(external_id: transaction_external_id(source, record.fetch("source_id")),
           amount: Financekit::Mapping.transaction_amount(record), currency: record.fetch("currency"),
           date: Financekit::Mapping.ledger_date(record, source.ledger_timezone),
           name: record["merchant"].presence || record["description"].presence || "Wallet transaction",
@@ -81,7 +81,7 @@ class Financekit::Processor
     end
 
     def retract!(source, record, batch, counts)
-      identity = source.financekit_transactions.find_or_initialize_by(source_id: record["source_id"])
+      identity = transaction_identity_for(source, record["source_id"])
       identity.assign_attributes(status: "deleted", tombstoned_at: Time.current, raw_payload: nil)
       entry = identity.entry
       if entry
@@ -105,6 +105,20 @@ class Financekit::Processor
       DebugLogEntry.capture(category: "provider_sync", level: "info", message: "FinanceKit tombstone processed",
         source: self.class.name, provider_key: "financekit", family: @item.family,
         metadata: { batch_id: batch.batch_id, source_identity_id: identity.id, review_required: identity.review_required })
+    end
+
+    def transaction_identity_for(source, transaction_source_id)
+      identity = FinancekitTransaction.joins(financekit_account: :financekit_item)
+        .where(financekit_accounts: { source_id: source.source_id },
+          financekit_items: { family_id: @item.family_id, user_id: @item.user_id })
+        .find_by(source_id: transaction_source_id)
+      identity ||= source.financekit_transactions.build(source_id: transaction_source_id)
+      identity.financekit_account = source
+      identity
+    end
+
+    def transaction_external_id(source, transaction_source_id)
+      "financekit:#{source.source_id}:#{transaction_source_id}"
     end
 
     def remove_source_only_entry!(source, identity, counts)

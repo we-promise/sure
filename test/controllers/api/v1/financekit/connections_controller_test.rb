@@ -24,8 +24,21 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     assert_response :created
     assert_equal @item.id, response.parsed_body["id"]
     @key.update!(scopes: [ "read" ])
+    get "/api/v1/financekit/capabilities", headers: @headers
+    assert_response :success
     post "/api/v1/financekit/connections", params: @enrollment, headers: @headers, as: :json
     assert_response :forbidden
+  end
+
+  test "capabilities require an administrator publisher" do
+    member = users(:family_member)
+    member.update!(preferences: member.preferences.merge("preview_features_enabled" => true))
+    key = ApiKey.create!(user: member, name: "FinanceKit member test", scopes: [ "read" ],
+      display_key: "test_#{SecureRandom.hex(16)}", source: "web")
+
+    get "/api/v1/financekit/capabilities", headers: { "X-Api-Key" => key.display_key }
+    assert_response :forbidden
+    assert_equal "publisher_forbidden", response.parsed_body["error"]
   end
 
   test "disabled capability is explicit and existing read only API remains available" do

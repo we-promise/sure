@@ -20,6 +20,6 @@ module Financekit
 
   def self.enabled?(family)
     ENV["FINANCEKIT_ENABLED"] == "true" &&
-      ENV.fetch("FINANCEKIT_FAMILY_IDS", "").split(",").include?(family.id)
+      ENV.fetch("FINANCEKIT_FAMILY_IDS", "").split(",").map(&:strip).include?(family.id)
   end
 end

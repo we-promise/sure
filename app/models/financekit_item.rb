@@ -21,11 +21,12 @@ class FinancekitItem < ApplicationRecord
   end
 
   def pending_account_setup?
-    financekit_accounts.empty? || financekit_accounts.left_joins(:account_provider).where(account_providers: { id: nil }).exists?
+    linked_source_ids = financekit_accounts.joins(:account_provider).pluck(:source_id)
+    (consented_source_ids - linked_source_ids).any?
   end
 
   def selected_accounts
-    financekit_accounts.where(source_id: consent.fetch("source_ids"))
+    financekit_accounts.where(source_id: consented_source_ids)
   end
 
   def require_writer!
@@ -33,6 +34,7 @@ class FinancekitItem < ApplicationRecord
     Financekit.require!(Financekit.enabled?(family), "unavailable", 503)
     user.reload
     Financekit.require!(user.active? && user.family_id == family_id && user.admin? && user.preview_features_enabled?, "publisher_forbidden", 403)
+    Financekit.require!(!pending_account_setup?, "account_setup_required", 409)
     permitted_ids = family.accounts.writable_by(user).pluck(:id)
     Financekit.require!(selected_accounts.all? { |source| source.account && permitted_ids.include?(source.account.id) }, "account_forbidden", 403)
   end
@@ -43,4 +45,10 @@ class FinancekitItem < ApplicationRecord
       update!(status: "revoked")
     end
   end
+
+  private
+
+    def consented_source_ids
+      consent.fetch("source_ids")
+    end
 end
