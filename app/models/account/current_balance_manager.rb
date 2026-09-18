@@ -176,7 +176,13 @@ class Account::CurrentBalanceManager
       net = flows.sum { |_, amount| amount }
       expected = older_entry.amount + (account.asset? ? -net : net)
 
-      (expected - new_balance).abs <= BigDecimal("0.01")
+      # Tolerance is the account currency's minor unit (e.g. 0.001 for BHD, 1 for JPY), not a
+      # fixed 0.01: that would be USD-shaped and either too loose (BHD) or too coarse (JPY).
+      # `step` is a Float; round-trip it through its own string so the BigDecimal comparison
+      # is exact rather than relying on Float coercion.
+      tolerance = BigDecimal(Money::Currency.new(account.currency).step.to_s)
+
+      (expected - new_balance).abs <= tolerance
     end
 
     def create_current_anchor(balance)

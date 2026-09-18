@@ -591,6 +591,98 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     end
   end
 
+  # The tolerance in ledger_explains? is the account currency's minor unit, not a fixed 0.01.
+  # BHD has 3 decimal places (step 0.001), so a reading exactly one minor unit off the
+  # ledger-predicted balance is still "explained" and the anchor moves forward in place.
+  test "moves a stale anchor forward when it is off by exactly one BHD minor unit" do
+    @linked_account.update!(currency: "BHD")
+
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      # No ledger flows: the expected balance stays at 1000. 999.999 is exactly 0.001 (one
+      # BHD minor unit) away, which is at the accepted threshold.
+      assert_no_difference -> { @linked_account.entries.count } do
+        assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(999.999).success?
+      end
+
+      moved = Valuation.find(stale_id)
+      assert_equal "current_anchor", moved.kind
+      assert_equal BigDecimal("999.999"), moved.entry.amount
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+      assert_empty @linked_account.valuations.reconciliation
+    end
+  end
+
+  # One tick beyond the BHD minor unit is a genuine unexplained move, and must NOT be
+  # swallowed by a coarser, USD-shaped 0.01 tolerance.
+  test "preserves a stale anchor when it is off by just beyond one BHD minor unit" do
+    @linked_account.update!(currency: "BHD")
+
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      # 999.998 is 0.002 away from the expected 1000: beyond BHD's 0.001 minor unit.
+      assert_difference -> { @linked_account.entries.count } => 1,
+                        -> { @linked_account.valuations.count } => 1 do
+        assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(999.998).success?
+      end
+
+      preserved = Valuation.find(stale_id)
+      assert_equal "reconciliation", preserved.kind
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+    end
+  end
+
+  # JPY has 0 decimal places (step 1), a coarser granularity than the fixed 0.01 the old
+  # tolerance used. A reading exactly one JPY unit off is still "explained".
+  test "moves a stale anchor forward when it is off by exactly one JPY minor unit" do
+    @linked_account.update!(currency: "JPY")
+
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      # No ledger flows: the expected balance stays at 1000. 999 is exactly 1 (one JPY
+      # minor unit) away, which is at the accepted threshold.
+      assert_no_difference -> { @linked_account.entries.count } do
+        assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(999).success?
+      end
+
+      moved = Valuation.find(stale_id)
+      assert_equal "current_anchor", moved.kind
+      assert_equal 999, moved.entry.amount
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+      assert_empty @linked_account.valuations.reconciliation
+    end
+  end
+
+  # One tick beyond the JPY minor unit is a genuine unexplained move.
+  test "preserves a stale anchor when it is off by just beyond one JPY minor unit" do
+    @linked_account.update!(currency: "JPY")
+
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      # 998 is 2 away from the expected 1000: beyond JPY's minor unit of 1.
+      assert_difference -> { @linked_account.entries.count } => 1,
+                        -> { @linked_account.valuations.count } => 1 do
+        assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(998).success?
+      end
+
+      preserved = Valuation.find(stale_id)
+      assert_equal "reconciliation", preserved.kind
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+    end
+  end
+
   test "does not preserve same-day anchor as reconciliation" do
     manager = Account::CurrentBalanceManager.new(@linked_account)
 
