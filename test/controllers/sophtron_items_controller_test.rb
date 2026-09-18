@@ -222,6 +222,32 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "What is your favorite color?"
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "sophtron_mfa", entry.category
+    assert_equal "Sophtron MFA challenge displayed", entry.message
+    assert_equal 1, entry.metadata["security_question_count"]
+  end
+
+  test "connect_institution logs connection start and job registration" do
+    provider = mock
+    provider.expects(:create_user_institution).returns({ JobID: "job-1", UserInstitutionID: "ui-1" })
+
+    SophtronItem.any_instance.stubs(:ensure_customer!).returns("cust-1")
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    assert_difference "DebugLogEntry.count", 2 do
+      post connect_institution_sophtron_item_url(@item), params: {
+        institution_id: "inst-1",
+        institution_name: "Example Bank",
+        bank_username: "user@example.com",
+        bank_password: "secret"
+      }
+    end
+
+    messages = DebugLogEntry.order(:created_at).last(2).map(&:message)
+    assert_includes messages, "Starting Sophtron institution connection"
+    assert_includes messages, "Sophtron institution connection started"
   end
 
   test "connection_status sanitizes captcha image before rendering data uri" do
@@ -520,6 +546,11 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to connection_status_sophtron_item_path(@item, post_mfa: true)
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "sophtron_mfa", entry.category
+    assert_equal "Sophtron MFA submitted", entry.message
+    assert_equal "security_answer", entry.metadata["mfa_type"]
   end
 
   test "submit_mfa rejects too many security answers" do
