@@ -9,7 +9,7 @@ class Api::V1::Financekit::BatchesController < ActionController::API
     raise Financekit::Error.new("payload_too_large", 413) if request.content_length.to_i > Financekit::MAX_BYTES
 
     item = FinancekitItem.find_by(publisher_id: params[:publisher_id])
-    token = request.authorization&.match(/\ABearer ([A-Za-z0-9_-]+)\z/)&.captures&.first
+    token = request.authorization&.match(/\ABearer ([A-Za-z0-9_-]+)\z/)&.captures&.first # pipelock:ignore Credential in URL
     raise Financekit::Error.new("publisher_unauthorized", 401) unless item&.authenticate_credential?(token)
 
     batch = FinancekitBatch.accept!(item, limited_body,

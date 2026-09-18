@@ -978,7 +978,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_200000) do
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_financekit_conflicts_on_family_id"
     t.index ["financekit_account_lineage_id"], name: "index_financekit_conflicts_on_lineage_id"
-    t.index ["financekit_item_id", "status", "created_at"], name: "index_financekit_conflicts_on_financekit_item_id_and_status_and_created_at"
+    t.index ["financekit_item_id", "status", "created_at"], name: "financekit_conflicts_status_created"
     t.index ["financekit_item_id"], name: "index_financekit_conflicts_on_financekit_item_id"
     t.index ["financekit_transaction_id"], name: "index_financekit_conflicts_on_financekit_transaction_id"
     t.index ["resolved_by_id"], name: "index_financekit_conflicts_on_resolved_by_id"

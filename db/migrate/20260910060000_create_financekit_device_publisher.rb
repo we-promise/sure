@@ -137,6 +137,7 @@ class CreateFinancekitDevicePublisher < ActiveRecord::Migration[8.1]
       t.datetime :resolved_at
       t.timestamps
     end
-    add_index :financekit_conflicts, [ :financekit_item_id, :status, :created_at ]
+    add_index :financekit_conflicts, [ :financekit_item_id, :status, :created_at ],
+      name: "financekit_conflicts_status_created"
   end
 end

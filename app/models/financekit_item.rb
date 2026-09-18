@@ -71,7 +71,7 @@ class FinancekitItem < ApplicationRecord
         lineage.create_account_provider!(account: lineage.account) unless lineage.account_provider
       end
 
-      token = rotate_credential!
+      token = rotate_credential! # pipelock:ignore Credential in URL
       update!(status: "active", repair_reason: nil, stream_id: SecureRandom.uuid,
         next_sequence: 1, predecessor_digest: nil)
     end
@@ -86,7 +86,7 @@ class FinancekitItem < ApplicationRecord
       Financekit.require!(!competing_active_writer?(selected_accounts, excluding: [ id ]),
         "lineage_writer_conflict", 409)
       revoke_pending_batches!("generation_replaced")
-      token = rotate_credential!
+      token = rotate_credential! # pipelock:ignore Credential in URL
       update!(generation: generation + 1, stream_id: SecureRandom.uuid, next_sequence: 1,
         predecessor_digest: nil, status: "active", repair_reason: nil)
     end
