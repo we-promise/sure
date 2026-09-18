@@ -47,6 +47,7 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     @enable_banking_account.update_columns(current_balance: nil)
 
     EnableBankingAccount::Transactions::Processor.any_instance.expects(:process).once
+      .returns({ success: true, total: 0, imported: 0, skipped: 0, failed: 0, errors: [] })
 
     assert_no_changes -> { @account.reload.cash_balance } do
       EnableBankingAccount::Processor.new(@enable_banking_account).process
