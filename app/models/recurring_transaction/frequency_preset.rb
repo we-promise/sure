@@ -54,7 +54,7 @@ class RecurringTransaction
         return false if preset.blank? || preset == CUSTOM
         return false unless PRESETS.include?(preset) || preset == INTERVAL
 
-        interval = presence_int(interval)
+        interval = strict_int(interval)
         if preset == INTERVAL && !valid_interval?(interval, interval_unit)
           recurring.errors.add(:frequency_interval, :invalid)
           return false
@@ -237,6 +237,16 @@ class RecurringTransaction
 
         def presence_int(value)
           value.present? ? value.to_i : nil
+        end
+
+        # The interval is typed, not picked from a list, so it is parsed whole:
+        # to_i would read "2.5" as 2 and "3abc" as 3 and save a cadence nobody
+        # asked for. Base 10 because Integer alone reads "010" as octal.
+        def strict_int(value)
+          return value if value.is_a?(Integer)
+          return nil if value.blank?
+
+          Integer(value.to_s, 10, exception: false)
         end
 
         def day_phrase(day)
