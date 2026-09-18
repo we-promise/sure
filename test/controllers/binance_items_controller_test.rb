@@ -236,4 +236,22 @@ class BinanceItemsControllerTest < ActionDispatch::IntegrationTest
     get select_existing_account_binance_items_url, params: { account_id: account.id }
     assert_response :success
   end
+
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_binance_items_url,
+    link_url: :link_existing_account_binance_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Crypto", balance: 0, currency: "USD",
+                               accountable: Crypto.create!(subtype: "exchange"))
+    },
+    # One spot account per item (unique index), so each record gets its own item.
+    provider_account: -> {
+      item = BinanceItem.create!(family: @family, name: "Binance #{SecureRandom.hex(3)}", api_key: "k", api_secret: "s")
+      item.binance_accounts.create!(name: "Spot Portfolio", account_type: "spot", currency: "USD", current_balance: 1000.0)
+    },
+    provider_param: :binance_account_id,
+    relinks: true,
+    dialog_names_linked: true
+  )
 end

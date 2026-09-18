@@ -112,11 +112,13 @@ class BinanceItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
 
+    # Never offer (or name) a link held by an account the user cannot write.
     @available_binance_accounts = Current.family.binance_items
       .includes(binance_accounts: [ :account, { account_provider: :account } ])
       .flat_map(&:binance_accounts)
-      .select { |ba| ba.account.present? || ba.account_provider.nil? }
+      .select { |ba| (ba.account.present? || ba.account_provider.nil?) && relinkable_by_current_user?(ba) }
       .sort_by { |ba| ba.updated_at || ba.created_at }
       .reverse
 
@@ -125,6 +127,7 @@ class BinanceItemsController < ApplicationController
 
   def link_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
 
     binance_account = BinanceAccount
       .joins(:binance_item)
@@ -141,6 +144,9 @@ class BinanceItemsController < ApplicationController
       end
       return
     end
+
+    # Relinking below moves the link off its current account.
+    return unless require_relinkable_provider_account!(binance_account, @account)
 
     if @account.account_providers.any? || @account.plaid_account_id.present? || @account.simplefin_account_id.present?
       alert_msg = t(".errors.only_manual")

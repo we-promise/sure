@@ -153,6 +153,23 @@ class MonobankItemsControllerTest < ActionDispatch::IntegrationTest
     assert @monobank_item.reload.scheduled_for_deletion?
   end
 
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_monobank_items_url,
+    link_url: :link_existing_account_monobank_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Card", balance: 0, currency: "UAH",
+                               accountable: Depository.new)
+    },
+    provider_account: -> {
+      @monobank_item.monobank_accounts.create!(name: "White card", account_id: SecureRandom.hex(6),
+                                               currency: "UAH", account_kind: "card", account_type: "white")
+    },
+    provider_param: :monobank_account_id,
+    params: -> { { monobank_item_id: @monobank_item.id } },
+    prepare: -> { MonobankItemsController.any_instance.stubs(:fetch_monobank_accounts_from_api).returns(nil) }
+  )
+
   private
 
     def unsafe_return_paths

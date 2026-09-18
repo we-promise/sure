@@ -110,6 +110,22 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select %(input[name="return_to"][value="#{return_to}"])
   end
 
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_akahu_items_url,
+    link_url: :link_existing_account_akahu_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Checking", balance: 0, currency: "NZD",
+                               accountable: Depository.new)
+    },
+    provider_account: -> {
+      @akahu_item.akahu_accounts.create!(name: "Akahu Checking", account_id: SecureRandom.hex(6), currency: "NZD")
+    },
+    provider_param: :akahu_account_id,
+    params: -> { { akahu_item_id: @akahu_item.id } },
+    prepare: -> { AkahuItemsController.any_instance.stubs(:fetch_akahu_accounts_from_api).returns(nil) }
+  )
+
   test "link accounts rejects unsafe return path on no selection redirect" do
     post link_accounts_akahu_items_url, params: {
       akahu_item_id: @akahu_item.id,

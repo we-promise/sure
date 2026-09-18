@@ -247,6 +247,31 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
   end
 
+  # link_existing_account looks the Mercury account up by its upstream
+  # account_id, while the shared tests post the record id, so the two are equal.
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_mercury_items_url,
+    link_url: :link_existing_account_mercury_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Checking", balance: 0, currency: "USD",
+                               accountable: Depository.new)
+    },
+    provider_account: -> {
+      id = SecureRandom.uuid
+      @second_item.mercury_accounts.create!(id: id, account_id: id, name: "Mercury Checking",
+                                            currency: "USD", current_balance: 1000)
+    },
+    provider_param: :mercury_account_id,
+    params: -> { { mercury_item_id: @second_item.id } },
+    prepare: -> {
+      accounts = @second_item.mercury_accounts.reload.map do |mercury_account|
+        { id: mercury_account.account_id, name: mercury_account.name, status: "active", currentBalance: 1000 }
+      end
+      Provider::Mercury.stubs(:new).returns(stub(get_accounts: { accounts: accounts }))
+    }
+  )
+
   private
 
     def mercury_accounts_payload

@@ -196,6 +196,27 @@ class QuestradeItemsControllerTest < ActionDispatch::IntegrationTest
   # admin guard
   # ---------------------------------------------------------------------------
 
+  # ---------------------------------------------------------------------------
+  # select_existing_account / link_existing_account
+  # ---------------------------------------------------------------------------
+
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_questrade_items_url,
+    link_url: :link_existing_account_questrade_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Investment", balance: 0, currency: "CAD",
+                               accountable: Investment.new)
+    },
+    # The actions link against the family's first Questrade connection.
+    provider_account: -> {
+      @family.questrade_items.first.questrade_accounts.create!(
+        name: "RRSP", questrade_account_id: SecureRandom.hex(4), account_type: "RRSP", currency: "CAD"
+      )
+    },
+    provider_param: :questrade_account_id
+  )
+
   test "non-admin cannot create a questrade item" do
     sign_in users(:family_member)
 

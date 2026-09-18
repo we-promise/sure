@@ -99,6 +99,8 @@ class Trading212ItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     @available_trading212_accounts = Current.family.trading212_items
       .includes(trading212_accounts: { account_provider: :account })
       .flat_map(&:trading212_accounts)
@@ -122,6 +124,8 @@ class Trading212ItemsController < ApplicationController
       redirect_to settings_providers_path, alert: t(".not_found")
       return
     end
+
+    return unless require_linkable_account!(account)
 
     if account.accountable_type != "Investment" || account.account_providers.any? || account.plaid_account_id.present? || account.simplefin_account_id.present?
       redirect_to account_path(account), alert: t(".only_manual_investment")
