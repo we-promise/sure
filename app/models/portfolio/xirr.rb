@@ -46,8 +46,8 @@
 # answer. The caller that renders this is a later PR; the predicate is here so
 # that PR has something to ask.
 #
-# No gem: AGENTS.md asks for Rails and few dependencies, and this is eighty
-# lines of arithmetic with no upstream to track.
+# No gem: AGENTS.md asks for Rails and few dependencies, and this is a few
+# hundred lines of arithmetic with no upstream to track.
 class Portfolio::Xirr
   # The flows never change sign, so no rate exists -- money only ever went in, or
   # only ever came out. Callers render "not available"; they must not substitute
@@ -67,13 +67,23 @@ class Portfolio::Xirr
   DAYS_PER_YEAR = 365.0
   MAX_NEWTON_ITERATIONS = 50
   MAX_BISECTION_ITERATIONS = 200
-  # Two different quantities, deliberately named apart. RESIDUAL_TOLERANCE is a
-  # present value -- money -- and says the objective is close enough to zero;
-  # RATE_TOLERANCE is a rate, and says the search has stopped moving. They
-  # carry the same number today and mean different things, and reading one
-  # `TOLERANCE` in both places invited the assumption that they must match.
-  RESIDUAL_TOLERANCE = 1e-9
+  # Two different quantities, deliberately named apart. The residual tolerance
+  # is a present value -- money -- and says the objective is close enough to
+  # zero; RATE_TOLERANCE is a rate, and says the search has stopped moving.
+  # Reading one `TOLERANCE` in both places invited the assumption that they
+  # must match.
+  #
+  # The residual one is RELATIVE, and the constant is the fraction rather than
+  # the amount: see #residual_tolerance for why an absolute figure made the
+  # answer depend on the unit the series happened to be written in.
+  RELATIVE_RESIDUAL_TOLERANCE = 1e-12
   RATE_TOLERANCE = 1e-9
+
+  # How many sub-brackets #bisect_sub_brackets splits the search range into
+  # when the range as a whole shows no sign change. Sampled geometrically, so
+  # 128 steps span the whole range from a low endpoint one Float tick above -1
+  # up to RATE_CEILING at a ratio of about 1.5 per step.
+  BRACKET_SCAN_STEPS = 128
 
   # The high end of the bracket we search. 1e7 is 1,000,000,000% -- absurd as
   # a return, but the bracket only has to contain the root, not be plausible.
@@ -91,14 +101,16 @@ class Portfolio::Xirr
   # `flows` is any enumerable of objects answering `date` and `amount`, or
   # [date, amount] pairs. Those two shapes only -- a Hash of
   # `{ date:, amount: }` is neither, and fails on `to_date` with a
-  # NoMethodError rather than with anything that names the problem. Sign convention: money leaving the investor is
-  # negative, money returning to them is positive. The terminal value of the
-  # portfolio is the final positive flow.
+  # NoMethodError rather than with anything that names the problem.
+  #
+  # Sign convention: money leaving the investor is negative, money returning to
+  # them is positive. The terminal value of the portfolio is the final positive
+  # flow.
   #
   # `days_per_unit` is the length of the unit the rate is expressed in. The
-  # default is a year, so `rate` is the annualised figure by default and every
-  # existing caller is unaffected. A caller reporting a period return passes the
-  # period's own length instead, which is not a presentational choice: the rate
+  # default is a year, so `rate` is the annualised figure unless a caller says
+  # otherwise. A caller reporting a period return passes the period's own
+  # length instead, which is not a presentational choice: the rate
   # for a short period expressed annually is an extrapolation, and a large one
   # is outside what Newton reaches or what a Float holds, so the annual form of
   # a few days' return is unreliable where the period form is ordinary.
@@ -201,6 +213,14 @@ class Portfolio::Xirr
       end
     end
 
+    # `sum` and not `inject(0.0, :+)`, and not by accident. Ruby's
+    # Enumerable#sum compensates Float summation (Kahan-Babuska), so a day's
+    # flows add to the same total whatever order the caller listed them in;
+    # `inject` does not. -1e16, +1 and +1e16 on one date sum to 1.0 in all six
+    # orders through `sum`, and to 0.0 in four of the six through `inject` --
+    # and a lost +1 is the difference between a series that solves and one that
+    # is refused for never changing sign. Group order is input order, so the
+    # order really is the caller's.
     def aggregate(moves)
       moves.group_by(&:date)
            .map { |date, on_date| Flow.new(date: date, amount: on_date.sum(&:amount)) }
@@ -210,6 +230,29 @@ class Portfolio::Xirr
 
     def sign_change?
       sign_changes.positive?
+    end
+
+    # The residual that counts as zero for THIS series, in the series' own
+    # money: a fraction of its nominal size, not a fixed number of currency
+    # units.
+    #
+    # An absolute figure is not scale invariant, and the present value scales
+    # with the flows: the same series written in cents and in millions asks the
+    # same question and must get the same answer. With a fixed 1e-9 it did not.
+    # -1000, -250, +1400 on three annual dates solves at 6.480040%, and the
+    # identical series multiplied by 1e-12 returned Newton's untouched 10%
+    # start, because every present value in it is already below 1e-9 and the
+    # first thing the loop does is accept. The same fixed figure is out of
+    # reach at the other end: a 10% year on a billion stalls at a residual of
+    # 1.2e-7, which is Float noise on that magnitude rather than an unsolved
+    # series, and had to be rescued by bisection.
+    #
+    # The scale is the nominal size of the series, summed once and independent
+    # of the rate, so acceptance depends only on present value over size. The
+    # derivative scales with size too, so the RATE accuracy this buys is the
+    # same at every magnitude rather than merely different.
+    def residual_tolerance
+      @residual_tolerance ||= RELATIVE_RESIDUAL_TOLERANCE * flows.sum { |flow| flow.amount.abs }
     end
 
     def first_date
@@ -299,7 +342,7 @@ class Portfolio::Xirr
 
       MAX_NEWTON_ITERATIONS.times do
         value = present_value(rate)
-        return rate if value.abs < RESIDUAL_TOLERANCE
+        return rate if value.abs < residual_tolerance
 
         derivative = present_value_derivative(rate)
         return nil if derivative.zero? || !derivative.finite?
@@ -319,7 +362,7 @@ class Portfolio::Xirr
         # check that says so. Confirm the residual, and hand over to bisection
         # when it fails rather than reporting a stalled guess as an answer.
         if (next_rate - rate).abs < RATE_TOLERANCE
-          return next_rate if present_value(next_rate).abs < RESIDUAL_TOLERANCE
+          return next_rate if present_value(next_rate).abs < residual_tolerance
 
           return nil
         end
@@ -334,8 +377,10 @@ class Portfolio::Xirr
       low = low_endpoint
       return nil if low.nil?
 
-      high = RATE_CEILING
+      bisect(low, RATE_CEILING) || bisect_sub_brackets(low, RATE_CEILING)
+    end
 
+    def bisect(low, high)
       low_value = present_value(low)
       high_value = present_value(high)
       return nil unless low_value.finite? && high_value.finite?
@@ -346,17 +391,31 @@ class Portfolio::Xirr
       # the interval collapsed towards. `[-1 today, +Float::EPSILON a year on]`
       # solves exactly at the low endpoint and returned RATE_CEILING -- a
       # 1,000,000,000% gain reported for a total loss.
-      return low if low_value.abs < RESIDUAL_TOLERANCE
-      return high if high_value.abs < RESIDUAL_TOLERANCE
+      return low if low_value.abs < residual_tolerance
+      return high if high_value.abs < residual_tolerance
 
-      # The root is not inside the widest bracket we are willing to search.
+      # No sign change across this bracket. The caller decides whether that is
+      # the end of the search or the cue to look inside it.
       return nil if low_value * high_value > 0
 
       MAX_BISECTION_ITERATIONS.times do
         mid = (low + high) / 2.0
         mid_value = present_value(mid)
 
-        return mid if mid_value.abs < RESIDUAL_TOLERANCE || (high - low).abs < RATE_TOLERANCE
+        # Two acceptances, and the second is not a weaker form of the first.
+        # The loop only ever replaces an endpoint with one of the same sign, so
+        # `low` and `high` bracket a sign change on every iteration; once they
+        # are within RATE_TOLERANCE of each other, so is the root, whatever the
+        # residual there reads.
+        #
+        # That distinction is load-bearing near -1, where the objective is
+        # astronomically steep and the residual stops measuring rate accuracy
+        # at all. -1, -1,000,000, +1 on three annual dates has the exact root
+        # -0.999999; this returns it to within 3.4e-11 while the present value
+        # there is still about -33,487,331, because one Float tick of `1 + r`
+        # is a ten-billionth of it at that rate. Refusing on the residual would
+        # refuse a rate that is right to ten decimal places.
+        return mid if mid_value.abs < residual_tolerance || (high - low).abs < RATE_TOLERANCE
 
         if low_value * mid_value < 0
           high = mid
@@ -364,6 +423,47 @@ class Portfolio::Xirr
           low = mid
           low_value = mid_value
         end
+      end
+
+      nil
+    end
+
+    # Both ends of the range can sit on the same side of zero while roots sit
+    # between them. The present value is built on 1 / (1 + r), so a series that
+    # changes sign more than once can cross zero and cross back: +1, -5, +3 on
+    # three annual dates has two exact roots inside the range, (3 - sqrt 13) / 2
+    # and (3 + sqrt 13) / 2, and the widest bracket reads positive at both ends.
+    # Newton misses from 10%, the single global bracket sees no sign change, and
+    # a series with two ordinary answers was refused outright.
+    #
+    # Sampled geometrically in `1 + r` rather than evenly in `r`, because that
+    # is the variable the objective is built on: an even walk from just above
+    # -1 up to 1e7 spends every step out at the top, where the function is flat,
+    # and none of them near -1, where all of the structure is.
+    #
+    # Only reached once the whole range has shown no sign change, so no series
+    # that solves today can change its answer -- this can only turn a refusal
+    # into a root. The walk runs upward from the low end, so where a series has
+    # several roots it reaches the lowest one; `#ambiguous?` is still how a
+    # caller finds out that there were several. See MULTIPLE ROOTS above.
+    def bisect_sub_brackets(low, high)
+      ratio = ((1.0 + high) / (1.0 + low))**(1.0 / BRACKET_SCAN_STEPS)
+
+      previous = low
+      previous_value = present_value(previous)
+
+      BRACKET_SCAN_STEPS.times do
+        rate = ((1.0 + previous) * ratio) - 1.0
+        value = present_value(rate)
+        return nil unless value.finite?
+
+        if previous_value * value <= 0
+          root = bisect(previous, rate)
+          return root unless root.nil?
+        end
+
+        previous = rate
+        previous_value = value
       end
 
       nil

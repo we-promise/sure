@@ -81,20 +81,76 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     assert_in_delta(-0.5, xirr.rate.to_f, 0.0005)
   end
 
-  # A 10% year on a billion. Newton's steps shrink below RATE_TOLERANCE while the
-  # present-value residual, in currency units, stays near 1.2e-7: at this
-  # magnitude an absolute 1e-9 residual is out of reach in Float. A step that
-  # small means Newton stopped moving, not that it solved, so it must hand over
-  # rather than report the stalled guess; bisection then finds 10%.
-  test "newton hands a stalled step to bisection when the residual is out of reach" do
+  # A step below RATE_TOLERANCE means Newton stopped moving, which is not the
+  # same as having solved: on an ill-conditioned stretch it stalls far from any
+  # root, and returning the rate there reports a guess as an answer. So the
+  # residual is confirmed before the step is accepted, and a stall hands over
+  # to bisection instead.
+  #
+  # -50,000 out, 500 and 20,000 back, 100 out again, on four annual dates: the
+  # stall fires at about -0.99493 with a residual of -4.8e-6 against a tolerance
+  # of 7.1e-8. What is pinned is the handover, not the stalling rate -- the
+  # figure must come from bisection, and it must be a rate the objective
+  # actually crosses zero at.
+  test "newton hands a stalled step to bisection rather than reporting it" do
     flows = [
-      [ Date.new(2026, 1, 1), -1_000_000_000 ],
-      [ Date.new(2027, 1, 1), 1_100_000_000 ]
+      [ Date.new(2026, 1, 1), -50_000 ],
+      [ Date.new(2027, 1, 1), 500 ],
+      [ Date.new(2028, 1, 1), 20_000 ],
+      [ Date.new(2029, 1, 1), -100 ]
     ]
     xirr = Portfolio::Xirr.new(flows)
 
     assert_nil xirr.send(:newton_rate), "a small step without a small residual is not a solution"
-    assert_in_delta 0.1, xirr.rate.to_f, 0.000001
+
+    rate = xirr.rate.to_f
+    below = xirr.send(:present_value, rate - 1e-8)
+    above = xirr.send(:present_value, rate + 1e-8)
+
+    assert_operator below * above, :<, 0,
+                    "the reported rate must sit on a sign change, i.e. on a root"
+  end
+
+  # Money scale is not part of the question. The same series written in cents
+  # and in billions is the same series, and an ABSOLUTE residual tolerance made
+  # it two different ones: below the tolerance every present value looks solved,
+  # and above it none of them do.
+  #
+  # Both halves are pinned. The tiny one accepted Newton's untouched 10% start
+  # because its whole present value is smaller than 1e-9; the billion-dollar one
+  # stalled at a residual of 1.2e-7, which is Float noise at that magnitude and
+  # not an unsolved series, and had to be rescued by bisection.
+  test "the same series scaled up or down solves to the same rate" do
+    shape = [
+      [ Date.new(2026, 1, 1), -1_000 ],
+      [ Date.new(2027, 1, 1), -250 ],
+      [ Date.new(2028, 1, 1), 1_400 ]
+    ]
+
+    ordinary = Portfolio::Xirr.rate(shape).to_f
+    tiny = Portfolio::Xirr.rate(shape.map { |date, amount| [ date, amount * 1e-12 ] }).to_f
+    huge = Portfolio::Xirr.rate(shape.map { |date, amount| [ date, amount * 1e9 ] }).to_f
+
+    assert_in_delta ordinary, tiny, 1e-9, "the same question in picodollars has the same answer"
+    assert_in_delta ordinary, huge, 1e-9, "and so does the same question in billions"
+
+    # The two-flow form, where the closed rate is exact and PyXIRR agrees: a
+    # doubling is 100% whether the amounts are 1e-12 or 1.
+    assert_in_delta 1.0,
+                    Portfolio::Xirr.rate([
+                      [ Date.new(2026, 1, 1), -1e-12 ],
+                      [ Date.new(2027, 1, 1), 2e-12 ]
+                    ]).to_f,
+                    0.0005
+
+    # And the 10% year on a billion is now Newton's own answer rather than a
+    # stall handed to bisection.
+    billion = Portfolio::Xirr.new([
+      [ Date.new(2026, 1, 1), -1_000_000_000 ],
+      [ Date.new(2027, 1, 1), 1_100_000_000 ]
+    ])
+
+    assert_in_delta 0.1, billion.send(:newton_rate), 1e-9
   end
 
   # A fivefold gain in 30 days annualises to 5^(365/30) - 1, about 3.2e8. That
@@ -360,6 +416,93 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     assert_equal 2, xirr.sign_changes
   end
 
+  # BOTH ends of the widest bracket can sit on the same side of zero while roots
+  # sit between them, and a single global bracket cannot see it. +1, -5, +3 on
+  # three annual dates is 1 - 5u + 3u**2 for u = 1 / (1 + r), whose roots are
+  # (3 -/+ sqrt 13) / 2: about -30.2776% and about +330.2776%, both inside the
+  # supported range. The present value is positive at the low endpoint and
+  # positive at the ceiling, Newton misses from its 10% start, and the series
+  # was refused outright although it has two ordinary answers.
+  #
+  # What is pinned: the refusal is gone, and the figure returned is a rate the
+  # objective actually crosses zero at rather than any number at all.
+  test "a series whose roots both sit inside the bracket is solved, not refused" do
+    flows = [
+      [ Date.new(2026, 1, 1), 1 ],
+      [ Date.new(2027, 1, 1), -5 ],
+      [ Date.new(2028, 1, 1), 3 ]
+    ]
+
+    xirr = Portfolio::Xirr.new(flows)
+    low = xirr.send(:low_endpoint)
+
+    assert_operator xirr.send(:present_value, low) * xirr.send(:present_value, Portfolio::Xirr::RATE_CEILING),
+                    :>, 0,
+                    "the premise: no sign change across the widest bracket"
+    assert_nil xirr.send(:newton_rate), "and Newton does not reach either root from 10%"
+
+    lower_root = (3 - Math.sqrt(13)) / 2
+    assert_in_delta lower_root, xirr.rate.to_f, 1e-8,
+                    "the scan walks up from the low end, so it reaches the lower root"
+    assert xirr.ambiguous?, "two sign changes, so the caller is told there may be another"
+  end
+
+  # Near -1 the objective is astronomically steep, and there the residual stops
+  # measuring how close the rate is. -1, -1,000,000, +1 on three annual dates
+  # has one exact root, -0.999999; bisection returns it to within 3.4e-11 while
+  # the present value AT that rate is about -33,487,331, because one Float tick
+  # of `1 + r` is a ten-billionth of it there.
+  #
+  # So bisection accepts on bracket width as well as on residual, and the width
+  # is the stronger claim of the two: the loop only ever replaces an endpoint
+  # with one of the same sign, so the two ends bracket a sign change on every
+  # iteration and a width below RATE_TOLERANCE puts the root inside it. Gating
+  # acceptance on the residual alone would refuse a rate that is right to ten
+  # decimal places.
+  test "a rate near minus one is accepted on bracket width, not on its residual" do
+    flows = [
+      [ Date.new(2026, 1, 1), -1 ],
+      [ Date.new(2027, 1, 1), -1_000_000 ],
+      [ Date.new(2028, 1, 1), 1 ]
+    ]
+
+    xirr = Portfolio::Xirr.new(flows)
+    rate = xirr.rate.to_f
+
+    assert_in_delta(-0.999999, rate, 1e-9, "the closed-form root of 1 - 1e6 u + u**2 at u = 1 / (1 + r)")
+
+    residual = xirr.send(:present_value, rate)
+    assert_operator residual.abs, :>, xirr.send(:residual_tolerance),
+                    "the premise: the residual there is nowhere near zero"
+    assert_operator xirr.send(:present_value, rate - 1e-9) * xirr.send(:present_value, rate + 1e-9),
+                    :<, 0,
+                    "and yet the root is inside one RATE_TOLERANCE of the answer"
+  end
+
+  # Flows landing on one date are summed in Float, and Float addition is not
+  # associative: -1e16, +1 and +1e16 add to 1.0 or to 0.0 depending on the
+  # order, and a lost +1 is the difference between a series that solves and one
+  # refused for never changing sign.
+  #
+  # Ruby's Enumerable#sum compensates for that (Kahan-Babuska) where a hand
+  # written `inject(0.0, :+)` does not, so the answer does not depend on the
+  # order the caller happened to list a day's rows in. That is a property of
+  # the method chosen, not of the arithmetic, so it is pinned here: every
+  # permutation of the same day must give the same rate.
+  test "the order of same date flows does not change the answer" do
+    on_the_day = [ -1e16, 1.0, 1e16 ]
+
+    rates = on_the_day.permutation.map do |amounts|
+      flows = amounts.map { |amount| [ Date.new(2026, 1, 1), amount ] }
+      flows << [ Date.new(2027, 1, 1), -2.0 ]
+
+      Portfolio::Xirr.rate(flows).to_f
+    end
+
+    assert_equal 1, rates.uniq.size, "six orderings, one answer: #{rates.inspect}"
+    assert_in_delta 1.0, rates.first, 0.0005, "1 in and 2 out a year later is 100%"
+  end
+
   # The predicate is an upper bound, not a count, and this is the case that
   # shows the difference: -1000, +2000, -1000 annually is -1000(x-1)**2 for
   # x = 1/(1+r), so it has ONE distinct root at 0 with multiplicity two, and
@@ -376,7 +519,13 @@ class Portfolio::XirrTest < ActiveSupport::TestCase
     ])
 
     assert_in_delta 0.0, xirr.send(:present_value, 0.0), 1e-9, "0 solves it"
-    assert_in_delta 0.0, xirr.rate.to_f, 1e-6, "and it is the only rate that does"
+
+    # 1e-5 rather than the 1e-9 the residual tolerance would suggest, and the
+    # gap is the double root, not slack. Near a simple root the present value
+    # falls off linearly with the rate, so a residual of e buys a rate accurate
+    # to about e; near a double root it falls off with the SQUARE, so the same
+    # residual buys only sqrt(e). Here that is sqrt(4e-9 / 1000), about 2e-6.
+    assert_in_delta 0.0, xirr.rate.to_f, 1e-5, "and it is the only rate that does"
     assert_equal 2, xirr.sign_changes
     assert xirr.ambiguous?, "two sign changes, so the bound says 'possibly', not 'is'"
   end
