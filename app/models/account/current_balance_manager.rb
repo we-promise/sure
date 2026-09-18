@@ -105,19 +105,12 @@ class Account::CurrentBalanceManager
       changes_made = false
 
       ActiveRecord::Base.transaction do
-        # Serialize concurrent writers on this account. Two syncs for the same provider item
-        # can overlap (Sync.visible stops matching a run older than Sync::VISIBLE_FOR, and
-        # also drops one whose cancel was requested while its job keeps going), and without
-        # this both read the same anchor and act on it: one can rotate the row the other just
-        # moved forward, leaving a waypoint holding an amount no provider ever reported.
-        #
-        # Locked via a bare query rather than `account.lock!`/`with_lock`: those reload the
-        # record and raise on unpersisted changes, so they would couple this to whatever state
-        # each of the eleven provider processors leaves on the account object. Locking the row
-        # directly takes the same FOR UPDATE without touching the caller's instance.
+        # Two syncs for the same account can overlap, and both would judge the same anchor.
+        # Lock the row directly rather than with `lock!`, which reloads the account and
+        # raises when a processor left unsaved changes on it.
         Account.where(id: account.id).lock.pick(:id)
 
-        # Re-read under the lock: the memo may predate another writer's commit.
+        # The memo can predate the other writer's commit, so read again under the lock.
         @current_anchor_valuation = nil
         anchor = current_anchor_valuation
 
@@ -190,10 +183,8 @@ class Account::CurrentBalanceManager
       net = flows.sum { |_, amount| amount }
       expected = older_entry.amount + (account.asset? ? -net : net)
 
-      # Tolerance is the account currency's minor unit (e.g. 0.001 for BHD, 1 for JPY), not a
-      # fixed 0.01: that would be USD-shaped and either too loose (BHD) or too coarse (JPY).
-      # `step` is a Float; round-trip it through its own string so the BigDecimal comparison
-      # is exact rather than relying on Float coercion.
+      # Tolerance is the currency's own minor unit (0.001 for BHD, 1 for JPY), not a fixed
+      # 0.01. `step` is a Float, so go through its string form to keep the comparison exact.
       tolerance = BigDecimal(Money::Currency.new(account.currency).step.to_s)
 
       (expected - new_balance).abs <= tolerance

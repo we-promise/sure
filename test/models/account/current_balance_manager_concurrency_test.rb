@@ -1,9 +1,7 @@
 require "test_helper"
 require "concurrent"
 
-# Two syncs for the same provider item can overlap: Sync.visible stops matching a run older
-# than Sync::VISIBLE_FOR, and also drops one whose cancel was requested while its job keeps
-# running. Both writers then reach the anchor compare-and-mutate with the same stale row.
+# Two syncs for the same account can overlap, and both then judge the same stale anchor.
 #
 # Real threads on real connections, so this needs real commits.
 class Account::CurrentBalanceManagerConcurrencyTest < ActiveSupport::TestCase
@@ -15,15 +13,15 @@ class Account::CurrentBalanceManagerConcurrencyTest < ActiveSupport::TestCase
       family: @family, name: "Checking", currency: "USD",
       balance: 1000, accountable: Depository.new)
 
-    # Its own provider row: claiming the shared fixture would outlive this test, since
-    # nothing is rolled back here.
+    # Its own provider row: nothing is rolled back here, so claiming the shared fixture
+    # would outlive the test.
     @plaid_account = PlaidAccount.create!(
       plaid_item: plaid_items(:one), currency: "USD", name: "Race Account",
       plaid_id: "acc_lock_test_#{SecureRandom.hex(4)}", plaid_type: "depository",
       current_balance: 1000, available_balance: 1000)
     @account.account_providers.create!(provider: @plaid_account)
 
-    # Yesterday's reading, the row both writers will race to judge.
+    # Yesterday's reading, the row both writers race to judge.
     @stale_anchor = @account.entries.create!(
       date: Date.current - 1.day, name: "Current balance", amount: 1000, currency: "USD",
       entryable: Valuation.new(kind: "current_anchor"))
@@ -59,8 +57,8 @@ class Account::CurrentBalanceManagerConcurrencyTest < ActiveSupport::TestCase
     assert_includes [ 600, 650 ], anchors.first.entry.amount.to_i,
       "the surviving anchor must hold one of the two reported readings"
 
-    # The corruption the lock prevents: the loser updates the row the winner already rotated,
-    # dragging a waypoint onto today and holding an amount no provider reported for that date.
+    # What the lock prevents: the loser updates the row the winner already rotated, leaving
+    # a waypoint dated today.
     waypoints = @account.valuations.where(kind: "reconciliation").includes(:entry)
     assert_empty waypoints.select { |v| v.entry.date == Date.current },
       "a preserved waypoint must never be dated today"
