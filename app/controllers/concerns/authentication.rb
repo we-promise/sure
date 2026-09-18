@@ -43,14 +43,12 @@ module Authentication
     def create_session_for(user)
       return false unless user&.persisted?
 
-      user.with_lock do
-        next false unless user.active?
-
+      user.with_active_lock! do
         session = user.sessions.create!
         cookies.signed.permanent[:session_token] = { value: session.id, httponly: true }
         session
       end
-    rescue ActiveRecord::RecordNotFound
+    rescue User::InactiveError
       false
     end
 

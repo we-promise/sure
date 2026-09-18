@@ -1,5 +1,5 @@
 class SnaptradeItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -39,11 +39,6 @@ class SnaptradeItem < ApplicationRecord
   scope :syncable, -> { active.where.not(oauth_access_token: nil) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   def import_latest_snaptrade_data(sync: nil)
     provider = snaptrade_provider
