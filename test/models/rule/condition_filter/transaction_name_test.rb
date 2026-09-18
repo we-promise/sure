@@ -16,7 +16,8 @@ class Rule::ConditionFilter::TransactionNameTest < ActiveSupport::TestCase
   end
 
   test "an exact rule still matches the Plaid row whose name grew a description" do
-    plaid = plaid_entry(name: "Target - TARGET 00023 SAN MATEO CA")
+    plaid = plaid_entry(name: "Target - TARGET 00023 SAN MATEO CA",
+                        original_description: "TARGET 00023 SAN MATEO CA")
 
     assert_equal [ plaid.id ], matching_entry_ids(operator: "=", value: "Target")
   end
@@ -48,15 +49,37 @@ class Rule::ConditionFilter::TransactionNameTest < ActiveSupport::TestCase
     assert_empty matching_entry_ids(operator: "=", value: "Rent")
   end
 
+  # Plaid resolves no merchant for plenty of ACH, transfer and fee rows, so their
+  # name is the bank's description alone and this change never touches it. Those
+  # descriptions are also the ones most likely to contain a dash. Matching on the
+  # separator by pattern could not tell that dash from the one #name inserts, and
+  # broke rules on rows the feature does not even rename.
+  test "an exact rule does not match a Plaid row whose own description has a dash" do
+    plaid_entry(name: "ACH - PAYROLL DEPOSIT ACME CORP",
+                original_description: "ACH - PAYROLL DEPOSIT ACME CORP")
+
+    assert_empty matching_entry_ids(operator: "=", value: "ACH")
+  end
+
+  test "a not-equal rule still returns a Plaid row whose own description has a dash" do
+    row = plaid_entry(name: "ACH - PAYROLL DEPOSIT ACME CORP",
+                      original_description: "ACH - PAYROLL DEPOSIT ACME CORP")
+
+    assert_includes matching_entry_ids(operator: "!=", value: "ACH"), row.id
+  end
+
   test "an exact rule stays case sensitive" do
-    plaid_entry(name: "Target - TARGET 00023 SAN MATEO CA")
+    plaid_entry(name: "Target - TARGET 00023 SAN MATEO CA",
+                original_description: "TARGET 00023 SAN MATEO CA")
 
     assert_empty matching_entry_ids(operator: "=", value: "target")
   end
 
   test "a not-equal rule excludes the Plaid row whose name grew a description" do
-    plaid_entry(name: "Target - TARGET 00023 SAN MATEO CA")
-    keeper = plaid_entry(name: "Costco - COSTCO WHSE 0112")
+    plaid_entry(name: "Target - TARGET 00023 SAN MATEO CA",
+                original_description: "TARGET 00023 SAN MATEO CA")
+    keeper = plaid_entry(name: "Costco - COSTCO WHSE 0112",
+                         original_description: "COSTCO WHSE 0112")
 
     assert_equal [ keeper.id ], matching_entry_ids(operator: "!=", value: "Target")
   end
@@ -65,9 +88,9 @@ class Rule::ConditionFilter::TransactionNameTest < ActiveSupport::TestCase
   # NULL and a bare NOT(...) would discard them. Guards the COALESCE.
   #
   # The second row is the one that does the guarding. For "Rent insurance" the
-  # LIKE is false, and NULL AND FALSE is FALSE, so that row survives the negation
-  # with or without the COALESCE. Only a manual row shaped like a combined name
-  # makes the LIKE true, leaving NULL AND TRUE, which is NULL.
+  # composed comparison is false, and NULL AND FALSE is FALSE, so that row
+  # survives the negation with or without the COALESCE. Only a manual row shaped
+  # like a combined name reaches NULL AND TRUE, which is NULL.
   test "a not-equal rule still returns manual rows" do
     manual = manual_entry(name: "Rent insurance")
     combined_looking = manual_entry(name: "Target - APARTMENT 4B")
@@ -79,7 +102,8 @@ class Rule::ConditionFilter::TransactionNameTest < ActiveSupport::TestCase
   end
 
   test "substring operators are untouched" do
-    plaid_entry(name: "Target - TARGET 00023 SAN MATEO CA")
+    plaid_entry(name: "Target - TARGET 00023 SAN MATEO CA",
+                original_description: "TARGET 00023 SAN MATEO CA")
     manual = manual_entry(name: "Rent insurance")
 
     assert_includes matching_entry_ids(operator: "like", value: "insurance"), manual.id
@@ -89,16 +113,35 @@ class Rule::ConditionFilter::TransactionNameTest < ActiveSupport::TestCase
   # A value carrying LIKE metacharacters must be compared literally, not as a
   # pattern, or `= "100% Chiropractic"` would match anything.
   test "wildcards in the value are escaped" do
-    plaid_entry(name: "Discount - 50% OFF EVERYTHING")
+    plaid_entry(name: "Discount - 50% OFF EVERYTHING",
+                original_description: "50% OFF EVERYTHING")
 
     assert_empty matching_entry_ids(operator: "=", value: "%")
   end
 
   private
+    # PlaidEntry::Processor#process writes the name and the stored
+    # original_description in one import_transaction call, so a combined name
+    # never exists without the description that built it. Tests that skip the
+    # description are describing a row production cannot produce.
+    #
     # @param name [String] the entry name to store
+    # @param original_description [String, nil] what the bank called it, stored
+    #   under extra["plaid"] the way the processor stores it
     # @return [Entry] a row carrying Plaid provenance, so the source gated arm applies
-    def plaid_entry(name:)
-      create_transaction(account: @account, name: name, source: PlaidEntry::Processor::SOURCE, external_id: "ext-#{name.parameterize}")
+    def plaid_entry(name:, original_description: nil)
+      entry = create_transaction(
+        account: @account,
+        name: name,
+        source: PlaidEntry::Processor::SOURCE,
+        external_id: "ext-#{name.parameterize}"
+      )
+
+      if original_description
+        entry.transaction.update!(extra: { "plaid" => { "original_description" => original_description } })
+      end
+
+      entry
     end
 
     # @param name [String] the entry name to store
