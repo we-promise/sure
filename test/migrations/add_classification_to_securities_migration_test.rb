@@ -34,10 +34,15 @@ class AddClassificationToSecuritiesMigrationTest < ActiveSupport::TestCase
   # was aimed at: killed after the ADD but before the VALIDATE. The re-run must
   # not duplicate the constraint, and must finish the validation it skipped.
   test "re-running over an unvalidated constraint validates it rather than duplicating it" do
+    # The predicate an interrupted run would actually have left: the migration
+    # adds the full list NOT VALID and validates it afterwards, so a process
+    # killed in between leaves THIS, not some narrower constraint. Built from
+    # the migration's own constant so the two cannot drift.
+    values = AddClassificationToSecurities::ASSET_CLASSES.map { |v| "'#{v}'" }.join(", ")
     connection.execute("ALTER TABLE securities DROP CONSTRAINT #{CONSTRAINT}")
     connection.execute(
       "ALTER TABLE securities ADD CONSTRAINT #{CONSTRAINT} " \
-      "CHECK (asset_class IN ('equity')) NOT VALID"
+      "CHECK (asset_class IN (#{values})) NOT VALID"
     )
     assert_not constraint_validated?, "precondition: the constraint is present but NOT VALID"
 

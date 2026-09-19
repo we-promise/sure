@@ -60,14 +60,21 @@ class AddClassificationToSecurities < ActiveRecord::Migration[8.1]
   def up
     add_column :securities, :asset_class, :string, if_not_exists: true
     add_column :securities, :asset_sub_class, :string, if_not_exists: true
-    # Free text, and deliberately so: these come from providers, each with its
-    # own vocabulary (EODHD's `General.Sector` is not GICS, and no two agree on
-    # region). There is no constraint and no `inclusion` validation on purpose
-    # -- adding one would reject a value a provider legitimately returns and
-    # break classification ingestion for that provider. Normalisation, if it
-    # ever happens, belongs above these columns rather than in them.
+    # `sector` and `industry` are free text, and deliberately so: they come from
+    # providers, each with its own vocabulary (EODHD's `General.Sector` is not
+    # GICS, and no two agree on wording). There is no constraint and no
+    # `inclusion` validation on purpose -- adding one would reject a value a
+    # provider legitimately returns and break ingestion for that provider.
+    # Normalisation, if it ever happens, belongs above these columns.
     add_column :securities, :sector, :string, if_not_exists: true
     add_column :securities, :industry, :string, if_not_exists: true
+    # `region` is NOT the same case, and grouping it with the two above would
+    # be wrong. No provider supplies a region: they supply a country, and the
+    # region is derived from it against a list this application owns. So its
+    # vocabulary is closed, and a model-level `inclusion` validation over that
+    # list is the right enforcement -- there is no provider value for it to
+    # reject. It is left unconstrained in the database only because the list
+    # lives in configuration, where widening it should not need a migration.
     add_column :securities, :region, :string, if_not_exists: true
     add_column :securities, :classification_source, :string, if_not_exists: true
     # A boolean with a constant default is a catalog-only change on
