@@ -604,7 +604,8 @@
           "pending",
           "booked",
           "rejected",
-          "memo"
+          "memo",
+              "unknown"
         ]
       },
       "transacted_at": {
