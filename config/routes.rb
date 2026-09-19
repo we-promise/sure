@@ -728,7 +728,7 @@ Rails.application.routes.draw do
           resources :conflicts, only: [ :index, :update ]
         end
         post "publishers/:publisher_id/batches", to: "batches#create"
-        get "publishers/:publisher_id/batches/:batch_id", to: "batches#show", as: :publisher_batches
+        get "publishers/:publisher_id/batches/:batch_id", to: "batches#show", as: :publisher_batch_status
       end
       # Authentication endpoints
       post "auth/signup", to: "auth#signup"

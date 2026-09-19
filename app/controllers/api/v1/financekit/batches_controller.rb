@@ -30,7 +30,6 @@ class Api::V1::Financekit::BatchesController < ActionController::API
       item
     end
 
-
     def limited_body
       body = request.body
       result = +""
