@@ -114,6 +114,36 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
       "the interest booked must be the schedule's interest, not a flat figure"
   end
 
+  # Owner review of #3474: what the chart says about the demo loans follows
+  # from their balances. The mortgage and the car loan sit on their schedules,
+  # so each pays off on time; the student loan is ahead by its extra payment,
+  # so it pays off early. None of them is quoted early while it is not ahead.
+  test "demo loans project payoffs that match their balances" do
+    @family.update!(currency: "USD")
+    generator = Demo::Generator.new(seed: 42)
+    generator.send(:create_realistic_categories!, @family)
+    generator.send(:create_realistic_accounts!, @family)
+    generator.send(:generate_housing_transactions!)
+    generator.send(:generate_transportation_transactions!)
+    generator.send(:generate_major_purchases!)
+    generator.send(:generate_loan_payments!)
+    today = Date.current
+
+    projections = [ "Home Mortgage", "Car Loan", "Student Loan" ].to_h do |name|
+      account = @family.accounts.find_by!(name: name)
+      Sync.create!(syncable: account).perform
+      [ name, account.reload.loan.payoff_projection(as_of: today) ]
+    end
+
+    [ "Home Mortgage", "Car Loan" ].each do |name|
+      assert projections[name].converged?, "#{name} is on schedule, so its projection must clear the balance"
+      assert_equal 0, projections[name].months_saved, "#{name} is on schedule, so it must pay off on time"
+    end
+    assert projections["Student Loan"].converged?, "the student loan's projection must clear the balance"
+    assert_operator projections["Student Loan"].months_saved, :>, 0,
+      "the extra payment must bring the student loan's payoff forward"
+  end
+
   private
     def create_user!(family, email)
       family.users.create!(

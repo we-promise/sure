@@ -60,6 +60,34 @@ en:
           start_principal: The principal balance at the beginning of this day
           start_value: The asset value at the beginning of this day
       chart:
+        loan:
+          actual: Recorded balance
+          scheduled: Original schedule
+          projected: Projected from today
+          today: Today
+          interactive_chart: interactive chart
+          no_payoff: not on the current repayment
+          aria_description: Loan balance chart. Recorded balance %{current_balance}. Original scheduled payoff %{scheduled_payoff_date}. Projected payoff from today's balance %{projected_payoff_date}.
+          aria_actual_history_starts: Recorded balance history begins %{date}.
+          projected_payoff: Projected payoff
+          months_saved:
+            one: "%{count} month sooner than scheduled"
+            other: "%{count} months sooner than scheduled"
+          on_schedule: On schedule
+          interest_saved: Interest saved
+          interest_added: Additional interest
+          not_converged: On the current repayment this balance is not paid off by the original maturity; %{balloon} would still be owed.
+          projection_basis: Compares today's recorded balance with the schedule's balance on the same day. A payment posted before its scheduled date reads as ahead until that date; one posted after reads as behind.
+          legend: Chart series
+          since_start: since the loan started
+          windows:
+            current_month: M
+            last_90_days: 90D
+            current_year: YTD
+            last_365_days: 1Y
+            last_5_years: 5Y
+            last_10_years: 10Y
+            all_time: All
         no_data_available: "No data available"
         title:
           balance: Balance
@@ -68,7 +96,7 @@ en:
           estimated_property_value: Estimated property value
           estimated_vehicle_value: Estimated vehicle value
           holdings_value: Holdings value
-          remaining_principal_balance: Remaining principal balance
+          remaining_principal_balance: Remaining balance
           total_account_value: Total account value
           total_gains: Total gains
         views:
