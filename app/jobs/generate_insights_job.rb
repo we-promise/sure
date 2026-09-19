@@ -116,6 +116,7 @@ class GenerateInsightsJob < ApplicationJob
             body: writer.write(generated),
             metadata: metadata,
             facts: facts,
+            currency: generated.currency,
             period_start: generated.period_start,
             period_end: generated.period_end,
             generated_at: Time.current,
@@ -127,7 +128,7 @@ class GenerateInsightsJob < ApplicationJob
           # The condition cleared earlier and has now returned with the same
           # numbers. Expiry was the system's doing, not the user's, so the
           # insight resurfaces; the body is still accurate, so no rewrite.
-          existing.update!(title: generated.title, status: "active", facts: facts,
+          existing.update!(title: generated.title, status: "active", facts: facts, currency: generated.currency,
                            generated_at: Time.current, read_at: nil)
           existing
         else
@@ -142,7 +143,7 @@ class GenerateInsightsJob < ApplicationJob
           # current costs nothing — and a title naming a goal or a category
           # the user has since renamed is simply wrong on the page. Rename is
           # not a reason to resurface, so status and read state stay untouched.
-          existing.update!(title: generated.title, facts: facts, generated_at: Time.current)
+          existing.update!(title: generated.title, facts: facts, currency: generated.currency, generated_at: Time.current)
           nil
         end
       rescue ActiveRecord::RecordNotUnique
