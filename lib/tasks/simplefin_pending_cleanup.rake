@@ -86,10 +86,7 @@ namespace :simplefin do
     excluded_pending = Entry.joins(
       "INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'"
     ).where(excluded: true)
-     .where(<<~SQL.squish)
-       (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-       OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-     SQL
+     .where(Transaction.pending_sql("transactions", providers: %w[simplefin plaid]))
 
     puts "Found #{excluded_pending.count} excluded pending transactions to evaluate"
     puts ""
@@ -105,10 +102,7 @@ namespace :simplefin do
         .where(currency: pending_entry.currency)
         .where(amount: pending_entry.amount)
         .where(date: pending_entry.date..(pending_entry.date + date_window.days))
-        .where(<<~SQL.squish)
-          (transactions.extra -> 'simplefin' ->> 'pending')::boolean IS NOT TRUE
-          AND (transactions.extra -> 'plaid' ->> 'pending')::boolean IS NOT TRUE
-        SQL
+        .where(Transaction.not_pending_sql("transactions", providers: %w[simplefin plaid]))
         .exists?
 
       unless valid_match

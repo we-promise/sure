@@ -63,8 +63,7 @@ class EntrySearch
       return scope if statuses.uniq.sort == %w[confirmed pending] # Both selected = no filter
 
       # Source the pending check from Transaction::PENDING_CHECK_SQL (aliased to
-      # "t") so every provider in PENDING_PROVIDERS is covered. Previously this
-      # hardcoded only simplefin/plaid/lunchflow, dropping enable_banking.
+      # "t") so every supported provider is covered.
       pending_condition = <<~SQL.squish
         entries.entryable_type = 'Transaction'
         AND EXISTS (
