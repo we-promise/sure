@@ -1,0 +1,26 @@
+---
+de:
+  physical_cashes:
+    edit:
+      edit: "%{account} bearbeiten"
+    form:
+      none: Keine
+      subtype_prompt: Bargeldart auswählen
+    new:
+      title: Bargeldbestand eingeben
+    subtypes:
+      wallet:
+        long: Portemonnaie
+        short: Portemonnaie
+      safe:
+        long: "Tresor (Safe)"
+        short: Tresor
+      piggy_bank:
+        long: Sparschwein
+        short: Sparschwein
+      envelope:
+        long: "Haushaltskasse (Umschlag)"
+        short: Umschlag
+      other:
+        long: Sonstiges
+        short: Sonstiges

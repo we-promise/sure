@@ -33,7 +33,7 @@ class Family::DataImporter
 
   SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant RecurringTransaction RecurrenceRule RecurringOccurrence RecurringAllocation RecurringPriceChange RecurringMatchRejection Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
-    "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
+    "Depository" => Depository, "PhysicalCash" => PhysicalCash, "Investment" => Investment, "Crypto" => Crypto,
     "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
     "CreditCard" => CreditCard, "Loan" => Loan, "OtherLiability" => OtherLiability
   }.freeze
