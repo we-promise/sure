@@ -19,7 +19,12 @@ class ChatProvider with ChangeNotifier {
   DateTime? _pollingStartTime;
   bool _isPollingRequestInFlight = false;
 
-  static const _pollingTimeout = Duration(seconds: 20);
+  // Matches the server's default AI_RESPONSE_TIMEOUT (90s, configurable by
+  // self-hosters — see docs/hosting/ai.md) plus headroom, so mobile doesn't
+  // give up on a response the server is still legitimately working on. There's
+  // no live channel to read a self-hoster's overridden value, so this is a
+  // fixed upper bound rather than something mobile can resolve dynamically.
+  static const _pollingTimeout = Duration(seconds: 100);
 
   /// Content length of the last assistant message from the previous poll.
   /// Used to detect when the LLM has finished writing (no growth between polls).
@@ -408,8 +413,15 @@ class ChatProvider with ChangeNotifier {
 
         final oldMessages = _currentChat!.messages;
         final newMessages = updatedChat.messages;
-        final oldMessageCount = oldMessages.length;
-        final newMessageCount = newMessages.length;
+
+        // Compare by message ID, not list length: /chats/:id serves a fixed-
+        // size newest-messages window, so once a chat has more messages than
+        // that window, the count stays flat (e.g. 50 == 50) even as the
+        // window's contents genuinely change — a length comparison alone
+        // would stop noticing new messages at that point.
+        final oldMessageIds = oldMessages.map((m) => m.id).toSet();
+        final hasNewMessage =
+            newMessages.any((m) => !oldMessageIds.contains(m.id));
 
         final oldContentLengthById = <String, int>{};
         for (final m in oldMessages) {
@@ -418,12 +430,11 @@ class ChatProvider with ChangeNotifier {
 
         bool shouldUpdate = false;
 
-        // New messages added
-        if (newMessageCount > oldMessageCount) {
+        if (hasNewMessage) {
           shouldUpdate = true;
           _lastAssistantContentLength = null;
-        } else if (newMessageCount == oldMessageCount) {
-          // Same count: check if any assistant message has more content
+        } else {
+          // Same set of messages: check if any assistant message grew.
           for (final m in newMessages) {
             if (m.isAssistant) {
               final oldLen = oldContentLengthById[m.id] ?? 0;
