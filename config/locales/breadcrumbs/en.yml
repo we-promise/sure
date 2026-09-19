@@ -83,6 +83,7 @@ en:
     sso_identities: SSO connections
     sso_providers: SSO providers
     subscriptions: Subscription
+    system_health: System Health
     tags: Tags
     trades: Trades
     transactions: Transactions
