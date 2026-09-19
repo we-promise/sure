@@ -114,4 +114,17 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_nil second.payload
     assert_not_nil second.payload_digest
   end
+  test "future transaction status remains source-only instead of failing the stream" do
+    payload = financekit_payload
+    transaction = payload.fetch("events").find { |event| event["kind"] == "transaction_upsert" }.fetch("transaction")
+    transaction["status"] = "unknown"
+
+    batch = accept_and_apply(payload)
+
+    assert_equal "applied", batch.status
+    assert_equal "active", @item.reload.status
+    assert_empty @source.account.entries
+    assert_equal "unknown", @source.financekit_transactions.find_by!(source_id: @transaction_id).status
+  end
+
 end

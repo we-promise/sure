@@ -22,6 +22,7 @@ class Financekit::Processor
       mappings = @item.selected_accounts.includes(financekit_account_lineage: :account)
         .index_by { |mapping| mapping.source_id.downcase }
       capture.each do |part|
+        batch = part
         data = JSON.parse(part.payload)
         Financekit::Payload.validate_batch!(data, @item)
         part.update!(status: "processing")
