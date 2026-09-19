@@ -788,6 +788,8 @@ class AccountTest < ActiveSupport::TestCase
 
     # 100 USD × custom_rate 1.10 = 110 EUR, negated because asset
     assert_equal Money.new(-110, "EUR"), eur_account.scheduled_entries_total_money
+  end
+
   test "history_start_date resolves to the earliest of opening anchor, entries, and balances" do
     account = @family.accounts.create!(
       owner: @admin,
