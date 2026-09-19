@@ -1766,16 +1766,17 @@ RSpec.configure do |config|
             }
           },
           CashFlowGraph: {
-            type: :object, required: %w[as_of time_zone currency period sankey],
+            type: :object, required: %w[as_of time_zone currency period sankey investment_contributions],
             properties: {
               as_of: { type: :string, format: :date }, time_zone: { type: :string }, currency: { type: :string },
               period: { '$ref' => '#/components/schemas/FinancialPeriod' },
-              sankey: { '$ref' => '#/components/schemas/CashFlowSankey' }
+              sankey: { '$ref' => '#/components/schemas/CashFlowSankey' },
+              investment_contributions: { type: :string, description: 'Cash moved into investment/crypto accounts this period. Excluded from the sankey spending figure: it reallocates net worth rather than consuming it.' }
             }
           },
           CashFlow: {
             type: :object,
-            required: %w[month as_of time_zone currency period income spending net_savings savings_rate spending_comparison],
+            required: %w[month as_of time_zone currency period income spending net_savings savings_rate spending_comparison investment_contributions],
             properties: {
               month: { type: :string, format: :date }, as_of: { type: :string, format: :date },
               time_zone: { type: :string }, currency: { type: :string },
@@ -1783,6 +1784,7 @@ RSpec.configure do |config|
               income: { type: :string }, spending: { type: :string }, net_savings: { type: :string },
               sankey: { '$ref' => '#/components/schemas/CashFlowSankey' },
               savings_rate: { type: :string, nullable: true, description: 'Percentage points; null when income is nonpositive. May be negative.' },
+              investment_contributions: { type: :string, description: 'Cash moved into investment/crypto accounts this period. Excluded from spending and savings_rate: it reallocates net worth rather than consuming it.' },
               spending_comparison: {
                 type: :object,
                 required: %w[previous_period current_total comparison_total comparison_end_date delta current previous],

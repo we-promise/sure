@@ -73,6 +73,28 @@
     </div>
   </div>
 
+  <%# Investments Card %>
+  <div class="bg-container rounded-xl shadow-border-xs p-6">
+    <div class="flex items-start justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <%= icon("landmark", class: "w-5 h-5") %>
+        <h3 class="text-sm font-medium text-secondary">
+          <%= t("reports.summary.investment_contributions") %>
+        </h3>
+      </div>
+    </div>
+
+    <div class="space-y-2">
+      <p class="text-2xl font-semibold text-primary privacy-sensitive">
+        <%= metrics[:current_investment_contributions].format %>
+      </p>
+
+      <p class="text-sm text-subdued">
+        <%= t("reports.summary.investment_contributions_description") %>
+      </p>
+    </div>
+  </div>
+
   <%# Net Savings Card %>
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-start justify-between mb-3">

@@ -213,6 +213,63 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h3", text: I18n.t("reports.summary.total_income")
     assert_select "h3", text: I18n.t("reports.summary.total_expenses")
     assert_select "h3", text: I18n.t("reports.summary.net_savings")
+    assert_select "h3", text: I18n.t("reports.summary.investment_contributions")
+  end
+
+  test "index shows investment contributions separately from total expenses" do
+    account = accounts(:depository)
+    create_transaction(account: account, amount: 60_000, category: nil, kind: "investment_contribution")
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    investment_totals = Current.family.income_statement(user: @user).investment_contribution_totals(period: Period.current_month)
+    expense_totals = Current.family.income_statement(user: @user).expense_totals(period: Period.current_month)
+
+    assert investment_totals.total >= 60_000, "the transfer must be counted as an investment contribution"
+    assert_select ".privacy-sensitive", text: Money.new(investment_totals.total, @family.currency).format
+  end
+
+  test "activity breakdown lists investment contributions separately from Expenses" do
+    # Regression: build_transactions_breakdown used to classify every
+    # transaction by sign alone (amount > 0 => "expense"), so a transfer to
+    # an investment/crypto account showed up inside the "Expenses" table
+    # here even though the summary cards above correctly excluded it.
+    account = accounts(:depository)
+    category = @family.investment_contributions_category
+    create_transaction(account: account, amount: 60_000, category: category, kind: "investment_contribution")
+    create_transaction(account: account, amount: 50, category: categories(:food_and_drink))
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    doc = Nokogiri::HTML(@response.body)
+    section_headers = doc.css(".text-large").map(&:text)
+    investment_header = section_headers.find { |t| t.include?(I18n.t("reports.transactions_breakdown.table.investment_contribution")) }
+    expense_header = section_headers.find { |t| t.include?(I18n.t("reports.transactions_breakdown.table.expense")) }
+
+    assert investment_header.present?, "expected an Investment Contributions section"
+    assert_match "$60,000.00", investment_header
+    assert expense_header.present?, "expected an Expenses section"
+    refute_match "60,000", expense_header, "the transfer must not be folded into Expenses"
+    assert_select "a", text: category.name
+  end
+
+  test "CSV export lists investment contributions in their own section" do
+    account = accounts(:depository)
+    category = @family.investment_contributions_category
+    create_transaction(account: account, amount: 60_000, category: category, kind: "investment_contribution", date: Date.current)
+
+    get export_transactions_reports_path(format: :csv, period_type: :monthly)
+
+    assert_response :ok
+    assert_match(/INVESTMENT CONTRIBUTIONS/, @response.body)
+    lines = @response.body.split("\n")
+    expenses_index = lines.index { |l| l.start_with?("EXPENSES") }
+    investment_index = lines.index { |l| l.start_with?("INVESTMENT CONTRIBUTIONS") }
+    # The 60,000 contribution must appear under its own section, not folded into EXPENSES.
+    expenses_block = expenses_index ? lines[expenses_index...investment_index].join("\n") : ""
+    assert_no_match(/60,000/, expenses_block)
   end
 
   test "index builds trends data" do

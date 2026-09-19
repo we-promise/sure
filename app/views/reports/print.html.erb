@@ -279,8 +279,14 @@
       <%
         income_groups = @transactions.select { |g| g[:type] == "income" }
         expense_groups = @transactions.select { |g| g[:type] == "expense" }
+        # A transfer to an investment/crypto account is a real cash outflow
+        # but not consumption (see Transaction::NON_OPERATING_KINDS), so it's
+        # broken out here too rather than silently missing from the printed
+        # report (it's neither "income" nor "expense" typed).
+        investment_contribution_groups = @transactions.select { |g| g[:type] == "investment_contribution" }
         income_total = income_groups.sum { |g| g[:total] }
         expense_total = expense_groups.sum { |g| g[:total] }
+        investment_contribution_total = investment_contribution_groups.sum { |g| g[:total] }
       %>
 
       <div class="tufte-two-col">
@@ -345,6 +351,41 @@
                 <% if expense_groups.length > 8 %>
                   <tr>
                     <td class="tufte-muted"><%= t("reports.print.spending.more_categories", count: expense_groups.length - 8) %></td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        <% end %>
+
+        <% if investment_contribution_groups.any? %>
+          <div>
+            <h3 class="tufte-subsection"><%= t("reports.print.spending.investment_contributions") %> <span class="tufte-expense"><%= Money.new(investment_contribution_total, Current.family.currency).format %></span></h3>
+            <table class="tufte-table tufte-compact">
+              <thead>
+                <tr>
+                  <th><%= t("reports.print.spending.category") %></th>
+                  <th class="tufte-right"><%= t("reports.print.spending.amount") %></th>
+                  <th class="tufte-right"><%= t("reports.print.spending.percent") %></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% investment_contribution_groups.first(8).each do |group| %>
+                  <% percentage = investment_contribution_total.zero? ? 0 : (group[:total].to_f / investment_contribution_total * 100).round(0) %>
+                  <tr>
+                    <td>
+                      <span class="tufte-dot" style="background: <%= group[:category_color] %>"></span>
+                      <%= group[:category_name] %>
+                    </td>
+                    <td class="tufte-right"><%= Money.new(group[:total], Current.family.currency).format %></td>
+                    <td class="tufte-right tufte-muted"><%= percentage %>%</td>
+                  </tr>
+                <% end %>
+                <% if investment_contribution_groups.length > 8 %>
+                  <tr>
+                    <td class="tufte-muted"><%= t("reports.print.spending.more_categories", count: investment_contribution_groups.length - 8) %></td>
                     <td></td>
                     <td></td>
                   </tr>
