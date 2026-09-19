@@ -191,7 +191,12 @@ class Provider::Openai::AutoMerchantDetector
 
     # Auto mode: try strict first, fall back to none if too many nulls or missing results
     def auto_detect_merchants_with_auto_mode
-      result = auto_detect_merchants_with_mode(JSON_MODE_STRICT)
+      result = begin
+        auto_detect_merchants_with_mode(JSON_MODE_STRICT)
+      rescue Provider::Openai::ResponseFormatError => e
+        Rails.logger.warn("Auto mode: strict JSON response could not be parsed (#{e.message}), retrying with none mode")
+        return auto_detect_merchants_with_mode(JSON_MODE_NONE)
+      end
 
       # Check if too many nulls OR missing results were returned
       # Models that can't reason in strict mode often:
@@ -318,7 +323,7 @@ class Provider::Openai::AutoMerchantDetector
                   parsed.dig("results") ||
                   (parsed.is_a?(Array) ? parsed : nil)
 
-      raise Provider::Openai::Error, "Could not find merchants in response" if merchants.nil?
+      raise Provider::Openai::ResponseFormatError, "Could not find merchants in response" if merchants.nil?
 
       # Normalize field names (some LLMs use different naming)
       merchants.map do |m|
@@ -390,7 +395,7 @@ class Provider::Openai::AutoMerchantDetector
         end
       end
 
-      raise Provider::Openai::Error, "Could not parse JSON from response: #{raw.truncate(200)}"
+      raise Provider::Openai::ResponseFormatError, "Could not parse JSON from response: #{raw.truncate(200)}"
     end
 
     # Strip thinking model tags (<think>...</think>) from response
