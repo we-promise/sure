@@ -12,7 +12,9 @@ en:
       title: Save Your Backup Codes
     create:
       invalid_code: Invalid verification code. Please try again.
+      setup_failed: Something went wrong enabling two-factor authentication. Please try again.
     disable:
+      failure: Something went wrong disabling two-factor authentication. Please try again.
       success: Two-factor authentication has been disabled
     new:
       code_label: Verification Code
