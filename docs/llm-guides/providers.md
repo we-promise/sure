@@ -38,6 +38,11 @@ so operators can inspect it in the super-admin `/settings/debug` UI.
 ## Pending transactions and FX metadata
 
 Store provider metadata on `Transaction#extra` under the provider namespace.
+[`import_transaction`](../../app/models/account/provider_import_adapter.rb) deep-merges
+that hash, so a key the provider stops sending keeps its previous value. A provider
+that owns its namespace outright passes `replace_extra_namespaces: ["<key>"]`. When the
+incoming payload includes that namespace, the existing namespace is replaced, so omitted
+nested fields are removed. Send the provider's current namespace snapshot on every sync.
 [`Transaction#pending?` and pending scopes](../../app/models/transaction.rb) share
 `PENDING_PROVIDERS`; that constant is the current list of supported namespaces,
 including providers beyond the three described below. The UI shows a Pending
@@ -47,7 +52,7 @@ metadata produces no badge; manual/CSV imports have no pending concept.
 | Provider | Detection and storage |
 | --- | --- |
 | SimpleFIN | [`SimplefinEntry::Processor.pending?`](../../app/models/simplefin_entry/processor.rb) accepts an explicitly truthy `pending` flag, or `posted` equal to numeric `0` or string `"0"` with a present, positive `transacted_at` timestamp. A blank/missing `posted` value does **not** imply pending. Writes `extra["simplefin"]["pending"]` as true or false so a posted update clears stale pending metadata. |
-| Plaid | [`PlaidEntry::Processor`](../../app/models/plaid_entry/processor.rb) stores bank/credit transaction `pending` and `pending_transaction_id` under `extra["plaid"]`; the linking ID supports pending-to-posted reconciliation. The investment transaction processor does not store pending metadata. |
+| Plaid | [`PlaidEntry::Processor`](../../app/models/plaid_entry/processor.rb) stores bank/credit transaction `pending` and `pending_transaction_id` under `extra["plaid"]`; the linking ID supports pending-to-posted reconciliation. It also stores `original_description`, `payment_channel`, `transaction_code`, `payment_meta` and `counterparties`, and passes `replace_extra_namespaces: ["plaid"]` so the namespace is a snapshot of what Plaid currently reports. The investment transaction processor does not store pending metadata. |
 | Lunchflow | [`LunchflowEntry::Processor`](../../app/models/lunchflow_entry/processor.rb) stores the boolean-cast `isPending` value under `extra["lunchflow"]["pending"]` when the upstream key is present. |
 | Monobank | [`MonobankEntry::Processor`](../../app/models/monobank_entry/processor.rb) treats a `hold: true` statement item as pending and writes `extra["monobank"]["pending"]`. Monobank may settle a hold under a *different* id, so the settled record reconciles onto the pending entry through [`Account::ProviderImportAdapter`](../../app/models/account/provider_import_adapter.rb)'s amount/date lookup. A hold that simply disappears is pruned, but only when the statement request actually covered its date range, and never when the entry is `protected_from_sync?` — those only lose the pending flag. `currencyCode` on a statement item is the **operation** currency, not the account's — it varies between items on one account — so entries take their currency from `MonobankAccount#currency` and `currencyCode`/`operationAmount` populate `fx_from`/`fx_amount`. Those two are emitted only for a recognized foreign operation — a known `currencyCode` differing from the account currency, and for `fx_amount` a parseable `operationAmount`, whose failure is captured as a `provider_sync_error`. Independently of that, `operation_amount` keeps the raw minor-unit figure whenever it differs from `amount`. |
 
@@ -93,6 +98,51 @@ Pending inclusion is provider- and layer-specific:
   changing the [importer](../../app/models/monobank_item/importer.rb)'s request
   budgeting, and keep the pending lookback wide enough that live holds stay in the
   payload instead of being pruned as stale.
+
+## Transaction naming
+
+Where a provider supplies both a cleaned merchant name and the bank's own
+description, combine them rather than choosing one:
+[`SimplefinEntry::Processor`](../../app/models/simplefin_entry/processor.rb) emits
+`"#{payee} - #{description}"` when both are present and differ, and
+[`PlaidEntry::Processor`](../../app/models/plaid_entry/processor.rb) does the same
+with `merchant_name` and `original_description`.
+
+The merchant name alone collapses distinct transactions into one name, and
+[rules](../../app/models/rule/condition.rb) match on `transaction_name`, so the
+collapse removes the only signal that could separate them. Merchant records are
+built from the cleaned name on a separate path, so grouping is unaffected.
+
+Changing a name that rules already target is the cost of this, and it falls
+entirely on the two operators with no substring tolerance. `transaction_name` is a
+text filter, so it offers `=` and `!=` alongside `like`/`not_like`
+([`condition_filter.rb`](../../app/models/rule/condition_filter.rb)); a `like` rule
+written against the merchant name still matches the combined form, but an `=` rule
+would stop matching and a `!=` rule would start matching what it was written to
+exclude — silently, in both directions.
+
+[`Rule::ConditionFilter::TransactionName`](../../app/models/rule/condition_filter/transaction_name.rb)
+absorbs that: for `=` and `!=` only, a row whose `entries.source` is Plaid also
+matches on the text before `PlaidEntry::Processor::NAME_SEPARATOR`. Three
+properties make this safe, and a change here must preserve all of them:
+
+- **Provenance-gated.** Rules run against every transaction in the family
+  ([`resource_scope`](../../app/models/rule/registry/transaction_resource.rb)), not
+  just provider rows. Without the `source` gate, `= "Rent"` would start matching a
+  manually entered "Rent insurance".
+- **Case-preserving.** `=` compiles to a plain `=` and is case-sensitive; the added
+  arm uses `LIKE`, never `ILIKE`.
+- **NULL-safe.** `entries.source` is nullable, so the added arm is `NULL` for manual
+  rows and a bare `NOT (...)` would drop them out of every `!=` rule. The predicate
+  is wrapped in `COALESCE(..., FALSE)` before negation.
+
+This is deliberately runtime behavior rather than a migration over saved rules:
+rewriting operators in place is irreversible, changes rules the user chose, and
+misses families who connect a provider later.
+
+If another provider starts combining names, gate it the same way — do not widen the
+rule engine generally. SimpleFIN is excluded on purpose: it has always emitted the
+combined form, so its rules were written against it.
 
 ## Raw payload debugging
 
