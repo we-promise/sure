@@ -91,10 +91,6 @@ class Transfer < ApplicationRecord
     "transfer"
   end
 
-  def categorizable?
-    to_account&.accountable_type == "Loan"
-  end
-
   def reject!
     Transfer.transaction do
       RejectedTransfer.find_or_create_by!(inflow_transaction_id: inflow_transaction_id, outflow_transaction_id: outflow_transaction_id)
