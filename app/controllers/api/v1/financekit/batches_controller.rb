@@ -4,13 +4,17 @@ class Api::V1::Financekit::BatchesController < ActionController::API
     render json: { error: "not_found" }, status: :not_found
   end
 
+  def show
+    item = authenticated_item!
+    batch = item.financekit_batches.find_by!(generation: item.generation, batch_id: params[:batch_id])
+    render json: batch.receipt
+  end
+
   def create
     raise Financekit::Error.new("invalid_content_type", 400) unless request.media_type == "application/json"
     raise Financekit::Error.new("payload_too_large", 413) if request.content_length.to_i > Financekit::MAX_BYTES
 
-    item = FinancekitItem.find_by(publisher_id: params[:publisher_id])
-    token = request.authorization&.match(/\ABearer ([A-Za-z0-9_-]+)\z/)&.captures&.first # pipelock:ignore Credential in URL
-    raise Financekit::Error.new("publisher_unauthorized", 401) unless item&.authenticate_credential?(token)
+    item = authenticated_item!
 
     batch = FinancekitBatch.accept!(item, limited_body,
       claimed_digest: request.headers["X-Sure-Payload-SHA256"],
@@ -19,6 +23,13 @@ class Api::V1::Financekit::BatchesController < ActionController::API
   end
 
   private
+    def authenticated_item!
+      item = FinancekitItem.find_by(publisher_id: params[:publisher_id])
+      token = request.authorization&.match(/\ABearer ([A-Za-z0-9_-]+)\z/)&.captures&.first # pipelock:ignore Credential in URL
+      raise Financekit::Error.new("publisher_unauthorized", 401) unless item&.authenticate_credential?(token)
+      item
+    end
+
 
     def limited_body
       body = request.body

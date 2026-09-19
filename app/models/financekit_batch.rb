@@ -28,6 +28,19 @@ class FinancekitBatch < ApplicationRecord
       Financekit.require!(data["sequence"] >= item.next_sequence &&
         !item.financekit_batches.exists?(generation: item.generation, stream_id: item.stream_id, sequence: data["sequence"]),
         "sequence_conflict", 409)
+      capture = item.financekit_batches.where(generation: item.generation, capture_id: data["capture_id"]).order(:chunk_index)
+      if capture.exists?
+        first = capture.first
+        Financekit.require!(first.chunk_count == data["chunk_count"] && first.capture_mode == data["capture_mode"] &&
+          first.captured_at == Financekit::Payload.timestamp!(data["captured_at"]) &&
+          data["chunk_index"] == capture.maximum(:chunk_index) + 1 &&
+          data["sequence"] == capture.maximum(:sequence) + 1, "capture_conflict", 409)
+      else
+        Financekit.require!(data["chunk_index"] == 0, "capture_conflict", 409)
+        incomplete = item.financekit_batches.where(generation: item.generation).where.not(status: %w[applied failed revoked])
+          .group(:capture_id, :chunk_count).having("COUNT(*) < chunk_count").exists?
+        Financekit.require!(!incomplete, "capture_incomplete", 409)
+      end
       Financekit.require!(data["sequence"] < item.next_sequence + Financekit::MAX_QUEUED &&
         item.financekit_batches.where(status: %w[accepted processing]).count < Financekit::MAX_QUEUED,
         "inbox_full", 429)
@@ -55,8 +68,10 @@ class FinancekitBatch < ApplicationRecord
       batch_id: batch_id,
       sequence: sequence,
       payload_digest: payload_digest,
-      status: "accepted",
-      accepted_at: accepted_at
+      status: status,
+      accepted_at: accepted_at,
+      applied_at: applied_at,
+      error_code: error_code
     }
   end
 end

@@ -10,25 +10,32 @@ class Financekit::Processor
       batch = @item.financekit_batches.find_by(generation: @item.generation,
         stream_id: @item.stream_id, sequence: @item.next_sequence)
       return false unless batch && batch.status == "accepted" && (!batch.retry_at || batch.retry_at <= Time.current)
+      capture = @item.financekit_batches.where(generation: @item.generation, capture_id: batch.capture_id).order(:chunk_index).to_a
+      return false unless capture.size == batch.chunk_count && capture.map(&:chunk_index) == (0...batch.chunk_count).to_a &&
+        capture.all? { |part| part.status == "accepted" }
 
       Financekit.require!(batch.predecessor_digest == @item.predecessor_digest, "predecessor_conflict", 409)
       Financekit.require!(!@item.last_captured_at || batch.captured_at >= @item.last_captured_at,
         "stale_capture", 409)
-      data = JSON.parse(batch.payload)
-      Financekit::Payload.validate_batch!(data, @item)
-      batch.update!(status: "processing")
       counts = { "upserted" => 0, "retracted" => 0, "review_required" => 0,
         "source_only" => 0, "balances" => 0, "accounts" => 0 }
       mappings = @item.selected_accounts.includes(financekit_account_lineage: :account)
         .index_by { |mapping| mapping.source_id.downcase }
-      data["events"].each { |event| apply_event!(event, mappings, batch, counts) }
-
-      sync = @item.syncs.create!(status: "completed", completed_at: Time.current,
+      capture.each do |part|
+        data = JSON.parse(part.payload)
+        Financekit::Payload.validate_batch!(data, @item)
+        part.update!(status: "processing")
+        data["events"].each { |event| apply_event!(event, mappings, part, counts) }
+      end
+      applied_at = Time.current
+      sync = @item.syncs.create!(status: "completed", completed_at: applied_at,
         sync_stats: { "financekit" => counts, "total_accounts" => mappings.size, "linked_accounts" => mappings.size })
-      batch.update!(status: "applied", applied_at: Time.current, counts: counts, sync: sync,
-        error_code: nil, retry_at: nil)
-      @item.update!(next_sequence: batch.sequence + 1, predecessor_digest: batch.payload_digest,
-        last_imported_at: batch.applied_at, last_captured_at: batch.captured_at)
+      capture.each { |part| part.update!(status: "applied", applied_at: applied_at, counts: counts, sync: sync,
+        error_code: nil, retry_at: nil) }
+      last = capture.last
+      @item.update!(next_sequence: last.sequence + 1, predecessor_digest: last.payload_digest,
+        last_imported_at: applied_at, last_captured_at: last.captured_at)
+      batch = last
     end
     Financekit::Downstream.new(batch).perform!
     true
@@ -94,6 +101,15 @@ class Financekit::Processor
     def import_transaction!(mapping, record, batch, counts)
       identity = transaction_identity_for(mapping, record["source_id"])
       existed = identity.persisted?
+      if !existed && @item.replaces_financekit_item_id.present? &&
+          mapping.financekit_account_lineage.financekit_transactions.exists?
+        identity.assign_attributes(financekit_account: mapping, generation: batch.generation,
+          sequence: batch.sequence, status: record["status"], raw_payload: record, review_required: true)
+        identity.save!
+        create_conflict!(mapping, identity, "replacement_identity")
+        counts["review_required"] += 1
+        return
+      end
       identity.assign_attributes(financekit_account: mapping, generation: batch.generation,
         sequence: batch.sequence, status: record["status"], raw_payload: record)
       if identity.tombstoned_at || (existed && identity.entry_id.nil? && identity.ledger_imported)
@@ -102,7 +118,7 @@ class Financekit::Processor
         counts["review_required"] += 1
         return
       end
-      if %w[rejected memo].include?(record["status"])
+      if %w[rejected memo unknown].include?(record["status"])
         remove_source_only_entry!(mapping, identity, counts) if identity.entry
         identity.ledger_imported = false unless identity.review_required?
         identity.save!

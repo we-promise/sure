@@ -71,6 +71,13 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     assert_equal raw, FinancekitBatch.sole.payload
     assert_empty @source.account.entries
 
+    FinancekitInboxJob.perform_now(@item.id)
+    get "/api/v1/financekit/publishers/#{@item.publisher_id}/batches/#{payload.fetch("batch_id")}",
+      headers: @publisher_headers.except("Content-Type")
+    assert_response :success
+    assert_equal "applied", response.parsed_body.fetch("status")
+    assert response.parsed_body.fetch("applied_at").present?
+
     get "/api/v1/accounts", headers: { "Authorization" => "Bearer #{@credential}" }
     assert_response :unauthorized
   end

@@ -1,5 +1,5 @@
 class Financekit::Payload
-  STATUSES = %w[authorized pending booked rejected memo].freeze
+  STATUSES = %w[authorized pending booked rejected memo unknown].freeze
   EVENT_KINDS = %w[account_upsert account_unavailable balance_upsert transaction_upsert transaction_tombstone].freeze
   UUID = /\A[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/i
   DIGEST = /\A[0-9a-f]{64}\z/

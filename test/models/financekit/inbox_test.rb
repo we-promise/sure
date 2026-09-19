@@ -7,23 +7,32 @@ class Financekit::InboxTest < ActiveSupport::TestCase
 
   setup { financekit_setup }
 
-  test "out of order batches remain durable and apply in sequence when the gap arrives" do
-    first_payload = financekit_payload
-    first_raw = JSON.generate(first_payload)
+  test "capture chunks are accepted contiguously and applied atomically after final chunk" do
+    capture_id = SecureRandom.uuid
+    first_payload = financekit_payload(events: [])
+    first_payload.merge!("capture_id" => capture_id, "chunk_index" => 0, "chunk_count" => 2)
+    first, first_raw = accept_batch(first_payload)
     first_digest = Digest::SHA256.hexdigest(first_raw)
-    second_payload = financekit_payload(sequence: 2, predecessor_digest: first_digest, events: [])
-    second, = accept_batch(second_payload)
 
     assert_not Financekit::Processor.new(@item).apply_next!
-    assert_equal "accepted", second.reload.status
+    assert_equal "accepted", first.reload.status
 
-    first = FinancekitBatch.accept!(@item, first_raw, claimed_digest: first_digest,
-      idempotency_key: first_payload.fetch("batch_id"))
+    second_payload = financekit_payload(sequence: 2, predecessor_digest: first_digest, events: [])
+    second_payload.merge!("capture_id" => capture_id, "chunk_index" => 1, "chunk_count" => 2)
+    second, = accept_batch(second_payload)
     FinancekitInboxJob.perform_now(@item.id)
 
     assert_equal "applied", first.reload.status
     assert_equal "applied", second.reload.status
     assert_equal 3, @item.reload.next_sequence
+  end
+
+  test "capture cannot begin at a later chunk" do
+    payload = financekit_payload(events: [])
+    payload.merge!("chunk_index" => 1, "chunk_count" => 2)
+
+    error = assert_raises(Financekit::Error) { accept_batch(payload) }
+    assert_equal "capture_conflict", error.code
   end
 
   test "repeated delivery returns the original receipt without another batch" do
@@ -36,8 +45,8 @@ class Financekit::InboxTest < ActiveSupport::TestCase
       repeated = FinancekitBatch.accept!(@item, raw, claimed_digest: original.payload_digest,
         idempotency_key: payload.fetch("batch_id"))
       assert_equal original.id, repeated.id
-      assert_equal accepted_receipt, repeated.receipt
-      assert_equal "accepted", repeated.receipt.fetch(:status)
+      assert_equal accepted_receipt.except(:status, :applied_at), repeated.receipt.except(:status, :applied_at)
+      assert_equal "applied", repeated.receipt.fetch(:status)
     end
   end
 
