@@ -52,6 +52,27 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  # The form offers a day-count convention, and a select is worth nothing if the
+  # controller drops the value. This is the end-to-end path the model and engine
+  # tests do not cover: without `:day_count_convention` in
+  # `permitted_accountable_attributes` the parameter is filtered out, the loan
+  # keeps its old convention, and every future schedule ignores the choice.
+  test "the day-count convention chosen on the form is saved" do
+    assert_equal "thirty_360", @account.loan.day_count_convention
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          day_count_convention: "actual_365"
+        }
+      }
+    }
+
+    assert_equal "actual_365", @account.loan.reload.day_count_convention,
+                 "the controller filtered out the convention the user chose"
+  end
+
   test "updates with loan details" do
     assert_no_difference [ "Account.count", "Loan.count" ] do
       patch loan_path(@account), params: {

@@ -208,15 +208,34 @@ class Loan
         return monthly_rate(annual_percentage) if @day_count_convention == :thirty_360
 
         rate = BigDecimal(annual_percentage.to_s) / PERCENT
-        days = BigDecimal((period_end - period_start).to_i.to_s)
-        denominator =
-          if @day_count_convention == :actual_actual
-            Date.leap?(period_start.year) ? DAYS_PER_LEAP_YEAR : DAYS_PER_YEAR
-          else
-            DAYS_PER_YEAR
-          end
 
-        (rate * days) / denominator
+        if @day_count_convention == :actual_365
+          return (rate * BigDecimal((period_end - period_start).to_i.to_s)) / DAYS_PER_YEAR
+        end
+
+        rate * actual_actual_year_fraction(period_start, period_end)
+      end
+
+      # actual/actual measures each calendar year's days against THAT year's
+      # own length, so a period crossing New Year is two fractions rather than
+      # one. Taking the opening year's denominator for the whole period would
+      # charge the days after 1 January at the wrong rate -- 15 December 2027
+      # to 15 January 2028 would put the 2028 days over 365 instead of 366.
+      def actual_actual_year_fraction(period_start, period_end)
+        fraction = BigDecimal("0")
+        cursor = period_start
+
+        while cursor < period_end
+          next_year_start = Date.new(cursor.year + 1, 1, 1)
+          segment_end = [ next_year_start, period_end ].min
+          days = BigDecimal((segment_end - cursor).to_i.to_s)
+          denominator = Date.leap?(cursor.year) ? DAYS_PER_LEAP_YEAR : DAYS_PER_YEAR
+
+          fraction += days / denominator
+          cursor = segment_end
+        end
+
+        fraction
       end
 
       def monthly_rate(annual_percentage)
