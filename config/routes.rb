@@ -727,7 +727,7 @@ Rails.application.routes.draw do
           post :repair, to: "connections#repair"
           resources :conflicts, only: [ :index, :update ]
         end
-        post "publishers/:publisher_id/batches", to: "batches#create"
+        post "publishers/:publisher_id/batches", to: "batches#create", as: :publisher_batches_upload
         get "publishers/:publisher_id/batches/:batch_id", to: "batches#show", as: :publisher_batch_status
       end
       # Authentication endpoints

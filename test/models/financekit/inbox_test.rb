@@ -126,5 +126,4 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_empty @source.account.entries
     assert_equal "unknown", @source.financekit_transactions.find_by!(source_id: @transaction_id).status
   end
-
 end

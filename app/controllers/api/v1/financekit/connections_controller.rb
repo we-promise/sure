@@ -68,7 +68,7 @@ class Api::V1::Financekit::ConnectionsController < Api::V1::Financekit::BaseCont
       connection_data(item).merge(
         protocol_version: Financekit::VERSION,
         server_url: request.base_url,
-        upload_url: api_v1_financekit_publisher_batches_url(publisher_id: item.publisher_id),
+        upload_url: api_v1_financekit_publisher_batches_upload_url(publisher_id: item.publisher_id),
         consent: item.consent.except("recorded_at"),
         account_bindings: item.selected_accounts.order(:source_id).map do |mapping|
           { source_account_id: mapping.source_id, lineage_id: mapping.financekit_account_lineage_id,
