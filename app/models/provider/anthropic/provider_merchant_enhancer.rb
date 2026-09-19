@@ -14,7 +14,7 @@ class Provider::Anthropic::ProviderMerchantEnhancer
   end
 
   def enhance_merchants
-    span = langfuse_trace&.span(name: "enhance_provider_merchants_api_call", input: {
+    span = langfuse_trace&.generation(name: "enhance_provider_merchants_api_call", model: model, input: {
       model: model,
       merchants: merchants
     })

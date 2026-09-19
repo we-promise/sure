@@ -17,7 +17,7 @@ class Provider::Openai::PdfProcessor
   end
 
   def process
-    span = langfuse_trace&.span(name: "process_pdf_api_call", input: {
+    span = langfuse_trace&.generation(name: "process_pdf_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
       model: model.presence || Provider::Openai::DEFAULT_MODEL,
       pdf_size: pdf_content&.bytesize
     })

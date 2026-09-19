@@ -23,7 +23,7 @@ class Provider::Anthropic::BankStatementExtractor
             "PDF exceeds Anthropic's 32 MB limit (#{pdf_content.bytesize} bytes)"
     end
 
-    span = langfuse_trace&.span(name: "extract_bank_statement_api_call", input: {
+    span = langfuse_trace&.generation(name: "extract_bank_statement_api_call", model: model, input: {
       model: model,
       pdf_size: pdf_content.bytesize
     })

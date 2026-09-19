@@ -15,7 +15,7 @@ class Provider::Anthropic::AutoCategorizer
   end
 
   def auto_categorize
-    span = langfuse_trace&.span(name: "auto_categorize_api_call", input: {
+    span = langfuse_trace&.generation(name: "auto_categorize_api_call", model: model, input: {
       model: model,
       transactions: transactions,
       user_categories: user_categories

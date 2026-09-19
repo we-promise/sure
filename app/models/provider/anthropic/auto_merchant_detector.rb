@@ -15,7 +15,7 @@ class Provider::Anthropic::AutoMerchantDetector
   end
 
   def auto_detect_merchants
-    span = langfuse_trace&.span(name: "auto_detect_merchants_api_call", input: {
+    span = langfuse_trace&.generation(name: "auto_detect_merchants_api_call", model: model, input: {
       model: model,
       transactions: transactions,
       user_merchants: user_merchants
