@@ -146,6 +146,23 @@ class Transaction < ApplicationRecord
     joins(entry: :account).where(accounts: { family_id: family.id })
   end
 
+  # Bulk category reassignment that still busts entry-keyed report caches.
+  # update_all skips callbacks, so the `has_one :entry, touch: true` bump that
+  # every normal save relies on (Family#entries_cache_version) never happens.
+  def self.reassign_category!(scope, category_id)
+    transaction do
+      ids = scope.pluck(:id)
+      next 0 if ids.empty?
+
+      # Write through a fresh id-scoped relation: re-evaluating `scope`'s
+      # condition after the update could match nothing once the rows already
+      # carry the new category_id.
+      where(id: ids).update_all(category_id: category_id)
+      Entry.where(entryable_type: "Transaction", entryable_id: ids).touch_all
+      ids.size
+    end
+  end
+
   # Overarching grouping method for all transfer-type transactions
   def transfer?
     TRANSFER_KINDS.include?(kind)
