@@ -47,7 +47,7 @@ end %>
     </div>
 
     <%# MOBILE - Top nav %>
-    <nav class="lg:hidden flex justify-between items-center p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+    <nav class="lg:hidden relative flex justify-between items-center p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
       <% if intro_mode %>
       <% else %>
         <%= icon("panel-left", as_button: true, data: { action: "app-layout#openMobileSidebar"}) %>
