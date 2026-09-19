@@ -24,6 +24,17 @@ module TransactionsHelper
     entry.split_child? && Current.user.show_split_grouped? && params_grouped == "true"
   end
 
+  # Name of the category an automatic assignment recorded — falls back to a
+  # generic label when that category has since been deleted.
+  def category_provenance_category_name(transaction, provenance)
+    if provenance.current?
+      transaction.category&.name
+    else
+      Current.family.categories.find_by(id: provenance.category_id)&.name ||
+        t("transactions.category_provenance.deleted_category")
+    end
+  end
+
   # ---- Transaction extra details helpers ----
   # Returns a structured hash describing extra details for a transaction.
   # Input can be a Transaction or an Entry (responds_to :transaction).
