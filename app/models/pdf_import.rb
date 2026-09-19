@@ -340,7 +340,7 @@ class PdfImport < Import
   def reconciled_entries
     return Entry.none if account_statement.blank?
 
-    Entry.reconciled_by(account_statement)
+    Entry.reconciled_by_statement(account_statement)
   end
 
   # The half of reconciled_entries this import did not create -- transactions the
@@ -549,7 +549,7 @@ class PdfImport < Import
     def release_reconciliations!(account_scope_id)
       return if account_statement.blank? || account_scope_id.blank?
 
-      Entry.reconciled_by(account_statement).where(account_id: account_scope_id).update_all(
+      Entry.reconciled_by_statement(account_statement).where(account_id: account_scope_id).update_all(
         reconciled_at: nil,
         reconciled_by_statement_id: nil,
         updated_at: Time.current

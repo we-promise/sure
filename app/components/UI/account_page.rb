@@ -1,11 +1,11 @@
 class UI::AccountPage < ApplicationComponent
-  attr_reader :account, :chart_view, :chart_period, :statement_coverage, :statements, :reconciliation_statuses,
+  attr_reader :account, :chart_view, :chart_period, :statement_coverage, :statements, :reconciliation_statuses, :reconciliation_indicator,
               :can_manage_statements
 
   renders_one :activity_feed, ->(feed_data:, pagy:, search:) { UI::Account::ActivityFeed.new(feed_data: feed_data, pagy: pagy, search: search) }
 
   def initialize(account:, chart_view: nil, chart_period: nil, active_tab: nil, statement_coverage: nil, statements: [],
-                 reconciliation_statuses: {}, can_manage_statements: false)
+                 reconciliation_statuses: {}, reconciliation_indicator: nil, can_manage_statements: false)
     @account = account
     @chart_view = chart_view
     @chart_period = chart_period
@@ -13,6 +13,7 @@ class UI::AccountPage < ApplicationComponent
     @statement_coverage = statement_coverage
     @statements = statements
     @reconciliation_statuses = reconciliation_statuses
+    @reconciliation_indicator = reconciliation_indicator
     @can_manage_statements = can_manage_statements
   end
 

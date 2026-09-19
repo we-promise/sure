@@ -1,4 +1,4 @@
-<%# locals: (account:, return_to: nil) %>
+<%# locals: (account:, return_to: nil, reconciliation_indicator: nil) %>
 
 <% is_default = Current.user&.default_account_id == account.id %>
 
@@ -9,7 +9,7 @@
          data-action="click->clickable-row#open"
        <% end %>>
     <div class="flex items-center gap-3">
-      <%= render "accounts/logo", account: account, size: "md" %>
+      <%= render "accounts/logo", account: account, size: "md", reconciliation_indicator: reconciliation_indicator %>
 
       <div>
         <% if account.pending_deletion? %>
