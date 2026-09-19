@@ -136,6 +136,30 @@ class Loan::DayCountConventionTest < ActiveSupport::TestCase
     assert_equal "thirty_360", Loan::DEFAULT_DAY_COUNT_CONVENTION
   end
 
+  # actual/actual measures each calendar year against its own length, so a
+  # period crossing New Year is two fractions. 15 Dec 2027 to 15 Jan 2028 is
+  # 17 days of 2027 over 365 plus 14 days of 2028 over 366 -- taking the
+  # opening year's denominator for all 31 would put the 2028 days over 365.
+  test "an actual/actual period crossing New Year uses each year's own denominator" do
+    from = Date.new(2027, 12, 15)
+    to = Date.new(2028, 1, 15)
+
+    expected = (BigDecimal("300000") * BigDecimal("0.06") *
+      ((BigDecimal("17") / 365) + (BigDecimal("14") / 366))).round(2)
+    naive = (BigDecimal("300000") * BigDecimal("0.06") * BigDecimal("31") / 365).round(2)
+
+    assert_not_equal naive, expected, "the two approaches must differ, or this test proves nothing"
+    assert_equal expected, interest_for(from, to, :actual_actual)
+  end
+
+  # The same period on actual/365 is unaffected: that convention has one
+  # denominator by definition, so the year boundary is not a boundary for it.
+  test "actual/365 is indifferent to the year boundary" do
+    expected = (BigDecimal("300000") * BigDecimal("0.06") * BigDecimal("31") / 365).round(2)
+
+    assert_equal expected, interest_for(Date.new(2027, 12, 15), Date.new(2028, 1, 15), :actual_365)
+  end
+
   private
     def simulate(schedule:, convention:, balance: BALANCE, rate: RATE)
       Loan::Simulator.new(
