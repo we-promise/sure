@@ -1,6 +1,8 @@
 require "test_helper"
 
 class TransfersControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     sign_in users(:family_admin)
   end
@@ -634,6 +636,33 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("accounts.not_authorized"), JSON.parse(response.body)["error"]
     assert_equal original_outflow_tags, transfer.outflow_transaction.reload.tag_ids
     assert_equal original_inflow_tags, transfer.inflow_transaction.reload.tag_ids
+  end
+
+  test "confirming a transfer requires write permission on the inflow account too" do
+    # family_member: full_control on depository (outflow), read_only on credit_card (inflow)
+    sign_in users(:family_member)
+    transfer = transfers(:one)
+    assert transfer.pending?
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert_equal "pending", transfer.reload.status
+  end
+
+  test "confirming a transfer only via status does not clear the auto-assigned investment category" do
+    investment = accounts(:investment)
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: investment, amount: -500)
+    users(:family_admin).family.auto_match_transfers!
+    transfer = outflow_entry.transaction.transfer
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+
+    assert_redirected_to transactions_url
+    category = users(:family_admin).family.investment_contributions_category
+    assert_equal category, outflow_entry.transaction.reload.category
   end
 
   test "can add notes to transfer" do
