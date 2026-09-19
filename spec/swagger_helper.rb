@@ -116,7 +116,7 @@ RSpec.configure do |config|
               import_id: {
                 type: :string,
                 format: :uuid,
-                description: 'Import ID preserved for retry or inspection after upload succeeds but publish fails'
+                description: 'Import ID preserved for retry or inspection after upload succeeds but preparation or publish fails'
               }
             }
           },
