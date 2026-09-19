@@ -59,7 +59,8 @@ class ChatProvider with ChangeNotifier {
         _chats = result['chats'] as List<Chat>;
         _errorMessage = null;
       } else {
-        _errorMessage = result['error'] ?? 'Failed to fetch chats';
+        _errorMessage =
+            result['message'] ?? 'Failed to fetch chats';
       }
     } catch (e) {
       _log.warning('ChatProvider', 'fetchChats failed: ${e.runtimeType}');
@@ -93,7 +94,8 @@ class ChatProvider with ChangeNotifier {
         _currentChat = result['chat'] as Chat;
         _errorMessage = null;
       } else {
-        _errorMessage = result['error'] ?? 'Failed to fetch chat';
+        _errorMessage =
+            result['message'] ?? 'Failed to fetch chat';
       }
     } catch (e) {
       _log.warning('ChatProvider', 'fetchChat failed: ${e.runtimeType}');
@@ -149,7 +151,8 @@ class ChatProvider with ChangeNotifier {
         notifyListeners();
         return _currentChat!;
       } else {
-        _errorMessage = result['error'] ?? 'Failed to create chat';
+        _errorMessage =
+            result['message'] ?? 'Failed to create chat';
         _isLoading = false;
         notifyListeners();
         return null;
@@ -231,7 +234,7 @@ class ChatProvider with ChangeNotifier {
       } else {
         // Roll back the optimistic message on failure.
         _rollbackOptimisticMessage(optimisticId, chatId);
-        _errorMessage = result['error'] ?? 'Failed to send message';
+        _errorMessage = result['message'] ?? 'Failed to send message';
         return false;
       }
     } catch (e) {
@@ -310,7 +313,7 @@ class ChatProvider with ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _errorMessage = result['error'] ?? 'Failed to delete chat';
+        _errorMessage = result['message'] ?? 'Failed to delete chat';
         notifyListeners();
         return false;
       }
