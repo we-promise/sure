@@ -107,4 +107,56 @@ class ApplicationHelperTest < ActionView::TestCase
 
     assert_equal [ "SGD", "USD", "EUR" ], currency_picker_options_for_family(family, extra: "EUR")
   end
+
+  # `markdown` renders AI chat messages, and a user message is content the
+  # user typed. Redcarpet passes raw HTML through untouched, so without a
+  # filter this is stored XSS against anyone else in the family.
+  test "markdown strips script tags from user content" do
+    assert_no_match(/<script/i, markdown("<script>alert(1)</script>"))
+  end
+
+  test "markdown strips event handlers from user content" do
+    assert_no_match(/onerror/i, markdown('<img src=x onerror="alert(1)">'))
+  end
+
+  # Raw HTML in a chat message must not survive, and stripping tags is not
+  # enough on its own: div, span and class stay allow-listed for footnotes and
+  # code blocks, so a bare allow-list would still let a message cover the app
+  # or lay an invisible link over it.
+  test "markdown drops raw HTML a user typed, layout tags included" do
+    assert_no_match(/<div/i, markdown('<div class="fixed inset-0 z-50 bg-black">covered</div>'))
+    assert_no_match(/fixed inset-0/, markdown('<a href="https://evil.example" class="fixed inset-0">x</a>'))
+    assert_no_match(/evil\.example/, markdown('<img src="https://evil.example/track.gif">'))
+  end
+
+  # A markdown link is built by the renderer itself, so a javascript: or data:
+  # target survives filter_html and goes away only via the sanitize allow-list.
+  test "markdown strips dangerous URL schemes from the links it generates" do
+    assert_no_match(/javascript:/i, markdown("[click](javascript:alert(1))"))
+    assert_no_match(/javascript:/i, markdown("![x](javascript:alert(1))"))
+    assert_no_match(%r{data:text/html}i, markdown("[click](data:text/html;base64,PHNjcmlwdD4=)"))
+    assert_no_match(/data:/i, markdown("![x](data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=)"))
+  end
+
+  test "markdown keeps ordinary image and link targets" do
+    assert_match(%r{<img[^>]+src="https://example\.com/a\.png"}, markdown("![alt](https://example.com/a.png)"))
+    assert_match(%r{href="https://example\.com"}, markdown("[x](https://example.com)"))
+  end
+
+  test "markdown still renders the formatting the chat relies on" do
+    rendered = markdown("**bold** and `code` and [link](https://example.com)")
+
+    assert_match(/<strong>bold<\/strong>/, rendered)
+    assert_match(/<code>code<\/code>/, rendered)
+    assert_match(%r{href="https://example\.com"}, rendered)
+  end
+
+  test "markdown renders images written as markdown" do
+    assert_match(%r{<img[^>]+src="https://example\.com/a\.png"}, markdown("![alt](https://example.com/a.png)"))
+  end
+
+  test "markdown returns an empty string for blank input" do
+    assert_equal "", markdown(nil)
+    assert_equal "", markdown("")
+  end
 end
