@@ -18,6 +18,9 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal "unauthorized", JSON.parse(response.body)["error"]
     assert response.headers["WWW-Authenticate"].present?, "Must include WWW-Authenticate header"
     assert_includes response.headers["WWW-Authenticate"], "oauth-protected-resource"
+    # RFC 6750 §3 scope hint, per the MCP authorization spec's Scope Selection
+    # Strategy: tells a client the least-privilege scope to request first.
+    assert_includes response.headers["WWW-Authenticate"], 'scope="read"'
   end
 
   test "returns 401 with wrong token" do
@@ -49,7 +52,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_mcp_initialize_response(result)
   end
 
-  test "authenticates a token issued to a dynamically registered MCP client" do
+  test "authenticates a token issued to a dynamically registered MCP client (default read scope)" do
     post "/register",
       params: {
         client_name: "Claude",
@@ -62,7 +65,9 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :created
     app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
-    assert_equal "read_write", app.scopes.to_s
+    # Least privilege by default: a client registered without requesting a
+    # scope gets "read", not the old blanket "read_write".
+    assert_equal "read", app.scopes.to_s
 
     sign_in(@user)
     verifier = SecureRandom.urlsafe_base64(64)
@@ -90,7 +95,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     token_response = JSON.parse(response.body)
-    assert_equal "read_write", token_response["scope"]
+    assert_equal "read", token_response["scope"]
 
     post "/mcp", params: jsonrpc_request("initialize").to_json,
          headers: mcp_headers(token_response["access_token"])
@@ -99,18 +104,52 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_mcp_initialize_response(JSON.parse(response.body)["result"])
   end
 
-  test "rejects token with read-only scope" do
-    app = Doorkeeper::Application.create!(
-      name: "Test MCP Client #{SecureRandom.hex(4)}",
-      redirect_uri: "https://claude.ai/callback",
-      confidential: false
-    )
-    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
-      application: app,
-      resource_owner_id: @user.id,
-      scopes: "read",
-      expires_in: 1.year
-    )
+  test "a dynamically registered client that explicitly requests read_write keeps full MCP access" do
+    post "/register",
+      params: {
+        client_name: "Claude",
+        redirect_uris: [ "https://claude.ai/callback" ],
+        scope: "read_write"
+      }.to_json,
+      headers: { "Content-Type" => "application/json" }
+
+    assert_response :created
+    app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
+    assert_equal "read_write", app.scopes.to_s
+
+    sign_in(@user)
+    verifier = SecureRandom.urlsafe_base64(64)
+    challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+
+    post "/oauth/authorize", params: {
+      client_id: app.uid,
+      redirect_uri: app.redirect_uri,
+      response_type: "code",
+      code_challenge: challenge,
+      code_challenge_method: "S256"
+    }
+    code = Rack::Utils.parse_query(URI.parse(response.location).query)["code"]
+
+    post "/oauth/token", params: {
+      grant_type: "authorization_code",
+      client_id: app.uid,
+      redirect_uri: app.redirect_uri,
+      code: code,
+      code_verifier: verifier
+    }
+    token_response = JSON.parse(response.body)
+    assert_equal "read_write", token_response["scope"]
+
+    post "/mcp", params: jsonrpc_request("tools/list").to_json,
+         headers: mcp_headers(token_response["access_token"])
+
+    assert_response :ok
+    tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+    assert_includes tool_names, "update_transaction"
+  end
+
+  test "OAuth token with neither read nor read_write scope is rejected" do
+    token = create_oauth_token(scope: "") # pipelock:ignore
 
     post "/mcp", params: jsonrpc_request("initialize").to_json,
          headers: mcp_headers(token.token)
@@ -180,6 +219,388 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # -- Read-only access mode --
+
+  test "server/discover requires authentication" do
+    post "/mcp", params: jsonrpc_request("server/discover").to_json,
+         headers: { "Content-Type" => "application/json" }
+
+    assert_response :unauthorized
+  end
+
+  test "server/discover rejects a wrong bearer token" do
+    post "/mcp", params: jsonrpc_request("server/discover").to_json,
+         headers: mcp_headers("wrong-token")
+
+    assert_response :unauthorized
+  end
+
+  test "MCP_API_TOKEN keeps read-write behavior when MCP_READ_ONLY and MCP_API_TOKEN_SCOPE are unset" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+      assert_includes tool_names, "update_transaction"
+      assert_includes tool_names, "update_budget"
+    end
+  end
+
+  WRITE_TOOL_NAMES = %w[
+    import_bank_statement create_goal create_tag update_tag create_category
+    update_category update_transaction update_budget upload_account_statement
+    record_valuation create_bill update_bill record_bill_payment
+  ].freeze
+
+  # -- OAuth scope: read --
+
+  test "OAuth read scope authenticates and exposes only read tools" do
+    token = create_oauth_token(scope: "read") # pipelock:ignore
+
+    post "/mcp", params: jsonrpc_request("tools/list").to_json,
+         headers: mcp_headers(token.token)
+
+    assert_response :ok
+    tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+
+    assert_includes tool_names, "get_transactions"
+    assert_includes tool_names, "get_accounts"
+    assert_includes tool_names, "get_balance_sheet"
+    WRITE_TOOL_NAMES.each { |name| assert_not_includes tool_names, name }
+  end
+
+  test "OAuth read scope hides write tools even for a user with preview features on" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    token = create_oauth_token(scope: "read") # pipelock:ignore
+
+    post "/mcp", params: jsonrpc_request("tools/list").to_json,
+         headers: mcp_headers(token.token)
+
+    assert_response :ok
+    tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+
+    WRITE_TOOL_NAMES.each { |name| assert_not_includes tool_names, name }
+  end
+
+  test "tools/call refuses a write tool by exact name for an OAuth read-scope token, identically to an unknown tool" do
+    token = create_oauth_token(scope: "read") # pipelock:ignore
+    transaction = transactions(:one)
+    original_category_id = transaction.category_id
+
+    post "/mcp", params: jsonrpc_request("tools/call", {
+      name: "update_transaction",
+      arguments: { id: transaction.id, notes: "should never be written" }
+    }, id: 55).to_json, headers: mcp_headers(token.token)
+
+    assert_response :ok
+    body = JSON.parse(response.body)
+    assert_equal(-32602, body["error"]["code"])
+    assert_includes body["error"]["message"], "Unknown tool: update_transaction"
+
+    post "/mcp", params: jsonrpc_request("tools/call", {
+      name: "nonexistent_tool",
+      arguments: {}
+    }, id: 56).to_json, headers: mcp_headers(token.token)
+
+    unknown_tool_body = JSON.parse(response.body)
+    assert_equal body["error"]["message"].sub("update_transaction", "nonexistent_tool"), unknown_tool_body["error"]["message"],
+      "A hidden write tool and a genuinely unknown tool must be indistinguishable"
+
+    transaction.reload
+    assert_equal original_category_id, transaction.category_id
+    assert_not_equal "should never be written", transaction.entry.notes
+  end
+
+  test "tools/call executes a read tool normally for an OAuth read-scope token" do
+    token = create_oauth_token(scope: "read") # pipelock:ignore
+
+    post "/mcp", params: jsonrpc_request("tools/call", {
+      name: "get_balance_sheet",
+      arguments: {}
+    }).to_json, headers: mcp_headers(token.token)
+
+    assert_response :ok
+    result = JSON.parse(response.body)["result"]
+    assert_not result["isError"]
+    inner = JSON.parse(result["content"][0]["text"])
+    assert inner.key?("net_worth") || inner.key?("error")
+  end
+
+  # get_budget reads like the other Get* tools but is deliberately excluded
+  # from the read-only allowlist: its default (current-month) path calls
+  # Budget.find_or_bootstrap, which creates a Budget row on first access. A
+  # read-scoped credential must not be able to trigger that via tools/list
+  # or tools/call, and must not be able to create the month's budget as a
+  # side effect of an unrelated family gaining a first budget this month.
+  test "get_budget is not exposed to an OAuth read-scope token, and cannot be called" do
+    token = create_oauth_token(scope: "read") # pipelock:ignore
+
+    post "/mcp", params: jsonrpc_request("tools/list").to_json,
+         headers: mcp_headers(token.token)
+    assert_response :ok
+    tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+    assert_not_includes tool_names, "get_budget"
+
+    assert_no_difference "Budget.count" do
+      post "/mcp", params: jsonrpc_request("tools/call", {
+        name: "get_budget",
+        arguments: {}
+      }, id: 61).to_json, headers: mcp_headers(token.token)
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      assert_equal(-32602, body["error"]["code"])
+      assert_includes body["error"]["message"], "Unknown tool: get_budget"
+    end
+  end
+
+  test "OAuth read_write scope keeps the full MCP surface available" do
+    token = create_oauth_token(scope: "read_write") # pipelock:ignore
+
+    post "/mcp", params: jsonrpc_request("tools/list").to_json,
+         headers: mcp_headers(token.token)
+
+    assert_response :ok
+    tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+    assert_includes tool_names, "update_transaction"
+    assert_includes tool_names, "update_budget"
+  end
+
+  # -- MCP_API_TOKEN_SCOPE (static token, same read/read_write levels as OAuth) --
+
+  test "MCP_API_TOKEN_SCOPE=read restricts the static token to read-only tools" do
+    with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, "MCP_API_TOKEN_SCOPE" => "read") do # pipelock:ignore
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+      assert_includes tool_names, "get_accounts"
+      WRITE_TOOL_NAMES.each { |name| assert_not_includes tool_names, name }
+    end
+  end
+
+  test "MCP_API_TOKEN_SCOPE=read_write matches the historical default" do
+    with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, "MCP_API_TOKEN_SCOPE" => "read_write") do # pipelock:ignore
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+      assert_includes tool_names, "update_transaction"
+    end
+  end
+
+  test "an invalid MCP_API_TOKEN_SCOPE fails authentication instead of defaulting to read_write" do
+    with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, "MCP_API_TOKEN_SCOPE" => "admin") do # pipelock:ignore
+      Rails.logger.expects(:warn).with(regexp_matches(/MCP_API_TOKEN_SCOPE/)).once
+
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :unauthorized
+    end
+  end
+
+  # -- Global kill switch --
+
+  test "MCP_READ_ONLY=true blocks write tools even for the historical MCP_API_TOKEN" do
+    with_mcp_env do
+      with_env_overrides("MCP_READ_ONLY" => "true") do
+        post "/mcp", params: jsonrpc_request("tools/list").to_json,
+             headers: mcp_headers(@token)
+
+        assert_response :ok
+        tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+        WRITE_TOOL_NAMES.each { |name| assert_not_includes tool_names, name }
+
+        post "/mcp", params: jsonrpc_request("tools/call", {
+          name: "update_budget",
+          arguments: { budgeted_spending: 1 }
+        }, id: 57).to_json, headers: mcp_headers(@token)
+
+        body = JSON.parse(response.body)
+        assert_equal(-32602, body["error"]["code"])
+      end
+    end
+  end
+
+  test "MCP_READ_ONLY=true also restricts an OAuth read_write connection" do
+    token = create_oauth_token(scope: "read_write") # pipelock:ignore
+
+    with_env_overrides("MCP_READ_ONLY" => "true") do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(token.token)
+
+      assert_response :ok
+      tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+      WRITE_TOOL_NAMES.each { |name| assert_not_includes tool_names, name }
+    end
+  end
+
+  # Black-box adversarial test: the full public HTTP surface only, no
+  # internal helpers — registration, authorization-code + PKCE, token
+  # issuance, tools/list, then a direct tools/call on a write tool's exact
+  # name that tools/list never advertised. A client that already knows (or
+  # guesses) a hidden tool's name must still be unable to run it, and the
+  # database must show no trace of the attempt.
+  test "adversarial: a client that never asked for read_write cannot reach a write tool by name" do
+    with_mcp_cache do
+      post "/register",
+        params: {
+          client_name: "Adversarial Client",
+          redirect_uris: [ "https://claude.ai/callback" ]
+          # No "scope" — least privilege by default gives this client "read".
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      assert_response :created
+      app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
+      assert_equal "read", app.scopes.to_s
+
+      sign_in(@user)
+      verifier = SecureRandom.urlsafe_base64(64)
+      challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
+
+      post "/oauth/authorize", params: {
+        client_id: app.uid,
+        redirect_uri: app.redirect_uri,
+        response_type: "code",
+        code_challenge: challenge,
+        code_challenge_method: "S256"
+      }
+      code = Rack::Utils.parse_query(URI.parse(response.location).query)["code"]
+
+      post "/oauth/token", params: {
+        grant_type: "authorization_code",
+        client_id: app.uid,
+        redirect_uri: app.redirect_uri,
+        code: code,
+        code_verifier: verifier
+      }
+      access_token = JSON.parse(response.body)["access_token"]
+      assert access_token.present?
+
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(access_token)
+      assert_response :ok
+      session_id = JSON.parse(response.body).dig("result", "sessionId")
+
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(access_token).merge("Mcp-Session-Id" => session_id)
+      assert_response :ok
+      advertised_tools = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+      assert_not_includes advertised_tools, "update_transaction"
+
+      transaction = transactions(:one)
+      original_category_id = transaction.category_id
+      original_notes = transaction.entry.notes
+
+      post "/mcp", params: jsonrpc_request("tools/call", {
+        name: "update_transaction",
+        arguments: { id: transaction.id, notes: "planted by an adversarial client" }
+      }, id: 900).to_json, headers: mcp_headers(access_token).merge("Mcp-Session-Id" => session_id)
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      assert_equal(-32602, body["error"]["code"])
+      assert_includes body["error"]["message"], "Unknown tool: update_transaction"
+
+      transaction.reload
+      assert_equal original_category_id, transaction.category_id
+      assert_equal original_notes, transaction.entry.notes
+    end
+  end
+
+  # -- Session privilege preservation --
+
+  test "a session minted with an OAuth read-scope token stays read-only even when reused with a read-write token" do
+    with_mcp_cache do
+      with_mcp_env do
+        readonly_token = create_oauth_token(scope: "read") # pipelock:ignore
+
+        post "/mcp", params: jsonrpc_request("initialize").to_json,
+             headers: mcp_headers(readonly_token.token)
+
+        assert_response :ok
+        session_id = response.headers["Mcp-Session-Id"]
+        assert session_id.present?
+
+        # Same session id, but this request authenticates with the historical
+        # read-write token — the session's own access mode must still win.
+        post "/mcp", params: jsonrpc_request("tools/list").to_json,
+             headers: mcp_headers(@token).merge(
+               "Mcp-Protocol-Version" => MCP_PROTOCOL_VERSION,
+               "Mcp-Session-Id" => session_id
+             )
+
+        assert_response :ok
+        tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+        WRITE_TOOL_NAMES.each { |name| assert_not_includes tool_names, name }
+      end
+    end
+  end
+
+  test "a session minted with an OAuth read_write token keeps write tools available on reuse" do
+    with_mcp_cache do
+      token = create_oauth_token(scope: "read_write") # pipelock:ignore
+
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(token.token)
+      assert_response :ok
+      session_id = response.headers["Mcp-Session-Id"]
+
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(token.token).merge(
+             "Mcp-Protocol-Version" => MCP_PROTOCOL_VERSION,
+             "Mcp-Session-Id" => session_id
+           )
+
+      assert_response :ok
+      tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+      assert_includes tool_names, "update_transaction"
+    end
+  end
+
+  test "an ambiguous access_mode in a cached session never grants more than the current credential already has" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = SecureRandom.uuid
+        Rails.cache.write("mcp:session:#{session_id}", { user_id: @user.id, access_mode: "not_a_real_mode" }, expires_in: 1.day)
+        readonly_token = create_oauth_token(scope: "read") # pipelock:ignore
+
+        post "/mcp", params: jsonrpc_request("tools/list").to_json,
+             headers: mcp_headers(readonly_token.token).merge(
+               "Mcp-Protocol-Version" => MCP_PROTOCOL_VERSION,
+               "Mcp-Session-Id" => session_id
+             )
+
+        assert_response :ok
+        tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+        WRITE_TOOL_NAMES.each { |name| assert_not_includes tool_names, name }
+      end
+    end
+  end
+
+  test "a legacy cache entry storing a bare user id is still accepted, at its historical read-write level" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = SecureRandom.uuid
+        Rails.cache.write("mcp:session:#{session_id}", @user.id, expires_in: 1.day)
+
+        post "/mcp", params: jsonrpc_request("tools/list").to_json,
+             headers: mcp_headers(@token).merge(
+               "Mcp-Protocol-Version" => MCP_PROTOCOL_VERSION,
+               "Mcp-Session-Id" => session_id
+             )
+
+        assert_response :ok
+        tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+        assert_includes tool_names, "update_transaction", "legacy sessions predate read-only tokens and were always read-write"
+      end
+    end
+  end
+
   # -- JSON-RPC protocol --
 
   test "returns parse error for invalid JSON" do
@@ -220,13 +641,17 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   # -- Notifications (requests without id) --
+  #
+  # MCP Streamable HTTP: a notification (no "id") gets 202 Accepted with an
+  # empty body, not 204 — the historical initialize / notifications/initialized
+  # workflow still works, only the status code changed.
 
   test "notifications receive no response body" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_notification("notifications/initialized").to_json,
            headers: mcp_headers(@token)
 
-      assert_response :no_content
+      assert_response :accepted
       assert response.body.blank?, "Notification must not produce a response body"
     end
   end
@@ -236,7 +661,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       post "/mcp", params: jsonrpc_notification("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json,
            headers: mcp_headers(@token)
 
-      assert_response :no_content
+      assert_response :accepted
       assert response.body.blank?, "Notification-style tools/call must not execute or respond"
     end
   end
@@ -246,7 +671,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       post "/mcp", params: jsonrpc_notification("notifications/unknown").to_json,
            headers: mcp_headers(@token)
 
-      assert_response :no_content
+      assert_response :accepted
       assert response.body.blank?
     end
   end
@@ -293,6 +718,217 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_equal 24, body["id"]
       assert_equal MCP_PROTOCOL_VERSION, body.dig("result", "protocolVersion")
       assert_equal MCP_PROTOCOL_VERSION, response.headers["Mcp-Protocol-Version"]
+    end
+  end
+
+  # -- 2026-07-28 (stateless/self-contained dialect) --
+
+  MODERN_PROTOCOL_VERSION = "2026-07-28"
+
+  test "initialize accepts the 2026-07-28 protocol version" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("initialize", { protocolVersion: MODERN_PROTOCOL_VERSION }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      result = JSON.parse(response.body)["result"]
+      assert_equal MODERN_PROTOCOL_VERSION, result["protocolVersion"]
+      assert_equal MODERN_PROTOCOL_VERSION, response.headers["Mcp-Protocol-Version"]
+    end
+  end
+
+  test "server/discover returns the 2026-07-28 result shape without minting a session" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("server/discover", {
+        _meta: { "io.modelcontextprotocol/protocolVersion" => MODERN_PROTOCOL_VERSION }
+      }).to_json,
+        headers: mcp_headers(@token).merge(
+          "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+          "Mcp-Method" => "server/discover"
+        )
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      result = body["result"]
+
+      assert_equal "complete", result["resultType"]
+      assert_includes result["supportedVersions"], MODERN_PROTOCOL_VERSION
+      assert result["capabilities"].key?("tools")
+      assert_equal "sure", result.dig("_meta", "io.modelcontextprotocol/serverInfo", "name")
+      assert_nil result["serverInfo"], "serverInfo must live under result._meta, not directly under result"
+      assert_nil response.headers["Mcp-Session-Id"], "server/discover must not create a session"
+    end
+  end
+
+  test "server/discover still requires authentication" do
+    post "/mcp", params: jsonrpc_request("server/discover").to_json,
+         headers: { "Content-Type" => "application/json" }
+
+    assert_response :unauthorized
+  end
+
+  test "tools/list adds resultType complete and cache hints for the 2026-07-28 dialect" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token).merge(
+             "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+             "Mcp-Method" => "tools/list"
+           )
+
+      assert_response :ok
+      result = JSON.parse(response.body)["result"]
+      assert_equal "complete", result["resultType"]
+      assert_kind_of Array, result["tools"]
+      assert_equal "sure", result.dig("_meta", "io.modelcontextprotocol/serverInfo", "name")
+      # CacheableResult (2026-07-28): list results carry freshness/scope hints.
+      # ttlMs: 0 because the tool surface depends on the caller's own scope.
+      assert_equal 0, result["ttlMs"]
+      assert_equal "private", result["cacheScope"]
+    end
+  end
+
+  test "tools/call adds resultType complete for the 2026-07-28 dialect, with no cache hints" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json,
+           headers: mcp_headers(@token).merge(
+             "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+             "Mcp-Method" => "tools/call",
+             "Mcp-Name" => "get_balance_sheet"
+           )
+
+      assert_response :ok
+      result = JSON.parse(response.body)["result"]
+      assert_equal "complete", result["resultType"]
+      assert_not result["isError"]
+      assert_equal "sure", result.dig("_meta", "io.modelcontextprotocol/serverInfo", "name")
+      # CacheableResult only applies to list-shaped results, not a tool call.
+      assert_not result.key?("ttlMs")
+      assert_not result.key?("cacheScope")
+    end
+  end
+
+  test "a 2026-07-28 request without Mcp-Method is rejected" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list", {}, id: 62).to_json,
+           headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION)
+
+      assert_response :bad_request
+      body = JSON.parse(response.body)
+      assert_equal 62, body["id"]
+      assert_equal(-32020, body["error"]["code"])
+      assert_includes body["error"]["message"], "Mcp-Method"
+    end
+  end
+
+  test "a 2026-07-28 request with a Mcp-Method that disagrees with the JSON-RPC method is rejected" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list", {}, id: 63).to_json,
+           headers: mcp_headers(@token).merge(
+             "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+             "Mcp-Method" => "tools/call"
+           )
+
+      assert_response :bad_request
+      body = JSON.parse(response.body)
+      assert_equal 63, body["id"]
+      assert_equal(-32020, body["error"]["code"])
+    end
+  end
+
+  test "a 2026-07-28 tools/call without a matching Mcp-Name is rejected before the tool runs" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "get_balance_sheet", arguments: {} }, id: 64).to_json,
+           headers: mcp_headers(@token).merge(
+             "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+             "Mcp-Method" => "tools/call",
+             "Mcp-Name" => "update_transaction"
+           )
+
+      assert_response :bad_request
+      body = JSON.parse(response.body)
+      assert_equal 64, body["id"]
+      assert_equal(-32020, body["error"]["code"])
+      assert_includes body["error"]["message"], "Mcp-Name"
+    end
+  end
+
+  test "rejects a request whose header and _meta protocol versions disagree" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list", {
+        _meta: { "io.modelcontextprotocol/protocolVersion" => MCP_PROTOCOL_VERSION }
+      }, id: 61).to_json,
+        headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION)
+
+      assert_response :bad_request
+      body = JSON.parse(response.body)
+      assert_equal 61, body["id"]
+      assert_equal(-32600, body["error"]["code"])
+    end
+  end
+
+  test "positional (array-valued) JSON-RPC params degrade to no named params instead of crashing" do
+    with_mcp_env do
+      # JSON-RPC 2.0 allows "params" to be an Array; nothing Sure implements
+      # uses positional params, but tools/list needs none, so this must not
+      # 500 on Array#dig receiving a String key.
+      post "/mcp", params: { jsonrpc: "2.0", id: 70, method: "tools/list", params: [] }.to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      assert_equal 70, body["id"]
+      assert_kind_of Array, body["result"]["tools"]
+    end
+  end
+
+  test "a 2026-07-28 request ignores a stray Mcp-Session-Id instead of validating or echoing it" do
+    with_mcp_cache do
+      with_mcp_env do
+        post "/mcp", params: jsonrpc_request("initialize").to_json,
+             headers: mcp_headers(@token)
+        assert_response :ok
+        legacy_session_id = response.headers["Mcp-Session-Id"]
+        assert legacy_session_id.present?
+
+        post "/mcp", params: jsonrpc_request("tools/list").to_json,
+             headers: mcp_headers(@token).merge(
+               "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+               "Mcp-Method" => "tools/list",
+               "Mcp-Session-Id" => legacy_session_id
+             )
+
+        assert_response :ok
+        assert_nil response.headers["Mcp-Session-Id"], "2026-07-28 has no session concept and must not echo one back"
+      end
+    end
+  end
+
+  test "legacy 2025-03-26 workflow is unchanged: initialize, notifications/initialized, tools/list, tools/call" do
+    with_mcp_cache do
+      with_mcp_env do
+        post "/mcp", params: jsonrpc_request("initialize", { protocolVersion: "2025-03-26" }).to_json,
+             headers: mcp_headers(@token)
+        assert_response :ok
+        session_id = JSON.parse(response.body).dig("result", "sessionId")
+
+        post "/mcp", params: jsonrpc_notification("notifications/initialized").to_json,
+             headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => "2025-03-26", "Mcp-Session-Id" => session_id)
+        assert_response :accepted
+        assert response.body.blank?
+
+        post "/mcp", params: jsonrpc_request("tools/list").to_json,
+             headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => "2025-03-26", "Mcp-Session-Id" => session_id)
+        assert_response :ok
+        tools_result = JSON.parse(response.body)["result"]
+        assert_not tools_result.key?("resultType"), "legacy dialect must not gain resultType"
+        assert_kind_of Array, tools_result["tools"]
+
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json,
+             headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => "2025-03-26", "Mcp-Session-Id" => session_id)
+        assert_response :ok
+        call_result = JSON.parse(response.body)["result"]
+        assert_not call_result.key?("resultType")
+      end
     end
   end
 
@@ -637,6 +1273,20 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     def with_mcp_env(&block)
       with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, &block) # pipelock:ignore
+    end
+
+    def create_oauth_token(scope:, user: @user) # pipelock:ignore
+      app = Doorkeeper::Application.create!(
+        name: "Test MCP Client #{SecureRandom.hex(4)}",
+        redirect_uri: "https://claude.ai/callback",
+        confidential: false
+      )
+      Doorkeeper::AccessToken.create!( # pipelock:ignore
+        application: app,
+        resource_owner_id: user.id,
+        scopes: scope,
+        expires_in: 1.year
+      )
     end
 
     def with_mcp_cache

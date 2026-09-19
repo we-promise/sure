@@ -32,6 +32,10 @@ class Assistant::Function::GetIncomeStatement < Assistant::Function
         ```
       INSTRUCTIONS
     end
+
+    def read_only?
+      true
+    end
   end
 
   MAX_MONTH_BUCKETS = 36
