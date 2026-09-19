@@ -2,7 +2,6 @@ import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 import { sankey } from "d3-sankey";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
-import { hiddenSankeyLabels } from "utils/sankey_labels";
 import { sankeyNodeHasChildren, zoomSankeyData } from "utils/sankey_zoom";
 import {
   buildCategoryTransactionsUrl,
@@ -385,11 +384,44 @@ export default class extends Controller {
 
   // Calculate which labels should be hidden to prevent overlap
   #calculateHiddenLabels(nodes) {
+    const hiddenLabels = new Set();
     const height = this.#chartElement().clientHeight || 400;
-    return hiddenSankeyLabels(nodes, {
-      height,
-      minSpacing: this.constructor.MIN_LABEL_SPACING,
+    const isLargeGraph = height > 600;
+    const minSpacing = isLargeGraph
+      ? this.constructor.MIN_LABEL_SPACING * 0.7
+      : this.constructor.MIN_LABEL_SPACING;
+
+    // Group nodes by column (using depth which d3-sankey assigns)
+    const columns = new Map();
+    nodes.forEach((node) => {
+      const depth = node.depth;
+      if (!columns.has(depth)) columns.set(depth, []);
+      columns.get(depth).push(node);
     });
+
+    // For each column, check for overlapping labels
+    columns.forEach((columnNodes) => {
+      // Sort by vertical position
+      columnNodes.sort((a, b) => (a.y0 + a.y1) / 2 - (b.y0 + b.y1) / 2);
+
+      let lastVisibleY = Number.NEGATIVE_INFINITY;
+
+      columnNodes.forEach((node) => {
+        const nodeY = (node.y0 + node.y1) / 2;
+        const nodeHeight = node.y1 - node.y0;
+
+        if (isLargeGraph && nodeHeight > minSpacing * 1.5) {
+          lastVisibleY = nodeY;
+        } else if (nodeY - lastVisibleY < minSpacing) {
+          // Too close to previous visible label, hide this one
+          hiddenLabels.add(node.index);
+        } else {
+          lastVisibleY = nodeY;
+        }
+      });
+    });
+
+    return hiddenLabels;
   }
 
   #attachHoverEvents(linkPaths, nodeGroups, sankeyData, hiddenLabels) {

@@ -1,5 +1,5 @@
-// Shared label-collision rule for both Sankey renderers (legacy dashboard
-// chart and preview chart). Nodes compete for labels only within their own
+// Label-collision rule for the new preview Sankey chart.
+// Nodes compete for labels only within their own
 // visual column: d3-sankey's justify alignment can place same-depth nodes
 // in different columns (sinks flush right), so columns are keyed by x0,
 // not depth. Within a column, labels are considered in descending
