@@ -16,6 +16,20 @@ components:
       name: X-Api-Key
       in: header
       description: API key for authentication. Generate one from your account settings.
+    financekitPublisher:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque publisher credential
+      description: Revocable credential restricted to one FinanceKit publisher upload URL.
+    oauth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: "/oauth/authorize"
+          tokenUrl: "/oauth/token"
+          scopes:
+            read: Read access
+            read_write: Read and write access
   schemas:
     Pagination:
       type: object
@@ -3625,6 +3639,801 @@ components:
             plaid_items:
               type: integer
               minimum: 0
+    FinancekitMoney:
+      type: object
+      additionalProperties: false
+      required:
+      - amount
+      - currency
+      - direction
+      properties:
+        amount:
+          type: string
+          pattern: "^(0|[1-9][0-9]{0,14})(\\.[0-9]{1,4})?$"
+        currency:
+          type: string
+          pattern: "^[A-Z]{3,5}$"
+        direction:
+          type: string
+          enum:
+          - credit
+          - debit
+    FinancekitConsent:
+      type: object
+      additionalProperties: false
+      required:
+      - version
+      - granted_at
+      - selected_source_account_ids
+      - upload_authorized
+      - family_visibility_acknowledged
+      - remote_processing_acknowledged
+      properties:
+        version:
+          type: integer
+          enum:
+          - 1
+        granted_at:
+          type: string
+          format: date-time
+        selected_source_account_ids:
+          type: array
+          minItems: 1
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        upload_authorized:
+          type: boolean
+          enum:
+          - true
+        family_visibility_acknowledged:
+          type: boolean
+          enum:
+          - true
+        remote_processing_acknowledged:
+          type: boolean
+          enum:
+          - true
+    FinancekitEnrollment:
+      type: object
+      additionalProperties: false
+      required:
+      - protocol_version
+      - enrollment_id
+      - consent
+      properties:
+        protocol_version:
+          type: integer
+          enum:
+          - 2
+        enrollment_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        replaces_connection_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        consent:
+          "$ref": "#/components/schemas/FinancekitConsent"
+    FinancekitMappingRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_version
+      - action
+      - name
+      - institution_name
+      - currency
+      - accountable_type
+      - subtype
+      - ledger_timezone
+      properties:
+        expected_version:
+          type: integer
+          minimum: 0
+        action:
+          type: string
+          enum:
+          - create
+          - link
+        name:
+          type: string
+          maxLength: 255
+        institution_name:
+          type: string
+          maxLength: 255
+        currency:
+          type: string
+        accountable_type:
+          type: string
+          enum:
+          - Depository
+          - CreditCard
+        subtype:
+          type: string
+        ledger_timezone:
+          type: string
+        account_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        lineage_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        booked_balance:
+          "$ref": "#/components/schemas/FinancekitMoney"
+        observed_at:
+          type: string
+          format: date-time
+      description: create requires booked_balance and observed_at; link requires a writable
+        same-family account_id and may carry a prior lineage_id
+    FinancekitAccountMapping:
+      type: object
+      additionalProperties: false
+      required:
+      - source_id
+      - lineage_id
+      - mapping_version
+      - name
+      - institution_name
+      - currency
+      - accountable_type
+      - subtype
+      - ledger_timezone
+      - account_id
+      properties:
+        source_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        lineage_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        mapping_version:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+        institution_name:
+          type: string
+          nullable: true
+        currency:
+          type: string
+        accountable_type:
+          type: string
+        subtype:
+          type: string
+        ledger_timezone:
+          type: string
+        account_id:
+          allOf:
+          - type: string
+            format: uuid
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          nullable: true
+    FinancekitAccountBinding:
+      type: object
+      additionalProperties: false
+      required:
+      - source_account_id
+      - lineage_id
+      - mapping_version
+      properties:
+        source_account_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        lineage_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        mapping_version:
+          type: integer
+          minimum: 1
+    FinancekitConnection:
+      type: object
+      required:
+      - id
+      - connection_id
+      - publisher_id
+      - status
+      - generation
+      - next_sequence
+      - open_conflicts
+      properties:
+        id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        connection_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        publisher_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        status:
+          type: string
+          enum:
+          - pending_mapping
+          - active
+          - repair_required
+          - revoked
+        generation:
+          type: integer
+          minimum: 1
+        stream_id:
+          allOf:
+          - type: string
+            format: uuid
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          nullable: true
+        next_sequence:
+          type: integer
+          minimum: 1
+        repair_reason:
+          type: string
+          nullable: true
+        last_device_contact_at:
+          allOf:
+          - type: string
+            format: date-time
+          nullable: true
+        last_accepted_at:
+          allOf:
+          - type: string
+            format: date-time
+          nullable: true
+        last_imported_at:
+          allOf:
+          - type: string
+            format: date-time
+          nullable: true
+        last_downstream_at:
+          allOf:
+          - type: string
+            format: date-time
+          nullable: true
+        last_captured_at:
+          allOf:
+          - type: string
+            format: date-time
+          nullable: true
+        open_conflicts:
+          type: integer
+          minimum: 0
+        accounts:
+          type: array
+          items:
+            "$ref": "#/components/schemas/FinancekitAccountMapping"
+        pagination:
+          "$ref": "#/components/schemas/Pagination"
+    FinancekitPublisherConfiguration:
+      allOf:
+      - "$ref": "#/components/schemas/FinancekitConnection"
+      - type: object
+        required:
+        - protocol_version
+        - server_url
+        - upload_url
+        - consent
+        - account_bindings
+        - max_records_per_batch
+        - max_bytes_per_batch
+        - publisher_credential
+        properties:
+          protocol_version:
+            type: integer
+            enum:
+            - 2
+          server_url:
+            type: string
+            format: uri
+          upload_url:
+            type: string
+            format: uri
+          consent:
+            "$ref": "#/components/schemas/FinancekitConsent"
+          account_bindings:
+            type: array
+            items:
+              "$ref": "#/components/schemas/FinancekitAccountBinding"
+          max_records_per_batch:
+            type: integer
+            minimum: 1
+          max_bytes_per_batch:
+            type: integer
+            minimum: 1
+          publisher_credential:
+            type: string
+            writeOnly: true
+    FinancekitAccountEvent:
+      type: object
+      additionalProperties: false
+      required:
+      - source_id
+      - lineage_id
+      - mapping_version
+      - display_name
+      - institution_name
+      - currency
+      - kind
+      properties:
+        source_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        lineage_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        mapping_version:
+          type: integer
+          minimum: 1
+        display_name:
+          type: string
+          maxLength: 255
+        institution_name:
+          type: string
+          maxLength: 255
+        currency:
+          type: string
+        kind:
+          type: string
+          enum:
+          - asset
+          - liability
+        account_description:
+          type: string
+          maxLength: 1000
+        opening_date:
+          type: string
+          format: date-time
+    FinancekitBalanceEvent:
+      type: object
+      additionalProperties: false
+      required:
+      - source_id
+      - source_account_id
+      - lineage_id
+      - mapping_version
+      - kind
+      - observed_at
+      - money
+      properties:
+        source_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        source_account_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        lineage_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        mapping_version:
+          type: integer
+          minimum: 1
+        kind:
+          type: string
+          enum:
+          - available
+          - booked
+        observed_at:
+          type: string
+          format: date-time
+        money:
+          "$ref": "#/components/schemas/FinancekitMoney"
+    FinancekitTransactionEvent:
+      type: object
+      additionalProperties: false
+      required:
+      - source_id
+      - source_account_id
+      - lineage_id
+      - mapping_version
+      - amount
+      - transaction_description
+      - original_transaction_description
+      - transaction_type
+      - status
+      - transacted_at
+      properties:
+        source_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        source_account_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        lineage_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        mapping_version:
+          type: integer
+          minimum: 1
+        amount:
+          "$ref": "#/components/schemas/FinancekitMoney"
+        foreign_amount:
+          "$ref": "#/components/schemas/FinancekitMoney"
+        foreign_exchange_rate:
+          type: string
+        transaction_description:
+          type: string
+          maxLength: 1000
+        original_transaction_description:
+          type: string
+          maxLength: 1000
+        transaction_type:
+          type: string
+          maxLength: 100
+        status:
+          type: string
+          enum:
+          - authorized
+          - pending
+          - booked
+          - rejected
+          - memo
+        transacted_at:
+          type: string
+          format: date-time
+        posted_at:
+          type: string
+          format: date-time
+        merchant_name:
+          type: string
+          maxLength: 255
+        merchant_category_code:
+          type: integer
+          minimum: -32768
+          maximum: 32767
+    FinancekitTombstoneEvent:
+      type: object
+      additionalProperties: false
+      required:
+      - source_id
+      - source_account_id
+      - lineage_id
+      - mapping_version
+      properties:
+        source_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        source_account_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        lineage_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        mapping_version:
+          type: integer
+          minimum: 1
+    FinancekitEvent:
+      oneOf:
+      - type: object
+        additionalProperties: false
+        required:
+        - kind
+        - account
+        properties:
+          kind:
+            type: string
+            enum:
+            - account_upsert
+          account:
+            "$ref": "#/components/schemas/FinancekitAccountEvent"
+      - type: object
+        additionalProperties: false
+        required:
+        - kind
+        - source_account_id
+        - lineage_id
+        - mapping_version
+        properties:
+          kind:
+            type: string
+            enum:
+            - account_unavailable
+          source_account_id:
+            type: string
+            format: uuid
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          lineage_id:
+            type: string
+            format: uuid
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          mapping_version:
+            type: integer
+            minimum: 1
+      - type: object
+        additionalProperties: false
+        required:
+        - kind
+        - balance
+        properties:
+          kind:
+            type: string
+            enum:
+            - balance_upsert
+          balance:
+            "$ref": "#/components/schemas/FinancekitBalanceEvent"
+      - type: object
+        additionalProperties: false
+        required:
+        - kind
+        - transaction
+        properties:
+          kind:
+            type: string
+            enum:
+            - transaction_upsert
+          transaction:
+            "$ref": "#/components/schemas/FinancekitTransactionEvent"
+      - type: object
+        additionalProperties: false
+        required:
+        - kind
+        - tombstone
+        properties:
+          kind:
+            type: string
+            enum:
+            - transaction_tombstone
+          tombstone:
+            "$ref": "#/components/schemas/FinancekitTombstoneEvent"
+    FinancekitBatch:
+      type: object
+      additionalProperties: false
+      required:
+      - protocol_version
+      - connection_id
+      - publisher_id
+      - generation
+      - stream_id
+      - batch_id
+      - sequence
+      - capture_id
+      - chunk_index
+      - chunk_count
+      - capture_mode
+      - snapshot_complete
+      - captured_at
+      - selected_source_account_ids
+      - events
+      properties:
+        protocol_version:
+          type: integer
+          enum:
+          - 2
+        connection_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        publisher_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        generation:
+          type: integer
+          minimum: 1
+        stream_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        batch_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        sequence:
+          type: integer
+          minimum: 1
+        predecessor_digest:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+        capture_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        chunk_index:
+          type: integer
+          minimum: 0
+        chunk_count:
+          type: integer
+          minimum: 1
+        capture_mode:
+          type: string
+          enum:
+          - snapshot
+          - delta
+        snapshot_complete:
+          type: boolean
+        captured_at:
+          type: string
+          format: date-time
+        selected_source_account_ids:
+          type: array
+          minItems: 1
+          maxItems: 20
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        events:
+          type: array
+          maxItems: 500
+          items:
+            "$ref": "#/components/schemas/FinancekitEvent"
+      description: Immutable ordered publisher batch. sequence 1 omits predecessor_digest;
+        later batches carry the SHA-256 digest of the preceding payload. Omission never
+        deletes data.
+    FinancekitBatchReceipt:
+      type: object
+      additionalProperties: false
+      required:
+      - connection_id
+      - publisher_id
+      - generation
+      - stream_id
+      - batch_id
+      - sequence
+      - payload_digest
+      - status
+      - accepted_at
+      properties:
+        connection_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        publisher_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        generation:
+          type: integer
+        stream_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        batch_id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        sequence:
+          type: integer
+        payload_digest:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+        status:
+          type: string
+          enum:
+          - accepted
+        accepted_at:
+          type: string
+          format: date-time
+    FinancekitConflict:
+      type: object
+      required:
+      - id
+      - kind
+      - status
+      - details
+      - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+        kind:
+          type: string
+        status:
+          type: string
+          enum:
+          - open
+          - resolved
+        details:
+          type: object
+        resolution:
+          type: string
+          nullable: true
+        resolved_at:
+          allOf:
+          - type: string
+            format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        financekit_account_lineage_id:
+          allOf:
+          - type: string
+            format: uuid
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          nullable: true
+        financekit_transaction_id:
+          allOf:
+          - type: string
+            format: uuid
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          nullable: true
+    FinancekitConflictResolution:
+      type: object
+      additionalProperties: false
+      required:
+      - resolution
+      properties:
+        resolution:
+          type: string
+          description: "`keep_sure` closes the conflict without mutating the publisher stream. `retry_after_repair` closes the conflict, moves the connection to repair_required, revokes queued work and credentials, and requires POST /repair before uploads resume."
+          enum:
+          - keep_sure
+          - retry_after_repair
+    FinancekitCapabilities:
+      type: object
+      additionalProperties: false
+      required:
+      - available
+      - protocol_versions
+      - delivery
+      - max_payload_bytes
+      - max_records
+      - max_accounts
+      - max_queued_batches
+      - transaction_statuses
+      - amount_precision
+      - amount_scale
+      properties:
+        available:
+          type: boolean
+        protocol_versions:
+          type: array
+          items:
+            type: integer
+            enum:
+            - 2
+        delivery:
+          type: string
+          enum:
+          - background_publisher
+        max_payload_bytes:
+          type: integer
+        max_records:
+          type: integer
+        max_accounts:
+          type: integer
+        max_queued_batches:
+          type: integer
+        transaction_statuses:
+          type: array
+          items:
+            type: string
+        amount_precision:
+          type: integer
+        amount_scale:
+          type: integer
+    FinancekitError:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          type: string
 paths:
   "/api/v1/accounts":
     get:
@@ -5188,6 +5997,945 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/financekit/capabilities":
+    get:
+      summary: Discover FinanceKit background publisher support
+      tags:
+      - FinanceKit
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read
+      responses:
+        '200':
+          description: Publisher limits and protocol versions
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitCapabilities"
+        '400':
+          description: Malformed or unsupported protocol
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '403':
+          description: Insufficient permission or publisher eligibility
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '409':
+          description: Enrollment, mapping, lineage, generation, or stream conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '413':
+          description: Payload or record limit exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '422':
+          description: Invalid typed record or consent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Rate limited or publisher inbox full
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Feature unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+  "/api/v1/financekit/connections":
+    post:
+      summary: Enroll a FinanceKit device publisher
+      tags:
+      - FinanceKit
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read_write
+      responses:
+        '201':
+          description: Publisher enrolled pending account mapping
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitConnection"
+        '400':
+          description: Malformed or unsupported protocol
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '403':
+          description: Insufficient permission or publisher eligibility
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '409':
+          description: Enrollment, mapping, lineage, generation, or stream conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '413':
+          description: Payload or record limit exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '422':
+          description: Invalid typed record or consent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Rate limited or publisher inbox full
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Feature unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/FinancekitEnrollment"
+  "/api/v1/financekit/connections/{id}":
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      summary: Read publisher health and paginated mappings
+      tags:
+      - FinanceKit
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read
+      responses:
+        '200':
+          description: Publisher health
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitConnection"
+        '400':
+          description: Malformed or unsupported protocol
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '403':
+          description: Insufficient permission or publisher eligibility
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '409':
+          description: Enrollment, mapping, lineage, generation, or stream conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '413':
+          description: Payload or record limit exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '422':
+          description: Invalid typed record or consent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Rate limited or publisher inbox full
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Feature unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+    delete:
+      summary: Revoke a publisher and retain imported financial history
+      tags:
+      - FinanceKit
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read_write
+      responses:
+        '204':
+          description: Publisher revoked
+        '400':
+          description: Malformed or unsupported protocol
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '403':
+          description: Insufficient permission or publisher eligibility
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '409':
+          description: Enrollment, mapping, lineage, generation, or stream conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '413':
+          description: Payload or record limit exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '422':
+          description: Invalid typed record or consent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Rate limited or publisher inbox full
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Feature unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+  "/api/v1/financekit/connections/{connection_id}/account_mappings/{source_id}":
+    parameters:
+    - name: connection_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: source_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    put:
+      summary: Explicitly create or link a canonical account lineage
+      tags:
+      - FinanceKit
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read_write
+      responses:
+        '200':
+          description: Stable account lineage binding
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitAccountMapping"
+        '400':
+          description: Malformed or unsupported protocol
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '403':
+          description: Insufficient permission or publisher eligibility
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '409':
+          description: Enrollment, mapping, lineage, generation, or stream conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '413':
+          description: Payload or record limit exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '422':
+          description: Invalid typed record or consent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Rate limited or publisher inbox full
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Feature unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/FinancekitMappingRequest"
+  "/api/v1/financekit/connections/{connection_id}/activate":
+    parameters:
+    - name: connection_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      summary: Activate the background publisher
+      tags:
+      - FinanceKit
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read_write
+      responses:
+        '200':
+          description: Publisher configuration and a newly issued restricted credential
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitPublisherConfiguration"
+        '400':
+          description: Malformed or unsupported protocol
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '403':
+          description: Insufficient permission or publisher eligibility
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '409':
+          description: Enrollment, mapping, lineage, generation, or stream conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '413':
+          description: Payload or record limit exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '422':
+          description: Invalid typed record or consent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Rate limited or publisher inbox full
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Feature unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+  "/api/v1/financekit/connections/{connection_id}/credential":
+    parameters:
+    - name: connection_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      summary: Credential the background publisher
+      tags:
+      - FinanceKit
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read_write
+      responses:
+        '200':
+          description: Publisher configuration and a newly issued restricted credential
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitPublisherConfiguration"
+        '400':
+          description: Malformed or unsupported protocol
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '403':
+          description: Insufficient permission or publisher eligibility
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '409':
+          description: Enrollment, mapping, lineage, generation, or stream conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '413':
+          description: Payload or record limit exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '422':
+          description: Invalid typed record or consent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Rate limited or publisher inbox full
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Feature unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+  "/api/v1/financekit/connections/{connection_id}/repair":
+    parameters:
+    - name: connection_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      summary: Repair the background publisher
+      tags:
+      - FinanceKit
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read_write
+      responses:
+        '200':
+          description: Publisher configuration and a newly issued restricted credential
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitPublisherConfiguration"
+        '400':
+          description: Malformed or unsupported protocol
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '403':
+          description: Insufficient permission or publisher eligibility
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '409':
+          description: Enrollment, mapping, lineage, generation, or stream conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '413':
+          description: Payload or record limit exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '422':
+          description: Invalid typed record or consent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Rate limited or publisher inbox full
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Feature unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+  "/api/v1/financekit/publishers/{publisher_id}/batches":
+    post:
+      summary: Durably accept an ordered FinanceKit publisher batch
+      tags:
+      - FinanceKit
+      security:
+      - financekitPublisher: []
+      responses:
+        '202':
+          description: Immutable bytes accepted into the inbox
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitBatchReceipt"
+        '400':
+          description: Malformed or unsupported protocol
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '409':
+          description: Enrollment, mapping, lineage, generation, or stream conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '413':
+          description: Payload or record limit exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Rate limited or publisher inbox full
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/FinancekitBatch"
+      parameters:
+      - name: publisher_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: X-Sure-Payload-SHA256
+        in: header
+        required: false
+        schema:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+  "/api/v1/financekit/connections/{connection_id}/conflicts":
+    parameters:
+    - name: connection_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      summary: List conflicts requiring user review
+      tags:
+      - FinanceKit
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read
+      responses:
+        '200':
+          description: Conflict collection
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - conflicts
+                properties:
+                  conflicts:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/FinancekitConflict"
+        '400':
+          description: Malformed or unsupported protocol
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '403':
+          description: Insufficient permission or publisher eligibility
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '409':
+          description: Enrollment, mapping, lineage, generation, or stream conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '413':
+          description: Payload or record limit exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '422':
+          description: Invalid typed record or consent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Rate limited or publisher inbox full
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Feature unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+  "/api/v1/financekit/connections/{connection_id}/conflicts/{id}":
+    parameters:
+    - name: connection_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    patch:
+      summary: Resolve a FinanceKit import conflict
+      tags:
+      - FinanceKit
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read_write
+      responses:
+        '200':
+          description: Conflict resolved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitConflict"
+        '400':
+          description: Malformed or unsupported protocol
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '403':
+          description: Insufficient permission or publisher eligibility
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '409':
+          description: Enrollment, mapping, lineage, generation, or stream conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '413':
+          description: Payload or record limit exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '422':
+          description: Invalid typed record or consent
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Rate limited or publisher inbox full
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+        '503':
+          description: Feature unavailable
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/FinancekitConflictResolution"
   "/api/v1/holdings":
     get:
       summary: List holdings
