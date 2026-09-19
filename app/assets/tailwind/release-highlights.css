@@ -45,3 +45,12 @@
 .release-highlight-popover .driver-popover-arrow {
   display: none;
 }
+
+/* Anchored feature highlight popover (e.g. "Meet Bills"). Shares the
+   release-highlight-popover look - including the hidden arrow, since the
+   spotlight cutout over the nav entry already does the pointing - sized
+   for a short pitch instead of full release notes. */
+.feature-highlight-popover {
+  width: min(22rem, calc(100vw - 2rem));
+  max-width: min(22rem, calc(100vw - 2rem));
+}

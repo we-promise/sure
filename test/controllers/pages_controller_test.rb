@@ -352,6 +352,37 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller='release-highlight']", count: 0
   end
 
+  test "dashboard mounts the feature highlight for a preview user with an unseen feature" do
+    Sure.stubs(:version).returns(Semver.new("0.7.5"))
+    @user.update!(preferences: { "preview_features_enabled" => true })
+
+    get root_path
+
+    assert_response :ok
+    assert_select "[data-controller='feature-highlight'][data-feature-highlight-key-value='bills']"
+  end
+
+  test "dashboard omits the feature highlight for users without preview features" do
+    Sure.stubs(:version).returns(Semver.new("0.7.5"))
+    @user.update!(preferences: {})
+
+    get root_path
+
+    assert_response :ok
+    assert_select "[data-controller='feature-highlight']", count: 0
+  end
+
+  test "dashboard omits the feature highlight once the feature was seen" do
+    Sure.stubs(:version).returns(Semver.new("0.7.5"))
+    @user.update!(preferences: { "preview_features_enabled" => true })
+    @user.mark_feature_highlight_seen!("bills", "v0.7.5-alpha.1")
+
+    get root_path
+
+    assert_response :ok
+    assert_select "[data-controller='feature-highlight']", count: 0
+  end
+
   test "changelog" do
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       get changelog_path
