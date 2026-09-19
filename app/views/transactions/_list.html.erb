@@ -44,14 +44,14 @@
           <% if Current.user.show_split_grouped? %>
             <% group_split_entries(entries, @split_parents).each do |item| %>
               <% if item.is_a?(EntriesHelper::SplitGroup) %>
-                <%= render "entries/split_group", split_group: item %>
+                <%= render "entries/split_group", split_group: item, view_ctx: "global", is_filtered: q.present? %>
               <% else %>
-                <%= render item %>
+                <%= render item, view_ctx: "global", is_filtered: q.present? %>
               <% end %>
             <% end %>
           <% else %>
             <% entries.each do |entry| %>
-              <%= render entry %>
+              <%= render entry, view_ctx: "global", is_filtered: q.present? %>
             <% end %>
           <% end %>
         <% end %>
