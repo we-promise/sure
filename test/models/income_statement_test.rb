@@ -773,4 +773,70 @@ class IncomeStatementTest < ActiveSupport::TestCase
 
     assert_equal 1, totals_query_calls
   end
+
+  # A foreign-currency transaction used to convert 1:1 whenever no exchange
+  # rate was stored for its exact date, so an NZD 117 expense showed as ¥117
+  # against a CNY budget. Rates only exist for days a provider published one,
+  # so weekends, holidays and import gaps all hit this.
+  test "totals: converts a foreign-currency expense at the nearest rate within the lookback window" do
+    family, account, category = fx_family_with_eur_account
+
+    create_transaction(account: account, amount: 100, currency: "EUR", date: Date.current, category: category)
+    ExchangeRate.create!(
+      from_currency: "EUR",
+      to_currency: "USD",
+      date: Date.current - 3.days,
+      rate: BigDecimal("1.25")
+    )
+
+    expense_totals = IncomeStatement.new(family).expense_totals(period: Period.last_30_days)
+    category_total = expense_totals.category_totals.find { |ct| ct.category.id == category.id }
+
+    assert_in_delta 125, category_total.total, 0.001,
+      "EUR 100 should convert at the nearest stored rate (1.25), not fall back to 1:1"
+    assert_in_delta 125, expense_totals.total, 0.001
+  end
+
+  # The window is bounded so a stale rate - say a years-old backfill for a
+  # currency the family no longer uses - cannot silently convert a recent
+  # transaction. Beyond the window the 1:1 fallback still applies.
+  test "totals: ignores an exchange rate older than the lookback window" do
+    family, account, category = fx_family_with_eur_account
+
+    create_transaction(account: account, amount: 100, currency: "EUR", date: Date.current, category: category)
+    ExchangeRate.create!(
+      from_currency: "EUR",
+      to_currency: "USD",
+      date: Date.current - (ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS + 1).days,
+      rate: BigDecimal("1.25")
+    )
+
+    expense_totals = IncomeStatement.new(family).expense_totals(period: Period.last_30_days)
+    category_total = expense_totals.category_totals.find { |ct| ct.category.id == category.id }
+
+    assert_in_delta 100, category_total.total, 0.001,
+      "a rate outside the lookback window should not apply; expect the 1:1 fallback"
+    assert_in_delta 100, expense_totals.total, 0.001
+  end
+
+  private
+    # A USD family whose only entries are the ones a test adds, so expense
+    # totals isolate the conversion under test.
+    def fx_family_with_eur_account
+      family = Family.create!(
+        name: "FX Family",
+        currency: "USD",
+        locale: "en",
+        date_format: "%Y-%m-%d"
+      )
+
+      account = family.accounts.create!(
+        name: "EUR Bank",
+        currency: "EUR",
+        balance: 0,
+        accountable: Depository.new
+      )
+
+      [ family, account, family.categories.create!(name: "Travel") ]
+    end
 end

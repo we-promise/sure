@@ -32,13 +32,37 @@ module IncomeStatement::ScopedTransactionsQuery
       "JOIN accounts a ON a.id = ae.account_id"
     end
 
+    # Rate used to convert an entry into the family currency.
+    #
+    # Joining on exact date equality left a transaction with no rate row for
+    # its own date matching nothing, and the `COALESCE(er.rate, 1)` in
+    # converted_amount_sql then converted it 1:1 - an NZD 117 expense showed as
+    # ¥117 against a CNY budget. Rates are only stored for days a provider
+    # published one, so any weekend, holiday or gap in an import hit this.
+    #
+    # Take the most recent rate for the pair within a bounded backward window
+    # instead, so the join yields NULL (and COALESCE falls back to 1:1) only
+    # when the pair has no rate near the entry date at all. The window mirrors
+    # ExchangeRate::Provided#find_or_fetch_rate, so SQL and Ruby agree on which
+    # rate is close enough to reuse; unbounded, a years-old import would
+    # silently convert today's transaction at a stale rate.
+    #
+    # Looking backward only also matches the Ruby path: a future-dated entry
+    # keeps the 1:1 fallback until a rate on or before its date is stored.
+    #
+    # The unique index on (from_currency, to_currency, date) serves the
+    # subquery, so the per-row cost stays negligible.
     def exchange_rates_join_sql
       <<~SQL.chomp
-        LEFT JOIN exchange_rates er ON (
-          er.date = ae.date AND
-          er.from_currency = ae.currency AND
-          er.to_currency = :target_currency
-        )
+        LEFT JOIN LATERAL (
+          SELECT rate
+          FROM exchange_rates
+          WHERE from_currency = ae.currency
+            AND to_currency = :target_currency
+            AND date BETWEEN ae.date - :nearest_rate_lookback_days AND ae.date
+          ORDER BY date DESC
+          LIMIT 1
+        ) er ON true
       SQL
     end
 
@@ -84,7 +108,11 @@ module IncomeStatement::ScopedTransactionsQuery
     # Bind params every income statement query needs; classes merge their
     # extras (date range, interval, account ids) on top.
     def base_sql_params(extra = {})
-      { target_currency: @family.currency, family_id: @family.id }.merge(extra).tap do |params|
+      {
+        target_currency: @family.currency,
+        family_id: @family.id,
+        nearest_rate_lookback_days: ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS
+      }.merge(extra).tap do |params|
         ids = @family.tax_advantaged_account_ids
         params[:tax_advantaged_account_ids] = ids if ids.present?
       end
