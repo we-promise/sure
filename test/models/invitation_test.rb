@@ -272,4 +272,27 @@ class InvitationTest < ActiveSupport::TestCase
       assert invitation.accept_for(user)
     end
   end
+
+  test "accepting an invitation releases provider items left behind" do
+    # The item's owner is leaving the family but the item stays. Without
+    # releasing it, the orphaned owner fails ProviderItemOwnable's same-family
+    # validation on the next save and the connection becomes unsyncable.
+    user = users(:family_member)
+    old_family = user.family
+    item = PlaidItem.create!(
+      family: old_family, plaid_id: "item_invite_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Left Behind Bank", owner: user
+    )
+    new_family = Family.create!(name: "Invited Family")
+    invitation = Invitation.create!(
+      family: new_family, email: user.email, role: "member",
+      inviter: users(:family_admin)
+    )
+
+    assert invitation.accept_for(user)
+
+    assert_nil item.reload.owner_id
+    assert_equal old_family, item.family
+    assert item.valid?, "the left-behind item must still be savable"
+  end
 end

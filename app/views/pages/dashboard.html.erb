@@ -170,7 +170,7 @@
         <div class="py-4" data-dashboard-section-target="content">
           <%= render partial: section[:partial], locals: section[:locals] %>
           <% if section[:key] == "cashflow_sankey" && preview_features_enabled? %>
-            <%= render "pages/dashboard/cashflow_preview", period: @period %>
+            <%= render "pages/dashboard/cashflow_preview", period: @period, legacy_data: section[:locals][:sankey_data] %>
           <% end %>
         </div>
       </section>

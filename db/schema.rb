@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_14_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_16_220129) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1748,6 +1748,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_200000) do
     t.string "institution_url"
     t.string "name"
     t.string "next_cursor"
+    t.uuid "owner_id"
     t.string "plaid_id", null: false
     t.string "plaid_region", default: "us", null: false
     t.jsonb "raw_institution_payload", default: {}
@@ -1756,6 +1757,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_200000) do
     t.string "status", default: "good", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_plaid_items_on_family_id"
+    t.index ["owner_id"], name: "index_plaid_items_on_owner_id"
     t.index ["plaid_id"], name: "index_plaid_items_on_plaid_id", unique: true
   end
 
@@ -2828,6 +2830,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_14_200000) do
   add_foreign_key "onchain_wallet_items", "families"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
+  add_foreign_key "plaid_items", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"

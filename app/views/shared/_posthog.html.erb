@@ -4,6 +4,9 @@
         api_host: '<%= posthog_host %>',
         defaults: '2025-11-30',
         person_profiles: 'always', // or 'identified_only'
-        loaded: function() { document.dispatchEvent(new Event('posthog:ready')); },
+        loaded: function(client) {
+            client.register({ sure_version: <%= raw json_escape(Sure.version.to_s.to_json) %> });
+            document.dispatchEvent(new Event('posthog:ready'));
+        },
     })
 </script>
