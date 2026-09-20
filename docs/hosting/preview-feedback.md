@@ -22,7 +22,20 @@ Managed deployments must use a survey belonging to their own project. Sankey's
 survey variable is `POSTHOG_SANKEY_SURVEY_ID`. Self-hosted feedback stays separate
 from any analytics project configured by the operator. Operators can disable the
 shared connection with `POSTHOG_FEEDBACK_ENABLED=false`; this does not reroute
-feedback to another project. Shared collection is disabled outside production.
+feedback to another project. Shared collection is disabled outside production by default.
+
+### Local testing
+
+To test without changing Rails to production mode, temporarily set
+`POSTHOG_DEVELOPMENT_ENABLED=true` in `.env.local` and restart your development
+process. Remove the override and restart when finished. This opt-in only applies
+to development; automated test environments remain disabled.
+
+With `SELF_HOSTED=true`, enable Preview features and click the Sankey thumbs-up/down
+buttons to test the bundled API survey. `POSTHOG_FEEDBACK_ENABLED=false` still
+opts out. Standard pop-up surveys require `POSTHOG_KEY` / `POSTHOG_HOST` for their
+project; managed Sankey feedback also requires `POSTHOG_SANKEY_SURVEY_ID`.
+The override uses the configured live projects, so submitted responses are real.
 
 The public project token routes requests to PostHog; it is not a private API key
 and grants no access to collected data or administration. Never distribute a
@@ -58,15 +71,48 @@ compared. Add events only with their capture code, allowlist, and offline tests;
 registering a survey does not automatically instrument the feature.
 
 These are the events **currently implemented for Sankey**. All include
-`preview_version: cash_flow_v1`:
+`preview_version: cash_flow_v1` and `sure_version` (the deployed release string
+from `.sure-version`, including any prerelease suffix):
 
 | Event | Trigger | Additional properties |
 | --- | --- | --- |
 | `sankey_preview_displayed` | A loaded result becomes visible, or the chart is explicitly expanded | `surface: inline / expanded`, `state: content / empty / error` |
 | `sankey_preview_feedback_clicked` | Thumbs up/down, when a survey ID and capture-enabled SDK are available | `rating: positive / negative`, `state` |
+| `new_sankey_match` / `new_sankey_mismatch` | Valid comparison after analytics is ready; once per graph load, including period changes | None |
 | `survey shown` | The validated survey form is presented | `$survey_id` |
 | `survey sent` | An explicit submission is accepted by the SDK | `$survey_id`, answers keyed by question UUID |
 | `survey dismissed` | A presented survey closes without submission | `$survey_id` |
+
+### Automatic graph comparison
+
+The browser compares the original dashboard graph and the validated preview graph
+before D3 mutates either input. It sorts nodes by stable identity and links by
+source/target identity, comparing amounts at the legacy chart's two-decimal
+precision and percentages at one decimal. Localized legacy IDs for synthetic
+Uncategorized/Other Investments categories map to the preview's stable IDs.
+Array order,
+labels, colors, and API-only metadata do not affect the result. An empty legacy
+zero-valued center is equivalent to an empty preview graph. Missing or invalid
+inputs produce no event. Zoomed and expanded views do not create new comparisons.
+
+Only `new_sankey_match` or `new_sankey_mismatch`, plus `preview_version` and
+`sure_version`, is sent to PostHog. No graph, amount, category, user ID, or date range is included in the
+comparison payload. Existing managed SDK metadata and self-hosted privacy rules
+still apply. Intentional deficit/netting changes can produce mismatches;
+a match proves input equivalence, not visual correctness. The separate requests
+can also observe different data if transactions change between loads.
+
+Each successful graph load can emit one comparison event after the SDK accepts
+it. Reloading the dashboard, changing the period, or retrying the data request
+starts a new comparison. Scrolling, resizing, zooming, expanding, and repeated
+SDK-ready notifications do not duplicate that load's event. Missing or opted-out
+analytics do not mark it captured; a later SDK-ready notification can retry.
+
+There is no daily or lifetime user limit. Legacy `sankey_comparison_result`
+preferences are ignored, so an earlier mismatch does not suppress a later match.
+No date ranges or graph data are persisted for deduplication or sent to PostHog.
+These events count compared loads, not unique users. SDK acceptance does not
+guarantee ingestion. Historical events are not rewritten by this change.
 
 ### Counting exposure and engagement
 
@@ -102,8 +148,9 @@ autocapture and session recording.
 Managed deployments retain their existing SDK metadata. The dedicated self-hosted
 client disables automatic tracking, pageviews, session recording, and person
 profiles; it strips incidental URL, referrer, and device metadata. Opting out of
-either client suppresses capture. GeoIP enrichment is disabled, although the
-ingestion service necessarily receives the network connection's IP address.
+either client suppresses capture. GeoIP enrichment is enabled using the browser
+connection's IP address, allowing PostHog to add approximate location properties
+to these events without creating person profiles. The destination project must also allow GeoIP enrichment.
 
 Use `feedback_config(:feature_name)` and the per-feature survey registry for the
 next preview. Follow [Adding feature feedback surveys](../llm-guides/feedback-surveys.md)
