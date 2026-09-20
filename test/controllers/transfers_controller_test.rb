@@ -124,6 +124,19 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_not transfer.outflow_transaction.reload.locked?(:category_id)
   end
 
+  test "invalid date re-renders the form and keeps the chosen category" do
+    category = users(:family_admin).family.categories.create!(name: "Chosen")
+
+    assert_no_difference "Transfer.count" do
+      post transfers_url, params: {
+        transfer: { from_account_id: accounts(:depository).id, to_account_id: accounts(:investment).id, date: "not-a-date", amount: 100, category_id: category.id }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='transfer[category_id]'][value='#{category.id}']"
+  end
+
   test "resubmitting the same idempotency key does not create a duplicate transfer" do
     idempotency_key = SecureRandom.uuid
     params = {

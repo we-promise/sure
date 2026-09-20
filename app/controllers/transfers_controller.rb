@@ -75,7 +75,7 @@ class TransfersController < ApplicationController
     @transfer.errors.add(:date, t(".date_invalid"))
     @from_account_id = transfer_params[:from_account_id]
     set_accounts
-    @tags = Current.family.tags.alphabetically
+    @selected_category_id = transfer_params[:category_id]
     render :new, status: :unprocessable_entity
   rescue Transfer::Creator::StaleIdempotencyKeyError
     @transfer ||= Transfer.new
