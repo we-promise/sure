@@ -20,8 +20,7 @@
       </div>
     </div>
     <div class="w-full md:w-2/3 text-secondary text-sm prose prose--github-release-notes">
-      <h2 class="mb-5 text-xl text-primary"><%= @release_notes[:name] %></h2>
-      <%= (@release_notes[:body] || "No release notes available").html_safe %>
+      <%= render "pages/release_notes", release_notes: @release_notes %>
     </div>
   </div>
 </div>
