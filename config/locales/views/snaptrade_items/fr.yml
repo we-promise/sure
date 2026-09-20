@@ -17,6 +17,7 @@ fr:
       description: SnapTrade se connecte à plus de 25 courtiers majeurs (Fidelity, Vanguard, Schwab, Robinhood, etc.) et fournit l'historique complet des transactions avec des libellés d'activité et le coût d'acquisition.
       free_tier_warning: L'offre gratuite inclut 20 connexions de courtier. Les connexions supplémentaires nécessitent un forfait SnapTrade payant.
       loading_connections: Chargement des connexions…
+      manage_at_snaptrade: Gérer les connexions sur SnapTrade
       manage_connections: Gérer les connexions
       name: SnapTrade
       needs_linking: à lier
@@ -25,9 +26,14 @@ fr:
         other: "%{count} à configurer"
       no_connections: Aucune connexion de courtier trouvée.
       oauth_connect_button: Se connecter avec SnapTrade
+      oauth_device_button: Utiliser un code d'appareil
       oauth_reauthorize_button: Réautoriser
+      oauth_setup_step_1_html: Enregistrez une application OAuth sur <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: 'Pour le flux navigateur uniquement : ajoutez l''URL de rappel de cette application (<code>%{callback_url}</code>) comme URI de redirection enregistrée'
+      oauth_setup_step_3: Définissez SNAPTRADE_OAUTH_CLIENT_ID dans votre environnement et redémarrez. Cela suffit à activer le flux par code d'appareil ; ajoutez SNAPTRADE_OAUTH_CLIENT_SECRET pour activer aussi le flux navigateur
       oauth_status_authorized: Autorisé avec SnapTrade.
       oauth_status_ready: Utilisez un code d'appareil pour autoriser Sure pour SnapTrade.
+      oauth_status_ready_device: Autorisez Sure avec un code d'appareil pour lire les données de votre compte SnapTrade.
       oauth_title: SnapTrade OAuth
       orphaned_connection: Connexion orpheline (non synchronisée localement)
       setup_accounts_button: Configurer les comptes
@@ -73,6 +79,13 @@ fr:
       success:
         one: "%{count} compte lié avec succès."
         other: "%{count} comptes liés avec succès."
+    complete_oauth_device_flow:
+      access_denied: L'autorisation SnapTrade a été refusée.
+      authorization_pending: SnapTrade n'a pas encore vu votre confirmation. Approuvez le code dans SnapTrade, puis réessayez.
+      device_code_required: Aucune autorisation d'appareil SnapTrade n'est en cours pour cette connexion. Relancez-la pour obtenir un nouveau code.
+      expired: Ce code d'appareil a expiré. Relancez l'autorisation.
+      failed: Impossible de finaliser l'autorisation d'appareil SnapTrade. Veuillez réessayer.
+      success: Autorisation SnapTrade terminée.
     connect:
       connection_failed: 'Échec de la connexion à SnapTrade : %{message}'
       decryption_failed: Impossible de lire les identifiants SnapTrade. Veuillez supprimer et recréer cette connexion.
@@ -90,6 +103,23 @@ fr:
       failed: 'Échec de la liaison du compte : %{message}'
       not_found: Compte introuvable.
       success: Compte SnapTrade lié avec succès.
+    oauth_authorize:
+      not_configured: L'autorisation SnapTrade par navigateur nécessite SNAPTRADE_OAUTH_CLIENT_SECRET en plus de SNAPTRADE_OAUTH_CLIENT_ID. Définissez-le et redémarrez, ou autorisez plutôt avec un code d'appareil.
+    oauth_callback:
+      access_denied: L'autorisation SnapTrade a été annulée.
+      failed: Impossible de finaliser l'autorisation SnapTrade. Veuillez réessayer.
+      state_mismatch: L'autorisation SnapTrade a échoué à un contrôle de sécurité. Veuillez réessayer.
+      success: Autorisation SnapTrade terminée.
+    oauth_device_flow:
+      cancel_button: Annuler
+      code_label: Code d'appareil
+      complete_button: J'ai autorisé SnapTrade
+      instructions: Ouvrez SnapTrade, confirmez ce code d'appareil, puis revenez ici pour terminer.
+      missing_client_id: L'OAuth SnapTrade n'est pas configuré. Ajoutez SNAPTRADE_OAUTH_CLIENT_ID à .env.local, redémarrez l'application, puis réessayez.
+      open_snaptrade: Ouvrir SnapTrade
+      start_button: Lancer l'autorisation
+      subtitle: Autorisez Sure auprès de SnapTrade avec un code d'appareil.
+      title: Connecter SnapTrade
     preload_accounts:
       not_configured: SnapTrade n'est pas configuré.
     select_accounts:
@@ -108,6 +138,14 @@ fr:
       title: Lier à un compte SnapTrade
     setup_accounts:
       account_number: 'Compte :'
+      account_type_label: Type de compte
+      account_types:
+        credit_card: Carte de crédit
+        crypto: Compte de cryptomonnaies
+        depository: Compte courant ou d'épargne
+        investment: Compte d'investissement
+        loan: Emprunt ou ligne de crédit
+        other_asset: Autre actif
       available_accounts: Comptes disponibles
       back_to_settings: Retour aux paramètres
       balance_label: 'Solde :'
@@ -162,3 +200,5 @@ fr:
       status: Dernière synchronisation il y a %{timestamp} - %{summary}
       status_never: Jamais synchronisé
       syncing: Synchronisation…
+    start_oauth_device_flow:
+      failed: Impossible de lancer l'autorisation d'appareil SnapTrade. Veuillez réessayer.

@@ -77,7 +77,8 @@
               <%= helpers.icon("check") %>
             </span>
 
-            <span><%= blank_label %></span>
+            <%= render partial: "categories/badge",
+                       locals: { category: Category.uncategorized } %>
           </button>
         <% end %>
 

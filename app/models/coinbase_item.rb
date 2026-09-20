@@ -1,5 +1,5 @@
 class CoinbaseItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, DestroyableLater
   include Encryptable
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -25,11 +25,6 @@ class CoinbaseItem < ApplicationRecord
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   def import_latest_coinbase_data
     provider = coinbase_provider
