@@ -51,7 +51,7 @@ en:
       bank_charges: Bank Charges
       source_fee: Source fee
       destination_fee: Destination fee
-      category: Category
+      category: Category (source account)
       uncategorized: Uncategorized
     update:
       success: Transfer updated

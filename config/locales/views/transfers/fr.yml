@@ -31,7 +31,7 @@ fr:
       title: Nouveau transfert
     show:
       amount: Montant
-      category: Catégorie
+      category: Catégorie (compte source)
       date: Date
       delete: Supprimer le transfert
       delete_subtitle:

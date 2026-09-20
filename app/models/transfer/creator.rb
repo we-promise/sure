@@ -61,6 +61,9 @@ class Transfer::Creator
         transfer.fee_transactions << build_destination_fee_transaction
       end
       transfer.save!
+      # Only an explicit pick is a user choice worth protecting from rules; the
+      # investment-contributions fallback stays overridable.
+      transfer.outflow_transaction.lock_attr!(:category_id) if category_id
       apply_tags!(transfer) if tag_ids.any?
     end
 

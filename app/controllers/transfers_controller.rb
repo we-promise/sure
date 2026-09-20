@@ -258,6 +258,7 @@ class TransfersController < ApplicationController
       if transfer_update_params.key?(:category_id)
         category_id = Current.family.categories.find_by(id: transfer_update_params[:category_id].presence)&.id
         @transfer.outflow_transaction.update!(category_id: category_id)
+        @transfer.outflow_transaction.lock_attr!(:category_id)
       end
       @transfer.update!(notes: transfer_update_params[:notes]) if transfer_update_params.key?(:notes)
     end

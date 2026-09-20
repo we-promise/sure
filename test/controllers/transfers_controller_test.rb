@@ -87,6 +87,43 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal category, Transfer.order(:created_at).last.outflow_transaction.category
   end
 
+  test "create locks category_id when a category is chosen" do
+    category = users(:family_admin).family.categories.create!(name: "Chosen")
+
+    post transfers_url, params: {
+      transfer: { from_account_id: accounts(:depository).id, to_account_id: accounts(:investment).id, date: Date.current, amount: 100, category_id: category.id }
+    }
+
+    assert Transfer.order(:created_at).last.outflow_transaction.locked?(:category_id)
+  end
+
+  test "create does not lock the investment contributions fallback" do
+    ensure_investment_contributions_category(users(:family_admin).family)
+
+    post transfers_url, params: {
+      transfer: { from_account_id: accounts(:depository).id, to_account_id: accounts(:investment).id, date: Date.current, amount: 100, category_id: "" }
+    }
+
+    assert_not Transfer.order(:created_at).last.outflow_transaction.locked?(:category_id)
+  end
+
+  test "update locks category_id when the key is present" do
+    transfer = transfers(:one)
+    category = users(:family_admin).family.categories.create!(name: "Picked")
+
+    patch transfer_url(transfer), params: { transfer: { category_id: category.id } }
+
+    assert transfer.outflow_transaction.reload.locked?(:category_id)
+  end
+
+  test "update without category_id does not lock it" do
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer), params: { transfer: { notes: "hello" } }
+
+    assert_not transfer.outflow_transaction.reload.locked?(:category_id)
+  end
+
   test "resubmitting the same idempotency key does not create a duplicate transfer" do
     idempotency_key = SecureRandom.uuid
     params = {
