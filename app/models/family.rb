@@ -161,6 +161,26 @@ class Family < ApplicationRecord
   def effective_categorization_provider
     ENV["CATEGORIZATION_PROVIDER"].presence || categorization_provider
   end
+
+  # The provider that will actually categorize this family's transactions.
+  #
+  # Jev decides a typed Choice per transaction and reports calibrated confidence,
+  # which the LLM providers cannot. Credentials alone never switch it on — the
+  # family has to choose it, because this decides whose transaction descriptions
+  # get sent to a third party. Falls back to the LLM path when Jev is unselected
+  # or unconfigured.
+  #
+  # Lives here rather than inside Family::AutoCategorizer because the rule
+  # confirmation screen has to name the same provider the run will use; when it
+  # resolved separately it estimated cost against a provider that would not run.
+  def resolved_categorization_provider
+    jev = Provider::Registry.get_provider(:jev) if effective_categorization_provider == "jev"
+
+    # The LLM fallback honors Setting.llm_provider (issue #2113) —
+    # Provider::Anthropic implements auto_categorize (PR #1984), so batch
+    # categorization routes to the configured provider.
+    jev || Provider::Registry.preferred_llm_provider
+  end
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
   validates :personal_budgets, inclusion: { in: [ true, false ] }
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }

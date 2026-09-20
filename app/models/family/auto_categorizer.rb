@@ -100,36 +100,13 @@ class Family::AutoCategorizer
     def categorization_provider
       return @categorization_provider if defined?(@categorization_provider)
 
-      @categorization_provider = classification_provider || llm_provider
-    end
-
-    # Jev decides a typed Choice per transaction and reports calibrated
-    # confidence, which the LLM providers cannot. Credentials alone never switch
-    # it on: the family has to choose it, because this decides whose transaction
-    # descriptions get sent to a third party.
-    #
-    # The choice is a family column rather than a global Setting so it means the
-    # same thing on a hosted instance as on a self-hosted one — Settings ->
-    # Self-hosting is guarded by `self_hosted?` and would be unreachable for half
-    # of them. The preview flag gates whether the selector is offered at all (see
-    # docs/llm-guides/gating-a-preview-feature.md); it deliberately plays no part
-    # in resolution, so a family that opted in and then chose the LLM provider
-    # gets the LLM provider.
-    def classification_provider
-      return nil unless jev_selected?
-
-      Provider::Registry.get_provider(:jev)
-    end
-
-    def jev_selected?
-      family.effective_categorization_provider == "jev"
-    end
-
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # auto_categorize (PR #1984), so batch categorization routes to the configured
-    # provider, with fallback handled by Provider::Registry.preferred_llm_provider.
-    def llm_provider
-      Provider::Registry.preferred_llm_provider
+      # Resolution lives on Family so the rule confirmation screen names the
+      # same provider this run will use. The preview flag gates whether the
+      # selector is offered at all (see
+      # docs/llm-guides/gating-a-preview-feature.md); it plays no part here, so
+      # a family that opted in and then chose the LLM provider gets the LLM
+      # provider.
+      @categorization_provider = family.resolved_categorization_provider
     end
 
     def user_categories_input

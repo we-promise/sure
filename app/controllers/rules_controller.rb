@@ -66,17 +66,7 @@ class RulesController < ApplicationController
   def confirm
     # Compute provider, model, and cost estimation for auto-categorize actions
     if @rule.actions.any? { |a| a.action_type == "auto_categorize" }
-      # Use the same provider determination logic as Family::AutoCategorizer
-      llm_provider = Provider::Registry.get_provider(:openai)
-
-      if llm_provider
-        @selected_model = Provider::Openai.effective_model
-        @estimated_cost = LlmUsage.estimate_auto_categorize_cost(
-          transaction_count: @rule.affected_resource_count,
-          category_count: @rule.family.categories.count,
-          model: @selected_model
-        )
-      end
+      @selected_model, @estimated_cost = auto_categorize_estimate(@rule)
     end
   end
 
@@ -110,16 +100,10 @@ class RulesController < ApplicationController
 
     # Compute AI cost estimation if any rule has auto_categorize action
     if @rules.any? { |r| r.actions.any? { |a| a.action_type == "auto_categorize" } }
-      llm_provider = Provider::Registry.get_provider(:openai)
-
-      if llm_provider
-        @selected_model = Provider::Openai.effective_model
-        @estimated_cost = LlmUsage.estimate_auto_categorize_cost(
-          transaction_count: @total_affected_count,
-          category_count: Current.family.categories.count,
-          model: @selected_model
-        )
-      end
+      @selected_model, @estimated_cost = auto_categorize_estimate(
+        Current.family,
+        transaction_count: @total_affected_count
+      )
     end
   end
 
@@ -134,6 +118,34 @@ class RulesController < ApplicationController
   end
 
   private
+    # Names the provider that will actually run, and prices against it.
+    #
+    # This previously hardcoded :openai, so an Anthropic install was quoted the
+    # wrong model and a family on Jev was quoted a provider that would not run
+    # at all. LlmUsage has no pricing for Jev, so the cost comes back nil and the
+    # view says so rather than inventing a figure.
+    def auto_categorize_estimate(scope, transaction_count: nil)
+      family = scope.is_a?(Rule) ? scope.family : scope
+      count = transaction_count || scope.affected_resource_count
+      provider = family.resolved_categorization_provider
+      return [ nil, nil ] unless provider
+
+      model =
+        case provider
+        when Provider::Jev then Provider::Jev.effective_model
+        when Provider::Anthropic then Provider::Anthropic.effective_model
+        else Provider::Openai.effective_model
+        end
+
+      cost = LlmUsage.estimate_auto_categorize_cost(
+        transaction_count: count,
+        category_count: family.categories.count,
+        model: model
+      )
+
+      [ model, cost ]
+    end
+
     # The reset itself happens in a background job, so an enqueue that never
     # lands looks exactly like a job that ran and found nothing. Logging the
     # request separately from the job's own "started" entry tells those apart.
