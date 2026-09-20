@@ -258,6 +258,7 @@ class Settings::HostingsController < ApplicationController
 
     update_assistant_type
     update_categorization_provider
+    update_categorization_tuning
 
     redirect_to settings_hosting_path, notice: t(".success")
   rescue Setting::ValidationError => error
@@ -310,6 +311,43 @@ class Settings::HostingsController < ApplicationController
       return unless Family::CATEGORIZATION_PROVIDERS.include?(provider)
 
       Current.family.update!(categorization_provider: provider)
+    end
+
+    # Family-scoped like categorization_provider. Validated here rather than
+    # leaning on the DB check constraint, which would surface as a 500 instead
+    # of the inline error the rest of this form gives.
+    def update_categorization_tuning
+      return unless params[:family].present?
+      return unless preview_features_enabled?
+
+      updates = {}
+
+      if params[:family][:categorization_confidence_threshold].present? && ENV["CATEGORIZATION_CONFIDENCE_THRESHOLD"].blank?
+        updates[:categorization_confidence_threshold] = unit_interval!(
+          params[:family][:categorization_confidence_threshold],
+          t("settings.hostings.categorization_provider_selector.confidence_threshold_label")
+        )
+      end
+
+      if params[:family][:categorization_shadow_rate].present? && ENV["CATEGORIZATION_SHADOW_RATE"].blank?
+        updates[:categorization_shadow_rate] = unit_interval!(
+          params[:family][:categorization_shadow_rate],
+          t("settings.hostings.categorization_provider_selector.shadow_rate_label")
+        )
+      end
+
+      Current.family.update!(updates) if updates.any?
+    end
+
+    def unit_interval!(raw, field_label)
+      value = Float(raw.to_s.strip) rescue nil
+
+      if value.nil? || value.negative? || value > 1
+        raise Setting::ValidationError,
+              t("settings.hostings.update.invalid_categorization_rate", field: field_label)
+      end
+
+      value
     end
 
     def update_assistant_type

@@ -1,19 +1,10 @@
+<%# Credential fields only. The heading, Preview pill and data-sharing notice
+    belong to _categorization_provider_selector, which renders this once Jev is
+    the selected provider. %>
 <div class="space-y-4">
-  <div>
-    <div class="flex items-center gap-2 mb-1">
-      <h2 class="font-medium"><%= t(".title") %></h2>
-      <%= render DS::Pill.new(label: t(".preview_pill")) %>
-    </div>
-    <% if ENV["JEV_API_KEY"].present? %>
-      <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
-    <% else %>
-      <p class="text-secondary text-sm"><%= t(".description") %></p>
-    <% end %>
-    <%# Configuring a key is not enough on its own: Family::AutoCategorizer only
-        reaches Jev for families with an opted-in member. Without this line an
-        admin sees the key save and nothing happen, with no way to tell why. %>
-    <p class="text-secondary text-sm mt-2 mb-4"><%= t(".preview_requirement") %></p>
-  </div>
+  <% if ENV["JEV_API_KEY"].present? %>
+    <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
+  <% end %>
 
   <%= styled_form_with model: Setting.new,
                        url: settings_hosting_path,

@@ -325,6 +325,59 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can update categorization tuning when opted into preview features" do
+    with_self_hosting do
+      enable_preview_features!
+
+      patch settings_hosting_url, params: {
+        family: { categorization_confidence_threshold: "0.7", categorization_shadow_rate: "0.25" }
+      }
+
+      @user.family.reload
+      assert_in_delta 0.7, @user.family.categorization_confidence_threshold, 0.001
+      assert_in_delta 0.25, @user.family.categorization_shadow_rate, 0.001
+    end
+  end
+
+  test "rejects a categorization threshold outside 0 and 1" do
+    with_self_hosting do
+      enable_preview_features!
+      # Compare against what was actually stored rather than a literal, so this
+      # keeps testing "rejection leaves the value alone" if the default moves.
+      before = @user.family.categorization_confidence_threshold
+
+      patch settings_hosting_url, params: {
+        family: { categorization_confidence_threshold: "1.5" }
+      }
+
+      assert_response :unprocessable_entity
+      assert_match(/between 0 and 1/, flash[:alert])
+      assert_in_delta before, @user.family.reload.categorization_confidence_threshold, 0.001
+    end
+  end
+
+  test "rejects a non-numeric categorization shadow rate" do
+    with_self_hosting do
+      enable_preview_features!
+
+      patch settings_hosting_url, params: { family: { categorization_shadow_rate: "lots" } }
+
+      assert_response :unprocessable_entity
+      assert_in_delta 0.0, @user.family.reload.categorization_shadow_rate, 0.001
+    end
+  end
+
+  test "ignores categorization tuning from a user without preview features" do
+    with_self_hosting do
+      family = users(:family_admin).family
+      assert_not family.preview_features_enabled?
+
+      patch settings_hosting_url, params: { family: { categorization_shadow_rate: "0.5" } }
+
+      assert_in_delta 0.0, family.reload.categorization_shadow_rate, 0.001
+    end
+  end
+
   test "can update jev api key when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { jev_api_key: "fake-jev-key-for-tests" } }
@@ -894,4 +947,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.securities_providers = ""
     Setting.tinkoff_invest_api_key = nil
   end
+
+  private
+    def enable_preview_features!
+      @user = users(:family_admin)
+      @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    end
 end

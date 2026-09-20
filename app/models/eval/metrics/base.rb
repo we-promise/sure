@@ -52,6 +52,13 @@ class Eval::Metrics::Base
       (error_count.to_f / total_count * 100).round(2)
     end
 
+    # Whether the provider's stated confidence tracks how often it was right.
+    # Absent for providers that report no confidence, which is a different thing
+    # from being badly calibrated — see Eval::Metrics::Calibration.
+    def calibration
+      @calibration ||= Eval::Metrics::Calibration.new(eval_run)
+    end
+
     def avg_latency_ms
       return nil if total_count.zero?
       results.average(:latency_ms)&.round(0)

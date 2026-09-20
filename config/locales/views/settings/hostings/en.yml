@@ -129,15 +129,27 @@ en:
         provider_llm: AI provider (OpenAI or Anthropic)
         provider_jev: Jev (TypeSafe)
         provider_help: The AI provider reads a batch of transactions and writes back category names. Jev picks from your category list and returns a calibrated confidence for each transaction.
-        not_configured_hint: Jev is selected but has no API key configured. Categorization will keep using the AI provider until you add one below.
+        jev_configured: Jev API key configured.
+        jev_not_configured: Jev is selected but has no API key configured. Categorization keeps using the AI provider until you add one below.
         data_retention_heading: Data sharing
         data_retention_direct: Transaction descriptions, amounts and your category names are sent to TypeSafe to be categorized. Review their retention policy before enabling this on real data.
         data_retention_proxied: Transaction descriptions, amounts and your category names are sent to %{host}, which forwards them to TypeSafe. Review both providers' retention policies before enabling this on real data.
+        confidence_threshold_label: Minimum confidence (0–1)
+        confidence_threshold_help: Below this confidence the category is not applied and the transaction is left uncategorized, so a later run can try again. Nothing is discarded. Set to 0 to apply every answer.
+        confidence_threshold_env_notice: Locked by the CATEGORIZATION_CONFIDENCE_THRESHOLD environment variable.
+        shadow_rate_label: Shadow comparison rate (0–1)
+        shadow_rate_help: Runs the provider you did NOT select alongside the one you did, recording where they disagree without changing any category. This doubles the API spend on every categorization run it samples. Set to 0 to turn it off.
+        shadow_rate_env_notice: Locked by the CATEGORIZATION_SHADOW_RATE environment variable.
+      categorization_shadow_results:
+        shadow_results_heading: Shadow comparison
+        shadow_results_empty: No comparisons recorded yet. Set a shadow comparison rate above 0 and run categorization to collect some.
+        shadow_results_summary: "%{agreement}%% agreement across %{count} sampled transactions."
+        shadow_disagreements_heading: Most recent disagreements
+        shadow_disagreement_row: "%{applied_provider} chose %{applied_category}; %{shadow_provider} chose %{shadow_category}."
+        shadow_disagreement_confidence: "(confidence %{confidence})"
+        shadow_no_disagreements: The two providers agreed on every sampled transaction.
+        shadow_no_category: no category
       jev_settings:
-        title: Jev (TypeSafe)
-        preview_pill: Preview
-        description: Enter your API key to use Jev for transaction categorization. Jev answers typed questions with calibrated confidence rather than generating text, so it is not used for chat or PDF processing.
-        preview_requirement: A key on its own does not switch categorization over — select Jev as the categorization provider above.
         env_configured_message: Successfully configured through environment variables.
         api_key_label: API Key
         api_key_placeholder: Enter your TypeSafe API key
@@ -281,6 +293,7 @@ en:
         invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
         anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
         invalid_jev_endpoint: Jev Endpoint must be an http(s) URL.
+        invalid_categorization_rate: "%{field} must be a number between 0 and 1."
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       disconnect_external_assistant:
         external_assistant_disconnected: External assistant disconnected

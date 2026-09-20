@@ -233,6 +233,56 @@ namespace :evals do
     end
   end
 
+  desc "Analyze a candidate run against a baseline (calibration, disagreement, verdict)"
+  task :analyze, [ :baseline_run_id, :candidate_run_id ] => :environment do |_t, args|
+    baseline_id = args[:baseline_run_id] || ENV["BASELINE"]
+    candidate_id = args[:candidate_run_id] || ENV["CANDIDATE"]
+
+    if baseline_id.blank? || candidate_id.blank?
+      puts "Usage: rake evals:analyze[baseline_run_id,candidate_run_id]"
+      puts "   or: BASELINE=<run_id> CANDIDATE=<run_id> rake evals:analyze"
+      puts
+      puts "The candidate is the provider under evaluation; the baseline is what"
+      puts "it would replace. Both runs must cover the same dataset."
+      exit 1
+    end
+
+    baseline = Eval::Run.find(baseline_id)
+    candidate = Eval::Run.find(candidate_id)
+
+    puts "=" * 80
+    puts "Candidate Analysis"
+    puts "=" * 80
+    puts "  Dataset:   #{candidate.dataset.name}"
+    puts "  Baseline:  #{baseline.provider}:#{baseline.model}"
+    puts "  Candidate: #{candidate.provider}:#{candidate.model}"
+    puts
+
+    puts Eval::Reporters::ComparisonReporter.new([ baseline, candidate ]).to_table
+    puts
+
+    puts "-" * 80
+    puts "Confidence calibration -- #{candidate.provider}:#{candidate.model}"
+    puts "-" * 80
+    puts Eval::Metrics::Calibration.new(candidate).to_table
+    puts
+
+    disagreement = Eval::Reporters::DisagreementReport.new(baseline, candidate)
+    puts "-" * 80
+    puts "Disagreement"
+    puts "-" * 80
+    puts disagreement.to_table
+    puts
+
+    puts "-" * 80
+    puts Eval::Reporters::Recommendation.new(
+      baseline: baseline,
+      candidate: candidate,
+      disagreement: disagreement
+    ).to_table
+    puts
+  end
+
   desc "Quick smoke test to verify provider configuration"
   task smoke_test: :environment do
     puts "Running smoke test..."
