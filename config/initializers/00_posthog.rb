@@ -24,22 +24,25 @@ Rails.configuration.x.posthog.feedback_surveys = {
   }.freeze
 }.freeze
 
-host_scheme = begin
-  URI.parse(Rails.configuration.x.posthog.host).scheme
-rescue URI::InvalidURIError
-  nil
-end
-
 # Both the server client below AND the browser snippet
 # (app/views/shared/_posthog.html.erb, rendered from _head.html.erb) AND
 # the CSP script-src/connect-src allowlist (content_security_policy.rb)
 # send data to this host — posthog-ruby sends the API key in the request
 # body and silently skips TLS when the scheme isn't https, and the browser
 # integration would ship analytics/session data in cleartext the same way.
-# A single `enabled` flag gates all three integration points so a bad
+# A single `enabled` method gates all three integration points so a bad
 # POSTHOG_HOST disables PostHog everywhere instead of only wherever a
-# reviewer happened to look first.
-Rails.configuration.x.posthog.enabled = Rails.configuration.x.posthog.api_key.present? && host_scheme == "https"
+# reviewer happened to look first. Defined as a method (not a value computed
+# once at boot) so it re-evaluates against api_key/host, which tests stub.
+Rails.configuration.x.posthog.define_singleton_method(:enabled) do
+  next false unless api_key.present?
+  scheme = begin
+    URI.parse(host).scheme
+  rescue URI::InvalidURIError
+    nil
+  end
+  scheme == "https"
+end
 
 if Rails.configuration.x.posthog.api_key.present? && !Rails.configuration.x.posthog.enabled
   Rails.logger.error("[PostHog] POSTHOG_HOST (#{Rails.configuration.x.posthog.host}) is not HTTPS — refusing to enable PostHog (server client, browser snippet, and CSP allowlist) to avoid sending the API key/analytics data in cleartext.")
