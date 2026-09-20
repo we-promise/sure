@@ -624,7 +624,11 @@ zh-TW:
         save_configuration: 儲存設定
         update_configuration: 更新設定
         sync: 同步
+        syncing: 同步中...
+        disconnect: 中斷 Trading 212 帳戶連線
         disconnect_confirm: 要中斷 Trading 212 連線嗎？
+        default_account_name: Trading 212 帳戶
+        add_account: 新增其他帳戶
         status_configured_prefix: 已設定。請前往
         accounts_tab: 帳戶管理
         status_configured_suffix: 分頁管理已偵測到的帳戶。

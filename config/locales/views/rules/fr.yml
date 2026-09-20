@@ -2,6 +2,8 @@
 fr:
   rule:
     conditions:
+      condition:
+        value_placeholder: Saisissez une valeur
       condition_group:
         add_condition: Ajouter une condition
         all: tout
@@ -40,6 +42,18 @@ fr:
       success: Le cache IA est en cours de suppression. Cela peut prendre quelques
         instants.
     condition_filters:
+      operators:
+        contains: Contient
+        does_not_contain: Ne contient pas
+        equal_to: Égal à
+        greater_or_equal_to: Supérieur ou égal à
+        greater_than: Supérieur à
+        is_empty: Est vide
+        is_equal_to: Est égal à
+        is_not_empty: N'est pas vide
+        less_than: Inférieur à
+        less_than_or_equal_to: Inférieur ou égal à
+        not_equal_to: Différent de
       transaction_type:
         equal_to: Égal à
         expense: Dépense

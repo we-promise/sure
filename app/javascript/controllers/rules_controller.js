@@ -50,12 +50,8 @@ export default class extends Controller {
   }
 
   #uniqueKey() {
-    // Prefixed so it can never collide with the numeric indexes Rails
-    // assigns to already-persisted conditions/actions when rendering an
-    // edit form (0, 1, 2, ...). A plain monotonic counter starting at 1
-    // would otherwise reuse index 1 and clobber an existing nested record.
     this.keySequence = (this.keySequence ?? 0) + 1;
-    return `new_${this.keySequence}`;
+    return Date.now() * 1000 + this.keySequence;
   }
 
   // Updates the prefix visibility of all conditions and condition groups

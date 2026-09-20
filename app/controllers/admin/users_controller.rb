@@ -9,6 +9,7 @@ module Admin
       scope = policy_scope(User)
         .left_joins(family: :subscription)
         .includes(:oidc_identities, family: :subscription)
+        .with_attached_profile_image
 
       scope = scope.where(role: params[:role]) if params[:role].present?
       scope = apply_trial_filter(scope) if params[:trial_status].present?

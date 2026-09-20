@@ -132,7 +132,7 @@ class TradeRepublicAccount::ActivitiesProcessor
         date:           date,
         name:           build_trade_name(security.ticker, signed_quantity),
         source:         "trade_republic",
-        activity_label: is_buy ? t("buy") : t("sell")
+        activity_label: is_buy ? "Buy" : "Sell"
       )
 
       trade_metadata = {
