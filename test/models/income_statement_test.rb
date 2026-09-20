@@ -155,6 +155,25 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 1500.0, income_statement.median_expense(interval: "month")
   end
 
+  test "median/avg expense ignore scheduled (future-dated) entries" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category)
+    create_transaction(account: @checking_account, amount: 300, category: @groceries_category)
+
+    income_statement = IncomeStatement.new(@family)
+    baseline_median = income_statement.median_expense(interval: "month")
+    baseline_avg = income_statement.avg_expense(interval: "month")
+
+    # A scheduled bill dated next month would otherwise open a new,
+    # partial-month bucket that skews both stats (see #3262 review).
+    create_transaction(account: @checking_account, amount: 999_999, category: @groceries_category, date: 1.month.from_now.to_date)
+
+    income_statement_with_scheduled = IncomeStatement.new(@family)
+    assert_equal baseline_median, income_statement_with_scheduled.median_expense(interval: "month")
+    assert_equal baseline_avg, income_statement_with_scheduled.avg_expense(interval: "month")
+  end
+
   test "calculates median income correctly with known dataset" do
     # Clear existing transactions by deleting entries
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
