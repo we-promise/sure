@@ -21,6 +21,7 @@ export default class extends Controller {
   ];
   static values = {
     surveyId: String,
+    sureVersion: String,
     legacyData: Object,
     selfHosted: Boolean,
     feedbackKey: String,
@@ -34,6 +35,7 @@ export default class extends Controller {
         this.feedbackKeyValue,
         this.feedbackHostValue,
         () => document.dispatchEvent(new Event("posthog:ready")),
+        this.sureVersionValue,
       );
     }
     this.comparisonDone = false;
