@@ -386,7 +386,7 @@ class Security::ResolverTest < ActiveSupport::TestCase
     match = Security.new(ticker: "KTY", exchange_operating_mic: "XWAR", country_code: "PL", price_provider: "eodhd")
 
     Security.expects(:search_provider)
-            .with("KTY", exchange_operating_mic: "XWAR", country_code: "PL")
+            .with("KTY", exchange_operating_mic: "XWAR", country_code: "PL", technical_failure: anything)
             .returns([ match ])
 
     Setting.stubs(:enabled_securities_providers).returns([ "eodhd" ])
