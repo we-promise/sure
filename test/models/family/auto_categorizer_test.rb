@@ -218,7 +218,173 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal category, txn.reload.category
   end
 
+  # Confidence has to change behaviour, not just appear in logs. Below the
+  # threshold the answer is withheld and the transaction is left unlocked, so a
+  # later run can still correct it.
+
+  test "applies every answer when the threshold is zero" do
+    # Set explicitly rather than leaning on the column default, which is 0.7 —
+    # this test is about the zero-threshold behaviour, not about what ships.
+    @family.update!(categorization_confidence_threshold: 0)
+    txn = create_transaction(account: @account, name: "Ambiguous thing").transaction
+    category = @family.categories.create!(name: "Coffee")
+
+    assert_equal 0.0, @family.effective_categorization_confidence_threshold
+    jev_returning(txn, category, confidence: 0.12)
+
+    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+
+    assert_equal category, txn.reload.category
+  end
+
+  test "withholds an answer below the confidence threshold and leaves it retryable" do
+    @family.update!(categorization_confidence_threshold: 0.7)
+    txn = create_transaction(account: @account, name: "Ambiguous thing").transaction
+    category = @family.categories.create!(name: "Coffee")
+
+    jev_returning(txn, category, confidence: 0.52)
+
+    assert_no_difference "DataEnrichment.count" do
+      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    end
+
+    assert_nil txn.reload.category
+    # Unlocked, so it stays eligible for a later attempt.
+    assert_includes @account.transactions.reload.enrichable(:category_id), txn
+
+    entry = DebugLogEntry.order(:created_at).last
+    withheld = entry.metadata["withheld_low_confidence"].sole
+    assert_equal txn.id, withheld["transaction_id"]
+    assert_in_delta 0.52, withheld["confidence"], 0.001
+  end
+
+  test "applies an answer at or above the confidence threshold" do
+    @family.update!(categorization_confidence_threshold: 0.7)
+    txn = create_transaction(account: @account, name: "Blue Bottle Coffee").transaction
+    category = @family.categories.create!(name: "Coffee")
+
+    jev_returning(txn, category, confidence: 0.97)
+
+    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+
+    assert_equal category, txn.reload.category
+  end
+
+  test "a threshold never suppresses a provider that reports no confidence" do
+    # The LLM providers return a bare category name. Gating them on a confidence
+    # they cannot produce would silently stop categorizing altogether.
+    @family.update!(categorization_confidence_threshold: 0.9)
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+
+    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
+    ])).once
+
+    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+
+    assert_equal category, txn.reload.category
+  end
+
+  # Shadow mode runs the provider that is NOT in use and records the comparison
+  # without applying any of its answers.
+
+  test "does not run a shadow provider by default" do
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+
+    assert_equal 0.0, @family.effective_categorization_shadow_rate
+    Provider::Registry.expects(:get_provider).with(:jev).never
+    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
+    ])).once
+
+    assert_no_difference "CategorizationComparison.count" do
+      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    end
+  end
+
+  test "records a disagreement without applying the shadow answer" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "Blue Bottle Coffee").transaction
+    applied = @family.categories.create!(name: "Coffee")
+    shadowed = @family.categories.create!(name: "Groceries")
+
+    # Real instances, not bare mocks: the comparison records each provider by
+    # its class name, and a Mocha::Mock would be stored as "mock".
+    openai = Provider::Openai.allocate
+    Provider::Registry.stubs(:preferred_llm_provider).returns(openai)
+    openai.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: txn.id, category_name: applied.name)
+    ])).once
+
+    jev = Provider::Jev.allocate
+    Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
+    jev.expects(:auto_categorize).returns(provider_success_response([
+      CategoryDecision.new(
+        transaction_id: txn.id,
+        category_name: shadowed.name,
+        confidence: 0.88,
+        probabilities: { shadowed.name => 0.88 },
+        usage: { "cost" => 0.000032 }
+      )
+    ])).once
+
+    assert_difference "CategorizationComparison.count", 1 do
+      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    end
+
+    # The incumbent's answer is the one that lands.
+    assert_equal applied, txn.reload.category
+
+    comparison = CategorizationComparison.order(:created_at).last
+    assert_not comparison.agreed
+    assert_equal "openai", comparison.applied_provider
+    assert_equal "jev", comparison.shadow_provider
+    assert_equal applied.name, comparison.applied_category_name
+    assert_equal shadowed.name, comparison.shadow_category_name
+    assert_in_delta 0.88, comparison.shadow_confidence, 0.001
+  end
+
+  test "a failing shadow provider does not break the run it observes" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+
+    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
+    ])).once
+
+    jev = Provider::Jev.allocate
+    Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
+    jev.expects(:auto_categorize).raises(Provider::Jev::Error.new("upstream down"))
+
+    assert_nothing_raised do
+      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    end
+
+    assert_equal category, txn.reload.category
+    assert_equal 0, CategorizationComparison.count
+  end
+
   private
     AutoCategorization = Provider::LlmConcept::AutoCategorization
     CategoryDecision = Provider::ClassificationConcept::CategoryDecision
+
+    # Puts the family on Jev and has it return one decision at a given confidence.
+    def jev_returning(transaction, category, confidence:)
+      @family.update!(categorization_provider: "jev")
+      jev = Provider::Jev.allocate
+      Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
+      jev.expects(:auto_categorize).returns(provider_success_response([
+        CategoryDecision.new(
+          transaction_id: transaction.id,
+          category_name: category.name,
+          confidence: confidence,
+          probabilities: { category.name => confidence },
+          usage: { "cost" => 0.000032 }
+        )
+      ])).once
+      jev
+    end
 end

@@ -56,6 +56,7 @@ class Family < ApplicationRecord
 
   has_many :tags, dependent: :destroy
   has_many :categories, dependent: :destroy
+  has_many :categorization_comparisons, dependent: :destroy
   has_many :merchants, dependent: :destroy, class_name: "FamilyMerchant"
 
   has_many :budgets, dependent: :destroy
@@ -155,6 +156,10 @@ class Family < ApplicationRecord
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :categorization_provider, inclusion: { in: CATEGORIZATION_PROVIDERS }
+  validates :categorization_confidence_threshold,
+            numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
+  validates :categorization_shadow_rate,
+            numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 1 }
 
   # Single definition of the ENV-over-column precedence, so the resolver and the
   # settings UI can never disagree about which provider is actually in force.
@@ -180,6 +185,33 @@ class Family < ApplicationRecord
     # Provider::Anthropic implements auto_categorize (PR #1984), so batch
     # categorization routes to the configured provider.
     jev || Provider::Registry.preferred_llm_provider
+  end
+
+  # Answers below this confidence are not applied. Zero means apply everything,
+  # which is how every install behaves until someone opts in.
+  #
+  # Only providers that report calibrated confidence can be gated — the LLM
+  # providers return a bare category name, so a threshold does nothing to them.
+  def effective_categorization_confidence_threshold
+    (ENV["CATEGORIZATION_CONFIDENCE_THRESHOLD"].presence || categorization_confidence_threshold).to_f
+  end
+
+  # Fraction of categorization runs that also ask the provider NOT in use, for
+  # comparison only. Zero disables it. This doubles spend on the runs it samples,
+  # so it is opt-in and sampled rather than all-or-nothing.
+  def effective_categorization_shadow_rate
+    (ENV["CATEGORIZATION_SHADOW_RATE"].presence || categorization_shadow_rate).to_f
+  end
+
+  # The provider to run alongside the one in use, for comparison. Deliberately
+  # symmetric: whichever is selected, this returns the other, so Jev can be
+  # trialled against the LLM path or vice versa without a second mechanism.
+  def shadow_categorization_provider
+    if effective_categorization_provider == "jev"
+      Provider::Registry.preferred_llm_provider
+    else
+      Provider::Registry.get_provider(:jev)
+    end
   end
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
   validates :personal_budgets, inclusion: { in: [ true, false ] }

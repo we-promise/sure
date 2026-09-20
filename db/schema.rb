@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_20_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_20_160100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -417,6 +417,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_150000) do
     t.index ["family_id"], name: "index_categories_on_family_id"
   end
 
+  create_table "categorization_comparisons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.boolean "agreed", null: false
+    t.string "applied_category_name"
+    t.string "applied_provider", null: false
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "shadow_category_name"
+    t.decimal "shadow_confidence", precision: 5, scale: 4
+    t.jsonb "shadow_probabilities", default: {}, null: false
+    t.string "shadow_provider", null: false
+    t.uuid "transaction_id"
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "agreed", "created_at"], name: "index_categorization_comparisons_on_family_agreement"
+    t.index ["family_id"], name: "index_categorization_comparisons_on_family_id"
+    t.index ["transaction_id"], name: "index_categorization_comparisons_on_transaction_id"
+  end
+
   create_table "chats", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.jsonb "error"
@@ -820,7 +837,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_150000) do
     t.string "assistant_type", default: "builtin", null: false
     t.boolean "auto_sync_on_login", default: true, null: false
     t.string "bills_feed_token"
+    t.decimal "categorization_confidence_threshold", precision: 3, scale: 2, default: "0.7", null: false
     t.string "categorization_provider", default: "llm", null: false
+    t.decimal "categorization_shadow_rate", precision: 3, scale: 2, default: "0.0", null: false
     t.string "country", default: "US"
     t.datetime "created_at", null: false
     t.string "currency", default: "USD"
@@ -844,7 +863,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_150000) do
     t.datetime "updated_at", null: false
     t.string "vector_store_id"
     t.index ["bills_feed_token"], name: "index_families_on_bills_feed_token", unique: true
+    t.check_constraint "categorization_confidence_threshold >= 0::numeric AND categorization_confidence_threshold <= 1::numeric", name: "chk_families_categorization_confidence_threshold"
     t.check_constraint "categorization_provider::text = ANY (ARRAY['llm'::character varying::text, 'jev'::character varying::text])", name: "chk_families_categorization_provider"
+    t.check_constraint "categorization_shadow_rate >= 0::numeric AND categorization_shadow_rate <= 1::numeric", name: "chk_families_categorization_shadow_rate"
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
   end
@@ -2750,6 +2771,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_20_150000) do
   add_foreign_key "budgets", "families"
   add_foreign_key "budgets", "users", on_delete: :cascade
   add_foreign_key "categories", "families"
+  add_foreign_key "categorization_comparisons", "families"
+  add_foreign_key "categorization_comparisons", "transactions", on_delete: :nullify
   add_foreign_key "chats", "users"
   add_foreign_key "coinbase_accounts", "coinbase_items"
   add_foreign_key "coinbase_items", "families"

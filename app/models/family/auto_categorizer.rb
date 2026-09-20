@@ -51,25 +51,44 @@ class Family::AutoCategorizer
       raise Error, "Failed to auto-categorize transactions: #{result.error.message}"
     end
 
+    shadow_decisions = run_shadow(categories_input)
+
     modified_count = 0
     categorized_transaction_ids = []
+    withheld = []
+
     scope.each do |transaction|
       auto_categorization = result.data.find { |c| c.transaction_id == transaction.id }
 
       category_id = categories_input.find { |c| c[:name] == auto_categorization&.category_name }&.dig(:id)
 
-      if category_id.present?
-        categorized_transaction_ids << transaction.id
-        was_modified = transaction.enrich_attribute(
-          :category_id,
-          category_id,
-          source: "ai"
-        )
-        transaction.lock_attr!(:category_id)
-        # enrich_attribute returns true if the transaction was actually modified
-        modified_count += 1 if was_modified
+      next if category_id.blank?
+
+      # Withheld rather than applied: the transaction is left unlocked and still
+      # enrichable, so a later run (or a better model) can try again. Applying a
+      # coin-flip guess and locking it would be worse than leaving it blank,
+      # because the lock is what stops anything else from correcting it.
+      if withhold?(auto_categorization)
+        withheld << {
+          transaction_id: transaction.id,
+          category_name: auto_categorization.category_name,
+          confidence: confidence_for(auto_categorization)
+        }
+        next
       end
+
+      categorized_transaction_ids << transaction.id
+      was_modified = transaction.enrich_attribute(
+        :category_id,
+        category_id,
+        source: "ai"
+      )
+      transaction.lock_attr!(:category_id)
+      # enrich_attribute returns true if the transaction was actually modified
+      modified_count += 1 if was_modified
     end
+
+    record_shadow_comparisons(result.data, shadow_decisions) if shadow_decisions
 
     DebugLogEntry.capture(
       category: "auto_categorization",
@@ -83,8 +102,11 @@ class Family::AutoCategorizer
         categorized_transaction_ids: categorized_transaction_ids,
         cached_transaction_ids: cached_ids,
         blocked_transaction_ids: blocked_ids,
-        modified_count: modified_count
-      }
+        modified_count: modified_count,
+        confidence_threshold: family.effective_categorization_confidence_threshold,
+        withheld_low_confidence: withheld,
+        shadow_compared_count: shadow_decisions ? shadow_decisions.size : 0
+      }.compact
     )
 
     modified_count
@@ -107,6 +129,91 @@ class Family::AutoCategorizer
       # a family that opted in and then chose the LLM provider gets the LLM
       # provider.
       @categorization_provider = family.resolved_categorization_provider
+    end
+
+    # Only providers reporting calibrated confidence can be gated. The LLM
+    # providers return a bare category name, so there is nothing to compare and
+    # their answers always apply — a threshold must not silently suppress a
+    # provider it cannot measure.
+    def confidence_for(decision)
+      decision.confidence if decision.respond_to?(:confidence)
+    end
+
+    def withhold?(decision)
+      threshold = family.effective_categorization_confidence_threshold
+      return false unless threshold.positive?
+
+      confidence = confidence_for(decision)
+      return false if confidence.nil?
+
+      confidence < threshold
+    end
+
+    # Asks the provider that is NOT in use to categorize the same batch, so it
+    # can be judged on real data before anyone switches. Its answers are never
+    # applied.
+    #
+    # Sampled per run rather than per transaction because the LLM providers
+    # categorize a whole batch in one request — sampling individual rows would
+    # not reduce the number of calls. Any failure is swallowed: a diagnostic
+    # must never break the categorization it is observing.
+    def run_shadow(categories_input)
+      rate = family.effective_categorization_shadow_rate
+      return nil unless rate.positive?
+      return nil unless rand < rate
+
+      provider = family.shadow_categorization_provider
+      return nil if provider.nil? || provider.class == categorization_provider.class
+
+      response = provider.auto_categorize(
+        transactions: transactions_input,
+        user_categories: categories_input,
+        family: family
+      )
+
+      return nil unless response.success?
+
+      @shadow_provider = provider
+      response.data
+    rescue => error
+      Rails.logger.warn("Shadow categorization failed for family #{family.id}: #{error.class}: #{error.message}")
+      nil
+    end
+
+    # Built from the decision lists rather than from `scope`, which is a fresh
+    # query: by this point the applied answers have been written and locked, so
+    # re-running it would match nothing.
+    def record_shadow_comparisons(applied_decisions, shadow_decisions)
+      ids = (applied_decisions.map(&:transaction_id) + shadow_decisions.map(&:transaction_id)).uniq
+
+      rows = ids.filter_map do |id|
+        applied = applied_decisions.find { |d| d.transaction_id == id }
+        shadow = shadow_decisions.find { |d| d.transaction_id == id }
+        next if applied.nil? && shadow.nil?
+
+        {
+          family_id: family.id,
+          transaction_id: id,
+          applied_provider: provider_key(categorization_provider),
+          applied_category_name: applied&.category_name,
+          shadow_provider: provider_key(@shadow_provider),
+          shadow_category_name: shadow&.category_name,
+          shadow_confidence: confidence_for(shadow),
+          shadow_probabilities: (shadow.probabilities if shadow.respond_to?(:probabilities)) || {},
+          # Both declining to guess counts as agreement — an abstention is an answer.
+          agreed: applied&.category_name == shadow&.category_name,
+          created_at: Time.current,
+          updated_at: Time.current
+        }
+      end
+
+      CategorizationComparison.insert_all(rows) if rows.any?
+    rescue => error
+      Rails.logger.warn("Recording shadow comparison failed for family #{family.id}: #{error.class}: #{error.message}")
+    end
+
+    def provider_key(provider)
+      provider.class.name.demodulize.underscore
     end
 
     def user_categories_input
