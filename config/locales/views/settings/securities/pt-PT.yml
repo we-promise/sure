@@ -1,0 +1,40 @@
+---
+pt-PT:
+  settings:
+    securities:
+      show:
+        disable_mfa: Desativar 2FA
+        disable_mfa_confirm: Tem a certeza de que pretende desativar a autenticação
+          de dois fatores? Isto tornará a sua conta menos segura.
+        enable_mfa: Ativar 2FA
+        mfa_enabled_status_html: "A autenticação de dois fatores está <span class=\"font-medium text-green-600\">ativada</span>"
+        mfa_enabled_description: A sua conta está protegida com uma camada adicional de segurança.
+        mfa_disabled_status_html: "A autenticação de dois fatores está <span class=\"font-medium text-red-600\">desativada</span>"
+        mfa_disabled_description: Ative a 2FA para adicionar uma camada extra de segurança à sua conta.
+        mfa_description: Adicione uma camada extra de segurança à sua conta ao exigir
+          um código da sua aplicação de autenticação quando inicia sessão
+        mfa_title: Autenticação de Dois Fatores
+        webauthn_add: Adicionar chave de acesso ou chave de segurança
+        webauthn_added: Adicionada em %{date}
+        webauthn_description: Utilize uma chave de acesso, Touch ID, Windows Hello
+          ou uma chave de segurança de hardware como segundo fator ao iniciar sessão.
+        webauthn_empty: Ainda não existem chaves de acesso ou chaves de segurança registadas.
+        webauthn_last_used: Utilizada pela última vez há %{time_ago}
+        webauthn_name_label: Designação da chave
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey, etc.
+        webauthn_remove: Eliminar
+        webauthn_remove_confirm: Tem a certeza de que pretende eliminar esta chave de
+          acesso ou chave de segurança?
+        webauthn_remove_confirm_body: Terá de registar novamente esta chave de acesso
+          ou chave de segurança antes de poder ser utilizada para verificação no início
+          de sessão.
+        webauthn_title: Chaves de acesso e chaves de segurança
+        webauthn_unsupported: Este navegador não suporta chaves de acesso ou chaves
+          de segurança.
+  webauthn_credentials:
+    default_name: Chave de segurança
+    failure: Não foi possível guardar essa chave de acesso ou chave de segurança. Tente
+      novamente.
+    mfa_required: Ative a autenticação de dois fatores antes de adicionar uma chave
+      de acesso ou chave de segurança.
+    success: Chave de acesso ou chave de segurança removida.

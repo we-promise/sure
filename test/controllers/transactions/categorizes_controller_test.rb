@@ -43,6 +43,26 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_equal parent_index + 1, child_index
   end
 
+  test "show groups subcategories immediately after their parent in the category pills" do
+    create_transaction(account: @account, name: "Starbucks")
+    get transactions_categorize_url
+
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    pill_values = doc.css("button[name='category_id']").map { |node| node["value"] }
+
+    parent_index = pill_values.index(categories(:food_and_drink).id)
+    child_index = pill_values.index(categories(:subcategory).id)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+
+    child_pill = doc.css("button[name='category_id'][value='#{categories(:subcategory).id}']").first
+    assert_includes child_pill.text, categories(:subcategory).display_name_with_parent
+  end
+
   test "show renders full dates so multi-year lists are unambiguous" do
     create_transaction(account: @account, name: "Starbucks", date: Date.new(2024, 7, 8))
 

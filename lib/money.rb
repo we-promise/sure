@@ -10,9 +10,7 @@ class Money
       @to_currency = to_currency
       @date = date
 
-      error_message = message || "Couldn't find exchange rate from #{from_currency} to #{to_currency} on #{date}"
-
-      super(error_message)
+      super("Couldn't find exchange rate from #{from_currency} to #{to_currency} on #{date}")
     end
   end
 

@@ -22,6 +22,7 @@ de:
       cancel: Abbrechen
       creating: Importiere...
     complete_account_setup:
+      invalid_sync_start_date: Wähl ein gültiges Startdatum für die Synchronisierung, das nicht in der Zukunft liegt.
       success:
         one: "%{count} Konto importiert"
         other: "%{count} Konten importiert"

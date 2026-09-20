@@ -1,0 +1,106 @@
+---
+zh-CN:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: "通过安全的网页登录连接 Trade Republic 投资账户"
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: "券商账户"
+      private_markets: "私募市场"
+      interest_products: "计息产品"
+      crypto_wallet: "加密货币钱包"
+    trade_republic_item:
+      syncing: "正在同步"
+      requires_update: "需要重新认证"
+      error: "错误"
+      synced: "%{time}前同步。%{summary}。"
+      setup_accounts: "设置账户"
+      delete: "删除"
+      accounts_need_setup: "账户需要设置"
+      accounts_need_setup_description: "您的 Trade Republic 账户需要关联到 Sure 账户。"
+      no_accounts_discovered: "尚未发现 Trade Republic 账户。"
+      no_accounts_discovered_description: "完成登录并运行同步以发现您的账户。"
+      data_quality:
+        title: "数据质量和同步详情"
+        repair: "修复导入的数据"
+        positions:
+          one: "%{count} 个持仓"
+          other: "%{count} 个持仓"
+        unpriced:
+          one: "%{count} 个没有当前价格"
+          other: "%{count} 个没有当前价格"
+        events:
+          one: "%{count} 条活动"
+          other: "%{count} 条活动"
+        unknown:
+          one: "%{count} 条未知活动"
+          other: "%{count} 条未知活动"
+        expenses:
+          one: "过去 30 天 %{count} 笔支出（%{amount}）"
+          other: "过去 30 天 %{count} 笔支出（%{amount}）"
+        reconciliation: "%{matched}/%{total} 个账户余额已核对"
+        sync_history: 最近同步
+        sync_status:
+          completed: 已完成
+          failed: 失败
+          pending: 待处理
+          syncing: 同步中
+          stale: 已过期
+    setup_accounts:
+      page_title: "设置 Trade Republic 账户"
+      subtitle: "关联您的 Trade Republic 投资账户。"
+      available_accounts:
+        account_type_investment: "Investment portfolio"
+        account_type_cash: "Cash account"
+      buttons:
+        refresh: "刷新"
+        cancel: "取消"
+        link: "关联"
+        done: "完成"
+    sync:
+      errors:
+        phone_number_missing: "缺少 Trade Republic 电话号码。"
+        reauthentication_required: "Trade Republic 会话缺失或已过期。请从设置 > 提供商重新连接。"
+      status:
+        checking_credentials: "正在检查 Trade Republic 凭据..."
+        importing_account: "正在导入 Trade Republic 账户..."
+        processing_activity: "正在处理持仓和活动..."
+        calculating_balances: "正在计算余额..."
+    repair:
+      scheduled: "已安排修复 Trade Republic 数据。"
+    select_existing_account:
+      title: "关联 Trade Republic 账户"
+      link: "关联"
+      cancel: "取消"
+    initiate_login:
+      verification_required: "登录已开始。请通过 %{method} 确认，然后点击确认登录。"
+    complete_login:
+      approval_pending: "尚未确认。请在 Trade Republic 应用中批准登录，然后重试。"
+      success: "Trade Republic 已成功连接。"
+      login_expired: "登录请求已过期。请重新开始。"
+    link_existing_account:
+      not_found: "未找到账户或 Trade Republic 配置。"
+      success: "已成功关联 Trade Republic 账户。"
+    complete_account_setup:
+      success:
+        one: "已成功创建 %{count} 个 Trade Republic 账户。"
+        other: "已成功创建 %{count} 个 Trade Republic 账户。"
+      none_created: "未创建任何账户。"
+      partial_failure:
+        one: "无法完全设置所选的一个 Trade Republic 账户。请检查调试日志并重试。"
+        other: "无法完全设置所选的 %{count} 个 Trade Republic 账户。请检查调试日志并重试。"
+    activities:
+      labels:
+        contribution: 入金
+        withdrawal: 出金
+        interest: 利息
+        dividend: 股息
+        card_payment: 刷卡支付
+        cash_withdrawal: 现金取款
+        card_fee: 卡费
+        card_refund: 卡退款
+        tax_refund: 退税
+        buy: 买入
+        sell: 卖出

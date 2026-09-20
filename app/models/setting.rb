@@ -56,6 +56,16 @@ class Setting < RailsSettings::Base
     url.gsub(BRAND_FETCH_URL_PATTERN, "\\1w/#{size}/h/#{size}\\2")
   end
 
+  def self.brand_fetch_icon_url(identifier, fallback: "lettermark", namespace: nil, width: nil, height: nil)
+    return nil if identifier.blank? || brand_fetch_client_id.blank?
+
+    w = width || brand_fetch_logo_size
+    h = height || brand_fetch_logo_size
+    path = [ namespace, identifier ].compact_blank.join("/")
+
+    "https://cdn.brandfetch.io/#{path}/icon/fallback/#{fallback}/w/#{w}/h/#{h}?c=#{brand_fetch_client_id}"
+  end
+
   # Provider selection
   field :exchange_rate_provider, type: :string, default: ENV.fetch("EXCHANGE_RATE_PROVIDER", "twelve_data")
   field :securities_provider, type: :string, default: ENV.fetch("SECURITIES_PROVIDER", "twelve_data")
@@ -68,6 +78,9 @@ class Setting < RailsSettings::Base
   field :eodhd_api_key, type: :string, default: ENV["EODHD_API_KEY"]
   field :alpha_vantage_api_key, type: :string, default: ENV["ALPHA_VANTAGE_API_KEY"]
   field :tinkoff_invest_api_key, type: :string, default: ENV["TINKOFF_INVEST_API_KEY"]
+  # Mansa API (mansaapi.com) — African exchanges, including NGX (Nigeria),
+  # which none of the providers above cover. See Provider::Mansa.
+  field :mansa_api_key, type: :string, default: ENV["MANSA_API_KEY"]
 
   # Property valuation (AVM) provider API keys
   field :rentcast_api_key, type: :string, default: ENV["RENTCAST_API_KEY"]
@@ -87,6 +100,7 @@ class Setting < RailsSettings::Base
       eodhd_api_key
       alpha_vantage_api_key
       tinkoff_invest_api_key
+      mansa_api_key
       rentcast_api_key
       realie_api_key
       openai_access_token
@@ -142,7 +156,7 @@ class Setting < RailsSettings::Base
       plural.to_s.split(",").map(&:strip).reject(&:blank?)
     else
       # Backward compat: fall back to singular setting
-      [ ENV["SECURITIES_PROVIDER"].presence || securities_provider ].compact
+      [ ENV["SECURITIES_PROVIDER"].presence || securities_provider.presence ].compact
     end
   end
 

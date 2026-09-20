@@ -159,6 +159,10 @@ class SimplefinItem::Importer
         normalized = observed
         if acct.accountable_type == "Loan"
           normalized = observed.abs
+        elsif is_liability && sfa.balance_sign_override == "credit"
+          normalized = -observed.abs
+        elsif is_liability && sfa.balance_sign_override == "debt"
+          normalized = observed.abs
         elsif is_liability
           # Try the overpayment analyzer first (feature-flagged)
           begin

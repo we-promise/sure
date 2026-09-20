@@ -47,6 +47,7 @@ en:
         binance_public_hint: free, no API key -- crypto only (BTC, ETH, etc.)
         moex_public_hint: free, no API key -- Russian stocks, funds & bonds (MOEX), incl. RUB FX
         tinkoff_invest_hint: requires read-only token -- Russian stocks/funds/bonds prices + brand logos
+        requires_api_key_mansa: requires API key, 100 calls/day free tier -- NGX (Nigerian Exchange) only
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -58,6 +59,7 @@ en:
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
+          mansa: Mansa
       assistant_settings:
         title: AI Assistant
         description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
@@ -85,15 +87,15 @@ en:
           title: Disconnect external assistant?
           body: This will remove the saved URL, token, and agent ID, and switch to the builtin assistant. You can reconnect later by entering new credentials.
       brand_fetch_settings:
-        description: Enter the Client ID provided by Brand Fetch
-        env_configured_message: You have successfully configured your Brand Fetch Client ID through the BRAND_FETCH_CLIENT_ID environment variable.
+        description: Enter the Client ID provided by Brandfetch
+        env_configured_message: You have successfully configured your Brandfetch Client ID through the BRAND_FETCH_CLIENT_ID environment variable.
         show_details: "(show details)"
-        setup_step_1_html: 'Visit <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> and create a free Brand Fetch Developer account.'
+        setup_step_1_html: 'Visit <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> and create a free Brandfetch Developer account.'
         setup_step_2_html: 'Go to the <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> page.'
         setup_step_3: 'Tap the eye icon under the "Your Client ID" section to reveal your Client ID and paste it below.'
         label: Client ID
         placeholder: Enter your Client ID here
-        title: Brand Fetch Settings
+        title: Brandfetch Settings
         high_res_label: Enable high-resolution logos
         high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
       llm_provider_selector:
@@ -188,6 +190,7 @@ en:
       tinkoff_invest_settings:
         title: T-Invest (T-Bank)
         description: Enter a read-only T-Invest API token. Used to fetch brand logos for securities (incl. funds and bonds, even when MOEX prices them) and, when enabled above, prices for Russian instruments.
+        moex_only_notice: Not enabled for prices above — T-Invest is used to fetch brand logos for all your securities whenever a token is configured, independent of the checkbox above.
         env_configured_message: Successfully configured through the TINKOFF_INVEST_API_KEY environment variable.
         label: API Token
         placeholder: Enter your T-Invest API token here
@@ -206,6 +209,16 @@ en:
         step_2_html: 'Go to your <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> to find your API token.'
         step_3: Copy your API token and paste it below.
         rate_limit_warning: "EODHD free tier is limited to 20 API calls per day. Best used as a supplementary provider for EU ETFs not available from other providers."
+      mansa_settings:
+        title: Mansa
+        description: Enter the API key from Mansa API. Supports NGX (Nigerian Exchange), not covered by any other provider here. Mansa covers other African exchanges too, but only NGX is verified against this integration.
+        env_configured_message: Successfully configured through the MANSA_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your Mansa API key here
+        show_details: "(show details)"
+        step_1_html: 'Visit <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> and claim your free API key -- no card required.'
+        step_2: Copy your API key and paste it below.
+        rate_limit_warning: "Mansa's free tier is limited to 100 API calls per day, and only exposes current quotes -- historical prices require a paid plan. Only NGX (Nigerian Exchange) is verified against this integration; other African exchanges Mansa covers are not yet supported here."
       alpha_vantage_settings:
         title: Alpha Vantage
         description: Enter the API key from Alpha Vantage. Supports EU ETFs on London Stock Exchange, XETRA, and other exchanges.

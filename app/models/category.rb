@@ -12,9 +12,19 @@ class Category < ApplicationRecord
          dependent: :nullify
   belongs_to :parent, class_name: "Category", optional: true
 
+  # Set by .uncategorized so #filter_value can identify the synthetic instance
+  # without a locale-sensitive name comparison. Not a DB column.
+  attr_writer :synthetic_uncategorized
+
+  # Stable, non-localized filter value for the synthetic "Uncategorized" option.
+  # Using an opaque sentinel (rather than the translated display name) means a real
+  # category can never collide with it, regardless of name or locale.
+  UNCATEGORIZED_FILTER_VALUE = "__uncategorized__"
+
   validates :name, :color, :lucide_icon, :family, presence: true
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }
   validates :name, uniqueness: { scope: :family_id }
+  validates :name, exclusion: { in: [ UNCATEGORIZED_FILTER_VALUE ] }
 
   validate :category_level_limit
 
@@ -228,7 +238,7 @@ class Category < ApplicationRecord
         name: I18n.t(UNCATEGORIZED_NAME_KEY),
         color: UNCATEGORIZED_COLOR,
         lucide_icon: "circle-dashed"
-      )
+      ).tap { |category| category.synthetic_uncategorized = true }
     end
 
     def other_investments
@@ -371,6 +381,18 @@ class Category < ApplicationRecord
   # Predicate: is this the synthetic "Uncategorized" category?
   def uncategorized?
     !persisted? && name == I18n.t(UNCATEGORIZED_NAME_KEY)
+  end
+
+  # The value the transactions-filter checkbox submits for this category: the
+  # persisted name for a real category, or the stable sentinel for the
+  # synthetic "Uncategorized" pseudo-category returned by .uncategorized.
+  #
+  # Uses the explicit synthetic_uncategorized marker set by .uncategorized, not
+  # uncategorized? -- that predicate compares name against I18n.t in the *current*
+  # locale, so it would give the wrong answer if the instance were built under one
+  # locale and read under another.
+  def filter_value
+    @synthetic_uncategorized ? UNCATEGORIZED_FILTER_VALUE : name
   end
 
   # Predicate: is this the synthetic "Other Investments" category?
