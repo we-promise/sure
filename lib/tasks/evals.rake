@@ -751,11 +751,19 @@ namespace :evals do
     def format_metric_value(value)
       case value
       when Float
-        value.round(4)
+        format_metric_float(value)
       when BigDecimal
-        value.to_f.round(4)
+        format_metric_float(value.to_f)
       else
         value
       end
+    end
+
+    # Per-sample costs run around 1e-5, which 4 decimal places renders as 0.0 —
+    # reporting a paid provider as free. Small magnitudes keep more places.
+    def format_metric_float(value)
+      return value.round(4) if value.zero? || value.abs >= 0.01
+
+      value.round(8)
     end
 end

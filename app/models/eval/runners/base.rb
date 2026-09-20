@@ -45,26 +45,11 @@ class Eval::Runners::Base
   private
 
     def build_provider
-      case eval_run.provider
-      when "openai"
-        build_openai_provider
-      else
-        raise "Unsupported provider: #{eval_run.provider}"
-      end
-    end
-
-    def build_openai_provider
-      access_token = eval_run.provider_config["access_token"].presence ||
-                     ENV["OPENAI_ACCESS_TOKEN"].presence ||
-                     Setting.openai_access_token
-
-      raise "OpenAI access token not configured" unless access_token.present?
-
-      uri_base = eval_run.provider_config["uri_base"].presence ||
-                 ENV["OPENAI_URI_BASE"].presence ||
-                 Setting.openai_uri_base
-
-      Provider::Openai.new(access_token, uri_base: uri_base, model: model)
+      Eval::ProviderFactory.build(
+        provider: eval_run.provider,
+        model: model,
+        config: eval_run.provider_config
+      )
     end
 
     def record_result(sample:, actual_output:, correct:, **attributes)

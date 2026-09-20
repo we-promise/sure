@@ -11,6 +11,8 @@ class Eval::Metrics::CategorizationMetrics < Eval::Metrics::Base
       hierarchical_accuracy: hierarchical_accuracy,
       samples_processed: total_count,
       samples_correct: correct_count,
+      samples_errored: error_count,
+      error_rate: error_rate,
       avg_latency_ms: avg_latency_ms,
       total_cost: total_cost,
       cost_per_sample: cost_per_sample,

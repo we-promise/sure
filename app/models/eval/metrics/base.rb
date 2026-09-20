@@ -36,6 +36,22 @@ class Eval::Metrics::Base
       (correct_count.to_f / total_count * 100).round(2)
     end
 
+    # A provider outage, an expired API key or a stale model slug records every
+    # sample as incorrect, which is indistinguishable from genuinely wrong
+    # answers in the accuracy figure alone — a 404 reads as a plausible 0%.
+    # Counting errored samples separately keeps a broken run from being mistaken
+    # for a benchmark result.
+    def error_count
+      # Memoized because `results` is a relation, not a loaded collection —
+      # error_rate and samples_errored would otherwise each re-query.
+      @error_count ||= results.where("metadata->>'error' IS NOT NULL").count
+    end
+
+    def error_rate
+      return 0.0 if total_count.zero?
+      (error_count.to_f / total_count * 100).round(2)
+    end
+
     def avg_latency_ms
       return nil if total_count.zero?
       results.average(:latency_ms)&.round(0)
