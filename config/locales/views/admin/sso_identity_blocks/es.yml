@@ -1,0 +1,6 @@
+---
+es:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: La identidad SSO puede iniciar sesión o crear una cuenta nuevamente.

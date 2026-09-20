@@ -1,0 +1,15 @@
+---
+es:
+  recurring_allocations:
+    over_allocation: Eso asignaría más que el monto de la transacción.
+    missing_rate: No hay tipo de cambio disponible; ingrese la cantidad explícitamente
+    already_allocated: Esa transacción ya está aplicada a esta factura.
+    invalid: No se pudo registrar el pago
+    create:
+      success: Pago aplicado
+    destroy:
+      success: Pago desvinculado
+    confirm:
+      success: Pago aplicado a la factura
+    reject:
+      success: Despedido. Esa transacción no se volverá a sugerir para esta factura.

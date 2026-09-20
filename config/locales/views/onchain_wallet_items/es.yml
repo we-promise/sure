@@ -1,0 +1,142 @@
+---
+es:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Actividad encontrada
+      explanation: Este formato de dirección es utilizado por más de una red y los
+        saldos en cada una son diferentes. Elija el que desea rastrear.
+      no_activity_found: No se encontró nada
+      subtitle: "%{address}"
+      title: "¿Qué red?"
+    destroy:
+      success: Programé la conexión de autocustodia para su eliminación.
+    disconnect_asset:
+      success: Se detuvo el seguimiento de %{symbol}. Se mantuvieron su cuenta y su
+        historia.
+    disconnect_wallet:
+      success:
+        one: Se dejó de rastrear 1 activo en esa dirección.
+        other: Se dejó de rastrear %{count} activos en esa dirección.
+    enable_crypto_prices:
+      not_self_hosted: Los proveedores de datos de mercado los configura el operador
+        de la instancia en esta implementación.
+      success: Los precios de las criptomonedas están habilitados. Los valores de
+        la billetera aparecen después de la siguiente sincronización.
+    errors:
+      address_required: Ingrese una dirección de billetera.
+      already_linked: Esa dirección ya está siendo rastreada en esta red. Utilice
+        tokens de revisión para cambiar qué activos se rastrean.
+      chain_unreachable: No se pudo contactar al explorador público de esta red. Inténtalo
+        de nuevo en un momento.
+      rate_limited: El explorador público está limitando la velocidad de las solicitudes
+        en este momento. Inténtalo de nuevo en unos minutos.
+      unexpected: Algo salió mal al leer esta billetera. Los detalles fueron grabados
+        para apoyo.
+      unrecognized_address: Esa no parece una dirección en ninguna red compatible.
+      wallet_not_found: Esta conexión no rastrea esa billetera.
+    link_wallet:
+      errors:
+        none_tracked: 'No se realizó ningún seguimiento: no se pudo agregar %{assets}.
+          Inténtalo de nuevo en un momento.'
+        nothing_selected: Elija al menos un activo para realizar un seguimiento.
+        some_failed: No se pudo realizar el seguimiento de %{assets} y se omitió.
+      success:
+        one: Seguimiento de 1 activo de esta billetera.
+        other: Seguimiento de %{count} activos desde esta billetera.
+    manage:
+      assets_truncated: Esta dirección contiene más tokens de los que se pueden leer,
+        por lo que solo se enumeran los %{count} más creíbles. Todo lo que ya se ha
+        rastreado se sigue sincronizando.
+      disconnect_asset: Dejar de rastrear
+      disconnect_asset_confirm: "¿Dejar de rastrear %{symbol}? Su cuenta e historial
+        se conservan y dejan de actualizarse."
+      disconnect_wallet: Desconectar billetera
+      disconnect_wallet_confirm: "¿Dejar de rastrear todos los activos en esta dirección?"
+      history_note: La desconexión mantiene las cuentas y su historial; simplemente
+        dejan de actualizarse.
+      history_truncated: 'No se pudieron leer todas las transferencias para esta dirección:
+        hay más historial del que cubre una sincronización o el explorador lo rechazó.
+        Los saldos están completos; Faltan algunas transferencias.'
+      native: Nativo
+      no_wallets: Aún no se ha rastreado ninguna billetera.
+      review_tokens: Revisar tokens
+      subtitle: Cada dirección que lee esta conexión y lo que rastrea en cada una.
+      title: Administrar billeteras de autocustodia
+    new_wallet:
+      address_label: Dirección de billetera
+      address_placeholder: bc1..., 0x..., o una dirección de Solana
+      bitcoin_single_address_note: Bitcoin se rastrea una dirección a la vez. Las
+        claves extendidas (xpub/ypub/zpub) no son compatibles, por lo que una billetera
+        que distribuye fondos entre direcciones derivadas mostrará solo el saldo de
+        la dirección que ingrese.
+      chain_auto_detect: Detectar automáticamente
+      chain_label: Red
+      continue: Continuar
+      read_only_note: Solo se leen los datos de la cadena pública. Nunca ingrese una
+        frase inicial o una clave privada.
+      subtitle: Rastrea una billetera de la que tienes las llaves, desde su dirección
+        pública.
+      title: Agregar una billetera de autocustodia
+    onchain_wallet_item:
+      assets_tracked:
+        one: 1 activo rastreado
+        other: "%{count} activos rastreados"
+      sync: Sincronizar ahora
+      syncing: Sincronizando...
+    wallet_card:
+      addresses_tracked:
+        one: 1 dirección rastreada
+        other: "%{count} direcciones rastreadas"
+      deletion_in_progress: Eliminando...
+      delete: Quitar conexión
+      needs_attention: necesita atencion
+      no_wallets_message: Vincula una dirección desde la configuración del proveedor
+        para verla aquí.
+      no_wallets_title: Aún no hay billeteras vinculadas
+      status: Sincronizado hace %{timestamp}
+      sync: Sincronizar ahora
+      status_never: Aún no sincronizado
+      syncing: Sincronizando...
+    price_provider_warning:
+      body: Ningún proveedor de datos de mercado habilitado puede fijar el precio
+        de las criptomonedas, por lo que estas billeteras rastrean las cantidades
+        pero muestran un valor de cero.
+      enable: Habilitar precios criptográficos
+      exchange_rate_body: 'Las criptomonedas tienen un precio en USD y ningún proveedor
+        de tipos de cambio está configurado para convertirlas a %{currency}, por lo
+        que estas billeteras rastrean las cantidades pero muestran un valor de cero.
+        Configure EXCHANGE_RATE_PROVIDER: Frankfurter no necesita la clave API.'
+      exchange_rate_title: No hay ningún proveedor de tipo de cambio configurado
+      link: Configuración de datos de mercado abierto
+      title: Los precios de las criptomonedas no están configurados
+    provider_connection:
+      description: Rastrea una billetera de la que tienes las llaves, desde su dirección
+        pública.
+      name: Cartera de autocustodia
+    review_tokens:
+      save: Guardar activos rastreados
+      subtitle: "%{chain} · %{address}"
+      title: Revisar los activos rastreados
+    token_review:
+      import_selected: Seguimiento de activos seleccionados
+      subtitle: "%{chain} · %{address}"
+      title: Elige qué rastrear
+    token_review_form:
+      assets_truncated: Esta dirección contiene más tokens de los que se pueden leer,
+        por lo que solo se enumeran los %{count} más creíbles.
+      cancel: Cancelar
+      explanation: 'Los activos con un precio conocido están marcados. Todo lo demás
+        queda sin marcar: las billeteras recopilan envíos aéreos de spam y el seguimiento
+        de una no tiene ningún valor asociado.'
+      native: Nativo
+      no_price: No hay precio disponible; rastreado solo por cantidad
+      nothing_found: Esta dirección no contiene nada que podamos ver en esta red.
+    update:
+      success: Se actualizó la conexión de autocustodia.
+    update_tokens:
+      errors:
+        no_changes: Nada cambió; los mismos activos todavía están marcados.
+        none_tracked: 'Nada cambió: no se pudo agregar %{assets}. Inténtalo de nuevo
+          en un momento.'
+        some_failed: No se pudo realizar el seguimiento de %{assets} y se omitió.
+      success: Activos rastreados actualizados (%{created} agregado, %{removed} eliminado).
