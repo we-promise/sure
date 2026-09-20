@@ -20,8 +20,11 @@
 
         <div class="flex items-center gap-4">
           <div class="flex items-center gap-2">
+            <% if projected? %>
+              <%= render DS::Pill.new(label: t(".projected"), tone: :neutral, marker: false, icon: "calendar") %>
+            <% end %>
             <span class="font-medium privacy-sensitive"><%= end_balance_money.format %></span>
-            <%= render DS::Tooltip.new(text: t(".balance_tooltip"), placement: "left", size: "sm", as: :span) %>
+            <%= render DS::Tooltip.new(text: t(projected? ? ".projected_balance_tooltip" : ".balance_tooltip"), placement: "left", size: "sm", as: :span) %>
           </div>
           <%= helpers.icon "chevron-down", class: "group-open:rotate-180" %>
         </div>

@@ -1,6 +1,6 @@
 ---
 fr:
-  UI:
+  ui:
     account:
       activity_date:
         balance_tooltip: Le solde de fin de journée, après toutes les transactions et ajustements

@@ -52,30 +52,47 @@ class Account < ApplicationRecord
   # into or out of the account, so summing its raw amount here would
   # double-count against Balance::BaseCalculator#market_value_change_on_date
   # once the trade lands.
-  def scheduled_entries_total_money
+  # `through_date` bounds the scheduled window to entries dated on or before
+  # it (inclusive) -- used to project the balance as of a specific future
+  # date (see Account::ActivityFeedData) instead of the account's fully
+  # projected total.
+  def scheduled_entries_total_money(through_date: nil)
     return Money.new(0, currency) if balance_type == :non_cash && accountable_type != "Loan"
 
-    total = entries.excluding_pending.excluding_split_parents
+    scope = entries.excluding_pending.excluding_split_parents
       .where(entryable_type: [ "Transaction", "Trade" ])
       .where("entries.date > ?", Date.current)
-      .includes(:entryable)
-      .sum do |entry|
-        next 0 if entry.entryable_type == "Trade" && entry.entryable.qty.nonzero?
+    scope = scope.where("entries.date <= ?", through_date) if through_date
 
-        custom_rate = entry.entryable.exchange_rate if entry.entryable.respond_to?(:exchange_rate)
-        converted = begin
-          entry.amount_money.exchange_to(currency, date: entry.date, custom_rate: custom_rate).amount
-        rescue Money::ConversionError
-          entry.amount
-        end
-        asset? ? -converted : converted
-      end
+    total = scope.includes(:entryable).sum { |entry| convert_scheduled_entry_amount(entry) || 0 }
 
     Money.new(total, currency)
   end
 
   def projected_balance_money
     balance_money + scheduled_entries_total_money
+  end
+
+  # Converts a scheduled entry's amount into this account's currency, signed
+  # the same way flows_for_date treats it (see Balance::BaseCalculator).
+  # Returns nil when the entry should not contribute -- a Buy/Sell trade
+  # (moves value between cash and holdings, not into/out of the account) or
+  # an unconvertible currency pair. Dropping the latter instead of using the
+  # raw, unconverted amount matches Balance::SyncCache#converted_entries,
+  # which drops the same entry outright once it materializes (see #1143) --
+  # a projection that doesn't drop it would disagree with the balance it's
+  # supposed to preview.
+  def convert_scheduled_entry_amount(entry)
+    return nil if entry.entryable_type == "Trade" && entry.entryable.qty.nonzero?
+
+    custom_rate = entry.entryable.exchange_rate if entry.entryable.respond_to?(:exchange_rate)
+    converted = begin
+      entry.amount_money.exchange_to(currency, date: entry.date, custom_rate: custom_rate).amount
+    rescue Money::ConversionError
+      return nil
+    end
+
+    asset? ? -converted : converted
   end
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }

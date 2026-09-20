@@ -790,6 +790,24 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal Money.new(-110, "EUR"), eur_account.scheduled_entries_total_money
   end
 
+  test "scheduled_entries_total_money drops entries with no available exchange rate instead of using the raw amount" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date, currency: "USD")
+    create_transaction(account: @account, amount: 100, date: 3.days.from_now.to_date, currency: "EUR")
+
+    # The EUR entry has no exchange rate to USD in this test and none can be
+    # fetched -- it must be dropped, not added in as a raw 100, to match how
+    # Balance::SyncCache drops it once the date arrives (see #1143).
+    assert_equal Money.new(-200, "USD"), @account.scheduled_entries_total_money
+  end
+
+  test "scheduled_entries_total_money(through_date:) only sums entries on or before that date" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date)
+    create_transaction(account: @account, amount: 50, date: 10.days.from_now.to_date)
+
+    assert_equal Money.new(-200, "USD"), @account.scheduled_entries_total_money(through_date: 5.days.from_now.to_date)
+    assert_equal Money.new(-250, "USD"), @account.scheduled_entries_total_money(through_date: 10.days.from_now.to_date)
+  end
+
   test "history_start_date resolves to the earliest of opening anchor, entries, and balances" do
     account = @family.accounts.create!(
       owner: @admin,
