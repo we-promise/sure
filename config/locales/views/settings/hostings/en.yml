@@ -120,6 +120,31 @@ en:
         model_label: Default Model (Optional)
         model_placeholder: "claude-sonnet-4-6 (default)"
         model_help: Used for chat and PDF processing. Batch operations (categorize, merchant detection) default to Haiku for cost.
+      categorization_provider_selector:
+        title: Transaction Categorization
+        preview_pill: Preview
+        description: Choose which provider categorizes transactions. This is separate from the AI provider above, which handles chat and PDF processing.
+        env_notice: "Set to %{type} through environment variables."
+        provider_label: Categorization provider
+        provider_llm: AI provider (OpenAI or Anthropic)
+        provider_jev: Jev (TypeSafe)
+        provider_help: The AI provider reads a batch of transactions and writes back category names. Jev picks from your category list and returns a calibrated confidence for each transaction.
+        not_configured_hint: Jev is selected but has no API key configured. Categorization will keep using the AI provider until you add one below.
+        data_retention_heading: Data sharing
+        data_retention: Transaction descriptions, amounts and your category names are sent to Jev to be categorized. Review TypeSafe's retention policy before enabling this on real data.
+      jev_settings:
+        title: Jev (TypeSafe)
+        preview_pill: Preview
+        description: Enter your API key to use Jev for transaction categorization. Jev answers typed questions with calibrated confidence rather than generating text, so it is not used for chat or PDF processing.
+        preview_requirement: A key on its own does not switch categorization over — select Jev as the categorization provider above.
+        env_configured_message: Successfully configured through environment variables.
+        api_key_label: API Key
+        api_key_placeholder: Enter your OpenRouter or TypeSafe API key
+        endpoint_label: Endpoint (Optional)
+        endpoint_placeholder: "https://openrouter.ai/api/alpha/decisions (default)"
+        model_label: Model (Optional)
+        model_placeholder: "~typesafe/jev-latest (default)"
+        model_help: Defaults to Jev via OpenRouter. To use TypeSafe directly, set the endpoint to https://api.typesafe.ai/v1/systemone and the model to jev-latest.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
@@ -254,6 +279,7 @@ en:
         invalid_llm_budget: "%{field} must be a whole number ≥ %{minimum}."
         invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
         anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
+        invalid_jev_endpoint: Jev Endpoint must be an http(s) URL.
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       disconnect_external_assistant:
         external_assistant_disconnected: External assistant disconnected

@@ -27,7 +27,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout external_assistant_token rentcast_api_key realie_api_key].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout external_assistant_token rentcast_api_key realie_api_key].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -322,6 +322,65 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
       assert_match(/Anthropic Model is required/, flash[:alert])
       assert_nil Setting.anthropic_base_url
+    end
+  end
+
+  test "can update jev api key when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { jev_api_key: "fake-jev-key-for-tests" } }
+
+      assert_equal "fake-jev-key-for-tests", Setting.jev_api_key
+    end
+  end
+
+  test "ignores redacted jev api key placeholder" do
+    with_self_hosting do
+      Setting.jev_api_key = "previous-key"
+
+      patch settings_hosting_url, params: { setting: { jev_api_key: "********" } }
+
+      assert_equal "previous-key", Setting.jev_api_key
+    end
+  end
+
+  test "can clear jev api key by submitting a blank value" do
+    with_self_hosting do
+      Setting.jev_api_key = "previous-key"
+
+      patch settings_hosting_url, params: { setting: { jev_api_key: "" } }
+
+      assert_nil Setting.jev_api_key
+    end
+  end
+
+  test "can update jev endpoint and model" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://api.typesafe.ai/v1/systemone", jev_model: "jev-latest" } }
+
+      assert_equal "https://api.typesafe.ai/v1/systemone", Setting.jev_endpoint
+      assert_equal "jev-latest", Setting.jev_model
+    end
+  end
+
+  test "rejects non-URL jev endpoint" do
+    with_self_hosting do
+      Setting.jev_endpoint = nil
+
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "not-a-url" } }
+
+      assert_response :unprocessable_entity
+      assert_match(/Jev Endpoint must be an http/, flash[:alert])
+      assert_nil Setting.jev_endpoint
+    end
+  end
+
+  test "clears jev endpoint when blank value submitted" do
+    with_self_hosting do
+      Setting.jev_endpoint = "https://api.typesafe.ai/v1/systemone"
+
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "" } }
+
+      assert_nil Setting.jev_endpoint
     end
   end
 
