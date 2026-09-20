@@ -412,6 +412,22 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_dom "#total-transactions", count: 1, text: "1"
   end
 
+  test "transaction count includes scheduled entries shown in the list" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    create_transaction(account: account)
+    scheduled = create_transaction(account: account, date: 1.day.from_now.to_date, name: "Scheduled bill")
+
+    get transactions_url
+
+    # The scheduled entry is excluded from totals.count (see Transaction::Search#totals)
+    # but still rendered in the list below -- the headline must match the list, not the totals.
+    assert_dom "#" + dom_id(scheduled), count: 1
+    assert_dom "#total-transactions", count: 1, text: "2"
+  end
+
   test "can update notes on split child transaction" do
     parent = create_transaction(account: accounts(:depository), amount: 100)
     parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
