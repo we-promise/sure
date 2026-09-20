@@ -48,13 +48,16 @@ end %>
     </div>
 
     <%# MOBILE - Top nav %>
-    <nav class="lg:hidden flex justify-between items-center p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+    <nav class="lg:hidden relative flex justify-between items-center p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
       <% if intro_mode %>
       <% else %>
-        <%= icon("panel-left", as_button: true, data: { action: "app-layout#openMobileSidebar"}) %>
+        <div class="flex items-center gap-1">
+          <%= icon("panel-left", as_button: true, data: { action: "app-layout#openMobileSidebar"}) %>
+          <%= render "layouts/shared/insights_button" %>
+        </div>
       <% end %>
 
-      <%= link_to home_path, class: "block" do %>
+      <%= link_to home_path, class: "absolute left-1/2 -translate-x-1/2" do %>
         <%= image_tag "logomark-color.svg", class: "w-9 h-9 mx-auto" %>
       <% end %>
 
@@ -112,7 +115,7 @@ end %>
        inert: !Current.user.show_sidebar?,
        data: { app_layout_target: "leftSidebar", sidebar_resize_target: "leftSidebar" } do %>
       <%= render "layouts/shared/sidebar_resize_handle", side: "left" %>
-      <div class="px-4 h-full flex flex-col overflow-y-auto">
+      <div id="sidebar-scroll" data-controller="preserve-scroll" class="px-4 h-full flex flex-col overflow-y-auto">
         <% if content_for?(:sidebar) %>
           <%= yield :sidebar %>
         <% else %>
@@ -159,37 +162,7 @@ end %>
           </div>
 
           <div class="flex items-center gap-2">
-            <%# Preview-gated. Gating the whole block (rather than just the
-                link) also keeps the unread COUNT off every page render for
-                users who haven't opted in. No preview dot on the icon: the
-                unread badge already occupies that corner. %>
-            <% if Current.family && preview_features_enabled? %>
-              <% unread_insights_count = Current.family.insights.active.count %>
-              <%# Prefetch disabled: /insights marks insights read on real visits
-                  and deliberately skips prefetch requests, so a prefetched
-                  response served on click would never clear the badge. %>
-              <%= link_to insights_path,
-                    class: "relative inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring",
-                    aria: { label: t("layouts.application.insights") },
-                    data: { turbo_prefetch: false } do %>
-                <%# `as: :span` + `html_class:` so the tooltip trigger fills this
-                    already-focusable link (full hover target). DS::Tooltip
-                    binds keyboard focus on the closest <a>/<summary> ancestor.
-                    Unread count stays a hand-rolled inverse chip — DS::Pill's
-                    filled neutral tone is not theme-swapped and disappears on
-                    dark nav surfaces. %>
-                <%= render DS::Tooltip.new(
-                      text: t("layouts.application.insights"),
-                      icon: "lightbulb",
-                      size: "sm",
-                      as: :span,
-                      html_class: "size-full items-center justify-center"
-                    ) %>
-                <% if unread_insights_count.positive? %>
-                  <span class="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-inverse text-inverse text-[10px] font-medium flex items-center justify-center pointer-events-none"><%= unread_insights_count > 9 ? "9+" : unread_insights_count %></span>
-                <% end %>
-              <% end %>
-            <% end %>
+            <%= render "layouts/shared/insights_button" %>
 
             <button type="button"
                     class="inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring"
@@ -249,5 +222,161 @@ end %>
         <%= render "layouts/shared/nav_item", **nav_item %>
       <% end %>
     <% end %>
+    <%# "What's new" release highlight: one centered popover per deployed
+        release, shown on first interaction and tracked per account. %>
+    <% unless intro_mode %>
+      <% if (tag = pending_release_tag) %>
+        <%= render "layouts/shared/release_highlight", tag: tag %>
+      <% end %>
+    <% end %>
+<%# Preserve the account sidebar's group open/closed state across Turbo Drive navigations so the sidebar height stays stable and the scroll position is not clamped to the top. See the inline script below for details. %>
+<%= javascript_tag nonce: true do %>
+  // Preserves the account sidebar's group open/closed state across Turbo Drive
+  // navigations so the sidebar height stays stable and the scroll position
+  // (restored by the `preserve-scroll` controller) is not clamped to the top.
+  //
+  // Each account group is a <details> whose open state is decided server-side:
+  // a group is open when it holds the active account or is in the user's
+  // "always expanded" preference. Navigating between accounts re-renders a
+  // different set of open groups, which changes the sidebar's scrollHeight.
+  // If the new sidebar is shorter than the saved offset, the browser clamps
+  // the restored scrollTop to the new maximum and the user sees the sidebar
+  // jump back up. This script records the open/closed state of every group
+  // before the navigation and re-applies it after the render (so a group the
+  // user collapsed stays collapsed, even one the server would re-open from the
+  // "always expanded" preference), keeps the group holding the active account
+  // open, forces a synchronous layout pass, and re-applies the saved scrollTop
+  // so the offset is valid again.
+  //
+  // groupKeyOf() derives a tab-independent group key from either markup shape:
+  //   (a) the NEW sidebar partial / balance sheet, which carry
+  //       data-group-key on the <details> or its wrapper, or
+  //   (b) the OLD sidebar partial, whose wrapper id is <tab>_<group>
+  //       (all_/asset_/liability_, plus the mobile_ variant) with no
+  //       data-group-key. A key is only accepted if it is a known account
+  //       category, so unrelated <details> widgets are never treated as
+  //       account groups. This makes the fix tolerant of a mixed deployment
+  //       where the sidebar partial and the balance sheet differ.
+  //
+  // State lives on a window global so it survives Turbo Drive visits (the
+  // window is not replaced, only the body). The listeners are bound once;
+  // the trailing restore() also covers a full (non-Turbo) page load, where
+  // the global is fresh and the call is a no-op.
+  (function () {
+    var state = window.__sidebarScrollPreserve ||
+      (window.__sidebarScrollPreserve = { groupStates: null, scrollTop: null });
+
+    var PREFIX_RE = /^(mobile_)?(all|asset|liability)_/;
+    // Accepted group keys, derived from Accountable::TYPES at render time
+    // so the set stays in sync with the source of truth: adding a new
+    // accountable type cannot silently recreate the "open group not
+    // re-opened after navigation" gap. `to_json` escapes <>& as unicode
+    // (safe inside a <script> tag); `raw` keeps ERB from double-escaping.
+    var GROUP_KEYS = new Set(<%= raw(Accountable::TYPES.map(&:underscore).to_json) %>);
+
+    function container() { return document.getElementById("sidebar-scroll"); }
+
+    function validKey(value) {
+      return value && GROUP_KEYS.has(value) ? value : null;
+    }
+
+    // Derive a tab-independent group key from a <details>, or null if it is
+    // not an account group.
+    function groupKeyOf(details) {
+      var root = container();
+      if (!root || !root.contains(details)) return null;
+      // 1. data-group-key on the <details> or its nearest wrapper.
+      for (var node = details; node && node !== root; node = node.parentElement) {
+        if (node.hasAttribute("data-group-key")) {
+          return validKey(node.getAttribute("data-group-key"));
+        }
+      }
+      // 2. Wrapper id with the tab prefix stripped (old partial).
+      for (var w = details.parentElement; w && w !== root; w = w.parentElement) {
+        if (w.id && PREFIX_RE.test(w.id)) {
+          return validKey(w.id.replace(PREFIX_RE, ""));
+        }
+      }
+      return null;
+    }
+
+    function groupDetails() {
+      var root = container();
+      if (!root) return [];
+      return Array.prototype.slice.call(root.querySelectorAll("details"));
+    }
+
+    // Prototype-free map of group key -> open/closed for every account group,
+    // or null when there are no account groups at all. Storing the explicit
+    // boolean (not just the open keys) lets restore() keep a group the user
+    // collapsed closed, including groups the server re-opens from the
+    // "always expanded" preference.
+    function groupStates() {
+      var states = null;
+      groupDetails().forEach(function (d) {
+        var k = groupKeyOf(d);
+        if (k) {
+          if (!states) states = Object.create(null);
+          states[k] = d.open;
+        }
+      });
+      return states;
+    }
+
+    // Key of the group holding the active account, or null. The active account
+    // link is marked data-active-account in the sidebar partial; every copy of
+    // the account (per tab panel, desktop + mobile) shares the same group key,
+    // so the first match resolves to the right group.
+    function activeGroupKey() {
+      var root = container();
+      if (!root) return null;
+      var active = root.querySelector("[data-active-account]");
+      if (!active) return null;
+      var d = active.closest("details");
+      return d ? groupKeyOf(d) : null;
+    }
+
+    function capture() {
+      var el = container();
+      if (!el) return;
+      state.groupStates = groupStates();
+      // Always save the scroll offset, even when every group is collapsed:
+      // the sidebar can still be scrolled (headers, "New" buttons, the bottom
+      // of a long list), so coupling the save to "any group open" would drop
+      // the offset in that case.
+      state.scrollTop = el.scrollTop;
+    }
+
+    function restore() {
+      var el = container();
+      if (!el || !state.groupStates) return;
+      var activeKey = activeGroupKey();
+      // Re-apply the user's pre-navigation open/closed state to every group we
+      // captured. A group the user collapsed stays closed even if the server
+      // re-opens it (active account or "always expanded" preference); the group
+      // holding the active account is forced open so it is never hidden.
+      // Groups not in state.groupStates (new since capture) are left as the
+      // server rendered them.
+      groupDetails().forEach(function (d) {
+        var k = groupKeyOf(d);
+        if (!k || !Object.prototype.hasOwnProperty.call(state.groupStates, k)) return;
+        d.open = (k === activeKey) ? true : state.groupStates[k];
+      });
+      // Force a synchronous layout pass so scrollHeight reflects the re-opened
+      // groups before we write scrollTop; otherwise the browser clamps the
+      // restored offset to the (still-short) container.
+      void el.offsetHeight;
+      if (typeof state.scrollTop === "number") el.scrollTop = state.scrollTop;
+    }
+
+    if (!window.__sidebarScrollPreserveBound) {
+      window.__sidebarScrollPreserveBound = true;
+      window.addEventListener("turbo:before-cache", capture);
+      window.addEventListener("turbo:render", restore);
+    }
+    restore();
+  })();
+
+<% end %>
   </div>
 <% end %>

@@ -100,6 +100,51 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     unregister_fake_chain!
   end
 
+  test "index renders trading212 items" do
+    trading212_item = trading212_items(:configured_item)
+    get accounts_url
+    assert_response :success
+    assert_select "##{dom_id(trading212_item)}"
+  end
+
+  test "index renders only accessible accounts for a visible trading212 item" do
+    accessible_account = accounts(:depository)
+    inaccessible_account = accounts(:investment)
+    trading212_item = trading212_items(:configured_item)
+    trading212_accounts(:main_account).ensure_account_provider!(accessible_account)
+    trading212_item.trading212_accounts.create!(
+      name: "Private Trading 212 Account",
+      trading212_account_id: "t212_private_123",
+      currency: "USD",
+      current_balance: 1000,
+      cash_balance: 100,
+      raw_positions_payload: [],
+      raw_orders_payload: [],
+      raw_dividends_payload: [],
+      raw_transactions_payload: []
+    ).ensure_account_provider!(inaccessible_account)
+    sign_in users(:family_member)
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(trading212_item)}"
+    assert_select "turbo-frame##{dom_id(accessible_account)}", count: 1
+    assert_select "turbo-frame##{dom_id(inaccessible_account)}", count: 0
+  end
+
+  test "index renders only trading212 items with accessible accounts for members" do
+    shared_account = accounts(:credit_card)
+    trading212_accounts(:main_account).ensure_account_provider!(shared_account)
+    sign_in users(:family_member)
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(trading212_items(:configured_item))}"
+    assert_select "##{dom_id(trading212_items(:pending_setup_item))}", count: 0
+  end
+
   test "should get show" do
     get account_url(@account)
     assert_response :success
@@ -743,6 +788,96 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     ActionController::Base.perform_caching = original_perform_caching
     ActionView::Base.logger = original_view_logger
     Rails.logger = original_rails_logger
+  end
+
+  # --- member-owned connections (issue #3579) ------------------------------
+
+  test "an owner is not shown a connection carrying an account they cannot see" do
+    # Ownership must not widen exposure: the card renders the item's accounts
+    # unfiltered (and is re-rendered by a viewer-less broadcast), so the whole
+    # card is withheld rather than shown with a filtered list.
+    member = users(:family_member)
+    family = families(:dylan_family)
+    item = PlaidItem.create!(
+      family: family, plaid_id: "item_card_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Owned Bank", owner: member
+    )
+    hidden = Account.create!(
+      family: family, owner: users(:family_admin), name: "Not Shared With Member",
+      balance: 100, currency: "USD", accountable: Depository.new
+    )
+    hidden.account_shares.destroy_all
+    plaid_account = PlaidAccount.create!(
+      plaid_item: item, name: "Hidden Feed", plaid_id: "acct_card_#{SecureRandom.hex(4)}",
+      plaid_type: "depository", plaid_subtype: "checking", currency: "USD",
+      current_balance: 100, available_balance: 100
+    )
+    AccountProvider.create!(account: hidden, provider: plaid_account)
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{ActionView::RecordIdentifier.dom_id(item)}", count: 0
+    assert_no_match(/Not Shared With Member/, response.body)
+  end
+
+  test "an owner is shown their freshly connected item before it has any accounts" do
+    # The case ownership visibility exists for: just connected, nothing synced.
+    member = users(:family_member)
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_fresh_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Fresh Bank", owner: member
+    )
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{ActionView::RecordIdentifier.dom_id(item)}", count: 1
+  end
+
+
+  test "an owner sees the management controls on their own connection card" do
+    member = users(:family_member)
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_ctrl_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Controls Bank", owner: member
+    )
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 1
+  end
+
+  test "a member demoted to guest loses the controls on a connection they own" do
+    member = users(:family_member)
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_demote_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Demoted Bank", owner: member
+    )
+    member.update!(role: :guest)
+
+    sign_in member
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
+  end
+
+  test "a member sees no controls on a connection someone else owns" do
+    item = PlaidItem.create!(
+      family: families(:dylan_family), plaid_id: "item_noctrl_#{SecureRandom.hex(4)}",
+      access_token: "token", name: "Admin Bank", owner: users(:family_admin)
+    )
+
+    sign_in users(:family_member)
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
   end
 end
 

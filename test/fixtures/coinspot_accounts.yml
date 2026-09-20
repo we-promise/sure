@@ -1,0 +1,8 @@
+one:
+  coinspot_item: one
+  name: CoinSpot
+  account_id: combined
+  account_type: combined
+  currency: AUD
+  current_balance: 1234.50
+  extra: {}

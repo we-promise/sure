@@ -718,6 +718,10 @@ class UserTest < ActiveSupport::TestCase
     assert_equal new_family, account.reload.family
     assert_equal new_family, plaid_item.reload.family
     assert_equal new_family, statement.reload.family
+
+    # The connection's owner has to follow it across, or it would be left
+    # pointing at a user in the family it just left.
+    assert_equal user, plaid_item.owner
   end
 
   test "transfer_to_family! rejects provider items linked to accounts outside the transfer" do
@@ -959,6 +963,53 @@ class UserTest < ActiveSupport::TestCase
 
     assert_enqueued_with(job: UserPurgeJob, args: [ target ]) do
       assert target.permanently_remove!
+    end
+  end
+
+  test "purging an impersonated user nullifies the admin's active_impersonator_session instead of failing" do
+    admin = users(:sure_support_staff)
+    target = users(:family_member)
+    impersonation = ImpersonationSession.create!(impersonator: admin, impersonated: target, status: :in_progress)
+    admin_session = admin.sessions.create!(active_impersonator_session: impersonation)
+
+    # UserPurgeJob may run before the admin's next request notices the
+    # target is gone — dependent: :destroy on User#impersonated_support_sessions
+    # destroys the ImpersonationSession row underneath the admin's still-live
+    # Session. Without ON DELETE SET NULL on that FK, this raises
+    # ActiveRecord::InvalidForeignKey instead of completing the purge.
+    perform_enqueued_jobs do
+      target.purge
+    end
+
+    assert_not User.exists?(target.id)
+    assert_nil admin_session.reload.active_impersonator_session_id
+  end
+
+  test "with_active_lock! rejects an inactive user without yielding" do
+    @user.update_column(:active, false)
+    yielded = false
+
+    assert_raises(User::InactiveError) do
+      @user.with_active_lock! { yielded = true }
+    end
+
+    assert_not yielded
+  end
+
+  test "with_active_lock! translates RecordNotFound only when the lock itself can't find the row" do
+    @user.stubs(:with_lock).raises(ActiveRecord::RecordNotFound)
+
+    assert_raises(User::InactiveError) do
+      @user.with_active_lock! { flunk "should not yield when the row can't be locked" }
+    end
+  end
+
+  test "with_active_lock! does not misreport a RecordNotFound raised inside the yielded block" do
+    # A failure unrelated to the user's own activity status (e.g. resolving
+    # some other record inside the caller's block) must propagate as-is,
+    # not get swallowed into "this user is inactive".
+    assert_raises(ActiveRecord::RecordNotFound) do
+      @user.with_active_lock! { raise ActiveRecord::RecordNotFound, "unrelated record missing" }
     end
   end
 
