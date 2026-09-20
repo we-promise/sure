@@ -117,6 +117,37 @@ and ignore the extra `confidence` / `probabilities` / `usage` fields.
 Keep that property when adding types. A caller should not need to know which
 kind of provider served it.
 
+## You are second in a cascade
+
+A classification provider does not see the transaction stream. `Family#auto_categorize_transactions`
+runs `Family::BayesCategorizer` first — a pure-Ruby naive Bayes model trained on
+the family's own categorized history, costing nothing and calling nobody — and
+only the transactions it declines reach `Family::AutoCategorizer`, where your
+provider sits:
+
+```ruby
+# app/models/family.rb
+bayes_result = Family::BayesCategorizer.new(self).classify_and_apply(transaction_ids)
+remaining_ids = Array(transaction_ids) - bayes_result.categorized_ids
+# ... if remaining_ids is empty, no provider is called at all
+llm_modified_count = AutoCategorizer.new(self, transaction_ids: remaining_ids).auto_categorize
+```
+
+Two consequences worth internalising before you benchmark anything.
+
+**Your provider receives the hard tail.** Bayes takes the repeat merchants and
+the obvious descriptors; what reaches you is what a model trained on this
+family's own history could not place. Accuracy measured over a whole golden
+dataset therefore *overstates* what your provider contributes in production,
+because it credits you for rows you would never have been handed. The number
+that matters is accuracy on the subset Bayes declines.
+
+**Your confidence threshold is the second one in series.** `BayesCategorizer::CONFIDENCE_THRESHOLD`
+is a hardcoded `0.7`; `families.categorization_confidence_threshold` also
+defaults to `0.7`, derived independently from a golden-set sweep. That the two
+coincide is a coincidence — different models over different distributions.
+Do not extract them into a shared constant.
+
 ## Provider resolution
 
 Categorization resolves through the family, not a global Setting — the choice

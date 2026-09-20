@@ -93,10 +93,11 @@ namespace :evals do
       provider: provider,
       model: model,
       name: run_name,
-      status: "pending"
+      status: "pending",
+      provider_config: split_config
     )
 
-    runner = dataset.runner_class.new(eval_run)
+    runner = runner_class_for(dataset, provider).new(eval_run)
 
     puts "Running evaluation..."
     start_time = Time.current
@@ -231,6 +232,32 @@ namespace :evals do
       puts
       puts "Exported to: #{csv_path}"
     end
+  end
+
+  desc "Report the Bayes -> provider cascade (provider accuracy on the residual Bayes declines)"
+  task :cascade, [ :bayes_run_id, :provider_run_ids ] => :environment do |_t, args|
+    bayes_id = args[:bayes_run_id] || ENV["BAYES"]
+    provider_ids = (args[:provider_run_ids] || ENV["PROVIDERS"])&.split(",")
+
+    if bayes_id.blank? || provider_ids.blank?
+      puts "Usage: rake evals:cascade[bayes_run_id,provider_run_id1+provider_run_id2]"
+      puts "   or: BAYES=<run_id> PROVIDERS=<id1>,<id2> rake evals:cascade"
+      puts
+      puts "Produce the runs first, all on the same split:"
+      puts "  PROVIDER=bayes SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,naive-bayes]'"
+      puts "  PROVIDER=jev SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,~typesafe/jev-latest]'"
+      exit 1
+    end
+
+    bayes_run = Eval::Run.find(bayes_id)
+    provider_runs = Eval::Run.where(id: provider_ids).to_a
+
+    if provider_runs.empty?
+      puts "Error: no provider runs found for #{provider_ids.join(', ')}"
+      exit 1
+    end
+
+    puts Eval::Reporters::CascadeReport.new(bayes_run: bayes_run, provider_runs: provider_runs)
   end
 
   desc "Analyze a candidate run against a baseline (calibration, disagreement, verdict)"
@@ -797,6 +824,28 @@ namespace :evals do
   end
 
   private
+
+    # Bayes is trained per-family rather than called as a provider, so it needs
+    # its own runner regardless of the dataset's eval_type.
+    def runner_class_for(dataset, provider)
+      return Eval::Runners::BayesRunner if provider.to_s == "bayes"
+
+      dataset.runner_class
+    end
+
+    # A run restricted to one side of the train/test split. Only set when asked
+    # for: an unsplit run still evaluates the whole dataset, which is what the
+    # existing single-provider benchmarks do.
+    def split_config
+      role = ENV["SPLIT_ROLE"].presence
+      return {} if role.blank?
+
+      {
+        "split_role" => role,
+        "split_seed" => (ENV["SPLIT_SEED"].presence || Eval::Runners::SampleSplit::DEFAULT_SEED).to_i,
+        "split_ratio" => (ENV["SPLIT_RATIO"].presence || Eval::Runners::SampleSplit::DEFAULT_TRAIN_RATIO).to_f
+      }
+    end
 
     def format_metric_value(value)
       case value
