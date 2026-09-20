@@ -7,6 +7,7 @@ ru:
       success: Перевод удалён
     form:
       amount: Сумма
+      category: Категория
       date: Дата
       destination_amount: Сумма на счёт назначения
       destination_amount_display: 'Сумма на счёт назначения: %{amount}'
@@ -19,6 +20,7 @@ ru:
       submit: Создать перевод
       to: Куда
       transfer: Перевод
+      uncategorized: Без категории
     new:
       title: Новый перевод
     show:

@@ -8,6 +8,7 @@ it:
     form:
       amount: Importo
       bank_charges: Commissioni bancarie
+      category: Categoria
       outgoing_fee: Commissione bonifico in uscita
       incoming_fee: Commissione bonifico in entrata
       date: Data
@@ -22,6 +23,7 @@ it:
       submit: Crea bonifico
       to: A
       transfer: Bonifico
+      uncategorized: Non categorizzata
     new:
       title: Nuovo bonifico
     show:

@@ -7,6 +7,7 @@ uk:
     form:
       amount: Сума
       bank_charges: Банківські комісії
+      category: Категорія
       outgoing_fee: Комісія за вихідний переказ
       incoming_fee: Комісія за вхідний переказ
       date: Дата
@@ -21,6 +22,7 @@ uk:
       submit: Створити переказ
       to: До
       transfer: Переказ
+      uncategorized: Без категорії
     new:
       title: Новий переказ
     show:
