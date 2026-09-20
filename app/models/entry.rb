@@ -92,6 +92,11 @@ class Entry < ApplicationRecord
     SQL
   }
 
+  # Future-dated entries haven't happened yet, so "actual" reporting (budgets,
+  # income statement, insights) should not count them until their date
+  # arrives -- see Entry#scheduled?.
+  scope :excluding_scheduled, -> { where("entries.date <= ?", Date.current) }
+
   # Find stale pending transactions (pending for more than X days with no matching posted version)
   scope :stale_pending, ->(days: 8) {
     pending.where("entries.date < ?", days.days.ago.to_date)
