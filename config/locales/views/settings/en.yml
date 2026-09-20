@@ -180,6 +180,8 @@ en:
         dashboard_subtitle: Customize how the dashboard is displayed
         dashboard_two_column_title: Two-column layout
         dashboard_two_column_description: Display dashboard widgets in two columns on large screens, with per-widget width and height controls in each widget's header. When off, widgets stack in a single column.
+        dashboard_account_groups_title: Start expanded by default
+        dashboard_account_groups_description: These account sections will start expanded on the dashboard and in the account sidebar. You can still collapse them manually at any time.
         split_grouped_title: Group split transactions
         split_grouped_description: Show split transactions grouped under their parent in the transaction list. When off, split children appear as individual rows.
     preferences:
@@ -440,6 +442,7 @@ en:
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         redbark: Sync Australian bank accounts via Redbark open banking.
         monobank: Sync Ukrainian Monobank cards and jars with a personal API token.
+        fio: Sync a Fio banka account with a read-only API token.
         enable_banking: Sync European bank accounts via PSD2 open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
         wise: Sync your Wise multi-currency balances and international transfers automatically.
@@ -448,6 +451,7 @@ en:
         coinbase: Import your Coinbase crypto holdings and track performance.
         binance: Sync your Binance spot balances using a read-only API key.
         kraken: Sync Kraken balances and spot trade fills using a read-only API key.
+        coinspot: Sync CoinSpot balances, AUD values, transfers, deposits, withdrawals, and order history using a read-only API key.
         onchain_wallet: Track self-custody Bitcoin, EVM and Solana wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
@@ -529,6 +533,28 @@ en:
         sync: Sync
         disconnect: Disconnect
         disconnect_confirm: "Are you sure you want to disconnect %{name}?"
+      coinspot_panel:
+        step1_html: 'Go to <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot API settings</a>'
+        step2: "Create an API key with read-only access to balances and history."
+        step3: "Paste the API key and secret below."
+        read_only_title: "Read-only exchange sync only"
+        read_only_body: "Do not grant send, withdrawal, trading, or transfer permissions. Sure only imports balances, AUD values, transfers, deposits, withdrawals, and completed order history."
+        default_connection_name: CoinSpot
+        add_connection: Add CoinSpot connection
+        update_connection: Update connection
+        connection_name_label: Connection name
+        connection_name_placeholder: Main CoinSpot
+        api_key_label: API Key
+        api_key_placeholder: Paste your CoinSpot API key
+        keep_api_key_placeholder: Leave blank to keep the existing API key
+        api_secret_label: API Secret
+        api_secret_placeholder: Paste your CoinSpot API secret
+        keep_api_secret_placeholder: Leave blank to keep the existing API secret
+        setup_accounts: Setup account
+        syncing: Syncing...
+        sync: Sync
+        disconnect: Disconnect
+        disconnect_confirm: "Are you sure you want to disconnect %{name}?"
       onchain_wallet_panel:
         add_wallet: Add wallet
         advanced: Advanced
@@ -597,6 +623,10 @@ en:
         step_1_html: "Go to %{link}, sign in with the Monobank app and generate a personal token."
         step_2: "Copy the token — it is shown only once."
         step_3: "Paste the token below, save, then link the cards and jars you want to track."
+      fio_panel:
+        step_1_html: "Sign in to %{link} internet banking and open Settings → API."
+        step_2: 'Create a token with read-only access ("Sledování účtu"). It needs strong authorization and is valid for up to 180 days.'
+        step_3: "Paste the token below and save. One token reaches one account, so add a connection per Fio account."
       simplefin_panel:
         step_1_html: "Go to %{link} for a one-time setup token."
         step_2: "Paste the token below and connect."

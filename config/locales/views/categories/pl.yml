@@ -10,25 +10,66 @@ pl:
       success: Kategoria została pomyślnie utworzona
     destroy:
       success: Kategoria została pomyślnie usunięta
+    destroy_all:
+      success: Wszystkie kategorie usunięte
     edit:
       edit: Edytuj kategorię
     form:
+      auto_adjust: dostosuj automatycznie.
+      color: Kolor
+      icon: Ikona
+      name_label: Nazwa
+      parent_category_label: Kategoria nadrzędna (opcjonalnie)
       placeholder: Nazwa kategorii
+      poor_contrast: Słaby kontrast, wybierz ciemniejszy kolor lub
+      trigger_label: Wybierz kolor i ikonę
+      unassigned: "(nieprzypisana)"
     index:
       bootstrap: Użyj domyślnych (zalecane)
       categories: Kategorie
       categories_expenses: Kategorie wydatków
       categories_incomes: Kategorie przychodów
+      delete_all: Usuń wszystkie
       empty: Nie znaleziono kategorii
+      merge: Scal kategorie
       new: Nowa kategoria
     menu:
       loading: Ładowanie...
+    merge:
+      description: Wybierz kategorię docelową oraz kategorie do scalenia z nią. Pasujące
+        transakcje i pozycje budżetu przeniosą się do kategorii docelowej.
+      select_target: Wybierz kategorię docelową...
+      sources_hint: Wybrane kategorie zostaną usunięte po przeniesieniu ich transakcji
+        i pozycji budżetu do kategorii docelowej. Nie wybieraj kategorii docelowej
+        jako źródłowej.
+      sources_label: Kategorie do scalenia
+      submit: Scal wybrane
+      target_label: Scal do (docelowa)
+      title: Scal kategorie
     new:
       new_category: Nowa kategoria
+    perform_merge:
+      invalid_categories: Wybrano nieprawidłowe kategorie
+      no_categories_selected: Nie wybrano kategorii do scalenia
+      success:
+        few: Scalono %{count} kategorie
+        many: Scalono %{count} kategorii
+        one: Scalono %{count} kategorię
+        other: Scalono %{count} kategorii
+      target_not_found: Nie znaleziono kategorii docelowej
+      target_selected_as_source: Wybierz różne kategorie dla docelowej i źródłowych.
     update:
       success: Kategoria została pomyślnie zaktualizowana
+    virtual:
+      payment: Płatność
+      trade: Transakcja
+      transfer: Przelew
   category:
     dropdowns:
       show:
         bootstrap: Wygeneruj domyślne kategorie
         empty: Nie znaleziono kategorii
+        expense: wydatek
+        income: przychód
+        match_transfer: Dopasuj przelew/płatność
+        one_time: Jednorazowy %{type}

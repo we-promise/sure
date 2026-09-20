@@ -383,7 +383,16 @@ class User < ApplicationRecord
       AccountStatement.where(account: accounts_to_move).update_all(family_id: new_family.id, updated_at: Time.current) if accounts_to_move.any?
 
       provider_items_to_move.each do |provider_item|
-        provider_item.update!(family: new_family)
+        attrs = { family: new_family }
+
+        # provider_items_for_transfer only returns items whose accounts all
+        # belong to this user, so the connection genuinely follows them. Its
+        # owner has to follow too: the previous owner stays behind in the old
+        # family, and ProviderItemOwnable validates that an owner and its item
+        # share a family.
+        attrs[:owner] = self if provider_item.respond_to?(:owner_id)
+
+        provider_item.update!(**attrs)
       end
 
       new_family.auto_share_existing_accounts_with(self)
@@ -645,10 +654,25 @@ class User < ApplicationRecord
     preferences&.dig("show_split_grouped") != false
   end
 
+  # Returns whether the user has enabled the two-column dashboard layout.
   def dashboard_two_column?
     preferences&.dig("dashboard_two_column") == true
   end
 
+  # Returns the accountable keys (e.g. "depository", "credit_card") that should
+  # start expanded in the sidebar and dashboard balance sheet, or an empty
+  # array when unset. Stored in the preferences JSONB column.
+  def always_expanded_account_groups
+    preferences&.dig("always_expanded_account_groups") || []
+  end
+
+  # Returns whether the given key (coerced to a string) is selected to start
+  # expanded in the sidebar and dashboard balance sheet.
+  def always_expanded_account_group?(account_group_key)
+    always_expanded_account_groups.include?(account_group_key.to_s)
+  end
+
+  # Returns whether clicking outside a modal is prevented from closing it.
   def disable_modal_click_outside?
     preferences&.dig("disable_modal_click_outside") == true
   end

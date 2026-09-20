@@ -1,5 +1,10 @@
 class PlaidItem < ApplicationRecord
-  include Syncable, Provided, Encryptable
+  include Syncable, Provided, Encryptable, DestroyableLater, ProviderItemOwnable
+
+  # A Plaid access_token only covers the institution the user authenticated
+  # to through Link, so a household member may connect their own bank without
+  # gaining any visibility into anyone else's connections.
+  credential_scope :per_connection
 
   enum :plaid_region, { us: "us", eu: "eu" }
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -76,11 +81,6 @@ class PlaidItem < ApplicationRecord
     return unless active_sync&.reload&.in_progress?
 
     PlaidFollowUpSyncJob.set(wait: PlaidFollowUpSyncJob::RETRY_DELAY).perform_later(self, active_sync_id: active_sync.id)
-  end
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
   end
 
   def request_transactions_refresh_later
@@ -198,10 +198,22 @@ class PlaidItem < ApplicationRecord
       end
     end
 
-    # Plaid returns mutually exclusive arrays here.  If the item has made a request for a product,
-    # it is put in the billed_products array.  If it is supported, but not yet used, it goes in the
-    # available_products array.
+    # Plaid splits an item's products across three arrays. If the item has made a
+    # request for a product, it is put in the billed_products array. If it is
+    # supported but not yet used, it goes in available_products. Products granted
+    # through Link's `additional_consented_products` appear in neither -- they are
+    # reported in consented_products until the first call actually bills them.
+    #
+    # That third array matters because it is how we request `transactions` for
+    # liability accounts: Provider::Plaid#get_primary_product returns "liabilities"
+    # for CreditCard/Loan, so `transactions` can only arrive as an additionally
+    # consented product. Omitting it made supports_product?("transactions") false
+    # for every Plaid-linked credit card, so PlaidItem::AccountsSnapshot skipped
+    # the transactions fetch entirely and those accounts imported balances and
+    # liabilities but no transactions at all.
     def supported_products
-      available_products + billed_products
+      consented = raw_payload.is_a?(Hash) ? Array(raw_payload["consented_products"]) : []
+
+      (available_products + billed_products + consented).map(&:to_s).uniq
     end
 end
