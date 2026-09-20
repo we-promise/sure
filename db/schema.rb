@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_16_220129) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -372,7 +372,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.index ["budget_id", "category_id"], name: "index_budget_categories_on_budget_id_and_category_id", unique: true
     t.index ["budget_id"], name: "index_budget_categories_on_budget_id"
     t.index ["category_id"], name: "index_budget_categories_on_category_id"
-    t.check_constraint "rolled_over_amount >= 0::numeric", name: "chk_budget_categories_rolled_over_amount_non_negative"
   end
 
   create_table "budget_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -467,6 +466,45 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_coinbase_items_on_family_id"
     t.index ["status"], name: "index_coinbase_items_on_status"
+  end
+
+  create_table "coinspot_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_id", null: false
+    t.string "account_type"
+    t.uuid "coinspot_item_id", null: false
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.jsonb "extra", default: {}, null: false
+    t.jsonb "institution_metadata"
+    t.string "name"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.datetime "updated_at", null: false
+    t.index ["account_type"], name: "index_coinspot_accounts_on_account_type"
+    t.index ["coinspot_item_id", "account_id"], name: "index_coinspot_accounts_on_item_and_account_id", unique: true
+    t.index ["coinspot_item_id"], name: "index_coinspot_accounts_on_coinspot_item_id"
+  end
+
+  create_table "coinspot_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "api_key"
+    t.text "api_secret"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "institution_color"
+    t.string "institution_domain"
+    t.string "institution_name"
+    t.string "institution_url"
+    t.bigint "last_nonce", default: 0, null: false
+    t.string "name"
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_payload"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.datetime "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_coinspot_items_on_family_id"
+    t.index ["status"], name: "index_coinspot_items_on_status"
   end
 
   create_table "coinstats_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -842,6 +880,50 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.index ["merchant_id"], name: "index_family_merchant_associations_on_merchant_id"
   end
 
+  create_table "fio_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "bank_id"
+    t.string "bic"
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "fio_account_id"
+    t.uuid "fio_item_id", null: false
+    t.date "history_synced_from"
+    t.string "iban"
+    t.boolean "ignored", default: false, null: false
+    t.jsonb "institution_metadata"
+    t.string "name", null: false
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.date "sync_start_date"
+    t.date "transactions_synced_through"
+    t.datetime "updated_at", null: false
+    t.index ["fio_item_id", "fio_account_id"], name: "index_fio_accounts_on_item_and_account_id", unique: true, where: "(fio_account_id IS NOT NULL)"
+    t.index ["fio_item_id"], name: "index_fio_accounts_on_fio_item_id"
+  end
+
+  create_table "fio_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.datetime "history_unlock_required_at"
+    t.string "institution_color"
+    t.string "institution_domain"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_url"
+    t.string "name"
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_institution_payload"
+    t.jsonb "raw_payload"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.date "sync_start_date"
+    t.text "token"
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_fio_items_on_family_id"
+    t.index ["status"], name: "index_fio_items_on_status"
+  end
+
   create_table "goal_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.decimal "allocated_amount", precision: 19, scale: 4
@@ -852,6 +934,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.index ["goal_id", "account_id"], name: "index_savings_goal_accounts_on_goal_and_account", unique: true
     t.index ["goal_id"], name: "index_goal_accounts_on_goal_id"
     t.check_constraint "allocated_amount IS NULL OR allocated_amount >= 0::numeric", name: "chk_goal_accounts_allocation_non_negative"
+  end
+
+  create_table "goal_expense_categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "category_id", null: false
+    t.datetime "created_at", null: false
+    t.uuid "goal_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category_id"], name: "index_goal_expense_categories_on_category_id"
+    t.index ["goal_id", "category_id"], name: "index_goal_expense_categories_on_goal_id_and_category_id", unique: true
+    t.index ["goal_id"], name: "index_goal_expense_categories_on_goal_id"
   end
 
   create_table "goal_pledges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -882,11 +974,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.string "currency", null: false
     t.uuid "family_id", null: false
     t.string "icon"
+    t.boolean "include_uncategorized_expenses", default: false, null: false
     t.string "kind", default: "one_off", null: false
     t.string "name", null: false
     t.text "notes"
     t.string "progress_basis", default: "balance", null: false
     t.string "state", default: "active", null: false
+    t.uuid "tag_id"
     t.decimal "target_amount", precision: 19, scale: 4, null: false
     t.date "target_date"
     t.string "target_mode", default: "fixed", null: false
@@ -894,6 +988,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.datetime "updated_at", null: false
     t.index ["family_id", "state"], name: "index_goals_on_family_id_and_state"
     t.index ["family_id"], name: "index_goals_on_family_id"
+    t.index ["tag_id"], name: "index_goals_on_tag_id"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
     t.check_constraint "consumed_amount >= 0::numeric", name: "chk_goals_consumed_amount_non_negative"
     t.check_constraint "kind::text = ANY (ARRAY['one_off'::character varying::text, 'maintained'::character varying::text])", name: "chk_goals_kind_enum"
@@ -1074,8 +1169,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.check_constraint "btrim(source_id::text) <> ''::text", name: "chk_import_source_mappings_source_id_present"
     t.check_constraint "btrim(source_type::text) <> ''::text", name: "chk_import_source_mappings_source_type_present"
     t.check_constraint "btrim(target_type::text) <> ''::text", name: "chk_import_source_mappings_target_type_present"
-    t.check_constraint "source_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'RecurringOccurrence'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying]::text[])", name: "chk_import_source_mappings_source_type"
-    t.check_constraint "target_type::text = ANY (ARRAY['Account'::character varying, 'Category'::character varying, 'Tag'::character varying, 'Merchant'::character varying, 'RecurringTransaction'::character varying, 'RecurringOccurrence'::character varying, 'Transaction'::character varying, 'Budget'::character varying, 'Security'::character varying, 'Rule'::character varying]::text[])", name: "chk_import_source_mappings_target_type"
+    t.check_constraint "source_type::text = ANY (ARRAY['Account'::character varying::text, 'Category'::character varying::text, 'Tag'::character varying::text, 'Merchant'::character varying::text, 'RecurringTransaction'::character varying::text, 'RecurringOccurrence'::character varying::text, 'Transaction'::character varying::text, 'Budget'::character varying::text, 'Security'::character varying::text, 'Rule'::character varying::text])", name: "chk_import_source_mappings_source_type"
+    t.check_constraint "target_type::text = ANY (ARRAY['Account'::character varying::text, 'Category'::character varying::text, 'Tag'::character varying::text, 'Merchant'::character varying::text, 'RecurringTransaction'::character varying::text, 'RecurringOccurrence'::character varying::text, 'Transaction'::character varying::text, 'Budget'::character varying::text, 'Security'::character varying::text, 'Rule'::character varying::text])", name: "chk_import_source_mappings_target_type"
   end
 
   create_table "imports", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1314,9 +1409,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.decimal "interest_rate", precision: 10, scale: 3
     t.jsonb "locked_attributes", default: {}
     t.string "rate_type"
+    t.date "start_date"
     t.string "subtype"
     t.integer "term_months"
     t.datetime "updated_at", null: false
+    t.jsonb "variable_rate_schedule", default: {}, null: false
   end
 
   create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1656,6 +1753,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.string "institution_url"
     t.string "name"
     t.string "next_cursor"
+    t.uuid "owner_id"
     t.string "plaid_id", null: false
     t.string "plaid_region", default: "us", null: false
     t.jsonb "raw_institution_payload", default: {}
@@ -1664,6 +1762,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.string "status", default: "good", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_plaid_items_on_family_id"
+    t.index ["owner_id"], name: "index_plaid_items_on_owner_id"
     t.index ["plaid_id"], name: "index_plaid_items_on_plaid_id", unique: true
   end
 
@@ -1692,6 +1791,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
 
   create_table "push_subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "device_key_digest"
     t.string "environment", null: false
     t.datetime "last_registered_at", null: false
     t.string "platform", default: "ios", null: false
@@ -1770,7 +1870,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.check_constraint "NOT (day_of_month IS NOT NULL AND weekday IS NOT NULL)", name: "chk_recurrence_rules_single_day_spec"
     t.check_constraint "\"interval\" > 0", name: "chk_recurrence_rules_interval_positive"
     t.check_constraint "day_of_month IS NULL OR day_of_month >= '-1'::integer AND day_of_month <= 31 AND day_of_month <> 0", name: "chk_recurrence_rules_day_of_month_range"
-    t.check_constraint "frequency::text = ANY (ARRAY['weekly'::character varying, 'monthly'::character varying, 'yearly'::character varying]::text[])", name: "chk_recurrence_rules_frequency"
+    t.check_constraint "frequency::text = ANY (ARRAY['weekly'::character varying::text, 'monthly'::character varying::text, 'yearly'::character varying::text])", name: "chk_recurrence_rules_frequency"
     t.check_constraint "month_of_year IS NULL OR month_of_year >= 1 AND month_of_year <= 12", name: "chk_recurrence_rules_month_of_year_range"
     t.check_constraint "weekday IS NULL OR weekday >= 0 AND weekday <= 6", name: "chk_recurrence_rules_weekday_range"
     t.check_constraint "weekday_ordinal IS NULL OR weekday IS NOT NULL", name: "chk_recurrence_rules_ordinal_requires_weekday"
@@ -1795,8 +1895,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.index ["recurring_occurrence_id", "entry_id"], name: "idx_recurring_allocations_entry_once", unique: true, where: "(entry_id IS NOT NULL)"
     t.index ["recurring_occurrence_id"], name: "index_recurring_allocations_on_recurring_occurrence_id"
     t.check_constraint "allocated_amount > 0::numeric", name: "chk_recurring_allocations_amount_positive"
-    t.check_constraint "source::text = ANY (ARRAY['auto_matched'::character varying, 'user_confirmed'::character varying, 'user_created'::character varying]::text[])", name: "chk_recurring_allocations_source"
-    t.check_constraint "state::text = ANY (ARRAY['suggested'::character varying, 'confirmed'::character varying]::text[])", name: "chk_recurring_allocations_state"
+    t.check_constraint "source::text = ANY (ARRAY['auto_matched'::character varying::text, 'user_confirmed'::character varying::text, 'user_created'::character varying::text])", name: "chk_recurring_allocations_source"
+    t.check_constraint "state::text = ANY (ARRAY['suggested'::character varying::text, 'confirmed'::character varying::text])", name: "chk_recurring_allocations_state"
   end
 
   create_table "recurring_match_rejections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1827,8 +1927,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.index ["id", "currency"], name: "idx_recurring_occurrences_id_currency", unique: true
     t.index ["recurring_transaction_id", "original_due_on"], name: "idx_recurring_occurrences_identity", unique: true
     t.check_constraint "(status::text = 'scheduled'::text) = (closed_at IS NULL)", name: "chk_recurring_occurrences_closed_state"
-    t.check_constraint "closed_source IS NULL OR (closed_source::text = ANY (ARRAY['auto'::character varying, 'user'::character varying]::text[]))", name: "chk_recurring_occurrences_closed_source"
-    t.check_constraint "status::text = ANY (ARRAY['scheduled'::character varying, 'paid'::character varying, 'skipped'::character varying, 'missed'::character varying]::text[])", name: "chk_recurring_occurrences_status"
+    t.check_constraint "closed_source IS NULL OR (closed_source::text = ANY (ARRAY['auto'::character varying::text, 'user'::character varying::text]))", name: "chk_recurring_occurrences_closed_source"
+    t.check_constraint "status::text = ANY (ARRAY['scheduled'::character varying::text, 'paid'::character varying::text, 'skipped'::character varying::text, 'missed'::character varying::text])", name: "chk_recurring_occurrences_status"
   end
 
   create_table "recurring_price_changes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2076,6 +2176,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.string "account_type"
     t.decimal "available_balance", precision: 19, scale: 4
     t.datetime "balance_date"
+    t.string "balance_sign_override"
     t.datetime "created_at", null: false
     t.string "currency"
     t.decimal "current_balance", precision: 19, scale: 4
@@ -2090,6 +2191,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
     t.index ["account_id"], name: "index_simplefin_accounts_on_account_id"
     t.index ["simplefin_item_id", "account_id"], name: "idx_unique_sfa_per_item_and_upstream", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["simplefin_item_id"], name: "index_simplefin_accounts_on_simplefin_item_id"
+    t.check_constraint "balance_sign_override::text = ANY (ARRAY['credit'::character varying, 'debt'::character varying]::text[])", name: "chk_simplefin_accounts_balance_sign_override"
   end
 
   create_table "simplefin_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2661,6 +2763,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
   add_foreign_key "chats", "users"
   add_foreign_key "coinbase_accounts", "coinbase_items"
   add_foreign_key "coinbase_items", "families"
+  add_foreign_key "coinspot_accounts", "coinspot_items"
+  add_foreign_key "coinspot_items", "families"
   add_foreign_key "coinstats_accounts", "coinstats_items"
   add_foreign_key "coinstats_items", "families"
   add_foreign_key "debug_log_entries", "account_providers", on_delete: :nullify
@@ -2681,12 +2785,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
   add_foreign_key "family_exports", "families"
   add_foreign_key "family_merchant_associations", "families"
   add_foreign_key "family_merchant_associations", "merchants"
+  add_foreign_key "fio_accounts", "fio_items"
+  add_foreign_key "fio_items", "families"
   add_foreign_key "goal_accounts", "accounts", on_delete: :restrict
   add_foreign_key "goal_accounts", "goals", on_delete: :cascade
+  add_foreign_key "goal_expense_categories", "categories"
+  add_foreign_key "goal_expense_categories", "goals"
   add_foreign_key "goal_pledges", "accounts", on_delete: :restrict
   add_foreign_key "goal_pledges", "goals", on_delete: :cascade
   add_foreign_key "goal_pledges", "transactions", column: "matched_transaction_id", on_delete: :nullify
   add_foreign_key "goals", "families", on_delete: :cascade
+  add_foreign_key "goals", "tags"
   add_foreign_key "holdings", "account_providers"
   add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"
@@ -2729,6 +2838,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_10_130000) do
   add_foreign_key "onchain_wallet_items", "families"
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
+  add_foreign_key "plaid_items", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"

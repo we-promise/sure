@@ -44,9 +44,9 @@ class TransfersController < ApplicationController
       source_fee_amount: transfer_params[:source_fee_amount],
       destination_fee_amount: transfer_params[:destination_fee_amount],
       tag_ids: transfer_params[:tag_ids],
+      category_id: transfer_params[:category_id],
       idempotency_key: submitted_idempotency_key
     }
-    creator_params[:category_id] = transfer_params[:category_id] if transfer_params.key?(:category_id)
 
     @transfer = Transfer::Creator.new(**creator_params).create
 

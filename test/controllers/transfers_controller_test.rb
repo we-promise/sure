@@ -53,6 +53,40 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal investment_category, transfer.outflow_transaction.category
   end
 
+  test "create with blank category_id (as the form submits it) defaults to investment contributions" do
+    investment_category = ensure_investment_contributions_category(users(:family_admin).family)
+
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:investment).id,
+          date: Date.current,
+          amount: 100,
+          category_id: ""
+        }
+      }
+    end
+
+    assert_equal investment_category, Transfer.order(:created_at).last.outflow_transaction.category
+  end
+
+  test "create assigns the chosen category to the outflow transaction" do
+    category = users(:family_admin).family.categories.create!(name: "Chosen")
+
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:investment).id,
+        date: Date.current,
+        amount: 100,
+        category_id: category.id
+      }
+    }
+
+    assert_equal category, Transfer.order(:created_at).last.outflow_transaction.category
+  end
+
   test "resubmitting the same idempotency key does not create a duplicate transfer" do
     idempotency_key = SecureRandom.uuid
     params = {

@@ -43,7 +43,7 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_equal "Transfer from #{@source_account.name}", inflow.entry.name
   end
 
-  test "preserves explicit blank category_id as uncategorized for investment contribution" do
+  test "blank category_id falls back to investment contributions for investment contribution" do
     creator = Transfer::Creator.new(
       family: @family,
       source_account_id: @source_account.id,
@@ -56,7 +56,7 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     transfer = creator.create
 
     assert transfer.persisted?
-    assert_nil transfer.outflow_transaction.category, "Explicit Uncategorized selection should not fall back to Investment Contributions"
+    assert_equal @investment_category, transfer.outflow_transaction.category
   end
 
   test "creates basic transfer between depository accounts" do
