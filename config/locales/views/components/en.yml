@@ -1,6 +1,6 @@
 ---
 en:
-  ui:
+  UI:
     period_picker:
       aria_label: "Time period: %{period}"
     account:

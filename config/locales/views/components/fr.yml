@@ -1,10 +1,12 @@
 ---
 fr:
-  ui:
+  UI:
     account:
       activity_date:
         balance_tooltip: Le solde de fin de journée, après toutes les transactions et ajustements
         no_balance_data: Aucune donnée de solde disponible pour cette date
+        projected: Prévisionnel
+        projected_balance_tooltip: "Une estimation : solde actuel plus les entrées planifiées jusqu'à cette date"
       activity_feed:
         toggle_selection_checkboxes: Basculer la sélection
       balance_reconciliation:
