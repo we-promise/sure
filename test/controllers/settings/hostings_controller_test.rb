@@ -161,12 +161,16 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Italian translates part of yahoo_finance_settings but not the rate-limited
+  # strings this path renders (status_rate_limited, rate_limited_title,
+  # rate_limited_message), which is what makes it exercise the fallback. Move to
+  # another such locale if it gains them, rather than dropping the coverage.
   test "falls back to English for untranslated Yahoo Finance health guidance" do
     @provider.stubs(:health_status).returns(:rate_limited)
 
     with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
       with_self_hosting do
-        get settings_hosting_url(locale: :fr)
+        get settings_hosting_url(locale: :it)
 
         assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
         assert_not_includes response.body, "translation missing"
@@ -799,11 +803,18 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { securities_providers: [ "moex_public" ] } }
 
-      get settings_hosting_url
+      notices = {
+        en: "Not enabled for prices above — T-Invest is used to fetch brand logos for all your securities whenever a token is configured, independent of the checkbox above.",
+        de: "Oben nicht für Kursdaten aktiviert – sobald ein Token eingerichtet ist, ruft T-Invest unabhängig vom obigen Kontrollkästchen Logos für alle deine Wertpapiere ab."
+      }
+      notices.each do |locale, notice|
+        get settings_hosting_url(locale: locale)
 
-      assert_response :success
-      assert_select "input[name='setting[tinkoff_invest_api_key]']"
-      assert_includes response.body, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice")
+        assert_response :success
+        assert_select "input[name='setting[tinkoff_invest_api_key]']"
+        assert_includes response.body, notice
+        assert_equal notice, I18n.t("settings.hostings.tinkoff_invest_settings.moex_only_notice", locale: locale, fallback: false, raise: true)
+      end
     end
   ensure
     Setting.securities_providers = ""

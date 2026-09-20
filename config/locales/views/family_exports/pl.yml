@@ -2,30 +2,56 @@
 pl:
   family_exports:
     access_denied: Brak dostępu
+    cancel:
+      cancelled: Eksport oznaczony jako nieudany. Możesz od razu utworzyć nowy eksport.
+      not_cancellable: Tego eksportu nie można teraz oznaczyć jako nieudanego, bo
+        jego zadanie może wciąż działać. Spróbuj ponownie, gdy będzie nieaktywny przez
+        godzinę.
     create:
       success: Eksport został rozpoczęty. Wkrótce będzie można go pobrać.
-    delete_confirmation: Czy na pewno chcesz usunąć ten eksport? Tej akcji nie można cofnąć.
+    delete_confirmation: Czy na pewno chcesz usunąć ten eksport? Tej akcji nie można
+      cofnąć.
     delete_failed_confirmation: Czy na pewno chcesz usunąć ten nieudany eksport?
     destroy:
       success: Eksport został pomyślnie usunięty
     export_not_ready: Eksport nie jest jeszcze gotowy do pobrania
     exporting: Trwa eksportowanie...
     index:
-      title: Eksporty
       new: Nowy eksport
-    table:
       title: Eksporty
+    new:
+      accounts_and_balances: Wszystkie konta i salda
+      cancel: Anuluj
+      categories_tags_rules: Kategorie, tagi i reguły
+      dialog_subtitle: Pobierz wszystkie swoje dane finansowe
+      dialog_title: Eksportuj swoje dane
+      export_data: Eksportuj dane
+      investment_trades: Transakcje inwestycyjne
+      note_description: Ten eksport zawiera wszystkie Twoje dane, ale tylko część
+        z nich można zaimportować z powrotem przez funkcję importu CSV. Obsługujemy
+        import kont, transakcji (z kategorią i tagami) oraz transakcji inwestycyjnych.
+        Pozostałe dane konta nie mogą być importowane i służą wyłącznie do Twojej
+        ewidencji.
+      note_label: Uwaga
+      transaction_history: Historia transakcji
+      whats_included: 'Co jest zawarte:'
+    table:
+      empty: Brak eksportów.
       header:
+        actions: Akcje
         date: Data
         filename: Nazwa pliku
         status: Status
-        actions: Akcje
       row:
-        status:
-          in_progress: W trakcie
-          complete: Zakończony
-          failed: Nieudany
         actions:
+          confirm_mark_failed: Ten eksport jest nieaktywny od jakiegoś czasu, a jego
+            zadanie w tle prawdopodobnie zostało przerwane. Oznaczyć go jako nieudany?
+            Możesz od razu utworzyć nowy eksport.
           delete: Usuń
           download: Pobierz
-      empty: Brak eksportów.
+          mark_failed: Oznacz jako nieudany
+        status:
+          complete: Zakończony
+          failed: Nieudany
+          in_progress: W trakcie
+      title: Eksporty

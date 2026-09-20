@@ -9,6 +9,7 @@ fr:
         success: Fournisseur SSO supprimé avec succès.
       edit:
         description: Mettre à jour la configuration pour %{label}
+        provider_configuration: Configuration du fournisseur
         title: Modifier le fournisseur SSO
       form:
         admin_groups: Groupes Admin
@@ -127,6 +128,7 @@ fr:
         title: Fournisseurs SSO
       new:
         description: Configurer un nouveau fournisseur d'authentification unique
+        provider_configuration: Configuration du fournisseur
         title: Ajouter un fournisseur SSO
       toggle:
         confirm_disable: Êtes-vous sûr(e) de vouloir désactiver ce fournisseur ?
