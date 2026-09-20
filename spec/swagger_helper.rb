@@ -245,6 +245,15 @@ RSpec.configure do |config|
               insights: { type: :array, items: { '$ref' => '#/components/schemas/Insight' } }
             }
           },
+          PushSubscriptionRegistration: {
+            type: :object, required: %w[token environment platform],
+            properties: {
+              token: { type: :string, maxLength: 2048, pattern: "^(?:[0-9a-fA-F]{2})+$" },
+              environment: { type: :string, enum: %w[sandbox production] },
+              platform: { type: :string, enum: %w[ios] },
+              device_key: { type: :string, pattern: '^[0-9a-f]{64}$', description: 'Optional 256-bit installation secret, unique per server and kept in device secure storage. Required proof to replace another user’s registration for this device. Never returned.' }
+            }
+          },
           PushSubscription: {
             type: :object,
             required: %w[id environment platform last_registered_at],
@@ -1718,6 +1727,73 @@ RSpec.configure do |config|
               amount: { type: :string, description: 'Numeric amount as string' },
               currency: { type: :string, description: 'ISO 4217 currency code' },
               formatted: { type: :string, description: 'Locale-formatted money string' }
+            }
+          },
+          FinancialPeriod: {
+            type: :object, required: %w[start_date end_date],
+            properties: { start_date: { type: :string, format: :date }, end_date: { type: :string, format: :date } }
+          },
+          SpendingPoint: {
+            type: :object, required: %w[date amount],
+            properties: { date: { type: :string, format: :date }, amount: { type: :string, description: 'Cumulative decimal amount in family currency' } }
+          },
+          CashFlowSankey: {
+            type: :object, required: %w[basis income spending net_savings nodes links],
+            description: 'Refunds net within each category. Parent direct amounts exclude child totals before partitioning by direction. Graph income/spending may differ from gross monthly totals; net savings agrees. Decimal strings retain FX precision. Empty flow has empty nodes and links.',
+            properties: {
+              basis: { type: :string, enum: [ 'net_by_category' ] },
+              income: { type: :string }, spending: { type: :string }, net_savings: { type: :string },
+              nodes: { type: :array, items: {
+                type: :object, required: %w[id name kind value percentage category_id filter_value color],
+                properties: {
+                  id: { type: :string, description: 'Stable direction-prefixed category identifier or structural identifier' },
+                  name: { type: :string }, kind: { type: :string, enum: %w[income expense cash_flow surplus deficit] },
+                  value: { type: :string, description: 'Nonnegative decimal in envelope currency' },
+                  percentage: { type: :string, description: 'Percentage of parent, or side total for root categories; structural balancing nodes use central capacity' },
+                  category_id: { type: :string, format: :uuid, nullable: true },
+                  filter_value: { type: :string, nullable: true, description: 'Web transaction category filter; null means no category drill-down' },
+                  color: { type: :string, nullable: true, description: 'User category color; structural colors belong to the client' }
+                }
+              } },
+              links: { type: :array, items: {
+                type: :object, required: %w[source target value percentage],
+                properties: {
+                  source: { type: :integer, minimum: 0, description: 'Zero-based nodes index' },
+                  target: { type: :integer, minimum: 0, description: 'Zero-based nodes index' },
+                  value: { type: :string, description: 'Positive decimal in envelope currency' }, percentage: { type: :string }
+                }
+              } }
+            }
+          },
+          CashFlowGraph: {
+            type: :object, required: %w[as_of time_zone currency period sankey],
+            properties: {
+              as_of: { type: :string, format: :date }, time_zone: { type: :string }, currency: { type: :string },
+              period: { '$ref' => '#/components/schemas/FinancialPeriod' },
+              sankey: { '$ref' => '#/components/schemas/CashFlowSankey' }
+            }
+          },
+          CashFlow: {
+            type: :object,
+            required: %w[month as_of time_zone currency period income spending net_savings savings_rate spending_comparison],
+            properties: {
+              month: { type: :string, format: :date }, as_of: { type: :string, format: :date },
+              time_zone: { type: :string }, currency: { type: :string },
+              period: { '$ref' => '#/components/schemas/FinancialPeriod' },
+              income: { type: :string }, spending: { type: :string }, net_savings: { type: :string },
+              sankey: { '$ref' => '#/components/schemas/CashFlowSankey' },
+              savings_rate: { type: :string, nullable: true, description: 'Percentage points; null when income is nonpositive. May be negative.' },
+              spending_comparison: {
+                type: :object,
+                required: %w[previous_period current_total comparison_total comparison_end_date delta current previous],
+                properties: {
+                  previous_period: { '$ref' => '#/components/schemas/FinancialPeriod' },
+                  current_total: { type: :string }, comparison_total: { type: :string }, delta: { type: :string },
+                  comparison_end_date: { type: :string, format: :date },
+                  current: { type: :array, items: { '$ref' => '#/components/schemas/SpendingPoint' } },
+                  previous: { type: :array, items: { '$ref' => '#/components/schemas/SpendingPoint' } }
+                }
+              }
             }
           },
           BalanceSheet: {
