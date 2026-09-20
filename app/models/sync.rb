@@ -177,45 +177,52 @@ class Sync < ApplicationRecord
   end
 
   def perform
-    Rails.logger.tagged("Sync", id, syncable_type, syncable_id) do
-      # This can happen on server restarts or if Sidekiq enqueues a duplicate job
-      unless may_start?
-        Rails.logger.warn("Sync #{id} is not in a valid state (#{aasm.from_state}) to start.  Skipping sync.")
-        return
-      end
+    # Entry#scheduled?, Balance::SyncCache and Balance::ForwardCalculator all
+    # key off Date.current -- without this, a job worker (no request, no
+    # Localize#switch_timezone) runs them in the app's default zone (UTC),
+    # not the family's, so a scheduled entry can materialize hours early or
+    # late around midnight depending on the family's offset from UTC.
+    Time.use_zone(family&.resolved_time_zone || Time.zone) do
+      Rails.logger.tagged("Sync", id, syncable_type, syncable_id) do
+        # This can happen on server restarts or if Sidekiq enqueues a duplicate job
+        unless may_start?
+          Rails.logger.warn("Sync #{id} is not in a valid state (#{aasm.from_state}) to start.  Skipping sync.")
+          next
+        end
 
-      # Guard: syncable may have been deleted while job was queued
-      unless syncable.present?
-        Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} no longer exists. Marking as failed.")
-        start! if may_start?
-        fail! if may_fail?
-        update(error: "Syncable record was deleted")
-        return
-      end
+        # Guard: syncable may have been deleted while job was queued
+        unless syncable.present?
+          Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} no longer exists. Marking as failed.")
+          start! if may_start?
+          fail! if may_fail?
+          update(error: "Syncable record was deleted")
+          next
+        end
 
-      # Guard: syncable may be scheduled for deletion
-      if syncable.respond_to?(:scheduled_for_deletion?) && syncable.scheduled_for_deletion?
-        Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} is scheduled for deletion. Skipping sync.")
-        start! if may_start?
-        fail! if may_fail?
-        update(error: "Syncable record is scheduled for deletion")
-        return
-      end
+        # Guard: syncable may be scheduled for deletion
+        if syncable.respond_to?(:scheduled_for_deletion?) && syncable.scheduled_for_deletion?
+          Rails.logger.warn("Sync #{id} - syncable #{syncable_type}##{syncable_id} is scheduled for deletion. Skipping sync.")
+          start! if may_start?
+          fail! if may_fail?
+          update(error: "Syncable record is scheduled for deletion")
+          next
+        end
 
-      start!
+        start!
 
-      begin
-        syncable.perform_sync(self)
-      rescue => e
-        # Re-check state under a row lock (with_lock reloads): the sync may
-        # have been terminalized externally (marked stale by SyncCleanerJob)
-        # while this job was still running. An unguarded fail! on the in-memory
-        # record would silently overwrite that terminal status.
-        with_lock { fail! if may_fail? }
-        update(error: e.message)
-        report_error(e)
-      ensure
-        finalize_if_all_children_finalized
+        begin
+          syncable.perform_sync(self)
+        rescue => e
+          # Re-check state under a row lock (with_lock reloads): the sync may
+          # have been terminalized externally (marked stale by SyncCleanerJob)
+          # while this job was still running. An unguarded fail! on the in-memory
+          # record would silently overwrite that terminal status.
+          with_lock { fail! if may_fail? }
+          update(error: e.message)
+          report_error(e)
+        ensure
+          finalize_if_all_children_finalized
+        end
       end
     end
   end
