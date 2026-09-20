@@ -100,7 +100,7 @@ en:
         high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
       llm_provider_selector:
         title: AI Provider
-        description: Choose which LLM powers AI chat. Batch operations (transaction categorization, merchant detection, and PDF processing) currently always use OpenAI.
+        description: Choose which LLM powers AI chat, merchant detection and PDF processing. Transaction categorization is configured separately below.
         env_configured_message: Successfully configured through the LLM_PROVIDER environment variable.
         provider_label: Active LLM provider
         provider_openai: OpenAI
@@ -131,7 +131,8 @@ en:
         provider_help: The AI provider reads a batch of transactions and writes back category names. Jev picks from your category list and returns a calibrated confidence for each transaction.
         not_configured_hint: Jev is selected but has no API key configured. Categorization will keep using the AI provider until you add one below.
         data_retention_heading: Data sharing
-        data_retention: Transaction descriptions, amounts and your category names are sent to Jev to be categorized. Review TypeSafe's retention policy before enabling this on real data.
+        data_retention_direct: Transaction descriptions, amounts and your category names are sent to TypeSafe to be categorized. Review their retention policy before enabling this on real data.
+        data_retention_proxied: Transaction descriptions, amounts and your category names are sent to %{host}, which forwards them to TypeSafe. Review both providers' retention policies before enabling this on real data.
       jev_settings:
         title: Jev (TypeSafe)
         preview_pill: Preview
@@ -139,12 +140,12 @@ en:
         preview_requirement: A key on its own does not switch categorization over — select Jev as the categorization provider above.
         env_configured_message: Successfully configured through environment variables.
         api_key_label: API Key
-        api_key_placeholder: Enter your OpenRouter or TypeSafe API key
+        api_key_placeholder: Enter your TypeSafe API key
         endpoint_label: Endpoint (Optional)
-        endpoint_placeholder: "https://openrouter.ai/api/alpha/decisions (default)"
+        endpoint_placeholder: "https://api.typesafe.ai/v1/systemone (default)"
         model_label: Model (Optional)
-        model_placeholder: "~typesafe/jev-latest (default)"
-        model_help: Defaults to Jev via OpenRouter. To use TypeSafe directly, set the endpoint to https://api.typesafe.ai/v1/systemone and the model to jev-latest.
+        model_placeholder: "jev-latest (default)"
+        model_help: Defaults to TypeSafe directly. To reach Jev through OpenRouter instead, set the endpoint to https://openrouter.ai/api/alpha/decisions and the model to ~typesafe/jev-latest.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.

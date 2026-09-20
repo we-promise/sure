@@ -5,12 +5,20 @@ class Provider::Jev < Provider
   # Subclass so errors caught in this provider are raised as Provider::Jev::Error
   Error = Class.new(Provider::Error)
 
-  # OpenRouter's Decisions API and TypeSafe's own /v1/systemone take the same
-  # payload and return the same answer types, so one class serves both. Point
-  # JEV_ENDPOINT at https://api.typesafe.ai/v1/systemone (with JEV_MODEL
-  # jev-latest) to talk to TypeSafe directly instead.
-  DEFAULT_ENDPOINT = "https://openrouter.ai/api/alpha/decisions"
-  DEFAULT_MODEL = "~typesafe/jev-latest"
+  # Defaults to TypeSafe's own API rather than a reseller. Gateways like
+  # OpenRouter serve the identical payload and answer types, so one class covers
+  # both — but routing a family's transaction descriptions through an extra
+  # party should be something an operator opts into, not something they inherit
+  # from a default. For OpenRouter, set JEV_ENDPOINT to
+  # https://openrouter.ai/api/alpha/decisions and JEV_MODEL to
+  # ~typesafe/jev-latest.
+  DEFAULT_ENDPOINT = "https://api.typesafe.ai/v1/systemone"
+  DEFAULT_MODEL = "jev-latest"
+
+  # The vendor's own host. Anything else is reached through a gateway, which the
+  # data-sharing disclosure has to name — telling someone their bank
+  # descriptions go to TypeSafe is wrong when they transit a proxy first.
+  VENDOR_HOST = "api.typesafe.ai"
 
   # Documented API limits.
   MAX_CHOICE_OPTIONS = 255
@@ -64,11 +72,34 @@ class Provider::Jev < Provider
   end
 
   def provider_name
-    custom_endpoint? ? "Jev (#{@endpoint})" : "Jev"
+    proxied? ? "Jev via #{endpoint_host}" : "Jev"
   end
 
-  def custom_endpoint?
-    @endpoint != DEFAULT_ENDPOINT
+  # True when requests reach TypeSafe through a gateway rather than directly.
+  def proxied?
+    endpoint_host != VENDOR_HOST
+  end
+
+  def endpoint_host
+    self.class.host_for(@endpoint)
+  end
+
+  class << self
+    def host_for(endpoint)
+      URI.parse(endpoint.to_s).host.presence || endpoint.to_s
+    rescue URI::InvalidURIError
+      endpoint.to_s
+    end
+
+    # The host an operator's current configuration will actually send to, for
+    # the settings disclosure.
+    def effective_host
+      host_for(effective_endpoint)
+    end
+
+    def effective_proxied?
+      effective_host != VENDOR_HOST
+    end
   end
 
   def decide(state:, questions:, model: "", family: nil)

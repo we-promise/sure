@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Provider::JevTest < ActiveSupport::TestCase
-  ENDPOINT = "https://openrouter.ai/api/alpha/decisions".freeze
+  ENDPOINT = "https://api.typesafe.ai/v1/systemone".freeze
 
   setup do
     @provider = Provider::Jev.new("test_api_key")
@@ -280,17 +280,43 @@ class Provider::JevTest < ActiveSupport::TestCase
     assert Provider::Jev.configured?
   end
 
-  test "targets TypeSafe directly when given its endpoint" do
-    typesafe = "https://api.typesafe.ai/v1/systemone"
-    provider = Provider::Jev.new("test_api_key", endpoint: typesafe, model: "jev-latest")
+  test "goes straight to the vendor by default" do
+    # Routing a family's transaction descriptions through a gateway should be an
+    # explicit choice, not inherited from a default.
+    assert_equal "https://api.typesafe.ai/v1/systemone", Provider::Jev::DEFAULT_ENDPOINT
+    assert_equal "jev-latest", Provider::Jev::DEFAULT_MODEL
+    assert_not @provider.proxied?
+    assert_equal "Jev", @provider.provider_name
+  end
 
-    stub = stub_request(:post, typesafe)
-      .with { |request| JSON.parse(request.body)["model"] == "jev-latest" }
+  test "reports the host the current configuration will actually send to" do
+    # The settings disclosure reads these: naming TypeSafe while a gateway is in
+    # front of it would understate who sees the transaction descriptions.
+    assert_equal "api.typesafe.ai", Provider::Jev.effective_host
+    assert_not Provider::Jev.effective_proxied?
+
+    Setting.jev_endpoint = "https://openrouter.ai/api/alpha/decisions"
+
+    assert_equal "openrouter.ai", Provider::Jev.effective_host
+    assert Provider::Jev.effective_proxied?
+  ensure
+    Setting.jev_endpoint = nil
+  end
+
+  test "reaches Jev through a gateway when pointed at one" do
+    openrouter = "https://openrouter.ai/api/alpha/decisions"
+    provider = Provider::Jev.new("test_api_key", endpoint: openrouter, model: "~typesafe/jev-latest")
+
+    stub = stub_request(:post, openrouter)
+      .with { |request| JSON.parse(request.body)["model"] == "~typesafe/jev-latest" }
       .to_return(status: 200, body: choice_body(choice: "Groceries"), headers: { "Content-Type" => "application/json" })
 
     provider.auto_categorize(transactions: [ transaction ], user_categories: categories)
 
     assert_requested stub
-    assert provider.custom_endpoint?
+    # The disclosure has to name this host: descriptions transit it too.
+    assert provider.proxied?
+    assert_equal "openrouter.ai", provider.endpoint_host
+    assert_equal "Jev via openrouter.ai", provider.provider_name
   end
 end

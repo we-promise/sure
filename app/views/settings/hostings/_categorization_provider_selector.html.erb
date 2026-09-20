@@ -47,8 +47,15 @@
   <% end %>
 
   <% if jev_active %>
+    <%# Names the host actually configured. Saying "sent to TypeSafe" would be
+        wrong whenever a gateway is in front of it — the descriptions transit
+        that party too. %>
     <%= render DS::Note.new(title: t(".data_retention_heading")) do %>
-      <p><%= t(".data_retention") %></p>
+      <% if Provider::Jev.effective_proxied? %>
+        <p><%= t(".data_retention_proxied", host: Provider::Jev.effective_host) %></p>
+      <% else %>
+        <p><%= t(".data_retention_direct") %></p>
+      <% end %>
     <% end %>
   <% end %>
 </div>
