@@ -7,7 +7,7 @@ class Family::AutoCategorizer
   end
 
   def auto_categorize
-    raise Error, "No LLM provider for auto-categorization" unless llm_provider
+    raise Error, "No LLM provider for auto-categorization" unless categorization_provider
 
     protected_ids = protected_transaction_ids
     cached_ids = cached_transaction_ids
@@ -33,7 +33,7 @@ class Family::AutoCategorizer
         message: "AI categorization failed: no categories available",
         source: self.class.name,
         family: family,
-        provider: llm_provider,
+        provider: categorization_provider,
         metadata: {
           requested_transaction_ids: transaction_ids
         }
@@ -41,7 +41,7 @@ class Family::AutoCategorizer
       raise Error, "No categories available for auto-categorization"
     end
 
-    result = llm_provider.auto_categorize(
+    result = categorization_provider.auto_categorize(
       transactions: transactions_input,
       user_categories: categories_input,
       family: family
@@ -77,7 +77,7 @@ class Family::AutoCategorizer
       message: "AI categorization completed",
       source: self.class.name,
       family: family,
-      provider: llm_provider,
+      provider: categorization_provider,
       metadata: {
         requested_transaction_ids: transaction_ids,
         categorized_transaction_ids: categorized_transaction_ids,
@@ -92,6 +92,38 @@ class Family::AutoCategorizer
 
   private
     attr_reader :family, :transaction_ids
+
+    # Memoized: this is read once to guard, once per DebugLogEntry and once to
+    # run, and each registry lookup builds a fresh provider object. Memoizing
+    # also guarantees the provider named in the logs is the one that actually
+    # ran, rather than whatever a later lookup happens to resolve.
+    def categorization_provider
+      return @categorization_provider if defined?(@categorization_provider)
+
+      @categorization_provider = classification_provider || llm_provider
+    end
+
+    # Jev decides a typed Choice per transaction and reports calibrated
+    # confidence, which the LLM providers cannot. Credentials alone never switch
+    # it on: the family has to choose it, because this decides whose transaction
+    # descriptions get sent to a third party.
+    #
+    # The choice is a family column rather than a global Setting so it means the
+    # same thing on a hosted instance as on a self-hosted one — Settings ->
+    # Self-hosting is guarded by `self_hosted?` and would be unreachable for half
+    # of them. The preview flag gates whether the selector is offered at all (see
+    # docs/llm-guides/gating-a-preview-feature.md); it deliberately plays no part
+    # in resolution, so a family that opted in and then chose the LLM provider
+    # gets the LLM provider.
+    def classification_provider
+      return nil unless jev_selected?
+
+      Provider::Registry.get_provider(:jev)
+    end
+
+    def jev_selected?
+      family.effective_categorization_provider == "jev"
+    end
 
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # auto_categorize (PR #1984), so batch categorization routes to the configured

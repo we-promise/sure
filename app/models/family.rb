@@ -31,6 +31,11 @@ class Family < ApplicationRecord
 
   MONIKERS = [ "Family", "Group" ].freeze
   ASSISTANT_TYPES = %w[builtin external].freeze
+
+  # Which provider categorizes this family's transactions. Family-level rather
+  # than a global Setting because it decides whose transaction descriptions get
+  # sent to a third party — the same reason assistant_type lives here.
+  CATEGORIZATION_PROVIDERS = %w[llm jev].freeze
   SHARING_DEFAULTS = %w[shared private].freeze
 
   has_many :users, dependent: :destroy
@@ -149,6 +154,13 @@ class Family < ApplicationRecord
   validates :month_start_day, inclusion: { in: 1..28 }
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
+  validates :categorization_provider, inclusion: { in: CATEGORIZATION_PROVIDERS }
+
+  # Single definition of the ENV-over-column precedence, so the resolver and the
+  # settings UI can never disagree about which provider is actually in force.
+  def effective_categorization_provider
+    ENV["CATEGORIZATION_PROVIDER"].presence || categorization_provider
+  end
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
   validates :personal_budgets, inclusion: { in: [ true, false ] }
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }

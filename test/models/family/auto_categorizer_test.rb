@@ -155,6 +155,70 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal [ llm_txn.id ], ai_entry.metadata["categorized_transaction_ids"]
   end
 
+  # Jev runs only when the family has chosen it AND credentials are configured.
+  # The choice is a family column, not the preview flag: preview gates whether
+  # the selector is offered (see docs/llm-guides/gating-a-preview-feature.md),
+  # never what gets used. Every other install keeps the LLM path.
+
+  test "uses the LLM provider by default" do
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+
+    assert_equal "llm", @family.categorization_provider
+    # Not even looked up: the choice short-circuits before the registry.
+    Provider::Registry.expects(:get_provider).with(:jev).never
+    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
+    ])).once
+
+    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+
+    assert_equal category, txn.reload.category
+  end
+
+  test "uses Jev when the family selects it and it is configured" do
+    @family.update!(categorization_provider: "jev")
+    txn = create_transaction(account: @account, name: "Blue Bottle Coffee").transaction
+    category = @family.categories.create!(name: "Coffee")
+
+    # A real instance, not a bare mock: DebugLogEntry derives provider_key from
+    # the class name, so a Mocha::Mock would log "mock".
+    jev = Provider::Jev.allocate
+    Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
+    @llm_provider.expects(:auto_categorize).never
+    jev.expects(:auto_categorize).returns(provider_success_response([
+      CategoryDecision.new(
+        transaction_id: txn.id,
+        category_name: category.name,
+        confidence: 0.97,
+        probabilities: { category.name => 0.97 },
+        usage: { "cost" => 0.000032 }
+      )
+    ])).once
+
+    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+
+    # The richer struct maps back through the same loop as the LLM shape.
+    assert_equal category, txn.reload.category
+    assert_equal "jev", DebugLogEntry.order(:created_at).last.provider_key
+  end
+
+  test "falls back to the LLM provider when Jev is selected but has no credentials" do
+    @family.update!(categorization_provider: "jev")
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+
+    Provider::Registry.stubs(:get_provider).with(:jev).returns(nil)
+    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
+    ])).once
+
+    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+
+    assert_equal category, txn.reload.category
+  end
+
   private
     AutoCategorization = Provider::LlmConcept::AutoCategorization
+    CategoryDecision = Provider::ClassificationConcept::CategoryDecision
 end
