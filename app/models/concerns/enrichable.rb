@@ -177,6 +177,12 @@ module Enrichable
       removed_count = ai_enrichments.delete_all
     end
 
+    # Views and totals filtered on provenance are cached under
+    # Family#entries_cache_version, which only moves when an entry's timestamp
+    # changes. delete_all doesn't touch anything, so bump the owning entry
+    # (or the record itself for Entry) to invalidate those caches.
+    (respond_to?(:entry) ? entry : self)&.touch if removed_count.positive?
+
     removed_count
   end
 

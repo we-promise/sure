@@ -1606,6 +1606,14 @@ end
     assert_select "#entry_#{@entry.id}", count: 0
   end
 
+  test "index ignores unsupported ai_status values without rendering a badge" do
+    get transactions_url(q: { ai_status: [ "bogus" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li", count: 0
+    assert_no_match(/translation missing/, response.body)
+  end
+
   test "clear_filter removes an ai_status value and redirects" do
     delete clear_filter_transactions_url(
       param_key: "ai_status",

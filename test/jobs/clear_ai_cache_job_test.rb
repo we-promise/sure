@@ -59,6 +59,15 @@ class ClearAiCacheJobTest < ActiveSupport::TestCase
     assert_equal 0, completion_entry.metadata["entries_removed"]
   end
 
+  test "bumps entries_cache_version so provenance-filtered caches invalidate" do
+    create_ai_enrichment(@transaction, "category_id")
+    before = @family.reload.entries_cache_version
+
+    ClearAiCacheJob.perform_now(@family)
+
+    assert_not_equal before, @family.reload.entries_cache_version
+  end
+
   test "warns instead of failing silently when no family is given" do
     ClearAiCacheJob.perform_now(nil)
 
