@@ -696,4 +696,119 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "0.25", merged.first.dig("detail", "quantity")
     assert_equal "EUR", merged.first.dig("detail", "currency")
   end
+
+  test "normalized events preserve lifecycle status deleted hidden and badge" do
+    event = @client.send(
+      :build_normalized_event,
+      {
+        "id" => "card-1",
+        "timestamp" => "2026-09-02T10:00:00Z",
+        "title" => "Coffee",
+        "subtitle" => "Card payment",
+        "eventType" => "CARD_TRANSACTION",
+        "status" => "EXECUTED",
+        "deleted" => false,
+        "hidden" => true,
+        "badge" => "Executed",
+        "amount" => { "value" => -4.5, "currency" => "EUR" }
+      },
+      category: "POC_CREATED",
+      detail: nil
+    )
+
+    assert_equal "EXECUTED", event["status"]
+    assert_equal false, event["deleted"]
+    assert_equal true, event["hidden"]
+    assert_equal "Executed", event["badge"]
+    assert_equal(-4.5, event.dig("detail", "amount"))
+  end
+
+  test "skeleton warnings only fire for truly unknown event types" do
+    warnings = []
+    @client.send(
+      :build_skeleton_event,
+      { "id" => "admin-1", "eventType" => "CARD_VERIFICATION", "title" => "Card verification" },
+      warnings: warnings
+    )
+    assert_empty warnings
+
+    @client.send(
+      :build_skeleton_event,
+      { "id" => "gap-1", "eventType" => "BRAND_NEW_MAPPING_GAP", "title" => "Mystery" },
+      warnings: warnings
+    )
+    assert_equal [ "unsupported timeline event type BRAND_NEW_MAPPING_GAP" ], warnings
+  end
+
+  test "declined or deleted trade events are not treated as incomplete detail candidates" do
+    declined = {
+      "id" => "declined-1",
+      "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+      "category" => "orderExecution",
+      "status" => "DECLINED",
+      "detail" => { "amount" => -25.0 }
+    }
+    deleted = declined.merge("id" => "deleted-1", "status" => "EXECUTED", "deleted" => true)
+    executed = declined.merge("id" => "ok-1", "status" => "EXECUTED", "deleted" => false)
+
+    assert_not Provider::TradeRepublicClient.incomplete_trade_detail_event?(declined)
+    assert_not Provider::TradeRepublicClient.incomplete_trade_detail_event?(deleted)
+    assert Provider::TradeRepublicClient.incomplete_trade_detail_event?(executed)
+  end
+
+  test "detail enrichment skips ignored and non-importable events" do
+    requested_ids = []
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested_ids << payload[:id]
+      { "sections" => [] }
+    end
+
+    events = [
+      { "id" => "admin-1", "eventType" => "CARD_VERIFICATION", "category" => nil },
+      {
+        "id" => "declined-1",
+        "eventType" => "CARD_TRANSACTION",
+        "category" => "POC_CREATED",
+        "status" => "DECLINED",
+        "detail" => { "amount" => -12.0 }
+      },
+      {
+        "id" => "trade-1",
+        "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+        "category" => "orderExecution",
+        "detail" => { "amount" => -25.0 }
+      }
+    ]
+
+    @client.send(:enrich_timeline_details, Object.new, events, enrich_events: [])
+
+    assert_equal [ "trade-1" ], requested_ids
+  end
+
+  test "prefer_richer_event keeps newer lifecycle fields including false booleans" do
+    previous = {
+      "id" => "card-1",
+      "category" => "POC_CREATED",
+      "status" => "AUTHORIZED",
+      "deleted" => true,
+      "hidden" => true,
+      "detail" => { "amount" => -10.0, "isin" => "US0378331005" }
+    }
+    incoming = {
+      "id" => "card-1",
+      "category" => "POC_CREATED",
+      "status" => "EXECUTED",
+      "deleted" => false,
+      "hidden" => false,
+      "detail" => { "amount" => -10.0, "currency" => "EUR" }
+    }
+
+    merged = @client.send(:prefer_richer_event, previous, incoming)
+
+    assert_equal "EXECUTED", merged["status"]
+    assert_equal false, merged["deleted"]
+    assert_equal false, merged["hidden"]
+    assert_equal "US0378331005", merged.dig("detail", "isin")
+    assert_equal "EUR", merged.dig("detail", "currency")
+  end
 end

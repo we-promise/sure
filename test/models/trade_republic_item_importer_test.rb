@@ -175,7 +175,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
 
     TradeRepublicItem::Importer.new(@item, provider: provider).import
 
-    assert_equal 2, @item.reload.data_quality_summary[:events]
+    assert_equal 1, @item.reload.data_quality_summary[:events]
     assert_equal 0, @item.data_quality_summary[:unknown_events]
   end
 
@@ -629,6 +629,69 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal "IE00B4L5Y983", stored.dig("detail", "isin")
     assert_equal "0.25", stored.dig("detail", "quantity")
     assert_equal "EUR", stored.dig("detail", "currency")
+  end
+
+  test "prefer_richer_timeline_event merges newer lifecycle fields including false flags" do
+    importer = TradeRepublicItem::Importer.new(@item, provider: mock("provider"))
+    previous = {
+      id: "card-1",
+      category: "POC_CREATED",
+      status: "AUTHORIZED",
+      deleted: true,
+      hidden: true,
+      detail: { amount: -10.0, isin: "US0378331005" }
+    }
+    incoming = {
+      id: "card-1",
+      category: "POC_CREATED",
+      status: "EXECUTED",
+      deleted: false,
+      hidden: false,
+      detail: { amount: -10.0, currency: "EUR" }
+    }
+
+    merged = importer.send(:prefer_richer_timeline_event, previous, incoming)
+
+    assert_equal "EXECUTED", merged[:status]
+    assert_equal false, merged[:deleted]
+    assert_equal false, merged[:hidden]
+    assert_equal "US0378331005", merged.dig(:detail, :isin)
+    assert_equal "EUR", merged.dig(:detail, :currency)
+  end
+
+  test "events needing detail enrichment exclude non-importable lifecycle events" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-ENRICH",
+      currency: "EUR",
+      raw_timeline_payload: [
+        {
+          "id" => "declined-savings",
+          "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+          "category" => "orderExecution",
+          "status" => "DECLINED",
+          "detail" => { "amount" => -25.0 }
+        },
+        {
+          "id" => "admin-verify",
+          "eventType" => "CARD_VERIFICATION"
+        },
+        {
+          "id" => "incomplete-ok",
+          "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+          "category" => "orderExecution",
+          "status" => "EXECUTED",
+          "detail" => { "amount" => -25.0 }
+        }
+      ]
+    )
+
+    enrich_ids = TradeRepublicItem::Importer.new(@item, provider: mock("provider"))
+      .send(:events_needing_detail_enrichment)
+      .map { |event| event["id"] || event[:id] }
+
+    assert_equal [ "incomplete-ok" ], enrich_ids
   end
 
   private

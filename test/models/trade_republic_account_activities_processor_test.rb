@@ -553,6 +553,129 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-25.00"), trade.amount
   end
 
+  test "executed card payments import while declined cards are skipped" do
+    cash_account, cash_sure = create_linked_cash_account!
+    cash_account.update!(raw_timeline_payload: [
+      {
+        id: "evt_card_ok",
+        timestamp: "2026-08-01T10:00:00Z",
+        eventType: "CARD_TRANSACTION",
+        category: "POC_CREATED",
+        status: "EXECUTED",
+        title: "Coffee",
+        detail: { amount: "4.50", currency: "EUR" }
+      },
+      {
+        id: "evt_card_declined",
+        timestamp: "2026-08-01T11:00:00Z",
+        eventType: "CARD_TRANSACTION",
+        category: "POC_CREATED",
+        status: "DECLINED",
+        title: "Blocked",
+        detail: { amount: "99.00", currency: "EUR" }
+      }
+    ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_card_ok")
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_card_declined")
+  end
+
+  test "deleted financial events are skipped and unprotected prior imports are removed" do
+    cash_account, cash_sure = create_linked_cash_account!
+    Account::ProviderImportAdapter.new(cash_sure).import_transaction(
+      external_id: "trade_republic_event_evt_card_deleted",
+      amount: BigDecimal("12.00"),
+      currency: "EUR",
+      date: Date.parse("2026-08-01"),
+      name: "Ghost payment",
+      source: "trade_republic",
+      investment_activity_label: "Card payment"
+    )
+
+    cash_account.update!(raw_timeline_payload: [ {
+      id: "evt_card_deleted",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "CARD_TRANSACTION",
+      category: "POC_CREATED",
+      deleted: true,
+      title: "Ghost payment",
+      detail: { amount: "12.00", currency: "EUR" }
+    } ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_card_deleted")
+  end
+
+  test "admin lifecycle events are ignored silently without unknown logging" do
+    cash_account, = create_linked_cash_account!
+    cash_account.update!(raw_timeline_payload: [ {
+      id: "evt_card_verify",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "CARD_VERIFICATION",
+      title: "Card verification"
+    } ])
+
+    assert_no_difference "DebugLogEntry.count" do
+      assert_no_difference "Entry.where(source: 'trade_republic').count" do
+        TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+      end
+    end
+  end
+
+  test "truly unknown financial mapping gaps are logged once without creating entries" do
+    cash_account, = create_linked_cash_account!
+    cash_account.update!(raw_timeline_payload: [ {
+      id: "evt_mapping_gap",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "BRAND_NEW_MAPPING_GAP",
+      title: "Mystery payout",
+      status: "EXECUTED"
+    } ])
+
+    assert_difference "DebugLogEntry.count", 1 do
+      assert_no_difference "Entry.where(source: 'trade_republic').count" do
+        TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+      end
+    end
+
+    log = DebugLogEntry.order(:created_at).last
+    assert_match(/unsupported timeline event/i, log.message)
+    assert_equal "BRAND_NEW_MAPPING_GAP", log.metadata["event_type"]
+    assert_equal "EXECUTED", log.metadata["status"]
+  end
+
+  test "preserves protected entries when reconciling declined upstream events" do
+    cash_account, cash_sure = create_linked_cash_account!
+    entry = Account::ProviderImportAdapter.new(cash_sure).import_transaction(
+      external_id: "trade_republic_event_evt_card_protected",
+      amount: BigDecimal("15.00"),
+      currency: "EUR",
+      date: Date.parse("2026-08-01"),
+      name: "Kept payment",
+      source: "trade_republic",
+      investment_activity_label: "Card payment"
+    )
+    entry.mark_user_modified!
+
+    cash_account.update!(raw_timeline_payload: [ {
+      id: "evt_card_protected",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "CARD_TRANSACTION",
+      category: "POC_CREATED",
+      status: "DECLINED",
+      title: "Kept payment",
+      detail: { amount: "15.00", currency: "EUR" }
+    } ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_card_protected")
+    assert entry.reload.user_modified?
+  end
+
   private
 
     def create_linked_cash_account!

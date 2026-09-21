@@ -222,10 +222,14 @@ class TradeRepublicItem::Importer
       return incoming if previous.blank?
       return previous if incoming.blank?
 
+      previous = previous.with_indifferent_access
+      incoming = incoming.with_indifferent_access
       merged = previous.merge(incoming)
       merged[:category] = incoming[:category].presence || previous[:category]
       merged[:eventType] = incoming[:eventType].presence || previous[:eventType]
       merged[:detail] = prefer_richer_timeline_detail(previous[:detail], incoming[:detail])
+      TradeRepublicAccount::DataHelpers.merge_lifecycle_fields!(merged, previous, incoming)
+      # compact drops nil only; boolean false for deleted/hidden must survive.
       merged.compact
     end
 

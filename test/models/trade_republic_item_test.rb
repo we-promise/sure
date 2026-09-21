@@ -89,4 +89,51 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
 
     assert_match(/1 linked, 1 need setup/i, item.reload.sync_status_summary)
   end
+
+  test "data_quality_summary dedupes portfolio and cash timeline events" do
+    item = trade_republic_items(:configured_item)
+    item.trade_republic_accounts.destroy_all
+
+    shared = {
+      "id" => "evt_shared",
+      "eventType" => "CARD_TRANSACTION",
+      "category" => "POC_CREATED",
+      "status" => "EXECUTED"
+    }
+    cash_only = {
+      "id" => "evt_cash_only",
+      "eventType" => "PAYMENT_INBOUND",
+      "category" => "PAYMENT_RECEIVED"
+    }
+    admin = {
+      "id" => "evt_admin",
+      "eventType" => "CARD_VERIFICATION",
+      "title" => "Card verification"
+    }
+    mapping_gap = {
+      "id" => "evt_gap",
+      "eventType" => "BRAND_NEW_MAPPING_GAP",
+      "title" => "Mystery"
+    }
+
+    item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-DQ-P",
+      currency: "EUR",
+      raw_timeline_payload: [ shared, admin, mapping_gap ]
+    )
+    item.trade_republic_accounts.create!(
+      kind: "cash",
+      name: "Cash",
+      trade_republic_account_id: "DE-DQ-C",
+      currency: "EUR",
+      raw_timeline_payload: [ shared, cash_only, admin ]
+    )
+
+    summary = item.data_quality_summary
+
+    assert_equal 4, summary[:events]
+    assert_equal 1, summary[:unknown_events]
+  end
 end

@@ -159,21 +159,21 @@ class TradeRepublicItem < ApplicationRecord
 
   def data_quality_summary
     positions = trade_republic_accounts.where(kind: "portfolio").flat_map { |account| Array(account.raw_positions_payload) }
-    events = trade_republic_accounts.flat_map { |account| Array(account.raw_timeline_payload) }
     portfolio_events = trade_republic_accounts.where(kind: "portfolio").flat_map { |account| Array(account.raw_timeline_payload) }
+    cash_events = trade_republic_accounts.where(kind: "cash").flat_map { |account| Array(account.raw_timeline_payload) }
+    unique_events = TradeRepublicAccount::DataHelpers.unique_timeline_events(portfolio_events, cash_events)
     hash_positions = positions.select { |position| position.is_a?(Hash) }
-    hash_events = events.select { |event| event.is_a?(Hash) }
-    unknown_events = hash_events.count do |event|
-      !TradeRepublicAccount::DataHelpers::KNOWN_ACTIVITY_CATEGORIES.include?(event["category"])
+    unknown_events = unique_events.count do |event|
+      TradeRepublicAccount::DataHelpers.classify_timeline_event(event) == :unknown
     end
-    pending_trade_details = portfolio_events.count do |event|
+    pending_trade_details = unique_events.count do |event|
       Provider::TradeRepublicClient.incomplete_trade_detail_event?(event)
     end
 
     {
       positions: hash_positions.size,
       unpriced_positions: hash_positions.count { |position| position["price"].blank? },
-      events: hash_events.size,
+      events: unique_events.size,
       unknown_events: unknown_events,
       pending_trade_details: pending_trade_details,
       linked_accounts: linked_accounts_count,

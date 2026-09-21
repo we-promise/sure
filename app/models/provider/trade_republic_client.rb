@@ -410,7 +410,10 @@ class Provider::TradeRepublicClient
     end
 
     def incomplete_trade_detail_event?(event)
-      requires_trade_detail?(event) && !trade_detail_complete?(event)
+      return false unless requires_trade_detail?(event)
+      return false unless TradeRepublicAccount::DataHelpers.importable_timeline_event?(event)
+
+      !trade_detail_complete?(event)
     end
   end
 
@@ -796,7 +799,10 @@ class Provider::TradeRepublicClient
 
     def build_skeleton_event(item, warnings: nil)
       category = item["category"].presence || EVENT_TYPE_CATEGORIES[item["eventType"].to_s]
-      if warnings && category.blank? && item["eventType"].present?
+      classified = item.merge("category" => category)
+      if warnings &&
+          item["eventType"].present? &&
+          TradeRepublicAccount::DataHelpers.classify_timeline_event(classified) == :unknown
         warnings << "unsupported timeline event type #{item["eventType"]}"
       end
       build_normalized_event(item, category: category, detail: nil)
@@ -845,6 +851,7 @@ class Provider::TradeRepublicClient
         item = event.stringify_keys
         category = item["category"].presence || EVENT_TYPE_CATEGORIES[item["eventType"].to_s]
         next if item["id"].blank? || category.blank?
+        next unless TradeRepublicAccount::DataHelpers.importable_timeline_event?(item)
 
         details_fetched += 1
         begin
@@ -910,6 +917,8 @@ class Provider::TradeRepublicClient
       merged = previous.merge(incoming)
       merged["category"] = incoming["category"].presence || previous["category"]
       merged["detail"] = prefer_richer_detail(previous["detail"], incoming["detail"])
+      TradeRepublicAccount::DataHelpers.merge_lifecycle_fields!(merged, previous, incoming)
+      # compact drops nil only; boolean false for deleted/hidden must survive.
       merged.compact
     end
 
@@ -923,6 +932,7 @@ class Provider::TradeRepublicClient
     end
 
     def build_normalized_event(item, category:, detail:)
+      item = item.stringify_keys
       amount = item.dig("amount", "value")
       event_detail = {
         "amount" => amount,
@@ -931,8 +941,17 @@ class Provider::TradeRepublicClient
       }.compact
       detail ||= {}
       detail = event_detail.merge(detail) if event_detail.present?
-      item.slice("id", "timestamp", "title", "subtitle", "eventType")
+      event = item.slice("id", "timestamp", "title", "subtitle", "eventType")
         .merge("category" => category, "detail" => detail.presence)
+
+      TradeRepublicAccount::DataHelpers::LIFECYCLE_KEYS.each do |key|
+        next unless item.key?(key)
+        next if key == "badge" && item[key].blank?
+
+        event[key] = item[key]
+      end
+
+      event
     end
 
     def normalize_event_detail(raw, item: nil)

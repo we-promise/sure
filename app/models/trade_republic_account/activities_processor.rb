@@ -23,6 +23,17 @@ class TradeRepublicAccount::ActivitiesProcessor
       next unless event.is_a?(Hash)
 
       event = event.with_indifferent_access
+      classification = classify_timeline_event(event)
+
+      case classification
+      when :ignored
+        next
+      when :unknown
+        record_unknown_event(event)
+        next
+      end
+
+      next if lifecycle_blocks_import?(event)
       next unless processable_event?(event)
 
       case process_event(event)
@@ -33,6 +44,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     reconcile_split_portfolio_transactions!
     reconcile_stale_saveback_cash_transactions!
+    reconcile_non_importable_entries!
 
     { trades: trade_count, transactions: transaction_count }
   end
@@ -373,6 +385,68 @@ class TradeRepublicAccount::ActivitiesProcessor
       )
     end
 
+    # Remove previously imported entries whose upstream events are now deleted
+    # or in a terminal non-importable status, unless the user protected them.
+    def reconcile_non_importable_entries!
+      blocked_ids = Array(@trade_republic_account.raw_timeline_payload).filter_map do |event|
+        next unless event.is_a?(Hash)
+        next unless TradeRepublicAccount::DataHelpers.lifecycle_blocks_import?(event)
+
+        event["id"].presence || event[:id].presence
+      end
+      return if blocked_ids.empty?
+
+      external_ids = blocked_ids.map { |event_id| "trade_republic_event_#{event_id}" }
+      candidates = account.entries
+        .where(source: "trade_republic")
+        .where(external_id: external_ids)
+        .includes(:entryable)
+
+      removed_count = 0
+      skipped_count = 0
+
+      candidates.find_each do |entry|
+        if entry.protected_from_sync? || entry.split_parent? || entry.split_child?
+          skipped_count += 1
+          DebugLogEntry.capture(
+            category: "sync",
+            level: "info",
+            message: "Skipped removing protected Trade Republic entry for non-importable event #{entry.external_id}",
+            source: "trade_republic",
+            family: @trade_republic_account.trade_republic_item.family,
+            provider_key: "trade_republic",
+            account: account,
+            metadata: {
+              trade_republic_account_id: @trade_republic_account.id,
+              external_id: entry.external_id,
+              protection_reason: entry.protection_reason || (entry.split_parent? || entry.split_child? ? :split : nil)
+            }
+          )
+          next
+        end
+
+        entry.destroy!
+        removed_count += 1
+      end
+
+      return unless removed_count.positive? || skipped_count.positive?
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Reconciled non-importable Trade Republic entries (removed=#{removed_count}, skipped=#{skipped_count})",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: {
+          trade_republic_account_id: @trade_republic_account.id,
+          removed_count: removed_count,
+          skipped_count: skipped_count
+        }
+      )
+    end
+
     def linked_cash_account_present?
       @trade_republic_account.trade_republic_item.trade_republic_accounts
         .where(kind: "cash")
@@ -388,7 +462,12 @@ class TradeRepublicAccount::ActivitiesProcessor
         source: "trade_republic",
         family: @trade_republic_account.trade_republic_item.family,
         provider_key: "trade_republic",
-        metadata: { event_id: event[:id], category: event[:category] }
+        metadata: {
+          event_id: event[:id],
+          event_type: event[:eventType],
+          category: event[:category],
+          status: event[:status]
+        }
       )
     end
 
