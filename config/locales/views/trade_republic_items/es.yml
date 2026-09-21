@@ -102,5 +102,6 @@ es:
         card_fee: Comisión de tarjeta
         card_refund: Reembolso de tarjeta
         tax_refund: Devolución de impuestos
+        round_up: Round up
         buy: Compra
         sell: Venta

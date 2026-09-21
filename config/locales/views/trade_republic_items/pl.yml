@@ -17,6 +17,7 @@ pl:
         contribution: Wpłata
         dividend: Dywidenda
         interest: Odsetki
+        round_up: Round up
         sell: Sprzedaż
         tax_refund: Zwrot podatku
         withdrawal: Wypłata

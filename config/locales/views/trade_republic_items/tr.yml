@@ -102,5 +102,6 @@ tr:
         card_fee: Kart ücreti
         card_refund: Kart iadesi
         tax_refund: Vergi iadesi
+        round_up: Round up
         buy: Alış
         sell: Satış
