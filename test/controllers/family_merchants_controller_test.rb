@@ -54,6 +54,16 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=checkbox][name='family_merchant[remove_iban]']", 1
   end
 
+  test "iban field masks keystrokes like a password field and signals a stored value" do
+    @merchant.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    get edit_family_merchant_url(@merchant)
+
+    assert_response :success
+    assert_select "input[type=password][name='family_merchant[iban]']", 1
+    assert_select "input[name='family_merchant[iban]'][placeholder^=?]", "••••"
+  end
+
   test "edit form does not render a remove_iban toggle when no iban is stored" do
     get edit_family_merchant_url(@merchant)
 
