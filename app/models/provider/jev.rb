@@ -20,6 +20,11 @@ class Provider::Jev < Provider
   # descriptions go to TypeSafe is wrong when they transit a proxy first.
   VENDOR_HOST = "api.typesafe.ai"
 
+  # Hosts where plaintext carries no network exposure. See .endpoint_allowed?.
+  # Matched against URI#hostname, which unwraps the brackets URI#host keeps on
+  # an IPv6 literal, so "::1" is the only spelling needed.
+  LOOPBACK_HOSTS = %w[localhost 127.0.0.1 ::1].freeze
+
   # Documented API limits.
   MAX_CHOICE_OPTIONS = 255
   SCORE_LEVELS = (2..10)
@@ -61,11 +66,39 @@ class Provider::Jev < Provider
     def effective_endpoint
       (ENV["JEV_ENDPOINT"].presence || Setting.jev_endpoint).presence || DEFAULT_ENDPOINT
     end
+
+    # Every request carries a Bearer token in the headers and the family's
+    # transaction descriptions in the body, so an http:// endpoint discloses
+    # both in cleartext — a credential leak, not merely a downgrade.
+    #
+    # The scheme has to be named explicitly: URI::HTTPS subclasses URI::HTTP,
+    # so the obvious `is_a?(URI::HTTP)` check silently accepts http://.
+    #
+    # Loopback is exempt. An operator running a gateway on the same host has no
+    # network segment to intercept, and demanding a valid certificate for
+    # 127.0.0.1 would push them towards disabling verification altogether,
+    # which is worse than the thing this guards against.
+    def endpoint_allowed?(url)
+      uri = URI.parse(url.to_s)
+      return false unless uri.is_a?(URI::HTTP) && uri.host.present?
+      return true if uri.scheme == "https"
+
+      uri.scheme == "http" && LOOPBACK_HOSTS.include?(uri.hostname.to_s.downcase)
+    rescue URI::InvalidURIError
+      false
+    end
   end
 
   def initialize(api_key, endpoint: nil, model: nil, concurrency: nil)
     @api_key = api_key # pipelock:ignore
     @endpoint = endpoint.presence || DEFAULT_ENDPOINT
+
+    # Enforced here as well as in the settings form so that JEV_ENDPOINT and
+    # eval-time construction, which never touch the form, get the same check.
+    unless self.class.endpoint_allowed?(@endpoint)
+      raise Error, "Jev endpoint must use https (or http on loopback): #{@endpoint}"
+    end
+
     @default_model = model.presence || DEFAULT_MODEL
     @concurrency = (concurrency || ENV["JEV_CONCURRENCY"]).to_i
     @concurrency = DEFAULT_CONCURRENCY unless @concurrency.positive?
@@ -273,19 +306,30 @@ class Provider::Jev < Provider
     # It reports 0 rather than nil so a downstream threshold reads it as
     # maximally unconfident and withholds, instead of mistaking it for a
     # provider that does not do confidence at all and waving it through.
+    # Clamped because the gate that consumes this compares against a threshold
+    # constrained to 0..1: an out-of-range confidence (a reported 1.5, or a
+    # noul_confidence derived from a probability outside 0..1) would clear every
+    # threshold and be applied and locked, which is the precise outcome the
+    # withholding logic exists to prevent. A malformed answer must fail closed.
     def confidence_for(type, value, reported)
-      return reported.to_f if reported
+      return reported.to_f.clamp(0.0, 1.0) if reported
+      return noul_confidence(value) if type == "noul"
 
-      type == "noul" ? noul_confidence(value) : 0.0
+      0.0
     end
 
     # Noul answers carry no confidence field — the probability is the answer.
     # Distance from 0.5 is the equivalent signal: 0.5 is maximal uncertainty,
     # 0.0 and 1.0 are maximal certainty.
+    #
+    # Bounded here rather than in the caller because this is the expression that
+    # can exceed 1, and because a nil must survive: it means "not a number at
+    # all", which the withholding gate reads as zero and refuses, whereas
+    # clamping a nil would raise on the one input worth sanitizing.
     def noul_confidence(value)
       return nil unless value.is_a?(Numeric)
 
-      (value - 0.5).abs * 2
+      ((value - 0.5).abs * 2).clamp(0.0, 1.0)
     end
 
     def build_usage(usage)

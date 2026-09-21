@@ -191,6 +191,40 @@ class Provider::JevTest < ActiveSupport::TestCase
     assert_equal 0.0, response.data[:q].confidence
   end
 
+  test "clamps a reported confidence into 0..1" do
+    # The threshold that consumes this is constrained to 0..1, so a reported
+    # 1.5 would clear every setting and be applied and locked — the exact
+    # outcome the withholding gate exists to prevent. A malformed answer has to
+    # fail closed, not sail through.
+    { 1.5 => 1.0, -0.4 => 0.0 }.each do |reported, expected|
+      stub_request(:post, ENDPOINT).to_return(
+        status: 200,
+        body: choice_body(choice: "Coffee", confidence: reported),
+        headers: { "Content-Type" => "application/json" }
+      )
+
+      response = @provider.auto_categorize(transactions: [ transaction ], user_categories: categories)
+
+      assert_equal expected, response.data.sole.confidence
+    end
+  end
+
+  test "survives a noul answer whose probability is not a number" do
+    # The bound belongs next to the arithmetic that can exceed 1, not in the
+    # caller: clamping the caller's result would raise on this path, which is
+    # the one input worth sanitizing.
+    stub_request(:post, ENDPOINT).to_return(
+      status: 200,
+      body: { "answers" => { "q" => { "type" => "noul", "noul" => "not-a-number" } } }.to_json,
+      headers: { "Content-Type" => "application/json" }
+    )
+
+    response = @provider.decide(state: "x", questions: { q: { type: "noul", instructions: "?" } })
+
+    assert response.success?
+    assert_nil response.data[:q].confidence
+  end
+
   test "derives confidence for noul answers from distance off the midpoint" do
     stub_request(:post, ENDPOINT).to_return(
       status: 200,
@@ -320,6 +354,31 @@ class Provider::JevTest < ActiveSupport::TestCase
     assert_equal "jev-latest", Provider::Jev::DEFAULT_MODEL
     assert_not @provider.proxied?
     assert_equal "Jev", @provider.provider_name
+  end
+
+  test "refuses a plaintext endpoint" do
+    error = assert_raises(Provider::Jev::Error) do
+      Provider::Jev.new("test_api_key", endpoint: "http://api.typesafe.ai/v1/systemone")
+    end
+
+    assert_match(/https/, error.message)
+
+    assert_not Provider::Jev.endpoint_allowed?("http://api.typesafe.ai/v1/systemone")
+    assert_not Provider::Jev.endpoint_allowed?("ftp://api.typesafe.ai/x")
+    assert_not Provider::Jev.endpoint_allowed?("not-a-url")
+    assert_not Provider::Jev.endpoint_allowed?(nil)
+  end
+
+  test "allows plaintext only on loopback" do
+    assert Provider::Jev.endpoint_allowed?("http://localhost:4000/v1/systemone")
+    assert Provider::Jev.endpoint_allowed?("http://127.0.0.1:4000/v1/systemone")
+    assert Provider::Jev.endpoint_allowed?("http://[::1]:4000/v1/systemone")
+    assert Provider::Jev.endpoint_allowed?("http://LocalHost:4000/v1/systemone")
+    assert Provider::Jev.endpoint_allowed?("https://api.typesafe.ai/v1/systemone")
+
+    assert_nothing_raised do
+      Provider::Jev.new("test_api_key", endpoint: "http://localhost:4000/v1/systemone")
+    end
   end
 
   test "reports the host the current configuration will actually send to" do

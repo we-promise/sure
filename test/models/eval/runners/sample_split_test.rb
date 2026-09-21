@@ -68,6 +68,24 @@ class Eval::Runners::SampleSplitTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { Eval::Runners::SampleSplit.new(@dataset.samples).for_role("holdout") }
   end
 
+  # Guards against String#hash, which Ruby seeds per process: the split has to
+  # be identical in the Bayes leg and the provider leg of a cascade run, and
+  # those are separate `rake evals:run` processes. A single-process test cannot
+  # observe that drift, and the selection itself cannot be pinned because the
+  # shuffle orders by sample id, which is a random UUID per run. So the pin goes
+  # on the offset — hardcoded values a per-process hash could never reproduce.
+  test "derives the difficulty offset from a stable digest" do
+    split = Eval::Runners::SampleSplit.new(@dataset.samples)
+
+    assert_equal 3981731257, split.send(:difficulty_offset, "hard")
+    assert_equal 2546011902, split.send(:difficulty_offset, "easy")
+    assert_equal 3229762922, split.send(:difficulty_offset, "medium")
+    assert_equal 3334581, split.send(:difficulty_offset, "edge_case")
+    # Samples with no difficulty still have to land somewhere deterministic.
+    assert_equal 3820012610, split.send(:difficulty_offset, nil)
+  end
+
+
   private
     def sample(difficulty:, category:, id_hint:)
       @dataset.samples.create!(

@@ -292,7 +292,7 @@ en:
         invalid_llm_budget: "%{field} must be a whole number ≥ %{minimum}."
         invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
         anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
-        invalid_jev_endpoint: Jev Endpoint must be an http(s) URL.
+        invalid_jev_endpoint: Jev Endpoint must be an https URL. Plain http is accepted only for localhost.
         invalid_categorization_rate: "%{field} must be a number between 0 and 1."
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       disconnect_external_assistant:

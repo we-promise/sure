@@ -73,7 +73,7 @@ class Eval::Runners::SampleSplit
         test_set = untrainable
 
         trainable.group_by(&:difficulty).each do |difficulty, group|
-          ordered = group.sort_by(&:id).shuffle(random: Random.new(seed + difficulty.hash))
+          ordered = group.sort_by(&:id).shuffle(random: Random.new(seed + difficulty_offset(difficulty)))
           take = (ordered.size * train_ratio).round
           train_set.concat(ordered.first(take))
           test_set.concat(ordered.drop(take))
@@ -81,5 +81,15 @@ class Eval::Runners::SampleSplit
 
         [ train_set.sort_by(&:id), test_set.sort_by(&:id) ]
       end
+    end
+
+    # Deliberately not String#hash, which Ruby seeds per process: the Bayes leg
+    # and the provider leg of a cascade run are separate `rake evals:run`
+    # processes, so the same seed produced a different shuffle in each and the
+    # two legs were scored over different test sets. Eval::Reporters::CascadeReport
+    # compares only the recorded seed and train_ratio, which matched either way,
+    # so nothing warned. A digest is stable across processes and Ruby versions.
+    def difficulty_offset(difficulty)
+      Digest::SHA256.hexdigest(difficulty.to_s)[0, 8].to_i(16)
     end
 end

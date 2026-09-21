@@ -204,8 +204,12 @@ class Family::AutoCategorizer
           shadow_category_name: shadow&.category_name,
           shadow_confidence: confidence_for(shadow),
           shadow_probabilities: (shadow.probabilities if shadow.respond_to?(:probabilities)) || {},
-          # Both declining to guess counts as agreement — an abstention is an answer.
-          agreed: applied&.category_name == shadow&.category_name,
+          # Both declining to guess counts as agreement — an abstention is an
+          # answer. A provider returning no decision at all is not: the ids come
+          # from the union of both lists, so one side can be missing entirely,
+          # and comparing `nil == nil` would score that as agreement and inflate
+          # the rate.
+          agreed: applied.present? && shadow.present? && applied.category_name == shadow.category_name,
           created_at: Time.current,
           updated_at: Time.current
         }

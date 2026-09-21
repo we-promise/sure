@@ -219,8 +219,10 @@ class Settings::HostingsController < ApplicationController
       if raw_endpoint.blank?
         Setting.jev_endpoint = nil
       else
-        parsed = URI.parse(raw_endpoint) rescue nil
-        unless parsed.is_a?(URI::HTTP)
+        # Provider::Jev owns the rule so settings, JEV_ENDPOINT and eval-time
+        # construction cannot drift apart; the controller's job is only to turn
+        # a rejection into a message instead of a 500.
+        unless Provider::Jev.endpoint_allowed?(raw_endpoint)
           raise Setting::ValidationError, t(".invalid_jev_endpoint")
         end
         Setting.jev_endpoint = raw_endpoint

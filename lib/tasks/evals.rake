@@ -201,7 +201,7 @@ namespace :evals do
 
   desc "Generate report for specific runs"
   task :report, [ :run_ids ] => :environment do |_t, args|
-    run_ids = (args[:run_ids] || ENV["RUN_IDS"])&.split(",")
+    run_ids = run_ids_from(args[:run_ids], args.extras, "RUN_IDS")
 
     runs = if run_ids.present?
       Eval::Run.where(id: run_ids)
@@ -237,10 +237,10 @@ namespace :evals do
   desc "Report the Bayes -> provider cascade (provider accuracy on the residual Bayes declines)"
   task :cascade, [ :bayes_run_id, :provider_run_ids ] => :environment do |_t, args|
     bayes_id = args[:bayes_run_id] || ENV["BAYES"]
-    provider_ids = (args[:provider_run_ids] || ENV["PROVIDERS"])&.split(",")
+    provider_ids = run_ids_from(args[:provider_run_ids], args.extras, "PROVIDERS")
 
     if bayes_id.blank? || provider_ids.blank?
-      puts "Usage: rake evals:cascade[bayes_run_id,provider_run_id1+provider_run_id2]"
+      puts "Usage: rake evals:cascade[bayes_run_id,provider_run_id1,provider_run_id2]"
       puts "   or: BAYES=<run_id> PROVIDERS=<id1>,<id2> rake evals:cascade"
       puts
       puts "Produce the runs first, all on the same split:"
@@ -836,6 +836,16 @@ namespace :evals do
     # A run restricted to one side of the train/test split. Only set when asked
     # for: an unsplit run still evaluates the whole dataset, which is what the
     # existing single-provider benchmarks do.
+    # Rake binds only the arguments a task declares, so `rake 'x[a,b,c]'` on a
+    # two-argument task puts "c" in `extras` rather than dropping it. Reading
+    # both means the comma form works for any number of ids and the CLI needs
+    # no second separator.
+    def run_ids_from(value, extras, env_key)
+      ids = value.present? ? [ value, *extras ] : ENV[env_key].to_s.split(",")
+
+      ids.map(&:strip).reject(&:blank?)
+    end
+
     def split_config
       role = ENV["SPLIT_ROLE"].presence
       return {} if role.blank?

@@ -76,7 +76,7 @@
                             label: t(".confidence_threshold_label"),
                             in: 0..1,
                             step: 0.05,
-                            value: Current.family.categorization_confidence_threshold,
+                            value: Current.family.effective_categorization_confidence_threshold,
                             disabled: threshold_locked,
                             data: { "auto-submit-form-target": "auto" } %>
     <% end %>
@@ -111,7 +111,7 @@
                           label: t(".shadow_rate_label"),
                           in: 0..1,
                           step: 0.05,
-                          value: Current.family.categorization_shadow_rate,
+                          value: Current.family.effective_categorization_shadow_rate,
                           disabled: shadow_locked,
                           data: { "auto-submit-form-target": "auto" } %>
   <% end %>

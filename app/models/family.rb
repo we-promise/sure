@@ -192,15 +192,21 @@ class Family < ApplicationRecord
   #
   # Only providers that report calibrated confidence can be gated — the LLM
   # providers return a bare category name, so a threshold does nothing to them.
+  # Clamped because the ENV override bypasses the column's 0..1 validation and
+  # the DB check constraint both. Left unbounded, a threshold of 5 withholds
+  # every answer and one of -1 disables the gate entirely, and the settings
+  # screen renders the value into a field declared `in: 0..1`.
   def effective_categorization_confidence_threshold
-    (ENV["CATEGORIZATION_CONFIDENCE_THRESHOLD"].presence || categorization_confidence_threshold).to_f
+    (ENV["CATEGORIZATION_CONFIDENCE_THRESHOLD"].presence || categorization_confidence_threshold).to_f.clamp(0.0, 1.0)
   end
 
   # Fraction of categorization runs that also ask the provider NOT in use, for
   # comparison only. Zero disables it. This doubles spend on the runs it samples,
   # so it is opt-in and sampled rather than all-or-nothing.
+  # Clamped for the same reason, with a sharper consequence: `rand < rate` on an
+  # unbounded override samples every single run, doubling spend silently.
   def effective_categorization_shadow_rate
-    (ENV["CATEGORIZATION_SHADOW_RATE"].presence || categorization_shadow_rate).to_f
+    (ENV["CATEGORIZATION_SHADOW_RATE"].presence || categorization_shadow_rate).to_f.clamp(0.0, 1.0)
   end
 
   # The provider to run alongside the one in use, for comparison. Deliberately

@@ -427,6 +427,21 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "rejects a plaintext jev endpoint but allows loopback" do
+    with_self_hosting do
+      Setting.jev_endpoint = nil
+
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "http://api.typesafe.ai/v1/systemone" } }
+
+      assert_response :unprocessable_entity
+      assert_nil Setting.jev_endpoint
+
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "http://localhost:4000/v1/systemone" } }
+
+      assert_equal "http://localhost:4000/v1/systemone", Setting.jev_endpoint
+    end
+  end
+
   test "clears jev endpoint when blank value submitted" do
     with_self_hosting do
       Setting.jev_endpoint = "https://api.typesafe.ai/v1/systemone"

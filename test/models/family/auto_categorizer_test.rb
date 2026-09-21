@@ -363,6 +363,66 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_in_delta 0.88, comparison.shadow_confidence, 0.001
   end
 
+  test "does not score a missing shadow answer as agreement" do
+    # The comparison rows come from the union of both providers' decisions, so
+    # one side can be absent entirely. When the other side abstained, both
+    # category names are nil — and comparing them directly recorded that as
+    # agreement, inflating the rate with rows where nobody agreed on anything.
+    @family.update!(categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
+    @family.categories.create!(name: "Coffee")
+
+    openai = Provider::Openai.allocate
+    Provider::Registry.stubs(:preferred_llm_provider).returns(openai)
+    # Answered, but declined to pick a category.
+    openai.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: txn.id, category_name: nil)
+    ])).once
+
+    jev = Provider::Jev.allocate
+    Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
+    # Returned no decision for this transaction at all.
+    jev.expects(:auto_categorize).returns(provider_success_response([])).once
+
+    assert_difference "CategorizationComparison.count", 1 do
+      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    end
+
+    comparison = CategorizationComparison.order(:created_at).last
+    assert_not comparison.agreed
+    assert_nil comparison.shadow_category_name
+  end
+
+  test "counts a shared abstention as agreement" do
+    # The other half of the rule: both providers answering "no category" is a
+    # real agreement, and must not be swept up by the fix above.
+    @family.update!(categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
+    @family.categories.create!(name: "Coffee")
+
+    openai = Provider::Openai.allocate
+    Provider::Registry.stubs(:preferred_llm_provider).returns(openai)
+    openai.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: txn.id, category_name: nil)
+    ])).once
+
+    jev = Provider::Jev.allocate
+    Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
+    jev.expects(:auto_categorize).returns(provider_success_response([
+      CategoryDecision.new(
+        transaction_id: txn.id,
+        category_name: nil,
+        confidence: 0.94,
+        probabilities: {},
+        usage: {}
+      )
+    ])).once
+
+    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+
+    assert CategorizationComparison.order(:created_at).last.agreed
+  end
+
   test "a failing shadow provider does not break the run it observes" do
     @family.update!(categorization_shadow_rate: 1.0)
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
