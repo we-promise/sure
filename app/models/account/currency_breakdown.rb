@@ -30,6 +30,7 @@ module Account::CurrencyBreakdown
 
   private
     def transaction_currencies
-      entries.excluding_pending.where(entryable_type: "Transaction").distinct.pluck(:currency)
+      entries.excluding_pending.excluding_split_parents
+             .where(entryable_type: "Transaction").distinct.pluck(:currency)
     end
 end
