@@ -160,15 +160,22 @@ class TradeRepublicItem < ApplicationRecord
   def data_quality_summary
     positions = trade_republic_accounts.where(kind: "portfolio").flat_map { |account| Array(account.raw_positions_payload) }
     events = trade_republic_accounts.flat_map { |account| Array(account.raw_timeline_payload) }
-    unknown_events = events.count do |event|
-      !event.is_a?(Hash) || !TradeRepublicAccount::DataHelpers::KNOWN_ACTIVITY_CATEGORIES.include?(event["category"])
+    portfolio_events = trade_republic_accounts.where(kind: "portfolio").flat_map { |account| Array(account.raw_timeline_payload) }
+    hash_positions = positions.select { |position| position.is_a?(Hash) }
+    hash_events = events.select { |event| event.is_a?(Hash) }
+    unknown_events = hash_events.count do |event|
+      !TradeRepublicAccount::DataHelpers::KNOWN_ACTIVITY_CATEGORIES.include?(event["category"])
+    end
+    pending_trade_details = portfolio_events.count do |event|
+      Provider::TradeRepublicClient.incomplete_trade_detail_event?(event)
     end
 
     {
-      positions: positions.size,
-      unpriced_positions: positions.count { |position| position["price"].blank? },
-      events: events.size,
+      positions: hash_positions.size,
+      unpriced_positions: hash_positions.count { |position| position["price"].blank? },
+      events: hash_events.size,
       unknown_events: unknown_events,
+      pending_trade_details: pending_trade_details,
       linked_accounts: linked_accounts_count,
       unlinked_accounts: unlinked_accounts_count
     }

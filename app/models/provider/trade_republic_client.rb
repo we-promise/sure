@@ -35,7 +35,14 @@ class Provider::TradeRepublicClient
     503 => TransientProviderError,
     504 => TransientProviderError
   }.freeze
-  DETAIL_CATEGORIES = %w[orderExecution PAYMENT_RECEIVED POC_CREATED INTEREST_PAYOUT_CREATED DIVIDEND].freeze
+  # Categories/event types that need timelineDetailV2 for ISIN and quantity.
+  # Ordinary cash movements (card payments, transfers, interest, dividends) use
+  # the timeline list amount only and must not consume the detail budget.
+  TRADE_DETAIL_CATEGORY = "orderExecution"
+  TRADE_DETAIL_EVENT_TYPES = %w[
+    SAVEBACK_AGGREGATE
+    SPARE_CHANGE_AGGREGATE
+  ].freeze
   EVENT_TYPE_CATEGORIES = {
     "TRADING_TRADE_EXECUTED" => "orderExecution",
     "TRADE_INVOICE" => "orderExecution",
@@ -97,9 +104,10 @@ class Provider::TradeRepublicClient
   TAX_TITLES = [ "steuer", "steuern", "tax", "taxes" ].freeze
   MAX_TIMELINE_PAGES = 50
   MAX_TIMELINE_DETAILS = 200
-  # Bound targeted detail backfills so one sync cannot exhaust the WebSocket
-  # session retrying every historically incomplete savings-plan event.
-  MAX_DETAIL_ENRICHMENT = 50
+  # Reserve this many detail fetches for newly discovered trade events each
+  # sync. The remainder drains the oldest stored incomplete events; leftover
+  # budget returns to additional new events.
+  MAX_TIMELINE_DETAILS_DELTA_RESERVED = 50
   MAX_SYNC_RETRIES = 2
   RETRY_BACKOFF_SECONDS = 0.5
   LOGIN_SUCCESS_STATES = %w[CONFIRMED COMPLETED APPROVED SUCCESS OK DONE].freeze
@@ -339,26 +347,21 @@ class Provider::TradeRepublicClient
       newest_event_id = nil
       timeline_warnings = []
       timeline_complete = false
+      detail_backfill_count = 0
       begin
-        events, newest_event_id, timeline_warnings, timeline_complete = collect_all_timeline(
+        events, newest_event_id, timeline_warnings, timeline_complete, detail_backfill_count = collect_all_timeline(
           websocket,
           known_newest_event_id: known_newest_event_id,
-          max_pages: timeline_max_pages.to_i
+          max_pages: timeline_max_pages.to_i,
+          enrich_events: enrich_events
         )
         warnings.concat(timeline_warnings)
+        # Timeline domain reflects list pagination only. Detail backlog drains
+        # across later syncs and must not freeze newest_event_id.
         domain_statuses["timeline"] = timeline_complete ? "success" : "partial"
       rescue MalformedResponse, ProviderUnavailable => e
         raise if e.is_a?(TransientProviderError)
         warnings << "timeline fetch failed: #{e.message}"
-      end
-
-      # Targeted backfill for stored events that arrived before they were mapped
-      # (for example older SAVINGS_PLAN_INVOICE_CREATED rows). This does not
-      # touch newest_event_id — remaining incomplete events retry next sync.
-      if Array(enrich_events).any?
-        enriched_events, enrichment_warnings = enrich_event_details(websocket, enrich_events)
-        warnings.concat(enrichment_warnings)
-        events = merge_enriched_events(events, enriched_events)
       end
 
       Result.new(data: {
@@ -372,6 +375,8 @@ class Provider::TradeRepublicClient
           "currency" => money_currency(available_cash) || money_currency(cash)
         }.compact),
         "positions" => positions, "events" => events, "newest_event_id" => newest_event_id,
+        "timeline_pagination_complete" => timeline_complete,
+        "detail_backfill_count" => detail_backfill_count,
         "warnings" => warnings, "position_warnings" => position_warnings
       })
     ensure
@@ -383,6 +388,30 @@ class Provider::TradeRepublicClient
 
   class << self
     def available? = !!defined?(WebSocket::Driver)
+
+    def requires_trade_detail?(item)
+      return false unless item.is_a?(Hash)
+
+      item = item.stringify_keys
+      category = item["category"].presence || EVENT_TYPE_CATEGORIES[item["eventType"].to_s]
+      return true if category.to_s == TRADE_DETAIL_CATEGORY
+
+      TRADE_DETAIL_EVENT_TYPES.include?(item["eventType"].to_s)
+    end
+
+    def trade_detail_complete?(event)
+      return false unless event.is_a?(Hash)
+
+      detail = event["detail"] || event[:detail]
+      return false unless detail.is_a?(Hash)
+
+      detail = detail.stringify_keys
+      detail["isin"].present? && detail["quantity"].present?
+    end
+
+    def incomplete_trade_detail_event?(event)
+      requires_trade_detail?(event) && !trade_detail_complete?(event)
+    end
   end
 
   private
@@ -690,33 +719,36 @@ class Provider::TradeRepublicClient
       )
     end
 
-    def collect_all_timeline(websocket, known_newest_event_id:, max_pages:)
-      transaction_events, transaction_cursor, transaction_warnings, transaction_complete = collect_timeline_topic(
+    def collect_all_timeline(websocket, known_newest_event_id:, max_pages:, enrich_events: [])
+      transaction_events, transaction_newest, transaction_warnings, transaction_complete = collect_timeline_topic(
         websocket,
         topic: "timelineTransactions",
         known_newest_event_id: known_newest_event_id,
         max_pages: max_pages
       )
-      activity_events, activity_cursor, activity_warnings, activity_complete = collect_timeline_topic(
+      activity_events, activity_newest, activity_warnings, activity_complete = collect_timeline_topic(
         websocket,
         topic: "timelineActivityLog",
         known_newest_event_id: known_newest_event_id,
         max_pages: max_pages
       )
-      events = (transaction_events + activity_events).uniq do |event|
+      skeleton_events = (transaction_events + activity_events).uniq do |event|
         event["id"].presence || event.slice("timestamp", "eventType", "title", "subtitle", "detail")
       end
+      events, detail_warnings, detail_backfill_count = enrich_timeline_details(
+        websocket,
+        skeleton_events,
+        enrich_events: enrich_events
+      )
       newest_event = events.max_by { |event| event["timestamp"].to_s }
-      details_incomplete = (transaction_events.any? && transaction_cursor.nil?) ||
-        (activity_events.any? && activity_cursor.nil?)
-      timeline_complete = transaction_complete != false && activity_complete != false &&
-        !details_incomplete &&
-        (transaction_warnings + activity_warnings).none? { |warning| warning.start_with?("detail fetch failed") }
+      # Pagination completeness only — pending details drain on later syncs.
+      timeline_complete = transaction_complete != false && activity_complete != false
       [
         events,
-        details_incomplete ? nil : (newest_event&.dig("id") || transaction_cursor || activity_cursor),
-        transaction_warnings + activity_warnings,
-        timeline_complete
+        newest_event&.dig("id") || transaction_newest || activity_newest,
+        transaction_warnings + activity_warnings + detail_warnings,
+        timeline_complete,
+        detail_backfill_count
       ]
     end
 
@@ -758,70 +790,104 @@ class Provider::TradeRepublicClient
         warnings << "timeline pagination truncated for #{topic}"
         complete = false
       end
-      details, resolved_newest_event_id, detail_warnings = resolve_details(websocket, items, newest_event_id, warnings)
-      [ details, resolved_newest_event_id, detail_warnings, complete ]
+      events = items.map { |item| build_skeleton_event(item, warnings: warnings) }
+      [ events, newest_event_id, warnings, complete ]
     end
 
-    def resolve_details(websocket, items, newest_event_id, warnings)
-      events = []
-      details_fetched = 0
-      details_skipped = false
-      items.each do |item|
-        detail = nil
-        category = item["category"].presence || EVENT_TYPE_CATEGORIES[item["eventType"].to_s]
-        warnings << "unsupported timeline event type #{item["eventType"]}" if category.blank?
-        if DETAIL_CATEGORIES.include?(category.to_s) && details_fetched < MAX_TIMELINE_DETAILS
-          begin
-            detail = normalize_event_detail(
-              subscribe(websocket, type: "timelineDetailV2", id: item["id"]),
-              item: item
-            )
-            details_fetched += 1
-          rescue TransientProviderError, Timeout, RateLimited
-            raise
-          rescue Error
-            warnings << "detail fetch failed for event #{item["id"]}"
-          end
-        elsif DETAIL_CATEGORIES.include?(category.to_s)
-          details_skipped = true
-        end
-        events << build_normalized_event(item, category: category, detail: detail)
+    def build_skeleton_event(item, warnings: nil)
+      category = item["category"].presence || EVENT_TYPE_CATEGORIES[item["eventType"].to_s]
+      if warnings && category.blank? && item["eventType"].present?
+        warnings << "unsupported timeline event type #{item["eventType"]}"
       end
-      newest_event_id = nil if details_skipped || events.any? { |event| DETAIL_CATEGORIES.include?(event["category"]) && event["detail"].nil? }
-      [ events, newest_event_id, warnings ]
+      build_normalized_event(item, category: category, detail: nil)
     end
 
-    # Re-fetch timelineDetailV2 for stored events that were skipped when their
-    # eventType was still unmapped. Caps the batch so remaining events can
-    # continue on a later sync without blocking the timeline cursor.
-    def enrich_event_details(websocket, events, max: MAX_DETAIL_ENRICHMENT)
+    # Shared detail budget: reserve capacity for newly discovered trade events,
+    # drain oldest stored incomplete events next, then spend any leftover on
+    # additional new events. Failed attempts still consume budget so a bad
+    # event cannot starve the rest of the queue forever within one sync.
+    def enrich_timeline_details(websocket, events, enrich_events: [])
       warnings = []
-      candidates = Array(events).select { |event| event.is_a?(Hash) && event["id"].presence }
-      if candidates.size > max
-        warnings << "detail enrichment truncated to #{max} of #{candidates.size} events"
-        candidates = candidates.first(max)
+      events = Array(events)
+      new_candidates = events.select { |event| self.class.incomplete_trade_detail_event?(event) && event["id"].present? }
+      new_ids = new_candidates.to_set { |event| event["id"].to_s }
+      backlog_candidates = Array(enrich_events).select do |event|
+        event.is_a?(Hash) &&
+          event.stringify_keys["id"].present? &&
+          self.class.incomplete_trade_detail_event?(event) &&
+          !new_ids.include?(event.stringify_keys["id"].to_s)
       end
 
-      enriched = candidates.filter_map do |event|
+      budget = MAX_TIMELINE_DETAILS
+      reserved = [ new_candidates.size, MAX_TIMELINE_DETAILS_DELTA_RESERVED, budget ].min
+      primary_new = new_candidates.first(reserved)
+      remaining_new = new_candidates.drop(reserved)
+      remaining_budget = budget - primary_new.size
+      backlog_batch = backlog_candidates.first(remaining_budget)
+      leftover = remaining_budget - backlog_batch.size
+      secondary_new = remaining_new.first(leftover)
+
+      queue = primary_new.map { |event| [ event, :new ] } +
+              backlog_batch.map { |event| [ event, :backfill ] } +
+              secondary_new.map { |event| [ event, :new ] }
+
+      if new_candidates.size + backlog_candidates.size > queue.size
+        warnings << "detail enrichment truncated to #{queue.size} of #{new_candidates.size + backlog_candidates.size} events"
+      end
+
+      enriched_by_id = {}
+      detail_backfill_count = 0
+      details_fetched = 0
+
+      queue.each do |event, kind|
+        break if details_fetched >= budget
+
         item = event.stringify_keys
         category = item["category"].presence || EVENT_TYPE_CATEGORIES[item["eventType"].to_s]
-        next if category.blank?
+        next if item["id"].blank? || category.blank?
 
+        details_fetched += 1
         begin
           detail = normalize_event_detail(
             subscribe(websocket, type: "timelineDetailV2", id: item["id"]),
             item: item
           )
-          build_normalized_event(item, category: category, detail: detail)
+          enriched_by_id[item["id"].to_s] = build_normalized_event(item, category: category, detail: detail)
+          detail_backfill_count += 1 if kind == :backfill
         rescue TransientProviderError, Timeout, RateLimited
           raise
         rescue Error
-          warnings << "detail enrichment failed for event #{item["id"]}"
-          nil
+          warnings << "detail fetch failed for event #{item["id"]}"
         end
       end
 
-      [ enriched, warnings ]
+      merged_events = events.map do |event|
+        id = event["id"].to_s
+        enriched = enriched_by_id.delete(id)
+        enriched ? prefer_richer_event(event, enriched) : event
+      end
+      # Backfilled stored events that were not on this sync's timeline pages.
+      merged_events = merge_enriched_events(merged_events, enriched_by_id.values)
+
+      [ merged_events, warnings, detail_backfill_count ]
+    end
+
+    # Test/helper wrapper: enrich a raw timeline page without touching the list cursor.
+    def resolve_details(websocket, items, newest_event_id, warnings)
+      events = Array(items).map { |item| build_skeleton_event(item, warnings: warnings) }
+      enriched, detail_warnings, = enrich_timeline_details(websocket, events, enrich_events: [])
+      [ enriched, newest_event_id, warnings.concat(detail_warnings) ]
+    end
+
+    def enrich_event_details(websocket, events, max: MAX_TIMELINE_DETAILS)
+      warnings = []
+      candidates = Array(events).select { |event| event.is_a?(Hash) && event.stringify_keys["id"].presence }
+      if candidates.size > max
+        warnings << "detail enrichment truncated to #{max} of #{candidates.size} events"
+        candidates = candidates.first(max)
+      end
+      enriched, enrich_warnings, = enrich_timeline_details(websocket, [], enrich_events: candidates)
+      [ enriched, warnings + enrich_warnings ]
     end
 
     def merge_enriched_events(events, enriched_events)

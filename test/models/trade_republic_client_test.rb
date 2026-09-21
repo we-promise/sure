@@ -98,21 +98,59 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_empty warnings
   end
 
-  test "does not advance the cursor when timeline details are incomplete" do
+  test "advances the list cursor when only trade details remain pending" do
     @client.define_singleton_method(:collect_timeline_topic) do |_websocket, topic:, **_|
       if topic == "timelineTransactions"
-        [ [ { "id" => "event-1", "timestamp" => "2026-08-02" } ], nil, [], true ]
+        [ [ {
+          "id" => "trade-1",
+          "timestamp" => "2026-08-02",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "category" => "orderExecution",
+          "detail" => { "amount" => -100.0 }
+        } ], "trade-1", [], true ]
+      else
+        [ [], nil, [], true ]
+      end
+    end
+    @client.define_singleton_method(:subscribe) do |_websocket, **_|
+      raise Provider::TradeRepublicClient::MalformedResponse, "no budget"
+    end
+
+    events, newest_id, warnings, complete, backfill_count = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 2,
+      enrich_events: []
+    )
+
+    assert_equal [ "trade-1" ], events.map { |event| event["id"] }
+    assert_equal "trade-1", newest_id
+    assert complete
+    assert_equal 0, backfill_count
+    assert_includes warnings, "detail fetch failed for event trade-1"
+  end
+
+  test "does not mark timeline complete when pagination is truncated" do
+    @client.define_singleton_method(:collect_timeline_topic) do |_websocket, topic:, **_|
+      if topic == "timelineTransactions"
+        [ [ { "id" => "event-1", "timestamp" => "2026-08-02" } ], "event-1", [ "timeline pagination truncated for timelineTransactions" ], false ]
       else
         [ [], nil, [], true ]
       end
     end
 
-    events, newest_id, warnings, complete = @client.send(:collect_all_timeline, Object.new, known_newest_event_id: nil, max_pages: 2)
+    _events, newest_id, warnings, complete, = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: nil,
+      max_pages: 2,
+      enrich_events: []
+    )
 
-    assert_equal [ "event-1" ], events.map { |event| event["id"] }
-    assert_nil newest_id
-    assert_empty warnings
+    assert_equal "event-1", newest_id
     refute complete
+    assert_includes warnings, "timeline pagination truncated for timelineTransactions"
   end
 
   test "recognizes QR login pending state" do
@@ -282,6 +320,144 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     assert_equal "orderExecution", events.first["category"]
     assert_equal(-100.0, events.first.dig("detail", "signed_amount"))
+  end
+
+  test "card and cash events do not consume timeline detail requests" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload
+      { "sections" => [] }
+    end
+
+    events, = @client.send(:resolve_details, Object.new, [
+      {
+        "id" => "card-1",
+        "timestamp" => "2026-08-01T10:00:00Z",
+        "eventType" => "CARD_TRANSACTION",
+        "amount" => { "value" => -12.5, "currency" => "EUR" }
+      },
+      {
+        "id" => "transfer-1",
+        "timestamp" => "2026-08-01T11:00:00Z",
+        "eventType" => "PAYMENT_INBOUND",
+        "amount" => { "value" => 50.0, "currency" => "EUR" }
+      }
+    ], nil, [])
+
+    assert_empty requested
+    assert_equal [ "card-1", "transfer-1" ], events.map { |event| event["id"] }
+    assert_equal(-12.5, events.first.dig("detail", "signed_amount"))
+  end
+
+  test "trade savings saveback and round-up events request timeline details" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      {
+        "sections" => [
+          { "title" => "Overview", "data" => [
+            { "title" => "Shares", "detail" => { "text" => "1.5" } },
+            { "title" => "Total", "detail" => { "text" => "€100.00" } }
+          ] },
+          { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } } ] }
+        ]
+      }
+    end
+
+    items = [
+      { "id" => "trade-1", "eventType" => "TRADING_TRADE_EXECUTED", "amount" => { "value" => -100.0 } },
+      { "id" => "savings-1", "eventType" => "SAVINGS_PLAN_INVOICE_CREATED", "amount" => { "value" => -25.0 } },
+      { "id" => "saveback-1", "eventType" => "SAVEBACK_AGGREGATE", "amount" => { "value" => -3.74 } },
+      { "id" => "roundup-1", "eventType" => "SPARE_CHANGE_AGGREGATE", "amount" => { "value" => -0.40 } }
+    ]
+
+    events, = @client.send(:resolve_details, Object.new, items, nil, [])
+
+    assert_equal %w[trade-1 savings-1 saveback-1 roundup-1], requested
+    assert events.all? { |event| event.dig("detail", "isin") == "US0378331005" }
+  end
+
+  test "mixed pages prioritize reserved new details then backlog within the shared cap" do
+    requested = []
+    detail_response = {
+      "sections" => [
+        { "title" => "Overview", "data" => [
+          { "title" => "Shares", "detail" => { "text" => "1" } },
+          { "title" => "Total", "detail" => { "text" => "€10.00" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } } ] }
+      ]
+    }
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      detail_response
+    end
+
+    new_events = (Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS_DELTA_RESERVED + 5).times.map do |index|
+      {
+        "id" => "new-#{index}",
+        "timestamp" => "2026-09-0#{index % 9 + 1}T10:00:00Z",
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "category" => "orderExecution",
+        "detail" => { "amount" => -10.0 }
+      }
+    end
+    backlog = 10.times.map do |index|
+      {
+        "id" => "old-#{index}",
+        "timestamp" => "2025-01-0#{index % 9 + 1}T10:00:00Z",
+        "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+        "category" => "orderExecution",
+        "detail" => { "amount" => -10.0 }
+      }
+    end
+
+    events, warnings, backfill_count = @client.send(
+      :enrich_timeline_details,
+      Object.new,
+      new_events,
+      enrich_events: backlog
+    )
+
+    reserved = Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS_DELTA_RESERVED
+    assert_equal reserved.times.map { |index| "new-#{index}" } + backlog.map { |event| event["id"] } +
+      (reserved...new_events.size).map { |index| "new-#{index}" }, requested
+    assert_equal backlog.size, backfill_count
+    assert_empty warnings
+    assert events.any? { |event| event["id"] == "old-0" && event.dig("detail", "isin") == "US0378331005" }
+  end
+
+  test "failed detail attempts consume budget without blocking later candidates" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      raise Provider::TradeRepublicClient::MalformedResponse, "bad" if payload[:id] == "fail-1"
+
+      {
+        "sections" => [
+          { "title" => "Overview", "data" => [
+            { "title" => "Shares", "detail" => { "text" => "1" } },
+            { "title" => "Total", "detail" => { "text" => "€10.00" } }
+          ] },
+          { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } } ] }
+        ]
+      }
+    end
+
+    events, warnings, = @client.send(
+      :enrich_timeline_details,
+      Object.new,
+      [
+        { "id" => "fail-1", "eventType" => "TRADING_TRADE_EXECUTED", "category" => "orderExecution", "detail" => { "amount" => -1 } },
+        { "id" => "ok-1", "eventType" => "TRADING_TRADE_EXECUTED", "category" => "orderExecution", "detail" => { "amount" => -1 } }
+      ],
+      enrich_events: []
+    )
+
+    assert_equal %w[fail-1 ok-1], requested
+    assert_includes warnings, "detail fetch failed for event fail-1"
+    assert_nil events.find { |event| event["id"] == "fail-1" }.dig("detail", "isin")
+    assert_equal "US0378331005", events.find { |event| event["id"] == "ok-1" }.dig("detail", "isin")
   end
 
   test "rejects an expired pending login state" do
@@ -454,7 +630,8 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       }
     end
 
-    events = (Provider::TradeRepublicClient::MAX_DETAIL_ENRICHMENT + 3).times.map do |index|
+    max = 5
+    events = (max + 3).times.map do |index|
       {
         "id" => "savings-#{index}",
         "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
@@ -462,10 +639,10 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       }
     end
 
-    enriched, warnings = @client.send(:enrich_event_details, Object.new, events)
+    enriched, warnings = @client.send(:enrich_event_details, Object.new, events, max: max)
 
-    assert_equal Provider::TradeRepublicClient::MAX_DETAIL_ENRICHMENT, enriched.size
-    assert_equal Provider::TradeRepublicClient::MAX_DETAIL_ENRICHMENT, requested_ids.size
+    assert_equal max, enriched.size
+    assert_equal max, requested_ids.size
     assert_includes warnings.first, "detail enrichment truncated"
   end
 
@@ -486,7 +663,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     )
 
     assert_empty enriched
-    assert_equal [ "detail enrichment failed for event fail-soft" ], warnings
+    assert_equal [ "detail fetch failed for event fail-soft" ], warnings
 
     assert_raises(Provider::TradeRepublicClient::Timeout) do
       @client.send(

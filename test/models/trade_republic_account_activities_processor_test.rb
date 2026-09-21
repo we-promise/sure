@@ -535,6 +535,24 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not Entry.exists?(external_id: "trade_republic_event_evt_savings_failed")
   end
 
+  test "incomplete savings-plan event is skipped until backfill enriches the same stored event" do
+    incomplete = savings_plan_invoice_event.deep_merge(detail: { isin: nil, quantity: nil })
+    @tr_account.update!(raw_timeline_payload: [ incomplete ])
+
+    assert_no_difference "Entry.where(source: 'trade_republic').count" do
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    end
+    assert_not Entry.exists?(account: @account, external_id: "trade_republic_event_evt_savings_plan")
+
+    @tr_account.update!(raw_timeline_payload: [ savings_plan_invoice_event ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+
+    trade = find_trade("trade_republic_event_evt_savings_plan")
+    assert_not_nil trade
+    assert_equal BigDecimal("0.25"), trade.entryable.qty
+    assert_equal BigDecimal("-25.00"), trade.amount
+  end
+
   private
 
     def create_linked_cash_account!

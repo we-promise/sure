@@ -35,14 +35,17 @@ class TradeRepublicItem::Importer
       upsert_account(data, domain_statuses: domain_statuses)
       trade_republic_item.update!(
         status: :good,
-        newest_event_id: domain_statuses["timeline"] == "success" && data["newest_event_id"].present? ? data["newest_event_id"] : trade_republic_item.newest_event_id,
+        newest_event_id: timeline_cursor_for(data, domain_statuses),
         session_blob: data["session_txt"].presence || trade_republic_item.session_blob
       )
     end
 
     record_provider_warnings(data["warnings"])
 
-    { success: true }
+    {
+      success: true,
+      detail_backfill_count: data["detail_backfill_count"].to_i
+    }
   end
 
   private
@@ -171,27 +174,36 @@ class TradeRepublicItem::Importer
       trade_republic_item.newest_event_id
     end
 
-    # Older SAVINGS_PLAN_INVOICE_CREATED rows were stored without details
-    # because the event type was unmapped. Ask the client to re-fetch a
-    # bounded batch by ID; leftovers retry on a later sync.
+    # Incomplete trade-detail events stored on the portfolio account. Oldest
+    # first so repeated syncs progressively drain historical starvation.
     def events_needing_detail_enrichment
       portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
       return [] unless portfolio
 
       Array(portfolio.raw_timeline_payload)
-        .select { |event| incomplete_savings_plan_event?(event) }
-        .first(Provider::TradeRepublicClient::MAX_DETAIL_ENRICHMENT)
+        .select { |event| Provider::TradeRepublicClient.incomplete_trade_detail_event?(event) }
+        .sort_by { |event| event_timestamp(event) }
+        .first(Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS)
     end
 
-    def incomplete_savings_plan_event?(event)
-      return false unless event.is_a?(Hash)
+    def event_timestamp(event)
+      return "" unless event.is_a?(Hash)
 
-      event = event.with_indifferent_access
-      return false unless event[:eventType].to_s == "SAVINGS_PLAN_INVOICE_CREATED"
+      (event["timestamp"] || event[:timestamp]).to_s
+    end
 
-      detail = event[:detail]
-      detail = detail.with_indifferent_access if detail.is_a?(Hash)
-      detail.blank? || detail[:isin].blank? || detail[:quantity].blank?
+    # Advance the list cursor whenever timeline pagination finished, even when
+    # a detail backlog remains for later syncs.
+    def timeline_cursor_for(data, domain_statuses)
+      pagination_complete = if data.key?("timeline_pagination_complete")
+        data["timeline_pagination_complete"]
+      else
+        domain_statuses["timeline"] == "success"
+      end
+      return trade_republic_item.newest_event_id unless pagination_complete
+      return trade_republic_item.newest_event_id if data["newest_event_id"].blank?
+
+      data["newest_event_id"]
     end
 
     def merge_timeline_events(existing, incoming)
