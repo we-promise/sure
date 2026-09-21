@@ -178,6 +178,21 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=checkbox][name='account[remove_iban]']", 1
   end
 
+  test "iban field masks keystrokes like a password field and signals a stored value" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    get edit_account_url(linked_account)
+
+    assert_response :success
+    # type=password, not type=text: typed input must be masked as you go,
+    # not just withheld from the initial render.
+    assert_select "input[type=password][name='account[iban]']", 1
+    # The placeholder alone ("IBAN on file...") was easy to miss -- a fixed
+    # run of bullets makes a stored value visually obvious at a glance.
+    assert_select "input[name='account[iban]'][placeholder^=?]", "••••"
+  end
+
   test "edit form does not render a remove_iban toggle when no iban is stored" do
     linked_account = accounts(:connected)
     linked_account.update!(iban: nil)
