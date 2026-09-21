@@ -1,5 +1,5 @@
-# Native (unconverted) balances per currency for accounts whose transactions
-# are recorded in more than one currency, e.g. a dual-currency credit card.
+# Native (unconverted) balances per currency for accounts that hold more than
+# one currency, e.g. a dual-currency credit card.
 #
 # Each currency line is the net of its own transactions using the account's
 # sign convention. The account currency's line also includes the opening
@@ -7,19 +7,20 @@
 module Account::CurrencyBreakdown
   extend ActiveSupport::Concern
 
+  # True when the account currency plus its transaction currencies span more
+  # than one currency, so a per-currency breakdown is meaningful.
   def multi_currency_breakdown?
-    transaction_currencies.size > 1
+    breakdown_currencies.size > 1
   end
 
-  # Returns Money values keyed by currency, account currency first.
+  # Returns Money balances, one per currency with the account currency first.
+  # Empty when the account is not multi-currency.
   def native_currency_balances
-    return [] unless multi_currency_breakdown?
+    currencies = breakdown_currencies
+    return [] if currencies.size <= 1
 
-    sums = entries.excluding_pending.excluding_split_parents
-                  .where(entryable_type: "Transaction")
-                  .group(:currency).sum(:amount)
+    sums = breakdown_transactions.group(:currency).sum(:amount)
 
-    currencies = ([ currency ] + transaction_currencies).uniq
     currencies.map do |code|
       flow = sums.fetch(code, 0)
       balance = asset? ? -flow : flow
@@ -29,8 +30,14 @@ module Account::CurrencyBreakdown
   end
 
   private
-    def transaction_currencies
-      entries.excluding_pending.excluding_split_parents
-             .where(entryable_type: "Transaction").distinct.pluck(:currency)
+    # Non-pending, non-split-parent transaction entries, the rows that count
+    # toward each currency's native balance.
+    def breakdown_transactions
+      entries.excluding_pending.excluding_split_parents.where(entryable_type: "Transaction")
+    end
+
+    # The account currency followed by any other currency used by its transactions.
+    def breakdown_currencies
+      ([ currency ] + breakdown_transactions.distinct.pluck(:currency)).uniq
     end
 end

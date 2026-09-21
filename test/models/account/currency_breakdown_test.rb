@@ -39,4 +39,14 @@ class Account::CurrencyBreakdownTest < ActiveSupport::TestCase
     assert_equal 100, balances[account.currency].amount
     assert_equal 10, balances["EUR"].amount
   end
+
+  test "single foreign transaction currency differing from account currency is broken down" do
+    create_transaction(account: @card, amount: 50, currency: "USD")
+
+    balances = @card.native_currency_balances.index_by { |m| m.currency.iso_code }
+
+    assert @card.multi_currency_breakdown?
+    assert_equal 0, balances["PEN"].amount
+    assert_equal 50, balances["USD"].amount
+  end
 end
