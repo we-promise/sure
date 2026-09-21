@@ -102,5 +102,6 @@ zh-TW:
         card_fee: 卡片費用
         card_refund: 卡片退款
         tax_refund: 退稅
+        round_up: Round up
         buy: 買入
         sell: 賣出

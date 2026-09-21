@@ -102,5 +102,6 @@ ca:
         card_fee: Comissió de targeta
         card_refund: Reemborsament de targeta
         tax_refund: Devolució d'impostos
+        round_up: Round up
         buy: Compra
         sell: Venda

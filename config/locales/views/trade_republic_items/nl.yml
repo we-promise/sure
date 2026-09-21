@@ -76,5 +76,6 @@ nl:
         card_fee: Kaartkosten
         card_refund: Kaartterugbetaling
         tax_refund: Belastingteruggaaf
+        round_up: Round up
         buy: Koop
         sell: Verkoop

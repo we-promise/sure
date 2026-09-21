@@ -76,5 +76,6 @@ nb:
         card_fee: Kortgebyr
         card_refund: Kortrefusjon
         tax_refund: Skatterefusjon
+        round_up: Round up
         buy: Kjøp
         sell: Salg

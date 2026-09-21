@@ -326,6 +326,33 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal [ "keep-event" ], account.raw_timeline_payload.map { |event| event["id"] }
   end
 
+  test "cash timeline retains saveback and round up aggregates while excluding order executions" do
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "session_txt" => "# refreshed cookies",
+      "account" => { "brokerage_account_id" => "DE-AGG", "currency" => "EUR" },
+      "cash" => { "amount" => "10.00", "currency" => "EUR" },
+      "positions" => [],
+      "events" => [
+        { "id" => "trade-1", "eventType" => "TRADING_TRADE_EXECUTED", "category" => "orderExecution" },
+        { "id" => "saveback-1", "eventType" => "SAVEBACK_AGGREGATE", "category" => "POC_CREATED" },
+        { "id" => "roundup-1", "eventType" => "SPARE_CHANGE_AGGREGATE", "category" => "POC_CREATED" }
+      ],
+      "newest_event_id" => "roundup-1",
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    portfolio = @item.trade_republic_accounts.find_by!(kind: "portfolio")
+    cash = @item.trade_republic_accounts.find_by!(kind: "cash")
+
+    assert_equal %w[trade-1 saveback-1 roundup-1], portfolio.raw_timeline_payload.map { |event| event["id"] }
+    assert_equal %w[saveback-1 roundup-1], cash.raw_timeline_payload.map { |event| event["id"] }
+    assert cash.raw_timeline_payload.none? { |event| event["category"] == "orderExecution" }
+  end
+
   private
 
     def client_result(data)

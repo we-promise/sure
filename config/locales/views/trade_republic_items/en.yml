@@ -170,5 +170,6 @@ en:
         card_fee: Card fee
         card_refund: Card refund
         tax_refund: Tax refund
+        round_up: Round up
         buy: Buy
         sell: Sell

@@ -5,6 +5,10 @@ class TradeRepublicAccount::ActivitiesProcessor
   # been resolved by the Trade Republic client boundary.
   CATEGORY_ORDER_EXECUTION = "orderExecution"
 
+  SAVEBACK_EVENT_TYPE = "SAVEBACK_AGGREGATE"
+  ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
+  AGGREGATE_TRADE_EVENT_TYPES = [ SAVEBACK_EVENT_TYPE, ROUND_UP_EVENT_TYPE ].freeze
+
   def initialize(trade_republic_account)
     @trade_republic_account = trade_republic_account
   end
@@ -14,21 +18,21 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     trade_count = 0
     transaction_count = 0
-    split_accounts = linked_cash_account_present?
 
     Array(@trade_republic_account.raw_timeline_payload).each do |event|
       next unless event.is_a?(Hash)
 
-      next if split_accounts && @trade_republic_account.portfolio? && event.with_indifferent_access[:category].to_s != CATEGORY_ORDER_EXECUTION
-      next if @trade_republic_account.cash? && event.with_indifferent_access[:category].to_s == CATEGORY_ORDER_EXECUTION
+      event = event.with_indifferent_access
+      next unless processable_event?(event)
 
-      case process_event(event.with_indifferent_access)
+      case process_event(event)
       when :trade then trade_count += 1
       when :transaction then transaction_count += 1
       end
     end
 
     reconcile_split_portfolio_transactions!
+    reconcile_stale_saveback_cash_transactions!
 
     { trades: trade_count, transactions: transaction_count }
   end
@@ -55,6 +59,23 @@ class TradeRepublicAccount::ActivitiesProcessor
       @trade_republic_account.currency
     end
 
+    # Saveback and Round Up stay classified as POC_CREATED at the client
+    # boundary so other cash withdrawals are unchanged. Routing happens here
+    # by eventType: Saveback is portfolio-only; Round Up is portfolio trade
+    # plus cash outflow when both accounts are linked.
+    def processable_event?(event)
+      event_type = event[:eventType].to_s
+
+      return @trade_republic_account.portfolio? if saveback_event?(event_type)
+      return true if round_up_event?(event_type)
+
+      category = event[:category].to_s
+      return category == CATEGORY_ORDER_EXECUTION if linked_cash_account_present? && @trade_republic_account.portfolio?
+      return category != CATEGORY_ORDER_EXECUTION if @trade_republic_account.cash?
+
+      true
+    end
+
     # Events arrive bridge-normalized:
     #   { id:, timestamp:, category:, title:, subtitle:,
     #     detail: { isin, name, quantity (signed), amount (magnitude),
@@ -69,6 +90,10 @@ class TradeRepublicAccount::ActivitiesProcessor
       return nil unless date
 
       detail = event[:detail] || {}
+      event_type = event[:eventType].to_s
+
+      return process_saveback(event, detail, external_id, date) if saveback_event?(event_type)
+      return process_round_up(event, detail, external_id, date) if round_up_event?(event_type)
 
       case event_category(event)
       when CATEGORY_ORDER_EXECUTION
@@ -96,6 +121,28 @@ class TradeRepublicAccount::ActivitiesProcessor
         metadata: { event_id: event[:id], category: event[:category] }
       )
       nil
+    end
+
+    def process_saveback(event, detail, external_id, date)
+      return nil unless @trade_republic_account.portfolio?
+
+      import_order_execution(event, detail, external_id, date) ? :trade : nil
+    end
+
+    def process_round_up(event, detail, external_id, date)
+      if @trade_republic_account.portfolio?
+        import_order_execution(event, detail, external_id, date) ? :trade : nil
+      else
+        import_cash_movement(event, detail, external_id, date, label: t("round_up"), sign: 1) ? :transaction : nil
+      end
+    end
+
+    def saveback_event?(event_type)
+      event_type == SAVEBACK_EVENT_TYPE
+    end
+
+    def round_up_event?(event_type)
+      event_type == ROUND_UP_EVENT_TYPE
     end
 
     def import_order_execution(event, detail, external_id, date)
@@ -222,6 +269,8 @@ class TradeRepublicAccount::ActivitiesProcessor
         t("card_refund")
       when "TAX_REFUND", "SSP_TAX_CORRECTION", "ssp_tax_correction_invoice"
         t("tax_refund")
+      when ROUND_UP_EVENT_TYPE
+        t("round_up")
       else
         default
       end
@@ -253,6 +302,74 @@ class TradeRepublicAccount::ActivitiesProcessor
         provider_key: "trade_republic",
         account: account,
         metadata: { trade_republic_account_id: @trade_republic_account.id, removed_count: removed_count }
+      )
+    end
+
+    # Saveback used to import as a cash withdrawal. Once split accounts are
+    # linked, remove those leftover cash entries unless the user edited or
+    # split them.
+    def reconcile_stale_saveback_cash_transactions!
+      return unless @trade_republic_account.cash?
+
+      saveback_event_ids = Array(@trade_republic_account.raw_timeline_payload).filter_map do |event|
+        next unless event.is_a?(Hash)
+        next unless event["eventType"].to_s == SAVEBACK_EVENT_TYPE
+
+        event["id"].presence
+      end
+      return if saveback_event_ids.empty?
+
+      external_ids = saveback_event_ids.map { |event_id| "trade_republic_event_#{event_id}" }
+      candidates = account.entries
+        .where(source: "trade_republic", entryable_type: "Transaction")
+        .where(external_id: external_ids)
+        .includes(:entryable)
+
+      removed_count = 0
+      skipped_count = 0
+
+      candidates.find_each do |entry|
+        event_type = entry.entryable.try(:extra)&.dig("trade_republic", "event_type")
+        next if event_type.present? && event_type != SAVEBACK_EVENT_TYPE
+
+        if entry.protected_from_sync? || entry.split_parent? || entry.split_child?
+          skipped_count += 1
+          DebugLogEntry.capture(
+            category: "sync",
+            level: "info",
+            message: "Skipped removing protected Saveback cash transaction #{entry.external_id}",
+            source: "trade_republic",
+            family: @trade_republic_account.trade_republic_item.family,
+            provider_key: "trade_republic",
+            account: account,
+            metadata: {
+              trade_republic_account_id: @trade_republic_account.id,
+              external_id: entry.external_id,
+              protection_reason: entry.protection_reason || (entry.split_parent? || entry.split_child? ? :split : nil)
+            }
+          )
+          next
+        end
+
+        entry.destroy!
+        removed_count += 1
+      end
+
+      return unless removed_count.positive? || skipped_count.positive?
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Reconciled stale Saveback cash transactions (removed=#{removed_count}, skipped=#{skipped_count})",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: {
+          trade_republic_account_id: @trade_republic_account.id,
+          removed_count: removed_count,
+          skipped_count: skipped_count
+        }
       )
     end
 

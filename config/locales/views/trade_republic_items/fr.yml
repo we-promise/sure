@@ -167,6 +167,7 @@ fr:
         card_fee: Frais de carte
         card_refund: Remboursement par carte
         tax_refund: Remboursement d'impôt
+        round_up: Round up
         buy: Achat
         sell: Vente
     update:

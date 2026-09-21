@@ -76,5 +76,6 @@ ru:
         card_fee: Комиссия по карте
         card_refund: Возврат на карту
         tax_refund: Налоговый возврат
+        round_up: Round up
         buy: Покупка
         sell: Продажа
