@@ -50,9 +50,15 @@
             placeholder: account.provider&.institution_domain || t(".institution_domain_placeholder") %>
 
         <%# Never pre-filled with the stored (decrypted) value -- write-only,
-            like a password field. A blank submit means "unchanged"; the
-            "Remove IBAN" toggle below is the only way to actually clear it. %>
-        <%= form.text_field :iban,
+            like a password field (password_field also masks keystrokes as
+            they're typed, matching that convention visually too). A blank
+            submit means "unchanged"; the "Remove IBAN" toggle below is the
+            only way to actually clear it. The "already set" placeholder
+            leads with a fixed run of bullets (not the real value's length)
+            so a stored IBAN is visually obvious at a glance, the same way a
+            password manager shows a filled field -- the placeholder text
+            alone was easy to miss. %>
+        <%= form.password_field :iban,
             value: nil,
             label: t(".iban_label"),
             placeholder: account.iban.present? ? t(".iban_set_placeholder") : t(".iban_placeholder") %>
