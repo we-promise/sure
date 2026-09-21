@@ -2,6 +2,47 @@
 en:
   admin:
     system_health:
+      push_notifications:
+        send_test: "Send test push notification"
+        queueing: "Queueing…"
+        title: "Push notifications"
+        requested_at: "Latest test requested at %{time}"
+        result_help: "APNs acceptance does not confirm delivery to your device. Refresh to see worker results. Results are retained for 24 hours."
+        device: "Device %{number}"
+        pending: "Pending"
+        refresh: "Refresh results"
+        columns:
+          device: "Device"
+          environment: "APNs environment"
+          status: "Result"
+          checked_at: "Last update"
+        environments:
+          sandbox: "Sandbox"
+          production: "Production"
+        messages:
+          enqueue_failed: "The test could not be queued. Check Sidekiq and refresh the results below."
+          ready: "Send a test notification to the enabled iOS devices registered to your account."
+          queued: "Test notification queued. Refresh the results below to check its status."
+          hosted_only: "Push notifications are available only in hosted mode."
+          ineligible: "Only an active super-admin can send a test notification."
+          no_devices: "Enable push notifications in the Sure iOS app for this account to send a test."
+          disabled: "Push delivery has been disabled by the operator."
+          not_configured: "APNs credentials are not configured."
+          cooldown: "Please wait 30 seconds before sending another test."
+          storage_unavailable: "The test request could not be saved. Check the shared cache configuration."
+        statuses:
+          queued: "Queued"
+          accepted: "Accepted by APNs"
+          skipped: "Skipped: no longer eligible"
+          rejected: "Rejected by APNs; check push debug logs"
+          unregistered: "Device registration is no longer valid"
+          retrying: "Retrying a temporary failure"
+          failed: "Failed; check push debug logs"
+          enqueue_failed: "Could not enqueue; check Sidekiq"
+          expired: "Expired without a final result"
+      push_notification:
+        title: "Sure test notification"
+        body: "This is a test push notification for your Sure account."
       verify_worker_ai:
         queued: "Worker check queued. It will appear below once a worker process picks it up, usually within a few seconds."
       show:
