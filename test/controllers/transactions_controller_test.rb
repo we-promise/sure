@@ -412,6 +412,84 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_dom "#total-transactions", count: 1, text: "1"
   end
 
+  # Regression: Account::ProviderImportAdapter assigns loan_payment /
+  # investment_contribution / funds_movement to standalone imported
+  # transactions that have NO Transfer row (Up internal transfers and
+  # round-ups, Contribution-labelled activity, negative amounts on Loan
+  # accounts). Both transaction-row conditions were switched from the
+  # association (`transaction.transfer.present?` / `transaction.transfer.nil?`)
+  # to the kind-based `transaction.transfer?`, which silently captures these.
+  #
+  # They are budget-tracked outflows the user still needs to categorize -- see
+  # the Transaction::UNCATEGORIZED_EXCLUDED_KINDS comment and #2592 -- so they
+  # must keep both the category dropdown and the bulk-select checkbox.
+  test "a transfer-kind transaction with no transfer keeps its category dropdown" do
+    entry = create_transaction(
+      account: accounts(:depository), amount: 500, kind: "loan_payment", name: "PROVIDER_CLASSIFIED_LOAN_PAYMENT"
+    )
+    transaction = entry.transaction
+    assert_nil transaction.transfer, "this transaction must have no Transfer row for the test to mean anything"
+
+    get transactions_url(q: { search: entry.name })
+    assert_response :success
+
+    menu_id = ActionView::RecordIdentifier.dom_id(transaction, "category_menu_desktop")
+    assert_select "##{menu_id} [data-controller='DS--popover']", 1,
+      "a transaction with no Transfer must keep an editable category menu"
+  end
+
+  test "a transfer-kind transaction with no transfer stays bulk-selectable" do
+    entry = create_transaction(
+      account: accounts(:depository), amount: 500, kind: "investment_contribution", name: "PROVIDER_CLASSIFIED_CONTRIBUTION"
+    )
+    assert_nil entry.transaction.transfer
+
+    get transactions_url(q: { search: entry.name })
+    assert_response :success
+
+    checkbox_id = ActionView::RecordIdentifier.dom_id(entry, "selection")
+    assert_select "input[type=checkbox][id=?]", checkbox_id, 1
+    assert_select "input[type=checkbox][id=?][disabled]", checkbox_id, 0,
+      "a transaction with no Transfer must stay bulk-selectable"
+  end
+
+  # The other half of the same swap, and the behavior the PR intends: a leg of
+  # a pending auto-match IS editable, because nothing has been applied to it
+  # yet. Pinned so a fix to the two tests above can't simply revert the
+  # conditions and undo this.
+  test "a pending auto-matched transaction keeps its category dropdown" do
+    outflow_entry = create_transaction(account: accounts(:depository), amount: 654, name: "PENDING_AUTOMATCH_OUTFLOW")
+    create_transaction(account: accounts(:credit_card), amount: -654, name: "PENDING_AUTOMATCH_INFLOW")
+    @user.family.auto_match_transfers!
+
+    transaction = outflow_entry.transaction.reload
+    assert transaction.transfer&.pending?, "auto-match did not pair the two 654 transactions"
+
+    get transactions_url(q: { search: outflow_entry.name })
+    assert_response :success
+
+    menu_id = ActionView::RecordIdentifier.dom_id(transaction, "category_menu_desktop")
+    assert_select "##{menu_id} [data-controller='DS--popover']", 1
+  end
+
+  # A confirmed transfer is settled: its category is derived from the transfer
+  # itself and the row must not be bulk-editable.
+  test "a confirmed transfer leg has no category dropdown and cannot be bulk-selected" do
+    outflow_entry = create_transaction(account: accounts(:depository), amount: 654, name: "CONFIRMED_TRANSFER_OUTFLOW")
+    create_transaction(account: accounts(:credit_card), amount: -654, name: "CONFIRMED_TRANSFER_INFLOW")
+    @user.family.auto_match_transfers!
+    outflow_entry.transaction.reload.transfer.confirm!
+
+    transaction = outflow_entry.transaction.reload
+
+    get transactions_url(q: { search: outflow_entry.name })
+    assert_response :success
+
+    menu_id = ActionView::RecordIdentifier.dom_id(transaction, "category_menu_desktop")
+    assert_select "##{menu_id} [data-controller='DS--popover']", 0
+    assert_select "input[type=checkbox][id=?][disabled]", ActionView::RecordIdentifier.dom_id(outflow_entry, "selection"), 1
+  end
+
   test "can update notes on split child transaction" do
     parent = create_transaction(account: accounts(:depository), amount: 100)
     parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])

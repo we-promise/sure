@@ -208,6 +208,55 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal accounts(:depository).family.investment_contributions_category, outflow_entry.transaction.reload.category
   end
 
+  # Regression: apply_transfer_kind! fires for any pending transfer, and
+  # re-derives kind from Transfer.kind_for_account -- which classifies by the
+  # DESTINATION account alone. Family::DataImporter creates transfers with the
+  # imported status (which can be "pending") and classifies an
+  # investment-to-investment move as funds_movement, because
+  # #imported_transfer_outflow_kind additionally requires the SOURCE not to be
+  # an investment account. Confirming such a transfer from the Auto Matches
+  # page rewrites funds_movement -> investment_contribution, flipping it from
+  # budget-excluded to a budget-counted expense and auto-assigning a category.
+  test "confirm! leaves a pending transfer's already-classified kind alone" do
+    source = accounts(:investment)
+    destination = families(:dylan_family).accounts.create!(
+      name: "Rollover IRA", currency: "USD", balance: 0, accountable: Investment.new
+    )
+
+    outflow_entry = create_transaction(date: Date.current, account: source, amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: destination, amount: -500, kind: "funds_movement")
+
+    transfer = Transfer.create!(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      status: "pending"
+    )
+
+    transfer.confirm!
+
+    assert_equal "funds_movement", outflow_entry.transaction.reload.kind
+    assert_nil outflow_entry.transaction.reload.category
+  end
+
+  # The narrower statement of the same rule: confirmation is only supposed to
+  # apply a kind that auto-match deliberately left off. A leg that already
+  # carries a non-standard kind was classified by something else, and that
+  # classification is not confirmation's to overwrite.
+  test "confirm! only applies kind to legs auto-match left as standard" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "one_time")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500, kind: "standard")
+
+    transfer = Transfer.create!(
+      inflow_transaction: inflow_entry.transaction,
+      outflow_transaction: outflow_entry.transaction,
+      status: "pending"
+    )
+
+    transfer.confirm!
+
+    assert_equal "one_time", outflow_entry.transaction.reload.kind
+  end
+
   test "confirm! does not overwrite an already-set category" do
     investment = accounts(:investment)
     category = categories(:food_and_drink)

@@ -55,6 +55,46 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 4, totals.transactions_count
   end
 
+  # Regression: a detected transfer moves money between the family's own
+  # accounts, so neither leg is income or an expense. The income statement
+  # decides that purely from Transaction#kind (see
+  # IncomeStatement::ScopedTransactionsQuery#classification_sql and
+  # BUDGET_EXCLUDED_KINDS) -- it never looks at transfer_id. Auto-match must
+  # therefore leave both legs in a kind the statement excludes, or every
+  # unreviewed suggestion inflates the dashboard.
+  test "a pending auto-matched transfer is excluded from income and expense totals" do
+    create_transaction(account: @checking_account, amount: 777)
+    create_transaction(account: @credit_card_account, amount: -777)
+
+    @family.auto_match_transfers!
+
+    transfer = Transfer.joins(outflow_transaction: :entry).find_by(entries: { account_id: @checking_account.id })
+    assert transfer.present?, "auto-match did not pair the two 777 transactions"
+    assert transfer.pending?, "auto-matched transfers are expected to start pending"
+
+    totals = IncomeStatement.new(@family).totals(date_range: Period.last_30_days.date_range)
+
+    # The +777 outflow classifies as an expense and the -777 inflow as income
+    # while both legs are still kind "standard".
+    assert_equal Money.new(1000, @family.currency), totals.income_money
+    assert_equal Money.new(200 + 300 + 400, @family.currency), totals.expense_money
+    assert_equal 4, totals.transactions_count
+  end
+
+  # Same regression, seen through the surface users actually look at: the
+  # per-category expense breakdown that drives budgets and the dashboard.
+  test "a pending auto-matched transfer does not add to expense category totals" do
+    create_transaction(account: @checking_account, amount: 777, category: @groceries_category)
+    create_transaction(account: @credit_card_account, amount: -777)
+
+    @family.auto_match_transfers!
+
+    expense_totals = IncomeStatement.new(@family).expense_totals(period: Period.last_30_days)
+
+    assert_equal 200 + 300 + 400, expense_totals.total
+    assert_equal 200 + 300 + 400, expense_totals.category_totals.find { |ct| ct.category.id == @groceries_category.id }.total
+  end
+
   test "calculates expenses for a period" do
     income_statement = IncomeStatement.new(@family)
     expense_totals = income_statement.expense_totals(period: Period.last_30_days)
