@@ -102,7 +102,12 @@ class AddClassificationToSecurities < ActiveRecord::Migration[8.1]
       # name alone is what "safe to run again" actually requires.
       next if check_constraint_exists?(:securities, name: name)
 
-      add_check_constraint :securities, "#{column} IN (#{values.map { |v| "'#{v}'" }.join(', ')})",
+      # connection.quote rather than "'#{v}'": the values are this migration's
+      # own constants today, so hand-quoting is safe by inspection -- but the
+      # next person adding a taxonomy value should not have to know that the
+      # safety comes from where the string came from.
+      quoted = values.map { |value| connection.quote(value) }.join(", ")
+      add_check_constraint :securities, "#{column} IN (#{quoted})",
         name: name, validate: false
     end
 

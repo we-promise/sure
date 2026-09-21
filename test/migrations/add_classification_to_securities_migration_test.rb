@@ -39,7 +39,11 @@ class AddClassificationToSecuritiesMigrationTest < ActiveSupport::TestCase
     # killed in between leaves THIS, not some narrower constraint. Built from
     # the migration's own constant so the two cannot drift.
     values = AddClassificationToSecurities::ASSET_CLASSES.map { |v| "'#{v}'" }.join(", ")
-    connection.execute("ALTER TABLE securities DROP CONSTRAINT #{CONSTRAINT}")
+    # IF EXISTS: this test builds the interrupted state from scratch, so it
+    # must not depend on the constraint being there when it starts. Without it
+    # a run against a database where the migration has not been applied fails
+    # on the setup rather than on the thing under test.
+    connection.execute("ALTER TABLE securities DROP CONSTRAINT IF EXISTS #{CONSTRAINT}")
     connection.execute(
       "ALTER TABLE securities ADD CONSTRAINT #{CONSTRAINT} " \
       "CHECK (asset_class IN (#{values})) NOT VALID"
