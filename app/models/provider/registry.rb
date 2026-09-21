@@ -106,7 +106,7 @@ class Provider::Registry
       end
 
       def jev
-        api_key = Provider::Jev.api_key
+        api_key = Provider::Jev.api_key # pipelock:ignore
 
         return nil unless api_key.present?
 

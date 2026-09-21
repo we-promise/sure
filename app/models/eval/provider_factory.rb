@@ -50,7 +50,7 @@ class Eval::ProviderFactory
     end
 
     def build_jev
-      api_key = config[:api_key].presence || Provider::Jev.api_key
+      api_key = config[:api_key].presence || Provider::Jev.api_key # pipelock:ignore
 
       raise Error, "Jev API key not configured" unless api_key.present?
 
