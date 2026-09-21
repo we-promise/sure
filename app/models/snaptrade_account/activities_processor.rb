@@ -245,7 +245,9 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       # Determine sign based on activity type (sell-side should be negative)
-      quantity = if SELL_SIDE_TYPES.include?(activity_type)
+      quantity = if activity_type == "ADJUSTMENT"
+        quantity
+      elsif SELL_SIDE_TYPES.include?(activity_type)
         -quantity.abs
       else
         quantity.abs

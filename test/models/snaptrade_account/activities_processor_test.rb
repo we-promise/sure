@@ -608,25 +608,42 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Other", entry.entryable.investment_activity_label
   end
 
-  test "processes share ADJUSTMENT as a zero-cash trade when units are present" do
+  test "processes share ADJUSTMENT as a zero-cash trade preserving signed units" do
     process_activities(
       build_trade_activity(
-        id: "share_adj_001",
+        id: "share_adj_add",
         type: "ADJUSTMENT",
         symbol: "VTI",
         units: 5.0,
         price: nil,
         amount: 500.00 # Notional value must not become cash flow
+      ),
+      build_trade_activity(
+        id: "share_adj_remove",
+        type: "ADJUSTMENT",
+        symbol: "VTI",
+        units: -3.0,
+        price: nil,
+        amount: -300.00
       )
     )
 
-    entry = snaptrade_entry("share_adj_001")
-    assert_not_nil entry
-    assert entry.entryable.is_a?(Trade), "ADJUSTMENT with units must be imported as a Trade"
-    assert_equal BigDecimal("5.0"), entry.entryable.qty
-    assert_equal BigDecimal("0"), entry.entryable.price
-    assert_equal BigDecimal("0"), entry.amount
-    assert_equal "Other", entry.entryable.investment_activity_label
+    add_entry = snaptrade_entry("share_adj_add")
+    remove_entry = snaptrade_entry("share_adj_remove")
+
+    assert_not_nil add_entry
+    assert_not_nil remove_entry
+    assert add_entry.entryable.is_a?(Trade), "ADJUSTMENT with units must be imported as a Trade"
+    assert remove_entry.entryable.is_a?(Trade)
+
+    assert_equal BigDecimal("5.0"), add_entry.entryable.qty, "positive units represents shares added"
+    assert_equal BigDecimal("-3.0"), remove_entry.entryable.qty, "negative units represents shares removed"
+    assert_equal BigDecimal("0"), add_entry.entryable.price
+    assert_equal BigDecimal("0"), remove_entry.entryable.price
+    assert_equal BigDecimal("0"), add_entry.amount
+    assert_equal BigDecimal("0"), remove_entry.amount
+    assert_equal "Other", add_entry.entryable.investment_activity_label
+    assert_equal "Other", remove_entry.entryable.investment_activity_label
   end
 
   test "ignores cash activities with zero or nil amount" do
