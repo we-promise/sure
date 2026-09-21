@@ -64,12 +64,26 @@ class Eval::Metrics::Base
       results.average(:latency_ms)&.round(0)
     end
 
+    # nil when no result reported a cost at all, which is NOT the same as a run
+    # that cost nothing. `sum` returns 0 over all-NULL, so without this guard an
+    # uninstrumented provider reports as free — the OpenAI path never populates
+    # `cost`, and TypeSafe's native API returns token counts without a settled
+    # price (only the OpenRouter gateway prices each call). Reporting those as
+    # $0.00 would make the cheapest-provider comparison pick whichever provider
+    # measures cost least.
+    def cost_reported?
+      return @cost_reported if defined?(@cost_reported)
+      @cost_reported = results.where.not(cost: nil).exists?
+    end
+
     def total_cost
+      return nil unless cost_reported?
       results.sum(:cost)&.to_f&.round(6)
     end
 
     def cost_per_sample
       return nil if total_count.zero?
+      return nil unless cost_reported?
       (total_cost / total_count).round(6)
     end
 

@@ -849,6 +849,11 @@ namespace :evals do
 
     def format_metric_value(value)
       case value
+      when nil
+        # Distinguishes "the provider reported nothing" from a measured zero.
+        # Printing a bare blank reads as a value of none, which for cost is the
+        # difference between free and unmeasured.
+        "not reported"
       when Float
         format_metric_float(value)
       when BigDecimal
