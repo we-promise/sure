@@ -73,11 +73,13 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
   test "normalizes current timeline event types to import categories" do
     assert_equal "orderExecution", Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["TRADING_TRADE_EXECUTED"]
     assert_equal "orderExecution", Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["TRADE_INVOICE"]
+    assert_equal "orderExecution", Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["SAVINGS_PLAN_INVOICE_CREATED"]
     assert_equal "DIVIDEND", Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["DIVIDEND"]
     assert_equal "orderExecution", Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["PRIVATE_MARKET_FUND_TRADE_EXECUTED"]
     assert_equal "POC_CREATED", Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["CARD_ATM_WITHDRAWAL"]
     assert_equal "POC_CREATED", Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["CARD_TRANSACTION"]
     assert_equal "POC_CREATED", Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["CARD_CASH_BACK"]
+    assert_nil Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["TRADING_SAVINGSPLAN_EXECUTION_FAILED"]
   end
 
   test "merges transaction and activity timelines without duplicate events" do
@@ -401,5 +403,120 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_raises(Provider::TradeRepublicClient::LoginExpired) do
       @client.send(:raise_login_error, response)
     end
+  end
+
+  test "enriches stored savings-plan events with targeted timeline details" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload
+      {
+        "sections" => [
+          { "title" => "Overview", "data" => [
+            { "title" => "Shares", "detail" => { "text" => "0.25" } },
+            { "title" => "Total", "detail" => { "text" => "€25.00" } }
+          ] },
+          { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B4L5Y983" } } } } ] }
+        ]
+      }
+    end
+
+    enriched, warnings = @client.send(
+      :enrich_event_details,
+      Object.new,
+      [ {
+        "id" => "savings-1",
+        "timestamp" => "2026-06-17T10:00:00Z",
+        "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+        "title" => "MSCI World",
+        "detail" => { "amount" => -25.0, "currency" => "EUR" }
+      } ]
+    )
+
+    assert_empty warnings
+    assert_equal 1, enriched.size
+    assert_equal [ { type: "timelineDetailV2", id: "savings-1" } ], requested
+    assert_equal "orderExecution", enriched.first["category"]
+    assert_equal "IE00B4L5Y983", enriched.first.dig("detail", "isin")
+    assert_equal BigDecimal("0.25"), BigDecimal(enriched.first.dig("detail", "quantity").to_s)
+  end
+
+  test "caps targeted detail enrichment and leaves leftovers for a later sync" do
+    requested_ids = []
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested_ids << payload[:id]
+      {
+        "sections" => [
+          { "data" => [
+            { "title" => "Shares", "detail" => { "text" => "1" } },
+            { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } }
+          ] }
+        ]
+      }
+    end
+
+    events = (Provider::TradeRepublicClient::MAX_DETAIL_ENRICHMENT + 3).times.map do |index|
+      {
+        "id" => "savings-#{index}",
+        "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+        "detail" => { "amount" => -10.0 }
+      }
+    end
+
+    enriched, warnings = @client.send(:enrich_event_details, Object.new, events)
+
+    assert_equal Provider::TradeRepublicClient::MAX_DETAIL_ENRICHMENT, enriched.size
+    assert_equal Provider::TradeRepublicClient::MAX_DETAIL_ENRICHMENT, requested_ids.size
+    assert_includes warnings.first, "detail enrichment truncated"
+  end
+
+  test "detail enrichment failures become warnings while transient errors still raise" do
+    calls = 0
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      calls += 1
+      raise Provider::TradeRepublicClient::MalformedResponse, "bad detail" if payload[:id] == "fail-soft"
+      raise Provider::TradeRepublicClient::Timeout, "timeout" if payload[:id] == "fail-hard"
+
+      { "sections" => [] }
+    end
+
+    enriched, warnings = @client.send(
+      :enrich_event_details,
+      Object.new,
+      [ { "id" => "fail-soft", "eventType" => "SAVINGS_PLAN_INVOICE_CREATED" } ]
+    )
+
+    assert_empty enriched
+    assert_equal [ "detail enrichment failed for event fail-soft" ], warnings
+
+    assert_raises(Provider::TradeRepublicClient::Timeout) do
+      @client.send(
+        :enrich_event_details,
+        Object.new,
+        [ { "id" => "fail-hard", "eventType" => "SAVINGS_PLAN_INVOICE_CREATED" } ]
+      )
+    end
+  end
+
+  test "merge prefers richer detail fields over a later thin timeline copy" do
+    merged = @client.send(
+      :merge_enriched_events,
+      [ {
+        "id" => "savings-1",
+        "category" => "orderExecution",
+        "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+        "detail" => { "amount" => -25.0, "isin" => "IE00B4L5Y983", "quantity" => "0.25" }
+      } ],
+      [ {
+        "id" => "savings-1",
+        "category" => "orderExecution",
+        "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+        "detail" => { "amount" => -25.0, "currency" => "EUR" }
+      } ]
+    )
+
+    assert_equal 1, merged.size
+    assert_equal "IE00B4L5Y983", merged.first.dig("detail", "isin")
+    assert_equal "0.25", merged.first.dig("detail", "quantity")
+    assert_equal "EUR", merged.first.dig("detail", "currency")
   end
 end

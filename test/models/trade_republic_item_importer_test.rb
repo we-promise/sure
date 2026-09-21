@@ -353,6 +353,151 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert cash.raw_timeline_payload.none? { |event| event["category"] == "orderExecution" }
   end
 
+  test "passes incomplete savings-plan invoice events for targeted enrichment" do
+    incomplete = {
+      "id" => "savings-old",
+      "timestamp" => "2026-06-17T10:00:00Z",
+      "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+      "detail" => { "amount" => -25.0, "currency" => "EUR" }
+    }
+    complete = {
+      "id" => "savings-done",
+      "timestamp" => "2026-07-01T10:00:00Z",
+      "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+      "category" => "orderExecution",
+      "detail" => { "amount" => -25.0, "isin" => "IE00B4L5Y983", "quantity" => "0.25" }
+    }
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-ENRICH",
+      currency: "EUR",
+      raw_timeline_payload: [ incomplete, complete ]
+    )
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).with { |args|
+      enrich_ids = Array(args[:enrich_events]).map { |event| event["id"] || event[:id] }
+      enrich_ids == [ "savings-old" ]
+    }.returns(client_result(
+      "status" => "ok",
+      "session_txt" => "# refreshed cookies",
+      "account" => { "brokerage_account_id" => "DE-ENRICH", "currency" => "EUR" },
+      "cash" => { "amount" => "1", "currency" => "EUR" },
+      "positions" => [],
+      "events" => [],
+      "newest_event_id" => "savings-done",
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+  end
+
+  test "backfills an amount-only savings-plan event and removes the stale cash copy" do
+    incomplete = {
+      "id" => "savings-1",
+      "timestamp" => "2026-06-17T10:00:00Z",
+      "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+      "detail" => { "amount" => -25.0, "currency" => "EUR" }
+    }
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-BACKFILL",
+      currency: "EUR",
+      raw_timeline_payload: [ incomplete ]
+    )
+    cash = @item.trade_republic_accounts.create!(
+      kind: "cash",
+      name: "Cash",
+      trade_republic_account_id: "cash:DE-BACKFILL",
+      currency: "EUR",
+      raw_timeline_payload: [ incomplete ]
+    )
+
+    enriched = incomplete.merge(
+      "category" => "orderExecution",
+      "detail" => {
+        "amount" => -25.0,
+        "currency" => "EUR",
+        "isin" => "IE00B4L5Y983",
+        "quantity" => "0.25",
+        "name" => "MSCI World"
+      }
+    )
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "session_txt" => "# refreshed cookies",
+      "account" => { "brokerage_account_id" => "DE-BACKFILL", "currency" => "EUR" },
+      "cash" => { "amount" => "10.00", "currency" => "EUR" },
+      "positions" => [],
+      "events" => [ enriched ],
+      "newest_event_id" => "savings-1",
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    portfolio = @item.trade_republic_accounts.find_by!(kind: "portfolio")
+    stored = portfolio.reload.raw_timeline_payload.find { |event| event["id"] == "savings-1" }
+
+    assert_equal "orderExecution", stored["category"]
+    assert_equal "IE00B4L5Y983", stored.dig("detail", "isin")
+    assert_equal "0.25", stored.dig("detail", "quantity")
+    assert cash.reload.raw_timeline_payload.none? { |event| event["id"] == "savings-1" }
+  end
+
+  test "preserves enriched savings-plan details when a thin timeline copy reappears" do
+    rich = {
+      "id" => "savings-1",
+      "timestamp" => "2026-06-17T10:00:00Z",
+      "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+      "category" => "orderExecution",
+      "detail" => {
+        "amount" => -25.0,
+        "currency" => "EUR",
+        "isin" => "IE00B4L5Y983",
+        "quantity" => "0.25"
+      }
+    }
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-RICH",
+      currency: "EUR",
+      raw_timeline_payload: [ rich ]
+    )
+
+    thin = {
+      "id" => "savings-1",
+      "timestamp" => "2026-06-17T10:00:00Z",
+      "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+      "category" => "orderExecution",
+      "detail" => { "amount" => -25.0, "currency" => "EUR" }
+    }
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "session_txt" => "# refreshed cookies",
+      "account" => { "brokerage_account_id" => "DE-RICH", "currency" => "EUR" },
+      "cash" => { "amount" => "1", "currency" => "EUR" },
+      "positions" => [],
+      "events" => [ thin ],
+      "newest_event_id" => "savings-1",
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    stored = @item.trade_republic_accounts.find_by!(kind: "portfolio").reload.raw_timeline_payload.first
+    assert_equal "IE00B4L5Y983", stored.dig("detail", "isin")
+    assert_equal "0.25", stored.dig("detail", "quantity")
+    assert_equal "EUR", stored.dig("detail", "currency")
+  end
+
   private
 
     def client_result(data)

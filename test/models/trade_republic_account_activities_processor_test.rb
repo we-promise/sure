@@ -472,6 +472,69 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert entry.reload.user_modified?
   end
 
+  test "savings-plan invoice imports as a portfolio trade and never as cash" do
+    cash_account, cash_sure = create_linked_cash_account!
+    event = savings_plan_invoice_event
+
+    @tr_account.update!(raw_timeline_payload: [ event ])
+    cash_account.update!(raw_timeline_payload: [ event ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    trade = find_trade("trade_republic_event_evt_savings_plan")
+    assert_not_nil trade
+    assert_equal "Trade", trade.entryable_type
+    assert_equal BigDecimal("0.25"), trade.entryable.qty
+    assert_equal "Buy", trade.entryable.investment_activity_label
+    assert_equal BigDecimal("-25.00"), trade.amount
+    assert_equal "SAVINGS_PLAN_INVOICE_CREATED", trade.entryable.extra.dig("trade_republic", "event_type")
+
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_savings_plan")
+  end
+
+  test "savings-plan invoice remains idempotent across repeated processing" do
+    cash_account, cash_sure = create_linked_cash_account!
+    event = savings_plan_invoice_event
+
+    @tr_account.update!(raw_timeline_payload: [ event ])
+    cash_account.update!(raw_timeline_payload: [ event ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_difference -> { @account.entries.where(source: "trade_republic").count }, 0 do
+      assert_difference -> { cash_sure.entries.where(source: "trade_republic").count }, 0 do
+        TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+        TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+      end
+    end
+
+    assert_equal 1, @account.entries.where(entryable_type: "Trade", source: "trade_republic").count
+    assert_equal 0, cash_sure.entries.where(source: "trade_republic").count
+  end
+
+  test "failed savings-plan executions remain ignored" do
+    cash_account, = create_linked_cash_account!
+    failed = {
+      id: "evt_savings_failed",
+      timestamp: "2026-06-17T10:00:00Z",
+      eventType: "TRADING_SAVINGSPLAN_EXECUTION_FAILED",
+      title: "MSCI World",
+      detail: { amount: -25.0, currency: "EUR" }
+    }
+
+    @tr_account.update!(raw_timeline_payload: [ failed ])
+    cash_account.update!(raw_timeline_payload: [ failed ])
+
+    assert_no_difference "Entry.where(source: 'trade_republic').count" do
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+
+    assert_not Entry.exists?(external_id: "trade_republic_event_evt_savings_failed")
+  end
+
   private
 
     def create_linked_cash_account!
@@ -531,6 +594,24 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
       }
     end
 
+    def savings_plan_invoice_event
+      {
+        id: "evt_savings_plan",
+        timestamp: "2026-06-17T10:00:00Z",
+        eventType: "SAVINGS_PLAN_INVOICE_CREATED",
+        category: "orderExecution",
+        title: "MSCI World",
+        subtitle: "Savings plan",
+        detail: {
+          amount: "25.00",
+          signed_amount: "-25.00",
+          currency: "EUR",
+          quantity: "0.25",
+          isin: "IE00B4L5Y983",
+          name: "MSCI World"
+        }
+      }
+    end
 
     def import_event(event)
       @tr_account.update!(raw_timeline_payload: [ event ])

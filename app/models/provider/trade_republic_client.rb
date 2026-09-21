@@ -43,6 +43,10 @@ class Provider::TradeRepublicClient
     "CRYPTO_INVOICE" => "orderExecution",
     "SAVINGS_PLAN_EXECUTED" => "orderExecution",
     "TRADING_SAVINGSPLAN_EXECUTED" => "orderExecution",
+    # Older savings-plan executions arrive as invoices rather than the newer
+    # TRADING_SAVINGSPLAN_EXECUTED activity. Treat them as order executions so
+    # timelineDetailV2 is fetched and the portfolio can import a trade.
+    "SAVINGS_PLAN_INVOICE_CREATED" => "orderExecution",
     "PRIVATE_MARKET_FUND_TRADE_EXECUTED" => "orderExecution",
     "IPO_TRADE_EXECUTED" => "orderExecution",
     "BANK_TRANSACTION_INCOMING" => "PAYMENT_RECEIVED",
@@ -93,6 +97,9 @@ class Provider::TradeRepublicClient
   TAX_TITLES = [ "steuer", "steuern", "tax", "taxes" ].freeze
   MAX_TIMELINE_PAGES = 50
   MAX_TIMELINE_DETAILS = 200
+  # Bound targeted detail backfills so one sync cannot exhaust the WebSocket
+  # session retrying every historically incomplete savings-plan event.
+  MAX_DETAIL_ENRICHMENT = 50
   MAX_SYNC_RETRIES = 2
   RETRY_BACKOFF_SECONDS = 0.5
   LOGIN_SUCCESS_STATES = %w[CONFIRMED COMPLETED APPROVED SUCCESS OK DONE].freeze
@@ -268,19 +275,20 @@ class Provider::TradeRepublicClient
     end
   end
 
-  def sync(session_txt:, known_newest_event_id: nil, timeline_max_pages: MAX_TIMELINE_PAGES)
+  def sync(session_txt:, known_newest_event_id: nil, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [])
     raise ConfigurationError, "session_txt is required" if session_txt.blank?
 
     with_retry do
       sync_once(
         session_txt: session_txt,
         known_newest_event_id: known_newest_event_id,
-        timeline_max_pages: timeline_max_pages
+        timeline_max_pages: timeline_max_pages,
+        enrich_events: enrich_events
       )
     end
   end
 
-  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:)
+  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, enrich_events: [])
     session = new_session(session_blob: session_txt)
     account_response = session.get("/api/v2/auth/account")
     return Result.new(data: { "status" => "session_expired" }) if [ 401, 403 ].include?(account_response.code.to_i)
@@ -342,6 +350,15 @@ class Provider::TradeRepublicClient
       rescue MalformedResponse, ProviderUnavailable => e
         raise if e.is_a?(TransientProviderError)
         warnings << "timeline fetch failed: #{e.message}"
+      end
+
+      # Targeted backfill for stored events that arrived before they were mapped
+      # (for example older SAVINGS_PLAN_INVOICE_CREATED rows). This does not
+      # touch newest_event_id — remaining incomplete events retry next sync.
+      if Array(enrich_events).any?
+        enriched_events, enrichment_warnings = enrich_event_details(websocket, enrich_events)
+        warnings.concat(enrichment_warnings)
+        events = merge_enriched_events(events, enriched_events)
       end
 
       Result.new(data: {
@@ -768,19 +785,88 @@ class Provider::TradeRepublicClient
         elsif DETAIL_CATEGORIES.include?(category.to_s)
           details_skipped = true
         end
-        amount = item.dig("amount", "value")
-        event_detail = {
-          "amount" => amount,
-          "signed_amount" => amount,
-          "currency" => item.dig("amount", "currency")
-        }.compact
-        detail ||= {}
-        detail = event_detail.merge(detail) if event_detail.present?
-        events << item.slice("id", "timestamp", "title", "subtitle", "eventType")
-          .merge("category" => category, "detail" => detail.presence)
+        events << build_normalized_event(item, category: category, detail: detail)
       end
       newest_event_id = nil if details_skipped || events.any? { |event| DETAIL_CATEGORIES.include?(event["category"]) && event["detail"].nil? }
       [ events, newest_event_id, warnings ]
+    end
+
+    # Re-fetch timelineDetailV2 for stored events that were skipped when their
+    # eventType was still unmapped. Caps the batch so remaining events can
+    # continue on a later sync without blocking the timeline cursor.
+    def enrich_event_details(websocket, events, max: MAX_DETAIL_ENRICHMENT)
+      warnings = []
+      candidates = Array(events).select { |event| event.is_a?(Hash) && event["id"].presence }
+      if candidates.size > max
+        warnings << "detail enrichment truncated to #{max} of #{candidates.size} events"
+        candidates = candidates.first(max)
+      end
+
+      enriched = candidates.filter_map do |event|
+        item = event.stringify_keys
+        category = item["category"].presence || EVENT_TYPE_CATEGORIES[item["eventType"].to_s]
+        next if category.blank?
+
+        begin
+          detail = normalize_event_detail(
+            subscribe(websocket, type: "timelineDetailV2", id: item["id"]),
+            item: item
+          )
+          build_normalized_event(item, category: category, detail: detail)
+        rescue TransientProviderError, Timeout, RateLimited
+          raise
+        rescue Error
+          warnings << "detail enrichment failed for event #{item["id"]}"
+          nil
+        end
+      end
+
+      [ enriched, warnings ]
+    end
+
+    def merge_enriched_events(events, enriched_events)
+      by_id = {}
+      (Array(events) + Array(enriched_events)).each do |event|
+        next unless event.is_a?(Hash)
+
+        key = event["id"].presence || event
+        by_id[key] = prefer_richer_event(by_id[key], event)
+      end
+      by_id.values
+    end
+
+    def prefer_richer_event(previous, incoming)
+      return incoming if previous.blank?
+      return previous if incoming.blank?
+
+      previous = previous.stringify_keys
+      incoming = incoming.stringify_keys
+      merged = previous.merge(incoming)
+      merged["category"] = incoming["category"].presence || previous["category"]
+      merged["detail"] = prefer_richer_detail(previous["detail"], incoming["detail"])
+      merged.compact
+    end
+
+    def prefer_richer_detail(previous, incoming)
+      previous = previous.is_a?(Hash) ? previous.stringify_keys : {}
+      incoming = incoming.is_a?(Hash) ? incoming.stringify_keys : {}
+      return previous.presence if incoming.blank?
+      return incoming.presence if previous.blank?
+
+      previous.merge(incoming) { |_key, old_value, new_value| new_value.presence || old_value }.presence
+    end
+
+    def build_normalized_event(item, category:, detail:)
+      amount = item.dig("amount", "value")
+      event_detail = {
+        "amount" => amount,
+        "signed_amount" => amount,
+        "currency" => item.dig("amount", "currency")
+      }.compact
+      detail ||= {}
+      detail = event_detail.merge(detail) if event_detail.present?
+      item.slice("id", "timestamp", "title", "subtitle", "eventType")
+        .merge("category" => category, "detail" => detail.presence)
     end
 
     def normalize_event_detail(raw, item: nil)
