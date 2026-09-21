@@ -110,6 +110,11 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
       "eventType" => "CARD_VERIFICATION",
       "title" => "Card verification"
     }
+    legal_docs = {
+      "id" => "evt_legal",
+      "title" => "Legal documents",
+      "subtitle" => "Accepted"
+    }
     mapping_gap = {
       "id" => "evt_gap",
       "eventType" => "BRAND_NEW_MAPPING_GAP",
@@ -121,7 +126,7 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
       name: "Portfolio",
       trade_republic_account_id: "DE-DQ-P",
       currency: "EUR",
-      raw_timeline_payload: [ shared, admin, mapping_gap ]
+      raw_timeline_payload: [ shared, admin, legal_docs, mapping_gap ]
     )
     item.trade_republic_accounts.create!(
       kind: "cash",
@@ -133,7 +138,7 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
 
     summary = item.data_quality_summary
 
-    assert_equal 4, summary[:events]
+    assert_equal 5, summary[:events]
     assert_equal 1, summary[:unknown_events]
   end
 end

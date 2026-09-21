@@ -274,6 +274,22 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal [ "price unavailable for LU3176111881; position kept without valuation" ], warnings
   end
 
+test "maps Google Pay inbound payments to deposits" do
+  assert_equal "PAYMENT_RECEIVED",
+    Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["PAYMENT_INBOUND_GOOGLE_PAY"]
+  assert_equal :financial, TradeRepublicAccount::DataHelpers.classify_timeline_event(
+    "eventType" => "PAYMENT_INBOUND_GOOGLE_PAY",
+    "title" => "Cash in"
+  )
+end
+
+test "ignores Legal documents timeline rows without an event type" do
+  assert_equal :ignored, TradeRepublicAccount::DataHelpers.classify_timeline_event(
+    "title" => "Legal documents",
+    "subtitle" => "Accepted"
+  )
+end
+
   test "marks a snapshot partial when malformed positions are skipped" do
     @client.expects(:position_price).never
 

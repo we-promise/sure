@@ -269,7 +269,8 @@ class TradeRepublicAccount::ActivitiesProcessor
       signed_amount = parse_decimal(event.dig(:detail, :signed_amount) || event.dig(:detail, :amount))
       return CATEGORY_WITHDRAWAL if event[:eventType].to_s == "CARD_CASH_BACK" && signed_amount&.negative?
 
-      event[:category].to_s
+      event[:category].to_s.presence ||
+        Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES[event[:eventType].to_s].to_s
     end
 
     def cash_label(event, default:)

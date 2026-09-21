@@ -48,6 +48,12 @@ module TradeRepublicAccount::DataHelpers
     TRADING_SAVINGSPLAN_EXECUTION_FAILED
   ].freeze
 
+  # Timeline rows that omit eventType/category but are clearly administrative.
+  # Titles are compared case-insensitively after strip.
+  IGNORED_TITLES = [
+    "legal documents"
+  ].freeze
+
   NON_IMPORTABLE_STATUSES = %w[
     DECLINED
     REJECTED
@@ -68,11 +74,17 @@ module TradeRepublicAccount::DataHelpers
       event = event.with_indifferent_access
       event_type = event[:eventType].to_s
       return :ignored if IGNORED_EVENT_TYPES.include?(event_type)
+      return :ignored if ignored_title?(event)
 
       category = resolved_category(event)
       return :financial if KNOWN_ACTIVITY_CATEGORIES.include?(category)
 
       :unknown
+    end
+
+    def ignored_title?(event)
+      title = event[:title].to_s.strip.downcase
+      title.present? && IGNORED_TITLES.include?(title)
     end
 
     def importable_timeline_event?(event)

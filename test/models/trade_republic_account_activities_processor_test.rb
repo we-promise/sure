@@ -651,6 +651,39 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "Google Pay inbound deposits import as contributions" do
+    cash_account, cash_sure = create_linked_cash_account!
+    cash_account.update!(raw_timeline_payload: [ {
+      id: "evt_gpay",
+      timestamp: "2024-03-28T08:29:35Z",
+      eventType: "PAYMENT_INBOUND_GOOGLE_PAY",
+      title: "Cash in",
+      detail: { amount: "50.00", currency: "EUR" }
+    } ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    entry = Entry.find_by!(account: cash_sure, external_id: "trade_republic_event_evt_gpay")
+    assert_equal BigDecimal("-50.00"), entry.amount
+    assert_equal "Contribution", entry.transaction.investment_activity_label
+  end
+
+  test "Legal documents title without event type is ignored silently" do
+    cash_account, = create_linked_cash_account!
+    cash_account.update!(raw_timeline_payload: [ {
+      id: "evt_legal",
+      timestamp: "2026-07-28T12:42:32Z",
+      title: "Legal documents",
+      subtitle: "Accepted"
+    } ])
+
+    assert_no_difference "DebugLogEntry.count" do
+      assert_no_difference "Entry.where(source: 'trade_republic').count" do
+        TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+      end
+    end
+  end
+
   test "truly unknown financial mapping gaps are logged once without creating entries" do
     cash_account, = create_linked_cash_account!
     cash_account.update!(raw_timeline_payload: [ {
