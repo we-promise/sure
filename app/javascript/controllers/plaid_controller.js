@@ -7,6 +7,9 @@ export default class extends Controller {
     region: { type: String, default: "us" },
     isUpdate: { type: Boolean, default: false },
     itemId: String,
+    accountableType: String,
+    connectedInstitutionIds: Array,
+    connectedInstitutionNames: Array,
   };
 
   connect() {
@@ -128,6 +131,12 @@ export default class extends Controller {
   };
 
   handleExit = (err, metadata) => {
+    // Our own forced exit on a duplicate institution — the warning dialog is taking
+    // over the modal frame. `err` is null for a forced exit, so the branches below
+    // happen to be inert today, but that is accidental: this guard keeps a later
+    // change to them from redirecting out from under the dialog.
+    if (this._duplicateHandled) return;
+
     // If there was an error during update mode, refresh the page to show
     // latest status. Guard `metadata` (Plaid can fire onExit with it
     // undefined when Link aborts very early) and gate the redirect on
@@ -157,9 +166,72 @@ export default class extends Controller {
     }
   };
 
+  // Plaid documents SELECT_INSTITUTION as a stable event, fired once the user picks
+  // an institution and before they authenticate. That is the only point where a
+  // duplicate connection can still be prevented: Plaid creates the Item when Link
+  // completes and the public token is issued, not when we exchange it, so a
+  // server-side check in `create` would already be too late.
   handleEvent = (eventName, metadata) => {
-    // no-op
+    if (eventName !== "SELECT_INSTITUTION") return;
+
+    // Update mode reconnects a known item, which is by definition its own duplicate
+    // (Plaid may even auto-select the saved institution). Without this guard,
+    // "Reconnect" and "Add accounts" — the two flows a user reaches when a connection
+    // is already broken — would warn every time.
+    if (this.isUpdateValue) return;
+
+    // SELECT_INSTITUTION fires again when the user backs out and picks another bank,
+    // so a one-shot flag keeps a second fire from double-navigating.
+    if (this._duplicateHandled) return;
+
+    // onEvent metadata is flat: institution_id sits at the top level, unlike the
+    // nested institution object that onSuccess reports. Both fields are nullable.
+    const institutionId = metadata?.institution_id;
+    const institutionName = metadata?.institution_name;
+
+    if (!this.isDuplicateInstitution(institutionId, institutionName)) return;
+
+    this._duplicateHandled = true;
+
+    // Close Link first. Navigating first risks disconnect() calling destroy() with no
+    // preceding exit(), leaving Plaid's own DOM behind.
+    this._handler?.exit({ force: true });
+
+    Turbo.visit(this.duplicateWarningUrl(institutionId, institutionName), {
+      frame: "modal",
+    });
   };
+
+  isDuplicateInstitution(institutionId, institutionName) {
+    if (
+      institutionId &&
+      this.connectedInstitutionIdsValue.includes(institutionId)
+    ) {
+      return true;
+    }
+
+    // Fallback for connections whose first sync never landed, so no institution_id was
+    // ever stored. The server sends these names already trimmed and lowercased.
+    const name = institutionName?.trim().toLowerCase();
+
+    return Boolean(name) && this.connectedInstitutionNamesValue.includes(name);
+  }
+
+  duplicateWarningUrl(institutionId, institutionName) {
+    const url = new URL(
+      "/plaid_items/duplicate_warning",
+      window.location.origin,
+    );
+
+    url.searchParams.set("region", this.regionValue);
+    if (institutionId) url.searchParams.set("institution_id", institutionId);
+    if (institutionName)
+      url.searchParams.set("institution_name", institutionName);
+    if (this.accountableTypeValue)
+      url.searchParams.set("accountable_type", this.accountableTypeValue);
+
+    return url.toString();
+  }
 
   handleLoad = () => {
     // no-op

@@ -5,6 +5,25 @@ en:
       success: Account linked successfully.  Please wait for accounts to sync.
     destroy:
       success: Accounts scheduled for deletion.
+    duplicate_warning:
+      add_accounts: Add accounts to this connection
+      add_new_connection: Add new connection
+      connected_by: Connected by %{name}
+      different_login: If you have a different login with different accounts, adding
+        a new connection is fine — it only counts as another Plaid connection.
+      eu_no_add_accounts: Plaid doesn't support adding accounts to an existing
+        EU connection. To change which accounts are connected, remove this one and
+        add it again.
+      linked_on: Linked %{date}
+      manage_connection: Go to accounts
+      mask: "****%{mask}"
+      no_accounts: No accounts have synced from this connection yet.
+      or: or
+      subtitle: Connecting the same login again duplicates these accounts, counts as
+        another Plaid connection, and may stop the existing connection from working.
+      title:
+        one: You already have a connection for this institution
+        other: You already have %{count} connections for this institution
     errors:
       link_token_generic: We couldn't open Plaid right now. Please try again, and
         if the problem persists check the server logs for details.

@@ -1,0 +1,113 @@
+<%# Whether any listed connection offers an action of its own. Without this the
+    "or" separator dangles above a lone button, implying a choice that isn't there. %>
+<% any_connection_action = @duplicate_items.any? { |item| item.manageable_by?(Current.user) } %>
+
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <%# A family can legitimately hold several connections for one institution -- that is
+        the state this warning exists to stop growing -- so the title counts them.
+
+        The two outcomes get their own paragraphs, because only the user can tell them
+        apart. A second login covering different accounts duplicates nothing and costs
+        only the extra connection, so stating the duplicate-and-disconnect consequences
+        unconditionally would be wrong for exactly the people the override serves. The
+        header slot's block renders the second paragraph, since `subtitle:` is one <p>. %>
+    <% dialog.with_header(title: t(".title", count: @duplicate_items.size), subtitle: t(".subtitle")) do %>
+      <p class="text-sm text-secondary"><%= t(".different_login") %></p>
+    <% end %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <div class="space-y-3">
+          <% @duplicate_items.each do |plaid_item| %>
+            <div class="p-3 border border-primary rounded-lg space-y-3">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="font-medium text-sm text-primary"><%= plaid_item.name %></span>
+                <span class="text-xs text-secondary whitespace-nowrap">
+                  <%= t(".linked_on", date: l(plaid_item.created_at.to_date, format: :short_with_year)) %>
+                </span>
+              </div>
+
+              <%# owner_id is nullable -- connections predating per-user ownership (#3613)
+                  carry none, and owned_by? is false for those, so attribute only when
+                  there is someone to name. %>
+              <% if plaid_item.owner.present? && !plaid_item.owned_by?(Current.user) %>
+                <p class="text-xs text-secondary">
+                  <%= t(".connected_by", name: plaid_item.owner.display_name) %>
+                </p>
+              <% end %>
+
+              <%# plaid_accounts, not accounts: PlaidItem#accounts resolves through the
+                  linked Account and returns nothing for a connection whose accounts were
+                  never linked -- which is exactly the broken connection a user re-links. %>
+              <% if plaid_item.plaid_accounts.any? %>
+                <ul class="space-y-1">
+                  <% plaid_item.plaid_accounts.each do |plaid_account| %>
+                    <li class="flex items-baseline justify-between gap-2 text-xs">
+                      <span class="text-primary"><%= plaid_account.name %></span>
+                      <% if plaid_account.mask.present? %>
+                        <span class="text-secondary whitespace-nowrap"><%= t(".mask", mask: plaid_account.mask) %></span>
+                      <% end %>
+                    </li>
+                  <% end %>
+                </ul>
+              <% else %>
+                <p class="text-xs text-secondary"><%= t(".no_accounts") %></p>
+              <% end %>
+
+              <% if plaid_item.manageable_by?(Current.user) %>
+                <% if plaid_item.us? %>
+                  <%= render DS::Link.new(
+                        text: t(".add_accounts"),
+                        href: edit_plaid_item_path(plaid_item, add_accounts: true),
+                        variant: :primary,
+                        size: :sm,
+                        full_width: true,
+                        frame: "modal"
+                      ) %>
+                <% else %>
+                  <%# Plaid does not support update-mode account selection for UK/EU
+                      institutions and directs callers to remove the Item and create a
+                      new one instead, so there is no "add accounts" path to offer here.
+                      Say why, rather than silently dropping the action. %>
+                  <p class="text-xs text-secondary"><%= t(".eu_no_add_accounts") %></p>
+                  <%= render DS::Link.new(
+                        text: t(".manage_connection"),
+                        href: accounts_path,
+                        variant: :outline,
+                        size: :sm,
+                        full_width: true,
+                        data: { turbo_frame: "_top" }
+                      ) %>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <% if any_connection_action %>
+          <p class="text-xs text-secondary text-center"><%= t(".or") %></p>
+        <% end %>
+
+        <%# DS::Link, not dialog.with_action: DS::Button renders `button_to` when given
+            an href, which would POST to this GET-only route. turbo_prefetch is disabled
+            because GET plaid_items#new mints a Plaid link token as a side effect, so a
+            hover would call /link/token/create. %>
+        <%= render DS::Link.new(
+              text: t(".add_new_connection"),
+              href: new_plaid_item_path(
+                region: @region,
+                accountable_type: @accountable_type,
+                allow_institution: @institution_id,
+                allow_institution_name: @institution_name
+              ),
+              variant: :outline,
+              size: :sm,
+              full_width: true,
+              frame: "modal",
+              data: { turbo_prefetch: "false" }
+            ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

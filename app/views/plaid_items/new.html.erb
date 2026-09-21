@@ -2,7 +2,10 @@
 <%= turbo_frame_tag "modal" do %>
   <%= render "plaid_items/auto_link_opener",
            link_token: @link_token,
-           region: params[:region],
+           region: @region,
            item_id: "",
-           is_update: false %>
+           is_update: false,
+           accountable_type: params[:accountable_type],
+           connected_institution_ids: @connected_institution_ids,
+           connected_institution_names: @connected_institution_names %>
 <% end %>
