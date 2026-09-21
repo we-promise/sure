@@ -1396,6 +1396,18 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match smart_configuration_bill_path(bill), response.body
   end
 
+  test "the bill page breadcrumb links back to the bills list" do
+    bill = create_bill(name: "Power Co", amount: 80)
+
+    get bill_url(bill)
+    assert_response :success
+
+    assert_select "[data-breadcrumbs]" do
+      assert_select "a[href=?]", bills_path
+      assert_select "span", text: bill.display_name
+    end
+  end
+
   test "price changes on accounts the member cannot reach stay out of notices and the rollup" do
     hidden = create_bill(name: "Hidden brokerage sub", amount: 24.99, account: accounts(:investment))
     hidden.update!(bill_type: "subscription")
