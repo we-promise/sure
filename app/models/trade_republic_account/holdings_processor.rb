@@ -39,7 +39,12 @@ class TradeRepublicAccount::HoldingsProcessor
       isin = position[:isin].to_s
       return if isin.blank?
 
-      security = resolve_security(isin, position[:name])
+      security = resolve_security(
+        isin,
+        position[:name],
+        symbol: position[:symbol],
+        exchange_slug: position[:exchange_slug]
+      )
       return unless security
 
       quantity = parse_decimal(position[:quantity])

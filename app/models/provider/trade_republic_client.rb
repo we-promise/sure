@@ -100,6 +100,11 @@ class Provider::TradeRepublicClient
   }.freeze
   TICKER_EXCHANGES = %w[LSX BHS TUB SGL BVT].freeze
   CRYPTO_TICKER_EXCHANGES = %w[BHS TUB SGL BVT LSX].freeze
+  # Prefer real venues over Trade Republic's synthetic LSX feed. Skip symbols
+  # that merely echo the ISIN (common on TIB).
+  INSTRUMENT_EXCHANGE_PREFERENCE = %w[XETR TDG].freeze
+  INSTRUMENT_EXCHANGE_LAST_RESORT = %w[LSX].freeze
+  INSTRUMENT_SYMBOL_CATEGORIES = %w[stocksAndETFs bonds].freeze
   FEE_TITLES = [ "gebühr", "fee" ].freeze
   TAX_TITLES = [ "steuer", "steuern", "tax", "taxes" ].freeze
   MAX_TIMELINE_PAGES = 50
@@ -636,6 +641,7 @@ class Provider::TradeRepublicClient
         end
       end
       prices = {}
+      instruments = {}
       valid_positions.each do |position|
         isin = position["instrumentId"].presence || position["isin"]
         next if prices.key?(isin)
@@ -644,11 +650,28 @@ class Provider::TradeRepublicClient
         prices[isin] = price if price.present?
         warnings << "price unavailable for #{isin}; position kept without valuation" if price.blank?
       end
+      valid_positions.each do |position|
+        isin = position["instrumentId"].presence || position["isin"]
+        next if instruments.key?(isin)
+        next unless INSTRUMENT_SYMBOL_CATEGORIES.include?(position["categoryType"].to_s)
+
+        instruments[isin] = instrument_exchange_symbol(websocket, isin)
+      end
 
       positions = valid_positions.map do |position|
         isin = position["instrumentId"].presence || position["isin"]
         quantity = position["netSize"] || position["quantity"]
-        { "isin" => isin, "name" => position["name"], "category" => portfolio_category(position["categoryType"]), "quantity" => decimal_string(quantity), "average_cost" => decimal_string(position["averageBuyIn"] || position["avgCost"]), "price" => prices[isin] }.compact
+        instrument = instruments[isin] || {}
+        {
+          "isin" => isin,
+          "name" => position["name"],
+          "category" => portfolio_category(position["categoryType"]),
+          "quantity" => decimal_string(quantity),
+          "average_cost" => decimal_string(position["averageBuyIn"] || position["avgCost"]),
+          "price" => prices[isin],
+          "symbol" => instrument[:symbol],
+          "exchange_slug" => instrument[:exchange_slug]
+        }.compact
       end
       [ positions, warnings ]
     end
@@ -671,6 +694,42 @@ class Provider::TradeRepublicClient
       end
 
       nil
+    end
+
+    # Returns { symbol:, exchange_slug: } from the instrument subscription, or
+    # nil when Trade Republic has no usable exchange ticker for this ISIN.
+    def instrument_exchange_symbol(websocket, isin)
+      payload = optional_subscribe(websocket, type: "instrument", id: isin)
+      return nil unless payload.is_a?(Hash)
+
+      pick_instrument_exchange_symbol(payload, isin)
+    rescue Error
+      nil
+    end
+
+    def pick_instrument_exchange_symbol(payload, isin)
+      candidates = Array(payload["exchanges"]).filter_map do |exchange|
+        next unless exchange.is_a?(Hash)
+        next if exchange.key?("active") && !ActiveModel::Type::Boolean.new.cast(exchange["active"])
+
+        symbol = exchange["symbolAtExchange"].to_s.strip.presence
+        next if symbol.blank?
+        next if symbol.casecmp?(isin.to_s)
+
+        slug = (exchange["slug"].presence || exchange["exchangeId"].presence || exchange["name"]).to_s.strip.upcase
+        next if slug.blank?
+
+        { symbol: symbol, exchange_slug: slug }
+      end
+      return nil if candidates.empty?
+
+      preferred = INSTRUMENT_EXCHANGE_PREFERENCE.filter_map { |slug| candidates.find { |c| c[:exchange_slug] == slug } }
+      return preferred.first if preferred.any?
+
+      non_last_resort = candidates.reject { |c| INSTRUMENT_EXCHANGE_LAST_RESORT.include?(c[:exchange_slug]) }
+      return non_last_resort.first if non_last_resort.any?
+
+      candidates.first
     end
 
     def portfolio_category(category_type)

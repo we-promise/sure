@@ -117,20 +117,95 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "resolves a holding to an exact exchange ticker and rematches this account only" do
+    Security.stubs(:search_provider).returns([])
+
+    isin = "DE000BASF111"
+    isin_security = Security.create!(ticker: isin, name: "BASF ISIN", offline: false)
+    other_account = @family.accounts.create!(
+      name: "Other TR Account",
+      balance: 0,
+      cash_balance: 0,
+      currency: "EUR",
+      accountable: Investment.new
+    )
+    other_holding = other_account.holdings.create!(
+      security: isin_security,
+      date: Date.current,
+      qty: 1,
+      price: 40,
+      amount: 40,
+      currency: "EUR"
+    )
+    import_position(isin: isin, quantity: "5", price: "42.50")
+    holding = @account.holdings.find_by!(security: isin_security)
+    trade_entry = @account.entries.create!(
+      name: "BASF buy",
+      date: Date.current,
+      amount: -100,
+      currency: "EUR",
+      entryable: Trade.new(security: isin_security, qty: 2, price: 50, currency: "EUR")
+    )
+
+    @tr_account.update!(raw_positions_payload: [
+      position_payload(isin: isin, quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+    ])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    resolved = Security.find_by!(ticker: "BAS", exchange_operating_mic: "XETR")
+    assert_equal false, resolved.offline?
+    assert_equal resolved.id, holding.reload.security_id
+    assert_equal resolved.id, trade_entry.reload.entryable.security_id
+    assert_equal isin_security.id, other_holding.reload.security_id
+    assert Security.exists?(id: isin_security.id)
+  end
+
+  test "falls back to an offline ISIN security without a usable exchange symbol" do
+    Security.stubs(:search_provider).returns([])
+
+    import_position(isin: "LU3176111881", quantity: "3", price: "10")
+
+    security = Security.find_by!(ticker: "LU3176111881")
+    holding = @account.holdings.find_by!(security: security)
+
+    assert security.offline?
+    assert_equal "LU3176111881", holding.security.ticker
+  end
+
+  test "maps a Trade Republic Tradegate symbol to the Tradegate MIC" do
+    Security.stubs(:search_provider).returns([])
+
+    import_position(
+      isin: "DE000TRAD123",
+      quantity: "2",
+      price: "20",
+      symbol: "TRD",
+      exchange_slug: "TDG"
+    )
+
+    security = @account.holdings.first.security
+    assert_equal "TRD", security.ticker
+    assert_equal "TGAT", security.exchange_operating_mic
+  end
+
   private
 
-    def import_position(isin:, quantity:, price:, average_cost: nil)
-      @tr_account.update!(raw_positions_payload: [ position_payload(isin:, quantity:, price:, average_cost:) ])
+    def import_position(isin:, quantity:, price:, average_cost: nil, symbol: nil, exchange_slug: nil)
+      @tr_account.update!(raw_positions_payload: [
+        position_payload(isin:, quantity:, price:, average_cost:, symbol:, exchange_slug:)
+      ])
       TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
     end
 
-    def position_payload(isin:, quantity:, price:, average_cost: nil)
+    def position_payload(isin:, quantity:, price:, average_cost: nil, symbol: nil, exchange_slug: nil)
       {
         "isin" => isin,
         "name" => "Test Security",
         "quantity" => quantity,
         "price" => price,
-        "average_cost" => average_cost
+        "average_cost" => average_cost,
+        "symbol" => symbol,
+        "exchange_slug" => exchange_slug
       }.compact
     end
 end

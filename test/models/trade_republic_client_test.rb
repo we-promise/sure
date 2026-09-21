@@ -235,7 +235,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
   end
 
   test "preserves an unpriced position for category visibility" do
-    @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
+    @client.define_singleton_method(:subscribe) do |_websocket, *_args, **_kwargs|
       raise Provider::TradeRepublicClient::ProviderUnavailable
     end
 
@@ -257,7 +257,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
   end
 
   test "preserves a position when a ticker subscription times out" do
-    @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
+    @client.define_singleton_method(:subscribe) do |_websocket, *_args, **_kwargs|
       raise Provider::TradeRepublicClient::Timeout, "ticker did not answer"
     end
 
@@ -291,6 +291,94 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       "malformed portfolio position skipped: missing instrument ID",
       "malformed portfolio position skipped: missing quantity"
     ], warnings
+  end
+
+  test "stores a real exchange symbol from the instrument subscription" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      case payload[:type]
+      when "instrument"
+        {
+          "exchanges" => [
+            { "slug" => "LSX", "symbolAtExchange" => "BAS", "active" => true },
+            { "slug" => "XETR", "symbolAtExchange" => "BAS", "active" => true },
+            { "slug" => "TIB", "symbolAtExchange" => "DE000BASF111", "active" => true }
+          ]
+        }
+      when "ticker"
+        { "last" => { "price" => "45.12" } }
+      else
+        {}
+      end
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "stocksAndETFs", "positions" => [
+          { "instrumentId" => "DE000BASF111", "name" => "BASF", "netSize" => "10" }
+        ] }
+      ]
+    })
+
+    assert_empty warnings
+    assert_equal "BAS", positions.first["symbol"]
+    assert_equal "XETR", positions.first["exchange_slug"]
+    assert_equal "45.12", positions.first["price"]
+  end
+
+  test "ignores instrument symbols that only echo the ISIN" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      case payload[:type]
+      when "instrument"
+        {
+          "exchanges" => [
+            { "slug" => "TIB", "symbolAtExchange" => "LU3176111881", "active" => true },
+            { "slug" => "LSX", "symbolAtExchange" => "LU3176111881", "active" => true }
+          ]
+        }
+      when "ticker"
+        { "last" => { "price" => "12.00" } }
+      else
+        {}
+      end
+    end
+
+    positions, _warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "stocksAndETFs", "positions" => [
+          { "instrumentId" => "LU3176111881", "name" => "ETF", "netSize" => "2" }
+        ] }
+      ]
+    })
+
+    assert_nil positions.first["symbol"]
+    assert_nil positions.first["exchange_slug"]
+    assert_equal "12.00", positions.first["price"]
+  end
+
+  test "keeps a position when the instrument subscription fails" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      if payload[:type] == "instrument"
+        raise Provider::TradeRepublicClient::TransientProviderError, "instrument temporarily unavailable"
+      end
+
+      { "last" => { "price" => "99.50" } }
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "stocksAndETFs", "positions" => [
+          { "instrumentId" => "US0378331005", "name" => "Apple", "netSize" => "1" }
+        ] }
+      ]
+    })
+
+    assert_empty warnings
+    assert_equal "US0378331005", positions.first["isin"]
+    assert_equal "99.50", positions.first["price"]
+    assert_nil positions.first["symbol"]
   end
 
   test "resolves event type and preserves the signed timeline amount" do

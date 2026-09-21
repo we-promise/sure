@@ -163,7 +163,12 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       return false if isin.blank? || quantity.nil? || quantity.zero?
 
-      security = resolve_security(isin, detail[:name] || event[:title])
+      security = resolve_security(
+        isin,
+        detail[:name] || event[:title],
+        symbol: detail[:symbol],
+        exchange_slug: detail[:exchange_slug]
+      )
       return false unless security
 
       is_buy = quantity.positive?

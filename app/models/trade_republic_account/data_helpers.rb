@@ -214,15 +214,190 @@ module TradeRepublicAccount::DataHelpers
       nil
     end
 
-    # Resolve (or create) a Security from a Trade Republic position. The ISIN
-    # is the stable provider identifier; ticker matching falls back to it
-    # because the securities table has no ISIN column.
-    def resolve_security(isin, name)
+    # Trade Republic exchange slugs → ISO MICs.
+    EXCHANGE_SLUG_TO_MIC = {
+      "XETR" => "XETR",
+      "TDG" => "TGAT",
+      "LSX" => "XHAM"
+    }.freeze
+
+    # Resolve (or create) a Security from a Trade Republic position/trade.
+    # Prefer an exact exchange ticker when the client supplied one; otherwise
+    # keep the ISIN as ticker but mark the security offline so market-data
+    # importers skip it while snapshot prices still value the holding.
+    def resolve_security(isin, name, symbol: nil, exchange_slug: nil)
       return nil if isin.blank?
 
-      Security.find_by(ticker: isin) ||
-        Security.create!(ticker: isin, name: name.presence || isin)
+      position = position_metadata_for(isin)
+      symbol = symbol.to_s.presence || position&.dig(:symbol)
+      exchange_slug = exchange_slug.to_s.presence || position&.dig(:exchange_slug)
+      mic = mic_for_exchange_slug(exchange_slug)
+      usable_symbol = usable_exchange_symbol(symbol, isin)
+
+      if usable_symbol.present? && mic.present?
+        security = resolve_exchange_security(usable_symbol, mic, name)
+        rematch_account_from_isin!(isin, security) if security
+        return security if security
+      end
+
+      resolve_offline_isin_security(isin, name)
+    end
+
+    # Timeline trade details contain an ISIN but no exchange symbol. Reuse the
+    # metadata fetched for the matching portfolio position so holdings and
+    # trades resolve to the same Security.
+    def position_metadata_for(isin)
+      position = Array(@trade_republic_account&.raw_positions_payload).find do |candidate|
+        candidate.is_a?(Hash) && candidate.with_indifferent_access[:isin].to_s == isin.to_s
+      end
+
+      position&.with_indifferent_access
+    end
+
+    def usable_exchange_symbol(symbol, isin)
+      candidate = symbol.to_s.strip.presence
+      return nil if candidate.blank?
+      return nil if candidate.casecmp?(isin.to_s)
+
+      candidate
+    end
+
+    def mic_for_exchange_slug(exchange_slug)
+      EXCHANGE_SLUG_TO_MIC[exchange_slug.to_s.strip.upcase].presence
+    end
+
+    def resolve_exchange_security(symbol, mic, name)
+      price_provider = available_price_provider
+
+      existing = Security.find_by_ticker_and_exchange(
+        ticker: symbol,
+        exchange_operating_mic: mic
+      )
+      if existing
+        ensure_online_price_provider!(existing, price_provider)
+        return existing
+      end
+
+      confirmed = confirm_exchange_security_with_provider(symbol, mic, name, price_provider)
+      return confirmed if confirmed
+
+      create_online_security!(
+        ticker: symbol,
+        exchange_operating_mic: mic,
+        name: name,
+        price_provider: price_provider
+      )
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+      Security.find_by_ticker_and_exchange(ticker: symbol, exchange_operating_mic: mic)
+    end
+
+    # Exact ticker + MIC only — never fall through to Security::Resolver's
+    # fuzzy name search, which can attach the wrong fund.
+    def confirm_exchange_security_with_provider(symbol, mic, name, price_provider)
+      return nil if price_provider.blank?
+
+      match = Security.search_provider(
+        symbol,
+        country_code: country_code_for_mic(mic),
+        exchange_operating_mic: mic
+      ).find { |candidate| provider_ticker_confirms?(candidate.ticker, symbol, candidate.exchange_operating_mic, mic) }
+
+      return nil unless match
+
+      security = Security.find_or_initialize_by_ticker_and_exchange(
+        ticker: match.ticker,
+        exchange_operating_mic: match.exchange_operating_mic.presence || mic
+      )
+      security.name = match.name.presence || name.presence || security.name || match.ticker
+      security.country_code = match.country_code.presence || country_code_for_mic(mic)
+      security.price_provider = price_provider if security.price_provider.blank?
+      security.offline = false
+      security.offline_reason = nil
+      security.save!
+      security
+    rescue StandardError => e
+      Rails.logger.warn("TradeRepublicAccount - Provider security confirm failed for #{symbol}/#{mic}: #{e.message}")
+      nil
+    end
+
+    def provider_ticker_confirms?(provider_ticker, symbol, provider_mic, expected_mic)
+      return false if provider_ticker.blank?
+
+      canonical_provider = Security.canonical_exchange_operating_mic(provider_mic)
+      canonical_expected = Security.canonical_exchange_operating_mic(expected_mic)
+      return false if canonical_provider.blank? || canonical_expected.blank?
+      return false if canonical_provider != canonical_expected
+
+      ticker = provider_ticker.to_s.upcase
+      base = symbol.to_s.upcase
+      ticker == base || ticker.start_with?("#{base}.")
+    end
+
+    def available_price_provider
+      Setting.enabled_securities_providers.find do |provider_key|
+        Security.provider_for(provider_key).present?
+      end
+    end
+
+    def create_online_security!(ticker:, exchange_operating_mic:, name:, price_provider:)
+      security = Security.find_or_initialize_by_ticker_and_exchange(
+        ticker: ticker,
+        exchange_operating_mic: exchange_operating_mic
+      )
+      security.name = name.presence || security.name || ticker
+      security.country_code = country_code_for_mic(exchange_operating_mic)
+      security.price_provider = price_provider if price_provider.present? && security.price_provider.blank?
+      security.offline = false
+      security.offline_reason = nil
+      security.save!
+      security
+    end
+
+    def country_code_for_mic(mic)
+      return nil if mic.blank?
+
+      Security::EXCHANGES.dig(mic.to_s.upcase, "country")
+    end
+
+    def ensure_online_price_provider!(security, price_provider)
+      attrs = {}
+      attrs[:offline] = false if security.offline?
+      attrs[:offline_reason] = nil if security.offline_reason.present?
+      if price_provider.present? && security.price_provider.blank?
+        attrs[:price_provider] = price_provider
+      end
+      security.update!(attrs) if attrs.any?
+    end
+
+    def resolve_offline_isin_security(isin, name)
+      security = Security.find_by(ticker: isin) ||
+        Security.new(ticker: isin)
+
+      security.name = name.presence || security.name || isin
+      security.offline = true
+      security.save!
+      security
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
       Security.find_by(ticker: isin)
+    end
+
+    # Securities are global. When an account previously stored the ISIN as the
+    # ticker, move only this account's holdings and trades onto the resolved
+    # exchange security instead of rewriting the shared ISIN row.
+    def rematch_account_from_isin!(isin, to_security)
+      return unless account.present? && to_security.present?
+
+      from_security = Security.find_by(ticker: isin)
+      return unless from_security
+      return if from_security.id == to_security.id
+
+      account.holdings.where(security_id: from_security.id).update_all(
+        security_id: to_security.id,
+        updated_at: Time.current
+      )
+      account.trades.where(security_id: from_security.id).update_all(
+        security_id: to_security.id,
+        updated_at: Time.current
+      )
     end
 end

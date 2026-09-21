@@ -40,6 +40,32 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("13.439945").to_s, trade.entryable.qty.to_s
   end
 
+  test "trade reuses exchange symbol fetched for its portfolio position" do
+    Security.stubs(:search_provider).returns([])
+    @tr_account.update!(raw_positions_payload: [
+      {
+        "isin" => "DE000BASF111",
+        "name" => "BASF",
+        "quantity" => "5",
+        "price" => "45.12",
+        "symbol" => "BAS",
+        "exchange_slug" => "XETR"
+      }
+    ])
+
+    import_event(order_execution_detail(
+      event_id: "evt_symbol",
+      quantity: "2",
+      isin: "DE000BASF111",
+      amount: "90.24"
+    ))
+
+    trade = find_trade("trade_republic_event_evt_symbol")
+    assert_equal "BAS", trade.entryable.security.ticker
+    assert_equal "XETR", trade.entryable.security.exchange_operating_mic
+    assert_not trade.entryable.security.offline?
+  end
+
   test "sell imports negative quantity and positive amount" do
     import_event(order_execution_detail(
       event_id: "evt_sell",
