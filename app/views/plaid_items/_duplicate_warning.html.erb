@@ -1,0 +1,159 @@
+<%# locals: (duplicate_items:, account_overlap:, public_token:, region:, institution_name:, institution_id:) %>
+
+<%# Rendered by PlaidItemsController#create in place of exchanging the public token:
+    the user has finished Link, but nothing has been added. When the dialog offers
+    "Add new connection", the token waits in that form, and is spent only if the user
+    submits it. %>
+
+<% masked = ->(mask) { t(".mask", mask: mask) if mask.present? } %>
+
+<%# Connections this user can take into update mode. With exactly one -- the common
+    case -- its button joins the other actions at the bottom. With several, each
+    keeps its own, since a single button could not say which connection it updates. %>
+<% updatable_items = duplicate_items.select { |item| item.manageable_by?(Current.user) && item.us? } %>
+<% bottom_update_item = updatable_items.one? ? updatable_items.first : nil %>
+
+<%= turbo_frame_tag "modal" do %>
+  <%# disable_click_outside: whether to duplicate a connection or keep the existing one
+      is not a decision a stray click should make, and this dialog opens as Link
+      closes, wherever Link left the pointer. The header close button and Esc still
+      dismiss it.
+
+      turbo_temporary: the dialog carries a live public token, and Turbo would
+      otherwise keep it in the page snapshot it caches on navigation -- so Back would
+      restore a dialog still able to spend it. %>
+  <%= render DS::Dialog.new(disable_click_outside: true, data: { turbo_temporary: true }) do |dialog| %>
+    <%# A family can legitimately hold several connections for one institution -- that is
+        the state this warning exists to stop growing -- so the title counts them. %>
+    <% dialog.with_header(title: t(".title", count: duplicate_items.size)) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4">
+        <%# What the new connection would duplicate, from the accounts Link just reported,
+            so the consequences are stated only where they hold. A second login with
+            different accounts duplicates nothing, and a warning that is false for the
+            people the override serves costs more than one that is merely unneeded. %>
+        <div class="space-y-2">
+          <% if account_overlap.state == :all_connected %>
+            <p class="text-sm text-secondary"><%= t(".overlap.all_connected", count: account_overlap.link_accounts.size) %></p>
+          <% elsif account_overlap.state == :some_connected %>
+            <p class="text-sm text-secondary"><%= t(".overlap.some_connected.unconnected", count: account_overlap.unconnected_accounts.size) %></p>
+            <dl class="space-y-1">
+              <% account_overlap.unconnected_accounts.each do |account| %>
+                <%= render DS::DetailRow.new(label: account["name"], value: masked.call(account["mask"]), align: :baseline) %>
+              <% end %>
+            </dl>
+            <p class="text-sm text-secondary"><%= t(".overlap.some_connected.connected", count: account_overlap.connected_count) %></p>
+          <% elsif account_overlap.state == :none_connected %>
+            <p class="text-sm text-secondary"><%= t(".overlap.none_connected") %></p>
+          <% else %>
+            <p class="text-sm text-secondary"><%= t(".overlap.unknown") %></p>
+          <% end %>
+        </div>
+
+        <div class="space-y-3">
+          <% duplicate_items.each do |plaid_item| %>
+            <div class="p-3 border border-primary rounded-lg space-y-3">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="font-medium text-sm text-primary"><%= plaid_item.name %></span>
+                <span class="text-xs text-secondary whitespace-nowrap">
+                  <%= t(".linked_on", date: l(plaid_item.created_at.to_date, format: :short_with_year)) %>
+                </span>
+              </div>
+
+              <%# owner_id is nullable -- connections predating per-user ownership (#3613)
+                  carry none, and owned_by? is false for those, so attribute only when
+                  there is someone to name. %>
+              <% if plaid_item.owner.present? && !plaid_item.owned_by?(Current.user) %>
+                <p class="text-xs text-secondary">
+                  <%= t(".connected_by", name: plaid_item.owner.display_name) %>
+                </p>
+              <% end %>
+
+              <%# plaid_accounts, not accounts: PlaidItem#accounts resolves through the
+                  linked Account and returns nothing for a connection whose accounts were
+                  never linked -- which is exactly the broken connection a user re-links. %>
+              <% if plaid_item.plaid_accounts.any? %>
+                <dl class="space-y-1">
+                  <% plaid_item.plaid_accounts.each do |plaid_account| %>
+                    <%= render DS::DetailRow.new(label: plaid_account.name, value: masked.call(plaid_account.mask), align: :baseline) %>
+                  <% end %>
+                </dl>
+              <% else %>
+                <p class="text-xs text-secondary"><%= t(".no_accounts") %></p>
+              <% end %>
+
+              <% if plaid_item.manageable_by?(Current.user) %>
+                <% if plaid_item.us? %>
+                  <% if bottom_update_item.nil? %>
+                    <%= render "plaid_items/add_accounts_link", plaid_item: plaid_item %>
+                  <% end %>
+                <% else %>
+                  <%# Plaid does not support update-mode account selection for UK/EU
+                      institutions and directs callers to remove the Item and create a
+                      new one instead, so there is no "add accounts" path to offer here.
+                      Say why, rather than silently dropping the action. %>
+                  <p class="text-xs text-secondary"><%= t(".eu_no_add_accounts") %></p>
+                  <%= render DS::Link.new(
+                        text: t(".manage_connection"),
+                        href: accounts_path,
+                        variant: :outline,
+                        size: :sm,
+                        full_width: true,
+                        data: { turbo_frame: "_top" }
+                      ) %>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+
+        <%# The main action. By now the user has been through Link, and the likeliest
+            reason for a same-login re-link is having forgotten the connection exists.
+            Closing the dialog discards the held token without exchanging it. %>
+        <%= render DS::Button.new(
+              text: t(".keep_existing"),
+              variant: :primary,
+              size: :sm,
+              full_width: true,
+              data: { action: "DS--dialog#close" }
+            ) %>
+
+        <% if bottom_update_item %>
+          <%= render "plaid_items/add_accounts_link", plaid_item: bottom_update_item %>
+        <% end %>
+
+        <%# When every account already matches, adding the connection can only duplicate
+            them and spend a Plaid connection, so there is no way to add it: more accounts
+            and a connection that stopped working both go through update mode instead. The
+            held token then never reaches the page at all. %>
+        <% unless account_overlap.state == :all_connected %>
+          <p class="text-xs text-secondary text-center"><%= t(".or") %></p>
+
+          <%# Sends the held public token back to create, with confirm_duplicate to let it
+              past the check. The token already passed through the browser on its way from
+              Link, is single-use, expires after 30 minutes, and is worthless without the
+              server's Plaid secret, so a hidden field exposes nothing new. _top because a
+              confirmed create redirects to Accounts, which has no modal frame to fill. %>
+          <%= render DS::Button.new(
+                text: t(".add_new_connection"),
+                href: plaid_items_path,
+                method: :post,
+                params: {
+                  confirm_duplicate: "1",
+                  plaid_item: {
+                    public_token: public_token,
+                    region: region,
+                    metadata: { institution: { name: institution_name, institution_id: institution_id } }
+                  }
+                },
+                variant: :outline,
+                size: :sm,
+                full_width: true,
+                frame: "_top"
+              ) %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

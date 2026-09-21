@@ -2,9 +2,48 @@
 en:
   plaid_items:
     create:
+      exchange_failed: We couldn't add this connection. Try again, and if the problem
+        continues, check the server logs.
       success: Account linked successfully.  Please wait for accounts to sync.
+      token_expired: This connection expired before it was added. Connect the institution
+        again.
     destroy:
       success: Accounts scheduled for deletion.
+    duplicate_warning:
+      add_accounts: Choose more accounts in Plaid
+      add_new_connection: Add new connection
+      connected_by: Connected by %{name}
+      eu_no_add_accounts: Plaid doesn't support adding accounts to an existing
+        EU connection. To change which accounts are connected, remove this one and
+        add it again.
+      keep_existing: Keep existing connection
+      linked_on: Linked %{date}
+      manage_connection: Go to accounts
+      mask: "****%{mask}"
+      no_accounts: No accounts have synced from this connection yet.
+      or: or
+      overlap:
+        all_connected:
+          one: The account you tried to add is already connected, so adding it again
+            would only create a duplicate.
+          other: The %{count} accounts you tried to add are all already connected, so
+            adding them again would only create duplicates.
+        none_connected: None of the accounts you tried to add are connected yet, so this
+          is likely a different login. Adding it only counts as another Plaid connection.
+        some_connected:
+          connected:
+            one: The other one is already connected, so adding this connection would
+              duplicate it and count as another Plaid connection.
+            other: The other %{count} are already connected, so adding this connection
+              would duplicate them and count as another Plaid connection.
+          unconnected:
+            one: "One account you tried to add isn't connected yet:"
+            other: "%{count} accounts you tried to add aren't connected yet:"
+        unknown: If the new connection covers the same accounts as an existing one,
+          adding it duplicates them and counts as another Plaid connection.
+      title:
+        one: You already have a connection for this institution
+        other: You already have %{count} connections for this institution
     errors:
       link_token_generic: We couldn't open Plaid right now. Please try again, and
         if the problem persists check the server logs for details.

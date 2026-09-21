@@ -106,10 +106,13 @@ export default class extends Controller {
       return;
     }
 
-    // For new connections, create a new Plaid item
+    // For new connections, create a new Plaid item. The server answers with a
+    // Turbo Stream: a redirect once the item exists, or -- when the institution is
+    // already connected -- a warning for the modal frame, with the exchange held.
     fetch("/plaid_items", {
       method: "POST",
       headers: {
+        Accept: "text/vnd.turbo-stream.html, text/html",
         "Content-Type": "application/json",
         "X-CSRF-Token": document.querySelector('[name="csrf-token"]').content,
       },
@@ -120,9 +123,17 @@ export default class extends Controller {
           region: this.regionValue,
         },
       }),
-    }).then((response) => {
+    }).then(async (response) => {
       if (response.redirected) {
         window.location.href = response.url;
+        return;
+      }
+
+      // Checked first, because renderStreamMessage appends whatever it is given to
+      // the page.
+      const contentType = response.headers.get("Content-Type") || "";
+      if (response.ok && contentType.includes("text/vnd.turbo-stream.html")) {
+        Turbo.renderStreamMessage(await response.text());
       }
     });
   };
