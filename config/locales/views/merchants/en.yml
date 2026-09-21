@@ -14,7 +14,7 @@ en:
       website_placeholder: Website (e.g., starbucks.com)
       website_hint: Enter the merchant's website to automatically display their logo
       iban_placeholder: IBAN (optional)
-      iban_set_placeholder: IBAN on file — enter a new value to replace it
+      iban_set_placeholder: •••• •••• •••• •••• — IBAN on file, enter a new value to replace it
       iban_hint: The merchant's own bank account number, if known
       iban_remove_label: Remove IBAN
     index:
