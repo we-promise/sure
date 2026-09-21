@@ -317,6 +317,59 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 500.00, outbound.amount.to_f, "money out must be stored positive on an asset account"
   end
 
+  test "processes unit-bearing TRANSFER activities as zero-cash trades" do
+    process_activities(
+      build_trade_activity(
+        id: "xfer_asset_in",
+        type: "TRANSFER",
+        symbol: "AAPL",
+        units: 10.0,
+        price: 150.00,
+        amount: 1500.00 # Notional amount must not create a cash transaction
+      ),
+      build_trade_activity(
+        id: "xfer_asset_out",
+        type: "TRANSFER",
+        symbol: "AAPL",
+        units: -4.0,
+        price: nil,
+        amount: -600.00
+      )
+    )
+
+    inbound = snaptrade_entry("xfer_asset_in")
+    outbound = snaptrade_entry("xfer_asset_out")
+
+    assert_not_nil inbound
+    assert_not_nil outbound
+    assert inbound.entryable.is_a?(Trade), "unit-bearing TRANSFER must be imported as a Trade"
+    assert outbound.entryable.is_a?(Trade), "unit-bearing TRANSFER must be imported as a Trade"
+
+    assert_equal BigDecimal("10.0"), inbound.entryable.qty
+    assert_equal BigDecimal("-4.0"), outbound.entryable.qty
+    assert_equal BigDecimal("0"), inbound.amount, "asset transfer must have zero cash impact"
+    assert_equal BigDecimal("0"), outbound.amount, "asset transfer must have zero cash impact"
+    assert_equal "Transfer", inbound.entryable.investment_activity_label
+    assert_equal "Transfer", outbound.entryable.investment_activity_label
+  end
+
+  test "keeps cash TRANSFER with zero units on the cash transaction path" do
+    process_activities(
+      build_cash_activity(
+        id: "xfer_cash_zero_units",
+        type: "TRANSFER",
+        amount: 250.00,
+        settlement_date: Date.current.to_s
+      ).merge("units" => 0)
+    )
+
+    entry = snaptrade_entry("xfer_cash_zero_units")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Transaction), "cash transfer with 0 units must remain a Transaction"
+    assert_equal(-250.00, entry.amount.to_f)
+    assert_equal "Transfer", entry.entryable.investment_activity_label
+  end
+
   test "processes REBATE as negative cash inflow" do
     process_activities(
       build_cash_activity(id: "rebate_001", type: "REBATE", amount: 50.00, settlement_date: Date.current.to_s)

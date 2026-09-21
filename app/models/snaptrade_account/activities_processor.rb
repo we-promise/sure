@@ -87,7 +87,7 @@ class SnaptradeAccount::ActivitiesProcessor
     OPTIONEXPIRATION EXPIRED
     EXTERNAL_ASSET_TRANSFER_IN EXTERNAL_ASSET_TRANSFER_OUT
     INTERNAL_ASSET_TRANSFER_IN INTERNAL_ASSET_TRANSFER_OUT
-    ADJUSTMENT
+    ADJUSTMENT TRANSFER
   ].freeze
 
   # Activity types that result in Transaction records (cash movements)
@@ -184,7 +184,12 @@ class SnaptradeAccount::ActivitiesProcessor
 
     def trade_activity?(activity_type, data = {})
       return true if TRADE_TYPES.include?(activity_type)
-      return true if activity_type == "ADJUSTMENT" && (data[:units].present? || data["units"].present? || data[:quantity].present? || data["quantity"].present?)
+
+      if %w[ADJUSTMENT TRANSFER].include?(activity_type)
+        units = parse_decimal(data[:units]) || parse_decimal(data["units"]) ||
+                parse_decimal(data[:quantity]) || parse_decimal(data["quantity"])
+        return true if units&.nonzero?
+      end
 
       false
     end
@@ -245,7 +250,7 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       # Determine sign based on activity type (sell-side should be negative)
-      quantity = if activity_type == "ADJUSTMENT"
+      quantity = if %w[ADJUSTMENT TRANSFER].include?(activity_type)
         quantity
       elsif SELL_SIDE_TYPES.include?(activity_type)
         -quantity.abs
