@@ -18,7 +18,8 @@ class TradeRepublicItem::Importer
   def import
     result = provider.sync(
       session_txt: trade_republic_item.session_blob,
-      known_newest_event_id: known_newest_event_id
+      known_newest_event_id: known_newest_event_id,
+      enrich_events: events_needing_detail_enrichment
     )
 
     data = result.data
@@ -75,6 +76,9 @@ class TradeRepublicItem::Importer
         warnings: position_warnings(data),
         domain_statuses: domain_statuses
       )
+      # Pass every event into the cash merge, including orderExecution. Filtering
+      # happens after merge so a newly categorized savings-plan event can replace
+      # and remove its older unmapped cash copy.
       upsert_kind(
         kind: "cash",
         external_id: "cash:#{account_id}",
@@ -83,7 +87,7 @@ class TradeRepublicItem::Importer
         current_balance: cash_balance(data),
         cash_balance: cash_balance(data),
         positions: [],
-        events: Array(data["events"]).reject { |event| event["category"] == "orderExecution" },
+        events: Array(data["events"]),
         warnings: [],
         domain_statuses: domain_statuses
       )
@@ -116,7 +120,9 @@ class TradeRepublicItem::Importer
       end
 
       if timeline_status != "failed"
-        attrs[:raw_timeline_payload] = merge_timeline_events(tr_account.raw_timeline_payload, events)
+        merged = merge_timeline_events(tr_account.raw_timeline_payload, events)
+        merged = merged.reject { |event| event_category(event) == "orderExecution" } if kind == "cash"
+        attrs[:raw_timeline_payload] = merged
       end
 
       tr_account.assign_attributes(attrs)
@@ -165,6 +171,29 @@ class TradeRepublicItem::Importer
       trade_republic_item.newest_event_id
     end
 
+    # Older SAVINGS_PLAN_INVOICE_CREATED rows were stored without details
+    # because the event type was unmapped. Ask the client to re-fetch a
+    # bounded batch by ID; leftovers retry on a later sync.
+    def events_needing_detail_enrichment
+      portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      return [] unless portfolio
+
+      Array(portfolio.raw_timeline_payload)
+        .select { |event| incomplete_savings_plan_event?(event) }
+        .first(Provider::TradeRepublicClient::MAX_DETAIL_ENRICHMENT)
+    end
+
+    def incomplete_savings_plan_event?(event)
+      return false unless event.is_a?(Hash)
+
+      event = event.with_indifferent_access
+      return false unless event[:eventType].to_s == "SAVINGS_PLAN_INVOICE_CREATED"
+
+      detail = event[:detail]
+      detail = detail.with_indifferent_access if detail.is_a?(Hash)
+      detail.blank? || detail[:isin].blank? || detail[:quantity].blank?
+    end
+
     def merge_timeline_events(existing, incoming)
       events_by_id = {}
       (Array(existing) + Array(incoming)).each do |event|
@@ -172,9 +201,36 @@ class TradeRepublicItem::Importer
 
         event = event.with_indifferent_access
         key = event[:id].presence || event
-        events_by_id[key] = event
+        events_by_id[key] = prefer_richer_timeline_event(events_by_id[key], event)
       end
       events_by_id.values.sort_by { |event| event[:timestamp].to_s }.last(MAX_TIMELINE_EVENTS)
+    end
+
+    def prefer_richer_timeline_event(previous, incoming)
+      return incoming if previous.blank?
+      return previous if incoming.blank?
+
+      merged = previous.merge(incoming)
+      merged[:category] = incoming[:category].presence || previous[:category]
+      merged[:eventType] = incoming[:eventType].presence || previous[:eventType]
+      merged[:detail] = prefer_richer_timeline_detail(previous[:detail], incoming[:detail])
+      merged.compact
+    end
+
+    def prefer_richer_timeline_detail(previous, incoming)
+      previous = previous.is_a?(Hash) ? previous.with_indifferent_access : {}.with_indifferent_access
+      incoming = incoming.is_a?(Hash) ? incoming.with_indifferent_access : {}.with_indifferent_access
+      return previous.presence if incoming.blank?
+      return incoming.presence if previous.blank?
+
+      previous.merge(incoming) { |_key, old_value, new_value| new_value.presence || old_value }.presence
+    end
+
+    def event_category(event)
+      return if event.blank?
+
+      event = event.with_indifferent_access if event.respond_to?(:with_indifferent_access)
+      event[:category].to_s
     end
 
     # Exact decimal math: cash + Σ(quantity × price). Positions lacking a
