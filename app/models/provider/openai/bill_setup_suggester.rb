@@ -20,13 +20,15 @@ class Provider::Openai::BillSetupSuggester
     suggest_with_format({ type: "json_object" })
   rescue Faraday::BadRequestError => e
     Rails.logger.warn("json_object mode failed for bill setup suggestion, retrying without: #{e.message}")
-    suggest_with_format(nil)
+    # The 400 may have been caused by reasoning_effort itself (some
+    # OpenAI-compatible hosts reject it), so drop it on the retry too.
+    suggest_with_format(nil, with_reasoning_effort: false)
   end
 
   private
     Suggestion = Provider::LlmConcept::BillSetupSuggestion
 
-    def suggest_with_format(response_format)
+    def suggest_with_format(response_format, with_reasoning_effort: true)
       span = langfuse_trace&.span(name: "suggest_bill_setup_api_call", input: {
         model: model,
         charges: charges,
@@ -41,7 +43,7 @@ class Provider::Openai::BillSetupSuggester
         ]
       }
       params[:response_format] = response_format if response_format
-      params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat) if with_reasoning_effort
 
       response = client.chat(parameters: params)
 

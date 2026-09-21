@@ -173,7 +173,9 @@ class Settings::HostingsController < ApplicationController
     end
 
     if hosting_params.key?(:openai_reasoning_effort)
-      value = hosting_params[:openai_reasoning_effort].presence
+      # Normalize the same way Provider::Openai.reasoning_effort does so the
+      # stored value matches what requests will send.
+      value = hosting_params[:openai_reasoning_effort].to_s.strip.downcase.presence
       if value.present? && !Provider::Openai::REASONING_EFFORTS.include?(value)
         raise Setting::ValidationError, t(".invalid_reasoning_effort")
       end

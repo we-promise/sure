@@ -858,6 +858,16 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.openai_reasoning_effort = nil
   end
 
+  test "normalizes openai reasoning effort like the provider resolver does" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { openai_reasoning_effort: " High " } }
+
+      assert_equal "high", Setting.openai_reasoning_effort
+    end
+  ensure
+    Setting.openai_reasoning_effort = nil
+  end
+
   test "rejects invalid openai reasoning effort" do
     with_self_hosting do
       Setting.openai_reasoning_effort = nil
