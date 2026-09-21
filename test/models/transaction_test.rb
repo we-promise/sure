@@ -327,4 +327,19 @@ class TransactionTest < ActiveSupport::TestCase
   test "reassign_category! returns 0 for an empty scope" do
     assert_equal 0, Transaction.reassign_category!(Transaction.none, categories(:income).id)
   end
+
+  test "reassign_category! locks the scoped rows before updating them" do
+    transaction = transactions(:one)
+    selects = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+      selects << payload[:sql] if payload[:sql].match?(/\ASELECT/i)
+    end
+
+    Transaction.reassign_category!(Transaction.where(id: transaction.id), categories(:income).id)
+
+    assert selects.any? { |sql| sql.include?("FOR UPDATE") },
+      "expected the id lookup to lock rows (SELECT ... FOR UPDATE)"
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscriber)
+  end
 end

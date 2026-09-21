@@ -151,7 +151,9 @@ class Transaction < ApplicationRecord
   # every normal save relies on (Family#entries_cache_version) never happens.
   def self.reassign_category!(scope, category_id)
     transaction do
-      ids = scope.pluck(:id)
+      # SELECT ... FOR UPDATE: a concurrent edit between reading the ids and
+      # the update_all below would otherwise be silently overwritten.
+      ids = scope.lock(true).pluck(:id)
       next 0 if ids.empty?
 
       # Write through a fresh id-scoped relation: re-evaluating `scope`'s

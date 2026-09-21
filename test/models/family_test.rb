@@ -138,15 +138,21 @@ class FamilyTest < ActiveSupport::TestCase
       name: "Test 2"
     )
 
+    txn2_entry_updated_at = txn2.entry.updated_at
+
     # Should merge both categories into one, keeping the oldest
     assert_difference "Category.count", -1 do
-      result = family.investment_contributions_category
+      result = travel_to(1.minute.from_now) { family.investment_contributions_category }
       assert_equal english_category.id, result.id
       assert_equal "Investment Contributions", result.name
 
       # Both transactions should now point to the keeper
       assert_equal english_category.id, txn1.reload.category_id
       assert_equal english_category.id, txn2.reload.category_id
+
+      # Reassignment must touch entries so entry-keyed caches bust
+      # (only txn2 is reassigned — txn1 already points at the keeper)
+      assert txn2.entry.reload.updated_at > txn2_entry_updated_at
 
       # French category should be deleted
       assert_nil Category.find_by(id: french_category.id)
