@@ -40,6 +40,50 @@ class Provider::Openai::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal "Food", result.first.category_name
   end
 
+  test "auto mode accepts a top-level JSON array in a single call" do
+    @client.expects(:chat).once
+      .returns(chat_response('[{"transaction_id":"1","category_name":"Food"}]'))
+
+    result = categorizer(json_mode: "auto").auto_categorize
+
+    assert_equal "Food", result.first.category_name
+  end
+
+  test "auto mode retries when strict response is a JSON scalar" do
+    @client.expects(:chat).twice
+      .returns(
+        chat_response("null"),
+        chat_response('{"categorizations":[{"transaction_id":"1","category_name":"Food"}]}')
+      )
+
+    result = categorizer(json_mode: "auto").auto_categorize
+
+    assert_equal "Food", result.first.category_name
+  end
+
+  test "auto mode retries when a recognized key holds a non-array value" do
+    @client.expects(:chat).twice
+      .returns(
+        chat_response('{"categorizations": 5}'),
+        chat_response('{"categorizations":[{"transaction_id":"1","category_name":"Food"}]}')
+      )
+
+    result = categorizer(json_mode: "auto").auto_categorize
+
+    assert_equal "Food", result.first.category_name
+  end
+
+  test "auto mode does not fire a second fallback when the none-mode retry returns HTTP 400" do
+    @client.expects(:chat).twice
+      .returns(chat_response('{"categorizations":[{"transaction_id":"1"'))
+      .then
+      .raises(Faraday::BadRequestError.new("400"))
+
+    assert_raises Faraday::BadRequestError do
+      categorizer(json_mode: "auto").auto_categorize
+    end
+  end
+
   test "auto mode makes a single call when strict returns categorizations for all transactions" do
     @client.expects(:chat).once
       .returns(chat_response('{"categorizations":[{"transaction_id":"1","category_name":"Food"}]}'))

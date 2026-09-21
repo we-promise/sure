@@ -39,6 +39,38 @@ class Provider::Openai::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal "Amazon", result.first.business_name
   end
 
+  test "auto mode accepts a top-level JSON array in a single call" do
+    @client.expects(:chat).once
+      .returns(chat_response('[{"transaction_id":"1","business_name":"Amazon","business_url":"amazon.com"}]'))
+
+    result = detector(json_mode: "auto").auto_detect_merchants
+
+    assert_equal "Amazon", result.first.business_name
+  end
+
+  test "auto mode retries when strict response is a JSON scalar" do
+    @client.expects(:chat).twice
+      .returns(
+        chat_response("null"),
+        chat_response('{"merchants":[{"transaction_id":"1","business_name":"Amazon","business_url":"amazon.com"}]}')
+      )
+
+    result = detector(json_mode: "auto").auto_detect_merchants
+
+    assert_equal "Amazon", result.first.business_name
+  end
+
+  test "auto mode does not fire a second fallback when the none-mode retry returns HTTP 400" do
+    @client.expects(:chat).twice
+      .returns(chat_response('{"merchants":[{"transaction_id":"1"'))
+      .then
+      .raises(Faraday::BadRequestError.new("400"))
+
+    assert_raises Faraday::BadRequestError do
+      detector(json_mode: "auto").auto_detect_merchants
+    end
+  end
+
   test "auto mode makes a single call when strict returns merchants for all transactions" do
     @client.expects(:chat).once
       .returns(chat_response('{"merchants":[{"transaction_id":"1","business_name":"Amazon","business_url":"amazon.com"}]}'))
