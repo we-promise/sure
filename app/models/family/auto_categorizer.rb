@@ -139,14 +139,18 @@ class Family::AutoCategorizer
       decision.confidence if decision.respond_to?(:confidence)
     end
 
+    # Gated on the decision TYPE, not on whether a confidence happens to be
+    # present. Keying on nil conflated two different situations: the LLM
+    # providers return a bare category name and must never be gated on a
+    # confidence they cannot produce, but a classification provider's answer
+    # arriving without one is malformed and should be withheld, not applied.
+    # `to_f` turns that nil into 0, so it falls below any positive threshold.
     def withhold?(decision)
       threshold = family.effective_categorization_confidence_threshold
       return false unless threshold.positive?
+      return false unless decision.is_a?(Provider::ClassificationConcept::CategoryDecision)
 
-      confidence = confidence_for(decision)
-      return false if confidence.nil?
-
-      confidence < threshold
+      confidence_for(decision).to_f < threshold
     end
 
     # Asks the provider that is NOT in use to categorize the same batch, so it

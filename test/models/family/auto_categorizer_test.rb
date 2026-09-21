@@ -222,6 +222,23 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
   # threshold the answer is withheld and the transaction is left unlocked, so a
   # later run can still correct it.
 
+  test "withholds a classification answer that carries no confidence at all" do
+    # Previously the gate returned false on a nil confidence, which was there to
+    # avoid gating the LLM providers. That also let a malformed classification
+    # answer through — the one case where withholding matters most, since we
+    # have no idea how good it is.
+    @family.update!(categorization_confidence_threshold: 0.7)
+    txn = create_transaction(account: @account, name: "Ambiguous thing").transaction
+    category = @family.categories.create!(name: "Coffee")
+
+    jev_returning(txn, category, confidence: nil)
+
+    Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+
+    assert_nil txn.reload.category
+    assert_includes @account.transactions.reload.enrichable(:category_id), txn
+  end
+
   test "applies every answer when the threshold is zero" do
     # Set explicitly rather than leaning on the column default, which is 0.7 —
     # this test is about the zero-threshold behaviour, not about what ships.

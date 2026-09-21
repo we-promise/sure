@@ -158,6 +158,39 @@ class Provider::JevTest < ActiveSupport::TestCase
     assert_equal({ "input_tokens" => 625, "output_tokens" => 162, "total_tokens" => 787, "cost" => 0.00002625 }, set.usage)
   end
 
+  test "treats a choice with no reported confidence as maximally unconfident" do
+    # A malformed answer must read as 0 rather than nil: nil would look like a
+    # provider that does not report confidence at all, and sail through a
+    # downstream threshold instead of being withheld.
+    stub_request(:post, ENDPOINT).to_return(
+      status: 200,
+      body: { "answers" => { "category" => { "type" => "choice", "choice" => "Coffee" } } }.to_json,
+      headers: { "Content-Type" => "application/json" }
+    )
+
+    response = @provider.auto_categorize(transactions: [ transaction ], user_categories: categories)
+
+    assert response.success?
+    assert_equal 0.0, response.data.sole.confidence
+  end
+
+  test "does not apply noul arithmetic to a score missing its confidence" do
+    # (value - 0.5).abs * 2 is only meaningful for a noul. A score of 1.92 would
+    # yield 2.84 — a confidence outside 0..1.
+    stub_request(:post, ENDPOINT).to_return(
+      status: 200,
+      body: { "answers" => { "q" => { "type" => "score", "score" => 1.92 } } }.to_json,
+      headers: { "Content-Type" => "application/json" }
+    )
+
+    response = @provider.decide(
+      state: "x",
+      questions: { q: { type: "score", instructions: "?", criteria: [ "a", "b", "c" ] } }
+    )
+
+    assert_equal 0.0, response.data[:q].confidence
+  end
+
   test "derives confidence for noul answers from distance off the midpoint" do
     stub_request(:post, ENDPOINT).to_return(
       status: 200,

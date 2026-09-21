@@ -260,8 +260,23 @@ class Provider::Jev < Provider
         type: type,
         value: value,
         probabilities: answer["probabilities"],
-        confidence: answer["confidence"] || noul_confidence(value)
+        confidence: confidence_for(type, value, answer["confidence"])
       )
+    end
+
+    # Derived per type rather than with a general fallback. noul_confidence is
+    # (value - 0.5).abs * 2, which is only meaningful for a noul: applied to a
+    # score it produces values outside 0..1 (a score of 1.92 yields 2.84), and
+    # applied to a choice it returns nil because the value is a String.
+    #
+    # A choice or score arriving without a confidence is a malformed response.
+    # It reports 0 rather than nil so a downstream threshold reads it as
+    # maximally unconfident and withholds, instead of mistaking it for a
+    # provider that does not do confidence at all and waving it through.
+    def confidence_for(type, value, reported)
+      return reported.to_f if reported
+
+      type == "noul" ? noul_confidence(value) : 0.0
     end
 
     # Noul answers carry no confidence field — the probability is the answer.
