@@ -26,6 +26,8 @@
   <% end %>
 </div>
 
+<%= render "accounts/currency_breakdown", account: account %>
+
 <div class="flex justify-center py-8">
   <%= render DS::Link.new(
     text: t(".edit_account_details"),

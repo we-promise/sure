@@ -1,0 +1,18 @@
+<%# locals: (account:) %>
+
+<% if account.multi_currency_breakdown? %>
+  <div class="rounded-xl bg-container shadow-xs border border-alpha-black-25 p-4 space-y-2">
+    <div>
+      <h4 class="text-secondary text-sm"><%= t(".title") %></h4>
+      <p class="text-xs text-subdued"><%= t(".description") %></p>
+    </div>
+    <ul class="divide-y divide-alpha-black-25">
+      <% account.native_currency_balances.each do |balance| %>
+        <li class="flex items-center justify-between py-2">
+          <span class="text-sm text-secondary"><%= balance.currency.iso_code %></span>
+          <span class="text-sm font-medium text-primary privacy-sensitive"><%= format_money(balance) %></span>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
