@@ -560,18 +560,30 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
         symbol: "MSFT",
         units: 1.0,
         price: 300.0
+      ),
+      build_trade_activity(
+        id: "opt_exercise_close",
+        type: "OPTIONEXERCISE",
+        symbol: "QQQ",
+        units: -1.0,
+        price: 0.0,
+        amount: -23805.0 # Exercise cash outlay
       )
     )
 
     assign = snaptrade_entry("opt_assign_001")
     exercise = snaptrade_entry("opt_exercise_001")
+    exercise_close = snaptrade_entry("opt_exercise_close")
 
     assert_not_nil assign
     assert_not_nil exercise
+    assert_not_nil exercise_close
     assert assign.entryable.is_a?(Trade)
     assert exercise.entryable.is_a?(Trade)
+    assert exercise_close.entryable.is_a?(Trade)
     assert_equal BigDecimal("-1.0"), assign.entryable.qty, "assignment should be sell-side (negative)"
     assert_equal BigDecimal("1.0"), exercise.entryable.qty
+    assert_equal BigDecimal("-1.0"), exercise_close.entryable.qty, "negative units removes exercised contract"
   end
 
   test "processes EXTERNAL_ASSET_TRANSFER_IN and OUT as zero-cash asset trades" do
@@ -640,25 +652,76 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Transfer", outbound.entryable.investment_activity_label
   end
 
+  test "processes STOCK_MERGER as zero-cash trade preserving signed units" do
+    process_activities(
+      build_trade_activity(
+        id: "merger_retire",
+        type: "STOCK_MERGER",
+        symbol: "AAPL",
+        units: -100.0,
+        price: nil,
+        amount: nil
+      ),
+      build_trade_activity(
+        id: "merger_receive",
+        type: "STOCK_MERGER",
+        symbol: "MSFT",
+        units: 50.0,
+        price: nil,
+        amount: nil
+      )
+    )
+
+    retire = snaptrade_entry("merger_retire")
+    receive = snaptrade_entry("merger_receive")
+
+    assert_not_nil retire
+    assert_not_nil receive
+    assert retire.entryable.is_a?(Trade)
+    assert receive.entryable.is_a?(Trade)
+    assert_equal BigDecimal("-100.0"), retire.entryable.qty, "negative units must retire acquired shares"
+    assert_equal BigDecimal("50.0"), receive.entryable.qty, "positive units must add new shares"
+    assert_equal BigDecimal("0"), retire.amount
+    assert_equal BigDecimal("0"), receive.amount
+    assert_equal "Other", retire.entryable.investment_activity_label
+    assert_equal "Other", receive.entryable.investment_activity_label
+  end
+
   test "processes zero-amount trade types when price and amount are omitted" do
     process_activities(
       build_trade_activity(
-        id: "opt_exp_001",
+        id: "opt_exp_long",
         type: "OPTIONEXPIRATION",
         symbol: "AAPL",
+        units: -1.0,
+        price: nil,
+        amount: nil
+      ),
+      build_trade_activity(
+        id: "opt_exp_short",
+        type: "OPTIONEXPIRATION",
+        symbol: "MSFT",
         units: 1.0,
         price: nil,
         amount: nil
       )
     )
 
-    entry = snaptrade_entry("opt_exp_001")
-    assert_not_nil entry, "zero-amount trade types must import even when price and amount are omitted"
-    assert entry.entryable.is_a?(Trade)
-    assert_equal BigDecimal("1.0"), entry.entryable.qty
-    assert_equal BigDecimal("0"), entry.entryable.price
-    assert_equal BigDecimal("0"), entry.amount
-    assert_equal "Other", entry.entryable.investment_activity_label
+    long_entry = snaptrade_entry("opt_exp_long")
+    short_entry = snaptrade_entry("opt_exp_short")
+
+    assert_not_nil long_entry, "zero-amount trade types must import even when price and amount are omitted"
+    assert_not_nil short_entry
+    assert long_entry.entryable.is_a?(Trade)
+    assert short_entry.entryable.is_a?(Trade)
+    assert_equal BigDecimal("-1.0"), long_entry.entryable.qty, "negative units must close out expired long contract"
+    assert_equal BigDecimal("1.0"), short_entry.entryable.qty, "positive units must close out expired short contract"
+    assert_equal BigDecimal("0"), long_entry.entryable.price
+    assert_equal BigDecimal("0"), short_entry.entryable.price
+    assert_equal BigDecimal("0"), long_entry.amount
+    assert_equal BigDecimal("0"), short_entry.amount
+    assert_equal "Other", long_entry.entryable.investment_activity_label
+    assert_equal "Other", short_entry.entryable.investment_activity_label
   end
 
   test "processes share ADJUSTMENT as a zero-cash trade preserving signed units" do

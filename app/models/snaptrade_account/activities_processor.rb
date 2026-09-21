@@ -80,6 +80,15 @@ class SnaptradeAccount::ActivitiesProcessor
     EXTERNAL_ASSET_TRANSFER_OUT INTERNAL_ASSET_TRANSFER_OUT
   ].freeze
 
+  # Trade types where direction is not fixed by the activity name and the provider's signed
+  # units value must be preserved (e.g. positive for additions, negative for removals)
+  SIGN_PRESERVED_TRADE_TYPES = %w[
+    ADJUSTMENT TRANSFER
+    STOCK_MERGER MERGER
+    OPTIONEXPIRATION EXPIRED
+    OPTIONEXERCISE EXERCISED
+  ].freeze
+
   # Trade types that represent non-cash share delivery/removal (splits, stock dividends, spinoffs, ACAT transfers)
   # where cash impact must be zero regardless of any notional dollar value reported by the provider
   ZERO_AMOUNT_TRADE_TYPES = %w[
@@ -185,7 +194,7 @@ class SnaptradeAccount::ActivitiesProcessor
     def trade_activity?(activity_type, data = {})
       return true if TRADE_TYPES.include?(activity_type)
 
-      if %w[ADJUSTMENT TRANSFER].include?(activity_type)
+      if SIGN_PRESERVED_TRADE_TYPES.include?(activity_type)
         units = parse_decimal(data[:units]) || parse_decimal(data["units"]) ||
                 parse_decimal(data[:quantity]) || parse_decimal(data["quantity"])
         return true if units&.nonzero?
@@ -250,7 +259,7 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       # Determine sign based on activity type (sell-side should be negative)
-      quantity = if %w[ADJUSTMENT TRANSFER].include?(activity_type)
+      quantity = if SIGN_PRESERVED_TRADE_TYPES.include?(activity_type)
         quantity
       elsif SELL_SIDE_TYPES.include?(activity_type)
         -quantity.abs
