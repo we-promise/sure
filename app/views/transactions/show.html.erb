@@ -94,9 +94,9 @@
             <% end %>
           <% end %>
         <% end %>
-        <% if (provenance = @entry.transaction.category_provenance) %>
-          <%= render "transactions/category_provenance", transaction: @entry.transaction, provenance: provenance %>
-        <% end %>
+        <%= render "transactions/category_provenance",
+              transaction: @entry.transaction,
+              provenance: @entry.transaction.category_provenance %>
       </div>
     <% end %>
     <% dialog.with_section(title: t(".details")) do %>

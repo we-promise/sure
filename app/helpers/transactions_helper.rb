@@ -30,7 +30,14 @@ module TransactionsHelper
     if provenance.current?
       transaction.category&.name
     else
-      Current.family.categories.find_by(id: provenance.category_id)&.name ||
+      # Memoize so a page of history rows issues one query per distinct
+      # category id instead of one per row.
+      @category_provenance_category_names ||= {}
+      unless @category_provenance_category_names.key?(provenance.category_id)
+        @category_provenance_category_names[provenance.category_id] =
+          Current.family.categories.find_by(id: provenance.category_id)&.name
+      end
+      @category_provenance_category_names[provenance.category_id] ||
         t("transactions.category_provenance.deleted_category")
     end
   end

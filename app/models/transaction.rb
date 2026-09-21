@@ -163,7 +163,11 @@ class Transaction < ApplicationRecord
   # Automatic-categorization provenance for the UI, or nil when no
   # ai/bayes enrichment was ever recorded for this transaction.
   def category_provenance
-    @category_provenance ||= Transaction::CategoryProvenance.for(self)
+    # ||= alone would re-run the lookup every call for transactions with no
+    # automatic categorization history (nil is not memoized by ||=).
+    return @category_provenance if defined?(@category_provenance)
+
+    @category_provenance = Transaction::CategoryProvenance.for(self)
   end
 
   def set_category!(category)

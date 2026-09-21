@@ -390,6 +390,24 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-stream[target='#{dom_id(entry, :mark_recurring)}'] button[disabled]", text: /Mark as Recurring/
   end
 
+  test "turbo_stream update replaces the provenance frame after a category change" do
+    transaction = @entry.entryable
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: {
+          id: @entry.entryable_id,
+          category_id: categories(:subcategory).id
+        }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[target='#{dom_id(@entry, :category_provenance)}'] [data-testid='category-provenance']"
+  end
+
   test "transaction count represents filtered total" do
     family = families(:empty)
     sign_in users(:empty)

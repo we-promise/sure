@@ -74,4 +74,11 @@ class Transaction::CategoryProvenanceTest < ActiveSupport::TestCase
 
     assert_nil @transaction.reload.category_provenance
   end
+
+  test "memoizes a nil result instead of re-running the lookup" do
+    Transaction::CategoryProvenance.expects(:for).with(@transaction).once.returns(nil)
+
+    assert_nil @transaction.category_provenance
+    assert_nil @transaction.category_provenance
+  end
 end
