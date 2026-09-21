@@ -204,7 +204,7 @@ namespace :evals do
     run_ids = run_ids_from(args[:run_ids], args.extras, "RUN_IDS")
 
     runs = if run_ids.present?
-      Eval::Run.where(id: run_ids)
+      runs_for!(run_ids)
     else
       Eval::Run.completed.order(created_at: :desc).limit(5)
     end
@@ -249,13 +249,8 @@ namespace :evals do
       exit 1
     end
 
-    bayes_run = Eval::Run.find(bayes_id)
-    provider_runs = Eval::Run.where(id: provider_ids).to_a
-
-    if provider_runs.empty?
-      puts "Error: no provider runs found for #{provider_ids.join(', ')}"
-      exit 1
-    end
+    bayes_run = runs_for!([ bayes_id ]).first
+    provider_runs = runs_for!(provider_ids)
 
     puts Eval::Reporters::CascadeReport.new(bayes_run: bayes_run, provider_runs: provider_runs)
   end
@@ -844,6 +839,23 @@ namespace :evals do
       ids = value.present? ? [ value, *extras ] : ENV[env_key].to_s.split(",")
 
       ids.map(&:strip).reject(&:blank?)
+    end
+
+    # All-or-nothing: `where(id: ids)` returns whatever matched, so a single
+    # mistyped id would quietly narrow the report rather than fail, and the
+    # output gives no hint that a run is missing. Comparing like for like
+    # against ids the caller asked for by name is the only way to tell the
+    # difference between "this run scored badly" and "this run was never read".
+    def runs_for!(ids)
+      runs = Eval::Run.where(id: ids).to_a
+      missing = ids - runs.map(&:id)
+
+      if missing.any?
+        puts "Error: no run found for #{missing.join(', ')}"
+        exit 1
+      end
+
+      runs
     end
 
     def split_config
