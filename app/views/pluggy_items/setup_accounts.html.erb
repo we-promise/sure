@@ -1,0 +1,114 @@
+<% content_for :title, t(".title") %>
+
+<%= render DS::Dialog.new(disable_click_outside: true) do |dialog| %>
+  <% dialog.with_header(title: t(".title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "settings", class: "text-primary" %>
+      <span class="text-primary"><%= t(".subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= form_with url: complete_account_setup_pluggy_item_path(@pluggy_item),
+                  method: :post,
+                  local: true,
+                  id: "pluggy-setup-form",
+                  data: {
+                    controller: "loading-button",
+                    action: "submit->loading-button#showLoading",
+                    loading_button_loading_text_value: t(".creating"),
+                    turbo_frame: "_top"
+                  },
+                  class: "space-y-6" do |form| %>
+
+      <div class="space-y-4">
+        <div class="bg-surface border border-primary p-4 rounded-lg">
+          <div class="flex items-start gap-3">
+            <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+            <div>
+              <p class="text-sm text-primary">
+                <%= t(".types_detected_automatically") %>
+              </p>
+              <p class="text-xs text-secondary mt-1">
+                <%= t(".accounts_count", count: @unlinked_accounts.count) %>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <% if @unlinked_accounts.empty? %>
+          <div class="text-center py-8">
+            <%= icon "alert-circle", class: "text-warning mx-auto mb-4", size: "lg" %>
+            <p class="text-secondary"><%= t(".no_accounts") %></p>
+          </div>
+        <% else %>
+          <%# Posts accounts[id][account_type] — the hash shape
+              PluggyItemsController#complete_account_setup reads (params[:accounts]).
+              Each row sends the type inferred by PluggyAccount#suggested_setup_account_type
+              from the upstream Pluggy account_type; no per-row "skip" — all synced
+              accounts get created. The auto-detected type is shown as a read-only label. %>
+          <div class="space-y-3 max-h-96 overflow-y-auto">
+            <% @unlinked_accounts.each do |pluggy_account| %>
+              <div class="border border-primary rounded-lg p-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
+                    <p class="font-medium text-primary truncate">
+                      <%= pluggy_account.name %>
+                    </p>
+                    <% if pluggy_account.account_type.present? %>
+                      <p class="text-xs text-secondary">
+                        <%= pluggy_account.account_type.titleize %>
+                      </p>
+                    <% end %>
+                  </div>
+                  <% if pluggy_account.activities_fetch_pending? %>
+                    <p class="text-xs italic text-secondary flex-shrink-0">
+                      <%= t(".balance_pending") %>
+                    </p>
+                  <% else %>
+                    <div class="text-right flex-shrink-0">
+                      <p class="text-sm font-medium text-primary">
+                        <%= number_to_currency(pluggy_account.current_balance || 0, unit: Money::Currency.new(pluggy_account.currency || "USD").symbol) %>
+                      </p>
+                      <p class="text-xs text-secondary">
+                        <%= pluggy_account.currency || "USD" %>
+                      </p>
+                    </div>
+                  <% end %>
+                </div>
+
+                <div class="mt-3 flex items-center gap-2 text-sm">
+                  <span class="text-secondary"><%= t(".account_type_label") %></span>
+                  <%= icon "arrow-right", size: "sm", class: "text-secondary flex-shrink-0" %>
+                  <span class="font-medium text-primary">
+                    <%= t(".account_types.#{pluggy_account.suggested_setup_account_type}") %>
+                  </span>
+                </div>
+
+                <%# Hidden field preserves the controller contract: accounts[id][account_type]. %>
+                <%= hidden_field_tag "accounts[#{pluggy_account.id}][account_type]",
+                      pluggy_account.suggested_setup_account_type %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="flex gap-3">
+        <%= render DS::Button.new(
+          text: t(".create_accounts"),
+          variant: "primary",
+          icon: "plus",
+          type: "submit",
+          class: "flex-1",
+          data: { loading_button_target: "button" }
+        ) %>
+        <%= render DS::Link.new(
+          text: t(".cancel"),
+          variant: "secondary",
+          href: accounts_path
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
