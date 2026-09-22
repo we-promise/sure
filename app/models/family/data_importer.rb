@@ -419,7 +419,12 @@ class Family::DataImporter
         # Store parent relationship for second pass
         parent_mappings[old_id] = parent_id if parent_id.present?
 
+        # A same-named category almost always exists already: onboarding seeds a
+        # default set for every family, so a plain (non-session) import would
+        # otherwise try to create a second "Groceries" and hit the unique index.
+        # Preflight already treats this as a reusable match, not a collision.
         category = mapped_record(:categories, old_id, @family.categories, record_type: "Category")
+        category ||= @family.categories.find_by(name: data["name"])
         created = category.blank?
         category ||= @family.categories.build
 
@@ -454,6 +459,7 @@ class Family::DataImporter
         require_source_id!("Tag", old_id)
 
         tag = mapped_record(:tags, old_id, @family.tags, record_type: "Tag")
+        tag ||= @family.tags.find_by(name: data["name"])
         created = tag.blank?
         tag ||= @family.tags.build
         color = data["color"] || tag.color
@@ -478,6 +484,7 @@ class Family::DataImporter
         require_source_id!("Merchant", old_id)
 
         merchant = mapped_record(:merchants, old_id, @family.merchants, record_type: "Merchant")
+        merchant ||= @family.merchants.find_by(name: data["name"])
         created = merchant.blank?
         merchant ||= @family.merchants.build
 

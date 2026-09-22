@@ -518,20 +518,12 @@ class SureImportTest < ActiveSupport::TestCase
   end
 
   test "preflight reports blocking errors before publish_later enqueues" do
-    @family.categories.create!(
-      name: "Groceries",
-      color: "#407706",
-      lucide_icon: "shopping-basket"
-    )
     attach_ndjson(build_ndjson([
-      { type: "Account", data: {
-        id: "account-1",
-        name: "Blocked Account",
-        balance: "100",
-        currency: "USD",
-        accountable_type: "Depository"
-      } },
-      { type: "Category", data: { id: "category-1", name: "Groceries" } }
+      { type: "Valuation", data: {
+        account_id: "missing-account",
+        date: "2024-01-01",
+        amount: "100"
+      } }
     ]))
 
     assert_no_enqueued_jobs do
@@ -541,7 +533,7 @@ class SureImportTest < ActiveSupport::TestCase
     end
 
     assert_equal "failed", @import.reload.status
-    assert_includes @import.error, "Category name \"Groceries\" already exists"
+    assert_includes @import.error, "references missing account_id"
   end
 
   test "publish_later reports unsupported records through preflight before publishable check" do
@@ -904,6 +896,37 @@ class SureImportTest < ActiveSupport::TestCase
     assert result.errors.any? { |error| error[:code] == "missing_reference" }
   end
 
+  test "publishing reuses an existing family category, tag and merchant matched by name instead of failing (#3113)" do
+    existing_category = @family.categories.create!(name: "Groceries", color: "#111111", lucide_icon: "shapes")
+    existing_tag = @family.tags.create!(name: "Reviewed", color: "#222222")
+    existing_merchant = @family.merchants.create!(name: "Local Cafe", color: "#333333")
+
+    category_count = @family.categories.count
+    tag_count = @family.tags.count
+    merchant_count = @family.merchants.count
+
+    attach_ndjson(build_ndjson([
+      { type: "Category", data: { id: "category-1", name: "Groceries", color: "#407706", lucide_icon: "shopping-cart" } },
+      { type: "Tag", data: { id: "tag-1", name: "Reviewed", color: "#12B76A" } },
+      { type: "Merchant", data: { id: "merchant-1", name: "Local Cafe", color: "#12B76A" } }
+    ]))
+
+    result = @import.sure_preflight
+    assert result.valid?, result.error_message
+    assert_equal 3, result.warnings.count { |warning| warning[:code] == "existing_taxonomy_collision" }
+
+    @import.publish
+
+    assert_equal "complete", @import.status
+    assert_equal category_count, @family.categories.count
+    assert_equal tag_count, @family.tags.count
+    assert_equal merchant_count, @family.merchants.count
+
+    assert_equal "#407706", existing_category.reload.color
+    assert_equal "#12B76A", existing_tag.reload.color
+    assert_equal "#12B76A", existing_merchant.reload.color
+  end
+
   private
 
     def attach_ndjson(ndjson)
@@ -974,7 +997,7 @@ class Import::PreflightTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
   end
 
-  test "SureImport preflight reports strict taxonomy collisions" do
+  test "SureImport preflight reuses an existing taxonomy match by name instead of blocking (#3113)" do
     @family.tags.create!(name: "Reviewed", color: "#12B76A")
     ndjson = build_ndjson([
       { type: "Tag", data: { id: "tag-1", name: "Reviewed" } }
@@ -988,8 +1011,9 @@ class Import::PreflightTest < ActiveSupport::TestCase
       payload = response.payload[:data]
 
       assert_equal :ok, response.status
-      assert_equal false, payload[:valid]
-      assert_equal "existing_taxonomy_collision", payload[:errors].first[:code]
+      assert_equal true, payload[:valid]
+      assert_empty payload[:errors]
+      assert_includes payload[:warnings], "Line 1 Tag name \"Reviewed\" already exists in this family and will be reused."
     end
   end
 

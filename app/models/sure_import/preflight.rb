@@ -16,6 +16,12 @@ class SureImport::Preflight
     def skipped_missing_merchant_count
       warnings.count { |warning| warning[:code] == "skipped_missing_merchant_reference" }
     end
+
+    # Rows whose Category/Tag/Merchant name already exists in the family and will
+    # be reused instead of duplicated -- same rollup rationale as above.
+    def reused_taxonomy_count
+      warnings.count { |warning| warning[:code] == "existing_taxonomy_collision" }
+    end
   end
 
   REQUIRED_FIELDS = {
@@ -176,15 +182,19 @@ class SureImport::Preflight
       end
     end
 
+    # A name collision is advisory, not blocking: Family::DataImporter reuses the
+    # family's existing Category/Tag/Merchant with that name (a common case for
+    # Category/Tag on a fresh family, whose onboarding seeds a default set) rather
+    # than trying to create a second record with the same name.
     def validate_taxonomy_collisions
       TAXONOMY_TYPES.each do |type, association|
         existing_names = family.public_send(association).pluck(:name).to_set
         @records[type].each do |record|
           name = record[:data]["name"].to_s
           next if name.blank? || !existing_names.include?(name)
-          add_error(
+          add_warning(
             :existing_taxonomy_collision,
-            "Line #{record[:line_number]} #{type} name #{name.inspect} already exists in this family."
+            "Line #{record[:line_number]} #{type} name #{name.inspect} already exists in this family and will be reused."
           )
         end
       end

@@ -473,6 +473,11 @@ en:
         with an export taken before provider-assigned merchants were added to Sure exports. You can still
         publish this import -- those transactions will just import without a merchant, and you can tag
         them afterward.
+      reused_taxonomy_notice_title: Some categories, tags or merchants already exist
+      reused_taxonomy_notice_description: >-
+        %{count} categor(y/ies), tag(s) or merchant(s) in this file already exist in your account (for
+        example, from onboarding's default categories). They'll be reused and updated with this file's
+        data instead of creating duplicates.
     errors:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"
       interrupted: "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again."

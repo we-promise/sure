@@ -2,7 +2,9 @@
 <% dry_run = import.dry_run %>
 <% resources_with_counts = dry_run.select { |_, count| count > 0 }.filter_map { |key, count| [dry_run_resource(key), count] if dry_run_resource(key) } %>
 <% import_summary_empty = resources_with_counts.empty? %>
-<% missing_merchant_count = import.is_a?(SureImport) ? import.sure_preflight.skipped_missing_merchant_count : 0 %>
+<% sure_preflight_result = import.is_a?(SureImport) ? import.sure_preflight : nil %>
+<% missing_merchant_count = sure_preflight_result&.skipped_missing_merchant_count.to_i %>
+<% reused_taxonomy_count = sure_preflight_result&.reused_taxonomy_count.to_i %>
 
 <div class="text-center space-y-2 mb-4 mx-auto max-w-md">
   <h1 class="text-3xl text-primary font-medium"><%= t(".title") %></h1>
@@ -15,6 +17,14 @@
       variant: :warning,
       title: t(".missing_merchant_warning_title"),
       message: t(".missing_merchant_warning_description", count: missing_merchant_count)
+    ) %>
+  <% end %>
+
+  <% if reused_taxonomy_count > 0 %>
+    <%= render DS::Alert.new(
+      variant: :info,
+      title: t(".reused_taxonomy_notice_title"),
+      message: t(".reused_taxonomy_notice_description", count: reused_taxonomy_count)
     ) %>
   <% end %>
 

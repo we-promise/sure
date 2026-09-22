@@ -472,6 +472,35 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, I18n.t("imports.ready.missing_merchant_warning_title")
   end
 
+  test "shows a friendly notice when a Sure import reuses existing categories, tags or merchants by name (#3113)" do
+    @user.family.categories.create!(name: "Groceries", color: "#407706", lucide_icon: "shopping-basket")
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Category", data: { id: "category-1", name: "Groceries" } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("imports.ready.reused_taxonomy_notice_title")
+  end
+
+  test "does not show the reused taxonomy notice for a Sure import with no name collisions" do
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Category", data: { id: "category-1", name: "A Brand New Category Name" } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("imports.ready.reused_taxonomy_notice_title")
+  end
+
   test "PDF import account select does not leak unshared family accounts (#1803)" do
     sign_in users(:family_member)
     pdf_import = imports(:pdf_with_rows)
