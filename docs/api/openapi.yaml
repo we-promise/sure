@@ -6747,6 +6747,62 @@ paths:
         schema:
           type: string
           pattern: "^[0-9a-f]{64}$"
+  "/api/v1/financekit/publishers/{publisher_id}/batches/{batch_id}":
+    get:
+      summary: Read the durable receipt for an accepted batch
+      description: Recovers the receipt for a batch whose upload response was lost.
+        The receipt is stable for the life of the batch within its generation.
+      tags:
+      - FinanceKit
+      security:
+      - financekitPublisher: []
+      responses:
+        '200':
+          description: Durable receipt for a previously accepted batch
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitBatchReceipt"
+        '401':
+          description: Invalid or missing authentication
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '404':
+          description: No batch with that identity in the current generation
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+      parameters:
+      - name: publisher_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: batch_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
   "/api/v1/financekit/connections/{connection_id}/conflicts":
     parameters:
     - name: connection_id

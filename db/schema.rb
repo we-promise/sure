@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_16_220129) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -934,9 +934,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_220129) do
     t.datetime "applied_at"
     t.integer "attempts", default: 0, null: false
     t.uuid "batch_id", null: false
-    t.datetime "captured_at", null: false
-    t.string "capture_mode", null: false
     t.uuid "capture_id", null: false
+    t.string "capture_mode", null: false
+    t.datetime "captured_at", null: false
     t.integer "chunk_count", null: false
     t.integer "chunk_index", null: false
     t.jsonb "counts", default: {}, null: false

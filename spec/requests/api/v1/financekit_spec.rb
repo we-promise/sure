@@ -194,6 +194,39 @@ RSpec.describe "Api::V1::Financekit", type: :request do
     end
   end
 
+  path "/api/v1/financekit/publishers/{publisher_id}/batches/{batch_id}" do
+    parameter name: :publisher_id, in: :path, type: :string, format: :uuid, required: true
+    parameter name: :batch_id, in: :path, type: :string, format: :uuid, required: true
+    get "Read the durable receipt for an accepted batch" do
+      tags "FinanceKit"
+      produces "application/json"
+      security FINANCEKIT_PUBLISHER_SECURITY
+      parameter name: :Authorization, in: :header, type: :string, required: true
+      let(:publisher_id) { connection.publisher_id }
+      let(:Authorization) { "Bearer #{publisher_credential}" }
+      let(:accepted_batch) do
+        publisher_credential
+        payload = { protocol_version: 2, connection_id: connection.id, publisher_id: connection.publisher_id,
+          generation: connection.generation, stream_id: connection.stream_id, batch_id: SecureRandom.uuid,
+          sequence: 1, capture_id: SecureRandom.uuid, chunk_index: 0, chunk_count: 1, capture_mode: "delta",
+          snapshot_complete: false, captured_at: Time.current.iso8601,
+          selected_source_account_ids: [ source_id ], events: [] }
+        FinancekitBatch.accept!(connection, JSON.generate(payload.deep_stringify_keys))
+      end
+      let(:batch_id) { accepted_batch.batch_id }
+      response "200", "Durable receipt for a previously accepted batch" do
+        schema "$ref" => "#/components/schemas/FinancekitBatchReceipt"
+        run_test!
+      end
+      response "401", "Invalid publisher credential" do
+        schema "$ref" => "#/components/schemas/FinancekitError"
+      end
+      response "404", "No batch with that identity in the current generation" do
+        schema "$ref" => "#/components/schemas/FinancekitError"
+      end
+    end
+  end
+
   path "/api/v1/financekit/connections/{connection_id}/conflicts" do
     parameter name: :connection_id, in: :path, type: :string, format: :uuid, required: true
     get "List conflicts requiring user review" do
