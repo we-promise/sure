@@ -157,10 +157,26 @@ decides whose transaction descriptions leave the instance, the same reason
 ```ruby
 # app/models/family.rb
 def resolved_categorization_provider
-  jev = Provider::Registry.get_provider(:jev) if effective_categorization_provider == "jev"
+  jev = configured_jev_provider if effective_categorization_provider == "jev"
   jev || Provider::Registry.preferred_llm_provider
 end
 ```
+
+Resolution must not raise. The registry builds a fresh provider on every
+lookup, so a constructor that validates its configuration — as
+`Provider::Jev` does with `endpoint_allowed?` — raises from inside a method
+whose whole contract is to fall back. ENV is how that happens: `JEV_ENDPOINT`
+never passes through the settings form that runs the identical check, so one
+`http://` typo against a non-loopback host stopped categorization entirely and
+500'd the rule confirmation screen. `configured_jev_provider` rescues
+`Provider::Error` and treats it as "not configured", capturing a
+`DebugLogEntry` so the operator can see why their chosen provider is not
+running. Rescue the provider error narrowly; anything wider hides real bugs.
+
+This is the same class of exposure the `CATEGORIZATION_CONFIDENCE_THRESHOLD`
+and `CATEGORIZATION_SHADOW_RATE` overrides are clamped for. An ENV override
+bypasses column validations, so every one of them needs its own guard at the
+point of use.
 
 Credentials alone never switch a classification provider on, and the preview
 flag plays no part here — it gates whether the *selector* is offered (see
@@ -236,6 +252,7 @@ records every sample as incorrect and otherwise reads as a credible 0%.
 - [ ] Register under `:classification`, not `:llm`
 - [ ] Explicit API key, no fallback to another provider's credentials
 - [ ] Default endpoint is the vendor's own; disclosure names the configured host
+- [ ] Provider resolution rescues construction failures and falls back, never raises
 - [ ] Every Choice question has an opt-out sentinel, translated to `nil`
 - [ ] Return types structurally compatible with the `LlmConcept` equivalents
 - [ ] Per-request `usage` carried through for eval cost attribution

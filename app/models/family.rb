@@ -179,7 +179,7 @@ class Family < ApplicationRecord
   # confirmation screen has to name the same provider the run will use; when it
   # resolved separately it estimated cost against a provider that would not run.
   def resolved_categorization_provider
-    jev = Provider::Registry.get_provider(:jev) if effective_categorization_provider == "jev"
+    jev = configured_jev_provider if effective_categorization_provider == "jev"
 
     # The LLM fallback honors Setting.llm_provider (issue #2113) —
     # Provider::Anthropic implements auto_categorize (PR #1984), so batch
@@ -216,9 +216,53 @@ class Family < ApplicationRecord
     if effective_categorization_provider == "jev"
       Provider::Registry.preferred_llm_provider
     else
-      Provider::Registry.get_provider(:jev)
+      configured_jev_provider
     end
   end
+
+  # Jev, or nil when it cannot be built.
+  #
+  # The registry constructs a fresh Provider::Jev on every lookup, and that
+  # constructor rejects an endpoint that would send the Bearer token and the
+  # family's transaction descriptions in cleartext. JEV_ENDPOINT reaches it
+  # without passing the settings form's identical check, so a self-hoster who
+  # types http:// against a non-loopback host raises from inside a method whose
+  # documented contract is to fall back to the LLM path. That took down
+  # categorization altogether and 500'd the rule confirmation screen, which is
+  # a worse outcome than the misconfiguration itself.
+  #
+  # Treated as "not configured" for the same reason a missing key is: the
+  # endpoint is unusable either way, and the distinction is one for the
+  # operator's debug log rather than for the fallback decision. This is the
+  # same defensiveness the threshold and shadow-rate overrides already get,
+  # which clamp precisely because ENV bypasses the column validations.
+  #
+  # Narrow on purpose. Only Provider::Error is swallowed; anything else from
+  # the registry is a bug and should still surface.
+  def configured_jev_provider
+    Provider::Registry.get_provider(:jev)
+  rescue Provider::Error => error
+    # Captured, not just logged: the only symptom an operator sees is
+    # categorization quietly running on the provider they did not choose, and
+    # nothing in the UI explains why. The endpoint is recorded because the
+    # typo is the whole diagnosis, and it carries no credential.
+    DebugLogEntry.capture(
+      category: "auto_categorization",
+      level: "error",
+      message: "Jev is misconfigured; falling back to the LLM provider",
+      source: self.class.name,
+      family: self,
+      provider: "jev",
+      metadata: {
+        endpoint: Provider::Jev.effective_endpoint,
+        error_class: error.class.name,
+        error_message: error.message
+      }
+    )
+    nil
+  end
+  private :configured_jev_provider
+
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
   validates :personal_budgets, inclusion: { in: [ true, false ] }
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }

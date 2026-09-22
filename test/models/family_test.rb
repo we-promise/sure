@@ -509,6 +509,70 @@ class FamilyTest < ActiveSupport::TestCase
     assert_nil family.request_plaid_transactions_refreshes_later(source: "TestSync")
   end
 
+  # A non-loopback http:// endpoint is the misconfiguration these guard: the
+  # settings form rejects it, but JEV_ENDPOINT never passes through the form.
+  REJECTED_JEV_ENV = {
+    "JEV_API_KEY" => "test_api_key",
+    "JEV_ENDPOINT" => "http://internal-gateway.example.com/v1/systemone"
+  }.freeze
+
+  test "resolved_categorization_provider builds Jev when the endpoint is allowed" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+
+    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_ENDPOINT" => "https://api.typesafe.ai/v1/systemone") do
+      assert_instance_of Provider::Jev, family.resolved_categorization_provider
+    end
+  end
+
+  test "resolved_categorization_provider falls back to the LLM provider when the endpoint is rejected" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    llm = Provider::Openai.allocate
+    Provider::Registry.stubs(:preferred_llm_provider).returns(llm)
+
+    with_env_overrides(REJECTED_JEV_ENV) do
+      assert_same llm, family.resolved_categorization_provider
+    end
+  end
+
+  test "resolved_categorization_provider captures the rejected endpoint for the operator" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    with_env_overrides(REJECTED_JEV_ENV) do
+      assert_nil family.resolved_categorization_provider
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "auto_categorization", entry.category
+    assert_equal "error", entry.level
+    assert_equal "jev", entry.provider_key
+    assert_equal family.id, entry.family_id
+    assert_equal REJECTED_JEV_ENV["JEV_ENDPOINT"], entry.metadata["endpoint"]
+    assert_equal "Provider::Jev::Error", entry.metadata["error_class"]
+  end
+
+  test "shadow_categorization_provider returns nil when the Jev endpoint is rejected" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "llm")
+
+    with_env_overrides(REJECTED_JEV_ENV) do
+      assert_nil family.shadow_categorization_provider
+    end
+  end
+
+  # The rescue is deliberately narrow, so a registry bug still surfaces rather
+  # than being reported to the operator as a Jev misconfiguration.
+  test "resolved_categorization_provider does not swallow non-provider errors" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    Provider::Registry.stubs(:get_provider).with(:jev).raises(ArgumentError, "boom")
+
+    assert_raises(ArgumentError) { family.resolved_categorization_provider }
+  end
+
   private
     def set_preview_features(user, enabled)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))
