@@ -38,6 +38,13 @@ class RecurringTransaction::ClassifierTest < ActiveSupport::TestCase
     assert auto_debit.autopay
   end
 
+  test "spaced auto pay wording stays ambiguous with an automobile payment" do
+    result = Classifier.classify(name: "TOYOTA FINANCIAL AUTO PAY", entries: entries_of(412, 412), account: @depository)
+
+    assert_equal "bill", result.bill_type
+    assert_not result.autopay
+  end
+
   test "ach and billpay descriptors are push payments, not subscriptions" do
     result = Classifier.classify(name: "WATSON PROPERTY WEB PMT", entries: entries_of(537.50, 537.50), account: @depository)
 

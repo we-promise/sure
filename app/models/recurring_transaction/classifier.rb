@@ -35,12 +35,12 @@ class RecurringTransaction
     # Push-payment fingerprints in raw descriptors.
     ACH_MARKERS = %w[ach web\ pmt webpmt billpay bill\ pay online\ pmt e-pay epay].freeze
 
-    # Explicit autopay/autodraft wording banks stamp onto a descriptor when a
-    # biller is enrolled to auto-debit -- a direct signal, not an inference,
-    # so it overrides the bill_type-based default below even for a "bill".
+    # Explicit autopay wording banks stamp onto a descriptor. "auto pay" and
+    # "auto pmt" are left out: on a car loan or policy they read as
+    # "automobile payment", and a false match drops the bill off needs-action.
     AUTOPAY_MARKERS = %w[
-      autopay auto\ pay auto-pay autodraft auto\ draft auto-draft autodebit
-      auto\ debit auto-debit autopmt auto\ pmt
+      autopay autopmt autodraft auto\ draft auto-draft autodebit auto\ debit
+      auto-debit
     ].freeze
 
     # Above this, a flat recurring charge is more likely rent-or-service
