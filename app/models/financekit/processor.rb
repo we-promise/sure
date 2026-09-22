@@ -40,7 +40,23 @@ class Financekit::Processor
     end
     Financekit::Downstream.new(batch).perform!
     true
-  rescue Financekit::Error, ActiveRecord::RecordInvalid, JSON::ParserError => error
+  rescue ActiveRecord::RecordInvalid => error
+    # Retryable. RecordInvalid covers ordinary races — a concurrent balance
+    # observation or conflict insert, an entry validation a later attempt
+    # clears — as well as genuinely poisoned input. Fencing on the first
+    # occurrence sends the publisher to repair_required and clears the upload
+    # credential, which only a foreground, OAuth-authenticated repair can
+    # reissue: no background wake can recover from it. Let the bounded
+    # MAX_ATTEMPTS backoff decide instead. A transient race clears itself; a
+    # persistent one still ends in the same fenced state, just not on a single
+    # unlucky save.
+    Rails.error.report(error, handled: true,
+      context: { financekit_item_id: @item.id, batch_id: batch&.batch_id })
+    fail_batch!(batch, "import_validation", permanent: false)
+    false
+  rescue Financekit::Error, JSON::ParserError => error
+    # Not retryable. The stored payload is immutable, so a protocol violation
+    # or bytes that no longer parse give every later attempt the same input.
     fail_batch!(batch, error.is_a?(Financekit::Error) ? error.code : "import_validation", permanent: true)
     false
   rescue StandardError => error

@@ -90,6 +90,40 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_equal "processing_error", batch.error_code
   end
 
+  test "a record validation failure retries instead of fencing the publisher" do
+    batch, = accept_batch
+    Financekit::Payload.stubs(:validate_batch!).raises(ActiveRecord::RecordInvalid.new(Account.new))
+    Rails.error.stubs(:report)
+
+    assert_not Financekit::Processor.new(@item).apply_next!
+
+    assert_equal "accepted", batch.reload.status
+    assert_equal "import_validation", batch.error_code
+    assert_equal 1, batch.attempts
+    assert_not_nil batch.retry_at
+    # The publisher keeps uploading: a background wake cannot reissue a
+    # credential, so a single unlucky save must not clear it.
+    assert_equal "active", @item.reload.status
+    assert_not_nil @item.credential_digest
+  end
+
+  test "a persistent record validation failure still fences after the bounded attempts" do
+    batch, = accept_batch
+    Financekit::Payload.stubs(:validate_batch!).raises(ActiveRecord::RecordInvalid.new(Account.new))
+    Rails.error.stubs(:report)
+
+    Financekit::MAX_ATTEMPTS.times do
+      batch.reload.update_columns(retry_at: nil)
+      Financekit::Processor.new(@item).apply_next!
+    end
+
+    assert_equal "failed", batch.reload.status
+    assert_equal "import_validation", batch.error_code
+    assert_equal Financekit::MAX_ATTEMPTS, batch.attempts
+    assert_equal "repair_required", @item.reload.status
+    assert_nil @item.credential_digest
+  end
+
   test "payload bytes are removed after the bounded replay window" do
     batch = accept_and_apply
     batch.update_columns(updated_at: 8.days.ago)
