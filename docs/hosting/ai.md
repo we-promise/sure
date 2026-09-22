@@ -1693,7 +1693,7 @@ Configure it in **Settings → Self-Hosting → AI Assistant**, or with:
 ```bash
 ASSISTANT_TYPE=external
 EXTERNAL_ASSISTANT_URL=https://your-agent-host/v1/chat/completions
-EXTERNAL_ASSISTANT_TOKEN=your-gateway-token
+EXTERNAL_ASSISTANT_TOKEN=your-gateway-token # pipelock:ignore
 EXTERNAL_ASSISTANT_MODEL=openclaw/main
 ```
 
