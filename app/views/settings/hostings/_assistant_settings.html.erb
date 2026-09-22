@@ -31,6 +31,21 @@
                       data: { "auto-submit-form-target": "auto" } } %>
   <% end %>
   <% if effective_type == "external" %>
+
+    <div class="p-4 bg-container-inset border border-secondary rounded-lg" data-testid="external-assistant-info">
+      <div class="flex items-start gap-2">
+        <%= icon "info", class: "w-5 h-5 text-link mt-0.5 flex-shrink-0" %>
+        <div>
+          <p class="text-sm font-medium text-primary mb-2"><%= t(".external_info.title") %></p>
+          <ul class="list-disc list-inside text-xs text-secondary space-y-1 ml-2">
+            <% t(".external_info.items").each do |item| %>
+              <li><%= item %></li>
+            <% end %>
+          </ul>
+        </div>
+      </div>
+    </div>
+
     <div class="flex items-center gap-2 text-sm mb-4">
       <% if Assistant::External.configured? %>
         <span class="inline-block w-2 h-2 rounded-full bg-success"></span>
@@ -96,17 +111,19 @@
                               data: { "auto-submit-form-target": "auto" } %>
       <p class="text-xs text-secondary mt-1"><%= t(".token_help") %></p>
 
-      <%= form.text_field :external_assistant_agent_id,
-                          label: t(".agent_id_label"),
-                          placeholder: t(".agent_id_placeholder"),
-                          value: Assistant::External.config.agent_id,
-                          autocomplete: "off",
-                          autocapitalize: "none",
-                          spellcheck: "false",
-                          inputmode: "text",
-                          disabled: ENV["EXTERNAL_ASSISTANT_AGENT_ID"].present?,
-                          data: { "auto-submit-form-target": "auto" } %>
+      <% model_options = Array(@external_assistant_models).map { |agent| [agent[:label], agent[:id]] } %>
+      <% selected_model = Assistant::External.config.model %>
+      <%= form.select :external_assistant_model,
+                      options_for_select(model_options, selected_model),
+                      { label: t(".agent_id_label"), include_blank: false },
+                      { aria: { required: true }, disabled: ENV["EXTERNAL_ASSISTANT_MODEL"].present? || model_options.empty?,
+                        data: { "auto-submit-form-target": "auto" } } %>
       <p class="text-xs text-secondary mt-1"><%= t(".agent_id_help") %></p>
+      <% if @external_assistant_catalog_error.present? %>
+        <p class="text-xs text-destructive mt-1"><%= t(".agent_discovery_error", error: @external_assistant_catalog_error) %></p>
+      <% elsif !Assistant::External.configured? %>
+        <p class="text-xs text-secondary mt-1"><%= t(".agent_discovery_configure_first") %></p>
+      <% end %>
     <% end %>
   <% end %>
 </div>

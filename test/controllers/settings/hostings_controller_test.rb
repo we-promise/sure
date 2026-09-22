@@ -27,7 +27,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout external_assistant_token rentcast_api_key realie_api_key].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -505,21 +505,81 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "can update external assistant settings" do
     with_self_hosting do
+      Assistant::External::ModelCatalog.any_instance.stubs(:models).returns([
+        { id: "openclaw/finance-bot", label: "finance-bot (openclaw/finance-bot)" }
+      ])
       patch settings_hosting_url, params: { setting: {
-        external_assistant_url: "https://agent.example.com/v1/chat",
+        external_assistant_url: "https://agent.example.com/v1/chat/completions",
         external_assistant_token: "my-secret-token",
-        external_assistant_agent_id: "finance-bot"
+        external_assistant_model: "openclaw/finance-bot"
       } }
 
       assert_redirected_to settings_hosting_url
-      assert_equal "https://agent.example.com/v1/chat", Setting.external_assistant_url
+      assert_equal "https://agent.example.com/v1/chat/completions", Setting.external_assistant_url
       assert_equal "my-secret-token", Setting.external_assistant_token
-      assert_equal "finance-bot", Setting.external_assistant_agent_id
+      assert_equal "openclaw/finance-bot", Setting.external_assistant_model
     end
   ensure
     Setting.external_assistant_url = nil
     Setting.external_assistant_token = nil
-    Setting.external_assistant_agent_id = nil
+    Setting.external_assistant_model = nil
+  end
+
+  test "external assistant panel is hidden for builtin and shown for external" do
+    with_self_hosting do
+      get settings_hosting_url
+      assert_response :success
+      assert_select "[data-testid='external-assistant-info']", count: 0
+
+      users(:family_admin).family.update!(assistant_type: "external")
+      Assistant::External::ModelCatalog.any_instance.stubs(:models).returns([])
+
+      get settings_hosting_url
+      assert_response :success
+      assert_select "[data-testid='external-assistant-info']", count: 1
+    end
+  end
+
+  test "external agent dropdown uses discovered model ids" do
+    with_self_hosting do
+      users(:family_admin).family.update!(assistant_type: "external")
+      Setting.external_assistant_url = "https://agent.example.com/v1/chat/completions"
+      Setting.external_assistant_token = "secret"
+      Setting.external_assistant_model = "openclaw/research"
+      Assistant::External::ModelCatalog.any_instance.stubs(:models).returns([
+        { id: "openclaw/main", label: "main (openclaw/main)" },
+        { id: "openclaw/research", label: "research (openclaw/research)" }
+      ])
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "select[name='setting[external_assistant_model]'][aria-required='true']" do
+        assert_select "option[value='']", count: 0
+        assert_select "option[value='openclaw/main']", text: /main/
+        assert_select "option[selected][value='openclaw/research']", text: /research/
+      end
+    end
+  ensure
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
+    Setting.external_assistant_model = nil
+  end
+
+  test "rejects an external agent not returned by discovery" do
+    with_self_hosting do
+      Setting.external_assistant_url = "https://agent.example.com/v1/chat/completions"
+      Setting.external_assistant_token = "secret"
+      Assistant::External::ModelCatalog.any_instance.stubs(:models).returns([
+        { id: "openclaw/main", label: "main (openclaw/main)" }
+      ])
+
+      patch settings_hosting_url, params: { setting: { external_assistant_model: "openclaw/missing" } }
+
+      assert_response :unprocessable_entity
+      assert_nil Setting.external_assistant_model
+      assert_equal "Select an agent returned by the configured endpoint.", flash[:alert]
+    end
   end
 
   test "does not overwrite token with masked placeholder" do
@@ -568,7 +628,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   ensure
     Setting.external_assistant_url = nil
     Setting.external_assistant_token = nil
-    Setting.external_assistant_agent_id = nil
+    Setting.external_assistant_model = nil
   end
 
   test "disconnect external assistant requires admin" do

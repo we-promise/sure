@@ -32,6 +32,7 @@ class Setting < RailsSettings::Base
   field :ai_response_timeout, type: :integer, default: ENV["AI_RESPONSE_TIMEOUT"]&.to_i
   field :external_assistant_url, type: :string
   field :external_assistant_token, type: :string
+  field :external_assistant_model, type: :string
   field :external_assistant_agent_id, type: :string
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"

@@ -1706,3 +1706,26 @@ For issues with AI features:
 ---
 
 **Last Updated:** August 2026
+
+## External chat assistant
+
+The External assistant delegates chat to a remote OpenAI-compatible agent gateway. It is separate from the Builtin LLM provider described above.
+
+Configure it in **Settings → Self-Hosting → AI Assistant**, or with:
+
+```bash
+ASSISTANT_TYPE=external
+EXTERNAL_ASSISTANT_URL=https://your-agent-host/v1/chat/completions
+EXTERNAL_ASSISTANT_TOKEN=your-gateway-token
+EXTERNAL_ASSISTANT_MODEL=openclaw/main
+```
+
+Configuration behavior:
+
+- `EXTERNAL_ASSISTANT_URL` is the full chat-completions endpoint. Sure sends requests to this URL verbatim; it does not append `/v1/chat/completions`.
+- An agent selection is required. After the URL and token are saved, Sure requests the sibling `/v1/models` endpoint and shows the returned entries as agent choices.
+- The selected value is sent as the OpenAI-compatible `model` routing value, such as `openclaw/main`. This selects an external agent. It does not select or change the LLM configured behind that agent.
+- The gateway must return standard streaming chat-completion events (`choices[0].delta.content`) followed by `data: [DONE]`.
+- An authentication, endpoint, or agent-selection failure comes from the external gateway. Check the gateway's response and logs when Sure reports an HTTP error.
+
+`EXTERNAL_ASSISTANT_AGENT_ID` remains supported as a routing-header override for existing deployments. New configurations should use `EXTERNAL_ASSISTANT_MODEL`; Sure derives the OpenClaw agent header from that value when no explicit header override is set.
