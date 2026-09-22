@@ -645,7 +645,12 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     )
     entry.mark_user_modified!
 
+    # Portfolio trade is already present so the missing-trade guard would not
+    # keep this cash row — protection alone must preserve it.
     cash_account.update!(raw_timeline_payload: [ saveback ])
+    @tr_account.update!(raw_timeline_payload: [ saveback ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    assert Entry.exists?(account: @account, external_id: "trade_republic_event_evt_saveback", entryable_type: "Trade")
 
     TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
 
