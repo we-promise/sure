@@ -438,7 +438,9 @@ module TradeRepublicAccount::DataHelpers
           # tracking from the ISIN row when missing on the target.
           attrs = {}
           attrs[:external_id] = holding.external_id if existing.external_id.blank? && holding.external_id.present?
-          attrs[:provider_security_id] = from_security.id if existing.provider_security_id.blank?
+          if existing.provider_security_id.blank?
+            attrs[:provider_security_id] = holding.provider_security_id.presence || from_security.id
+          end
           attrs[:account_provider_id] = holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
           existing.update!(attrs) if attrs.any?
           holding.destroy!

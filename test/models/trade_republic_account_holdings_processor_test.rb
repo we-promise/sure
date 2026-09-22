@@ -165,6 +165,7 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
 
     isin = "DE000BASF111"
     isin_security = Security.create!(ticker: isin, name: "BASF ISIN", offline: true)
+    prior_provider_security = Security.create!(ticker: "PRIOR_BAS", name: "Prior BASF", offline: true)
     exchange_security = Security.create!(
       ticker: "BAS",
       exchange_operating_mic: "XETR",
@@ -180,6 +181,7 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
       amount: 200,
       currency: "EUR",
       external_id: "stale-isin-holding",
+      provider_security_id: prior_provider_security.id,
       account_provider_id: @tr_account.account_provider.id
     )
     exchange_holding = @account.holdings.create!(
@@ -201,7 +203,7 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_not Holding.exists?(isin_holding.id)
     assert Holding.exists?(exchange_holding.id)
     assert_equal exchange_security.id, exchange_holding.reload.security_id
-    assert_equal isin_security.id, exchange_holding.provider_security_id
+    assert_equal prior_provider_security.id, exchange_holding.provider_security_id
   end
 
   test "falls back to an offline ISIN security without a usable exchange symbol" do
