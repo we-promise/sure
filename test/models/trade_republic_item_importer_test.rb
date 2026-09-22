@@ -694,6 +694,112 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal [ "incomplete-ok" ], enrich_ids
   end
 
+  test "apply_instrument_symbols stamps merged timeline events that lacked a ticker" do
+    importer = TradeRepublicItem::Importer.new(@item, provider: mock("provider"))
+    events = [
+      {
+        id: "old-sell",
+        category: "orderExecution",
+        detail: { isin: "NL0000303709", quantity: "-5", amount: "80.00" }
+      }.with_indifferent_access,
+      {
+        id: "already-resolved",
+        category: "orderExecution",
+        detail: { isin: "DE000BASF111", symbol: "BAS", exchange_slug: "XETR", quantity: "1" }
+      }.with_indifferent_access
+    ]
+
+    importer.send(:apply_instrument_symbols!, events, {
+      "NL0000303709" => { "symbol" => "ABN", "exchange_slug" => "XETR" },
+      "DE000BASF111" => { "symbol" => "SHOULD_NOT_OVERRIDE", "exchange_slug" => "XETR" }
+    })
+
+    assert_equal "ABN", events.first.dig(:detail, :symbol)
+    assert_equal "XETR", events.first.dig(:detail, :exchange_slug)
+    assert_equal "BAS", events.last.dig(:detail, :symbol)
+  end
+
+  test "import applies instrument_symbols to previously stored trades without symbols" do
+    portfolio = @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-SYMBOLS",
+      currency: "EUR",
+      raw_timeline_payload: [
+        {
+          "id" => "historical-sell",
+          "timestamp" => "2025-01-01T10:00:00Z",
+          "category" => "orderExecution",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "detail" => {
+            "isin" => "NL0000303709",
+            "quantity" => "-10",
+            "amount" => "150.00",
+            "currency" => "EUR"
+          }
+        }
+      ]
+    )
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).with(
+      has_entries(symbol_lookup_isins: [ "NL0000303709" ])
+    ).returns(client_result(
+      "status" => "ok",
+      "session_txt" => "# cookies",
+      "account" => { "brokerage_account_id" => "DE-SYMBOLS", "currency" => "EUR" },
+      "cash" => { "amount" => "100.00", "currency" => "EUR" },
+      "positions" => [],
+      "events" => [],
+      "instrument_symbols" => {
+        "NL0000303709" => { "symbol" => "ABN", "exchange_slug" => "XETR" }
+      },
+      "newest_event_id" => "historical-sell",
+      "timeline_pagination_complete" => true,
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    stored = portfolio.reload.raw_timeline_payload.first
+    assert_equal "ABN", stored.dig("detail", "symbol") || stored.dig("detail", :symbol)
+    assert_equal "XETR", stored.dig("detail", "exchange_slug") || stored.dig("detail", :exchange_slug)
+  end
+
+  test "isins_needing_symbol_lookup skips trades that already have a ticker" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-LOOKUP",
+      currency: "EUR",
+      raw_timeline_payload: [
+        {
+          "id" => "need-lookup",
+          "category" => "orderExecution",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "detail" => { "isin" => "NL0000303709", "quantity" => "-1", "amount" => "10" }
+        },
+        {
+          "id" => "already-have",
+          "category" => "orderExecution",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "detail" => {
+            "isin" => "DE000BASF111",
+            "symbol" => "BAS",
+            "exchange_slug" => "XETR",
+            "quantity" => "1",
+            "amount" => "10"
+          }
+        }
+      ]
+    )
+
+    isins = TradeRepublicItem::Importer.new(@item, provider: mock("provider"))
+      .send(:isins_needing_symbol_lookup)
+
+    assert_equal [ "NL0000303709" ], isins
+  end
+
   private
 
     def client_result(data)

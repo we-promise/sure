@@ -19,7 +19,8 @@ class TradeRepublicItem::Importer
     result = provider.sync(
       session_txt: trade_republic_item.session_blob,
       known_newest_event_id: known_newest_event_id,
-      enrich_events: events_needing_detail_enrichment
+      enrich_events: events_needing_detail_enrichment,
+      symbol_lookup_isins: isins_needing_symbol_lookup
     )
 
     data = result.data
@@ -76,6 +77,7 @@ class TradeRepublicItem::Importer
         cash_balance: 0,
         positions: Array(data["positions"]),
         events: data["events"],
+        instrument_symbols: data["instrument_symbols"],
         warnings: position_warnings(data),
         domain_statuses: domain_statuses
       )
@@ -91,12 +93,13 @@ class TradeRepublicItem::Importer
         cash_balance: cash_balance(data),
         positions: [],
         events: Array(data["events"]),
+        instrument_symbols: data["instrument_symbols"],
         warnings: [],
         domain_statuses: domain_statuses
       )
     end
 
-    def upsert_kind(kind:, external_id:, name:, currency:, current_balance:, cash_balance:, positions:, events:, warnings:, domain_statuses:)
+    def upsert_kind(kind:, external_id:, name:, currency:, current_balance:, cash_balance:, positions:, events:, instrument_symbols:, warnings:, domain_statuses:)
       tr_account = trade_republic_item.trade_republic_accounts.find_by(trade_republic_account_id: external_id) ||
                     trade_republic_item.trade_republic_accounts.find_or_initialize_by(kind: kind)
       portfolio_status = domain_statuses["portfolio"]
@@ -124,6 +127,7 @@ class TradeRepublicItem::Importer
 
       if timeline_status != "failed"
         merged = merge_timeline_events(tr_account.raw_timeline_payload, events)
+        apply_instrument_symbols!(merged, instrument_symbols)
         merged = merged.reject { |event| event_category(event) == "orderExecution" } if kind == "cash"
         attrs[:raw_timeline_payload] = merged
       end
@@ -186,6 +190,34 @@ class TradeRepublicItem::Importer
         .first(Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS)
     end
 
+    # Sold / historical trade ISINs that already have complete details but still
+    # lack an exchange ticker. Incremental syncs stop at newest_event_id, so
+    # these must be passed explicitly for instrument lookup.
+    def isins_needing_symbol_lookup
+      portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      return [] unless portfolio
+
+      Array(portfolio.raw_timeline_payload).filter_map do |event|
+        next unless event.is_a?(Hash)
+        next unless Provider::TradeRepublicClient.requires_trade_detail?(event)
+        next unless TradeRepublicAccount::DataHelpers.importable_timeline_event?(event)
+
+        detail = (event["detail"] || event[:detail])
+        next unless detail.is_a?(Hash)
+
+        detail = detail.stringify_keys
+        isin = detail["isin"].to_s.presence
+        next if isin.blank?
+
+        symbol = detail["symbol"].to_s.strip.presence
+        exchange_slug = detail["exchange_slug"].to_s.strip.presence
+        usable = symbol.present? && !symbol.casecmp?(isin) && exchange_slug.present?
+        next if usable
+
+        isin
+      end.uniq.first(Provider::TradeRepublicClient::MAX_INSTRUMENT_LOOKUPS)
+    end
+
     def event_timestamp(event)
       return "" unless event.is_a?(Hash)
 
@@ -216,6 +248,50 @@ class TradeRepublicItem::Importer
         events_by_id[key] = prefer_richer_timeline_event(events_by_id[key], event)
       end
       events_by_id.values.sort_by { |event| event[:timestamp].to_s }.last(MAX_TIMELINE_EVENTS)
+    end
+
+    # Stamp exchange tickers onto timeline details for ISINs that were resolved
+    # during sync (including fully sold holdings no longer in the portfolio).
+    def apply_instrument_symbols!(events, instrument_symbols)
+      return events if instrument_symbols.blank?
+
+      symbols = instrument_symbols.each_with_object({}) do |(isin, mapping), map|
+        next if isin.blank? || !mapping.is_a?(Hash)
+
+        entry = mapping.stringify_keys
+        symbol = entry["symbol"].to_s.strip.presence
+        exchange_slug = entry["exchange_slug"].to_s.strip.upcase.presence
+        next if symbol.blank? || exchange_slug.blank?
+        next if symbol.casecmp?(isin.to_s)
+
+        map[isin.to_s] = { "symbol" => symbol, "exchange_slug" => exchange_slug }
+      end
+      return events if symbols.empty?
+
+      Array(events).each do |event|
+        next unless event.is_a?(Hash)
+
+        detail = event[:detail] || event["detail"]
+        next unless detail.is_a?(Hash)
+
+        detail = detail.with_indifferent_access
+        isin = detail[:isin].to_s.presence
+        next if isin.blank?
+
+        mapping = symbols[isin]
+        next unless mapping
+
+        current_symbol = detail[:symbol].to_s.strip.presence
+        usable_symbol = current_symbol.present? && !current_symbol.casecmp?(isin)
+        detail[:symbol] = mapping["symbol"] unless usable_symbol
+        detail[:exchange_slug] = mapping["exchange_slug"] if detail[:exchange_slug].to_s.strip.blank?
+
+        if event.respond_to?(:[]=)
+          event[:detail] = detail
+        end
+      end
+
+      events
     end
 
     def prefer_richer_timeline_event(previous, incoming)

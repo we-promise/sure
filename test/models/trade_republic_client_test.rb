@@ -1038,4 +1038,163 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "US0378331005", merged.dig("detail", "isin")
     assert_equal "EUR", merged.dig("detail", "currency")
   end
+
+  test "enrich_trade_instrument_symbols stamps sold ISINs missing from portfolio" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      if payload[:type] == "instrument" && payload[:id] == "NL0000303709"
+        {
+          "exchanges" => [
+            { "slug" => "XETR", "symbolAtExchange" => "ABN", "active" => true }
+          ]
+        }
+      else
+        {}
+      end
+    end
+
+    events = [
+      {
+        "id" => "sell-abn",
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "category" => "orderExecution",
+        "detail" => {
+          "isin" => "NL0000303709",
+          "quantity" => "-10",
+          "amount" => "150.00",
+          "currency" => "EUR"
+        }
+      }
+    ]
+
+    symbols = @client.send(
+      :enrich_trade_instrument_symbols,
+      Object.new,
+      events,
+      known_symbols: { "DE000BASF111" => { "symbol" => "BAS", "exchange_slug" => "XETR" } }
+    )
+
+    assert_equal "ABN", events.first.dig("detail", "symbol")
+    assert_equal "XETR", events.first.dig("detail", "exchange_slug")
+    assert_equal "ABN", symbols.dig("NL0000303709", "symbol")
+    assert_equal "BAS", symbols.dig("DE000BASF111", "symbol")
+  end
+
+  test "enrich_trade_instrument_symbols skips known symbols and respects the lookup cap" do
+    looked_up = []
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      if payload[:type] == "instrument"
+        looked_up << payload[:id]
+        {
+          "exchanges" => [
+            { "slug" => "XETR", "symbolAtExchange" => "T#{looked_up.size}", "active" => true }
+          ]
+        }
+      else
+        {}
+      end
+    end
+
+    known = { "HELD001" => { "symbol" => "HOLD", "exchange_slug" => "XETR" } }
+    events = ([
+      {
+        "id" => "held-trade",
+        "category" => "orderExecution",
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "detail" => { "isin" => "HELD001", "quantity" => "1", "amount" => "10" }
+      }
+    ] + (1..3).map do |i|
+      {
+        "id" => "sold-#{i}",
+        "category" => "orderExecution",
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "detail" => { "isin" => "SOLD#{i}", "quantity" => "-1", "amount" => "10" }
+      }
+    end)
+
+    stub_const = Provider::TradeRepublicClient.const_get(:MAX_INSTRUMENT_LOOKUPS)
+    Provider::TradeRepublicClient.send(:remove_const, :MAX_INSTRUMENT_LOOKUPS)
+    Provider::TradeRepublicClient.const_set(:MAX_INSTRUMENT_LOOKUPS, 2)
+
+    begin
+      symbols = @client.send(:enrich_trade_instrument_symbols, Object.new, events, known_symbols: known)
+    ensure
+      Provider::TradeRepublicClient.send(:remove_const, :MAX_INSTRUMENT_LOOKUPS)
+      Provider::TradeRepublicClient.const_set(:MAX_INSTRUMENT_LOOKUPS, stub_const)
+    end
+
+    assert_equal [ "SOLD1", "SOLD2" ], looked_up
+    refute_includes looked_up, "HELD001"
+    assert_equal "HOLD", symbols.dig("HELD001", "symbol")
+    assert_equal "T1", symbols.dig("SOLD1", "symbol")
+    assert_equal "T2", symbols.dig("SOLD2", "symbol")
+    assert_nil symbols["SOLD3"]
+    assert_nil events.find { |e| e["id"] == "sold-3" }.dig("detail", "symbol")
+  end
+
+  test "enrich_trade_instrument_symbols ignores ISIN-echo symbols and failed lookups" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      case payload[:id]
+      when "ECHO001"
+        {
+          "exchanges" => [
+            { "slug" => "TIB", "symbolAtExchange" => "ECHO001", "active" => true }
+          ]
+        }
+      when "FAIL001"
+        raise Provider::TradeRepublicClient::ProviderUnavailable, "instrument unavailable"
+      else
+        {}
+      end
+    end
+
+    events = [
+      {
+        "id" => "echo",
+        "category" => "orderExecution",
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "detail" => { "isin" => "ECHO001", "quantity" => "-1", "amount" => "10" }
+      },
+      {
+        "id" => "fail",
+        "category" => "orderExecution",
+        "eventType" => "TRADING_TRADE_EXECUTED",
+        "detail" => { "isin" => "FAIL001", "quantity" => "-1", "amount" => "10" }
+      }
+    ]
+
+    symbols = @client.send(:enrich_trade_instrument_symbols, Object.new, events, known_symbols: {})
+
+    assert_empty symbols
+    assert_nil events.first.dig("detail", "symbol")
+    assert_nil events.last.dig("detail", "symbol")
+  end
+
+  test "enrich_trade_instrument_symbols looks up stored ISINs absent from the delta events" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      if payload[:type] == "instrument" && payload[:id] == "NL0000303709"
+        {
+          "exchanges" => [
+            { "slug" => "XETR", "symbolAtExchange" => "ABN", "active" => true }
+          ]
+        }
+      else
+        {}
+      end
+    end
+
+    symbols = @client.send(
+      :enrich_trade_instrument_symbols,
+      Object.new,
+      [],
+      known_symbols: {},
+      extra_isins: [ "NL0000303709" ]
+    )
+
+    assert_equal "ABN", symbols.dig("NL0000303709", "symbol")
+    assert_equal "XETR", symbols.dig("NL0000303709", "exchange_slug")
+  end
 end

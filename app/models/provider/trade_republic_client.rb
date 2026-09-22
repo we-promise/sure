@@ -114,6 +114,9 @@ class Provider::TradeRepublicClient
   # sync. The remainder drains the oldest stored incomplete events; leftover
   # budget returns to additional new events.
   MAX_TIMELINE_DETAILS_DELTA_RESERVED = 50
+  # Cap instrument lookups for sold / historical trade ISINs that are absent
+  # from the current portfolio snapshot.
+  MAX_INSTRUMENT_LOOKUPS = 100
   MAX_SYNC_RETRIES = 2
   RETRY_BACKOFF_SECONDS = 0.5
   LOGIN_SUCCESS_STATES = %w[CONFIRMED COMPLETED APPROVED SUCCESS OK DONE].freeze
@@ -289,7 +292,7 @@ class Provider::TradeRepublicClient
     end
   end
 
-  def sync(session_txt:, known_newest_event_id: nil, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [])
+  def sync(session_txt:, known_newest_event_id: nil, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [], symbol_lookup_isins: [])
     raise ConfigurationError, "session_txt is required" if session_txt.blank?
 
     with_retry do
@@ -297,12 +300,13 @@ class Provider::TradeRepublicClient
         session_txt: session_txt,
         known_newest_event_id: known_newest_event_id,
         timeline_max_pages: timeline_max_pages,
-        enrich_events: enrich_events
+        enrich_events: enrich_events,
+        symbol_lookup_isins: symbol_lookup_isins
       )
     end
   end
 
-  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, enrich_events: [])
+  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, enrich_events: [], symbol_lookup_isins: [])
     session = new_session(session_blob: session_txt)
     account_response = session.get("/api/v2/auth/account")
     return Result.new(data: { "status" => "session_expired" }) if [ 401, 403 ].include?(account_response.code.to_i)
@@ -353,6 +357,9 @@ class Provider::TradeRepublicClient
         warnings << "portfolio fetch failed: #{e.message}"
       end
 
+      known_symbols = instrument_symbols_from_positions(positions)
+      instrument_symbols = known_symbols.dup
+
       events = []
       newest_event_id = nil
       timeline_warnings = []
@@ -364,6 +371,12 @@ class Provider::TradeRepublicClient
           known_newest_event_id: known_newest_event_id,
           max_pages: timeline_max_pages.to_i,
           enrich_events: enrich_events
+        )
+        instrument_symbols = enrich_trade_instrument_symbols(
+          websocket,
+          events,
+          known_symbols: known_symbols,
+          extra_isins: symbol_lookup_isins
         )
         warnings.concat(timeline_warnings)
         # Timeline domain reflects list pagination only. Detail backlog drains
@@ -384,10 +397,14 @@ class Provider::TradeRepublicClient
           "available_amount" => decimal_string(money_amount(available_cash)),
           "currency" => money_currency(available_cash) || money_currency(cash)
         }.compact),
-        "positions" => positions, "events" => events, "newest_event_id" => newest_event_id,
+        "positions" => positions,
+        "events" => events,
+        "instrument_symbols" => instrument_symbols,
+        "newest_event_id" => newest_event_id,
         "timeline_pagination_complete" => timeline_complete,
         "detail_backfill_count" => detail_backfill_count,
-        "warnings" => warnings, "position_warnings" => position_warnings
+        "warnings" => warnings,
+        "position_warnings" => position_warnings
       })
     ensure
       websocket.close
@@ -806,6 +823,120 @@ class Provider::TradeRepublicClient
       pick_instrument_exchange_symbol(payload, isin)
     rescue Error
       nil
+    end
+
+    def instrument_symbols_from_positions(positions)
+      Array(positions).each_with_object({}) do |position, map|
+        next unless position.is_a?(Hash)
+
+        isin = position["isin"].to_s.presence
+        symbol = position["symbol"].to_s.strip.presence
+        exchange_slug = position["exchange_slug"].to_s.strip.upcase.presence
+        next if isin.blank? || symbol.blank? || exchange_slug.blank?
+        next if symbol.casecmp?(isin)
+
+        map[isin] = { "symbol" => symbol, "exchange_slug" => exchange_slug }
+      end
+    end
+
+    # Look up exchange tickers for trade ISINs that are no longer (or never)
+    # present in the current portfolio snapshot — e.g. fully sold holdings.
+    # `extra_isins` covers stored timeline trades that incremental syncs no
+    # longer re-fetch after the newest-event cursor advances.
+    def enrich_trade_instrument_symbols(websocket, events, known_symbols: {}, extra_isins: [])
+      symbols = stringify_instrument_symbols(known_symbols)
+      missing_isins = (
+        trade_isins_missing_symbols(events, symbols) +
+        Array(extra_isins).map { |isin| isin.to_s.presence }.compact
+      ).uniq
+      missing_isins.reject! { |isin| symbols.key?(isin) }
+
+      looked_up = 0
+      missing_isins.each do |isin|
+        break if looked_up >= MAX_INSTRUMENT_LOOKUPS
+
+        looked_up += 1
+        instrument = instrument_exchange_symbol(websocket, isin)
+        next unless instrument.is_a?(Hash)
+
+        symbol = instrument[:symbol].to_s.strip.presence
+        exchange_slug = instrument[:exchange_slug].to_s.strip.upcase.presence
+        next if symbol.blank? || exchange_slug.blank?
+        next if symbol.casecmp?(isin)
+
+        symbols[isin] = { "symbol" => symbol, "exchange_slug" => exchange_slug }
+      end
+
+      stamp_instrument_symbols_on_events!(events, symbols)
+      symbols
+    end
+
+    def trade_isins_missing_symbols(events, known_symbols)
+      missing = []
+      Array(events).each do |event|
+        next unless event.is_a?(Hash)
+        next unless self.class.requires_trade_detail?(event)
+        next unless TradeRepublicAccount::DataHelpers.importable_timeline_event?(event)
+
+        detail = event["detail"] || event[:detail]
+        next unless detail.is_a?(Hash)
+
+        detail = detail.stringify_keys
+        isin = detail["isin"].to_s.presence
+        next if isin.blank?
+        next if known_symbols.key?(isin)
+        next if usable_trade_symbol?(detail["symbol"], isin) && detail["exchange_slug"].to_s.strip.present?
+
+        missing << isin
+      end
+      missing.uniq
+    end
+
+    def stamp_instrument_symbols_on_events!(events, symbols)
+      Array(events).each do |event|
+        next unless event.is_a?(Hash)
+
+        detail = event["detail"] || event[:detail]
+        next unless detail.is_a?(Hash)
+
+        detail = detail.stringify_keys
+        isin = detail["isin"].to_s.presence
+        next if isin.blank?
+
+        mapping = symbols[isin]
+        next unless mapping
+
+        if usable_trade_symbol?(detail["symbol"], isin) && detail["exchange_slug"].to_s.strip.present?
+          next
+        end
+
+        detail["symbol"] = mapping["symbol"] if detail["symbol"].blank? || !usable_trade_symbol?(detail["symbol"], isin)
+        detail["exchange_slug"] = mapping["exchange_slug"] if detail["exchange_slug"].to_s.strip.blank?
+        event["detail"] = detail
+      end
+      events
+    end
+
+    def stringify_instrument_symbols(known_symbols)
+      Array(known_symbols).each_with_object({}) do |(isin, mapping), map|
+        next if isin.blank? || !mapping.is_a?(Hash)
+
+        entry = mapping.stringify_keys
+        symbol = entry["symbol"].to_s.strip.presence
+        exchange_slug = entry["exchange_slug"].to_s.strip.upcase.presence
+        next if symbol.blank? || exchange_slug.blank?
+        next if symbol.casecmp?(isin.to_s)
+
+        map[isin.to_s] = { "symbol" => symbol, "exchange_slug" => exchange_slug }
+      end
+    end
+
+    def usable_trade_symbol?(symbol, isin)
+      candidate = symbol.to_s.strip.presence
+      return false if candidate.blank?
+      return false if candidate.casecmp?(isin.to_s)
+
+      true
     end
 
     def pick_instrument_exchange_symbol(payload, isin)

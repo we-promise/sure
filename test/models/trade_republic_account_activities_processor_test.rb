@@ -66,6 +66,54 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not trade.entryable.security.offline?
   end
 
+  test "trade with symbol in detail resolves sold ISIN to exchange ticker" do
+    Security.stubs(:search_provider).returns([])
+
+    import_event(order_execution_detail(
+      event_id: "evt_sold_symbol",
+      quantity: "-10",
+      isin: "NL0000303709",
+      amount: "150.00"
+    ).deep_merge(detail: { symbol: "ABN", exchange_slug: "XETR", name: "ABN AMRO" }))
+
+    trade = find_trade("trade_republic_event_evt_sold_symbol")
+    assert_equal "ABN", trade.entryable.security.ticker
+    assert_equal "XETR", trade.entryable.security.exchange_operating_mic
+    assert_not trade.entryable.security.offline?
+    assert_not_includes trade.name, "NL0000303709"
+    assert_includes trade.name, "ABN"
+  end
+
+  test "reprocessing rematches prior ISIN trades when detail gains an exchange symbol" do
+    Security.stubs(:search_provider).returns([])
+
+    import_event(order_execution_detail(
+      event_id: "evt_rematch",
+      quantity: "-3",
+      isin: "DE000A0F5UJ7",
+      amount: "90.00"
+    ))
+
+    first = find_trade("trade_republic_event_evt_rematch")
+    assert_equal "DE000A0F5UJ7", first.entryable.security.ticker
+    assert first.entryable.security.offline?
+    assert_includes first.name, "DE000A0F5UJ7"
+
+    import_event(order_execution_detail(
+      event_id: "evt_rematch",
+      quantity: "-3",
+      isin: "DE000A0F5UJ7",
+      amount: "90.00"
+    ).deep_merge(detail: { symbol: "EXV1", exchange_slug: "XETR", name: "STOXX Banks" }))
+
+    rematched = find_trade("trade_republic_event_evt_rematch")
+    assert_equal "EXV1", rematched.entryable.security.ticker
+    assert_equal "XETR", rematched.entryable.security.exchange_operating_mic
+    assert_not rematched.entryable.security.offline?
+    assert_not_includes rematched.name, "DE000A0F5UJ7"
+    assert_includes rematched.name, "EXV1"
+  end
+
   test "sell imports negative quantity and positive amount" do
     import_event(order_execution_detail(
       event_id: "evt_sell",
