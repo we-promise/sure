@@ -7,7 +7,6 @@ class TradeRepublicAccount::ActivitiesProcessor
 
   SAVEBACK_EVENT_TYPE = "SAVEBACK_AGGREGATE"
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
-  AGGREGATE_TRADE_EVENT_TYPES = [ SAVEBACK_EVENT_TYPE, ROUND_UP_EVENT_TYPE ].freeze
 
   def initialize(trade_republic_account)
     @trade_republic_account = trade_republic_account
