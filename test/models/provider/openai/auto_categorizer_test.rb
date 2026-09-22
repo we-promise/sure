@@ -111,6 +111,41 @@ class Provider::Openai::AutoCategorizerTest < ActiveSupport::TestCase
     end
   end
 
+  test "auto mode retries when every strict response item is malformed" do
+    @client.expects(:chat).twice
+      .returns(
+        chat_response('{"categorizations":[{}]}'),
+        chat_response('{"categorizations":[{"transaction_id":"1","category_name":"Food"}]}')
+      )
+
+    result = categorizer(json_mode: "auto").auto_categorize
+
+    assert_equal "Food", result.first.category_name
+  end
+
+  test "auto mode drops malformed items below the retry threshold instead of returning nil fields" do
+    @transactions.concat([
+      { id: "2", name: "Shell", amount: 50, classification: "expense" },
+      { id: "3", name: "Netflix", amount: 15, classification: "expense" },
+      { id: "4", name: "Spotify", amount: 10, classification: "expense" }
+    ])
+
+    @client.expects(:chat).once
+      .returns(chat_response(<<~JSON.squish))
+        {"categorizations":[
+          {},
+          {"transaction_id":"2","category_name":null},
+          {"transaction_id":"3","category_name":"Food"},
+          {"transaction_id":"4","category_name":"Food"}
+        ]}
+      JSON
+
+    result = categorizer(json_mode: "auto").auto_categorize
+
+    assert_equal 3, result.size
+    assert result.all? { |r| r.transaction_id.present? }
+  end
+
   test "auto mode still falls back to none mode on HTTP 400" do
     call_params = []
     @client.expects(:chat).twice

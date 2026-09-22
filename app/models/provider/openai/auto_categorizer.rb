@@ -380,6 +380,15 @@ class Provider::Openai::AutoCategorizer
         raise Provider::Openai::ResponseFormatError, "Could not find categorizations in response"
       end
 
+      # Drop items missing a transaction id or the required field keys (the
+      # schema requires both keys; null values are allowed). Without this a
+      # {} item comes back as a nil-field row that looks like a real result,
+      # hiding a malformed batch from the auto-mode retry heuristic.
+      categorizations.select! do |cat|
+        (cat["transaction_id"] || cat["id"] || cat["txn_id"]).present? &&
+          %w[category_name category name].any? { |key| cat.key?(key) }
+      end
+
       # Normalize field names (some LLMs use different naming)
       categorizations.map do |cat|
         {

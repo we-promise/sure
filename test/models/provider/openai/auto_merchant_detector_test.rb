@@ -60,6 +60,41 @@ class Provider::Openai::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal "Amazon", result.first.business_name
   end
 
+  test "auto mode retries when every strict response item is malformed" do
+    @client.expects(:chat).twice
+      .returns(
+        chat_response('{"merchants":[{}]}'),
+        chat_response('{"merchants":[{"transaction_id":"1","business_name":"Amazon","business_url":"amazon.com"}]}')
+      )
+
+    result = detector(json_mode: "auto").auto_detect_merchants
+
+    assert_equal "Amazon", result.first.business_name
+  end
+
+  test "auto mode drops malformed items below the retry threshold instead of returning nil fields" do
+    @transactions.concat([
+      { id: "2", name: "SHELL OIL", amount: 50, classification: "expense" },
+      { id: "3", name: "NETFLIX", amount: 15, classification: "expense" },
+      { id: "4", name: "SPOTIFY", amount: 10, classification: "expense" }
+    ])
+
+    @client.expects(:chat).once
+      .returns(chat_response(<<~JSON.squish))
+        {"merchants":[
+          {"transaction_id":"1","business_name":"Amazon"},
+          {"transaction_id":"2","business_name":null,"business_url":null},
+          {"transaction_id":"3","business_name":"Netflix","business_url":"netflix.com"},
+          {"transaction_id":"4","business_name":"Spotify","business_url":"spotify.com"}
+        ]}
+      JSON
+
+    result = detector(json_mode: "auto").auto_detect_merchants
+
+    assert_equal 3, result.size
+    assert result.all? { |r| r.transaction_id.present? }
+  end
+
   test "auto mode does not fire a second fallback when the none-mode retry returns HTTP 400" do
     @client.expects(:chat).twice
       .returns(chat_response('{"merchants":[{"transaction_id":"1"'))
