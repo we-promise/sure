@@ -511,6 +511,10 @@ class FamilyTest < ActiveSupport::TestCase
 
   # A non-loopback http:// endpoint is the misconfiguration these guard: the
   # settings form rejects it, but JEV_ENDPOINT never passes through the form.
+  # Marked for the secret scanner: a redaction test has to hold the shape it
+  # redacts. The host and secrets are fake.
+  CREDENTIALED_JEV_ENDPOINT = "http://someone:s3cret@gw.example.com/v1?api_key=QUERYSECRET#frag" # pipelock:ignore Credential in URL
+
   REJECTED_JEV_ENV = {
     "JEV_API_KEY" => "test_api_key",
     "JEV_ENDPOINT" => "http://internal-gateway.example.com/v1/systemone"
@@ -559,10 +563,7 @@ class FamilyTest < ActiveSupport::TestCase
     family.update!(categorization_provider: "jev")
     Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
 
-    with_env_overrides(
-      "JEV_API_KEY" => "test_api_key",
-      "JEV_ENDPOINT" => "http://user:s3cret@gw.example.com/v1?api_key=AKIAXXXX#frag"
-    ) do
+    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_ENDPOINT" => CREDENTIALED_JEV_ENDPOINT) do
       assert_nil family.resolved_categorization_provider
     end
 
@@ -573,7 +574,7 @@ class FamilyTest < ActiveSupport::TestCase
     # just as readily as the endpoint field if it is not redacted at the raise.
     serialized = entry.metadata.to_json
     assert_not_includes serialized, "s3cret"
-    assert_not_includes serialized, "AKIAXXXX"
+    assert_not_includes serialized, "QUERYSECRET"
     assert_not_includes serialized, "frag"
   end
 

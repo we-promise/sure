@@ -34,11 +34,16 @@ class Provider::JevTest < ActiveSupport::TestCase
     { id: id, description: description, amount: 6.75, classification: "expense", merchant: merchant }
   end
 
+  # Fake gateway URLs carrying a secret in userinfo and in the query. Marked for
+  # the secret scanner because a redaction test cannot avoid holding the shape
+  # it redacts.
+  CREDENTIALED = "https://someone:s3cret@gw.example.com/v1?api_key=QUERYSECRET#frag" # pipelock:ignore Credential in URL
+  CREDENTIALED_HTTP = "http://someone:s3cret@gw.example.com/v1?api_key=QUERYSECRET" # pipelock:ignore Credential in URL
+  USERINFO_ONLY = "https://tokenonly@gw.example.com/v1" # pipelock:ignore Credential in URL
+
   test "redacted_endpoint strips userinfo, query and fragment" do
-    assert_equal "https://gw.example.com/v1",
-                 Provider::Jev.redacted_endpoint("https://user:s3cret@gw.example.com/v1?api_key=AKIA#frag")
-    assert_equal "https://gw.example.com/v1",
-                 Provider::Jev.redacted_endpoint("https://tokenonly@gw.example.com/v1")
+    assert_equal "https://gw.example.com/v1", Provider::Jev.redacted_endpoint(CREDENTIALED)
+    assert_equal "https://gw.example.com/v1", Provider::Jev.redacted_endpoint(USERINFO_ONLY)
     assert_equal ENDPOINT, Provider::Jev.redacted_endpoint(ENDPOINT)
   end
 
@@ -51,12 +56,12 @@ class Provider::JevTest < ActiveSupport::TestCase
   # endpoint it names must already be redacted.
   test "the rejected-endpoint error names the endpoint without its credentials" do
     error = assert_raises(Provider::Jev::Error) do
-      Provider::Jev.new("test_api_key", endpoint: "http://user:s3cret@gw.example.com/v1?api_key=AKIA")
+      Provider::Jev.new("test_api_key", endpoint: CREDENTIALED_HTTP)
     end
 
     assert_includes error.message, "http://gw.example.com/v1"
     assert_not_includes error.message, "s3cret"
-    assert_not_includes error.message, "AKIA"
+    assert_not_includes error.message, "QUERYSECRET"
   end
 
   test "categorizes a transaction and carries the reported confidence" do
