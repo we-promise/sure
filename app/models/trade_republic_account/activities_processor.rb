@@ -182,13 +182,20 @@ class TradeRepublicAccount::ActivitiesProcessor
       price = parse_decimal(detail[:price])
       price = nil if price&.zero?
       amount = parse_decimal(detail[:amount])
-      amount = quantity.abs * price.abs + (fee || 0) if (!amount || amount.zero?) && price
+      if (!amount || amount.zero?) && price
+        gross = quantity.abs * price.abs
+        # Fee increases buy cost and reduces sell proceeds (same as SnapTrade /
+        # manual trades).
+        amount = is_buy ? gross + (fee || 0) : gross - (fee || 0)
+      end
       return false unless amount && !amount.zero?
 
       signed_amount = is_buy ? -amount.abs : amount.abs
       if price.nil?
-        net = amount.abs - (fee || 0)
-        price = net / signed_quantity.abs if net.positive?
+        # Provider totals include fees: buy total = gross + fee, sell total =
+        # gross - fee. Recover share price from the cash amount accordingly.
+        gross = is_buy ? amount.abs - (fee || 0) : amount.abs + (fee || 0)
+        price = gross / signed_quantity.abs if gross.positive?
         price ||= amount.abs / signed_quantity.abs
       end
 
