@@ -36,7 +36,9 @@ class AccountProvider < ApplicationRecord
   private
 
     def financekit_has_exclusive_writer
-      return unless account_id
+      # belongs_to :account already reports a missing account; bail out rather
+      # than dereference it below.
+      return if account.nil?
       # Every provider link takes the same canonical-account lock. This closes
       # the race between FinanceKit mapping and another provider's setup flow.
       Account.where(id: account_id).lock.pick(:id)

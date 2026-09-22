@@ -20,6 +20,11 @@ class Financekit::AccountMapping
       Financekit.require!(@input["expected_version"] == 0, "mapping_conflict", 409)
       account, lineage = resolve_account_and_lineage!
       validate_canonical!(account)
+      # One enrollment may not publish two Wallet accounts into the same
+      # canonical account. Without this the unique index raises RecordNotUnique,
+      # which no handler in the FinanceKit stack translates.
+      Financekit.require!(!@item.financekit_accounts.exists?(financekit_account_lineage_id: lineage.id),
+        "lineage_account_conflict", 409)
       version = lineage.financekit_accounts.maximum(:mapping_version).to_i + 1
       @item.financekit_accounts.create!(financekit_account_lineage: lineage, source_id: @source_id,
         mapping_version: version, mapping_digest: mapping_digest,
@@ -27,6 +32,8 @@ class Financekit::AccountMapping
         accountable_type: @input["accountable_type"], subtype: @input["subtype"],
         ledger_timezone: @input["ledger_timezone"])
     end
+  rescue ActiveRecord::RecordNotUnique
+    raise Financekit::Error.new("mapping_conflict", 409)
   rescue Money::Currency::UnknownCurrencyError
     raise Financekit::Error.new("invalid_currency")
   end

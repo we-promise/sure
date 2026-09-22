@@ -95,6 +95,79 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal "source_reappeared", @item.financekit_conflicts.sole.kind
   end
 
+  test "a second wallet account cannot map onto an already mapped canonical account" do
+    other_source = SecureRandom.uuid
+    @item.update!(status: "repair_required", consent: @item.consent.merge(
+      "selected_source_account_ids" => [ @source_id, other_source ]))
+
+    error = assert_raises(Financekit::Error) do
+      FinancekitAccount.map!(@item, other_source, @mapping_input.except("booked_balance", "observed_at").merge(
+        "action" => "link", "account_id" => @source.account.id))
+    end
+
+    assert_equal "lineage_account_conflict", error.code
+    assert_equal 409, error.status
+  end
+
+  test "a conflict resolved with keep_sure is not reopened by later captures" do
+    first = accept_and_apply
+    tombstone = {
+      "kind" => "transaction_tombstone",
+      "tombstone" => {
+        "source_id" => @transaction_id,
+        "source_account_id" => @source_id,
+        "lineage_id" => @source.financekit_account_lineage_id,
+        "mapping_version" => @source.mapping_version
+      }
+    }
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ tombstone ]))
+    third = accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest,
+      events: [ financekit_events.last ]))
+    conflict = @item.financekit_conflicts.sole
+    conflict.resolve!(user: @user, resolution: "keep_sure")
+
+    fourth = accept_and_apply(financekit_payload(sequence: 4, predecessor_digest: third.payload_digest,
+      events: [ financekit_events.last ]))
+
+    assert_equal 1, @item.financekit_conflicts.count
+    assert_equal "resolved", conflict.reload.status
+    assert_equal 1, fourth.counts.fetch("settled")
+    assert_empty @source.account.entries.reload
+    assert_not @source.financekit_transactions.sole.review_required?
+  end
+
+  test "a replacement identity awaiting review is not imported by the next capture" do
+    accept_and_apply
+    account = @source.account
+    lineage = @source.financekit_account_lineage
+
+    replacement_enrollment = @enrollment.deep_dup
+    replacement_enrollment["enrollment_id"] = SecureRandom.uuid
+    replacement_enrollment["replaces_connection_id"] = @item.id
+    replacement = Financekit::Enrollment.create!(@user, replacement_enrollment).item
+    @source = FinancekitAccount.map!(replacement, @source_id,
+      @mapping_input.except("booked_balance", "observed_at").merge(
+        "action" => "link", "account_id" => account.id, "lineage_id" => lineage.id))
+    replacement.activate!
+
+    unknown_identity = financekit_events.last
+    unknown_identity.fetch("transaction")["source_id"] = SecureRandom.uuid
+    first = accept_and_apply(financekit_payload(item: replacement, events: [ unknown_identity ]),
+      item: replacement)
+
+    assert_equal 1, first.counts.fetch("review_required")
+    assert_equal "replacement_identity", replacement.financekit_conflicts.sole.kind
+    assert_equal 1, account.entries.reload.count
+
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      item: replacement, events: [ unknown_identity ]), item: replacement)
+
+    assert_equal 1, second.counts.fetch("review_required")
+    assert_equal 1, account.entries.reload.count
+    assert_equal 1, replacement.financekit_conflicts.count
+  end
+
   test "balance observations are retained while only the latest booked value is materialized" do
     first = accept_and_apply
     second_events = financekit_events.select { |event| event["kind"] == "balance_upsert" }

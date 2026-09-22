@@ -12,6 +12,13 @@ class Financekit::LifecycleTest < ActiveSupport::TestCase
     end
   end
 
+  test "a provider link pointing at a missing account is invalid rather than raising" do
+    provider_link = AccountProvider.new(account_id: SecureRandom.uuid, provider: plaid_accounts(:one))
+
+    assert_not provider_link.valid?
+    assert_includes provider_link.errors[:account], "must exist"
+  end
+
   test "a source account cannot link to another family" do
     other = users(:empty)
     account = other.family.accounts.create!(owner: other, name: "Other household", currency: "USD", balance: 25,

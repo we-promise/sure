@@ -27,6 +27,15 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_equal 3, @item.reload.next_sequence
   end
 
+  test "a payload body that is not a JSON object is rejected before the idempotency check" do
+    error = assert_raises(Financekit::Error) do
+      FinancekitBatch.accept!(@item, "[]", idempotency_key: SecureRandom.uuid)
+    end
+
+    assert_equal "invalid_payload", error.code
+    assert_equal 422, error.status
+  end
+
   test "capture cannot begin at a later chunk" do
     payload = financekit_payload(events: [])
     payload.merge!("chunk_index" => 1, "chunk_count" => 2)

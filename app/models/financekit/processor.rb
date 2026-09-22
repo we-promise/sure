@@ -18,7 +18,7 @@ class Financekit::Processor
       Financekit.require!(!@item.last_captured_at || batch.captured_at >= @item.last_captured_at,
         "stale_capture", 409)
       counts = { "upserted" => 0, "retracted" => 0, "review_required" => 0,
-        "source_only" => 0, "balances" => 0, "accounts" => 0 }
+        "source_only" => 0, "settled" => 0, "balances" => 0, "accounts" => 0 }
       mappings = @item.selected_accounts.includes(financekit_account_lineage: :account)
         .index_by { |mapping| mapping.source_id.downcase }
       capture.each do |part|
@@ -118,17 +118,36 @@ class Financekit::Processor
     def import_transaction!(mapping, record, batch, counts)
       identity = transaction_identity_for(mapping, record["source_id"])
       existed = identity.persisted?
+      identity.assign_attributes(financekit_account: mapping, generation: batch.generation,
+        sequence: batch.sequence, status: record["status"], raw_payload: record)
+
+      # "Keep Sure" is a durable decision about this source identity, not a
+      # one-off dismissal. The publisher re-sends the same record on every
+      # capture that covers it, so without this the resolved conflict reopens
+      # on the next batch and the family is asked the same question forever.
+      if settled_by_family?(identity)
+        identity.review_required = false
+        identity.save!
+        counts["settled"] += 1
+        return
+      end
+
+      # An unanswered review keeps the record out of the ledger. Importing it
+      # on the next capture would decide the question the family was asked.
+      if existed && identity.review_required?
+        identity.save!
+        counts["review_required"] += 1
+        return
+      end
+
       if !existed && @item.replaces_financekit_item_id.present? &&
           mapping.financekit_account_lineage.financekit_transactions.exists?
-        identity.assign_attributes(financekit_account: mapping, generation: batch.generation,
-          sequence: batch.sequence, status: record["status"], raw_payload: record, review_required: true)
+        identity.review_required = true
         identity.save!
         create_conflict!(mapping, identity, "replacement_identity")
         counts["review_required"] += 1
         return
       end
-      identity.assign_attributes(financekit_account: mapping, generation: batch.generation,
-        sequence: batch.sequence, status: record["status"], raw_payload: record)
       if identity.tombstoned_at || (existed && identity.entry_id.nil? && identity.ledger_imported)
         identity.update!(review_required: true)
         create_conflict!(mapping, identity, "source_reappeared")
@@ -163,7 +182,13 @@ class Financekit::Processor
       identity.assign_attributes(financekit_account: mapping, generation: batch.generation, sequence: batch.sequence,
         status: "deleted", tombstoned_at: Time.current, raw_payload: nil)
       entry = identity.entry
-      if entry
+      if entry && settled_by_family?(identity)
+        # The family already chose to keep Sure's entry for this identity. The
+        # tombstone is still recorded so the source cannot resurrect it, but the
+        # protected entry stays and the answered conflict is not reopened.
+        identity.review_required = false
+        counts["settled"] += 1
+      elsif entry
         Entry.transaction do
           entry.lock!
           if protected_entry?(entry) || entry.source != "financekit" || entry.account_id != mapping.account.id
@@ -182,6 +207,25 @@ class Financekit::Processor
         source: self.class.name, provider_key: "financekit", family: @item.family,
         metadata: { batch_id: batch.batch_id, source_identity_id: identity.id,
           review_required: identity.review_required })
+    end
+
+    # A conflict the family resolved with "keep_sure" settles that source
+    # identity for good: Sure's version wins and the publisher's copy of the
+    # record is recorded without touching the ledger or raising again.
+    def settled_by_family?(identity)
+      identity.persisted? && settled_identity_ids.include?(identity.id)
+    end
+
+    # Read once per apply rather than per record: a capture carries up to
+    # Financekit::MAX_RECORDS events and this runs inside the item row lock.
+    # Scoped to the family, not the connection, so a decision survives device
+    # replacement the same way the source identity behind it does. Conflicts
+    # opened during this apply are "open", so the set cannot change under us.
+    def settled_identity_ids
+      @settled_identity_ids ||= FinancekitConflict
+        .where(family_id: @item.family_id, resolution: "keep_sure")
+        .where.not(financekit_transaction_id: nil)
+        .distinct.pluck(:financekit_transaction_id).to_set
     end
 
     def transaction_identity_for(mapping, source_id)

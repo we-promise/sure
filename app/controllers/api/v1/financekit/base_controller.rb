@@ -4,6 +4,7 @@ class Api::V1::Financekit::BaseController < Api::V1::BaseController
   before_action :require_financekit_access
   rescue_from Financekit::Error, with: :protocol_error
   rescue_from ActiveRecord::RecordInvalid, with: :invalid_record
+  rescue_from ActiveRecord::RecordNotUnique, with: :duplicate_record
   rescue_from KeyError, with: :invalid_record
 
   private
@@ -33,5 +34,9 @@ class Api::V1::Financekit::BaseController < Api::V1::BaseController
 
     def invalid_record(_error)
       protocol_error(Financekit::Error.new("validation_failed"))
+    end
+
+    def duplicate_record(_error)
+      protocol_error(Financekit::Error.new("resource_conflict", 409))
     end
 end

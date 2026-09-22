@@ -8,6 +8,9 @@ class FinancekitBatch < ApplicationRecord
     digest = Digest::SHA256.hexdigest(raw_payload)
     Financekit.require!(claimed_digest.blank? || claimed_digest == digest, "payload_digest_mismatch", 409)
     data = JSON.parse(raw_payload)
+    # validate_batch! proves the shape, but it runs behind the item lock and the
+    # idempotency comparison below already indexes the body by key.
+    Financekit.require!(data.is_a?(Hash))
     Financekit.require!(idempotency_key.blank? || idempotency_key.casecmp?(data["batch_id"].to_s),
       "idempotency_key_mismatch", 409)
 
