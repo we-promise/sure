@@ -340,7 +340,11 @@ class Provider::TradeRepublicClient
       begin
         portfolio = subscribe(websocket, type: "compactPortfolioByType", secAccNo: account["securitiesAccountNumber"])
         raise MalformedResponse, "Trade Republic portfolio response did not contain categories" unless portfolio.is_a?(Hash) && portfolio.key?("categories")
-        positions, position_warnings = normalize_positions(websocket, portfolio)
+        positions, position_warnings = normalize_positions(
+          websocket,
+          portfolio,
+          sec_acc_no: account["securitiesAccountNumber"]
+        )
         warnings.concat(position_warnings)
         domain_statuses["portfolio"] = "success"
         domain_statuses["instrument_metadata"] = position_warnings.empty? ? "success" : "partial"
@@ -626,7 +630,7 @@ class Provider::TradeRepublicClient
       end.join
     end
 
-    def normalize_positions(websocket, portfolio)
+    def normalize_positions(websocket, portfolio, sec_acc_no: nil)
       raw_positions = Array(portfolio["categories"]).flat_map do |category|
         Array(category["positions"]).map { |position| position.merge("categoryType" => category["categoryType"]) }
       end
@@ -642,14 +646,38 @@ class Provider::TradeRepublicClient
         end
       end
       prices = {}
+      price_sources = {}
       instruments = {}
+      private_market_quotes = private_markets_unit_prices(websocket, sec_acc_no) if valid_positions.any? { |p|
+        p["categoryType"].to_s == "privateMarkets"
+      }
+
       valid_positions.each do |position|
         isin = position["instrumentId"].presence || position["isin"]
         next if prices.key?(isin)
 
         price = position_price(websocket, isin, position["categoryType"])
-        prices[isin] = price if price.present?
-        warnings << "price unavailable for #{isin}; position kept without valuation" if price.blank?
+        price_source = nil
+
+        if price.blank? && private_market_quotes.present?
+          price = private_market_quotes[isin]
+          price_source = "private_markets" if price.present?
+        end
+
+        if price.blank?
+          cost = decimal_string(position["averageBuyIn"] || position["avgCost"])
+          if cost.present?
+            price = cost
+            price_source = "cost_basis"
+          else
+            warnings << "price unavailable for #{isin}; position kept without valuation"
+          end
+        end
+
+        if price.present?
+          prices[isin] = price
+          price_sources[isin] = price_source if price_source.present?
+        end
       end
       valid_positions.each do |position|
         isin = position["instrumentId"].presence || position["isin"]
@@ -670,6 +698,7 @@ class Provider::TradeRepublicClient
           "quantity" => decimal_string(quantity),
           "average_cost" => decimal_string(position["averageBuyIn"] || position["avgCost"]),
           "price" => prices[isin],
+          "price_source" => price_sources[isin],
           "symbol" => instrument[:symbol],
           "exchange_slug" => instrument[:exchange_slug]
         }.compact
@@ -678,22 +707,93 @@ class Provider::TradeRepublicClient
     end
 
     def position_price(websocket, isin, category_type)
-      exchanges = category_type.to_s == "cryptos" ? CRYPTO_TICKER_EXCHANGES : TICKER_EXCHANGES
-      exchanges.each do |exchange|
-        ticker = subscribe(websocket, type: "ticker", id: "#{isin}.#{exchange}")
-        price = ticker.dig("last", "price") if ticker.is_a?(Hash)
-        return decimal_string(price) if price.present?
-      rescue Timeout
-        # A ticker that never answers is instrument-metadata loss, not a
-        # failed portfolio snapshot. Keep the holding and let the importer
-        # record the missing valuation instead of retrying the whole sync.
-        return nil
-      rescue TransientProviderError, RateLimited
-        raise
-      rescue Error
-        next
+      home_exchange = home_instrument_exchange_id(websocket, isin)
+      if home_exchange.present?
+        price = ticker_last_price(websocket, isin, home_exchange)
+        return price if price.present?
       end
 
+      exchanges = category_type.to_s == "cryptos" ? CRYPTO_TICKER_EXCHANGES : TICKER_EXCHANGES
+      exchanges.each do |exchange|
+        next if exchange == home_exchange
+
+        price = ticker_last_price(websocket, isin, exchange)
+        return price if price.present?
+      end
+
+      nil
+    end
+
+    def home_instrument_exchange_id(websocket, isin)
+      home = optional_subscribe(websocket, type: "homeInstrumentExchange", id: isin)
+      return nil unless home.is_a?(Hash)
+
+      (home["exchangeId"].presence || home["id"].presence || home["slug"].presence).to_s.strip.upcase.presence
+    rescue Error
+      nil
+    end
+
+    def ticker_last_price(websocket, isin, exchange)
+      ticker = subscribe(websocket, type: "ticker", id: "#{isin}.#{exchange}")
+      price = ticker.dig("last", "price") if ticker.is_a?(Hash)
+      decimal_string(price) if price.present?
+    rescue Timeout
+      # A hung ticker feed must not block the rest of the exchange list or the
+      # private-markets / cost-basis fallbacks below.
+      nil
+    rescue TransientProviderError, RateLimited
+      raise
+    rescue Error
+      nil
+    end
+
+    # Best-effort PE enrichment. Trade Republic rejects the subscription when
+    # the account has no private-markets sleeve — treat that as an empty map.
+    def private_markets_unit_prices(websocket, sec_acc_no)
+      return {} if sec_acc_no.blank?
+
+      payload = optional_subscribe(websocket, type: "privateMarketsPositions", secAccNo: sec_acc_no)
+      return {} unless payload.is_a?(Hash)
+
+      Array(payload["positions"]).each_with_object({}) do |position, prices|
+        next unless position.is_a?(Hash)
+
+        isin = position["instrumentId"].presence || position["isin"]
+        next if isin.blank?
+
+        unit_price = private_markets_unit_price(position)
+        prices[isin] = unit_price if unit_price.present?
+      end
+    rescue Error
+      {}
+    end
+
+    def private_markets_unit_price(position)
+      quantity = decimal_string(position["netSize"] || position["quantity"] || position["size"])
+      qty = quantity.present? ? BigDecimal(quantity) : nil
+
+      explicit = decimal_string(
+        position["unitPrice"] ||
+        position["nav"] ||
+        position["price"] ||
+        position.dig("positionReturn", "price") ||
+        position.dig("positionReturn", "unitPrice") ||
+        position.dig("quotation", "price")
+      )
+      return explicit if explicit.present?
+
+      total = money_amount(
+        position["positionReturn"] ||
+        position["currentValue"] ||
+        position["marketValue"] ||
+        position["netValue"] ||
+        position["value"]
+      )
+      total_s = decimal_string(total)
+      return nil if total_s.blank? || qty.nil? || qty.zero?
+
+      decimal_string(BigDecimal(total_s) / qty)
+    rescue ArgumentError
       nil
     end
 

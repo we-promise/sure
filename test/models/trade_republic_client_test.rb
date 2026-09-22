@@ -274,21 +274,144 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal [ "price unavailable for LU3176111881; position kept without valuation" ], warnings
   end
 
-test "maps Google Pay inbound payments to deposits" do
-  assert_equal "PAYMENT_RECEIVED",
-    Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["PAYMENT_INBOUND_GOOGLE_PAY"]
-  assert_equal :financial, TradeRepublicAccount::DataHelpers.classify_timeline_event(
-    "eventType" => "PAYMENT_INBOUND_GOOGLE_PAY",
-    "title" => "Cash in"
-  )
-end
+  test "falls back to average buy-in when private markets has no ticker" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *_args, **_kwargs|
+      raise Provider::TradeRepublicClient::ProviderUnavailable
+    end
 
-test "ignores Legal documents timeline rows without an event type" do
-  assert_equal :ignored, TradeRepublicAccount::DataHelpers.classify_timeline_event(
-    "title" => "Legal documents",
-    "subtitle" => "Accepted"
-  )
-end
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "privateMarkets", "positions" => [
+          {
+            "instrumentId" => "LU3176111881",
+            "name" => "Private Equity",
+            "netSize" => "1.01",
+            "averageBuyIn" => "100.0"
+          }
+        ] }
+      ]
+    }, sec_acc_no: "0717713602")
+
+    assert_empty warnings
+    assert_equal "100.0", positions.first["price"]
+    assert_equal "cost_basis", positions.first["price_source"]
+    assert_equal "private_markets", positions.first["category"]
+  end
+
+  test "prefers homeInstrumentExchange ticker before the hardcoded exchange list" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      requested << payload
+      case payload[:type]
+      when "homeInstrumentExchange"
+        { "exchangeId" => "XETR" }
+      when "ticker"
+        if payload[:id] == "DE000BASF111.XETR"
+          { "last" => { "price" => "45.12" } }
+        else
+          raise Provider::TradeRepublicClient::ProviderUnavailable
+        end
+      else
+        {}
+      end
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "stocksAndETFs", "positions" => [
+          { "instrumentId" => "DE000BASF111", "name" => "BASF", "netSize" => "2" }
+        ] }
+      ]
+    })
+
+    assert_empty warnings
+    assert_equal "45.12", positions.first["price"]
+    assert requested.any? { |p| p[:type] == "homeInstrumentExchange" }
+    assert requested.any? { |p| p[:type] == "ticker" && p[:id] == "DE000BASF111.XETR" }
+    assert requested.none? { |p| p[:type] == "ticker" && p[:id].to_s.end_with?(".LSX") }
+  end
+
+  test "merges a privateMarketsPositions unit price when ticker feeds are empty" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      case payload[:type]
+      when "privateMarketsPositions"
+        {
+          "positions" => [
+            {
+              "instrumentId" => "LU3176111881",
+              "netSize" => "1.01",
+              "unitPrice" => "108.50"
+            }
+          ]
+        }
+      else
+        raise Provider::TradeRepublicClient::ProviderUnavailable
+      end
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "privateMarkets", "positions" => [
+          {
+            "instrumentId" => "LU3176111881",
+            "name" => "Private Equity",
+            "netSize" => "1.01",
+            "averageBuyIn" => "100.0"
+          }
+        ] }
+      ]
+    }, sec_acc_no: "0717713602")
+
+    assert_empty warnings
+    assert_equal "108.50", positions.first["price"]
+    assert_equal "private_markets", positions.first["price_source"]
+  end
+
+  test "tolerates a rejected privateMarketsPositions subscription" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      if payload[:type] == "privateMarketsPositions"
+        raise Provider::TradeRepublicClient::ProviderUnavailable, "no private markets sleeve"
+      end
+
+      raise Provider::TradeRepublicClient::ProviderUnavailable
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "privateMarkets", "positions" => [
+          {
+            "instrumentId" => "LU3176111881",
+            "name" => "Private Equity",
+            "netSize" => "1.01",
+            "averageBuyIn" => "100.0"
+          }
+        ] }
+      ]
+    }, sec_acc_no: "0717713602")
+
+    assert_empty warnings
+    assert_equal "100.0", positions.first["price"]
+    assert_equal "cost_basis", positions.first["price_source"]
+  end
+
+  test "maps Google Pay inbound payments to deposits" do
+    assert_equal "PAYMENT_RECEIVED",
+      Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["PAYMENT_INBOUND_GOOGLE_PAY"]
+    assert_equal :financial, TradeRepublicAccount::DataHelpers.classify_timeline_event(
+      "eventType" => "PAYMENT_INBOUND_GOOGLE_PAY",
+      "title" => "Cash in"
+    )
+  end
+
+  test "ignores Legal documents timeline rows without an event type" do
+    assert_equal :ignored, TradeRepublicAccount::DataHelpers.classify_timeline_event(
+      "title" => "Legal documents",
+      "subtitle" => "Accepted"
+    )
+  end
 
   test "marks a snapshot partial when malformed positions are skipped" do
     @client.expects(:position_price).never
