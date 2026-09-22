@@ -154,7 +154,11 @@ module TradeRepublicAccount::DataHelpers
 
     def declined_subtitle?(event)
       event = event.with_indifferent_access
-      [ event[:subtitle], event[:badge], event[:title] ].compact.any? do |value|
+      # Only subtitle/badge — never title. Titles are often security or merchant
+      # names and can contain substrings like "cancel" without meaning the
+      # event itself failed; treating those as non-importable would delete
+      # legitimate entries on reconcile.
+      [ event[:subtitle], event[:badge] ].compact.any? do |value|
         value.to_s.match?(DECLINED_SUBTITLE_PATTERN)
       end
     end

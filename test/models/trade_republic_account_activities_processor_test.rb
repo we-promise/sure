@@ -731,6 +731,62 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_card_declined")
   end
 
+  test "blank status with declined subtitle skips import without matching security titles" do
+    cash_account, cash_sure = create_linked_cash_account!
+    cash_account.update!(raw_timeline_payload: [
+      {
+        id: "evt_subtitle_declined",
+        timestamp: "2026-08-01T10:00:00Z",
+        eventType: "CARD_TRANSACTION",
+        category: "POC_CREATED",
+        title: "Coffee Shop",
+        subtitle: "Payment declined",
+        detail: { amount: "12.00", currency: "EUR" }
+      },
+      {
+        id: "evt_title_cancel_ok",
+        timestamp: "2026-08-01T11:00:00Z",
+        eventType: "CARD_TRANSACTION",
+        category: "POC_CREATED",
+        title: "Cancellation Fee Shop",
+        subtitle: "Card payment",
+        detail: { amount: "3.00", currency: "EUR" }
+      }
+    ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_subtitle_declined")
+    assert Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_title_cancel_ok")
+  end
+
+  test "blank status declined subtitle reconciles unprotected prior imports" do
+    cash_account, cash_sure = create_linked_cash_account!
+    Account::ProviderImportAdapter.new(cash_sure).import_transaction(
+      external_id: "trade_republic_event_evt_later_declined",
+      amount: BigDecimal("12.00"),
+      currency: "EUR",
+      date: Date.parse("2026-08-01"),
+      name: "Pending card",
+      source: "trade_republic",
+      investment_activity_label: "Card payment"
+    )
+
+    cash_account.update!(raw_timeline_payload: [ {
+      id: "evt_later_declined",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "CARD_TRANSACTION",
+      category: "POC_CREATED",
+      title: "Coffee",
+      subtitle: "Transaction failed",
+      detail: { amount: "12.00", currency: "EUR" }
+    } ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_later_declined")
+  end
+
   test "deleted financial events are skipped and unprotected prior imports are removed" do
     cash_account, cash_sure = create_linked_cash_account!
     Account::ProviderImportAdapter.new(cash_sure).import_transaction(
