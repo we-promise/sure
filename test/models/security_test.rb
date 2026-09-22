@@ -58,27 +58,54 @@ class SecurityTest < ActiveSupport::TestCase
     assert security.classification_locked?
   end
 
-  # The counterpart to the two taxonomy tests: sector, industry and region are
-  # free text ON PURPOSE, because each provider ships its own vocabulary and a
-  # constraint would reject a value one of them legitimately returns. That is an
-  # absence -- of a constraint and of an `inclusion` rule -- and an absence is
-  # exactly what no other test here would notice being filled in. Adding either
-  # one later breaks classification ingestion for a provider, and the first
-  # symptom would be in the provider, not in this file.
+  # The counterpart to the two taxonomy tests: sector and industry are free text
+  # ON PURPOSE, because each provider ships its own vocabulary and a constraint
+  # would reject a value one of them legitimately returns. That is an absence --
+  # of a constraint and of an `inclusion` rule -- and an absence is exactly what
+  # no other test here would notice being filled in. Adding either one later
+  # breaks classification ingestion for a provider, and the first symptom would
+  # be in the provider, not in this file.
+  #
+  # `region` is deliberately NOT asserted here; see the test below for why the
+  # two cases are not the same.
   #
   # Values chosen to be outside any plausible taxonomy and to carry the
   # punctuation real provider strings do, since a normalising validation would
   # pass a tidy string and fail on these.
-  test "sector, industry and region are unconstrained free text" do
+  test "sector and industry are unconstrained free text" do
     security = securities(:aapl)
     free_text = "Consumer Electronics & Durables -- EMEA/APAC (ex-Japan), 2nd tier"
 
-    security.assign_attributes(sector: free_text, industry: free_text, region: free_text)
+    security.assign_attributes(sector: free_text, industry: free_text)
     assert security.valid?, "no inclusion validation belongs on these"
 
     # And no check constraint either, which the model's validations cannot show.
-    security.update_columns(sector: free_text, industry: free_text, region: free_text)
-    assert_equal [ free_text ] * 3, security.reload.values_at(:sector, :industry, :region)
+    security.update_columns(sector: free_text, industry: free_text)
+    assert_equal [ free_text ] * 2, security.reload.values_at(:sector, :industry)
+  end
+
+  # `region` is unconstrained at the DATABASE level for a different reason than
+  # sector and industry, and this test protects only that reason. No provider
+  # supplies a region -- they supply a country, and the region is derived from
+  # it against a list this application owns -- so the vocabulary is closed and
+  # a model-level `inclusion` validation is the right enforcement once
+  # something writes it. The list belongs in configuration, where widening it
+  # should not need a migration, which is why the constraint is not in the
+  # schema.
+  #
+  # So this asserts the missing CHECK constraint and says nothing about model
+  # validation: an `inclusion` rule arriving on `region` later is the intended
+  # end state, not a regression, and a test that failed when it landed would be
+  # asserting the opposite of the design.
+  test "region carries no database check constraint so the list can live in configuration" do
+    security = securities(:aapl)
+    outside_any_list = "Trans-Kuiper Belt, 2nd tier"
+
+    security.update_columns(region: outside_any_list)
+    assert_equal outside_any_list, security.reload.region
+
+    assert_nil Security.connection.check_constraints(:securities).find { |c| c.expression.include?("region") },
+               "a check constraint on region would move the list out of configuration and into a migration"
   end
 
   test "the model taxonomy and the database constraint list the same values" do

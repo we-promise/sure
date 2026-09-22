@@ -55,10 +55,19 @@ class Security < ApplicationRecord
   # therefore a two-file edit, and "the model taxonomy and the database
   # constraint list the same values" fails if only one side moves.
   #
-  # `sector`, `industry` and `region` have no constants and no validation on
-  # purpose: they hold provider vocabulary, which no two providers agree on.
-  # An `inclusion` rule there would reject a value a provider legitimately
+  # `sector` and `industry` have no constants and no validation on purpose:
+  # they hold provider vocabulary, which no two providers agree on. An
+  # `inclusion` rule there would reject a value a provider legitimately
   # returns.
+  #
+  # `region` is NOT the same case, and grouping it with those two would be
+  # wrong. No provider supplies a region -- they supply a country, and the
+  # region is derived from it against a list this application owns -- so its
+  # vocabulary is closed and a model-level `inclusion` validation is the right
+  # enforcement once something writes it. It is unconstrained today only
+  # because nothing does. It is left unconstrained in the DATABASE for a
+  # different reason: the list belongs in configuration, where widening it
+  # should not need a migration. The migration header says the same.
   ASSET_CLASSES = %w[
     alternative_investment commodity equity fixed_income liquidity real_estate
   ].freeze
