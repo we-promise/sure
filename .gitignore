@@ -134,3 +134,6 @@ logs/security/
 # Ignore Playwright artifacts
 playwright-report/
 .playwright-mcp
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

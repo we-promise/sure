@@ -16,6 +16,7 @@ class AkahuAccount::Processor
     end
 
     process_account!
+    process_holdings
     process_transactions
   rescue StandardError => e
     Rails.logger.error "AkahuAccount::Processor - Failed to process account akahu_account_id=#{akahu_account.id} error_class=#{e.class.name}"
@@ -51,6 +52,16 @@ class AkahuAccount::Processor
       report_exception(e, "transactions")
       Rails.logger.error "AkahuAccount::Processor - Failed to process transactions akahu_account_id=#{akahu_account.id} error_class=#{e.class.name}"
       { success: false, failed: 1, errors: [ { error: I18n.t("akahu_item.errors.account_processing_failed") } ] }
+    end
+
+    # Holdings are best-effort: a malformed portfolio entry must not fail the
+    # account sync, which would also drop the balance update and transactions.
+    def process_holdings
+      AkahuAccount::HoldingsProcessor.new(akahu_account).process
+    rescue => e
+      report_exception(e, "holdings")
+      Rails.logger.error "AkahuAccount::Processor - Failed to process holdings akahu_account_id=#{akahu_account.id} error_class=#{e.class.name}"
+      nil
     end
 
     def report_exception(error, context)
