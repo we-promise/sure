@@ -277,12 +277,55 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not Entry.exists?(external_id: "trade_republic_event_evt_unknown")
   end
 
-  test "trade fee is retained as metadata and not imported as a second cash entry" do
-    import_event(order_execution_detail(quantity: "1.5", isin: "US0378331005", amount: "100.00").deep_merge(detail: { fees: "1.00" }))
+  test "trade fee is imported on the trade and excluded from per-share price" do
+    import_event(order_execution_detail(
+      quantity: "2",
+      isin: "IE00B5BMR087",
+      amount: "1024.92"
+    ).deep_merge(detail: { fees: "1.00", price: "511.96", name: "Core S&P 500" }))
 
     assert_equal 1, Entry.where(source: "trade_republic").count
     trade = find_trade("trade_republic_event_evt_buy")
+    assert_equal BigDecimal("511.96"), trade.entryable.price
+    assert_equal BigDecimal("1.00"), trade.entryable.fee
+    assert_equal BigDecimal("-1024.92"), trade.amount
     assert_equal "1.00", trade.entryable.extra.dig("trade_republic", "fees")
+  end
+
+  test "trade derives share price from amount net of fees when price is missing" do
+    import_event(order_execution_detail(
+      quantity: "2",
+      isin: "IE00B5BMR087",
+      amount: "1024.92"
+    ).deep_merge(detail: { fees: "1.00" }))
+
+    trade = find_trade("trade_republic_event_evt_buy")
+    assert_equal BigDecimal("511.96"), trade.entryable.price
+    assert_equal BigDecimal("1.00"), trade.entryable.fee
+  end
+
+  test "reprocessing updates fee and share price on an existing trade" do
+    import_event(order_execution_detail(
+      event_id: "evt_fee_update",
+      quantity: "2",
+      isin: "IE00B5BMR087",
+      amount: "1024.92"
+    ))
+
+    first = find_trade("trade_republic_event_evt_fee_update")
+    assert_equal BigDecimal("512.46"), first.entryable.price
+    assert_equal 0, first.entryable.fee.to_d
+
+    import_event(order_execution_detail(
+      event_id: "evt_fee_update",
+      quantity: "2",
+      isin: "IE00B5BMR087",
+      amount: "1024.92"
+    ).deep_merge(detail: { fees: "1.00", price: "511.96" }))
+
+    updated = find_trade("trade_republic_event_evt_fee_update")
+    assert_equal BigDecimal("511.96"), updated.entryable.price
+    assert_equal BigDecimal("1.00"), updated.entryable.fee
   end
 
   test "event without normalized detail is skipped" do

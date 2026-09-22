@@ -174,17 +174,23 @@ class TradeRepublicAccount::ActivitiesProcessor
       is_buy = quantity.positive?
       signed_quantity = quantity # Bridge reports sells as negative quantities already
 
-      # Amount falls back to |quantity| × price only when the provider omits
-      # the exact cash amount. Fees and taxes stay embedded in the provider
-      # amount rather than being inferred separately.
+      fee = parse_decimal(detail[:fees])&.abs
+      fee = nil if fee&.zero?
+
+      # Prefer the provider share price. Fall back to cash amount net of fees
+      # so the per-share price is not inflated by transaction costs.
       price = parse_decimal(detail[:price])
       price = nil if price&.zero?
       amount = parse_decimal(detail[:amount])
-      amount = quantity.abs * price.abs if (!amount || amount.zero?) && price
+      amount = quantity.abs * price.abs + (fee || 0) if (!amount || amount.zero?) && price
       return false unless amount && !amount.zero?
 
       signed_amount = is_buy ? -amount.abs : amount.abs
-      price ||= amount.abs / signed_quantity.abs
+      if price.nil?
+        net = amount.abs - (fee || 0)
+        price = net / signed_quantity.abs if net.positive?
+        price ||= amount.abs / signed_quantity.abs
+      end
 
       entry = import_adapter.import_trade(
         external_id:    external_id,
@@ -192,6 +198,7 @@ class TradeRepublicAccount::ActivitiesProcessor
         quantity:       signed_quantity,
         price:          price,
         amount:         signed_amount,
+        fee:            fee,
         currency:       detail[:currency].presence || currency,
         date:           date,
         name:           build_trade_name(security.ticker, signed_quantity),

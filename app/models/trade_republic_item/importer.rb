@@ -178,14 +178,18 @@ class TradeRepublicItem::Importer
       trade_republic_item.newest_event_id
     end
 
-    # Incomplete trade-detail events stored on the portfolio account. Oldest
-    # first so repeated syncs progressively drain historical starvation.
+    # Incomplete trade-detail events and complete trades still missing a share
+    # price (stored before execution price/fees were parsed). Oldest first so
+    # repeated syncs progressively drain historical starvation.
     def events_needing_detail_enrichment
       portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
       return [] unless portfolio
 
       Array(portfolio.raw_timeline_payload)
-        .select { |event| Provider::TradeRepublicClient.incomplete_trade_detail_event?(event) }
+        .select do |event|
+          Provider::TradeRepublicClient.incomplete_trade_detail_event?(event) ||
+            Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(event)
+        end
         .sort_by { |event| event_timestamp(event) }
         .first(Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS)
     end

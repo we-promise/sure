@@ -380,20 +380,27 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       "timestamp" => "2026-08-01T10:00:00Z",
       "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
       "category" => "orderExecution",
-      "detail" => { "amount" => -25.0, "isin" => "IE00B4L5Y983", "quantity" => "0.25" }
+      "detail" => { "amount" => -25.0, "isin" => "IE00B4L5Y983", "quantity" => "0.25", "price" => "100.00" }
+    }
+    needs_price = {
+      "id" => "trade-needs-price",
+      "timestamp" => "2026-08-02T10:00:00Z",
+      "eventType" => "TRADING_TRADE_EXECUTED",
+      "category" => "orderExecution",
+      "detail" => { "amount" => -100.0, "isin" => "US0378331005", "quantity" => "1", "currency" => "EUR" }
     }
     @item.trade_republic_accounts.create!(
       kind: "portfolio",
       name: "Portfolio",
       trade_republic_account_id: "DE-ENRICH",
       currency: "EUR",
-      raw_timeline_payload: [ incomplete_saveback, complete, incomplete_savings, incomplete_trade ]
+      raw_timeline_payload: [ incomplete_saveback, complete, needs_price, incomplete_savings, incomplete_trade ]
     )
 
     provider = mock("trade_republic_provider")
     provider.expects(:sync).with { |args|
       enrich_ids = Array(args[:enrich_events]).map { |event| event["id"] || event[:id] }
-      enrich_ids == %w[trade-old savings-old saveback-old]
+      enrich_ids == %w[trade-old savings-old saveback-old trade-needs-price]
     }.returns(client_result(
       "status" => "ok",
       "session_txt" => "# refreshed cookies",
@@ -401,7 +408,7 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       "cash" => { "amount" => "1", "currency" => "EUR" },
       "positions" => [],
       "events" => [],
-      "newest_event_id" => "savings-done",
+      "newest_event_id" => "trade-needs-price",
       "timeline_pagination_complete" => true,
       "detail_backfill_count" => 0,
       "warnings" => []
@@ -692,6 +699,48 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       .map { |event| event["id"] || event[:id] }
 
     assert_equal [ "incomplete-ok" ], enrich_ids
+  end
+
+  test "events needing detail enrichment include complete trades missing share price" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-PRICE",
+      currency: "EUR",
+      raw_timeline_payload: [
+        {
+          "id" => "needs-price",
+          "timestamp" => "2024-03-28T10:00:00Z",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "category" => "orderExecution",
+          "detail" => {
+            "isin" => "IE00B5BMR087",
+            "quantity" => "2",
+            "amount" => "1024.92",
+            "currency" => "EUR"
+          }
+        },
+        {
+          "id" => "has-price",
+          "timestamp" => "2024-03-29T10:00:00Z",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "category" => "orderExecution",
+          "detail" => {
+            "isin" => "IE00B5BMR087",
+            "quantity" => "1",
+            "amount" => "500.00",
+            "price" => "500.00",
+            "currency" => "EUR"
+          }
+        }
+      ]
+    )
+
+    enrich_ids = TradeRepublicItem::Importer.new(@item, provider: mock("provider"))
+      .send(:events_needing_detail_enrichment)
+      .map { |event| event["id"] || event[:id] }
+
+    assert_equal [ "needs-price" ], enrich_ids
   end
 
   test "apply_instrument_symbols stamps merged timeline events that lacked a ticker" do

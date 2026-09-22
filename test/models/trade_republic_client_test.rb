@@ -549,6 +549,55 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal(-100.0, events.first.dig("detail", "signed_amount"))
   end
 
+  test "normalize_event_detail parses Dutch share price and Kosten fees" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Transactie", "data" => [
+          { "title" => "Aandelen", "detail" => { "text" => "2" } },
+          { "title" => "Aandelenkoers", "detail" => { "text" => "€511,96" } },
+          { "title" => "Kosten", "detail" => { "text" => "€1,00" } },
+          { "title" => "Totaal", "detail" => { "text" => "€1.024,92" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B5BMR087" } } } } ] }
+      ]
+    }, item: { "title" => "Core S&P 500 USD (Acc)", "subtitle" => "Kopen" })
+
+    assert_equal "IE00B5BMR087", detail["isin"]
+    assert_equal "2.0", detail["quantity"]
+    assert_equal "511.96", detail["price"]
+    assert_equal "1.0", detail["fees"]
+    assert_equal "1024.92", detail["amount"]
+  end
+
+  test "normalize_event_detail derives share price from total net of fees" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Overview", "data" => [
+          { "title" => "Shares", "detail" => { "text" => "2" } },
+          { "title" => "Fee", "detail" => { "text" => "€1.00" } },
+          { "title" => "Total", "detail" => { "text" => "€1,024.92" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B5BMR087" } } } } ] }
+      ]
+    })
+
+    assert_equal "511.96", detail["price"]
+    assert_equal "1.0", detail["fees"]
+  end
+
+  test "trade_detail_needs_price_backfill detects complete trades without price" do
+    assert Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(
+      "category" => "orderExecution",
+      "eventType" => "TRADING_TRADE_EXECUTED",
+      "detail" => { "isin" => "IE00B5BMR087", "quantity" => "2", "amount" => "1024.92" }
+    )
+    refute Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(
+      "category" => "orderExecution",
+      "eventType" => "TRADING_TRADE_EXECUTED",
+      "detail" => { "isin" => "IE00B5BMR087", "quantity" => "2", "price" => "511.96" }
+    )
+  end
+
   test "card and cash events do not consume timeline detail requests" do
     requested = []
     @client.define_singleton_method(:subscribe) do |_websocket, **payload|

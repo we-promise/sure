@@ -106,8 +106,21 @@ class Provider::TradeRepublicClient
   INSTRUMENT_EXCHANGE_PREFERENCE = %w[XETR TDG].freeze
   INSTRUMENT_EXCHANGE_LAST_RESORT = %w[LSX].freeze
   INSTRUMENT_SYMBOL_CATEGORIES = %w[stocksAndETFs bonds].freeze
-  FEE_TITLES = [ "gebühr", "fee" ].freeze
-  TAX_TITLES = [ "steuer", "steuern", "tax", "taxes" ].freeze
+  FEE_TITLES = [
+    "gebühr", "fee", "fees", "kosten", "costs", "cost", "commission", "kommission"
+  ].freeze
+  TAX_TITLES = [ "steuer", "steuern", "tax", "taxes", "belasting" ].freeze
+  SHARE_TITLES = [
+    "aktien", "anteile", "shares", "aandelen",
+    "aktien hinzugefügt", "shares added", "aktien erhalten", "shares received",
+    "aktien entfernt", "shares removed", "aktien gesendet", "shares sent"
+  ].freeze
+  TOTAL_TITLES = [ "gesamt", "total", "totaal", "gesamtbetrag" ].freeze
+  PRICE_TITLES = [
+    "share price", "aandelenkoers", "aktienkurs", "anteilskurs",
+    "execution price", "kurs"
+  ].freeze
+  SELL_SUBTITLE_MARKERS = %w[sell verkauf verkaufen verkopen].freeze
   MAX_TIMELINE_PAGES = 50
   MAX_TIMELINE_DETAILS = 200
   # Reserve this many detail fetches for newly discovered trade events each
@@ -441,6 +454,17 @@ class Provider::TradeRepublicClient
       return false unless TradeRepublicAccount::DataHelpers.importable_timeline_event?(event)
 
       !trade_detail_complete?(event)
+    end
+
+    # Complete trades (isin + quantity) that still lack a share price — usually
+    # stored before we parsed execution price / fees from timeline details.
+    def trade_detail_needs_price_backfill?(event)
+      return false unless requires_trade_detail?(event)
+      return false unless TradeRepublicAccount::DataHelpers.importable_timeline_event?(event)
+      return false unless trade_detail_complete?(event)
+
+      detail = (event["detail"] || event[:detail]).stringify_keys
+      detail["price"].to_s.strip.blank?
     end
   end
 
@@ -1100,19 +1124,24 @@ class Provider::TradeRepublicClient
     end
 
     # Shared detail budget: reserve capacity for newly discovered trade events,
-    # drain oldest stored incomplete events next, then spend any leftover on
-    # additional new events. Failed attempts still consume budget so a bad
-    # event cannot starve the rest of the queue forever within one sync.
+    # drain oldest stored incomplete / price-backfill events next, then spend
+    # any leftover on additional new events. Failed attempts still consume
+    # budget so a bad event cannot starve the rest of the queue forever within
+    # one sync.
     def enrich_timeline_details(websocket, events, enrich_events: [])
       warnings = []
       events = Array(events)
       new_candidates = events.select { |event| self.class.incomplete_trade_detail_event?(event) && event["id"].present? }
       new_ids = new_candidates.to_set { |event| event["id"].to_s }
       backlog_candidates = Array(enrich_events).select do |event|
-        event.is_a?(Hash) &&
-          event.stringify_keys["id"].present? &&
-          self.class.incomplete_trade_detail_event?(event) &&
-          !new_ids.include?(event.stringify_keys["id"].to_s)
+        next false unless event.is_a?(Hash)
+
+        item = event.stringify_keys
+        next false if item["id"].blank?
+        next false if new_ids.include?(item["id"].to_s)
+
+        self.class.incomplete_trade_detail_event?(item) ||
+          self.class.trade_detail_needs_price_backfill?(item)
       end
 
       budget = MAX_TIMELINE_DETAILS
@@ -1247,17 +1276,37 @@ class Provider::TradeRepublicClient
 
     def normalize_event_detail(raw, item: nil)
       rows = collect_sections(raw).flat_map { |section| Array(section["data"]) }.select { |row| row.is_a?(Hash) }
-      shares = find_row(rows, [ "aktien", "anteile", "shares", "aktien hinzugefügt", "shares added", "aktien erhalten", "shares received", "aktien entfernt", "shares removed", "aktien gesendet", "shares sent" ])
-      total = find_row(rows, [ "gesamt", "total" ])
+      shares = find_row(rows, SHARE_TITLES)
+      total = find_row(rows, TOTAL_TITLES)
+      price_row = find_row(rows, PRICE_TITLES)
       fees = find_row(rows, FEE_TITLES)
       taxes = find_row(rows, TAX_TITLES)
       quantity = decimal_from_row(shares) || quantity_from_raw(raw)
       title = shares&.dig("title").to_s.downcase
       quantity = -quantity.abs if title.include?("entfernt") || title.include?("removed") || title.include?("gesendet") || title.include?("sent")
-      quantity = -quantity.abs if quantity && item&.dig("subtitle").to_s.downcase.include?("sell")
+      subtitle = item&.dig("subtitle").to_s.downcase
+      quantity = -quantity.abs if quantity && SELL_SUBTITLE_MARKERS.any? { |marker| subtitle.include?(marker) }
       amount = decimal_from_row(total)
+      fee_amount = decimal_from_row(fees)
+      tax_amount = decimal_from_row(taxes)
+      price = decimal_from_row(price_row)
+      if price.nil? && quantity&.nonzero? && amount
+        deductions = fee_amount.to_d.abs + tax_amount.to_d.abs
+        net = amount.abs - deductions
+        price = net / quantity.abs if net.positive?
+      end
       return nil if quantity.nil? && amount.nil?
-      { "isin" => find_isin(item) || find_isin(raw), "name" => item&.dig("title") || find_asset_name(raw), "quantity" => decimal_string(quantity), "price" => nil, "amount" => decimal_string(amount&.abs), "currency" => currency_from_row(total) || currency_from_row(shares), "fees" => decimal_string(decimal_from_row(fees)), "taxes" => decimal_string(decimal_from_row(taxes)) }.compact
+
+      {
+        "isin" => find_isin(item) || find_isin(raw),
+        "name" => item&.dig("title") || find_asset_name(raw),
+        "quantity" => decimal_string(quantity),
+        "price" => decimal_string(price),
+        "amount" => decimal_string(amount&.abs),
+        "currency" => currency_from_row(total) || currency_from_row(shares) || currency_from_row(price_row),
+        "fees" => decimal_string(fee_amount),
+        "taxes" => decimal_string(tax_amount)
+      }.compact
     end
 
     def collect_sections(node, result = [])
@@ -1275,8 +1324,21 @@ class Provider::TradeRepublicClient
     def decimal_from_row(row)
       text = row&.dig("detail", "text") || row&.dig("detail", "value", "text")
       return nil if text.blank?
+
       normalized = text.to_s.gsub(/[^\d,.-]/, "")
-      normalized = normalized.gsub(".", "").tr(",", ".") if normalized.count(",") == 1 && normalized.rindex(",") > normalized.rindex(".")
+      return nil if normalized.blank?
+
+      # European: 1.024,92 or 511,96 → strip thousand dots, comma as decimal.
+      # English: 1,024.92 → strip thousand commas. Leave plain 511.96 alone.
+      if normalized.count(",") == 1 && (dot = normalized.rindex(".")) && normalized.rindex(",") > dot
+        normalized = normalized.gsub(".", "").tr(",", ".")
+      elsif normalized.count(",") == 1 && normalized.rindex(".").nil?
+        normalized = normalized.tr(",", ".")
+      elsif normalized.count(",") >= 1 && normalized.count(".") == 1 &&
+          normalized.rindex(",") < normalized.rindex(".")
+        normalized = normalized.gsub(",", "")
+      end
+
       BigDecimal(normalized)
     rescue ArgumentError
       nil
