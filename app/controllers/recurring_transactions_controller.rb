@@ -26,7 +26,7 @@ class RecurringTransactionsController < ApplicationController
 
     # Fresh detections wait in their own review strip until confirmed; they
     # are not real bills yet and would only be noise inside the main table.
-    @suggested = scope.suggested.order(next_expected_date: :asc)
+    @suggested_income, @suggested_bills = scope.suggested.order(next_expected_date: :asc).partition(&:typed_income?)
     @recurring_transactions = scope.where.not(status: :suggested)
                                    .order(status: :asc, next_expected_date: :asc)
     @family = Current.family
@@ -55,7 +55,7 @@ class RecurringTransactionsController < ApplicationController
       end
     end
 
-    flash[:notice] = t("recurring_transactions.confirmed")
+    flash[:notice] = t(@recurring_transaction.typed_income? ? "recurring_transactions.confirmed_income" : "recurring_transactions.confirmed")
     redirect_back_or_to recurring_transactions_path
   end
 

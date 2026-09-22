@@ -592,10 +592,13 @@ class BillsController < ApplicationController
       series.where(manual: false, status: :active).count
     end
 
+    # Income suggestions are reviewed in Settings -> Recurring, so detect's
+    # count leaves them out too.
     def accessible_suggested_series
       Current.family.recurring_transactions
              .accessible_by(Current.user)
              .suggested
+             .not_typed_income
     end
 
     # Family-wide, not user-scoped: occurrence materialization is the same
@@ -615,7 +618,7 @@ class BillsController < ApplicationController
         .merge(RecurringTransaction.accessible_by(Current.user))
         # Income never reviews here: the matcher no longer suggests it, and
         # this filter also retires any suggestion written before that rule.
-        .merge(RecurringTransaction.where.not(bill_type: "income"))
+        .merge(RecurringTransaction.not_typed_income)
         .includes(:entry, recurring_occurrence: { recurring_transaction: :merchant })
         # The confidence the matcher scored these with was sitting unused on
         # the row while the queue ordered itself by when the job happened to

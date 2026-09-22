@@ -824,6 +824,29 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert suggestion.reload.ended?
   end
 
+  test "settings reviews detected income in its own strip, not as a possible bill" do
+    create_series(name: "CITY WATER", amount: 80, status: "suggested")
+    create_series(name: "ACME PAYROLL", amount: -2500, bill_type: "income", status: "suggested")
+
+    get recurring_transactions_url
+
+    assert_response :success
+    assert_select "[data-persisted-disclosure-key-value='bills-suggested']", text: /CITY WATER/ do |strip|
+      assert_no_match "ACME PAYROLL", strip.text
+    end
+    assert_select "[data-persisted-disclosure-key-value='income-suggested']", text: /ACME PAYROLL/ do
+      assert_select "a", text: I18n.t("recurring_transactions.suggested_income.dismiss")
+    end
+  end
+
+  test "confirming an income suggestion says income was added" do
+    suggestion = create_series(name: "ACME PAYROLL", amount: -2500, bill_type: "income", status: "suggested")
+
+    post confirm_recurring_transaction_url(suggestion)
+
+    assert_equal I18n.t("recurring_transactions.confirmed_income"), flash[:notice]
+  end
+
   # --- "Search all your transactions" picker inside the add dialog ---
 
   test "the add dialog links to the picker whether or not detection found anything" do
@@ -1107,12 +1130,14 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-    def create_series(name:, account: accounts(:depository), merchant: nil, status: "active", payment_url: nil)
+    def create_series(name:, account: accounts(:depository), merchant: nil, status: "active", payment_url: nil,
+                      amount: 25, bill_type: "bill")
       @family.recurring_transactions.create!(
         account: account,
         merchant: merchant,
         name: name,
-        amount: 25,
+        amount: amount,
+        bill_type: bill_type,
         dedup_scope: name,
         currency: "USD",
         expected_day_of_month: 5,

@@ -188,7 +188,12 @@ en:
       collapsed_hint: Tap to review
       confirm: Add bill
       dismiss: Not a bill
+    suggested_income:
+      title: Possible new income
+      confirm: Add income
+      dismiss: Not income
     confirmed: Bill added to your recurring transactions
+    confirmed_income: Income added to your recurring transactions
     dismissed: "Dismissed. This pattern won't be suggested again."
     badges:
       manual: Manual
