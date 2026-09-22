@@ -160,6 +160,50 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert Security.exists?(id: isin_security.id)
   end
 
+  test "rematch drops a same-date ISIN holding when the exchange holding already exists" do
+    Security.stubs(:search_provider).returns([])
+
+    isin = "DE000BASF111"
+    isin_security = Security.create!(ticker: isin, name: "BASF ISIN", offline: true)
+    exchange_security = Security.create!(
+      ticker: "BAS",
+      exchange_operating_mic: "XETR",
+      name: "BASF",
+      offline: false
+    )
+
+    isin_holding = @account.holdings.create!(
+      security: isin_security,
+      date: Date.current,
+      qty: 5,
+      price: 40,
+      amount: 200,
+      currency: "EUR",
+      external_id: "stale-isin-holding",
+      account_provider_id: @tr_account.account_provider.id
+    )
+    exchange_holding = @account.holdings.create!(
+      security: exchange_security,
+      date: Date.current,
+      qty: 5,
+      price: 42.5,
+      amount: 212.5,
+      currency: "EUR",
+      external_id: "trade_republic_position_DEHOLD1_#{isin}_#{Date.current}",
+      account_provider_id: @tr_account.account_provider.id
+    )
+
+    processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
+    assert_nothing_raised do
+      processor.send(:rematch_account_from_isin!, isin, exchange_security)
+    end
+
+    assert_not Holding.exists?(isin_holding.id)
+    assert Holding.exists?(exchange_holding.id)
+    assert_equal exchange_security.id, exchange_holding.reload.security_id
+    assert_equal isin_security.id, exchange_holding.provider_security_id
+  end
+
   test "falls back to an offline ISIN security without a usable exchange symbol" do
     Security.stubs(:search_provider).returns([])
 

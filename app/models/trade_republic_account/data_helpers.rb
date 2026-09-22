@@ -396,6 +396,12 @@ module TradeRepublicAccount::DataHelpers
     # Securities are global. When an account previously stored the ISIN as the
     # ticker, move only this account's holdings and trades onto the resolved
     # exchange security instead of rewriting the shared ISIN row.
+    #
+    # Holdings use a unique index on (account_id, security_id, date, currency).
+    # Blind update_all can raise RecordNotUnique when today's exchange holding
+    # already exists (e.g. HoldingsProcessor imported it before Activities
+    # rematch), which aborts the outer Processor transaction. Move row-by-row
+    # and drop the stale ISIN duplicate on collision.
     def rematch_account_from_isin!(isin, to_security)
       return unless account.present? && to_security.present?
 
@@ -403,13 +409,42 @@ module TradeRepublicAccount::DataHelpers
       return unless from_security
       return if from_security.id == to_security.id
 
-      account.holdings.where(security_id: from_security.id).update_all(
-        security_id: to_security.id,
-        updated_at: Time.current
-      )
+      rematch_holdings_from_isin!(from_security, to_security)
       account.trades.where(security_id: from_security.id).update_all(
         security_id: to_security.id,
         updated_at: Time.current
       )
+    end
+
+    def rematch_holdings_from_isin!(from_security, to_security)
+      existing_keys = account.holdings
+        .where(security_id: to_security.id)
+        .pluck(:date, :currency)
+        .to_set
+
+      account.holdings.where(security_id: from_security.id).find_each do |holding|
+        key = [ holding.date, holding.currency ]
+        if existing_keys.include?(key)
+          existing = account.holdings.find_by!(
+            security_id: to_security.id,
+            date: holding.date,
+            currency: holding.currency
+          )
+          # Keep the already-resolved exchange holding; preserve provider
+          # tracking from the ISIN row when missing on the target.
+          attrs = {}
+          attrs[:external_id] = holding.external_id if existing.external_id.blank? && holding.external_id.present?
+          attrs[:provider_security_id] = from_security.id if existing.provider_security_id.blank?
+          attrs[:account_provider_id] = holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
+          existing.update!(attrs) if attrs.any?
+          holding.destroy!
+        else
+          holding.update!(
+            security_id: to_security.id,
+            provider_security_id: holding.provider_security_id.presence || from_security.id
+          )
+          existing_keys << key
+        end
+      end
     end
 end
