@@ -64,7 +64,12 @@ class TradeRepublicItem < ApplicationRecord
   def process_accounts
     return [] if trade_republic_accounts.empty?
 
-    linked_trade_republic_accounts.includes(account_provider: :account).each_with_object([]) do |tr_account, results|
+    # Portfolio before cash so Saveback trades exist before cash reconciliation
+    # removes legacy Saveback withdrawals in the same process_accounts pass.
+    linked_trade_republic_accounts
+      .includes(account_provider: :account)
+      .order(Arel.sql("CASE kind WHEN 'portfolio' THEN 0 WHEN 'cash' THEN 1 ELSE 2 END"), :id)
+      .each_with_object([]) do |tr_account, results|
       account = tr_account.current_account
       next unless account
       next if account.pending_deletion? || account.disabled?

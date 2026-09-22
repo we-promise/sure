@@ -141,4 +141,51 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
     assert_equal 5, summary[:events]
     assert_equal 1, summary[:unknown_events]
   end
+
+  test "process_accounts processes portfolio before cash even when cash was created first" do
+    item = trade_republic_items(:configured_item)
+    item.trade_republic_accounts.destroy_all
+
+    cash = item.trade_republic_accounts.create!(
+      kind: "cash",
+      name: "Cash First",
+      trade_republic_account_id: "DE-ORD-C",
+      currency: "EUR"
+    )
+    portfolio = item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio Second",
+      trade_republic_account_id: "DE-ORD-P",
+      currency: "EUR"
+    )
+
+    cash_sure = item.family.accounts.create!(
+      name: "TR Cash Order",
+      balance: 0,
+      cash_balance: 0,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+    portfolio_sure = item.family.accounts.create!(
+      name: "TR Portfolio Order",
+      balance: 0,
+      cash_balance: 0,
+      currency: "EUR",
+      accountable: Investment.new
+    )
+    cash.ensure_account_provider!(cash_sure)
+    portfolio.ensure_account_provider!(portfolio_sure)
+
+    processed_kinds = []
+    fake_processor = Object.new
+    fake_processor.define_singleton_method(:process) { true }
+    TradeRepublicAccount::Processor.stubs(:new).with { |tr_account|
+      processed_kinds << tr_account.kind
+      true
+    }.returns(fake_processor)
+
+    item.process_accounts
+
+    assert_equal %w[portfolio cash], processed_kinds
+  end
 end
