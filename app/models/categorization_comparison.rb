@@ -1,13 +1,9 @@
-# One transaction, categorized twice: once by the provider in use and once by
-# the one that is not.
+# One transaction categorized twice, by the provider in use and by the one that
+# is not. Recorded by Family::AutoCategorizer when shadow mode samples a run;
+# only the applied provider's answer reaches the transaction.
 #
-# Recorded by Family::AutoCategorizer when shadow mode samples a run. Only the
-# applied provider's answer reaches the transaction — these rows exist so a
-# provider can be evaluated against real data before anyone switches to it,
-# which is the step the rollout plan wanted before promoting a classifier.
-#
-# `shadow_confidence` is null whenever the shadow provider does not report one;
-# the LLM providers never do, so it is populated only when Jev is the shadow.
+# `shadow_confidence` is null unless the shadow provider reports one, which the
+# LLM providers never do.
 class CategorizationComparison < ApplicationRecord
   belongs_to :family
   # Not named `transaction`: ActiveRecord already defines that method, and an
@@ -24,8 +20,7 @@ class CategorizationComparison < ApplicationRecord
   scope :chronological, -> { order(:created_at) }
 
   # Share of sampled transactions where the two providers picked the same
-  # category. Both answering "no category" counts as agreement: declining to
-  # guess is an answer.
+  # category. Both answering "no category" counts as agreement.
   def self.agreement_rate
     total = count
     return nil if total.zero?

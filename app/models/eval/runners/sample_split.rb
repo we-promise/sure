@@ -1,21 +1,14 @@
-# Deterministic train/test split over a dataset's samples.
+# Deterministic train/test split over a dataset's samples. Family::BayesCategorizer
+# trains on a family's own history rather than shipping pre-trained, so every
+# provider must be scored on the same held-out samples to stay comparable. The
+# seed is what lets a later provider leg land on the Bayes leg's test set.
 #
-# Exists because Family::BayesCategorizer is trained on a family's own
-# categorized history rather than shipped pre-trained, so evaluating it means
-# holding some samples back to train on. Every other provider then has to be
-# evaluated on the *same* held-out samples, or the numbers are not comparable.
+# Two rules shape it:
 #
-# Two rules shape the split:
-#
-#   1. Null-expected samples can never train. Bayes trains on
-#      `where.not(category_id: nil)`, so a sample whose correct answer is "no
-#      category" has nothing to contribute to the model. They all land in test.
+#   1. Null-expected samples always land in test. Bayes trains on
+#      `where.not(category_id: nil)` and cannot learn from them.
 #   2. The categorized remainder is stratified by difficulty, so training does
-#      not accidentally absorb every easy sample and leave a test set that is
-#      uniformly hard.
-#
-# Seeded, so a run is reproducible and a later provider leg lands on exactly the
-# same test set as the Bayes leg it is being compared against.
+#      not absorb the easy samples and leave a uniformly hard test set.
 class Eval::Runners::SampleSplit
   DEFAULT_SEED = 42
   DEFAULT_TRAIN_RATIO = 0.5
@@ -44,10 +37,9 @@ class Eval::Runners::SampleSplit
     @test ||= partition.last
   end
 
-  # Describes the split in the run output so a reader can reproduce it and see
-  # what the test set is actually made of — a test set that is 23% null-expected
-  # behaves differently from one that is 13%, and that shift is a consequence of
-  # rule 1 above rather than a property of the dataset.
+  # Recorded in the run output so a split can be reproduced. The null-expected
+  # share matters when comparing runs: rule 1 moves it with the dataset's
+  # categorized ratio, so two runs over the same dataset can still differ.
   def describe
     {
       "seed" => seed,
@@ -83,12 +75,10 @@ class Eval::Runners::SampleSplit
       end
     end
 
-    # Deliberately not String#hash, which Ruby seeds per process: the Bayes leg
-    # and the provider leg of a cascade run are separate `rake evals:run`
-    # processes, so the same seed produced a different shuffle in each and the
-    # two legs were scored over different test sets. Eval::Reporters::CascadeReport
-    # compares only the recorded seed and train_ratio, which matched either way,
-    # so nothing warned. A digest is stable across processes and Ruby versions.
+    # Not String#hash, which Ruby seeds per process — the legs of a cascade run
+    # are separate `rake evals:run` processes, so one seed gave two shuffles.
+    # Eval::Reporters::CascadeReport compares only seed and train_ratio, so it
+    # cannot catch a regression here.
     def difficulty_offset(difficulty)
       Digest::SHA256.hexdigest(difficulty.to_s)[0, 8].to_i(16)
     end

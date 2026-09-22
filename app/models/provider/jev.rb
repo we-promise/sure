@@ -5,19 +5,16 @@ class Provider::Jev < Provider
   # Subclass so errors caught in this provider are raised as Provider::Jev::Error
   Error = Class.new(Provider::Error)
 
-  # Defaults to TypeSafe's own API rather than a reseller. Gateways like
-  # OpenRouter serve the identical payload and answer types, so one class covers
-  # both — but routing a family's transaction descriptions through an extra
-  # party should be something an operator opts into, not something they inherit
-  # from a default. For OpenRouter, set JEV_ENDPOINT to
-  # https://openrouter.ai/api/alpha/decisions and JEV_MODEL to
-  # ~typesafe/jev-latest.
+  # TypeSafe's own API, not a reseller — a gateway adds a party to the data
+  # flow, so reaching one is an operator's choice rather than a default.
+  # Gateways serve an identical payload, so this class covers both: for
+  # OpenRouter set JEV_ENDPOINT to https://openrouter.ai/api/alpha/decisions
+  # and JEV_MODEL to ~typesafe/jev-latest.
   DEFAULT_ENDPOINT = "https://api.typesafe.ai/v1/systemone"
   DEFAULT_MODEL = "jev-latest"
 
-  # The vendor's own host. Anything else is reached through a gateway, which the
-  # data-sharing disclosure has to name — telling someone their bank
-  # descriptions go to TypeSafe is wrong when they transit a proxy first.
+  # The vendor's own host. Anything else is a gateway, which the data-sharing
+  # disclosure has to name rather than claiming TypeSafe receives the data.
   VENDOR_HOST = "api.typesafe.ai"
 
   # Hosts where plaintext carries no network exposure. See .endpoint_allowed?.
@@ -31,11 +28,8 @@ class Provider::Jev < Provider
 
   QUESTION_TYPES = %w[choice score noul].freeze
 
-  # Offered alongside the real categories so the model has somewhere to put a
-  # transaction that fits none of them. Choice always returns one of the keys it
-  # was given, so without an explicit opt-out it would be forced to guess.
-  # Verified: an opaque "ACH DEBIT 4471920 REF#88213" descriptor selects
-  # UNCATEGORIZED at probability 1.0.
+  # A Choice always returns one of the keys it was given, so without an explicit
+  # opt-out the model is forced to guess on a transaction that fits nothing.
   UNCATEGORIZED = "__uncategorized__"
 
   CATEGORY_INSTRUCTIONS = "Which spending category best fits this bank transaction? " \
@@ -67,17 +61,13 @@ class Provider::Jev < Provider
       (ENV["JEV_ENDPOINT"].presence || Setting.jev_endpoint).presence || DEFAULT_ENDPOINT
     end
 
-    # Every request carries a Bearer token in the headers and the family's
-    # transaction descriptions in the body, so an http:// endpoint discloses
-    # both in cleartext — a credential leak, not merely a downgrade.
+    # An http:// endpoint discloses the Bearer token and the family's
+    # transaction descriptions in cleartext, so this is a credential leak rather
+    # than a downgrade. Name the scheme explicitly — URI::HTTPS subclasses
+    # URI::HTTP, so `is_a?(URI::HTTP)` silently accepts http://.
     #
-    # The scheme has to be named explicitly: URI::HTTPS subclasses URI::HTTP,
-    # so the obvious `is_a?(URI::HTTP)` check silently accepts http://.
-    #
-    # Loopback is exempt. An operator running a gateway on the same host has no
-    # network segment to intercept, and demanding a valid certificate for
-    # 127.0.0.1 would push them towards disabling verification altogether,
-    # which is worse than the thing this guards against.
+    # Loopback is exempt because demanding a certificate for 127.0.0.1 pushes
+    # operators towards disabling verification altogether.
     def endpoint_allowed?(url)
       uri = URI.parse(url.to_s)
       return false unless uri.is_a?(URI::HTTP) && uri.host.present?

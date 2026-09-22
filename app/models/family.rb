@@ -167,51 +167,40 @@ class Family < ApplicationRecord
     ENV["CATEGORIZATION_PROVIDER"].presence || categorization_provider
   end
 
-  # The provider that will actually categorize this family's transactions.
+  # The provider that will actually categorize this family's transactions,
+  # falling back to the LLM path when Jev is unselected or unconfigured.
+  # Credentials alone never select Jev; the family has to choose it, because
+  # this decides whose transaction descriptions reach a third party.
   #
-  # Jev decides a typed Choice per transaction and reports calibrated confidence,
-  # which the LLM providers cannot. Credentials alone never switch it on — the
-  # family has to choose it, because this decides whose transaction descriptions
-  # get sent to a third party. Falls back to the LLM path when Jev is unselected
-  # or unconfigured.
-  #
-  # Lives here rather than inside Family::AutoCategorizer because the rule
-  # confirmation screen has to name the same provider the run will use; when it
-  # resolved separately it estimated cost against a provider that would not run.
+  # Anything naming the provider calls this, including the rule confirmation
+  # screen's cost estimate, or it quotes a provider that will not run.
   def resolved_categorization_provider
     jev = configured_jev_provider if effective_categorization_provider == "jev"
 
-    # The LLM fallback honors Setting.llm_provider (issue #2113) —
-    # Provider::Anthropic implements auto_categorize (PR #1984), so batch
-    # categorization routes to the configured provider.
+    # Honors Setting.llm_provider (#2113); Provider::Anthropic gained
+    # auto_categorize in #1984, so either LLM provider can serve this.
     jev || Provider::Registry.preferred_llm_provider
   end
 
-  # Answers below this confidence are not applied. Zero means apply everything,
-  # which is how every install behaves until someone opts in.
-  #
-  # Only providers that report calibrated confidence can be gated — the LLM
-  # providers return a bare category name, so a threshold does nothing to them.
-  # Clamped because the ENV override bypasses the column's 0..1 validation and
-  # the DB check constraint both. Left unbounded, a threshold of 5 withholds
-  # every answer and one of -1 disables the gate entirely, and the settings
-  # screen renders the value into a field declared `in: 0..1`.
+  # Answers below this confidence are not applied. Zero applies everything and
+  # is the default. Only providers reporting calibrated confidence can be gated;
+  # the LLM providers return a bare category name. Clamped because the ENV
+  # override bypasses both the column validation and the DB check constraint.
   def effective_categorization_confidence_threshold
     (ENV["CATEGORIZATION_CONFIDENCE_THRESHOLD"].presence || categorization_confidence_threshold).to_f.clamp(0.0, 1.0)
   end
 
-  # Fraction of categorization runs that also ask the provider NOT in use, for
-  # comparison only. Zero disables it. This doubles spend on the runs it samples,
-  # so it is opt-in and sampled rather than all-or-nothing.
-  # Clamped for the same reason, with a sharper consequence: `rand < rate` on an
-  # unbounded override samples every single run, doubling spend silently.
+  # Fraction of categorization runs that also ask the provider not in use, for
+  # comparison only. Zero disables it. Doubles spend on the runs it samples, so
+  # it is sampled rather than all-or-nothing. Clamped because `rand < rate` on
+  # an unbounded override samples every run.
   def effective_categorization_shadow_rate
     (ENV["CATEGORIZATION_SHADOW_RATE"].presence || categorization_shadow_rate).to_f.clamp(0.0, 1.0)
   end
 
-  # The provider to run alongside the one in use, for comparison. Deliberately
-  # symmetric: whichever is selected, this returns the other, so Jev can be
-  # trialled against the LLM path or vice versa without a second mechanism.
+  # The provider to run alongside the one in use, for comparison. Symmetric —
+  # returns whichever of the two is not selected, so either can be trialled
+  # against the other without a second mechanism.
   def shadow_categorization_provider
     if effective_categorization_provider == "jev"
       Provider::Registry.preferred_llm_provider
