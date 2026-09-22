@@ -1684,29 +1684,6 @@ throttle('chats/create', limit: 10, period: 1.minute) do |req|
 end
 ```
 
-## Resources
-
-- [OpenAI Documentation](https://platform.openai.com/docs)
-- [Ollama Documentation](https://github.com/ollama/ollama)
-- [OpenRouter Documentation](https://openrouter.ai/docs)
-- [Langfuse Documentation](https://langfuse.com/docs)
-- [Sure GitHub Repository](https://github.com/we-promise/sure)
-
-## Support
-
-For issues with AI features:
-1. Check this documentation first
-2. Search [existing GitHub issues](https://github.com/we-promise/sure/issues)
-3. Open a new issue with:
-   - Your configuration (redact API keys!)
-   - Error messages
-   - Steps to reproduce
-   - Expected vs. actual behavior
-
----
-
-**Last Updated:** August 2026
-
 ## External chat assistant
 
 The External assistant delegates chat to a remote OpenAI-compatible agent gateway. It is separate from the Builtin LLM provider described above.
@@ -1729,3 +1706,26 @@ Configuration behavior:
 - An authentication, endpoint, or agent-selection failure comes from the external gateway. Check the gateway's response and logs when Sure reports an HTTP error.
 
 `EXTERNAL_ASSISTANT_AGENT_ID` remains supported as a routing-header override for existing deployments. New configurations should use `EXTERNAL_ASSISTANT_MODEL`; Sure derives the OpenClaw agent header from that value when no explicit header override is set.
+
+## Resources
+
+- [OpenAI Documentation](https://platform.openai.com/docs)
+- [Ollama Documentation](https://github.com/ollama/ollama)
+- [OpenRouter Documentation](https://openrouter.ai/docs)
+- [Langfuse Documentation](https://langfuse.com/docs)
+- [Sure GitHub Repository](https://github.com/we-promise/sure)
+
+## Support
+
+For issues with AI features:
+1. Check this documentation first
+2. Search [existing GitHub issues](https://github.com/we-promise/sure/issues)
+3. Open a new issue with:
+   - Your configuration (redact API keys!)
+   - Error messages
+   - Steps to reproduce
+   - Expected vs. actual behavior
+
+---
+
+**Last Updated:** September 2026
