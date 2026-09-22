@@ -434,14 +434,40 @@ module TradeRepublicAccount::DataHelpers
             date: holding.date,
             currency: holding.currency
           )
-          # Keep the already-resolved exchange holding; preserve provider
-          # tracking from the ISIN row when missing on the target.
+          # Both rows are the same position after ISIN→ticker rematch (live
+          # exchange holding from HoldingsProcessor vs stale ISIN row). Keep
+          # exchange market qty/amount/price — summing would double-count.
+          # Merge provider tracking and cost basis from the ISIN row when the
+          # exchange row is missing them.
           attrs = {}
           attrs[:external_id] = holding.external_id if existing.external_id.blank? && holding.external_id.present?
           if existing.provider_security_id.blank?
             attrs[:provider_security_id] = holding.provider_security_id.presence || from_security.id
           end
           attrs[:account_provider_id] = holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
+          attrs[:cost_basis] = holding.cost_basis if existing.cost_basis.blank? && holding.cost_basis.present?
+
+          if existing.qty != holding.qty || existing.amount != holding.amount
+            DebugLogEntry.capture(
+              category: "sync",
+              level: "info",
+              message: "ISIN rematch collision kept exchange holding market values",
+              source: "trade_republic",
+              family: account.family,
+              provider_key: "trade_republic",
+              account: account,
+              metadata: {
+                from_security_id: from_security.id,
+                to_security_id: to_security.id,
+                date: holding.date,
+                isin_qty: holding.qty,
+                isin_amount: holding.amount,
+                exchange_qty: existing.qty,
+                exchange_amount: existing.amount
+              }
+            )
+          end
+
           existing.update!(attrs) if attrs.any?
           holding.destroy!
         else

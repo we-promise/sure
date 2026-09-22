@@ -160,7 +160,7 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert Security.exists?(id: isin_security.id)
   end
 
-  test "rematch drops a same-date ISIN holding when the exchange holding already exists" do
+  test "rematch prefers exchange market values and merges cost basis on collision" do
     Security.stubs(:search_provider).returns([])
 
     isin = "DE000BASF111"
@@ -176,9 +176,10 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     isin_holding = @account.holdings.create!(
       security: isin_security,
       date: Date.current,
-      qty: 5,
+      qty: 3,
       price: 40,
-      amount: 200,
+      amount: 120,
+      cost_basis: 38,
       currency: "EUR",
       external_id: "stale-isin-holding",
       provider_security_id: prior_provider_security.id,
@@ -196,13 +197,19 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     )
 
     processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
-    assert_nothing_raised do
-      processor.send(:rematch_account_from_isin!, isin, exchange_security)
+    assert_difference "DebugLogEntry.count", 1 do
+      assert_nothing_raised do
+        processor.send(:rematch_account_from_isin!, isin, exchange_security)
+      end
     end
 
     assert_not Holding.exists?(isin_holding.id)
     assert Holding.exists?(exchange_holding.id)
-    assert_equal exchange_security.id, exchange_holding.reload.security_id
+    exchange_holding.reload
+    assert_equal exchange_security.id, exchange_holding.security_id
+    assert_equal BigDecimal("5"), exchange_holding.qty
+    assert_equal BigDecimal("212.5"), exchange_holding.amount
+    assert_equal BigDecimal("38"), exchange_holding.cost_basis
     assert_equal prior_provider_security.id, exchange_holding.provider_security_id
   end
 
