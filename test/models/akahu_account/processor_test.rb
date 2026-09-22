@@ -35,6 +35,8 @@ class AkahuAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("12345.67"), @account.balance
     assert_equal BigDecimal("0"), @account.cash_balance
     assert_equal "NZD", @account.currency
+    assert @account.has_current_anchor?, "expected a current_anchor valuation to be created"
+    assert_equal BigDecimal("12345.67"), @account.current_anchor_balance
   end
 
   test "logs account processing failures without raw exception message" do
