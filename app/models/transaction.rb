@@ -151,17 +151,22 @@ class Transaction < ApplicationRecord
   # every normal save relies on (Family#entries_cache_version) never happens.
   def self.reassign_category!(scope, category_id)
     transaction do
-      # SELECT ... FOR UPDATE: a concurrent edit between reading the ids and
-      # the update_all below would otherwise be silently overwritten.
+      # SELECT ... FOR UPDATE so a concurrent recategorization can't slip in
+      # between this read and the update below and be silently overwritten.
       ids = scope.lock(true).pluck(:id)
       next 0 if ids.empty?
 
-      # Write through a fresh id-scoped relation: re-evaluating `scope`'s
-      # condition after the update could match nothing once the rows already
-      # carry the new category_id.
-      where(id: ids).update_all(category_id: category_id)
-      Entry.where(entryable_type: "Transaction", entryable_id: ids).touch_all
-      ids.size
+      # Touch entries through a subquery (the same pattern
+      # Entry.mark_user_modified_for_transactions! uses) while `scope` still
+      # matches — after the update it wouldn't — so the SQL carries no
+      # materialized id list.
+      Entry.where(entryable_type: "Transaction", entryable_id: scope.select(:id)).touch_all
+
+      # Re-evaluate `scope`'s predicate for the update itself: the row locks
+      # keep concurrent edits out, and rows that entered the scope since the
+      # pluck are reassigned instead of being left behind (or nulled by the
+      # FK when the source category is destroyed).
+      scope.update_all(category_id: category_id)
     end
   end
 
