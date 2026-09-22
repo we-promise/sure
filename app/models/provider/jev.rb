@@ -86,7 +86,7 @@ class Provider::Jev < Provider
     # Enforced here as well as in the settings form so that JEV_ENDPOINT and
     # eval-time construction, which never touch the form, get the same check.
     unless self.class.endpoint_allowed?(@endpoint)
-      raise Error, "Jev endpoint must use https (or http on loopback): #{@endpoint}"
+      raise Error, "Jev endpoint must use https (or http on loopback): #{self.class.redacted_endpoint(@endpoint)}"
     end
 
     @default_model = model.presence || DEFAULT_MODEL
@@ -118,6 +118,25 @@ class Provider::Jev < Provider
     # the settings disclosure.
     def effective_host
       host_for(effective_endpoint)
+    end
+
+    # The endpoint with its credential-bearing parts removed, for logs, error
+    # messages and diagnostics. A gateway URL can carry a key in userinfo or in
+    # the query string, and DebugLogEntry rows are exported when an operator
+    # asks for support.
+    #
+    # `userinfo=` is not enough: Ruby returns early when passed nil, leaving the
+    # credential in place. Clear the password before the user, or the assignment
+    # raises on a URL that has both.
+    def redacted_endpoint(url)
+      uri = URI.parse(url.to_s)
+      uri.password = nil if uri.respond_to?(:password) && uri.password
+      uri.user = nil if uri.respond_to?(:user) && uri.user
+      uri.query = nil
+      uri.fragment = nil
+      uri.to_s
+    rescue URI::Error, NoMethodError
+      "[unparseable endpoint]"
     end
 
     def effective_proxied?

@@ -216,7 +216,8 @@ class Family < ApplicationRecord
     Provider::Registry.get_provider(:jev)
   rescue Provider::Error => error
     # Without this the only symptom is categorization silently running on the
-    # provider the family did not choose. The endpoint carries no credential.
+    # provider the family did not choose. The endpoint is redacted because a
+    # gateway URL can carry a key in userinfo or the query string.
     DebugLogEntry.capture(
       category: "auto_categorization",
       level: "error",
@@ -225,7 +226,7 @@ class Family < ApplicationRecord
       family: self,
       provider: "jev",
       metadata: {
-        endpoint: Provider::Jev.effective_endpoint,
+        endpoint: Provider::Jev.redacted_endpoint(Provider::Jev.effective_endpoint),
         error_class: error.class.name,
         error_message: error.message
       }

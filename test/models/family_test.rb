@@ -554,6 +554,29 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal "Provider::Jev::Error", entry.metadata["error_class"]
   end
 
+  test "the captured diagnostic holds no endpoint credentials" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    with_env_overrides(
+      "JEV_API_KEY" => "test_api_key",
+      "JEV_ENDPOINT" => "http://user:s3cret@gw.example.com/v1?api_key=AKIAXXXX#frag"
+    ) do
+      assert_nil family.resolved_categorization_provider
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "http://gw.example.com/v1", entry.metadata["endpoint"]
+
+    # error_message embeds the endpoint the constructor rejected, so it leaks
+    # just as readily as the endpoint field if it is not redacted at the raise.
+    serialized = entry.metadata.to_json
+    assert_not_includes serialized, "s3cret"
+    assert_not_includes serialized, "AKIAXXXX"
+    assert_not_includes serialized, "frag"
+  end
+
   test "shadow_categorization_provider returns nil when the Jev endpoint is rejected" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "llm")

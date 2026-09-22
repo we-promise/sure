@@ -34,6 +34,31 @@ class Provider::JevTest < ActiveSupport::TestCase
     { id: id, description: description, amount: 6.75, classification: "expense", merchant: merchant }
   end
 
+  test "redacted_endpoint strips userinfo, query and fragment" do
+    assert_equal "https://gw.example.com/v1",
+                 Provider::Jev.redacted_endpoint("https://user:s3cret@gw.example.com/v1?api_key=AKIA#frag")
+    assert_equal "https://gw.example.com/v1",
+                 Provider::Jev.redacted_endpoint("https://tokenonly@gw.example.com/v1")
+    assert_equal ENDPOINT, Provider::Jev.redacted_endpoint(ENDPOINT)
+  end
+
+  test "redacted_endpoint does not raise on an unparseable endpoint" do
+    assert_equal "[unparseable endpoint]", Provider::Jev.redacted_endpoint("not a url")
+    assert_equal "", Provider::Jev.redacted_endpoint(nil)
+  end
+
+  # The constructor's message reaches Rails logs and DebugLogEntry, so the
+  # endpoint it names must already be redacted.
+  test "the rejected-endpoint error names the endpoint without its credentials" do
+    error = assert_raises(Provider::Jev::Error) do
+      Provider::Jev.new("test_api_key", endpoint: "http://user:s3cret@gw.example.com/v1?api_key=AKIA")
+    end
+
+    assert_includes error.message, "http://gw.example.com/v1"
+    assert_not_includes error.message, "s3cret"
+    assert_not_includes error.message, "AKIA"
+  end
+
   test "categorizes a transaction and carries the reported confidence" do
     stub_request(:post, ENDPOINT).to_return(
       status: 200,
