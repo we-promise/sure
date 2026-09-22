@@ -220,32 +220,14 @@ class Family < ApplicationRecord
     end
   end
 
-  # Jev, or nil when it cannot be built.
-  #
-  # The registry constructs a fresh Provider::Jev on every lookup, and that
-  # constructor rejects an endpoint that would send the Bearer token and the
-  # family's transaction descriptions in cleartext. JEV_ENDPOINT reaches it
-  # without passing the settings form's identical check, so a self-hoster who
-  # types http:// against a non-loopback host raises from inside a method whose
-  # documented contract is to fall back to the LLM path. That took down
-  # categorization altogether and 500'd the rule confirmation screen, which is
-  # a worse outcome than the misconfiguration itself.
-  #
-  # Treated as "not configured" for the same reason a missing key is: the
-  # endpoint is unusable either way, and the distinction is one for the
-  # operator's debug log rather than for the fallback decision. This is the
-  # same defensiveness the threshold and shadow-rate overrides already get,
-  # which clamp precisely because ENV bypasses the column validations.
-  #
-  # Narrow on purpose. Only Provider::Error is swallowed; anything else from
-  # the registry is a bug and should still surface.
+  # Returns Jev, or nil when it cannot be built. The registry constructs a fresh
+  # Provider::Jev per lookup and its constructor rejects a cleartext endpoint,
+  # which JEV_ENDPOINT can set without passing the settings form's check.
   def configured_jev_provider
     Provider::Registry.get_provider(:jev)
   rescue Provider::Error => error
-    # Captured, not just logged: the only symptom an operator sees is
-    # categorization quietly running on the provider they did not choose, and
-    # nothing in the UI explains why. The endpoint is recorded because the
-    # typo is the whole diagnosis, and it carries no credential.
+    # Without this the only symptom is categorization silently running on the
+    # provider the family did not choose. The endpoint carries no credential.
     DebugLogEntry.capture(
       category: "auto_categorization",
       level: "error",
