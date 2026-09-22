@@ -337,10 +337,13 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     # Saveback used to import as a cash withdrawal. Once split accounts are
-    # linked, remove those leftover cash entries unless the user edited or
-    # split them.
+    # linked, remove those leftover cash entries only after the portfolio
+    # replacement trade exists, and unless the user edited or split them.
     def reconcile_stale_saveback_cash_transactions!
       return unless @trade_republic_account.cash?
+
+      portfolio_account = linked_portfolio_account
+      return unless portfolio_account
 
       saveback_event_ids = Array(@trade_republic_account.raw_timeline_payload).filter_map do |event|
         next unless event.is_a?(Hash)
@@ -382,6 +385,27 @@ class TradeRepublicAccount::ActivitiesProcessor
           next
         end
 
+        # Keep the legacy cash row until the portfolio trade is present so an
+        # incomplete Saveback detail cannot open a ledger gap.
+        unless portfolio_saveback_trade_present?(portfolio_account, entry.external_id)
+          skipped_count += 1
+          DebugLogEntry.capture(
+            category: "sync",
+            level: "info",
+            message: "Skipped removing Saveback cash transaction #{entry.external_id} until portfolio trade exists",
+            source: "trade_republic",
+            family: @trade_republic_account.trade_republic_item.family,
+            provider_key: "trade_republic",
+            account: account,
+            metadata: {
+              trade_republic_account_id: @trade_republic_account.id,
+              external_id: entry.external_id,
+              portfolio_account_id: portfolio_account.id
+            }
+          )
+          next
+        end
+
         entry.destroy!
         removed_count += 1
       end
@@ -402,6 +426,23 @@ class TradeRepublicAccount::ActivitiesProcessor
           skipped_count: skipped_count
         }
       )
+    end
+
+    def linked_portfolio_account
+      portfolio_tr = @trade_republic_account.trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      return unless portfolio_tr
+
+      portfolio_account = portfolio_tr.current_account
+      return unless portfolio_account
+      return if portfolio_account.pending_deletion? || portfolio_account.disabled?
+
+      portfolio_account
+    end
+
+    def portfolio_saveback_trade_present?(portfolio_account, external_id)
+      portfolio_account.entries
+        .where(source: "trade_republic", entryable_type: "Trade", external_id: external_id)
+        .exists?
     end
 
     # Remove previously imported entries whose upstream events are now deleted

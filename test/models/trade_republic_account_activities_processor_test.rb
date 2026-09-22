@@ -592,6 +592,38 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_saveback")
   end
 
+  test "keeps legacy saveback cash until the portfolio trade is imported" do
+    cash_account, cash_sure = create_linked_cash_account!
+    incomplete = saveback_event.deep_merge(detail: { isin: nil, quantity: nil })
+
+    Account::ProviderImportAdapter.new(cash_sure).import_transaction(
+      external_id: "trade_republic_event_evt_saveback",
+      amount: BigDecimal("3.74"),
+      currency: "EUR",
+      date: Date.parse("2026-09-02"),
+      name: "STOXX Global Dividend 100 EUR (Dist)",
+      source: "trade_republic",
+      investment_activity_label: "Withdrawal",
+      extra: {
+        trade_republic: {
+          event_id: "trade_republic_event_evt_saveback",
+          event_type: "SAVEBACK_AGGREGATE",
+          title: "STOXX Global Dividend 100 EUR (Dist)",
+          subtitle: "Saveback"
+        }
+      }
+    )
+
+    cash_account.update!(raw_timeline_payload: [ incomplete ])
+    @tr_account.update!(raw_timeline_payload: [ incomplete ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_not Entry.exists?(account: @account, external_id: "trade_republic_event_evt_saveback")
+    assert Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_saveback", entryable_type: "Transaction")
+  end
+
   test "preserves protected legacy saveback cash transactions during reconciliation" do
     cash_account, cash_sure = create_linked_cash_account!
     saveback = saveback_event
