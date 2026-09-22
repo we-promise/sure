@@ -467,6 +467,12 @@ en:
       empty_summary: We could not find any importable records in this file. It may be empty, or the lines may not match the expected export format (each line should be a JSON object with "type" and "data" keys, using types this import supports).
       publish_import: Publish import
       back_to_imports: Back to imports
+      missing_merchant_warning_title: Some merchants are missing from this export
+      missing_merchant_warning_description: >-
+        %{count} transaction(s) reference a merchant that isn't included in this file. This can happen
+        with an export taken before provider-assigned merchants were added to Sure exports. You can still
+        publish this import -- those transactions will just import without a merchant, and you can tag
+        them afterward.
     errors:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"
       interrupted: "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again."

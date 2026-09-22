@@ -434,6 +434,44 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("imports.create.file_too_large", max_size: configured_limit / 1.megabyte), flash[:alert]
   end
 
+  test "shows a friendly warning when a Sure import's transactions reference merchants missing from the export (#3113)" do
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Account", data: {
+        id: "account-1", name: "Old Export Checking", balance: "1000.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } },
+      { type: "Transaction", data: {
+        id: "transaction-1", account_id: "account-1", merchant_id: "merchant-never-exported",
+        date: "2024-01-15", amount: "42.50", name: "Amazon purchase", currency: "USD"
+      } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("imports.ready.missing_merchant_warning_title")
+  end
+
+  test "does not show the missing merchant warning for a Sure import with no unresolved merchant references" do
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Account", data: {
+        id: "account-1", name: "Clean Export Checking", balance: "1000.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("imports.ready.missing_merchant_warning_title")
+  end
+
   test "PDF import account select does not leak unshared family accounts (#1803)" do
     sign_in users(:family_member)
     pdf_import = imports(:pdf_with_rows)

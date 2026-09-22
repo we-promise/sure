@@ -8,6 +8,14 @@ class SureImport::Preflight
     def error_messages = errors.map { |error| error[:message] }
     def error_message = valid? ? "" : ([ "Sure import preflight failed:" ] + error_messages).join("\n")
     def payload = { valid: valid?, stats: stats, errors: errors, warnings: warnings }
+
+    # Rows that will import without a merchant because this export predates
+    # provider-merchant support (#3113) -- surfaced as a single friendly count
+    # rather than one line per row, which is what skipped_missing_merchant_reference
+    # warnings would otherwise read as.
+    def skipped_missing_merchant_count
+      warnings.count { |warning| warning[:code] == "skipped_missing_merchant_reference" }
+    end
   end
 
   REQUIRED_FIELDS = {
@@ -16,6 +24,7 @@ class SureImport::Preflight
     "Category" => %w[id name],
     "Tag" => %w[id name],
     "Merchant" => %w[id name],
+    "ProviderMerchant" => %w[id name source],
     "RecurringTransaction" => %w[id amount expected_day_of_month last_occurrence_date next_expected_date],
     "Transaction" => %w[id account_id date amount],
     "Transfer" => %w[inflow_transaction_id outflow_transaction_id],
@@ -33,9 +42,27 @@ class SureImport::Preflight
   # a warning rather than a blocking error.
   SOFT_REFERENCE_TYPES = %w[RejectedTransfer].freeze
 
+  # merchant_id specifically (not account_id/category_id) is advisory on these
+  # types: the importer already nulls an unresolved merchant_id rather than
+  # failing (see Family::DataImporter#import_transactions), and an export taken
+  # before #3113 shipped never included the provider-assigned merchants a
+  # transaction could reference -- so a dangling merchant_id is expected on
+  # older exports, not a sign of corrupt data.
+  SOFT_REFERENCE_FIELDS = {
+    "Transaction" => %w[merchant_id],
+    "RecurringTransaction" => %w[merchant_id],
+    "Transaction split line" => %w[merchant_id]
+  }.freeze
+
   TAXONOMY_TYPES = { "Category" => :categories, "Tag" => :tags, "Merchant" => :merchants }.freeze
 
+  # ProviderMerchant shares the :merchants reference namespace with Merchant (a
+  # Transaction/RecurringTransaction's merchant_id can point at either), but it is
+  # a cross-family shared record, not family-owned taxonomy -- so it's deliberately
+  # excluded from TAXONOMY_TYPES, whose collision/duplicate-name checks assume
+  # family-scoped uniqueness.
   SOURCE_ID_TYPES = TAXONOMY_TYPES.merge(
+    "ProviderMerchant" => :merchants,
     "Account" => :accounts,
     "RecurringTransaction" => :recurring_transactions,
     "Transaction" => :transactions,
@@ -278,6 +305,8 @@ class SureImport::Preflight
       }
       if SOFT_REFERENCE_TYPES.include?(type)
         add_warning(:skipped_missing_reference, I18n.t("sure_import.preflight.skipped_missing_reference", **interpolations))
+      elsif SOFT_REFERENCE_FIELDS.fetch(type, []).include?(field)
+        add_warning(:skipped_missing_merchant_reference, I18n.t("sure_import.preflight.skipped_missing_merchant_reference", **interpolations))
       else
         add_error(:missing_reference, I18n.t("sure_import.preflight.missing_reference", **interpolations))
       end

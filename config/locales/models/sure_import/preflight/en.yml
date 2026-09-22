@@ -4,3 +4,4 @@ en:
     preflight:
       missing_reference: "Line %{line} %{type} references missing %{field} %{value}."
       skipped_missing_reference: "Line %{line} %{type} references missing %{field} %{value}. It will be skipped during import."
+      skipped_missing_merchant_reference: "Line %{line} %{type} references a merchant (%{value}) that isn't included in this export. This can happen with an export taken before provider-assigned merchants were added to Sure exports. It will import without that merchant."

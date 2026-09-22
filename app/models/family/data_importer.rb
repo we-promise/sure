@@ -31,7 +31,7 @@ class Family::DataImporter
     end
   end
 
-  SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant RecurringTransaction RecurrenceRule RecurringOccurrence RecurringAllocation RecurringPriceChange RecurringMatchRejection Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
+  SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant ProviderMerchant RecurringTransaction RecurrenceRule RecurringOccurrence RecurringAllocation RecurringPriceChange RecurringMatchRejection Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
     "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
     "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
@@ -60,6 +60,7 @@ class Family::DataImporter
     "Category" => "categories",
     "Tag" => "tags",
     "Merchant" => "merchants",
+    "ProviderMerchant" => "provider_merchants",
     "RecurringTransaction" => "recurring_transactions",
     "RecurrenceRule" => "recurrence_rules",
     "RecurringOccurrence" => "recurring_occurrences",
@@ -114,6 +115,7 @@ class Family::DataImporter
       import_categories(records["Category"] || [])
       import_tags(records["Tag"] || [])
       import_merchants(records["Merchant"] || [])
+      import_provider_merchants(records["ProviderMerchant"] || [])
       import_recurring_transactions(records["RecurringTransaction"] || [])
       import_transactions(records["Transaction"] || [])
       # Bills: rules and occurrences need their series, allocations and the
@@ -488,6 +490,55 @@ class Family::DataImporter
         map_source!(:merchants, old_id, merchant)
         increment_summary("Merchant", created ? :created : :updated)
       end
+    end
+
+    # ProviderMerchant rows share the :merchants id-mapping namespace with
+    # Merchant, so Transaction/RecurringTransaction merchant_id resolution below
+    # needs no changes to accept either source. Unlike FamilyMerchant, a
+    # ProviderMerchant is shared across every family on the instance, so an
+    # existing match is reused as-is (only backfilling attributes it doesn't
+    # have yet) rather than overwritten with this export's data.
+    def import_provider_merchants(records)
+      records.each do |record|
+        data = record["data"]
+        old_id = data["id"]
+
+        require_source_id!("ProviderMerchant", old_id)
+
+        source = data["source"].to_s
+        unless ProviderMerchant.sources.key?(source)
+          invalid_record!("ProviderMerchant", "source", data["source"])
+          next
+        end
+
+        merchant = find_provider_merchant(data, source)
+        created = merchant.blank?
+
+        if created
+          merchant = ProviderMerchant.new(
+            name: data["name"],
+            source: source,
+            provider_merchant_id: data["provider_merchant_id"].presence,
+            color: data["color"],
+            logo_url: data["logo_url"],
+            website_url: data["website_url"]
+          )
+          merchant.save!
+        else
+          assign_if_blank(merchant, :logo_url, data["logo_url"].presence)
+          assign_if_blank(merchant, :website_url, data["website_url"].presence)
+          merchant.save! if merchant.changed?
+        end
+
+        map_source!(:merchants, old_id, merchant)
+        increment_summary("ProviderMerchant", created ? :created : :updated)
+      end
+    end
+
+    def find_provider_merchant(data, source)
+      provider_merchant_id = data["provider_merchant_id"].presence
+      by_provider_id = ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source) if provider_merchant_id
+      by_provider_id || ProviderMerchant.find_by(name: data["name"], source: source)
     end
 
     def import_recurring_transactions(records)

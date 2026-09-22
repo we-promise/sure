@@ -762,6 +762,148 @@ class SureImportTest < ActiveSupport::TestCase
     assert_includes result.error_message, "references missing parent_id"
   end
 
+  test "provider merchant referenced by a transaction resolves during preflight and publish" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Provider Merchant Checking",
+        balance: "1000.00",
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable: { subtype: "checking" }
+      } },
+      { type: "ProviderMerchant", data: {
+        id: "provider-merchant-1",
+        name: "AMZN MKTP",
+        source: "plaid",
+        provider_merchant_id: "plaid_amzn"
+      } },
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "account-1",
+        merchant_id: "provider-merchant-1",
+        date: "2024-01-15",
+        amount: "42.50",
+        name: "Amazon purchase",
+        currency: "USD"
+      } }
+    ]))
+
+    result = @import.sure_preflight
+    assert result.valid?, result.error_message
+
+    assert_difference -> { ProviderMerchant.count }, 1 do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+
+    entry = @family.entries.find_by!(name: "Amazon purchase")
+    merchant = entry.entryable.merchant
+
+    assert_instance_of ProviderMerchant, merchant
+    assert_equal "AMZN MKTP", merchant.name
+    assert_equal "plaid", merchant.source
+    assert_equal "plaid_amzn", merchant.provider_merchant_id
+  end
+
+  test "provider merchant import reuses an existing matching record instead of duplicating or overwriting it" do
+    existing = ProviderMerchant.create!(
+      name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn", website_url: "https://amazon.com"
+    )
+
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Provider Merchant Checking",
+        balance: "1000.00",
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable: { subtype: "checking" }
+      } },
+      { type: "ProviderMerchant", data: {
+        id: "provider-merchant-1",
+        name: "AMZN MKTP",
+        source: "plaid",
+        provider_merchant_id: "plaid_amzn",
+        website_url: "https://should-not-overwrite.example.com"
+      } },
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "account-1",
+        merchant_id: "provider-merchant-1",
+        date: "2024-01-15",
+        amount: "42.50",
+        name: "Amazon purchase",
+        currency: "USD"
+      } }
+    ]))
+
+    assert_no_difference -> { ProviderMerchant.count } do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+
+    existing.reload
+    assert_equal "https://amazon.com", existing.website_url
+
+    entry = @family.entries.find_by!(name: "Amazon purchase")
+    assert_equal existing.id, entry.entryable.merchant_id
+  end
+
+  test "a transaction merchant_id unresolvable in the export is a warning, not a blocking preflight error (#3113)" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Old Export Checking",
+        balance: "1000.00",
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable: { subtype: "checking" }
+      } },
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "account-1",
+        merchant_id: "merchant-never-exported",
+        date: "2024-01-15",
+        amount: "42.50",
+        name: "Amazon purchase",
+        currency: "USD"
+      } }
+    ]))
+
+    result = @import.sure_preflight
+    assert result.valid?, result.error_message
+    assert_equal 1, result.skipped_missing_merchant_count
+    assert result.warnings.any? { |warning| warning[:code] == "skipped_missing_merchant_reference" }
+
+    @import.publish
+
+    assert_equal "complete", @import.status
+    entry = @family.entries.find_by!(name: "Amazon purchase")
+    assert_nil entry.entryable.merchant_id
+  end
+
+  test "a missing account_id (not merchant_id) on a transaction is still a blocking preflight error" do
+    attach_ndjson(build_ndjson([
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "missing-account",
+        date: "2024-01-15",
+        amount: "42.50",
+        name: "Orphaned transaction",
+        currency: "USD"
+      } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert_not result.valid?
+    assert_equal 0, result.skipped_missing_merchant_count
+    assert result.errors.any? { |error| error[:code] == "missing_reference" }
+  end
+
   private
 
     def attach_ndjson(ndjson)
