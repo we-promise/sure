@@ -1612,6 +1612,9 @@ end
     assert_response :success
     assert_select "#transaction-search-filters li", count: 0
     assert_no_match(/translation missing/, response.body)
+
+    # The bogus value must be dropped entirely, not applied as a filter
+    assert_select "#entry_#{@entry.id}", count: 1
   end
 
   test "clear_filter removes an ai_status value and redirects" do
