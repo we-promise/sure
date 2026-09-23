@@ -4,6 +4,12 @@ clean_syncs:
   queue: "scheduled"
   description: "Cleans up stale syncs and reaps imports, exports, and provider fetch flags stuck by lost jobs"
 
+process_financekit_inbox:
+  cron: "*/5 * * * *"
+  class: "FinancekitInboxJob"
+  queue: "high_priority"
+  description: "Applies durable FinanceKit publisher batches and retries downstream work"
+
 run_security_health_checks:
   cron: "0 2 * * 1-5" # 2:00 AM EST / 3:00 AM EDT (NY time) Monday through Friday
   class: "SecurityHealthCheckJob"
