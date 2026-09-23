@@ -184,6 +184,10 @@ pt-PT:
       all_skipped: Todas as contas foram ignoradas. Não foi criada nenhuma conta.
       creation_failed: 'Falha ao criar contas: %{error}'
       creation_failed_generic: Falha ao criar contas.
-      setup_failed: Não foi possível criar %{count} conta(s). Nada mais foi alterado - corrija o problema e tente novamente.
+      setup_failed:
+        one: Não foi possível criar %{count} conta. Nada mais foi alterado - corrija o problema e tente novamente.
+        other: Não foi possível criar %{count} contas. Nada mais foi alterado - corrija o problema e tente novamente.
       no_accounts: Não existem contas para configurar.
-      success: '%{count} conta(s) criada(s) com sucesso.'
+      success:
+        one: "%{count} conta criada com sucesso."
+        other: "%{count} contas criadas com sucesso."

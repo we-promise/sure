@@ -184,6 +184,10 @@ it:
       all_skipped: Tutti i conti sono stati saltati. Nessun conto è stato creato.
       creation_failed: 'Creazione conti fallita: %{error}'
       creation_failed_generic: Creazione conti fallita.
-      setup_failed: 'Impossibile creare %{count} conto/i. Non è stato modificato nient''altro: risolvi il problema e riprova.'
+      setup_failed:
+        one: 'Impossibile creare %{count} conto. Non è stato modificato nient''altro: risolvi il problema e riprova.'
+        other: 'Impossibile creare %{count} conti. Non è stato modificato nient''altro: risolvi il problema e riprova.'
       no_accounts: Nessun conto da configurare.
-      success: Creati con successo %{count} conto/i.
+      success:
+        one: "%{count} conto creato con successo."
+        other: "%{count} conti creati con successo."
