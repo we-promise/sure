@@ -7,7 +7,7 @@
 # collection because the surrounding sync machinery (Family::Syncer, the setup flow,
 # Family::FinancialDataReset) is written against provider items with many accounts.
 class FioItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -36,12 +36,6 @@ class FioItem < ApplicationRecord
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  # Mark the item for deletion and enqueue the background destroy job.
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   # Run the importer to fetch the latest statement from Fio.
   def import_latest_fio_data

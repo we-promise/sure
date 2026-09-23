@@ -1,5 +1,5 @@
 class SimplefinItem < ApplicationRecord
-  include Syncable, Provided, Encryptable
+  include Syncable, Provided, Encryptable, DestroyableLater
   include SimplefinItem::Unlinking
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -43,11 +43,6 @@ class SimplefinItem < ApplicationRecord
       .map(&:current_account)
       .compact
       .uniq
-  end
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
   end
 
   def import_latest_simplefin_data(sync: nil)
