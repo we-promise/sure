@@ -49,11 +49,20 @@ class AddClassificationToSecuritiesMigrationTest < ActiveSupport::TestCase
       "CHECK (asset_class IN (#{values})) NOT VALID"
     )
     assert_not constraint_validated?, "precondition: the constraint is present but NOT VALID"
+    before = constraint_expression
 
     assert_nothing_raised { run_migration }
 
     assert_equal 1, constraint_count, "the re-run must not add a second constraint under the same name"
     assert constraint_validated?, "the re-run must validate the constraint it found unvalidated"
+    # `NOT VALID` is the one thing that MUST change -- validating is what
+    # removes it -- so the predicate is compared with that marker stripped.
+    assert_equal before.sub(/ NOT VALID\z/, ""), constraint_expression,
+                 "the re-run replaced the predicate instead of validating the one it found"
+    AddClassificationToSecurities::ASSET_CLASSES.each do |value|
+      assert_includes constraint_expression, "'#{value}'",
+                      "#{value} is missing from the constraint the re-run left behind"
+    end
   end
 
   private
@@ -68,6 +77,17 @@ class AddClassificationToSecuritiesMigrationTest < ActiveSupport::TestCase
     def constraint_validated?
       connection.select_value(
         "SELECT convalidated FROM pg_constraint WHERE conname = #{connection.quote(CONSTRAINT)}"
+      )
+    end
+
+    # The rendered predicate, read back from the catalog. Counting the
+    # constraints and checking they are validated does not say WHICH constraint
+    # survived: a re-run that dropped the full list and re-added a narrower one
+    # would pass both of those (raised by cubic on #190).
+    def constraint_expression
+      connection.select_value(
+        "SELECT pg_get_constraintdef(oid) FROM pg_constraint " \
+        "WHERE conname = #{connection.quote(CONSTRAINT)}"
       )
     end
 
