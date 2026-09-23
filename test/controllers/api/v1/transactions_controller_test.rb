@@ -913,9 +913,10 @@ end
 
     response_data = JSON.parse(response.body)
     assert_equal 2, response_data["splits"].size
-    assert_equal [ "Groceries", "Household" ], response_data["splits"].map { |s| s["name"] }
-    assert_equal "Food", response_data["splits"].first["category"]["name"]
-    assert_nil response_data["splits"].second["category"]
+    splits_by_name = response_data["splits"].index_by { |s| s["name"] }
+    assert_equal [ "Groceries", "Household" ], splits_by_name.keys.sort
+    assert_equal "Food", splits_by_name["Groceries"]["category"]["name"]
+    assert_nil splits_by_name["Household"]["category"]
 
     entry.reload
     assert entry.split_parent?

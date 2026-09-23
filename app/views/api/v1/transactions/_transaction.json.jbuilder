@@ -95,7 +95,10 @@ json.updated_at transaction.updated_at.iso8601
 
 # Split information (parent relation + child parts)
 json.parent_id transaction.entry.parent_entry&.transaction&.id
-child_parts = transaction.entry.child_entries.select(&:persisted?)
+# child_entries has no ordering, so raw DB order varies between reads. Sort by
+# creation to mirror the order the caller supplied the parts in, matching
+# Family::DataExporter#split_child_entries_for_export.
+child_parts = transaction.entry.child_entries.select(&:persisted?).sort_by { |child| [ child.created_at, child.id ] }
 if child_parts.any?
   json.splits child_parts do |child|
     json.id child.transaction.id
