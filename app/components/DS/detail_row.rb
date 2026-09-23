@@ -33,7 +33,9 @@ class DS::DetailRow < DesignSystemComponent
   def initialize(label:, value: nil, align: :start, truncate: false, value_class: nil, **opts)
     @label = label
     @plain_value = value
-    @align = ALIGNS.include?(align.to_sym) ? align.to_sym : :start
+    # to_s first so a nil or unrecognized value falls back instead of raising.
+    candidate = align.to_s.to_sym
+    @align = ALIGNS.include?(candidate) ? candidate : :start
     @truncate = truncate
     @value_class = value_class
     @opts = opts

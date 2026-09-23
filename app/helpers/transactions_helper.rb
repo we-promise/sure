@@ -135,14 +135,19 @@ module TransactionsHelper
   # provider_extra_field_label here. Nothing downstream reformats it, because a
   # composed label is part translation and part provider identifier and
   # `humanize` would lowercase the translated half.
+  #
+  # An empty value yields no row. A row with nothing opposite its label is noise,
+  # and it made the extras non-blank, which defeated the guard that keeps an
+  # empty Additional details section closed.
   def provider_extra_rows(key, value, depth: 0)
+    value = value.reject { |item| blank_provider_extra?(item) } if value.is_a?(Array)
+    return [] if blank_provider_extra?(value)
+
     label = key.to_s
 
     case value
     when Hash
       value.flat_map do |child_key, child_value|
-        next [] if child_value.nil? || child_value == ""
-
         child = provider_extra_field_label(child_key)
         child_label = depth.zero? ? "#{label} · #{child}" : "#{label}.#{child}"
         provider_extra_rows(child_label, child_value, depth: depth + 1)
@@ -186,8 +191,32 @@ module TransactionsHelper
   # confidence_level), so they get a translation where we know the field and
   # `humanize` otherwise — the set is open-ended and a provider can add to it
   # without us, which is better served by a readable fallback than a missing key.
+  #
+  # The key becomes part of an i18n lookup, so a blank or dotted one would be read
+  # as a scope rather than a field name: "" resolves to the whole
+  # provider_extra_fields hash, which then rendered as the label. Those fall back
+  # to the humanized key, as does any lookup that comes back as something other
+  # than a string.
   def provider_extra_field_label(key)
-    t("transactions.show.provider_extra_fields.#{key}", default: key.to_s.humanize)
+    fallback = key.to_s.humanize
+    return fallback if key.to_s.strip.empty? || key.to_s.include?(".")
+
+    label = t("transactions.show.provider_extra_fields.#{key}", default: fallback)
+    label.is_a?(String) ? label : fallback
+  end
+
+  # Nothing worth a row: nil, an empty or whitespace-only string, or an empty
+  # collection. false and 0 are real values a provider meant to report, so they stay.
+  #
+  # @param value [Object] a provider value
+  # @return [Boolean] whether the value has nothing to show
+  def blank_provider_extra?(value)
+    case value
+    when nil then true
+    when String then value.strip.empty?
+    when Array, Hash then value.empty?
+    else false
+    end
   end
 
   # Provider payloads are arbitrary JSON, so anything that cannot be generated

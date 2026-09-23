@@ -35,6 +35,9 @@ class DS::DetailRowTest < ViewComponent::TestCase
 
     render_inline(DS::DetailRow.new(label: "Memo", value: "x", align: :nonsense))
     assert_selector "div.items-start"
+
+    render_inline(DS::DetailRow.new(label: "Memo", value: "x", align: nil))
+    assert_selector "div.items-start"
   end
 
   test "merges an extra class without dropping the base classes" do

@@ -53,6 +53,40 @@ class TransactionsHelperTest < ActionView::TestCase
     assert_includes keys, "Payment meta · Some future field"
   end
 
+  # The key becomes part of an i18n lookup, and "" resolves to the parent scope,
+  # which returned the whole provider_extra_fields hash and rendered it as the label.
+  test "never renders a translation hash as a label for a blank or dotted key" do
+    details = build_transaction_extra_details(transaction_with({
+      "plaid" => { "payment_meta" => { "" => "blank key", "a.b" => "dotted key" } }
+    }))
+
+    details[:provider_extras].each do |row|
+      assert_kind_of String, row[:key]
+      refute_match(/by_order_of|confidence_level/, row[:key], "the translation hash leaked into a label")
+    end
+  end
+
+  # An empty value used to become a row with nothing opposite its label, and made
+  # the extras non-blank, which opened an Additional details section with no details.
+  test "skips provider values that are empty" do
+    details = build_transaction_extra_details(transaction_with({
+      "simplefin" => { "extra" => { "note" => "", "tags" => [], "blanks" => [ "", nil ], "meta" => {} } }
+    }))
+
+    assert_nil details, "nothing here is worth showing, so the section stays closed"
+  end
+
+  # false and 0 are values a provider meant to report, unlike an empty string.
+  test "keeps provider values that are false or zero" do
+    details = build_transaction_extra_details(transaction_with({
+      "simplefin" => { "extra" => { "recurring" => false, "retries" => 0 } }
+    }))
+
+    values = details[:provider_extras].map { |row| row[:value] }
+    assert_includes values, false
+    assert_includes values, 0
+  end
+
   # The drawer should stay closed for transactions where Plaid told us nothing
   # beyond reconciliation flags the pending badge already shows.
   test "returns nil when the Plaid extra holds only pending flags" do
