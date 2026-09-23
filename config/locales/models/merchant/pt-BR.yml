@@ -1,0 +1,5 @@
+---
+pt-BR:
+  models:
+    merchant:
+      no_merchant: Sem comerciante

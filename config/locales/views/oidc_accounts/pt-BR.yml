@@ -20,6 +20,8 @@ pt-BR:
       submit_create: Criar conta
       account_creation_disabled: A criação de contas via login único está desativada. Entre em contato com um administrador.
       cancel: Cancelar
+      no_pending_oidc: Nenhuma autenticação OIDC pendente encontrada
+      submit_accept_invitation: Aceitar convite
     new_user:
       title: Completar sua conta
       heading: Criar sua conta
@@ -31,3 +33,10 @@ pt-BR:
       last_name_placeholder: Digite seu sobrenome
       submit: Criar conta
       cancel: Cancelar
+      no_pending_oidc: Nenhuma autenticação OIDC pendente encontrada
+    create_link:
+      no_pending_oidc: Nenhuma autenticação OIDC pendente encontrada
+    create_user:
+      no_pending_oidc: Nenhuma autenticação OIDC pendente encontrada
+      account_creation_disabled: A criação de contas via SSO está desativada. Entre em contato com um administrador.
+      account_created: Boas-vindas! Sua conta foi criada.

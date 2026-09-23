@@ -6,6 +6,19 @@ pt-BR:
       link_provider: Vincular ao provedor
       unlink_provider: Desvincular do provedor
       troubleshoot: Solucionar problemas
+      complete_setup: Concluir configuração
+      edit: Editar
+      change_simplefin_account: Alterar conta SimpleFIN
+      enable: Ativar conta
+      disable: Desativar conta
+      exclude_from_reports: Desconsiderar em todos os relatórios
+      include_in_reports: Considerar nos relatórios
+      excluded_from_reports_indicator: Desconsiderada nos relatórios
+      set_default: Definir como padrão
+      remove_default: Remover como padrão
+      default_label: Padrão
+      delete: Excluir conta
+      sharing: Compartilhamento
     chart:
       data_not_available: Dados não disponíveis para o período selecionado
     create:
@@ -13,6 +26,7 @@ pt-BR:
     destroy:
       success: "Conta %{type} agendada para exclusão"
       cannot_delete_linked: "Não é possível excluir uma conta vinculada. Por favor, desvincule-a primeiro."
+      failed: Não foi possível excluir o recurso. Tente novamente mais tarde.
     empty:
       empty_message: Adicione uma conta via conexão, importação ou inserção manual.
       new_account: Nova conta
@@ -20,13 +34,25 @@ pt-BR:
     form:
       balance: Saldo atual
       name_label: Nome da conta
-      name_placeholder: Nome da conta exemplo
+      name_placeholder: Exemplo de nome da conta
+      opening_balance_date_label: Data do saldo inicial
+      additional_details: Detalhes adicionais
+      institution_name_label: Nome da instituição
+      institution_name_placeholder: 'ex.: Banco do Brasil'
+      institution_domain_label: Domínio da instituição
+      institution_domain_placeholder: 'ex.: bb.com.br'
+      notes_label: Observações
+      notes_placeholder: Guarde informações adicionais, como número da conta, agência, IBAN, chave Pix etc.
+      exclude_from_reports: Desconsiderar em todos os relatórios
+      enable_category_matcher_label: Ativar sugestão automática de categoria
+      enable_category_matcher_hint: Quando ativada, a categoria sugerida pelo provedor é aplicada às transações importadas. Desative para deixar as novas transações sem categoria.
     index:
       accounts: Contas
       manual_accounts:
         other_accounts: Outras contas
       new_account: Nova conta
       sync: Sincronizar todas
+      cancel_sync: Cancelar sincronização
     sync_all:
       syncing: "Sincronizando contas..."
     new:
@@ -39,20 +65,34 @@ pt-BR:
         manual_entry: Inserir saldo da conta
         title: Como você gostaria de adicionar?
       title: O que você gostaria de adicionar?
+      container:
+        select: Selecionar
+        navigate: Navegar
+        close: Fechar
+        next: Próximo
+        previous: Anterior
     show:
       activity:
         amount: Valor
         balance: Saldo
         date: Data
-        entries: entradas
-        entry: entrada
+        entries: lançamentos
+        entry: lançamento
         new: Nova
         new_balance: Novo saldo
         new_transaction: Nova transação
-        no_entries: Nenhuma entrada encontrada
+        no_entries: Nenhum lançamento encontrado
         search:
-          placeholder: Buscar entradas por nome
+          placeholder: Buscar lançamentos por nome
         title: Atividade
+        confirmed: Efetivadas
+        filter: Filtrar
+        new_activity: Nova atividade
+        new_trade: Nova negociação
+        new_transfer: Nova transferência
+        pending: Pendentes
+        search_placeholder: Buscar lançamentos por nome
+        status: Status
       chart:
         balance: Saldo
         owed: Valor devido
@@ -67,11 +107,27 @@ pt-BR:
         edit: Editar
         import: Importar transações
         manage: Gerenciar contas
+        delete_account: Excluir conta
+        import_trades: Importar negociações
+        import_transactions: Importar transações
+        sharing: Compartilhamento
+        statements: Extratos
+        exclude_from_reports: Desconsiderar em todos os relatórios
+        include_in_reports: Considerar nos relatórios
+      limited_fx_history_warning: O histórico de taxas de câmbio só está disponível a partir de %{date}. Transações anteriores a essa data usam conversões de moeda aproximadas — isso pode acontecer quando o provedor de câmbio oferece apenas um período histórico limitado.
+      tabs:
+        activity: Atividade
+        holdings: Posições
+        overview: Visão geral
+        schedule: Cronograma
+        statements: Extratos
+      header:
+        complete_setup: Concluir configuração
     update:
       success: "Conta %{type} atualizada"
     sidebar:
       missing_data: Dados históricos ausentes
-      missing_data_description: "%{product} usa provedores terceirizados para buscar taxas de câmbio históricas, preços de títulos e muito mais. Esses dados são necessários para calcular saldos de contas históricos com precisão."
+      missing_data_description: "%{product} usa provedores terceirizados para buscar taxas de câmbio históricas, preços de ativos e muito mais. Esses dados são necessários para calcular saldos de contas históricos com precisão."
       configure_providers: Configure seus provedores aqui.
       tabs:
         all: Todas
@@ -81,11 +137,13 @@ pt-BR:
       new_debt: Nova dívida
       new_account: Nova conta
       new_account_group: "Novo(a) %{account_group}"
+      expand_all: Expandir tudo
+      collapse_all: Recolher tudo
     types:
       depository: Dinheiro
       investment: Investimento
       crypto: Cripto
-      property: Propriedade
+      property: Imóvel
       vehicle: Veículo
       other_asset: Outro Ativo
       credit_card: Cartão de Crédito
@@ -95,7 +153,7 @@ pt-BR:
       title: Desvincular conta do provedor?
       description_html: "Você está prestes a desvincular <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Isso a converterá em uma conta manual."
       warning_title: O que isso significa
-      warning_no_sync: A conta não sincronizará mais automaticamente com seu banco
+      warning_no_sync: A conta não sincronizará mais automaticamente com seu provedor
       warning_manual_updates: Você precisará adicionar transações e atualizar saldos manualmente
       warning_transactions_kept: Todas as transações e saldos existentes serão preservados
       warning_can_delete: Após desvincular, você poderá excluir a conta, se necessário
@@ -110,9 +168,44 @@ pt-BR:
       description: "Escolha qual provedor você deseja usar para vincular %{account_name}"
       already_linked: "A conta já está vinculada a um provedor"
       no_providers: "Nenhum provedor configurado no momento"
+    not_authorized: Você não tem permissão para gerenciar esta conta
+    set_default:
+      depository_only: Somente contas bancárias e de cartão de crédito podem ser definidas como padrão.
+    types_plural:
+      depository: Dinheiro
+      investment: Investimentos
+      crypto: Cripto
+      property: Imóveis
+      vehicle: Veículos
+      other_asset: Outros Ativos
+      credit_card: Cartões de Crédito
+      loan: Empréstimos
+      other_liability: Outros Passivos
+    tax_treatments:
+      taxable: Tributável
+      tax_deferred: Tributação diferida
+      tax_exempt: Isenta de impostos
+      tax_advantaged: Com benefício fiscal
+    tax_treatment_descriptions:
+      taxable: Ganhos tributados quando realizados
+      tax_deferred: Aportes dedutíveis, tributados no resgate
+      tax_exempt: Aportes feitos após impostos, ganhos não tributados
+      tax_advantaged: Benefícios fiscais especiais sujeitos a condições
+    subtype_regions:
+      us: Estados Unidos
+      uk: Reino Unido
+      ca: Canadá
+      au: Austrália
+      eu: Europa
+      in: Índia
+      generic: Geral
   
   email_confirmations:
     new:
       invalid_token: Link de confirmação inválido ou expirado.
       success_login: Seu e-mail foi confirmado. Por favor, faça login com seu novo endereço
         de e-mail.
+  account:
+    entries:
+      destroy:
+        success: Lançamento excluído com sucesso.

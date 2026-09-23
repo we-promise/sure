@@ -14,6 +14,14 @@ pt-BR:
       edit: Editar categoria
     form:
       placeholder: Nome da categoria
+      name_label: Nome
+      unassigned: (nenhuma)
+      parent_category_label: Categoria principal (opcional)
+      trigger_label: Escolher cor e ícone
+      color: Cor
+      icon: Ícone
+      auto_adjust: ajustar automaticamente.
+      poor_contrast: Contraste insuficiente. Escolha uma cor mais escura ou
     index:
       bootstrap: Usar padrões (recomendado)
       categories: Categorias
@@ -21,14 +29,42 @@ pt-BR:
       categories_incomes: Categorias de receitas
       empty: Nenhuma categoria encontrada
       new: Nova categoria
+      delete_all: Excluir todas
+      merge: Mesclar categorias
     menu:
       loading: Carregando...
     new:
       new_category: Nova categoria
     update:
       success: Categoria atualizada com sucesso
+    destroy_all:
+      success: Todas as categorias foram excluídas
+    merge:
+      title: Mesclar categorias
+      description: Selecione uma categoria de destino e as categorias que serão mescladas nela. As transações e linhas de orçamento correspondentes serão movidas para a categoria de destino.
+      target_label: Mesclar em (destino)
+      select_target: Selecione a categoria de destino...
+      sources_label: Categorias a mesclar
+      sources_hint: As categorias selecionadas serão excluídas depois que suas transações e linhas de orçamento forem movidas para o destino. Não selecione a categoria de destino como origem.
+      submit: Mesclar selecionadas
+    perform_merge:
+      success:
+        one: '%{count} categoria mesclada com sucesso'
+        other: '%{count} categorias mescladas com sucesso'
+      no_categories_selected: Nenhuma categoria selecionada para mesclar
+      target_not_found: Categoria de destino não encontrada
+      invalid_categories: Categorias selecionadas inválidas
+      target_selected_as_source: Escolha categorias diferentes para o destino e as origens.
+    virtual:
+      transfer: Transferência
+      payment: Pagamento
+      trade: Negociação
   category:
     dropdowns:
       show:
         bootstrap: Gerar categorias padrão
         empty: Nenhuma categoria encontrada
+        match_transfer: Associar transferência/pagamento
+        one_time: É uma %{type} pontual
+        income: receita
+        expense: despesa

@@ -42,6 +42,9 @@ pt-BR:
       default: "%d/%m/%Y"
       long: "%d de %B de %Y"
       short: "%d de %B"
+      month_year: '%B de %Y'
+      short_month_year: '%b %Y'
+      short_with_year: '%d %b %Y'
     month_names:
     -
     - janeiro
@@ -148,6 +151,8 @@ pt-BR:
   helpers:
     select:
       prompt: Por favor selecione
+      search_placeholder: Pesquisar
+      default_label: Selecione...
     submit:
       create: Criar %{model}
       submit: Salvar %{model}
@@ -223,3 +228,17 @@ pt-BR:
       long: "%d de %B de %Y, %H:%M"
       short: "%d de %B, %H:%M"
     pm: pm
+  defaults:
+    brand_name: '%{brand_name}'
+    product_name: '%{product_name}'
+    common:
+      close: Fechar
+  global:
+    expand: Expandir
+  mcp:
+    errors:
+      invalid_session_id: ID de sessão MCP inválido
+      unsupported_protocol_version: 'Versão do protocolo MCP não suportada: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris deve usar https, http de loopback ou um esquema de URI de aplicativo nativo

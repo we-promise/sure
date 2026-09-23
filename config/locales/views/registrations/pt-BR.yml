@@ -14,13 +14,13 @@ pt-BR:
       success: Você se inscreveu com sucesso.
     new:
       invitation_message: "%{inviter} convidou você para se juntar como %{role}"
-      join_family_title: Juntar-se a %{family}
+      join_family_title: Juntar-se a %{family} (%{moniker})
       role_admin: administrador
       role_member: membro
       submit: Criar conta
       title: Criar sua conta
       welcome_body: Para começar, você deve se inscrever para uma nova conta. Então você
-        poderá configurar configurações adicionais dentro do aplicativo.
+        poderá ajustar configurações adicionais dentro do aplicativo.
       welcome_title: Bem-vindo ao Self Hosted %{product_name}!
       password_placeholder: Digite sua senha
       password_requirements:
@@ -28,3 +28,5 @@ pt-BR:
         case: Letras maiúsculas e minúsculas
         number: Um número (0-9)
         special: "Um caractere especial (!, @, #, $, %, etc)"
+      role_guest: convidado
+    closed: As inscrições estão fechadas no momento.

@@ -4,3 +4,91 @@ pt-BR:
     exports: Exportações
     home: Início
     imports: Importações
+    account_sharings: Compartilhamento de contas
+    account_statements: Cofre de extratos
+    accounts: Contas
+    ai_prompts: Prompts de IA
+    api_key: Chave de API
+    api_keys: Chaves de API
+    appearance: Aparência
+    appearances: Aparência
+    bank_sync: Sincronização bancária
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Categorias do orçamento
+    budgets: Orçamentos
+    categories: Categorias
+    categorize: Categorizar
+    changelog: Novidades
+    chats: Conversas
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Cartões de crédito
+    cryptos: Cripto
+    dashboard: Painel
+    debug: Depuração
+    debugs: Depuração
+    depositories: Contas bancárias
+    enable_banking_items: Enable Banking
+    family_exports: Exportações
+    family_merchants: Comerciantes
+    feedback: Feedback
+    guides: Guias
+    holdings: Posições
+    hostings: Auto-hospedagem
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Acessos como usuário
+    indexa_capital_items: Indexa Capital
+    intro: Introdução
+    investments: Investimentos
+    invitations: Convites
+    invite_codes: Códigos de convite
+    kraken_items: Kraken
+    llm_usage: Uso de LLM
+    llm_usages: Uso de LLM
+    loans: Empréstimos
+    lunchflow_items: Lunch Flow
+    mcp: Servidor MCP
+    merchants: Comerciantes
+    mercury_items: Mercury
+    messages: Mensagens
+    mfa: Autenticação em dois fatores
+    monobank_items: Monobank
+    oidc_accounts: Contas SSO
+    onboardings: Primeiros passos
+    other_assets: Outros ativos
+    other_liabilities: Outros passivos
+    payments: Pagamentos
+    pending_duplicate_merges: Revisão de duplicatas
+    plaid_items: Plaid
+    plan: Planejamento
+    preferences: Preferências
+    profile: Dados do perfil
+    profiles: Dados do perfil
+    properties: Imóveis
+    providers: Provedores
+    recurring_transactions: Recorrentes
+    redbark_items: Redbark
+    registrations: Cadastro
+    reports: Relatórios
+    rules: Regras
+    securities: Segurança
+    security: Segurança
+    self_hosting: Auto-hospedagem
+    sessions: Entrar
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Divisão
+    sso_identities: Conexões SSO
+    sso_providers: Provedores de SSO
+    subscriptions: Assinatura
+    system_health: Saúde do sistema
+    tags: Tags
+    trades: Negociações
+    transactions: Transações
+    transfer_matches: Correspondências de transferência
+    transfers: Transferências
+    users: Usuários
+    valuations: Atualizações de saldo
+    vehicles: Veículos

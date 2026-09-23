@@ -1,0 +1,92 @@
+---
+pt-BR:
+  coinspot_items:
+    provider_connection:
+      default_name: CoinSpot
+      default_description: Vincular a uma conta de corretora da CoinSpot
+      name: CoinSpot - %{name}
+      description: Vincular a %{name}
+    create:
+      default_name: CoinSpot
+      success: Conexão com a CoinSpot estabelecida com sucesso. Sua conta da corretora está sendo sincronizada.
+    update:
+      success: Conexão da CoinSpot atualizada com sucesso.
+    destroy:
+      success: Conexão da CoinSpot programada para exclusão.
+      unlink_failed: Não foi possível desconectar a conexão da CoinSpot
+    select_accounts:
+      select_connection: Escolha uma conexão da CoinSpot nas configurações de provedores.
+      no_credentials_configured: Adicione as credenciais da API da CoinSpot antes de configurar as contas.
+    link_accounts:
+      select_connection: Escolha uma conexão da CoinSpot antes de vincular contas.
+    select_existing_account:
+      title: Vincular conta da CoinSpot
+      no_accounts_found: Nenhuma conta da CoinSpot encontrada.
+      wait_for_sync: Aguarde a CoinSpot concluir a sincronização.
+      check_provider_health: Verifique se suas credenciais da API da CoinSpot são válidas.
+      link: Vincular
+      cancel: Cancelar
+    link_existing_account:
+      success: Vinculado com sucesso à conta da CoinSpot
+      select_connection: Escolha uma conexão da CoinSpot antes de vincular contas.
+      errors:
+        only_manual: Apenas contas manuais de corretora de criptomoedas sem um vínculo de provedor existente podem ser vinculadas à CoinSpot
+        invalid_coinspot_account: Conta da CoinSpot inválida
+        coinspot_account_already_linked: Esta conta da CoinSpot já está vinculada
+    setup_accounts:
+      title: Importar conta da CoinSpot
+      subtitle: Selecione a conta da corretora que você quer acompanhar
+      instructions: A CoinSpot importa uma única conta combinada de corretora de criptomoedas para esta conexão, com saldos, valores em AUD, transferências, depósitos, saques e histórico de ordens.
+      no_accounts: Todas as contas da CoinSpot foram importadas.
+      accounts_count:
+        one: '%{count} conta disponível'
+        other: '%{count} contas disponíveis'
+      select_all: Selecionar todas
+      import_selected: Importar selecionadas
+      cancel: Cancelar
+      creating: Importando...
+    complete_account_setup:
+      success:
+        one: '%{count} conta importada'
+        other: '%{count} contas importadas'
+      none_selected: Nenhuma conta selecionada
+      no_accounts: Nenhuma conta para importar
+      setup_failed:
+        one: Falha ao importar %{count} conta
+        other: Falha ao importar %{count} contas
+    coinspot_item:
+      provider_name: CoinSpot
+      syncing: Sincronizando...
+      reconnect: As credenciais precisam ser atualizadas
+      deletion_in_progress: Excluindo...
+      sync_status:
+        no_accounts: Nenhuma conta encontrada
+        all_synced:
+          one: '%{count} conta sincronizada'
+          other: '%{count} contas sincronizadas'
+        partial_sync: '%{linked_count} sincronizadas, %{unlinked_count} precisam de configuração'
+      status: Sincronizado há %{timestamp}
+      status_with_summary: Sincronizado há %{timestamp} - %{summary}
+      status_never: Nunca sincronizado
+      delete: Excluir
+      no_accounts_title: Nenhuma conta encontrada
+      no_accounts_message: Sua conta da corretora CoinSpot aparecerá aqui após a sincronização.
+      setup_needed: Conta pronta para importar
+      setup_description: Importe esta conexão da CoinSpot como uma conta de corretora de criptomoedas.
+      setup_action: Importar conta
+      import_accounts_menu: Importar conta
+      stale_rate_warning: O saldo é aproximado porque a taxa de câmbio exata para %{date} não estava disponível. Será atualizado na próxima sincronização.
+  coinspot_item:
+    syncer:
+      checking_credentials: Verificando credenciais...
+      credentials_invalid: Credenciais da API da CoinSpot inválidas. Verifique sua chave de API e seu segredo.
+      importing_accounts: Importando contas da CoinSpot...
+      checking_configuration: Verificando a configuração da conta...
+      accounts_need_setup:
+        one: '%{count} conta precisa de configuração'
+        other: '%{count} contas precisam de configuração'
+      processing_accounts: Processando os dados da conta...
+      processing_failed:
+        one: Falha ao processar %{count} conta da CoinSpot
+        other: Falha ao processar %{count} contas da CoinSpot
+      calculating_balances: Calculando saldos...

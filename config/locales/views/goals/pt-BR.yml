@@ -1,0 +1,345 @@
+---
+pt-BR:
+  goals:
+    color_picker:
+      trigger_label: Escolher cor e ícone
+      color_heading: Cor
+      icon_heading: Ícone
+      poor_contrast: Contraste insuficiente. Escolha uma cor mais escura ou
+      auto_adjust: ajustar automaticamente.
+    index:
+      title: Metas
+      subtitle: Guarde dinheiro para o que importa.
+      new_goal: Nova meta
+      empty_filtered: Nenhuma meta encontrada.
+      pending_pledges_callout: Você tem aportes pendentes. O Sure vai confirmá-los na próxima sincronização.
+      kpi:
+        contributed_label: Aportado · últimos 30 dias
+        velocity_delta_up: ↑ %{percent}%% vs. 30 dias anteriores
+        velocity_delta_down: ↓ %{percent}%% vs. 30 dias anteriores
+        velocity_delta_flat: vs. 30 dias anteriores
+        velocity_delta_zero_base: Primeiros 30 dias de atividade
+        needs_this_month_label: Necessário este mês
+        needs_this_month_sub:
+          one: '%{count} meta abaixo do ritmo'
+          other: '%{count} metas abaixo do ritmo'
+        needs_this_month_zero_sub: Nenhuma meta abaixo do ritmo
+        on_track_label: Metas em dia
+        on_track_value: '%{on_track} de %{total}'
+        on_track_sub_parts:
+          reached:
+            one: '%{count} atingida'
+            other: '%{count} atingidas'
+          behind:
+            one: '%{count} atrasada'
+            other: '%{count} atrasadas'
+          no_date:
+            one: '%{count} sem prazo'
+            other: '%{count} sem prazo'
+          paused:
+            one: '%{count} pausada'
+            other: '%{count} pausadas'
+        on_track_sub_all_good: Todas as metas ativas no ritmo
+        on_track_all_caught_up: Tudo em dia
+      goals_section:
+        heading: Metas
+        subtitle: Guarde dinheiro para o que importa.
+      ongoing_section:
+        heading: Metas
+      archived_section:
+        heading: Arquivadas
+      search:
+        placeholder: Buscar metas…
+        aria_label: Buscar metas
+        empty: Nenhuma meta encontrada.
+        empty_with_query: Nenhuma meta encontrada para "%{query}".
+        empty_with_filter: Nenhuma meta encontrada com este filtro.
+        empty_with_both: Nenhuma meta encontrada para "%{query}" com este filtro.
+        clear_search: Limpar busca
+        show_all: Mostrar todas
+      chips_aria: Filtrar metas por status
+      chips:
+        all: Todas
+        on_track: Em dia
+        behind: Atrasadas
+        no_target_date: Sem prazo
+        paused: Pausadas
+        completed: Concluídas
+    new:
+      heading: Nova meta
+      subtitle: Guarde dinheiro para algo específico.
+    edit:
+      heading: Editar meta
+      save: Salvar alterações
+    create:
+      success: Meta criada.
+    update:
+      success: Meta atualizada.
+    destroy:
+      success: Meta excluída.
+    pause:
+      success: Meta pausada.
+      invalid_transition: A meta não pode ser pausada no estado atual.
+    resume:
+      success: Meta retomada.
+      invalid_transition: A meta não pode ser retomada no estado atual.
+    complete:
+      success: Meta marcada como concluída.
+      invalid_transition: A meta não pode ser concluída no estado atual.
+    archive:
+      success: Meta arquivada.
+      invalid_transition: A meta não pode ser arquivada no estado atual.
+    unarchive:
+      success: Meta restaurada.
+      invalid_transition: A meta não pode ser restaurada no estado atual.
+    reopen:
+      success: Meta reaberta.
+      invalid_transition: A meta não pode ser reaberta no estado atual.
+    consume:
+      title: Registrar um gasto
+      subtitle: '%{goal}'
+      amount_label: Quanto você usou?
+      amount_hint: No momento, %{saved} está destinado a esta meta.
+      account_label: De qual conta?
+      earmark_note: O valor registrado deixa de estar destinado a esta meta, e suas outras metas nessa conta recuperam a parte delas.
+      cancel: Cancelar
+      submit: Registrar
+      success: '%{amount} registrado como usado.'
+      errors:
+        non_positive: Insira um valor maior que zero.
+        maintained: Uma reserva é usada e reabastecida, não gasta — o valor que falta já aparece na meta.
+        exceeds_target: Esse valor é maior do que o objetivo total desta meta.
+        account_required: Esta meta é financiada por várias contas — informe de qual delas o dinheiro saiu.
+        account_not_linked: Essa conta não financia esta meta.
+        not_active: Esta meta não está mais ativa, então nada pode ser registrado nela.
+        exceeds_earmark: Esse valor é maior do que o destinado à meta nesta conta.
+        transaction_already_claimed: Essa saída já foi atribuída.
+        transaction_not_found: Essa saída não está mais disponível para atribuição.
+        no_linked_account: Esta meta não tem mais nenhuma conta de financiamento.
+    unattributed_outflows:
+      heading: Saíram valores destas contas
+      body: Se parte disso foi gasta com %{goal}, informe aqui e o valor deixa de contar contra o objetivo.
+      attribute: Foi este gasto
+    show:
+      edit: Editar
+      consume: Usei parte deste dinheiro
+      pause: Pausar
+      resume: Retomar
+      complete: Marcar como concluída
+      archive: Arquivar
+      unarchive: Restaurar
+      reopen: Reabrir meta
+      delete: Excluir
+      reserve_shortfall:
+        heading: Reserva abaixo do saldo-alvo
+        body: Você tem %{saved} de %{target}. Adicione %{missing} para voltar ao saldo-alvo.
+      record_pledge_cta: Registrar aporte
+      pledge_just_transferred: Registrar uma transferência feita
+      pledge_just_saved: Registrar um valor guardado
+      funding_accounts_heading: Contas de financiamento
+      funding_accounts:
+        earmarked_of: '%{earmarked} destinados de %{balance}'
+        empty:
+          heading: Nenhuma conta de financiamento vinculada ainda
+          body: Edite a meta para vincular as contas bancárias em que você guarda dinheiro.
+      notes: Anotações
+      funding_last_30d: últimos 30 dias
+      funding_last_90d: últimos 90 dias
+      status_callout:
+        depleted: '%{amount} abaixo do saldo-alvo — complemente para recompor a reserva'
+        behind: guarde mais %{amount}/mês para recuperar o ritmo
+        behind_covered: os aportes pendentes cobrem a diferença
+        on_track: atinge a meta por volta de %{date}
+        no_target_date: defina uma data-alvo para projetar a conclusão
+      pending_pledge:
+        title:
+          zero: 'Pendente: %{amount} para %{account} · expira hoje'
+          one: 'Pendente: %{amount} para %{account} · falta %{count} dia'
+          other: 'Pendente: %{amount} para %{account} · faltam %{count} dias'
+        body_transfer: Confirmado automaticamente quando o Sure identificar um depósito correspondente na próxima sincronização.
+        body_manual: Confirmado na próxima vez que você editar o saldo manualmente.
+        pledged_at: Registrado há %{time_ago}
+        extend: Prorrogar 7 dias
+        cancel: Cancelar
+        confirm_cancel_title: Cancelar este aporte?
+        confirm_cancel_body: O aporte de %{amount} será removido. Você pode registrar um novo quando quiser.
+        confirm_cancel_cta: Cancelar aporte
+      header:
+        target: 'Objetivo: %{amount}'
+        target_by: 'Objetivo: %{amount} até %{date}'
+        target_by_past: 'Objetivo: %{amount} · prazo era %{date}'
+      ring:
+        including_used: Inclui %{amount} já usados
+        saved: Guardado
+        of: de %{target}
+        to_go: faltam %{amount}
+        of_target: do objetivo
+        market_value: 'Valor de mercado: %{amount}'
+        aria_label: Meta %{percent}% concluída. %{amount} de %{target} guardados.
+        aria_label_with_used: Meta %{percent}% concluída. %{amount} de %{target}, incluindo %{used} já usados.
+      projection:
+        heading: Projeção
+        legend_saved: Guardado
+        legend_projection: Projeção
+        legend_required: Necessário
+        reserve: Uma reserva mantém um saldo-alvo, então não há data de conclusão para projetar.
+        reached: Você atingiu o objetivo. Nenhuma projeção necessária.
+        no_target_date: Nenhuma data-alvo definida. Defina uma para projetar a conclusão.
+        no_pace: Nenhum depósito ainda. Adicione dinheiro a uma conta vinculada para iniciar uma projeção.
+        behind: No ritmo atual, a meta não será atingida a tempo.
+        on_track_html: No ritmo atual, você vai atingir esta meta por volta de <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        aria_label: Gráfico de projeção de %{name}
+        today_marker: Hoje
+        tooltip_projected: 'Projetado: %{amount}'
+        tooltip_saved: 'Guardado: %{amount}'
+        tooltip_target_relation: '%{percent}% do objetivo de %{target}'
+      catch_up:
+        title: Guarde mais %{amount}/mês para recuperar o ritmo
+        body: 'Ritmo atual: %{avg}/mês · necessário: %{required}/mês para atingir o objetivo.'
+        adjust_target_cta: Ajustar o objetivo
+      confirm_complete_title: Marcar esta meta como concluída?
+      confirm_complete_body: O dinheiro destinado a ela fica liberado para suas outras metas na mesma conta. Ela sai da lista de metas em andamento, e você ainda pode arquivá-la ou restaurá-la depois.
+      confirm_complete_body_short: Você está em %{progress}%, %{saved} de %{target}. Ao marcar como concluída, isso fica registrado como sua conquista no lugar do objetivo original. Deseja continuar ou fechar e ajustar o objetivo?
+      confirm_complete_cta: Marcar como concluída
+      confirm_archive_title: Arquivar esta meta?
+      confirm_archive_body: As metas arquivadas saem da lista principal. Você pode restaurá-las depois. Arquivar não registra o que você alcançou — marque a meta como concluída antes se quiser manter isso.
+      confirm_archive_cta: Arquivar
+      confirm_delete_title: Excluir esta meta?
+      confirm_delete_body: '%{name} e seu histórico de aportes serão removidos permanentemente. Suas contas vinculadas, saldos e transações não serão afetados. Para mantê-la como registro, arquive-a.'
+      confirm_delete_cta: Excluir meta
+      paused_banner:
+        title: Esta meta está pausada
+        body: Retome-a para continuar acompanhando seu progresso.
+        resume_cta: Retomar meta
+      archived_banner:
+        title: Esta meta está arquivada
+        body: Restaure-a para continuar contribuindo ou mantenha-a como registro.
+        restore_cta: Restaurar meta
+      celebration:
+        heading_reserve: Reserva completa
+        body_reserve: Sua reserva está no saldo-alvo, %{saved} de %{target}. Nada a fazer — o valor continua destinado a ela.
+        heading: Meta atingida. Parabéns!
+        body_reached: Você atingiu seu objetivo com %{saved} de %{target}. A meta ainda não foi encerrada — o dinheiro continua destinado a ela.
+        close_cta: Encerrar esta meta
+        close_hint: Encerrar libera o dinheiro destinado para suas outras metas na mesma conta. Faça isso depois de ter gasto o valor.
+        frozen: Atingida em %{date} · %{amount}
+        body: Meta encerrada com %{saved} de %{target}. Mantenha-a como registro ou arquive-a agora.
+        archive_cta: Arquivar meta
+      inactive:
+        heading_paused: Esta meta está pausada
+        heading_archived: Esta meta está arquivada
+        body: '%{saved} de %{target} guardados até agora.'
+      no_target_date:
+        heading: Adicione uma data-alvo
+        body: Defina um prazo para projetar a conclusão e acompanhar o ritmo necessário.
+        cta: Definir data-alvo
+      empty:
+        heading: Nenhum depósito ainda
+        body: Faça uma transferência para sua conta vinculada — o Sure vai identificá-la na próxima sincronização. Ou atualize o saldo da sua conta manual.
+    errors:
+      not_found: Não foi possível encontrar esta meta. Ela pode ter sido excluída.
+    states:
+      active: Ativa
+      paused: Pausada
+      completed: Concluída
+      archived: Arquivada
+    status:
+      funded: Reserva completa
+      depleted: Precisa de reforço
+      on_track: Em dia
+      behind: Atrasada
+      reached: Atingida
+      completed: Concluída
+      no_target_date: Sem prazo
+      paused: Pausada
+      archived: Arquivada
+    empty_state:
+      heading: Nenhuma meta ainda
+      body: Defina um objetivo, vincule as contas em que você guarda dinheiro e acompanhe seu progresso.
+      subtitle: Defina um objetivo e comece a guardar dinheiro para ele.
+      new_goal: Criar sua primeira meta
+      no_depository_accounts: Você precisa de pelo menos uma conta bancária (conta corrente, poupança, HSA, CDB ou money market) antes de criar uma meta.
+      add_account: Adicionar uma conta
+    goal_card:
+      including_used: Inclui %{amount} já usados
+      no_accounts: Nenhuma conta vinculada
+      n_accounts: '%{first} +%{count}'
+      left: restantes
+      aria_progress: '%{percent}% de %{target}'
+      accounts:
+        one: '%{count} conta'
+        other: '%{count} contas'
+      no_target_date: Sem prazo
+      completed: Concluída
+      past_due: Prazo vencido
+      days_left:
+        one: falta %{count} dia
+        other: faltam %{count} dias
+      pace_with_target: '%{avg}/mês · objetivo %{target}/mês'
+      pace_no_target: média de %{avg}/mês
+      footer_paused: Pausada
+      footer_archived: Arquivada
+      footer_reserve_intact: Reserva completa
+      footer_reserve_short: faltam %{amount} para completar
+      footer_reached: Meta atingida
+      footer_catch_up: Guarde %{amount}/mês para recuperar o ritmo
+      footer_no_deadline: Sem prazo
+      pending_pledge: Aporte pendente
+      pending_count:
+        one: '%{count} pendente'
+        other: '%{count} pendentes'
+      footer_no_pledges: Nenhum aporte confirmado ainda
+      footer_last_today: Último aporte confirmado hoje
+      footer_last_days:
+        one: Último aporte confirmado há %{count} dia
+        other: Último aporte confirmado há %{count} dias
+    form:
+      target_modes:
+        fixed: Um valor fixo
+        months_of_expenses: Um número de meses de despesas
+      kinds:
+        one_off:
+          hint: Guarde para algo específico e encerre a meta quando gastar o valor.
+          label: Meta pontual
+        maintained:
+          hint: Um saldo a manter, como uma reserva de emergência. Nunca é encerrada.
+          label: Reserva a manter
+      create: Criar meta
+      save: Salvar alterações
+      suggested_with_date: Guarde {monthly}/mês em {accounts} para atingir a meta no prazo.
+      suggested_no_date: Defina uma data-alvo para projetar a conclusão.
+      errors:
+        name_required: Dê um nome à sua meta.
+        amount_required: Defina um objetivo maior que zero.
+        accounts_required: Escolha pelo menos uma conta de financiamento.
+      earmark:
+        headroom: '{left} ainda disponível para destinar nesta conta.'
+        prorata: Suas metas nesta conta somam {total} para um saldo de {balance} — elas vão progredir proporcionalmente.
+        whole_balance: Esta conta vai financiar o que sobrar depois das outras destinações.
+        whole_balance_alone: Esta meta vai usar o saldo inteiro desta conta.
+      fields:
+        target_mode: Como o saldo-alvo é definido
+        target_months: Meses de despesas
+        target_months_hint: Recalculado no dia 1º de cada mês com base na mediana dos seus gastos mensais.
+        name: Nome
+        name_placeholder: Reserva de emergência, entrada da casa…
+        target_amount: Valor-alvo
+        target_balance: Saldo-alvo
+        target_balance_pending: Calculado ao salvar
+        target_balance_hint: Com base na mediana dos seus gastos mensais nos meses acima. Atualizado todo mês.
+        target_date: Data-alvo
+        color: Cor
+        notes: Anotações (opcional)
+        notes_placeholder: Um lembrete para o seu eu do futuro…
+        funding_accounts: Contas de financiamento
+        funding_accounts_hint: O saldo desta meta é o saldo (ou a parte destinada) destas contas.
+        whole_balance: Saldo inteiro
+        earmark_for: Valor destinado de %{account}
+        earmark_hint: Deixe um valor em branco para dedicar o saldo inteiro da conta.
+      subtypes:
+        checking: Conta corrente
+        savings: Poupança
+        hsa: HSA
+        cd: CDB
+        money_market: Money market
+        other: Outras

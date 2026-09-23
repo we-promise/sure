@@ -18,6 +18,21 @@ pt-BR:
         from: De
         to: Até
       showing_period: "Exibindo dados de %{start} até %{end}"
+      previous_period: Período anterior
+      next_period: Próximo período
+      today: Hoje
+      period_label:
+        quarterly: T%{quarter} %{year}
+        ytd: Acum. %{year}
+        past_year: '%{year}'
+        last_6_months: '%{start} – %{end}'
+      period_picker:
+        quarter: T%{quarter} %{year}
+        ytd: Acum. %{year}
+      previous_year: Ano anterior
+      next_year: Próximo ano
+      previous_decade: Década anterior
+      next_decade: Próxima década
     invalid_date_range: "A data final não pode ser anterior à data inicial. As datas foram trocadas."
     summary:
       total_income: Receita Total
@@ -105,19 +120,19 @@ pt-BR:
         income: Receitas
         uncategorized: Sem Categoria
         entries:
-          one: "%{count} entrada"
-          other: "%{count} entradas"
+          one: "%{count} lançamento"
+          other: "%{count} lançamentos"
         percentage: "% do Total"
       pagination:
         showing:
-          one: Exibindo %{count} entrada
-          other: Exibindo %{count} entradas
+          one: Exibindo %{count} lançamento
+          other: Exibindo %{count} lançamentos
         previous: Anterior
         next: Próximo
     net_worth:
       title: Patrimônio líquido
       current_net_worth: Patrimônio líquido atual
-      period_change: Alteração de período
+      period_change: Variação no período
       assets_vs_liabilities: Ativos versus Passivos
       total_assets: Ativos
       total_liabilities: Passivos
@@ -129,8 +144,8 @@ pt-BR:
       total_return: Retorno Total
       contributions: Contribuições do Período
       withdrawals: Saques do Período
-      top_holdings: Principais Aplicações
-      holding: Holding
+      top_holdings: Principais Posições
+      holding: Posição
       weight: Peso
       value: Valor
       return: Retorno
@@ -143,20 +158,24 @@ pt-BR:
       no_data: "-"
       view_details: Ver detalhes
       holdings_count:
-        one: "%{count} holding"
-        other: "%{count} holdings"
+        one: "%{count} posição"
+        other: "%{count} posições"
       sells_count:
         one: "%{count} venda"
         other: "%{count} vendas"
-      holdings: Holdings
-      sell_trades: Venda de Negócios
+      holdings: Posições
+      sell_trades: Negociações de venda
       and_more: "+%{count} mais"
+      period_return: Retorno do período
     investment_flows:
       title: Fluxos de investimento
       description: Acompanhe o fluxo de dinheiro que entra e sai de suas contas de investimento.
       contributions: Contribuições
       withdrawals: Saques
       net_flow: Fluxo Líquido
+      contributions_description: Dinheiro aplicado em investimentos
+      withdrawals_description: Dinheiro resgatado de investimentos
+      net_flow_description: Variação líquida total
     google_sheets_instructions:
       title_with_key: "✅ Copiar URL para Google Sheets"
       title_no_key: "⚠️ Chave de API Necessária"
@@ -213,11 +232,12 @@ pt-BR:
         contributions: Contribuições
         withdrawals: Saques
         this_period: este período
-        top_holdings: Principais Aplicações
-        holding: Holding
+        top_holdings: Principais Posições
+        holding: Posição
         weight: Peso
         value: Valor
         return: Retorno
+        period_return: Retorno do período
       # Spending by Category section
       spending:
         title: Gastos por Categoria

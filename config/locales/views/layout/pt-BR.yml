@@ -10,16 +10,33 @@ pt-BR:
         home: Início
         reports: Relatórios
         transactions: Transações
-    auth.sign_up:
-      existing_account: Já tem uma conta?
-      no_account: Novo no %{product_name}?
-      sign_in: Entrar
-      sign_up: Criar conta
+        bills: Contas a pagar
+        plan: Planejamento
+        goals: Metas
+      insights: Insights
+      resize_left_sidebar: Redimensionar a barra lateral de contas
+      resize_right_sidebar: Redimensionar a barra lateral do assistente
+      release_highlight:
+        title: Novidades
+        done: Entendi
     shared:
       footer:
         privacy_policy: Política de Privacidade
         terms_of_service: Termos de Serviço
+      confirm_dialog:
+        are_you_sure: Tem certeza?
+        cannot_be_undone: Esta ação não pode ser desfeita.
+        confirm: Confirmar
+      notification_tray:
+        download_complete: Download concluído
+        download_failed: Falha no download. Tente novamente.
+        download_location: O arquivo está na sua pasta Downloads.
     trial:
       open_demo: Demo aberta
       data_deleted_in_days: Os dados serão excluídos em %{days} dias
       contribute: Contribuir
+    auth:
+      existing_account: Já tem uma conta?
+      no_account: Novo no %{product_name}?
+      sign_in: Entrar
+      sign_up: Criar conta

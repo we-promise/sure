@@ -1,0 +1,20 @@
+---
+pt-BR:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: Valor
+        currency: Moeda
+        account: Conta
+        kind: Tipo
+        status: Status
+        expires_at: Expira em
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Escolha uma das contas vinculadas à meta.
+            currency:
+              must_match_goal: A moeda do aporte deve ser a mesma da meta.
+          duplicate_open_pledge: Você já tem um aporte pendente com este valor nesta conta. Cancele ou prorrogue o existente antes de registrar outro.

@@ -1,0 +1,4 @@
+---
+pt-BR:
+  passkey_sessions:
+    invalid_credential: Não foi possível entrar com essa chave de acesso. Tente novamente ou use sua senha.

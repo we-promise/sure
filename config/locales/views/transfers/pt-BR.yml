@@ -3,6 +3,9 @@ pt-BR:
   transfers:
     create:
       success: Transferência criada
+      exchange_rate_unavailable: Taxa de câmbio indisponível para as moedas e a data selecionadas
+      date_invalid: é inválida
+      stale_form: Este formulário já foi enviado com outros dados. Atualize a página e tente novamente.
     destroy:
       success: Transferência removida
     form:
@@ -15,6 +18,13 @@ pt-BR:
       submit: Criar transferência
       to: Para
       transfer: Transferência
+      bank_charges: Tarifas bancárias
+      outgoing_fee: Tarifa de envio da transferência
+      incoming_fee: Tarifa de recebimento da transferência
+      destination_amount: Valor recebido no destino
+      destination_amount_display: 'Valor recebido no destino: %{amount}'
+      exchange_rate_display: 'Taxa de câmbio: %{rate}'
+      source_amount: Valor enviado
     new:
       title: Nova transferência
     show:
@@ -27,5 +37,18 @@ pt-BR:
       note_placeholder: Adicionar uma nota a esta transferência
       overview: Visão geral
       settings: Configurações
+      mark_recurring: Marcar como recorrente
+      mark_recurring_subtitle: Acompanhe esta transferência como um padrão recorrente na lista de próximas transações e na página de recorrentes.
+      mark_recurring_title: Marcar transferência como recorrente
+      from: De
+      to: Para
+      date: Data
+      transfer_amount: Valor da transferência
+      total: Total
+      bank_charges: Tarifas bancárias
+      source_fee: Tarifa na origem
+      destination_fee: Tarifa no destino
+      category: Categoria
+      uncategorized: Sem categoria
     update:
       success: Transferência atualizada

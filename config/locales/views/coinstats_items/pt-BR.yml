@@ -1,0 +1,75 @@
+---
+pt-BR:
+  coinstats_items:
+    create:
+      success: Conexão com o provedor CoinStats configurada com sucesso.
+      default_name: Conexão CoinStats
+      errors:
+        validation_failed: 'Falha na validação: %{message}.'
+    update:
+      success: Conexão com o provedor CoinStats atualizada com sucesso.
+      errors:
+        validation_failed: 'Falha na validação: %{message}.'
+    destroy:
+      success: Conexão com o provedor CoinStats programada para exclusão.
+    link_wallet:
+      success: '%{count} carteira(s) cripto vinculada(s) com sucesso.'
+      missing_params: 'Parâmetros obrigatórios ausentes: endereço e blockchain.'
+      failed: Falha ao vincular a carteira cripto.
+      error: 'Falha ao vincular a carteira cripto: %{message}.'
+    link_exchange:
+      success: Corretora %{name} vinculada.
+      missing_params: A corretora e as credenciais são obrigatórias.
+      invalid_exchange: A corretora selecionada não é mais compatível.
+      failed: Falha ao vincular a corretora.
+      error: 'Falha ao vincular a corretora: %{message}.'
+    new:
+      title: Vincular criptomoedas com a CoinStats
+      blockchain_fetch_error: Falha ao carregar as blockchains. Tente novamente mais tarde.
+      link_wallet_title: Vincular endereço de carteira
+      link_wallet_description: Acompanhe uma carteira de autocustódia ou um único endereço on-chain pela CoinStats.
+      address_label: Endereço
+      address_placeholder: Obrigatório
+      blockchain_label: Blockchain
+      blockchain_placeholder: Obrigatório
+      blockchain_select_blank: Selecione uma blockchain
+      link_wallet_submit: Vincular carteira cripto
+      link_exchange_title: Vincular API da corretora
+      link_exchange_description: Use uma chave de API somente leitura da corretora para que a CoinStats possa sincronizar saldos e transações da Bitvavo, Binance e outras corretoras compatíveis.
+      link_exchange_note: Se a sua corretora exigir a ativação da chave de API ou confirmação por e-mail, conclua essa etapa antes de vincular aqui.
+      exchange_select_blank: Selecione uma corretora
+      exchange_label: Corretora
+      link_exchange_submit: Vincular corretora
+      not_configured_title: Conexão com o provedor CoinStats não configurada
+      not_configured_message: Para vincular uma carteira cripto ou uma corretora, primeiro configure a conexão com o provedor CoinStats.
+      not_configured_step1_html: Acesse <strong>Configurações → Provedores</strong>
+      not_configured_step2_html: Localize o provedor <strong>CoinStats</strong>
+      not_configured_step3_html: Siga as <strong>instruções de configuração</strong> fornecidas para concluir a configuração do provedor
+      go_to_settings: Ir para as configurações de provedores
+      setup_instructions: 'Instruções de configuração:'
+      step1_html: Acesse o <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">painel da API pública da CoinStats</a> para obter uma chave de API.
+      step2: Insira sua chave de API abaixo e clique em Configurar.
+      step3_html: Após conectar com sucesso, acesse a aba <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Contas</a> para configurar suas contas de criptomoedas.
+      api_key_label: Chave de API
+      api_key_placeholder: Obrigatório
+      configure: Configurar
+      update_configuration: Reconfigurar
+      default_name: Conexão CoinStats
+    coinstats_item:
+      deletion_in_progress: Os dados da carteira cripto estão sendo excluídos…
+      provider_name: CoinStats
+      syncing: Sincronizando…
+      sync_status:
+        no_accounts: Nenhuma carteira cripto encontrada
+        all_synced:
+          one: '%{count} carteira cripto sincronizada'
+          other: '%{count} carteiras cripto sincronizadas'
+        partial_sync: '%{linked_count} carteiras cripto sincronizadas, %{unlinked_count} precisam de configuração'
+      reconnect: Reconectar
+      status: Sincronizado há %{timestamp}
+      status_never: Nunca sincronizado
+      status_with_summary: Sincronizado há %{timestamp} • %{summary}
+      update_api_key: Atualizar chave de API
+      delete: Excluir
+      no_wallets_title: Nenhuma carteira cripto conectada
+      no_wallets_message: No momento, nenhuma carteira cripto está conectada à CoinStats.

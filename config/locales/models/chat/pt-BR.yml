@@ -1,0 +1,9 @@
+---
+pt-BR:
+  chat:
+    errors:
+      rate_limited: O provedor de IA atingiu o limite de requisições no momento. Tente novamente em alguns minutos.
+      temporarily_unavailable: O provedor de IA está temporariamente indisponível. Tente novamente em alguns minutos.
+      misconfigured: O provedor de IA não está configurado corretamente. Entre em contato com o administrador.
+      no_response: O assistente não respondeu. O worker em segundo plano pode estar fora do ar ou a IA pode não estar totalmente configurada. Tente novamente.
+      default: Não foi possível gerar uma resposta. Tente novamente.

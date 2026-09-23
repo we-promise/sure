@@ -4,3 +4,6 @@ pt-BR:
     chat_form:
       placeholder: "Pergunte qualquer coisa ..."
       disclaimer: "As respostas da IA são apenas informativas. Não constituem aconselhamento financeiro!"
+      coming_soon: Em breve
+    create:
+      chat_not_found: Este chat não está mais disponível.

@@ -17,39 +17,39 @@ pt-BR:
       skipped: "Ignorada: %{count}"
       fetching: "Buscando na corretora..."
       protected:
-        one: "%{count} entrada protegida (não sobrescrita)"
-        other: "%{count} entradas protegidas (não sobrescritas)"
-      view_protected: Ver entradas protegidas
+        one: "%{count} lançamento protegido (não sobrescrito)"
+        other: "%{count} lançamentos protegidos (não sobrescritos)"
+      view_protected: Ver lançamentos protegidos
     skip_reasons:
       excluded: Excluída
-      user_modified: Usuário modificou
+      user_modified: Modificada pelo usuário
       import_locked: Importação de CSV
       protected: Protegida
     holdings:
-      title: Holdings
+      title: Posições
       found: "Encontrado: %{count}"
       processed: "Processados: %{count}"
     trades:
-      title: Trocas
+      title: Negociações
       imported: "Importado: %{count}"
       skipped: "Ignorado: %{count}"
       fetching: "Buscar atividades da corretora..."
     health:
       title: Saúde
       view_error_details: Ver detalhes do erro
-      rate_limited: "Taxa limitada %{time_ago}"
-      recently: recentemente
+      rate_limited: "Limite de requisições atingido (%{time_ago} atrás)"
+      recently: pouco tempo
       errors: "Erros: %{count}"
       pending_reconciled:
-        one: "%{count} transações pendentes duplicadas reconciliadas"
-        other: "%{count} transações pendentes duplicadas reconciliadas"
+        one: "%{count} transação pendente duplicada conciliada"
+        other: "%{count} transações pendentes duplicadas conciliadas"
       view_reconciled: Visualizar transações conciliadas
       duplicate_suggestions:
         one: "%{count} possível duplicado precisa de revisão"
         other: "%{count} possíveis duplicados precisam ser revisados"
       view_duplicate_suggestions: Ver duplicados sugeridos
       stale_pending:
-        one: "%{count} transações pendentes obsoletas (excluídas dos orçamentos)"
+        one: "%{count} transação pendente obsoleta (excluída dos orçamentos)"
         other: "%{count} transações pendentes obsoletas (excluídas dos orçamentos)"
       view_stale_pending: Veja as contas afetadas
       stale_pending_count:
@@ -65,3 +65,105 @@ pt-BR:
       data_warnings: "Avisos de dados: %{count}"
       notices: "Avisos: %{count}"
       view_data_quality: Veja os detalhes da qualidade dos dados.
+  UI:
+    period_picker:
+      aria_label: 'Período: %{period}'
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Alternar seleção
+      balance_reconciliation:
+        labels:
+          adjustments: Ajustes
+          buys: Compras
+          change_in_brokerage_cash: Variação do caixa na corretora
+          change_in_holdings_market: Variação das posições (oscilação de preços de mercado)
+          change_in_holdings_trades: Variação das posições (compras/vendas)
+          charges: Compras no cartão
+          end_balance: Saldo calculado
+          end_principal: Principal calculado
+          end_value: Valor calculado
+          final_balance: Saldo final
+          final_principal: Principal final
+          final_value: Valor final
+          market_changes: Variações de mercado
+          net_cash_flow: Fluxo de caixa líquido
+          net_principal_change: Variação líquida do principal
+          net_value_change: Variação líquida do valor
+          payments: Pagamentos
+          sells: Vendas
+          start_balance: Saldo inicial
+          start_principal: Principal inicial
+          start_value: Valor inicial
+        tooltips:
+          adjustments: Conciliações manuais ou outros ajustes
+          adjustments_asset: Ajustes manuais de valor ou avaliações
+          buys: Compras de criptomoedas durante o dia
+          change_in_brokerage_cash: Variação líquida do caixa com depósitos, saques e negociações
+          change_in_holdings_market: Variação no valor das posições decorrente da oscilação dos preços de mercado
+          change_in_holdings_trades: Impacto nas posições da compra e venda de ativos
+          charges: Novas compras no cartão durante o dia
+          end_balance: O saldo calculado após todas as transações
+          end_balance_investment: O saldo calculado após todas as movimentações
+          end_principal: O principal calculado após todas as transações
+          end_value: O valor calculado após todas as variações
+          final_balance: O saldo final da conta no dia
+          final_balance_credit: O saldo devedor final do dia
+          final_balance_crypto: O valor final das posições em criptomoedas no dia
+          final_balance_investment: O valor final da carteira no dia
+          final_principal: O saldo devedor do principal no fim do dia
+          final_value: O valor final do ativo no dia
+          market_changes: Variações de valor decorrentes da oscilação dos preços de mercado
+          net_cash_flow: Variação líquida do saldo com todas as transações do dia
+          net_principal_change: Amortizações do principal e novos empréstimos durante o dia
+          net_value_change: Todas as variações de valor, incluindo benfeitorias e depreciação
+          payments: Pagamentos feitos ao cartão durante o dia
+          sells: Vendas de criptomoedas durante o dia
+          start_balance: O saldo da conta no início deste dia
+          start_balance_credit: O saldo devedor no início deste dia
+          start_balance_crypto: O valor das posições em criptomoedas no início deste dia
+          start_balance_investment: O valor total da carteira no início deste dia
+          start_principal: O saldo devedor do principal no início deste dia
+          start_value: O valor do ativo no início deste dia
+      chart:
+        no_data_available: Nenhum dado disponível
+        title:
+          balance: Saldo
+          cash_value: Valor em caixa
+          debt_balance: Saldo devedor
+          estimated_property_value: Valor estimado do imóvel
+          estimated_vehicle_value: Valor estimado do veículo
+          holdings_value: Valor das posições
+          remaining_principal_balance: Saldo devedor do principal
+          total_account_value: Valor total da conta
+          total_gains: Ganhos totais
+        views:
+          cash: Caixa
+          gains: Ganhos / ROI
+          holdings: Posições
+          total_value: Valor total
+        vs_available_history: vs. histórico disponível
+      activity_date:
+        balance_tooltip: O saldo no fim do dia, após todas as transações e ajustes
+        no_balance_data: Nenhum dado de saldo disponível para esta data
+  ds:
+    alert:
+      variants:
+        info: Informação
+        success: Sucesso
+        warning: Aviso
+        error: Erro
+        destructive: Erro
+    pill:
+      aria_label: '%{label}'
+      default_label: Prévia
+    dialog:
+      close: Fechar
+    popover:
+      avatar_default_label: Abrir menu
+    tooltip:
+      trigger_label: Mais informações
+    link:
+      opens_in_new_tab: (abre em uma nova aba)
+    icon_picker:
+      no_matching_icons: Nenhum ícone encontrado
+      search_placeholder: Buscar ícones...

@@ -1,0 +1,189 @@
+---
+pt-BR:
+  redbark_items:
+    default_name: Conexão Redbark
+    sync_status:
+      no_accounts: Nenhuma conta encontrada
+      synced:
+        one: '%{count} conta sincronizada'
+        other: '%{count} contas sincronizadas'
+      synced_with_setup: '%{linked} sincronizadas, %{unlinked} precisam de configuração'
+    institution_summary:
+      none: Nenhuma instituição conectada
+      count:
+        one: '%{count} instituição'
+        other: '%{count} instituições'
+    errors:
+      provider_not_configured: O provedor Redbark não está configurado
+    sync:
+      status:
+        importing: Importando contas da Redbark...
+        processing: Processando transações...
+        calculating: Calculando saldos...
+        importing_data: Importando dados das contas...
+        checking_setup: Verificando a configuração das contas...
+        needs_setup: '%{count} contas precisam de configuração...'
+      success: Sincronização iniciada
+    panel:
+      setup_instructions: 'Instruções de configuração:'
+      step_1: Crie uma chave de API em app.redbark.com, em Settings
+      step_2: Insira sua chave de API abaixo e clique no botão Salvar
+      step_3: Após conectar com sucesso, acesse a aba Contas para configurar as novas contas
+      field_descriptions: 'Descrição dos campos:'
+      optional: (Opcional)
+      required: (obrigatório)
+      optional_with_default: (opcional, padrão %{default_value})
+      save_button: Salvar configuração
+      update_button: Atualizar configuração
+      status_configured_html: Configurado e pronto para uso. Acesse a aba <a href="%{accounts_path}" class="link">Contas</a> para gerenciar e configurar as contas.
+      status_not_configured: Não configurado
+      fields:
+        api_key:
+          label: Chave de API
+          description: Sua chave de API da Redbark (começa com rbk_live_)
+          placeholder_new: rbk_live_...
+          placeholder_update: Insira a nova chave de API para atualizar
+    create:
+      success: Conexão com a Redbark criada com sucesso
+    update:
+      success: Conexão com a Redbark atualizada
+    destroy:
+      success: Conexão com a Redbark removida
+      unlink_failed:
+        one: Não foi possível desvincular %{count} conta. Tente novamente.
+        other: Não foi possível desvincular %{count} contas. Tente novamente.
+    index:
+      title: Conexões Redbark
+    loading:
+      loading_message: Carregando contas da Redbark...
+      loading_title: Carregando
+    redbark_item:
+      accounts_need_setup: Contas precisam de configuração
+      delete: Excluir conexão
+      deletion_in_progress: exclusão em andamento...
+      error: Erro
+      more_accounts_available:
+        one: '%{count} conta adicional disponível'
+        other: '%{count} contas adicionais disponíveis'
+      no_accounts_description: Esta conexão ainda não tem contas vinculadas.
+      no_accounts_title: Nenhuma conta
+      provider_name: Redbark
+      requires_update: A conexão precisa ser atualizada
+      setup_action: Configurar novas contas
+      setup_description: '%{linked} de %{total} contas vinculadas. Escolha os tipos de conta para as contas recém-importadas da Redbark.'
+      setup_needed: Novas contas prontas para configurar
+      status: Sincronizado há %{timestamp}
+      status_never: Nunca sincronizado
+      status_with_summary: Última sincronização há %{timestamp} - %{summary}
+      syncing: Sincronizando...
+      total: Total
+      unlinked: Não vinculadas
+      update_credentials: Atualizar credenciais
+    select_accounts:
+      accounts_selected: contas selecionadas
+      api_error: 'Erro da API: %{message}'
+      cancel: Cancelar
+      configure_name_in_provider: Não é possível importar - configure o nome da conta na Redbark
+      description: Selecione as contas que você quer vincular à sua conta do %{product_name}.
+      link_accounts: Vincular contas selecionadas
+      no_accounts_found: Nenhuma conta encontrada. Verifique a configuração da sua chave de API.
+      no_api_key: A chave de API da Redbark não está configurada. Configure-a nas Configurações.
+      no_credentials_configured: Configure primeiro suas credenciais da Redbark nas Configurações do provedor.
+      no_name_placeholder: (Sem nome)
+      title: Selecionar contas da Redbark
+    select_existing_account:
+      account_already_linked: Esta conta já está vinculada a um provedor
+      all_accounts_already_linked: Todas as contas da Redbark já estão vinculadas
+      api_error: 'Erro da API: %{message}'
+      balance_label: 'Saldo:'
+      cancel: Cancelar
+      cancel_button: Cancelar
+      configure_name_in_provider: Não é possível importar - configure o nome da conta na Redbark
+      connect_hint: Conecte uma conta da Redbark para ativar a sincronização automática.
+      description: Selecione uma conta da Redbark para vincular a esta conta. As transações serão sincronizadas e desduplicadas automaticamente.
+      header: Vincular à Redbark
+      link_account: Vincular conta
+      link_button: Vincular esta conta
+      linking_to: 'Vinculando a:'
+      no_account_specified: Nenhuma conta especificada
+      no_accounts: Nenhuma conta da Redbark não vinculada encontrada.
+      no_accounts_found: Nenhuma conta da Redbark encontrada. Verifique a configuração da sua chave de API.
+      no_api_key: A chave de API da Redbark não está configurada. Configure-a nas Configurações.
+      no_credentials_configured: Configure primeiro suas credenciais da Redbark nas Configurações do provedor.
+      no_name_placeholder: (Sem nome)
+      settings_link: Ir para Configurações do provedor
+      subtitle: Escolha uma conta da Redbark
+      title: Vincular %{account_name} à Redbark
+    link_existing_account:
+      account_already_linked: Esta conta já está vinculada a um provedor
+      api_error: 'Erro da API: %{message}'
+      invalid_account_name: Não é possível vincular uma conta com o nome em branco
+      provider_account_already_linked: Esta conta da Redbark já está vinculada a outra conta
+      provider_account_not_found: Conta da Redbark não encontrada
+      missing_parameters: Parâmetros obrigatórios ausentes
+      no_api_key: Chave de API da Redbark não encontrada. Configure-a nas Configurações do provedor.
+      success: '%{account_name} vinculada com sucesso à Redbark'
+    setup_accounts:
+      account_type_label: 'Tipo de conta:'
+      accounts_count:
+        one: '%{count} conta disponível'
+        other: '%{count} contas disponíveis'
+      all_accounts_linked: Todas as suas contas da Redbark já foram configuradas.
+      api_error: 'Erro da API: %{message}'
+      creating: Criando contas...
+      fetch_failed: Não foi possível buscar as contas
+      import_selected: Importar contas selecionadas
+      instructions: Selecione as contas que você quer importar da Redbark. Você pode escolher várias contas.
+      no_accounts: Nenhuma conta não vinculada encontrada nesta conexão Redbark.
+      no_accounts_to_setup: Nenhuma conta para configurar
+      no_api_key: A chave de API da Redbark não está configurada. Verifique as configurações da sua conexão.
+      select_all: Selecionar todas
+      account_types:
+        skip: Ignorar esta conta
+        depository: Conta corrente ou poupança
+        credit_card: Cartão de crédito
+        loan: Empréstimo ou financiamento
+        other_asset: Outro ativo
+      subtype_labels:
+        depository: 'Subtipo de conta:'
+        credit_card: ''
+        loan: 'Tipo de empréstimo:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Os cartões de crédito serão configurados automaticamente como contas de cartão de crédito.
+        other_asset: Nenhuma opção adicional é necessária para outros ativos.
+      subtypes:
+        depository:
+          checking: Conta corrente
+          savings: Conta poupança
+          hsa: Conta poupança de saúde
+          cd: Certificado de depósito
+          money_market: Conta do mercado monetário
+        loan:
+          mortgage: Financiamento imobiliário
+          student: Crédito estudantil
+          auto: Financiamento de veículo
+          other: Outro empréstimo
+      balance: Saldo
+      cancel: Cancelar
+      done: Concluído
+      choose_account_type: 'Escolha o tipo de conta correto para cada conta da Redbark:'
+      create_accounts: Criar contas
+      creating_accounts: Criando contas...
+      historical_data_range: 'Período de dados históricos:'
+      subtitle: Escolha os tipos de conta corretos para as contas importadas
+      sync_start_date_help: Selecione até quando no passado você quer sincronizar o histórico de transações.
+      sync_start_date_label: 'Sincronizar transações a partir de:'
+      title: Configure suas contas da Redbark
+    setup_required:
+      title: Conecte a Redbark primeiro
+      not_configured_title: A Redbark ainda não está conectada
+      not_configured_description: Adicione sua chave de API da Redbark nas Configurações do provedor e depois volte aqui para vincular as contas.
+      go_to_provider_settings: Ir para Configurações do provedor
+    complete_account_setup:
+      all_skipped: Todas as contas foram ignoradas. Nenhuma conta foi criada.
+      creation_failed: 'Falha ao criar as contas: %{error}'
+      creation_failed_generic: Falha ao criar as contas.
+      setup_failed: Não foi possível criar %{count} conta(s). Nada mais foi alterado - corrija o problema e tente novamente.
+      no_accounts: Nenhuma conta para configurar.
+      success: '%{count} conta(s) criada(s) com sucesso.'
