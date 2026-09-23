@@ -7,6 +7,14 @@ en:
       enable_description: Automatically detect and suggest transfer matches between accounts on every sync. Suggestions are not applied until you confirm them below.
     update_settings:
       settings_updated: Auto match settings updated
+    bulk_update:
+      invalid_selection: Select at least one suggestion to confirm or reject
+      bulk_confirmed:
+        one: Confirmed 1 transfer
+        other: Confirmed %{count} transfers
+      bulk_rejected:
+        one: Rejected 1 transfer
+        other: Rejected %{count} transfers
     empty:
       title: No pending auto-match suggestions
       description: When a sync detects a likely transfer between two of your accounts, it will show up here for review.
@@ -16,3 +24,8 @@ en:
       date: Date
       actions: Actions
       separator: "·"
+    bulk_actions:
+      selected_label: selected
+      confirm_selected: Confirm selected
+      reject_selected: Reject selected
+      select_all: Select all

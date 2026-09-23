@@ -20,16 +20,23 @@ class Rule::ConditionFilter::TransactionType < Rule::ConditionFilter
   end
 
   def apply(scope, operator, value)
-    # Logic matches Transaction::Search#apply_type_filter for consistency
+    # Logic matches Transaction::Search#apply_type_filter for consistency.
+    # `kind` alone misses a pending auto-match: its legs still carry
+    # kind == "standard" until confirmed, so also excluding/including rows
+    # with a `transfer` association keeps unconfirmed matches out of
+    # income/expense rule matching the same way they're excluded once
+    # confirmed.
     case value
     when "income"
       scope.where("entries.amount < 0")
            .where.not(kind: Transaction::TRANSFER_KINDS)
+           .where(transfer_id: nil)
     when "expense"
       scope.where("entries.amount >= 0")
            .where.not(kind: Transaction::TRANSFER_KINDS)
+           .where(transfer_id: nil)
     when "transfer"
-      scope.where(kind: Transaction::TRANSFER_KINDS)
+      scope.where(kind: Transaction::TRANSFER_KINDS).or(scope.where.not(transfer_id: nil))
     else
       scope
     end

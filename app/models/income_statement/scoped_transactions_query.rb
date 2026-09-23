@@ -57,6 +57,22 @@ module IncomeStatement::ScopedTransactionsQuery
       @budget_excluded_kinds_sql ||= Transaction::BUDGET_EXCLUDED_KINDS.map { |k| "'#{k}'" }.join(", ")
     end
 
+    # Auto-matched transfer legs keep kind = "standard" until the user
+    # confirms the match (Transfer#confirm!), so `kind NOT IN (...)` alone
+    # lets a pending match through as both an expense (outflow) and an
+    # income (inflow) row. Exclude both legs of any still-pending transfer
+    # explicitly so unconfirmed matches stay invisible to budgets/reports,
+    # matching the pre-confirmation behavior the rest of the app assumes.
+    def exclude_pending_transfers_sql(t)
+      <<~SQL.chomp
+        AND NOT EXISTS (
+          SELECT 1 FROM transfers pending_transfers
+          WHERE pending_transfers.status = 'pending'
+            AND (pending_transfers.inflow_transaction_id = #{t}.id OR pending_transfers.outflow_transaction_id = #{t}.id)
+        )
+      SQL
+    end
+
     def pending_providers_sql(t = "t")
       Transaction.pending_providers_sql(t)
     end

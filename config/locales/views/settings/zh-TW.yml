@@ -312,6 +312,7 @@ zh-TW:
       accounts_label: 帳戶管理
       advanced_section_title: 進階設定
       ai_prompts_label: AI 提示詞
+      auto_matches_label: 自動配對
       background_jobs_label: 背景工作
       api_key_label: API 金鑰
       payment_label: 付款

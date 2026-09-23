@@ -326,6 +326,7 @@ pt-PT:
       accounts_label: Contas
       advanced_section_title: Avançado
       ai_prompts_label: Prompts de IA
+      auto_matches_label: Correspondências automáticas
       background_jobs_label: Tarefas em segundo plano
       api_key_label: Chaves de API
       payment_label: Pagamento

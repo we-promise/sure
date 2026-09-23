@@ -104,6 +104,7 @@ ro:
       accounts_label: Conturi
       advanced_section_title: Avansat
       ai_prompts_label: Prompturi AI
+      auto_matches_label: Potriviri automate
       api_key_label: Cheie API
       payment_label: Plată
       categories_label: Categorii

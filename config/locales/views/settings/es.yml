@@ -269,6 +269,7 @@ es:
       accounts_label: Cuentas
       advanced_section_title: Avanzado
       ai_prompts_label: Indicaciones de IA
+      auto_matches_label: Coincidencias automáticas
       api_key_label: Clave API
       payment_label: Pago
       categories_label: Categorías
