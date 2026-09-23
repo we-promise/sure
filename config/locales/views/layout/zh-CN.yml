@@ -11,6 +11,14 @@ zh-CN:
         reports: 报表
         transactions: 交易
         goals: 目标
+        bills: 账单
+        plan: 规划
+      insights: 洞察
+      resize_left_sidebar: 调整账户侧边栏大小
+      resize_right_sidebar: 调整助手侧边栏大小
+      release_highlight:
+        title: 新功能
+        done: 知道了
     auth:
       existing_account: 已经有账户？
       no_account: 新加入 %{product_name}？
@@ -24,7 +32,11 @@ zh-CN:
         are_you_sure: 您确定吗？
         cannot_be_undone: 此操作无法撤销。
         confirm: 确认
+      notification_tray:
+        download_complete: 下载完成
+        download_failed: 下载失败，请重试。
+        download_location: 文件已保存到您的“下载”文件夹。
     trial:
-      open_demo: 打开演示
+      open_demo: 开放演示
       data_deleted_in_days: 数据将在 %{days} 天后删除
       contribute: 贡献支持

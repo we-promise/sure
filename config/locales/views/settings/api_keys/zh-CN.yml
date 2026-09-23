@@ -56,6 +56,7 @@ zh-CN:
           regenerate_key: 创建新密钥
           revoke_key: 撤销密钥
           revoke_confirmation: 确定要撤销此 API 密钥吗？此操作无法撤销，并将立即禁用所有使用此密钥的应用程序。
+          back_to_keys: 返回 API 密钥
       new:
         title: 创建 API 密钥
         create_new_api_key: 创建新 API 密钥
@@ -113,3 +114,20 @@ zh-CN:
         cannot_revoke: 此 API 密钥不能撤销
         revoked_successfully: API 密钥已撤销
         revoke_failed: 撤销 API 密钥失败
+      shared:
+        active: 生效中
+        created_ago: 创建于 %{time} 前
+        last_used_ago: 最近使用于 %{time} 前
+        never_used: 从未使用
+        scope_read_only: 只读
+        scope_read_write: 读写
+      index:
+        title: API 密钥
+        subtitle: 管理用于以程序方式访问您数据的 API 密钥。
+        new_key: 新建 API 密钥
+        empty_heading: 尚无 API 密钥
+        empty_description: 创建 API 密钥，以程序方式访问您的数据。
+        revoke_key: 撤销
+        revoke_confirmation: 确定要撤销“%{name}”吗？所有使用此密钥的应用程序都将立即失效。
+      key_reveal:
+        copied: 已复制！

@@ -2,3 +2,8 @@
 zh-CN:
   provider_warnings:
     limited_investment_data: "此提供商的投资数据有限。活动标签（买入、卖出、股息）不可用，这可能会影响预算准确性。请考虑创建规则以排除或分类投资交易。"
+    lunchflow_accounts_failed:
+      other: Lunchflow 导入：%{count} 个账户更新失败
+    lunchflow_transactions_failed:
+      other: Lunchflow 导入：%{count} 个账户的交易获取失败
+    lunchflow_import_error: Lunchflow 导入：%{error}

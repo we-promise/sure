@@ -3,7 +3,7 @@ zh-CN:
   valuations:
     confirmation_contents:
       this_will: 这将%{action_verb}账户在
-      to_colon: 改为：
+      to_colon: 的价值为：
       total_account_value: 账户总价值
       holdings_value: 持仓价值
       brokerage_cash: 券商现金
@@ -21,6 +21,8 @@ zh-CN:
       recalculate_notice: 所有未来的交易和余额都将根据此%{change_or_update}重新计算。
       change: 变更
       update: 更新
+      action_set: 设置
+      action_update: 更新
     create:
       account_updated: 账户已更新
     update:
@@ -58,5 +60,11 @@ zh-CN:
       note_placeholder: 为此条目添加任何补充详情
       overview: 概览
       settings: 设置
-      opening_balance: 开始余额
+      opening_balance: 期初余额
       update_value: 更新价值
+    confirm_create:
+      confirm: 确认
+      title: 确认新余额
+    confirm_update:
+      title: 更新余额
+      update: 更新

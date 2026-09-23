@@ -12,7 +12,7 @@ zh-CN:
       subtitle: 为重要目标储蓄。
       new_goal: 新建目标
       empty_filtered: 没有匹配的目标。
-      pending_pledges_callout: 你有待确认的承诺。Sure 会在下次同步时确认。
+      pending_pledges_callout: 您有待确认的承诺。Sure 会在下次同步时确认。
       kpi:
         contributed_label: 已投入 · 最近 30 天
         velocity_delta_up: 较前 30 天 ↑ %{percent}%%
@@ -61,9 +61,10 @@ zh-CN:
         all: 全部
         on_track: 进度正常
         behind: 进度落后
-        no_target_date: 开放
+        no_target_date: 不限期
         paused: 已暂停
         completed: 已完成
+      chips_aria: 按状态筛选目标
     new:
       heading: 新建目标
       subtitle: 为具体目标储蓄。
@@ -104,8 +105,8 @@ zh-CN:
       reopen: 重新开启目标
       delete: 删除
       record_pledge_cta: 记录承诺
-      pledge_just_transferred: 记录你完成的转账
-      pledge_just_saved: 记录你留出的资金
+      pledge_just_transferred: 记录您完成的转账
+      pledge_just_saved: 记录您留出的资金
       funding_accounts_heading: 资金账户
       funding_accounts:
         earmarked_of: 已预留 %{earmarked}（共 %{balance}）
@@ -120,18 +121,19 @@ zh-CN:
         behind_covered: 待确认承诺可以补足差距
         on_track: 预计在 %{date} 左右达成目标
         no_target_date: 设置目标日期以预测完成时间
+        depleted: 低于目标余额 %{amount}——补足即可恢复储备金
       pending_pledge:
         title:
           zero: 待确认：%{amount} 存入 %{account} · 今天过期
           one: 待确认：%{amount} 存入 %{account} · 剩余 1 天
           other: 待确认：%{amount} 存入 %{account} · 剩余 %{count} 天
         body_transfer: Sure 在下次同步发现匹配存款时会自动确认。
-        body_manual: 会在你下次手动编辑余额时确认。
+        body_manual: 会在您下次手动编辑余额时确认。
         pledged_at: "%{time_ago} 前承诺"
         extend: 延长 7 天
         cancel: 取消
         confirm_cancel_title: 取消此承诺？
-        confirm_cancel_body: "%{amount} 的承诺将被移除。你可以随时记录新的承诺。"
+        confirm_cancel_body: "%{amount} 的承诺将被移除。您可以随时记录新的承诺。"
         confirm_cancel_cta: 取消承诺
       header:
         target: 目标 %{amount}
@@ -144,34 +146,37 @@ zh-CN:
         of_target: 目标进度
         market_value: 市值 %{amount}
         aria_label: 目标已完成 %{percent}%。已存 %{target} 中的 %{amount}。
+        including_used: 含已使用的 %{amount}
+        aria_label_with_used: 目标已完成 %{percent}%。已存 %{target} 中的 %{amount}，含已使用的 %{used}。
       projection:
         heading: 预测
         legend_saved: 已存
         legend_projection: 预测
         legend_required: 所需
-        reached: 你已达到目标，无需预测。
+        reached: 您已达到目标，无需预测。
         no_target_date: 尚未设置目标日期。设置后可预测完成时间。
         no_pace: 还没有存入资金。向关联账户存钱后即可开始预测。
         behind: 按当前进度会低于目标。
-        on_track_html: 按当前进度，你大约会在 <strong class="text-primary whitespace-nowrap">%{date}</strong> 达成此目标。
+        on_track_html: 按当前进度，您大约会在 <strong class="text-primary whitespace-nowrap">%{date}</strong> 达成此目标。
         aria_label: "%{name} 的预测图表"
         today_marker: 今天
         tooltip_projected: 预计：%{amount}
         tooltip_saved: 已存：%{amount}
         tooltip_target_relation: 目标 %{target} 的 %{percent}%
+        reserve: 储备金目标是保持目标余额，因此没有可预测的完成时间。
       catch_up:
         title: 每月多存 %{amount} 以赶上进度
         body: 当前进度 %{avg}/月 · 达成目标需要 %{required}/月。
         adjust_target_cta: 改为调整目标
       confirm_complete_title: 将此目标标记为完成？
-      confirm_complete_body: 完成后会从进行中的目标列表移除。之后仍可归档或恢复。
+      confirm_complete_body: 为其预留的资金将释放给同一账户上的其他目标。该目标会从进行中列表移除，之后您仍可将其归档或恢复。
       confirm_complete_body_short: 当前进度为 %{progress}，已存 %{saved}/%{target}。标记完成会把当前结果记录为达成值，而不是原始目标。要继续吗？
       confirm_complete_cta: 标记完成
       confirm_archive_title: 归档此目标？
-      confirm_archive_body: 归档后的目标会从主列表隐藏。之后可以恢复。
+      confirm_archive_body: 归档的目标会从主列表中消失，之后可以恢复。归档不会记录您已达成的进度——如需保留，请先将目标标记为完成。
       confirm_archive_cta: 归档
       confirm_delete_title: "删除此目标？"
-      confirm_delete_body: "%{name} 及其存款记录将被永久删除。你的关联账户、余额和交易不受影响。如果想保留记录，请改为归档。"
+      confirm_delete_body: "%{name} 及其存款记录将被永久删除。您的关联账户、余额和交易不受影响。如果想保留记录，请改为归档。"
       confirm_delete_cta: "删除目标"
       paused_banner:
         title: 此目标已暂停
@@ -185,6 +190,12 @@ zh-CN:
         heading: 目标已达成。做得不错。
         body: 目标以 %{saved}/%{target} 关闭。可以保留记录，或现在归档。
         archive_cta: 归档目标
+        heading_reserve: 储备金充足
+        body_reserve: 您的储备金已达到目标余额，%{saved}/%{target}。无需任何操作——资金将继续为其预留。
+        body_reached: 您已达成目标，%{saved}/%{target}。目标尚未关闭——资金仍为其预留。
+        close_cta: 关闭此目标
+        close_hint: 关闭后，预留的资金会释放给同一账户上的其他目标。请在实际花掉这笔钱后再关闭。
+        frozen: 于 %{date} 达成 · %{amount}
       inactive:
         heading_paused: 此目标已暂停
         heading_archived: 此目标已归档
@@ -195,7 +206,11 @@ zh-CN:
         cta: 设置目标日期
       empty:
         heading: 还没有存入资金
-        body: 向关联账户转入资金。Sure 会在下次同步时识别，或你也可以更新手动账户余额。
+        body: 向关联账户转入资金。Sure 会在下次同步时识别，或您也可以更新手动账户余额。
+      consume: 我用掉了一部分资金
+      reserve_shortfall:
+        heading: 储备金低于目标余额
+        body: 您目前持有 %{saved}，目标为 %{target}。再存入 %{missing} 即可恢复到目标余额。
     errors:
       not_found: 找不到该目标。它可能已被删除。
     states:
@@ -208,9 +223,11 @@ zh-CN:
       behind: 进度落后
       reached: 已达成
       completed: 已完成
-      no_target_date: 开放
+      no_target_date: 不限期
       paused: 已暂停
       archived: 已归档
+      funded: 储备金充足
+      depleted: 需要补足
     empty_state:
       heading: 还没有目标
       body: 设定目标，关联储蓄账户，并查看进度累积。
@@ -226,7 +243,7 @@ zh-CN:
       accounts:
         one: 1 个账户
         other: "%{count} 个账户"
-      no_target_date: 开放
+      no_target_date: 不限期
       completed: 已完成
       past_due: 已逾期
       days_left:
@@ -238,16 +255,19 @@ zh-CN:
       footer_archived: 已归档
       footer_reached: 目标已达成
       footer_catch_up: 每月存入 %{amount} 以赶上进度
-      footer_no_deadline: 开放
+      footer_no_deadline: 不限期
       pending_pledge: 待确认承诺
       pending_count:
         one: 1 个待处理
-        other: "%{count} 个待处理"
+        other: "%{count} 个待确认"
       footer_no_pledges: 暂无匹配的承诺
       footer_last_today: 上次承诺今天已匹配
       footer_last_days:
         one: 上次承诺 1 天前已匹配
         other: 上次承诺 %{count} 天前已匹配
+      including_used: 含已使用的 %{amount}
+      footer_reserve_intact: 储备金充足
+      footer_reserve_short: 还需补足 %{amount}
     form:
       create: 创建目标
       save: 保存更改
@@ -270,6 +290,12 @@ zh-CN:
         whole_balance: 全部余额
         earmark_for: 为「%{account}」预留的金额
         earmark_hint: 留空则使用该账户的全部余额。
+        target_mode: 目标余额的设定方式
+        target_months: 支出月数
+        target_months_hint: 每月 1 日根据您的月度支出中位数重新计算。
+        target_balance: 目标余额
+        target_balance_pending: 保存时计算
+        target_balance_hint: 根据上述月数内您的月度支出中位数计算，每月更新。
       subtypes:
         checking: 支票账户
         savings: 储蓄账户
@@ -277,3 +303,43 @@ zh-CN:
         cd: 定期存单
         money_market: 货币市场
         other: 其他
+      target_modes:
+        fixed: 固定金额
+        months_of_expenses: 若干个月的支出
+      kinds:
+        one_off:
+          hint: 为某件事储蓄，花掉后关闭目标。
+          label: 一次性目标
+        maintained:
+          hint: 需要长期保持的余额，例如应急基金。永不关闭。
+          label: 需维持的储备金
+      earmark:
+        headroom: 此账户还可预留 {left}。
+        prorata: 您在此账户上的目标合计 {total}，而余额为 {balance}——各目标将按比例推进。
+        whole_balance: 此账户会将其他预留之后剩余的全部金额用于此目标。
+        whole_balance_alone: 此目标将使用该账户的全部余额。
+    consume:
+      title: 记录一笔支出
+      subtitle: '%{goal}'
+      amount_label: 您用了多少？
+      amount_hint: 目前有 %{saved} 计入此目标。
+      account_label: 从哪个账户支出？
+      earmark_note: 您记录的金额将不再为此目标预留，该账户上的其他目标会重新获得相应份额。
+      cancel: 取消
+      submit: 记录
+      success: 已记录使用 %{amount}。
+      errors:
+        non_positive: 请输入大于零的金额。
+        maintained: 储备金是取用后再补足，而不是花掉——其缺口已显示在目标上。
+        exceeds_target: 该金额超过了此目标原本计划储蓄的总额。
+        account_required: 此目标由多个账户提供资金——请说明资金是从哪个账户支出的。
+        account_not_linked: 该账户不为此目标提供资金。
+        not_active: 此目标已不再进行中，因此无法再记录支出。
+        exceeds_earmark: 该金额超过了此目标在该账户上预留的金额。
+        transaction_already_claimed: 这笔支出已被归属。
+        transaction_not_found: 这笔支出已无法归属。
+        no_linked_account: 此目标已没有资金账户。
+    unattributed_outflows:
+      heading: 这些账户有资金流出
+      body: 如果其中有用于 %{goal} 的支出，请标记出来，它将不再计入目标差额。
+      attribute: 就是这笔

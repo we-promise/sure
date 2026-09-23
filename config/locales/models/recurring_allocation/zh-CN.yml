@@ -1,0 +1,9 @@
+---
+zh-CN:
+  activerecord:
+    errors:
+      models:
+        recurring_allocation:
+          attributes:
+            currency:
+              must_match_occurrence: 必须与该期账单的货币一致

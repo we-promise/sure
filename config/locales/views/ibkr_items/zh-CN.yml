@@ -64,7 +64,7 @@ zh-CN:
       partial: 已关联 %{linked} 个，%{unlinked} 个需要设置
     select_existing_account:
       title: 关联 Interactive Brokers 账户
-      no_accounts_available: 目前没有可关联的未链接 Interactive Brokers 账户。
+      no_accounts_available: 目前没有未关联的 Interactive Brokers 账户。
       run_sync_hint: "在更新 Flex 查询后，请前往 设置 > 提供商 运行一次同步。"
       wait_for_sync: 等待账户发现同步完成。
       balance: 余额

@@ -3,7 +3,7 @@ zh-CN:
   views:
     settings:
       payments:
-        renewal: 您的捐助将持续到 %{date}。
+        renewal: 您的捐助将于 %{date} 续期。
         cancellation: 您的捐助将于 %{date} 结束。
   settings:
     debugs:
@@ -77,12 +77,34 @@ zh-CN:
         main_system_prompt:
           title: 主系统提示词
           subtitle: 定义 AI 助手在所有聊天对话中的行为的核心指令
+          label: 聊天系统提示词
         transaction_categorizer:
           title: 交易分类器
           subtitle: AI 会根据您定义的分类自动对交易进行分类
         merchant_detector:
           title: 商户识别器
           subtitle: AI 会识别并补充交易数据中的商户信息
+        save: 保存提示词
+        save_confirm:
+          title: 保存自定义 AI 提示词？
+          body: 自定义提示词会替换您家庭的内置系统指令和安全防护措施（例如财务建议限制）。
+          dont_show_again: 不再显示此警告
+          cancel: 取消
+          confirm: 确认
+      prompt_field:
+        provider_label: 提供商
+        prompt_label: 提示词
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: 恢复默认
+        reset_confirm_title: 恢复为默认提示词？
+        reset_confirm_body: 这将丢弃您的自定义提示词，并恢复内置的默认指令。
+        status_custom: 正在使用您的自定义提示词
+        status_default: 正在使用内置默认提示词
+        format_risk: '您的 %{provider} 提示词删除了 {"%{key}": ...} 示例。每次请求仍会要求该格式，因此通常仍能正常解析，但如果覆盖内容要求不同的输出格式，解析将会失败。'
+      update:
+        success: AI 提示词已更新
+        multiple_errors: 多个提示词过长（最多 %{count} 个字符）
     payments:
       show:
         page_title: 付款
@@ -119,6 +141,8 @@ zh-CN:
         dashboard_two_column_description: 在大屏幕上以两列显示仪表盘组件；关闭后，组件将以单列堆叠显示。
         split_grouped_title: 将拆分交易分组显示
         split_grouped_description: 在交易列表中按父级分组显示拆分交易；关闭后，拆分子项将作为独立行显示。
+        dashboard_account_groups_title: 默认展开
+        dashboard_account_groups_description: 这些账户分组在仪表盘和账户侧边栏中将默认展开。您仍可随时手动折叠。
     preferences:
       show:
         country: 国家
@@ -161,13 +185,27 @@ zh-CN:
         preview:
           title: 启用预览功能
           description: 选择启用标记为 preview 或 canary 的进行中功能。
+        budget_title: 预算
+        budget_subtitle: 配置预算的运作方式
+        personal_budgets: 个人预算
+        personal_budgets_hint: 为每位家庭成员启用单独的预算。
+        household_budget_enabled: 家庭预算
+        household_budget_enabled_hint: 在个人预算之外保留一份共享的家庭预算。关闭后仅使用个人预算。
+        budget_sharing_title: 预算共享
+        budget_sharing_subtitle: 允许其他成员查看或编辑您的个人预算
+        budget_sharing_no_members: 您的%{moniker}中没有可共享的其他成员
+        budget_sharing_permission_label: '%{name} 的访问权限'
+        budget_sharing_permissions:
+          none: 无权访问
+          read_only: 仅查看
+          read_write: 可编辑
     profiles:
       destroy:
         cannot_remove_self: 您不能把自己从账户中移除。
         member_removal_failed: 移除成员时出现问题。
         member_removed: 成员已成功移除。
         not_authorized: 您没有权限移除成员。
-        member_owns_other_family_data: 此成员仍拥有其他家庭的数据，无法移除。请先转移或删除这些账户。
+        member_owns_other_family_data: 此成员仍拥有其他家庭中的账户，无法移除。请先转移或移除这些账户。
       show:
         confirm_delete:
           body: 确定要永久删除您的账户吗？此操作不可逆。
@@ -210,6 +248,8 @@ zh-CN:
         remove_invitation: 移除邀请
         remove_member: 移除成员
         save: 保存
+        resend_confirmation_link: 重新发送确认邮件
+        unconfirmed_email_notice_html: 您已申请将邮箱更改为 %{email}。请前往该邮箱确认，更改才会生效。如果未收到邮件，请检查垃圾邮件文件夹，或%{resend_link}。
     securities:
       show:
         page_title: 安全性
@@ -230,6 +270,34 @@ zh-CN:
         sso_confirm_body: 确定要断开您的 %{provider} 账户吗？您之后仍可再次使用该提供商登录并重新连接。
         sso_confirm_button: 断开连接
         sso_warning_message: 这是您唯一的登录方式。断开前应先在安全设置中设置密码，否则您可能无法再登录账户。
+        encryption_warning:
+          title: 缺少加密密钥
+          intro: 敏感数据（API 密钥、提供商令牌、MFA 密钥和个人身份信息）目前以未加密形式存储。要启用加密，请在环境变量或 Rails 凭据中设置以下密钥：
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: 使用以下命令生成一组密钥：bin/rails db:encryption:init
+    mcp:
+      show:
+        page_title: MCP 服务器
+        connect_title: 连接 AI 助手
+        connect_subtitle: 将此 URL 粘贴到 Claude.ai（或任何兼容 MCP 的客户端）中，即可将其连接到您的 Sure 账户。
+        copy_url: 复制
+        copied: 已复制！
+        how_to_connect_title: 如何连接 Claude
+        step_1: 打开 Claude.ai，前往 Settings → Customize → Connectors。
+        step_2: 点击“Add connector”，粘贴上方的 MCP 服务器 URL。
+        step_3: 点击 Connect——您将被重定向到 Sure 进行登录并授权访问。
+        step_4: 授权后，Claude 即可读取您的账户、交易和余额数据。
+        connected_title: 已连接的客户端
+        connected_subtitle: 以下应用当前可以访问您的 Sure 数据。请撤销您不再使用的应用。
+        unknown_client: 未知客户端
+        connected_ago: 连接于 %{time} 前
+        revoke: 撤销
+        revoke_confirm: 撤销此客户端的访问权限？
+      revoke:
+        revoked: 连接已撤销。
     settings_nav:
       accounts_label: 账户
       advanced_section_title: 高级
@@ -258,11 +326,14 @@ zh-CN:
       tags_label: 标签
       transactions_section_title: 交易
       users_label: 用户
-      whats_new_label: 有什么新内容
+      whats_new_label: 新功能
       api_keys_label: API 密钥
       appearance_label: 外观
       bank_sync_label: 银行同步
       debug_label: 调试
+      background_jobs_label: 后台任务
+      mcp_label: MCP
+      system_health_label: 系统健康状况
     settings_nav_link_large:
       next: 下一步
       previous: 返回
@@ -283,11 +354,11 @@ zh-CN:
         ok: 已连接
         warn: 需要处理
         err: 错误
-        off: 未配置
+        "off": 未配置
       maturity:
         beta: Beta
         alpha: Alpha
-      drawer_trust_statement: 只读访问。Sure 绝不会移动您的资金，且您的凭证会被加密存储。
+      drawer_trust_statement: 只读访问。Sure 绝不会移动您的资金，且您的凭据会被加密存储。
       setup_steps:
         eyebrow: 设置
         need_help: 需要帮助？
@@ -303,7 +374,7 @@ zh-CN:
         last_synced: 上次同步于 %{time} 前
       meta:
         sync_error: 同步错误
-        no_recent_sync: 同步已逾期
+        no_recent_sync: 长时间未同步
         reconsent_required: 需要重新授权
         reconsent_needed:
           one: 1 天后需要重新授权
@@ -318,7 +389,7 @@ zh-CN:
       taglines:
         simplefin: 通过开放的 SimpleFIN 协议连接美国银行账户。
         lunchflow: 连接来自 40 多个国家/地区的 2 万多家银行（英国、欧盟、美国等）！
-        enable_banking: 通过 PSD2 开放银行连接欧洲银行账户。
+        enable_banking: 通过 PSD2 开放银行同步欧洲银行账户。
         coinstats: 跨钱包和交易所跟踪您的整个加密资产组合。
         mercury: 自动同步您的 Mercury 商业银行账户。
         brex: 以只读方式同步 Brex 现金和公司卡活动。
@@ -326,12 +397,21 @@ zh-CN:
         binance: 使用只读 API 密钥同步您的 Binance 现货余额。
         kraken: 使用只读 API 密钥同步 Kraken 余额和现货成交记录。
         snaptrade: 通过 SnapTrade 聚合网络连接券商账户。
-        ibkr: 通过 Flex Query 导入同步盈透证券投资账户。
+        ibkr: 通过 Flex Query 导入同步 Interactive Brokers 投资账户。
         indexa_capital: 跟踪您的 Indexa Capital 自动化投资组合。
         sophtron: 连接美国和加拿大的银行及公用事业账户。
         plaid: 通过 Plaid 连接数千家美国金融机构。
         plaid_eu: 通过 Plaid 连接欧洲金融机构（PSD2 / Open Banking）。
         akahu: 通过 Akahu 同步新西兰金融机构。
+        coinspot: 使用只读 API 密钥同步 CoinSpot 余额、澳元价值、转账、充值、提现和订单历史。
+        fio: 使用只读 API 令牌同步 Fio banka 账户。
+        monobank: 使用个人 API 令牌同步乌克兰 Monobank 银行卡和储蓄罐。
+        onchain_wallet: 通过公开地址跟踪自托管的比特币、EVM 和 Solana 钱包。
+        questrade: 通过 Questrade API 直接同步您的 Questrade 投资账户。
+        redbark: 通过 Redbark 开放银行同步澳大利亚银行账户。
+        trade_republic: 通过安全的只读网页登录同步您的 Trade Republic 投资账户。
+        trading212: 使用只读 API 密钥同步您的 Trading 212 投资组合。
+        wise: 自动同步您的 Wise 多币种余额和国际转账。
       search_filters:
         aria_label: 搜索提供商
         placeholder: 搜索提供商
@@ -408,7 +488,7 @@ zh-CN:
         connection_error: 连接错误
         step_1_html: 前往 %{link} 并获取您的开发者凭据。
         step_2: 选择您的国家/地区，并将 Application ID + Client Certificate 粘贴到下方。
-        step_3: 保存后使用“添加连接”链接您的银行。
+        step_3: 保存后使用“添加连接”关联您的银行。
         config_locked_title: 配置已锁定
         config_locked_message: 在更改这些凭据之前，请先断开所有已连接的银行。
         application_id_label: Application ID
@@ -423,7 +503,7 @@ zh-CN:
         connection: 连接
         session_expired_reconnect: 会话已过期 - 重新连接
         configured: 已配置
-        ready_to_link: 准备链接账户
+        ready_to_link: 可以关联账户
         sync: 同步
         reconnect: 重新连接
         connect_bank: 连接银行
@@ -465,7 +545,7 @@ zh-CN:
           step_2: 在“Activity Flex Query”区域点击“+”图标创建一个新查询。
           step_3: 为查询命名（例如“Sure Sync”），然后查看下方的 Flex Query 详情并启用列出的部分、字段和配置选项。
           step_4: 保存查询，记下您的“Query ID”，然后使用“Flex Web Service Configuration”区域中的齿轮图标生成访问 Token。
-          step_5: 将您的 Query ID 和 Token 粘贴到下方，保存配置，然后前往账户以链接发现的 IBKR 账户。
+          step_5: 将您的 Query ID 和 Token 粘贴到下方，保存配置，然后前往账户以关联发现的 IBKR 账户。
         flex_query_details:
           eyebrow: Flex Query
           title: 部分、字段与配置
@@ -518,3 +598,181 @@ zh-CN:
         step_1_html: 前往 %{link} 并创建个人应用。
         step_2: 复制 App Token 和 User Token。
         step_3: 粘贴 Token、保存，然后关联同步到账户。
+      coinspot_panel:
+        add_connection: 添加 CoinSpot 连接
+        api_key_label: API Key
+        api_key_placeholder: 粘贴您的 CoinSpot API key
+        api_secret_label: API Secret
+        api_secret_placeholder: 粘贴您的 CoinSpot API secret
+        connection_name_label: 连接名称
+        connection_name_placeholder: 主 CoinSpot
+        default_connection_name: CoinSpot
+        disconnect: 断开连接
+        disconnect_confirm: 确定要断开 %{name} 吗？
+        keep_api_key_placeholder: 留空以保留现有 API key
+        keep_api_secret_placeholder: 留空以保留现有 API secret
+        read_only_body: 不要授予发送、提现、交易或转账权限。Sure 只导入余额、澳元价值、转账、充值、提现和已完成的订单历史。
+        read_only_title: 仅限只读交易所同步
+        setup_accounts: 设置账户
+        step1_html: 前往 <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot API 设置</a>
+        step2: 创建一个仅具备余额和历史记录只读权限的 API key。
+        step3: 将 API key 和 secret 粘贴到下方。
+        sync: 同步
+        syncing: 正在同步...
+        update_connection: 更新连接
+      drawer_trust_statement_encryption_unconfigured: 只读访问。Sure 绝不会移动您的资金。在生产环境中保存提供商凭据前，请先配置显式加密密钥。
+      fio_panel:
+        step_1_html: 登录 %{link} 网上银行，打开 Settings → API。
+        step_2: 创建一个只读权限（“Sledování účtu”）的令牌。创建时需要强身份验证，有效期最长 180 天。
+        step_3: 将令牌粘贴到下方并保存。一个令牌只对应一个账户，因此请为每个 Fio 账户分别添加连接。
+      monobank_panel:
+        step_1_html: 前往 %{link}，使用 Monobank 应用登录并生成个人令牌。
+        step_2: 复制令牌——它只会显示一次。
+        step_3: 将令牌粘贴到下方并保存，然后关联您要跟踪的银行卡和储蓄罐。
+      onchain_wallet_panel:
+        add_wallet: 添加钱包
+        advanced: 高级
+        disconnect_all: 断开所有钱包
+        disconnect_all_confirm: 这将移除所有已跟踪的地址及其账户。是否继续？
+        etherscan_api_key_label: Etherscan API key（可选）
+        etherscan_api_key_placeholder: 粘贴 Etherscan API key
+        etherscan_hint: 读取 Ethereum 数据无需密钥。添加 Etherscan key 只会提高 Ethereum 的调用频率上限。
+        keep_etherscan_api_key: 留空以保留现有密钥
+        keyless_body: Sure 只会读取公开的链上数据。不涉及任何私钥、助记词或签名，也无法动用任何资金。
+        keyless_title: 只读，无需私钥
+        manage_wallets: 管理钱包
+        save: 保存
+        sync_start_date_hint: 此日期之前的转账将被忽略。留空则导入区块浏览器返回的全部记录。
+        sync_start_date_label: 忽略此日期之前的转账
+      provider_setup_encryption_warning:
+        message: 此自托管实例尚未配置显式的 Active Record 加密密钥。在生产环境中保存提供商凭据前，请配置 primary_key、deterministic_key 和 key_derivation_salt。
+        title: 缺少加密密钥
+      trade_republic_panel:
+        accounts_discovered:
+          other: 已发现 %{count} 个 Trade Republic 账户。
+        accounts_tab: 账户
+        approval_pending: 登录已开始。请在 Trade Republic 应用中批准，Sure 正在自动检查。
+        authenticator_code_label: 身份验证器代码（如有提示）
+        authenticator_code_notice: 请输入身份验证器应用中的代码。
+        authenticator_code_placeholder: 6 位数代码
+        awaiting_authenticator_code: 需要身份验证器代码。
+        awaiting_confirmation: 正在等待在 Trade Republic 应用中批准。
+        check_login_status: 立即检查状态
+        complete_login: 继续
+        confirm_login: 检查登录
+        connect: 登录
+        connection_success:
+          close: 完成
+          description: Sure 正在后台同步您的 Trade Republic 数据。
+          message: 您的 Trade Republic 连接已就绪。
+          title: Trade Republic 连接成功
+        currency_label: 账户货币
+        disconnect: 断开 Trade Republic
+        disconnect_confirm: 断开 Trade Republic？已同步的账户将变为手动账户。
+        encryption_warning:
+          message: 在配置 Active Record Encryption 之前，无法安全存储 Trade Republic 凭据和会话数据。
+          title: 尚未配置加密
+        login_expired: 批准请求已过期。
+        not_configured: 未配置。
+        phone_number_label: 电话号码
+        phone_number_placeholder_existing: 留空以保留当前电话号码
+        phone_number_placeholder_new: +49 170 1234567
+        pin_label: PIN
+        pin_placeholder_existing: 留空以保留当前 PIN
+        pin_placeholder_new: 您的 Trade Republic 应用 PIN
+        push_login_notice: 请立即在 Trade Republic 应用中批准登录。Sure 会在后台自动检查，您也可以自行检查状态。
+        qr_back_to_credentials: 返回电话号码和 PIN 登录
+        qr_cancel: 取消二维码登录
+        qr_error: 无法开始二维码登录。请重试。
+        qr_instruction: 使用 Trade Republic 应用扫描二维码并批准登录。
+        qr_loading: 正在准备二维码…
+        qr_login: 使用二维码登录
+        qr_success: 登录已批准。Sure 正在刷新提供商页面。
+        restart_login: 重新开始登录
+        save_configuration: 保存并开始登录
+        setup_accounts: 设置账户
+        status_configured_prefix: 已连接。请访问
+        status_configured_suffix: 标签页以管理已发现的账户。
+        steps:
+          step_1: 输入您在 Trade Republic 应用中使用的电话号码和 PIN，然后保存。
+          step_2: 在收到提示时输入身份验证器应用中的代码。
+          step_3: 在收到提示时，在 Trade Republic 应用中批准登录。
+        sync: 同步
+        update_configuration: 更新配置
+      trading212_panel:
+        accounts_tab: 账户
+        add_account: 添加其他账户
+        api_key_label: API ID
+        api_key_placeholder_existing: 留空以保留当前 API ID
+        api_key_placeholder_new: 粘贴您的 Trading 212 API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_existing: 留空以保留当前 Secret Key
+        api_secret_placeholder_new: 粘贴您的 Trading 212 Secret Key
+        currency_label: 账户货币
+        default_account_name: Trading 212 账户
+        disconnect: 断开 Trading 212 账户
+        disconnect_confirm: 断开 Trading 212？
+        environment_demo: 模拟账户
+        environment_label: 环境
+        environment_live: 实盘账户
+        not_configured: 未配置。
+        save_configuration: 保存配置
+        status_configured_prefix: 已配置。请访问
+        status_configured_suffix: 标签页以管理已发现的账户。
+        steps:
+          step_1: 前往 Trading 212 → Settings → API（网页版或移动应用）。
+          step_2: 生成新的 API 密钥——Trading 212 会显示 API ID 和 Secret Key。
+          step_3: 将两者粘贴到下方，选择环境和账户货币，然后保存。
+        sync: 同步
+        syncing: 正在同步...
+        update_configuration: 更新配置
+      up_panel:
+        step_1_html: 前往 %{link} 并生成个人访问令牌。
+        step_2: 复制您的个人访问令牌。
+        step_3: 将令牌粘贴到下方并保存，然后关联同步到的账户。
+    background_jobs:
+      show:
+        page_title: 后台任务
+        title: Worker 状态
+        subtitle: Sidekiq 实时运行状态：Worker 进程、队列深度以及重试/死信集合。
+        redis_unreachable: Sidekiq 状态不可用（无法连接 Redis）。存活状态未知，因此操作已禁用。
+        operations_title: 进行中的操作
+        operations_subtitle: 所有家庭中尚未进入终止状态的同步、导入和导出。空闲超过 30 分钟且没有可见任务的操作会被视为已丢失，可以将其标记为丢失。
+        empty: 没有进行中的操作。
+        missing_value: '-'
+        stats:
+          workers: Worker
+          busy: 忙碌
+          enqueued: 已入队
+          retries: 待重试
+          scheduled: 已计划
+          dead: 死信
+          queue_label: '%{name}：%{size} · 延迟 %{latency} 秒'
+        table:
+          type: 操作
+          family: 家庭
+          status: 状态
+          last_activity: 最近活动
+          liveness: 存活状态
+          action: 操作
+      operation:
+        ago: '%{time} 前'
+        sync_label: 同步 · %{type}
+        running: 运行中
+        queued: 排队中
+        recent: 近期活动
+        unknown: 未知
+        stuck: 卡住——推定已丢失
+        confirm: 将此操作标记为已丢失？该记录将被置为终止状态，以便重试。底层数据不会受到影响。
+        missing_value: '-'
+        actions:
+          mark_stale: 标记为过期
+          mark_failed: 标记为失败
+          release_claim: 释放占用
+      cancel:
+        cancelled: '%{type} 已标记为丢失。'
+        not_cancellable: 此操作当前无法修改——其任务可能仍在排队或运行中。请在其空闲 30 分钟后重试。
+        cancelled_error: 已被管理员标记为失败——后台任务被推定已丢失。
+    budget_shares:
+      update:
+        success: 预算共享设置已更新

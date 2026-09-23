@@ -39,4 +39,4 @@ zh-CN:
     create_user:
       no_pending_oidc: 未找到待处理的 OIDC 认证。
       account_creation_disabled: SSO 账户创建已禁用。请联系管理员。
-      account_created: 欢迎！你的账户已创建。
+      account_created: 欢迎！您的账户已创建。

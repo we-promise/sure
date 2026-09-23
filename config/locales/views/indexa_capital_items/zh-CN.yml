@@ -109,8 +109,8 @@ zh-CN:
       api_error: "API 错误：%{message}"
       cancel: 取消
       configure_name_in_provider: 无法导入 - 请先在 Indexa Capital 中配置账户名称
-      description: 选择您想链接到 %{product_name} 账户的账户。
-      link_accounts: 链接所选账户
+      description: 选择您想关联到 %{product_name} 账户的账户。
+      link_accounts: 关联所选账户
       no_accounts_found: 未找到账户。请检查您的 Indexa Capital 凭据。
       no_api_key: 未配置 Indexa Capital 凭据。请在设置中配置。
       no_credentials_configured: 请先在提供商设置中配置您的 Indexa Capital 凭据。

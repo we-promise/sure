@@ -1,0 +1,6 @@
+---
+zh-CN:
+  sure_import:
+    preflight:
+      missing_reference: 第 %{line} 行的 %{type} 引用了不存在的 %{field} %{value}。
+      skipped_missing_reference: 第 %{line} 行的 %{type} 引用了不存在的 %{field} %{value}，导入时将跳过该项。

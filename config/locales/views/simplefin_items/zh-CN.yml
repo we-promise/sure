@@ -122,32 +122,32 @@ zh-CN:
       stale_pending_note: （不计入预算）
       stale_pending_accounts: 在：%{accounts}
       reconciled_details_note: （详情请查看同步摘要）
-      duplicate_accounts_skipped: 某些账户因重复被跳过——请使用“链接现有账户”进行合并。
+      duplicate_accounts_skipped: 某些账户因重复被跳过——请使用“关联现有账户”进行合并。
     select_existing_account:
-      title: 将 %{account_name} 连接到 SimpleFIN
-      description: 选择一个 SimpleFIN 账户以连接到您现有的账户
+      title: 将 %{account_name} 关联到 SimpleFIN
+      description: 选择一个 SimpleFIN 账户以关联到您现有的账户
       cancel: 取消
-      link_account: 连接账户
+      link_account: 关联账户
       no_accounts_found: 此 %{moniker} 未找到任何 SimpleFIN 账户。
       wait_for_sync: 如果您刚刚连接或同步，请等待同步完成后再试。
-      unlink_to_move: 若要移动连接，请先在账户操作菜单中取消其连接。
-      all_accounts_already_linked: 所有 SimpleFIN 账户似乎都已连接。
-      currently_linked_to: 当前连接到：%{account_name}
-      check_provider_health: 请检查您的 API 凭据和同步状态。
+      unlink_to_move: 若要移动关联，请先在账户操作菜单中取消其关联。
+      all_accounts_already_linked: 所有 SimpleFIN 账户似乎都已关联。
+      currently_linked_to: 当前关联到：%{account_name}
+      check_provider_health: 请在“设置 → 提供商”中检查您的 SimpleFIN 连接是否正常。
     link_existing_account:
-      success: 账户已成功连接到 SimpleFIN
+      success: 账户已成功关联到 SimpleFIN
       errors:
-        only_manual: 只有手动账户才能连接
-        different_provider: 此账户已连接到其他提供商。请先取消与该提供商的连接，然后再连接到 SimpleFIN。
+        only_manual: 只有手动账户才能关联
+        different_provider: 此账户已关联到其他提供商。请先取消与该提供商的关联，然后再关联到 SimpleFIN。
         invalid_simplefin_account: 所选 SimpleFIN 账户无效
     dismiss_replacement_suggestion:
       dismissed: 已忽略替换建议
     replacement_prompt:
       title: 您的 %{institution} 卡片可能已被替换
-      description: “%{account_name}” 连接到 “%{old_name}”，该卡片近期没有活动且余额为零。现在，同一机构中有一张新卡 “%{new_name}” 已激活。重新关联可保留您的历史记录。
+      description: “%{account_name}” 关联到 “%{old_name}”，该卡片近期没有活动且余额为零。现在，同一机构中有一张新卡 “%{new_name}” 已激活。重新关联可保留您的历史记录。
       relink: 重新关联到新卡
       confirm_title: 重新关联到新卡？
-      confirm_body: “%{account_name}” 将连接到 “%{new_name}”。您的交易历史将保留，未来交易将来自新卡。
+      confirm_body: “%{account_name}” 将关联到 “%{new_name}”。您的交易历史将保留，未来交易将来自新卡。
       dismiss_aria: 忽略替换建议
     reconciled_status:
       message:
@@ -157,3 +157,18 @@ zh-CN:
       message:
         one: "%{count} 笔待处理交易早于 %{days} 天"
         other: "%{count} 笔待处理交易早于 %{days} 天"
+    sync_status:
+      no_accounts: 未找到账户
+      synced:
+        other: 已同步 %{count} 个账户
+      partial_setup:
+        other: 已同步 %{linked} 个，%{unlinked} 个需要设置
+    institution_summary:
+      none: 未连接任何机构
+      count:
+        other: '%{count} 个机构'
+    rate_limited:
+      daily_refresh: 您已达到 SimpleFIN 的每日刷新上限。请在 Bridge 刷新后再试（最多 24 小时）。
+    stale_sync:
+      last_successful: 上次成功同步是在 %{count} 天前。您的 SimpleFIN 连接可能需要处理。
+      no_transactions: 已有 %{count} 天没有新交易。请检查您的 SimpleFIN 控制台，确认银行连接处于活跃状态。

@@ -42,14 +42,14 @@ zh-CN:
     virtual:
       transfer: 转账
       payment: 付款
-      trade: 交易
+      trade: 证券交易
     merge:
       title: 合并分类
-      description: 选择要合并的分类，并指定保留的目标分类。
+      description: 选择一个目标分类以及要合并到其中的分类。匹配的交易和预算项将移至目标分类。
       target_label: 合并到（目标）
       select_target: 选择目标分类...
       sources_label: 要合并的分类
-      sources_hint: 这些分类会被合并到目标分类中。
+      sources_hint: 所选分类的交易和预算项移至目标分类后，这些分类将被删除。请勿将目标分类同时选为来源。
       submit: 合并所选分类
     perform_merge:
       success:

@@ -11,7 +11,7 @@ zh-CN:
           change_in_brokerage_cash: 经纪账户现金变动
           change_in_holdings_market: 持仓变动（市价活动）
           change_in_holdings_trades: 持仓变动（买入/卖出）
-          charges: 费用
+          charges: 新增消费
           end_balance: 期末余额
           end_principal: 期末本金
           end_value: 期末价值
@@ -22,7 +22,7 @@ zh-CN:
           net_cash_flow: 净现金流
           net_principal_change: 净本金变动
           net_value_change: 净价值变动
-          payments: 付款
+          payments: 还款
           sells: 卖出
           start_balance: 期初余额
           start_principal: 期初本金
@@ -34,7 +34,7 @@ zh-CN:
           change_in_brokerage_cash: 存款、取款和交易带来的现金净变化
           change_in_holdings_market: 市场价格变动导致的持仓价值变化
           change_in_holdings_trades: 买卖证券对持仓的影响
-          charges: 当日新增费用
+          charges: 当日新增的消费
           end_balance: 所有交易后的计算余额
           end_balance_investment: 所有活动后的计算余额
           end_principal: 所有交易后的计算本金
@@ -49,7 +49,7 @@ zh-CN:
           net_cash_flow: 当日所有交易带来的余额净变化
           net_principal_change: 当日的本金还款和新增借款
           net_value_change: 包括增值和贬值在内的所有价值变化
-          payments: 当日记入卡上的付款
+          payments: 当日向该卡的还款
           sells: 当日加密货币卖出
           start_balance: 当日开始时的账户余额
           start_balance_credit: 当日开始时的欠款余额
@@ -68,10 +68,12 @@ zh-CN:
           holdings_value: 持仓价值
           remaining_principal_balance: 剩余本金余额
           total_account_value: 账户总价值
+          total_gains: 总收益
         views:
           cash: 现金
           holdings: 持仓
           total_value: 总价值
+          gains: 收益 / 投资回报率
         vs_available_history: 与可用历史相比
       activity_date:
         balance_tooltip: 当日结束余额，已包含所有交易和调整
@@ -181,6 +183,9 @@ zh-CN:
       trigger_label: 更多信息
     link:
       opens_in_new_tab: "（在新标签页打开）"
+    icon_picker:
+      no_matching_icons: 没有匹配的图标
+      search_placeholder: 搜索图标...
   provider_sync_summary:
     title: 同步摘要
     last_sync: 上次同步：%{time_ago} 前
@@ -211,7 +216,7 @@ zh-CN:
       found: 已找到：%{count}
       processed: 已处理：%{count}
     trades:
-      title: 交易
+      title: 证券交易
       imported: 已导入：%{count}
       skipped: 已跳过：%{count}
       fetching: 正在从券商获取活动...

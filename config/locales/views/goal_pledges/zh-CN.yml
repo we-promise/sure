@@ -2,8 +2,8 @@
 zh-CN:
   goal_pledges:
     new:
-      helper_transfer: 记录一次已完成的转账，系统会在同步后匹配。
-      helper_manual: 记录一次你手动留出的资金。
+      helper_transfer: Sure 会在您的关联账户中查找匹配的存款。承诺将保持待确认状态 7 天，Sure 一旦识别到存款便会自动确认。
+      helper_manual: Sure 会在您下次手动编辑余额时记录此项，并确认这笔投入。
       amount_label: 金额
       account_label: 存入账户
       submit: 记录承诺
@@ -11,9 +11,9 @@ zh-CN:
       preview_nonzero: 将达到 {percent}%，即 {newTotal}/{target}。
       preview_reached: 将达到目标 {target}。
     create:
-      success: 目标承诺成功
+      success: 承诺已记录。Sure 会在下次同步时确认。
     renew:
-      success: 承诺已续期。
+      success: 承诺期限已延长 7 天。
       not_open: 只有待处理的承诺可以续期。
     destroy:
       success: 承诺已取消。

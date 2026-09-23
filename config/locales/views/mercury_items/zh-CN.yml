@@ -19,12 +19,12 @@ zh-CN:
     setup_required:
       title: 需要设置 Mercury
       api_token_not_configured: 未配置 API Token
-      api_token_description: 在链接 Mercury 账户之前，您需要先配置 Mercury API token。
+      api_token_description: 在关联 Mercury 账户之前，您需要先配置 Mercury API token。
       setup_steps_title: "设置步骤："
       setup_step_1_html: "前往 <strong>设置 > 提供商</strong>"
       setup_step_2_html: "找到 <strong>Mercury</strong> 区块"
       setup_step_3: 输入您的 Mercury API token
-      setup_step_4: 返回这里链接您的账户
+      setup_step_4: 返回这里关联您的账户
       go_to_provider_settings: 前往提供商设置
     create:
       success: Mercury 连接创建成功
@@ -100,8 +100,8 @@ zh-CN:
       api_error: "API 错误：%{message}"
       cancel: 取消
       configure_name_in_mercury: 无法导入 - 请先在 Mercury 中配置账户名称
-      description: 选择您想链接到 %{product_name} 账户的账户。
-      link_accounts: 链接所选账户
+      description: 选择您想关联到 %{product_name} 账户的账户。
+      link_accounts: 关联所选账户
       no_accounts_found: 未找到账户。请检查您的 API token 配置。
       no_api_token: 未配置 Mercury API token。请在设置中配置。
       no_credentials_configured: 请先在提供商设置中配置您的 Mercury API token。

@@ -28,7 +28,7 @@ zh-CN:
       title: 关联到 SnapTrade 账户
       header: 关联现有账户
       subtitle: 选择要关联的 SnapTrade 账户
-      no_accounts: 没有可关联的未链接 SnapTrade 账户。
+      no_accounts: 没有未关联的 SnapTrade 账户。
       connect_hint: 您可能需要先连接一个券商。
       settings_link: 前往提供商设置
       linking_to: 正在关联到账户：
@@ -78,6 +78,14 @@ zh-CN:
       link_button: 关联
       linked_accounts: 已关联
       linked_to: 已关联到：
+      account_type_label: 账户类型
+      account_types:
+        depository: 支票账户或储蓄账户
+        credit_card: 信用卡
+        investment: 投资账户
+        crypto: 加密资产账户
+        loan: 贷款或信用额度
+        other_asset: 其他资产
     snaptrade_item:
       accounts_need_setup:
         one: "%{count} 个账户需要设置"
@@ -102,6 +110,32 @@ zh-CN:
         other: 还有 %{count} 个账户可设置
       no_accounts_title: 未发现账户
       no_accounts_description: 连接一个券商以导入您的投资账户。
+    oauth_authorize:
+      not_configured: SnapTrade 浏览器授权除了 SNAPTRADE_OAUTH_CLIENT_ID 之外，还需要 SNAPTRADE_OAUTH_CLIENT_SECRET。请设置后重启，或改用设备码授权。
+    oauth_callback:
+      success: SnapTrade 授权已完成。
+      access_denied: SnapTrade 授权已取消。
+      state_mismatch: SnapTrade 授权未通过安全检查。请重试。
+      failed: 无法完成 SnapTrade 授权。请重试。
+    oauth_device_flow:
+      title: 连接 SnapTrade
+      subtitle: 使用设备码为 Sure 授权 SnapTrade。
+      instructions: 打开 SnapTrade，确认此设备码，然后返回此处完成操作。
+      code_label: 设备码
+      open_snaptrade: 打开 SnapTrade
+      start_button: 开始授权
+      complete_button: 我已授权 SnapTrade
+      cancel_button: 取消
+      missing_client_id: SnapTrade OAuth 尚未配置。请将 SNAPTRADE_OAUTH_CLIENT_ID 添加到 .env.local，重启应用后重试。
+    start_oauth_device_flow:
+      failed: 无法开始 SnapTrade 设备授权。请重试。
+    complete_oauth_device_flow:
+      success: SnapTrade 授权已完成。
+      device_code_required: 此连接当前没有进行中的 SnapTrade 设备授权。请重新开始以获取新的设备码。
+      authorization_pending: SnapTrade 尚未收到您的确认。请在 SnapTrade 中批准该设备码，然后重试。
+      expired: 此设备码已过期。请重新开始授权。
+      access_denied: SnapTrade 授权被拒绝。
+      failed: 无法完成 SnapTrade 设备授权。请重试。
   providers:
     snaptrade:
       name: "SnapTrade"
@@ -131,6 +165,17 @@ zh-CN:
       delete_connection_title: "删除券商连接？"
       delete_connection_body: "这将永久从 SnapTrade 中移除 %{brokerage} 连接。该券商的所有账户都会取消关联。您需要重新连接才能再次同步这些账户。"
       delete_connection_confirm: "删除连接"
+      oauth_setup_step_1_html: 在 <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a> 注册一个 OAuth 应用
+      oauth_setup_step_2_html: 仅适用于浏览器授权流程：将此应用的回调 URL（<code>%{callback_url}</code>）添加为已注册的重定向 URI
+      oauth_setup_step_3: 在环境变量中设置 SNAPTRADE_OAUTH_CLIENT_ID 并重启。仅此一项即可启用设备码流程；如需浏览器授权流程，还需添加 SNAPTRADE_OAUTH_CLIENT_SECRET
+      oauth_title: SnapTrade OAuth
+      oauth_status_ready: 授权 Sure 读取您的 SnapTrade 账户数据。
+      oauth_status_ready_device: 使用设备码授权 Sure 读取您的 SnapTrade 账户数据。
+      oauth_status_authorized: 已通过 SnapTrade 授权。
+      oauth_connect_button: 通过 SnapTrade 连接
+      oauth_device_button: 使用设备码
+      oauth_reauthorize_button: 重新授权
+      manage_at_snaptrade: 在 SnapTrade 中管理连接
   snaptrade_item:
     sync_status:
       no_accounts: "未找到账户"

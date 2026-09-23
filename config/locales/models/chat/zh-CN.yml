@@ -6,3 +6,4 @@ zh-CN:
       temporarily_unavailable: AI 提供商当前暂时不可用，请几分钟后再试。
       misconfigured: AI 提供商配置不正确，请联系您的管理员。
       default: 生成回复失败，请重试。
+      no_response: 助手没有回复。后台任务进程可能已停止运行，或 AI 尚未完全配置。请重试。

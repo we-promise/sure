@@ -1,0 +1,17 @@
+---
+zh-CN:
+  providers:
+    property_valuation:
+      not_configured: 此房产数据提供商尚未配置。
+      missing_fields: 请提供名称和完整的美国地址（街道、城市、州和邮政编码）。
+      preview_expired: 此房产预览已过期，请重新查询地址。
+    rentcast:
+      errors:
+        no_valuation: RentCast 未返回此地址的估值。
+        not_found: RentCast 未找到与此地址匹配的房产。
+    realie:
+      errors:
+        no_property: Realie 未返回此地址对应的房产。
+        no_valuation: Realie 未返回此房产的估值。
+        not_found: Realie 未找到与此地址匹配的房产。
+        location_mismatch: Realie 匹配到的房产位于其他城市或邮政编码区域。请仔细核对地址。

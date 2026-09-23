@@ -16,10 +16,11 @@ zh-CN:
       type_buy: 买入
       type_sell: 卖出
       type_deposit: 存入
-      type_withdrawal: 提现
+      type_withdrawal: 提取
       type_dividend: 分红
       type_interest: 利息
       dividend_requires_security: 分红需要证券
+      trade_requires_security: 买入和卖出交易需要指定证券（代码）
     header:
       buy: 买入
       sell: 卖出
@@ -31,6 +32,15 @@ zh-CN:
       purchase_qty_label: 买入数量
       symbol_label: 代码
       total_return_label: 未实现盈亏
+      contribution: 投入
+      exchange: 兑换
+      fee: 费用
+      other: 其他
+      reinvestment: 再投资
+      sweep_in: 现金归集转入
+      sweep_out: 现金归集转出
+      transfer: 转账
+      withdrawal: 提取
     new:
       title: 新建交易
     show:
@@ -55,3 +65,8 @@ zh-CN:
       sell: 卖出
       settings: 设置
       type_label: 类型
+    api_errors:
+      activity_label_must_match_type: 当 type 为 %{type} 时，investment_activity_label 必须为 %{label}
+      invalid_activity_label: 无效的投资活动标签
+      invalid_type: 无效的类型
+      supported_types: type 必须是以下值之一：%{types}

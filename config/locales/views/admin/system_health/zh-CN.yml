@@ -1,0 +1,256 @@
+---
+zh-CN:
+  admin:
+    system_health:
+      push_notifications:
+        send_test: 发送测试推送通知
+        queueing: 正在加入队列…
+        title: 推送通知
+        requested_at: 最近一次测试请求时间：%{time}
+        result_help: APNs 接受并不代表已送达您的设备。刷新即可查看 worker 的处理结果。结果保留 24 小时。
+        device: 设备 %{number}
+        pending: 等待中
+        refresh: 刷新结果
+        columns:
+          device: 设备
+          environment: APNs 环境
+          status: 结果
+          checked_at: 最后更新
+        environments:
+          sandbox: Sandbox
+          production: Production
+        messages:
+          enqueue_failed: 无法将测试加入队列。请检查 Sidekiq，然后刷新下方结果。
+          ready: 向您账户下已启用的 iOS 设备发送一条测试通知。
+          queued: 测试通知已加入队列。刷新下方结果即可查看其状态。
+          hosted_only: 推送通知仅在托管模式下可用。
+          ineligible: 只有活跃的超级管理员才能发送测试通知。
+          no_devices: 请在 Sure iOS 应用中为此账户启用推送通知后再发送测试。
+          disabled: 运营方已停用推送发送。
+          not_configured: 尚未配置 APNs 凭据。
+          cooldown: 请等待 30 秒后再发送下一次测试。
+          storage_unavailable: 无法保存测试请求。请检查共享缓存配置。
+        statuses:
+          queued: 已加入队列
+          accepted: APNs 已接受
+          skipped: 已跳过：不再符合条件
+          rejected: APNs 已拒绝；请查看推送调试日志
+          unregistered: 设备注册已失效
+          retrying: 临时失败，正在重试
+          failed: 失败；请查看推送调试日志
+          enqueue_failed: 无法加入队列；请检查 Sidekiq
+          expired: 已过期，未获得最终结果
+      push_notification:
+        title: Sure 测试通知
+        body: 这是发送到您 Sure 账户的一条测试推送通知。
+      verify_worker_ai:
+        queued: Worker 检查已加入队列。worker 进程接手后，结果将显示在下方，通常只需几秒钟。
+      show:
+        title: 系统健康
+        tabs:
+          background_jobs: 后台任务
+          ai: AI 状态
+        alert:
+          title: 后台任务未在运行
+        status_section_title: Sidekiq 状态
+        status_section_description: 负责同步、余额和净资产计算的后台 worker 的当前状态。
+        counters_section_title: 任务计数
+        counters_section_description: 所有队列的 Sidekiq 汇总计数。
+        queues_section_title: 队列
+        queues_section_description: 各队列的深度及最早任务的等待时长。延迟是指最早的任务已等待的秒数。
+        labels:
+          status: 状态
+          processes: Worker 进程
+          last_heartbeat: 最后心跳
+          max_queue_latency: 最早任务等待时长
+          enqueued: 排队中
+          retries: 重试
+          failed: 失败
+          processed_total: 已处理总数
+          queue: 队列
+          size: 大小
+          latency: 延迟
+        values:
+          healthy: 健康
+          unhealthy: 降级
+          time_ago: '%{time_ago}前'
+          never: 从未
+          seconds: '%{seconds} 秒'
+          no_queues: 没有已注册的队列。worker 可能未在运行。
+        ai:
+          run_checks: 重新运行检查
+          last_checked: 实时检查已于 %{time_ago}前完成。结果会短暂缓存。
+          not_checked_help: 直接打开 AI 状态 URL 或运行检查，以验证服务是否可用。
+          alerts:
+            custom_openai:
+              title: 此自定义端点上的托管向量存储检查失败
+              message: 所配置的端点未通过 /v1/vector_stores 可用性检查。大多数本地及 OpenAI 兼容端点都未实现该 API。聊天和 PDF 处理可能仍然可用；常见的本地部署方式是使用 pgvector 并搭配单独的 embeddings 端点。此失败已记录在“设置 → 调试日志”和 Rails.logger 中。
+            function_calling_unsupported:
+              title: 该模型不支持函数调用
+              message: 该端点可以处理普通聊天请求，但拒绝了携带 tools 参数的同一请求。AI 助手通过函数调用读取账户、交易和持仓，因此在换用支持工具的模型之前，聊天会持续失败（常常只返回一个无用的 404）。请选择其提供商明确说明支持函数调用的模型。此失败已记录在“设置 → 调试日志”和 Rails.logger 中。
+            function_calling_not_used:
+              title: 模型未调用要求它调用的工具就直接作答
+              message: 该端点接受了 tools 参数，但模型直接以文本回复，而没有调用健康检查工具。AI 助手无法在不调用工具的情况下读取财务数据，因此聊天可能返回空内容或编造的数字。建议选择其提供商明确说明支持函数调用的模型。
+            llm_probe_failed:
+              title: LLM 实时检查失败
+              message: Sure 无法同时验证所配置的端点和模型。此失败已记录在“设置 → 调试日志”和 Rails.logger 中。
+            llm_model_not_available:
+              title: 所配置的 AI 模型不可用
+              message: 端点有响应，但未列出或提供所配置的模型。请为所选提供商选择一个可用的模型，然后重新运行检查。如果通过 OpenAI 兼容的转换层使用 Gemini，请使用当前受支持的模型，例如 gemini-2.5-flash。
+            pdf_text_extraction_failed:
+              title: 合成 PDF 文本提取检查失败
+              message: Sure 无法完成文本优先路径，即在本地提取 PDF 内嵌文本并发送给所配置的模型。未发送任何客户数据。此失败已记录在“设置 → 调试日志”和 Rails.logger 中。
+            pdf_vision_processing_failed:
+              title: 合成 PDF 视觉/原生检查失败
+              message: Sure 无法通过所配置的模型完成图像或原生文档 PDF 路径。未发送任何客户数据。此失败已记录在“设置 → 调试日志”和 Rails.logger 中。
+            vector_probe_failed:
+              title: 文档搜索实时检查失败
+              message: Sure 无法验证所选的向量存储及所有必需的 embedding 服务。此失败已记录在“设置 → 调试日志”和 Rails.logger 中。
+            pgvector_extension_not_enabled:
+              title: 未启用 PostgreSQL vector 扩展
+              message: 已选择 pgvector 适配器，但 PostgreSQL 尚未为此数据库启用 vector 扩展。请使用包含 pgvector 的 PostgreSQL 镜像，然后以数据库所有者或超级用户身份启用该扩展，并在设置 VECTOR_STORE_PROVIDER=pgvector 后重新运行迁移。
+            pgvector_table_not_found:
+              title: 缺少 vector_store_chunks 表
+              message: pgvector 扩展已启用，但未找到分块表。请检查迁移状态，然后在设置 VECTOR_STORE_PROVIDER=pgvector 后重新运行向量存储迁移，以便 Sure 创建 vector_store_chunks。
+            pgvector_probe_failed:
+              title: pgvector 存储检查失败
+              message: Sure 无法查询 pgvector 分块表。请检查 PostgreSQL 权限、vector 扩展以及 vector_store_chunks 迁移。此失败已记录在“设置 → 调试日志”和 Rails.logger 中。
+            embedding_dimensions_mismatch:
+              title: Embedding 维度不匹配
+              message: Embedding 端点返回的向量长度与 EMBEDDING_DIMENSIONS 不一致。请将 EMBEDDING_MODEL 和 EMBEDDING_DIMENSIONS 设置为该模型文档中的向量维度，重启 Sure 使环境变量生效；如果现有数据使用了不同的维度，还需修改或重建 pgvector embedding 列/表，并重新为文档生成 embedding。
+            embedding_probe_timeout:
+              title: Embedding 实时检查超时
+              message: Embedding 端点未在 AI_HEALTH_PROBE_TIMEOUT 之前响应。如果提供商响应较慢，请调高该健康检查超时，然后重启 Sure，使环境变量在每个进程中生效。如果普通的 AI 聊天调用也超时，请另行调高 OPENAI_REQUEST_TIMEOUT。
+            embedding_probe_failed:
+              title: Embedding 实时检查失败
+              message: Sure 无法通过所配置的端点和模型生成一个简短的测试 embedding。请检查 EMBEDDING_URI_BASE、EMBEDDING_MODEL、EMBEDDING_ACCESS_TOKEN 以及 embedding 提供商的日志。此失败已记录在“设置 → 调试日志”和 Rails.logger 中。
+            qdrant:
+              title: 尚未实现 Qdrant 支持
+              message: Qdrant 适配器目前只有框架，文档上传和搜索操作都会失败。请为文档搜索选择 OpenAI 或 pgvector。
+            missing_vector_store:
+              title: 未配置向量存储
+              message: 在配置向量存储适配器及其所需条件之前，已上传的文档无法被索引或搜索。
+            unavailable_vector_store:
+              title: 所选向量存储不可用
+              message: 请检查下方的适配器要求。对于 pgvector，数据库必须提供 vector 扩展或已有 vector_store_chunks 表。
+          llm:
+            title: LLM 与 PDF 处理
+            description: 实时检查会验证所配置的模型，像助手一样让它执行一次简单的函数调用，然后分别使用一个不含客户数据的单页合成 PDF 测试文本提取和视觉/原生处理。凭据值绝不会显示。
+          vector_store:
+            title: 向量存储与文档搜索
+            description: 实时检查会查询托管的向量存储 API，或者测试 pgvector 表并生成一个简短的 embedding（不会保存）。
+          labels:
+            selected_provider: 所选提供商
+            effective_provider: 实际使用的提供商
+            model: 模型
+            endpoint: 端点
+            function_calling: 函数调用（tools）
+            pdf_text_extraction: PDF 文本提取路径
+            pdf_vision_processing: PDF 视觉/原生路径
+            llm_request_timeout: LLM 请求超时
+            probe_request_timeout: 健康检查探测超时
+            openai_credentials: OpenAI 凭据
+            openai_compatible_credentials: OpenAI 兼容 API 凭据
+            anthropic_credentials: Anthropic 凭据
+            adapter: 适配器
+            adapter_available: 适配器可用
+            pgvector_extension: PostgreSQL vector 扩展
+            pgvector_table: 向量分块表
+            embedding_model: Embedding 模型
+            embedding_endpoint: Embedding 端点
+            embedding_dimensions: Embedding 维度
+            function_calling_failure_reason: 函数调用失败原因
+            pdf_text_extraction_failure_reason: 文本提取失败原因
+            pdf_vision_processing_failure_reason: 视觉/原生处理失败原因
+            storage_probe: pgvector 存储检查
+            embedding_probe: Embedding 端点检查
+            failure_reason: 失败原因
+          providers:
+            openai: OpenAI
+            openai_compatible: OpenAI 兼容
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: 自定义端点
+          adapters:
+            openai: OpenAI 托管向量存储
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: 已配置
+            not_configured: 未配置
+            fallback: （备用）
+            not_set: 未设置
+            "yes": 是
+            "no": 否
+            enabled: 已启用
+            available_not_enabled: 可用，但未启用
+            not_available: 不可用
+            available: 可用
+            not_found: 未找到
+          function_calling_statuses:
+            supported: 实时工具调用成功
+            unsupported: 实际使用的提供商/模型不支持
+            not_used: 已接受 tools，但模型未调用任何工具
+            failing: 实时检查失败
+            not_checked: 未检查
+            unavailable: 配置 LLM 提供商后才可用
+          pdf_statuses:
+            supported: 合成 PDF 检查通过
+            failing: 合成 PDF 检查失败
+            unsupported: 已停用，或实际使用的提供商/模型不支持
+            not_checked: 未检查
+            unavailable: 配置 LLM 提供商后才可用
+          probe_statuses:
+            passing: 实时检查通过
+            failing: 实时检查失败
+            not_checked: 未检查
+            not_configured: 未配置
+          vector_statuses:
+            passing: 实时检查通过
+            failing: 实时检查失败
+            not_checked: 未检查
+            not_configured: 未配置
+            scaffolded: 仅有框架
+            missing: 未配置
+          failure_codes:
+            model_not_available: 提供商未返回所配置的模型
+            no_tool_call: 模型未调用健康检查工具就直接作答
+            tools_refused: 服务可以处理不带 tools 的同一请求，但拒绝了带 tools 的请求
+            invalid_response: 服务返回了意外的响应
+            dimensions_mismatch: Embedding 向量维度与所配置的维度不一致
+            extension_not_enabled: 未启用 PostgreSQL vector 扩展
+            table_not_found: 未找到 vector_store_chunks 表
+            render_missing_binary: 此容器中没有 pdftoppm 渲染器（poppler-utils）
+            timeout: 服务未在探测超时前响应
+            request_failed: 服务请求失败
+            unsupported_provider: 该提供商不支持此检查
+          worker:
+            title: Worker 验证
+            description: 以上检查是在当前 Web 进程中运行的。而大部分 AI 工作（助手回复、PDF 处理、embedding、自动分类和商户识别）实际上都在 Sidekiq worker 进程中运行，其网络访问、DNS、代理规则甚至加载的凭据都可能不同。将检查加入队列，即可验证 worker 自身的配置和连通性。
+            verify_button: 验证 worker 配置
+            coverage_notice: 每次检查只验证一个 worker 进程，即取出该任务的那个进程。如果有多个 worker 副本，检查通过并不代表所有 worker 都正常；可再次将检查加入队列以抽检另一个。
+            empty:
+              title: 尚无 worker 回报结果
+              description: 点击“验证 worker 配置”即可将一次异步检查加入队列。worker 进程接手后，结果将显示在这里。
+            labels:
+              process: Worker 进程
+              checked_at: 检查时间
+              configuration: 配置
+            configuration_statuses:
+              match: 与 Web 一致
+              mismatch: 与 Web 不一致
+            statuses:
+              passing: 通过
+              failing: 未通过
+              stale: 已过时
+            settings_origin:
+              title: 哪些设置需要重启？
+              database_backed: 在“设置 → 自托管”中修改的提供商、模型和 API 密钥设置存储在数据库中。rails-settings-cached 会在写入时使共享缓存失效，因此 Web 和 worker 都会在下一个请求或下一个排队任务中读取到新值，无需重启。
+              env_backed: Embedding 配置以及任何只通过环境变量设置的值，都在每个容器启动时固定。Rails 无法修改其他容器的环境，因此更改这些值需要重启或重建 Web 和 worker 两个服务；只重启其中一个的部署工具（部分发布、更新了 Secret 却没有重启 pod）都不会使更改生效。
+          local_setup:
+            title: 推荐的本地部署方式
+            description: 通过本地的 OpenAI 兼容端点运行 LLM，将文档向量存储在 pgvector 中，并将 embedding 设置指向一个 OpenAI 兼容的 embeddings 端点。PostgreSQL 镜像必须包含 vector 扩展，且 embedding 维度必须与所选模型一致。

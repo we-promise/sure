@@ -182,6 +182,9 @@ zh-CN:
       other:
         short: 其他
         long: 其他投资
+      cash_management:
+        short: CMA
+        long: 现金管理账户
     value_tooltip:
       cash: 现金
       holdings: 持仓

@@ -1,0 +1,250 @@
+---
+zh-CN:
+  questrade_items:
+    default_name: Questrade 连接
+    sync_status:
+      no_accounts: 未找到账户
+      synced:
+        other: 已同步 %{count} 个账户
+      synced_with_setup: 已同步 %{linked} 个，%{unlinked} 个需要设置
+    institution_summary:
+      none: 未连接任何机构
+      count:
+        other: '%{count} 家机构'
+    errors:
+      provider_not_configured: 尚未配置 Questrade 提供商
+    sync:
+      status:
+        importing: 正在从 Questrade 导入账户...
+        processing: 正在处理持仓和账户活动...
+        calculating: 正在计算余额...
+        importing_data: 正在导入账户数据...
+        checking_setup: 正在检查账户配置...
+        needs_setup: '%{count} 个账户需要设置...'
+      success: 已开始同步
+    panel:
+      eyebrow: 设置 · 仅限桌面端
+      help_text: Questrade API 文档
+      disconnect: 断开连接
+      disconnect_confirm: 断开与 Questrade 的连接？这将移除该连接，并解除其已同步账户的关联。
+      steps:
+        s1_html: 在桌面浏览器中登录 <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">Questrade 门户</a>。移动应用中无法使用 API 设置。
+        s2: 打开 Settings，在 General settings 下编辑 IQ API settings。
+        s3_html: 在 API 访问弹窗中，点击 <strong>My applications</strong> 下的 <strong>Manage</strong>。
+        s4: 注册一个个人应用，填写名称和描述，然后保存。
+        s5: 添加一台新设备并生成令牌。
+        s6: 将生成的令牌粘贴到下方并保存。
+      setup_instructions: 设置说明：
+      step_1: 访问您的 Questrade 控制面板获取凭据
+      step_2: 在下方输入您的凭据，然后点击“保存”按钮
+      step_3: 连接成功后，前往“账户”标签页设置新账户
+      field_descriptions: 字段说明：
+      optional: （可选）
+      required: （必填）
+      optional_with_default: （可选，默认为 %{default_value}）
+      save_button: 保存配置
+      update_button: 更新配置
+      token_refresh_hint: 每次同步账户时，Questrade 令牌都会自动续期。如果连接超过 7 天未使用而失效，请在此粘贴新令牌，无需断开连接即可重新激活。
+      status_configured_html: 已配置，可以使用。前往 <a href="%{accounts_path}" class="link">账户</a> 标签页管理和设置账户。
+      status_not_configured: 未配置
+      fields:
+        refresh_token:
+          label: 刷新令牌
+          description: 您的 Questrade 刷新令牌
+          placeholder_new: 在此粘贴刷新令牌
+          placeholder_update: 输入新的刷新令牌以更新
+        api_server:
+          label: API 服务器
+          description: 您的 Questrade API 服务器
+          placeholder_new: 在此粘贴 API 服务器地址
+          placeholder_update: 输入新的 API 服务器地址以更新
+    create:
+      success: Questrade 连接创建成功
+    update:
+      success: Questrade 连接已更新
+    destroy:
+      success: Questrade 连接已移除
+    index:
+      title: Questrade 连接
+    loading:
+      loading_message: 正在加载 Questrade 账户...
+      loading_title: 正在加载
+    link_accounts:
+      all_already_linked:
+        other: 所选的 %{count} 个账户均已关联：%{names}
+      api_error: API 错误：%{message}
+      invalid_account_names:
+        other: 无法关联 %{count} 个名称为空的账户
+      link_failed: 关联账户失败
+      no_accounts_selected: 请至少选择一个账户
+      no_api_key: 未找到 Questrade API 密钥。请在提供商设置中进行配置。
+      partial_invalid: 成功关联 %{created_count} 个账户，%{already_linked_count} 个已关联，%{invalid_count} 个账户名称无效
+      partial_success: 成功关联 %{created_count} 个账户。%{already_linked_count} 个账户已关联：%{already_linked_names}
+      success:
+        other: 成功关联 %{count} 个账户
+    questrade_item:
+      kind: 券商
+      accounts_need_setup: 账户需要设置
+      delete: 删除连接
+      deletion_in_progress: 正在删除...
+      error: 错误
+      more_accounts_available:
+        other: 还有 %{count} 个账户可用
+      no_accounts_description: 此连接尚未关联任何账户。
+      no_accounts_title: 无账户
+      provider_name: Questrade
+      requires_update: 连接需要更新
+      setup_action: 设置新账户
+      setup_description: 已关联 %{linked} / %{total} 个账户。请为新导入的 Questrade 账户选择账户类型。
+      setup_needed: 新账户已准备好设置
+      status: 上次同步于 %{timestamp} 前
+      status_never: 从未同步
+      status_with_summary: 上次同步于 %{timestamp} 前 - %{summary}
+      syncing: 正在同步...
+      total: 总计
+      unlinked: 未关联
+      update_credentials: 更新凭据
+    select_accounts:
+      accounts_selected: 已选择账户
+      api_error: API 错误：%{message}
+      cancel: 取消
+      configure_name_in_provider: 无法导入——请在 Questrade 中设置账户名称
+      description: 选择要关联到您 %{product_name} 账户的账户。
+      link_accounts: 关联所选账户
+      no_accounts_found: 未找到账户。请检查您的 API 密钥配置。
+      no_api_key: 尚未配置 Questrade API 密钥。请在设置中进行配置。
+      no_credentials_configured: 请先在提供商设置中配置您的 Questrade 凭据。
+      no_name_placeholder: （无名称）
+      title: 选择 Questrade 账户
+    select_existing_account:
+      page_title: 关联 Questrade 账户
+      dialog_title: 关联到 Questrade 账户
+      linking_label: 正在关联
+      none_available: 没有可关联的 Questrade 账户。
+      buttons:
+        cancel: 取消
+        link: 关联
+      account_already_linked: 此账户已关联到某个提供商
+      all_accounts_already_linked: 所有 Questrade 账户均已关联
+      api_error: API 错误：%{message}
+      balance_label: 余额：
+      cancel: 取消
+      cancel_button: 取消
+      configure_name_in_provider: 无法导入——请在 Questrade 中设置账户名称
+      connect_hint: 连接 Questrade 账户以启用自动同步。
+      description: 选择一个 Questrade 账户与此账户关联。交易将自动同步并去重。
+      header: 与 Questrade 关联
+      link_account: 关联账户
+      link_button: 关联此账户
+      linking_to: 关联到：
+      no_account_specified: 未指定账户
+      no_accounts: 未找到未关联的 Questrade 账户。
+      no_accounts_found: 未找到 Questrade 账户。请检查您的 API 密钥配置。
+      no_api_key: 尚未配置 Questrade API 密钥。请在设置中进行配置。
+      no_credentials_configured: 请先在提供商设置中配置您的 Questrade 凭据。
+      no_name_placeholder: （无名称）
+      settings_link: 前往提供商设置
+      subtitle: 将此账户连接到您的某个 Questrade 账户
+      title: 将 %{account_name} 与 Questrade 关联
+    link_existing_account:
+      account_already_linked: 此账户已关联到某个提供商
+      api_error: API 错误：%{message}
+      invalid_account_name: 无法关联名称为空的账户
+      provider_account_already_linked: 此 Questrade 账户已关联到其他账户
+      provider_account_not_found: 未找到 Questrade 账户
+      missing_parameters: 缺少必需参数
+      no_api_key: 未找到 Questrade API 密钥。请在提供商设置中进行配置。
+      success: 已成功将 %{account_name} 与 Questrade 关联
+    setup_accounts:
+      page_title: 设置 Questrade 账户
+      dialog_title: 设置您的 Questrade 账户
+      all_linked: 所有 Questrade 账户均已关联。
+      import_as: 导入为
+      buttons:
+        cancel: 取消
+        create: 创建账户
+        done: 完成
+      types:
+        investment: 投资
+        depository: 现金 / 存款
+        skip: 跳过此账户
+      account_type_label: 账户类型：
+      accounts_count:
+        other: '%{count} 个账户可用'
+      all_accounts_linked: 您的所有 Questrade 账户均已设置完成。
+      api_error: API 错误：%{message}
+      creating: 正在创建账户...
+      fetch_failed: 获取账户失败
+      import_selected: 导入所选账户
+      instructions: 选择要从 Questrade 导入的账户。您可以选择多个账户。
+      no_accounts: 此 Questrade 连接中未找到未关联的账户。
+      no_accounts_to_setup: 没有需要设置的账户
+      no_api_key: 尚未配置 Questrade API 密钥。请检查您的连接设置。
+      select_all: 全选
+      account_types:
+        skip: 跳过此账户
+        depository: 支票账户或储蓄账户
+        credit_card: 信用卡
+        investment: 投资账户
+        crypto: 加密货币账户
+        loan: 贷款或抵押贷款
+        other_asset: 其他资产
+      subtype_labels:
+        depository: 账户子类型：
+        credit_card: ''
+        investment: 投资类型：
+        crypto: ''
+        loan: 贷款类型：
+        other_asset: ''
+      subtype_messages:
+        credit_card: 信用卡将自动设置为信用卡账户。
+        other_asset: 其他资产无需额外选项。
+        crypto: 加密货币账户将被设置为跟踪持仓和交易。
+      subtypes:
+        depository:
+          checking: 支票账户
+          savings: 储蓄账户
+          hsa: 健康储蓄账户
+          cd: 定期存款
+          money_market: 货币市场
+        investment:
+          brokerage: 券商账户
+          pension: 养老金
+          retirement: 退休账户
+          401k: 401(k)
+          roth_401k: Roth 401(k)
+          403b: 403(b)
+          tsp: 节俭储蓄计划
+          529_plan: 529 计划
+          hsa: 健康储蓄账户
+          mutual_fund: 共同基金
+          ira: 传统 IRA
+          roth_ira: Roth IRA
+          angel: 天使投资
+        loan:
+          mortgage: 抵押贷款
+          student: 学生贷款
+          auto: 汽车贷款
+          other: 其他贷款
+      balance: 余额
+      cancel: 取消
+      choose_account_type: 为每个 Questrade 账户选择正确的账户类型：
+      create_accounts: 创建账户
+      creating_accounts: 正在创建账户...
+      historical_data_range: 历史数据范围：
+      subtitle: 选择每个账户的导入方式
+      sync_start_date_help: 选择要同步多久以前的交易历史。
+      sync_start_date_label: 从以下日期开始同步交易：
+      title: 设置您的 Questrade 账户
+    setup_required:
+      title: 请先连接 Questrade
+      not_configured_title: 尚未连接 Questrade
+      not_configured_description: 请在提供商设置中添加您的 Questrade 连接，然后返回此处关联账户。
+      go_to_provider_settings: 前往提供商设置
+    complete_account_setup:
+      all_skipped: 所有账户都已跳过。未创建任何账户。
+      creation_failed: 创建账户失败：%{error}
+      no_accounts: 没有可设置的账户。
+      success: 成功创建 %{count} 个账户。
+    preload_accounts:
+      no_credentials_configured: 请先在提供商设置中配置您的 Questrade 凭据。

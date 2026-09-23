@@ -2,7 +2,7 @@
 zh-CN:
   pdf_import_mailer:
     next_steps:
-      greeting: "你好 %{name}，"
+      greeting: "您好 %{name}，"
       intro: "我们已经完成了您上传到 %{product} 的 PDF 文档分析。"
       document_type_label: 文档类型
       summary_label: AI 摘要

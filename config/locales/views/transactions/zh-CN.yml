@@ -46,6 +46,12 @@ zh-CN:
       tag_search_placeholder: 搜索或创建标签
       tags_label: 标签
       transfer: 转账
+      category_search_placeholder: 搜索分类
+      create_category: 创建“%{name}”
+      create_category_error: 无法创建分类
+      create_merchant: 创建
+      create_merchant_error: 无法创建商户
+      merchant_search_placeholder: 搜索或创建商户
     create:
       created: 交易已创建
     update:
@@ -79,7 +85,7 @@ zh-CN:
       one_time_description: 一次性交易将从某些预算计算和报表中排除，以帮助您看清真正重要的内容。
       convert_to_trade_title: 转换为证券交易
       convert_to_trade_description: 将此交易转换为带证券详情的买入或卖出交易，以用于投资组合跟踪。
-      convert_to_trade_button: 转换为交易
+      convert_to_trade_button: 转换为证券交易
       transfer_matcher_description: 将此交易与其他账户中的对应交易关联。
       pending_duplicate_merger_title: 已入账交易的重复项？
       pending_duplicate_merger_description: 手动将此待处理交易与其已入账版本合并。
@@ -104,6 +110,10 @@ zh-CN:
       transfer_or_debt_payment: 转账还是债务还款？
       open_matcher: 打开匹配器
       convert: 转换
+      create_bill: 创建账单
+      applied_to_title: 此交易支付的账单
+      applied_to_detail: 用于支付 %{date} 到期账单的 %{amount}
+      applied_to_unreviewed: 待审核
     activity_labels:
       buy: 买入
       sell: 卖出
@@ -114,7 +124,7 @@ zh-CN:
       interest: 利息
       fee: 费用
       transfer: 转账
-      contribution: 供款
+      contribution: 投入
       withdrawal: 提取
       exchange: 兑换
       other: 其他
@@ -126,7 +136,7 @@ zh-CN:
     split_parent_row:
       split_label: 拆分
     transfer_match:
-      auto_matched: 自动匹配
+      auto_matched: 已自动匹配
       auto_matched_short: 自/配
       confirm_match: 确认匹配
       payment_confirmed: 付款已确认
@@ -250,7 +260,7 @@ zh-CN:
       exchange_placeholder: XNAS
       exchange_hint: 留空以自动识别
       cancel: 取消
-      submit: 转换为交易
+      submit: 转换为证券交易
       success: 交易已转换为证券交易
       conversion_note: "由交易转换而来：%{original_name}（%{original_date}）"
       errors:

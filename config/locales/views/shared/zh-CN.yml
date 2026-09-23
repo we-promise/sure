@@ -44,3 +44,13 @@ zh-CN:
     sync_toast:
       message: 有新数据可用
       refresh: 刷新
+    require_connector_owner: 您只能管理自己添加的连接
+    sidekiq_health_banner:
+      title: 部分数据可能已过时
+      body: 后台任务未在处理，因此余额、净资产和账户同步数据可能已过时或缺失。
+      cta: 查看系统健康状况
+      reasons:
+        redis_unreachable: 应用无法连接 Redis。请检查 REDIS_URL，并确认 Redis 正在运行。
+        no_worker_processes: 没有已连接的 Sidekiq worker 进程。请启动 worker 容器或 systemd 单元。
+        stale_heartbeat: Sidekiq worker 最近没有上报心跳，可能已卡住或崩溃。
+        queue_backed_up: 最早入队的任务等待时间已超过延迟预算。worker 仍在运行，但处理进度落后。

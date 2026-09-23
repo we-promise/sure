@@ -28,15 +28,15 @@ zh-CN:
     destroy:
       success: Enable Banking 连接已排队等待删除。
     link_accounts:
-      already_linked: 所选账户已连接。
-      link_failed: 连接账户失败
+      already_linked: 所选账户已关联。
+      link_failed: 关联账户失败
       no_accounts_selected: 未选择账户。
       no_session: 当前没有活动的 Enable Banking 连接。请先连接银行。
-      success: 已成功连接 %{count} 个账户。
+      success: 已成功关联 %{count} 个账户。
     link_existing_account:
-      success: 账户已成功连接到 Enable Banking
+      success: 账户已成功关联到 Enable Banking
       errors:
-        only_manual: 只有手动账户才能连接
+        only_manual: 只有手动账户才能关联
         invalid_enable_banking_account: 所选 Enable Banking 账户无效
     enable_banking_item:
       deletion_in_progress: 正在删除
@@ -55,12 +55,12 @@ zh-CN:
       no_accounts_found: 未找到账户
       no_accounts_found_description: 未从 Enable Banking 找到账户。请重试同步。
     select_existing_account:
-      title: 连接 Enable Banking 账户
-      all_linked: 看起来所有 Enable Banking 账户都已连接。
+      title: 关联 Enable Banking 账户
+      all_linked: 看起来所有 Enable Banking 账户都已关联。
       try_after_sync: 如果您刚刚连接或同步，请等待同步完成后再试。
-      unlink_to_move: 若要链接不同的账户，请先在账户的操作菜单中取消其连接。
+      unlink_to_move: 若要关联其他账户，请先在该账户的操作菜单中取消关联。
       balance: 余额
-      link: 连接
+      link: 关联
       cancel: 取消
     setup_accounts:
       title: 设置您的 Enable Banking 账户
@@ -76,7 +76,7 @@ zh-CN:
       cancel: 取消
       psd2_savings_notice: 根据 PSD2 规则，部分储蓄账户可能需要额外授权。
     new:
-      link_enable_banking_title: 连接 Enable Banking
+      link_enable_banking_title: 关联 Enable Banking
       session_expired: 会话已过期 - 需要重新授权
       connected_bank: 已连接的银行
       session_expires: 会话过期时间
@@ -96,7 +96,7 @@ zh-CN:
       setup_step_1_html: 前往 <strong>设置 → 提供商</strong>
       setup_step_2_html: 找到 <strong>Enable Banking</strong> 区块
       setup_step_3: 输入您的 Enable Banking 凭据
-      setup_step_4: 返回此处连接您的账户
+      setup_step_4: 返回此处关联您的账户
       go_to_provider_settings: 前往提供商设置
     reauthorize:
       invalid_redirect: 收到的授权 URL 无效。请重试。

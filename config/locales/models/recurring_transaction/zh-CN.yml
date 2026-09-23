@@ -5,3 +5,28 @@ zh-CN:
       models:
         recurring_transaction:
           merchant_or_name_required: 商户或名称至少必须存在一个
+          attributes:
+            payment_url:
+              invalid_scheme: 必须是有效的 http:// 或 https:// 地址
+            anchor_date:
+              required_for_intervals: 在规则每隔 2 个或更多周期重复时为必填项
+            bill_type:
+              transfer_shape_mismatch: 只有设置了目标账户时才能设为转账
+            expected_amount_min:
+              greater_than_max: 不能大于预期最高金额
+            account:
+              required_for_transfer: 在循环转账中为必填项
+              wrong_family: 必须属于此家庭
+            destination_account:
+              same_as_source: 不能与来源账户相同
+              family_mismatch: 必须与来源账户属于同一家庭
+              wrong_family: 必须属于此家庭
+    attributes:
+      recurring_transaction:
+        payment_url: 付款链接
+  recurring_transactions:
+    allocator:
+      missing_rate: 没有从 %{from} 到 %{to} 的汇率，请直接输入金额
+      unmeasurable: 此交易已有一笔无法换算为 %{currency} 的分配，因此无法计算其剩余金额。请添加 %{date} 的汇率，或先移除现有的付款
+      over_allocated: 分配 %{amount} 超出了该交易剩余的 %{capacity} %{currency}
+      exceeds_remaining: '%{amount} 超出了本期剩余的 %{remaining}'

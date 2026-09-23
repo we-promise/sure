@@ -21,7 +21,7 @@ zh-CN:
       family_title: "%{moniker} 商户"
       family_empty: 还没有 %{moniker} 商户
       provider_title: 提供商商户
-      provider_empty: 还没有链接到此 %{moniker} 的提供商商户
+      provider_empty: 还没有关联到此 %{moniker} 的提供商商户
       provider_read_only: 提供商商户来自您已连接的机构同步，无法在此编辑。
       provider_info: 这些商户是由您的银行连接或 AI 自动识别的。您可以编辑它们以创建自己的副本，或将其移除以解除与交易的关联。
       enhance_info:
@@ -35,6 +35,11 @@ zh-CN:
         actions: 操作
         source: 来源
       import: 导入商户
+      search_family_merchants: 搜索家庭商户...
+      search_provider_merchants: 搜索提供商商户...
+      no_family_merchants_found: 未找到匹配的家庭商户
+      no_provider_merchants_found: 未找到匹配的提供商商户
+      per_page: 每页
     family_merchant:
       edit: 编辑
       delete: 删除
@@ -52,6 +57,8 @@ zh-CN:
       sources_label: 要合并的商户
       sources_hint: 所选商户将合并到目标商户。家庭商户将被删除，提供商商户将解除关联。
       submit: 合并所选项
+      sources_search_placeholder: 搜索商户...
+      no_merchants_found: 未找到匹配的商户
     new:
       title: 新建商户
     perform_merge:
