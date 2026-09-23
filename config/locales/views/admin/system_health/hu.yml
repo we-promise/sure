@@ -1,0 +1,256 @@
+---
+hu:
+  admin:
+    system_health:
+      push_notifications:
+        send_test: Teszt push értesítés küldése
+        queueing: Sorba állítás…
+        title: Push értesítések
+        requested_at: 'Legutóbbi teszt kérve: %{time}'
+        result_help: Az APNs általi elfogadás nem igazolja, hogy az értesítés meg is érkezett az eszközödre. Frissíts a háttérfolyamat eredményeinek megtekintéséhez. Az eredményeket 24 óráig őrizzük meg.
+        device: '%{number}. eszköz'
+        pending: Függőben
+        refresh: Eredmények frissítése
+        columns:
+          device: Eszköz
+          environment: APNs-környezet
+          status: Eredmény
+          checked_at: Utolsó frissítés
+        environments:
+          sandbox: Sandbox
+          production: Éles
+        messages:
+          enqueue_failed: A tesztet nem sikerült sorba állítani. Ellenőrizd a Sidekiqet, és frissítsd az alábbi eredményeket.
+          ready: Küldj teszt értesítést a fiókodhoz regisztrált, engedélyezett iOS-eszközökre.
+          queued: A teszt értesítés sorba állítva. Az állapotát az alábbi eredmények frissítésével ellenőrizheted.
+          hosted_only: A push értesítések csak a felhőben üzemeltetett módban érhetők el.
+          ineligible: Teszt értesítést csak aktív szuperadmin küldhet.
+          no_devices: Teszt küldéséhez engedélyezd a push értesítéseket a Sure iOS-alkalmazásban ehhez a fiókhoz.
+          disabled: Az üzemeltető letiltotta a push értesítések kézbesítését.
+          not_configured: Az APNs hitelesítő adatai nincsenek beállítva.
+          cooldown: Várj 30 másodpercet, mielőtt újabb tesztet küldesz.
+          storage_unavailable: A tesztkérést nem sikerült menteni. Ellenőrizd a megosztott gyorsítótár beállításait.
+        statuses:
+          queued: Sorban áll
+          accepted: Az APNs elfogadta
+          skipped: 'Kihagyva: már nem jogosult'
+          rejected: Az APNs elutasította; nézd meg a push hibakeresési naplókat
+          unregistered: Az eszköz regisztrációja már nem érvényes
+          retrying: Átmeneti hiba, újrapróbálkozás
+          failed: Sikertelen; nézd meg a push hibakeresési naplókat
+          enqueue_failed: Nem sikerült sorba állítani; ellenőrizd a Sidekiqet
+          expired: Végeredmény nélkül lejárt
+      push_notification:
+        title: Sure teszt értesítés
+        body: Ez egy teszt push értesítés a Sure-fiókodhoz.
+      verify_worker_ai:
+        queued: A háttérfolyamat-ellenőrzés sorba állítva. Amint egy háttérfolyamat felveszi, általában néhány másodpercen belül, alább megjelenik.
+      show:
+        title: Rendszerállapot
+        tabs:
+          background_jobs: Háttérfeladatok
+          ai: AI-állapot
+        alert:
+          title: A háttérfeladatok nem futnak
+        status_section_title: Sidekiq-állapot
+        status_section_description: A szinkronizálásokat, egyenlegeket és nettóvagyon-számításokat végző háttérfolyamat aktuális állapota.
+        counters_section_title: Feladatszámlálók
+        counters_section_description: Összesített Sidekiq-számlálók az összes sorra.
+        queues_section_title: Sorok
+        queues_section_description: Soronkénti mélység és a legrégebbi feladat kora. A késleltetés azt mutatja, hány másodperce vár a legrégebbi feladat.
+        labels:
+          status: Állapot
+          processes: Háttérfolyamatok
+          last_heartbeat: Utolsó életjel
+          max_queue_latency: Legrégebbi feladat kora
+          enqueued: Sorban álló
+          retries: Újrapróbálások
+          failed: Sikertelen
+          processed_total: Összesen feldolgozva
+          queue: Sor
+          size: Méret
+          latency: Késleltetés
+        values:
+          healthy: Egészséges
+          unhealthy: Csökkent működés
+          time_ago: '%{time_ago} ezelőtt'
+          never: Soha
+          seconds: '%{seconds} mp'
+          no_queues: Nincs regisztrált sor. Lehet, hogy a háttérfolyamat nem fut.
+        ai:
+          run_checks: Ellenőrzések újbóli futtatása
+          last_checked: Az élő ellenőrzések %{time_ago} ezelőtt futottak le. Az eredményeket rövid ideig gyorsítótárazzuk.
+          not_checked_help: Nyisd meg közvetlenül az AI-állapot URL-jét, vagy futtasd az ellenőrzéseket a szolgáltatás elérhetőségének ellenőrzéséhez.
+          alerts:
+            custom_openai:
+              title: A hosztolt vektortár-ellenőrzés sikertelen ennél az egyéni végpontnál
+              message: 'A beállított végpont nem ment át a /v1/vector_stores elérhetőségi ellenőrzésen. A legtöbb helyi és OpenAI-kompatibilis végpont nem valósítja meg ezt az API-t. A csevegés és a PDF-feldolgozás ettől még működhet; a szokásos helyi beállításhoz használj pgvectort külön embedding végponttal. A hiba rögzítve lett itt: Beállítások → Hibakeresési naplók, és a Rails.logger naplóban.'
+            function_calling_unsupported:
+              title: A modell nem támogatja a függvényhívást
+              message: 'A végpont kiszolgált egy egyszerű csevegési kérést, de elutasította ugyanazt a kérést a tools paraméterrel. Az AI-asszisztens függvényhívásokkal olvassa a számlákat, tranzakciókat és a portfóliót, ezért a csevegés addig hibára fut – gyakran egy semmitmondó 404-es hibával –, amíg nem olyan modellt használsz, amely támogatja az eszközöket. Válassz olyan modellt, amelynek szolgáltatója dokumentáltan támogatja a függvényhívást. A hiba rögzítve lett itt: Beállítások → Hibakeresési naplók, és a Rails.logger naplóban.'
+            function_calling_not_used:
+              title: A modell anélkül válaszolt, hogy meghívta volna a kért eszközt
+              message: A végpont elfogadta a tools paramétert, de a modell szöveggel válaszolt ahelyett, hogy meghívta volna az állapotellenőrző eszközt. Eszközhívások nélkül az AI-asszisztens nem tudja olvasni a pénzügyi adatokat, így a csevegés üres választ vagy kitalált számokat adhat. Lehetőleg olyan modellt válassz, amelynek szolgáltatója dokumentáltan támogatja a függvényhívást.
+            llm_probe_failed:
+              title: Az LLM élő ellenőrzése sikertelen
+              message: 'A Sure nem tudta ellenőrizni a beállított végpontot és a modellt. A hiba rögzítve lett itt: Beállítások → Hibakeresési naplók, és a Rails.logger naplóban.'
+            llm_model_not_available:
+              title: A beállított AI-modell nem érhető el
+              message: A végpont válaszolt, de nem listázta és nem szolgálta ki a beállított modellt. Válassz egy aktív modellt a kiválasztott szolgáltatóhoz, majd futtasd újra az ellenőrzéseket. Ha a Geminit OpenAI-kompatibilis fordítórétegen keresztül használod, válassz egy jelenleg támogatott modellt, például a gemini-2.5-flash-t.
+            pdf_text_extraction_failed:
+              title: A szintetikus PDF szövegkinyerési ellenőrzése sikertelen
+              message: 'A Sure nem tudta végigvinni a szövegalapú folyamatot, amely helyben kinyeri a PDF beágyazott szövegét, és elküldi a beállított modellnek. Ügyféladat nem került elküldésre. A hiba rögzítve lett itt: Beállítások → Hibakeresési naplók, és a Rails.logger naplóban.'
+            pdf_vision_processing_failed:
+              title: A szintetikus PDF képi/natív ellenőrzése sikertelen
+              message: 'A Sure nem tudta végigvinni a képi vagy natív dokumentumos PDF-feldolgozást a beállított modellel. Ügyféladat nem került elküldésre. A hiba rögzítve lett itt: Beállítások → Hibakeresési naplók, és a Rails.logger naplóban.'
+            vector_probe_failed:
+              title: A dokumentumkeresés élő ellenőrzése sikertelen
+              message: 'A Sure nem tudta ellenőrizni a kiválasztott vektortárat és az összes szükséges embedding szolgáltatást. A hiba rögzítve lett itt: Beállítások → Hibakeresési naplók, és a Rails.logger naplóban.'
+            pgvector_extension_not_enabled:
+              title: A PostgreSQL vector bővítmény nincs engedélyezve
+              message: A pgvector adapter van kiválasztva, de a PostgreSQL-ben nincs engedélyezve a vector bővítmény ehhez az adatbázishoz. Használj pgvectort tartalmazó PostgreSQL-képet, majd engedélyezd a bővítményt adatbázis-tulajdonosként vagy superuserként, és futtasd újra a migrációkat a VECTOR_STORE_PROVIDER=pgvector beállítással.
+            pgvector_table_not_found:
+              title: A vector_store_chunks tábla hiányzik
+              message: A pgvector bővítmény engedélyezve van, de a chunks tábla nem található. Ellenőrizd a migrációk állapotát, majd futtasd újra a vektortár-migrációt a VECTOR_STORE_PROVIDER=pgvector beállítással, hogy a Sure létrehozhassa a vector_store_chunks táblát.
+            pgvector_probe_failed:
+              title: A pgvector tárolási ellenőrzése sikertelen
+              message: 'A Sure nem tudta lekérdezni a pgvector chunks táblát. Ellenőrizd a PostgreSQL-jogosultságokat, a vector bővítményt és a vector_store_chunks migrációt. A hiba rögzítve lett itt: Beállítások → Hibakeresési naplók, és a Rails.logger naplóban.'
+            embedding_dimensions_mismatch:
+              title: Az embedding dimenziói nem egyeznek
+              message: Az embedding végpont olyan vektort adott vissza, amelynek hossza nem egyezik az EMBEDDING_DIMENSIONS értékével. Állítsd az EMBEDDING_MODEL és az EMBEDDING_DIMENSIONS értékét a modell dokumentált vektorméretére, indítsd újra a Sure-t, hogy a környezet érvényesüljön, majd módosítsd vagy hozd létre újra a pgvector embedding oszlopát/tábláját, és készítsd el újra a dokumentumok embeddingjeit, ha a meglévő adatok más méretet használtak.
+            embedding_probe_timeout:
+              title: Az embedding élő ellenőrzése túllépte az időkorlátot
+              message: Az embedding végpont nem válaszolt az AI_HEALTH_PROBE_TIMEOUT lejárta előtt. Ha a szolgáltató lassú, növeld ezt az állapotellenőrzési időkorlátot, majd indítsd újra a Sure-t, hogy a környezet minden folyamatban érvényesüljön. Ha a normál AI-csevegési hívások is túllépik az időkorlátot, külön emeld meg az OPENAI_REQUEST_TIMEOUT értékét.
+            embedding_probe_failed:
+              title: Az embedding élő ellenőrzése sikertelen
+              message: 'A Sure nem tudott rövid teszt embeddinget létrehozni a beállított végponttal és modellel. Ellenőrizd az EMBEDDING_URI_BASE, EMBEDDING_MODEL és EMBEDDING_ACCESS_TOKEN értékét, valamint az embedding szolgáltató naplóit. A hiba rögzítve lett itt: Beállítások → Hibakeresési naplók, és a Rails.logger naplóban.'
+            qdrant:
+              title: A Qdrant támogatása még nincs megvalósítva
+              message: A Qdrant adapter váza elkészült, de a dokumentumfeltöltés és -keresés jelenleg sikertelen. Dokumentumkereséshez válaszd az OpenAI-t vagy a pgvectort.
+            missing_vector_store:
+              title: Nincs beállított vektortár
+              message: A feltöltött dokumentumok addig nem indexelhetők és nem kereshetők, amíg be nem állítasz egy vektortár-adaptert és annak követelményeit.
+            unavailable_vector_store:
+              title: A kiválasztott vektortár nem érhető el
+              message: Ellenőrizd az alábbi adapterkövetelményeket. pgvector esetén az adatbázisnak biztosítania kell a vector bővítményt vagy egy meglévő vector_store_chunks táblát.
+          llm:
+            title: LLM és PDF-feldolgozás
+            description: Az élő ellenőrzések ellenőrzik a beállított modellt, egy egyszerű függvényhívást kérnek tőle úgy, ahogy az asszisztens teszi, majd külön tesztelik a szövegkinyerést és a képi/natív feldolgozást egy egyoldalas, ügyféladatot nem tartalmazó szintetikus PDF-fel. A hitelesítő adatok értékei soha nem jelennek meg.
+          vector_store:
+            title: Vektortár és dokumentumkeresés
+            description: Az élő ellenőrzés lekérdezi a hosztolt vektortár API-t, vagy teszteli a pgvector táblát, és létrehoz egy rövid embeddinget anélkül, hogy eltárolná.
+          labels:
+            selected_provider: Kiválasztott szolgáltató
+            effective_provider: Ténylegesen használt szolgáltató
+            model: Modell
+            endpoint: Végpont
+            function_calling: Függvényhívás (tools)
+            pdf_text_extraction: PDF-szövegkinyerési folyamat
+            pdf_vision_processing: PDF képi/natív folyamat
+            llm_request_timeout: LLM-kérés időkorlátja
+            probe_request_timeout: Állapotellenőrzés időkorlátja
+            openai_credentials: OpenAI hitelesítő adatok
+            openai_compatible_credentials: OpenAI-kompatibilis API hitelesítő adatok
+            anthropic_credentials: Anthropic hitelesítő adatok
+            adapter: Adapter
+            adapter_available: Adapter elérhető
+            pgvector_extension: PostgreSQL vector bővítmény
+            pgvector_table: Vektor-chunk tábla
+            embedding_model: Embedding modell
+            embedding_endpoint: Embedding végpont
+            embedding_dimensions: Embedding dimenziók
+            function_calling_failure_reason: Függvényhívási hiba oka
+            pdf_text_extraction_failure_reason: Szövegkinyerési hiba oka
+            pdf_vision_processing_failure_reason: Képi/natív hiba oka
+            storage_probe: pgvector tárolási ellenőrzés
+            embedding_probe: Embedding végpont ellenőrzése
+            failure_reason: Hiba oka
+          providers:
+            openai: OpenAI
+            openai_compatible: OpenAI-kompatibilis
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Egyéni végpont
+          adapters:
+            openai: OpenAI hosztolt vektortár
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Beállítva
+            not_configured: Nincs beállítva
+            fallback: (tartalék)
+            not_set: Nincs megadva
+            "yes": Igen
+            "no": Nem
+            enabled: Engedélyezve
+            available_not_enabled: Elérhető, de nincs engedélyezve
+            not_available: Nem érhető el
+            available: Elérhető
+            not_found: Nem található
+          function_calling_statuses:
+            supported: Az élő eszközhívás sikeres
+            unsupported: A ténylegesen használt szolgáltató/modell nem támogatja
+            not_used: Az eszközöket elfogadta, de a modell egyet sem hívott meg
+            failing: Az élő ellenőrzés sikertelen
+            not_checked: Nincs ellenőrizve
+            unavailable: Nem érhető el, amíg nincs beállítva LLM-szolgáltató
+          pdf_statuses:
+            supported: A szintetikus PDF-ellenőrzés sikeres
+            failing: A szintetikus PDF-ellenőrzés sikertelen
+            unsupported: Letiltva, vagy a ténylegesen használt szolgáltató/modell nem támogatja
+            not_checked: Nincs ellenőrizve
+            unavailable: Nem érhető el, amíg nincs beállítva LLM-szolgáltató
+          probe_statuses:
+            passing: Az élő ellenőrzés sikeres
+            failing: Az élő ellenőrzés sikertelen
+            not_checked: Nincs ellenőrizve
+            not_configured: Nincs beállítva
+          vector_statuses:
+            passing: Az élő ellenőrzések sikeresek
+            failing: Az élő ellenőrzés sikertelen
+            not_checked: Nincs ellenőrizve
+            not_configured: Nincs beállítva
+            scaffolded: Csak váz
+            missing: Nincs beállítva
+          failure_codes:
+            model_not_available: A szolgáltató nem adta vissza a beállított modellt
+            no_tool_call: A modell anélkül válaszolt, hogy meghívta volna az állapotellenőrző eszközt
+            tools_refused: A szolgáltatás eszközök nélkül kiszolgálta a kérést, eszközökkel viszont elutasította
+            invalid_response: A szolgáltatás váratlan választ adott
+            dimensions_mismatch: Az embedding vektor dimenziói nem egyeznek a beállított dimenziókkal
+            extension_not_enabled: A PostgreSQL vector bővítmény nincs engedélyezve
+            table_not_found: A vector_store_chunks tábla nem található
+            render_missing_binary: A pdftoppm renderelő (poppler-utils) nem érhető el ebben a konténerben
+            timeout: A szolgáltatás nem válaszolt az ellenőrzés időkorlátján belül
+            request_failed: A szolgáltatáskérés sikertelen
+            unsupported_provider: A szolgáltató nem támogatja ezt az ellenőrzést
+          worker:
+            title: Háttérfolyamat ellenőrzése
+            description: A fenti ellenőrzések ebből a webes folyamatból futottak. Az AI-feladatok többsége – asszisztensválaszok, PDF-feldolgozás, embeddingek, automatikus kategorizálás és kereskedőfelismerés – valójában egy Sidekiq háttérfolyamatban fut, amelynek hálózati hozzáférése, DNS-e, proxyszabályai vagy akár betöltött hitelesítő adatai is eltérhetnek. Állíts sorba egy ellenőrzést, hogy egy háttérfolyamat saját konfigurációját és kapcsolódását ellenőrizd.
+            verify_button: Háttérfolyamat konfigurációjának ellenőrzése
+            coverage_notice: Minden ellenőrzés pontosan egy háttérfolyamatot ellenőriz – azt, amelyik kiveszi a sorból. Több háttérfolyamat-replika esetén egy sikeres eredmény nem igazolja, hogy minden háttérfolyamat egészséges; egy másik mintavételéhez állítsd újra sorba az ellenőrzést.
+            empty:
+              title: Még egyetlen háttérfolyamat sem jelentkezett
+              description: Kattints a „Háttérfolyamat konfigurációjának ellenőrzése” gombra egy aszinkron ellenőrzés sorba állításához. Az eredmény itt jelenik meg, amint egy háttérfolyamat felveszi.
+            labels:
+              process: Háttérfolyamat
+              checked_at: Ellenőrizve
+              configuration: Konfiguráció
+            configuration_statuses:
+              match: Egyezik a webessel
+              mismatch: Eltér a webestől
+            statuses:
+              passing: Sikeres
+              failing: Sikertelen
+              stale: Elavult
+            settings_origin:
+              title: Mely beállításokhoz kell újraindítás?
+              database_backed: A Beállítások → Saját üzemeltetés oldalon módosított szolgáltató-, modell- és API-kulcs-beállítások az adatbázisban tárolódnak. A rails-settings-cached íráskor érvényteleníti a megosztott gyorsítótárat, így a webes és a háttérfolyamat is az új értéket használja a következő kérésnél vagy sorba állított feladatnál – nincs szükség újraindításra.
+              env_backed: Az embedding konfiguráció és minden olyan érték, amely csak környezeti változóval van megadva, az egyes konténerek indulásakor rögzül. A Rails nem tudja módosítani egy másik konténer környezetét, ezért ezek módosításához a webes és a háttérszolgáltatást is újra kell indítani vagy létrehozni – és az olyan telepítési eszközök, amelyek csak az egyiket indítják újra (részleges bevezetés, pod-újraindítás nélkül frissített Secret), nem veszik át a változást.
+          local_setup:
+            title: Javasolt helyi beállítás
+            description: Futtasd az LLM-et a helyi OpenAI-kompatibilis végponton keresztül, tárold a dokumentumvektorokat pgvectorban, és állítsd az embedding beállításokat egy OpenAI-kompatibilis embedding végpontra. A PostgreSQL-képnek tartalmaznia kell a vector bővítményt, és az embedding dimenzióinak egyezniük kell a kiválasztott modellel.

@@ -55,7 +55,7 @@ hu:
       loading_hint: "Kattints a Frissítésre a számlák ellenőrzéséhez."
       refresh: "Frissítés"
       info_title: "SnapTrade befektetési adatok"
-      info_holdings: "Portfólió aktuális árakkal és mennyiségekkel"
+      info_holdings: "Pozíciók aktuális árakkal és mennyiségekkel"
       info_cost_basis: "Pozíciónkénti bekerülési érték (ha elérhető)"
       info_activities: "Kereskedési előzmények tevékenységcímkékkel (Vétel, Eladás, Osztalék stb.)"
       info_history: "Legfeljebb 3 év tranzakciós előzmény"
@@ -78,6 +78,14 @@ hu:
       link_button: "Összekapcsolás"
       linked_accounts: "Már összekapcsolt"
       linked_to: "Összekapcsolva:"
+      account_type_label: Számlatípus
+      account_types:
+        depository: Folyó- vagy megtakarítási számla
+        credit_card: Hitelkártya
+        investment: Befektetési számla
+        crypto: Kriptoszámla
+        loan: Hitel vagy hitelkeret
+        other_asset: Egyéb vagyon
     snaptrade_item:
       accounts_need_setup:
         one: "%{count} számla beállítást igényel"
@@ -102,6 +110,32 @@ hu:
         other: "%{count} további beállítható számla"
       no_accounts_title: "Nem találhatók számlák"
       no_accounts_description: "Csatlakoztass egy brókercéget a befektetési számlák importálásához."
+    oauth_authorize:
+      not_configured: A SnapTrade böngészős engedélyezéséhez a SNAPTRADE_OAUTH_CLIENT_ID mellett a SNAPTRADE_OAUTH_CLIENT_SECRET is szükséges. Állítsd be, és indítsd újra az alkalmazást, vagy engedélyezz inkább eszközkóddal.
+    oauth_callback:
+      success: A SnapTrade engedélyezése befejeződött.
+      access_denied: A SnapTrade engedélyezése megszakítva.
+      state_mismatch: A SnapTrade engedélyezése nem ment át egy biztonsági ellenőrzésen. Próbáld újra.
+      failed: Nem sikerült befejezni a SnapTrade engedélyezését. Próbáld újra.
+    oauth_device_flow:
+      title: SnapTrade csatlakoztatása
+      subtitle: Engedélyezd a Sure hozzáférését a SnapTrade-hez eszközkóddal.
+      instructions: Nyisd meg a SnapTrade-et, erősítsd meg ezt az eszközkódot, majd térj vissza ide a befejezéshez.
+      code_label: Eszközkód
+      open_snaptrade: SnapTrade megnyitása
+      start_button: Engedélyezés indítása
+      complete_button: Engedélyeztem a SnapTrade-ben
+      cancel_button: Mégse
+      missing_client_id: A SnapTrade OAuth nincs beállítva. Add hozzá a SNAPTRADE_OAUTH_CLIENT_ID változót a .env.local fájlhoz, indítsd újra az alkalmazást, majd próbáld újra.
+    start_oauth_device_flow:
+      failed: Nem sikerült elindítani a SnapTrade eszközös engedélyezését. Próbáld újra.
+    complete_oauth_device_flow:
+      success: A SnapTrade engedélyezése befejeződött.
+      device_code_required: Ehhez a kapcsolathoz nincs folyamatban SnapTrade eszközös engedélyezés. Indítsd újra, hogy új kódot kapj.
+      authorization_pending: A SnapTrade még nem kapta meg a megerősítésedet. Hagyd jóvá a kódot a SnapTrade-ben, majd próbáld újra.
+      expired: Ez az eszközkód lejárt. Indítsd újra az engedélyezést.
+      access_denied: A SnapTrade engedélyezése elutasítva.
+      failed: Nem sikerült befejezni a SnapTrade eszközös engedélyezését. Próbáld újra.
 
   providers:
     snaptrade:
@@ -133,6 +167,17 @@ hu:
       delete_connection_title: "Brókeri kapcsolat törlése?"
       delete_connection_body: "Ez véglegesen eltávolítja a(z) %{brokerage} kapcsolatot a SnapTrade-ből. Az ehhez a brókercéghez tartozó összes számla szétkapcsolásra kerül. A számlák újbóli szinkronizálásához újra kell csatlakoznod."
       delete_connection_confirm: "Kapcsolat törlése"
+      oauth_setup_step_1_html: 'Regisztrálj egy OAuth-alkalmazást itt: <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>'
+      oauth_setup_step_2_html: 'Csak a böngészős folyamathoz: add hozzá az alkalmazás visszahívási URL-jét (<code>%{callback_url}</code>) regisztrált átirányítási URI-ként'
+      oauth_setup_step_3: Állítsd be a SNAPTRADE_OAUTH_CLIENT_ID változót a környezetedben, és indítsd újra az alkalmazást. Ez önmagában engedélyezi az eszközkódos folyamatot; a böngészős folyamathoz add meg a SNAPTRADE_OAUTH_CLIENT_SECRET értékét is
+      oauth_title: SnapTrade OAuth
+      oauth_status_ready: Engedélyezd, hogy a Sure olvassa a SnapTrade-számláid adatait.
+      oauth_status_ready_device: Engedélyezd eszközkóddal, hogy a Sure olvassa a SnapTrade-számláid adatait.
+      oauth_status_authorized: Engedélyezve a SnapTrade-del.
+      oauth_connect_button: Csatlakozás SnapTrade-del
+      oauth_device_button: Eszközkód használata
+      oauth_reauthorize_button: Újraengedélyezés
+      manage_at_snaptrade: Kapcsolatok kezelése a SnapTrade-ben
 
   snaptrade_item:
     sync_status:
@@ -154,7 +199,7 @@ hu:
     syncer:
       discovering: "Számlák felderítése..."
       importing: "Számlák importálása a SnapTrade-ből..."
-      processing: "Portfólió és tevékenységek feldolgozása..."
+      processing: "Pozíciók és tevékenységek feldolgozása..."
       calculating: "Egyenlegek kiszámítása..."
       checking_config: "Számlakonfiguráció ellenőrzése..."
       needs_setup: "%{count} számla beállítást igényel..."

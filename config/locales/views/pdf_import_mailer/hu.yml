@@ -10,7 +10,7 @@ hu:
       document_stored_note: Ez a dokumentum el lett mentve referenciaként. Felhasználható kontextusként a jövőbeli AI-párbeszédekben.
       next_steps_label: Mi a következő lépés?
       next_steps_intro: "Több lehetőséged is van:"
-      option_extract_transactions: Tranzakciók kibontása ebből a kivonatból
+      option_extract_transactions: Tranzakciók kibontása ebből a kimutatásból
       option_keep_reference: Megőrzöm ezt a dokumentumot referenciaként a jövőbeli AI-párbeszédekhez
       option_delete: Törlöm ezt az importot, ha már nincs rá szükségem
       view_import_button: Importálás részleteinek megtekintése

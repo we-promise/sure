@@ -18,7 +18,7 @@ hu:
     sync:
       status:
         importing: "Számlák importálása az IndexaCapital-ból..."
-        processing: "Portfólió és tevékenységek feldolgozása..."
+        processing: "Pozíciók és tevékenységek feldolgozása..."
         calculating: "Egyenlegek kiszámítása..."
         importing_data: "Számlaadatok importálása..."
         checking_setup: "Számlakonfiguráció ellenőrzése..."
@@ -136,7 +136,7 @@ hu:
       description: "Válassz egy IndexaCapital számlát, amelyet ehhez a számlához szeretnél kapcsolni. A tranzakciók automatikusan szinkronizálásra és deduplikálásra kerülnek."
       header: "Összekapcsolás az IndexaCapital-lal"
       link_account: "Számla összekapcsolása"
-      link_button: "Ez a számla összekapcsolása"
+      link_button: "Számla összekapcsolása"
       linking_to: "Összekapcsolás:"
       no_account_specified: "Nem lett megadva számla"
       no_accounts: "Nem találhatók nem összekapcsolt IndexaCapital számlák."

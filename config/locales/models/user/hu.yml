@@ -16,5 +16,7 @@ hu:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: A rendszergazda nem törölheti fiókját, amíg más tagok is vannak. Kérjük, először töröld az összes tagot.
+              provider_item_has_other_accounts: A felhasználónak olyan szolgáltatói kapcsolathoz kötött számlái vannak, amelyhez egy másik felhasználó számlái is tartoznak. A család/csoport tagságának módosítása előtt helyezd át vagy válaszd le ezeket a számlákat.
+              cannot_remove_last_super_admin: Az utolsó aktív szuperadmin nem távolítható el. Előbb nevezz ki egy másik felhasználót szuperadminná.
             profile_image:
               invalid_file_size: a fájl mérete nem haladhatja meg a %{max_megabytes}MB-ot

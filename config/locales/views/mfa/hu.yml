@@ -31,7 +31,7 @@ hu:
       page_title: Kétlépéses hitelesítés ellenőrzése
       title: Kétlépéses hitelesítés
       verify_button: Ellenőrzés
-      webauthn_button: Jelszókulcs vagy biztonsági kulcs használata
+      webauthn_button: Hozzáférési kulcs vagy biztonsági kulcs használata
       webauthn_unsupported: Ez a böngésző nem támogatja a jelszókulcsokat vagy biztonsági kulcsokat.
     verify_code:
       invalid_code: Érvénytelen hitelesítési kód. Kérjük, próbáld újra.

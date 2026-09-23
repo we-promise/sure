@@ -1,0 +1,4 @@
+---
+hu:
+  passkey_sessions:
+    invalid_credential: Nem sikerült bejelentkezni ezzel a hozzáférési kulccsal. Próbáld újra, vagy használd a jelszavadat.

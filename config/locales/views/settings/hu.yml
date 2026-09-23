@@ -16,7 +16,7 @@ hu:
         total_requests: "Összes kérés"
         total_tokens: "Összes token"
         prompt: "prompt"
-        completion: "befejezés"
+        completion: "kimenet"
         total_cost: "Összes költség"
         avg_cost_per_request: "Átl. költség/kérés"
         based_on_requests: "%{total} kérésből %{with_cost} rendelkezik költségadattal"
@@ -34,23 +34,45 @@ hu:
         cost_estimates_description: "A költségek a szolgáltatók közzétett árazása alapján vannak becsülve, beleértve az OpenAI 2026. júliusi árait. A tényleges költségek eltérhetnek. Az árazás millió tokenenként van megadva, és modellenként változik. Az egyéni vagy önállóan üzemeltetett modellek \"N/A\"-t mutatnak, és nem szerepelnek a költségösszesítőkben."
     ai_prompts:
       show:
-        page_title: MI promptok
+        page_title: AI-promptok
         openai_label: OpenAI
-        disable_ai: MI asszisztens letiltása
+        disable_ai: AI-asszisztens letiltása
         prompt_instructions: Prompt utasítások
         main_system_prompt:
           title: Fő rendszerprompt
-          subtitle: Alapvető utasítások, amelyek meghatározzák, hogyan viselkedik az MI asszisztens minden csevegési beszélgetésben
+          subtitle: Alapvető utasítások, amelyek meghatározzák, hogyan viselkedik az AI-asszisztens minden csevegési beszélgetésben
+          label: Csevegés rendszerpromptja
         transaction_categorizer:
           title: Tranzakció-kategorizáló
-          subtitle: Az MI automatikusan kategorizálja a tranzakcióidat a meghatározott kategóriák alapján
+          subtitle: Az AI automatikusan kategorizálja a tranzakcióidat a meghatározott kategóriák alapján
         merchant_detector:
           title: Kereskedő-felismerő
-          subtitle: Az MI azonosítja és kereskedőinformációkkal gazdagítja a tranzakcióadatokat
+          subtitle: Az AI azonosítja és kereskedőinformációkkal gazdagítja a tranzakcióadatokat
+        save: Promptok mentése
+        save_confirm:
+          title: Mented az egyéni AI-promptokat?
+          body: Az egyéni promptok felülírják a beépített rendszerutasításokat és biztonsági korlátokat (például a pénzügyi tanácsadásra vonatkozó korlátozásokat) a családod számára.
+          dont_show_again: Ne jelenjen meg újra ez a figyelmeztetés
+          cancel: Mégse
+          confirm: Megerősítés
+      prompt_field:
+        provider_label: Szolgáltató
+        prompt_label: Prompt
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Alapértelmezés visszaállítása
+        reset_confirm_title: Visszaállítod az alapértelmezett promptot?
+        reset_confirm_body: Ez elveti az egyéni promptodat, és visszaállítja a beépített alapértelmezett utasításokat.
+        status_custom: Az egyéni promptod van használatban
+        status_default: A beépített alapértelmezés van használatban
+        format_risk: 'A(z) %{provider} promptodból kimaradt a {"%{key}": ...} példa. Minden kérés továbbra is ezt a formát kéri, így a feldolgozás általában működik, de egy más kimeneti formátumot kérő felülírás tönkreteszi.'
+      update:
+        success: AI-promptok frissítve
+        multiple_errors: Több prompt is túl hosszú (legfeljebb %{count} karakter lehet)
     payments:
       show:
         page_title: Fizetések
-        subscription_subtitle: Frissítsd bankkártyaadataidat
+        subscription_subtitle: Frissítsd a bankkártyaadataidat
         subscription_title: Hozzájárulások kezelése
         currently_on_plan: "Jelenleg a"
         trialing: "Jelenleg a %{product_name} nyílt demóját használod"
@@ -83,6 +105,8 @@ hu:
         dashboard_two_column_description: Az irányítópult-widgetek megjelenítése két oszlopban nagy képernyőkön. Ha ki van kapcsolva, a widgetek egyetlen oszlopban egymás alatt jelennek meg.
         split_grouped_title: Felosztott tranzakciók csoportosítása
         split_grouped_description: A felosztott tranzakciók megjelenítése szülőjük alatt csoportosítva a tranzakciólistában. Ha ki van kapcsolva, a felosztott tételek egyedi sorként jelennek meg.
+        dashboard_account_groups_title: Alapértelmezetten kibontva
+        dashboard_account_groups_description: Ezek a számlacsoportok kibontva jelennek meg az irányítópulton és a számlák oldalsávjában. Bármikor manuálisan összecsukhatod őket.
     preferences:
       show:
         country: Ország
@@ -121,12 +145,31 @@ hu:
         sharing_default_label: Új számlák alapértelmezett megosztása
         sharing_shared: Megosztás az összes taggal
         sharing_private: Alapértelmezetten privát
+        translations_notice: Kérjük, vedd figyelembe, hogy egyes nyelvek fordításán még dolgozunk.
+        budget_title: Költségvetés
+        budget_subtitle: Állítsd be, hogyan működjenek a költségvetéseid
+        personal_budgets: Személyes költségvetések
+        personal_budgets_hint: Egyéni költségvetés engedélyezése minden családtag számára.
+        household_budget_enabled: Háztartási költségvetés
+        household_budget_enabled_hint: Közös háztartási költségvetés vezetése a személyes költségvetések mellett. Kapcsold ki, ha csak személyes költségvetéseket szeretnél használni.
+        budget_sharing_title: Költségvetés megosztása
+        budget_sharing_subtitle: Engedd, hogy más tagok megtekintsék vagy szerkesszék a személyes költségvetésedet
+        budget_sharing_no_members: Nincs más tag ebben a körben (%{moniker}), akivel megoszthatnád
+        budget_sharing_permission_label: '%{name} hozzáférése'
+        budget_sharing_permissions:
+          none: Nincs hozzáférés
+          read_only: Csak megtekintés
+          read_write: Szerkesztheti
+        preview:
+          title: Előzetes funkciók engedélyezése
+          description: Kapcsold be a fejlesztés alatt álló, preview vagy canary címkével jelölt funkciókat.
     profiles:
       destroy:
         cannot_remove_self: Nem távolíthatod el magadat a fiókból.
         member_removal_failed: Probléma merült fel a tag eltávolítása során.
         member_removed: A tag sikeresen eltávolítva.
         not_authorized: Nincs jogosultságod tagok eltávolítására.
+        member_owns_other_family_data: Ez a tag még számlák tulajdonosa egy másik háztartásban, ezért nem távolítható el. Előbb add át vagy töröld azokat a számlákat.
       show:
         confirm_delete:
           body: Biztosan véglegesen törölni szeretnéd a fiókodat? Ez a művelet visszavonhatatlan.
@@ -169,6 +212,8 @@ hu:
         remove_invitation: Meghívó eltávolítása
         remove_member: Tag eltávolítása
         save: Mentés
+        resend_confirmation_link: kérj új megerősítő e-mailt
+        unconfirmed_email_notice_html: 'Az e-mail címed módosítását kérted erre: %{email}. A módosítás érvénybe lépéséhez erősítsd meg az e-mailben kapott linkkel. Ha nem kaptad meg az e-mailt, nézd meg a spam mappát, vagy %{resend_link}.'
     securities:
       show:
         page_title: Biztonság
@@ -189,10 +234,38 @@ hu:
         sso_confirm_body: Biztosan le szeretnéd választani a %{provider} fiókodat? Később újra összekapcsolhatod, ha azzal a szolgáltatóval jelentkezel be.
         sso_confirm_button: Leválasztás
         sso_warning_message: Ez az egyetlen bejelentkezési módod. Mielőtt leválasztanád, állíts be jelszót a biztonsági beállításokban, különben kizárhatod magad a fiókodból.
+        encryption_warning:
+          title: Hiányoznak a titkosítási kulcsok
+          intro: 'Az érzékeny adatok (API-kulcsok, szolgáltatói tokenek, MFA-titkok és személyes adatok) titkosítatlanul vannak tárolva. A titkosítás engedélyezéséhez állítsd be a következő kulcsokat a környezeti változókban vagy a Rails credentials-ben:'
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: 'Kulcskészlet generálása: bin/rails db:encryption:init'
+    mcp:
+      show:
+        page_title: MCP-szerver
+        connect_title: AI-asszisztens csatlakoztatása
+        connect_subtitle: Illeszd be ezt az URL-t a Claude.ai-ba (vagy bármely MCP-kompatibilis kliensbe), hogy összekapcsold a Sure-fiókoddal.
+        copy_url: Másolás
+        copied: Másolva!
+        how_to_connect_title: A Claude csatlakoztatása
+        step_1: Nyisd meg a Claude.ai-t, és menj a Settings → Customize → Connectors menüpontba.
+        step_2: Kattints az „Add connector” gombra, és illeszd be a fenti MCP-szerver URL-t.
+        step_3: Kattints a Connect gombra – a Sure-ba irányítunk, ahol bejelentkezhetsz és engedélyezheted a hozzáférést.
+        step_4: Az engedélyezés után a Claude olvashatja a számláidat, tranzakcióidat és egyenlegadataidat.
+        connected_title: Csatlakoztatott kliensek
+        connected_subtitle: Ezek az alkalmazások jelenleg hozzáférnek a Sure-adataidhoz. Vond vissza azokét, amelyeket már nem használsz.
+        unknown_client: Ismeretlen kliens
+        connected_ago: Csatlakoztatva %{time} ezelőtt
+        revoke: Visszavonás
+        revoke_confirm: Visszavonod ennek a kliensnek a hozzáférését?
+      revoke:
+        revoked: Kapcsolat visszavonva.
     settings_nav:
       accounts_label: Számlák
       advanced_section_title: Speciális
-      ai_prompts_label: MI promptok
+      ai_prompts_label: AI-promptok
       api_key_label: API-kulcs
       payment_label: Fizetés
       categories_label: Kategóriák
@@ -221,6 +294,10 @@ hu:
       api_keys_label: API-kulcs
       appearance_label: Megjelenés
       bank_sync_label: Banki szinkronizálás
+      background_jobs_label: Háttérfeladatok
+      debug_label: Hibakeresés
+      mcp_label: MCP
+      system_health_label: Rendszerállapot
     settings_nav_link_large:
       next: Következő
       previous: Vissza
@@ -241,7 +318,7 @@ hu:
         ok: Csatlakoztatva
         warn: Beavatkozás szükséges
         err: Hiba
-        off: Nincs konfigurálva
+        "off": Nincs konfigurálva
       maturity:
         beta: Béta
         alpha: Alfa
@@ -261,10 +338,10 @@ hu:
         last_synced: Utoljára szinkronizálva %{time} ezelőtt
       meta:
         sync_error: Szinkronizálási hiba
-        no_recent_sync: Szinkronizálás lejárt
+        no_recent_sync: Szinkronizálás esedékes
         reconsent_required: Újrahozzájárulás szükséges
         reconsent_needed:
-          one: Újrahozzájárulás szükséges 1 napon belül
+          one: Újrahozzájárulás szükséges %{count} napon belül
           other: Újrahozzájárulás szükséges %{count} napon belül
         last_synced: Szinkronizálva %{time} ezelőtt
       sync_all: Összes szinkronizálása
@@ -289,6 +366,16 @@ hu:
         sophtron: US és kanadai bankok és közüzemi szolgáltatók csatlakoztatása.
         plaid: Ezernyi US pénzintézet csatlakoztatása Plaid-en keresztül.
         plaid_eu: Európai pénzintézetek csatlakoztatása Plaid-en keresztül (PSD2 / Open Banking).
+        akahu: Új-zélandi pénzintézetek szinkronizálása az Akahun keresztül.
+        coinspot: CoinSpot egyenlegek, AUD-értékek, átutalások, befizetések, kifizetések és megbízási előzmények szinkronizálása csak olvasási API-kulccsal.
+        fio: Fio banka számla szinkronizálása csak olvasási API-tokennel.
+        monobank: Ukrán Monobank kártyák és perselyek szinkronizálása személyes API-tokennel.
+        onchain_wallet: Saját kezelésű Bitcoin-, EVM- és Solana-tárcák követése nyilvános címük alapján.
+        questrade: Questrade befektetési számláid szinkronizálása közvetlenül a Questrade API-n keresztül.
+        redbark: Ausztrál bankszámlák szinkronizálása a Redbark open banking szolgáltatásával.
+        trade_republic: Trade Republic befektetési számlád szinkronizálása biztonságos, csak olvasási webes bejelentkezéssel.
+        trading212: Trading 212 befektetési portfóliód szinkronizálása csak olvasási API-kulccsal.
+        wise: Wise többdevizás egyenlegeid és nemzetközi átutalásaid automatikus szinkronizálása.
       search_filters:
         aria_label: Szolgáltatók keresése
         placeholder: Szolgáltatók keresése
@@ -336,6 +423,9 @@ hu:
         syncing: Szinkronizálás...
         sync: Szinkronizálás
         disconnect_confirm: "Biztosan le szeretnéd választani a Binance-t?"
+        historical_import: Előzmények importálásának beállításai
+        sync_start_date_help: Válaszd ki, milyen régre visszamenőleg kérjük le a korábbi ügyleteket.
+        sync_start_date_label: Adatok importálása ettől a dátumtól
       kraken_panel:
         step1_html: 'Nyisd meg a <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API-beállításait</a>'
         step2: "Hozz létre egy API-kulcsot csak Lekérdezési alapok és Lekérdezési zárt megbízások & ügyletek jogosultsággal."
@@ -456,7 +546,7 @@ hu:
           all_other_options: 'Minden egyéb konfigurációs opció: „Nem"'
         report_window_note: "Az IBKR Flex-jelentések az IBKR-ben konfigurált lekérdezési ablakra korlátozódnak. A Sure a teljes aktuális pozíciókat, valamint a jelentésből legfeljebb 365 nap tevékenységet importál."
         sync: Szinkronizálás
-        disconnect_confirm: Leválasztja az Interactive Brokers-t?
+        disconnect_confirm: Leválasztod az Interactive Brokerst?
         query_id_label: Lekérdezés azonosítója
         query_id_placeholder_new: Add meg az IBKR Flex lekérdezés azonosítóját
         query_id_placeholder_existing: Hagyd üresen a meglévő azonosító megtartásához
@@ -469,3 +559,224 @@ hu:
         accounts_tab: Számlák
         status_configured_suffix: fület a felderített számlák kezeléséhez.
         not_configured: Nincs konfigurálva.
+      akahu_panel:
+        step_1_html: Menj a(z) %{link} oldalra, és hozz létre egy személyes alkalmazást.
+        step_2: Másold ki az app tokenedet és a user tokenedet.
+        step_3: Illeszd be alább a tokeneket, mentsd el, majd kapcsold össze a szinkronizált számláidat.
+      coinspot_panel:
+        add_connection: CoinSpot-kapcsolat hozzáadása
+        api_key_label: API-kulcs
+        api_key_placeholder: Illeszd be a CoinSpot API-kulcsodat
+        api_secret_label: API-titok
+        api_secret_placeholder: Illeszd be a CoinSpot API-titkodat
+        connection_name_label: Kapcsolat neve
+        connection_name_placeholder: Fő CoinSpot
+        default_connection_name: CoinSpot
+        disconnect: Leválasztás
+        disconnect_confirm: 'Biztosan leválasztod ezt: %{name}?'
+        keep_api_key_placeholder: Hagyd üresen a meglévő API-kulcs megtartásához
+        keep_api_secret_placeholder: Hagyd üresen a meglévő API-titok megtartásához
+        read_only_body: Ne adj küldési, kifizetési, kereskedési vagy átutalási jogosultságot. A Sure csak az egyenlegeket, AUD-értékeket, átutalásokat, befizetéseket, kifizetéseket és a teljesült megbízások előzményeit importálja.
+        read_only_title: Csak olvasási tőzsdei szinkronizálás
+        setup_accounts: Számla beállítása
+        step1_html: Nyisd meg a <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot API-beállításait</a>
+        step2: Hozz létre egy API-kulcsot, amely csak olvasási hozzáféréssel rendelkezik az egyenlegekhez és az előzményekhez.
+        step3: Illeszd be alább az API-kulcsot és a titkos kulcsot.
+        sync: Szinkronizálás
+        syncing: Szinkronizálás...
+        update_connection: Kapcsolat frissítése
+      drawer_trust_statement_encryption_unconfigured: Csak olvasási hozzáférés. A Sure soha nem tud pénzt mozgatni. Éles környezetben állíts be explicit titkosítási kulcsokat, mielőtt szolgáltatói hitelesítő adatokat tárolsz.
+      fio_panel:
+        step_1_html: Jelentkezz be a(z) %{link} internetbankba, és nyisd meg a Beállítások → API menüpontot.
+        step_2: Hozz létre egy csak olvasási hozzáférésű tokent („Sledování účtu”). Erős ügyfél-hitelesítés szükséges hozzá, és legfeljebb 180 napig érvényes.
+        step_3: Illeszd be alább a tokent, és mentsd el. Egy token egy számlához ad hozzáférést, ezért minden Fio-számlához külön kapcsolatot adj hozzá.
+      monobank_panel:
+        step_1_html: Menj a(z) %{link} oldalra, jelentkezz be a Monobank alkalmazással, és generálj egy személyes tokent.
+        step_2: Másold ki a tokent – csak egyszer jelenik meg.
+        step_3: Illeszd be alább a tokent, mentsd el, majd kapcsold össze a követni kívánt kártyákat és perselyeket.
+      onchain_wallet_panel:
+        add_wallet: Tárca hozzáadása
+        advanced: Speciális
+        disconnect_all: Összes tárca leválasztása
+        disconnect_all_confirm: Ez eltávolít minden követett címet és a hozzájuk tartozó számlákat. Folytatod?
+        etherscan_api_key_label: Etherscan API-kulcs (nem kötelező)
+        etherscan_api_key_placeholder: Illessz be egy Etherscan API-kulcsot
+        etherscan_hint: Az Ethereum-adatok kulcs nélkül is lekérhetők. Egy Etherscan-kulcs csak az Ethereum lekérési korlátját emeli meg.
+        keep_etherscan_api_key: Hagyd üresen a meglévő kulcs megtartásához
+        keyless_body: A Sure csak nyilvános blokklánc-adatokat olvas. Nincs szükség kulcsokra, seed phrase-re vagy aláírásra, és semmit nem lehet elkölteni.
+        keyless_title: Csak olvasás, kulcsok nélkül
+        manage_wallets: Tárcák kezelése
+        save: Mentés
+        sync_start_date_hint: Az ennél korábbi átutalások figyelmen kívül maradnak. Hagyd üresen, ha mindent importálni szeretnél, amit a blokklánc-böngésző mutat.
+        sync_start_date_label: Átutalások figyelmen kívül hagyása eddig
+      provider_form:
+        save_and_connect: Mentés és csatlakozás
+      provider_setup_encryption_warning:
+        message: Ebben a saját üzemeltetésű telepítésben nincsenek explicit Active Record titkosítási kulcsok beállítva. Éles környezetben állítsd be a primary_key, deterministic_key és key_derivation_salt értékeket, mielőtt szolgáltatói hitelesítő adatokat mentesz.
+        title: Hiányoznak a titkosítási kulcsok
+      trade_republic_panel:
+        accounts_discovered:
+          one: '%{count} Trade Republic-számla található.'
+          other: '%{count} Trade Republic-számla található.'
+        accounts_tab: Számlák
+        approval_pending: A bejelentkezés elindult. Hagyd jóvá a Trade Republic alkalmazásban; a Sure automatikusan ellenőrzi.
+        authenticator_code_label: Hitelesítő kód (ha a rendszer kéri)
+        authenticator_code_notice: Add meg a hitelesítő alkalmazásod kódját.
+        authenticator_code_placeholder: 6 jegyű kód
+        awaiting_authenticator_code: Hitelesítő kód szükséges.
+        awaiting_confirmation: Jóváhagyásra vár a Trade Republic alkalmazásban.
+        check_login_status: Állapot ellenőrzése most
+        complete_login: Tovább
+        confirm_login: Bejelentkezés ellenőrzése
+        connect: Bejelentkezés
+        connection_success:
+          close: Kész
+          description: A Sure most a háttérben szinkronizálja a Trade Republic-adataidat.
+          message: A Trade Republic-kapcsolatod készen áll.
+          title: A Trade Republic sikeresen csatlakoztatva
+        currency_label: Számla pénzneme
+        disconnect: Trade Republic leválasztása
+        disconnect_confirm: Leválasztod a Trade Republicot? A szinkronizált számláid manuális számlákká válnak.
+        encryption_warning:
+          message: A Trade Republic hitelesítő adatai és munkamenet-adatai nem tárolhatók biztonságosan, amíg az Active Record Encryption nincs beállítva.
+          title: A titkosítás nincs beállítva
+        login_expired: A jóváhagyási kérelem lejárt.
+        not_configured: Nincs konfigurálva.
+        phone_number_label: Telefonszám
+        phone_number_placeholder_existing: Hagyd üresen a jelenlegi telefonszám megtartásához
+        phone_number_placeholder_new: +49 170 1234567
+        pin_label: PIN-kód
+        pin_placeholder_existing: Hagyd üresen a jelenlegi PIN-kód megtartásához
+        pin_placeholder_new: A Trade Republic alkalmazásod PIN-kódja
+        push_login_notice: Hagyd jóvá most a bejelentkezést a Trade Republic alkalmazásban. A Sure a háttérben automatikusan ellenőrzi. Az állapotot magad is ellenőrizheted.
+        qr_back_to_credentials: Vissza a telefonszámhoz és PIN-kódhoz
+        qr_cancel: QR-bejelentkezés megszakítása
+        qr_error: A QR-bejelentkezést nem sikerült elindítani. Próbáld újra.
+        qr_instruction: Olvasd be a QR-kódot a Trade Republic alkalmazással, és hagyd jóvá a bejelentkezést.
+        qr_loading: QR-kód előkészítése…
+        qr_login: Bejelentkezés QR-kóddal
+        qr_success: Bejelentkezés jóváhagyva. A Sure frissíti a szolgáltatói oldalt.
+        restart_login: Bejelentkezés újrakezdése
+        save_configuration: Mentés és bejelentkezés
+        setup_accounts: Számlák beállítása
+        status_configured_prefix: Csatlakoztatva. Nyisd meg a
+        status_configured_suffix: fület a felderített számlák kezeléséhez.
+        steps:
+          step_1: Add meg a Trade Republic alkalmazásban használt telefonszámodat és PIN-kódodat, majd mentsd el.
+          step_2: Ha a rendszer kéri, add meg a hitelesítő alkalmazásod kódját.
+          step_3: Amikor a rendszer kéri, hagyd jóvá a bejelentkezést a Trade Republic alkalmazásban.
+        sync: Szinkronizálás
+        update_configuration: Konfiguráció frissítése
+      trading212_panel:
+        accounts_tab: Számlák
+        add_account: Másik számla hozzáadása
+        api_key_label: API ID
+        api_key_placeholder_existing: Hagyd üresen a jelenlegi API ID megtartásához
+        api_key_placeholder_new: Illeszd be a Trading 212 API ID-dat
+        api_secret_label: Secret Key
+        api_secret_placeholder_existing: Hagyd üresen a jelenlegi Secret Key megtartásához
+        api_secret_placeholder_new: Illeszd be a Trading 212 Secret Key-edet
+        currency_label: Számla pénzneme
+        default_account_name: Trading 212-számla
+        disconnect: Trading 212-számla leválasztása
+        disconnect_confirm: Leválasztod a Trading 212-t?
+        environment_demo: Demószámla
+        environment_label: Környezet
+        environment_live: Éles számla
+        not_configured: Nincs konfigurálva.
+        save_configuration: Konfiguráció mentése
+        status_configured_prefix: Konfigurálva. Nyisd meg a
+        status_configured_suffix: fület a felderített számlák kezeléséhez.
+        steps:
+          step_1: Nyisd meg a Trading 212-ben a Beállítások → API menüpontot (weben vagy a mobilalkalmazásban).
+          step_2: Generálj egy új API-kulcsot – a Trading 212 megjelenít egy API ID-t és egy Secret Key-t.
+          step_3: Illeszd be mindkettőt alább, válaszd ki a környezetet és a számla pénznemét, majd mentsd el.
+        sync: Szinkronizálás
+        syncing: Szinkronizálás...
+        update_configuration: Konfiguráció frissítése
+      up_panel:
+        step_1_html: Menj a(z) %{link} oldalra, és generálj egy személyes hozzáférési tokent.
+        step_2: Másold ki a személyes hozzáférési tokenedet.
+        step_3: Illeszd be alább a tokent, mentsd el, majd kapcsold össze a szinkronizált számláidat.
+    background_jobs:
+      show:
+        page_title: Háttérfeladatok
+        title: Workerek állapota
+        subtitle: 'A Sidekiq élő futásidejű állapota: worker-folyamatok, sorok mélysége, valamint az újrapróbálandó és véglegesen sikertelen feladatok.'
+        redis_unreachable: A Sidekiq állapota nem érhető el (a Redis elérhetetlen). Az élő állapot ismeretlen, ezért a műveletek le vannak tiltva.
+        operations_title: Folyamatban lévő műveletek
+        operations_subtitle: Az összes család szinkronizálásai, importálásai és exportálásai, amelyek még nem értek el végállapotot. A 30 percnél régebben tétlen, látható feladat nélküli műveleteket elveszettnek tekintjük, és ekként megjelölhetők.
+        empty: Nincs folyamatban lévő művelet.
+        missing_value: '-'
+        stats:
+          workers: Workerek
+          busy: Foglalt
+          enqueued: Sorban álló
+          retries: Újrapróbálások
+          scheduled: Ütemezett
+          dead: Véglegesen sikertelen
+          queue_label: '%{name}: %{size} · %{latency} mp késleltetés'
+        table:
+          type: Művelet
+          family: Család
+          status: Állapot
+          last_activity: Utolsó aktivitás
+          liveness: Élő állapot
+          action: Művelet
+      operation:
+        ago: '%{time} ezelőtt'
+        sync_label: Szinkronizálás · %{type}
+        running: Fut
+        queued: Sorban áll
+        recent: Friss
+        unknown: Ismeretlen
+        stuck: Elakadt – valószínűleg elveszett
+        confirm: Elveszettként jelölöd ezt a műveletet? A rekord végállapotba kerül, így újrapróbálható. A mögöttes adatok nem változnak.
+        missing_value: '-'
+        actions:
+          mark_stale: Megjelölés elavultként
+          mark_failed: Megjelölés sikertelenként
+          release_claim: Zárolás feloldása
+      cancel:
+        cancelled: '%{type} elveszettként megjelölve.'
+        not_cancellable: Ez a művelet most nem módosítható – a feladata még sorban állhat vagy futhat. Próbáld újra, ha már 30 perce tétlen.
+        cancelled_error: Egy rendszergazda sikertelenként jelölte meg – a háttérfeladatot elveszettnek tekintettük.
+    debugs:
+      show:
+        page_title: Hibakeresés
+        title: Hibakeresési eseménynapló
+        subtitle: Jelentős üzemeltetési események szuperadminisztrátorok számára. A legújabbak elöl.
+        empty: Nem található hibakeresési esemény.
+        missing_value: '-'
+        filters:
+          all: Összes
+          category: Kategória
+          level: Szint
+          source: Forrás
+          provider: Szolgáltató
+          start_date: Ettől
+          end_date: Eddig
+          family_id: Családazonosító
+          account_id: Számlaazonosító
+          user_id: Felhasználóazonosító
+          account_provider_id: Számlaszolgáltató-azonosító
+          submit: Szűrés
+          reset: Visszaállítás
+        table:
+          time: Idő
+          level: Szint
+          category: Kategória
+          source: Forrás
+          message: Üzenet
+          context: Kontextus
+          metadata: Metaadatok
+          view_metadata: Megtekintés
+        context:
+          provider: provider=%{value}
+          family: family=%{value}
+          account: account=%{value}
+          user: user=%{value}
+          account_provider: account_provider=%{value}
+    budget_shares:
+      update:
+        success: Költségvetés-megosztási beállítások frissítve

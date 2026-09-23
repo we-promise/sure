@@ -23,13 +23,14 @@ hu:
         financial_data_providers: Pénzügyi adatszolgáltatók
         sync_settings: Szinkronizálási beállítások
         invites: Meghívókódok
-        title: Lokális futtatás
+        title: Saját üzemeltetés
         danger_zone: Veszélyzóna
         clear_cache: Adatcache törlése
-        clear_cache_warning: Az adatcache törlésével eltávolítod az összes árfolyamot, értékpapír-árat, fiókegyenleget és egyéb adatot. Ez nem törli a fiókokat, tranzakciókat, kategóriákat és egyéb felhasználói adatokat.
+        clear_cache_warning: Az adatcache törlésével eltávolítod az összes árfolyamot, értékpapír-árat, számlaegyenleget és egyéb adatot. Ez nem törli a számlákat, tranzakciókat, kategóriákat és egyéb felhasználói adatokat.
         confirm_clear_cache:
-          title: Törli az adatcache-t?
-          body: Biztosan törölni szeretnéd az adatcache-t? Ez eltávolítja az összes árfolyamot, értékpapír-árat, fiókegyenleget és egyéb adatot. Ez a művelet nem vonható vissza.
+          title: Törlöd az adatcache-t?
+          body: Biztosan törölni szeretnéd az adatcache-t? Ez eltávolítja az összes árfolyamot, értékpapír-árat, számlaegyenleget és egyéb adatot. Ez a művelet nem vonható vissza.
+        property_valuation_providers: Ingatlanérték-szolgáltatók
       provider_selection:
         exchange_rate_title: Árfolyam-szolgáltató
         exchange_rate_description: Válassz egyetlen szolgáltatót az árfolyamok lekéréséhez.
@@ -54,6 +55,11 @@ hu:
           mfapi: MFAPI.in
           binance_public: Binance
           moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
+          mansa: Mansa
+        tinkoff_invest_hint: csak olvasási token szükséges – orosz részvények, alapok és kötvények árai + márkalogók
+        requires_api_key_mansa: API-kulcs szükséges, ingyenes csomag napi 100 hívással – csak NGX (Nigériai Értéktőzsde)
       assistant_settings:
         title: AI-asszisztens
         description: Válaszd ki, hogyan válaszoljon a csevegési asszisztens. A beépített mód közvetlenül a beállított LLM-szolgáltatót használja. A külső mód egy távoli AI-ügynökhöz továbbítja a kérést, amely MCP-n keresztül hozzáférhet a Sure pénzügyi eszközeihez.
@@ -116,6 +122,14 @@ hu:
         max_items_per_call_label: Maximális elemek kötegenként (nem kötelező)
         max_items_per_call_help: "Felső korlát az automatikus kategorizálási / kereskedő-felismerési kötegeknél. Alapértelmezett: 25. A nagyobb kötegek automatikusan felosztódnak a kontextusablakba féréshez."
         title: OpenAI
+        model_function_calling_help: Az AI-asszisztens függvényhívásokon keresztül olvassa az adataidat, ezért olyan modellt válassz, amelynél a szolgáltatód dokumentálja a tools/function calling támogatását. Az ezt nem támogató modellekkel a csevegés egy nehezen értelmezhető szolgáltatói hibával meghiúsul.
+        model_function_calling_link: Beállított modell ellenőrzése
+        timeout_heading: Időkorlátok
+        timeout_description: Meghatározza, mennyi ideig futhatnak az OpenAI-kompatibilis modellhívások, mielőtt a Sure feladja. Emeld meg, ha lassú hardveren futtatsz helyi modellt.
+        openai_request_timeout_label: Kérés időkorlátja másodpercben (nem kötelező)
+        openai_request_timeout_help: 'Alapértelmezett: 60. Minden OpenAI-kompatibilis HTTP-kérésre vonatkozik, beleértve az automatikus kategorizálást, a kereskedő-felismerést, a csevegést, a PDF-feldolgozást és a vektortár-hívásokat. Az OPENAI_REQUEST_TIMEOUT felülírja ezt a mezőt.'
+        ai_response_timeout_label: Válasz időkorlátja másodpercben (nem kötelező)
+        ai_response_timeout_help: 'Alapértelmezett: 90. Csak a csevegés teljes körére vonatkozó felügyeletre érvényes, ezért összegként méretezd: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × kérés időkorlátja, plusz az eszközfuttatás és a várakozási sor ideje. Az AI_RESPONSE_TIMEOUT felülírja ezt a mezőt.'
       yahoo_finance_settings:
         title: Yahoo Finance
         description: A Yahoo Finance ingyenes hozzáférést biztosít részvényárakhoz, árfolyamokhoz és pénzügyi adatokhoz API-kulcs nélkül.
@@ -123,6 +137,14 @@ hu:
         status_inactive: A Yahoo Finance kapcsolat sikertelen
         connection_failed: Nem sikerült csatlakozni a Yahoo Finance-hez
         troubleshooting: Ellenőrizd az internetkapcsolatot és a tűzfal beállításait. A Yahoo Finance átmenetileg nem érhető el.
+        status_healthy: A Yahoo Finance aktív és működik.
+        status_rate_limited: A Yahoo Finance átmenetileg korlátozza a kéréseket.
+        rate_limited_title: Elérted a Yahoo Finance kéréskorlátját.
+        rate_limited_message: Nincs teendőd. A Sure 30 percig nem végez további állapotellenőrzést. Az ár- és árfolyam-műveletek ettől függetlenül folytatódnak.
+        status_unavailable: A Yahoo Finance jelenleg nem érhető el.
+        unavailable_title: Nem sikerült ellenőrizni a Yahoo Finance-t.
+        unavailable_message: A Yahoo Finance nem érhető el, vagy váratlan választ adott. Ellenőrizd az internetkapcsolatodat, és próbáld újra később.
+        status_unknown: A Yahoo Finance állapotának ellenőrzése folyamatban.
       tiingo_settings:
         title: Tiingo
         description: Add meg a Tiingo által biztosított API-tokent. Az ingyenes csomag óránként 50 egyedi szimbólumot támogat, 30+ év historikus adattal.
@@ -164,7 +186,7 @@ hu:
         show_details: "(részletek megjelenítése)"
         step_1_html: 'Látogass el a <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> oldalra, és hozz létre egy ingyenes Twelve Data fejlesztői fiókot.'
         step_2_html: 'Lépj az <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API-kulcsok</a> oldalra.'
-        step_3: Fedezd fel a titkos kulcsodat, és illeszd be alább.
+        step_3: Jelenítsd meg a titkos kulcsodat, és illeszd be alább.
         plan: "%{plan} csomag"
         plan_upgrade_warning_title: Egyes tickerek fizetős csomagot igényelnek
         plan_upgrade_warning_description: A portfóliódban lévő következő tickerekhez nem szinkronizálhatók az árak a jelenlegi Twelve Data csomagoddal.
@@ -178,6 +200,8 @@ hu:
         invalid_sync_time: "Érvénytelen szinkronizálási időformátum. Kérjük, használd a ÓÓ:PP formátumot (pl.: 02:30)."
         invalid_llm_budget: "%{field} értékének legalább %{minimum} egész számnak kell lennie."
         scheduler_sync_failed: A beállítások mentve, de a szinkronizálási ütemezés frissítése nem sikerült. Kérjük, próbáld újra, vagy ellenőrizd a szerver naplóit.
+        invalid_anthropic_base_url: Az Anthropic alap URL-jének http(s) URL-nek kell lennie.
+        anthropic_model_required_for_base_url: Egyéni alap URL megadásakor az Anthropic modell megadása kötelező.
       disconnect_external_assistant:
         external_assistant_disconnected: A külső asszisztens kapcsolata bontva
       clear_cache:
@@ -189,9 +213,68 @@ hu:
         scheduler_sync_failed: A beállítások mentve, de a szinkronizálási ütemezés frissítése nem sikerült. Kérjük, próbáld újra, vagy ellenőrizd a szerver naplóit.
       sync_settings:
         auto_sync_label: Automatikus szinkronizálás engedélyezése
-        auto_sync_description: Ha engedélyezve van, az összes fiók naponta automatikusan szinkronizálódik a megadott időpontban.
+        auto_sync_description: Ha engedélyezve van, az összes számla naponta automatikusan szinkronizálódik a megadott időpontban.
         auto_sync_time_label: Szinkronizálási idő (ÓÓ:PP)
         auto_sync_time_description: Add meg a nap azon időpontját, amikor az automatikus szinkronizálásnak meg kell történnie.
         include_pending_label: Függőben lévő tranzakciók belefoglalása
         include_pending_description: Ha engedélyezve van, a függőben lévő (nem teljesített) tranzakciók importálódnak, és automatikusan egyeztetődnek, amikor könyvelődnek. Tiltsd le, ha a bankod megbízhatatlan függőben lévő adatokat szolgáltat.
         env_configured_message: Ez a beállítás le van tiltva, mert be van állítva egy szolgáltatói környezeti változó (SIMPLEFIN_INCLUDE_PENDING vagy PLAID_INCLUDE_PENDING). Távolítsd el ezt a beállítás engedélyezéséhez.
+      llm_provider_selector:
+        title: AI-szolgáltató
+        description: Válaszd ki, melyik LLM működtesse az AI-csevegést. A kötegelt műveletek (tranzakciók kategorizálása, kereskedő-felismerés és PDF-feldolgozás) jelenleg mindig az OpenAI-t használják.
+        env_configured_message: Sikeresen konfigurálva az LLM_PROVIDER környezeti változón keresztül.
+        provider_label: Aktív LLM-szolgáltató
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
+        provider_help: A szolgáltatóváltás a következő csevegéstől lép érvénybe. Az aktív szolgáltató hitelesítő adatait alább állíthatod be.
+        not_configured_hint: Az aktiváláshoz add meg alább a(z) %{provider} API-kulcsot.
+        data_retention_heading: Adatkezelés
+        data_retention: Az API-bemeneteket alapértelmezés szerint nem használják modellek tanítására; a szolgáltatók hosztolt API-jai kb. 30 napig őrzik meg az adatokat bizalmi és biztonsági célból. Az egyéni vagy saját üzemeltetésű végpontokra a saját szabályzatod vonatkozik.
+      anthropic_settings:
+        title: Anthropic (Claude)
+        description: Add meg az Anthropic API-kulcsodat. Az alap URL opcionálisan AWS Bedrockra vagy GCP Vertexre is mutathat.
+        env_configured_message: Sikeresen konfigurálva környezeti változókon keresztül.
+        access_token_label: API-kulcs
+        access_token_placeholder: Add meg az Anthropic API-kulcsodat
+        base_url_label: Alap URL (nem kötelező)
+        base_url_placeholder: https://api.anthropic.com (alapértelmezett)
+        model_label: Alapértelmezett modell (nem kötelező)
+        model_placeholder: claude-sonnet-4-6 (alapértelmezett)
+        model_help: Csevegéshez és PDF-feldolgozáshoz használatos. A kötegelt műveletek (kategorizálás, kereskedő-felismerés) költségkímélésből alapértelmezetten a Haikut használják.
+      rentcast_settings:
+        title: RentCast
+        description: Add meg a RentCast API-kulcsodat, hogy ingatlan hozzáadásakor lekérhesd az amerikai ingatlanok adatait és becsült értékét. Az ingyenes csomag havi 50 API-kérésre korlátozott, amelyen az ingatlanlekérdezések és a napi értékfrissítések osztoznak. Fizetős csomag esetén a korlátot a RENTCAST_MAX_REQUESTS_PER_MONTH környezeti változóval emelheted meg.
+        env_configured_message: Sikeresen konfigurálva a RENTCAST_API_KEY környezeti változón keresztül.
+        label: API-kulcs
+        placeholder: Add meg ide a RentCast API-kulcsodat
+        usage: '%{used} / %{limit} havi kérés felhasználva'
+      realie_settings:
+        title: Realie
+        description: Add meg a Realie API-kulcsodat, hogy ingatlan hozzáadásakor lekérhesd az amerikai ingatlanok adatait és becsült értékét. Az ingyenes csomag havi 25 API-kérésre korlátozott, amelyen az ingatlanlekérdezések és a napi értékfrissítések osztoznak. Fizetős csomag esetén a korlátot a REALIE_MAX_REQUESTS_PER_MONTH környezeti változóval emelheted meg.
+        env_configured_message: Sikeresen konfigurálva a REALIE_API_KEY környezeti változón keresztül.
+        label: API-kulcs
+        placeholder: Add meg ide a Realie API-kulcsodat
+        usage: '%{used} / %{limit} havi kérés felhasználva'
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: Adj meg egy csak olvasási T-Invest API-tokent. Az értékpapírok márkalogóinak lekérésére szolgál (beleértve az alapokat és kötvényeket, akkor is, ha az árukat a MOEX adja), valamint – ha fent engedélyezted – az orosz instrumentumok árainak lekérésére.
+        moex_only_notice: Az árakhoz fent nincs engedélyezve – a T-Invest a fenti jelölőnégyzettől függetlenül minden értékpapírod márkalogóját lekéri, ha be van állítva token.
+        env_configured_message: Sikeresen konfigurálva a TINKOFF_INVEST_API_KEY környezeti változón keresztül.
+        label: API-token
+        placeholder: Add meg ide a T-Invest API-tokenedet
+        show_details: (részletek megjelenítése)
+        step_1: Nyisd meg a T-Bank befektetéseket, majd a Beállítások → API-tokenek menüpontot (nyitott T-Bank brókeri számla szükséges).
+        step_2: Hozz létre egy csak olvasási hozzáférésű tokent.
+        step_3: Másold ki a tokent, és illeszd be alább.
+      mansa_settings:
+        title: Mansa
+        description: Add meg a Mansa API-tól kapott API-kulcsot. Támogatja az NGX-et (Nigériai Értéktőzsde), amelyet itt egyetlen más szolgáltató sem fed le. A Mansa más afrikai tőzsdéket is lefed, de ezzel az integrációval csak az NGX van ellenőrizve.
+        env_configured_message: Sikeresen konfigurálva a MANSA_API_KEY környezeti változón keresztül.
+        label: API-kulcs
+        placeholder: Add meg ide a Mansa API-kulcsodat
+        show_details: (részletek megjelenítése)
+        step_1_html: Látogass el a <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> oldalra, és igényeld az ingyenes API-kulcsodat – bankkártya nem szükséges.
+        step_2: Másold ki az API-kulcsodat, és illeszd be alább.
+        rate_limit_warning: A Mansa ingyenes csomagja napi 100 API-hívásra korlátozott, és csak aktuális árfolyamokat ad – a historikus árakhoz fizetős csomag szükséges. Ezzel az integrációval csak az NGX (Nigériai Értéktőzsde) van ellenőrizve; a Mansa által lefedett többi afrikai tőzsde itt még nem támogatott.
+      ensure_admin:
+        not_authorized: Nincs jogosultságod ehhez a művelethez

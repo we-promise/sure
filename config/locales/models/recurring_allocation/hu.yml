@@ -1,0 +1,9 @@
+---
+hu:
+  activerecord:
+    errors:
+      models:
+        recurring_allocation:
+          attributes:
+            currency:
+              must_match_occurrence: meg kell egyeznie az esedékesség pénznemével

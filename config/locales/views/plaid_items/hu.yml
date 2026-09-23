@@ -12,7 +12,7 @@ hu:
       confirm_title: Töröljük az intézményt?
       connection_lost: A kapcsolat megszakadt
       connection_lost_description: Ez a kapcsolat már nem érvényes. Törölnöd kell ezt a kapcsolatot, majd újra hozzá kell adnod az adatok szinkronizálásának folytatásához.
-      delete: Töröl
+      delete: Törlés
       error: Hiba történt az adatok szinkronizálása közben
       no_accounts_description: Nem sikerült betölteni egyetlen számlát sem erről a pénzintézetről.
       no_accounts_title: Nem találhatók számlák
@@ -21,6 +21,9 @@ hu:
       status_never: Adatszinkronizálás szükséges
       syncing: Szinkronizálás folyamatban...
       update: Frissítés
+      add_accounts: Számlák hozzáadása
+      deletion_in_progress: (törlés folyamatban...)
+      provider_name: Plaid
     select_existing_account:
       no_available_accounts: Nincs elérhető Plaid-számla az összekapcsoláshoz. Először csatlakozz egy új Plaid-fiókhoz.
       title: "%{account_name} csatlakoztatása Plaid-hez"
@@ -31,3 +34,6 @@ hu:
       invalid_account: Érvénytelen Plaid-számla van kijelölve
       already_linked: Ez a Plaid-számla már össze van kapcsolva
       success: A számla sikeresen össze lett kapcsolva a Plaid-del
+    errors:
+      link_token_generic: A Plaid jelenleg nem nyitható meg. Kérlek, próbáld újra, és ha a probléma továbbra is fennáll, nézd meg a szervernaplókat a részletekért.
+      link_token_with_message: 'A Plaid nem tudta megnyitni a kapcsolatot: %{message}'

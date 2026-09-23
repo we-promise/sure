@@ -1,0 +1,6 @@
+---
+hu:
+  sure_import:
+    preflight:
+      missing_reference: '%{line}. sor: a(z) %{type} hiányzó %{field} értékre hivatkozik: %{value}.'
+      skipped_missing_reference: '%{line}. sor: a(z) %{type} hiányzó %{field} értékre hivatkozik: %{value}. Az importálás során ki lesz hagyva.'

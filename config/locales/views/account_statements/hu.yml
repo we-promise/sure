@@ -21,12 +21,12 @@ hu:
         not_expected: Nem várt
     create:
       duplicates:
-        one: 1 duplikált kimutatás ki lett hagyva.
+        one: "%{count} duplikált kimutatás ki lett hagyva."
         other: "%{count} duplikált kimutatás ki lett hagyva."
       invalid_file_type: PDF, CSV vagy XLSX kimutatást tölts fel a méretkorláton belül.
       no_files: Válassz legalább egy kimutatásfájlt.
       success:
-        one: 1 kimutatás feltöltve.
+        one: "%{count} kimutatás feltöltve."
         other: "%{count} kimutatás feltöltve."
     destroy:
       failure: A kimutatást nem sikerült törölni.
@@ -40,8 +40,8 @@ hu:
       account_label: Számla
       confidence: "%{confidence} egyezés"
       empty_linked: Még nincs kapcsolt kimutatás.
-      empty_unmatched: A kimutatás beérkező üres.
-      leave_unmatched: Hagyja párosítatlanul
+      empty_unmatched: A kimutatások beérkező mappája üres.
+      leave_unmatched: Hagyd párosítatlanul
       linked_title: Kapcsolt kimutatások
       no_suggestion: Nincs javaslat
       storage_used: Felhasznált tárhely
@@ -78,7 +78,7 @@ hu:
       ledger_amount: Sure főkönyv
       linked_to: "Összekapcsolva ezzel a számlával: %{account}."
       linking_title: Számlakapcsolat
-      link_suggestion: Kapcsolati javaslat
+      link_suggestion: Összekapcsolási javaslat
       metadata_title: Kimutatás metaadatok
       no_suggestion: Még nincs számlajavaslat.
       opening_balance: Nyitóegyenleg
@@ -91,7 +91,7 @@ hu:
       statement_amount: Kimutatás
       suggested_account: A javasolt számla %{account} (%{confidence} bizonyossággal).
       title: Kimutatás
-      unlink: Szétkapcsolás
+      unlink: Leválasztás
       unmatched_account: Párosítatlan beérkező
       unknown_value: Ismeretlen
     status:
@@ -104,12 +104,12 @@ hu:
       download: Letöltés
       edit: Szerkesztés
       file: Fájl
-      link_suggestion: Kapcsolati javaslat
+      link_suggestion: Összekapcsolási javaslat
       period: Időszak
       reconciliation: Egyeztetés
       reject: Javaslat elutasítása
       suggestion: Javaslat
-      unlink: Szétkapcsolás
+      unlink: Leválasztás
       view: Megtekintés
     unlink:
       success: Kimutatás visszahelyezve a párosítatlan beérkezőbe.

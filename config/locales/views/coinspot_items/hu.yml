@@ -1,0 +1,92 @@
+---
+hu:
+  coinspot_items:
+    provider_connection:
+      default_name: CoinSpot
+      default_description: Kapcsolódás egy CoinSpot tőzsdei számlához
+      name: CoinSpot - %{name}
+      description: 'Kapcsolódás ehhez: %{name}'
+    create:
+      default_name: CoinSpot
+      success: Sikeresen csatlakoztál a CoinSpothoz. A tőzsdei számlád szinkronizálása folyamatban van.
+    update:
+      success: A CoinSpot-kapcsolat sikeresen frissítve.
+    destroy:
+      success: A CoinSpot-kapcsolat törlése ütemezve.
+      unlink_failed: Nem sikerült bontani a CoinSpot-kapcsolatot
+    select_accounts:
+      select_connection: Válassz CoinSpot-kapcsolatot a szolgáltatói beállításokban.
+      no_credentials_configured: A számlák beállítása előtt add meg a CoinSpot API hitelesítő adatait.
+    link_accounts:
+      select_connection: A számlák összekapcsolása előtt válassz CoinSpot-kapcsolatot.
+    select_existing_account:
+      title: CoinSpot számla összekapcsolása
+      no_accounts_found: Nem találhatók CoinSpot számlák.
+      wait_for_sync: Várd meg, amíg a CoinSpot befejezi a szinkronizálást.
+      check_provider_health: Ellenőrizd, hogy a CoinSpot API hitelesítő adataid érvényesek-e.
+      link: Összekapcsolás
+      cancel: Mégse
+    link_existing_account:
+      success: Sikeresen összekapcsolva a CoinSpot számlával
+      select_connection: A számlák összekapcsolása előtt válassz CoinSpot-kapcsolatot.
+      errors:
+        only_manual: Csak olyan manuális kriptotőzsdei számlák kapcsolhatók össze a CoinSpottal, amelyekhez még nem tartozik szolgáltatói kapcsolat
+        invalid_coinspot_account: Érvénytelen CoinSpot számla
+        coinspot_account_already_linked: Ez a CoinSpot számla már össze van kapcsolva
+    setup_accounts:
+      title: CoinSpot számla importálása
+      subtitle: Válaszd ki a követni kívánt tőzsdei számlát
+      instructions: A CoinSpot ehhez a kapcsolathoz egyetlen összevont kriptotőzsdei számlát importál, egyenlegekkel, AUD-értékekkel, utalásokkal, befizetésekkel, pénzkivételekkel és a megbízások előzményeivel.
+      no_accounts: Minden CoinSpot számla importálva lett.
+      accounts_count:
+        one: '%{count} számla elérhető'
+        other: '%{count} számla elérhető'
+      select_all: Összes kijelölése
+      import_selected: Kijelöltek importálása
+      cancel: Mégse
+      creating: Importálás...
+    complete_account_setup:
+      success:
+        one: '%{count} számla importálva'
+        other: '%{count} számla importálva'
+      none_selected: Nincs kijelölt számla
+      no_accounts: Nincs importálható számla
+      setup_failed:
+        one: '%{count} számla importálása sikertelen'
+        other: '%{count} számla importálása sikertelen'
+    coinspot_item:
+      provider_name: CoinSpot
+      syncing: Szinkronizálás...
+      reconnect: A hitelesítő adatok frissítése szükséges
+      deletion_in_progress: Törlés folyamatban...
+      sync_status:
+        no_accounts: Nem találhatók számlák
+        all_synced:
+          one: '%{count} számla szinkronizálva'
+          other: '%{count} számla szinkronizálva'
+        partial_sync: '%{linked_count} szinkronizálva, %{unlinked_count} beállítást igényel'
+      status: 'Utolsó szinkronizálás: %{timestamp} ezelőtt'
+      status_with_summary: 'Utolsó szinkronizálás: %{timestamp} ezelőtt – %{summary}'
+      status_never: Még nem volt szinkronizálva
+      delete: Törlés
+      no_accounts_title: Nem találhatók számlák
+      no_accounts_message: A CoinSpot tőzsdei számlád szinkronizálás után jelenik meg itt.
+      setup_needed: Számla importálásra kész
+      setup_description: Importáld ezt a CoinSpot-kapcsolatot kriptotőzsdei számlaként.
+      setup_action: Számla importálása
+      import_accounts_menu: Számla importálása
+      stale_rate_warning: Az egyenleg közelítő érték, mert a(z) %{date}-i pontos árfolyam nem volt elérhető. A következő szinkronizáláskor frissül.
+  coinspot_item:
+    syncer:
+      checking_credentials: Hitelesítő adatok ellenőrzése...
+      credentials_invalid: Érvénytelen CoinSpot API hitelesítő adatok. Ellenőrizd az API-kulcsot és a titkos kulcsot.
+      importing_accounts: Számlák importálása a CoinSpotból...
+      checking_configuration: Számlakonfiguráció ellenőrzése...
+      accounts_need_setup:
+        one: '%{count} számla beállítást igényel'
+        other: '%{count} számla beállítást igényel'
+      processing_accounts: Számlaadatok feldolgozása...
+      processing_failed:
+        one: '%{count} CoinSpot számla feldolgozása sikertelen'
+        other: '%{count} CoinSpot számla feldolgozása sikertelen'
+      calculating_balances: Egyenlegek kiszámítása...

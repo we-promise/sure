@@ -1,0 +1,17 @@
+---
+hu:
+  onchain:
+    chains:
+      arbitrum: Arbitrum
+      base: Base
+      bitcoin: Bitcoin
+      ethereum: Ethereum
+      gnosis: Gnosis
+      optimism: Optimism
+      polygon: Polygon
+      solana: Solana
+    institution_name: Saját kezelésű tárcák
+  onchain_wallet_item:
+    movement:
+      received: 'Beérkezett: %{quantity} %{symbol}'
+      sent: 'Elküldve: %{quantity} %{symbol}'

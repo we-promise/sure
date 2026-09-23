@@ -7,3 +7,6 @@ hu:
           min_actions: "legalább egy műveletet kötelező megadni"
           duplicate_actions: "A szabálynak nem lehetnek duplikált műveletei: %{types}"
           nested_conditions: "Összetett feltételek nem ágyazhatók egymásba"
+  rule:
+    conditions:
+      unsupported_label: Nem támogatott (%{type})

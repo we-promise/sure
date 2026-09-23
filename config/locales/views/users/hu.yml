@@ -22,3 +22,8 @@ hu:
       feedback: Visszajelzés
       contact: Kapcsolat
       log_out: Kijelentkezés
+      aria_label: Fiókmenü megnyitása
+    roles:
+      admin: Admin
+      member: Tag
+      super_admin: Szuperadmin

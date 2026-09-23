@@ -52,3 +52,5 @@ hu:
     custom:
       label_short: "Egyéni"
       label: "Egyéni időszak"
+      comparison_label: '%{start_date} – %{end_date}'
+    range: '%{start_date} – %{end_date}'

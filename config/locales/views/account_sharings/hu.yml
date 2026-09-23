@@ -2,8 +2,8 @@
 hu:
   account_sharings:
     show:
-      title: Fiókmegosztás
-      subtitle: Szabályozd, ki láthatja és kezelheti ezt a fiókot
+      title: Számlamegosztás
+      subtitle: Szabályozd, ki láthatja és kezelheti ezt a számlát
       member: Tag
       permission: Jogosultság
       shared: Megosztva
@@ -14,16 +14,16 @@ hu:
         read_write: Megjegyzést írhat
         read_write_description: Kategorizálhat, címkézhet és megjegyzést adhat hozzá
         read_only: Csak megtekintés
-        read_only_description: Csak a fiókadatokat tekintheti meg
+        read_only_description: Csak a számlaadatokat tekintheti meg
       save: Megosztási beállítások mentése
       owner_label: "Tulajdonos: %{name}"
       shared_with_count:
-        one: 1 taggal megosztva
+        one: "%{count} taggal megosztva"
         other: "%{count} taggal megosztva"
       include_in_finances: Beleszámít a költségvetésembe és riportjaimba
       exclude_from_finances: Kizárás a költségvetésemből és riportjaimból
-      finance_toggle_description: Ez a fiók beleszámít a nettó vagyonodba, költségvetésedbe és riportjaidba
+      finance_toggle_description: Ez a számla beleszámít a nettó vagyonodba, költségvetésedbe és riportjaidba
     update:
       success: Megosztási beállítások frissítve
-      not_owner: Csak a fiók tulajdonosa kezelheti a megosztást
+      not_owner: Csak a számla tulajdonosa kezelheti a megosztást
       finance_toggle_success: Pénzügyi befoglalási beállítás frissítve

@@ -22,7 +22,7 @@ hu:
       why_required_body: A Sure Redis-t használ a Sidekiq háttérfeladatokhoz, például a számlaadatok szinkronizálásához, importálások feldolgozásához és más háttérműveletekhez, amelyek naprakészen tartják a pénzügyi adataidat.
       view_setup_guide: Beállítási útmutató megtekintése
       setup_guide_hint: Kövesd az átfogó Docker beállítási útmutatónkat a Redis konfigurálásához
-      refresh_hint: "Ha konfigurálta a Redis-t, frissítsd ezt az oldalt a folytatáshoz."
+      refresh_hint: "Ha beállítottad a Redis-t, frissítsd ezt az oldalt a folytatáshoz."
       refresh_page: Oldal frissítése
     changelog:
       title: Újdonságok
@@ -50,7 +50,7 @@ hu:
       balance_sheet:
         title: "Mérleg"
         no_items: "Még nincsenek %{name}"
-        add_accounts: "Add hozzá %{name} számláidat a teljes áttekintésért"
+        add_accounts: "Add hozzá a(z) %{name} számláidat a teljes áttekintésért"
         no_asset: "Még nincs vagyonod"
         no_liability: "Még nincsenek kötelezettségeid"
         add_asset_accounts: "Adj hozzá vagyonszámlákat a teljes pénzügyi áttekintésért"
@@ -61,16 +61,34 @@ hu:
         classifications:
           asset: "Vagyon"
           liability: "Kötelezettségek"
+        expand_all: Összes kibontása
+        collapse_all: Összes összecsukása
       cashflow_preview:
         node_labels:
           cash_flow: "Pénzforgalom"
           surplus: "Többlet"
           deficit: "Hiány"
+        title: Új Sankey-diagram
+        preview: Előzetes
+        preview_tooltip: Ez váltja majd fel a fenti diagramot, mivel egy új, a mobilos Swift klienssel közös API-t használ.
+        feedback_prompt: Hasonlítsd össze ezt a diagramot a fenti eredetivel, és jelezd, ha a rendezésen kívül bármiben eltér.
+        positive: Rendben van
+        negative: Valami nem stimmel
+        feedback_title: Visszajelzés a pénzforgalmi diagramról
+        feedback_loading: Visszajelzési űrlap betöltése…
+        feedback_unavailable: A visszajelzés jelenleg nem érhető el. Kérlek, próbáld újra később.
+        feedback_thanks: Köszönjük, hogy segítesz jobbá tenni a diagramot!
+        feedback_privacy: A válaszod a PostHoghoz kerül. Számlaszámok, egyenlegek és más bizalmas pénzügyi adatok nélkül írd le a problémát.
+        feedback_submit: Visszajelzés küldése
       cashflow_sankey:
         title: "Pénzforgalom"
         no_data_title: "Nincs pénzforgalmi adat erre az időszakra"
         no_data_description: "Adj hozzá tranzakciókat a pénzforgalmi adatok megjelenítéséhez, vagy bővítsd az időszakot"
         add_transaction: "Tranzakció hozzáadása"
+        loading: Pénzforgalom betöltése…
+        load_error: Nem sikerült betölteni a pénzforgalmat. Kérlek, próbáld újra.
+        retry: Újrapróbálás
+        zoom_out: Vissza a teljes pénzforgalomhoz
       no_accounts:
         title: "Még nincs számla"
         description: "Adj hozzá számlákat a nettó vagyon adatok megjelenítéséhez"
@@ -84,7 +102,7 @@ hu:
       investment_summary:
         title: "Befektetések"
         total_return: "Teljes hozam"
-        holding: "Befektetés"
+        holding: "Pozíció"
         weight: "Arány"
         value: "Érték"
         return: "Hozam"
@@ -94,3 +112,40 @@ hu:
         trades: "Ügyletek"
         no_investments: "Nincs befektetési számla"
         add_investment: "Adj hozzá befektetési számlát a portfóliód nyomon követéséhez"
+      sections_aria_label: Irányítópult szakaszai
+      widget_size:
+        label: Méret módosítása
+        width_label: Szélesség
+        half: Fél
+        full: Teljes
+        height_label: Magasság
+        compact: Kompakt
+        auto: Automatikus
+        tall: Magas
+      insights_feed:
+        title: Elemzések
+      money_flow:
+        title: Bevétel / kiadás
+        date_range: '%{start_date} – %{end_date}'
+        month_picker_aria_label: Hónap kiválasztása
+        filter_accounts: Számlák szűrése (%{count})
+        filter_accounts_all: Összes számla
+        period_scope_hint: Az itt kiválasztott hónapokat mutatja – függetlenül az irányítópult tetején beállított időszaktól.
+        search_accounts: Számlák keresése
+        apply: Alkalmaz
+        balance: Tranzakciós egyenleg
+        chart_span: Elmúlt %{count} hónap
+        income: Bevétel
+        expenses: Kiadások
+      spending_trend:
+        title: Kiadások
+        date_range: '%{start_date} – %{end_date}'
+        date_range_short: '%{year}. %{start_date}–%{end_day}.'
+        date_range_short_single: '%{year}. %{date}'
+        month_picker_aria_label: Hónap kiválasztása
+        period_scope_hint: Az itt kiválasztott hónapot mutatja – függetlenül az irányítópult tetején beállított időszaktól.
+        no_data: Ebben a hónapban nincs kiadási adat
+        previous_comparison_days: (1–%{end_day}.)
+    release_notes_unavailable:
+      name: A kiadási megjegyzések nem érhetők el
+      body_html: <p>A legfrissebb kiadási megjegyzéseket jelenleg nem sikerült lekérni. Nézz vissza később, vagy látogass el közvetlenül a <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub kiadások oldalára</a>.</p>

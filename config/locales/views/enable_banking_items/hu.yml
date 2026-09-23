@@ -49,7 +49,7 @@ hu:
       delete: Törlés
       setup_needed: Beállítás szükséges
       setup_needed_description:
-        one: 1 Enable Banking-ből importált számla beállítása szükséges
+        one: "%{count} Enable Banking-ből importált számla beállítása szükséges"
         other: "%{count} Enable Banking-ből importált számla beállítása szükséges"
       set_up_accounts: Számlák beállítása
       no_accounts_found: Nem található számla

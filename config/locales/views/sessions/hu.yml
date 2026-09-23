@@ -4,6 +4,7 @@ hu:
     create:
       invalid_credentials: Érvénytelen e-mail cím vagy jelszó.
       local_login_disabled: A helyi jelszavas bejelentkezés le van tiltva. Kérjük, használd az egyszeri bejelentkezést.
+      account_deactivated: Ez a fiók deaktiválva lett. Lépj kapcsolatba egy rendszergazdával.
     destroy:
       logout_successful: Sikeresen kijelentkeztél.
     post_logout:
@@ -33,3 +34,5 @@ hu:
       no_auth_methods_enabled: Jelenleg nincs engedélyezett hitelesítési módszer. Kérjük, lépj kapcsolatba egy rendszergazdával.
       demo_banner_title: "Demó mód aktív"
       demo_banner_message: "Ez egy bemutató környezet. A bejelentkezési adatok előre ki vannak töltve a kényelmed érdekében. Kérjük, ne adj meg valódi vagy érzékeny adatokat."
+      passkey_button: Bejelentkezés hozzáférési kulccsal
+      passkey_unsupported: Ez a böngésző nem támogatja a hozzáférési kulcsokat.

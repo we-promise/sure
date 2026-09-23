@@ -1,0 +1,9 @@
+---
+hu:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Ez a számla már teljes egészében el van különítve a(z) „%{goal_name}” célra. Adj meg egy összeget a felosztáshoz.

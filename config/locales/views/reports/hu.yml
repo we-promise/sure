@@ -53,7 +53,7 @@ hu:
       suggested_daily: "Javasolt napi összeg: %{amount} a hátralévő %{days} napra"
       no_budgets: Erre a hónapra nincsenek beállított költségvetési kategóriák
       status:
-        good: Tervezett szerint
+        good: Ütemben
         warning: Közel a határhoz
         over: Túllépte a keretet
     trends:
@@ -166,6 +166,7 @@ hu:
       holdings: Pozíciók
       sell_trades: Eladási ügyletek
       and_more: "+%{count} további"
+      period_return: Időszaki hozam
     investment_flows:
       title: Befektetési pénzáramlás
       description: Kövesd nyomon a befektetési számláidra be- és onnan kiáramló pénzt
@@ -232,6 +233,7 @@ hu:
         weight: Súly
         value: Érték
         return: Hozam
+        period_return: Időszaki hozam
       spending:
         title: Kiadások kategóriánként
         income: Bevétel

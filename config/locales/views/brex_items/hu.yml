@@ -117,7 +117,7 @@ hu:
       setup_title: "Beállítási utasítások:"
       sync: Szinkronizálás
       token_label: Token
-      token_placeholder: Illeszt be tokent ide
+      token_placeholder: Illeszd be ide a tokent
       update_connection: Kapcsolat frissítése
     provider_connection:
       default_description: Csatlakozás Brex fiókhoz

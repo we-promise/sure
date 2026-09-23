@@ -1,0 +1,134 @@
+---
+hu:
+  providers:
+    monobank:
+      name: Monobank
+      description: Ukrán Monobank kártyák és perselyek csatlakoztatása személyes API-tokennel
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Monobank kapcsolat
+  monobank_account:
+    jar_fallback: Monobank persely
+    card_types:
+      black: Black kártya
+      white: White kártya
+      platinum: Platinum kártya
+      iron: Iron kártya
+      yellow: Yellow kártya
+      eaid: eAid kártya
+      fop: Vállalkozói számla
+      jar: Persely
+      unknown: Monobank kártya
+  monobank_item:
+    errors:
+      account_processing_failed: Nem sikerült szinkronizálni a Monobank számlát
+      account_sync_schedule_failed: Nem sikerült ütemezni a Monobank számla szinkronizálását
+      transactions_failed: Nem sikerült lekérni a Monobank-kimutatást
+      sync_failed: Nem sikerült szinkronizálni a Monobank kapcsolatot
+    sync:
+      status:
+        importing: Számlák importálása a Monobankból...
+        checking_setup: Számlabeállítások ellenőrzése...
+        needs_setup:
+          one: '%{count} számla beállításra vár...'
+          other: '%{count} számla beállításra vár...'
+        processing: Tranzakciók feldolgozása...
+        calculating: Egyenlegek kiszámítása...
+    sync_status:
+      no_accounts: Nem találhatók számlák
+      all_synced:
+        one: '%{count} számla szinkronizálva'
+        other: '%{count} számla szinkronizálva'
+      partial: '%{linked} szinkronizálva, %{unlinked} beállításra vár'
+    institution_summary:
+      none: Nincs csatlakoztatott intézmény
+      one: 1 intézmény
+      count:
+        one: '%{count} intézmény'
+        other: '%{count} intézmény'
+  monobank_items:
+    provider_panel:
+      default_connection_name: Monobank kapcsolat
+      add_connection: Monobank kapcsolat hozzáadása
+      update_connection: Kapcsolat frissítése
+      connection_name_label: Kapcsolat neve
+      connection_name_placeholder: Saját Monobank
+      access_token_label: Személyes API-token
+      access_token_placeholder: Illeszd be a személyes Monobank tokenedet
+      keep_access_token_placeholder: Hagyd üresen a meglévő token megtartásához
+      setup_accounts: Számlák beállítása
+      syncing: Szinkronizálás...
+      sync: Szinkronizálás
+      disconnect: Leválasztás
+      disconnect_confirm: Biztosan leválasztod a(z) %{name} kapcsolatot?
+      rate_limit_notice: A Monobank percenként csak egy kérést enged, ezért egy szinkronizálás egyszerre csak néhány számlát kér le, a régebbi előzmények pedig több szinkronizálás alatt érkeznek meg.
+    create:
+      success: Monobank kapcsolat mentve.
+    update:
+      success: Monobank kapcsolat frissítve.
+    destroy:
+      success: A Monobank kapcsolat törlése ütemezve.
+      unlink_failed: Nem sikerült leválasztani a Monobank kapcsolatot
+    select_accounts:
+      title: Monobank számlák összekapcsolása
+      description: Válaszd ki a hozzáadandó Monobank kártyákat vagy perselyeket.
+      no_accounts_found: Nem található összekapcsolatlan Monobank számla.
+      no_credentials_configured: Először állítsd be a Monobankot a szolgáltatói beállításokban.
+      cancel: Mégse
+      link_accounts: Számlák összekapcsolása
+    link_accounts:
+      success:
+        one: '%{count} Monobank számla összekapcsolva.'
+        other: '%{count} Monobank számla összekapcsolva.'
+      no_accounts_selected: Válassz legalább egy számlát.
+      no_credentials_configured: Először állítsd be a Monobankot a szolgáltatói beállításokban.
+      unsupported_account_type: A Monobank nem támogatja ezt a számlatípust.
+      link_failed: Egy számla sem lett összekapcsolva.
+    select_existing_account:
+      title: 'Monobank számla összekapcsolása ezzel: %{account_name}'
+      description: Válassz egy összekapcsolatlan Monobank számlát, amelyet ehhez a számlához kapcsolsz.
+      no_accounts_found: Nem található összekapcsolatlan Monobank számla.
+      no_credentials_configured: Először állítsd be a Monobankot a szolgáltatói beállításokban.
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval.
+      cancel: Mégse
+      link_account: Számla összekapcsolása
+    link_existing_account:
+      success: 'Monobank számla összekapcsolva ezzel: %{account_name}.'
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval.
+      monobank_account_already_linked: Ez a Monobank számla már össze van kapcsolva.
+      no_account_selected: Válassz egy összekapcsolandó Monobank számlát.
+    setup_accounts:
+      title: Monobank számlák összekapcsolása
+      subtitle: Válaszd ki, hogyan jelenjen meg az egyes Monobank kártyák és perselyek a Sure-ban.
+      no_credentials: Először add meg a Monobank hitelesítő adatait.
+      api_error: Nem sikerült frissíteni a számlákat a Monobankból, ezért a legutóbbi szinkronizáláskor mentett számlák láthatók.
+      no_accounts_to_setup: Nincs beállítandó számla
+      all_accounts_linked: Minden Monobank számla már össze van kapcsolva.
+      choose_account_type: Válassz számlatípust
+      choose_account_type_description: Hagyd ki azokat a számlákat, amelyeket nem szeretnél követni.
+      account_type_label: Számlatípus
+      account_types:
+        skip: Kihagyás
+        depository: Készpénz
+      create_accounts: Számlák létrehozása
+      cancel: Mégse
+    complete_account_setup:
+      success:
+        one: '%{count} Monobank számla létrehozva.'
+        other: '%{count} Monobank számla létrehozva.'
+      all_skipped: Egy Monobank számla sem jött létre.
+      no_accounts: Nincs kiválasztott Monobank számla.
+      creation_failed: Nem sikerült létrehozni a Monobank számlákat.
+    monobank_item:
+      deletion_in_progress: Törlés folyamatban
+      syncing: Szinkronizálás
+      error: Hiba
+      status_with_summary: Szinkronizálva %{timestamp} ezelőtt · %{summary}
+      status_never: Még nem szinkronizált
+      delete: Törlés
+      setup_needed: Számlák beállítása szükséges
+      setup_description: '%{linked} / %{total} számla összekapcsolva.'
+      setup_action: Számlák beállítása
+      no_accounts_title: Még nincsenek importált számlák
+      no_accounts_description: Kérd le a Monobank számlákat, és válaszd ki, melyeket szeretnéd összekapcsolni.

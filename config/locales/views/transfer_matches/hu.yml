@@ -5,7 +5,7 @@ hu:
       success: Átutalás létrehozva
     new:
       header:
-        title: Átutalás vagy fizetés párosítása
+        title: Átutalás vagy törlesztés párosítása
         subtitle: Párosítsd a megfelelő tranzakciót egy másik számlán, vagy hozz létre újat, ha még nem létezik.
       from_account: Forrásszámla
       from_account_named: "Forrásszámla: %{name}"
@@ -13,7 +13,7 @@ hu:
       to_account_named: "Célszámla: %{name}"
       outflow_transaction: Kiáramlási tranzakció
       inflow_transaction: Beáramlási tranzakció
-      create_transfer_match: Átutalás-egyezés létrehozása
+      create_transfer_match: Átutalás-párosítás létrehozása
     matching_fields:
       select_method: Válassz módszert a tranzakciók párosításához.
       match_existing_recommended: Meglévő tranzakció párosítása (ajánlott)

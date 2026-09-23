@@ -9,7 +9,7 @@ hu:
     budget_header:
       today: "Ma"
     over_allocation_warning:
-      over_allocated_message: "Túllépted a költségvetési keretét. Kérjük, javítsd az elosztásokat."
+      over_allocated_message: "Túllépted a költségvetési keretedet. Kérjük, javítsd az elosztásokat."
       fix_allocations: "Elosztások javítása"
     actuals_summary:
       income: "Bevétel"
@@ -47,6 +47,7 @@ hu:
         all: Mind
         on_track: Ütemben
         over_budget: Túllépve
+        aria_label: Költségvetési kategóriák szűrése
       tabs:
         actual: Tényleges
         budgeted: Tervezett
@@ -59,6 +60,19 @@ hu:
       success: "Költségvetés átmásolva innen: %{source_name}"
       no_source: "Nem található korábbi költségvetés a másoláshoz"
       already_initialized: "Ez a költségvetés már be van állítva"
+    switcher:
+      aria_label: Költségvetés váltása
+      household: Háztartás
+    budget_nav:
+      categories: Kategóriák
+      setup: Beállítás
+    available_cash:
+      heading: Rendelkezésre álló pénz
+      subtitle: A fenti terv mellett, de nem része annak.
+      available: Elérhető pénzeszközök
+      earmarked: Már elkülönítve célokra
+      free: Valóban szabad
+      goals_link: Célok megtekintése
   budget_categories:
     confirm_button:
       confirm: "Megerősítés"
@@ -83,3 +97,39 @@ hu:
       recent_transactions: "Legutóbbi tranzakciók"
       view_all_transactions: "Összes kategória tranzakció megtekintése"
       no_transactions: "Nem találhatók tranzakciók erre a költségvetési időszakra."
+      rolled_over: Áthozva
+    bills_reserved: '%{amount} lefoglalva fizetnivalókra'
+    bills_reserved_unconvertible:
+      one: '%{count} fizetnivaló nincs lefoglalva, mert nem érhető el árfolyam'
+      other: '%{count} fizetnivaló nincs lefoglalva, mert nem érhető el árfolyam'
+    allocation_progress:
+      budget_exceeded_html: 'Költségvetés túllépve ennyivel: <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      left_to_allocate: maradt felosztásra
+      over_set: '> 100% felosztva'
+      percent_set: '%{percent} felosztva'
+    budget_category:
+      rolled_over: +%{amount} áthozva
+    budget_category_form:
+      monthly_average: '%{amount}/hó átl.'
+      rollover_label: Maradvány átvitele
+      rollover_title: A kategória el nem költött pénze átkerül a következő hónapra
+      shared_placeholder: Közös
+      shared_title: Hagyd üresen, hogy a szülőkategória keretén osztozzon
+    move:
+      button_title: Pénz átcsoportosítása ebből a kategóriából
+      cancel: Mégse
+      dialog_title: Pénz átcsoportosítása
+      no_destination: Jelenleg nincs másik keret, ahová pénzt csoportosíthatnál át – egy kategória nem küldhet pénzt a saját szülő- vagy alkategóriájának.
+      submit: Átcsoportosítás
+      amount_label: Összeg
+      available: '%{amount} elérhető'
+      from_label: Honnan
+      to_label: Hová
+      success: Pénz átcsoportosítva.
+      errors:
+        different_budgets: Mindkét kategóriának ugyanahhoz a költségvetéshez kell tartoznia.
+        insufficient_funds: Ez több, mint amennyi ennek a kategóriának a keretében van.
+        non_positive_amount: Nullánál nagyobb összeget adj meg.
+        parent_child: Egy kategória és a saját alkategóriája között nem lehet pénzt átcsoportosítani – módosítsd közvetlenül az alkategóriát.
+        same_category: Válassz másik kategóriát, ahová a pénzt átcsoportosítod.
+        uncategorized: A Kategorizálatlan nem valódi keret, ezért nem lehet bele vagy belőle pénzt átcsoportosítani.

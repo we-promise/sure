@@ -34,6 +34,12 @@ hu:
         merchant: Kereskedő
         actions: Műveletek
         source: Forrás
+      import: Kereskedők importálása
+      search_family_merchants: Saját kereskedők keresése...
+      search_provider_merchants: Szolgáltatói kereskedők keresése...
+      no_family_merchants_found: Nincs egyező saját kereskedő
+      no_provider_merchants_found: Nincs egyező szolgáltatói kereskedő
+      per_page: oldalanként
     family_merchant:
       edit: Szerkesztés
       delete: Törlés
@@ -51,6 +57,8 @@ hu:
       sources_label: Beolvasztandó kereskedők
       sources_hint: A kiválasztott kereskedők beolvadnak a célkereskedőbe. A saját kereskedők törlésre kerülnek, a szolgáltatói kereskedők leválasztásra kerülnek.
       submit: Kijelöltek egyesítése
+      sources_search_placeholder: Kereskedők keresése...
+      no_merchants_found: Nincs egyező kereskedő
     new:
       title: Új kereskedő
     perform_merge:

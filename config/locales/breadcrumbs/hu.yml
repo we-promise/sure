@@ -14,8 +14,81 @@ hu:
     intro: Bemutató
     llm_usage: LLM használat
     merchants: Kereskedők
-    profile: Profil adatok
+    profile: Profiladatok
     reports: Jelentések
     security: Biztonság
     self_hosting: Saját üzemeltetés
     transactions: Tranzakciók
+    account_sharings: Számlamegosztás
+    account_statements: Kimutatástár
+    accounts: Számlák
+    api_keys: API-kulcsok
+    appearance: Megjelenés
+    appearances: Megjelenés
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Költségvetési kategóriák
+    categories: Kategóriák
+    changelog: Újdonságok
+    chats: Csevegések
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Hitelkártyák
+    cryptos: Kripto
+    debug: Hibakeresés
+    debugs: Hibakeresés
+    depositories: Bankszámlák
+    enable_banking_items: Enable Banking
+    family_exports: Exportok
+    family_merchants: Kereskedők
+    feedback: Visszajelzés
+    holdings: Pozíciók
+    hostings: Saját üzemeltetés
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Megszemélyesítések
+    indexa_capital_items: Indexa Capital
+    investments: Befektetések
+    invitations: Meghívások
+    invite_codes: Meghívókódok
+    kraken_items: Kraken
+    llm_usages: LLM-használat
+    loans: Hitelek
+    lunchflow_items: Lunch Flow
+    mcp: MCP-szerver
+    mercury_items: Mercury
+    messages: Üzenetek
+    mfa: Kétlépéses hitelesítés
+    monobank_items: Monobank
+    oidc_accounts: SSO-fiókok
+    onboardings: Bevezetés
+    other_assets: Egyéb vagyon
+    other_liabilities: Egyéb kötelezettségek
+    payments: Fizetések
+    pending_duplicate_merges: Duplikátumok ellenőrzése
+    plaid_items: Plaid
+    plan: Terv
+    preferences: Preferenciák
+    profiles: Profiladatok
+    properties: Ingatlanok
+    providers: Szolgáltatók
+    recurring_transactions: Ismétlődő
+    redbark_items: Redbark
+    registrations: Regisztráció
+    rules: Szabályok
+    securities: Biztonság
+    sessions: Bejelentkezés
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Felosztás
+    sso_identities: SSO-kapcsolatok
+    sso_providers: SSO-szolgáltatók
+    subscriptions: Előfizetés
+    system_health: Rendszerállapot
+    tags: Címkék
+    trades: Ügyletek
+    transfer_matches: Átutalás-párosítások
+    transfers: Átutalások
+    users: Felhasználók
+    valuations: Egyenlegfrissítések
+    vehicles: Járművek

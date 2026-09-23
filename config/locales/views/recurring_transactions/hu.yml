@@ -25,10 +25,10 @@ hu:
         - Bármely szolgáltatói szinkronizálás befejeztével (Plaid, SimpleFIN stb.)
     identified: "%{count} ismétlődő tranzakciós minta azonosítva"
     cleaned_up: "%{count} elavult ismétlődő tranzakció törölve"
-    marked_inactive: Az ismétlődő tranzakció inaktívvá jelölve
-    marked_active: Az ismétlődő tranzakció aktívvá jelölve
-    deleted: Ismétlődő tranzakció törölve
-    confirm_delete: Biztosan törlöd ezt az ismétlődő tranzakciót?
+    marked_inactive: Szüneteltetve. Addig nem jelenik meg újra, amíg nem folytatod.
+    marked_active: Folytatva.
+    deleted: Fizetnivaló eltávolítva. A tranzakcióid nem változtak.
+    confirm_delete: Eltávolítod a(z) %{name} tételt a fizetnivalóid közül? A tranzakcióid pontosan úgy maradnak, ahogy vannak. Csak a fizetnivaló és a fizetési ütemezése törlődik.
     marked_as_recurring: Tranzakció ismétlődőként jelölve
     already_exists: Ehhez a mintához már létezik egy manuálisan rögzített ismétlődő tranzakció
     creation_failed: Nem sikerült létrehozni az ismétlődő tranzakciót. Ellenőrizd a tranzakció adatait, és próbáld újra.
@@ -45,12 +45,155 @@ hu:
       last_occurrence: Utolsó előfordulás
       status: Státusz
       actions: Műveletek
+      frequency: Gyakoriság
     status:
       active: Aktív
-      inactive: Inaktív
+      inactive: Szüneteltetve
+      suggested: Lehetséges fizetnivaló
+      paused: Szüneteltetve
+      ended: Lezárva
     badges:
       manual: Manuális
     transfer_marked_as_recurring: Átutalás ismétlődőként jelölve
     transfer_already_exists: Ehhez a számlápárhoz már létezik ismétlődő átutalás
     transfer_creation_failed: Nem sikerült létrehozni az ismétlődő átutalást. Kérlek ellenőrizd az átutalás adatait, és próbáld újra.
     transfer_feature_disabled: Az ismétlődő tranzakciók le vannak tiltva ennél a háztartásnál
+    frequency_presets:
+      monthly: Havonta
+      weekly: Hetente
+      biweekly: Kéthetente
+      semimonthly: Havonta kétszer
+      quarterly: Negyedévente
+      semiannual: Félévente
+      annual: Évente
+      custom: Egyéni ütemezés
+    frequency:
+      monthly: Havonta, %{day}
+      weekly: Hetente, %{weekday}
+      biweekly: Kéthetente, %{weekday}
+      semimonthly: 'Havonta kétszer: %{first} és %{second}'
+      quarterly: Negyedévente, %{day}
+      semiannual: Félévente, %{day}
+      annual: Évente, %{month} %{day}
+      custom: Egyéni ütemezés
+      last_day: utolsó nap
+    actions:
+      edit_payment_link: Fizetési link szerkesztése
+      pause: Szüneteltetés
+      resume: Folytatás
+      delete: Eltávolítás
+    pay_action:
+      pay: Fizetés
+      pay_aria: '%{name} befizetése (új lapon nyílik meg)'
+      add_link: Link hozzáadása
+      add_link_aria: 'Fizetési link hozzáadása ehhez: %{name}'
+      autopay: Automatikus fizetés
+      autopay_aria: '%{name} automatikusan fizetődik, a portálja új lapon nyílik meg'
+      open_site: Fizetési oldal megnyitása
+    new:
+      title: Fizetnivaló hozzáadása
+      income_title: Bevétel hozzáadása
+      start_from_title: Indulj ki egy általunk észlelt ismétlődő terhelésből
+      start_from_income_title: Indulj ki egy általunk észlelt ismétlődő jóváírásból
+      start_from_hint: Nem kötelező. A kiválasztás csak kitölti az űrlapot, utána bármit módosíthatsz.
+      candidate_meta: '%{count}× · utoljára %{date}'
+      search_all_prompt: Nem találod, amit keresel?
+      search_all_cta: Keresés az összes tranzakciódban
+      pick_different: Indulj ki egy másik tranzakcióból
+      smart_fill: Intelligens kitöltés AI-jal
+      smart_fill_applied: Az AI a terhelési előzmények alapján javasolta ezeket az értékeket. Mentés előtt ellenőrizd őket.
+    smart_fills:
+      create:
+        failed: Most nem sikerült elemezni a terhelési előzményeket. Az űrlapon a tranzakció saját értékei maradtak.
+    pick_entry:
+      title: Válassz egy tranzakciót kiindulásként
+      income_title: Válassz egy jóváírást kiindulásként
+      hint: A kiválasztás csak kitölti az űrlapot, utána bármit módosíthatsz.
+      search_placeholder: Keresés név, megjegyzés vagy kereskedő szerint
+      back: Vissza az űrlaphoz
+      showing_recent: A %{count} legutóbbi tranzakciód látható. Kereséssel szűkítheted a listát.
+      no_results: 'Nincs találat erre: „%{query}”. Próbálj kevesebb szót, vagy menj vissza, és töltsd ki az űrlapot magad.'
+    picker_row:
+      claimed: 'Része ennek: %{name}'
+    create:
+      success: Fizetnivaló hozzáadva
+      success_income: Bevétel hozzáadva
+      due_date_required: Add meg a következő esedékesség dátumát
+      amount_invalid: Az összeget egyszerű számként add meg
+      account_invalid: Válassz olyan számlát, amelyhez fizetnivaló rendelhető, vagy hagyd üresen
+      already_exists: Ez a fizetnivaló már létezik
+    edit:
+      trigger_label: Fizetnivaló szerkesztése
+      title: '%{name} szerkesztése'
+      income_title: Bevétel szerkesztése · %{name}
+    form:
+      payment_url_label: Fizetési link
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: Itt fizeted be ezt a fizetnivalót. Az ismétlődő és közelgő listákból új lapon nyílik meg.
+      autopay_label: Automatikusan fizetődik
+      autopay_hint: A listádon marad, de nem jelenik meg teendőként.
+      more_options: További beállítások
+      notes_label: Megjegyzések
+      notes_placeholder: 'Ügyfélszám: 4821, Amex kártyára terhelve'
+      notes_hint: Bármi, amit fizetéskor szem előtt szeretnél tartani. A fizetnivalónál jelenik meg.
+      apply_to_siblings:
+        one: Ezt a linket a másik %{name} fizetnivalónál is használd
+        other: Ezt a linket a többi %{count} %{name} fizetnivalónál is használd
+      submit: Fizetnivaló mentése
+      submit_income: Bevétel mentése
+      income_name_label: Forrás
+      income_name_placeholder: Munkáltató, ügyfél, mellékállás
+      income_amount_label: Összeg kifizetésenként
+      income_due_on_label: Következő fizetésnap
+      income_account_label: Jóváírás számlája
+      income_frequency_hint: Milyen gyakran kapsz fizetést. A napot a fizetésnapodnak megfelelően válaszd ki.
+      income_frequency_label: Milyen gyakran kapsz fizetést
+      income_frequency_new_hint: A fizetésnap adatai a fenti dátumból származnak. Mentés után pontosíthatod az ütemezést.
+      income_notes_placeholder: Közvetlen jóváírás, két számlára megosztva
+      income_notes_hint: Bármi, amit érdemes megjegyezni erről a bevételről.
+      name_label: Név
+      name_placeholder: Lakbér, áramszámla, Netflix
+      amount_label: Összeg
+      first_due_on_label: Következő esedékesség
+      account_label: Terhelt számla
+      account_blank: Bármely számla
+      bill_type_label: Típus
+      installment_count_label: Részletek száma
+      installment_count_hint: A törlesztés ennyi részlet után véget ér, addig pedig látható a haladása.
+      renews_on_label: Megújul
+      trial_ends_on_label: Próbaidőszak vége
+      amount_edit_hint: A mostantól esedékes fizetnivalókra vonatkozik. A már esedékes tételek összege nem változik.
+      income_amount_edit_hint: A mostantól esedékes fizetésnapokra vonatkozik. A már esedékes tételek összege nem változik.
+      cancelled_on_label: Lemondva
+      cancelled_on_hint: A dátum csak a saját tájékoztatásodra szolgál. Szüneteltesd a fizetnivalót, hogy ne jelenjenek meg újabb esedékességek.
+      category_label: Kategória
+      category_blank: Nincs kategória
+      frequency_new_hint: A nap adatai a fenti esedékességi dátumból származnak. Mentés után pontosíthatod az ütemezést.
+      frequency_label: Gyakoriság
+      frequency_hint: Milyen gyakran esedékes ez a fizetnivaló. A napot a kimutatásodnak megfelelően válaszd ki.
+      frequency_day_label: Nap
+      frequency_second_day_label: Második nap
+      frequency_weekday_label: Nap
+      frequency_month_label: Hónap
+    update:
+      success: Fizetnivaló frissítve
+      success_with_siblings:
+        one: Fizetnivaló frissítve, a fizetési link %{count} másik fizetnivalóhoz is átmásolva
+        other: Fizetnivaló frissítve, a fizetési link %{count} másik fizetnivalóhoz is átmásolva
+    manage:
+      title: A fizetnivalóidat a Fizetnivalók oldalon találod
+      description: Ott vehetsz fel, szerkeszthetsz, szüneteltethetsz és fizethetsz be mindent. Ez az oldal a felismerést szabályozza.
+      cta: Összes fizetnivaló megnyitása
+    identify_already_running: A felismerés már fut. Nézz vissza egy kicsit később.
+    deleted_income: Bevétel eltávolítva. A tranzakcióid nem változtak.
+    confirm_delete_income: Eltávolítod a(z) %{name} bevételt? A tranzakcióid pontosan úgy maradnak, ahogy vannak. Csak a bevétel és az ütemezése törlődik.
+    suggested:
+      title: Lehetséges új fizetnivalók
+      seen_count:
+        one: egyszer észlelve
+        other: '%{count} alkalommal észlelve'
+      collapsed_hint: Koppints az áttekintéshez
+      confirm: Hozzáadás
+      dismiss: Nem fizetnivaló
+    confirmed: A fizetnivaló hozzáadva az ismétlődő tranzakcióidhoz
+    dismissed: Elvetve. Ezt a mintát többé nem javasoljuk.

@@ -1,0 +1,15 @@
+---
+hu:
+  recurring_allocations:
+    over_allocation: Ezzel többet osztanál szét, mint a tranzakció összege
+    missing_rate: Nincs elérhető árfolyam; add meg az összeget kézzel
+    already_allocated: Ez a tranzakció már hozzá van rendelve ehhez a fizetnivalóhoz
+    invalid: A befizetést nem sikerült rögzíteni
+    create:
+      success: Befizetés hozzárendelve
+    destroy:
+      success: Befizetés leválasztva
+    confirm:
+      success: Befizetés hozzárendelve a fizetnivalóhoz
+    reject:
+      success: Elvetve. Ezt a tranzakciót többé nem javasoljuk ehhez a fizetnivalóhoz.

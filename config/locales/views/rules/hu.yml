@@ -9,10 +9,10 @@ hu:
       delete: Törlés
       then: AKKOR
       and_more_conditions:
-        one: és 1 további feltétel
+        one: és %{count} további feltétel
         other: és %{count} további feltétel
       and_more_actions:
-        one: és 1 további művelet
+        one: és %{count} további művelet
         other: és %{count} további művelet
       action_label_to: "%{label} erre: %{value}"
       all_past_and_future: Összes korábbi és jövőbeli %{resource}
@@ -37,7 +37,7 @@ hu:
       sort_updated_at: Módosítás dátuma szerint
       toggle_sort_direction: Rendezési irány váltása
       no_rules_title: Még nincsenek szabályok
-      no_rules_description: Állíts be szabályokat, amelyek minden fiókszinkronizáláskor automatikusan elvégzik a megadott műveleteket a tranzakciókon és egyéb adatokon.
+      no_rules_description: Állíts be szabályokat, amelyek minden számlaszinkronizáláskor automatikusan elvégzik a megadott műveleteket a tranzakciókon és egyéb adatokon.
     confirm:
       title: Változtatások megerősítése
       title_with_name: "Változtatások megerősítése: \"%{name}\""
@@ -52,6 +52,7 @@ hu:
       confirm_changes: Változtatások megerősítése
     actions:
       value_placeholder: Adj meg egy értéket
+      to_label: 'erre:'
     apply_all:
       button: Összes alkalmazása
       confirm_title: Összes szabály alkalmazása
@@ -104,6 +105,18 @@ hu:
         expense: Kiadás
         transfer: Átutalás
         equal_to: Egyenlő
+      operators:
+        contains: Tartalmazza
+        does_not_contain: Nem tartalmazza
+        equal_to: Egyenlő
+        is_equal_to: Egyenlő
+        not_equal_to: Nem egyenlő
+        is_empty: Üres
+        is_not_empty: Nem üres
+        greater_than: Nagyobb, mint
+        greater_or_equal_to: Nagyobb vagy egyenlő
+        less_than: Kisebb, mint
+        less_than_or_equal_to: Kisebb vagy egyenlő
   rule:
     conditions:
       condition_group:
@@ -113,3 +126,5 @@ hu:
         any: bármelyik
         of_the_following_conditions: a következő feltételek közül
         add_condition: Feltétel hozzáadása
+      condition:
+        value_placeholder: Adj meg egy értéket

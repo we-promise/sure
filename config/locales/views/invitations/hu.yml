@@ -11,6 +11,7 @@ hu:
       existing_user_added: A felhasználó hozzá lett adva a háztartásodhoz.
       failure: Nem sikerült elküldeni a meghívót.
       success: A meghívó sikeresen elküldve.
+      existing_user_has_family_data: Ennek a felhasználónak már van saját háztartása számlákkal. A csatlakozás előtt törölnie kell vagy át kell helyeznie ezeket a számlákat.
     destroy:
       failure: Hiba történt a meghívó eltávolítása során.
       not_authorized: Nincs jogosultságod a meghívók kezeléséhez.

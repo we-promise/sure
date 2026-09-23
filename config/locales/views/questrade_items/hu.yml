@@ -1,0 +1,257 @@
+---
+hu:
+  questrade_items:
+    default_name: Questrade kapcsolat
+    sync_status:
+      no_accounts: Nem találhatók számlák
+      synced:
+        one: '%{count} számla szinkronizálva'
+        other: '%{count} számla szinkronizálva'
+      synced_with_setup: '%{linked} szinkronizálva, %{unlinked} beállításra vár'
+    institution_summary:
+      none: Nincs csatlakoztatott intézmény
+      count:
+        one: '%{count} intézmény'
+        other: '%{count} intézmény'
+    errors:
+      provider_not_configured: A Questrade szolgáltató nincs beállítva
+    sync:
+      status:
+        importing: Számlák importálása a Questrade-ből...
+        processing: Pozíciók és tranzakciók feldolgozása...
+        calculating: Egyenlegek kiszámítása...
+        importing_data: Számlaadatok importálása...
+        checking_setup: Számlabeállítások ellenőrzése...
+        needs_setup: '%{count} számla beállításra vár...'
+      success: Szinkronizálás elindítva
+    panel:
+      eyebrow: Beállítás · csak asztali gépen
+      help_text: Questrade API dokumentáció
+      disconnect: Leválasztás
+      disconnect_confirm: Leválasztod a Questrade-et? Ez eltávolítja a kapcsolatot, és megszünteti a szinkronizált számlák összekapcsolását.
+      steps:
+        s1_html: Jelentkezz be a <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">Questrade portálra</a> asztali böngészőben. Az API-beállítások a mobilalkalmazásban nem érhetők el.
+        s2: Nyisd meg a Beállításokat, és az Általános beállítások alatt szerkeszd az IQ API-beállításokat.
+        s3_html: Az API-hozzáférés ablakban kattints a <strong>Manage</strong> gombra a <strong>My applications</strong> alatt.
+        s4: Regisztrálj egy személyes alkalmazást névvel és leírással, majd mentsd.
+        s5: Adj hozzá egy új eszközt, és generálj tokent.
+        s6: Illeszd be alább a generált tokent, és mentsd.
+      setup_instructions: 'Beállítási útmutató:'
+      step_1: Látogass el a Questrade irányítópultodra a hitelesítő adataid megszerzéséhez
+      step_2: Add meg alább a hitelesítő adataidat, és kattints a Mentés gombra
+      step_3: Sikeres csatlakozás után lépj a Számlák fülre az új számlák beállításához
+      field_descriptions: 'Mezők leírása:'
+      optional: (Nem kötelező)
+      required: (kötelező)
+      optional_with_default: '(nem kötelező, alapértelmezés: %{default_value})'
+      save_button: Konfiguráció mentése
+      update_button: Konfiguráció frissítése
+      token_refresh_hint: A Questrade tokenek minden szinkronizáláskor automatikusan megújulnak. Ha egy kapcsolatot 7 napnál tovább nem használsz és elavul, illessz be ide új tokent, hogy leválasztás nélkül újraaktiváld.
+      status_configured_html: Beállítva és használatra kész. A számlák kezeléséhez és beállításához látogass el a <a href="%{accounts_path}" class="link">Számlák</a> fülre.
+      status_not_configured: Nincs beállítva
+      fields:
+        refresh_token:
+          label: Frissítési token
+          description: A Questrade frissítési tokened
+          placeholder_new: Illeszd be ide a frissítési tokent
+          placeholder_update: Add meg az új frissítési tokent a módosításhoz
+        api_server:
+          label: API-szerver
+          description: A Questrade API-szervered
+          placeholder_new: Illeszd be ide az API-szervert
+          placeholder_update: Add meg az új API-szervert a módosításhoz
+    create:
+      success: Questrade kapcsolat sikeresen létrehozva
+    update:
+      success: Questrade kapcsolat frissítve
+    destroy:
+      success: Questrade kapcsolat eltávolítva
+    index:
+      title: Questrade kapcsolatok
+    loading:
+      loading_message: Questrade számlák betöltése...
+      loading_title: Betöltés
+    link_accounts:
+      all_already_linked:
+        one: A kiválasztott számla (%{names}) már össze van kapcsolva
+        other: 'Mind a(z) %{count} kiválasztott számla már össze van kapcsolva: %{names}'
+      api_error: 'API hiba: %{message}'
+      invalid_account_names:
+        one: Nem lehet összekapcsolni üres nevű számlát
+        other: Nem lehet összekapcsolni %{count} üres nevű számlát
+      link_failed: Nem sikerült összekapcsolni a számlákat
+      no_accounts_selected: Kérlek, válassz legalább egy számlát
+      no_api_key: A Questrade API-kulcs nem található. Kérlek, állítsd be a szolgáltatói beállításokban.
+      partial_invalid: '%{created_count} számla sikeresen összekapcsolva, %{already_linked_count} már össze volt kapcsolva, %{invalid_count} számla neve érvénytelen'
+      partial_success: '%{created_count} számla sikeresen összekapcsolva. %{already_linked_count} számla már össze volt kapcsolva: %{already_linked_names}'
+      success:
+        one: '%{count} számla sikeresen összekapcsolva'
+        other: '%{count} számla sikeresen összekapcsolva'
+    questrade_item:
+      kind: Brókerszámla
+      accounts_need_setup: Számlák beállításra várnak
+      delete: Kapcsolat törlése
+      deletion_in_progress: törlés folyamatban...
+      error: Hiba
+      more_accounts_available:
+        one: További %{count} számla érhető el
+        other: További %{count} számla érhető el
+      no_accounts_description: Ehhez a kapcsolathoz még nincsenek összekapcsolt számlák.
+      no_accounts_title: Nincsenek számlák
+      provider_name: Questrade
+      requires_update: A kapcsolat frissítést igényel
+      setup_action: Új számlák beállítása
+      setup_description: '%{linked} / %{total} számla összekapcsolva. Válaszd ki az újonnan importált Questrade számlák típusát.'
+      setup_needed: Új számlák beállításra várnak
+      status: Szinkronizálva %{timestamp} ezelőtt
+      status_never: Még nem szinkronizált
+      status_with_summary: Utolsó szinkronizálás %{timestamp} ezelőtt – %{summary}
+      syncing: Szinkronizálás...
+      total: Összesen
+      unlinked: Nincs összekapcsolva
+      update_credentials: Hitelesítő adatok frissítése
+    select_accounts:
+      accounts_selected: kiválasztott számla
+      api_error: 'API hiba: %{message}'
+      cancel: Mégse
+      configure_name_in_provider: Nem importálható – kérlek, állítsd be a számla nevét a Questrade-ben
+      description: Válaszd ki azokat a számlákat, amelyeket össze szeretnél kapcsolni a(z) %{product_name} fiókoddal.
+      link_accounts: Kiválasztott számlák összekapcsolása
+      no_accounts_found: Nem találhatók számlák. Kérlek, ellenőrizd az API-kulcs beállítását.
+      no_api_key: A Questrade API-kulcs nincs beállítva. Kérlek, állítsd be a Beállításokban.
+      no_credentials_configured: Kérlek, először add meg a Questrade hitelesítő adataidat a szolgáltatói beállításokban.
+      no_name_placeholder: (Nincs név)
+      title: Questrade számlák kiválasztása
+    select_existing_account:
+      page_title: Questrade számla összekapcsolása
+      dialog_title: Összekapcsolás Questrade számlával
+      linking_label: Összekapcsolás
+      none_available: Nincs elérhető összekapcsolatlan Questrade számla.
+      buttons:
+        cancel: Mégse
+        link: Összekapcsolás
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval
+      all_accounts_already_linked: Minden Questrade számla már össze van kapcsolva
+      api_error: 'API hiba: %{message}'
+      balance_label: 'Egyenleg:'
+      cancel: Mégse
+      cancel_button: Mégse
+      configure_name_in_provider: Nem importálható – kérlek, állítsd be a számla nevét a Questrade-ben
+      connect_hint: Kapcsolj össze egy Questrade számlát az automatikus szinkronizáláshoz.
+      description: Válassz egy Questrade számlát, amelyet ehhez a számlához szeretnél kapcsolni. A tranzakciók automatikusan szinkronizálódnak, a duplikátumok kiszűrésével.
+      header: Összekapcsolás a Questrade-del
+      link_account: Számla összekapcsolása
+      link_button: Számla összekapcsolása
+      linking_to: 'Összekapcsolás ezzel:'
+      no_account_specified: Nem lett megadva számla
+      no_accounts: Nem található összekapcsolatlan Questrade számla.
+      no_accounts_found: Nem találhatók Questrade számlák. Kérlek, ellenőrizd az API-kulcs beállítását.
+      no_api_key: A Questrade API-kulcs nincs beállítva. Kérlek, állítsd be a Beállításokban.
+      no_credentials_configured: Kérlek, először add meg a Questrade hitelesítő adataidat a szolgáltatói beállításokban.
+      no_name_placeholder: (Nincs név)
+      settings_link: Ugrás a szolgáltatói beállításokhoz
+      subtitle: Kapcsold össze ezt a számlát az egyik Questrade számláddal
+      title: '%{account_name} összekapcsolása a Questrade-del'
+    link_existing_account:
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval
+      api_error: 'API hiba: %{message}'
+      invalid_account_name: Nem lehet összekapcsolni üres nevű számlát
+      provider_account_already_linked: Ez a Questrade számla már össze van kapcsolva egy másik számlával
+      provider_account_not_found: A Questrade számla nem található
+      missing_parameters: Hiányzó kötelező paraméterek
+      no_api_key: A Questrade API-kulcs nem található. Kérlek, állítsd be a szolgáltatói beállításokban.
+      success: '%{account_name} sikeresen összekapcsolva a Questrade-del'
+    setup_accounts:
+      page_title: Questrade számlák beállítása
+      dialog_title: Questrade számláid beállítása
+      all_linked: Minden Questrade számla már össze van kapcsolva.
+      import_as: Importálás mint
+      buttons:
+        cancel: Mégse
+        create: Számlák létrehozása
+        done: Kész
+      types:
+        investment: Befektetés
+        depository: Készpénz / betét
+        skip: Számla kihagyása
+      account_type_label: 'Számla típusa:'
+      accounts_count:
+        one: '%{count} számla érhető el'
+        other: '%{count} számla érhető el'
+      all_accounts_linked: Minden Questrade számlád már be van állítva.
+      api_error: 'API hiba: %{message}'
+      creating: Számlák létrehozása...
+      fetch_failed: Nem sikerült lekérni a számlákat
+      import_selected: Kiválasztott számlák importálása
+      instructions: Válaszd ki a Questrade-ből importálandó számlákat. Több számlát is kiválaszthatsz.
+      no_accounts: Ebben a Questrade kapcsolatban nem található összekapcsolatlan számla.
+      no_accounts_to_setup: Nincs beállítandó számla
+      no_api_key: A Questrade API-kulcs nincs beállítva. Kérlek, ellenőrizd a kapcsolat beállításait.
+      select_all: Összes kijelölése
+      account_types:
+        skip: Számla kihagyása
+        depository: Folyó- vagy megtakarítási számla
+        credit_card: Hitelkártya
+        investment: Befektetési számla
+        crypto: Kriptovaluta-számla
+        loan: Hitel vagy jelzálog
+        other_asset: Egyéb vagyon
+      subtype_labels:
+        depository: 'Számla altípusa:'
+        credit_card: ''
+        investment: 'Befektetés típusa:'
+        crypto: ''
+        loan: 'Hitel típusa:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: A hitelkártyák automatikusan hitelkártya-számlaként lesznek beállítva.
+        other_asset: Az egyéb vagyonelemekhez nincs szükség további beállításokra.
+        crypto: A kriptovaluta-számlák a portfólió és a tranzakciók követésére lesznek beállítva.
+      subtypes:
+        depository:
+          checking: Folyószámla
+          savings: Megtakarítási számla
+          hsa: Egészségügyi megtakarítási számla
+          cd: Lekötött betét
+          money_market: Pénzpiaci számla
+        investment:
+          brokerage: Brókerszámla
+          pension: Nyugdíjalap
+          retirement: Nyugdíj-megtakarítás
+          401k: 401(k)
+          roth_401k: Roth 401(k)
+          403b: 403(b)
+          tsp: Thrift Savings Plan
+          529_plan: 529 oktatási megtakarítási terv
+          hsa: Egészségügyi megtakarítási számla
+          mutual_fund: Befektetési alap
+          ira: Hagyományos IRA
+          roth_ira: Roth IRA
+          angel: Angyalbefektetés
+        loan:
+          mortgage: Jelzálog
+          student: Diákhitel
+          auto: Autóhitel
+          other: Egyéb hitel
+      balance: Egyenleg
+      cancel: Mégse
+      choose_account_type: 'Válaszd ki a megfelelő számlatípust minden Questrade számlához:'
+      create_accounts: Számlák létrehozása
+      creating_accounts: Számlák létrehozása...
+      historical_data_range: 'Előzmények időtartama:'
+      subtitle: Válaszd ki, hogyan importálod az egyes számlákat
+      sync_start_date_help: Válaszd ki, milyen messzire menjen vissza a tranzakciós előzmények szinkronizálása.
+      sync_start_date_label: 'Tranzakciók szinkronizálásának kezdete:'
+      title: Questrade számláid beállítása
+    setup_required:
+      title: Először csatlakoztasd a Questrade-et
+      not_configured_title: A Questrade még nincs csatlakoztatva
+      not_configured_description: Add hozzá a Questrade kapcsolatot a szolgáltatói beállításokban, majd térj vissza ide a számlák összekapcsolásához.
+      go_to_provider_settings: Ugrás a szolgáltatói beállításokhoz
+    complete_account_setup:
+      all_skipped: Minden számla ki lett hagyva. Nem jött létre számla.
+      creation_failed: 'Nem sikerült létrehozni a számlákat: %{error}'
+      no_accounts: Nincs beállítandó számla.
+      success: '%{count} számla sikeresen létrehozva.'
+    preload_accounts:
+      no_credentials_configured: Kérlek, először add meg a Questrade hitelesítő adataidat a szolgáltatói beállításokban.

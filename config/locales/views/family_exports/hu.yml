@@ -40,4 +40,9 @@ hu:
         actions:
           delete: Törlés
           download: Letöltés
+          mark_failed: Megjelölés sikertelenként
+          confirm_mark_failed: Ez az export már egy ideje inaktív, és a háttérfeladata valószínűleg megszakadt. Megjelölöd sikertelenként? Azonnal létrehozhatsz egy új exportot.
       empty: Még nincsenek exportok.
+    cancel:
+      cancelled: Az export sikertelennek jelölve. Azonnal létrehozhatsz egy újat.
+      not_cancellable: Ez az export most nem jelölhető sikertelennek – lehet, hogy a feladata még fut. Próbáld újra, ha már egy órája inaktív.

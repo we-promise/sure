@@ -1,0 +1,53 @@
+---
+hu:
+  recurring_occurrences:
+    history_status:
+      paid: Kifizetve
+      skipped: Kihagyva
+      missed: Elmaradt
+      scheduled: Nyitott
+    show:
+      due_on: 'Esedékes: %{date}'
+      paid_of: '%{paid} / %{expected} kifizetve'
+      paid_headline: '%{amount} kifizetve'
+      remaining: '%{amount} van hátra'
+      settled: Teljesen kifizetve
+      overpaid: több a vártnál
+      skipped: Kihagyva
+      missed: Elmaradtként jelölve
+      payments: Befizetések
+      manual_payment: Kézi befizetés
+      unlink: Leválasztás
+      review_heading: Befizetés ellenőrzése
+      find_heading: Befizetés keresése
+      add_heading: Újabb befizetés hozzáadása
+      other_matches: További valószínű egyezések
+      no_ranked_candidates: Egyelőre semmi sem tűnik ennek a fizetnivalónak a befizetésének.
+      search_all: Keresés az összes tranzakcióban
+      search_placeholder: Tranzakciók keresése
+      no_candidates: Nincs közeli dátumú összekapcsolható tranzakció.
+      no_search_results: 'Nincs találat erre: %{query}.'
+      link_payment: Befizetés összekapcsolása
+      not_this_one: Nem ez az
+      cant_find: Nem találod a tranzakciót?
+      manual_explainer: Rögzíts egy befizetést, amelyről tudod, hogy megtörtént, ha egyik tranzakció sem egyezik vele.
+      manual_amount_label: Összeg
+      manual_date_label: Dátum
+      record_payment: Befizetés rögzítése
+      mark_paid: Megjelölés kifizetettként
+      mark_paid_hint: A hátralévő részt tranzakció rögzítése nélkül rendezi.
+      skip: Kihagyás
+      snooze_week: Halasztás egy héttel
+      reopen: Újranyitás
+      view_bill: Teljes fizetnivaló megtekintése
+    mark_paid:
+      success: Fizetnivaló kifizetettként megjelölve
+    skip:
+      success: Fizetnivaló kihagyva
+    reopen:
+      success: Fizetnivaló újranyitva
+    snooze:
+      success: 'Elhalasztva eddig: %{date}'
+      invalid_date: Ezt a dátumot nem sikerült értelmezni
+    override_amount:
+      success: Várt összeg frissítve
