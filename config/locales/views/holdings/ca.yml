@@ -80,7 +80,7 @@ ca:
       remap_security: Desa
       reset_confirm_body: Això canviarà el valor de %{current} a %{original} i mourà
         totes les operacions associades.
-      reset_confirm_title: Restablir el valor al del proveïdor?
+      reset_confirm_title: Vols restablir el valor al del proveïdor?
       reset_to_provider: Restableix al del proveïdor
       search_security: Cerca valor
       search_security_placeholder: Cerca per símbol o nom
@@ -104,7 +104,7 @@ ca:
       unknown: Desconegut
       unlock_confirm_body: Això permetrà que el cost base s'actualitzi per les sincronitzacions
         del proveïdor o pels càlculs d'operacions.
-      unlock_confirm_title: Desbloquejar el cost base?
+      unlock_confirm_title: Vols desbloquejar el cost base?
       unlock_cost_basis: Desbloqueja
     sync_prices:
       provider_error: No s'han pogut obtenir els preus més recents. Torna-ho a provar

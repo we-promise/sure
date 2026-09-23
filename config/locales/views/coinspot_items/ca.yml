@@ -1,0 +1,92 @@
+---
+ca:
+  coinspot_items:
+    provider_connection:
+      default_name: CoinSpot
+      default_description: Connecta un compte d'exchange de CoinSpot
+      name: CoinSpot - %{name}
+      description: Connecta amb %{name}
+    create:
+      default_name: CoinSpot
+      success: S'ha connectat correctament a CoinSpot. El teu compte d'exchange s'està sincronitzant.
+    update:
+      success: La connexió de CoinSpot s'ha actualitzat correctament.
+    destroy:
+      success: S'ha programat l'eliminació de la connexió de CoinSpot.
+      unlink_failed: No s'ha pogut desconnectar la connexió de CoinSpot
+    select_accounts:
+      select_connection: Tria una connexió de CoinSpot a la configuració de proveïdors.
+      no_credentials_configured: Afegeix les credencials de l'API de CoinSpot abans de configurar els comptes.
+    link_accounts:
+      select_connection: Tria una connexió de CoinSpot abans d'enllaçar comptes.
+    select_existing_account:
+      title: Enllaça un compte de CoinSpot
+      no_accounts_found: No s'han trobat comptes de CoinSpot.
+      wait_for_sync: Espera que CoinSpot acabi la sincronització.
+      check_provider_health: Comprova que les teves credencials de l'API de CoinSpot siguin vàlides.
+      link: Enllaça
+      cancel: Cancel·la
+    link_existing_account:
+      success: S'ha enllaçat correctament al compte de CoinSpot
+      select_connection: Tria una connexió de CoinSpot abans d'enllaçar comptes.
+      errors:
+        only_manual: Només es poden enllaçar a CoinSpot els comptes manuals de tipus Cripto exchange que no tinguin cap enllaç amb un proveïdor
+        invalid_coinspot_account: Compte de CoinSpot no vàlid
+        coinspot_account_already_linked: Aquest compte de CoinSpot ja està enllaçat
+    setup_accounts:
+      title: Importa el compte de CoinSpot
+      subtitle: Selecciona el compte d'exchange que vols seguir
+      instructions: CoinSpot importa un únic compte de Cripto exchange combinat per a aquesta connexió, amb saldos, valors en AUD, transferències, dipòsits, retirades i historial d'ordres.
+      no_accounts: S'han importat tots els comptes de CoinSpot.
+      accounts_count:
+        one: '%{count} compte disponible'
+        other: '%{count} comptes disponibles'
+      select_all: Selecciona-ho tot
+      import_selected: Importa els seleccionats
+      cancel: Cancel·la
+      creating: Important...
+    complete_account_setup:
+      success:
+        one: S'ha importat %{count} compte
+        other: S'han importat %{count} comptes
+      none_selected: No s'ha seleccionat cap compte
+      no_accounts: No hi ha comptes per importar
+      setup_failed:
+        one: No s'ha pogut importar %{count} compte
+        other: No s'han pogut importar %{count} comptes
+    coinspot_item:
+      provider_name: CoinSpot
+      syncing: Sincronitzant...
+      reconnect: Les credencials necessiten actualització
+      deletion_in_progress: Eliminant...
+      sync_status:
+        no_accounts: No s'han trobat comptes
+        all_synced:
+          one: '%{count} compte sincronitzat'
+          other: '%{count} comptes sincronitzats'
+        partial_sync: '%{linked_count} sincronitzats, %{unlinked_count} necessiten configuració'
+      status: Darrera sincronització fa %{timestamp}
+      status_with_summary: Darrera sincronització fa %{timestamp} - %{summary}
+      status_never: Mai sincronitzat
+      delete: Elimina
+      no_accounts_title: No s'han trobat comptes
+      no_accounts_message: El teu compte d'exchange de CoinSpot apareixerà aquí després de sincronitzar.
+      setup_needed: Compte a punt per importar
+      setup_description: Importa aquesta connexió de CoinSpot com a compte de Cripto exchange.
+      setup_action: Importa el compte
+      import_accounts_menu: Importa el compte
+      stale_rate_warning: El saldo és aproximat perquè el tipus de canvi exacte per a %{date} no estava disponible. S'actualitzarà a la propera sincronització.
+  coinspot_item:
+    syncer:
+      checking_credentials: Comprovant credencials...
+      credentials_invalid: Credencials de l'API de CoinSpot no vàlides. Revisa la teva clau API i el secret.
+      importing_accounts: Important comptes des de CoinSpot...
+      checking_configuration: Comprovant la configuració del compte...
+      accounts_need_setup:
+        one: '%{count} compte necessita configuració'
+        other: '%{count} comptes necessiten configuració'
+      processing_accounts: Processant dades del compte...
+      processing_failed:
+        one: No s'ha pogut processar %{count} compte de CoinSpot
+        other: No s'han pogut processar %{count} comptes de CoinSpot
+      calculating_balances: Calculant saldos...

@@ -1,0 +1,256 @@
+---
+ca:
+  admin:
+    system_health:
+      push_notifications:
+        send_test: Envia una notificació push de prova
+        queueing: Posant a la cua…
+        title: Notificacions push
+        requested_at: Última prova sol·licitada a les %{time}
+        result_help: Que APNs l'accepti no confirma que s'hagi lliurat al dispositiu. Actualitza per veure els resultats del worker. Els resultats es conserven durant 24 hores.
+        device: Dispositiu %{number}
+        pending: Pendent
+        refresh: Actualitza els resultats
+        columns:
+          device: Dispositiu
+          environment: Entorn d'APNs
+          status: Resultat
+          checked_at: Última actualització
+        environments:
+          sandbox: Sandbox
+          production: Producció
+        messages:
+          enqueue_failed: No s'ha pogut posar la prova a la cua. Comprova Sidekiq i actualitza els resultats de sota.
+          ready: Envia una notificació de prova als dispositius iOS activats registrats al teu compte.
+          queued: Notificació de prova a la cua. Actualitza els resultats de sota per comprovar-ne l'estat.
+          hosted_only: Les notificacions push només estan disponibles en el mode allotjat.
+          ineligible: Només un super administrador actiu pot enviar una notificació de prova.
+          no_devices: Activa les notificacions push a l'app de Sure per a iOS per a aquest compte per enviar una prova.
+          disabled: L'operador ha desactivat l'enviament de notificacions push.
+          not_configured: Les credencials d'APNs no estan configurades.
+          cooldown: Espera 30 segons abans d'enviar una altra prova.
+          storage_unavailable: No s'ha pogut desar la sol·licitud de prova. Comprova la configuració de la memòria cau compartida.
+        statuses:
+          queued: A la cua
+          accepted: Acceptada per APNs
+          skipped: 'Omesa: ja no compleix els requisits'
+          rejected: Rebutjada per APNs; consulta els registres de depuració de push
+          unregistered: El registre del dispositiu ja no és vàlid
+          retrying: Reintentant després d'un error temporal
+          failed: Ha fallat; consulta els registres de depuració de push
+          enqueue_failed: No s'ha pogut posar a la cua; comprova Sidekiq
+          expired: Ha caducat sense un resultat final
+      push_notification:
+        title: Notificació de prova de Sure
+        body: Aquesta és una notificació push de prova per al teu compte de Sure.
+      verify_worker_ai:
+        queued: Comprovació del worker a la cua. Apareixerà a sota quan un procés worker l'agafi, normalment en pocs segons.
+      show:
+        title: Estat del sistema
+        tabs:
+          background_jobs: Tasques en segon pla
+          ai: Estat de la IA
+        alert:
+          title: Les tasques en segon pla no s'estan executant
+        status_section_title: Estat de Sidekiq
+        status_section_description: Estat actual del worker en segon pla que executa les sincronitzacions, els saldos i els càlculs del patrimoni net.
+        counters_section_title: Comptadors de tasques
+        counters_section_description: Comptadors agregats de Sidekiq de totes les cues.
+        queues_section_title: Cues
+        queues_section_description: Mida de cada cua i antiguitat de la tasca més antiga. La latència són els segons que fa que espera la tasca més antiga.
+        labels:
+          status: Estat
+          processes: Processos worker
+          last_heartbeat: Últim senyal de vida
+          max_queue_latency: Antiguitat de la tasca més antiga
+          enqueued: A la cua
+          retries: Reintents
+          failed: Fallides
+          processed_total: Total processades
+          queue: Cua
+          size: Mida
+          latency: Latència
+        values:
+          healthy: Correcte
+          unhealthy: Degradat
+          time_ago: fa %{time_ago}
+          never: Mai
+          seconds: '%{seconds} s'
+          no_queues: No hi ha cap cua registrada. Pot ser que el worker no s'estigui executant.
+        ai:
+          run_checks: Torna a executar les comprovacions
+          last_checked: Comprovacions en directe completades fa %{time_ago}. Els resultats es desen breument a la memòria cau.
+          not_checked_help: Obre directament l'URL d'estat de la IA o executa les comprovacions per verificar que el servei respon.
+          alerts:
+            custom_openai:
+              title: La comprovació del magatzem vectorial allotjat ha fallat en aquest endpoint personalitzat
+              message: L'endpoint configurat no ha superat la comprovació de disponibilitat de /v1/vector_stores. La majoria d'endpoints locals i compatibles amb OpenAI no implementen aquesta API. El xat i el processament de PDF poden funcionar igualment; per a la configuració local habitual, fes servir pgvector amb un endpoint d'embeddings separat. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
+            function_calling_unsupported:
+              title: El model no admet la crida a funcions
+              message: L'endpoint ha respost a una petició de xat simple, però ha rebutjat la mateixa petició amb el paràmetre tools. L'assistent d'IA llegeix comptes, transaccions i posicions mitjançant crides a funcions, així que el xat continuarà fallant (sovint amb un error 404 poc útil) fins que el model n'admeti. Tria un model el proveïdor del qual documenti la compatibilitat amb la crida a funcions. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
+            function_calling_not_used:
+              title: El model ha respost sense cridar l'eina que se li ha demanat
+              message: L'endpoint ha acceptat el paràmetre tools, però el model ha respost amb text en lloc de cridar l'eina de comprovació. L'assistent d'IA no pot llegir dades financeres sense crides a eines, així que el xat pot respondre en blanc o amb xifres inventades. És preferible un model el proveïdor del qual documenti la compatibilitat amb la crida a funcions.
+            llm_probe_failed:
+              title: La comprovació en directe de l'LLM ha fallat
+              message: Sure no ha pogut verificar alhora l'endpoint i el model configurats. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
+            llm_model_not_available:
+              title: El model d'IA configurat no està disponible
+              message: L'endpoint ha respost, però no ha llistat ni servit el model configurat. Tria un model actiu per al proveïdor seleccionat i torna a executar les comprovacions. Per a Gemini mitjançant una capa de traducció compatible amb OpenAI, fes servir un model admès actualment, com ara gemini-2.5-flash.
+            pdf_text_extraction_failed:
+              title: La comprovació d'extracció de text amb un PDF sintètic ha fallat
+              message: Sure no ha pogut completar la via de text prioritari, que extreu localment el text incrustat del PDF i l'envia al model configurat. No s'ha enviat cap dada de clients. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
+            pdf_vision_processing_failed:
+              title: La comprovació de visió/nativa amb un PDF sintètic ha fallat
+              message: Sure no ha pogut completar la via de PDF com a imatge o document natiu amb el model configurat. No s'ha enviat cap dada de clients. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
+            vector_probe_failed:
+              title: La comprovació en directe de la cerca de documents ha fallat
+              message: Sure no ha pogut verificar el magatzem vectorial seleccionat ni tots els serveis d'embeddings necessaris. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
+            pgvector_extension_not_enabled:
+              title: L'extensió vector de PostgreSQL no està activada
+              message: L'adaptador pgvector està seleccionat, però PostgreSQL no té activada l'extensió vector per a aquesta base de dades. Fes servir una imatge de PostgreSQL que inclogui pgvector, activa l'extensió com a propietari de la base de dades o superusuari i torna a executar les migracions amb VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: Falta la taula vector_store_chunks
+              message: L'extensió pgvector està activada, però no s'ha trobat la taula de fragments. Comprova l'estat de les migracions i torna a executar la migració del magatzem vectorial amb VECTOR_STORE_PROVIDER=pgvector perquè Sure pugui crear vector_store_chunks.
+            pgvector_probe_failed:
+              title: La comprovació de l'emmagatzematge pgvector ha fallat
+              message: Sure no ha pogut consultar la taula de fragments de pgvector. Comprova els permisos de PostgreSQL, l'extensió vector i la migració de vector_store_chunks. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
+            embedding_dimensions_mismatch:
+              title: Les dimensions de l'embedding no coincideixen
+              message: L'endpoint d'embeddings ha retornat un vector la longitud del qual no coincideix amb EMBEDDING_DIMENSIONS. Defineix EMBEDDING_MODEL i EMBEDDING_DIMENSIONS amb la mida de vector documentada del model, reinicia Sure perquè l'entorn es mantingui i, després, modifica o torna a crear la columna/taula d'embeddings de pgvector i torna a generar els embeddings dels documents si les dades existents feien servir una altra mida.
+            embedding_probe_timeout:
+              title: La comprovació en directe dels embeddings ha excedit el temps d'espera
+              message: L'endpoint d'embeddings no ha respost abans d'AI_HEALTH_PROBE_TIMEOUT. Augmenta aquest temps d'espera de la comprovació si el proveïdor és lent i reinicia Sure perquè l'entorn es mantingui en tots els processos. Si les crides normals al xat d'IA també excedeixen el temps d'espera, augmenta OPENAI_REQUEST_TIMEOUT per separat.
+            embedding_probe_failed:
+              title: La comprovació en directe dels embeddings ha fallat
+              message: Sure no ha pogut crear un embedding breu de prova amb l'endpoint i el model configurats. Comprova EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN i els registres del proveïdor d'embeddings. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
+            qdrant:
+              title: La compatibilitat amb Qdrant encara no està implementada
+              message: L'adaptador de Qdrant té l'estructura bàsica, però ara mateix les operacions de pujada i cerca de documents fallen. Selecciona OpenAI o pgvector per a la cerca de documents.
+            missing_vector_store:
+              title: No hi ha cap magatzem vectorial configurat
+              message: Els documents pujats no es poden indexar ni cercar fins que no es configuri un adaptador de magatzem vectorial i els seus requisits.
+            unavailable_vector_store:
+              title: El magatzem vectorial seleccionat no està disponible
+              message: Revisa els requisits de l'adaptador de sota. Per a pgvector, la base de dades ha de proporcionar l'extensió vector o una taula vector_store_chunks existent.
+          llm:
+            title: LLM i processament de PDF
+            description: Les comprovacions en directe verifiquen el model configurat, li demanen una crida a funció trivial tal com ho fa l'assistent i, per separat, proven l'extracció de text i el processament de visió/natiu amb un PDF sintètic d'una pàgina sense dades de clients. Els valors de les credencials no es mostren mai.
+          vector_store:
+            title: Magatzem vectorial i cerca de documents
+            description: La comprovació en directe consulta l'API del magatzem vectorial allotjat, o prova la taula de pgvector i crea un embedding breu sense desar-lo.
+          labels:
+            selected_provider: Proveïdor seleccionat
+            effective_provider: Proveïdor efectiu
+            model: Model
+            endpoint: Endpoint
+            function_calling: Crida a funcions (tools)
+            pdf_text_extraction: Via d'extracció de text de PDF
+            pdf_vision_processing: Via de visió/nativa de PDF
+            llm_request_timeout: Temps d'espera de les peticions a l'LLM
+            probe_request_timeout: Temps d'espera de la comprovació d'estat
+            openai_credentials: Credencials d'OpenAI
+            openai_compatible_credentials: Credencials d'API compatible amb OpenAI
+            anthropic_credentials: Credencials d'Anthropic
+            adapter: Adaptador
+            adapter_available: Adaptador disponible
+            pgvector_extension: Extensió vector de PostgreSQL
+            pgvector_table: Taula de fragments vectorials
+            embedding_model: Model d'embeddings
+            embedding_endpoint: Endpoint d'embeddings
+            embedding_dimensions: Dimensions de l'embedding
+            function_calling_failure_reason: Motiu de l'error de la crida a funcions
+            pdf_text_extraction_failure_reason: Motiu de l'error de l'extracció de text
+            pdf_vision_processing_failure_reason: Motiu de l'error de visió/nativa
+            storage_probe: Comprovació de l'emmagatzematge pgvector
+            embedding_probe: Comprovació de l'endpoint d'embeddings
+            failure_reason: Motiu de l'error
+          providers:
+            openai: OpenAI
+            openai_compatible: Compatible amb OpenAI
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Endpoint personalitzat
+          adapters:
+            openai: Magatzem vectorial allotjat d'OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Configurat
+            not_configured: No configurat
+            fallback: (alternatiu)
+            not_set: No definit
+            "yes": Sí
+            "no": 'No'
+            enabled: Activada
+            available_not_enabled: Disponible, no activada
+            not_available: No disponible
+            available: Disponible
+            not_found: No trobada
+          function_calling_statuses:
+            supported: La crida d'eina en directe ha funcionat
+            unsupported: No compatible amb el proveïdor/model efectiu
+            not_used: Eines acceptades, però el model no n'ha cridat cap
+            failing: La comprovació en directe ha fallat
+            not_checked: No comprovat
+            unavailable: No disponible fins que es configuri un proveïdor d'LLM
+          pdf_statuses:
+            supported: Comprovació amb PDF sintètic superada
+            failing: La comprovació amb PDF sintètic ha fallat
+            unsupported: Desactivat o no compatible amb el proveïdor/model efectiu
+            not_checked: No comprovat
+            unavailable: No disponible fins que es configuri un proveïdor d'LLM
+          probe_statuses:
+            passing: Comprovació en directe superada
+            failing: La comprovació en directe ha fallat
+            not_checked: No comprovat
+            not_configured: No configurat
+          vector_statuses:
+            passing: Comprovacions en directe superades
+            failing: La comprovació en directe ha fallat
+            not_checked: No comprovat
+            not_configured: No configurat
+            scaffolded: Només estructura bàsica
+            missing: No configurat
+          failure_codes:
+            model_not_available: El proveïdor no ha retornat el model configurat
+            no_tool_call: El model ha respost sense cridar l'eina de comprovació
+            tools_refused: El servei ha respost la mateixa petició sense eines, però l'ha rebutjat amb eines
+            invalid_response: El servei ha retornat una resposta inesperada
+            dimensions_mismatch: Les dimensions del vector d'embedding no coincideixen amb les configurades
+            extension_not_enabled: L'extensió vector de PostgreSQL no està activada
+            table_not_found: No s'ha trobat la taula vector_store_chunks
+            render_missing_binary: El renderitzador pdftoppm (poppler-utils) no està disponible en aquest contenidor
+            timeout: El servei no ha respost abans que s'esgotés el temps d'espera de la comprovació
+            request_failed: La petició al servei ha fallat
+            unsupported_provider: El proveïdor no admet aquesta comprovació
+          worker:
+            title: Verificació del worker
+            description: Les comprovacions anteriors s'han executat des d'aquest procés web. La major part del treball d'IA (respostes de l'assistent, processament de PDF, embeddings, categorització automàtica i detecció de comerços) s'executa en realitat en un procés worker de Sidekiq, que pot tenir un accés a la xarxa, un DNS, unes regles de proxy o fins i tot unes credencials carregades diferents. Posa una comprovació a la cua per verificar la configuració i la connectivitat del mateix worker.
+            verify_button: Verifica la configuració del worker
+            coverage_notice: 'Cada comprovació verifica exactament un procés worker: el que l''agafi de la cua. Amb més d''una rèplica del worker, un resultat correcte no confirma que tots els workers funcionin bé; torna a posar la comprovació a la cua per provar-ne un altre.'
+            empty:
+              title: Encara no ha respost cap worker
+              description: Fes clic a «Verifica la configuració del worker» per posar a la cua una comprovació asíncrona. El resultat apareixerà aquí quan un procés worker l'agafi.
+            labels:
+              process: Procés worker
+              checked_at: Comprovat
+              configuration: Configuració
+            configuration_statuses:
+              match: Coincideix amb el web
+              mismatch: Difereix del web
+            statuses:
+              passing: Correcte
+              failing: Amb errors
+              stale: Obsolet
+            settings_origin:
+              title: Quins paràmetres requereixen reiniciar?
+              database_backed: Els paràmetres de proveïdor, model i clau API que es canvien a Configuració → Self hosting es desen a la base de dades. rails-settings-cached invalida la memòria cau compartida en escriure, de manera que tant el web com el worker obtenen el valor nou a la següent petició o tasca de la cua, sense necessitat de reiniciar.
+              env_backed: La configuració dels embeddings, i qualsevol valor definit només mitjançant una variable d'entorn, queda fixada quan s'inicia cada contenidor. Rails no pot canviar l'entorn d'un altre contenidor, així que per canviar-los cal reiniciar o tornar a crear tant el servei web com el worker; qualsevol eina de desplegament que només en reiniciï un (desplegament parcial, un Secret actualitzat sense reiniciar el pod) no aplicarà el canvi.
+          local_setup:
+            title: Configuració local recomanada
+            description: Executa l'LLM mitjançant el teu endpoint local compatible amb OpenAI, desa els vectors dels documents a pgvector i configura els embeddings amb un endpoint d'embeddings compatible amb OpenAI. La imatge de PostgreSQL ha d'incloure l'extensió vector, i les dimensions dels embeddings han de coincidir amb el model seleccionat.

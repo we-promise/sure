@@ -1,0 +1,345 @@
+---
+ca:
+  goals:
+    color_picker:
+      trigger_label: Tria color i icona
+      color_heading: Color
+      icon_heading: Icona
+      poor_contrast: Contrast insuficient; tria un color més fosc o
+      auto_adjust: ajusta'l automàticament.
+    index:
+      title: Objectius
+      subtitle: Estalvia per al que t'importa.
+      new_goal: Nou objectiu
+      empty_filtered: Cap objectiu coincideix.
+      pending_pledges_callout: Tens aportacions pendents. Sure les confirmarà a la propera sincronització.
+      kpi:
+        contributed_label: Aportat · últims 30 d
+        velocity_delta_up: ↑ %{percent}%% vs. 30 d anteriors
+        velocity_delta_down: ↓ %{percent}%% vs. 30 d anteriors
+        velocity_delta_flat: vs. 30 d anteriors
+        velocity_delta_zero_base: Primers 30 d d'activitat
+        needs_this_month_label: Cal aquest mes
+        needs_this_month_sub:
+          one: '%{count} objectiu va endarrerit'
+          other: '%{count} objectius van endarrerits'
+        needs_this_month_zero_sub: Cap objectiu endarrerit
+        on_track_label: Objectius en bon camí
+        on_track_value: '%{on_track} de %{total}'
+        on_track_sub_parts:
+          reached:
+            one: '%{count} assolit'
+            other: '%{count} assolits'
+          behind:
+            one: '%{count} endarrerit'
+            other: '%{count} endarrerits'
+          no_date:
+            one: '%{count} sense data límit'
+            other: '%{count} sense data límit'
+          paused:
+            one: '%{count} en pausa'
+            other: '%{count} en pausa'
+        on_track_sub_all_good: Tots els objectius actius van al ritme previst
+        on_track_all_caught_up: Tot al dia
+      goals_section:
+        heading: Objectius
+        subtitle: Estalvia per al que t'importa.
+      ongoing_section:
+        heading: Objectius
+      archived_section:
+        heading: Arxivats
+      search:
+        placeholder: Cerca objectius…
+        aria_label: Cerca objectius
+        empty: Cap objectiu coincideix.
+        empty_with_query: Cap objectiu coincideix amb «%{query}».
+        empty_with_filter: Cap objectiu coincideix amb aquest filtre.
+        empty_with_both: Cap objectiu coincideix amb «%{query}» amb aquest filtre.
+        clear_search: Esborra la cerca
+        show_all: Mostra-ho tot
+      chips_aria: Filtra els objectius per estat
+      chips:
+        all: Tots
+        on_track: En bon camí
+        behind: Endarrerits
+        no_target_date: Sense data límit
+        paused: En pausa
+        completed: Completats
+    new:
+      heading: Nou objectiu
+      subtitle: Estalvia per a una cosa concreta.
+    edit:
+      heading: Edita l'objectiu
+      save: Desa els canvis
+    create:
+      success: Objectiu creat.
+    update:
+      success: Objectiu actualitzat.
+    destroy:
+      success: Objectiu eliminat.
+    pause:
+      success: Objectiu en pausa.
+      invalid_transition: No es pot posar en pausa l'objectiu des del seu estat actual.
+    resume:
+      success: Objectiu reprès.
+      invalid_transition: No es pot reprendre l'objectiu des del seu estat actual.
+    complete:
+      success: Objectiu marcat com a completat.
+      invalid_transition: No es pot completar l'objectiu des del seu estat actual.
+    archive:
+      success: Objectiu arxivat.
+      invalid_transition: No es pot arxivar l'objectiu des del seu estat actual.
+    unarchive:
+      success: Objectiu restaurat.
+      invalid_transition: No es pot restaurar l'objectiu des del seu estat actual.
+    reopen:
+      success: Objectiu reobert.
+      invalid_transition: No es pot reobrir l'objectiu des del seu estat actual.
+    consume:
+      title: Registra una despesa
+      subtitle: '%{goal}'
+      amount_label: Quant n'has fet servir?
+      amount_hint: Ara mateix hi ha %{saved} destinats a aquest objectiu.
+      account_label: De quin compte?
+      earmark_note: L'import que registris deixa d'estar reservat per a aquest objectiu, de manera que els altres objectius d'aquell compte recuperen la seva part.
+      cancel: Cancel·la
+      submit: Registra-ho
+      success: '%{amount} registrats com a utilitzats.'
+      errors:
+        non_positive: Introdueix un import superior a zero.
+        maintained: 'Una reserva es fa servir i es torna a omplir, no es gasta: el que hi falta ja es mostra a l''objectiu.'
+        exceeds_target: És més del que aquest objectiu pretenia estalviar.
+        account_required: Aquest objectiu es finança amb diversos comptes; indica de quin han sortit els diners.
+        account_not_linked: Aquest compte no finança aquest objectiu.
+        not_active: Aquest objectiu ja no està actiu, així que no s'hi pot registrar res.
+        exceeds_earmark: És més del que l'objectiu té reservat en aquest compte.
+        transaction_already_claimed: Aquesta sortida ja s'ha atribuït.
+        transaction_not_found: Aquesta sortida ja no es pot atribuir.
+        no_linked_account: A aquest objectiu ja no li queda cap compte de finançament.
+    unattributed_outflows:
+      heading: Han sortit diners d'aquests comptes
+      body: Si alguna d'aquestes despeses era per a %{goal}, indica-ho i deixarà de comptar en contra de l'objectiu.
+      attribute: És aquesta
+    show:
+      edit: Edita
+      consume: He fet servir part d'aquests diners
+      pause: Posa en pausa
+      resume: Reprèn
+      complete: Marca com a completat
+      archive: Arxiva
+      unarchive: Restaura
+      reopen: Reobre l'objectiu
+      delete: Elimina
+      reserve_shortfall:
+        heading: Reserva per sota del saldo objectiu
+        body: Tens %{saved} de %{target}. Afegeix-hi %{missing} per tornar-la al saldo objectiu.
+      record_pledge_cta: Registra una aportació
+      pledge_just_transferred: Registra una transferència que has fet
+      pledge_just_saved: Registra diners que has apartat
+      funding_accounts_heading: Comptes de finançament
+      funding_accounts:
+        earmarked_of: '%{earmarked} reservats de %{balance}'
+        empty:
+          heading: Encara no hi ha comptes de finançament enllaçats
+          body: Edita l'objectiu per enllaçar els comptes d'efectiu on estalvies.
+      notes: Notes
+      funding_last_30d: últims 30 d
+      funding_last_90d: últims 90 d
+      status_callout:
+        depleted: '%{amount} per sota del saldo objectiu: reposa-la per recuperar la reserva'
+        behind: estalvia %{amount}/mes més per posar-te al dia
+        behind_covered: les aportacions pendents cobreixen la diferència
+        on_track: assolirà l'objectiu cap al %{date}
+        no_target_date: fixa una data objectiu per projectar quan l'assoliràs
+      pending_pledge:
+        title:
+          zero: 'Pendent: %{amount} a %{account} · caduca avui'
+          one: 'Pendent: %{amount} a %{account} · queda %{count} dia'
+          other: 'Pendent: %{amount} a %{account} · queden %{count} dies'
+        body_transfer: Es confirma automàticament quan Sure detecta un ingrés coincident a la propera sincronització.
+        body_manual: Es confirma la propera vegada que editis manualment el saldo.
+        pledged_at: Registrada fa %{time_ago}
+        extend: Amplia 7 dies
+        cancel: Cancel·la
+        confirm_cancel_title: Vols cancel·lar aquesta aportació?
+        confirm_cancel_body: S'eliminarà l'aportació de %{amount}. Pots registrar-ne una de nova quan vulguis.
+        confirm_cancel_cta: Cancel·la l'aportació
+      header:
+        target: 'Objectiu: %{amount}'
+        target_by: 'Objectiu: %{amount} abans del %{date}'
+        target_by_past: 'Objectiu: %{amount} · data límit %{date}'
+      ring:
+        including_used: Inclou %{amount} ja utilitzats
+        saved: Estalviat
+        of: de %{target}
+        to_go: en falten %{amount}
+        of_target: de l'objectiu
+        market_value: 'Valor de mercat: %{amount}'
+        aria_label: Objectiu completat al %{percent}%. %{amount} estalviats de %{target}.
+        aria_label_with_used: Objectiu completat al %{percent}%. %{amount} de %{target}, incloent-hi %{used} ja utilitzats.
+      projection:
+        heading: Projecció
+        legend_saved: Estalviat
+        legend_projection: Projecció
+        legend_required: Necessari
+        reserve: Una reserva manté un saldo objectiu, així que no hi ha cap data d'assoliment a projectar.
+        reached: Has arribat a l'objectiu. No cal cap projecció.
+        no_target_date: No hi ha data objectiu. Fixa'n una per projectar quan l'assoliràs.
+        no_pace: Encara no hi ha ingressos. Afegeix diners a un compte enllaçat per començar una projecció.
+        behind: Al ritme actual no hi arribaràs.
+        on_track_html: Al ritme actual, assoliràs aquest objectiu cap al <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        aria_label: Gràfic de projecció de %{name}
+        today_marker: Avui
+        tooltip_projected: 'Projectat: %{amount}'
+        tooltip_saved: 'Estalviat: %{amount}'
+        tooltip_target_relation: '%{percent}% de l''objectiu de %{target}'
+      catch_up:
+        title: Estalvia %{amount}/mes més per posar-te al dia
+        body: 'Ritme actual: %{avg}/mes · necessari: %{required}/mes per arribar a l''objectiu.'
+        adjust_target_cta: Ajusta l'objectiu
+      confirm_complete_title: Vols marcar aquest objectiu com a completat?
+      confirm_complete_body: Els diners reservats per a aquest objectiu queden lliures per als teus altres objectius del mateix compte. Sortirà de la llista d'objectius en curs, i encara el podràs arxivar o restaurar més endavant.
+      confirm_complete_body_short: Vas al %{progress}%, %{saved} de %{target}. Si el marques com a completat, es registrarà aquest import com a assoliment en lloc de l'objectiu original. Vols continuar, o prefereixes tancar això i ajustar l'objectiu?
+      confirm_complete_cta: Marca com a completat
+      confirm_archive_title: Vols arxivar aquest objectiu?
+      confirm_archive_body: 'Els objectius arxivats desapareixen de la llista principal. Els pots restaurar més endavant. Arxivar no registra el que has assolit: si vols conservar-ho, primer marca l''objectiu com a completat.'
+      confirm_archive_cta: Arxiva
+      confirm_delete_title: Vols eliminar aquest objectiu?
+      confirm_delete_body: '%{name} i el seu historial d''aportacions s''eliminaran definitivament. Els teus comptes enllaçats, saldos i transaccions no es veuran afectats. Si el vols conservar com a registre, arxiva''l.'
+      confirm_delete_cta: Elimina l'objectiu
+      paused_banner:
+        title: Aquest objectiu està en pausa
+        body: Reprèn-lo per continuar seguint el teu progrés.
+        resume_cta: Reprèn l'objectiu
+      archived_banner:
+        title: Aquest objectiu està arxivat
+        body: Restaura'l per continuar fent-hi aportacions, o deixa'l com a registre.
+        restore_cta: Restaura l'objectiu
+      celebration:
+        heading_reserve: Reserva completa
+        body_reserve: 'La teva reserva és al saldo objectiu, %{saved} de %{target}. No cal fer res: continua reservada.'
+        heading: Objectiu assolit. Bona feina!
+        body_reached: 'Has arribat a l''objectiu amb %{saved} de %{target}. Encara no està tancat: els diners continuen reservats per a aquest objectiu.'
+        close_cta: Tanca aquest objectiu
+        close_hint: En tancar-lo, els diners reservats queden lliures per als teus altres objectius del mateix compte. Fes-ho quan ja els hagis gastat.
+        frozen: Assolit el %{date} · %{amount}
+        body: Objectiu tancat amb %{saved} de %{target}. Conserva'l com a registre o arxiva'l ara.
+        archive_cta: Arxiva l'objectiu
+      inactive:
+        heading_paused: Aquest objectiu està en pausa
+        heading_archived: Aquest objectiu està arxivat
+        body: '%{saved} estalviats de %{target} fins ara.'
+      no_target_date:
+        heading: Afegeix una data objectiu
+        body: Fixa una data límit per projectar quan l'assoliràs i seguir el ritme necessari.
+        cta: Fixa la data objectiu
+      empty:
+        heading: Encara no hi ha ingressos
+        body: Fes una transferència al teu compte enllaçat. Sure la detectarà a la propera sincronització. O actualitza el saldo del teu compte manual.
+    errors:
+      not_found: No s'ha trobat aquest objectiu. És possible que s'hagi eliminat.
+    states:
+      active: Actiu
+      paused: En pausa
+      completed: Completat
+      archived: Arxivat
+    status:
+      funded: Reserva completa
+      depleted: Cal reposar-la
+      on_track: En bon camí
+      behind: Endarrerit
+      reached: Assolit
+      completed: Completat
+      no_target_date: Sense data límit
+      paused: En pausa
+      archived: Arxivat
+    empty_state:
+      heading: Encara no hi ha objectius
+      body: Fixa un objectiu, enllaça els comptes on estalvies i mira com creix el teu progrés.
+      subtitle: Fixa un objectiu i comença a estalviar per aconseguir-lo.
+      new_goal: Crea el teu primer objectiu
+      no_depository_accounts: Necessites com a mínim un compte d'efectiu (corrent, d'estalvi, HSA, dipòsit a termini o mercat monetari) abans de crear un objectiu.
+      add_account: Afegeix un compte
+    goal_card:
+      including_used: Inclou %{amount} ja utilitzats
+      no_accounts: Cap compte enllaçat
+      n_accounts: '%{first} +%{count}'
+      left: restants
+      aria_progress: '%{percent}% de %{target}'
+      accounts:
+        one: '%{count} compte'
+        other: '%{count} comptes'
+      no_target_date: Sense data límit
+      completed: Completat
+      past_due: Data límit superada
+      days_left:
+        one: Queda %{count} dia
+        other: Queden %{count} dies
+      pace_with_target: '%{avg}/mes · objectiu %{target}/mes'
+      pace_no_target: '%{avg}/mes de mitjana'
+      footer_paused: En pausa
+      footer_archived: Arxivat
+      footer_reserve_intact: Reserva completa
+      footer_reserve_short: Falten %{amount} per reposar
+      footer_reached: Objectiu assolit
+      footer_catch_up: Estalvia %{amount}/mes per posar-te al dia
+      footer_no_deadline: Sense data límit
+      pending_pledge: Aportació pendent
+      pending_count:
+        one: '%{count} pendent'
+        other: '%{count} pendents'
+      footer_no_pledges: Encara no hi ha aportacions confirmades
+      footer_last_today: Darrera aportació confirmada avui
+      footer_last_days:
+        one: Darrera aportació confirmada fa %{count} dia
+        other: Darrera aportació confirmada fa %{count} dies
+    form:
+      target_modes:
+        fixed: Un import fix
+        months_of_expenses: Un nombre de mesos de despeses
+      kinds:
+        one_off:
+          hint: Estalvia per a alguna cosa i tanca l'objectiu quan ho gastis.
+          label: Objectiu puntual
+        maintained:
+          hint: Un saldo per mantenir, com un fons d'emergència. No es tanca mai.
+          label: Reserva per mantenir
+      create: Crea l'objectiu
+      save: Desa els canvis
+      suggested_with_date: Estalvia {monthly}/mes entre {accounts} per arribar-hi a temps.
+      suggested_no_date: Fixa una data objectiu per projectar quan l'assoliràs.
+      errors:
+        name_required: Posa un nom al teu objectiu.
+        amount_required: Fixa un objectiu superior a zero.
+        accounts_required: Tria com a mínim un compte de finançament.
+      earmark:
+        headroom: Queden {left} per reservar en aquest compte.
+        prorata: 'Els teus objectius en aquest compte sumen {total} per a un saldo de {balance}: avançaran de manera proporcional.'
+        whole_balance: Aquest compte finançarà el que quedi després de les altres reserves.
+        whole_balance_alone: Aquest objectiu farà servir tot el saldo d'aquest compte.
+      fields:
+        target_mode: Com es fixa el saldo objectiu
+        target_months: Mesos de despeses
+        target_months_hint: Es recalcula el dia 1 de cada mes a partir de la teva despesa mensual mediana.
+        name: Nom
+        name_placeholder: Fons d'emergència, entrada del pis…
+        target_amount: Import objectiu
+        target_balance: Saldo objectiu
+        target_balance_pending: Es calcula en desar
+        target_balance_hint: A partir de la teva despesa mensual mediana dels mesos indicats. S'actualitza cada mes.
+        target_date: Data objectiu
+        color: Color
+        notes: Notes (opcional)
+        notes_placeholder: Un recordatori per al teu jo del futur…
+        funding_accounts: Comptes de finançament
+        funding_accounts_hint: El saldo d'aquest objectiu és el saldo (o la part reservada) d'aquests comptes.
+        whole_balance: Tot el saldo
+        earmark_for: Import reservat de %{account}
+        earmark_hint: Deixa un import en blanc per destinar-hi tot el saldo d'aquell compte.
+      subtypes:
+        checking: Compte corrent
+        savings: Estalvi
+        hsa: HSA
+        cd: Dipòsit a termini
+        money_market: Mercat monetari
+        other: Altres

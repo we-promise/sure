@@ -5,3 +5,10 @@ ca:
       Les etiquetes d'activitat (Compra, Venda, Dividend) no estan disponibles, cosa
       que pot afectar la precisió del pressupost. Considera crear regles per excloure
       o categoritzar les transaccions d'inversió.
+    lunchflow_accounts_failed:
+      one: 'Importació de Lunchflow: no s''ha pogut actualitzar %{count} compte'
+      other: 'Importació de Lunchflow: no s''han pogut actualitzar %{count} comptes'
+    lunchflow_transactions_failed:
+      one: 'Importació de Lunchflow: no s''han pogut obtenir les transaccions de %{count} compte'
+      other: 'Importació de Lunchflow: no s''han pogut obtenir les transaccions de %{count} comptes'
+    lunchflow_import_error: 'Importació de Lunchflow: %{error}'

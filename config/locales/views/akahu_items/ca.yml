@@ -1,0 +1,127 @@
+---
+ca:
+  providers:
+    akahu:
+      name: Akahu
+      description: Connecta comptes bancaris de Nova Zelanda mitjançant Akahu
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Connexió d'Akahu
+  akahu_account:
+    fallback: Compte d'Akahu
+  akahu_entry:
+    notes:
+      reference: Referència
+      particulars: Detalls
+      code: Codi
+      other_account: Altre compte
+  akahu_item:
+    errors:
+      account_processing_failed: No s'ha pogut sincronitzar el compte d'Akahu
+      account_sync_schedule_failed: No s'ha pogut programar la sincronització del compte d'Akahu
+      pending_transactions_failed: No s'han pogut obtenir les transaccions pendents d'Akahu
+      transactions_failed: No s'han pogut obtenir les transaccions d'Akahu
+      sync_failed: No s'ha pogut sincronitzar la connexió d'Akahu
+    sync_status:
+      no_accounts: No s'han trobat comptes
+      all_synced:
+        one: '%{count} compte sincronitzat'
+        other: '%{count} comptes sincronitzats'
+      partial: '%{linked} sincronitzats, %{unlinked} per configurar'
+    institution_summary:
+      none: No hi ha cap entitat connectada
+      one: 1 entitat
+      count:
+        one: '%{count} entitat'
+        other: '%{count} entitats'
+  akahu_items:
+    provider_panel:
+      default_connection_name: Connexió d'Akahu
+      add_connection: Afegeix una connexió d'Akahu
+      update_connection: Actualitza la connexió
+      connection_name_label: Nom de la connexió
+      connection_name_placeholder: Akahu principal
+      app_token_label: Token de l'app
+      app_token_placeholder: Enganxa el teu token d'app d'Akahu
+      keep_app_token_placeholder: Deixa-ho en blanc per mantenir el token d'app actual
+      user_token_label: Token d'usuari
+      user_token_placeholder: Enganxa el teu token d'usuari d'Akahu
+      keep_user_token_placeholder: Deixa-ho en blanc per mantenir el token d'usuari actual
+      setup_accounts: Configura els comptes
+      syncing: Sincronitzant...
+      sync: Sincronitza
+      disconnect: Desconnecta
+      disconnect_confirm: Segur que vols desconnectar %{name}?
+    create:
+      success: Connexió d'Akahu desada.
+    update:
+      success: Connexió d'Akahu actualitzada.
+    destroy:
+      success: La connexió d'Akahu s'ha programat per a l'eliminació.
+      unlink_failed: No s'ha pogut desconnectar la connexió d'Akahu
+    select_accounts:
+      title: Enllaça comptes d'Akahu
+      description: Tria els comptes d'Akahu que vols afegir.
+      no_accounts_found: No s'han trobat comptes d'Akahu sense enllaçar.
+      no_credentials_configured: Primer configura Akahu a la configuració del proveïdor.
+      cancel: Cancel·la
+      link_accounts: Enllaça els comptes
+    link_accounts:
+      success:
+        one: S'ha enllaçat %{count} compte d'Akahu.
+        other: S'han enllaçat %{count} comptes d'Akahu.
+      no_accounts_selected: Selecciona com a mínim un compte.
+      no_credentials_configured: Primer configura Akahu a la configuració del proveïdor.
+      unsupported_account_type: Akahu no admet aquest tipus de compte.
+      link_failed: No s'ha enllaçat cap compte.
+    select_existing_account:
+      title: Enllaça un compte d'Akahu a %{account_name}
+      description: Tria un compte d'Akahu sense enllaçar per connectar-lo a aquest compte.
+      no_accounts_found: No s'han trobat comptes d'Akahu sense enllaçar.
+      no_credentials_configured: Primer configura Akahu a la configuració del proveïdor.
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor.
+      cancel: Cancel·la
+      link_account: Enllaça el compte
+    link_existing_account:
+      success: S'ha enllaçat el compte d'Akahu a %{account_name}.
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor.
+      akahu_account_already_linked: Aquest compte d'Akahu ja està enllaçat.
+    setup_accounts:
+      title: Configura els comptes d'Akahu
+      subtitle: Tria com ha d'aparèixer cada compte d'Akahu a Sure.
+      no_credentials: Primer configura les credencials d'Akahu.
+      api_error: No s'han pogut obtenir els comptes d'Akahu.
+      fetch_failed: No s'han pogut obtenir els comptes
+      no_accounts_to_setup: No hi ha comptes per configurar
+      all_accounts_linked: Tots els comptes d'Akahu ja estan enllaçats.
+      choose_account_type: Tria un tipus de compte
+      choose_account_type_description: Omet els comptes que no vulguis seguir.
+      account_type_label: Tipus de compte
+      account_types:
+        skip: Omet
+        depository: Efectiu
+        credit_card: Targeta de crèdit
+        investment: Inversió
+        loan: Préstec
+      create_accounts: Crea els comptes
+      cancel: Cancel·la
+    complete_account_setup:
+      success:
+        one: S'ha creat %{count} compte d'Akahu.
+        other: S'han creat %{count} comptes d'Akahu.
+      all_skipped: No s'ha creat cap compte d'Akahu.
+      no_accounts: No s'ha seleccionat cap compte d'Akahu.
+      creation_failed: No s'han pogut crear els comptes d'Akahu.
+    akahu_item:
+      deletion_in_progress: Eliminació en curs
+      syncing: Sincronitzant
+      error: Error
+      status_with_summary: Sincronitzat fa %{timestamp} · %{summary}
+      status_never: Mai sincronitzat
+      delete: Elimina
+      setup_needed: Cal configurar els comptes
+      setup_description: '%{linked} de %{total} comptes enllaçats.'
+      setup_action: Configura els comptes
+      no_accounts_title: Encara no s'ha importat cap compte
+      no_accounts_description: Obtén els comptes d'Akahu i tria quins vols enllaçar.

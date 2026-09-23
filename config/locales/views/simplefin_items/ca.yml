@@ -106,14 +106,14 @@ ca:
       account_type_other_asset_desc: Tota la resta
       activity:
         days_ago:
-          one: fa 1 dia
+          one: fa %{count} dia
           other: fa %{count} dies
         dormant: Sense activitat en %{days} dies
         empty: Encara no s'han importat transaccions
         likely_closed: Sense activitat recent i saldo zero — pot ser una targeta tancada
           o substituïda
         recent:
-          one: 1 transacció • darrera %{when}
+          one: '%{count} transacció • darrera %{when}'
           other: "%{count} transaccions • darrera %{when}"
         today: avui
         yesterday: ahir
@@ -191,3 +191,21 @@ ca:
         update_failed: 'No s''ha pogut actualitzar la connexió: %{message}'
       success: Connexió SimpleFIN actualitzada correctament! Els teus comptes s'estan
         tornant a connectar.
+    sync_status:
+      no_accounts: No s'han trobat comptes
+      synced:
+        one: '%{count} compte sincronitzat'
+        other: '%{count} comptes sincronitzats'
+      partial_setup:
+        one: '%{linked} sincronitzat, %{unlinked} pendents de configurar'
+        other: '%{linked} sincronitzats, %{unlinked} pendents de configurar'
+    institution_summary:
+      none: No hi ha entitats connectades
+      count:
+        one: '%{count} entitat'
+        other: '%{count} entitats'
+    rate_limited:
+      daily_refresh: Has arribat al límit diari d'actualitzacions de SimpleFIN. Torna-ho a provar quan el bridge s'actualitzi (fins a 24 hores).
+    stale_sync:
+      last_successful: La darrera sincronització correcta va ser fa %{count} dies. Pot ser que la teva connexió de SimpleFIN necessiti atenció.
+      no_transactions: No hi ha transaccions noves des de fa %{count} dies. Comprova al tauler de SimpleFIN que les connexions bancàries estiguin actives.

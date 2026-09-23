@@ -7,7 +7,7 @@ ca:
         i informes
       include_in_finances: Inclou als meus pressupostos i informes
       member: Membre
-      no_members: Encara no hi ha altres membres amb qui compartir aquest compte
+      no_members: No hi ha altres membres a %{moniker} amb qui compartir
       owner_label: 'Propietari: %{name}'
       permission: Permís
       permissions:
@@ -20,7 +20,7 @@ ca:
       save: Desa la configuració de compartició
       shared: Compartit
       shared_with_count:
-        one: Compartit amb 1 membre
+        one: Compartit amb %{count} membre
         other: Compartit amb %{count} membres
       subtitle: Controla qui pot veure i interactuar amb aquest compte
       title: Compartició de comptes

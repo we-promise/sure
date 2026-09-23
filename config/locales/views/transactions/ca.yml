@@ -11,8 +11,8 @@ ca:
       other: Altres
       reinvestment: Reinversió
       sell: Venda
-      sweep_in: Sweep entrant
-      sweep_out: Sweep sortint
+      sweep_in: Traspàs automàtic d'entrada
+      sweep_out: Traspàs automàtic de sortida
       transfer: Transferència
       withdrawal: Retirada
     attachments:
@@ -24,7 +24,7 @@ ca:
       failed_delete: 'No s''ha pogut eliminar l''adjunt: %{error}'
       failed_upload: 'No s''ha pogut pujar l''adjunt: %{error}'
       files:
-        one: Fitxer (1)
+        one: Fitxer (%{count})
         other: Fitxers (%{count})
       max_reached: S'ha arribat al límit de fitxers (%{count}/%{max}). Elimina un
         fitxer existent per pujar-ne un altre.
@@ -58,7 +58,7 @@ ca:
     categorizes:
       create:
         categorized:
-          one: 1 transacció categoritzada
+          one: "%{count} transacció categoritzada"
           other: "%{count} transaccions categoritzades"
         rule_creation_failed: Transaccions categoritzades, però no s'ha pogut crear
           la regla (potser ja existeix).
@@ -78,14 +78,14 @@ ca:
         filter_placeholder: Cerca categories...
         no_categories: No hi ha categories coincidents
         remaining:
-          one: Queda 1 transacció sense categoritzar
+          one: Queda %{count} transacció sense categoritzar
           other: Queden %{count} transaccions sense categoritzar
         rule_description_prefix: Les futures transaccions de tipus %{type} amb nom
           que contingui
         rule_description_suffix: també haurien de rebre aquesta categoria.
         skip: Omet
         transaction_count:
-          one: 1 transacció
+          one: "%{count} transacció"
           other: "%{count} transaccions"
         transactions_hint: Desmarca per excloure una transacció, o assigna-li una
           categoria diferent directament a la seva fila.
@@ -112,14 +112,14 @@ ca:
         select_security: Selecciona o introdueix un valor
         unexpected_error: 'Error inesperat durant la conversió: %{error}'
       exchange_hint: Deixa-ho en blanc per detectar-ho automàticament
-      exchange_label: Mercat (opcional)
+      exchange_label: Borsa (opcional)
       exchange_placeholder: XNAS
       price_hint: Preu per acció (%{currency})
       price_label: Preu per acció
       price_mismatch_message: El teu preu (%{entered_price}/acció) difereix significativament
         del preu de mercat actual de %{ticker} (%{market_price}). Si sembla incorrecte,
-        potser has seleccionat el valor equivocat — prova "Introdueix una cotització
-        personalitzada" per especificar el correcte.
+        potser has seleccionat el valor equivocat — prova "Introdueix un ticker
+        personalitzat" per especificar el correcte.
       price_mismatch_title: El preu pot no coincidir
       price_placeholder: p. ex. 52,15
       qty_or_price_hint: Introdueix com a mínim la quantitat O el preu. L'altre es
@@ -144,7 +144,7 @@ ca:
     create:
       created: Transacció creada
     dismiss_duplicate:
-      failure: No s'ha pogut rebutjar la suggerència de duplicat
+      failure: No s'ha pogut descartar el suggeriment de duplicat
       success: Mantingudes com a transaccions separades
     form:
       account: Compte
@@ -168,6 +168,12 @@ ca:
       tag_search_placeholder: Cerca o crea una etiqueta
       tags_label: Etiquetes
       transfer: Transferència
+      category_search_placeholder: Cerca categories
+      create_category: Crea "%{name}"
+      create_category_error: No s'ha pogut crear la categoria
+      create_merchant: Crea
+      create_merchant_error: No s'ha pogut crear el comerç
+      merchant_search_placeholder: Cerca o crea un comerç
     header:
       edit_categories: Edita categories
       edit_imports: Edita importacions
@@ -176,7 +182,7 @@ ca:
       import: Importa
     index:
       categorize_button:
-        one: Categoritza (1)
+        one: Categoritza (%{count})
         other: Categoritza (%{count})
       edit_categories: Edita categories
       edit_imports: Edita importacions
@@ -205,14 +211,14 @@ ca:
     new:
       new_transaction: Nova transacció
     pending_duplicate_merge:
-      confirm_title: Fusiona amb la transacció publicada (%{posted_amount})
+      confirm_title: Fusiona amb la transacció comptabilitzada (%{posted_amount})
       possible_duplicate: Duplicat?
       possible_duplicate_short: Dup?
       reject_title: Mantén com a transaccions separades
       review_recommended: Revisa
       review_recommended_short: Rev
     potential_duplicate_description: Aquesta transacció pendent pot ser la mateixa
-      que la transacció publicada a sota. Si és així, fusiona-les per evitar comptabilitzar
+      que la transacció comptabilitzada a sota. Si és així, fusiona-les per evitar comptabilitzar
       dues vegades.
     potential_duplicate_title: S'ha detectat un duplicat possible
     search:
@@ -250,6 +256,14 @@ ca:
           expense: Despesa
           income: Ingrés
           transfer: Transferència
+        account_filter:
+          filter_accounts: Filtra comptes
+        category_filter:
+          filter_category: Filtra categories
+        merchant_filter:
+          filter_merchants: Filtra comerços
+        tag_filter:
+          filter_tags: Filtra etiquetes
       form:
         filter: Filtra
         search_placeholder: Cerca transaccions...
@@ -321,10 +335,10 @@ ca:
       payee: Beneficiari
       pending_duplicate_merger_button: Obre el fusionador
       pending_duplicate_merger_description: Fusiona manualment aquesta transacció
-        pendent amb la seva versió publicada.
-      pending_duplicate_merger_title: Duplicat d'una transacció publicada?
+        pendent amb la seva versió comptabilitzada.
+      pending_duplicate_merger_title: Duplicat d'una transacció comptabilitzada?
       potential_duplicate_description: Aquesta transacció pendent pot ser la mateixa
-        que la transacció publicada a sota. Si és així, fusiona-les per evitar comptabilitzar
+        que la transacció comptabilitzada a sota. Si és així, fusiona-les per evitar comptabilitzar
         dues vegades.
       potential_duplicate_title: S'ha detectat un duplicat possible
       provider_extras: Extres del proveïdor
@@ -337,6 +351,10 @@ ca:
         en un altre compte.
       transfer_or_debt_payment: Transferència o pagament de deute?
       uncategorized: "(sense categoritzar)"
+      create_bill: Crea una factura
+      applied_to_title: Factures pagades amb aquesta transacció
+      applied_to_detail: '%{amount} aplicats a la factura amb venciment el %{date}'
+      applied_to_unreviewed: Cal revisar-ho
     split_parent_row:
       split_label: Divisió
     transfer_match:
@@ -355,9 +373,9 @@ ca:
     toggle_recurring_section: Mostra/Amaga les transaccions recurrents properes
     transaction:
       activity_type_tooltip: Tipus d'activitat d'inversió
-      linked_with_provider: Vinculat amb %{provider}
+      linked_with_provider: Enllaçat amb %{provider}
       pending: Pendent
-      pending_tooltip: Transacció pendent — pot canviar quan es publiqui
+      pending_tooltip: Transacció pendent — pot canviar quan es comptabilitzi
       possible_duplicate: Duplicat?
       potential_duplicate_tooltip: Això pot ser un duplicat d'una altra transacció
       review_recommended: Revisa

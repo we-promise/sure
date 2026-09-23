@@ -32,7 +32,7 @@ ca:
           member: Accés bàsic d'usuari. Pot gestionar els seus propis comptes, transaccions
             i configuracions.
           super_admin: Administrador d'instància. Pot gestionar proveïdors SSO, rols
-            d'usuari i personificar usuaris per donar suport.
+            d'usuari i suplantar usuaris per donar suport.
         role_descriptions_title: Descripcions dels rols
         roles:
           admin: Administrador
@@ -51,10 +51,77 @@ ca:
           session_count: Nombre de sessions
           trial_ends_at: Fi de la prova
           user: Usuari
+          family: Família / Grup
+          keep_current_family: Mantén la família/grup actual
+          create_new_family_option: + Crea una família/grup nou
+          new_family_name: Nom de la nova família/grup
+          new_family_name_placeholder: Introdueix un nom per crear una família/grup nou
+          new_family_moniker: Tipus de la nova família/grup
+          set_password: Defineix una contrasenya nova
+          password_placeholder: Deixa-ho en blanc per mantenir l'actual
+          actions: Accions
         title: Gestió d'usuaris
         trial_ends_at: Fi de la prova
         unnamed_family: Família/grup sense nom
         you: "(Tu)"
+        family_monikers:
+          family: Família
+          group: Grup
+        actions:
+          manage_user: Gestiona l'usuari
+          update: Actualitza l'usuari
+          delete_user: Elimina l'usuari
+          self_edit_warning: Si canvies el teu propi rol, es modificaran els teus privilegis d'administració.
+          self_update_confirm: Segur que vols actualitzar el rol o la família del teu propi compte?
+          last_super_admin_role_locked: El canvi de rol està bloquejat perquè ets l'últim super administrador del sistema.
+        delete_confirm: Segur que vols eliminar aquest usuari? Aquesta acció no es pot desfer.
+        delete_confirm_last_user: Segur que vols eliminar aquest usuari? És l'últim usuari de la seva família/grup, així que eliminar-lo també eliminarà tota la família/grup i totes les dades associades. Aquesta acció no es pot desfer.
+        remove: Elimina l'usuari
+        removed_sso_identities:
+          title: Identitats SSO eliminades
+          description: Aquestes identitats no poden crear ni tornar a connectar un compte. Permet de nou una identitat només si l'eliminació va ser accidental.
+          allow_again: Permet de nou
+          confirm: Vols permetre que %{email} torni a iniciar sessió o crear un compte mitjançant SSO?
+        auth_types:
+          sso: SSO
+          local: Local
+          local_and_sso: Local + SSO
+          sso_provider_tooltip: 'Proveïdor SSO: %{providers}'
+        unused_families:
+          title: Famílies / grups sense ús
+          family_id: 'ID de família: %{id}'
+          delete: Elimina la família sense ús
+          delete_confirm: Segur que vols eliminar aquesta família/grup sense ús? Aquesta acció no es pot desfer.
+          empty: No s'han trobat famílies/grups sense ús.
       update:
         failure: No s'ha pogut actualitzar el rol d'usuari.
         success: Rol d'usuari actualitzat correctament.
+        success_role: Rol d'usuari actualitzat correctament.
+        success_password: Contrasenya de l'usuari actualitzada correctament.
+        success_role_and_password: Rol i contrasenya de l'usuari actualitzats correctament.
+        success_family: Pertinença de l'usuari a la família/grup actualitzada correctament.
+        family_required: Selecciona una família/grup existent o introdueix un nom per crear-ne una de nova.
+        password_and_family_conflict: No es poden actualitzar alhora la contrasenya i la pertinença a la família/grup.
+        password_too_short: La contrasenya ha de tenir com a mínim 8 caràcters.
+        password_missing_case: La contrasenya ha d'incloure lletres majúscules i minúscules.
+        password_missing_number: La contrasenya ha d'incloure com a mínim un número.
+        password_missing_special: La contrasenya ha d'incloure com a mínim un caràcter especial.
+        last_super_admin_error: No es pot degradar l'últim super administrador del sistema.
+      destroy:
+        success: S'ha revocat l'accés de l'usuari i se n'ha programat l'eliminació permanent.
+        failure: No s'ha pogut eliminar l'usuari.
+        cannot_remove_self: No pots eliminar el teu propi compte des d'aquí.
+        cannot_remove_last_super_admin: No pots eliminar l'últim super administrador actiu.
+        confirmation_mismatch: L'adreça electrònica no coincideix. No s'ha eliminat l'usuari.
+      deletion:
+        title: Elimina l'usuari permanentment
+        warning: Això revoca immediatament l'accés i programa l'eliminació permanent de l'usuari i les seves dades. No es pot desfer.
+        instruction: Escriu %{email} per confirmar-ho.
+        email_label: Correu electrònic de l'usuari
+        cancel: Cancel·la
+        submit: Elimina l'usuari permanentment
+    families:
+      destroy:
+        family_has_active_subscription: La família/grup té una subscripció activa i no es pot eliminar fins que no es cancel·li la subscripció.
+        family_has_users: La família/grup encara té usuaris i no es pot eliminar.
+        success: Família/grup eliminada correctament.

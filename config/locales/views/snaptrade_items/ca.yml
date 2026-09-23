@@ -35,6 +35,17 @@ ca:
         one: "%{count} compte de SnapTrade"
         other: "%{count} comptes de SnapTrade"
       status_ready: Llest per connectar brokers
+      oauth_setup_step_1_html: Registra una aplicació OAuth a <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: 'Només per al flux del navegador: afegeix l''URL de retorn d''aquesta aplicació (<code>%{callback_url}</code>) com a URI de redirecció registrat'
+      oauth_setup_step_3: Defineix SNAPTRADE_OAUTH_CLIENT_ID al teu entorn i reinicia. Només amb això s'activa el flux amb codi de dispositiu; afegeix també SNAPTRADE_OAUTH_CLIENT_SECRET per al flux del navegador
+      oauth_title: OAuth de SnapTrade
+      oauth_status_ready: Autoritza Sure a llegir les dades del teu compte de SnapTrade.
+      oauth_status_ready_device: Autoritza Sure amb un codi de dispositiu per llegir les dades del teu compte de SnapTrade.
+      oauth_status_authorized: Autoritzat amb SnapTrade.
+      oauth_connect_button: Connecta amb SnapTrade
+      oauth_device_button: Utilitza un codi de dispositiu
+      oauth_reauthorize_button: Torna a autoritzar
+      manage_at_snaptrade: Gestiona les connexions a SnapTrade
   snaptrade_item:
     brokerage_summary:
       count:
@@ -145,6 +156,14 @@ ca:
       syncing: Obtenint els teus comptes...
       title: Configura comptes SnapTrade
       try_again: Connecta un broker
+      account_type_label: Tipus de compte
+      account_types:
+        depository: Compte corrent o d'estalvis
+        credit_card: Targeta de crèdit
+        investment: Compte d'inversió
+        crypto: Compte de criptomonedes
+        loan: Préstec o línia de crèdit
+        other_asset: Altre actiu
     snaptrade_item:
       accounts_need_setup:
         one: "%{count} compte necessita configuració"
@@ -170,3 +189,29 @@ ca:
       status: Darrera sincronització fa %{timestamp} - %{summary}
       status_never: Mai sincronitzat
       syncing: Sincronitzant...
+    oauth_authorize:
+      not_configured: L'autorització de SnapTrade al navegador necessita SNAPTRADE_OAUTH_CLIENT_SECRET a més de SNAPTRADE_OAUTH_CLIENT_ID. Defineix-la i reinicia, o autoritza amb un codi de dispositiu.
+    oauth_callback:
+      success: Autorització de SnapTrade completada.
+      access_denied: S'ha cancel·lat l'autorització de SnapTrade.
+      state_mismatch: L'autorització de SnapTrade no ha superat una comprovació de seguretat. Torna-ho a provar.
+      failed: No s'ha pogut completar l'autorització de SnapTrade. Torna-ho a provar.
+    oauth_device_flow:
+      title: Connecta SnapTrade
+      subtitle: Autoritza Sure a SnapTrade amb un codi de dispositiu.
+      instructions: Obre SnapTrade, confirma aquest codi de dispositiu i torna aquí per acabar.
+      code_label: Codi de dispositiu
+      open_snaptrade: Obre SnapTrade
+      start_button: Inicia l'autorització
+      complete_button: He autoritzat SnapTrade
+      cancel_button: Cancel·la
+      missing_client_id: L'OAuth de SnapTrade no està configurat. Afegeix SNAPTRADE_OAUTH_CLIENT_ID a .env.local, reinicia l'aplicació i torna-ho a provar.
+    start_oauth_device_flow:
+      failed: No s'ha pogut iniciar l'autorització de dispositiu de SnapTrade. Torna-ho a provar.
+    complete_oauth_device_flow:
+      success: Autorització de SnapTrade completada.
+      device_code_required: No hi ha cap autorització de dispositiu de SnapTrade en curs per a aquesta connexió. Torna-la a iniciar per obtenir un codi nou.
+      authorization_pending: SnapTrade encara no ha rebut la teva confirmació. Aprova el codi a SnapTrade i torna-ho a provar.
+      expired: Aquest codi de dispositiu ha caducat. Torna a iniciar l'autorització.
+      access_denied: S'ha denegat l'autorització de SnapTrade.
+      failed: No s'ha pogut completar l'autorització de dispositiu de SnapTrade. Torna-ho a provar.

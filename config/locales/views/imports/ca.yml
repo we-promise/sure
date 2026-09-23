@@ -50,6 +50,20 @@ ca:
           de neteja.
       mint_import:
         date_format_label: Format de data
+        account_optional: Compte (opcional)
+        amount: Import
+        apply_configuration: Aplica la configuració
+        category_optional: Categoria (opcional)
+        currency: Divisa
+        date: Data
+        format: Format
+        incomes_negative: Els ingressos són negatius
+        incomes_positive: Els ingressos són positius
+        intro: Hem preconfigurat la teva importació de Mint. Continua al pas següent.
+        leave_empty: Deixa-ho buit
+        name_optional: Nom (opcional)
+        select_format: Selecciona el format
+        tags_optional: Etiquetes (opcional)
       rule_import:
         description: Configura la teva importació de regles. Es crearan o actualitzaran
           regles basades en les dades del CSV.
@@ -59,6 +73,11 @@ ca:
       show:
         description: Selecciona les columnes que corresponen a cada camp del teu CSV.
         title: Configura la teva importació
+        template_found: S'ha trobat una plantilla de configuració
+        template_description: Hem trobat una configuració d'una importació anterior per a aquest compte. Vols aplicar-la a aquesta importació?
+        manually_configure: Configura manualment
+        apply_template: Aplica la plantilla
+        sample_caption: Dades d'exemple del CSV que has pujat
       trade_import:
         account_label: Compte
         apply_configuration: Aplica la configuració
@@ -114,6 +133,21 @@ ca:
         treat_as_html: Tracta «<span class="font-medium">%{value}</span>» com a
       update:
         success: Importació configurada correctament.
+      merchant_import:
+        button_label: Continua
+        description: Puja un fitxer CSV amb els teus comerços. Maparem les columnes automàticament.
+        instructions: Selecciona continuar per analitzar el teu CSV i passar al pas de neteja.
+      ynab_import:
+        preconfigured_notice: Hem preconfigurat la teva importació de YNAB. Continua al pas següent.
+        amount_notice: Els imports es detecten automàticament a partir de les columnes Outflow i Inflow.
+        leave_empty: Deixa-ho buit
+        date_label: Data
+        date_format_label: Format de data
+        account_label: Compte (opcional)
+        name_label: Beneficiari (opcional)
+        category_label: Categoria (opcional)
+        notes_label: Nota (opcional)
+        apply_configuration: Aplica la configuració
     confirms:
       mappings:
         create_account: Crea un compte
@@ -127,21 +161,21 @@ ca:
         unassigned_account: Necessites crear un nou compte per a les files sense assignar?
       show:
         account_mapping_description: Assigna tots els comptes del teu fitxer importat
-          als comptes existents. També pots afegir nous comptes o deixar-los
-          sense categoria.
+          als comptes existents de %{product_name}. També pots afegir nous comptes o deixar-los
+          sense assignar.
         account_mapping_title: Assigna els teus comptes
         account_type_mapping_description: Assigna tots els tipus de compte del teu
-          fitxer importat als existents
+          fitxer importat als tipus de compte de %{product_name}.
         account_type_mapping_title: Assigna els teus tipus de compte
         category_mapping_description: Assigna totes les categories del teu fitxer
-          importat a les categories existents. També pots afegir-ne de noves
+          importat a les categories existents de %{product_name}. També pots afegir-ne de noves
           o deixar-les sense categoria.
         category_mapping_title: Assigna les teves categories
         invalid_data: Hi ha dades invàlides; edita-les fins que es resolguin tots
           els errors
         tag_mapping_description: Assigna totes les etiquetes del teu fitxer importat
-          a les etiquetes existents. També pots afegir-ne de noves o deixar-les
-          sense categoria.
+          a les etiquetes existents de %{product_name}. També pots afegir-ne de noves o deixar-les
+          sense assignar.
         tag_mapping_title: Assigna les teves etiquetes
       sure_import:
         cancel: Cancel·la
@@ -156,7 +190,7 @@ ca:
     qif_category_selections:
       show:
         categories_found:
-          one: 1 categoria trobada
+          one: '%{count} categoria trobada'
           other: "%{count} categories trobades"
         categories_heading: Categories
         category_name_col: Nom de la categoria
@@ -175,19 +209,20 @@ ca:
         submit: Continua per revisar
         tag_name_col: Nom de l'etiqueta
         tags_found:
-          one: 1 etiqueta trobada
+          one: '%{count} etiqueta trobada'
           other: "%{count} etiquetes trobades"
         tags_heading: Etiquetes
         title: Configura i selecciona
         transactions_col: Transaccions
         txn_count:
-          one: 1 trans.
+          one: '%{count} trans.'
           other: "%{count} trans."
       update:
         success: Categories i etiquetes desades.
     uploads:
       handle_qif_upload:
         qif_uploaded: Fitxer QIF pujat correctament.
+        qif_account_required: Selecciona un compte per a la importació QIF
       show:
         account_optional_label: Compte (opcional)
         browse: Explora
@@ -257,6 +292,8 @@ ca:
       qty: Quantitat
       tags: Etiquetes
       ticker: Ticker
+      merchant_color: Color
+      merchant_website: URL del lloc web
     create:
       csv_uploaded: CSV pujat correctament.
       document_provider_not_configured: No hi ha cap magatzem vectorial configurat per
@@ -267,7 +304,7 @@ ca:
         Torna-ho a provar.
       document_uploaded: Document pujat correctament.
       file_too_large: El fitxer és massa gran. La mida màxima és %{max_size}MB.
-      invalid_document_file_type: Tipus de fitxer de document no vàlid per a l'arxiu
+      invalid_document_file_type: Tipus de fitxer de document no vàlid per al magatzem
         vectorial actiu.
       invalid_file_type: Tipus de fitxer no vàlid. Puja un fitxer CSV.
       invalid_ndjson_file_type: Tipus o format de fitxer no vàlid. Puja un fitxer
@@ -277,6 +314,7 @@ ca:
       pdf_processing: El teu PDF s'està processant. Rebràs un correu electrònic quan
         l'anàlisi estigui completa.
       pdf_too_large: El fitxer PDF és massa gran. La mida màxima és %{max_size}MB.
+      duplicate_pdf_unavailable: Aquest PDF ja està desat com un extracte al qual no tens accés.
     date_format:
       description: El format de data s'ha detectat automàticament del teu fitxer.
         Canvia'l si les dates no es veuen correctament.
@@ -300,6 +338,8 @@ ca:
     errors:
       custom_column_requires_inflow: Les importacions amb columna personalitzada requereixen
         seleccionar una columna d'entrada
+      interrupted: El procés en segon pla es va interrompre abans d'acabar. S'han desfet les dades importades; ho pots tornar a provar sense risc.
+      presumed_lost: Marcada com a fallida perquè es dona per perduda la tasca en segon pla. S'han desfet les dades importades; ho pots tornar a provar sense risc.
     failure:
       description: Comprova el format del fitxer, els errors i que tots els camps
         obligatoris estiguin omplerts, i torna-ho a provar.
@@ -342,6 +382,7 @@ ca:
       tab_financial_tools: Eines financeres i fitxers
       tab_raw_data: Dades sense processar
       title: Nova importació
+      import_merchants: Importa comerços
     pdf_import:
       back_to_dashboard: Tornar al tauler
       back_to_imports: Tornar a les importacions
@@ -383,6 +424,17 @@ ca:
       unknown_state_description: Aquesta importació es troba en un estat inesperat.
         Torna a les importacions.
       unknown_state_title: Estat desconegut
+      source_statement: Extracte d'origen
+      errors:
+        provider_not_configured: No hi ha cap proveïdor d'IA configurat
+        provider_no_pdf_support: El proveïdor d'IA no admet el processament de PDF
+      view_summary: Veure el resum de la importació
+      already_recorded_note:
+        one: '%{count} ja era en aquest compte i s''ha fet coincidir amb l''extracte.'
+        other: '%{count} ja eren en aquest compte i s''han fet coincidir amb l''extracte.'
+      complete_fully_reconciled:
+        one: 'Totes les transaccions d''aquest extracte ja eren al teu compte. S''ha fet coincidir %{count} transacció i s''ha marcat com a conciliada: no calia importar res.'
+        other: 'Totes les transaccions d''aquest extracte ja eren al teu compte. S''han fet coincidir les %{count} i s''han marcat com a conciliades: no calia importar res.'
     publish:
       max_rows_exceeded: La teva importació supera el límit màxim de %{max} files.
       started: La teva importació s'ha iniciat en segon pla.
@@ -415,11 +467,22 @@ ca:
       progress: Pas %{step} de %{total}
       select: Selecciona
       upload: Pujada
+      label: Pas %{step}
     success:
       back_to_dashboard: Tornar al tauler
       description: Les teves dades importades s'han afegit correctament a l'aplicació
         i ja es poden utilitzar.
       title: Importació correcta
+      verification:
+        title: Verificació per relectura
+        checked: Comprovats
+        mismatches: Discrepàncies
+        status:
+          not_verified: No verificat
+          matched: Coincideix
+          mismatch: Discrepància
+          failed: Error
+          reverted: Revertit
     table:
       empty: Encara no hi ha importacions.
       header:
@@ -435,6 +498,8 @@ ca:
           delete: Elimina
           revert: Reverteix
           view: Veure
+          mark_failed: Marca com a fallida
+          confirm_mark_failed: Aquesta importació fa estona que està inactiva i probablement la seva tasca en segon pla es va interrompre. Vols marcar-la com a fallida per poder tornar-ho a provar? No es conserva cap dada importada.
         status:
           complete: Completat
           failed: Error
@@ -454,6 +519,8 @@ ca:
           sure_import: Sure
           trade_import: Operació
           transaction_import: Transacció
+          ynab_import: YNAB
+          merchant_import: Comerç
       title: Importacions
     type_labels:
       account_import: Importació de comptes
@@ -467,6 +534,42 @@ ca:
       sure_import: Importació Sure
       trade_import: Importació d'operacions
       transaction_import: Importació de transaccions
+      ynab_import: Importació de YNAB
+      merchant_import: Importació de comerços
     update:
       account_saved: Compte desat.
       invalid_account: No s'ha trobat el compte.
+      account_locked: Aquesta importació ja s'ha publicat, així que no se'n pot canviar el compte. Reverteix-la primer si l'has d'importar a un altre lloc.
+    dry_run_resources:
+      transactions: Transaccions
+      balances: Saldos
+      accounts: Comptes
+      categories: Categories
+      tags: Etiquetes
+      rules: Regles
+      merchants: Comerços
+      recurring_transactions: Transaccions recurrents
+      transfers: Transferències
+      rejected_transfers: Transferències rebutjades
+      trades: Operacions
+      holdings: Posicions
+      valuations: Valoracions
+      budgets: Pressupostos
+      budget_categories: Categories del pressupost
+    summary:
+      title: Resum de la importació
+      subtitle: Què ha passat amb cada transacció d'aquest extracte a %{account}.
+      subtitle_no_account: Què ha passat amb cada transacció d'aquest extracte.
+      extracted: Trobades a l'extracte
+      already_recorded: Ja registrades
+      already_recorded_hint: S'han fet coincidir amb una transacció que el compte ja tenia i s'han marcat com a conciliades.
+      imported: Importades com a noves
+      awaiting_review: Pendents d'importar
+      fully_reconciled:
+        one: 'No calia importar res: l''única transacció de l''extracte ja estava registrada.'
+        other: 'No calia importar res: les %{count} transaccions ja estaven registrades.'
+      statement_evidence_html: Conciliat amb %{statement}.
+      close: Tanca
+    cancel:
+      cancelled: Importació marcada com a fallida. Pots tornar-ho a provar des de la pàgina d'importació.
+      not_cancellable: 'Ara mateix no es pot marcar aquesta importació com a fallida: pot ser que la seva tasca encara s''estigui executant. Torna-ho a provar quan porti una hora inactiva.'

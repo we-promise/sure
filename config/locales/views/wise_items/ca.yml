@@ -3,3 +3,164 @@ ca:
     provider_panel:
       instructions:
         open_tokens: Ves a Settings → Connect and manage apps → Developer tools → API tokens
+        sign_in_html: Visita %{link} i inicia sessió al teu compte
+        create_token: Crea un nou token API personal amb accés només de lectura
+        copy_token_html: Copia el token i enganxa'l a continuació. Sure només l'utilitza per sincronitzar els teus saldos i transaccions.
+      setup_title: 'Instruccions de configuració:'
+      add_connection: Afegeix connexió Wise
+      token_label: Token API
+      token_placeholder: Enganxa el teu token API personal de Wise
+      keep_token_placeholder: Deixa-ho en blanc per mantenir el token actual
+      connection_name_label: Nom de la connexió
+      connection_name_placeholder: Wise personal
+      sync_start_date_label: Importa transaccions des de
+      sync_start_date_help: Els extractes de Wise s'importen a partir d'aquesta data. Deixa el valor per defecte per obtenir fins a un any d'historial.
+      import_all_history_label: Importa tot l'historial de transaccions
+      import_all_history_help: Obté tots els extractes històrics de Wise en lloc de només el darrer any.
+      connect: Connecta Wise
+      update_connection: Actualitza la connexió
+      setup_accounts: Configura comptes
+      sync: Sincronitza
+      disconnect: Desconnecta
+      disconnect_label: Desconnecta %{name}
+      disconnect_confirm: Vols desconnectar %{name}? S'eliminaran totes les dades dels comptes sincronitzats.
+      accounts_link: Comptes
+      configured_html: Connectat i sincronitzant. Visita la pestanya %{accounts_link} per gestionar els teus comptes.
+      not_configured: No configurat
+      sandbox_note_html: Utilitza l'URL base de <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>) per fer proves. Defineix <code>WISE_BASE_URL</code> al teu entorn.
+      encryption_warning:
+        title: El xifrat de la base de dades no està configurat
+        message: Configura les claus de xifrat d'Active Record abans d'afegir tokens de Wise en producció. Sense xifrat, els tokens s'emmagatzemen en text pla.
+      sca:
+        title: Autenticació reforçada de clients (SCA)
+        description: Wise requereix superar un repte signat amb un token d'un sol ús per llegir els extractes complets de transaccions, inclosos els pagaments entrants. Genera aquí un parell de claus i registra la clau pública a Wise per activar-ho.
+        public_key_label: Clau pública (PEM)
+        registered_help_html: 'Registra aquesta clau a Wise: Settings → Connect and manage apps → Developer tools → Public keys → Add public key.'
+        copy: Copia
+        copied: Copiat!
+        generate: Genera un parell de claus
+        regenerate: Regenera el parell de claus
+        regenerate_confirm: Això genera un nou parell de claus. Wise continuarà acceptant la clau pública anterior fins que l'eliminis tu mateix del teu compte de Wise; Sure no la pot revocar a distància. Hauràs de registrar la nova clau pública a Wise perquè els extractes es tornin a sincronitzar. Vols continuar?
+    profile_types:
+      personal: Personal
+      business: Empresa
+    entries:
+      default_name: Transacció Wise
+      fee_name: Comissió de Wise
+    activities:
+      jar_deposit: Transferència a la guardiola
+      jar_withdrawal: Transferència des de la guardiola
+      transfer_to_jar: Transferència a %{jar}
+      transfer_from_jar: Transferència des de %{jar}
+      interest: Interessos de Wise
+      asset_fee: Comissió de Wise Assets
+      default_name: Activitat de Wise
+    sync_status:
+      no_accounts: No s'han trobat comptes
+      all_synced:
+        one: '%{count} compte sincronitzat'
+        other: '%{count} comptes sincronitzats'
+      partial_setup: '%{synced} sincronitzats, %{pending} pendents de configurar'
+    create:
+      no_profiles_found: No s'han trobat perfils de Wise. Revisa el teu token API.
+      invalid_token: Token API no vàlid. Revisa'l i torna-ho a provar.
+      connection_failed: No s'ha pogut connectar a Wise. Torna-ho a provar més tard.
+    destroy:
+      success: S'ha eliminat la connexió Wise
+    update:
+      success: S'ha actualitzat la connexió Wise
+    sync:
+      success: S'ha iniciat la sincronització
+    syncer:
+      importing_accounts: Important comptes de Wise...
+      checking_account_configuration: Comprovant la configuració dels comptes...
+      accounts_need_setup:
+        one: '%{count} compte pendent de configurar...'
+        other: '%{count} comptes pendents de configurar...'
+      processing_transactions: Processant transaccions...
+      calculating_balances: Calculant saldos...
+      credentials_invalid: El token API de Wise no és vàlid o no té prou permisos
+      failed: La sincronització ha fallat. Torna-ho a provar o contacta amb suport.
+      import_failed: La importació de Wise ha fallat.
+      accounts_failed:
+        one: No s'ha pogut importar %{count} saldo.
+        other: No s'han pogut importar %{count} saldos.
+      transactions_failed:
+        one: '%{count} saldo ha tingut errors en importar les transaccions.'
+        other: '%{count} saldos han tingut errors en importar les transaccions.'
+      account_processing_failed:
+        one: '%{count} compte Wise ha fallat durant el processament.'
+        other: '%{count} comptes Wise han fallat durant el processament.'
+      account_sync_failed:
+        one: No s'ha pogut programar la sincronització de %{count} compte Wise.
+        other: No s'ha pogut programar la sincronització de %{count} comptes Wise.
+    provider_connection:
+      default_name: Wise
+      default_description: Connecta el teu compte multidivisa de Wise
+      name: Wise — %{name}
+      description: Connecta amb %{name}
+    link_profiles:
+      session_expired: La sessió ha caducat. Torna a provar de connectar-te.
+      no_profiles_selected: Selecciona almenys un perfil.
+      already_connected: Tots els perfils seleccionats ja estan connectats.
+      success:
+        one: S'ha connectat correctament %{count} perfil de Wise
+        other: S'han connectat correctament %{count} perfils de Wise
+    select_profiles:
+      session_expired: La sessió ha caducat. Torna a provar de connectar-te.
+      title: Selecciona perfils de Wise
+      subtitle: Tria quins perfils vols connectar
+      description: El teu compte de Wise té diversos perfils. Selecciona els que vulguis sincronitzar amb Sure.
+      unnamed_profile: (Perfil sense nom)
+      already_connected_label: Ja connectat
+      connect: Connecta els perfils seleccionats
+      cancel: Cancel·la
+    wise_item:
+      deletion_in_progress: eliminació en curs...
+      syncing: Sincronitzant...
+      error: Error de sincronització
+      status: Sincronitzat fa %{timestamp}
+      status_never: Mai sincronitzat
+      status_with_summary: Darrera sincronització fa %{timestamp} — %{summary}
+      delete: Desconnecta
+      setup_needed: Nous comptes a punt per configurar
+      setup_description: '%{linked} de %{total} comptes enllaçats. Crea comptes de Sure per als saldos en cada divisa de Wise.'
+      setup_action: Configura comptes
+      no_accounts_title: Encara no hi ha comptes enllaçats
+      no_accounts_description: Executa una sincronització per descobrir els teus saldos de Wise i després enllaça'ls amb comptes de Sure.
+    setup_accounts:
+      title: Configura comptes Wise
+      subtitle: Enllaça els teus saldos en divises de Wise
+      description: Crea un compte de Sure per a cada saldo en divisa de Wise que vulguis seguir. Cada divisa es converteix en un compte propi.
+      no_accounts_to_setup: Tots els comptes estan configurats
+      all_accounts_linked: Tots els teus saldos en divises de Wise s'han enllaçat amb comptes de Sure.
+      create_account: Crea compte
+      done: Fet
+    select_accounts:
+      title: Selecciona un saldo de Wise
+      description: Selecciona el saldo en divisa de Wise que vols enllaçar al teu compte de %{product_name}.
+      no_accounts_found: Tots els saldos de Wise ja estan enllaçats amb comptes de Sure.
+      no_connection: No s'ha trobat cap connexió Wise. Primer, connecta Wise a la configuració dels proveïdors.
+      link_account: Enllaça el saldo
+      cancel: Cancel·la
+    select_existing_account:
+      title: Enllaça %{account_name} amb Wise
+      description: Selecciona el saldo en divisa de Wise que vols enllaçar amb aquest compte. Les transaccions se sincronitzaran automàticament.
+      no_accounts_found: No s'han trobat saldos de Wise sense enllaçar.
+      link_account: Enllaça el saldo
+      cancel: Cancel·la
+    link_accounts:
+      not_found: No s'ha trobat el saldo de Wise.
+      success: S'ha enllaçat correctament el saldo de Wise amb el compte.
+      failed: No s'ha pogut enllaçar el saldo de Wise. Torna-ho a provar.
+    link_existing_account:
+      not_found: No s'ha trobat el compte o el saldo de Wise.
+      success: S'ha enllaçat correctament %{account_name} amb Wise
+      failed: No s'ha pogut enllaçar el compte. Torna-ho a provar.
+    complete_account_setup:
+      not_found: No s'ha trobat el saldo de Wise.
+      success: S'ha creat i enllaçat el compte correctament.
+      failed: No s'ha pogut crear el compte. Torna-ho a provar.
+    generate_sca_keypair:
+      success: S'ha generat un nou parell de claus SCA. Registra la clau pública a Wise per acabar d'activar-lo.
+      failed: No s'ha pogut generar un nou parell de claus SCA. Torna-ho a provar.

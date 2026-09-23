@@ -1,0 +1,141 @@
+---
+ca:
+  providers:
+    fio:
+      name: Fio banka
+      description: Sincronitza un compte de Fio banka amb un token d'API de només lectura
+  family:
+    fio:
+      create_fio_item:
+        default_name: Connexió de Fio banka
+  fio_item:
+    errors:
+      account_processing_failed: No s'ha pogut sincronitzar el compte de Fio
+      account_mismatch: Aquest token pertany a un compte de Fio diferent del que ja sincronitza aquesta connexió. Afegeix-lo com a connexió independent.
+      account_sync_schedule_failed: No s'ha pogut programar la sincronització del compte de Fio
+      statement_too_large: L'extracte té més transaccions de les que Fio retorna en una sola petició. Tria una data d'inici de sincronització posterior i torna a sincronitzar.
+      statement_fetch_failed: No s'ha pogut obtenir l'extracte de Fio
+      history_locked: Fio ha rebutjat aquest període de l'extracte. Desbloqueja l'historial complet del compte a la banca en línia, a Configuració → API, i torna a sincronitzar en els 10 minuts següents.
+      sync_failed: No s'ha pogut sincronitzar la connexió de Fio
+    sync:
+      status:
+        importing: Important l'extracte de Fio...
+        checking_setup: Comprovant la configuració del compte...
+        needs_setup:
+          one: '%{count} compte necessita configuració...'
+          other: '%{count} comptes necessiten configuració...'
+        processing: Processant transaccions...
+        calculating: Calculant saldos...
+    sync_status:
+      no_accounts: Encara no s'ha trobat cap compte
+      all_synced:
+        one: '%{count} compte sincronitzat'
+        other: '%{count} comptes sincronitzats'
+      partial: '%{linked} sincronitzats, %{unlinked} necessiten configuració'
+  fio_items:
+    account_types:
+      depository: Compte corrent o d'estalvi
+      loan: Préstec, hipoteca o descobert
+    provider_panel:
+      default_connection_name: Connexió de Fio banka
+      add_connection: Afegeix una connexió de Fio banka
+      update_connection: Actualitza la connexió
+      connection_name_label: Nom de la connexió
+      connection_name_placeholder: El meu compte de Fio
+      token_label: Token d'API (només lectura)
+      token_placeholder: Enganxa el token de 64 caràcters
+      keep_token_placeholder: Deixa-ho en blanc per conservar el token actual
+      sync_start_date_label: Importa transaccions des del
+      sync_start_date_hint: 'Fio proporciona els últims 90 dies sense autorització addicional. Per a dades més antigues, desbloqueja l''historial complet del compte a la banca en línia, a Configuració → API (icona del cadenat): això obre un interval de 10 minuts durant el qual has de sincronitzar.'
+      one_account_notice: Un token dona accés a un sol compte de Fio, així que afegeix una connexió per a cada compte que vulguis seguir. Un token es pot fer servir una vegada cada 30 segons; una sincronització que arribi abans l'agafarà la següent.
+      connected_account: Compte connectat
+      no_account_yet: 'Encara no hi ha cap compte: la primera sincronització detecta el compte al qual dona accés aquest token.'
+      account_needs_setup: Encara no està enllaçat a cap compte de Sure.
+      requires_update: Cal un token nou
+      requires_update_notice: Fio ha rebutjat aquest token. Els tokens són vàlids fins a 180 dies, tret que s'amplïin automàticament a cada inici de sessió a la banca, així que crea un token nou de només lectura a Configuració → API i enganxa'l a sota.
+      last_synced: Sincronitzat fa %{timestamp}
+      never_synced: Mai sincronitzat
+      syncing: Sincronitzant...
+      sync: Sincronitza
+      setup_accounts: Configura el compte
+      disconnect: Desconnecta
+      disconnect_confirm: Segur que vols desconnectar %{name}?
+    create:
+      success: S'ha desat la connexió de Fio banka.
+      token_required: Enganxa el token d'API de la banca en línia de Fio.
+    update:
+      success: S'ha actualitzat la connexió de Fio banka.
+    destroy:
+      success: S'ha programat l'eliminació de la connexió de Fio banka.
+      unlink_failed: No s'ha pogut desconnectar la connexió de Fio banka
+    select_accounts:
+      title: Enllaça el teu compte de Fio
+      description: Aquest token dona accés a un sol compte. Tria com s'ha de seguir a Sure.
+      account_type_label: Tipus de compte
+      awaiting_first_sync: Fio encara no ha informat del compte d'aquest token. Fes una sincronització i torna més tard.
+      already_linked: El compte d'aquesta connexió ja està enllaçat a un compte de Sure.
+      sync_now: Sincronitza ara
+      no_credentials_configured: Primer configura Fio banka a la configuració de proveïdors.
+      cancel: Cancel·la
+      link_account: Enllaça el compte
+    link_accounts:
+      success: S'ha enllaçat el teu compte de Fio a %{account_name}.
+      no_account_found: No s'ha trobat cap compte de Fio sense enllaçar per a aquesta connexió.
+      no_credentials_configured: Primer configura Fio banka a la configuració de proveïdors.
+      unsupported_account_type: Fio no admet aquest tipus de compte.
+      link_failed: No s'ha pogut enllaçar el compte.
+    select_existing_account:
+      title: Enllaça el compte de Fio a %{account_name}
+      description: Connecta el compte al qual dona accés aquest token amb el compte que has triat.
+      awaiting_first_sync: Fio encara no ha informat del compte d'aquest token. Fes una sincronització i torna més tard.
+      already_linked: El compte d'aquesta connexió ja està enllaçat a un compte de Sure.
+      sync_now: Sincronitza ara
+      no_credentials_configured: Primer configura Fio banka a la configuració de proveïdors.
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor.
+      cancel: Cancel·la
+      link_account: Enllaça el compte
+    link_existing_account:
+      success: S'ha enllaçat el teu compte de Fio a %{account_name}.
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor.
+      fio_account_already_linked: Aquest compte de Fio ja està enllaçat.
+      no_account_selected: No hi havia cap compte de Fio disponible per enllaçar.
+      unsupported_account_type: Fio només pot sincronitzar comptes d'efectiu i de préstec.
+    setup_accounts:
+      title: Enllaça el teu compte de Fio
+      subtitle: Tria com ha d'aparèixer a Sure el compte al qual dona accés aquest token.
+      choose_account_type: Tria un tipus de compte
+      choose_account_type_description: Omet-lo si no vols seguir aquest compte.
+      account_type_label: Tipus de compte
+      account_types:
+        skip: Omet
+      create_account: Crea el compte
+      awaiting_first_sync: Encara no s'ha trobat cap compte
+      awaiting_first_sync_description: Fio només informa del compte en un extracte, així que apareixerà després de la primera sincronització correcta.
+      sync_now: Sincronitza ara
+      nothing_to_setup: No hi ha res a configurar
+      account_already_handled: El compte d'aquesta connexió ja s'ha enllaçat o s'ha omès.
+      close: Tanca
+      cancel: Cancel·la
+    complete_account_setup:
+      success: S'ha creat %{account_name}.
+      skipped: S'ha omès el compte de Fio.
+      no_account: No calia configurar cap compte de Fio.
+      unsupported_account_type: Fio no admet aquest tipus de compte.
+      creation_failed: No s'ha pogut crear el compte de Sure.
+    fio_item:
+      deletion_in_progress: Eliminació en curs
+      syncing: Sincronitzant
+      requires_update: Cal un token nou
+      error: Error
+      status_with_summary: Sincronitzat fa %{timestamp} · %{summary}
+      status_never: Mai sincronitzat
+      delete: Elimina
+      requires_update_title: Cal un token nou
+      requires_update_description: Fio ha rebutjat el token d'aquesta connexió. Crea un token nou de només lectura a Configuració → API a la banca en línia.
+      update_token: Actualitza el token
+      setup_needed: Cal configurar el compte
+      setup_description: El compte al qual dona accés aquest token encara no està enllaçat a cap compte de Sure.
+      setup_action: Configura el compte
+      no_accounts_title: Encara no s'ha importat cap compte
+      no_accounts_description: Fio només informa del compte en un extracte, així que apareixerà després de la primera sincronització correcta.
+      sync_now: Sincronitza ara

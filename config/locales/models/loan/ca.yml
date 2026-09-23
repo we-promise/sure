@@ -1,0 +1,8 @@
+---
+ca:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Les files de canvi de tipus necessiten una data d'efecte i un tipus d'interès.
+          rate_change_before_origination: Un canvi de tipus no pot tenir efecte abans de la data de formalització del préstec.

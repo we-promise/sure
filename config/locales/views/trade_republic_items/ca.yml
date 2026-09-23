@@ -48,41 +48,82 @@ ca:
           pending: Pendent
           syncing: Sincronitzant
           stale: Obsoleta
+      deletion_in_progress: Eliminació en curs
+      never_synced: Mai sincronitzat.
     setup_accounts:
       page_title: "Configura el compte de Trade Republic"
       subtitle: "Enllaça el teu compte d'inversió de Trade Republic."
       available_accounts:
         account_type_investment: "Cartera d'inversió"
         account_type_cash: "Compte d'efectiu"
+        title: Compte disponible
+        account_summary: '%{account_type} • Saldo: %{balance}'
+        account_id: 'ID del compte: %{account_id}'
       buttons:
         refresh: "Actualitza"
         cancel: "Cancel·la"
         link: "Enllaça"
         done: "Fet"
+        back_to_settings: Torna a la configuració
+        create_selected_accounts: Crea els comptes seleccionats
+      dialog_title: Configura el teu compte de Trade Republic
+      info_box:
+        title: Importació de Trade Republic
+        items:
+          item_1: Posicions actuals amb preus i quantitats
+          item_2: Operacions executades (compres i vendes)
+          item_3: Dipòsits, retirades i pagaments d'interessos
+      status:
+        fetching_accounts: Obtenint el compte de Trade Republic...
+        no_accounts_found_title: No s'ha trobat cap compte.
+        no_accounts_found_description: Sure no ha trobat cap compte de Trade Republic. Comprova que la sessió encara sigui vàlida.
+      link_existing:
+        description: O enllaça el compte de Trade Republic descobert amb un compte d'inversió manual existent.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Selecciona un compte...
+      linked_accounts:
+        title: Ja enllaçat
+        linked_to_html: 'Enllaçat amb: %{account}'
     sync:
       errors:
         phone_number_missing: "Falta el número de telèfon de Trade Republic."
-        reauthentication_required: "La sessió de Trade Republic falta o ha caducat. Torna a connectar-la des d'Arranjament > Proveïdors."
+        reauthentication_required: "La sessió de Trade Republic falta o ha caducat. Torna a connectar-la des de Configuració > Proveïdors."
       status:
         checking_credentials: "Comprovant les credencials de Trade Republic..."
         importing_account: "Important el compte de Trade Republic..."
         processing_activity: "Processant les posicions i l'activitat..."
         calculating_balances: "Calculant els saldos..."
+        checking_configuration: Comprovant la configuració del compte...
+        accounts_need_setup:
+          one: '%{count} compte de Trade Republic necessita configuració...'
+          other: '%{count} comptes de Trade Republic necessiten configuració...'
     repair:
       scheduled: "La reparació de les dades de Trade Republic s'ha programat."
     select_existing_account:
       title: "Enllaça el compte de Trade Republic"
       link: "Enllaça"
       cancel: "Cancel·la"
+      no_accounts_available: Encara no hi ha comptes de Trade Republic sense enllaçar disponibles.
+      run_sync_hint: Completa l'inici de sessió i executa una sincronització des de Configuració > Proveïdors.
+      wait_for_sync: Espera que acabi la sincronització de descobriment de comptes.
+      balance: Saldo
     initiate_login:
       verification_required: "Inicia la sessió i confirma-la mitjançant %{method}, després prem Confirma l'inici de sessió."
+      not_configured: Trade Republic no està configurat.
+      pin_required: Introdueix el PIN de Trade Republic per iniciar una sessió nova.
     complete_login:
       approval_pending: "Encara no s'ha confirmat. Aprova l'inici de sessió a l'aplicació de Trade Republic i torna-ho a provar."
       success: "Trade Republic s'ha connectat correctament."
       login_expired: "La sol·licitud d'inici de sessió ha caducat. Torna-ho a provar."
+      no_pending_login: No hi ha cap inici de sessió pendent. Inicia'n un de nou primer.
+      still_pending: Encara no s'ha confirmat. Aprova l'inici de sessió a l'aplicació de Trade Republic i torna-ho a provar.
     link_existing_account:
       not_found: "Compte o configuració de Trade Republic no trobats."
       success: "Enllaçat correctament amb el compte de Trade Republic."
+      only_manual_investment: Només es poden enllaçar amb Trade Republic comptes d'inversió manuals.
+      already_linked: Aquest compte de Trade Republic ja està enllaçat.
+      processing_failed: El compte s'ha enllaçat, però el processament inicial de les dades ha fallat. S'ha programat una sincronització; consulta el registre de depuració si continua incomplet.
+      failed: No s'ha pogut enllaçar el compte de Trade Republic.
     complete_account_setup:
       success:
         one: "S'ha creat correctament %{count} compte de Trade Republic."
@@ -91,6 +132,7 @@ ca:
       partial_failure:
         one: "No s'ha pogut completar un compte de Trade Republic seleccionat. Revisa el registre de depuració i torna-ho a provar."
         other: "No s'han pogut completar %{count} comptes de Trade Republic seleccionats. Revisa el registre de depuració i torna-ho a provar."
+      none_selected: No s'ha seleccionat cap compte.
     activities:
       labels:
         contribution: Aportació
@@ -104,3 +146,29 @@ ca:
         tax_refund: Devolució d'impostos
         buy: Compra
         sell: Venda
+    defaults:
+      name: Trade Republic
+    sync_status:
+      no_accounts: Encara no s'ha descobert cap compte de Trade Republic
+      all_linked:
+        one: '%{count} compte enllaçat'
+        other: '%{count} comptes enllaçats'
+      partial: '%{linked} enllaçats, %{unlinked} pendents de configurar'
+    create:
+      success: Trade Republic s'ha desat. Confirma l'inici de sessió a l'aplicació de Trade Republic per acabar de connectar.
+    update:
+      success: La configuració de Trade Republic s'ha actualitzat correctament.
+      pin_required: Introdueix el PIN de Trade Republic per tornar a autenticar-te.
+    destroy:
+      success: S'ha programat l'eliminació de la connexió de Trade Republic.
+      unlink_failed: No s'ha pogut desconnectar completament Trade Republic. S'ha conservat la connexió perquè es pugui tornar a intentar amb seguretat.
+    select_accounts:
+      not_configured: Trade Republic no està configurat.
+    initiate_qr_login:
+      not_configured: Trade Republic no està configurat.
+    poll_login:
+      no_pending_login: No hi ha cap inici de sessió pendent. Inicia'n un de nou primer.
+      login_expired: La sol·licitud d'inici de sessió ha caducat. Torna a començar.
+    poll_qr_login:
+      no_pending_login: No hi ha cap inici de sessió amb QR pendent.
+      success: Trade Republic s'ha connectat correctament.

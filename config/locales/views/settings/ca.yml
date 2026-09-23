@@ -8,6 +8,7 @@ ca:
           subtitle: Instruccions bàsiques que defineixen el comportament de l'assistent
             d'IA a totes les converses
           title: Prompt principal del sistema
+          label: Prompt del sistema del xat
         merchant_detector:
           subtitle: La IA identifica i enriqueix les dades de transaccions amb informació
             de comerç
@@ -19,6 +20,27 @@ ca:
           subtitle: La IA categoritza automàticament les teves transaccions segons
             les categories definides
           title: Categoritzador de transaccions
+        save: Desa els prompts
+        save_confirm:
+          title: Vols desar els prompts d'IA personalitzats?
+          body: Els prompts personalitzats substitueixen les instruccions del sistema integrades i les salvaguardes de seguretat (com ara les restriccions sobre assessorament financer) per a la teva família.
+          dont_show_again: No tornis a mostrar aquest avís
+          cancel: Cancel·la
+          confirm: Confirma
+      prompt_field:
+        provider_label: Proveïdor
+        prompt_label: Prompt
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Restableix el predeterminat
+        reset_confirm_title: Vols restablir el prompt predeterminat?
+        reset_confirm_body: Això descartarà el teu prompt personalitzat i restaurarà les instruccions predeterminades integrades.
+        status_custom: S'utilitza el teu prompt personalitzat
+        status_default: S'utilitza el predeterminat integrat
+        format_risk: 'El teu prompt de %{provider} ha eliminat l''exemple {"%{key}": ...}. Cada sol·licitud continua demanant aquest format, així que l''anàlisi normalment funciona, però una substitució que demani un format de sortida diferent la farà fallar.'
+      update:
+        success: Prompts d'IA actualitzats
+        multiple_errors: Hi ha diversos prompts massa llargs (el màxim és de %{count} caràcters)
     appearances:
       show:
         dashboard_subtitle: Personalitza com es mostra el tauler de control
@@ -42,6 +64,8 @@ ca:
         theme_title: Tema
         transactions_subtitle: Personalitza com es mostren les transaccions
         transactions_title: Transaccions
+        dashboard_account_groups_title: Desplegades per defecte
+        dashboard_account_groups_description: Aquestes seccions de comptes es mostraran desplegades al tauler i a la barra lateral de comptes. Pots plegar-les manualment en qualsevol moment.
     debugs:
       show:
         context:
@@ -92,7 +116,7 @@ ca:
         col_model: Model
         col_operation: Operació
         col_tokens: Tokens
-        completion: completació
+        completion: resposta
         cost_by_model: Cost per model
         cost_by_operation: Cost per operació
         cost_estimates_description: 'Els costos s’estimen segons els preus publicats pels proveïdors, inclosos els preus d’OpenAI de juliol de 2026. Els costos reals poden variar. El preu és per cada milió de tokens i varia segons el model. Els models personalitzats o amb self hosting mostraran "N/A" i no s’inclouen als totals de cost.'
@@ -135,8 +159,8 @@ ca:
           title: Activa funcions experimentals
         country: País
         currencies_more: "+%{count} més"
-        currencies_subtitle: Tria quines divises apareixen als camps de diners
-        currencies_title: Divises
+        currencies_subtitle: Tria quines divises apareixen als camps d'import de %{moniker}
+        currencies_title: "Divises de %{moniker}"
         currency: Divisa
         currency_search_placeholder: Cerca divises
         date_format: Format de data
@@ -168,20 +192,35 @@ ca:
         sharing_default_label: Compartició predeterminada per a comptes nous
         sharing_private: Mantén privat per defecte
         sharing_shared: Comparteix amb tots els membres
-        sharing_subtitle: Controla com es comparteixen els comptes entre els membres
-        sharing_title: Compartició de comptes
+        sharing_subtitle: Controla com es comparteixen els comptes a %{moniker}
+        sharing_title: "Compartició a %{moniker}"
         timezone: Fus horari
+        budget_title: Pressupost
+        budget_subtitle: Configura com funcionen els teus pressupostos
+        personal_budgets: Pressupostos personals
+        personal_budgets_hint: Activa pressupostos individuals per a cada membre.
+        household_budget_enabled: Pressupost de la llar
+        household_budget_enabled_hint: Mantén un pressupost compartit de la llar juntament amb els pressupostos personals. Desactiva-ho per utilitzar només pressupostos personals.
+        budget_sharing_title: Compartició del pressupost
+        budget_sharing_subtitle: Permet que altres membres vegin o editin el teu pressupost personal
+        budget_sharing_no_members: No hi ha altres membres a %{moniker} amb qui compartir-lo
+        budget_sharing_permission_label: Accés de %{name}
+        budget_sharing_permissions:
+          none: Sense accés
+          read_only: Només lectura
+          read_write: Pot editar
     profiles:
       destroy:
         cannot_remove_self: No pots eliminar-te del compte.
         member_removal_failed: Hi ha hagut un problema en eliminar el membre.
         member_removed: Membre eliminat correctament.
         not_authorized: No estàs autoritzat/da a eliminar membres.
+        member_owns_other_family_data: Aquest membre encara és titular de comptes en una altra llar i no es pot eliminar. Primer transfereix o elimina aquests comptes.
       show:
         confirm_delete:
           body: Segur que vols eliminar definitivament el teu compte? Aquesta acció
             és irreversible.
-          title: Eliminar el compte?
+          title: Vols eliminar el compte?
         confirm_remove_invitation:
           body: Segur que vols eliminar la invitació per a %{email}?
           title: Eliminar invitació
@@ -192,12 +231,12 @@ ca:
           body: Segur que vols restablir el teu compte? Això eliminarà tots els teus
             comptes, categories, comerços, etiquetes i altres dades. Aquesta acció
             no es pot desfer.
-          title: Restablir el compte?
+          title: Vols restablir el compte?
         confirm_reset_with_sample_data:
           body: Segur que vols restablir el teu compte i carregar dades d'exemple?
             Això eliminarà les teves dades existents i les substituirà per dades de
             demostració perquè puguis explorar Sure amb seguretat.
-          title: Restablir el compte i carregar dades d'exemple?
+          title: Vols restablir el compte i carregar dades d'exemple?
         danger_zone_title: Zona perillosa
         delete_account: Elimina el compte
         delete_account_warning: Eliminar el teu compte suprimirà definitivament totes
@@ -228,6 +267,8 @@ ca:
         reset_account_with_sample_data_warning: Elimina totes les teves dades existents
           i carrega dades d'exemple per explorar amb un entorn preomplert.
         save: Desa
+        resend_confirmation_link: sol·licita un nou correu de confirmació
+        unconfirmed_email_notice_html: Has sol·licitat canviar el teu correu electrònic a %{email}. Consulta el teu correu i confirma-ho perquè el canvi tingui efecte. Si no has rebut el correu, revisa la carpeta de correu brossa o %{resend_link}.
     providers:
       bank_sync:
         lede: Connecta comptes externs perquè transaccions, saldos i posicions flueixin
@@ -256,6 +297,9 @@ ca:
         step3: Enganxa la teva clau API i secret a sota
         sync: Sincronitza
         syncing: Sincronitzant...
+        historical_import: Configuració de la importació històrica
+        sync_start_date_label: Importa dades des del
+        sync_start_date_help: Selecciona fins a quina data vols obtenir l'historial d'operacions.
       clear_filter: Neteja filtres
       coinbase_panel:
         api_key_label: Clau API
@@ -376,8 +420,8 @@ ca:
             To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
             Date, Trade ID, TradePrice, Transaction ID'
           trades_options: 'Options: Execution'
-        status_configured_prefix: "%{summary}. Visita la"
-        status_configured_suffix: pestanya per gestionar els comptes descoberts.
+        status_configured_prefix: "%{summary}. Ves a la pestanya"
+        status_configured_suffix: per gestionar els comptes descoberts.
         steps:
           step_1: Al teu IBKR Client Portal, navega a "Performance & Reports" > "Flex
             Queries".
@@ -437,9 +481,9 @@ ca:
         beta: Beta
       meta:
         last_synced: Sincronitzat fa %{time}
-        no_recent_sync: Sincronització vençuda
+        no_recent_sync: Sincronització endarrerida
         reconsent_needed:
-          one: Cal renovar el consentiment en 1 dia
+          one: Cal renovar el consentiment en %{count} dia
           other: Cal renovar el consentiment en %{count} dies
         reconsent_required: Cal renovar el consentiment
         sync_error: Error de sincronització
@@ -473,7 +517,7 @@ ca:
         step_3: Després ves a Comptes per enllaçar els teus comptes sincronitzats.
       status:
         err: Error
-        off: No configurat
+        "off": No configurat
         ok: Connectat
         warn: Cal acció
       sync_all: Sincronitza-ho tot
@@ -504,16 +548,165 @@ ca:
           EUA i més!).
         mercury: Sincronitza automàticament els teus comptes bancaris empresarials
           de Mercury.
-        plaid: Connecta milers d'institucions financeres dels EUA mitjançant Plaid.
-        plaid_eu: Connecta institucions financeres europees mitjançant Plaid (PSD2
+        plaid: Connecta milers d'entitats financeres dels EUA mitjançant Plaid.
+        plaid_eu: Connecta entitats financeres europees mitjançant Plaid (PSD2
           / Open Banking).
         simplefin: Connecta comptes bancaris dels EUA mitjançant el protocol obert
           SimpleFIN.
         snaptrade: Connecta comptes d'inversió mitjançant la xarxa d'agregació SnapTrade.
         sophtron: Connecta bancs i serveis dels EUA i Canadà.
+        akahu: Sincronitza entitats financeres de Nova Zelanda mitjançant Akahu.
+        redbark: Sincronitza comptes bancaris australians mitjançant l'open banking de Redbark.
+        monobank: Sincronitza targetes i guardioles (jars) de Monobank amb un token API personal.
+        fio: Sincronitza un compte de Fio banka amb un token API de només lectura.
+        wise: Sincronitza automàticament els teus saldos multidivisa i les transferències internacionals de Wise.
+        coinspot: Sincronitza saldos, valors en AUD, transferències, dipòsits, retirades i historial d'ordres de CoinSpot amb una clau API de només lectura.
+        onchain_wallet: Fes el seguiment de carteres Bitcoin, EVM i Solana d'autocustòdia a partir de les seves adreces públiques.
+        trading212: Sincronitza la teva cartera d'inversió de Trading 212 amb una clau API de només lectura.
+        trade_republic: Sincronitza el teu compte d'inversió de Trade Republic mitjançant un inici de sessió web segur de només lectura.
+        questrade: Sincronitza els teus comptes d'inversió de Questrade directament a través de l'API de Questrade.
       update:
         no_changes: No s'ha fet cap canvi
         updated_successfully: Configuració del proveïdor actualitzada correctament
+      drawer_trust_statement_encryption_unconfigured: Accés només de lectura. Sure mai no pot moure diners. Configura claus de xifratge explícites abans de desar credencials de proveïdors en producció.
+      provider_setup_encryption_warning:
+        title: Falten les claus de xifratge
+        message: Aquesta instal·lació autoallotjada no té configurades claus de xifratge explícites d'Active Record. Configura primary_key, deterministic_key i key_derivation_salt abans de desar credencials de proveïdors en producció.
+      provider_form:
+        save_and_connect: Desa i connecta
+      coinspot_panel:
+        step1_html: Ves a la <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">configuració de l'API de CoinSpot</a>
+        step2: Crea una clau API amb accés de només lectura a saldos i historial.
+        step3: Enganxa la clau API i el secret a continuació.
+        read_only_title: Només sincronització de lectura amb l'exchange
+        read_only_body: No atorguis permisos d'enviament, retirada, trading ni transferència. Sure només importa saldos, valors en AUD, transferències, dipòsits, retirades i l'historial d'ordres executades.
+        default_connection_name: CoinSpot
+        add_connection: Afegeix una connexió de CoinSpot
+        update_connection: Actualitza la connexió
+        connection_name_label: Nom de la connexió
+        connection_name_placeholder: CoinSpot principal
+        api_key_label: Clau API
+        api_key_placeholder: Enganxa la teva clau API de CoinSpot
+        keep_api_key_placeholder: Deixa-ho en blanc per mantenir la clau API existent
+        api_secret_label: Secret de l'API
+        api_secret_placeholder: Enganxa el teu secret de l'API de CoinSpot
+        keep_api_secret_placeholder: Deixa-ho en blanc per mantenir el secret de l'API existent
+        setup_accounts: Configura el compte
+        syncing: Sincronitzant...
+        sync: Sincronitza
+        disconnect: Desconnecta
+        disconnect_confirm: Segur que vols desconnectar %{name}?
+      onchain_wallet_panel:
+        add_wallet: Afegeix una cartera
+        advanced: Avançat
+        disconnect_all: Desconnecta totes les carteres
+        disconnect_all_confirm: Això elimina totes les adreces seguides i els seus comptes. Vols continuar?
+        etherscan_api_key_label: Clau API d'Etherscan (opcional)
+        etherscan_api_key_placeholder: Enganxa una clau API d'Etherscan
+        etherscan_hint: Les lectures d'Ethereum funcionen sense clau. Afegir una clau d'Etherscan només augmenta el límit de sol·licituds per a Ethereum.
+        keep_etherscan_api_key: Deixa-ho en blanc per mantenir la clau existent
+        manage_wallets: Gestiona les carteres
+        keyless_body: Sure només llegeix dades públiques de la cadena de blocs. No intervenen claus, frases de recuperació ni signatures, i no es pot gastar res.
+        keyless_title: Només lectura, sense claus
+        save: Desa
+        sync_start_date_hint: Les transferències anteriors a aquesta data s'ignoren. Deixa-ho en blanc per importar tot el que mostri l'explorador.
+        sync_start_date_label: Ignora les transferències anteriors al
+      akahu_panel:
+        step_1_html: Ves a %{link} i crea una aplicació personal.
+        step_2: Copia el teu token d'aplicació i el token d'usuari.
+        step_3: Enganxa els tokens a continuació, desa i després enllaça els comptes sincronitzats.
+      up_panel:
+        step_1_html: Ves a %{link} i genera un token d'accés personal.
+        step_2: Copia el teu token d'accés personal.
+        step_3: Enganxa el token a continuació, desa i després enllaça els comptes sincronitzats.
+      monobank_panel:
+        step_1_html: Ves a %{link}, inicia sessió amb l'aplicació de Monobank i genera un token personal.
+        step_2: 'Copia el token: només es mostra una vegada.'
+        step_3: Enganxa el token a continuació, desa i després enllaça les targetes i guardioles (jars) que vulguis seguir.
+      fio_panel:
+        step_1_html: Inicia sessió a la banca en línia de %{link} i obre Settings → API.
+        step_2: Crea un token amb accés de només lectura ("Sledování účtu"). Requereix autenticació reforçada i és vàlid fins a 180 dies.
+        step_3: Enganxa el token a continuació i desa. Cada token dona accés a un sol compte, així que afegeix una connexió per cada compte de Fio.
+      trade_republic_panel:
+        encryption_warning:
+          title: El xifratge no està configurat
+          message: Les credencials i les dades de sessió de Trade Republic no es poden desar de manera segura fins que es configuri Active Record Encryption.
+        steps:
+          step_1: Introdueix el número de telèfon i el PIN que fas servir a l'aplicació de Trade Republic i desa.
+          step_2: Introdueix el codi de la teva aplicació d'autenticació quan se't demani.
+          step_3: Aprova l'inici de sessió a l'aplicació de Trade Republic quan se't demani.
+        phone_number_label: Número de telèfon
+        phone_number_placeholder_new: +49 170 1234567
+        phone_number_placeholder_existing: Deixa-ho en blanc per mantenir el número de telèfon actual
+        pin_label: PIN
+        pin_placeholder_new: El PIN de l'aplicació de Trade Republic
+        pin_placeholder_existing: Deixa-ho en blanc per mantenir el PIN actual
+        currency_label: Divisa del compte
+        connect: Inicia sessió
+        confirm_login: Comprova l'inici de sessió
+        complete_login: Continua
+        authenticator_code_label: Codi d'autenticació (si se't demana)
+        authenticator_code_placeholder: Codi de 6 dígits
+        push_login_notice: Aprova ara l'inici de sessió a l'aplicació de Trade Republic. Sure ho comprova automàticament en segon pla. També pots comprovar-ne l'estat tu mateix.
+        check_login_status: Comprova l'estat ara
+        authenticator_code_notice: Introdueix el codi de la teva aplicació d'autenticació.
+        approval_pending: Inici de sessió en curs. Aprova'l a l'aplicació de Trade Republic; Sure ho comprova automàticament.
+        awaiting_confirmation: L'aprovació a l'aplicació de Trade Republic està pendent.
+        awaiting_authenticator_code: Cal el codi d'autenticació.
+        login_expired: La sol·licitud d'aprovació ha caducat.
+        restart_login: Torna a iniciar sessió
+        connection_success:
+          title: Trade Republic s'ha connectat correctament
+          message: La teva connexió de Trade Republic està a punt.
+          description: Sure està sincronitzant les teves dades de Trade Republic en segon pla.
+          close: Fet
+        qr_login: Inicia sessió amb codi QR
+        qr_cancel: Cancel·la l'inici de sessió amb QR
+        qr_back_to_credentials: Torna al número de telèfon i PIN
+        qr_loading: Preparant el codi QR…
+        qr_instruction: Escaneja el codi QR amb l'aplicació de Trade Republic i aprova l'inici de sessió.
+        qr_success: Inici de sessió aprovat. Sure està actualitzant la pàgina del proveïdor.
+        qr_error: No s'ha pogut iniciar la sessió amb QR. Torna-ho a provar.
+        save_configuration: Desa i inicia sessió
+        update_configuration: Actualitza la configuració
+        sync: Sincronitza
+        disconnect: Desconnecta Trade Republic
+        disconnect_confirm: Vols desconnectar Trade Republic? Els comptes sincronitzats passaran a ser comptes manuals.
+        status_configured_prefix: Connectat. Ves a la pestanya
+        accounts_tab: Comptes
+        setup_accounts: Configura els comptes
+        accounts_discovered:
+          one: S'ha descobert %{count} compte de Trade Republic.
+          other: S'han descobert %{count} comptes de Trade Republic.
+        status_configured_suffix: per gestionar els comptes descoberts.
+        not_configured: No configurat.
+      trading212_panel:
+        steps:
+          step_1: Ves a Trading 212 → Settings → API (web o aplicació mòbil).
+          step_2: 'Genera una clau API nova: Trading 212 et mostrarà un API ID i una Secret Key.'
+          step_3: Enganxa'ls tots dos a continuació, selecciona l'entorn i la divisa del compte i desa.
+        api_key_label: API ID
+        api_key_placeholder_new: Enganxa el teu API ID de Trading 212
+        api_key_placeholder_existing: Deixa-ho en blanc per mantenir l'API ID actual
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Enganxa la teva Secret Key de Trading 212
+        api_secret_placeholder_existing: Deixa-ho en blanc per mantenir la Secret Key actual
+        environment_label: Entorn
+        environment_live: Compte real
+        environment_demo: Compte de demostració
+        currency_label: Divisa del compte
+        save_configuration: Desa la configuració
+        update_configuration: Actualitza la configuració
+        sync: Sincronitza
+        syncing: Sincronitzant...
+        disconnect: Desconnecta el compte de Trading 212
+        disconnect_confirm: Vols desconnectar Trading 212?
+        default_account_name: Compte de Trading 212
+        add_account: Afegeix un altre compte
+        status_configured_prefix: Configurat. Ves a la pestanya
+        accounts_tab: Comptes
+        status_configured_suffix: per gestionar els comptes descoberts.
+        not_configured: No configurat.
     securities:
       show:
         page_title: Seguretat
@@ -521,7 +714,7 @@ ca:
           Pots tornar-lo a connectar més tard iniciant sessió amb aquest proveïdor
           una altra vegada.
         sso_confirm_button: Desconnecta
-        sso_confirm_title: Desconnectar compte?
+        sso_confirm_title: Vols desconnectar el compte?
         sso_connect_hint: Tanca sessió i inicia amb un proveïdor SSO per connectar
           un compte.
         sso_disconnect: Desconnecta
@@ -535,6 +728,80 @@ ca:
         sso_warning_message: Aquesta és l'única forma d'inici de sessió. Hauries de
           configurar una contrasenya a la teva configuració de seguretat abans de
           desconnectar, altrament podries quedar bloquejat/da fora del teu compte.
+        encryption_warning:
+          title: Falten les claus de xifratge
+          intro: 'Les dades sensibles (claus API, tokens de proveïdors, secrets de MFA i dades personals) s''emmagatzemen sense xifrar. Per activar el xifratge, defineix les claus següents a les variables d''entorn o a les credencials de Rails:'
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: 'Genera''n un joc amb: bin/rails db:encryption:init'
+    mcp:
+      show:
+        page_title: Servidor MCP
+        connect_title: Connecta un assistent d'IA
+        connect_subtitle: Enganxa aquest URL a Claude.ai (o a qualsevol client compatible amb MCP) per connectar-lo al teu compte de Sure.
+        copy_url: Copia
+        copied: Copiat!
+        how_to_connect_title: Com connectar Claude
+        step_1: Obre Claude.ai i ves a Settings → Customize → Connectors.
+        step_2: Fes clic a "Add connector" i enganxa l'URL del servidor MCP de dalt.
+        step_3: 'Fes clic a Connect: se''t redirigirà a Sure per iniciar sessió i autoritzar l''accés.'
+        step_4: Un cop autoritzat, Claude podrà llegir els teus comptes, transaccions i saldos.
+        connected_title: Clients connectats
+        connected_subtitle: Aquestes aplicacions tenen accés a les teves dades de Sure. Revoca les que ja no facis servir.
+        unknown_client: Client desconegut
+        connected_ago: Connectat fa %{time}
+        revoke: Revoca
+        revoke_confirm: Vols revocar l'accés d'aquest client?
+      revoke:
+        revoked: Connexió revocada.
+    background_jobs:
+      show:
+        page_title: Tasques en segon pla
+        title: Estat dels workers
+        subtitle: 'Estat d''execució de Sidekiq en directe: processos worker, mida de les cues i conjunts de reintents i tasques mortes.'
+        redis_unreachable: L'estat de Sidekiq no està disponible (no s'arriba a Redis). No se sap si els workers estan actius, així que les accions estan desactivades.
+        operations_title: Operacions en curs
+        operations_subtitle: Sincronitzacions, importacions i exportacions de totes les famílies que encara no han arribat a un estat final. Les operacions inactives durant més de 30 minuts sense cap tasca visible es consideren perdudes i es poden marcar com a tals.
+        empty: No hi ha operacions en curs.
+        missing_value: '-'
+        stats:
+          workers: Workers
+          busy: Ocupats
+          enqueued: A la cua
+          retries: Reintents
+          scheduled: Programades
+          dead: Mortes
+          queue_label: '%{name}: %{size} · latència de %{latency}s'
+        table:
+          type: Operació
+          family: Família
+          status: Estat
+          last_activity: Darrera activitat
+          liveness: Activitat
+          action: Acció
+      operation:
+        ago: fa %{time}
+        sync_label: Sincronització · %{type}
+        running: En execució
+        queued: A la cua
+        recent: Recent
+        unknown: Desconegut
+        stuck: 'Encallada: es considera perduda'
+        confirm: Vols marcar aquesta operació com a perduda? El registre passa a un estat final perquè es pugui tornar a intentar. Les dades subjacents no es modifiquen.
+        missing_value: '-'
+        actions:
+          mark_stale: Marca com a obsoleta
+          mark_failed: Marca com a fallida
+          release_claim: Allibera el bloqueig
+      cancel:
+        cancelled: '%{type} s''ha marcat com a perdut.'
+        not_cancellable: 'Ara mateix no es pot modificar aquesta operació: pot ser que la tasca encara estigui a la cua o en execució. Torna-ho a provar quan hagi estat inactiva durant 30 minuts.'
+        cancelled_error: 'Marcada com a fallida per un administrador: es considera que la tasca en segon pla s''ha perdut.'
+    budget_shares:
+      update:
+        success: S'ha actualitzat la configuració de compartició del pressupost
     settings_nav:
       accounts_label: Comptes
       advanced_section_title: Avançat
@@ -542,6 +809,7 @@ ca:
       api_key_label: Clau API
       api_keys_label: Clau API
       appearance_label: Aparença
+      background_jobs_label: Tasques en segon pla
       bank_sync_label: Sincronització bancària
       categories_label: Categories
       debug_label: Depuració
@@ -552,6 +820,7 @@ ca:
       imports_label: Importacions
       llm_usage_label: Ús d'LLM
       logout: Tanca la sessió
+      mcp_label: MCP
       merchants_label: Comerços
       other_section_title: Més
       payment_label: Pagament
@@ -564,6 +833,7 @@ ca:
       self_hosting_label: Self hosting
       sso_providers_label: Proveïdors SSO
       statement_vault_label: Arxiu d'extractes
+      system_health_label: Estat del sistema
       tags_label: Etiquetes
       transactions_section_title: Transaccions
       users_label: Usuaris
