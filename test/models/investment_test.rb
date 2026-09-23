@@ -99,10 +99,34 @@ class InvestmentTest < ActiveSupport::TestCase
     assert_equal :tax_advantaged, investment.tax_treatment
   end
 
-  test "tax_treatment returns tax_advantaged for French AV" do
-    investment = Investment.new(subtype: "assurance_vie")
-    assert_equal :tax_advantaged, investment.tax_treatment
+  # French account types
+
+  test "tax_treatment returns tax_exempt for French regulated savings accounts" do
+    %w[livret_a ldds lee lep livret_jeune].each do |subtype|
+      investment = Investment.new(subtype: subtype)
+      assert_equal :tax_exempt, investment.tax_treatment, "Expected #{subtype} to be tax_exempt"
+    end
   end
+
+  test "tax_treatment returns tax_advantaged for French tax-advantaged plans" do
+    %w[assurance_vie contrat_de_capitalisation pea pea_pme pee peg pel].each do |subtype|
+      investment = Investment.new(subtype: subtype)
+      assert_equal :tax_advantaged, investment.tax_treatment, "Expected #{subtype} to be tax_advantaged"
+    end
+  end
+
+  test "tax_treatment returns tax_deferred for French retirement plans" do
+    %w[per per_individuel per_collectif per_obligatoire].each do |subtype|
+      investment = Investment.new(subtype: subtype)
+      assert_equal :tax_deferred, investment.tax_treatment, "Expected #{subtype} to be tax_deferred"
+    end
+  end
+
+  test "tax_treatment returns taxable for French taxable accounts" do
+    investment = Investment.new(subtype: "cto")
+    assert_equal :taxable, investment.tax_treatment
+  end
+
   # Generic account types
 
   test "tax_treatment returns tax_deferred for generic pension and retirement" do
@@ -133,7 +157,7 @@ class InvestmentTest < ActiveSupport::TestCase
   end
 
   test "all subtypes have valid region values" do
-    valid_regions = [ "us", "uk", "ca", "au", "eu", "in", nil ]
+    valid_regions = [ "us", "uk", "ca", "au", "eu", "fr", "in", nil ]
 
     Investment::SUBTYPES.each do |key, metadata|
       assert_includes valid_regions, metadata[:region],
@@ -141,6 +165,7 @@ class InvestmentTest < ActiveSupport::TestCase
     end
   end
 
+<<<<<<< HEAD
   # India account types
 
   test "India pension subtypes have tax_advantaged treatment" do
@@ -175,5 +200,40 @@ class InvestmentTest < ActiveSupport::TestCase
     assert grouped.any?, "grouped should not be empty"
     first_group_label = grouped.first[0]
     assert_equal I18n.t("accounts.subtype_regions.in"), first_group_label
+  end
+
+<<<<<<< HEAD
+  test "subtypes_grouped_for_select includes France region when country is FR" do
+    grouped = Investment.subtypes_grouped_for_select(currency: "EUR", country: "FR")
+    labels = grouped.map(&:first)
+    france_label = I18n.t("accounts.subtype_regions.fr")
+
+    assert_includes labels, france_label
+    assert_equal france_label, labels.first
+  end
+
+  test "subtypes_grouped_for_select prioritizes currency when no country given" do
+    grouped = Investment.subtypes_grouped_for_select(currency: "EUR")
+    labels = grouped.map(&:first)
+    eu_label = I18n.t("accounts.subtype_regions.eu")
+
+    assert_includes labels, eu_label
+    assert_equal eu_label, labels.first
+  end
+
+  test "subtypes_grouped_for_select includes generic subtypes regardless of country or currency" do
+    generic_label = I18n.t("accounts.subtype_regions.generic")
+
+    # FR country, EUR currency
+    grouped_fr = Investment.subtypes_grouped_for_select(currency: "EUR", country: "FR")
+    assert_includes grouped_fr.map(&:first), generic_label
+
+    # US country, USD currency
+    grouped_us = Investment.subtypes_grouped_for_select(currency: "USD", country: "US")
+    assert_includes grouped_us.map(&:first), generic_label
+
+    # No country, no currency
+    grouped_none = Investment.subtypes_grouped_for_select
+    assert_includes grouped_none.map(&:first), generic_label
   end
 end
