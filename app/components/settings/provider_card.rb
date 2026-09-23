@@ -9,7 +9,7 @@ class Settings::ProviderCard < ApplicationComponent
     I18n.t(key) if key
   end
 
-  def initialize(provider_key:, name:, tagline: nil, region: nil, kinds: nil, tier: nil, maturity: :stable, coming_soon: false)
+  def initialize(provider_key:, name:, tagline: nil, region: nil, kinds: nil, tier: nil, maturity: :stable, external_link: nil)
     @provider_key = provider_key
     @name         = name
     @tagline      = tagline
@@ -17,14 +17,14 @@ class Settings::ProviderCard < ApplicationComponent
     @kinds        = Array(kinds).compact
     @tier         = tier
     @maturity     = maturity.to_sym
-    @coming_soon  = coming_soon
+    @external_link = external_link
   end
 
-  attr_reader :provider_key, :name, :tagline, :coming_soon
+  attr_reader :provider_key, :name, :tagline, :external_link
 
   def container(&block)
     classes = "bg-container shadow-border-xs rounded-xl p-4 flex flex-col gap-2.5 text-primary"
-    if coming_soon
+    if external_link
       tag.div(class: classes, data: filter_data, &block)
     else
       link_to(connect_path,

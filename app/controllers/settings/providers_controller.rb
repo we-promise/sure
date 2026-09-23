@@ -447,7 +447,11 @@ class Settings::ProvidersController < ApplicationController
       wallet_entry = {
         provider_key: "financekit", title: Provider::Metadata.for(:financekit)[:name],
         turbo_id: "financekit", partial: "financekit_panel", maturity: :beta,
-        coming_soon: true, sync_supported: false,
+        external_link: {
+          text: t("settings.providers.financekit.app_store"), href: nil,
+          tooltip: t("settings.providers.financekit.coming_soon")
+        },
+        sync_supported: false,
         summary: view_context.financekit_provider_summary(@financekit_connections)
       }
 

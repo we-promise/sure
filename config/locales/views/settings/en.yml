@@ -416,7 +416,6 @@ en:
       financekit:
         app_store: App Store
         coming_soon: Coming soon!
-        app_store_coming_soon: App Store — Coming soon!
         description: "Manage Apple Wallet connections in the Sure iOS app. Wallet data syncs while the app is open; unattended background sync is not available yet."
         summary: Wallet sync
         accounts: Linked accounts

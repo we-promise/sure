@@ -15,11 +15,16 @@
     <p class="text-sm text-secondary grow leading-snug"><%= tagline %></p>
   <% end %>
   <div class="flex items-center justify-end gap-1.5 text-sm font-medium text-primary">
-    <% if coming_soon %>
-      <span title="<%= t("settings.providers.financekit.coming_soon") %>" tabindex="0" aria-label="<%= t("settings.providers.financekit.app_store_coming_soon") %>">
-        <%= render DS::Button.new(text: t("settings.providers.financekit.app_store"), variant: :secondary, size: :sm,
-              disabled: true, class: "pointer-events-none opacity-50", aria: { description: t("settings.providers.financekit.coming_soon") }) %>
-      </span>
+    <% if external_link %>
+      <% if external_link[:href].present? %>
+        <%= render DS::Link.new(text: external_link.fetch(:text), href: external_link[:href], variant: :secondary, size: :sm,
+              target: "_blank", data: { turbo: false }, title: external_link[:tooltip]) %>
+      <% else %>
+        <span title="<%= external_link[:tooltip] %>" tabindex="0" aria-label="<%= external_link.fetch(:text) %>" aria-description="<%= external_link[:tooltip] %>">
+          <%= render DS::Button.new(text: external_link.fetch(:text), variant: :secondary, size: :sm,
+                disabled: true, class: "pointer-events-none opacity-50", aria: { description: external_link[:tooltip] }) %>
+        </span>
+      <% end %>
     <% else %>
       <%= t("settings.providers.connect") %>
       <%= helpers.icon "arrow-right", size: "sm", class: "!w-3.5 !h-3.5" %>
