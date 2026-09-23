@@ -297,7 +297,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         security: security,
         quantity: 5,
         price: 150.00,
-        amount: 750.00,
+        amount: 754.95,
+        fee: 4.95,
         currency: "USD",
         date: Date.today,
         source: "plaid"
@@ -306,7 +307,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_kind_of Trade, entry.entryable
       assert_equal 5, entry.entryable.qty
       assert_equal 150.00, entry.entryable.price
-      assert_equal 750.00, entry.amount
+      assert_equal BigDecimal("4.95"), entry.entryable.fee
+      assert_equal BigDecimal("754.95"), entry.amount
       assert_match(/Buy.*5.*shares/i, entry.name)
     end
   end
@@ -328,6 +330,39 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     )
 
     assert_equal 0.91, entry.entryable.exchange_rate
+  end
+
+  # So user-entered fees aren't erased by syncing from providers that don't report fees
+  test "preserves existing trade fee when reimport omits it" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    aapl = securities(:aapl)
+
+    entry = adapter.import_trade(
+      external_id: "plaid_trade_fee_preserved",
+      security: aapl,
+      quantity: 5,
+      price: 150.00,
+      amount: 754.95,
+      fee: 4.95,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid"
+    )
+
+    updated_entry = adapter.import_trade(
+      external_id: "plaid_trade_fee_preserved",
+      security: aapl,
+      quantity: 5,
+      price: 150.00,
+      amount: 754.95,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid"
+    )
+
+    assert_equal entry.id, updated_entry.id
+    assert_equal BigDecimal("4.95"), updated_entry.entryable.reload.fee
   end
 
   test "raises error when security is missing for trade import" do

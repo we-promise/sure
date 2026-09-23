@@ -84,46 +84,71 @@ class Holding::ReverseCalculator
 
     def precompute_cost_basis
       @cost_basis_snapshots = Hash.new { |h, k| h[k] = [] }
-      # First date a transfer landed on each security. From that day on the
-      # position contains units acquired at a price nothing here knows, so it
-      # has no cost basis — before it, the purchases still stand on their own.
-      @first_transfer_dates = {}
+      # Spans [start, end) during which a security still holds transferred-in units
+      # of unknown cost. `end` is nil while a span is still open at the last trade.
+      @unknown_spans = Hash.new { |h, k| h[k] = [] }
       trackers = Hash.new { |h, k| h[k] = Holding::CostBasisTracker.new }
+      open_unknown_start = {}
 
       # get_trades is already chronological (date, then created_at, then id).
       # Re-sorting by date alone is unstable and could reorder same-day trades,
-      # which now matters because the tracker is order-sensitive once sells relieve.
-      portfolio_cache.get_trades.each do |trade_entry|
+      # which matters because the tracker is order-sensitive once sells relieve.
+      trades = portfolio_cache.get_trades
+
+      # A reverse-synced account can hold shares before its first imported trade,
+      # because the provider gives current holdings rather than full history. Seed
+      # each running position from the snapshot minus the net imported trades, so
+      # "position back at zero" reflects the real position, not just the trades we
+      # happen to have.
+      net_qty = Hash.new(0)
+      trades.each { |te| net_qty[te.entryable.security_id] += te.entryable.qty }
+      snapshot = portfolio_snapshot.to_h
+      positions = Hash.new(0)
+      net_qty.each_key { |security_id| positions[security_id] = (snapshot[security_id] || 0) - net_qty[security_id] }
+
+      trades.each do |trade_entry|
         trade = trade_entry.entryable
         security_id = trade.security_id
+        previous_position = positions[security_id]
+        positions[security_id] += trade.qty
 
         if trade.internal_movement?
           # Inbound transfers make the basis unknown from that date on; outbound
           # transfers only remove units, so relieve them at the running average.
           if trade.qty.positive?
-            @first_transfer_dates[security_id] ||= trade_entry.date
+            open_unknown_start[security_id] ||= trade_entry.date
           else
             trackers[security_id].apply(converted_trade_price(trade), trade.qty)
             @cost_basis_snapshots[security_id] << [ trade_entry.date, trackers[security_id].average_cost ]
           end
-          next
+        else
+          tracker = trackers[security_id]
+          # Buys raise the basis; sells relieve quantity at the running average, and a
+          # full liquidation resets it so a later repurchase starts from a clean basis.
+          tracker.apply(converted_trade_price(trade), trade.qty)
+
+          # Record the basis after each trade — including nil once a position is fully
+          # closed — so cost_basis_for returns nil for the sold-out span instead of a
+          # stale figure carried forward from the last buy.
+          @cost_basis_snapshots[security_id] << [ trade_entry.date, tracker.average_cost ]
         end
 
-        tracker = trackers[security_id]
-        # Buys raise the basis; sells relieve quantity at the running average, and a
-        # full liquidation resets it so a later repurchase starts from a clean basis.
-        tracker.apply(converted_trade_price(trade), trade.qty)
-
-        # Record the basis after each trade — including nil once a position is fully
-        # closed — so cost_basis_for returns nil for the sold-out span instead of a
-        # stale figure carried forward from the last buy.
-        @cost_basis_snapshots[security_id] << [ trade_entry.date, tracker.average_cost ]
+        # Close an open unknown span only on a genuine downward crossing through
+        # zero. A position that was already non-positive — e.g. a gapped import
+        # whose reconstructed baseline is negative — never held these units, so
+        # opening and closing must not collapse onto the same trade.
+        if open_unknown_start[security_id] && previous_position.positive? && positions[security_id] <= 0
+          @unknown_spans[security_id] << [ open_unknown_start[security_id], trade_entry.date ]
+          open_unknown_start.delete(security_id)
+        end
       end
+
+      # Spans still open at the last trade stay unknown through to the present.
+      open_unknown_start.each { |security_id, start| @unknown_spans[security_id] << [ start, nil ] }
     end
 
     def transferred_by?(security_id, date)
-      first = @first_transfer_dates[security_id]
-      first.present? && first <= date
+      @unknown_spans[security_id].any? { |start, stop| start <= date && (stop.nil? || date < stop) }
     end
 
     def cost_basis_for(security_id, date)

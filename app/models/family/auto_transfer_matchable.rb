@@ -14,13 +14,44 @@ module Family::AutoTransferMatchable
   IBAN_CONFIRMED_DATE_WINDOW = 30
   DEFAULT_DATE_WINDOW = 4
 
+  # The automatic path's cross-currency tolerance when TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE
+  # is unset or unusable. 10% is the long-standing default. Real-world FX slippage between
+  # a transaction's timestamp and the cached daily rate is typically 1-3%, so an operator
+  # seeing coincidental matches on round-number amounts can tighten it without a code change.
+  DEFAULT_EXCHANGE_RATE_TOLERANCE = 0.1
+
+  # Beyond this the band stops meaning anything: at 1.0 the lower bound reaches zero and
+  # any two cross-currency amounts inside the date window would match.
+  MAX_EXCHANGE_RATE_TOLERANCE = 0.5
+
+  # The manual "match as transfer" dialog (Transaction#transfer_match_candidates) is never
+  # narrower than this: a user is confirming the match themselves, and FX slippage or
+  # card-network markup on a manual-account leg can be wide. Mirrors the same
+  # date_window: 30 vs. 4 widening that dialog already applies.
+  MANUAL_MATCH_EXCHANGE_RATE_TOLERANCE = 0.1
+
+  # Read at call time rather than frozen into a constant at boot, so a bad value falls back
+  # instead of raising inside every sync: Family::Syncer and Account::Syncer both call
+  # auto_match_transfers! without a tolerance of their own.
+  def self.exchange_rate_tolerance
+    tolerance = Float(ENV["TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE"], exception: false)
+    return DEFAULT_EXCHANGE_RATE_TOLERANCE if tolerance.nil? || !tolerance.finite? || tolerance.negative?
+
+    [ tolerance, MAX_EXCHANGE_RATE_TOLERANCE ].min
+  end
+
+  def self.manual_match_exchange_rate_tolerance
+    [ MANUAL_MATCH_EXCHANGE_RATE_TOLERANCE, exchange_rate_tolerance ].max
+  end
+
   def transfer_match_candidates(
     date_window: 4,
-    exchange_rate_tolerance: 0.1,
+    exchange_rate_tolerance: Family::AutoTransferMatchable.exchange_rate_tolerance,
     inflow_transaction_id: nil,
     outflow_transaction_id: nil,
     account_id: nil,
-    include_rejected: true
+    include_rejected: true,
+    restrict_cross_currency_to_linked_accounts: false
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
@@ -34,19 +65,26 @@ module Family::AutoTransferMatchable
         outflow_transaction_id:,
         account_id:,
         include_rejected:,
+        restrict_cross_currency_to_linked_accounts:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
     ])
   end
 
-  def auto_match_transfers!(account: nil)
+  def auto_match_transfers!(account: nil, exchange_rate_tolerance: Family::AutoTransferMatchable.exchange_rate_tolerance)
     # Exclude already matched transfers. Loads the wider IBAN-confirmed window
     # up front; candidates that turn out not to be IBAN-confirmed are pruned
     # back down to the normal window just below, so unconfirmed behavior is
-    # unchanged.
+    # unchanged. Cross-currency FX-tolerance matching is restricted to
+    # provider-linked accounts ONLY on this automatic path -- a coincidental
+    # amount/FX-rate match applied here has no human reviewing it first.
     candidates_scope = transfer_match_candidates(
-      account_id: account&.id, include_rejected: false, date_window: IBAN_CONFIRMED_DATE_WINDOW
+      date_window: IBAN_CONFIRMED_DATE_WINDOW,
+      account_id: account&.id,
+      include_rejected: false,
+      exchange_rate_tolerance:,
+      restrict_cross_currency_to_linked_accounts: true
     )
     transaction_ids = candidates_scope.flat_map do |match|
       [ match.inflow_transaction_id, match.outflow_transaction_id ]
@@ -218,6 +256,25 @@ module Family::AutoTransferMatchable
       tolerance
     end
 
+    # The second UNION branch below (cross-currency, FX-rate-tolerance matching) is a
+    # coincidence guess -- amount x FX-rate within a tolerance band, not an exact amount
+    # match -- and a manual account has no institution behind it confirming money actually
+    # moved, so an unrelated pair of round-number transactions can land inside the tolerance
+    # band purely by chance. When :restrict_cross_currency_to_linked_accounts is true, that
+    # branch additionally requires both accounts to have a live provider connection
+    # (Plaid/SimpleFIN/account_providers). Manual accounts always participate in the first
+    # branch's exact-amount, same-currency matching, which carries no such ambiguity.
+    #
+    # The restriction is opt-in (default false) rather than baked into the branch
+    # unconditionally: Family#auto_match_transfers! passes true because a coincidental match
+    # there is applied automatically with no human reviewing it first, but
+    # Transaction#transfer_match_candidates (the manual "match as transfer" dialog) leaves it
+    # off so a user can still find and confirm a real cross-currency transfer that happens to
+    # involve a manual account, rather than being forced into creating a duplicate.
+    #
+    # NOTE: this is passed through `.squish`, which collapses all whitespace (including
+    # newlines) into single spaces -- a `--` SQL line comment anywhere in this heredoc would
+    # swallow the remainder of the query. Put explanatory comments here in Ruby instead.
     def transfer_match_candidates_sql
       <<~SQL.squish
         SELECT transfer_match_candidates.*
@@ -304,9 +361,27 @@ module Family::AutoTransferMatchable
               BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
-            (:include_rejected = TRUE OR rejected_transfers.id IS NULL)
+            (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
+            (
+              :restrict_cross_currency_to_linked_accounts = FALSE OR
+              (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")})
+            )
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.date_diff ASC
+      SQL
+    end
+
+    # The inverse of Account#manual? / the Account.manual scope, inlined as SQL so
+    # it can run against the inflow/outflow account aliases in the same query
+    # rather than round-tripping through AR. Keep in sync with Account#manual? if
+    # what counts as "linked" ever changes (e.g. a new provider type).
+    def linked_account_sql(accounts_alias)
+      <<~SQL.squish
+        (
+          #{accounts_alias}.plaid_account_id IS NOT NULL OR
+          #{accounts_alias}.simplefin_account_id IS NOT NULL OR
+          EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = #{accounts_alias}.id)
+        )
       SQL
     end
 end

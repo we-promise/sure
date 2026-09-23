@@ -212,4 +212,44 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "input[name='account[enable_category_matcher]']", 0
   end
+
+  # --- member-owned connections (issue #3579) ------------------------------
+
+  test "a member sees only member-connectable providers in the method selector" do
+    Provider::Registry.stubs(:plaid_provider_for_region).returns(stub("plaid"))
+    Family.any_instance.stubs(:can_connect_plaid_us?).returns(true)
+    Family.any_instance.stubs(:can_connect_plaid_eu?).returns(false)
+
+    sign_in users(:family_member)
+    get new_depository_path(step: "method_select")
+
+    assert_response :success
+    assert_select "a[href=?]", new_plaid_item_path(region: "us", accountable_type: "Depository"), count: 1
+    # SimpleFIN is tenant-wide, so it must not be offered to a member even
+    # when it is configured.
+    assert_select "a[href*=?]", "simplefin", count: 0
+  end
+
+  test "an admin still sees every configured provider in the method selector" do
+    Provider::Registry.stubs(:plaid_provider_for_region).returns(stub("plaid"))
+    Family.any_instance.stubs(:can_connect_plaid_us?).returns(true)
+    Family.any_instance.stubs(:can_connect_plaid_eu?).returns(false)
+
+    sign_in users(:family_admin)
+    get new_depository_path(step: "method_select")
+
+    assert_response :success
+    assert_select "a[href=?]", new_plaid_item_path(region: "us", accountable_type: "Depository"), count: 1
+  end
+
+  test "a member is offered manual entry even with no connectable providers" do
+    Family.any_instance.stubs(:can_connect_plaid_us?).returns(false)
+    Family.any_instance.stubs(:can_connect_plaid_eu?).returns(false)
+
+    sign_in users(:family_member)
+    get new_depository_path(step: "method_select")
+
+    assert_response :success
+    assert_select "a[href=?]", new_depository_path, count: 1
+  end
 end

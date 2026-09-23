@@ -31,6 +31,25 @@ RSpec.configure do |config|
             name: 'X-Api-Key',
             in: :header,
             description: 'API key for authentication. Generate one from your account settings.'
+          },
+          financekitPublisher: {
+            type: :http,
+            scheme: :bearer,
+            bearerFormat: 'opaque publisher credential',
+            description: 'Revocable credential restricted to one FinanceKit publisher upload URL.'
+          },
+          oauth2: {
+            type: :oauth2,
+            flows: {
+              authorizationCode: {
+                authorizationUrl: '/oauth/authorize',
+                tokenUrl: '/oauth/token',
+                scopes: {
+                  read: 'Read access',
+                  read_write: 'Read and write access'
+                }
+              }
+            }
           }
         },
         schemas: {
@@ -248,7 +267,8 @@ RSpec.configure do |config|
           PushSubscriptionRegistration: {
             type: :object, required: %w[token environment platform],
             properties: {
-              token: { type: :string }, environment: { type: :string, enum: %w[sandbox production] },
+              token: { type: :string, maxLength: 2048, pattern: "^(?:[0-9a-fA-F]{2})+$" },
+              environment: { type: :string, enum: %w[sandbox production] },
               platform: { type: :string, enum: %w[ios] },
               device_key: { type: :string, pattern: '^[0-9a-f]{64}$', description: 'Optional 256-bit installation secret, unique per server and kept in device secure storage. Required proof to replace another user’s registration for this device. Never returned.' }
             }
@@ -1852,6 +1872,10 @@ RSpec.configure do |config|
       }
     }
   }
+
+  config.openapi_specs["openapi.yaml"][:components][:schemas].merge!(
+    JSON.parse(Rails.root.join("docs/api/financekit/schemas.json").read)
+  )
 
   config.openapi_format = :yaml
 end
