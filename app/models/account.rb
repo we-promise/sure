@@ -56,17 +56,20 @@ class Account < ApplicationRecord
   # it (inclusive) -- used to project the balance as of a specific future
   # date (see Account::ActivityFeedData) instead of the account's fully
   # projected total.
+  #
+  # The flows are loaded and converted once per instance (see
+  # #scheduled_entry_flows), so the chart tooltip and every projected date
+  # group in the activity feed share one query and one FX pass.
   def scheduled_entries_total_money(through_date: nil)
-    return Money.new(0, currency) if balance_type == :non_cash && accountable_type != "Loan"
+    flows = scheduled_entry_flows
+    flows = flows.select { |date, _| date <= through_date } if through_date
 
-    scope = entries.excluding_pending.excluding_split_parents
-      .where(entryable_type: [ "Transaction", "Trade" ])
-      .where("entries.date > ?", Date.current)
-    scope = scope.where("entries.date <= ?", through_date) if through_date
+    Money.new(flows.sum { |_, amount| amount }, currency)
+  end
 
-    total = scope.includes(:entryable).sum { |entry| convert_scheduled_entry_amount(entry) || 0 }
-
-    Money.new(total, currency)
+  def reload(*)
+    @scheduled_entry_flows = nil
+    super
   end
 
   def projected_balance_money
@@ -769,6 +772,19 @@ class Account < ApplicationRecord
   end
 
   private
+    # [date, signed amount in account currency] for each scheduled entry that
+    # contributes to the projection.
+    def scheduled_entry_flows
+      @scheduled_entry_flows ||= if balance_type == :non_cash && accountable_type != "Loan"
+        []
+      else
+        entries.excluding_pending.excluding_split_parents
+          .where(entryable_type: [ "Transaction", "Trade" ])
+          .where("entries.date > ?", Date.current)
+          .includes(:entryable)
+          .filter_map { |entry| (amount = convert_scheduled_entry_amount(entry)) && [ entry.date, amount ] }
+      end
+    end
 
     def assign_default_owner
       return if owner.present?

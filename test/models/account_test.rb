@@ -808,6 +808,24 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal Money.new(-250, "USD"), @account.scheduled_entries_total_money(through_date: 10.days.from_now.to_date)
   end
 
+  test "scheduled entries are loaded once per instance and reloaded on reload" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date)
+    create_transaction(account: @account, amount: 50, date: 10.days.from_now.to_date)
+
+    queries = 0
+    counter = ->(*, payload) { queries += 1 if payload[:sql].include?("entries.date >") }
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      @account.scheduled_entries_total_money
+      @account.projected_balance_money
+      @account.scheduled_entries_total_money(through_date: 3.days.from_now.to_date)
+      @account.scheduled_entries_total_money(through_date: 10.days.from_now.to_date)
+    end
+    assert_equal 1, queries
+
+    create_transaction(account: @account, amount: 25, date: 5.days.from_now.to_date)
+    assert_equal Money.new(-275, "USD"), @account.reload.scheduled_entries_total_money
+  end
+
   test "history_start_date resolves to the earliest of opening anchor, entries, and balances" do
     account = @family.accounts.create!(
       owner: @admin,

@@ -19,10 +19,14 @@ class UI::Account::ActivityDate < ApplicationComponent
   # Scheduled (future-dated) entries have no Balance row yet -- see
   # Entry#scheduled?. `projected_balance_money` estimates one from the
   # account's current balance plus scheduled entries through this date.
-  # `account.balance_money` is a last-resort fallback for a non-scheduled
-  # date that somehow has neither (e.g. before the first sync completes).
+  # Any other date without a Balance row (e.g. a pre-anchor gap) keeps the
+  # historical zero rather than showing today's balance as that date's
+  # end-of-day balance.
   def end_balance_money
-    balance&.end_balance_money || projected_balance_money || account.balance_money
+    return balance.end_balance_money if balance
+    return projected_balance_money if projected_balance_money
+
+    Money.new(0, account.currency)
   end
 
   def projected?

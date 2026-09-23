@@ -34,7 +34,7 @@ class UI::Account::ActivityDateTest < ViewComponent::TestCase
     assert_text projected.format
   end
 
-  test "falls back to the account's current balance when neither a Balance row nor a projection exists" do
+  test "falls back to zero when neither a Balance row nor a projection exists" do
     account = accounts(:depository)
 
     data = Account::ActivityFeedData::ActivityDateData.new(
@@ -48,7 +48,7 @@ class UI::Account::ActivityDateTest < ViewComponent::TestCase
 
     component = UI::Account::ActivityDate.new(account: account, data: data)
 
-    assert_equal account.balance_money, component.end_balance_money
+    assert_equal Money.new(0, account.currency), component.end_balance_money
     refute component.projected?
 
     render_inline(component)
