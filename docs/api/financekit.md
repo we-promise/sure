@@ -1,8 +1,10 @@
-# FinanceKit background device publisher (protocol 2)
+# FinanceKit device publisher (protocol 2)
 
 Related issue: [#3485](https://github.com/we-promise/sure/issues/3485).
 
 FinanceKit is modeled as a device publisher inside Sure's provider architecture. The iOS client reads explicitly authorized Apple Wallet accounts, persists an encrypted local outbox, and uploads bounded batches whenever iOS grants foreground or background execution. Sure remains the financial system of record after a batch is accepted and applied.
+
+Foreground "Sync now" is sufficient for alpha testing. Background delivery is an optional client execution mode using the same server protocol.
 
 The protocol deliberately separates two trust domains:
 
@@ -14,6 +16,8 @@ TLS protects transport. The server stores only a SHA-256 digest of the publisher
 ## Eligibility and discovery
 
 `GET /api/v1/financekit/capabilities` requires `read` access. It reports protocol version 2, `background_publisher` delivery, and server limits. Enrollment and management require `read_write`, an active family administrator, preview opt-in, `FINANCEKIT_ENABLED=true`, and an exact family allowlist match.
+
+The protocol 2 delivery value `background_publisher` names the device-publisher contract; it does not require or confirm background execution on the device. Foreground uploads use this same capability.
 
 A disabled capability does not affect the caller's existing read-only Sure access.
 

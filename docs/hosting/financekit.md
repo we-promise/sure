@@ -1,4 +1,8 @@
-# Operating the FinanceKit background publisher
+# Operating the FinanceKit device publisher
+
+This guide covers Sure's server-side ingestion of FinanceKit uploads. It applies to foreground "Sync now" in alpha builds and to optional background delivery by the iOS client. Both use the same enrollment, upload, receipt, and repair protocol; background delivery is not required to begin alpha testing.
+
+Sure's server-side worker and scheduled inbox sweep are required for either delivery mode. They apply accepted batches, retry processing, complete downstream account updates, and remove expired payload bytes. These server jobs are separate from the iOS app's ability to run in the background.
 
 FinanceKit is default-off and requires:
 
