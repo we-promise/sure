@@ -20,21 +20,26 @@ class Financekit::Downstream
       pending = FinancekitBatch.where(id: @batch_ids, downstream_completed_at: nil).pluck(:id)
       next if pending.empty?
 
-      # Account syncs, transfer matching and rule application all cost the same
-      # whether one capture or fifty just landed, so a drain pays for them once
-      # rather than once per capture.
-      @item.selected_accounts.includes(financekit_account_lineage: :account).find_each do |mapping|
-        mapping.account&.sync_later
-      end
-      @item.family.auto_match_transfers!
-      @item.family.rules.where(active: true).find_each(&:apply_later)
-
-      # Both writes together, and after the scheduling above so nothing is
-      # enqueued from inside the transaction. Committing them separately left
-      # batches complete alongside stale publisher health, which the recovery
-      # sweep then skipped because it only looks for incomplete batches.
+      # Scheduling and both completion writes in one transaction. Committing the
+      # two writes separately left batches complete alongside stale publisher
+      # health, which the recovery sweep then skipped because it only looks for
+      # incomplete batches. Scheduling outside it was no better: a failed health
+      # write rolled the batch back after the jobs were already queued, so
+      # recovery ran the same rules again and RuleJob records a RuleRun per run.
+      # Enqueueing from inside is safe here because ApplicationJob sets
+      # enqueue_after_transaction_commit, so SyncJob and RuleJob are deferred to
+      # the commit and dropped outright if it rolls back.
+      #
+      # The fan-out itself costs the same whether one capture or fifty just
+      # landed, so a drain pays for it once rather than once per capture.
       completed_at = Time.current
       FinancekitBatch.transaction do
+        @item.selected_accounts.includes(financekit_account_lineage: :account).find_each do |mapping|
+          mapping.account&.sync_later
+        end
+        @item.family.auto_match_transfers!
+        @item.family.rules.where(active: true).find_each(&:apply_later)
+
         FinancekitBatch.where(id: pending)
           .update_all(downstream_completed_at: completed_at, updated_at: completed_at)
         @item.update!(last_downstream_at: completed_at)

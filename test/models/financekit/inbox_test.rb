@@ -247,12 +247,17 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert Financekit::Processor.new(@item).apply_next!.present?
     FinancekitItem.any_instance.stubs(:update!).raises(ActiveRecord::StatementInvalid.new("health write failed"))
 
+    enqueued_before = enqueued_jobs.size
     Financekit::Downstream.new(@item, FinancekitBatch.where(id: batch.id)).perform!
 
     # Completing the batch without the health write would hide it from the
-    # recovery sweep, which only looks for incomplete batches.
+    # recovery sweep, which only looks for incomplete batches. Rolling it back
+    # has to take the scheduling with it, or recovery redoes work already
+    # queued and RuleJob records a second RuleRun for the same capture.
     assert_nil batch.reload.downstream_completed_at
     assert_nil FinancekitItem.find(@item.id).last_downstream_at
+    assert_equal enqueued_before, enqueued_jobs.size,
+      "rolled-back downstream work must not leave jobs queued"
   end
 
   test "the sweep recovers a backlog without materializing batch rows" do
