@@ -83,7 +83,7 @@ es:
         name_help_text: Elige un nombre descriptivo que te ayude a identificar esta clave más adelante.
         name_help: Elige un nombre descriptivo para ayudarte a identificar el propósito de esta clave.
         permissions_label: Permisos
-        permissions_help: Selecciona los permisos que necesita tu clave API. Siempre puedes crear una nueva clave con permisos diferentes.
+        permissions_help: 'Selecciona los permisos que debe tener esta clave API:'
         scope_read_only: Solo lectura
         scope_read_only_description: Ver tus cuentas, transacciones y saldos
         scope_read_write: Lectura/escritura
@@ -93,7 +93,7 @@ es:
           read_transactions: Ver datos de transacciones, categorías y detalles de transacciones
           read_balances: Ver datos históricos de saldos y tendencias de valor de cuentas
           write_transactions: Crear y actualizar registros de transacciones (próximamente)
-        security_warning_title: Aviso Importante de Seguridad
+        security_warning_title: 'Aviso importante de seguridad'
         security_warning_body: Tu clave API se mostrará solo una vez tras crearla. Asegúrate de copiarla y guardarla en un lugar seguro. Cualquier persona con acceso a esta clave podrá acceder a tus datos según los permisos que selecciones.
         security_warning: Tu clave API se mostrará solo una vez después de su creación. Guárdala de forma segura y nunca la compartas públicamente. Si la pierdes, tendrás que crear una nueva.
         create_key: Crear Clave API
@@ -102,7 +102,7 @@ es:
         create_new_key: Crear Nueva Clave API
       created:
         title: Clave API Creada
-        success_title: Clave API Creada con Éxito
+        success_title: 'Clave API creada con éxito'
         success_description: Tu nueva clave API está lista para usar. Asegúrate de copiarla ahora, ya que no podrás verla nuevamente.
         your_api_key: Tu Clave API
         key_name: Nombre
@@ -114,4 +114,6 @@ es:
         usage_instructions_title: Inicio Rápido
         usage_instructions: 'Usa tu clave API incluyéndola en el encabezado X-Api-Key:'
         copy_key: Copiar Clave API
-        continue: Continuar a Configuración de Claves API
+        continue: 'Continuar a los ajustes de claves API'
+      key_reveal:
+        copied: ¡Copiada!

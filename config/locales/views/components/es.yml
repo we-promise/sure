@@ -70,10 +70,12 @@ es:
           holdings_value: Valor de las posiciones
           remaining_principal_balance: Capital pendiente
           total_account_value: Valor total de la cuenta
+          total_gains: Ganancias totales
         views:
           cash: Efectivo
           holdings: Posiciones
           total_value: Valor total
+          gains: Ganancias / ROI
         vs_available_history: vs. historial disponible
       activity_date:
         balance_tooltip: El saldo al final del día, tras todas las transacciones y ajustes
@@ -97,6 +99,9 @@ es:
       trigger_label: Más información
     link:
       opens_in_new_tab: (se abre en una pestaña nueva)
+    icon_picker:
+      no_matching_icons: No hay iconos que coincidan
+      search_placeholder: Buscar iconos...
   provider_sync_summary:
     title: Resumen de sincronización
     last_sync: 'Última sincronización: hace %{time_ago}'
@@ -105,7 +110,7 @@ es:
       total: 'Total: %{count}'
       linked: 'Vinculadas: %{count}'
       unlinked: 'Desvinculadas: %{count}'
-      institutions: 'Instituciones: %{count}'
+      institutions: 'Entidades: %{count}'
     transactions:
       title: Transacciones
       seen: 'Detectadas: %{count}'
@@ -135,7 +140,7 @@ es:
       title: Estado de salud
       view_error_details: Ver detalles del error
       rate_limited: Límite de frecuencia alcanzado hace %{time_ago}
-      recently: recientemente
+      recently: poco
       errors: 'Errores: %{count}'
       pending_reconciled:
         one: '%{count} transacción pendiente duplicada conciliada'

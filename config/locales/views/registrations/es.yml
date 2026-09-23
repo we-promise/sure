@@ -15,7 +15,7 @@ es:
       success: Te has registrado con éxito.
     new:
       invitation_message: "%{inviter} te ha invitado a unirte como %{role}"
-      join_family_title: Únete a %{family} %{moniker}
+      join_family_title: 'Únete a %{family} (%{moniker})'
       role_admin: administrador
       role_guest: invitado
       role_member: miembro

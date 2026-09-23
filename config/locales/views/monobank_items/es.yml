@@ -1,0 +1,134 @@
+---
+es:
+  providers:
+    monobank:
+      name: Monobank
+      description: Conecta tarjetas y huchas de Monobank (Ucrania) con un token de API personal
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Conexión de Monobank
+  monobank_account:
+    jar_fallback: Hucha de Monobank
+    card_types:
+      black: Tarjeta Black
+      white: Tarjeta White
+      platinum: Tarjeta Platinum
+      iron: Tarjeta Iron
+      yellow: Tarjeta Yellow
+      eaid: Tarjeta eAid
+      fop: Cuenta de empresa
+      jar: Hucha
+      unknown: Tarjeta Monobank
+  monobank_item:
+    errors:
+      account_processing_failed: No se ha podido sincronizar la cuenta de Monobank
+      account_sync_schedule_failed: No se ha podido programar la sincronización de la cuenta de Monobank
+      transactions_failed: No se ha podido obtener el extracto de Monobank
+      sync_failed: No se ha podido sincronizar la conexión de Monobank
+    sync:
+      status:
+        importing: Importando cuentas desde Monobank...
+        checking_setup: Comprobando la configuración de las cuentas...
+        needs_setup:
+          one: '%{count} cuenta necesita configuración...'
+          other: '%{count} cuentas necesitan configuración...'
+        processing: Procesando transacciones...
+        calculating: Calculando saldos...
+    sync_status:
+      no_accounts: No se han encontrado cuentas
+      all_synced:
+        one: '%{count} cuenta sincronizada'
+        other: '%{count} cuentas sincronizadas'
+      partial: '%{linked} sincronizadas, %{unlinked} necesitan configuración'
+    institution_summary:
+      none: No hay entidades conectadas
+      one: 1 entidad
+      count:
+        one: '%{count} entidad'
+        other: '%{count} entidades'
+  monobank_items:
+    provider_panel:
+      default_connection_name: Conexión de Monobank
+      add_connection: Añadir conexión de Monobank
+      update_connection: Actualizar conexión
+      connection_name_label: Nombre de la conexión
+      connection_name_placeholder: Mi Monobank
+      access_token_label: Token de API personal
+      access_token_placeholder: Pega tu token personal de Monobank
+      keep_access_token_placeholder: Déjalo en blanco para conservar el token actual
+      setup_accounts: Configurar cuentas
+      syncing: Sincronizando...
+      sync: Sincronizar
+      disconnect: Desconectar
+      disconnect_confirm: ¿Seguro que quieres desconectar %{name}?
+      rate_limit_notice: Monobank permite una solicitud por minuto, así que cada sincronización obtiene unas pocas cuentas a la vez y el historial más antiguo llega a lo largo de varias sincronizaciones.
+    create:
+      success: Conexión de Monobank guardada.
+    update:
+      success: Conexión de Monobank actualizada.
+    destroy:
+      success: Se ha programado la eliminación de la conexión de Monobank.
+      unlink_failed: No se ha podido desconectar la conexión de Monobank
+    select_accounts:
+      title: Vincular cuentas de Monobank
+      description: Elige las tarjetas o huchas de Monobank que quieres añadir.
+      no_accounts_found: No se han encontrado cuentas de Monobank sin vincular.
+      no_credentials_configured: Configura primero Monobank en los ajustes de proveedores.
+      cancel: Cancelar
+      link_accounts: Vincular cuentas
+    link_accounts:
+      success:
+        one: Se ha vinculado %{count} cuenta de Monobank.
+        other: Se han vinculado %{count} cuentas de Monobank.
+      no_accounts_selected: Selecciona al menos una cuenta.
+      no_credentials_configured: Configura primero Monobank en los ajustes de proveedores.
+      unsupported_account_type: Monobank no admite ese tipo de cuenta.
+      link_failed: No se ha vinculado ninguna cuenta.
+    select_existing_account:
+      title: Vincular una cuenta de Monobank a %{account_name}
+      description: Elige una cuenta de Monobank sin vincular para conectarla a esta cuenta.
+      no_accounts_found: No se han encontrado cuentas de Monobank sin vincular.
+      no_credentials_configured: Configura primero Monobank en los ajustes de proveedores.
+      account_already_linked: Esta cuenta ya está vinculada a un proveedor.
+      cancel: Cancelar
+      link_account: Vincular cuenta
+    link_existing_account:
+      success: Cuenta de Monobank vinculada a %{account_name}.
+      account_already_linked: Esta cuenta ya está vinculada a un proveedor.
+      monobank_account_already_linked: Esta cuenta de Monobank ya está vinculada.
+      no_account_selected: Selecciona una cuenta de Monobank para vincular.
+    setup_accounts:
+      title: Vincular cuentas de Monobank
+      subtitle: Elige cómo debe aparecer en Sure cada tarjeta o hucha de Monobank.
+      no_credentials: Configura primero las credenciales de Monobank.
+      api_error: No se han podido actualizar las cuentas desde Monobank, así que se muestran las cuentas guardadas en la última sincronización.
+      no_accounts_to_setup: No hay cuentas que configurar
+      all_accounts_linked: Todas las cuentas de Monobank ya están vinculadas.
+      choose_account_type: Elige un tipo de cuenta
+      choose_account_type_description: Omite las cuentas que no quieras seguir.
+      account_type_label: Tipo de cuenta
+      account_types:
+        skip: Omitir
+        depository: Efectivo
+      create_accounts: Crear cuentas
+      cancel: Cancelar
+    complete_account_setup:
+      success:
+        one: Se ha creado %{count} cuenta de Monobank.
+        other: Se han creado %{count} cuentas de Monobank.
+      all_skipped: No se ha creado ninguna cuenta de Monobank.
+      no_accounts: No se ha seleccionado ninguna cuenta de Monobank.
+      creation_failed: No se han podido crear las cuentas de Monobank.
+    monobank_item:
+      deletion_in_progress: Eliminación en curso
+      syncing: Sincronizando
+      error: Error
+      status_with_summary: Sincronizado hace %{timestamp} · %{summary}
+      status_never: Nunca sincronizado
+      delete: Eliminar
+      setup_needed: Es necesario configurar las cuentas
+      setup_description: '%{linked} de %{total} cuentas vinculadas.'
+      setup_action: Configurar cuentas
+      no_accounts_title: Aún no se han importado cuentas
+      no_accounts_description: Obtén las cuentas de Monobank y elige cuáles vincular.

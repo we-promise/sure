@@ -13,17 +13,17 @@ es:
       submit: Añadir transacción
       ticker_placeholder: AAPL
       type: Tipo
-      type_buy: Comprar
-      type_sell: Vender
+      type_buy: Compra
+      type_sell: Venta
       type_deposit: Depósito
-      type_withdrawal: Retiro
+      type_withdrawal: Retirada
       type_dividend: Dividendo
       type_interest: Interés
       dividend_requires_security: Se requiere un valor para los dividendos
       trade_requires_security: Se requiere un valor (símbolo) para las operaciones de compra y venta
     header:
-      buy: Comprar
-      sell: Vender
+      buy: Compra
+      sell: Venta
       dividend: Dividendo
       interest: Interés
       current_market_price_label: Precio de mercado actual
@@ -32,6 +32,15 @@ es:
       purchase_qty_label: Cantidad comprada
       symbol_label: Símbolo
       total_return_label: Ganancia/pérdida no realizada
+      contribution: Aportación
+      exchange: Intercambio
+      fee: Comisión
+      other: Otros
+      reinvestment: Reinversión
+      sweep_in: Transferencia de barrido (entrada)
+      sweep_out: Transferencia de barrido (salida)
+      transfer: Transferencia
+      withdrawal: Retirada
     new:
       title: Nueva transacción
     show:
@@ -56,3 +65,8 @@ es:
       sell: Venta
       settings: Configuración
       type_label: Tipo
+    api_errors:
+      activity_label_must_match_type: investment_activity_label debe ser %{label} cuando type es %{type}
+      invalid_activity_label: Etiqueta de actividad de inversión no válida
+      invalid_type: Tipo no válido
+      supported_types: 'type debe ser uno de los siguientes: %{types}'

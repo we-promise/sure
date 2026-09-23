@@ -22,8 +22,8 @@ es:
       family_title: Comercios de %{moniker}
       family_empty: Aún no hay comercios de %{moniker}
       provider_title: Comercios del proveedor
-      provider_empty: Aún no hay comercios del proveedor vinculados a %{moniker}
-      provider_read_only: Los comercios del proveedor se sincronizan desde tus instituciones conectadas. No se pueden editar aquí.
+      provider_empty: 'Aún no hay comercios del proveedor vinculados a tu %{moniker}'
+      provider_read_only: Los comercios del proveedor se sincronizan desde tus entidades conectadas. No se pueden editar aquí.
       provider_info: Estos comercios han sido detectados automáticamente por tus conexiones bancarias o por IA. Puedes editarlos para crear tu propia copia o eliminarlos para desvincularlos de tus transacciones.
       enhance_info:
         one: A %{count} comercio del proveedor le falta la información del sitio web. Mejora con IA para detectar sitios web, mostrar logotipos y fusionar comercios duplicados.
@@ -35,6 +35,11 @@ es:
         merchant: Comercio
         actions: Acciones
         source: Origen
+      search_family_merchants: Buscar comercios propios...
+      search_provider_merchants: Buscar comercios del proveedor...
+      no_family_merchants_found: No se han encontrado comercios propios que coincidan
+      no_provider_merchants_found: No se han encontrado comercios del proveedor que coincidan
+      per_page: por página
     family_merchant:
       edit: Editar
       delete: Eliminar
@@ -50,8 +55,10 @@ es:
       target_label: Fusionar en (destino)
       select_target: Seleccionar comercio de destino...
       sources_label: Comercios a fusionar
-      sources_hint: Los comercios seleccionados se fusionarán en el de destino. Los comercios familiares se eliminarán y los de proveedores se desvincularán.
+      sources_hint: Los comercios seleccionados se fusionarán en el de destino. Los comercios propios se eliminarán y los de proveedores se desvincularán.
       submit: Fusionar seleccionados
+      sources_search_placeholder: Buscar comercios...
+      no_merchants_found: No se han encontrado comercios que coincidan
     new:
       title: Nuevo comercio
     perform_merge:

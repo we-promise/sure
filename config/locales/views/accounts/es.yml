@@ -32,31 +32,34 @@ es:
       depository_only: Solo las cuentas de efectivo y tarjeta de crédito pueden establecerse como predeterminadas.
     destroy:
       success: Cuenta %{type} programada para eliminación
-      cannot_delete_linked: No se puede eliminar una cuenta vinculada. Por favor, desvincúlela primero.
+      cannot_delete_linked: No se puede eliminar una cuenta vinculada. Por favor, desvincúlala primero.
       failed: No se pudo eliminar el recurso. Inténtalo de nuevo más tarde.
     empty:
       empty_message: Añade una cuenta mediante conexión, importación o introducción manual.
       new_account: Nueva cuenta
       no_accounts: Aún no hay cuentas
     form:
-      balance: Saldo actual
+      balance: 'Saldo en la fecha:'
       opening_balance_date_label: Fecha del saldo inicial
       name_label: Nombre de la cuenta
       name_placeholder: Ejemplo de nombre de cuenta
       additional_details: Detalles adicionales
-      institution_name_label: Nombre de la institución
+      institution_name_label: Nombre de la entidad
       institution_name_placeholder: ej. Chase Bank
-      institution_domain_label: Dominio de la institución
+      institution_domain_label: Dominio de la entidad
       institution_domain_placeholder: ej. chase.com
       notes_label: Notas
       notes_placeholder: Guarda información adicional como números de cuenta, códigos de sucursal, IBAN, números de ruta, etc.
       exclude_from_reports: Excluir de todos los informes
+      enable_category_matcher_label: Activar asignación automática de categorías
+      enable_category_matcher_hint: Si está activada, la categoría sugerida por el proveedor se aplica a las transacciones importadas. Desactívala para dejar las nuevas transacciones sin categorizar.
     index:
       accounts: Cuentas
       manual_accounts:
         other_accounts: Otras cuentas
       new_account: Nueva cuenta
       sync: Sincronizar todo
+      cancel_sync: Cancelar sincronización
     sync_all:
       syncing: Sincronizando cuentas...
     new:
@@ -65,6 +68,8 @@ es:
         select: Seleccionar
         navigate: Navegar
         close: Cerrar
+        next: Siguiente
+        previous: Anterior
       method_selector:
         connected_entry: Vincular cuenta
         connected_entry_eu: Vincular cuenta de la UE
@@ -80,8 +85,9 @@ es:
         holdings: Posiciones
         overview: Resumen
         statements: Extractos
+        schedule: Calendario de pagos
       activity:
-        amount: Cantidad
+        amount: 'Importe'
         balance: Saldo
         confirmed: Confirmado
         date: Fecha
@@ -133,7 +139,9 @@ es:
       new_asset: Nuevo activo
       new_debt: Nueva deuda
       new_account: Nueva cuenta
-      new_account_group: Nuevo %{account_group}
+      new_account_group: 'Añadir %{account_group}'
+      expand_all: Expandir todo
+      collapse_all: Contraer todo
     types:
       depository: Efectivo
       investment: Inversión
@@ -156,9 +164,9 @@ es:
       other_liability: Otros pasivos
     tax_treatments:
       taxable: Sujeto a impuestos
-      tax_deferred: Impuestos diferidos
+      tax_deferred: Con impuestos diferidos
       tax_exempt: Exento de impuestos
-      tax_advantaged: Ventaja fiscal
+      tax_advantaged: Con ventajas fiscales
     tax_treatment_descriptions:
       taxable: Ganancias gravadas al realizarse
       tax_deferred: Aportaciones deducibles, impuestos al retirar

@@ -10,9 +10,16 @@ es:
       apr_placeholder: '15.99'
       available_credit: Crédito disponible
       available_credit_placeholder: '10000'
-      expiration_date: Fecha de vencimiento
+      expiration_date: Fecha de caducidad
       minimum_payment: Pago mínimo
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automático
+      simplefin_balance_sign_credit: Crédito (el banco te debe dinero)
+      simplefin_balance_sign_debt: Deuda (le debes dinero al banco)
+      simplefin_balance_sign_description: Fija el signo manualmente solo cuando SimpleFIN informe de un signo ambiguo. La opción automática sigue usando el historial de transacciones y el saldo del proveedor.
+      simplefin_balance_sign_label: Significado del saldo de SimpleFIN
+      treat_balance_as_available_credit_description: Actívalo si tu banco informa del saldo de esta tarjeta como el crédito disponible restante en lugar de la cantidad adeudada. La deuda se calcula entonces a partir del límite de crédito que informa tu banco o, si tu banco no lo proporciona, a partir del campo Crédito disponible.
+      treat_balance_as_available_credit_label: El saldo es el crédito disponible
     new:
       title: Introducir detalles de la tarjeta de crédito
     overview:
@@ -21,6 +28,6 @@ es:
       apr: TAE
       available_credit: Crédito disponible
       edit_account_details: Editar detalles de la cuenta
-      expiration_date: Fecha de vencimiento
+      expiration_date: Fecha de caducidad
       minimum_payment: Pago mínimo
       unknown: Desconocido

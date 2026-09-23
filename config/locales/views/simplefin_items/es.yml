@@ -18,9 +18,9 @@ es:
     destroy:
       success: La conexión SimpleFIN será eliminada.
     update:
-      success: ¡Conexión SimpleFIN actualizada con éxito! Tus cuentas se están reconectando.
+      success: 'Conexión de SimpleFIN actualizada.'
       errors:
-        blank_token: Por favor, introduce un token de configuración de SimpleFIN.
+        blank_token: 'Falta el token de acceso de SimpleFIN. Introduce un token o usa «Vincular cuentas existentes» para continuar.'
         invalid_token: Token de configuración no válido. Por favor, verifica que has copiado el token completo desde SimpleFIN Bridge.
         token_compromised: El token de configuración puede estar comprometido, caducado o ya utilizado. Por favor, crea uno nuevo.
         update_failed: 'No se pudo actualizar la conexión: %{message}'
@@ -62,7 +62,7 @@ es:
         balance: Saldo
       activity:
         recent:
-          one: 1 transacción • última %{when}
+          one: '%{count} transacción • última %{when}'
           other: '%{count} transacciones • última %{when}'
         dormant: Sin actividad en %{days} días
         empty: Aún no se han importado transacciones
@@ -70,7 +70,7 @@ es:
         today: hoy
         yesterday: ayer
         days_ago:
-          one: hace 1 día
+          one: 'hace %{count} día'
           other: hace %{count} días
       stale_accounts:
         title: Cuentas que ya no están en SimpleFIN
@@ -128,11 +128,12 @@ es:
       description: Selecciona una cuenta de SimpleFIN para vincularla a tu cuenta existente
       cancel: Cancelar
       link_account: Vincular cuenta
-      no_accounts_found: No se han encontrado cuentas de SimpleFIN para este %{moniker}.
+      no_accounts_found: 'No se han encontrado cuentas de SimpleFIN en tu %{moniker}.'
       wait_for_sync: Si acabas de conectar o sincronizar, inténtalo de nuevo cuando finalice la sincronización.
       unlink_to_move: Para mover un vínculo, primero desvincúlalo desde el menú de acciones de la cuenta.
       all_accounts_already_linked: Todas las cuentas de SimpleFIN parecen estar ya vinculadas.
       currently_linked_to: 'Vinculada actualmente a: %{account_name}'
+      check_provider_health: Comprueba que tu conexión de SimpleFIN funciona correctamente en Ajustes → Proveedores.
     link_existing_account:
       success: Cuenta vinculada correctamente a SimpleFIN
       errors:
@@ -156,3 +157,21 @@ es:
       message:
         one: '%{count} transacción pendiente con más de %{days} días'
         other: '%{count} transacciones pendientes con más de %{days} días'
+    sync_status:
+      no_accounts: No se han encontrado cuentas
+      synced:
+        one: '%{count} cuenta sincronizada'
+        other: '%{count} cuentas sincronizadas'
+      partial_setup:
+        one: '%{linked} sincronizadas, %{unlinked} necesita configuración'
+        other: '%{linked} sincronizadas, %{unlinked} necesitan configuración'
+    institution_summary:
+      none: No hay entidades conectadas
+      count:
+        one: '%{count} entidad'
+        other: '%{count} entidades'
+    rate_limited:
+      daily_refresh: Has alcanzado el límite diario de actualizaciones de SimpleFIN. Inténtalo de nuevo cuando se actualice el bridge (hasta 24 horas).
+    stale_sync:
+      last_successful: La última sincronización correcta fue hace %{count} días. Puede que tu conexión de SimpleFIN necesite atención.
+      no_transactions: No hay transacciones nuevas en %{count} días. Revisa tu panel de SimpleFIN para asegurarte de que las conexiones con tus bancos están activas.

@@ -16,9 +16,9 @@ es:
     reset_with_sample_data:
       success: Tu cuenta ha sido restablecida y se están preparando datos de muestra. Verás datos de demostración en breve.
     roles:
-      admin: Admin
+      admin: 'Administrador'
       member: Miembro
-      super_admin: Super admin
+      super_admin: 'Superadministrador'
     user_menu:
       aria_label: Abrir menú de la cuenta
       version: Versión

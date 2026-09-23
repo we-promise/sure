@@ -9,10 +9,10 @@ es:
       delete: Eliminar
       then: ENTONCES
       and_more_conditions:
-        one: y 1 condición más
+        one: 'y %{count} condición más'
         other: y %{count} condiciones más
       and_more_actions:
-        one: y 1 acción más
+        one: 'y %{count} acción más'
         other: y %{count} acciones más
       action_label_to: '%{label} a %{value}'
       all_past_and_future: Todas las %{resource} pasadas y futuras
@@ -52,6 +52,7 @@ es:
       confirm_changes: Confirmar cambios
     actions:
       value_placeholder: Introduce un valor
+      to_label: a
     update:
       success: Regla actualizada
     destroy:
@@ -104,12 +105,26 @@ es:
         expense: Gasto
         transfer: Transferencia
         equal_to: Igual a
+      operators:
+        contains: Contiene
+        does_not_contain: No contiene
+        equal_to: Igual a
+        is_equal_to: Es igual a
+        not_equal_to: Distinto de
+        is_empty: Está vacío
+        is_not_empty: No está vacío
+        greater_than: Mayor que
+        greater_or_equal_to: Mayor o igual que
+        less_than: Menor que
+        less_than_or_equal_to: Menor o igual que
   rule:
     conditions:
       condition_group:
         and_prefix: y
         match: cumplir
-        all: todas
+        all: cada una
         any: alguna
         of_the_following_conditions: de las siguientes condiciones
         add_condition: Añadir condición
+      condition:
+        value_placeholder: Introduce un valor

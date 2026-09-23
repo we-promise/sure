@@ -5,3 +5,28 @@ es:
       models:
         recurring_transaction:
           merchant_or_name_required: Debe indicarse el comercio o el nombre
+          attributes:
+            payment_url:
+              invalid_scheme: debe ser una dirección http:// o https:// válida
+            anchor_date:
+              required_for_intervals: es obligatoria cuando una regla se repite cada 2 o más periodos
+            bill_type:
+              transfer_shape_mismatch: solo puede ser transferencia cuando hay una cuenta de destino
+            expected_amount_min:
+              greater_than_max: no puede ser mayor que el importe máximo esperado
+            account:
+              required_for_transfer: es obligatoria en una transferencia recurrente
+              wrong_family: debe pertenecer a esta familia
+            destination_account:
+              same_as_source: no puede ser la misma que la cuenta de origen
+              family_mismatch: debe pertenecer a la misma familia que la cuenta de origen
+              wrong_family: debe pertenecer a esta familia
+    attributes:
+      recurring_transaction:
+        payment_url: Enlace de pago
+  recurring_transactions:
+    allocator:
+      missing_rate: no hay tipo de cambio de %{from} a %{to}; introduce un importe explícitamente
+      unmeasurable: esta transacción tiene una asignación que no se puede convertir a %{currency}, así que no se puede calcular lo que queda de ella. Añade un tipo de cambio para %{date} o elimina primero el pago existente
+      over_allocated: asignar %{amount} supera el importe restante de la transacción (%{capacity} %{currency})
+      exceeds_remaining: '%{amount} supera los %{remaining} pendientes en este ciclo'
