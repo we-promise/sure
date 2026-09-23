@@ -405,8 +405,9 @@ ca:
       publish_transactions:
         one: Publica %{count} transacció
         other: Publica %{count} transaccions
-      ready_for_review_description: Hem extret %{count} transaccions del teu extracte.
-        Revisa-les i publica-les per afegir-les al teu compte.
+      ready_for_review_description:
+        one: "%{count} transacció del teu extracte encara no és en aquest compte. Revisa-la i publica-la per afegir-la."
+        other: "%{count} transaccions del teu extracte encara no són en aquest compte. Revisa-les i publica-les per afegir-les."
       ready_for_review_title: A punt per revisar
       review_transactions: Revisa les transaccions
       save_account: Desa
