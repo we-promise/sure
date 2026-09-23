@@ -16,6 +16,7 @@ fr:
       ?
     confirm_delete_income: Supprimer %{name} de vos revenus ? Vos transactions restent exactement telles quelles. Seuls le revenu et son échéancier sont supprimés.
     confirmed: Facture ajoutée à vos transactions récurrentes
+    confirmed_income: Revenu ajouté à vos transactions récurrentes
     create:
       account_invalid: Choisissez un compte auquel vous pouvez ajouter des factures, ou laissez le champ vide
       already_exists: Cette facture existe déjà
@@ -182,6 +183,10 @@ fr:
         one: vue une fois
         other: vue %{count} fois
       title: Nouvelles factures possibles
+    suggested_income:
+      confirm: Ajouter le revenu
+      dismiss: Ce n'est pas un revenu
+      title: Nouveaux revenus possibles
     table:
       actions: Actions
       amount: Montant
