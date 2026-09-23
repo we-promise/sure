@@ -298,7 +298,7 @@ es:
       dormant: Inactivos
       kpi_remaining: Pendiente este mes
       kpi_paid: Pagado este mes
-      kpi_next_seven: Vence en 7 días
+      kpi_next_seven: Vencimiento en los próximos 7 días
       kpi_past_due: Vencido
       paid_count:
         one: '%{count} recibo liquidado'

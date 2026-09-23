@@ -83,7 +83,7 @@ es:
           not_checked_help: Abre directamente la URL de estado de la IA o ejecuta las comprobaciones para verificar que el servicio está activo.
           alerts:
             custom_openai:
-              title: La comprobación del vector store alojado falló en este endpoint personalizado
+              title: La comprobación del almacén de vectores alojado falló en este endpoint personalizado
               message: El endpoint configurado no superó la comprobación de actividad de /v1/vector_stores. La mayoría de los endpoints locales y compatibles con OpenAI no implementan esa API. Puede que el chat y el procesamiento de PDF sigan funcionando; usa pgvector con un endpoint de embeddings independiente para la configuración local habitual. El fallo se ha registrado en Ajustes → Registros de depuración y en Rails.logger.
             function_calling_unsupported:
               title: El modelo no admite llamadas a funciones
@@ -105,13 +105,13 @@ es:
               message: Sure no pudo completar la ruta de PDF como imagen o documento nativo a través del modelo configurado. No se envió ningún dato de clientes. El fallo se ha registrado en Ajustes → Registros de depuración y en Rails.logger.
             vector_probe_failed:
               title: Falló la comprobación en vivo de la búsqueda de documentos
-              message: Sure no pudo verificar el vector store seleccionado ni todos los servicios de embeddings necesarios. El fallo se ha registrado en Ajustes → Registros de depuración y en Rails.logger.
+              message: Sure no pudo verificar el almacén de vectores seleccionado ni todos los servicios de embeddings necesarios. El fallo se ha registrado en Ajustes → Registros de depuración y en Rails.logger.
             pgvector_extension_not_enabled:
               title: La extensión vector de PostgreSQL no está activada
               message: El adaptador pgvector está seleccionado, pero PostgreSQL no ha activado la extensión vector para esta base de datos. Usa una imagen de PostgreSQL que incluya pgvector, activa la extensión como propietario de la base de datos o superusuario y vuelve a ejecutar las migraciones con VECTOR_STORE_PROVIDER=pgvector.
             pgvector_table_not_found:
               title: Falta la tabla vector_store_chunks
-              message: La extensión pgvector está activada, pero no se encontró la tabla de fragmentos. Comprueba el estado de las migraciones y vuelve a ejecutar la migración del vector store con VECTOR_STORE_PROVIDER=pgvector para que Sure pueda crear vector_store_chunks.
+              message: La extensión pgvector está activada, pero no se encontró la tabla de fragmentos. Comprueba el estado de las migraciones y vuelve a ejecutar la migración del almacén de vectores con VECTOR_STORE_PROVIDER=pgvector para que Sure pueda crear vector_store_chunks.
             pgvector_probe_failed:
               title: Falló la comprobación del almacenamiento de pgvector
               message: Sure no pudo consultar la tabla de fragmentos de pgvector. Comprueba los permisos de PostgreSQL, la extensión vector y la migración de vector_store_chunks. El fallo se ha registrado en Ajustes → Registros de depuración y en Rails.logger.
@@ -128,17 +128,17 @@ es:
               title: La compatibilidad con Qdrant aún no está implementada
               message: El adaptador de Qdrant existe como esqueleto, pero las operaciones de subida y búsqueda de documentos fallan actualmente. Selecciona OpenAI o pgvector para la búsqueda de documentos.
             missing_vector_store:
-              title: No hay ningún vector store configurado
-              message: Los documentos subidos no se pueden indexar ni buscar hasta que se configure un adaptador de vector store y sus requisitos.
+              title: No hay ningún almacén de vectores configurado
+              message: Los documentos subidos no se pueden indexar ni buscar hasta que se configure un adaptador de almacén de vectores y sus requisitos.
             unavailable_vector_store:
-              title: El vector store seleccionado no está disponible
+              title: El almacén de vectores seleccionado no está disponible
               message: Revisa los requisitos del adaptador que aparecen abajo. Para pgvector, la base de datos debe ofrecer la extensión vector o una tabla vector_store_chunks existente.
           llm:
             title: LLM y procesamiento de PDF
             description: Las comprobaciones en vivo verifican el modelo configurado, le piden una llamada a función trivial como hace el asistente y, por separado, prueban la extracción de texto y el procesamiento de visión/nativo con un PDF sintético de una página que no contiene datos de clientes. Los valores de las credenciales nunca se muestran.
           vector_store:
-            title: Vector store y búsqueda de documentos
-            description: La comprobación en vivo consulta la API del vector store alojado, o prueba la tabla de pgvector y crea un embedding corto sin almacenarlo.
+            title: Almacén de vectores y búsqueda de documentos
+            description: La comprobación en vivo consulta la API del almacén de vectores alojado, o prueba la tabla de pgvector y crea un embedding corto sin almacenarlo.
           labels:
             selected_provider: Proveedor seleccionado
             effective_provider: Proveedor efectivo
@@ -176,7 +176,7 @@ es:
             cloudflare: Cloudflare
             custom_openai_compatible: Endpoint personalizado
           adapters:
-            openai: Vector store alojado de OpenAI
+            openai: Almacén de vectores alojado en OpenAI
             pgvector: pgvector
             qdrant: Qdrant
           values:

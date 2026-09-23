@@ -100,7 +100,7 @@ es:
       explanation: 'Los activos con precio conocido aparecen marcados. El resto se deja sin marcar: las carteras acumulan airdrops de spam, y seguir uno no aporta ningún valor.'
       native: Nativo
       no_price: Sin precio disponible; solo se sigue la cantidad
-      nothing_found: No vemos nada en esta dirección en esta red.
+      nothing_found: Esta dirección no contiene nada que podamos ver en esta red.
     update:
       success: Conexión de autocustodia actualizada.
     update_tokens:

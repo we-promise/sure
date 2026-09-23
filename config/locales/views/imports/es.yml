@@ -419,11 +419,11 @@ es:
       invalid_pdf: El archivo subido no es un PDF válido.
       duplicate_pdf_unavailable: Este PDF ya está almacenado como un extracto al que no tienes acceso.
       document_too_large: El documento es demasiado grande. El tamaño máximo es %{max_size}MB.
-      invalid_document_file_type: 'Tipo de archivo de documento no válido para el vector store activo.'
+      invalid_document_file_type: 'Tipo de archivo de documento no válido para el almacén de vectores activo.'
       document_uploaded: Documento subido correctamente.
-      document_upload_failed: 'No hemos podido subir el documento al vector store. Por favor, inténtalo de nuevo.'
+      document_upload_failed: 'No hemos podido subir el documento al almacén de vectores. Por favor, inténtalo de nuevo.'
       invalid_ndjson_file_type: Tipo o formato de archivo no válido. Sube un archivo de exportación .ndjson o .json válido.
-      document_provider_not_configured: 'No hay ningún vector store configurado para la subida de documentos.'
+      document_provider_not_configured: 'No hay ningún almacén de vectores configurado para la subida de documentos.'
     show:
       finalize_upload: Por favor, finaliza la subida de tu archivo.
       finalize_mappings: Por favor, finaliza tus mapeos antes de continuar.
