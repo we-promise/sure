@@ -20,7 +20,7 @@ pl:
       manual: Ustawione przez użytkownika
       provider: Od dostawcy
     destroy:
-      cannot_delete: Nie możesz usunąć tego aktywa
+      cannot_delete: Nie możesz usunąć tej pozycji
       success: Pozycja została usunięta
     errors:
       security_collision: 'Nie można zmienić mapowania: masz już pozycję dla %{ticker}

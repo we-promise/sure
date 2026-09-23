@@ -203,10 +203,8 @@ pl:
         empty_state_secondary: Wszystkie transakcje zostaną zaimportowane bez kategorii
           i tagów.
         split_badge: podział
-        split_warning_description: Ten plik QIF zawiera transakcje dzielone. Podziały
-          nie są jeszcze obsługiwane, więc każda taka transakcja zostanie zaimportowana
-          jako pojedyncza transakcja z pełną kwotą i bez kategorii. Szczegółowy podział
-          nie zostanie zachowany.
+        split_warning_description: Ten plik QIF zawiera transakcje dzielone. Przed
+          importem sprawdź poniżej wykryte kategorie i tagi podziałów.
         split_warning_title: Wykryto transakcje dzielone
         submit: Przejdź do podsumowania
         tag_name_col: Nazwa tagu
@@ -252,8 +250,8 @@ pl:
         paste_csv_placeholder: Wklej tutaj zawartość pliku CSV
         qif_account_label: Konto
         qif_account_placeholder: Wybierz konto…
-        qif_description: Wybierz konto, do którego należy ten plik QIF, a następnie
-          prześlij eksport .qif z Quicken.
+        qif_description: Wybierz konto dla plików z jednym kontem albo zostaw puste,
+          jeśli eksport QIF zawiera nazwy kont.
         qif_file_hint: tylko pliki .qif
         qif_file_prompt: aby dodać tutaj plik QIF
         qif_submit: Prześlij QIF
@@ -351,7 +349,7 @@ pl:
       budget_categories: Kategorie budżetu
       budgets: Budżety
       categories: Kategorie
-      holdings: Posiadane aktywa
+      holdings: Pozycje
       merchants: Kontrahenci
       recurring_transactions: Transakcje cykliczne
       rejected_transfers: Odrzucone przelewy
@@ -394,7 +392,7 @@ pl:
       description: Importuj dane z narzędzia finansowego lub prześlij surowe pliki
         danych.
       import_accounts: Importuj konta
-      import_actual: Import z Actual Budget
+      import_actual: Importuj z Actual Budget
       import_categories: Importuj kategorie
       import_file: Importuj dokument
       import_file_description: Analiza PDF wspierana przez AI oraz przesyłanie przeszukiwalnych

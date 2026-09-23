@@ -72,7 +72,7 @@ pl:
     registrations: Rejestracja
     reports: Raporty
     rules: Reguły
-    securities: Papiery wartościowe
+    securities: Bezpieczeństwo
     security: Bezpieczeństwo
     self_hosting: Hosting własny
     sessions: Logowanie
@@ -91,3 +91,4 @@ pl:
     users: Użytkownicy
     valuations: Wyceny
     vehicles: Pojazdy
+    system_health: Stan systemu

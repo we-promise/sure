@@ -23,7 +23,7 @@ pl:
           final_principal: Kapitał na koniec dnia
           final_value: Wartość na koniec dnia
           market_changes: Zmiany rynkowe
-          net_cash_flow: Przepływ gotówki netto
+          net_cash_flow: Przepływy pieniężne netto
           net_principal_change: Zmiana kapitału netto
           net_value_change: Zmiana wartości netto
           payments: Płatności
@@ -74,14 +74,14 @@ pl:
           debt_balance: Saldo zadłużenia
           estimated_property_value: Szacowana wartość nieruchomości
           estimated_vehicle_value: Szacowana wartość pojazdu
-          holdings_value: Wartość aktywów
+          holdings_value: Wartość pozycji
           remaining_principal_balance: Pozostały kapitał
           total_account_value: Łączna wartość konta
           total_gains: Łączny zysk
         views:
           cash: Gotówka
           gains: Zyski / ROI
-          holdings: Aktywa
+          holdings: Pozycje
           total_value: Wartość całkowita
         vs_available_history: względem dostępnej historii
     period_picker:

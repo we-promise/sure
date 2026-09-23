@@ -25,7 +25,7 @@ pl:
       sign_out: Wyloguj się
       trial_over: Okres próbny dobiegł końca
       trialing:
-        few: Twoje dane zostaną usunięte za %{count} dni
-        many: Twoje dane zostaną usunięte za %{count} dni
-        one: Twoje dane zostaną usunięte za %{count} dzień
-        other: Twoje dane zostaną usunięte za %{count} dnia
+        few: Twoje dane zostaną usunięte za %{days} dni
+        many: Twoje dane zostaną usunięte za %{days} dni
+        one: Twoje dane zostaną usunięte za %{days} dzień
+        other: Twoje dane zostaną usunięte za %{days} dnia

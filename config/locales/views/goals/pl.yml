@@ -258,11 +258,13 @@ pl:
         heading_reserve: Rezerwa nienaruszona
       complete: Oznacz jako zakończony
       confirm_archive_body: Zarchiwizowane cele znikną z głównej listy. Możesz je
-        później przywrócić.
+        później przywrócić. Archiwizacja nie zapisuje tego, co udało się osiągnąć —
+        jeśli chcesz to zachować, najpierw oznacz cel jako zakończony.
       confirm_archive_cta: Archiwizuj
       confirm_archive_title: Zarchiwizować ten cel?
-      confirm_complete_body: Opuści listę aktywnych. Nadal możesz go później zarchiwizować
-        lub przywrócić.
+      confirm_complete_body: Środki przeznaczone na ten cel zostaną zwolnione dla Twoich
+        pozostałych celów na tym samym koncie. Cel opuści listę aktywnych. Nadal możesz
+        go później zarchiwizować lub przywrócić.
       confirm_complete_body_short: Jesteś na %{progress}%, %{saved} z %{target}. Oznaczenie
         jako zakończone zapisze to jako osiągnięcie zamiast pierwotnego celu. Kontynuować,
         czy zamknąć i dostosować cel?

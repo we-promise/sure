@@ -36,7 +36,7 @@ pl:
     preview: Podgląd
     require_admin: Tę akcję mogą wykonać tylko administratorzy
     sidekiq_health_banner:
-      body: Zadania w tle nie są przetwarzane, więc salda, wartość netto i synchronizacje
+      body: Zadania w tle nie są przetwarzane, więc salda, majątek netto i synchronizacje
         kont mogą być nieaktualne lub ich brakować.
       cta: Zobacz stan systemu
       reasons:
@@ -60,3 +60,4 @@ pl:
       transfer: Przelew
     trend_change:
       no_change: bez zmian
+    require_connector_owner: Możesz zarządzać tylko połączeniami, które sam dodałeś

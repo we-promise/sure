@@ -77,7 +77,7 @@ pl:
     investment_flows:
       contributions: Wpłaty
       contributions_description: Środki dodane do inwestycji
-      description: Śledź środki wpływające i wypływające z kont inwestycyjnych
+      description: Śledź środki wpływające na konta inwestycyjne i wypływające z nich poprzez wpłaty i wypłaty.
       net_flow: Przepływ netto
       net_flow_description: Całkowita zmiana netto
       title: Przepływy inwestycyjne

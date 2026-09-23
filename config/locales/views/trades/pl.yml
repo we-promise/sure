@@ -27,7 +27,7 @@ pl:
       contribution: Wpłata
       current_market_price_label: Aktualna cena rynkowa
       dividend: Dywidenda
-      exchange: Giełda
+      exchange: Wymiana
       fee: Opłata
       interest: Odsetki
       other: Inne
@@ -69,3 +69,8 @@ pl:
       sell: Sprzedaż
       settings: Ustawienia
       type_label: Typ
+    api_errors:
+      activity_label_must_match_type: investment_activity_label musi mieć wartość %{label}, gdy type ma wartość %{type}
+      invalid_activity_label: Nieprawidłowa etykieta aktywności inwestycyjnej
+      invalid_type: Nieprawidłowy typ
+      supported_types: 'type musi mieć jedną z wartości: %{types}'

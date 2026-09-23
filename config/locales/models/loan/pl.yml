@@ -1,0 +1,8 @@
+---
+pl:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Każdy wiersz zmiany oprocentowania wymaga daty obowiązywania i stopy procentowej.
+          rate_change_before_origination: Zmiana oprocentowania nie może obowiązywać przed datą udzielenia pożyczki.

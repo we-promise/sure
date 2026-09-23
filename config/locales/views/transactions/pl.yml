@@ -26,7 +26,7 @@ pl:
       files:
         few: Pliki (%{count})
         many: Plików (%{count})
-        one: Plik (1)
+        one: Plik (%{count})
         other: Plików (%{count})
       max_reached: Osiągnięto maksymalny limit plików (%{count}/%{max}). Usuń istniejący
         plik, aby przesłać kolejny.
@@ -216,19 +216,19 @@ pl:
       automatycznie obliczana na podstawie ostatnich 6 miesięcy podobnych transakcji.
     mark_recurring_title: Transakcja cykliczna
     merge_duplicate:
-      failure: Nie udało się połączyć transakcji
-      success: Pomyślnie połączono transakcje
+      failure: Nie udało się scalić transakcji
+      success: Pomyślnie scalono transakcje
     new:
       new_transaction: Nowa transakcja
     pending_duplicate_merge:
-      confirm_title: Połącz z zaksięgowaną transakcją (%{posted_amount})
+      confirm_title: Scal z zaksięgowaną transakcją (%{posted_amount})
       possible_duplicate: Duplikat?
       possible_duplicate_short: Dupl.?
       reject_title: Zachowaj jako oddzielne transakcje
       review_recommended: Sprawdź
       review_recommended_short: Weryf.
     potential_duplicate_description: Ta oczekująca transakcja może być tą samą transakcją
-      co zaksięgowana transakcja poniżej. Jeśli tak, połącz je, aby uniknąć podwójnego
+      co zaksięgowana transakcja poniżej. Jeśli tak, scal je, aby uniknąć podwójnego
       liczenia.
     potential_duplicate_title: Wykryto możliwy duplikat
     search:
@@ -346,8 +346,8 @@ pl:
       open_matcher: Otwórz dopasowywanie
       overview: Przegląd
       payee: Odbiorca
-      pending_duplicate_merger_button: Otwórz łączenie
-      pending_duplicate_merger_description: Ręcznie połącz tę oczekującą transakcję
+      pending_duplicate_merger_button: Otwórz scalanie
+      pending_duplicate_merger_description: Ręcznie scal tę oczekującą transakcję
         z jej zaksięgowaną wersją.
       pending_duplicate_merger_title: Duplikat zaksięgowanej transakcji?
       potential_duplicate_description: Ta oczekująca transakcja może być tą samą co

@@ -182,6 +182,9 @@ pl:
       workplace_pension_uk:
         long: Emerytura pracownicza
         short: Emerytalne
+      cash_management:
+        short: CMA
+        long: Konto zarządzania gotówką (CMA)
     value_tooltip:
       cash: Gotówka
       holdings: Pozycje

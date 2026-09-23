@@ -6,9 +6,21 @@ pl:
     dashboard:
       cashflow_preview:
         node_labels:
-          cash_flow: "Przepływ gotówki"
+          cash_flow: "Przepływy pieniężne"
           surplus: "Nadwyżka"
           deficit: "Deficyt"
+        title: Nowy wykres Sankeya
+        preview: Podgląd
+        preview_tooltip: Ten wykres zastąpi powyższą wizualizację, ponieważ korzysta z nowego, wspólnego API z aplikacją mobilną w Swift.
+        feedback_prompt: Porównaj ten wykres z oryginałem powyżej i daj nam znać, czy różni się czymś poza sortowaniem.
+        positive: Wygląda dobrze
+        negative: Coś jest nie tak
+        feedback_title: Opinia o wykresie przepływów pieniężnych
+        feedback_loading: Ładowanie formularza opinii…
+        feedback_unavailable: Przesyłanie opinii jest teraz niedostępne. Spróbuj ponownie później.
+        feedback_thanks: Dziękujemy za pomoc w ulepszaniu wykresu!
+        feedback_privacy: Twoja odpowiedź zostanie wysłana do PostHog. Opisz problem bez podawania numerów kont, sald ani innych prywatnych danych finansowych.
+        feedback_submit: Wyślij opinię
       balance_sheet:
         add_accounts: Dodaj konta %{name}, aby zobaczyć pełny podział
         add_asset_accounts: Dodaj konta aktywów, aby zobaczyć pełny podział
@@ -23,6 +35,8 @@ pl:
         title: Bilans
         value: Wartość
         weight: Udział
+        expand_all: Rozwiń wszystkie
+        collapse_all: Zwiń wszystkie
       bond_rate_review_notice:
         few: "%{count} partie obligacji wymagają aktualizacji stopy emisji (%{accounts})."
         many: "%{count} partii obligacji wymaga aktualizacji stopy emisji (%{accounts})."
@@ -50,7 +64,10 @@ pl:
           albo poszerz zakres czasu
         no_data_title: Brak danych o przepływach pieniężnych dla tego okresu
         title: Przepływy pieniężne
-        zoom_out: Wróć do pełnego przepływu środków
+        zoom_out: Wróć do pełnych przepływów pieniężnych
+        loading: Ładowanie przepływów pieniężnych…
+        load_error: Nie udało się załadować przepływów pieniężnych. Spróbuj ponownie.
+        retry: Spróbuj ponownie
       drag_to_reorder: Przeciągnij, aby zmienić kolejność sekcji
       insights_feed:
         title: Analizy

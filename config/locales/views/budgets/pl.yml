@@ -54,7 +54,7 @@ pl:
       oops: Ups!
       use_defaults: Użyj domyślnych (zalecane)
     show:
-      budgeted: Zbudżetowano
+      budgeted: Zabudżetowano
       category: Kategoria
       left: pozostało
       monthly_average_spending: Średnie miesięczne wydatki

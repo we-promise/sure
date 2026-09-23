@@ -46,7 +46,7 @@ pl:
         one: Nie utworzono %{count} konta.
         other: Nie utworzono %{count} kont.
       no_accounts: Brak kont do skonfigurowania.
-      partial_skipped: Utworzono %{created_count}; pominięto %{skipped_count}.
+      partial_skipped: 'Utworzone konta: %{created_count}; pominięte konta: %{skipped_count}.'
       partial_success: Utworzono %{created_count}, ale %{failed_count} się nie powiodło.
       success:
         few: Utworzono %{count} konta.

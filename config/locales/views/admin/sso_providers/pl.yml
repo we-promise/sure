@@ -20,7 +20,7 @@ pl:
         client_id_label: ID klienta
         client_id_placeholder: twoj-client-id
         client_secret_help: Sekret klienta OAuth (zaszyfrowany w bazie danych)
-        client_secret_help_existing: " - pozostaw puste, aby zachować istniejący"
+        client_secret_help_existing: Pozostaw puste, aby zachować istniejący sekret
         client_secret_label: Sekret klienta
         client_secret_placeholder_existing: zapisany-sekret
         client_secret_placeholder_new: twoj-client-secret
@@ -49,7 +49,7 @@ pl:
         idp_sso_url: URL SSO IdP
         issuer_help: URL wystawcy OIDC (waliduje endpoint .well-known/openid-configuration)
         issuer_label: Wystawca
-        issuer_placeholder: https://accounts.google.com
+        issuer_placeholder: https://your-idp.example.com/realms/your-realm
         label_help: Tekst przycisku widoczny dla użytkowników
         label_label: Etykieta
         label_placeholder: np. Zaloguj przez Keycloak
