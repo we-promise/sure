@@ -40,8 +40,7 @@ class Financekit::Processor
         last_imported_at: applied_at, last_captured_at: last.captured_at)
       batch = last
     end
-    Financekit::Downstream.new(batch).perform!
-    true
+    batch
   rescue ActiveRecord::RecordInvalid => error
     # Retryable. RecordInvalid covers ordinary races — a concurrent balance
     # observation or conflict insert, an entry validation a later attempt
@@ -96,16 +95,26 @@ class Financekit::Processor
     def import_balance!(mapping, record, counts)
       observed_at = Financekit::Payload.timestamp!(record["observed_at"])
       money = record.fetch("money")
+      amount = Financekit::Payload.money!(money)
       observation = mapping.financekit_balance_observations.find_or_create_by!(source_id: record["source_id"],
         kind: record["kind"], observed_at: observed_at) do |balance|
         balance.financekit_account = mapping
-        balance.amount = Financekit::Payload.money!(money)
+        balance.amount = amount
         balance.currency = money["currency"]
         balance.direction = money["direction"]
       end
-      Financekit.require!(observation.amount == Financekit::Payload.money!(money) &&
-        observation.currency == money["currency"] && observation.direction == money["direction"],
-        "balance_observation_conflict", 409)
+      # A stored observation is immutable, so the retained value and the
+      # canonical balance both stay as they are. Detecting the disagreement is
+      # right; ending ingestion over it is not. Fencing here would clear the
+      # upload credential, and only a foreground OAuth repair can reissue one —
+      # the same reason import validation retries rather than fences. Raise it
+      # for the family and carry on with the rest of the capture.
+      if observation.amount != amount || observation.currency != money["currency"] ||
+          observation.direction != money["direction"]
+        create_observation_conflict!(mapping, record)
+        counts["review_required"] += 1
+        return
+      end
       counts["balances"] += 1 if observation.previously_new_record?
       return unless record["kind"] == "booked"
 
@@ -131,7 +140,7 @@ class Financekit::Processor
       # capture that covers it, so without this the resolved conflict reopens
       # on the next batch and the family is asked the same question forever.
       if settled_by_family?(identity)
-        identity.review_required = false
+        identity.review_required = identity.financekit_conflicts.open.exists?
         identity.save!
         counts["settled"] += 1
         return
@@ -271,10 +280,13 @@ class Financekit::Processor
       end
     end
 
+    # Ordered cheapest first: every check below the columns loads an
+    # association, and transfer/split membership each cost a query.
     def protected_entry?(entry)
-      entry.protected_from_sync? || entry.transaction.transfer.present? || entry.transaction.transfer_id.present? || entry.reconciled_at.present? ||
-        entry.split_parent? || entry.split_child? || entry.locked_attributes.present? ||
-        entry.transaction.locked_attributes.present?
+      entry.protected_from_sync? || entry.reconciled_at.present? || entry.split_child? ||
+        entry.locked_attributes.present? || entry.transaction.locked_attributes.present? ||
+        entry.transaction.transfer_id.present? || entry.transaction.transfer.present? ||
+        entry.split_parent?
     end
 
     # Preserve the shared importer's pending-to-booked exception for user edits,
@@ -287,9 +299,21 @@ class Financekit::Processor
         return unless entry.user_modified? && !entry.excluded? && !entry.import_locked?
 
         transaction = entry.transaction
-        if transaction.extra.dig("financekit", "pending")
+        if transaction.extra&.dig("financekit", "pending")
           transaction.update!(extra: transaction.extra.deep_merge("financekit" => { "pending" => false }))
         end
+      end
+    end
+
+    # Balance observations have no source transaction, so the conflict hangs off
+    # the lineage alone and one open row covers the lineage until it is answered.
+    def create_observation_conflict!(mapping, record)
+      @item.financekit_conflicts.find_or_create_by!(financekit_transaction: nil,
+        financekit_account_lineage: mapping.financekit_account_lineage,
+        kind: "balance_observation_conflict", status: "open") do |conflict|
+        conflict.family = @item.family
+        conflict.details = { "source_id" => record["source_id"], "kind" => record["kind"],
+          "observed_at" => record["observed_at"] }
       end
     end
 

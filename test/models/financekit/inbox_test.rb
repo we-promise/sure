@@ -189,6 +189,35 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_nil @item.credential_digest
   end
 
+  test "draining a backlog fans downstream work out once, not once per capture" do
+    first, first_raw = accept_batch
+    second, = accept_batch(financekit_payload(sequence: 2,
+      predecessor_digest: Digest::SHA256.hexdigest(first_raw), events: []))
+
+    # Two captures, one fan-out: transfer matching scans the whole family and
+    # costs the same whether one capture or fifty just landed.
+    Family.any_instance.expects(:auto_match_transfers!).once.returns(nil)
+
+    FinancekitInboxJob.perform_now(@item.id)
+
+    assert_equal "applied", first.reload.status
+    assert_equal "applied", second.reload.status
+    assert_not_nil first.downstream_completed_at
+    assert_not_nil second.downstream_completed_at
+    assert_not_nil @item.reload.last_downstream_at
+  end
+
+  test "the sweep recovers applied batches whose downstream work was lost" do
+    batch = accept_and_apply
+    batch.update_columns(downstream_completed_at: nil)
+    @item.update_columns(last_downstream_at: nil)
+
+    FinancekitInboxJob.perform_now
+
+    assert_not_nil batch.reload.downstream_completed_at
+    assert_not_nil @item.reload.last_downstream_at
+  end
+
   test "payload bytes are removed after the bounded replay window" do
     batch = accept_and_apply
     batch.update_columns(updated_at: 8.days.ago)

@@ -120,7 +120,10 @@ module FinancekitTestHelper
 
   def accept_and_apply(payload = financekit_payload, item: @item)
     batch, = accept_batch(payload, item: item)
-    assert Financekit::Processor.new(item).apply_next!
+    applied = Financekit::Processor.new(item).apply_next!
+    assert applied
+    # apply_next! no longer fans out on its own; the job batches a whole drain.
+    Financekit::Downstream.new([ applied ]).perform!
     batch.reload
   end
 end

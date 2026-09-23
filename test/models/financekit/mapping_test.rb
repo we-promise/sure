@@ -189,14 +189,46 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     first = accept_and_apply
     event = financekit_events.find { |record| record["kind"] == "balance_upsert" }
     event["balance"]["money"] = money("999.00", "credit")
-    second, = accept_batch(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest, events: [ event ]))
 
-    assert_not Financekit::Processor.new(@item).apply_next!
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ event ]))
 
-    assert_equal "balance_observation_conflict", second.reload.error_code
-    assert_equal "failed", second.status
+    # The stored observation is immutable and the canonical balance is untouched,
+    # but the disagreement is a conflict for the family, not a protocol failure:
+    # fencing here would clear a credential only a foreground repair can reissue.
+    assert_equal "applied", second.status
+    assert_equal 1, second.counts.fetch("review_required")
     assert_equal BigDecimal("112.66"), @source.account.reload.balance
     assert_equal BigDecimal("112.66"), @source.financekit_balance_observations.sole.amount
+    conflict = @item.financekit_conflicts.sole
+    assert_equal "balance_observation_conflict", conflict.kind
+    assert_equal @balance_id, conflict.details.fetch("source_id")
+    assert_equal "active", @item.reload.status
+    assert @item.authenticate_credential?(@credential)
+  end
+
+  test "a repeated balance disagreement does not pile up open conflicts" do
+    first = accept_and_apply
+    event = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    event["balance"]["money"] = money("999.00", "credit")
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ event ]))
+    accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest,
+      events: [ event ]))
+
+    assert_equal 1, @item.financekit_conflicts.open.count
+    assert_equal "active", @item.reload.status
+  end
+
+  test "a source identifier outside the v1-v5 range is accepted" do
+    uuidv7 = "01890a5d-ac96-774b-bcce-b302099a8057"
+    event = financekit_events.last
+    event.fetch("transaction")["source_id"] = uuidv7
+
+    batch = accept_and_apply(financekit_payload(events: [ event ]))
+
+    assert_equal "applied", batch.status
+    assert_equal uuidv7, @source.financekit_transactions.sole.source_id
   end
 
   test "a second wallet account cannot map onto an already mapped canonical account" do
