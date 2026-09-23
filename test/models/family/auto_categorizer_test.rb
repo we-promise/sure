@@ -478,6 +478,24 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal 0, CategorizationComparison.count
   end
 
+  test "logs a rejected Jev endpoint when it was due to shadow the run" do
+    @family.update!(categorization_provider: "llm", categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+
+    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
+    ])).once
+
+    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_ENDPOINT" => "http://gw.example.com/v1") do
+      Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+    end
+
+    entry = DebugLogEntry.where(message: "Jev is misconfigured; skipping the shadow comparison").sole
+    assert_equal "Provider::Jev::Error", entry.metadata["error_class"]
+    assert_equal category, txn.reload.category
+  end
+
   private
     AutoCategorization = Provider::LlmConcept::AutoCategorization
     CategoryDecision = Provider::ClassificationConcept::CategoryDecision

@@ -177,10 +177,11 @@ class Family < ApplicationRecord
   # this decides whose transaction descriptions reach a third party.
   #
   # Anything naming the provider calls this, including the rule confirmation
-  # screen's cost estimate, or it quotes a provider that will not run. Keep this
-  # side-effect free: views call it while rendering rule labels.
-  def resolved_categorization_provider
-    jev = configured_jev_provider if effective_categorization_provider == "jev"
+  # screen's cost estimate, or it quotes a provider that will not run. Views
+  # call it while rendering, so it writes nothing itself; a caller that runs
+  # categorization passes a block to hear why Jev could not be built.
+  def resolved_categorization_provider(&on_jev_error)
+    jev = configured_jev_provider(&on_jev_error) if effective_categorization_provider == "jev"
 
     # Honors Setting.llm_provider (#2113); Provider::Anthropic gained
     # auto_categorize in #1984, so either LLM provider can serve this.
@@ -217,11 +218,11 @@ class Family < ApplicationRecord
   # The provider to run alongside the one in use, for comparison. Symmetric —
   # returns whichever of the two is not selected, so either can be trialled
   # against the other without a second mechanism.
-  def shadow_categorization_provider
+  def shadow_categorization_provider(&on_jev_error)
     if effective_categorization_provider == "jev"
       Provider::Registry.preferred_llm_provider
     else
-      configured_jev_provider
+      configured_jev_provider(&on_jev_error)
     end
   end
 
@@ -230,7 +231,8 @@ class Family < ApplicationRecord
   # which JEV_ENDPOINT can set without passing the settings form's check.
   def configured_jev_provider
     Provider::Registry.get_provider(:jev)
-  rescue Provider::Error
+  rescue Provider::Error => error
+    yield error if block_given?
     nil
   end
   private :configured_jev_provider

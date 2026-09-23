@@ -589,6 +589,19 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
+  test "resolved_categorization_provider hands the construction error to a caller that asks" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    errors = []
+
+    with_env_overrides(REJECTED_JEV_ENV) do
+      assert_nil family.resolved_categorization_provider { |error| errors << error }
+    end
+
+    assert_equal [ Provider::Jev::Error ], errors.map(&:class)
+  end
+
   # The rescue is deliberately narrow, so a registry bug still surfaces rather
   # than being reported to the operator as a Jev misconfiguration.
   test "resolved_categorization_provider does not swallow non-provider errors" do
