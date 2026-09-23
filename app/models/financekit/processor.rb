@@ -116,7 +116,7 @@ class Financekit::Processor
       # for the family and carry on with the rest of the capture.
       if observation.amount != amount || observation.currency != money["currency"] ||
           observation.direction != money["direction"]
-        counts[create_observation_conflict!(mapping, record) ? "review_required" : "settled"] += 1
+        counts[create_observation_conflict!(mapping, record, observed_at) ? "review_required" : "settled"] += 1
         return
       end
       counts["balances"] += 1 if observation.previously_new_record?
@@ -320,10 +320,18 @@ class Financekit::Processor
     # publisher re-sends the same disagreement on every capture that covers it,
     # so keying the lookup on open rows made the decision last one capture. A
     # different observation still opens its own conflict.
-    def create_observation_conflict!(mapping, record)
+    def create_observation_conflict!(mapping, record, observed_at)
+      # Canonical UTC, not the wire string: the observation itself is keyed on
+      # the parsed instant, so two payloads spelling the same moment differently
+      # hit one observation and must consult one decision.
       details = { "source_id" => record["source_id"], "kind" => record["kind"],
-        "observed_at" => record["observed_at"] }
-      history = @item.financekit_conflicts
+        "observed_at" => observed_at.utc.iso8601(6) }
+      # Searched across the family rather than this connection, the same way a
+      # source transaction's decision is, because the observation lives on the
+      # lineage and outlives the publisher that sent it. A replacement device
+      # must not reopen a question the family already answered. The new row
+      # still belongs to the connection that raised it.
+      history = FinancekitConflict.where(family_id: @item.family_id)
         .where(kind: "balance_observation_conflict",
           financekit_account_lineage_id: mapping.financekit_account_lineage_id)
         .where("details @> ?::jsonb", details.to_json)

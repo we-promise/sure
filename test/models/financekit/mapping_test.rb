@@ -237,6 +237,57 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal BigDecimal("112.66"), @source.account.reload.balance
   end
 
+  test "a balance decision survives replacing the publishing device" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+    @item.financekit_conflicts.open.sole.resolve!(user: @user, resolution: "keep_sure")
+    account = @source.account
+    lineage = @source.financekit_account_lineage
+
+    enrollment = @enrollment.deep_dup
+    enrollment["enrollment_id"] = SecureRandom.uuid
+    enrollment["replaces_connection_id"] = @item.id
+    replacement = Financekit::Enrollment.create!(@user, enrollment).item
+    @source = FinancekitAccount.map!(replacement, @source_id,
+      @mapping_input.except("booked_balance", "observed_at").merge(
+        "action" => "link", "account_id" => account.id, "lineage_id" => lineage.id))
+    replacement.activate!
+
+    # Rebuilt so it carries the replacement's mapping_version; the observation
+    # identity is unchanged because the clock is frozen. The observation lives
+    # on the lineage and outlives the publisher, so the decision must too.
+    replayed = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    replayed["balance"]["money"] = money("999.00", "credit")
+    batch = accept_and_apply(financekit_payload(item: replacement, events: [ replayed ]),
+      item: replacement)
+
+    assert_empty FinancekitConflict.where(family: @family).open
+    assert_equal 1, batch.counts.fetch("settled")
+  end
+
+  test "a balance decision matches an equivalent timestamp in another format" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    disagreement["balance"]["observed_at"] = "2026-09-10T12:00:00Z"
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+    @item.financekit_conflicts.open.sole.resolve!(user: @user, resolution: "keep_sure")
+
+    # Same instant, different spelling: it resolves to one stored observation,
+    # so it has to resolve to one decision.
+    reformatted = disagreement.deep_dup
+    reformatted["balance"]["observed_at"] = "2026-09-10T12:00:00.000Z"
+    accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest,
+      events: [ reformatted ]))
+
+    assert_empty @item.financekit_conflicts.open
+    assert_equal 1, @item.financekit_conflicts.count
+  end
+
   test "a settled balance decision does not suppress a different disagreement" do
     first = accept_and_apply
     disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
