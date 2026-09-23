@@ -582,6 +582,84 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "rejected external assistant changes leave stored settings untouched" do
+    with_self_hosting do
+      with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil, "EXTERNAL_ASSISTANT_MODEL" => nil) do
+        Setting.external_assistant_url = "https://old.example.com/v1/chat/completions"
+        Setting.external_assistant_token = "old-secret"
+        Setting.external_assistant_model = "openclaw/main"
+        Assistant::External::ModelCatalog.any_instance.stubs(:models)
+          .raises(Assistant::External::ModelCatalog::Error, "Agent discovery returned HTTP 401.")
+
+        patch settings_hosting_url, params: { setting: {
+          external_assistant_url: "https://new.example.com/v1/chat/completions",
+          external_assistant_token: "new-secret",
+          external_assistant_model: "openclaw/main"
+        } }
+
+        assert_response :unprocessable_entity
+        assert_equal "https://old.example.com/v1/chat/completions", Setting.external_assistant_url
+        assert_equal "old-secret", Setting.external_assistant_token
+        assert_equal "openclaw/main", Setting.external_assistant_model
+      end
+    end
+  ensure
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
+    Setting.external_assistant_model = nil
+  end
+
+  test "changing the endpoint clears an agent the new endpoint does not offer" do
+    with_self_hosting do
+      with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil, "EXTERNAL_ASSISTANT_MODEL" => nil) do
+        Setting.external_assistant_url = "https://old.example.com/v1/chat/completions"
+        Setting.external_assistant_token = "secret"
+        Setting.external_assistant_model = "openclaw/research"
+        Setting.external_assistant_agent_id = "research"
+        Assistant::External::ModelCatalog.any_instance.stubs(:models).returns([
+          { id: "openclaw/main", label: "main (openclaw/main)" }
+        ])
+
+        patch settings_hosting_url, params: { setting: {
+          external_assistant_url: "https://new.example.com/v1/chat/completions",
+          external_assistant_token: "********",
+          external_assistant_model: "openclaw/research"
+        } }
+
+        assert_redirected_to settings_hosting_url
+        assert_equal I18n.t("settings.hostings.assistant_settings.external_agent_reselect"), flash[:alert]
+        assert_equal "https://new.example.com/v1/chat/completions", Setting.external_assistant_url
+        assert_equal "secret", Setting.external_assistant_token
+        assert_nil Setting.external_assistant_model
+        assert_nil Setting.external_assistant_agent_id
+      end
+    end
+  ensure
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
+    Setting.external_assistant_model = nil
+    Setting.external_assistant_agent_id = nil
+  end
+
+  test "settings page shows a discovery error instead of failing on TLS errors" do
+    with_self_hosting do
+      with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil, "EXTERNAL_ASSISTANT_MODEL" => nil) do
+        users(:family_admin).family.update!(assistant_type: "external")
+        Setting.external_assistant_url = "https://agent.example.com/v1/chat/completions"
+        Setting.external_assistant_token = "secret"
+        stub_request(:get, "https://agent.example.com/v1/models").to_raise(OpenSSL::SSL::SSLError)
+
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "p.text-destructive", text: /Could not load agents/
+      end
+    end
+  ensure
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
+  end
+
   test "does not overwrite token with masked placeholder" do
     with_self_hosting do
       Setting.external_assistant_token = "real-secret"

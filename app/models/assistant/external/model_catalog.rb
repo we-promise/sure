@@ -4,10 +4,19 @@ require "json"
 
 class Assistant::External::ModelCatalog
   Error = Class.new(StandardError)
+  CONNECTION_ERRORS = [
+    *Assistant::External::Client::TRANSIENT_ERRORS,
+    Timeout::Error,
+    OpenSSL::SSL::SSLError,
+    IOError,
+    SystemCallError
+  ].freeze
 
-  def initialize(url:, token:)
+  def initialize(url:, token:, open_timeout: 5, read_timeout: 10)
     @url = url
     @token = token
+    @open_timeout = open_timeout
+    @read_timeout = read_timeout
   end
 
   def models
@@ -16,14 +25,19 @@ class Assistant::External::ModelCatalog
     request["Authorization"] = "Bearer #{@token}"
     request["Accept"] = "application/json"
 
-    response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: 10, read_timeout: 20) do |http|
+    response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: @open_timeout, read_timeout: @read_timeout) do |http|
       http.request(request)
     end
 
     raise Error, "Agent discovery returned HTTP #{response.code}." unless response.is_a?(Net::HTTPSuccess)
 
     payload = JSON.parse(response.body)
-    Array(payload["data"]).filter_map do |model|
+    entries = payload.is_a?(Hash) ? payload["data"] : nil
+    unless entries.is_a?(Array) && entries.all? { |entry| entry.is_a?(Hash) }
+      raise Error, "Agent discovery returned an invalid response."
+    end
+
+    entries.filter_map do |model|
       id = model["id"].to_s
       next if id.blank?
 
@@ -31,7 +45,7 @@ class Assistant::External::ModelCatalog
     end
   rescue JSON::ParserError, URI::InvalidURIError => e
     raise Error, "Agent discovery returned an invalid response: #{e.message}"
-  rescue *Assistant::External::Client::TRANSIENT_ERRORS => e
+  rescue *CONNECTION_ERRORS => e
     raise Error, "Agent discovery is unavailable: #{e.message}"
   end
 
@@ -51,9 +65,10 @@ class Assistant::External::ModelCatalog
 
     def agent_label(id)
       case id
-      when "openclaw" then "Default agent (openclaw)"
-      when "openclaw/default" then "Default agent (openclaw/default)"
-      when %r{\Aopenclaw/(.+)\z} then "#{$1} (#{id})"
+      when "openclaw", "openclaw/default"
+        I18n.t("assistant.external.model_catalog.default_agent_label", id: id)
+      when %r{\Aopenclaw/(.+)\z}
+        I18n.t("assistant.external.model_catalog.named_agent_label", name: $1, id: id)
       else id
       end
     end

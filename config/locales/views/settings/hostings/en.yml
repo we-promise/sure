@@ -83,6 +83,7 @@ en:
         agent_discovery_configure_first: Save a valid endpoint URL and API token to load available agents.
         external_agent_required: Select an external agent before saving.
         external_agent_invalid: Select an agent returned by the configured endpoint.
+        external_agent_reselect: The endpoint changed and the previously selected agent is not available there. Select an agent from the new endpoint.
         agent_discovery_error: "Could not load agents: %{error}"
         external_info:
           title: External AI configuration
