@@ -1,4 +1,4 @@
-<%# locals: (accounts:) %>
+<%# locals: (accounts:, reconciliation_indicators: {}) %>
 
 <details open class="group bg-container p-4 shadow-border-xs rounded-xl">
   <summary class="flex items-center gap-2">
@@ -12,6 +12,6 @@
   </summary>
 
   <div class="space-y-4 mt-4">
-    <%= render "accounts/index/account_groups", accounts: accounts %>
+    <%= render "accounts/index/account_groups", accounts: accounts, reconciliation_indicators: reconciliation_indicators %>
   </div>
 </details>
