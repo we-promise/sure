@@ -29,6 +29,7 @@ en:
     syncing_notice:
       syncing: Syncing accounts data...
     require_admin: "Only admins can perform this action"
+    require_connector_owner: "You can only manage connections you added"
     custom_confirm:
       default_title: "Are you sure?"
       default_body: "This is not reversible."
