@@ -90,7 +90,7 @@ class CashFlowTest < ApplicationSystemTestCase
       end
       assert_no_selector "#cashflow-preview-expanded-dialog[open]"
       assert_selector "#cashflow-preview [data-sankey-preview-target='expandButton']:focus"
-      assert_equal "true", find("[data-section-key='cashflow_sankey']")["draggable"]
+      assert_selector "[data-section-key='cashflow_sankey'][draggable='true']"
     end
   end
 
