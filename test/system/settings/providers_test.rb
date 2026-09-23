@@ -1,10 +1,50 @@
 require "application_system_test_case"
+require_relative "../../support/financekit_test_helper"
 
 class Settings::ProvidersTest < ApplicationSystemTestCase
+  include FinancekitTestHelper
   setup do
     @user = users(:family_admin)
     @family = families(:dylan_family)
     login_as @user
+  end
+
+  test "Wallet account links leave the provider frame and open transaction activity" do
+    financekit_setup(user: @user)
+    accept_and_apply
+
+    visit settings_providers_path
+    find("summary", text: "Apple Wallet").click
+    page.save_screenshot(Rails.root.join("tmp", "apple-wallet-connected.png"))
+    within "turbo-frame#financekit-providers-panel" do
+      click_link "Test Wallet"
+    end
+
+    assert_current_path account_path(@source.account)
+    assert_selector "header h2", text: "Test Wallet"
+    assert_text "Synthetic shop"
+
+    visit accounts_path
+    page.save_screenshot(Rails.root.join("tmp", "apple-wallet-accounts.png"))
+    within "#financekit-accounts" do
+      click_link "Test Wallet"
+    end
+    assert_current_path account_path(@source.account)
+    assert_text "Synthetic shop"
+  end
+
+  test "Wallet advertises App Store availability without a web connection flow" do
+    visit settings_providers_path
+    find('[data-providers-filter-target="input"]').set("Apple Wallet")
+
+    within available_provider_cards_container do
+      assert_text "US / UK"
+      assert_text "Bank"
+      assert_button "App Store", disabled: true
+      assert_selector '[title="Coming soon!"]'
+      assert_no_selector "a[data-turbo-frame='drawer']", visible: true
+    end
+    page.save_screenshot(Rails.root.join("tmp", "apple-wallet-available.png"))
   end
 
   test "shows status pill on section header for a configured provider" do

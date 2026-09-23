@@ -1,6 +1,4 @@
-<%= link_to connect_path,
-            class: "bg-container shadow-border-xs hover:bg-surface-inset rounded-xl p-4 flex flex-col gap-2.5 text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300",
-            data: { turbo_frame: "drawer", turbo_prefetch: "false" }.merge(filter_data) do %>
+<%= container do %>
   <div class="flex items-start gap-2.5">
     <%= render ProviderLogo.new(provider_key: provider_key, class_name: "w-9 h-9 rounded-lg") %>
     <div class="flex-1 min-w-0">
@@ -17,7 +15,14 @@
     <p class="text-sm text-secondary grow leading-snug"><%= tagline %></p>
   <% end %>
   <div class="flex items-center justify-end gap-1.5 text-sm font-medium text-primary">
-    <%= t("settings.providers.connect") %>
-    <%= helpers.icon "arrow-right", size: "sm", class: "!w-3.5 !h-3.5" %>
+    <% if coming_soon %>
+      <span title="<%= t("settings.providers.financekit.coming_soon") %>" tabindex="0" aria-label="<%= t("settings.providers.financekit.app_store_coming_soon") %>">
+        <%= render DS::Button.new(text: t("settings.providers.financekit.app_store"), variant: :secondary, size: :sm,
+              disabled: true, class: "pointer-events-none opacity-50", aria: { description: t("settings.providers.financekit.coming_soon") }) %>
+      </span>
+    <% else %>
+      <%= t("settings.providers.connect") %>
+      <%= helpers.icon "arrow-right", size: "sm", class: "!w-3.5 !h-3.5" %>
+    <% end %>
   </div>
 <% end %>

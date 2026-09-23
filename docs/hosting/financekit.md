@@ -32,6 +32,70 @@ After deploy:
 
 Monitor queue depth, oldest accepted batch age, `repair_required` connections, and downstream lag. Diagnostics may include publisher, batch, sequence, generation, and typed error codes. They must not include credentials, raw request bodies, transaction descriptions, merchant names, amounts, account names, or server authentication headers.
 
+## Debugging uploads
+
+Super admins can open `/settings/debug?provider_key=financekit` and filter further
+by family, level, or source. Events share `connection_id`, `publisher_id`,
+`generation`, `stream_id`, and `next_sequence`. Accepted batches also include
+`batch_id`, `capture_id`, sequence/chunk information, payload size, and event count.
+
+- `upload_accepted` means Sure stored the upload; it does not mean ledger import
+  has completed. An accepted sequence ahead of `next_sequence` is waiting for its
+  predecessor; a multi-chunk capture waits for all its chunks.
+- `upload_rejected` records a typed protocol error and HTTP status when an
+  authenticated upload fails validation. Identical accepted retries reuse their
+  receipt without another acceptance log.
+- `capture_imported` records the resulting sync ID and counts, including records
+  requiring conflict review.
+- `import_retry` includes the attempt count, retry deadline, error code, and
+  exception class. `import_failed` means repair is required; `import_blocked`
+  covers failures before a batch could be selected.
+- `downstream_completed` means account updates and rules were scheduled.
+  `downstream_failed` includes the affected account/provider link when available;
+  the inbox sweep retries this stage.
+
+These diagnostics deliberately omit exception messages and financial payloads.
+Requests rejected before reaching the batch inbox (such as invalid publisher
+credentials or content type) do not create these model-level events.
+
+## Local sample accounts
+
+The full demo generator includes a synthetic Apple Wallet connection with Apple
+Card (`CreditCard`), Apple Cash, and Nancy's Apple Cash (`Depository`, subtype `cash`). It includes a
+year of card purchases/payments and cash purchases/top-ups, plus pending activity,
+source identities, balance observations, and acceptance/import timestamps.
+Apple Cash receives a simulated 1% Daily Cash reward the day after each day's
+booked Apple Card purchases (excluding pending charges and payments), categorized
+as Cash Back. Six small gifts link the parent's Apple Cash to Nancy's account.
+Nancy spends some of each gift on candy, movies, after-school snacks, and ice
+cream: a few categorized purchases per month, with a positive running balance.
+These additions also populate older demo enrollments in place; stable source IDs
+prevent duplicate rewards, gifts, and purchases on reruns.
+
+To add just these accounts to an existing local family without replacing its data:
+
+```sh
+FAMILY_ID=<local-family-uuid> bin/rails demo_data:financekit
+```
+
+Alternatively use `DEMO_EMAIL=<local-user-email>` (defaults to the configured demo
+email). `SEED=42` controls the generated amounts and merchants. Reruns preserve
+the existing demo enrollment and transactions, and upgrade older synthetic data
+with merchant-specific categories and paired transfers. Apple Card payments and
+Apple Cash top-ups come from the demo owner's manual Chase Premier Checking
+account; if absent, a funded Wallet Demo Checking account is created. Subsequent
+reruns preserve category edits and do not duplicate either transfer leg.
+The standalone task is restricted
+to development/test and does not enable FinanceKit feature flags or change user
+permissions. These records simulate imported data; no iOS device is required.
+
+## Wallet logo
+
+The provider logo is bundled at `app/assets/images/providers/apple-wallet.png`,
+using Apple's [256-pixel Wallet icon](https://developer.apple.com/assets/elements/icons/wallet/wallet-128x128_2x.png).
+Rails serves this asset locally, so displaying the logo does not depend on Apple
+or Brandfetch being available.
+
 ## Capacity and retention
 
 Protocol 2 limits each publisher to 20 selected accounts, 500 events per batch, 1 MiB of JSON, and 100 accepted/processing batches. Each capture is limited to 100 chunks so the complete capture fits in the inbox. A client can upload larger histories using multiple consecutive captures.

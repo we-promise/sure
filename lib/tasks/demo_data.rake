@@ -1,4 +1,18 @@
 namespace :demo_data do
+  desc "Add Apple Card and family Apple Cash accounts to an existing local demo family"
+  task financekit: :environment do
+    raise "FinanceKit demo seeding is only available in development/test" unless Rails.env.local?
+
+    family = if ENV["FAMILY_ID"].present?
+      Family.find(ENV.fetch("FAMILY_ID"))
+    else
+      email = ENV.fetch("DEMO_EMAIL", Rails.application.config_for(:demo).fetch(:email))
+      User.find_by!(email: email).family
+    end
+    item = Demo::FinancekitGenerator.new(family, seed: ENV.fetch("SEED", 42)).generate!
+    puts "Apple Wallet demo ready: #{item.accounts.count} linked accounts."
+  end
+
   desc "Load empty demo dataset (no financial data)"
   task empty: :environment do
     start = Time.now

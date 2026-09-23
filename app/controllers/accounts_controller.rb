@@ -13,6 +13,10 @@ class AccountsController < ApplicationController
           .with_attached_logo
           .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
+    @financekit_accounts = Current.family.accounts
+      .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
+      .joins(:account_providers).where(account_providers: { provider_type: "FinancekitAccountLineage" })
+      .distinct.with_attached_logo.includes(:accountable, account_providers: :provider).order(:name)
     @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:plaid_accounts))
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.with_attached_logo)
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
@@ -397,7 +401,7 @@ class AccountsController < ApplicationController
         @onchain_wallet_items
       ].flatten.compact
 
-      accounts = @manual_accounts.to_a
+      accounts = @manual_accounts.to_a + @financekit_accounts.to_a
       items.each do |item|
         next unless item.respond_to?(:accounts)
         accounts.concat(item.accounts)

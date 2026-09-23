@@ -9,7 +9,7 @@ class Settings::ProviderCard < ApplicationComponent
     I18n.t(key) if key
   end
 
-  def initialize(provider_key:, name:, tagline: nil, region: nil, kinds: nil, tier: nil, maturity: :stable)
+  def initialize(provider_key:, name:, tagline: nil, region: nil, kinds: nil, tier: nil, maturity: :stable, coming_soon: false)
     @provider_key = provider_key
     @name         = name
     @tagline      = tagline
@@ -17,9 +17,21 @@ class Settings::ProviderCard < ApplicationComponent
     @kinds        = Array(kinds).compact
     @tier         = tier
     @maturity     = maturity.to_sym
+    @coming_soon  = coming_soon
   end
 
-  attr_reader :provider_key, :name, :tagline
+  attr_reader :provider_key, :name, :tagline, :coming_soon
+
+  def container(&block)
+    classes = "bg-container shadow-border-xs rounded-xl p-4 flex flex-col gap-2.5 text-primary"
+    if coming_soon
+      tag.div(class: classes, data: filter_data, &block)
+    else
+      link_to(connect_path,
+        class: "#{classes} hover:bg-surface-inset transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300",
+        data: { turbo_frame: "drawer", turbo_prefetch: "false" }.merge(filter_data), &block)
+    end
+  end
 
   def maturity_label
     self.class.maturity_label(@maturity)

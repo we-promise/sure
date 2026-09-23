@@ -1,7 +1,8 @@
 # Renders a sync provider's own logo, falling back in order:
-#   1. the provider's brand icon from Brandfetch (needs a domain and a client ID)
-#   2. the provider's generic icon (`logo_icon`), for providers with no brand
-#   3. the provider's initials (`logo_text`)
+#   1. a bundled brand asset (`logo_asset`), when available
+#   2. the provider's brand icon from Brandfetch (needs a domain and a client ID)
+#   3. the provider's generic icon (`logo_icon`), for providers with no brand
+#   4. the provider's initials (`logo_text`)
 #
 # The fallback is always rendered and the Brandfetch image is laid over it on an
 # opaque background. Brandfetch is asked for a 404 rather than its lettermark
@@ -18,7 +19,7 @@ class ProviderLogo < ApplicationComponent
   attr_reader :class_name
 
   def brand_url
-    Provider::Metadata.logo_url(@provider_key)
+    metadata[:logo_asset].presence || Provider::Metadata.logo_url(@provider_key)
   end
 
   def metadata

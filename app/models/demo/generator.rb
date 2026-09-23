@@ -71,6 +71,7 @@ class Demo::Generator
         create_realistic_categories!(family)
         create_realistic_accounts!(family)
         create_realistic_transactions!(family)
+        Demo::FinancekitGenerator.new(family, seed: seed).generate!
         generate_budget_auto_fill!(family)
 
         puts "🎯 Seeding goals..."
@@ -100,6 +101,7 @@ class Demo::Generator
       create_realistic_categories!(family)
       create_realistic_accounts!(family)
       create_realistic_transactions!(family)
+      Demo::FinancekitGenerator.new(family, seed: seed).generate!
       # Auto-fill current-month budget based on recent spending averages
       generate_budget_auto_fill!(family)
 

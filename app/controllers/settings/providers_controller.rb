@@ -332,6 +332,15 @@ class Settings::ProvidersController < ApplicationController
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
       @fio_items = Current.family.fio_items.active.ordered
 
+      # Wallet uploads are managed on iOS. Only expose linked accounts the
+      # current admin can access, including connections that need repair.
+      accessible_account_ids = Current.family.accounts.accessible_by(Current.user).pluck(:id).to_set
+      @financekit_connections = Current.family.financekit_items.where(status: %w[active repair_required])
+        .ordered.includes(:accounts).filter_map do |item|
+          accounts = item.accounts.select { |account| accessible_account_ids.include?(account.id) }
+          { item: item, accounts: accounts } if accounts.any?
+        end
+
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
       entries = build_provider_entries
@@ -434,6 +443,13 @@ class Settings::ProvidersController < ApplicationController
         }
       end
 
-      (configuration_entries + family_entries).sort_by { |entry| entry[:title].downcase }
+      wallet_entry = {
+        provider_key: "financekit", title: Provider::Metadata.for(:financekit)[:name],
+        turbo_id: "financekit", partial: "financekit_panel", maturity: :beta,
+        coming_soon: true, sync_supported: false,
+        summary: view_context.financekit_provider_summary(@financekit_connections)
+      }
+
+      (configuration_entries + family_entries + [ wallet_entry ]).sort_by { |entry| entry[:title].downcase }
     end
 end

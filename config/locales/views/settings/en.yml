@@ -413,6 +413,22 @@ en:
         eyebrow: Setup
         need_help: "Need help?"
       connect: Connect
+      financekit:
+        app_store: App Store
+        coming_soon: Coming soon!
+        app_store_coming_soon: App Store — Coming soon!
+        description: "Manage Apple Wallet connections in the Sure iOS app. Wallet data syncs while the app is open; unattended background sync is not available yet."
+        summary: Wallet sync
+        accounts: Linked accounts
+        linked_accounts:
+          one: 1 linked account
+          other: "%{count} linked accounts"
+        status:
+          active: Sync active
+          repair_required: Repair required — open the Sure iOS app
+        last_accepted_at: Last accepted by Sure
+        last_imported_at: Last imported into your family
+        not_yet: Not yet
       groups:
         your_connections: Your connections
         available: Available
@@ -437,6 +453,7 @@ en:
       sync_provider_in_progress: Sync started.
       recently_synced: Synced recently. Try again in a moment.
       taglines:
+        financekit: Sync (some) FinanceKit accounts through the Sure iOS app.
         akahu: Sync New Zealand financial institutions via Akahu.
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)

@@ -1,6 +1,7 @@
 class Provider
   module Metadata
     REGISTRY = {
+      financekit:     { region: "US / UK", kinds: %w[Bank],            maturity: :beta,   logo_text: "AW", logo_color: nil, domain: nil, logo_icon: "wallet", logo_asset: "providers/apple-wallet.png", name: "Apple Wallet" },
       akahu:          { region: "NZ",      kinds: %w[Bank Investment], maturity: :beta,   logo_text: "AK", logo_color: "#059669", domain: "akahu.nz" },
       simplefin:      { region: "US",      kinds: %w[Bank Investment], maturity: :stable, logo_text: "SF", logo_color: "#2563eb", domain: "simplefin.org" },
       lunchflow:      { region: "Global",  kinds: %w[Bank],            maturity: :stable, logo_text: "LF", logo_color: "#f97316", domain: "lunchflow.app" },

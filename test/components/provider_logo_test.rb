@@ -16,6 +16,16 @@ class ProviderLogoTest < ViewComponent::TestCase
     assert_selector "span[aria-hidden='true'] + img"
   end
 
+  test "Apple Wallet uses its bundled logo without Brandfetch" do
+    Provider::Metadata.expects(:logo_url).never
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+
+    render_inline(ProviderLogo.new(provider_key: :financekit))
+
+    assert_selector "img[src='#{ActionController::Base.helpers.asset_path("providers/apple-wallet.png")}']"
+    assert_selector "span[aria-hidden='true'] + img"
+  end
+
   test "renders only the fallback when the provider has no domain" do
     stub_metadata(logo_icon: "wallet", logo_text: "EX", logo_color: "#6b7280")
 

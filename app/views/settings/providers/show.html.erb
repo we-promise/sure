@@ -80,7 +80,8 @@
                   region:       meta[:region],
                   kinds:        meta[:kinds],
                   tier:         meta[:tier],
-                  maturity:     meta[:maturity] || :stable
+                  maturity:     meta[:maturity] || :stable,
+                  coming_soon:  entry[:coming_soon]
                 ) %>
           <% end %>
         </div>
