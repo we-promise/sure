@@ -22,12 +22,12 @@ tr:
         not_expected: Beklenmiyor
     create:
       duplicates:
-        one: 1 kopya ekstre atlandı.
+        one: "%{count} kopya ekstre atlandı."
         other: "%{count} kopya ekstre atlandı."
       invalid_file_type: Boyut sınırının altında bir PDF, CSV veya XLSX ekstre yükleyin.
       no_files: En az bir ekstre dosyası seçin.
       success:
-        one: 1 ekstre yüklendi.
+        one: "%{count} ekstre yüklendi."
         other: "%{count} ekstre yüklendi."
     destroy:
       failure: Ekstre silinemedi.

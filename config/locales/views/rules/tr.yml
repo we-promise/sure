@@ -9,9 +9,12 @@ tr:
         any: herhangi biri
         match: eşleşsin
         of_the_following_conditions: aşağıdaki koşullardan
+      condition:
+        value_placeholder: Bir değer girin
   rules:
     actions:
       value_placeholder: Bir değer girin
+      to_label: değer
     apply_all:
       ai_cost_message: Bu işlem, %{transactions} adede kadar işlemi kategorize etmek
         için yapay zeka kullanacak.
@@ -43,6 +46,18 @@ tr:
         expense: Gider
         income: Gelir
         transfer: Transfer
+      operators:
+        contains: İçerir
+        does_not_contain: İçermez
+        equal_to: Eşittir
+        is_equal_to: Eşittir
+        not_equal_to: Eşit değildir
+        is_empty: Boş
+        is_not_empty: Boş değil
+        greater_than: Büyüktür
+        greater_or_equal_to: Büyük veya eşittir
+        less_than: Küçüktür
+        less_than_or_equal_to: Küçük veya eşittir
     confirm:
       ai_cost_no_estimate_html: Bu işlem, %{count} işlemi kategorize etmek için yapay
         zeka kullanacak.
@@ -117,10 +132,10 @@ tr:
       action_label_to: "%{label} - %{value}"
       all_past_and_future: Geçmişteki ve gelecekteki tüm %{resource}
       and_more_actions:
-        one: ve 1 eylem daha
+        one: "ve %{count} eylem daha"
         other: ve %{count} eylem daha
       and_more_conditions:
-        one: ve 1 koşul daha
+        one: "ve %{count} koşul daha"
         other: ve %{count} koşul daha
       delete: Sil
       edit: Düzenle

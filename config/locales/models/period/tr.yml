@@ -20,6 +20,7 @@ tr:
     custom:
       label: Özel Dönem
       label_short: Özel
+      comparison_label: '%{start_date} – %{end_date} arası'
     last_10_years:
       comparison_label: 10 yıl öncesine göre
       label: Son 10 Yıl
@@ -52,3 +53,4 @@ tr:
       comparison_label: Geçen aya göre
       label: Geçen Ay
       label_short: GA
+    range: '%{start_date} – %{end_date}'

@@ -55,6 +55,20 @@ tr:
           seçin.
       mint_import:
         date_format_label: Tarih formatı
+        account_optional: Hesap (isteğe bağlı)
+        amount: Tutar
+        apply_configuration: Yapılandırmayı uygula
+        category_optional: Kategori (isteğe bağlı)
+        currency: Para birimi
+        date: Tarih
+        format: Biçim
+        incomes_negative: Gelirler negatif
+        incomes_positive: Gelirler pozitif
+        intro: Mint içe aktarmanızı sizin için önceden yapılandırdık. Lütfen bir sonraki adıma geçin.
+        leave_empty: Boş bırak
+        name_optional: Ad (isteğe bağlı)
+        select_format: Biçim seçin
+        tags_optional: Etiketler (isteğe bağlı)
       rule_import:
         description: Kural içe aktarmanızı yapılandırın. Kurallar CSV verilerine göre
           oluşturulacak veya güncellenecektir.
@@ -64,6 +78,11 @@ tr:
       show:
         description: CSV dosyanızdaki her alan için karşılık gelen sütunları seçin.
         title: İçe aktarmayı yapılandırın
+        template_found: Şablon yapılandırması bulundu
+        template_description: Bu hesap için önceki bir içe aktarmadan kalan bir yapılandırma bulduk. Bunu bu içe aktarmaya uygulamak ister misiniz?
+        manually_configure: Manuel olarak yapılandır
+        apply_template: Şablonu uygula
+        sample_caption: Yüklediğiniz CSV'den örnek veriler
       trade_import:
         account_label: Hesap
         apply_configuration: Yapılandırmayı uygula
@@ -176,7 +195,7 @@ tr:
     qif_category_selections:
       show:
         categories_found:
-          one: 1 kategori bulundu
+          one: "%{count} kategori bulundu"
           other: "%{count} kategori bulundu"
         categories_heading: Kategoriler
         category_name_col: Kategori adı
@@ -193,19 +212,20 @@ tr:
         submit: İncelemeye devam et
         tag_name_col: Etiket adı
         tags_found:
-          one: 1 etiket bulundu
+          one: "%{count} etiket bulundu"
           other: "%{count} etiket bulundu"
         tags_heading: Etiketler
         title: Yapılandır ve seç
         transactions_col: İşlemler
         txn_count:
-          one: 1 işlem
+          one: "%{count} işlem"
           other: "%{count} işlem"
       update:
         success: Kategoriler ve etiketler kaydedildi.
     uploads:
       handle_qif_upload:
         qif_uploaded: QIF dosyası başarıyla yüklendi.
+        qif_account_required: Lütfen QIF içe aktarması için bir hesap seçin
       show:
         account_optional_label: Hesap (isteğe bağlı)
         browse: Gözat
@@ -338,6 +358,7 @@ tr:
         seçilmesi gerekir
       presumed_lost: Arka plan işinin kaybolduğu varsayıldığından başarısız olarak
         işaretlendi. İçe aktarılan veriler geri alındı — güvenle tekrar deneyebilirsiniz.
+      interrupted: Arka plan çalışanı bu işlem bitmeden kesintiye uğradı. İçe aktarılan veriler geri alındı — güvenle yeniden deneyebilirsiniz.
     failure:
       description: Lütfen dosya biçiminizi, olası hataları ve tüm zorunlu alanların
         doldurulduğunu kontrol edin, ardından geri dönüp tekrar deneyin.
@@ -402,10 +423,10 @@ tr:
       processing_failed_with_message: "%{message}"
       processing_title: PDF'iniz işleniyor
       publish_transactions:
-        one: "%{count} İşlemi Yayınla"
-        other: "%{count} İşlemi Yayınla"
+        one: "%{count} İşlemi Ekle"
+        other: "%{count} İşlemi Ekle"
       ready_for_review_description: Ekstrenizden %{count} işlem çıkardık. Hesabınıza
-        eklemek için inceleyin ve yayınlayın.
+        eklemek için inceleyin ve onaylayın.
       ready_for_review_title: İncelemeye Hazır
       review_transactions: İşlemleri İncele
       save_account: Kaydet
@@ -424,18 +445,28 @@ tr:
       unknown_state_description: Bu içe aktarma beklenmeyen bir durumda. Lütfen içe
         aktarmalara geri dönün.
       unknown_state_title: Bilinmeyen durum
+      errors:
+        provider_not_configured: Yapay zeka sağlayıcısı yapılandırılmamış
+        provider_no_pdf_support: Yapay zeka sağlayıcısı PDF işlemeyi desteklemiyor
+      view_summary: İçe aktarma özetini görüntüle
+      already_recorded_note:
+        one: '%{count} işlem zaten bu hesaptaydı ve ekstreyle eşleştirildi.'
+        other: '%{count} işlem zaten bu hesaptaydı ve ekstreyle eşleştirildi.'
+      complete_fully_reconciled:
+        one: Bu ekstredeki her işlem zaten hesabınızdaydı. %{count} işlem eşleştirildi ve mutabık olarak işaretlendi — içe aktarılacak bir şey yoktu.
+        other: Bu ekstredeki her işlem zaten hesabınızdaydı. %{count} işlemin tamamı eşleştirildi ve mutabık olarak işaretlendi — içe aktarılacak bir şey yoktu.
     publish:
       max_rows_exceeded: İçe aktarmanız maksimum %{max} satır sayısını aşıyor.
       started: İçe aktarmanız arka planda başlatıldı.
     ready:
       back_to_imports: İçe aktarmalara dön
-      description: Bu içe aktarmayı yayınladığınızda hesabınıza eklenecek yeni öğelerin
+      description: Bu içe aktarmayı tamamladığınızda hesabınıza eklenecek yeni öğelerin
         özeti aşağıdadır.
       empty_summary: Bu dosyada içe aktarılabilir kayıt bulunamadı. Dosya boş olabilir
         veya satırlar beklenen dışa aktarma biçimiyle eşleşmiyor (her satır, bu içe
         aktarmanın desteklediği türlerle «type» ve «data» anahtarlarına sahip bir
         JSON nesnesi olmalıdır).
-      publish_import: İçe aktarmayı yayınla
+      publish_import: İçe aktarmayı tamamla
       summary_count_label: Adet
       summary_item_label: Öğe
       title: İçe aktarma verilerinizi onaylayın
@@ -456,6 +487,7 @@ tr:
       progress: Adım %{step}/%{total}
       select: Seç
       upload: Yükle
+      label: Adım %{step}
     success:
       back_to_dashboard: Panele dön
       description: İçe aktarılan verileriniz uygulamaya başarıyla eklendi ve artık
@@ -528,3 +560,18 @@ tr:
     update:
       account_saved: Hesap kaydedildi.
       invalid_account: Hesap bulunamadı.
+      account_locked: Bu içe aktarma zaten tamamlandı, bu nedenle hesabı değiştirilemez. Başka bir hesaba aktarmanız gerekiyorsa önce geri alın.
+    summary:
+      title: İçe aktarma özeti
+      subtitle: '%{account} hesabına ait bu ekstredeki her işleme ne olduğu.'
+      subtitle_no_account: Bu ekstredeki her işleme ne olduğu.
+      extracted: Ekstrede bulunan
+      already_recorded: Zaten kayıtlı
+      already_recorded_hint: Bu hesapta zaten bulunan bir işlemle eşleştirildi ve mutabık olarak işaretlendi.
+      imported: Yeni olarak içe aktarılan
+      awaiting_review: İçe aktarılmayı bekleyen
+      fully_reconciled:
+        one: İçe aktarılacak bir şey yoktu — ekstredeki tek işlem zaten kayıtlıydı.
+        other: İçe aktarılacak bir şey yoktu — %{count} işlemin tamamı zaten kayıtlıydı.
+      statement_evidence_html: '%{statement} ile mutabakat yapıldı.'
+      close: Kapat
