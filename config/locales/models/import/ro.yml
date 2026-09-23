@@ -4,9 +4,14 @@ ro:
       import:
         currency: Monedă
         number_format: Format numeric
+        col_sep: Separator de coloane
+        col_seps:
+          comma: Virgulă (,)
+          semicolon: Punct și virgulă (;)
     errors:
       models:
         import:
           attributes:
             raw_file_str:
               invalid_csv_format: nu este un format CSV valid
+          duplicate_headers: 'Anteturile CSV devin coloane duplicate după normalizare: %{columns}'

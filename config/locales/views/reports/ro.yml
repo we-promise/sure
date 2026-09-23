@@ -15,6 +15,24 @@ ro:
         from: De la
         to: Până la
       showing_period: "Se afișează date de la %{start} până la %{end}"
+      print_report: Tipărește raportul
+      drag_to_reorder: Trage pentru a reordona secțiunea
+      toggle_section: Afișează/ascunde secțiunea
+      previous_period: Perioada anterioară
+      next_period: Perioada următoare
+      today: Azi
+      period_label:
+        quarterly: T%{quarter} %{year}
+        ytd: '%{year} până azi'
+        past_year: '%{year}'
+        last_6_months: '%{start} – %{end}'
+      period_picker:
+        quarter: T%{quarter} %{year}
+        ytd: '%{year} până azi'
+      previous_year: Anul anterior
+      next_year: Anul următor
+      previous_decade: Deceniul anterior
+      next_decade: Deceniul următor
     summary:
       total_income: Venit total
       total_expenses: Cheltuieli totale
@@ -50,8 +68,9 @@ ro:
         good: Pe drumul cel bun
         warning: Aproape de limită
         over: Peste buget
+      shared: partajat
     trends:
-      title: Tendințe și Perspective
+      title: Tendințe și observații
       monthly_breakdown: Defalcare lunară
       month: Lună
       income: Venituri
@@ -69,14 +88,14 @@ ro:
       total: Total
       avg_per_transaction: Medie per tranzacție
       transactions: Tranzacții
-      insight_title: Perspectivă
-      insight_higher_weekend: "Cheltuiți cu %{percent}% mai mult per tranzacție în weekend decât în timpul săptămânii"
-      insight_higher_weekday: "Cheltuiți cu %{percent}% mai mult per tranzacție în timpul săptămânii decât în weekend"
-      insight_similar: "Cheltuielile dumneavoastră per tranzacție sunt similare în timpul săptămânii și în weekend"
+      insight_title: Observație
+      insight_higher_weekend: "Cheltuiești cu %{percent}% mai mult per tranzacție în weekend decât în timpul săptămânii"
+      insight_higher_weekday: "Cheltuiești cu %{percent}% mai mult per tranzacție în timpul săptămânii decât în weekend"
+      insight_similar: "Cheltuielile tale per tranzacție sunt similare în timpul săptămânii și în weekend"
       no_spending_data: Nu există date de cheltuieli disponibile pentru această perioadă
     empty_state:
       title: Nu există date disponibile
-      description: Începeți să vă urmăriți finanțele adăugând tranzacții sau conectând conturile pentru a vedea rapoarte complete
+      description: Începe să-ți urmărești finanțele adăugând tranzacții sau conectând conturile pentru a vedea rapoarte complete
       add_transaction: Adaugă tranzacție
       add_account: Adaugă cont
     transactions_breakdown:
@@ -113,8 +132,12 @@ ro:
         expense: Cheltuieli
         income: Venituri
         uncategorized: Necategorizate
-        transactions: transactions
+        transactions: tranzacții
         percentage: "% din total"
+        entries:
+          one: '%{count} înregistrare'
+          few: '%{count} înregistrări'
+          other: '%{count} de înregistrări'
       pagination:
         showing: Se afișează %{count} tranzacții
         previous: Anterioare
@@ -135,3 +158,103 @@ ro:
       open_sheets: Deschide Google Sheets
       go_to_api_keys: Mergi la Chei API
       close: Am înțeles
+    invalid_date_range: Data de sfârșit nu poate fi înainte de data de început. Datele au fost inversate.
+    net_worth:
+      title: Avere netă
+      current_net_worth: Avere netă actuală
+      period_change: Variație în perioadă
+      assets_vs_liabilities: Active vs. datorii
+      total_assets: Active
+      total_liabilities: Datorii
+      no_assets: Niciun activ
+      no_liabilities: Nicio datorie
+    investment_performance:
+      title: Performanța investițiilor
+      portfolio_value: Valoarea portofoliului
+      total_return: Randament total
+      period_return: Randament în perioadă
+      contributions: Depuneri în perioadă
+      withdrawals: Retrageri în perioadă
+      top_holdings: Principalele dețineri
+      holding: Deținere
+      weight: Pondere
+      value: Valoare
+      return: Randament
+      accounts: Conturi de investiții
+      gains_by_tax_treatment: Câștiguri după regimul fiscal
+      unrealized_gains: Câștiguri nerealizate
+      realized_gains: Câștiguri realizate
+      total_gains: Câștiguri totale
+      taxable_realized_note: Aceste câștiguri pot fi impozabile
+      no_data: '-'
+      view_details: Vezi detalii
+      holdings_count:
+        one: '%{count} deținere'
+        few: '%{count} dețineri'
+        other: '%{count} de dețineri'
+      sells_count:
+        one: '%{count} vânzare'
+        few: '%{count} vânzări'
+        other: '%{count} de vânzări'
+      holdings: Dețineri
+      sell_trades: Tranzacții de vânzare
+      and_more: +încă %{count}
+    investment_flows:
+      title: Fluxuri de investiții
+      description: Urmărește banii care intră și ies din conturile tale de investiții prin depuneri și retrageri.
+      contributions: Depuneri
+      contributions_description: Bani adăugați în investiții
+      withdrawals: Retrageri
+      withdrawals_description: Bani retrași din investiții
+      net_flow: Flux net
+      net_flow_description: Variația netă totală
+    print:
+      document_title: Raport financiar
+      title: Raport financiar
+      generated_on: Generat la %{date}
+      summary:
+        title: Rezumat
+        income: Venituri
+        expenses: Cheltuieli
+        net_savings: Economii nete
+        budget: Buget
+        vs_prior: '%{percent}% față de perioada anterioară'
+        of_income: '%{percent}% din venituri'
+        used: utilizat
+      net_worth:
+        title: Avere netă
+        current_balance: Valoare actuală
+        this_period: în această perioadă
+        assets: Active
+        liabilities: Datorii
+        no_liabilities: Nicio datorie
+      trends:
+        title: Tendințe lunare
+        month: Lună
+        income: Venituri
+        expenses: Cheltuieli
+        net: Net
+        savings_rate: Rata de economisire
+        average: Medie
+        current_month_note: '* Luna curentă (date parțiale)'
+      investments:
+        title: Investiții
+        portfolio_value: Valoarea portofoliului
+        total_return: Randament total
+        period_return: Randament în perioadă
+        contributions: Depuneri
+        withdrawals: Retrageri
+        this_period: în această perioadă
+        top_holdings: Principalele dețineri
+        holding: Deținere
+        weight: Pondere
+        value: Valoare
+        return: Randament
+      spending:
+        title: Cheltuieli pe categorii
+        income: Venituri
+        expenses: Cheltuieli
+        category: Categorie
+        amount: Sumă
+        percent: '%'
+        more_categories: + încă %{count} categorii

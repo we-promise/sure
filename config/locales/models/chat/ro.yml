@@ -1,0 +1,9 @@
+---
+ro:
+  chat:
+    errors:
+      rate_limited: Furnizorul AI limitează momentan numărul de cereri. Încearcă din nou peste câteva minute.
+      temporarily_unavailable: Furnizorul AI este temporar indisponibil. Încearcă din nou peste câteva minute.
+      misconfigured: Furnizorul AI nu este configurat corect. Contactează administratorul.
+      no_response: Asistentul nu a răspuns. Procesul de fundal poate fi oprit sau AI-ul nu este complet configurat. Încearcă din nou.
+      default: Nu s-a putut genera un răspuns. Încearcă din nou.

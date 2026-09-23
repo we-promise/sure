@@ -66,12 +66,15 @@ ro:
         deny: 'Refuză'
       error:
         title: 'A apărut o eroare'
+        go_back: Înapoi
       new:
         title: 'Autorizare necesară'
         prompt: 'Autorizezi %{client_name} să îți folosească contul?'
         able_to: 'Această aplicație va putea să'
       show:
         title: 'Cod de autorizare'
+        authorization_code_label: 'Cod de autorizare:'
+        copy_instructions: Copiază acest cod și lipește-l în aplicație.
       form_post:
         title: 'Trimite acest formular'
 
@@ -104,6 +107,7 @@ ro:
         invalid_code_challenge_method:
           zero: 'Serverul de autorizare nu acceptă PKCE deoarece nu există valori code_challenge_method acceptate.'
           one: 'Valoarea code_challenge_method trebuie să fie %{challenge_methods}.'
+          few: 'Valoarea code_challenge_method trebuie să fie una dintre %{challenge_methods}.'
           other: 'Valoarea code_challenge_method trebuie să fie una dintre %{challenge_methods}.'
         server_error: 'Serverul de autorizare a întâmpinat o condiție neașteptată care l-a împiedicat să îndeplinească solicitarea.'
         temporarily_unavailable: 'Serverul de autorizare este momentan incapabil să gestioneze solicitarea din cauza unei supraîncărcări temporare sau a unei mentenanțe.'

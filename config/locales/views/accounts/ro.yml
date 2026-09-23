@@ -2,28 +2,57 @@
 ro:
   accounts:
     account:
-      link_lunchflow: Conectare cu Lunch Flow
+      link_lunchflow: Conectează cu Lunch Flow
       troubleshoot: Depanare
+      complete_setup: Finalizează configurarea
+      edit: Editează
+      link_provider: Conectează la furnizor
+      unlink_provider: Deconectează de la furnizor
+      change_simplefin_account: Schimbă contul SimpleFIN
+      enable: Activează contul
+      disable: Dezactivează contul
+      exclude_from_reports: Exclude din toate rapoartele
+      include_in_reports: Include în rapoarte
+      excluded_from_reports_indicator: Exclus din rapoarte
+      set_default: Setează ca implicit
+      remove_default: Elimină ca implicit
+      default_label: Implicit
+      delete: Șterge contul
+      sharing: Partajare
     chart:
       data_not_available: Date indisponibile pentru perioada selectată
     create:
       success: "Cont %{type} creat"
     destroy:
       success: "Cont %{type} programat pentru ștergere"
+      cannot_delete_linked: Un cont conectat nu poate fi șters. Deconectează-l mai întâi.
+      failed: Ștergerea a eșuat. Încearcă din nou mai târziu.
     empty:
       empty_message: Adaugă un cont fie prin conexiune, import sau introducere manuală.
       new_account: Cont nou
       no_accounts: Încă nu există conturi
     form:
-      balance: Sold curent
+      balance: "Sold la dată:"
       name_label: Nume cont
       name_placeholder: Exemplu nume cont
+      opening_balance_date_label: Data soldului inițial
+      additional_details: Detalii suplimentare
+      institution_name_label: Nume instituție
+      institution_name_placeholder: ex. Banca Transilvania
+      institution_domain_label: Domeniu instituție
+      institution_domain_placeholder: ex. bancatransilvania.ro
+      notes_label: Note
+      notes_placeholder: Păstrează informații suplimentare precum numere de cont, IBAN, cod SWIFT/BIC etc.
+      exclude_from_reports: Exclude din toate rapoartele
+      enable_category_matcher_label: Activează potrivirea categoriilor
+      enable_category_matcher_hint: Când este activată, categoria sugerată de furnizor se aplică tranzacțiilor importate. Dezactivează pentru a lăsa tranzacțiile noi necategorizate.
     index:
       accounts: Conturi
       manual_accounts:
         other_accounts: Alte conturi
       new_account: Cont nou
       sync: Sincronizează tot
+      cancel_sync: Anulează sincronizarea
     new:
       import_accounts: Importă conturi
       method_selector:
@@ -34,6 +63,12 @@ ro:
         manual_entry: Introdu soldul contului
         title: Cum dorești să adaugi?
       title: Ce dorești să adaugi?
+      container:
+        select: Selectează
+        navigate: Navighează
+        close: Închide
+        next: Înainte
+        previous: Înapoi
     show:
       activity:
         amount: Sumă
@@ -48,6 +83,14 @@ ro:
         search:
           placeholder: Caută înregistrări după nume
         title: Activitate
+        confirmed: Înregistrate
+        filter: Filtrează
+        new_activity: Activitate nouă
+        new_trade: Tranzacție bursieră nouă
+        new_transfer: Transfer nou
+        pending: În așteptare
+        search_placeholder: Caută înregistrări după nume
+        status: Stare
       chart:
         balance: Sold
         owed: Sumă datorată
@@ -58,6 +101,22 @@ ro:
         edit: Editează
         import: Importă tranzacții
         manage: Gestionează conturi
+        delete_account: Șterge contul
+        import_trades: Importă tranzacții bursiere
+        import_transactions: Importă tranzacții
+        sharing: Partajare
+        statements: Extrase
+        exclude_from_reports: Exclude din toate rapoartele
+        include_in_reports: Include în rapoarte
+      limited_fx_history_warning: Istoricul cursurilor de schimb este disponibil doar începând cu %{date}. Tranzacțiile anterioare acestei date folosesc conversii valutare aproximative — acest lucru se poate întâmpla când furnizorul de cursuri valutare oferă doar un interval istoric limitat.
+      tabs:
+        activity: Activitate
+        holdings: Dețineri
+        overview: Prezentare generală
+        schedule: Grafic de plăți
+        statements: Extrase
+      header:
+        complete_setup: Finalizează configurarea
     update:
       success: "Cont %{type} actualizat"
     sidebar:
@@ -72,6 +131,8 @@ ro:
       new_debt: Datorie nouă
       new_account: Cont nou
       new_account_group: "%{account_group} nou"
+      expand_all: Extinde tot
+      collapse_all: Restrânge tot
     types:
       depository: Numerar
       investment: Investiții
@@ -82,8 +143,64 @@ ro:
       credit_card: Card de credit
       loan: Împrumut
       other_liability: Altă datorie
+    not_authorized: Nu ai permisiunea de a gestiona acest cont
+    set_default:
+      depository_only: Doar conturile de numerar și cardurile de credit pot fi setate ca implicite.
+    sync_all:
+      syncing: Se sincronizează conturile...
+    types_plural:
+      depository: Numerar
+      investment: Investiții
+      crypto: Crypto
+      property: Proprietăți
+      vehicle: Vehicule
+      other_asset: Alte active
+      credit_card: Carduri de credit
+      loan: Împrumuturi
+      other_liability: Alte datorii
+    tax_treatments:
+      taxable: Impozabil
+      tax_deferred: Cu impozitare amânată
+      tax_exempt: Scutit de impozit
+      tax_advantaged: Cu avantaje fiscale
+    tax_treatment_descriptions:
+      taxable: Câștigurile sunt impozitate la realizare
+      tax_deferred: Contribuții deductibile, impozitare la retragere
+      tax_exempt: Contribuții din venit impozitat, câștiguri neimpozitate
+      tax_advantaged: Beneficii fiscale speciale, în anumite condiții
+    subtype_regions:
+      us: Statele Unite
+      uk: Regatul Unit
+      ca: Canada
+      au: Australia
+      eu: Europa
+      in: India
+      generic: General
+    confirm_unlink:
+      title: Deconectezi contul de la furnizor?
+      description_html: Urmează să deconectezi <strong>%{account_name}</strong> de la <strong>%{provider_name}</strong>. Acesta va deveni un cont manual.
+      warning_title: Ce înseamnă acest lucru
+      warning_no_sync: Contul nu se va mai sincroniza automat cu furnizorul
+      warning_manual_updates: Va trebui să adaugi tranzacții și să actualizezi soldurile manual
+      warning_transactions_kept: Toate tranzacțiile și soldurile existente vor fi păstrate
+      warning_can_delete: După deconectare, vei putea șterge contul dacă este necesar
+      confirm_button: Confirmă și deconectează
+    unlink:
+      success: Contul a fost deconectat. Acum este un cont manual.
+      not_linked: Contul nu este conectat la un furnizor
+      error: 'Deconectarea contului a eșuat: %{error}'
+      generic_error: A apărut o eroare neașteptată. Încearcă din nou.
+    select_provider:
+      title: Selectează un furnizor pentru conectare
+      description: Alege furnizorul pe care vrei să-l folosești pentru a conecta %{account_name}
+      already_linked: Contul este deja conectat la un furnizor
+      no_providers: Momentan nu este configurat niciun furnizor
 
   email_confirmations:
     new:
       invalid_token: Link de confirmare invalid sau expirat.
       success_login: Adresa ta de e-mail a fost confirmată. Te rugăm să te autentifici cu noua ta adresă de e-mail.
+  account:
+    entries:
+      destroy:
+        success: Înregistrarea a fost ștearsă.

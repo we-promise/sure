@@ -5,13 +5,17 @@ ro:
       brokerage_cash: Numerar de brokeraj
     destroy:
       success: Deținerea a fost ștearsă
+      cannot_delete: Nu poți șterge această deținere
     holding:
       per_share: per acțiune
       shares: "%{qty} acțiuni"
+      unknown: --
+      no_cost_basis: Fără cost de achiziție
     index:
       positions:
         one: "%{count} poziție"
-        other: "%{count} poziții"
+        other: "%{count} de poziții"
+        few: '%{count} poziții'
       average_cost: Cost mediu
       holdings: Dețineri
       name: Nume
@@ -38,3 +42,66 @@ ro:
       trade_history_entry: "%{qty} acțiuni din %{security} la %{price}"
       total_return_label: Randament total
       unknown: Necunoscut
+      edit_security: Editează instrumentul
+      no_trade_history: Nu există istoric de tranzacții pentru această deținere.
+      security_label: Instrument financiar
+      originally: anterior %{ticker}
+      search_security: Caută instrument
+      search_security_placeholder: Caută după simbol sau nume
+      cancel: Anulează
+      remap_security: Salvează
+      provider_disabled_warning: Actualizările de preț sunt oprite — furnizorul %{provider} este dezactivat. Treci la alt furnizor mai jos sau reactivează-l în Setări.
+      truncated_history_warning: Istoricul prețurilor este disponibil doar începând cu %{date}. Pentru datele anterioare nu există informații de la furnizorul selectat — acest lucru se poate întâmpla când activul a fost listat după data tranzacției tale sau când furnizorul oferă doar un istoric limitat în planul său curent.
+      switch_provider_label: Schimbă furnizorul
+      switch_provider_description: '%{provider} este dezactivat. Caută acest instrument la alt furnizor activat.'
+      switch_provider_button: Schimbă
+      no_security_provider: Furnizorul de date pentru instrumente financiare nu este configurat. Nu se pot căuta instrumente.
+      security_remapped_label: Instrument remapat
+      provider_sent: 'Trimis de furnizor: %{ticker}'
+      reset_to_provider: Resetează la valoarea furnizorului
+      reset_confirm_title: Resetezi instrumentul la valoarea furnizorului?
+      reset_confirm_body: Aceasta va schimba instrumentul din %{current} înapoi în %{original} și va muta toate tranzacțiile asociate.
+      cost_basis_locked_label: Costul de achiziție este blocat
+      cost_basis_locked_description: Costul de achiziție setat manual nu va fi modificat de sincronizări.
+      unlock_cost_basis: Deblochează
+      unlock_confirm_title: Deblochezi costul de achiziție?
+      unlock_confirm_body: Aceasta va permite actualizarea costului de achiziție prin sincronizările cu furnizorul sau prin calculele din tranzacții.
+      shares_label: Acțiuni
+      book_value_label: Valoare contabilă
+      market_value_label: Valoare de piață
+      market_data_label: Date de piață
+      market_data_sync_button: Actualizează
+      last_price_update: Ultima actualizare a prețului
+      syncing: Se sincronizează...
+      never: Niciodată
+    update:
+      success: Costul de achiziție a fost salvat.
+      error: Valoare invalidă pentru costul de achiziție.
+    unlock_cost_basis:
+      success: Costul de achiziție a fost deblocat. Poate fi actualizat la următoarea sincronizare.
+    remap_security:
+      success: Instrumentul financiar a fost actualizat cu succes.
+      security_not_found: Instrumentul financiar selectat nu a fost găsit.
+    reset_security:
+      success: Instrumentul financiar a fost resetat la valoarea furnizorului.
+    sync_prices:
+      success: Datele de piață au fost sincronizate cu succes.
+      unavailable: Sincronizarea datelor de piață nu este disponibilă pentru instrumentele offline.
+      provider_error: Nu s-au putut prelua cele mai recente prețuri. Încearcă din nou în câteva minute.
+    errors:
+      security_collision: 'Nu se poate remapa: ai deja o deținere pentru %{ticker} la %{date}.'
+    cost_basis_sources:
+      manual: Setat de utilizator
+      calculated: Din tranzacții
+      provider: De la furnizor
+    cost_basis_cell:
+      unknown: --
+      set: Setează
+      set_cost_basis_header: Setează costul de achiziție pentru %{ticker} (%{qty} acțiuni)
+      total_cost_basis_label: Cost total de achiziție
+      or_per_share_label: 'Sau introdu per acțiune:'
+      per_share: per acțiune
+      cancel: Anulează
+      save: Salvează
+      overwrite_confirm_title: Suprascrii costul de achiziție?
+      overwrite_confirm_body: Aceasta va înlocui costul de achiziție curent de %{current}.

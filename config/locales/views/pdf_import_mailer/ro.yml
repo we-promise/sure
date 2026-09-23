@@ -1,0 +1,17 @@
+---
+ro:
+  pdf_import_mailer:
+    next_steps:
+      greeting: Salut, %{name},
+      intro: Am terminat de analizat documentul PDF pe care l-ai încărcat în %{product}.
+      document_type_label: Tipul documentului
+      summary_label: Rezumat AI
+      transactions_note: Se pare că acest document conține tranzacții. Le poți extrage și verifica acum.
+      document_stored_note: Acest document a fost păstrat pentru referință. Poate fi folosit ca context în conversațiile viitoare cu AI.
+      next_steps_label: Ce urmează?
+      next_steps_intro: 'Ai mai multe opțiuni:'
+      option_extract_transactions: Extrage tranzacțiile din acest extras de cont
+      option_keep_reference: Păstrează acest document ca referință pentru conversațiile viitoare cu AI
+      option_delete: Șterge acest import dacă nu mai ai nevoie de el
+      view_import_button: Vezi detaliile importului
+      footer_note: Acesta este un mesaj automat. Te rugăm să nu răspunzi direct la acest email.

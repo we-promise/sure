@@ -1,0 +1,10 @@
+---
+ro:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_chat_system: Prompt de sistem pentru chat
+        ai_prompt_categorizer_openai: Prompt pentru categorizatorul de tranzacții (OpenAI)
+        ai_prompt_categorizer_anthropic: Prompt pentru categorizatorul de tranzacții (Anthropic)
+        ai_prompt_merchant_openai: Prompt pentru detectorul de comercianți (OpenAI)
+        ai_prompt_merchant_anthropic: Prompt pentru detectorul de comercianți (Anthropic)

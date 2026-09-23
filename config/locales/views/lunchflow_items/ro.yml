@@ -13,43 +13,71 @@ ro:
     link_accounts:
       all_already_linked:
         one: "Contul selectat (%{names}) este deja conectat"
-        other: "Toate cele %{count} conturi selectate sunt deja conectate: %{names}"
+        other: "Toate cele %{count} de conturi selectate sunt deja conectate: %{names}"
+        few: 'Toate cele %{count} conturi selectate sunt deja conectate: %{names}'
       api_error: "Eroare API: %{message}"
       link_failed: Conectarea conturilor a eșuat
-      no_accounts_selected: Vă rugăm să selectați cel puțin un cont
-      partial_success: "S-au conectat cu succes %{created_count} cont(uri). %{already_linked_count} cont(uri) erau deja conectate: %{already_linked_names}"
+      no_accounts_selected: Te rugăm să selectezi cel puțin un cont
+      partial_success: "Conturi conectate cu succes: %{created_count}. Conturi deja conectate (%{already_linked_count}): %{already_linked_names}"
       success:
         one: "S-a conectat cu succes %{count} cont"
-        other: "S-au conectat cu succes %{count} conturi"
+        other: "S-au conectat cu succes %{count} de conturi"
+        few: S-au conectat cu succes %{count} conturi
+      invalid_account_names:
+        one: Nu se poate conecta un cont fără nume
+        few: Nu se pot conecta %{count} conturi fără nume
+        other: Nu se pot conecta %{count} de conturi fără nume
+      partial_invalid: "Conturi conectate cu succes: %{created_count}; deja conectate: %{already_linked_count}; cu nume invalide: %{invalid_count}"
     lunchflow_item:
       delete: Șterge conexiunea
       deletion_in_progress: ștergere în curs...
       error: Eroare
-      no_accounts_description: Această conexiune nu are încă conturi legate.
+      no_accounts_description: Această conexiune nu are încă niciun cont conectat.
       no_accounts_title: Niciun cont
       status: "Sincronizat acum %{timestamp}"
       status_never: Niciodată sincronizat
       syncing: Se sincronizează...
+      accounts_need_setup: Conturile necesită configurare
+      setup_action: Configurează conturile noi
+      setup_description: '%{linked} din %{total} conturi conectate. Alege tipurile de cont pentru conturile Lunch Flow nou importate.'
+      setup_needed: Conturi noi gata de configurare
+      status_with_summary: Ultima sincronizare acum %{timestamp} • %{summary}
+      sync_status:
+        no_accounts: Nu s-au găsit conturi
+        synced:
+          one: '%{count} cont sincronizat'
+          few: '%{count} conturi sincronizate'
+          other: '%{count} de conturi sincronizate'
+        partial_setup:
+          one: '%{linked} sincronizate, %{unlinked} necesită configurare'
+          few: '%{linked} sincronizate, %{unlinked} necesită configurare'
+          other: '%{linked} sincronizate, %{unlinked} necesită configurare'
+      total: Total
+      unlinked: Neconectate
     select_accounts:
       accounts_selected: conturi selectate
       api_error: "Eroare API: %{message}"
       cancel: Anulează
-      description: Selectați conturile pe care doriți să le conectați la contul dumneavoastră Sure.
+      description: Selectează conturile pe care vrei să le conectezi la contul tău %{product_name}.
       link_accounts: Conectează conturile selectate
-      no_accounts_found: Nu s-au găsit conturi. Vă rugăm să verificați configurația cheii API.
-      no_api_key: Cheia API Lunch Flow nu este configurată. Vă rugăm să o configurați în Setări.
-      title: Selectați conturile Lunch Flow
+      no_accounts_found: Nu s-au găsit conturi. Te rugăm să verifici configurația cheii API.
+      no_api_key: Cheia API Lunch Flow nu este configurată. Te rugăm să o configurezi în Setări.
+      title: Selectează conturile Lunch Flow
+      configure_name_in_lunchflow: Nu se poate importa - configurează numele contului în Lunchflow
+      no_name_placeholder: (Fără nume)
     select_existing_account:
       account_already_linked: Acest cont este deja conectat la un furnizor
       all_accounts_already_linked: Toate conturile Lunch Flow sunt deja conectate
       api_error: "Eroare API: %{message}"
       cancel: Anulează
-      description: Selectați un cont Lunch Flow pentru a-l conecta cu acest cont. Tranzacțiile vor fi sincronizate și deduplicate automat.
+      description: Selectează un cont Lunch Flow pentru a-l conecta la acest cont. Tranzacțiile vor fi sincronizate și deduplicate automat.
       link_account: Conectează contul
       no_account_specified: Niciun cont specificat
-      no_accounts_found: Nu s-au găsit conturi Lunch Flow. Vă rugăm să verificați configurația cheii API.
-      no_api_key: Cheia API Lunch Flow nu este configurată. Vă rugăm să o configurați în Setări.
+      no_accounts_found: Nu s-au găsit conturi Lunch Flow. Te rugăm să verifici configurația cheii API.
+      no_api_key: Cheia API Lunch Flow nu este configurată. Te rugăm să o configurezi în Setări.
       title: "Conectează %{account_name} cu Lunch Flow"
+      configure_name_in_lunchflow: Nu se poate importa - configurează numele contului în Lunchflow
+      no_name_placeholder: (Fără nume)
     link_existing_account:
       account_already_linked: Acest cont este deja conectat la un furnizor
       api_error: "Eroare API: %{message}"
@@ -57,7 +85,102 @@ ro:
       lunchflow_account_not_found: Contul Lunch Flow nu a fost găsit
       missing_parameters: Parametri lipsă
       success: "S-a conectat cu succes %{account_name} cu Lunch Flow"
+      invalid_account_name: Nu se poate conecta un cont fără nume
     sync:
       success: Sincronizarea a început
     update:
       success: Conexiunea Lunch Flow a fost actualizată
+    api_error:
+      title: Eroare de conexiune Lunch Flow
+      unable_to_connect: Nu se poate realiza conexiunea la Lunch Flow
+      common_issues: 'Probleme frecvente:'
+      invalid_api_key_label: Cheie API invalidă
+      invalid_api_key_desc: Verifică cheia API în Setările furnizorilor
+      expired_credentials_label: Date de autentificare expirate
+      expired_credentials_desc: Generează o cheie API nouă din Lunch Flow
+      network_issue_label: Problemă de rețea
+      network_issue_desc: Verifică conexiunea la internet
+      service_down_label: Serviciu indisponibil
+      service_down_desc: API-ul Lunch Flow poate fi temporar indisponibil
+      check_provider_settings: Verifică setările furnizorului
+      unexpected_error: A apărut o eroare neașteptată. Te rugăm să încerci din nou mai târziu.
+    setup_required:
+      title: Configurare Lunch Flow necesară
+      api_key_not_configured: Cheia API nu este configurată
+      api_key_description: Înainte de a putea conecta conturi Lunch Flow, trebuie să configurezi cheia API Lunch Flow.
+      setup_steps_title: 'Pași de configurare:'
+      setup_step_1_html: Accesează <strong>Setări → Furnizori</strong>
+      setup_step_2_html: Găsește secțiunea <strong>Lunch Flow</strong>
+      setup_step_3: Introdu cheia API Lunch Flow
+      setup_step_4: Revino aici pentru a-ți conecta conturile
+      go_to_provider_settings: Accesează Setările furnizorilor
+    subtype_select:
+      placeholder:
+        subtype: Selectează subtipul
+        type: Selectează tipul
+    setup_accounts:
+      account_type_label: 'Tip de cont:'
+      all_accounts_linked: Toate conturile Lunch Flow au fost deja configurate.
+      api_error: 'Eroare API: %{message}'
+      fetch_failed: Preluarea conturilor a eșuat
+      no_accounts_to_setup: Niciun cont de configurat
+      no_api_key: Cheia API Lunch Flow nu este configurată. Te rugăm să verifici setările conexiunii.
+      page_title: Configurare conturi Lunch Flow
+      account_types:
+        skip: Omite acest cont
+        depository: Cont curent sau de economii
+        credit_card: Card de credit
+        investment: Cont de investiții
+        loan: Împrumut sau credit ipotecar
+        other_asset: Alt activ
+      subtype_labels:
+        depository: 'Subtip de cont:'
+        credit_card: ''
+        investment: 'Tip de investiție:'
+        loan: 'Tip de împrumut:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Cardurile de credit vor fi configurate automat ca conturi de card de credit.
+        other_asset: Nu sunt necesare opțiuni suplimentare pentru alte active.
+      subtypes:
+        depository:
+          checking: Cont curent
+          savings: Cont de economii
+          hsa: Cont de economii pentru sănătate (HSA)
+          cd: Depozit la termen
+          money_market: Cont de piață monetară
+        investment:
+          brokerage: Cont de brokeraj
+          pension: Pensie
+          retirement: Pensionare
+          401k: 401(k)
+          roth_401k: Roth 401(k)
+          403b: 403(b)
+          tsp: Thrift Savings Plan (TSP)
+          529_plan: Plan 529
+          hsa: Cont de economii pentru sănătate (HSA)
+          mutual_fund: Fond mutual
+          ira: IRA tradițional
+          roth_ira: Roth IRA
+          angel: Investiție angel
+        loan:
+          mortgage: Credit ipotecar
+          student: Împrumut pentru studii
+          auto: Credit auto
+          other: Alt împrumut
+      balance: Sold
+      cancel: Anulează
+      choose_account_type: 'Alege tipul corect de cont pentru fiecare cont Lunch Flow:'
+      create_accounts: Creează conturile
+      creating_accounts: Se creează conturile...
+      historical_data_range: 'Interval de date istorice:'
+      subtitle: Alege tipurile corecte de cont pentru conturile importate
+      sync_start_date_help: Selectează cât de departe în trecut vrei să sincronizezi istoricul tranzacțiilor. Este disponibil un istoric de maximum 3 ani.
+      sync_start_date_label: 'Sincronizează tranzacțiile începând cu:'
+      title: Configurează conturile Lunch Flow
+    complete_account_setup:
+      all_skipped: Toate conturile au fost omise. Nu a fost creat niciun cont.
+      creation_failed: 'Crearea conturilor a eșuat: %{error}'
+      no_accounts: Niciun cont de configurat.
+      success: "Conturi create cu succes: %{count}."
+      unexpected_error: A apărut o eroare neașteptată

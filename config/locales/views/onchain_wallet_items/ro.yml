@@ -1,0 +1,115 @@
+---
+ro:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Activitate găsită
+      explanation: Acest format de adresă este folosit de mai multe rețele, iar soldurile diferă de la una la alta. Alege rețeaua pe care vrei s-o urmărești.
+      no_activity_found: Nimic găsit
+      subtitle: '%{address}'
+      title: Ce rețea?
+    destroy:
+      success: Conexiunea cu portofelul self-custody a fost programată pentru ștergere.
+    disconnect_asset:
+      success: Nu mai urmărești %{symbol}. Contul și istoricul au fost păstrate.
+    disconnect_wallet:
+      success:
+        one: Nu mai urmărești %{count} activ la această adresă.
+        few: Nu mai urmărești %{count} active la această adresă.
+        other: Nu mai urmărești %{count} de active la această adresă.
+    enable_crypto_prices:
+      not_self_hosted: Pe această instalare, furnizorii de date de piață sunt configurați de operatorul instanței.
+      success: Prețurile crypto sunt activate. Valorile portofelelor vor apărea după următoarea sincronizare.
+    errors:
+      address_required: Introdu o adresă de portofel.
+      already_linked: Această adresă este deja urmărită în această rețea. Folosește „Verifică tokenurile” pentru a schimba activele urmărite.
+      chain_unreachable: Exploratorul public pentru această rețea nu a putut fi accesat. Încearcă din nou peste câteva momente.
+      rate_limited: Exploratorul public limitează momentan cererile. Încearcă din nou peste câteva minute.
+      unexpected: A apărut o problemă la citirea acestui portofel. Detaliile au fost înregistrate pentru echipa de suport.
+      unrecognized_address: Aceasta nu pare a fi o adresă din nicio rețea acceptată.
+      wallet_not_found: Acest portofel nu este urmărit de această conexiune.
+    link_wallet:
+      errors:
+        none_tracked: 'Nu a fost urmărit nimic: %{assets} nu a(u) putut fi adăugat(e). Încearcă din nou peste câteva momente.'
+        nothing_selected: Alege cel puțin un activ de urmărit.
+        some_failed: '%{assets} nu a(u) putut fi urmărit(e) și a(u) fost omis(e).'
+      success:
+        one: Se urmărește %{count} activ din acest portofel.
+        few: Se urmăresc %{count} active din acest portofel.
+        other: Se urmăresc %{count} de active din acest portofel.
+    manage:
+      assets_truncated: Această adresă deține mai multe tokenuri decât pot fi citite o dată, așa că sunt listate doar cele mai credibile %{count}. Tot ce este deja urmărit continuă să se sincronizeze.
+      disconnect_asset: Nu mai urmări
+      disconnect_asset_confirm: Nu mai urmărești %{symbol}? Contul și istoricul sunt păstrate, dar nu se mai actualizează.
+      disconnect_wallet: Deconectează portofelul
+      disconnect_wallet_confirm: Nu mai urmărești niciun activ de la această adresă?
+      history_note: Deconectarea păstrează conturile și istoricul lor; acestea doar nu se mai actualizează.
+      history_truncated: Nu toate transferurile acestei adrese au putut fi citite — istoricul este mai lung decât acoperă o sincronizare sau exploratorul a refuzat cererea. Soldurile sunt complete; lipsesc unele transferuri.
+      native: Nativ
+      no_wallets: Niciun portofel nu este urmărit încă.
+      review_tokens: Verifică tokenurile
+      subtitle: Fiecare adresă citită de această conexiune și ce urmărește la fiecare.
+      title: Gestionează portofelele self-custody
+    new_wallet:
+      address_label: Adresa portofelului
+      address_placeholder: bc1..., 0x... sau o adresă Solana
+      bitcoin_single_address_note: Bitcoin este urmărit câte o adresă pe rând. Cheile extinse (xpub/ypub/zpub) nu sunt acceptate, așa că un portofel care distribuie fondurile pe mai multe adrese derivate va afișa doar soldul adresei introduse.
+      chain_auto_detect: Detectează automat
+      chain_label: Rețea
+      continue: Continuă
+      read_only_note: Sunt citite doar datele publice din blockchain. Nu introduce niciodată fraza de recuperare (seed phrase) sau cheia privată.
+      subtitle: Urmărește un portofel pentru care deții cheile, pe baza adresei sale publice.
+      title: Adaugă un portofel self-custody
+    onchain_wallet_item:
+      assets_tracked:
+        one: '%{count} activ urmărit'
+        few: '%{count} active urmărite'
+        other: '%{count} de active urmărite'
+      sync: Sincronizează acum
+      syncing: Se sincronizează...
+    wallet_card:
+      addresses_tracked:
+        one: '%{count} adresă urmărită'
+        few: '%{count} adrese urmărite'
+        other: '%{count} de adrese urmărite'
+      deletion_in_progress: Se elimină...
+      delete: Elimină conexiunea
+      needs_attention: Necesită atenție
+      no_wallets_message: Conectează o adresă din setările furnizorilor pentru a o vedea aici.
+      no_wallets_title: Niciun portofel conectat încă
+      status: Sincronizat acum %{timestamp}
+      sync: Sincronizează acum
+      status_never: Nesincronizat încă
+      syncing: Se sincronizează...
+    price_provider_warning:
+      body: Niciun furnizor de date de piață activat nu poate evalua criptomonedele, așa că aceste portofele urmăresc cantitățile, dar afișează valoarea zero.
+      enable: Activează prețurile crypto
+      exchange_rate_body: Criptomonedele sunt evaluate în USD și nu este configurat niciun furnizor de cursuri de schimb pentru conversia în %{currency}, așa că aceste portofele urmăresc cantitățile, dar afișează valoarea zero. Setează EXCHANGE_RATE_PROVIDER — Frankfurter nu necesită cheie API.
+      exchange_rate_title: Nu este configurat niciun furnizor de cursuri de schimb
+      link: Deschide setările datelor de piață
+      title: Prețurile crypto nu sunt configurate
+    provider_connection:
+      description: Urmărește un portofel pentru care deții cheile, pe baza adresei sale publice.
+      name: Portofel self-custody
+    review_tokens:
+      save: Salvează activele urmărite
+      subtitle: '%{chain} · %{address}'
+      title: Verifică activele urmărite
+    token_review:
+      import_selected: Urmărește activele selectate
+      subtitle: '%{chain} · %{address}'
+      title: Alege ce vrei să urmărești
+    token_review_form:
+      assets_truncated: Această adresă deține mai multe tokenuri decât pot fi citite o dată, așa că sunt listate doar cele mai credibile %{count}.
+      cancel: Anulează
+      explanation: Activele cu preț cunoscut sunt bifate. Restul rămân nebifate — portofelele primesc airdropuri spam, iar urmărirea lor nu are nicio valoare.
+      native: Nativ
+      no_price: Niciun preț disponibil; urmărit doar după cantitate
+      nothing_found: Această adresă nu deține nimic vizibil în această rețea.
+    update:
+      success: Conexiunea cu portofelul self-custody a fost actualizată.
+    update_tokens:
+      errors:
+        no_changes: Nimic nu s-a schimbat; sunt bifate aceleași active.
+        none_tracked: 'Nimic nu s-a schimbat: %{assets} nu a(u) putut fi adăugat(e). Încearcă din nou peste câteva momente.'
+        some_failed: '%{assets} nu a(u) putut fi urmărit(e) și a(u) fost omis(e).'
+      success: Activele urmărite au fost actualizate (%{created} adăugate, %{removed} eliminate).

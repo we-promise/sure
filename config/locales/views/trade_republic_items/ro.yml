@@ -19,20 +19,76 @@ ro:
       setup_accounts: "Configurează conturile"
       delete: "Șterge"
       accounts_need_setup: "Contul necesită configurare"
-      accounts_need_setup_description: "Contul tău Trade Republic trebuie asociat unui cont Sure."
+      accounts_need_setup_description: "Contul tău Trade Republic trebuie conectat la un cont Sure."
       no_accounts_discovered: "Niciun cont Trade Republic nu a fost descoperit încă."
       no_accounts_discovered_description: "Finalizează autentificarea și rulează o sincronizare pentru a descoperi contul."
       data_quality:
         title: "Calitatea datelor și detalii de sincronizare"
         repair: "Repară datele importate"
+        positions:
+          one: '%{count} poziție'
+          few: '%{count} poziții'
+          other: '%{count} de poziții'
+        unpriced:
+          one: '%{count} fără preț curent'
+          few: '%{count} fără preț curent'
+          other: '%{count} fără preț curent'
+        events:
+          one: '%{count} activitate'
+          few: '%{count} activități'
+          other: '%{count} de activități'
+        unknown:
+          one: '%{count} activitate necunoscută'
+          few: '%{count} activități necunoscute'
+          other: '%{count} de activități necunoscute'
+        expenses:
+          one: '%{count} cheltuială în ultimele 30 de zile (%{amount})'
+          few: '%{count} cheltuieli în ultimele 30 de zile (%{amount})'
+          other: '%{count} de cheltuieli în ultimele 30 de zile (%{amount})'
+        reconciliation: 'Solduri de cont reconciliate: %{matched}/%{total}'
+        sync_history: Sincronizări recente
+        sync_status:
+          completed: Finalizată
+          failed: Eșuată
+          pending: În așteptare
+          syncing: Se sincronizează
+          stale: Învechită
+      deletion_in_progress: Ștergere în curs
+      never_synced: Nesincronizat niciodată.
     setup_accounts:
       page_title: "Configurează contul Trade Republic"
-      subtitle: "Asociază contul tău de investiții Trade Republic."
+      subtitle: "Conectează contul tău de investiții Trade Republic."
       buttons:
         refresh: "Reîmprospătează"
         cancel: "Anulează"
-        link: "Asociază"
+        link: "Conectează"
         done: "Gata"
+        back_to_settings: Înapoi la Setări
+        create_selected_accounts: Creează conturile selectate
+      dialog_title: Configurează contul tău Trade Republic
+      info_box:
+        title: Import Trade Republic
+        items:
+          item_1: Pozițiile curente, cu prețuri și cantități
+          item_2: Ordinele executate (cumpărări și vânzări)
+          item_3: Depuneri, retrageri și plăți de dobânzi
+      status:
+        fetching_accounts: Se preia contul din Trade Republic...
+        no_accounts_found_title: Nu a fost găsit niciun cont.
+        no_accounts_found_description: Sure nu a găsit niciun cont Trade Republic. Verifică dacă sesiunea ta este încă validă.
+      available_accounts:
+        title: Cont disponibil
+        account_type_investment: Portofoliu de investiții
+        account_type_cash: Cont de numerar
+        account_summary: '%{account_type} • Sold: %{balance}'
+        account_id: 'ID cont: %{account_id}'
+      link_existing:
+        description: Sau conectează contul Trade Republic descoperit la un cont de investiții manual existent.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Selectează un cont...
+      linked_accounts:
+        title: Deja conectat
+        linked_to_html: 'Conectat la: %{account}'
     sync:
       errors:
         phone_number_missing: "Lipsește numărul de telefon Trade Republic."
@@ -42,21 +98,38 @@ ro:
         importing_account: "Se importă contul Trade Republic..."
         processing_activity: "Se procesează pozițiile și activitatea..."
         calculating_balances: "Se calculează soldurile..."
+        checking_configuration: Se verifică configurația contului...
+        accounts_need_setup:
+          one: '%{count} cont Trade Republic necesită configurare...'
+          few: '%{count} conturi Trade Republic necesită configurare...'
+          other: '%{count} de conturi Trade Republic necesită configurare...'
     repair:
       scheduled: "Repararea datelor Trade Republic a fost programată."
     select_existing_account:
-      title: "Asociază un cont Trade Republic"
-      link: "Asociază"
+      title: "Conectează un cont Trade Republic"
+      link: "Conectează"
       cancel: "Anulează"
+      no_accounts_available: Nu există încă niciun cont Trade Republic neconectat disponibil.
+      run_sync_hint: Finalizează autentificarea și rulează o sincronizare din Setări > Furnizori.
+      wait_for_sync: Așteaptă finalizarea sincronizării de descoperire a contului.
+      balance: Sold
     initiate_login:
       verification_required: "Autentificarea a început. Confirmă prin %{method}, apoi apasă Confirmă autentificarea."
+      not_configured: Trade Republic nu este configurat.
+      pin_required: Introdu PIN-ul Trade Republic pentru a începe o nouă autentificare.
     complete_login:
       approval_pending: "Nu a fost confirmat încă. Aprobă autentificarea în aplicația Trade Republic și încearcă din nou."
       success: "Trade Republic a fost conectat cu succes."
       login_expired: "Solicitarea de autentificare a expirat. Începe din nou."
+      no_pending_login: Nu există nicio autentificare în curs. Începe mai întâi o nouă autentificare.
+      still_pending: Nu a fost confirmat încă. Aprobă autentificarea în aplicația Trade Republic și încearcă din nou.
     link_existing_account:
       not_found: "Contul sau configurația Trade Republic nu a fost găsită."
-      success: "Cont asociat cu succes la Trade Republic."
+      success: "Cont conectat cu succes la Trade Republic."
+      only_manual_investment: Doar conturile de investiții manuale pot fi conectate la Trade Republic.
+      already_linked: Acest cont Trade Republic este deja conectat.
+      processing_failed: Contul a fost conectat, dar procesarea inițială a datelor a eșuat. A fost programată o sincronizare; verifică jurnalul de depanare dacă datele rămân incomplete.
+      failed: Conectarea contului Trade Republic a eșuat.
     complete_account_setup:
       success:
         one: "A fost creat cu succes %{count} cont Trade Republic."
@@ -67,6 +140,7 @@ ro:
         one: "Un cont Trade Republic selectat nu a putut fi configurat complet. Verifică jurnalul de depanare și încearcă din nou."
         few: "%{count} conturi Trade Republic selectate nu au putut fi configurate complet. Verifică jurnalul de depanare și încearcă din nou."
         other: "%{count} de conturi Trade Republic selectate nu au putut fi configurate complet. Verifică jurnalul de depanare și încearcă din nou."
+      none_selected: Nu a fost selectat niciun cont.
     activities:
       labels:
         contribution: Contribuție
@@ -80,3 +154,30 @@ ro:
         tax_refund: Rambursare fiscală
         buy: Cumpărare
         sell: Vânzare
+    defaults:
+      name: Trade Republic
+    sync_status:
+      no_accounts: Niciun cont Trade Republic descoperit încă
+      all_linked:
+        one: '%{count} cont conectat'
+        few: '%{count} conturi conectate'
+        other: '%{count} de conturi conectate'
+      partial: 'Conectate: %{linked}, necesită configurare: %{unlinked}'
+    create:
+      success: Trade Republic a fost salvat. Confirmă autentificarea în aplicația Trade Republic pentru a finaliza conectarea.
+    update:
+      success: Configurația Trade Republic a fost actualizată cu succes.
+      pin_required: Introdu PIN-ul Trade Republic pentru a te reautentifica.
+    destroy:
+      success: Conexiunea Trade Republic a fost programată pentru ștergere.
+      unlink_failed: Trade Republic nu a putut fi deconectat complet. Conexiunea a fost păstrată pentru a putea reîncerca în siguranță.
+    select_accounts:
+      not_configured: Trade Republic nu este configurat.
+    initiate_qr_login:
+      not_configured: Trade Republic nu este configurat.
+    poll_login:
+      no_pending_login: Nu există nicio autentificare în curs. Începe mai întâi o nouă autentificare.
+      login_expired: Solicitarea de autentificare a expirat. Începe din nou.
+    poll_qr_login:
+      no_pending_login: Nu există nicio autentificare prin cod QR în curs.
+      success: Trade Republic a fost conectat cu succes.

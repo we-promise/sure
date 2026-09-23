@@ -1,0 +1,318 @@
+---
+ro:
+  sophtron_items:
+    defaults:
+      name: Conexiune Sophtron
+    new:
+      title: Conectează Sophtron
+      user_id: ID utilizator
+      user_id_placeholder: lipește ID-ul de utilizator Sophtron
+      access_key: Cheie de acces
+      access_key_placeholder: lipește cheia de acces Sophtron
+      connect: Conectează
+      cancel: Anulează
+    create:
+      success: Conexiunea Sophtron a fost creată cu succes
+    destroy:
+      success: Conexiunea Sophtron a fost eliminată
+    update:
+      success: Conexiunea Sophtron a fost actualizată cu succes! Conturile tale sunt reconectate.
+      errors:
+        blank_user_id: Introdu un ID de utilizator Sophtron.
+        invalid_user_id: ID de utilizator invalid. Verifică dacă ai copiat ID-ul de utilizator complet din Sophtron.
+        user_id_compromised: ID-ul de utilizator poate fi compromis, expirat sau deja folosit. Creează unul nou.
+        blank_access_key: Introdu o cheie de acces Sophtron.
+        invalid_access_key: Cheie de acces invalidă. Verifică dacă ai copiat cheia de acces completă din Sophtron.
+        access_key_compromised: Cheia de acces poate fi compromisă, expirată sau deja folosită. Creează una nouă.
+        update_failed: 'Actualizarea conexiunii a eșuat: %{message}'
+        unexpected: A apărut o eroare neașteptată. Încearcă din nou sau contactează asistența.
+    edit:
+      user_id:
+        label: 'ID utilizator Sophtron:'
+        placeholder: Lipește aici ID-ul de utilizator Sophtron...
+        help_text: ID-ul de utilizator ar trebui să fie un șir lung de caractere, începând cu litere și cifre
+      access_key:
+        label: 'Cheie de acces Sophtron:'
+        placeholder: Lipește aici cheia de acces Sophtron...
+        help_text: Cheia de acces ar trebui să fie un șir lung de caractere, începând cu litere și cifre
+    index:
+      title: Conexiuni Sophtron
+    loading:
+      loading_message: Se încarcă conturile Sophtron...
+      loading_title: Se încarcă
+    link_accounts:
+      all_already_linked:
+        one: Contul selectat (%{names}) este deja conectat
+        few: 'Toate cele %{count} conturi selectate sunt deja conectate: %{names}'
+        other: 'Toate cele %{count} de conturi selectate sunt deja conectate: %{names}'
+      api_error: Eroare de conexiune API
+      invalid_account_names:
+        one: Nu se poate conecta un cont fără nume
+        few: Nu se pot conecta %{count} conturi fără nume
+        other: Nu se pot conecta %{count} de conturi fără nume
+      link_failed: Conectarea conturilor a eșuat
+      no_accounts_selected: Selectează cel puțin un cont
+      partial_invalid: 'Conturi conectate cu succes: %{created_count}; deja conectate: %{already_linked_count}; cu nume invalide: %{invalid_count}'
+      partial_success: 'Conturi conectate cu succes: %{created_count}. Conturi deja conectate (%{already_linked_count}): %{already_linked_names}'
+      success:
+        one: '%{count} cont a fost conectat cu succes'
+        few: '%{count} conturi au fost conectate cu succes'
+        other: '%{count} de conturi au fost conectate cu succes'
+      no_credentials_configured: Configurează mai întâi ID-ul de utilizator și cheia de acces API Sophtron în setările furnizorilor.
+      no_accounts_found: Nu s-au găsit conturi. Verifică configurația cheii API.
+      no_access_key: Cheia de acces Sophtron nu este configurată. Configureaz-o în Setări.
+      no_user_id: ID-ul de utilizator Sophtron nu este configurat. Configurează-l în Setări.
+      no_institution_connected: Conectează mai întâi o bancă prin Sophtron.
+    connect:
+      cancel: Anulează
+      captcha: Captcha
+      connect: Conectează
+      institution_search_label: Instituție
+      institution_search_placeholder: Caută după numele băncii
+      no_institutions: Nu s-au găsit instituții potrivite.
+      password: Parolă
+      search: Caută
+      search_too_short: Introdu cel puțin două caractere pentru a căuta.
+      title: Conectează o instituție prin Sophtron
+      username: Nume de utilizator
+    connect_institution:
+      api_error: 'Conectarea Sophtron a eșuat: %{message}'
+      missing_parameters: Selectează o instituție și introdu datele de autentificare la bancă.
+    connection_status:
+      api_error: 'Eroare de conexiune API: %{message}'
+      attempt: Încercarea %{attempt} din %{max}
+      check_again: Verifică din nou
+      failed: Sophtron nu a putut finaliza conectarea la această instituție.
+      failed_timeout: Timpul de așteptare Sophtron a expirat în timp ce instituția finaliza autentificarea.
+      timeout: Sophtron nu a finalizat conectarea în timpul așteptat. Poți verifica din nou sau poți încerca să te reconectezi mai târziu.
+      title: Se conectează Sophtron
+      waiting: Sophtron încă se conectează la instituția ta.
+    mfa:
+      captcha: Textul captcha
+      captcha_alt: Captcha Sophtron
+      phone_confirmed: Am confirmat prin telefon
+      submit: Trimite
+      title: Verificare Sophtron
+      token: Cod de verificare
+    submit_mfa:
+      api_error: 'Verificarea a eșuat: %{message}'
+      invalid_security_answers: Răspunsurile la întrebările de securitate lipsesc sau sunt prea lungi.
+      unknown_challenge: Pas de verificare Sophtron necunoscut.
+    sophtron_item:
+      accounts_need_setup: Conturile necesită configurare
+      automatic_sync: Folosește sincronizarea automată
+      delete: Șterge conexiunea
+      deletion_in_progress: ștergere în curs...
+      error: Eroare
+      no_accounts_description: Această conexiune nu are încă niciun cont conectat.
+      no_accounts_title: Niciun cont
+      manual_sync: Sincronizare manuală
+      manual_sync_action: Solicită sincronizare manuală
+      manual_sync_action_for: Solicită sincronizare manuală pentru %{institution}
+      automatic_sync_for: Folosește sincronizarea automată pentru %{institution}
+      setup_action: Configurează conturile noi
+      setup_description: '%{linked} din %{total} conturi conectate. Alege tipurile de cont pentru conturile Sophtron nou importate.'
+      setup_needed: Conturi noi gata de configurare
+      status: Sincronizat acum %{timestamp}
+      status_never: Niciodată sincronizat
+      status_with_summary: Ultima sincronizare acum %{timestamp} • %{summary}
+      sync_now: Sincronizează acum
+      syncing: Se sincronizează...
+      total: Total
+      unlinked: Neconectate
+    preload_accounts:
+      preload_accounts: preîncarcă conturile
+      api_error: Eroare de conexiune API
+      unexpected_error: A apărut o eroare neașteptată
+      no_credentials_configured: Configurează mai întâi ID-ul de utilizator și cheia de acces API Sophtron în setările furnizorilor.
+      no_accounts_found: Nu s-au găsit conturi. Verifică configurația cheii API.
+      no_access_key: Cheia de acces Sophtron nu este configurată. Configureaz-o în Setări.
+      no_user_id: ID-ul de utilizator Sophtron nu este configurat. Configurează-l în Setări.
+    select_accounts:
+      accounts_selected: conturi selectate
+      api_error: Eroare de conexiune API
+      unexpected_error: A apărut o eroare neașteptată
+      cancel: Anulează
+      configure_name_in_sophtron: Nu se poate importa - configurează numele contului în Sophtron
+      description: Selectează conturile pe care vrei să le conectezi la contul tău %{product_name}.
+      link_accounts: Conectează conturile selectate
+      no_accounts_found: Nu s-au găsit conturi. Verifică configurația cheii API.
+      no_access_key: Cheia de acces Sophtron nu este configurată. Configureaz-o în Setări.
+      no_user_id: ID-ul de utilizator Sophtron nu este configurat. Configurează-l în Setări.
+      no_credentials_configured: Configurează mai întâi ID-ul de utilizator și cheia de acces API Sophtron în setările furnizorilor.
+      no_institution_connected: Conectează mai întâi o bancă prin Sophtron.
+      no_name_placeholder: (Fără nume)
+      title: Selectează conturile Sophtron
+    select_existing_account:
+      account_already_linked: Acest cont este deja conectat la un furnizor
+      all_accounts_already_linked: Toate conturile Sophtron sunt deja conectate
+      api_error: Eroare de conexiune API
+      cancel: Anulează
+      configure_name_in_sophtron: Nu se poate importa - configurează numele contului în Sophtron
+      description: Selectează un cont Sophtron pe care să-l conectezi la acest cont. Tranzacțiile vor fi sincronizate, iar duplicatele eliminate automat.
+      link_account: Conectează contul
+      no_account_specified: Niciun cont specificat
+      no_accounts_found: Nu s-au găsit conturi Sophtron. Verifică configurația cheii API.
+      no_access_key: Cheia de acces Sophtron nu este configurată. Configureaz-o în Setări.
+      no_user_id: ID-ul de utilizator Sophtron nu este configurat. Configurează-l în Setări.
+      no_institution_connected: Conectează mai întâi o bancă prin Sophtron.
+      no_name_placeholder: (Fără nume)
+      title: Conectează %{account_name} la Sophtron
+      unexpected_error: A apărut o eroare neașteptată
+    link_existing_account:
+      account_already_linked: Acest cont este deja conectat la un furnizor
+      api_error: Eroare de conexiune API
+      unexpected_error: A apărut o eroare neașteptată
+      invalid_account_name: Nu se poate conecta un cont fără nume
+      sophtron_account_already_linked: Acest cont Sophtron este deja conectat la alt cont
+      sophtron_account_not_found: Contul Sophtron nu a fost găsit
+      missing_parameters: Lipsesc parametri obligatorii
+      no_institution_connected: Conectează mai întâi o bancă prin Sophtron.
+      success: '%{account_name} a fost conectat cu succes la Sophtron'
+    setup_accounts:
+      account_type_label: 'Tip de cont:'
+      all_accounts_linked: Toate conturile tale Sophtron au fost deja configurate.
+      api_error: Eroare de conexiune API
+      unexpected_error: A apărut o eroare neașteptată
+      fetch_failed: Preluarea conturilor a eșuat
+      no_accounts_to_setup: Niciun cont de configurat
+      no_access_key: Cheia de acces Sophtron nu este configurată. Verifică setările conexiunii.
+      no_user_id: ID-ul de utilizator Sophtron nu este configurat. Verifică setările conexiunii.
+      no_institution_connected: Nicio instituție nu este conectată încă prin Sophtron.
+      account_types:
+        skip: Omite acest cont
+        depository: Cont curent sau de economii
+        credit_card: Card de credit
+        investment: Cont de investiții
+        loan: Împrumut sau credit ipotecar
+        other_asset: Alt activ
+      subtype_labels:
+        depository: 'Subtip de cont:'
+        credit_card: ''
+        investment: 'Tip de investiție:'
+        loan: 'Tip de împrumut:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Cardurile de credit vor fi configurate automat drept conturi de card de credit.
+        other_asset: Nu sunt necesare opțiuni suplimentare pentru alte active.
+      balance: Sold
+      cancel: Anulează
+      choose_account_type: 'Alege tipul corect pentru fiecare cont Sophtron:'
+      create_accounts: Creează conturile
+      creating_accounts: Se creează conturile...
+      historical_data_range: 'Interval de date istorice:'
+      subtitle: Alege tipurile corecte pentru conturile importate
+      sync_start_date_help: Selectează de cât timp în urmă vrei să sincronizezi istoricul tranzacțiilor. Sunt disponibili maximum 3 ani de istoric.
+      sync_start_date_label: 'Sincronizează tranzacțiile începând cu:'
+      title: Configurează conturile tale Sophtron
+    complete_account_setup:
+      all_skipped: Toate conturile au fost omise. Nu a fost creat niciun cont.
+      creation_failed: Crearea conturilor a eșuat
+      api_error: Eroare de conexiune API
+      unexpected_error: A apărut o eroare neașteptată
+      no_accounts: Nu există conturi de configurat.
+      success: 'Conturi create cu succes: %{count}.'
+    sync:
+      already_running: Sincronizarea manuală Sophtron este deja în curs.
+      api_error: 'Sincronizarea manuală Sophtron a eșuat: %{message}'
+      failed: Sincronizarea manuală Sophtron a eșuat
+      no_linked_accounts: Această instituție Sophtron nu are conturi conectate de sincronizat.
+      processing_failed: Sincronizarea manuală Sophtron nu a putut procesa tranzacțiile reîmprospătate.
+      success: Sincronizarea a început
+    toggle_manual_sync:
+      success_disabled: Instituția Sophtron se va sincroniza automat.
+      success_enabled: Instituția Sophtron necesită acum sincronizare manuală.
+    manual_sync_complete:
+      close: Închide
+      description: Soldurile conturilor se vor actualiza complet în fundal.
+      message: Tranzacțiile au fost descărcate după verificarea Sophtron.
+      title: Sincronizarea Sophtron a început
+    sophtron_setup_required:
+      title: Configurare Sophtron necesară
+      message: Pentru a finaliza configurarea conexiunii Sophtron, mergi la pagina Setările furnizorilor și urmează instrucțiunile pentru a autoriza și configura conexiunea Sophtron.
+      go_to_provider_settings: Mergi la setările furnizorilor
+      heading: ID-ul de utilizator și cheia de acces nu sunt configurate
+      description: Înainte de a putea conecta conturi Sophtron, trebuie să configurezi ID-ul de utilizator și cheia de acces Sophtron.
+      setup_steps_title: 'Pași de configurare:'
+      step_1_html: Mergi la <strong>Setări → Sincronizare bancară</strong>
+      step_2_html: Găsește secțiunea <strong>Sophtron</strong>
+      step_3_html: Introdu ID-ul de utilizator și cheia de acces Sophtron
+      step_4: Revino aici pentru a-ți conecta conturile
+    api_error:
+      title: Eroare de conexiune Sophtron
+      unable_to_connect: Nu se poate realiza conectarea la Sophtron
+      institution_unable_to_connect: Nu se poate realiza conectarea la instituție
+      common_issues_title: 'Probleme frecvente:'
+      incorrect_user_id: 'ID de utilizator incorect: verifică ID-ul de utilizator în setările furnizorilor'
+      invalid_access_key: 'Cheie de acces invalidă: verifică cheia de acces în setările furnizorilor'
+      expired_credentials: 'Date de autentificare expirate: generează un ID de utilizator și o cheie de acces noi din Sophtron'
+      network_issue: 'Problemă de rețea: verifică-ți conexiunea la internet'
+      service_down: 'Serviciu indisponibil: API-ul Sophtron poate fi temporar indisponibil'
+      bad_credentials: 'Date de autentificare bancare: verifică dacă numele de utilizator și parola sunt corecte'
+      verification_code: 'Cod de verificare: asigură-te că ai introdus cel mai recent cod înainte să expire'
+      institution_timeout: 'Timp de așteptare depășit la instituție: pagina de autentificare a băncii nu s-a încărcat la timp'
+      unsupported_mfa: 'Suport MFA: Sophtron poate să nu accepte fluxul de verificare actual al acestei instituții'
+      check_provider_settings: Verifică setările furnizorilor
+      try_again: Încearcă să te conectezi din nou
+    select_option: Selectează %{type}
+    subtype: subtipul
+    type: tipul
+    sophtron_panel:
+      setup_instructions_title: 'Instrucțiuni de configurare:'
+      setup_instructions:
+        step_1_html: Accesează <a href="%{url}" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a> pentru a obține datele de autentificare API
+        step_2: Copiază ID-ul de utilizator și cheia de acces din setările contului tău Sophtron
+        step_3: Lipește datele de autentificare mai jos și apasă Salvează; Sure va crea sau va reutiliza automat Customer ID-ul tău Sophtron
+      field_descriptions_title: 'Descrierea câmpurilor:'
+      field_descriptions:
+        user_id_html: <strong>ID utilizator:</strong> credențialul User ID Sophtron
+        access_key_html: <strong>Cheie de acces:</strong> credențialul Access Key Sophtron
+        base_url_html: <strong>URL de bază:</strong> URL-ul endpointului API Sophtron, de obicei https://api.sophtron.com/api
+      fields:
+        user_id:
+          label: ID utilizator
+          placeholder_new: Lipește ID-ul de utilizator Sophtron
+          placeholder_edit: ••••••••
+        access_key:
+          label: Cheie de acces
+          placeholder_new: Lipește cheia de acces Sophtron
+          placeholder_edit: ••••••••
+        base_url:
+          label: URL de bază
+          placeholder: https://api.sophtron.com/api
+      save: Salvează configurația
+      update: Actualizează configurația
+    syncer:
+      manual_sync_required: Această instituție necesită sincronizare manuală Sophtron; conturile ei sunt omise în timpul sincronizării automate.
+      importing_accounts: Se importă conturile din Sophtron...
+      checking_account_configuration: Se verifică configurația conturilor...
+      accounts_need_setup: 'Conturi care necesită configurare: %{count}'
+      processing_transactions: Se procesează tranzacțiile pentru conturile conectate...
+      calculating_balances: Se calculează soldurile pentru conturile conectate...
+    sophtron_entry:
+      processor:
+        unknown_transaction: Tranzacție necunoscută
+    render_connection_timeout:
+      timeout: Timpul de conectare a expirat. Încearcă din nou.
+    redirect_after_account_link:
+      invalid_account_names:
+        one: Nu se poate conecta %{count} cont fără nume
+        few: Nu se pot conecta %{count} conturi fără nume
+        other: Nu se pot conecta %{count} de conturi fără nume
+      partial_invalid: 'Conturi conectate: %{created_count}. Deja conectate: %{already_linked_count}; cu nume invalide: %{invalid_count}.'
+      partial_success: 'Conturi conectate: %{created_count}. Conturi deja conectate: %{already_linked_count}.'
+      success:
+        one: '%{count} cont a fost conectat cu succes.'
+        few: '%{count} conturi au fost conectate cu succes.'
+        other: '%{count} de conturi au fost conectate cu succes.'
+      all_already_linked:
+        one: Contul selectat este deja conectat
+        few: Toate cele %{count} conturi selectate sunt deja conectate
+        other: Toate cele %{count} de conturi selectate sunt deja conectate
+      link_failed: Conectarea conturilor a eșuat
+    start_manual_sync:
+      already_running: O sincronizare este deja în curs.
+      no_linked_accounts: Nu există conturi conectate de sincronizat.
+      api_error: 'Eroare API: %{message}'
+    start_manual_sync_for_account:
+      failed: Sincronizarea contului a eșuat

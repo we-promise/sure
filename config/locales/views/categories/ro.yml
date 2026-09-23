@@ -14,6 +14,14 @@ ro:
       edit: Editează categoria
     form:
       placeholder: Nume categorie
+      name_label: Nume
+      unassigned: (neatribuit)
+      parent_category_label: Categorie părinte (opțional)
+      trigger_label: Alege culoarea și pictograma
+      color: Culoare
+      icon: Pictogramă
+      auto_adjust: ajustează automat.
+      poor_contrast: Contrast slab, alege o culoare mai închisă sau
     index:
       bootstrap: Folosește valorile implicite (recomandat)
       categories: Categorii
@@ -21,14 +29,43 @@ ro:
       categories_incomes: Categorii de venituri
       empty: Nicio categorie găsită
       new: Categorie nouă
+      delete_all: Șterge tot
+      merge: Combină categoriile
     menu:
       loading: Se încarcă...
     new:
       new_category: Categorie nouă
     update:
       success: Categoria a fost actualizată cu succes
+    destroy_all:
+      success: Toate categoriile au fost șterse
+    merge:
+      title: Combină categoriile
+      description: Selectează o categorie țintă și categoriile care vor fi combinate în ea. Tranzacțiile și liniile de buget aferente vor fi mutate în categoria țintă.
+      target_label: Combină în (țintă)
+      select_target: Selectează categoria țintă...
+      sources_label: Categorii de combinat
+      sources_hint: Categoriile selectate vor fi șterse după ce tranzacțiile și liniile lor de buget sunt mutate în categoria țintă. Nu selecta categoria țintă ca sursă.
+      submit: Combină selecția
+    perform_merge:
+      success:
+        one: A fost combinată cu succes %{count} categorie
+        few: Au fost combinate cu succes %{count} categorii
+        other: Au fost combinate cu succes %{count} de categorii
+      no_categories_selected: Nu ai selectat nicio categorie de combinat
+      target_not_found: Categoria țintă nu a fost găsită
+      invalid_categories: Au fost selectate categorii invalide
+      target_selected_as_source: Alege categorii diferite pentru țintă și surse.
+    virtual:
+      transfer: Transfer
+      payment: Plată
+      trade: Tranzacție bursieră
   category:
     dropdowns:
       show:
         bootstrap: Generează categoriile implicite
         empty: Nicio categorie găsită
+        match_transfer: Asociază transferul/plata
+        one_time: '%{type} (o singură dată)'
+        income: Venit
+        expense: Cheltuială

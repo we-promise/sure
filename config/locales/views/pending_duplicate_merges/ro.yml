@@ -1,0 +1,21 @@
+---
+ro:
+  pending_duplicate_merges:
+    create:
+      no_posted_selected: Te rugăm să selectezi o tranzacție înregistrată cu care să o combini
+      invalid_transaction: Tranzacție invalidă selectată pentru combinare
+      merge_success: Tranzacția în așteptare a fost combinată cu tranzacția înregistrată
+      merge_failed: Tranzacțiile nu au putut fi combinate
+    set_transaction:
+      pending_only: Această funcție este disponibilă doar pentru tranzacțiile în așteptare
+    new:
+      title: Combină cu tranzacția înregistrată
+      warning_title: Combinarea manuală a duplicatelor
+      warning_description: Folosește această opțiune pentru a combina manual o tranzacție în așteptare cu versiunea ei înregistrată. Tranzacția în așteptare va fi ștearsă și se va păstra doar cea înregistrată.
+      pending_transaction: Tranzacție în așteptare
+      select_posted: Selectează tranzacția înregistrată cu care să o combini
+      showing_range: Se afișează %{start} - %{end}
+      previous: ← Precedentele 10
+      next: Următoarele 10 →
+      no_candidates: Nu s-au găsit tranzacții înregistrate în acest cont.
+      submit_button: Combină tranzacțiile

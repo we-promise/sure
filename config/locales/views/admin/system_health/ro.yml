@@ -1,0 +1,256 @@
+---
+ro:
+  admin:
+    system_health:
+      push_notifications:
+        send_test: Trimite o notificare push de test
+        queueing: Se pune în coadă…
+        title: Notificări push
+        requested_at: Ultimul test solicitat la %{time}
+        result_help: Acceptarea de către APNs nu confirmă livrarea pe dispozitivul tău. Reîmprospătează pentru a vedea rezultatele worker-ului. Rezultatele sunt păstrate 24 de ore.
+        device: Dispozitivul %{number}
+        pending: În așteptare
+        refresh: Reîmprospătează rezultatele
+        columns:
+          device: Dispozitiv
+          environment: Mediu APNs
+          status: Rezultat
+          checked_at: Ultima actualizare
+        environments:
+          sandbox: Sandbox
+          production: Producție
+        messages:
+          enqueue_failed: Testul nu a putut fi pus în coadă. Verifică Sidekiq și reîmprospătează rezultatele de mai jos.
+          ready: Trimite o notificare de test pe dispozitivele iOS activate, înregistrate în contul tău.
+          queued: Notificarea de test a fost pusă în coadă. Reîmprospătează rezultatele de mai jos pentru a-i verifica starea.
+          hosted_only: Notificările push sunt disponibile doar în modul găzduit.
+          ineligible: Doar un super-administrator activ poate trimite o notificare de test.
+          no_devices: Activează notificările push în aplicația Sure pentru iOS pentru acest cont ca să poți trimite un test.
+          disabled: Livrarea notificărilor push a fost dezactivată de operator.
+          not_configured: Credențialele APNs nu sunt configurate.
+          cooldown: Te rugăm să aștepți 30 de secunde înainte de a trimite un alt test.
+          storage_unavailable: Solicitarea de test nu a putut fi salvată. Verifică configurația cache-ului partajat.
+        statuses:
+          queued: În coadă
+          accepted: Acceptată de APNs
+          skipped: 'Omisă: nu mai este eligibilă'
+          rejected: Respinsă de APNs; verifică jurnalele de depanare push
+          unregistered: Înregistrarea dispozitivului nu mai este validă
+          retrying: Se reîncearcă după o eroare temporară
+          failed: Eșuată; verifică jurnalele de depanare push
+          enqueue_failed: Nu a putut fi pusă în coadă; verifică Sidekiq
+          expired: Expirată fără un rezultat final
+      push_notification:
+        title: Notificare de test Sure
+        body: Aceasta este o notificare push de test pentru contul tău Sure.
+      verify_worker_ai:
+        queued: Verificarea worker-ului a fost pusă în coadă. Va apărea mai jos după ce un proces worker o preia, de obicei în câteva secunde.
+      show:
+        title: Starea sistemului
+        tabs:
+          background_jobs: Sarcini în fundal
+          ai: Stare AI
+        alert:
+          title: Sarcinile în fundal nu rulează
+        status_section_title: Stare Sidekiq
+        status_section_description: Starea actuală a worker-ului de fundal care se ocupă de sincronizări, solduri și calculul valorii nete.
+        counters_section_title: Contoare de sarcini
+        counters_section_description: Contoare Sidekiq agregate pentru toate cozile.
+        queues_section_title: Cozi
+        queues_section_description: Numărul de sarcini din fiecare coadă și vechimea celei mai vechi sarcini. Latența reprezintă numărul de secunde de când așteaptă cea mai veche sarcină.
+        labels:
+          status: Stare
+          processes: Procese worker
+          last_heartbeat: Ultimul semnal de activitate
+          max_queue_latency: Vechimea celei mai vechi sarcini
+          enqueued: În coadă
+          retries: Reîncercări
+          failed: Eșuate
+          processed_total: Total procesate
+          queue: Coadă
+          size: Dimensiune
+          latency: Latență
+        values:
+          healthy: Funcțional
+          unhealthy: Degradat
+          time_ago: acum %{time_ago}
+          never: Niciodată
+          seconds: '%{seconds} s'
+          no_queues: Nu este înregistrată nicio coadă. Este posibil ca worker-ul să nu ruleze.
+        ai:
+          run_checks: Rulează din nou verificările
+          last_checked: Verificările live s-au finalizat acum %{time_ago}. Rezultatele sunt păstrate în cache pentru scurt timp.
+          not_checked_help: Deschide direct URL-ul de stare AI sau rulează verificările pentru a confirma că serviciile funcționează.
+          alerts:
+            custom_openai:
+              title: Verificarea depozitului vectorial găzduit a eșuat la acest endpoint personalizat
+              message: Endpoint-ul configurat nu a trecut verificarea de funcționare /v1/vector_stores. Majoritatea endpoint-urilor locale și compatibile cu OpenAI nu implementează acest API. Chatul și procesarea PDF pot funcționa în continuare; pentru configurația locală obișnuită, folosește pgvector cu un endpoint separat pentru embeddings. Eroarea a fost înregistrată în Setări → Jurnale de depanare și în Rails.logger.
+            function_calling_unsupported:
+              title: Modelul nu acceptă apelarea de funcții
+              message: Endpoint-ul a răspuns la o cerere de chat simplă, dar a respins aceeași cerere când aceasta conținea parametrul tools. Asistentul AI citește conturile, tranzacțiile și deținerile prin apeluri de funcții, așa că chatul va eșua în continuare — adesea cu o eroare 404 neclară — până când folosești un model care acceptă tools. Alege un model al cărui furnizor documentează suportul pentru apelarea de funcții. Eroarea a fost înregistrată în Setări → Jurnale de depanare și în Rails.logger.
+            function_calling_not_used:
+              title: Modelul a răspuns fără să apeleze instrumentul cerut
+              message: Endpoint-ul a acceptat parametrul tools, dar modelul a răspuns cu text în loc să apeleze instrumentul de verificare. Asistentul AI nu poate citi datele financiare fără apeluri de instrumente, așa că chatul poate răspunde gol sau cu cifre inventate. Preferă un model al cărui furnizor documentează suportul pentru apelarea de funcții.
+            llm_probe_failed:
+              title: Verificarea live a LLM-ului a eșuat
+              message: Sure nu a putut verifica atât endpoint-ul configurat, cât și modelul. Eroarea a fost înregistrată în Setări → Jurnale de depanare și în Rails.logger.
+            llm_model_not_available:
+              title: Modelul AI configurat nu este disponibil
+              message: Endpoint-ul a răspuns, dar nu a listat sau nu a servit modelul configurat. Alege un model activ pentru furnizorul selectat, apoi rulează din nou verificările. Pentru Gemini printr-un strat de traducere compatibil cu OpenAI, folosește un model acceptat în prezent, cum ar fi gemini-2.5-flash.
+            pdf_text_extraction_failed:
+              title: Verificarea extragerii textului dintr-un PDF sintetic a eșuat
+              message: Sure nu a putut finaliza fluxul bazat pe text, care extrage local textul încorporat în PDF și îl trimite modelului configurat. Nu au fost trimise date ale clienților. Eroarea a fost înregistrată în Setări → Jurnale de depanare și în Rails.logger.
+            pdf_vision_processing_failed:
+              title: Verificarea vision/nativă cu un PDF sintetic a eșuat
+              message: Sure nu a putut finaliza fluxul PDF bazat pe imagine sau pe document nativ prin modelul configurat. Nu au fost trimise date ale clienților. Eroarea a fost înregistrată în Setări → Jurnale de depanare și în Rails.logger.
+            vector_probe_failed:
+              title: Verificarea live a căutării în documente a eșuat
+              message: Sure nu a putut verifica depozitul vectorial selectat și toate serviciile de embedding necesare. Eroarea a fost înregistrată în Setări → Jurnale de depanare și în Rails.logger.
+            pgvector_extension_not_enabled:
+              title: Extensia vector din PostgreSQL nu este activată
+              message: Adaptorul pgvector este selectat, dar extensia vector nu este activată în PostgreSQL pentru această bază de date. Folosește o imagine PostgreSQL care include pgvector, apoi activează extensia ca proprietar al bazei de date sau ca superuser și rulează din nou migrările cu VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: Tabelul vector_store_chunks lipsește
+              message: Extensia pgvector este activată, dar tabelul de fragmente (chunks) nu a fost găsit. Verifică starea migrărilor, apoi rulează din nou migrarea depozitului vectorial cu VECTOR_STORE_PROVIDER=pgvector, ca Sure să poată crea vector_store_chunks.
+            pgvector_probe_failed:
+              title: Verificarea stocării pgvector a eșuat
+              message: Sure nu a putut interoga tabelul de fragmente pgvector. Verifică permisiunile PostgreSQL, extensia vector și migrarea vector_store_chunks. Eroarea a fost înregistrată în Setări → Jurnale de depanare și în Rails.logger.
+            embedding_dimensions_mismatch:
+              title: Dimensiunile embedding-ului nu corespund
+              message: Endpoint-ul de embedding a returnat un vector a cărui lungime nu corespunde cu EMBEDDING_DIMENSIONS. Setează EMBEDDING_MODEL și EMBEDDING_DIMENSIONS la dimensiunea vectorului documentată pentru model, repornește Sure pentru ca mediul să fie aplicat, apoi modifică sau recreează coloana/tabelul de embedding pgvector și regenerează embedding-urile documentelor dacă datele existente foloseau o altă dimensiune.
+            embedding_probe_timeout:
+              title: Verificarea live a embedding-ului a depășit timpul limită
+              message: Endpoint-ul de embedding nu a răspuns înainte de AI_HEALTH_PROBE_TIMEOUT. Mărește acest timp limită al verificării dacă furnizorul este lent, apoi repornește Sure pentru ca mediul să fie aplicat în fiecare proces. Dacă și apelurile obișnuite de chat AI depășesc timpul limită, mărește separat OPENAI_REQUEST_TIMEOUT.
+            embedding_probe_failed:
+              title: Verificarea live a embedding-ului a eșuat
+              message: Sure nu a putut crea un embedding scurt de test prin endpoint-ul și modelul configurate. Verifică EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN și jurnalele furnizorului de embedding. Eroarea a fost înregistrată în Setări → Jurnale de depanare și în Rails.logger.
+            qdrant:
+              title: Suportul pentru Qdrant nu este încă implementat
+              message: Adaptorul Qdrant există doar ca schelet, iar operațiunile de încărcare și căutare a documentelor eșuează în prezent. Selectează OpenAI sau pgvector pentru căutarea în documente.
+            missing_vector_store:
+              title: Niciun depozit vectorial nu este configurat
+              message: Documentele încărcate nu pot fi indexate sau căutate până când nu sunt configurate un adaptor de depozit vectorial și cerințele acestuia.
+            unavailable_vector_store:
+              title: Depozitul vectorial selectat nu este disponibil
+              message: Verifică cerințele adaptorului de mai jos. Pentru pgvector, baza de date trebuie să ofere extensia vector sau un tabel vector_store_chunks existent.
+          llm:
+            title: LLM și procesare PDF
+            description: Verificările live confirmă modelul configurat, îi cer un apel de funcție trivial, așa cum face asistentul, apoi testează separat extragerea textului și procesarea vision/nativă cu un PDF sintetic de o pagină, fără date ale clienților. Valorile credențialelor nu sunt afișate niciodată.
+          vector_store:
+            title: Depozit vectorial și căutare în documente
+            description: Verificarea live interoghează API-ul depozitului vectorial găzduit sau testează tabelul pgvector și creează un embedding scurt, fără a-l stoca.
+          labels:
+            selected_provider: Furnizor selectat
+            effective_provider: Furnizor efectiv
+            model: Model
+            endpoint: Endpoint
+            function_calling: Apelare de funcții (tools)
+            pdf_text_extraction: Flux PDF de extragere a textului
+            pdf_vision_processing: Flux PDF vision/nativ
+            llm_request_timeout: Timp limită pentru cererile LLM
+            probe_request_timeout: Timp limită pentru verificarea de stare
+            openai_credentials: Credențiale OpenAI
+            openai_compatible_credentials: Credențiale API compatibile cu OpenAI
+            anthropic_credentials: Credențiale Anthropic
+            adapter: Adaptor
+            adapter_available: Adaptor disponibil
+            pgvector_extension: Extensia vector PostgreSQL
+            pgvector_table: Tabel de fragmente vectoriale
+            embedding_model: Model de embedding
+            embedding_endpoint: Endpoint de embedding
+            embedding_dimensions: Dimensiuni embedding
+            function_calling_failure_reason: Motivul eșecului apelării de funcții
+            pdf_text_extraction_failure_reason: Motivul eșecului extragerii textului
+            pdf_vision_processing_failure_reason: Motivul eșecului vision/nativ
+            storage_probe: Verificarea stocării pgvector
+            embedding_probe: Verificarea endpoint-ului de embedding
+            failure_reason: Motivul eșecului
+          providers:
+            openai: OpenAI
+            openai_compatible: Compatibil cu OpenAI
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Endpoint personalizat
+          adapters:
+            openai: Depozit vectorial găzduit OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Configurat
+            not_configured: Neconfigurat
+            fallback: (rezervă)
+            not_set: Nesetat
+            "yes": Da
+            "no": Nu
+            enabled: Activat
+            available_not_enabled: Disponibil, neactivat
+            not_available: Indisponibil
+            available: Disponibil
+            not_found: Negăsit
+          function_calling_statuses:
+            supported: Apelul live al instrumentului a reușit
+            unsupported: Neacceptat de furnizorul/modelul efectiv
+            not_used: Tools acceptate, dar modelul nu a apelat niciunul
+            failing: Verificarea live a eșuat
+            not_checked: Neverificat
+            unavailable: Indisponibil până când este configurat un furnizor LLM
+          pdf_statuses:
+            supported: Verificarea cu PDF sintetic a reușit
+            failing: Verificarea cu PDF sintetic a eșuat
+            unsupported: Dezactivat sau neacceptat de furnizorul/modelul efectiv
+            not_checked: Neverificat
+            unavailable: Indisponibil până când este configurat un furnizor LLM
+          probe_statuses:
+            passing: Verificarea live a reușit
+            failing: Verificarea live a eșuat
+            not_checked: Neverificat
+            not_configured: Neconfigurat
+          vector_statuses:
+            passing: Verificările live au reușit
+            failing: Verificarea live a eșuat
+            not_checked: Neverificat
+            not_configured: Neconfigurat
+            scaffolded: Doar schelet
+            missing: Neconfigurat
+          failure_codes:
+            model_not_available: Modelul configurat nu a fost returnat de furnizor
+            no_tool_call: Modelul a răspuns fără să apeleze instrumentul de verificare
+            tools_refused: Serviciul a răspuns la aceeași cerere fără tools, dar a refuzat-o cu tools
+            invalid_response: Serviciul a returnat un răspuns neașteptat
+            dimensions_mismatch: Dimensiunile vectorului de embedding nu corespund cu cele configurate
+            extension_not_enabled: Extensia vector din PostgreSQL nu este activată
+            table_not_found: Tabelul vector_store_chunks nu a fost găsit
+            render_missing_binary: Utilitarul de randare pdftoppm (poppler-utils) nu este disponibil în acest container
+            timeout: Serviciul nu a răspuns înainte de expirarea timpului limită al verificării
+            request_failed: Cererea către serviciu a eșuat
+            unsupported_provider: Furnizorul nu acceptă această verificare
+          worker:
+            title: Verificarea worker-ului
+            description: Verificările de mai sus au rulat din acest proces web. Majoritatea operațiunilor AI -- răspunsurile asistentului, procesarea PDF, embedding-urile, categorisirea automată și detectarea comercianților -- rulează de fapt într-un proces worker Sidekiq, care poate diferi prin accesul la rețea, DNS, regulile de proxy sau chiar prin credențialele încărcate. Pune în coadă o verificare pentru a confirma configurația și conectivitatea proprii ale unui worker.
+            verify_button: Verifică configurația worker-ului
+            coverage_notice: Fiecare verificare testează exact un proces worker -- pe cel care o preia din coadă. Cu mai multe replici de worker, un rezultat reușit nu confirmă că toți worker-ii funcționează; pune din nou verificarea în coadă pentru a testa un alt worker.
+            empty:
+              title: Niciun worker nu a raportat încă
+              description: Apasă „Verifică configurația worker-ului” pentru a pune în coadă o verificare asincronă. Rezultatul apare aici după ce un proces worker o preia.
+            labels:
+              process: Proces worker
+              checked_at: Verificat
+              configuration: Configurație
+            configuration_statuses:
+              match: Identică cu web
+              mismatch: Diferită de web
+            statuses:
+              passing: Reușită
+              failing: Eșuată
+              stale: Învechită
+            settings_origin:
+              title: Ce setări necesită o repornire?
+              database_backed: Setările de furnizor, model și cheie API modificate în Setări → Găzduire proprie sunt stocate în baza de date. rails-settings-cached invalidează cache-ul partajat la scriere, așa că atât procesul web, cât și worker-ul folosesc noua valoare la următoarea cerere sau sarcină din coadă -- nu este necesară nicio repornire.
+              env_backed: Configurația de embedding și orice valoare setată doar printr-o variabilă de mediu sunt fixate la pornirea fiecărui container. Rails nu poate modifica mediul unui alt container, așa că schimbarea acestora necesită repornirea sau recrearea ambelor servicii, web și worker -- iar orice instrument de implementare care repornește doar unul dintre ele (lansare parțială, un Secret actualizat fără repornirea pod-ului) nu va prelua modificarea.
+          local_setup:
+            title: Configurație locală recomandată
+            description: Rulează LLM-ul prin endpoint-ul tău local compatibil cu OpenAI, stochează vectorii documentelor în pgvector și direcționează setările de embedding către un endpoint de embeddings compatibil cu OpenAI. Imaginea PostgreSQL trebuie să includă extensia vector, iar dimensiunile embedding-ului trebuie să corespundă modelului selectat.

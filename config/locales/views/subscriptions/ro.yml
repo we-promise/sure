@@ -4,11 +4,21 @@ ro:
     self_hosted_alert: "%{product_name} nu este disponibil în modul self-hosted."
     upgrade:
       contribute_and_support_sure: "Contribuie și sprijină Sure"
-      cta: "Continuați să sprijiniți dezvoltarea acestei baze de cod!"
+      cta: "Continuă să sprijini dezvoltarea acestei baze de cod!"
       header:
         support: "Sprijină"
         sure: "Sure"
         today: "astăzi"
-      redirect_to_stripe: "În pasul următor, veți fi redirecționat către Stripe, care procesează cardurile de credit pentru noi."
-      trialing: "Datele dvs. vor fi șterse în %{days} zile"
-      trial_over: "Perioada dvs. de probă s-a încheiat"
+      redirect_to_stripe: "În pasul următor, vei fi redirecționat către Stripe, care procesează plățile cu cardul pentru noi."
+      trialing: "Zile până la ștergerea datelor tale: %{days}"
+      trial_over: "Perioada ta de probă s-a încheiat"
+      already_contributing: Contribui deja. Îți mulțumim!
+      page_title: Upgrade
+      account_settings: Setările contului
+      sign_out: Deconectare
+    create:
+      welcome: Bine ai venit în Sure!
+      trial_already_used: Ai început sau ai încheiat deja o perioadă de probă. Fă upgrade pentru a continua.
+    success:
+      welcome_with_contribution: Bine ai venit în Sure! Îți mulțumim pentru contribuție.
+      contribution_failed: A apărut o eroare la procesarea contribuției tale. Încearcă din nou.

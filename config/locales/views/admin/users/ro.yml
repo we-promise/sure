@@ -1,0 +1,119 @@
+---
+ro:
+  admin:
+    users:
+      index:
+        title: Gestionarea utilizatorilor
+        description: Gestionează rolurile utilizatorilor, apartenența la familii/grupuri și eliminarea conturilor pentru instanța ta. Super-administratorii pot accesa setările furnizorilor SSO și gestionarea utilizatorilor.
+        section_title: Familii / Grupuri
+        you: (Tu)
+        trial_ends_at: Sfârșitul perioadei de probă
+        not_available: n/a
+        no_users: Nu s-au găsit utilizatori.
+        unnamed_family: Familie/grup fără nume
+        no_subscription: Fără abonament
+        family_summary: '%{members} membri · %{accounts} conturi · %{transactions} tranzacții'
+        filters:
+          role: Rol
+          role_all: Toate rolurile
+          trial_status: Starea perioadei de probă
+          trial_all: Toate
+          trial_expiring_soon: Expiră în 7 zile
+          trial_trialing: În perioada de probă
+          submit: Filtrează
+        summary:
+          trials_expiring_7_days: Perioade de probă care expiră în următoarele 7 zile
+        table:
+          user: Utilizator
+          trial_ends_at: Sfârșitul perioadei de probă
+          family_accounts: Conturile familiei
+          family_transactions: Tranzacțiile familiei
+          last_login: Ultima autentificare
+          session_count: Număr de sesiuni
+          never: Niciodată
+          role: Rol
+          family: Familie / Grup
+          keep_current_family: Păstrează familia/grupul actual
+          create_new_family_option: + Creează o familie/un grup nou
+          new_family_name: Numele noii familii/noului grup
+          new_family_name_placeholder: Introdu un nume pentru a crea o familie/un grup nou
+          new_family_moniker: Tipul noii familii/noului grup
+          set_password: Setează o parolă nouă
+          password_placeholder: Lasă gol pentru a păstra parola actuală
+          actions: Acțiuni
+        family_monikers:
+          family: Familie
+          group: Grup
+        actions:
+          manage_user: Gestionează utilizatorul
+          update: Actualizează utilizatorul
+          delete_user: Șterge utilizatorul
+          self_edit_warning: Schimbarea propriului rol îți va modifica privilegiile administrative.
+          self_update_confirm: Sigur vrei să actualizezi rolul sau familia propriului cont?
+          last_super_admin_role_locked: Schimbarea rolului este blocată deoarece ești ultimul super-administrator din sistem.
+        delete_confirm: Sigur vrei să ștergi acest utilizator? Această acțiune nu poate fi anulată.
+        delete_confirm_last_user: Sigur vrei să ștergi acest utilizator? Este ultimul utilizator din familia/grupul său, așa că ștergerea lui va șterge și întreaga familie/întregul grup, împreună cu toate datele asociate. Această acțiune nu poate fi anulată.
+        remove: Șterge utilizatorul
+        role_descriptions_title: Descrierea rolurilor
+        removed_sso_identities:
+          title: Identități SSO eliminate
+          description: Aceste identități nu pot crea sau reconecta un cont. Permite din nou o identitate doar dacă eliminarea a fost accidentală.
+          allow_again: Permite din nou
+          confirm: Permiți din nou pentru %{email} autentificarea sau crearea unui cont prin SSO?
+        roles:
+          guest: Invitat
+          member: Membru
+          admin: Administrator
+          super_admin: Super-administrator
+        auth_types:
+          sso: SSO
+          local: Local
+          local_and_sso: Local + SSO
+          sso_provider_tooltip: 'Furnizor SSO: %{providers}'
+        role_descriptions:
+          guest: Experiență centrată pe asistent, cu permisiuni restricționate intenționat pentru fluxurile introductive.
+          member: Acces de bază. Își poate gestiona propriile conturi, tranzacții și setări.
+          admin: Administrator al familiei. Poate accesa setări avansate, precum cheile API, importurile și prompturile AI.
+          super_admin: Administrator al instanței. Poate gestiona furnizorii SSO și rolurile utilizatorilor și poate accesa aplicația în numele utilizatorilor pentru suport.
+        invitations:
+          pending_label: Invitat (în așteptare)
+          expires: Expiră pe %{date}
+          delete: Șterge
+          delete_all: Șterge toate
+        unused_families:
+          title: Familii / grupuri nefolosite
+          family_id: 'ID familie: %{id}'
+          delete: Șterge familia nefolosită
+          delete_confirm: Sigur vrei să ștergi această familie/acest grup nefolosit? Această acțiune nu poate fi anulată.
+          empty: Nu s-au găsit familii/grupuri nefolosite.
+      update:
+        success_role: Rolul utilizatorului a fost actualizat cu succes.
+        success_password: Parola utilizatorului a fost actualizată cu succes.
+        success_role_and_password: Rolul și parola utilizatorului au fost actualizate cu succes.
+        success_family: Apartenența utilizatorului la familie/grup a fost actualizată cu succes.
+        failure: Actualizarea detaliilor utilizatorului (rol sau apartenență la familie/grup) a eșuat.
+        family_required: Selectează o familie/un grup existent sau introdu un nume pentru unul nou.
+        password_and_family_conflict: Parola și apartenența la familie/grup nu pot fi actualizate în același timp.
+        password_too_short: Parola trebuie să aibă cel puțin 8 caractere.
+        password_missing_case: Parola trebuie să conțină atât litere mari, cât și litere mici.
+        password_missing_number: Parola trebuie să conțină cel puțin o cifră.
+        password_missing_special: Parola trebuie să conțină cel puțin un caracter special.
+        last_super_admin_error: Ultimul super-administrator din sistem nu poate fi retrogradat.
+      destroy:
+        success: Accesul utilizatorului a fost revocat, iar ștergerea definitivă a fost programată.
+        failure: Eliminarea utilizatorului a eșuat.
+        cannot_remove_self: Nu îți poți elimina propriul cont de aici.
+        cannot_remove_last_super_admin: Nu poți elimina ultimul super-administrator activ.
+        confirmation_mismatch: Adresa de email nu corespunde. Utilizatorul nu a fost eliminat.
+      deletion:
+        title: Elimină definitiv utilizatorul
+        warning: Această acțiune revocă imediat accesul și programează ștergerea definitivă a utilizatorului și a datelor sale. Acțiunea nu poate fi anulată.
+        instruction: Tastează %{email} pentru a confirma.
+        email_label: Emailul utilizatorului
+        cancel: Anulează
+        submit: Elimină definitiv utilizatorul
+    families:
+      destroy:
+        family_has_active_subscription: 'Familia/grupul nu poate fi șters(ă): are un abonament activ, care trebuie anulat mai întâi.'
+        family_has_users: 'Familia/grupul nu poate fi șters(ă): are încă utilizatori.'
+        success: Familia/grupul a fost șters(ă) cu succes.

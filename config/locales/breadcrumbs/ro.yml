@@ -4,3 +4,91 @@ ro:
     exports: Exporturi
     home: Acasă
     imports: Importuri
+    account_sharings: Partajare cont
+    account_statements: Arhiva de extrase
+    accounts: Conturi
+    ai_prompts: Prompturi AI
+    api_key: Cheie API
+    api_keys: Chei API
+    appearance: Aspect
+    appearances: Aspect
+    bank_sync: Sincronizare bancară
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Categorii de buget
+    budgets: Bugete
+    categories: Categorii
+    categorize: Categorizare
+    changelog: Noutăți
+    chats: Conversații
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Carduri de credit
+    cryptos: Crypto
+    dashboard: Panou principal
+    debug: Depanare
+    debugs: Depanare
+    depositories: Conturi de numerar
+    enable_banking_items: Enable Banking
+    family_exports: Exporturi
+    family_merchants: Comercianți
+    feedback: Feedback
+    guides: Ghiduri
+    holdings: Dețineri
+    hostings: Găzduire proprie
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Sesiuni de acces ca utilizator
+    indexa_capital_items: Indexa Capital
+    intro: Introducere
+    investments: Investiții
+    invitations: Invitații
+    invite_codes: Coduri de invitație
+    kraken_items: Kraken
+    llm_usage: Utilizare LLM
+    llm_usages: Utilizare LLM
+    loans: Împrumuturi
+    lunchflow_items: Lunch Flow
+    mcp: Server MCP
+    merchants: Comercianți
+    mercury_items: Mercury
+    messages: Mesaje
+    mfa: Autentificare cu doi factori
+    monobank_items: Monobank
+    oidc_accounts: Conturi SSO
+    onboardings: Configurare inițială
+    other_assets: Alte active
+    other_liabilities: Alte datorii
+    payments: Plăți
+    pending_duplicate_merges: Verificare duplicate
+    plaid_items: Plaid
+    plan: Plan
+    preferences: Preferințe
+    profile: Informații profil
+    profiles: Informații profil
+    properties: Proprietăți
+    providers: Furnizori
+    recurring_transactions: Recurente
+    redbark_items: Redbark
+    registrations: Înregistrare
+    reports: Rapoarte
+    rules: Reguli
+    securities: Securitate
+    security: Securitate
+    self_hosting: Găzduire proprie
+    sessions: Autentificare
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Împărțire
+    sso_identities: Conexiuni SSO
+    sso_providers: Furnizori SSO
+    subscriptions: Abonament
+    system_health: Starea sistemului
+    tags: Etichete
+    trades: Tranzacții bursiere
+    transactions: Tranzacții
+    transfer_matches: Potriviri de transferuri
+    transfers: Transferuri
+    users: Utilizatori
+    valuations: Evaluări
+    vehicles: Vehicule

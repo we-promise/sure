@@ -5,3 +5,16 @@ ro:
       edit: Editează %{account}
     new:
       title: Introdu soldul contului
+    form:
+      subtype_label: Tipul contului
+      subtype_prompt: Selectează tipul contului
+      subtype_none: Niciunul
+      tax_treatment_label: Regim fiscal
+      tax_treatment_hint: Majoritatea criptomonedelor sunt deținute în conturi impozabile. Selectează altă opțiune dacă sunt deținute într-un cont cu avantaje fiscale.
+    subtypes:
+      wallet:
+        short: Portofel
+        long: Portofel crypto
+      exchange:
+        short: Platformă de schimb
+        long: Platformă de schimb crypto

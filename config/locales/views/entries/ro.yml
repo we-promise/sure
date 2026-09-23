@@ -12,3 +12,12 @@ ro:
       loading: Se încarcă înregistrările...
     update:
       success: Înregistrare actualizată
+    unlock:
+      success: Înregistrare deblocată. Poate fi actualizată la următoarea sincronizare.
+    protection:
+      tooltip: Protejată de sincronizare
+      title: Protejată de sincronizare
+      description: Modificările tale la această înregistrare nu vor fi suprascrise de sincronizarea cu furnizorul.
+      locked_fields_label: 'Câmpuri blocate:'
+      unlock_button: Permite actualizarea prin sincronizare
+      unlock_confirm: Permiți sincronizării să actualizeze această înregistrare? Modificările tale pot fi suprascrise la următoarea sincronizare.

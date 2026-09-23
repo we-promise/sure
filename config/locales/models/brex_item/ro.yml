@@ -1,0 +1,14 @@
+---
+ro:
+  activerecord:
+    attributes:
+      brex_item:
+        base_url: URL de bază
+        name: Nume conexiune
+        token: Token
+    errors:
+      models:
+        brex_item:
+          attributes:
+            base_url:
+              official_hosts_only: trebuie să fie gol, https://api.brex.com sau https://api-staging.brex.com

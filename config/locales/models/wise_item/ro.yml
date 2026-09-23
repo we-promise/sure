@@ -1,0 +1,12 @@
+---
+ro:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: Cheie privată SCA
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: nu poate fi stocată deoarece criptarea Active Record nu este configurată în această instalare

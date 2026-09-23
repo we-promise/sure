@@ -8,7 +8,7 @@ ro:
     expected_on: Așteptat pe %{date}
     day_of_month: Ziua %{day} a lunii
     identify_patterns: Identifică tipare
-    cleanup_stale: Curăță cele învechite
+    cleanup_stale: Elimină cele învechite
     info:
       title: Detecție automată a tiparelor
       manual_description: Poți identifica manual tipare sau curăța tranzacțiile recurente învechite folosind butoanele de mai sus.
@@ -16,23 +16,189 @@ ro:
       triggers:
         - Importurile CSV sunt complete (tranzacții, tranzacții bursiere, conturi etc.)
         - Orice sincronizare a furnizorului este completă (Plaid, SimpleFIN etc.)
-    identified: Au fost identificate %{count} tipare de tranzacții recurente
-    cleaned_up: Au fost curățate %{count} tranzacții recurente învechite
-    marked_inactive: Tranzacție recurentă marcată ca inactivă
-    marked_active: Tranzacție recurentă marcată ca activă
-    deleted: Tranzacție recurentă ștearsă
-    confirm_delete: Ești sigur că vrei să ștergi această tranzacție recurentă?
+    identified: 'Tipare de tranzacții recurente identificate: %{count}'
+    cleaned_up: 'Tranzacții recurente învechite eliminate: %{count}'
+    marked_inactive: Pusă pe pauză. Nu va mai apărea până când nu o reiei.
+    marked_active: Reluată.
+    deleted: Factura a fost eliminată. Tranzacțiile tale nu au fost modificate.
+    confirm_delete: Elimini %{name} din facturi? Tranzacțiile tale rămân exact așa cum sunt. Se elimină doar factura și programul ei de plată.
     empty:
       title: Nu s-au găsit tranzacții recurente
       description: Apasă "Identifică tipare" pentru a detecta automat tranzacțiile recurente din istoricul tău de tranzacții.
     table:
-      merchant: Comerciant
+      merchant: Nume
       amount: Sumă
       expected_day: Ziua așteptată
       next_date: Data următoare
       last_occurrence: Ultima apariție
       status: Stare
       actions: Acțiuni
+      frequency: Frecvență
     status:
       active: Activ
-      inactive: Inactiv
+      inactive: În pauză
+      suggested: Posibilă factură
+      paused: În pauză
+      ended: Închisă
+    expected_today: Așteptat astăzi
+    expected_in:
+      one: Așteptat peste %{count} zi
+      few: Așteptat peste %{count} zile
+      other: Așteptat peste %{count} de zile
+    frequency_presets:
+      monthly: Lunar
+      weekly: Săptămânal
+      biweekly: La fiecare 2 săptămâni
+      semimonthly: De două ori pe lună
+      quarterly: Trimestrial
+      semiannual: La fiecare 6 luni
+      annual: Anual
+      custom: Program personalizat
+    frequency:
+      monthly: Lunar, pe %{day}
+      weekly: Săptămânal, %{weekday}
+      biweekly: La fiecare 2 săptămâni, %{weekday}
+      semimonthly: De două ori pe lună, pe %{first} și pe %{second}
+      quarterly: Trimestrial, pe %{day}
+      semiannual: La fiecare 6 luni, pe %{day}
+      annual: Anual, în %{month}, pe %{day}
+      custom: Program personalizat
+      last_day: ultima zi
+    actions:
+      edit_payment_link: Editează linkul de plată
+      pause: Pune pe pauză
+      resume: Reia
+      delete: Elimină
+    pay_action:
+      pay: Plătește
+      pay_aria: Plătește %{name} (se deschide într-o filă nouă)
+      add_link: Adaugă link
+      add_link_aria: Adaugă un link de plată pentru %{name}
+      autopay: Plată automată
+      autopay_aria: '%{name} se plătește automat; deschide portalul într-o filă nouă'
+      open_site: Deschide site-ul facturii
+    new:
+      title: Adaugă o factură
+      income_title: Adaugă un venit
+      start_from_title: Pornește de la o cheltuială recurentă detectată
+      start_from_income_title: Pornește de la o încasare recurentă detectată
+      start_from_hint: Opțional. Alegerea uneia doar completează formularul; poți modifica în continuare orice.
+      candidate_meta: '%{count}× · ultima %{date}'
+      search_all_prompt: Nu vezi ce cauți?
+      search_all_cta: Caută în toate tranzacțiile tale
+      pick_different: Pornește de la o altă tranzacție
+      smart_fill: Completează inteligent cu AI
+      smart_fill_applied: AI a sugerat aceste valori pe baza istoricului plăților. Verifică-le înainte de a salva.
+    smart_fills:
+      create:
+        failed: Istoricul plăților nu a putut fi analizat acum. Formularul a păstrat valorile tranzacției.
+    pick_entry:
+      title: Găsește o tranzacție de la care să pornești
+      income_title: Găsește o încasare de la care să pornești
+      hint: Alegerea uneia doar completează formularul; poți modifica în continuare orice.
+      search_placeholder: Caută după nume, note sau comerciant
+      back: Înapoi la formular
+      showing_recent: Se afișează cele mai recente %{count}. Caută pentru a restrânge lista.
+      no_results: Nimic nu corespunde cu „%{query}”. Încearcă mai puține cuvinte sau revino și completează singur formularul.
+    picker_row:
+      claimed: Face parte din %{name}
+    create:
+      success: Factura a fost adăugată
+      success_income: Venitul a fost adăugat
+      due_date_required: Introdu următoarea dată scadentă a facturii
+      amount_invalid: Introdu suma ca număr simplu
+      account_invalid: Alege un cont la care poți adăuga facturi sau lasă câmpul gol
+      already_exists: Această factură există deja
+    edit:
+      trigger_label: Editează factura
+      title: Editează %{name}
+      income_title: Editează venitul · %{name}
+    form:
+      payment_url_label: Link de plată
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: Unde mergi pentru a plăti această factură. Se deschide într-o filă nouă din listele de plăți recurente și viitoare.
+      autopay_label: Se plătește automat
+      autopay_hint: Rămâne în lista de facturi, dar nu mai apare ca ceva de făcut.
+      more_options: Mai multe opțiuni
+      notes_label: Note
+      notes_placeholder: Contract 4821, plătit cu cardul Amex
+      notes_hint: Orice vrei să ai la îndemână când plătești. Se afișează pe factură.
+      apply_to_siblings:
+        one: Folosește acest link și pentru cealaltă factură %{name}
+        few: Folosește acest link și pentru celelalte %{count} facturi %{name}
+        other: Folosește acest link și pentru celelalte %{count} de facturi %{name}
+      submit: Salvează factura
+      submit_income: Salvează venitul
+      income_name_label: Sursă
+      income_name_placeholder: Angajator, client, activitate secundară
+      income_amount_label: Sumă per plată
+      income_due_on_label: Următoarea zi de plată
+      income_account_label: Se încasează în
+      income_frequency_hint: Cât de des ești plătit. Alege detaliile zilei astfel încât să corespundă zilei de plată.
+      income_frequency_label: Cât de des ești plătit
+      income_frequency_new_hint: Detaliile zilei de plată sunt preluate din data de mai sus. Poți ajusta programul după salvare.
+      income_notes_placeholder: Virament salariu, împărțit în două conturi
+      income_notes_hint: Orice merită reținut despre acest venit.
+      name_label: Nume
+      name_placeholder: Chirie, Enel, Netflix
+      amount_label: Sumă
+      first_due_on_label: Următoarea scadență
+      account_label: Plătită din
+      account_blank: Orice cont
+      bill_type_label: Tip
+      installment_count_label: Număr de rate
+      installment_count_hint: Planul se încheie după acest număr de rate și își afișează progresul până atunci.
+      renews_on_label: Se reînnoiește
+      trial_ends_on_label: Perioada de probă se încheie
+      amount_edit_hint: Se aplică facturilor scadente de acum înainte. Cele deja scadente își păstrează suma inițială.
+      income_amount_edit_hint: Se aplică zilelor de plată de acum înainte. Cele deja scadente își păstrează suma inițială.
+      cancelled_on_label: Anulată
+      cancelled_on_hint: Data este înregistrată doar pentru evidența ta. Pune factura pe pauză pentru ca altele viitoare să nu mai apară.
+      category_label: Categorie
+      category_blank: Fără categorie
+      frequency_new_hint: Detaliile zilei sunt preluate din data scadentă de mai sus. Poți ajusta programul după salvare.
+      frequency_label: Cât de des
+      frequency_hint: Cât de des devine scadentă această factură. Alege detaliile zilei astfel încât să corespundă extrasului de cont.
+      frequency_day_label: În ziua
+      frequency_second_day_label: Și în ziua
+      frequency_weekday_label: Ziua
+      frequency_month_label: Luna
+    update:
+      success: Factura a fost actualizată
+      success_with_siblings:
+        one: Factura a fost actualizată, iar linkul de plată a fost copiat în încă %{count} factură
+        few: Factura a fost actualizată, iar linkul de plată a fost copiat în alte %{count} facturi
+        other: Factura a fost actualizată, iar linkul de plată a fost copiat în alte %{count} de facturi
+    manage:
+      title: Facturile tale se află pe pagina Facturi
+      description: Declară, editează, pune pe pauză și plătește totul de acolo. Această pagină controlează detectarea.
+      cta: Deschide toate facturile
+    settings:
+      enable_label: Activează tranzacțiile recurente
+      enable_description: Detectează automat tiparele tranzacțiilor recurente și afișează tranzacțiile viitoare proiectate.
+    settings_updated: Setările tranzacțiilor recurente au fost actualizate
+    identify_already_running: Detectarea rulează deja. Revino în câteva momente.
+    deleted_income: Venitul a fost eliminat. Tranzacțiile tale nu au fost modificate.
+    confirm_delete_income: Elimini %{name} ca venit? Tranzacțiile tale rămân exact așa cum sunt. Se elimină doar venitul și programul lui.
+    marked_as_recurring: Tranzacția a fost marcată ca recurentă
+    already_exists: Există deja o tranzacție recurentă manuală pentru acest tipar
+    creation_failed: Crearea tranzacției recurente a eșuat. Te rugăm să verifici detaliile tranzacției și să încerci din nou.
+    unexpected_error: A apărut o eroare neașteptată la crearea tranzacției recurente
+    amount_range: 'Interval: %{min} - %{max}'
+    suggested:
+      title: Posibile facturi noi
+      seen_count:
+        one: văzută o dată
+        few: văzută de %{count} ori
+        other: văzută de %{count} de ori
+      collapsed_hint: Atinge pentru a verifica
+      confirm: Adaugă factura
+      dismiss: Nu este o factură
+    confirmed: Factura a fost adăugată la tranzacțiile recurente
+    dismissed: Respins. Acest tipar nu va mai fi sugerat.
+    badges:
+      manual: Manual
+    transfer_marked_as_recurring: Transferul a fost marcat ca recurent
+    transfer_already_exists: Există deja un transfer recurent pentru această pereche de conturi
+    transfer_creation_failed: Crearea transferului recurent a eșuat. Te rugăm să verifici detaliile transferului și să încerci din nou.
+    transfer_feature_disabled: Tranzacțiile recurente sunt dezactivate pentru această familie

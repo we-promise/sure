@@ -1,0 +1,15 @@
+---
+ro:
+  recurring_allocations:
+    over_allocation: Astfel s-ar aloca mai mult decât suma tranzacției
+    missing_rate: Nu există un curs de schimb disponibil; introdu suma manual
+    already_allocated: Această tranzacție este deja asociată acestei facturi
+    invalid: Plata nu a putut fi înregistrată
+    create:
+      success: Plata a fost asociată
+    destroy:
+      success: Plata a fost dezasociată
+    confirm:
+      success: Plata a fost asociată facturii
+    reject:
+      success: Respinsă. Această tranzacție nu va mai fi sugerată pentru această factură.
