@@ -121,9 +121,9 @@ module FinancekitTestHelper
   def accept_and_apply(payload = financekit_payload, item: @item)
     batch, = accept_batch(payload, item: item)
     applied = Financekit::Processor.new(item).apply_next!
-    assert applied
+    assert applied.present?
     # apply_next! no longer fans out on its own; the job batches a whole drain.
-    Financekit::Downstream.new(item, FinancekitBatch.where(id: applied.id)).perform!
+    Financekit::Downstream.new(item, FinancekitBatch.where(id: applied.map(&:id))).perform!
     batch.reload
   end
 end

@@ -6,13 +6,15 @@ class FinancekitInboxJob < ApplicationJob
     items.find_each do |item|
       next unless Financekit.enabled?(item.family)
 
-      # Ids only: a drained capture still holds its payload bytes.
+      # Ids only: a drained capture still holds its payload bytes. Every part of
+      # a multi-chunk capture is collected, so none is left for the sweep below
+      # to fan out a second time in this same run.
       applied_ids = []
       Financekit::MAX_QUEUED.times do
-        batch = Financekit::Processor.new(item).apply_next!
-        break unless batch
+        parts = Financekit::Processor.new(item).apply_next!
+        break if parts.blank?
 
-        applied_ids << batch.id
+        applied_ids.concat(parts.map(&:id))
       end
       Financekit::Downstream.new(item, FinancekitBatch.where(id: applied_ids)).perform!
     end

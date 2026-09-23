@@ -3,8 +3,12 @@ class Financekit::Processor
     @item = item
   end
 
+  # Returns every part of the capture it applied, so the caller can complete
+  # them together. Returning only the last chunk left the earlier ones without
+  # downstream work, and the recovery sweep then repeated the fan-out for them.
   def apply_next!
     batch = nil
+    applied = nil
     @item.with_lock do
       @item.require_publisher!
       batch = @item.financekit_batches.find_by(generation: @item.generation,
@@ -39,8 +43,9 @@ class Financekit::Processor
       @item.update!(next_sequence: last.sequence + 1, predecessor_digest: last.payload_digest,
         last_imported_at: applied_at, last_captured_at: last.captured_at)
       batch = last
+      applied = capture
     end
-    batch
+    applied
   rescue ActiveRecord::RecordInvalid => error
     # Retryable. RecordInvalid covers ordinary races — a concurrent balance
     # observation or conflict insert, an entry validation a later attempt

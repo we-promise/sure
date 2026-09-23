@@ -207,6 +207,26 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_not_nil @item.reload.last_downstream_at
   end
 
+  test "a multi-chunk capture fans downstream work out once, not once per chunk" do
+    capture_id = SecureRandom.uuid
+    first_payload = financekit_payload(events: [])
+    first_payload.merge!("capture_id" => capture_id, "chunk_index" => 0, "chunk_count" => 2)
+    first, first_raw = accept_batch(first_payload)
+    second_payload = financekit_payload(sequence: 2, predecessor_digest: Digest::SHA256.hexdigest(first_raw),
+      events: [])
+    second_payload.merge!("capture_id" => capture_id, "chunk_index" => 1, "chunk_count" => 2)
+    second, = accept_batch(second_payload)
+
+    # Completing only the last chunk left the earlier ones for the recovery
+    # sweep, which then repeated the whole fan-out inside the same job run.
+    Family.any_instance.expects(:auto_match_transfers!).once.returns(nil)
+
+    FinancekitInboxJob.perform_now(@item.id)
+
+    assert_not_nil first.reload.downstream_completed_at
+    assert_not_nil second.reload.downstream_completed_at
+  end
+
   test "the sweep recovers a backlog without materializing batch rows" do
     first = accept_and_apply
     second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
