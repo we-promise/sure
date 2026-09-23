@@ -6,12 +6,16 @@ uk:
       synced:
         one: "%{count} рахунок синхронізовано"
         other: "%{count} рахунків синхронізовано"
+        few: '%{count} рахунки синхронізовано'
+        many: '%{count} рахунків синхронізовано'
       synced_with_setup: "%{linked} синхронізовано, %{unlinked} потребують налаштування"
     institution_summary:
       none: "Немає підключених установ"
       count:
         one: "%{count} установа"
         other: "%{count} установ"
+        few: '%{count} установи'
+        many: '%{count} установ'
     errors:
       provider_not_configured: "Постачальника IndexaCapital не налаштовано"
     sync:
@@ -71,10 +75,14 @@ uk:
       all_already_linked:
         one: "Вибраний рахунок (%{names}) уже прив'язано"
         other: "Всі %{count} вибраних рахунків уже прив'язано: %{names}"
+        few: 'Всі %{count} вибрані рахунки уже прив''язано: %{names}'
+        many: 'Всі %{count} вибраних рахунків уже прив''язано: %{names}'
       api_error: "Помилка API: %{message}"
       invalid_account_names:
         one: "Неможливо прив'язати рахунок з порожньою назвою"
         other: "Неможливо прив'язати %{count} рахунків з порожніми назвами"
+        few: Неможливо прив'язати %{count} рахунки з порожніми назвами
+        many: Неможливо прив'язати %{count} рахунків з порожніми назвами
       link_failed: "Не вдалося прив'язати рахунки"
       no_accounts_selected: "Будь ласка, виберіть принаймні один рахунок"
       no_api_key: "Облікові дані IndexaCapital не знайдено. Будь ласка, налаштуйте їх у налаштуваннях постачальника."
@@ -83,6 +91,8 @@ uk:
       success:
         one: "Успішно прив'язано %{count} рахунок"
         other: "Успішно прив'язано %{count} рахунків"
+        few: Успішно прив'язано %{count} рахунки
+        many: Успішно прив'язано %{count} рахунків
     indexa_capital_item:
       accounts_need_setup: "Рахунки потребують налаштування"
       delete: "Видалити підключення"
@@ -91,6 +101,8 @@ uk:
       more_accounts_available:
         one: "Доступний ще %{count} рахунок"
         other: "Доступно ще %{count} рахунків"
+        few: Доступні ще %{count} рахунки
+        many: Доступно ще %{count} рахунків
       no_accounts_description: "Це підключення ще не має прив'язаних рахунків."
       no_accounts_title: "Немає рахунків"
       provider_name: "IndexaCapital"
@@ -153,6 +165,8 @@ uk:
       accounts_count:
         one: "%{count} рахунок доступний"
         other: "%{count} рахунків доступні"
+        few: '%{count} рахунки доступні'
+        many: '%{count} рахунків доступні'
       all_accounts_linked: "Всі ваші рахунки IndexaCapital уже налаштовано."
       api_error: "Помилка API: %{message}"
       creating: "Створення рахунків..."
@@ -165,7 +179,7 @@ uk:
       select_all: "Вибрати все"
       account_types:
         skip: "Пропустити цей рахунок"
-        depository: "Розрахунковий або ощадний рахунок"
+        depository: "Поточний або ощадний рахунок"
         credit_card: "Кредитна картка"
         investment: "Інвестиційний рахунок"
         crypto: "Криптовалютний рахунок"
@@ -184,11 +198,11 @@ uk:
         crypto: "Криптовалютні рахунки будуть налаштовані для відстеження активів та транзакцій."
       subtypes:
         depository:
-          checking: "Розрахунковий"
+          checking: "Поточний"
           savings: "Ощадний"
           hsa: "Рахунок для заощаджень на здоров'я"
-          cd: "Депозитний сертифікат"
-          money_market: "Грошовий ринок"
+          cd: "Строковий депозит"
+          money_market: "Рахунок грошового ринку"
         investment:
           brokerage: "Брокерський"
           pension: "Пенсійний"

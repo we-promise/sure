@@ -72,3 +72,5 @@ uk:
         create_key: "Створити ключ API"
         cancel: "Скасувати"
         save_api_key: "Зберегти ключ API"
+      key_reveal:
+        copied: Скопійовано!

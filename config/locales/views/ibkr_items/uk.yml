@@ -31,7 +31,7 @@ uk:
         items:
           item_1: "Активи з поточними цінами та кількістю"
           item_2: "Базова вартість за позицією"
-          item_3: "Угоди, дивіденди, комісії та готівкові депозити або зняття"
+          item_3: "Угоди, дивіденди, комісії та внесення або зняття коштів"
         warning: "Історична активність обмежена вікном звіту запиту Flex"
       status:
         fetching_accounts: "Отримання рахунків з Interactive Brokers..."
@@ -59,8 +59,10 @@ uk:
     sync_status:
       no_accounts: "Рахунків IBKR ще не знайдено"
       all_linked:
-        one: "1 рахунок прив'язано"
+        one: "%{count} рахунок прив'язано"
         other: "%{count} рахунків прив'язано"
+        few: '%{count} рахунки прив''язано'
+        many: '%{count} рахунків прив''язано'
       partial: "%{linked} прив'язано, %{unlinked} потребують налаштування"
     select_existing_account:
       title: "Прив'язати рахунок Interactive Brokers"
@@ -88,5 +90,7 @@ uk:
       success:
         one: "Успішно створено %{count} рахунок Interactive Brokers."
         other: "Успішно створено %{count} рахунків Interactive Brokers."
+        few: Успішно створено %{count} рахунки Interactive Brokers.
+        many: Успішно створено %{count} рахунків Interactive Brokers.
       none_selected: "Не вибрано жодного рахунку."
       none_created: "Не створено жодного рахунку."
