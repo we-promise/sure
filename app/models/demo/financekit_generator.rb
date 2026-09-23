@@ -22,16 +22,20 @@ class Demo::FinancekitGenerator
   # Additive and repeatable: never replace an existing Wallet enrollment or
   # clear a family's data. These synthetic records need no device or feature flags.
   def generate!
-    raise "FinanceKit demo seeding is only available in development/test" unless Rails.env.local?
-
-    @funding_accounts_to_sync = []
     item = @family.with_lock do
-      existing = @family.financekit_items.find_by(enrollment_id: ENROLLMENT_ID)
-      if existing
-        @item = existing
-        complete_demo_activity!
-        generate_cash_family_activity!.each { |mapping| record_balance!(mapping) }
-        next existing
+      create_accounts!
+      create_transactions!
+    end
+    (item.accounts.to_a + @funding_accounts_to_sync).uniq.each { |account| Sync.create!(syncable: account).perform }
+    item
+  end
+
+  def create_accounts!
+    @family.with_lock do
+      @item = @family.financekit_items.find_by(enrollment_id: ENROLLMENT_ID)
+      if @item
+        ensure_nancy_account!
+        next @item
       end
 
       user = @family.users.where(active: true, role: %w[admin super_admin]).order(:created_at).first!
@@ -44,14 +48,30 @@ class Demo::FinancekitGenerator
           "remote_processing_acknowledged" => true
         }
       }).item
-      card = map_account!(CARD_SOURCE_ID, "Apple Card", "CreditCard", "credit_card")
-      cash = map_account!(CASH_SOURCE_ID, "Apple Cash", "Depository", "cash")
-      nancy = map_account!(NANCY_SOURCE_ID, "Nancy's Apple Cash", "Depository", "cash")
+      map_account!(CARD_SOURCE_ID, "Apple Card", "CreditCard", "credit_card")
+      map_account!(CASH_SOURCE_ID, "Apple Cash", "Depository", "cash")
+      map_account!(NANCY_SOURCE_ID, "Nancy's Apple Cash", "Depository", "cash")
       @item.activate!
+      @item
+    end
+  end
+
+  def create_transactions!
+    @funding_accounts_to_sync = []
+    @family.with_lock do
+      @item = @family.financekit_items.find_by!(enrollment_id: ENROLLMENT_ID)
+      if @item.last_imported_at
+        complete_demo_activity!
+        generate_cash_family_activity!.each { |mapping| record_balance!(mapping) }
+        next @item
+      end
+
+      card = @item.financekit_accounts.find_by!(source_id: CARD_SOURCE_ID)
+      cash = @item.financekit_accounts.find_by!(source_id: CASH_SOURCE_ID)
       generate_transactions!(card, cash)
       complete_demo_activity!
       generate_cash_family_activity!
-      [ card, cash, nancy ].each { |mapping| record_balance!(mapping) }
+      @item.financekit_accounts.each { |mapping| record_balance!(mapping) }
       now = Time.current
       @item.update!(last_device_contact_at: now, last_accepted_at: now, last_imported_at: now)
       @item.syncs.create!(status: "completed", completed_at: now,
@@ -60,12 +80,20 @@ class Demo::FinancekitGenerator
         message: "FinanceKit demo accounts created", event: "demo_seeded", account_count: 3)
       @item
     end
-
-    (item.accounts.to_a + @funding_accounts_to_sync).uniq.each { |account| Sync.create!(syncable: account).perform }
-    item
   end
 
   private
+    def ensure_nancy_account!
+      return if @item.financekit_accounts.exists?(source_id: NANCY_SOURCE_ID)
+
+      # Only this synthetic enrollment is extended; real device enrollments
+      # continue to manage their own consent and mapping lifecycle.
+      @item.update!(status: "repair_required", consent: @item.consent.merge(
+        "selected_source_account_ids" => (@item.consented_source_ids + [ NANCY_SOURCE_ID ]).uniq))
+      map_account!(NANCY_SOURCE_ID, "Nancy's Apple Cash", "Depository", "cash")
+      @item.activate!
+    end
+
     def map_account!(source_id, name, type, subtype)
       FinancekitAccount.map!(@item, source_id, {
         "expected_version" => 0, "action" => "create", "name" => name,
@@ -159,15 +187,7 @@ class Demo::FinancekitGenerator
     def generate_cash_family_activity!
       card = @item.financekit_accounts.find_by!(source_id: CARD_SOURCE_ID)
       cash = @item.financekit_accounts.find_by!(source_id: CASH_SOURCE_ID)
-      nancy = @item.financekit_accounts.find_by(source_id: NANCY_SOURCE_ID)
-      unless nancy
-        # Only this synthetic enrollment is extended; real device enrollments
-        # continue to manage their own consent and mapping lifecycle.
-        @item.update!(status: "repair_required", consent: @item.consent.merge(
-          "selected_source_account_ids" => (@item.consented_source_ids + [ NANCY_SOURCE_ID ]).uniq))
-        nancy = map_account!(NANCY_SOURCE_ID, "Nancy's Apple Cash", "Depository", "cash")
-        @item.activate!
-      end
+      nancy = @item.financekit_accounts.find_by!(source_id: NANCY_SOURCE_ID)
 
       changed = []
       today = Time.current.in_time_zone(cash.ledger_timezone).to_date

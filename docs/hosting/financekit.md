@@ -90,9 +90,9 @@ These diagnostics deliberately omit exception messages and financial payloads.
 Requests rejected before reaching the batch inbox (such as invalid publisher
 credentials or content type) do not create these model-level events.
 
-## Local sample accounts
+## Sample accounts
 
-In development/test, the full demo generator includes a synthetic Apple Wallet connection with Apple
+The standard demo account and transaction phases include a synthetic Apple Wallet connection with Apple
 Card (`CreditCard`), Apple Cash, and Nancy's Apple Cash (`Depository`, subtype `cash`). It includes a
 year of card purchases/payments and cash purchases/top-ups, plus pending activity,
 source identities, balance observations, and acceptance/import timestamps.
@@ -104,22 +104,22 @@ cream: a few categorized purchases per month, with a positive running balance.
 These additions also populate older demo enrollments in place; stable source IDs
 prevent duplicate rewards, gifts, and purchases on reruns.
 
-To add just these accounts to an existing local family without replacing its data:
+To add just these accounts to an existing demo family without replacing its data:
 
 ```sh
-FAMILY_ID=<local-family-uuid> bin/rails demo_data:financekit
+FAMILY_ID=<demo-family-uuid> bin/rails demo_data:financekit
 ```
 
-Alternatively use `DEMO_EMAIL=<local-user-email>` (defaults to the configured demo
+Alternatively use `DEMO_EMAIL=<demo-user-email>` (defaults to the configured demo
 email). `SEED=42` controls the generated amounts and merchants. Reruns preserve
 the existing demo enrollment and transactions, and upgrade older synthetic data
 with merchant-specific categories and paired transfers. Apple Card payments and
 Apple Cash top-ups come from the demo owner's manual Chase Premier Checking
 account; if absent, a funded Wallet Demo Checking account is created. Subsequent
 reruns preserve category edits and do not duplicate either transfer leg.
-FinanceKit demo generation is restricted to development/test, including when
-called by the full generator or sample-data reset flow. It does not enable FinanceKit feature flags or change user
-permissions. These records simulate imported data; no iOS device is required.
+Wallet demo data is included in every environment by both the full generator
+and sample-data reset flow. It does not enable FinanceKit feature flags or change
+user permissions. These records simulate imported data; no iOS device is required.
 
 ## Wallet logo
 

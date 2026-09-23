@@ -8,14 +8,26 @@ class Demo::FinancekitGeneratorTest < ActiveSupport::TestCase
     @checking.depository.update!(subtype: "checking")
   end
 
-  test "FinanceKit demo generation refuses nonlocal environments before writing data" do
+  test "FinanceKit demo accounts and transactions can be generated in separate phases in production" do
     Rails.stubs(:env).returns(ActiveSupport::EnvironmentInquirer.new("production"))
+    generator = Demo::FinancekitGenerator.new(families(:dylan_family))
 
-    assert_no_difference [ "Account.count", "FinancekitItem.count", "Entry.count" ] do
-      error = assert_raises(RuntimeError) do
-        Demo::FinancekitGenerator.new(families(:dylan_family)).generate!
-      end
-      assert_match(/only available in development\/test/, error.message)
+    item = nil
+    assert_no_difference "Entry.count" do
+      item = generator.create_accounts!
+    end
+    assert_equal [ "Apple Card", "Apple Cash", "Nancy's Apple Cash" ], item.accounts.order(:name).pluck(:name)
+    assert item.accounts.all?(&:linked?)
+    assert_nil item.last_imported_at
+
+    assert_no_difference "Account.count" do
+      generator.create_transactions!
+    end
+    assert item.reload.last_imported_at
+    assert item.accounts.all? { |account| account.entries.exists? }
+    assert_no_difference [ "Account.count", "Entry.count", "FinancekitTransaction.count", "Transfer.count" ] do
+      generator.create_accounts!
+      generator.create_transactions!
     end
   end
 

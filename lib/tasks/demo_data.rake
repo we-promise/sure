@@ -1,8 +1,6 @@
 namespace :demo_data do
-  desc "Add Apple Card and family Apple Cash accounts to an existing local demo family"
+  desc "Add Apple Card and family Apple Cash accounts to an existing demo family"
   task financekit: :environment do
-    raise "FinanceKit demo seeding is only available in development/test" unless Rails.env.local?
-
     family = if ENV["FAMILY_ID"].present?
       Family.find(ENV.fetch("FAMILY_ID"))
     else
