@@ -1,4 +1,10 @@
-<%= container do %>
+<%= content_tag(external_link ? :div : :a,
+      href: (connect_path unless external_link),
+      class: class_names(
+        "bg-container shadow-border-xs rounded-xl p-4 flex flex-col gap-2.5 text-primary",
+        "hover:bg-surface-inset transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300" => !external_link
+      ),
+      data: filter_data.merge(external_link ? {} : { turbo_frame: "drawer", turbo_prefetch: "false" })) do %>
   <div class="flex items-start gap-2.5">
     <%= render ProviderLogo.new(provider_key: provider_key, class_name: "w-9 h-9 rounded-lg") %>
     <div class="flex-1 min-w-0">

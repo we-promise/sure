@@ -22,17 +22,6 @@ class Settings::ProviderCard < ApplicationComponent
 
   attr_reader :provider_key, :name, :tagline, :external_link
 
-  def container(&block)
-    classes = "bg-container shadow-border-xs rounded-xl p-4 flex flex-col gap-2.5 text-primary"
-    if external_link
-      tag.div(class: classes, data: filter_data, &block)
-    else
-      link_to(connect_path,
-        class: "#{classes} hover:bg-surface-inset transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300",
-        data: { turbo_frame: "drawer", turbo_prefetch: "false" }.merge(filter_data), &block)
-    end
-  end
-
   def maturity_label
     self.class.maturity_label(@maturity)
   end
