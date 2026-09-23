@@ -142,11 +142,11 @@ it:
       no_api_token: "Il token API Mercury non è configurato. Controlla le impostazioni di connessione."
       account_types:
         skip: Salta questo conto
-        depository: Conto Corrente o Risparmio
+        depository: Conto corrente o di risparmio
         credit_card: Carta di credito
         investment: Conto investimento
         loan: Prestito o Mutuo
-        other_asset: Altro attivo
+        other_asset: Altro asset
       subtype_labels:
         depository: "Sottotipo conto:"
         credit_card: ""
@@ -155,16 +155,16 @@ it:
         other_asset: ""
       subtype_messages:
         credit_card: "Le carte di credito saranno configurate automaticamente come conti carta di credito."
-        other_asset: "Nessuna opzione aggiuntiva necessaria per gli altri attivi."
+        other_asset: "Nessuna opzione aggiuntiva necessaria per gli altri asset."
       subtypes:
         depository:
-          checking: Conto Corrente
+          checking: Conto corrente
           savings: Risparmio
-          hsa: Health Savings Account
+          hsa: Conto di risparmio sanitario
           cd: Certificato di Deposito
           money_market: Mercato Monetario
         investment:
-          brokerage: Intermediazione
+          brokerage: Conto titoli
           pension: Pensione
           retirement: Previdenza
           "401k": "401(k)"
@@ -172,7 +172,7 @@ it:
           "403b": "403(b)"
           tsp: Thrift Savings Plan
           "529_plan": "Piano 529"
-          hsa: Health Savings Account
+          hsa: Conto di risparmio sanitario
           mutual_fund: Fondo comune
           ira: IRA Tradizionale
           roth_ira: Roth IRA

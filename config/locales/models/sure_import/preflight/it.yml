@@ -1,0 +1,6 @@
+---
+it:
+  sure_import:
+    preflight:
+      missing_reference: 'Riga %{line}: %{type} fa riferimento a %{field} %{value} mancante.'
+      skipped_missing_reference: 'Riga %{line}: %{type} fa riferimento a %{field} %{value} mancante. Verrà saltato durante l''importazione.'

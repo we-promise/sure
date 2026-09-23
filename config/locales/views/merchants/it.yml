@@ -2,73 +2,80 @@
 it:
   family_merchants:
     create:
-      error: "Errore nella creazione del commerciante: %{error}"
-      success: Nuovo commerciante creato con successo
+      error: "Errore nella creazione dell'esercente: %{error}"
+      success: Nuovo esercente creato con successo
     destroy:
-      success: Commerciante eliminato con successo
-      unlinked_success: Commerciante rimosso dalle tue transazioni
+      success: Esercente eliminato con successo
+      unlinked_success: Esercente rimosso dalle tue transazioni
     edit:
-      title: Modifica commerciante
+      title: Modifica esercente
     form:
-      name_placeholder: Nome commerciante
+      name_placeholder: Nome esercente
       website_placeholder: Sito web (es. starbucks.com)
-      website_hint: Inserisci il sito web del commerciante per visualizzarne automaticamente il logo
+      website_hint: Inserisci il sito web dell'esercente per visualizzarne automaticamente il logo
     index:
-      empty: Nessun commerciante ancora
-      new: Nuovo commerciante
-      import: Importa commercianti
-      merge: Unisci commercianti
-      title: Commercianti
-      family_title: "Commercianti %{moniker}"
-      family_empty: "Nessun commerciante %{moniker} ancora"
-      provider_title: Commercianti del provider
-      provider_empty: "Nessun commerciante del provider collegato a questo %{moniker} ancora"
-      provider_read_only: I commercianti del provider vengono sincronizzati dalle istituzioni collegate. Non possono essere modificati qui.
-      provider_info: Questi commercianti sono stati rilevati automaticamente dai tuoi conti bancari collegati o dall'IA. Puoi modificarli per crearne una copia personalizzata, o rimuoverli per scollegarli dalle transazioni.
+      empty: Nessun esercente ancora
+      new: Nuovo esercente
+      import: Importa esercenti
+      merge: Unisci esercenti
+      title: Esercenti
+      family_title: "Esercenti %{moniker}"
+      family_empty: "Nessun esercente %{moniker} ancora"
+      provider_title: Esercenti del provider
+      provider_empty: "Nessun esercente del provider collegato a questo account %{moniker} ancora"
+      provider_read_only: Gli esercenti del provider vengono sincronizzati dalle istituzioni collegate. Non possono essere modificati qui.
+      provider_info: Questi esercenti sono stati rilevati automaticamente dai tuoi conti bancari collegati o dall'IA. Puoi modificarli per crearne una copia personalizzata, o rimuoverli per scollegarli dalle transazioni.
       enhance_info:
-        one: "%{count} commerciante del provider non ha informazioni sul sito web. Migliora con l'IA per rilevare siti, mostrare loghi e unire commercianti duplicati."
-        other: "%{count} commercianti del provider non hanno informazioni sul sito web. Migliora con l'IA per rilevare siti, mostrare loghi e unire commercianti duplicati."
+        one: "%{count} esercente del provider non ha informazioni sul sito web. Migliora con l'IA per rilevare siti, mostrare loghi e unire esercenti duplicati."
+        other: "%{count} esercenti del provider non hanno informazioni sul sito web. Migliora con l'IA per rilevare siti, mostrare loghi e unire esercenti duplicati."
       enhance_button: Migliora con l'IA
       unlinked_title: Scollegati di recente
-      unlinked_info: Questi commercianti sono stati recentemente rimossi dalle tue transazioni. Scompariranno da questa lista dopo 30 giorni a meno che non vengano riassegnati a una transazione.
+      unlinked_info: Questi esercenti sono stati recentemente rimossi dalle tue transazioni. Scompariranno da questa lista dopo 30 giorni a meno che non vengano riassegnati a una transazione.
       table:
-        merchant: Commerciante
+        merchant: Esercente
         actions: Azioni
         source: Fonte
+      search_family_merchants: Cerca esercenti della famiglia...
+      search_provider_merchants: Cerca esercenti del provider...
+      no_family_merchants_found: Nessun esercente della famiglia corrispondente
+      no_provider_merchants_found: Nessun esercente del provider corrispondente
+      per_page: per pagina
     family_merchant:
       edit: Modifica
       delete: Elimina
     merchant:
-      confirm_accept: Elimina commerciante
-      confirm_body: Sei sicuro di voler eliminare questo commerciante? La rimozione di questo commerciante scollegherà tutte le transazioni associate e potrebbe influire sui rapporti.
-      confirm_title: Eliminare il commerciante?
-      delete: Elimina commerciante
-      edit: Modifica commerciante
+      confirm_accept: Elimina esercente
+      confirm_body: Sei sicuro di voler eliminare questo esercente? La rimozione di questo esercente scollegherà tutte le transazioni associate e potrebbe influire sui rapporti.
+      confirm_title: Eliminare l'esercente?
+      delete: Elimina esercente
+      edit: Modifica esercente
     merge:
-      title: Unisci commercianti
-      description: Seleziona un commerciante di destinazione e i commercianti da unire. Tutte le transazioni dei commercianti uniti verranno riassegnate alla destinazione.
+      title: Unisci esercenti
+      description: Seleziona un esercente di destinazione e gli esercenti da unire. Tutte le transazioni degli esercenti uniti verranno riassegnate alla destinazione.
       target_label: Unisci in (destinazione)
-      select_target: Seleziona commerciante di destinazione...
-      sources_label: Commercianti da unire
-      sources_hint: I commercianti selezionati verranno uniti nella destinazione. I commercianti della famiglia verranno eliminati, quelli del provider verranno scollegati.
+      select_target: Seleziona esercente di destinazione...
+      sources_label: Esercenti da unire
+      sources_hint: Gli esercenti selezionati verranno uniti nella destinazione. Gli esercenti della famiglia verranno eliminati, quelli del provider verranno scollegati.
       submit: Unisci selezionati
+      sources_search_placeholder: Cerca esercenti...
+      no_merchants_found: Nessun esercente corrispondente
     new:
-      title: Nuovo commerciante
+      title: Nuovo esercente
     perform_merge:
       success:
-        one: Unito con successo %{count} commerciante
-        other: Uniti con successo %{count} commercianti
-      no_merchants_selected: Nessun commerciante selezionato da unire
-      target_not_found: Commerciante di destinazione non trovato
-      invalid_merchants: Commercianti non validi selezionati
+        one: Unito con successo %{count} esercente
+        other: Uniti con successo %{count} esercenti
+      no_merchants_selected: Nessun esercente selezionato da unire
+      target_not_found: Esercente di destinazione non trovato
+      invalid_merchants: Esercenti non validi selezionati
     provider_merchant:
       edit: Modifica
       remove: Rimuovi
-      remove_confirm_title: Rimuovere il commerciante?
-      remove_confirm_body: Sei sicuro di voler rimuovere %{name}? Questo scollegherà tutte le transazioni associate da questo commerciante ma non lo eliminerà.
+      remove_confirm_title: Rimuovere l'esercente?
+      remove_confirm_body: Sei sicuro di voler rimuovere %{name}? Questo scollegherà tutte le transazioni associate da questo esercente ma non lo eliminerà.
     enhance:
-      success: Miglioramento commercianti del provider avviato. I commercianti verranno migliorati e i duplicati uniti a breve.
+      success: Miglioramento esercenti del provider avviato. Gli esercenti verranno migliorati e i duplicati uniti a breve.
       already_running: Il miglioramento è già in corso. Attendi che finisca.
     update:
-      success: Commerciante aggiornato con successo
-      converted_success: Commerciante convertito e aggiornato con successo
+      success: Esercente aggiornato con successo
+      converted_success: Esercente convertito e aggiornato con successo

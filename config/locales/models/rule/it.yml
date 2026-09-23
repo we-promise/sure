@@ -7,3 +7,6 @@ it:
           min_actions: "deve avere almeno un'azione"
           duplicate_actions: "La regola non può avere azioni duplicate %{types}"
           nested_conditions: "Le condizioni composte non possono essere nidificate"
+  rule:
+    conditions:
+      unsupported_label: Non supportata (%{type})

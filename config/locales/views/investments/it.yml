@@ -12,8 +12,8 @@ it:
       chart_title: Valore totale
     subtypes:
       brokerage:
-        short: Intermediario
-        long: Conto intermediario
+        short: Conto titoli
+        long: Conto titoli
       401k:
         short: 401(k)
         long: 401(k)
@@ -182,6 +182,9 @@ it:
       other:
         short: Altro
         long: Altro investimento
+      cash_management:
+        short: CMA
+        long: Conto di gestione della liquidità
     value_tooltip:
       cash: Liquidità
       holdings: Posizioni

@@ -15,6 +15,11 @@ it:
         reports: Rapporti
         goals: Obiettivi
         transactions: Transazioni
+        bills: Bollette
+      insights: Insight
+      release_highlight:
+        title: Novità
+        done: Ho capito
     auth:
       existing_account: Hai già un account?
       no_account: Nuovo su %{product_name}?
@@ -28,7 +33,11 @@ it:
         are_you_sure: Sei sicuro?
         cannot_be_undone: Questa azione non può essere annullata.
         confirm: Conferma
+      notification_tray:
+        download_complete: Download completato
+        download_failed: Download non riuscito. Riprova.
+        download_location: Il file si trova nella cartella Download.
     trial:
-      open_demo: Apri demo
+      open_demo: Demo pubblica
       data_deleted_in_days: Dati eliminati tra %{days} giorni
       contribute: Contribuisci

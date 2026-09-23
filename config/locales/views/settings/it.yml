@@ -51,8 +51,8 @@ it:
         filter: "Filtra"
         total_requests: "Richieste totali"
         total_tokens: "Token totali"
-        prompt: "prompt"
-        completion: "completamento"
+        prompt: "input"
+        completion: "output"
         total_cost: "Costo totale"
         avg_cost_per_request: "Costo medio/richiesta"
         based_on_requests: "Basato su %{with_cost} di %{total} richieste con dati di costo"
@@ -77,12 +77,34 @@ it:
         main_system_prompt:
           title: Prompt di sistema principale
           subtitle: Istruzioni fondamentali che definiscono come l'assistente AI si comporta in tutte le conversazioni
+          label: Prompt di sistema della chat
         transaction_categorizer:
           title: Categorizzatore transazioni
           subtitle: L'AI categorizza automaticamente le tue transazioni in base alle categorie definite
         merchant_detector:
           title: Rilevatore esercenti
           subtitle: L'AI identifica e arricchisce i dati delle transazioni con informazioni sull'esercente
+        save: Salva prompt
+        save_confirm:
+          title: Salvare i prompt AI personalizzati?
+          body: I prompt personalizzati sostituiscono le istruzioni di sistema integrate e le protezioni di sicurezza (come le restrizioni sulla consulenza finanziaria) per la tua famiglia.
+          dont_show_again: Non mostrare più questo avviso
+          cancel: Annulla
+          confirm: Conferma
+      prompt_field:
+        provider_label: Provider
+        prompt_label: Prompt
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Ripristina predefinito
+        reset_confirm_title: Ripristinare il prompt predefinito?
+        reset_confirm_body: Il tuo prompt personalizzato verrà eliminato e verranno ripristinate le istruzioni predefinite integrate.
+        status_custom: In uso il tuo prompt personalizzato
+        status_default: In uso il prompt predefinito integrato
+        format_risk: 'Il tuo prompt %{provider} non contiene più l''esempio {"%{key}": ...}. Ogni richiesta chiede comunque quel formato, quindi l''analisi della risposta di solito funziona, ma una personalizzazione che richiede un formato di output diverso la farà fallire.'
+      update:
+        success: Prompt AI aggiornati
+        multiple_errors: Più prompt sono troppo lunghi (massimo %{count} caratteri)
     payments:
       show:
         page_title: Pagamenti
@@ -119,6 +141,8 @@ it:
         dashboard_two_column_description: Visualizza i widget del dashboard in due colonne su schermi grandi, con controlli larghezza e altezza per widget nell'intestazione di ciascun widget. Se disattivato, i widget si impilano in una singola colonna.
         split_grouped_title: Raggruppa transazioni suddivise
         split_grouped_description: Mostra le transazioni suddivise raggruppate sotto la voce principale nell'elenco transazioni. Se disattivato, le voci figlie appaiono come righe individuali.
+        dashboard_account_groups_title: Espandi per impostazione predefinita
+        dashboard_account_groups_description: Queste sezioni dei conti saranno espanse all'apertura nella dashboard e nella barra laterale dei conti. Puoi comunque comprimerle manualmente in qualsiasi momento.
     preferences:
       show:
         country: Paese
@@ -137,7 +161,7 @@ it:
         month_start_day_warning: I tuoi budget e i calcoli MTD useranno questo giorno di inizio personalizzato invece del 1° di ogni mese.
         translations_notice: Nota che stiamo ancora lavorando alle traduzioni per varie lingue.
         currencies_title: "Valute %{moniker}"
-        currencies_subtitle: Scegli quali valute appaiono nei campi importo per il tuo %{moniker}
+        currencies_subtitle: Scegli quali valute appaiono nei campi importo del tuo account %{moniker}
         base_currency_label: Valuta base
         base_currency_badge: Valuta base
         additional_currencies_label: Valute aggiuntive
@@ -154,13 +178,27 @@ it:
           other: "%{count} selezionate"
         save_currencies: Salva valute
         sharing_title: "Condivisione %{moniker}"
-        sharing_subtitle: "Controlla come i conti vengono condivisi nel tuo %{moniker}"
+        sharing_subtitle: "Controlla come i conti vengono condivisi nel tuo account %{moniker}"
         sharing_default_label: Condivisione predefinita per nuovi conti
         sharing_shared: Condividi con tutti i membri
         sharing_private: Mantieni privato per impostazione predefinita
         preview:
           title: Abilita funzionalità in anteprima
           description: Opta per le funzionalità in corso contrassegnate come anteprima o canary.
+        budget_title: Budget
+        budget_subtitle: Configura il funzionamento dei tuoi budget
+        personal_budgets: Budget personali
+        personal_budgets_hint: Abilita budget individuali per ogni membro della famiglia.
+        household_budget_enabled: Budget familiare
+        household_budget_enabled_hint: Mantieni un budget familiare condiviso insieme ai budget personali. Disattiva per usare solo i budget personali.
+        budget_sharing_title: Condivisione del budget
+        budget_sharing_subtitle: Consenti ad altri membri di visualizzare o modificare il tuo budget personale
+        budget_sharing_no_members: Nessun altro membro nel tuo account %{moniker} con cui condividere
+        budget_sharing_permission_label: Accesso di %{name}
+        budget_sharing_permissions:
+          none: Nessun accesso
+          read_only: Solo visualizzazione
+          read_write: Può modificare
     profiles:
       destroy:
         cannot_remove_self: Non puoi rimuovere te stesso dall'account.
@@ -227,7 +265,7 @@ it:
         mfa_description: Aggiungi un ulteriore livello di sicurezza al tuo account richiedendo un codice dalla tua app di autenticazione durante l'accesso
         enable_mfa: Abilita 2FA
         disable_mfa: Disabilita 2FA
-        disable_mfa_confirm: Sei sicuro di voler disabilitare l'autenticazione a due fattori?
+        disable_mfa_confirm: Sei sicuro di voler disabilitare l'autenticazione a due fattori? Questo renderà il tuo account meno sicuro.
         sso_title: Account collegati
         sso_subtitle: Gestisci le connessioni al tuo account single sign-on
         sso_disconnect: Disconnetti
@@ -235,7 +273,7 @@ it:
         sso_never: Mai
         sso_no_email: Nessuna email
         sso_no_identities: Nessun account SSO collegato
-        sso_connect_hint: Disconnetti e accedi con un provider SSO per collegare un account.
+        sso_connect_hint: Esci e accedi con un provider SSO per collegare un account.
         sso_confirm_title: Disconnettere l'account?
         sso_confirm_body: Sei sicuro di voler disconnettere il tuo account %{provider}? Puoi ricollegarlo in seguito accedendo di nuovo con quel provider.
         sso_confirm_button: Disconnetti
@@ -272,7 +310,7 @@ it:
       imports_label: Importazioni
       exports_label: Esportazioni
       llm_usage_label: Utilizzo LLM
-      logout: Disconnetti
+      logout: Esci
       merchants_label: Esercenti
       providers_label: Provider
       guides_label: Guide
@@ -285,7 +323,7 @@ it:
       security_label: Sicurezza
       self_hosting_label: Self-Hosting
       sso_providers_label: Provider SSO
-      statement_vault_label: Archivio estratti
+      statement_vault_label: Archivio estratti conto
       tags_label: Etichette
       transactions_section_title: Transazioni
       users_label: Utenti
@@ -294,6 +332,8 @@ it:
       appearance_label: Aspetto
       bank_sync_label: Sincronizzazione bancaria
       debug_label: Debug
+      background_jobs_label: Job in background
+      system_health_label: Stato del sistema
     settings_nav_link_large:
       next: Avanti
       previous: Indietro
@@ -314,7 +354,7 @@ it:
         ok: Connesso
         warn: Azione richiesta
         err: Errore
-        off: Non configurato
+        "off": Non configurato
       maturity:
         beta: Beta
         alpha: Alpha
@@ -348,7 +388,7 @@ it:
       sync_provider_in_progress: Sincronizzazione avviata.
       recently_synced: Sincronizzato di recente. Riprova tra un momento.
       taglines:
-        akahu: Sincronizza gli istituti finanziari neozelandesi tramite Akahu.
+        akahu: Sincronizza le istituzioni finanziarie neozelandesi tramite Akahu.
         simplefin: Connetti conti bancari USA tramite il protocollo aperto SimpleFIN.
         lunchflow: Connetti 20.000+ banche da 40+ paesi (UK, EU, USA e altro!)
         enable_banking: Sincronizza conti bancari europei tramite PSD2 open banking.
@@ -362,8 +402,17 @@ it:
         ibkr: Sincronizza conti di investimento Interactive Brokers tramite importazioni Flex Query.
         indexa_capital: Monitora il tuo portafoglio di investimento automatizzato Indexa Capital.
         sophtron: Connetti banche e utility USA e canadesi.
-        plaid: Connetti migliaia di istituti finanziari USA tramite Plaid.
-        plaid_eu: Connetti istituti finanziari europei tramite Plaid (PSD2 / Open Banking).
+        plaid: Connetti migliaia di istituzioni finanziarie USA tramite Plaid.
+        plaid_eu: Connetti istituzioni finanziarie europee tramite Plaid (PSD2 / Open Banking).
+        redbark: Sincronizza conti bancari australiani tramite l'open banking di Redbark.
+        monobank: Sincronizza carte e jar Monobank ucraini con un token API personale.
+        fio: Sincronizza un conto Fio banka con un token API in sola lettura.
+        wise: Sincronizza automaticamente i tuoi saldi multivaluta e i trasferimenti internazionali Wise.
+        coinspot: Sincronizza saldi CoinSpot, valori in AUD, trasferimenti, depositi, prelievi e cronologia degli ordini con una chiave API in sola lettura.
+        onchain_wallet: Monitora wallet self-custody Bitcoin, EVM e Solana tramite i loro indirizzi pubblici.
+        trading212: Sincronizza il tuo portafoglio di investimento Trading 212 con una chiave API in sola lettura.
+        trade_republic: Sincronizza il tuo conto d'investimento Trade Republic tramite un accesso web sicuro in sola lettura.
+        questrade: Sincronizza i tuoi conti d'investimento Questrade direttamente tramite l'API Questrade.
       search_filters:
         aria_label: Cerca provider
         placeholder: Cerca provider
@@ -505,7 +554,7 @@ it:
           step_2: 'Clicca sull''icona "+" nella sezione "Activity Flex Query" per creare una nuova query.'
           step_3: 'Assegna un nome alla query (es. "Sure Sync"), poi esamina i dettagli della Flex Query qui sotto e abilita le sezioni, i campi e le opzioni di configurazione elencati.'
           step_4: 'Salva la query, annota il tuo "Query ID", poi usa l''icona ingranaggio nella sezione "Flex Web Service Configuration" per generare un token di accesso.'
-          step_5: "Incolla il tuo Query ID e Token qui sotto, salva la configurazione, poi vai su Conti per collegare i conti IBKR scoperti."
+          step_5: "Incolla il tuo Query ID e Token qui sotto, salva la configurazione, poi vai su Conti per collegare i conti IBKR rilevati."
         flex_query_details:
           eyebrow: Flex Query
           title: Sezioni, campi e configurazione
@@ -552,5 +601,180 @@ it:
         update_configuration: Aggiorna configurazione
         status_configured_prefix: "%{summary}. Visita la scheda"
         accounts_tab: Conti
-        status_configured_suffix: per gestire i conti scoperti.
+        status_configured_suffix: per gestire i conti rilevati.
         not_configured: Non configurato.
+      drawer_trust_statement_encryption_unconfigured: Accesso in sola lettura. Sure non può mai spostare denaro. Configura chiavi di crittografia esplicite prima di salvare le credenziali dei provider in produzione.
+      provider_setup_encryption_warning:
+        title: Chiavi di crittografia mancanti
+        message: Questa installazione self-hosted non ha configurato chiavi esplicite per la crittografia di Active Record. Configura primary_key, deterministic_key e key_derivation_salt prima di salvare le credenziali dei provider in produzione.
+      coinspot_panel:
+        step1_html: Vai alle <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">impostazioni API di CoinSpot</a>
+        step2: Crea una chiave API con accesso in sola lettura a saldi e cronologia.
+        step3: Incolla la chiave API e il segreto qui sotto.
+        read_only_title: Solo sincronizzazione exchange in sola lettura
+        read_only_body: Non concedere permessi di invio, prelievo, trading o trasferimento. Sure importa solo saldi, valori in AUD, trasferimenti, depositi, prelievi e cronologia degli ordini completati.
+        default_connection_name: CoinSpot
+        add_connection: Aggiungi connessione CoinSpot
+        update_connection: Aggiorna connessione
+        connection_name_label: Nome connessione
+        connection_name_placeholder: CoinSpot principale
+        api_key_label: Chiave API
+        api_key_placeholder: Incolla la tua chiave API CoinSpot
+        keep_api_key_placeholder: Lascia vuoto per mantenere la chiave API esistente
+        api_secret_label: Segreto API
+        api_secret_placeholder: Incolla il tuo segreto API CoinSpot
+        keep_api_secret_placeholder: Lascia vuoto per mantenere il segreto API esistente
+        setup_accounts: Configura conto
+        syncing: Sincronizzazione...
+        sync: Sincronizza
+        disconnect: Disconnetti
+        disconnect_confirm: Sei sicuro di voler disconnettere %{name}?
+      onchain_wallet_panel:
+        add_wallet: Aggiungi wallet
+        advanced: Avanzate
+        disconnect_all: Disconnetti tutti i wallet
+        disconnect_all_confirm: Verranno rimossi tutti gli indirizzi monitorati e i relativi conti. Continuare?
+        etherscan_api_key_label: Chiave API Etherscan (facoltativa)
+        etherscan_api_key_placeholder: Incolla una chiave API Etherscan
+        etherscan_hint: La lettura dei dati Ethereum funziona senza chiave. Aggiungere una chiave Etherscan aumenta solo il limite di richieste per Ethereum.
+        keep_etherscan_api_key: Lascia vuoto per mantenere la chiave esistente
+        manage_wallets: Gestisci wallet
+        keyless_body: Sure legge solo dati pubblici della blockchain. Non sono coinvolte chiavi, seed phrase o firme, e non è possibile spendere nulla.
+        keyless_title: Sola lettura, nessuna chiave richiesta
+        save: Salva
+        sync_start_date_hint: I trasferimenti precedenti a questa data vengono ignorati. Lascia vuoto per importare tutto ciò che riporta l'explorer.
+        sync_start_date_label: Ignora i trasferimenti precedenti al
+      monobank_panel:
+        step_1_html: Vai su %{link}, accedi con l'app Monobank e genera un token personale.
+        step_2: 'Copia il token: viene mostrato una sola volta.'
+        step_3: Incolla il token qui sotto, salva, poi collega le carte e i jar che vuoi monitorare.
+      fio_panel:
+        step_1_html: Accedi all'internet banking di %{link} e apri Impostazioni → API.
+        step_2: Crea un token con accesso in sola lettura ("Sledování účtu"). Richiede l'autenticazione forte ed è valido fino a 180 giorni.
+        step_3: Incolla il token qui sotto e salva. Un token dà accesso a un solo conto, quindi aggiungi una connessione per ogni conto Fio.
+      trade_republic_panel:
+        encryption_warning:
+          title: La crittografia non è configurata
+          message: Le credenziali e i dati di sessione di Trade Republic non possono essere salvati in modo sicuro finché non viene configurata la crittografia di Active Record.
+        steps:
+          step_1: Inserisci il numero di telefono e il PIN che usi per l'app Trade Republic, poi salva.
+          step_2: Inserisci il codice della tua app di autenticazione quando richiesto.
+          step_3: Approva l'accesso nella tua app Trade Republic quando richiesto.
+        phone_number_label: Numero di telefono
+        phone_number_placeholder_new: +49 170 1234567
+        phone_number_placeholder_existing: Lascia vuoto per mantenere il numero di telefono attuale
+        pin_label: PIN
+        pin_placeholder_new: Il PIN della tua app Trade Republic
+        pin_placeholder_existing: Lascia vuoto per mantenere il PIN attuale
+        currency_label: Valuta del conto
+        connect: Accedi
+        confirm_login: Verifica accesso
+        complete_login: Continua
+        authenticator_code_label: Codice di autenticazione (se richiesto)
+        authenticator_code_placeholder: Codice a 6 cifre
+        push_login_notice: Approva ora l'accesso nella tua app Trade Republic. Sure verifica automaticamente in background. Puoi anche controllare lo stato tu stesso.
+        check_login_status: Controlla lo stato ora
+        authenticator_code_notice: Inserisci il codice della tua app di autenticazione.
+        approval_pending: Accesso avviato. Approvalo nell'app Trade Republic; Sure sta verificando automaticamente.
+        awaiting_confirmation: Approvazione nell'app Trade Republic in attesa.
+        awaiting_authenticator_code: Codice di autenticazione richiesto.
+        login_expired: La richiesta di approvazione è scaduta.
+        restart_login: Riavvia l'accesso
+        connection_success:
+          title: Trade Republic collegato correttamente
+          message: La tua connessione Trade Republic è pronta.
+          description: Sure sta ora sincronizzando i tuoi dati Trade Republic in background.
+          close: Fine
+        qr_login: Accedi con codice QR
+        qr_cancel: Annulla accesso QR
+        qr_back_to_credentials: Torna a numero di telefono e PIN
+        qr_loading: Preparazione del codice QR…
+        qr_instruction: Scansiona il codice QR con la tua app Trade Republic e approva l'accesso.
+        qr_success: Accesso approvato. Sure sta aggiornando la pagina del provider.
+        qr_error: Impossibile avviare l'accesso QR. Riprova.
+        save_configuration: Salva e avvia l'accesso
+        update_configuration: Aggiorna configurazione
+        sync: Sincronizza
+        disconnect: Disconnetti Trade Republic
+        disconnect_confirm: Disconnettere Trade Republic? I tuoi conti sincronizzati diventeranno conti manuali.
+        status_configured_prefix: Connesso. Visita la scheda
+        accounts_tab: Conti
+        setup_accounts: Configura i conti
+        accounts_discovered:
+          one: '%{count} conto Trade Republic rilevato.'
+          other: '%{count} conti Trade Republic rilevati.'
+        status_configured_suffix: per gestire i conti rilevati.
+        not_configured: Non configurato.
+      trading212_panel:
+        steps:
+          step_1: Vai su Trading 212 → Impostazioni → API (web o app mobile).
+          step_2: 'Genera una nuova chiave API: Trading 212 ti mostrerà un API ID e una Secret Key.'
+          step_3: Incolla entrambi qui sotto, seleziona l'ambiente e la valuta del conto, poi salva.
+        api_key_label: API ID
+        api_key_placeholder_new: Incolla il tuo API ID Trading 212
+        api_key_placeholder_existing: Lascia vuoto per mantenere l'API ID attuale
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Incolla la tua Secret Key Trading 212
+        api_secret_placeholder_existing: Lascia vuoto per mantenere la Secret Key attuale
+        environment_label: Ambiente
+        environment_live: Conto reale
+        environment_demo: Conto demo
+        currency_label: Valuta del conto
+        save_configuration: Salva configurazione
+        update_configuration: Aggiorna configurazione
+        sync: Sincronizza
+        syncing: Sincronizzazione...
+        disconnect: Disconnetti conto Trading 212
+        disconnect_confirm: Disconnettere Trading 212?
+        default_account_name: Conto Trading 212
+        add_account: Aggiungi un altro conto
+        status_configured_prefix: Configurato. Visita la scheda
+        accounts_tab: Conti
+        status_configured_suffix: per gestire i conti rilevati.
+        not_configured: Non configurato.
+    background_jobs:
+      show:
+        page_title: Job in background
+        title: Stato dei worker
+        subtitle: 'Stato di Sidekiq in tempo reale: processi worker, lunghezza delle code e set di nuovi tentativi e job falliti.'
+        redis_unreachable: Lo stato di Sidekiq non è disponibile (Redis non raggiungibile). Non è possibile sapere se i job sono attivi, quindi le azioni sono disabilitate.
+        operations_title: Operazioni in corso
+        operations_subtitle: Sincronizzazioni, importazioni ed esportazioni di tutte le famiglie che non hanno ancora raggiunto uno stato finale. Le operazioni inattive da oltre 30 minuti senza alcun job visibile sono considerate perse e possono essere contrassegnate come tali.
+        empty: Nessuna operazione in corso.
+        missing_value: '-'
+        stats:
+          workers: Worker
+          busy: Occupati
+          enqueued: In coda
+          retries: Nuovi tentativi
+          scheduled: Pianificati
+          dead: Falliti
+          queue_label: '%{name}: %{size} · latenza %{latency}s'
+        table:
+          type: Operazione
+          family: Famiglia
+          status: Stato
+          last_activity: Ultima attività
+          liveness: Attività
+          action: Azione
+      operation:
+        ago: '%{time} fa'
+        sync_label: Sincronizzazione · %{type}
+        running: In esecuzione
+        queued: In coda
+        recent: Recente
+        unknown: Sconosciuto
+        stuck: Bloccata — presumibilmente persa
+        confirm: Contrassegnare questa operazione come persa? Il record viene portato in uno stato finale così da poter essere ritentato. I dati sottostanti non vengono modificati.
+        missing_value: '-'
+        actions:
+          mark_stale: Segna come obsoleta
+          mark_failed: Segna come non riuscita
+          release_claim: Rilascia blocco
+      cancel:
+        cancelled: '%{type} contrassegnato come perso.'
+        not_cancellable: 'Questa operazione non può essere modificata al momento: il suo job potrebbe essere ancora in coda o in esecuzione. Riprova quando sarà inattiva da 30 minuti.'
+        cancelled_error: 'Contrassegnata come non riuscita da un amministratore: il job in background è stato considerato perso.'
+    budget_shares:
+      update:
+        success: Impostazioni di condivisione del budget aggiornate

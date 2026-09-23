@@ -13,6 +13,8 @@ it:
       model_placeholder: Camry
       year: Anno
       year_placeholder: '2023'
+      mileage_unit_kilometers: Chilometri
+      mileage_unit_miles: Miglia
     new:
       title: Inserisci i dettagli del veicolo
     overview:

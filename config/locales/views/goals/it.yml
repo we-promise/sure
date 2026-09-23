@@ -64,6 +64,7 @@ it:
         no_target_date: Aperto
         paused: In pausa
         completed: Completato
+      chips_aria: Filtra obiettivi per stato
     new:
       heading: Nuovo obiettivo
       subtitle: Risparmia per qualcosa di specifico.
@@ -120,6 +121,7 @@ it:
         behind_covered: "gli impegni in sospeso colmano il divario"
         on_track: "raggiunge l'obiettivo intorno al %{date}"
         no_target_date: "imposta una data obiettivo per proiettare un traguardo"
+        depleted: '%{amount} sotto il saldo obiettivo — ricaricala per ripristinare la riserva'
       pending_pledge:
         title:
           zero: "In sospeso: %{amount} in %{account} · scade oggi"
@@ -144,6 +146,8 @@ it:
         of_target: dell'obiettivo
         market_value: "Valore di mercato %{amount}"
         aria_label: "Obiettivo %{percent}%% completato. %{amount} di %{target} risparmiati."
+        including_used: Inclusi %{amount} già utilizzati
+        aria_label_with_used: Obiettivo completato al %{percent}%. %{amount} di %{target}, inclusi %{used} già utilizzati.
       projection:
         heading: Proiezione
         legend_saved: Risparmiato
@@ -159,16 +163,17 @@ it:
         tooltip_projected: "Proiettato: %{amount}"
         tooltip_saved: "Risparmiato: %{amount}"
         tooltip_target_relation: "%{percent}%% di %{target} obiettivo"
+        reserve: Una riserva mantiene un saldo obiettivo, quindi non c'è un traguardo da proiettare.
       catch_up:
         title: "Risparmia %{amount}/mese in più per recuperare"
         body: "Ritmo attuale %{avg}/mese · necessario %{required}/mese per raggiungere l'obiettivo."
         adjust_target_cta: Modifica l'obiettivo invece
       confirm_complete_title: Contrassegnare questo obiettivo come completato?
-      confirm_complete_body: Uscirà dalla lista In corso. Puoi ancora archiviarlo o ripristinarlo in seguito.
+      confirm_complete_body: Il denaro accantonato per questo obiettivo viene liberato per gli altri obiettivi sullo stesso conto. Uscirà dalla lista In corso e potrai comunque archiviarlo o ripristinarlo in seguito.
       confirm_complete_body_short: "Sei al %{progress}%%, %{saved} di %{target}. Contrassegnare come completato registra questo come il tuo risultato invece dell'obiettivo originale. Continua, o chiudi e modifica l'obiettivo invece?"
       confirm_complete_cta: Segna come completato
       confirm_archive_title: Archiviare questo obiettivo?
-      confirm_archive_body: Gli obiettivi archiviati scompaiono dalla lista principale. Puoi ripristinarli in seguito.
+      confirm_archive_body: "Gli obiettivi archiviati scompaiono dalla lista principale. Puoi ripristinarli in seguito. L'archiviazione non registra quanto hai raggiunto: se vuoi conservarlo, segna prima l'obiettivo come completato."
       confirm_archive_cta: Archivia
       confirm_delete_title: "Eliminare questo obiettivo?"
       confirm_delete_body: "%{name} e la sua cronologia dei versamenti vengono eliminati definitivamente. I conti collegati, i saldi e le transazioni non vengono toccati. Per conservarlo come traccia, archivialo invece."
@@ -185,6 +190,12 @@ it:
         heading: Obiettivo raggiunto. Ottimo lavoro.
         body: "Obiettivo chiuso a %{saved} di %{target}. Tienilo come registro o archivialo ora."
         archive_cta: Archivia obiettivo
+        heading_reserve: Riserva intatta
+        body_reserve: La tua riserva è al saldo obiettivo, %{saved} di %{target}. Non devi fare nulla — resta accantonata.
+        body_reached: Hai raggiunto l'obiettivo con %{saved} di %{target}. Non è ancora chiuso — il denaro resta accantonato.
+        close_cta: Chiudi questo obiettivo
+        close_hint: La chiusura libera il denaro accantonato per gli altri tuoi obiettivi sullo stesso conto. Fallo quando lo avrai effettivamente speso.
+        frozen: Raggiunto il %{date} · %{amount}
       inactive:
         heading_paused: Questo obiettivo è in pausa
         heading_archived: Questo obiettivo è archiviato
@@ -196,6 +207,10 @@ it:
       empty:
         heading: Nessun deposito ancora
         body: Effettua un trasferimento nel tuo conto collegato. L'app lo rileverà alla prossima sincronizzazione. Oppure aggiorna il saldo del tuo conto manuale.
+      consume: Ho usato parte di questo denaro
+      reserve_shortfall:
+        heading: Riserva sotto il saldo obiettivo
+        body: Hai %{saved} su %{target}. Aggiungi %{missing} per riportarla al saldo obiettivo.
     errors:
       not_found: Questo obiettivo non è stato trovato. Potrebbe essere stato eliminato.
     states:
@@ -211,12 +226,14 @@ it:
       no_target_date: Aperto
       paused: In pausa
       archived: Archiviato
+      funded: Riserva intatta
+      depleted: Da ricaricare
     empty_state:
       heading: Nessun obiettivo ancora
       body: Imposta un obiettivo, collega i conti in cui risparmi e osserva i tuoi progressi accumularsi.
       subtitle: Imposta un obiettivo e inizia a risparmiare.
       new_goal: Crea il tuo primo obiettivo
-      no_depository_accounts: Hai bisogno di almeno un conto corrente (conto corrente, risparmio, HSA, CD, mercato monetario) prima di creare un obiettivo.
+      no_depository_accounts: Hai bisogno di almeno un conto di liquidità (conto corrente, risparmio, HSA, CD, mercato monetario) prima di creare un obiettivo.
       add_account: Aggiungi un conto
     goal_card:
       no_accounts: Nessun conto collegato
@@ -248,6 +265,9 @@ it:
       footer_last_days:
         one: Ultimo impegno abbinato 1 giorno fa
         other: "Ultimo impegno abbinato %{count} giorni fa"
+      including_used: Inclusi %{amount} già utilizzati
+      footer_reserve_intact: Riserva intatta
+      footer_reserve_short: '%{amount} da ricaricare'
     form:
       create: Crea obiettivo
       save: Salva modifiche
@@ -270,6 +290,12 @@ it:
         whole_balance: Saldo intero
         earmark_for: Accantona un importo per %{account}
         earmark_hint: Lascia vuoto un importo per dedicare l'intero saldo di quel conto.
+        target_mode: Come viene impostato il saldo obiettivo
+        target_months: Mesi di spese
+        target_months_hint: Ricalcolato il 1° di ogni mese in base alla tua spesa mensile mediana.
+        target_balance: Saldo obiettivo
+        target_balance_pending: Calcolato al salvataggio
+        target_balance_hint: In base alla tua spesa mensile mediana per i mesi indicati sopra. Aggiornato ogni mese.
       subtypes:
         checking: Conto corrente
         savings: Risparmio
@@ -277,3 +303,43 @@ it:
         cd: CD
         money_market: Mercato monetario
         other: Altro
+      target_modes:
+        fixed: Un importo fisso
+        months_of_expenses: Un numero di mesi di spese
+      kinds:
+        one_off:
+          hint: Risparmia per qualcosa, poi chiudilo quando lo spendi.
+          label: Obiettivo una tantum
+        maintained:
+          hint: Un saldo da mantenere, come un fondo di emergenza. Non viene mai chiuso.
+          label: Riserva da mantenere
+      earmark:
+        headroom: '{left} ancora da accantonare su questo conto.'
+        prorata: I tuoi obiettivi su questo conto ammontano a {total} a fronte di un saldo di {balance} — avanzeranno pro rata.
+        whole_balance: Questo conto finanzierà quanto resta dopo gli altri accantonamenti.
+        whole_balance_alone: Questo obiettivo userà l'intero saldo di questo conto.
+    consume:
+      title: Registra una spesa
+      subtitle: '%{goal}'
+      amount_label: Quanto hai usato?
+      amount_hint: '%{saved} sostengono attualmente questo obiettivo.'
+      account_label: Da quale conto?
+      earmark_note: L'importo che registri non è più riservato a questo obiettivo, quindi gli altri obiettivi su quel conto riottengono la loro quota.
+      cancel: Annulla
+      submit: Registra
+      success: '%{amount} registrati come utilizzati.'
+      errors:
+        non_positive: Inserisci un importo maggiore di zero.
+        maintained: Una riserva si prosciuga e si ricostituisce, non si spende — il suo ammanco è già indicato sull'obiettivo.
+        exceeds_target: È più di quanto questo obiettivo si sia mai prefissato di risparmiare.
+        account_required: Questo obiettivo è finanziato da più conti — indica da quale è uscito il denaro.
+        account_not_linked: Quel conto non finanzia questo obiettivo.
+        not_active: Questo obiettivo non è più attivo, quindi non è possibile registrare nulla a suo carico.
+        exceeds_earmark: È più di quanto l'obiettivo abbia accantonato su questo conto.
+        transaction_already_claimed: Questa uscita è già stata attribuita.
+        transaction_not_found: Questa uscita non è più disponibile per l'attribuzione.
+        no_linked_account: A questo obiettivo non resta alcun conto di finanziamento.
+    unattributed_outflows:
+      heading: Denaro uscito da questi conti
+      body: Se una parte è stata spesa per %{goal}, indicalo e smetterà di contare contro l'obiettivo.
+      attribute: È questa

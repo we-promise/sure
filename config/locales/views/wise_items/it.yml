@@ -3,3 +3,164 @@ it:
     provider_panel:
       instructions:
         open_tokens: Vai su Settings → Connect and manage apps → Developer tools → API tokens
+        sign_in_html: Vai su %{link} e accedi al tuo account
+        create_token: Crea un nuovo token API personale con accesso in sola lettura
+        copy_token_html: Copia il token e incollalo qui sotto. Sure lo usa solo per sincronizzare i tuoi saldi e le tue transazioni.
+      setup_title: 'Istruzioni di configurazione:'
+      add_connection: Aggiungi connessione Wise
+      token_label: Token API
+      token_placeholder: Incolla il tuo token API personale Wise
+      keep_token_placeholder: Lascia vuoto per mantenere il token attuale
+      connection_name_label: Nome connessione
+      connection_name_placeholder: Wise Personale
+      sync_start_date_label: Importa transazioni dal
+      sync_start_date_help: Gli estratti conto Wise vengono importati a partire da questa data. Lascia il valore predefinito per importare fino a un anno di cronologia.
+      import_all_history_label: Importa l'intera cronologia delle transazioni
+      import_all_history_help: Recupera tutti gli estratti conto Wise storici anziché solo quelli dell'ultimo anno.
+      connect: Connetti Wise
+      update_connection: Aggiorna connessione
+      setup_accounts: Configura conti
+      sync: Sincronizza
+      disconnect: Disconnetti
+      disconnect_label: Disconnetti %{name}
+      disconnect_confirm: Vuoi davvero disconnettere %{name}? Verranno rimossi tutti i dati dei conti sincronizzati.
+      accounts_link: Conti
+      configured_html: Connesso e in sincronizzazione. Vai alla scheda %{accounts_link} per gestire i tuoi conti.
+      not_configured: Non configurato
+      sandbox_note_html: Per i test usa l'URL di base della <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>). Imposta <code>WISE_BASE_URL</code> nel tuo ambiente.
+      encryption_warning:
+        title: La crittografia del database non è configurata
+        message: Configura le chiavi di crittografia di Active Record prima di aggiungere token Wise in produzione. Senza crittografia, i token vengono salvati in chiaro.
+      sca:
+        title: Autenticazione forte del cliente (SCA)
+        description: Wise richiede la firma di una verifica con token monouso per leggere gli estratti conto completi, inclusi i pagamenti in entrata. Genera qui una coppia di chiavi e registra la chiave pubblica su Wise per abilitarla.
+        public_key_label: Chiave pubblica (PEM)
+        registered_help_html: 'Registra questa chiave su Wise: Settings → Connect and manage apps → Developer tools → Public keys → Add public key.'
+        copy: Copia
+        copied: Copiato!
+        generate: Genera coppia di chiavi
+        regenerate: Rigenera coppia di chiavi
+        regenerate_confirm: Verrà generata una nuova coppia di chiavi. Wise continuerà ad accettare la chiave pubblica precedente finché non la rimuoverai tu stesso dal tuo account Wise — Sure non può revocarla da remoto. Dovrai registrare la nuova chiave pubblica su Wise prima che gli estratti conto possano essere sincronizzati di nuovo. Continuare?
+    profile_types:
+      personal: Personale
+      business: Business
+    entries:
+      default_name: Transazione Wise
+      fee_name: Commissione Wise
+    activities:
+      jar_deposit: Trasferimento al salvadanaio
+      jar_withdrawal: Trasferimento dal salvadanaio
+      transfer_to_jar: Trasferimento a %{jar}
+      transfer_from_jar: Trasferimento da %{jar}
+      interest: Interessi Wise
+      asset_fee: Commissione Wise Assets
+      default_name: Attività Wise
+    sync_status:
+      no_accounts: Nessun conto trovato
+      all_synced:
+        one: '%{count} conto sincronizzato'
+        other: '%{count} conti sincronizzati'
+      partial_setup: '%{synced} sincronizzati, %{pending} da configurare'
+    create:
+      no_profiles_found: Nessun profilo Wise trovato. Controlla il tuo token API.
+      invalid_token: Token API non valido. Controlla e riprova.
+      connection_failed: Impossibile connettersi a Wise. Riprova più tardi.
+    destroy:
+      success: Connessione Wise rimossa
+    update:
+      success: Connessione Wise aggiornata
+    sync:
+      success: Sincronizzazione avviata
+    syncer:
+      importing_accounts: Importazione dei conti da Wise...
+      checking_account_configuration: Verifica della configurazione dei conti...
+      accounts_need_setup:
+        one: '%{count} conto da configurare...'
+        other: '%{count} conti da configurare...'
+      processing_transactions: Elaborazione delle transazioni...
+      calculating_balances: Calcolo dei saldi...
+      credentials_invalid: Token API Wise non valido o autorizzazioni insufficienti
+      failed: Sincronizzazione non riuscita. Riprova o contatta il supporto.
+      import_failed: Importazione da Wise non riuscita.
+      accounts_failed:
+        one: Importazione non riuscita per %{count} saldo.
+        other: Importazione non riuscita per %{count} saldi.
+      transactions_failed:
+        one: '%{count} saldo ha avuto errori nell''importazione delle transazioni.'
+        other: '%{count} saldi hanno avuto errori nell''importazione delle transazioni.'
+      account_processing_failed:
+        one: Elaborazione non riuscita per %{count} conto Wise.
+        other: Elaborazione non riuscita per %{count} conti Wise.
+      account_sync_failed:
+        one: Impossibile pianificare la sincronizzazione di %{count} conto Wise.
+        other: Impossibile pianificare la sincronizzazione di %{count} conti Wise.
+    provider_connection:
+      default_name: Wise
+      default_description: Connetti il tuo conto multivaluta Wise
+      name: Wise — %{name}
+      description: Connetti usando %{name}
+    link_profiles:
+      session_expired: Sessione scaduta. Prova a connetterti di nuovo.
+      no_profiles_selected: Seleziona almeno un profilo.
+      already_connected: Tutti i profili selezionati sono già connessi.
+      success:
+        one: '%{count} profilo Wise connesso con successo'
+        other: '%{count} profili Wise connessi con successo'
+    select_profiles:
+      session_expired: Sessione scaduta. Prova a connetterti di nuovo.
+      title: Seleziona profili Wise
+      subtitle: Scegli quali profili connettere
+      description: Il tuo account Wise ha più profili. Seleziona quelli che vuoi sincronizzare con Sure.
+      unnamed_profile: (Profilo senza nome)
+      already_connected_label: Già connesso
+      connect: Connetti i profili selezionati
+      cancel: Annulla
+    wise_item:
+      deletion_in_progress: eliminazione in corso...
+      syncing: Sincronizzazione in corso...
+      error: Errore di sincronizzazione
+      status: Sincronizzato %{timestamp} fa
+      status_never: Mai sincronizzato
+      status_with_summary: Ultima sincronizzazione %{timestamp} fa — %{summary}
+      delete: Disconnetti
+      setup_needed: Nuovi conti pronti per la configurazione
+      setup_description: '%{linked} di %{total} conti collegati. Crea conti Sure per i saldi valuta del tuo Wise.'
+      setup_action: Configura conti
+      no_accounts_title: Nessun conto ancora collegato
+      no_accounts_description: Avvia una sincronizzazione per rilevare i tuoi saldi Wise, poi collegali ai conti Sure.
+    setup_accounts:
+      title: Configura conti Wise
+      subtitle: Collega i tuoi saldi valuta Wise
+      description: Crea un conto Sure per ogni saldo valuta Wise che vuoi monitorare. Ogni valuta diventa un conto a sé.
+      no_accounts_to_setup: Tutti i conti sono configurati
+      all_accounts_linked: Tutti i tuoi saldi valuta Wise sono stati collegati a conti Sure.
+      create_account: Crea conto
+      done: Fatto
+    select_accounts:
+      title: Seleziona saldo Wise
+      description: Seleziona il saldo valuta Wise da collegare al tuo conto %{product_name}.
+      no_accounts_found: Tutti i saldi Wise sono già collegati a conti Sure.
+      no_connection: Nessuna connessione Wise trovata. Connetti prima Wise nelle Impostazioni provider.
+      link_account: Collega saldo
+      cancel: Annulla
+    select_existing_account:
+      title: Collega %{account_name} a Wise
+      description: Seleziona il saldo valuta Wise da collegare a questo conto. Le transazioni verranno sincronizzate automaticamente.
+      no_accounts_found: Nessun saldo Wise non collegato trovato.
+      link_account: Collega saldo
+      cancel: Annulla
+    link_accounts:
+      not_found: Saldo Wise non trovato.
+      success: Saldo Wise collegato al conto con successo.
+      failed: Impossibile collegare il saldo Wise. Riprova.
+    link_existing_account:
+      not_found: Conto o saldo Wise non trovato.
+      success: '%{account_name} collegato a Wise con successo'
+      failed: Impossibile collegare il conto. Riprova.
+    complete_account_setup:
+      not_found: Saldo Wise non trovato.
+      success: Conto creato e collegato con successo.
+      failed: Impossibile creare il conto. Riprova.
+    generate_sca_keypair:
+      success: Nuova coppia di chiavi SCA generata. Registra la chiave pubblica su Wise per completarne l'abilitazione.
+      failed: Impossibile generare una nuova coppia di chiavi SCA. Riprova.

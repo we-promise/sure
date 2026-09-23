@@ -2,13 +2,13 @@
 it:
   onboardings:
     header:
-      sign_out: Disconnetti
+      sign_out: Esci
       setup: Configurazione
       preferences: Preferenze
       goals: Obiettivi
       start: Inizia
     logout:
-      sign_out: Disconnetti
+      sign_out: Esci
     show:
       title: Configuriamo il tuo account
       subtitle: Prima di tutto, configuriamo il tuo profilo.

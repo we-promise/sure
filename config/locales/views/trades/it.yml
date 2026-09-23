@@ -32,6 +32,15 @@ it:
       purchase_qty_label: Quantità Acquistata
       symbol_label: Simbolo
       total_return_label: Utile/perdita non realizzato
+      contribution: Contributo
+      exchange: Scambio
+      fee: Commissione
+      other: Altro
+      reinvestment: Reinvestimento
+      sweep_in: Sweep in entrata
+      sweep_out: Sweep in uscita
+      transfer: Trasferimento
+      withdrawal: Prelievo
     new:
       title: Nuova transazione
     show:
@@ -56,3 +65,8 @@ it:
       sell: Vendita
       settings: Impostazioni
       type_label: Tipo
+    api_errors:
+      activity_label_must_match_type: investment_activity_label deve essere %{label} quando type è %{type}
+      invalid_activity_label: Etichetta dell'attività d'investimento non valida
+      invalid_type: Tipo non valido
+      supported_types: 'type deve essere uno tra: %{types}'

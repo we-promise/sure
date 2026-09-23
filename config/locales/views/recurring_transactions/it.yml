@@ -3,7 +3,7 @@ it:
   recurring_transactions:
     title: Transazioni ricorrenti
     upcoming: Transazioni ricorrenti in arrivo
-    projected: Proiettata
+    projected: Prevista
     recurring: Ricorrente
     expected_today: "Prevista oggi"
     expected_in:
@@ -14,7 +14,7 @@ it:
     cleanup_stale: Elimina obsolete
     settings:
       enable_label: Abilita transazioni ricorrenti
-      enable_description: Rileva automaticamente gli schemi di transazioni ricorrenti e mostra le transazioni proiettate in arrivo.
+      enable_description: Rileva automaticamente gli schemi di transazioni ricorrenti e mostra le transazioni previste in arrivo.
     settings_updated: Impostazioni transazioni ricorrenti aggiornate
     info:
       title: Rilevamento automatico degli schemi
@@ -25,15 +25,15 @@ it:
         - Completamento di qualsiasi sincronizzazione provider (Plaid, SimpleFIN, ecc.)
     identified: Identificati %{count} schemi di transazioni ricorrenti
     cleaned_up: Eliminate %{count} transazioni ricorrenti obsolete
-    marked_inactive: Transazione ricorrente contrassegnata come inattiva
-    marked_active: Transazione ricorrente contrassegnata come attiva
-    deleted: Transazione ricorrente eliminata
-    confirm_delete: Sei sicuro di voler eliminare questa transazione ricorrente?
+    marked_inactive: In pausa. Non comparirà più finché non la riprendi.
+    marked_active: Ripresa.
+    deleted: Bolletta rimossa. Le tue transazioni non sono state modificate.
+    confirm_delete: Rimuovere %{name} dalle tue bollette? Le tue transazioni restano esattamente come sono. Vengono rimosse solo la bolletta e la sua pianificazione dei pagamenti.
     marked_as_recurring: Transazione contrassegnata come ricorrente
     already_exists: Esiste già una transazione ricorrente manuale per questo schema
     creation_failed: Impossibile creare la transazione ricorrente. Verifica i dettagli della transazione e riprova.
     unexpected_error: Si è verificato un errore imprevisto durante la creazione della transazione ricorrente
-    amount_range: "Intervallo: %{min} a %{max}"
+    amount_range: "Intervallo: da %{min} a %{max}"
     empty:
       title: Nessuna transazione ricorrente trovata
       description: Clicca "Identifica schemi" per rilevare automaticamente le transazioni ricorrenti dalla cronologia delle transazioni.
@@ -45,12 +45,155 @@ it:
       last_occurrence: Ultima occorrenza
       status: Stato
       actions: Azioni
+      frequency: Frequenza
     status:
       active: Attiva
-      inactive: Inattiva
+      inactive: In pausa
+      suggested: Possibile bolletta
+      paused: In pausa
+      ended: Ignorata
     badges:
       manual: Manuale
-    transfer_marked_as_recurring: Bonifico contrassegnato come ricorrente
-    transfer_already_exists: Esiste già un bonifico ricorrente per questa coppia di conti
-    transfer_creation_failed: Impossibile creare il bonifico ricorrente. Verifica i dettagli e riprova.
+    transfer_marked_as_recurring: Trasferimento contrassegnato come ricorrente
+    transfer_already_exists: Esiste già un trasferimento ricorrente per questa coppia di conti
+    transfer_creation_failed: Impossibile creare il trasferimento ricorrente. Verifica i dettagli e riprova.
     transfer_feature_disabled: Le transazioni ricorrenti sono disabilitate per questa famiglia
+    frequency_presets:
+      monthly: Mensile
+      weekly: Settimanale
+      biweekly: Ogni 2 settimane
+      semimonthly: Due volte al mese
+      quarterly: Trimestrale
+      semiannual: Ogni 6 mesi
+      annual: Annuale
+      custom: Pianificazione personalizzata
+    frequency:
+      monthly: 'Mensile, giorno: %{day}'
+      weekly: Settimanale, di %{weekday}
+      biweekly: Ogni 2 settimane, di %{weekday}
+      semimonthly: 'Due volte al mese, giorni: %{first} e %{second}'
+      quarterly: 'Trimestrale, giorno: %{day}'
+      semiannual: 'Ogni 6 mesi, giorno: %{day}'
+      annual: Annuale, %{day} di %{month}
+      custom: Pianificazione personalizzata
+      last_day: ultimo giorno
+    actions:
+      edit_payment_link: Modifica link di pagamento
+      pause: Metti in pausa
+      resume: Riprendi
+      delete: Rimuovi
+    pay_action:
+      pay: Paga
+      pay_aria: Paga %{name} (si apre in una nuova scheda)
+      add_link: Aggiungi link
+      add_link_aria: Aggiungi un link di pagamento per %{name}
+      autopay: Addebito automatico
+      autopay_aria: '%{name} viene pagata automaticamente; apri il suo portale in una nuova scheda'
+      open_site: Apri sito della bolletta
+    new:
+      title: Aggiungi una bolletta
+      income_title: Aggiungi entrata
+      start_from_title: Parti da un addebito ricorrente che abbiamo individuato
+      start_from_income_title: Parti da un accredito ricorrente che abbiamo individuato
+      start_from_hint: Facoltativo. Sceglierne uno compila solo il modulo; puoi comunque modificare tutto.
+      candidate_meta: '%{count}× · ultimo %{date}'
+      search_all_prompt: Non trovi quello che cerchi?
+      search_all_cta: Cerca in tutte le tue transazioni
+      pick_different: Parti da un'altra transazione
+      smart_fill: Compila con l'IA
+      smart_fill_applied: L'IA ha suggerito questi valori in base alla cronologia degli addebiti. Controllali prima di salvare.
+    smart_fills:
+      create:
+        failed: Impossibile analizzare la cronologia degli addebiti in questo momento. Il modulo mantiene i valori della transazione.
+    pick_entry:
+      title: Trova una transazione da cui partire
+      income_title: Trova un accredito da cui partire
+      hint: Sceglierne una compila solo il modulo; puoi comunque modificare tutto.
+      search_placeholder: Cerca per nome, note o esercente
+      back: Torna al modulo
+      showing_recent: Sono mostrate le %{count} più recenti. Cerca per restringere i risultati.
+      no_results: Nessun risultato per «%{query}». Prova con meno parole oppure torna indietro e compila il modulo manualmente.
+    picker_row:
+      claimed: Parte di %{name}
+    create:
+      success: Bolletta aggiunta
+      success_income: Entrata aggiunta
+      due_date_required: Inserisci la prossima data di scadenza della bolletta
+      amount_invalid: Inserisci l'importo come numero semplice
+      account_invalid: Scegli un conto a cui puoi aggiungere bollette oppure lascia vuoto
+      already_exists: Questa bolletta esiste già
+    edit:
+      trigger_label: Modifica bolletta
+      title: Modifica %{name}
+      income_title: Modifica entrata · %{name}
+    form:
+      payment_url_label: Link di pagamento
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: Dove vai per pagare questa bolletta. Si apre in una nuova scheda dagli elenchi delle ricorrenti e delle prossime scadenze.
+      autopay_label: Pagata automaticamente
+      autopay_hint: Resta nell'elenco delle bollette, ma non viene più considerata un'attività da svolgere.
+      more_options: Altre opzioni
+      notes_label: Note
+      notes_placeholder: Conto 4821, addebitata sulla Amex
+      notes_hint: Tutto ciò che vuoi avere sotto mano al momento del pagamento. Mostrato sulla bolletta.
+      apply_to_siblings:
+        one: Usa questo link anche per l'altra bolletta %{name}
+        other: Usa questo link anche per le altre %{count} bollette %{name}
+      submit: Salva bolletta
+      submit_income: Salva entrata
+      income_name_label: Fonte
+      income_name_placeholder: Datore di lavoro, cliente, lavoro extra
+      income_amount_label: Importo per accredito
+      income_due_on_label: Prossimo giorno di paga
+      income_account_label: Accreditata su
+      income_frequency_hint: Ogni quanto vieni pagato. Scegli i dettagli del giorno in base al tuo giorno di paga.
+      income_frequency_label: Ogni quanto vieni pagato
+      income_frequency_new_hint: I dettagli del giorno di paga derivano dalla data sopra. Puoi perfezionare la pianificazione dopo aver salvato.
+      income_notes_placeholder: Accredito diretto, suddiviso su due conti
+      income_notes_hint: Qualsiasi cosa valga la pena ricordare su questa entrata.
+      name_label: Nome
+      name_placeholder: Affitto, Enel, Netflix
+      amount_label: Importo
+      first_due_on_label: Prossima scadenza
+      account_label: Pagata da
+      account_blank: Qualsiasi conto
+      bill_type_label: Tipo
+      installment_count_label: Numero di rate
+      installment_count_hint: Il piano termina dopo questo numero di rate e fino ad allora ne mostra l'avanzamento.
+      renews_on_label: Rinnovo
+      trial_ends_on_label: Fine prova
+      amount_edit_hint: Si applica alle bollette in scadenza da ora in poi. Quelle già scadute mantengono l'importo precedente.
+      income_amount_edit_hint: Si applica ai giorni di paga da ora in poi. Quelli già passati mantengono l'importo precedente.
+      cancelled_on_label: Disdetta
+      cancelled_on_hint: La data serve solo come promemoria. Metti in pausa la bolletta per non far comparire le prossime.
+      category_label: Categoria
+      category_blank: Nessuna categoria
+      frequency_new_hint: I dettagli del giorno derivano dalla data di scadenza sopra. Puoi perfezionare la pianificazione dopo aver salvato.
+      frequency_label: Frequenza
+      frequency_hint: Ogni quanto scade questa bolletta. Scegli i dettagli del giorno in base al tuo estratto conto.
+      frequency_day_label: Giorno
+      frequency_second_day_label: E giorno
+      frequency_weekday_label: Giorno della settimana
+      frequency_month_label: Mese
+    update:
+      success: Bolletta aggiornata
+      success_with_siblings:
+        one: Bolletta aggiornata e link di pagamento copiato in %{count} altra bolletta
+        other: Bolletta aggiornata e link di pagamento copiato in altre %{count} bollette
+    manage:
+      title: Le tue bollette si trovano nella pagina Bollette
+      description: Da lì puoi dichiarare, modificare, mettere in pausa e pagare tutto. Questa pagina controlla il rilevamento.
+      cta: Apri tutte le bollette
+    identify_already_running: Il rilevamento è già in corso. Ricontrolla tra un momento.
+    deleted_income: Entrata rimossa. Le tue transazioni non sono state modificate.
+    confirm_delete_income: Rimuovere %{name} dalle entrate? Le tue transazioni restano esattamente come sono. Vengono rimosse solo l'entrata e la sua pianificazione.
+    suggested:
+      title: Possibili nuove bollette
+      seen_count:
+        one: vista una volta
+        other: vista %{count} volte
+      collapsed_hint: Tocca per verificare
+      confirm: Aggiungi bolletta
+      dismiss: Non è una bolletta
+    confirmed: Bolletta aggiunta alle tue transazioni ricorrenti
+    dismissed: Ignorata. Questo schema non verrà più suggerito.

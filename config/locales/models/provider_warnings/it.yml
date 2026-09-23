@@ -2,3 +2,10 @@
 it:
   provider_warnings:
     limited_investment_data: "I dati di investimento da questo provider sono limitati. Le etichette delle attività (Acquisto, Vendita, Dividendo) non sono disponibili, il che potrebbe influire sull'accuratezza del budget. Considera la creazione di regole per escludere o categorizzare le transazioni di investimento."
+    lunchflow_accounts_failed:
+      one: 'Importazione Lunchflow: aggiornamento non riuscito per %{count} conto'
+      other: 'Importazione Lunchflow: aggiornamento non riuscito per %{count} conti'
+    lunchflow_transactions_failed:
+      one: 'Importazione Lunchflow: recupero delle transazioni non riuscito per %{count} conto'
+      other: 'Importazione Lunchflow: recupero delle transazioni non riuscito per %{count} conti'
+    lunchflow_import_error: 'Importazione Lunchflow: %{error}'

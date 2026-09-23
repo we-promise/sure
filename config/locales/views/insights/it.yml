@@ -33,6 +33,7 @@ it:
       idle_cash: Liquidità inutilizzata
       budget_at_risk: Budget
       budget_on_track: Budget
+      maintained_goal_depleted: Riserva
     meta:
       next_n_days:
         one: Giorno successivo
@@ -61,6 +62,7 @@ it:
       savings_rate_change: Vedi le transazioni di quel mese
       idle_cash: Vai al conto
       budget: Vedi il budget
+      maintained_goal_depleted: Vedi riserva
     titles:
       spending_anomaly:
         above: Le spese per %{category} sono in aumento
@@ -78,6 +80,7 @@ it:
         one: Una categoria del tuo budget richiede attenzione
         other: "%{count} categorie del tuo budget richiedono attenzione"
       budget_on_track: Il tuo budget è in linea
+      maintained_goal_depleted: '%{goal} è sceso sotto il suo livello'
     templates:
       spending_anomaly:
         above: "Questo mese sei in linea per spendere %{projected_spend} per %{category}, circa il %{deviation_pct}% in più della recente media mensile di %{baseline_spend}."
@@ -96,3 +99,7 @@ it:
         over: "%{categories} hanno superato il budget questo mese. Finora hai usato il %{budget_spent_pct}% del budget totale."
         near: "%{categories} sono vicine ai rispettivi limiti questo mese. Finora hai usato il %{budget_spent_pct}% del budget totale."
       budget_on_track: "Hai speso %{spent} del budget di %{budgeted} (%{budget_spent_pct}%) e tutto rientra nei limiti."
+      maintained_goal_depleted: '%{goal} contiene %{saved} dei %{target} che dovrebbe mantenere. Mancano %{missing}.'
+    notification:
+      title: Nuovo insight finanziario
+      body: Apri Sure per consultare il tuo ultimo insight IA.

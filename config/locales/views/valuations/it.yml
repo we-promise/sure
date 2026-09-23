@@ -2,25 +2,27 @@
 it:
   valuations:
     confirmation_contents:
-      this_will: "Questo %{action_verb} il valore del conto"
+      this_will: "Stai per %{action_verb} il valore del conto al"
       to_colon: "a:"
       total_account_value: Valore totale del conto
       holdings_value: Valore posizioni
       brokerage_cash: Liquidità di conto
-      account_balance: saldo del conto
-      credit_card_balance: saldo della carta di credito
-      loan_balance: saldo del prestito
-      property_value: valore dell'immobile
-      vehicle_value: valore del veicolo
-      crypto_balance: saldo crypto
-      asset_value: valore dell'asset
-      liability_balance: saldo della passività
-      balance: saldo
-      "on": "il"
+      account_balance: il saldo del conto
+      credit_card_balance: il saldo della carta di credito
+      loan_balance: il saldo del prestito
+      property_value: il valore dell'immobile
+      vehicle_value: il valore del veicolo
+      crypto_balance: il saldo crypto
+      asset_value: il valore dell'asset
+      liability_balance: il saldo della passività
+      balance: il saldo
+      "on": "al"
       to: "a"
-      recalculate_notice: "Tutte le transazioni e i saldi futuri verranno ricalcolati sulla base di questa %{change_or_update}."
-      change: modifica
-      update: aggiornamento
+      recalculate_notice: "Tutte le transazioni e i saldi futuri verranno ricalcolati sulla base di %{change_or_update}."
+      change: questa modifica
+      update: questo aggiornamento
+      action_set: impostare
+      action_update: aggiornare
     create:
       account_updated: Conto aggiornato
     update:
@@ -58,3 +60,9 @@ it:
       settings: Impostazioni
       opening_balance: "Saldo iniziale"
       update_value: Aggiorna valore
+    confirm_create:
+      confirm: Conferma
+      title: Conferma nuovo saldo
+    confirm_update:
+      title: Aggiorna saldo
+      update: Aggiorna

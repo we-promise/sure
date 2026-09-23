@@ -25,6 +25,8 @@ it:
       status_never: Richiede sincronizzazione dati
       syncing: Sincronizzazione in corso...
       update: Aggiorna
+      add_accounts: Aggiungi conti
+      provider_name: Plaid
     select_existing_account:
       no_available_accounts: Nessun conto Plaid disponibile da collegare. Collega prima un nuovo conto Plaid.
       title: "Collega %{account_name} a Plaid"

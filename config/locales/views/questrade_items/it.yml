@@ -9,10 +9,10 @@ it:
         other: "%{count} conti sincronizzati"
       synced_with_setup: "%{linked} sincronizzati, %{unlinked} da configurare"
     institution_summary:
-      none: Nessun istituto connesso
+      none: Nessuna istituzione connessa
       count:
-        one: "%{count} istituto"
-        other: "%{count} istituti"
+        one: "%{count} istituzione"
+        other: "%{count} istituzioni"
     errors:
       provider_not_configured: Il provider Questrade non è configurato
     sync:
@@ -117,7 +117,7 @@ it:
       api_error: "Errore API: %{message}"
       cancel: Annulla
       configure_name_in_provider: "Impossibile importare: configura il nome del conto in Questrade"
-      description: Seleziona i conti da collegare al tuo conto %{product_name}.
+      description: Seleziona i conti da collegare al tuo account %{product_name}.
       link_accounts: Collega i conti selezionati
       no_accounts_found: Nessun conto trovato. Controlla la configurazione della chiave API.
       no_api_key: La chiave API Questrade non è configurata. Configurala nelle Impostazioni.
@@ -152,7 +152,7 @@ it:
       no_credentials_configured: Prima configura le credenziali Questrade nelle impostazioni dei provider.
       no_name_placeholder: "(Senza nome)"
       settings_link: Vai alle impostazioni dei provider
-      subtitle: Scegli un conto Questrade
+      subtitle: Collega questo conto a uno dei tuoi conti Questrade
       title: "Collega %{account_name} a Questrade"
     link_existing_account:
       account_already_linked: Questo conto è già collegato a un provider
@@ -197,7 +197,7 @@ it:
         investment: Conto di investimento
         crypto: Conto di criptovalute
         loan: Prestito o mutuo
-        other_asset: Altra attività
+        other_asset: Altro asset
       subtype_labels:
         depository: "Sottotipo di conto:"
         credit_card: ""
@@ -207,7 +207,7 @@ it:
         other_asset: ""
       subtype_messages:
         credit_card: Le carte di credito saranno configurate automaticamente come conti carta di credito.
-        other_asset: Non sono necessarie opzioni aggiuntive per le altre attività.
+        other_asset: Non sono necessarie opzioni aggiuntive per gli altri asset.
         crypto: I conti di criptovalute saranno configurati per monitorare posizioni e transazioni.
       subtypes:
         depository:
@@ -217,7 +217,7 @@ it:
           cd: Certificato di deposito
           money_market: Mercato monetario
         investment:
-          brokerage: Intermediazione
+          brokerage: Conto titoli
           pension: Pensione
           retirement: Previdenza
           "401k": "401(k)"

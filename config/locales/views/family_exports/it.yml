@@ -40,4 +40,9 @@ it:
         actions:
           delete: Elimina
           download: Scarica
+          mark_failed: Contrassegna come fallita
+          confirm_mark_failed: Questa esportazione è inattiva da un po' e il suo job in background è stato probabilmente interrotto. Contrassegnarla come fallita? Potrai creare subito una nuova esportazione.
       empty: Nessuna esportazione ancora.
+    cancel:
+      cancelled: Esportazione contrassegnata come fallita. Puoi creare subito una nuova esportazione.
+      not_cancellable: Al momento questa esportazione non può essere contrassegnata come fallita — il suo job potrebbe essere ancora in esecuzione. Riprova quando sarà inattiva da un'ora.
