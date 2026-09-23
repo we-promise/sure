@@ -32,6 +32,26 @@ After deploy:
 
 Monitor queue depth, oldest accepted batch age, `repair_required` connections, and downstream lag. Diagnostics may include publisher, batch, sequence, generation, and typed error codes. They must not include credentials, raw request bodies, transaction descriptions, merchant names, amounts, account names, or server authentication headers.
 
+## Transaction dates
+
+`posted_at` is optional, including for booked Apple Card transactions. When
+supplied, it must still be a valid timestamp no later than the capture timestamp.
+Ledger dates retain their existing precedence: `posted_at`, otherwise the
+required `transacted_at`, converted into the mapped account's ledger timezone.
+
+## Wallet in settings
+
+Bank sync lists Apple Wallet as a US / UK bank provider. Its App Store button is
+disabled with “Coming soon!” hover help; connections are managed in the iOS app.
+
+![Available Apple Wallet provider](financekit/apple-wallet-available.png)
+
+Existing connections appear under Your Connections with sync status, acceptance
+and import timestamps, and links to accounts the viewer can access. Wallet accounts
+also appear in Accounts. This screenshot uses synthetic test data.
+
+![Connected Apple Wallet provider](financekit/apple-wallet-connected.png)
+
 ## Debugging uploads
 
 Super admins can open `/settings/debug?provider_key=financekit` and filter further

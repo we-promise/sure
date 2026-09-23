@@ -15,7 +15,7 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
     visit settings_providers_path
     find("summary", text: "Apple Wallet").click
-    page.save_screenshot(Rails.root.join("tmp", "apple-wallet-connected.png"))
+    find("details", text: "Apple Wallet").native.save_screenshot(Rails.root.join("tmp", "apple-wallet-connected.png"))
     within "turbo-frame#financekit-providers-panel" do
       click_link "Test Wallet"
     end
@@ -25,7 +25,6 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     assert_text "Synthetic shop"
 
     visit accounts_path
-    page.save_screenshot(Rails.root.join("tmp", "apple-wallet-accounts.png"))
     within "#financekit-accounts" do
       click_link "Test Wallet"
     end
@@ -43,8 +42,9 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
       assert_button "App Store", disabled: true
       assert_selector '[title="Coming soon!"]'
       assert_no_selector "a[data-turbo-frame='drawer']", visible: true
+      find('[data-providers-filter-target="card"]', text: "Apple Wallet").native.save_screenshot(
+        Rails.root.join("tmp", "apple-wallet-available.png"))
     end
-    page.save_screenshot(Rails.root.join("tmp", "apple-wallet-available.png"))
   end
 
   test "shows status pill on section header for a configured provider" do
