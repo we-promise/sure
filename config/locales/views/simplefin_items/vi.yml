@@ -47,8 +47,8 @@ vi:
       account_type_credit_card: Thẻ tín dụng
       account_type_credit_card_desc: Tài khoản thẻ tín dụng
       account_type_investment: Đầu tư
-      account_type_investment_desc: "Tài khoản Brokerage, 401(k), IRA"
-      account_type_loan: Vay hoặc thế chấp
+      account_type_investment_desc: "Tài khoản môi giới, 401(k), IRA"
+      account_type_loan: Khoản vay hoặc vay thế chấp
       account_type_loan_desc: Tài khoản nợ
       account_type_other_asset: Tài sản khác
       account_type_other_asset_desc: Tất cả các loại khác
@@ -74,7 +74,7 @@ vi:
           other: "%{count} ngày trước"
       stale_accounts:
         title: "Tài khoản không còn trong SimpleFIN"
-        description: "Các tài khoản này tồn tại trong cơ sở dữ liệu của bạn nhưng không còn được SimpleFIN cung cấp. Điều này có thể xảy ra khi cấu hình tài khoản thay đổi ở phía trên."
+        description: "Các tài khoản này tồn tại trong cơ sở dữ liệu của bạn nhưng không còn được SimpleFIN cung cấp. Điều này có thể xảy ra khi cấu hình tài khoản thay đổi ở phía nhà cung cấp."
         action_prompt: "Bạn muốn làm gì?"
         action_delete: "Xóa tài khoản và tất cả giao dịch"
         action_move: "Chuyển giao dịch sang:"
@@ -133,6 +133,7 @@ vi:
       unlink_to_move: Để chuyển liên kết, trước tiên hãy hủy liên kết từ menu thao tác của tài khoản.
       all_accounts_already_linked: Tất cả tài khoản SimpleFIN có vẻ đã được liên kết.
       currently_linked_to: "Hiện đang liên kết với: %{account_name}"
+      check_provider_health: Kiểm tra xem kết nối SimpleFIN có hoạt động bình thường trong Cài đặt → Nhà cung cấp.
 
     link_existing_account:
       success: Tài khoản đã được liên kết thành công với SimpleFIN
@@ -157,3 +158,18 @@ vi:
       message:
         one: "%{count} giao dịch đang chờ cũ hơn %{days} ngày"
         other: "%{count} giao dịch đang chờ cũ hơn %{days} ngày"
+    sync_status:
+      no_accounts: Không tìm thấy tài khoản
+      synced:
+        other: Đã đồng bộ %{count} tài khoản
+      partial_setup:
+        other: '%{linked} đã đồng bộ, %{unlinked} cần thiết lập'
+    institution_summary:
+      none: Chưa kết nối tổ chức nào
+      count:
+        other: '%{count} tổ chức'
+    rate_limited:
+      daily_refresh: Bạn đã đạt giới hạn làm mới hằng ngày của SimpleFIN. Vui lòng thử lại sau khi SimpleFIN Bridge làm mới (tối đa 24 giờ).
+    stale_sync:
+      last_successful: Lần đồng bộ thành công gần nhất là %{count} ngày trước. Kết nối SimpleFIN của bạn có thể cần được kiểm tra.
+      no_transactions: Không có giao dịch mới trong %{count} ngày. Hãy kiểm tra bảng điều khiển SimpleFIN để đảm bảo các kết nối ngân hàng vẫn hoạt động.

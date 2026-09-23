@@ -181,7 +181,7 @@ vi:
         depository: Tài khoản thanh toán hoặc tiết kiệm
         credit_card: Thẻ tín dụng
         investment: Tài khoản đầu tư
-        loan: Vay hoặc thế chấp
+        loan: Khoản vay hoặc vay thế chấp
         other_asset: Tài sản khác
       subtype_labels:
         depository: "Loại phụ tài khoản:"

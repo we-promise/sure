@@ -20,6 +20,7 @@ vi:
       type_dividend: Cổ tức
       type_interest: Lãi
       dividend_requires_security: Cổ tức yêu cầu phải có chứng khoán
+      trade_requires_security: Giao dịch mua và bán yêu cầu phải có chứng khoán (mã ticker)
     header:
       buy: Mua
       sell: Bán
@@ -31,6 +32,15 @@ vi:
       purchase_qty_label: Số lượng mua
       symbol_label: Mã chứng khoán
       total_return_label: Lãi/lỗ chưa thực hiện
+      contribution: Nạp tiền
+      exchange: Hoán đổi
+      fee: Phí
+      other: Khác
+      reinvestment: Tái đầu tư
+      sweep_in: Chuyển tự động vào
+      sweep_out: Chuyển tự động ra
+      transfer: Chuyển khoản
+      withdrawal: Rút tiền
     new:
       title: Giao dịch mới
     show:
@@ -55,3 +65,8 @@ vi:
       sell: Bán
       settings: Cài đặt
       type_label: Loại
+    api_errors:
+      activity_label_must_match_type: investment_activity_label phải là %{label} khi type là %{type}
+      invalid_activity_label: Nhãn hoạt động đầu tư không hợp lệ
+      invalid_type: Loại không hợp lệ
+      supported_types: 'type phải là một trong: %{types}'

@@ -3,6 +3,9 @@ vi:
   transfers:
     create:
       success: Chuyển khoản đã được tạo
+      exchange_rate_unavailable: Không có tỷ giá cho các loại tiền tệ và ngày đã chọn
+      date_invalid: không hợp lệ
+      stale_form: Biểu mẫu này đã được gửi với thông tin khác. Vui lòng tải lại trang và thử lại.
     destroy:
       success: Chuyển khoản đã được xóa
     form:
@@ -19,6 +22,9 @@ vi:
       submit: Tạo chuyển khoản
       to: Đến
       transfer: Chuyển khoản
+      bank_charges: Phí ngân hàng
+      outgoing_fee: Phí chuyển đi
+      incoming_fee: Phí nhận tiền
     new:
       title: Chuyển khoản mới
     show:
@@ -39,7 +45,10 @@ vi:
       amount: Số tiền
       category: Danh mục
       uncategorized: Chưa phân loại
-      total: '[Total]'
-      transfer_amount: '[Transfer amount]'
+      total: Tổng cộng
+      transfer_amount: Số tiền chuyển
+      bank_charges: Phí ngân hàng
+      source_fee: Phí bên chuyển
+      destination_fee: Phí bên nhận
     update:
       success: Chuyển khoản đã được cập nhật

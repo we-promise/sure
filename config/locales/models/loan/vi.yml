@@ -1,0 +1,8 @@
+---
+vi:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Mỗi dòng thay đổi lãi suất cần có cả ngày hiệu lực và lãi suất.
+          rate_change_before_origination: Thay đổi lãi suất không thể có hiệu lực trước ngày giải ngân khoản vay.

@@ -1,0 +1,35 @@
+---
+vi:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        frequency: Tần suất
+        interval: Khoảng lặp
+        day_of_month: Ngày trong tháng
+        weekday: Thứ trong tuần
+        weekday_ordinal: Tuần trong tháng
+        month_of_year: Tháng
+      recurring_transaction/recurrence_rules:
+        base: 'Lịch lặp lại:'
+        frequency: Tần suất
+        interval: Khoảng lặp
+        day_of_month: Ngày trong tháng
+        weekday: Thứ trong tuần
+        weekday_ordinal: Tuần trong tháng
+        month_of_year: Tháng
+    errors:
+      models:
+        recurrence_rule:
+          day_spec_required: 'Chọn đúng một trong hai: ngày trong tháng hoặc thứ trong tuần'
+          attributes:
+            weekday:
+              required_for_weekly: là bắt buộc với lịch hàng tuần
+            weekday_ordinal:
+              not_allowed_for_weekly: không áp dụng cho lịch hàng tuần
+              required_with_weekday: là bắt buộc khi đã chọn thứ trong tuần
+              not_allowed_without_weekday: chỉ áp dụng khi đã chọn thứ trong tuần
+            day_of_month:
+              not_allowed_for_weekly: không áp dụng cho lịch hàng tuần
+            month_of_year:
+              required_for_yearly: là bắt buộc với lịch hàng năm
+              not_allowed: chỉ áp dụng cho lịch hàng năm

@@ -42,6 +42,9 @@ vi:
       default: "%d-%m-%Y"
       long: "%d %B, %Y"
       short: "%d %b"
+      month_year: '%B %Y'
+      short_month_year: '%b %Y'
+      short_with_year: '%d %b, %Y'
     month_names:
     -
     - Tháng một
@@ -74,6 +77,8 @@ vi:
       x_minutes: "%{count} phút"
       x_months: "%{count} tháng"
       x_seconds: "%{count} giây"
+      x_years:
+        other: '%{count} năm'
     prompts:
       day: Ngày
       hour: Giờ
@@ -86,7 +91,7 @@ vi:
     messages:
       accepted: phải được đồng ý
       blank: không thể để trắng
-      confirmation: không khớp với xác nhận
+      confirmation: không khớp với %{attribute}
       empty: không thể rỗng
       equal_to: phải bằng %{count}
       even: phải là số chẵn
@@ -107,12 +112,16 @@ vi:
       too_long: quá dài (tối đa %{count} ký tự)
       too_short: quá ngắn (tối thiểu %{count} ký tự)
       wrong_length: độ dài không đúng (phải là %{count} ký tự)
+      in: phải nằm trong khoảng %{count}
+      model_invalid: 'Xác thực không thành công: %{errors}'
     template:
       body: 'Có lỗi với các mục sau:'
       header: "%{count} lỗi ngăn không cho lưu %{model} này"
   helpers:
     select:
       prompt: Vui lòng chọn
+      search_placeholder: Tìm kiếm
+      default_label: Chọn...
     submit:
       create: Tạo %{model}
       submit: Lưu %{model}
@@ -133,6 +142,7 @@ vi:
       separator: ","
       significant: false
       strip_insignificant_zeros: false
+      round_mode: default
     human:
       decimal_units:
         format: "%n %u"
@@ -158,6 +168,8 @@ vi:
           kb: KB
           mb: MB
           tb: TB
+          eb: EB
+          pb: PB
     percentage:
       format:
         delimiter: ''
@@ -177,3 +189,17 @@ vi:
       long: "%d %B, %Y %H:%M"
       short: "%d %b %H:%M"
     pm: chiều
+  defaults:
+    brand_name: '%{brand_name}'
+    product_name: '%{product_name}'
+    common:
+      close: Đóng
+  global:
+    expand: Mở rộng
+  mcp:
+    errors:
+      invalid_session_id: Session id MCP không hợp lệ
+      unsupported_protocol_version: 'Phiên bản giao thức MCP không được hỗ trợ: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris phải dùng https, http loopback hoặc URI scheme của ứng dụng gốc (native app)

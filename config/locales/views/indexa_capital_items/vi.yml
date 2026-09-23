@@ -179,7 +179,7 @@ vi:
         credit_card: "Thẻ tín dụng"
         investment: "Tài khoản đầu tư"
         crypto: "Tài khoản tiền điện tử"
-        loan: "Vay hoặc thế chấp"
+        loan: "Khoản vay hoặc vay thế chấp"
         other_asset: "Tài sản khác"
       subtype_labels:
         depository: "Loại phụ tài khoản:"
@@ -200,7 +200,7 @@ vi:
           cd: "Chứng chỉ tiền gửi"
           money_market: "Thị trường tiền tệ"
         investment:
-          brokerage: "Brokerage"
+          brokerage: "Tài khoản môi giới"
           pension: "Lương hưu"
           retirement: "Hưu trí"
           "401k": "401(k)"
@@ -214,7 +214,7 @@ vi:
           roth_ira: "Roth IRA"
           angel: "Angel"
         loan:
-          mortgage: "Thế chấp"
+          mortgage: "Vay thế chấp"
           student: "Vay sinh viên"
           auto: "Vay mua xe"
           other: "Vay khác"

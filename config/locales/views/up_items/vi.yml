@@ -1,0 +1,112 @@
+---
+vi:
+  providers:
+    up:
+      name: Up
+      description: Kết nối tài khoản ngân hàng Up tại Úc bằng mã truy cập cá nhân
+  family:
+    up:
+      create_up_item:
+        default_name: Kết nối Up
+  up_account:
+    fallback: Tài khoản Up
+  up_item:
+    errors:
+      account_processing_failed: Không thể đồng bộ tài khoản Up
+      account_sync_schedule_failed: Không thể lên lịch đồng bộ tài khoản Up
+      transactions_failed: Không thể tải giao dịch Up
+      sync_failed: Không thể đồng bộ kết nối Up
+    sync_status:
+      no_accounts: Không tìm thấy tài khoản
+      all_synced:
+        other: Đã đồng bộ %{count} tài khoản
+      partial: '%{linked} đã đồng bộ, %{unlinked} cần thiết lập'
+    institution_summary:
+      none: Chưa kết nối tổ chức nào
+      one: 1 tổ chức
+      count:
+        other: '%{count} tổ chức'
+  up_items:
+    provider_panel:
+      default_connection_name: Kết nối Up
+      add_connection: Thêm kết nối Up
+      update_connection: Cập nhật kết nối
+      connection_name_label: Tên kết nối
+      connection_name_placeholder: Up chính
+      access_token_label: Mã truy cập cá nhân
+      access_token_placeholder: Dán mã truy cập cá nhân Up của bạn
+      keep_access_token_placeholder: Để trống để giữ mã hiện tại
+      setup_accounts: Thiết lập tài khoản
+      syncing: Đang đồng bộ...
+      sync: Đồng bộ
+      disconnect: Ngắt kết nối
+      disconnect_confirm: Bạn có chắc chắn muốn ngắt kết nối %{name}?
+    create:
+      success: Đã lưu kết nối Up.
+    update:
+      success: Đã cập nhật kết nối Up.
+    destroy:
+      success: Đã lên lịch xóa kết nối Up.
+      unlink_failed: Không thể ngắt kết nối Up
+    select_accounts:
+      title: Liên kết tài khoản Up
+      description: Chọn các tài khoản Up cần thêm.
+      no_accounts_found: Không tìm thấy tài khoản Up nào chưa liên kết.
+      no_credentials_configured: Vui lòng cấu hình Up trong Cài đặt nhà cung cấp trước.
+      cancel: Hủy
+      link_accounts: Liên kết tài khoản
+    link_accounts:
+      success:
+        other: Đã liên kết %{count} tài khoản Up.
+      no_accounts_selected: Vui lòng chọn ít nhất một tài khoản.
+      no_credentials_configured: Vui lòng cấu hình Up trong Cài đặt nhà cung cấp trước.
+      unsupported_account_type: Up không hỗ trợ loại tài khoản này.
+      link_failed: Không có tài khoản nào được liên kết.
+    select_existing_account:
+      title: Liên kết tài khoản Up với %{account_name}
+      description: Chọn một tài khoản Up chưa liên kết để kết nối với tài khoản này.
+      no_accounts_found: Không tìm thấy tài khoản Up nào chưa liên kết.
+      no_credentials_configured: Vui lòng cấu hình Up trong Cài đặt nhà cung cấp trước.
+      account_already_linked: Tài khoản này đã được liên kết với nhà cung cấp
+      cancel: Hủy
+      link_account: Liên kết tài khoản
+    link_existing_account:
+      success: Đã liên kết tài khoản Up với %{account_name}.
+      account_already_linked: Tài khoản này đã được liên kết với nhà cung cấp.
+      up_account_already_linked: Tài khoản Up này đã được liên kết.
+      no_account_selected: Vui lòng chọn một tài khoản Up để liên kết.
+    setup_accounts:
+      title: Liên kết tài khoản Up
+      subtitle: Chọn cách hiển thị từng tài khoản Up trong Sure.
+      no_credentials: Vui lòng cấu hình thông tin xác thực Up trước.
+      api_error: Không thể tải tài khoản Up.
+      fetch_failed: Không thể tải tài khoản
+      no_accounts_to_setup: Không có tài khoản nào để thiết lập
+      all_accounts_linked: Tất cả tài khoản Up đã được liên kết.
+      choose_account_type: Chọn loại tài khoản
+      choose_account_type_description: Bỏ qua những tài khoản bạn không muốn theo dõi.
+      account_type_label: Loại tài khoản
+      account_types:
+        skip: Bỏ qua
+        depository: Tiền mặt
+        loan: Khoản vay
+      create_accounts: Tạo tài khoản
+      cancel: Hủy
+    complete_account_setup:
+      success:
+        other: Đã tạo %{count} tài khoản Up.
+      all_skipped: Không có tài khoản Up nào được tạo.
+      no_accounts: Chưa chọn tài khoản Up nào.
+      creation_failed: Không thể tạo tài khoản Up.
+    up_item:
+      deletion_in_progress: Đang xóa
+      syncing: Đang đồng bộ
+      error: Lỗi
+      status_with_summary: Đồng bộ %{timestamp} trước · %{summary}
+      status_never: Chưa bao giờ đồng bộ
+      delete: Xóa
+      setup_needed: Cần thiết lập tài khoản
+      setup_description: '%{linked} trong số %{total} tài khoản đã liên kết.'
+      setup_action: Thiết lập tài khoản
+      no_accounts_title: Chưa nhập tài khoản nào
+      no_accounts_description: Tải các tài khoản Up và chọn tài khoản cần liên kết.

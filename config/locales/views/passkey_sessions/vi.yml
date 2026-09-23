@@ -1,0 +1,4 @@
+---
+vi:
+  passkey_sessions:
+    invalid_credential: Không thể đăng nhập bằng passkey đó. Vui lòng thử lại hoặc dùng mật khẩu của bạn.

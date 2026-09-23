@@ -27,7 +27,7 @@ vi:
       title: Liên kết tiền điện tử với CoinStats
       blockchain_fetch_error: Tải blockchain thất bại. Vui lòng thử lại sau.
       link_wallet_title: Liên kết địa chỉ ví
-      link_wallet_description: Theo dõi ví tự quản hoặc địa chỉ on-chain đơn lẻ qua CoinStats.
+      link_wallet_description: Theo dõi ví tự lưu ký hoặc địa chỉ on-chain đơn lẻ qua CoinStats.
       address_label: Địa chỉ
       address_placeholder: Bắt buộc
       blockchain_label: Blockchain

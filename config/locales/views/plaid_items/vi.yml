@@ -22,6 +22,8 @@ vi:
       status_never: Cần đồng bộ dữ liệu
       syncing: Đang đồng bộ...
       update: Cập nhật
+      add_accounts: Thêm tài khoản
+      provider_name: Plaid
     select_existing_account:
       no_available_accounts: Không có tài khoản Plaid nào để liên kết. Vui lòng kết nối tài khoản Plaid mới trước.
       title: "Liên kết %{account_name} với Plaid"
@@ -32,3 +34,6 @@ vi:
       invalid_account: Tài khoản Plaid được chọn không hợp lệ
       already_linked: Tài khoản Plaid này đã được liên kết
       success: Tài khoản đã được liên kết thành công với Plaid
+    errors:
+      link_token_generic: Hiện không thể mở Plaid. Vui lòng thử lại; nếu sự cố vẫn tiếp diễn, hãy kiểm tra nhật ký máy chủ để biết chi tiết.
+      link_token_with_message: 'Plaid không thể mở kết nối: %{message}'

@@ -1,0 +1,335 @@
+---
+vi:
+  goals:
+    color_picker:
+      trigger_label: Chọn màu và biểu tượng
+      color_heading: Màu sắc
+      icon_heading: Biểu tượng
+      poor_contrast: Độ tương phản kém, chọn màu tối hơn hoặc
+      auto_adjust: tự động điều chỉnh.
+    index:
+      title: Mục tiêu
+      subtitle: Tiết kiệm cho những điều quan trọng.
+      new_goal: Mục tiêu mới
+      empty_filtered: Không có mục tiêu phù hợp.
+      pending_pledges_callout: Bạn có khoản góp đang chờ. Sure sẽ xác nhận chúng ở lần đồng bộ tiếp theo.
+      kpi:
+        contributed_label: Đã góp · 30 ngày qua
+        velocity_delta_up: ↑ %{percent}%% so với 30 ngày trước đó
+        velocity_delta_down: ↓ %{percent}%% so với 30 ngày trước đó
+        velocity_delta_flat: so với 30 ngày trước đó
+        velocity_delta_zero_base: 30 ngày hoạt động đầu tiên
+        needs_this_month_label: Cần trong tháng này
+        needs_this_month_sub:
+          other: '%{count} mục tiêu chậm tiến độ'
+        needs_this_month_zero_sub: Không có mục tiêu nào chậm tiến độ
+        on_track_label: Mục tiêu đúng tiến độ
+        on_track_value: '%{on_track} trên %{total}'
+        on_track_sub_parts:
+          reached:
+            other: '%{count} đã đạt'
+          behind:
+            other: '%{count} chậm tiến độ'
+          no_date:
+            other: '%{count} không có hạn chót'
+          paused:
+            other: '%{count} đã tạm dừng'
+        on_track_sub_all_good: Tất cả mục tiêu đang hoạt động đều đúng tiến độ
+        on_track_all_caught_up: Mọi thứ đều ổn
+      goals_section:
+        heading: Mục tiêu
+        subtitle: Tiết kiệm cho những điều quan trọng.
+      ongoing_section:
+        heading: Mục tiêu
+      archived_section:
+        heading: Đã lưu trữ
+      search:
+        placeholder: Tìm mục tiêu…
+        aria_label: Tìm mục tiêu
+        empty: Không có mục tiêu phù hợp.
+        empty_with_query: Không có mục tiêu nào khớp với “%{query}”.
+        empty_with_filter: Không có mục tiêu nào khớp với bộ lọc này.
+        empty_with_both: Không có mục tiêu nào khớp với “%{query}” trong bộ lọc này.
+        clear_search: Xóa tìm kiếm
+        show_all: Hiện tất cả
+      chips_aria: Lọc mục tiêu theo trạng thái
+      chips:
+        all: Tất cả
+        on_track: Đúng tiến độ
+        behind: Chậm tiến độ
+        no_target_date: Không thời hạn
+        paused: Đã tạm dừng
+        completed: Đã hoàn thành
+    new:
+      heading: Mục tiêu mới
+      subtitle: Tiết kiệm cho một điều cụ thể.
+    edit:
+      heading: Chỉnh sửa mục tiêu
+      save: Lưu thay đổi
+    create:
+      success: Đã tạo mục tiêu.
+    update:
+      success: Đã cập nhật mục tiêu.
+    destroy:
+      success: Đã xóa mục tiêu.
+    pause:
+      success: Đã tạm dừng mục tiêu.
+      invalid_transition: Không thể tạm dừng mục tiêu ở trạng thái hiện tại.
+    resume:
+      success: Đã tiếp tục mục tiêu.
+      invalid_transition: Không thể tiếp tục mục tiêu ở trạng thái hiện tại.
+    complete:
+      success: Đã đánh dấu mục tiêu là hoàn thành.
+      invalid_transition: Không thể hoàn thành mục tiêu ở trạng thái hiện tại.
+    archive:
+      success: Đã lưu trữ mục tiêu.
+      invalid_transition: Không thể lưu trữ mục tiêu ở trạng thái hiện tại.
+    unarchive:
+      success: Đã khôi phục mục tiêu.
+      invalid_transition: Không thể khôi phục mục tiêu ở trạng thái hiện tại.
+    reopen:
+      success: Đã mở lại mục tiêu.
+      invalid_transition: Không thể mở lại mục tiêu ở trạng thái hiện tại.
+    consume:
+      title: Ghi nhận khoản chi
+      subtitle: '%{goal}'
+      amount_label: Bạn đã dùng bao nhiêu?
+      amount_hint: Hiện có %{saved} đang được tính cho mục tiêu này.
+      account_label: Từ tài khoản nào?
+      earmark_note: Số tiền bạn ghi nhận sẽ không còn được dành riêng cho mục tiêu này, vì vậy các mục tiêu khác trên tài khoản đó sẽ nhận lại phần của chúng.
+      cancel: Hủy
+      submit: Ghi nhận
+      success: Đã ghi nhận %{amount} là đã dùng.
+      errors:
+        non_positive: Nhập số tiền lớn hơn 0.
+        maintained: Quỹ dự trữ được rút ra rồi bù lại, không phải để chi tiêu — phần thiếu hụt đã hiển thị trên mục tiêu.
+        exceeds_target: Số tiền này vượt quá mức mà mục tiêu từng đặt ra để tiết kiệm.
+        account_required: Mục tiêu này được cấp tiền từ nhiều tài khoản — hãy chọn tài khoản mà tiền đã được rút ra.
+        account_not_linked: Tài khoản đó không cấp tiền cho mục tiêu này.
+        not_active: Mục tiêu này không còn hoạt động, nên không thể ghi nhận gì vào đó.
+        exceeds_earmark: Số tiền này vượt quá mức mục tiêu đã dành riêng trên tài khoản này.
+        transaction_already_claimed: Khoản chi ra đó đã được gán cho mục tiêu.
+        transaction_not_found: Khoản chi ra đó không còn khả dụng để gán.
+        no_linked_account: Mục tiêu này không còn tài khoản nguồn nào.
+    unattributed_outflows:
+      heading: Tiền đã được chi ra từ các tài khoản này
+      body: Nếu khoản nào trong số này được chi cho %{goal}, hãy đánh dấu để khoản đó không còn bị trừ vào mục tiêu.
+      attribute: Chính là khoản này
+    show:
+      edit: Chỉnh sửa
+      consume: Tôi đã dùng một phần số tiền này
+      pause: Tạm dừng
+      resume: Tiếp tục
+      complete: Đánh dấu hoàn thành
+      archive: Lưu trữ
+      unarchive: Khôi phục
+      reopen: Mở lại mục tiêu
+      delete: Xóa
+      reserve_shortfall:
+        heading: Quỹ dự trữ thấp hơn số dư mục tiêu
+        body: Bạn đang giữ %{saved} trên %{target}. Thêm %{missing} để đưa quỹ về lại số dư mục tiêu.
+      record_pledge_cta: Ghi nhận khoản góp
+      pledge_just_transferred: Ghi lại khoản chuyển tiền bạn đã thực hiện
+      pledge_just_saved: Ghi lại khoản tiền bạn đã để dành
+      funding_accounts_heading: Tài khoản nguồn
+      funding_accounts:
+        earmarked_of: Đã dành riêng %{earmarked} trên %{balance}
+        empty:
+          heading: Chưa liên kết tài khoản nguồn nào
+          body: Chỉnh sửa mục tiêu để liên kết các tài khoản tiền gửi mà bạn dùng để tiết kiệm.
+      notes: Ghi chú
+      funding_last_30d: 30 ngày qua
+      funding_last_90d: 90 ngày qua
+      status_callout:
+        depleted: thấp hơn số dư mục tiêu %{amount} — hãy nạp thêm để bù lại quỹ dự trữ
+        behind: cần tiết kiệm thêm %{amount}/tháng để bắt kịp
+        behind_covered: các khoản góp đang chờ sẽ bù đủ phần thiếu
+        on_track: sẽ đạt mục tiêu vào khoảng %{date}
+        no_target_date: đặt ngày mục tiêu để dự báo thời điểm hoàn thành
+      pending_pledge:
+        title:
+          zero: 'Đang chờ: %{amount} vào %{account} · hết hạn hôm nay'
+          other: 'Đang chờ: %{amount} vào %{account} · còn %{count} ngày'
+        body_transfer: Tự động xác nhận khi Sure phát hiện khoản tiền nạp tương ứng ở lần đồng bộ tiếp theo.
+        body_manual: Được xác nhận vào lần bạn cập nhật số dư thủ công tiếp theo.
+        pledged_at: Đã ghi nhận %{time_ago} trước
+        extend: Gia hạn 7 ngày
+        cancel: Hủy
+        confirm_cancel_title: Hủy khoản góp này?
+        confirm_cancel_body: Khoản góp %{amount} sẽ bị xóa. Bạn có thể ghi nhận khoản mới bất cứ lúc nào.
+        confirm_cancel_cta: Hủy khoản góp
+      header:
+        target: Mục tiêu %{amount}
+        target_by: Mục tiêu %{amount} trước %{date}
+        target_by_past: Mục tiêu %{amount} · hạn chót là %{date}
+      ring:
+        including_used: Bao gồm %{amount} đã dùng
+        saved: Đã tiết kiệm
+        of: trên %{target}
+        to_go: Còn thiếu %{amount}
+        of_target: của mục tiêu
+        market_value: Giá trị thị trường %{amount}
+        aria_label: Mục tiêu hoàn thành %{percent}%. Đã tiết kiệm %{amount} trên %{target}.
+        aria_label_with_used: Mục tiêu hoàn thành %{percent}%. %{amount} trên %{target}, bao gồm %{used} đã dùng.
+      projection:
+        heading: Dự báo
+        legend_saved: Đã tiết kiệm
+        legend_projection: Dự báo
+        legend_required: Cần đạt
+        reserve: Quỹ dự trữ duy trì một số dư mục tiêu, nên không có thời điểm hoàn thành để dự báo.
+        reached: Bạn đã đạt mục tiêu. Không cần dự báo.
+        no_target_date: Chưa đặt ngày mục tiêu. Hãy đặt ngày để dự báo thời điểm hoàn thành.
+        no_pace: Chưa có khoản nạp nào. Hãy thêm tiền vào tài khoản đã liên kết để bắt đầu dự báo.
+        behind: Chưa đủ với tốc độ hiện tại.
+        on_track_html: Với tốc độ hiện tại, bạn sẽ đạt mục tiêu này vào khoảng <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        aria_label: Biểu đồ dự báo cho %{name}
+        today_marker: Hôm nay
+        tooltip_projected: 'Dự báo: %{amount}'
+        tooltip_saved: 'Đã tiết kiệm: %{amount}'
+        tooltip_target_relation: '%{percent}% của mục tiêu %{target}'
+      catch_up:
+        title: Tiết kiệm thêm %{amount}/tháng để bắt kịp
+        body: Tốc độ hiện tại %{avg}/tháng · cần %{required}/tháng để đạt mục tiêu.
+        adjust_target_cta: Điều chỉnh mục tiêu
+      confirm_complete_title: Đánh dấu mục tiêu này là hoàn thành?
+      confirm_complete_body: Số tiền đã dành riêng cho mục tiêu sẽ được giải phóng cho các mục tiêu khác trên cùng tài khoản. Mục tiêu sẽ rời khỏi danh sách Đang thực hiện, và bạn vẫn có thể lưu trữ hoặc khôi phục sau.
+      confirm_complete_body_short: Bạn đang ở mức %{progress}%, %{saved} trên %{target}. Đánh dấu hoàn thành sẽ ghi nhận mức này là thành quả của bạn thay cho mục tiêu ban đầu. Tiếp tục, hay đóng hộp thoại này và điều chỉnh mục tiêu?
+      confirm_complete_cta: Đánh dấu hoàn thành
+      confirm_archive_title: Lưu trữ mục tiêu này?
+      confirm_archive_body: Mục tiêu đã lưu trữ sẽ biến mất khỏi danh sách chính. Bạn có thể khôi phục sau. Việc lưu trữ không ghi nhận mức bạn đã đạt — hãy đánh dấu hoàn thành trước nếu muốn giữ lại thông tin đó.
+      confirm_archive_cta: Lưu trữ
+      confirm_delete_title: Xóa mục tiêu này?
+      confirm_delete_body: '%{name} và lịch sử khoản góp của nó sẽ bị xóa vĩnh viễn. Các tài khoản đã liên kết, số dư và giao dịch của bạn không bị ảnh hưởng. Nếu muốn giữ lại làm hồ sơ, hãy lưu trữ thay vì xóa.'
+      confirm_delete_cta: Xóa mục tiêu
+      paused_banner:
+        title: Mục tiêu này đang tạm dừng
+        body: Tiếp tục để theo dõi tiến độ của bạn.
+        resume_cta: Tiếp tục mục tiêu
+      archived_banner:
+        title: Mục tiêu này đã được lưu trữ
+        body: Khôi phục để tiếp tục góp tiền, hoặc giữ lại làm hồ sơ.
+        restore_cta: Khôi phục mục tiêu
+      celebration:
+        heading_reserve: Quỹ dự trữ đầy đủ
+        body_reserve: Quỹ dự trữ của bạn đang ở mức số dư mục tiêu, %{saved} trên %{target}. Không cần làm gì — số tiền vẫn được dành riêng.
+        heading: Đã đạt mục tiêu. Làm tốt lắm!
+        body_reached: Bạn đã đạt mục tiêu với %{saved} trên %{target}. Mục tiêu chưa được đóng — số tiền vẫn đang được dành riêng cho nó.
+        close_cta: Đóng mục tiêu này
+        close_hint: Đóng mục tiêu sẽ giải phóng số tiền đã dành riêng cho các mục tiêu khác trên cùng tài khoản. Hãy làm việc này khi bạn đã thực sự chi số tiền đó.
+        frozen: Đạt vào %{date} · %{amount}
+        body: Mục tiêu đã đóng ở mức %{saved} trên %{target}. Giữ lại làm hồ sơ, hoặc lưu trữ ngay.
+        archive_cta: Lưu trữ mục tiêu
+      inactive:
+        heading_paused: Mục tiêu này đang tạm dừng
+        heading_archived: Mục tiêu này đã được lưu trữ
+        body: Đã tiết kiệm %{saved} trên %{target}.
+      no_target_date:
+        heading: Thêm ngày mục tiêu
+        body: Đặt hạn chót để dự báo thời điểm hoàn thành và theo dõi tốc độ cần thiết.
+        cta: Đặt ngày mục tiêu
+      empty:
+        heading: Chưa có khoản nạp nào
+        body: Chuyển tiền vào tài khoản đã liên kết. Sure sẽ ghi nhận ở lần đồng bộ tiếp theo. Hoặc cập nhật số dư tài khoản thủ công của bạn.
+    errors:
+      not_found: Không tìm thấy mục tiêu này. Có thể mục tiêu đã bị xóa.
+    states:
+      active: Đang hoạt động
+      paused: Đã tạm dừng
+      completed: Đã hoàn thành
+      archived: Đã lưu trữ
+    status:
+      funded: Quỹ dự trữ đầy đủ
+      depleted: Cần nạp thêm
+      on_track: Đúng tiến độ
+      behind: Chậm tiến độ
+      reached: Đã đạt
+      completed: Đã hoàn thành
+      no_target_date: Không thời hạn
+      paused: Đã tạm dừng
+      archived: Đã lưu trữ
+    empty_state:
+      heading: Chưa có mục tiêu nào
+      body: Đặt mục tiêu, liên kết các tài khoản bạn dùng để tiết kiệm và theo dõi tiến độ tăng dần.
+      subtitle: Đặt mục tiêu và bắt đầu tiết kiệm.
+      new_goal: Tạo mục tiêu đầu tiên
+      no_depository_accounts: Bạn cần ít nhất một tài khoản tiền gửi (thanh toán, tiết kiệm, HSA, tiền gửi có kỳ hạn, thị trường tiền tệ) trước khi tạo mục tiêu.
+      add_account: Thêm tài khoản
+    goal_card:
+      including_used: Bao gồm %{amount} đã dùng
+      no_accounts: Chưa có tài khoản liên kết
+      n_accounts: '%{first} +%{count}'
+      left: còn lại
+      aria_progress: '%{percent}% của %{target}'
+      accounts:
+        other: '%{count} tài khoản'
+      no_target_date: Không thời hạn
+      completed: Đã hoàn thành
+      past_due: Đã quá hạn
+      days_left:
+        other: Còn %{count} ngày
+      pace_with_target: '%{avg}/tháng · mục tiêu %{target}/tháng'
+      pace_no_target: TB %{avg}/tháng
+      footer_paused: Đã tạm dừng
+      footer_archived: Đã lưu trữ
+      footer_reserve_intact: Quỹ dự trữ đầy đủ
+      footer_reserve_short: Cần nạp thêm %{amount}
+      footer_reached: Đã đạt mục tiêu
+      footer_catch_up: Tiết kiệm %{amount}/tháng để bắt kịp
+      footer_no_deadline: Không thời hạn
+      pending_pledge: Khoản góp đang chờ
+      pending_count:
+        other: '%{count} đang chờ'
+      footer_no_pledges: Chưa có khoản góp nào được khớp
+      footer_last_today: Khoản góp gần nhất được khớp hôm nay
+      footer_last_days:
+        other: Khoản góp gần nhất được khớp %{count} ngày trước
+    form:
+      target_modes:
+        fixed: Một số tiền cố định
+        months_of_expenses: Số tháng chi tiêu
+      kinds:
+        one_off:
+          hint: Tiết kiệm cho một việc gì đó, rồi đóng lại khi bạn chi tiêu.
+          label: Mục tiêu một lần
+        maintained:
+          hint: Một số dư cần duy trì, như quỹ khẩn cấp. Không bao giờ đóng.
+          label: Quỹ dự trữ cần duy trì
+      create: Tạo mục tiêu
+      save: Lưu thay đổi
+      suggested_with_date: Tiết kiệm {monthly}/tháng trên {accounts} để đạt đúng hạn.
+      suggested_no_date: Đặt ngày mục tiêu để dự báo thời điểm hoàn thành.
+      errors:
+        name_required: Hãy đặt tên cho mục tiêu.
+        amount_required: Đặt mục tiêu lớn hơn 0.
+        accounts_required: Chọn ít nhất một tài khoản nguồn.
+      earmark:
+        headroom: Còn {left} có thể dành riêng trên tài khoản này.
+        prorata: Các mục tiêu của bạn trên tài khoản này tổng cộng {total} trong khi số dư là {balance} — chúng sẽ tiến triển theo tỷ lệ.
+        whole_balance: Tài khoản này sẽ góp phần còn lại sau các khoản dành riêng khác.
+        whole_balance_alone: Mục tiêu này sẽ dùng toàn bộ số dư của tài khoản này.
+      fields:
+        target_mode: Cách đặt số dư mục tiêu
+        target_months: Số tháng chi tiêu
+        target_months_hint: Được tính lại vào ngày 1 hằng tháng dựa trên chi tiêu trung vị hằng tháng của bạn.
+        name: Tên
+        name_placeholder: Quỹ khẩn cấp, Tiền trả trước mua nhà…
+        target_amount: Số tiền mục tiêu
+        target_balance: Số dư mục tiêu
+        target_balance_pending: Được tính khi bạn lưu
+        target_balance_hint: Dựa trên chi tiêu trung vị hằng tháng trong số tháng ở trên. Cập nhật mỗi tháng.
+        target_date: Ngày mục tiêu
+        color: Màu sắc
+        notes: Ghi chú (tùy chọn)
+        notes_placeholder: Lời nhắc cho bạn trong tương lai…
+        funding_accounts: Tài khoản nguồn
+        funding_accounts_hint: Số dư của mục tiêu này là số dư (hoặc phần đã dành riêng) của các tài khoản này.
+        whole_balance: Toàn bộ số dư
+        earmark_for: Số tiền dành riêng cho %{account}
+        earmark_hint: Để trống số tiền để dùng toàn bộ số dư của tài khoản đó.
+      subtypes:
+        checking: Thanh toán
+        savings: Tiết kiệm
+        hsa: HSA
+        cd: Tiền gửi có kỳ hạn
+        money_market: Thị trường tiền tệ
+        other: Khác

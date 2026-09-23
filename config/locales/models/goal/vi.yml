@@ -1,0 +1,36 @@
+---
+vi:
+  activerecord:
+    attributes:
+      goal:
+        name: Tên
+        target_amount: Số tiền mục tiêu
+        currency: Tiền tệ
+        target_date: Ngày mục tiêu
+        color: Màu
+        notes: Ghi chú
+        state: Trạng thái
+        linked_accounts: Tài khoản liên kết
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Hãy chọn ít nhất một tài khoản nguồn cho mục tiêu này.
+              whole_account_conflict_on_restore: 'Không thể khôi phục mục tiêu này: toàn bộ số dư của “%{account_name}” hiện đã được dành riêng cho “%{goal_name}”. Hãy nhập số tiền cho một trong hai mục tiêu trước.'
+            target_mode:
+              months_requires_maintained: Chỉ quỹ dự trữ do bạn duy trì mới có thể đặt mục tiêu theo số tháng chi tiêu.
+            target_months:
+              blank: Hãy cho biết quỹ dự trữ này cần đủ cho bao nhiêu tháng chi tiêu.
+              only_with_months_mode: Số tháng chi tiêu chỉ áp dụng khi mục tiêu được đặt theo cách đó.
+            linked_accounts:
+              must_be_fundable: Tất cả tài khoản liên kết phải là tài khoản tiền mặt hoặc đầu tư.
+              currency_mismatch: Tất cả tài khoản liên kết phải dùng cùng một loại tiền tệ.
+              must_belong_to_family: Tài khoản liên kết phải thuộc cùng gia đình/nhóm với mục tiêu.
+            kind:
+              locked_while_released: Hãy mở lại mục tiêu này trước khi chuyển nó thành quỹ dự trữ.
+              locked_once_consumed: Mục tiêu này đã ghi nhận tiền là đã chi tiêu nên không thể chuyển thành quỹ dự trữ.
+            target_amount:
+              below_consumed: Không thể đặt mục tiêu thấp hơn số tiền mục tiêu này đã ghi nhận là đã chi tiêu.
+            currency:
+              locked_after_linked: Không thể thay đổi tiền tệ sau khi mục tiêu đã được liên kết với tài khoản.

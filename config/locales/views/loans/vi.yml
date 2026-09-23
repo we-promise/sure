@@ -13,6 +13,18 @@ vi:
       none: Không có
       subtype_prompt: Chọn loại khoản vay
       subtype_none: Không có
+      rate_type_adjustable: Điều chỉnh định kỳ
+      rate_type_fixed: Cố định
+      rate_type_variable: Thả nổi
+      rate_changes: Thay đổi lãi suất
+      rate_changes_hint: Mỗi dòng đặt lãi suất áp dụng từ ngày hiệu lực của dòng đó cho đến dòng tiếp theo. Nhập lại một ngày đã có sẽ thay thế dòng đó thay vì thêm dòng thứ hai.
+      rate_changes_empty: Chưa ghi nhận thay đổi lãi suất nào. Khoản vay áp dụng lãi suất ở trên.
+      rate_change_effective_date: Ngày hiệu lực
+      rate_change_rate: Lãi suất
+      rate_change_add: Thêm thay đổi lãi suất
+      rate_change_remove: Xóa
+      start_date: Ngày giải ngân
+      start_date_hint: Ngày khoản vay được giải ngân. Để trống để dùng ngày mở tài khoản.
     new:
       title: Nhập thông tin khoản vay
     overview:
@@ -24,6 +36,7 @@ vi:
       term: Kỳ hạn
       type: Loại
       unknown: Không xác định
+      original_payoff_date: Ngày tất toán ban đầu
     tabs:
       overview:
         interest_rate: Lãi suất
@@ -35,3 +48,17 @@ vi:
         type: Loại
         unknown: Không xác định
         edit_loan_details: "Chỉnh sửa thông tin khoản vay"
+        original_payoff_date: Ngày tất toán ban đầu
+      schedule:
+        date: Ngày
+        description: Dự tính từ số dư ban đầu, lãi suất và kỳ hạn, bắt đầu từ %{start_date}. Không bao gồm các khoản trả nợ trước hạn.
+        variable_rate_notice: Lãi suất của khoản vay này thay đổi theo thời gian. Lịch trả nợ được tính lại tại mỗi lần thay đổi đã ghi nhận, giữ nguyên ngày tất toán ban đầu và điều chỉnh số tiền trả mỗi kỳ; một thay đổi chưa được ghi nhận sẽ làm các số liệu này thay đổi.
+        opening_payment: Khoản trả kỳ đầu
+        interest: Tiền lãi
+        monthly_payment: Thanh toán hàng tháng
+        number: '#'
+        payment: Số tiền trả
+        principal: Tiền gốc
+        remaining_balance: Dư nợ còn lại
+        total_cost: Tổng chi phí
+        total_interest: Tổng tiền lãi

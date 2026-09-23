@@ -4,3 +4,6 @@ vi:
     chat_form:
       placeholder: "Hỏi bất cứ điều gì ..."
       disclaimer: "Phản hồi của AI chỉ mang tính thông tin. Không phải tư vấn tài chính!"
+      coming_soon: Sắp ra mắt
+    create:
+      chat_not_found: Cuộc trò chuyện này không còn khả dụng.

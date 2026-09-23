@@ -13,8 +13,8 @@ vi:
     subtypes:
       # United States
       brokerage:
-        short: Brokerage
-        long: Brokerage
+        short: Môi giới
+        long: Tài khoản môi giới
       401k:
         short: 401(k)
         long: 401(k)
@@ -189,8 +189,11 @@ vi:
       other:
         short: Khác
         long: Đầu tư khác
+      cash_management:
+        short: CMA
+        long: Tài khoản quản lý tiền mặt
     value_tooltip:
       cash: Tiền mặt
       holdings: Danh mục nắm giữ
       total: Số dư danh mục
-      total_value_tooltip: Tổng số dư danh mục là tổng tiền mặt tại sàn giao dịch (có sẵn để giao dịch) và giá trị thị trường hiện tại của các tài sản nắm giữ.
+      total_value_tooltip: Tổng số dư danh mục là tổng tiền mặt môi giới (có sẵn để giao dịch) và giá trị thị trường hiện tại của các tài sản nắm giữ.

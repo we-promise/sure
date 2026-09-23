@@ -52,6 +52,7 @@ vi:
       confirm_changes: Xác nhận thay đổi
     actions:
       value_placeholder: Nhập một giá trị
+      to_label: thành
     update:
       success: Đã cập nhật quy tắc
     destroy:
@@ -87,7 +88,7 @@ vi:
           blocked: Bị chặn
       execution_types:
         manual: Thủ công
-        scheduled: Đã lên lịch
+        scheduled: Tự động
       statuses:
         pending: Đang chờ
         success: Thành công
@@ -104,6 +105,18 @@ vi:
         expense: Chi tiêu
         transfer: Chuyển khoản
         equal_to: Bằng
+      operators:
+        contains: Chứa
+        does_not_contain: Không chứa
+        equal_to: Bằng
+        is_equal_to: Bằng
+        not_equal_to: Khác
+        is_empty: Trống
+        is_not_empty: Không trống
+        greater_than: Lớn hơn
+        greater_or_equal_to: Lớn hơn hoặc bằng
+        less_than: Nhỏ hơn
+        less_than_or_equal_to: Nhỏ hơn hoặc bằng
   rule:
     conditions:
       condition_group:
@@ -113,3 +126,5 @@ vi:
         any: bất kỳ
         of_the_following_conditions: trong các điều kiện sau
         add_condition: Thêm điều kiện
+      condition:
+        value_placeholder: Nhập một giá trị

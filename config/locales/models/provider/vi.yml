@@ -1,0 +1,17 @@
+---
+vi:
+  providers:
+    property_valuation:
+      not_configured: Nhà cung cấp dữ liệu bất động sản này chưa được cấu hình.
+      missing_fields: Vui lòng nhập tên và địa chỉ Hoa Kỳ đầy đủ (số nhà và đường, thành phố, bang và mã ZIP).
+      preview_expired: Bản xem trước bất động sản này đã hết hạn — vui lòng tra cứu lại địa chỉ.
+    rentcast:
+      errors:
+        no_valuation: RentCast không trả về giá trị ước tính cho địa chỉ này.
+        not_found: RentCast không tìm thấy bất động sản nào khớp với địa chỉ này.
+    realie:
+      errors:
+        no_property: Realie không trả về bất động sản nào cho địa chỉ này.
+        no_valuation: Realie không trả về định giá cho bất động sản này.
+        not_found: Realie không tìm thấy bất động sản nào khớp với địa chỉ này.
+        location_mismatch: Realie đã khớp với một bất động sản ở thành phố hoặc mã ZIP khác. Vui lòng kiểm tra lại địa chỉ.

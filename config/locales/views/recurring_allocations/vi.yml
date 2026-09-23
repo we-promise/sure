@@ -1,0 +1,15 @@
+---
+vi:
+  recurring_allocations:
+    over_allocation: Số tiền phân bổ sẽ vượt quá số tiền của giao dịch
+    missing_rate: Không có tỷ giá hối đoái; vui lòng nhập số tiền cụ thể
+    already_allocated: Giao dịch đó đã được áp dụng cho hóa đơn này
+    invalid: Không thể ghi nhận khoản thanh toán
+    create:
+      success: Đã áp dụng khoản thanh toán
+    destroy:
+      success: Đã hủy liên kết khoản thanh toán
+    confirm:
+      success: Đã áp dụng khoản thanh toán cho hóa đơn
+    reject:
+      success: Đã bỏ qua. Giao dịch đó sẽ không được gợi ý cho hóa đơn này nữa.

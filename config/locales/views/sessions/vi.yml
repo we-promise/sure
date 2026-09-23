@@ -4,6 +4,7 @@ vi:
     create:
       invalid_credentials: Email hoặc mật khẩu không đúng.
       local_login_disabled: Đăng nhập bằng mật khẩu nội bộ đã bị tắt. Vui lòng sử dụng đăng nhập một lần (SSO).
+      account_deactivated: Tài khoản này đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.
     destroy:
       logout_successful: Bạn đã đăng xuất thành công.
     post_logout:
@@ -33,3 +34,5 @@ vi:
       no_auth_methods_enabled: Hiện chưa có phương thức xác thực nào được bật. Vui lòng liên hệ quản trị viên.
       demo_banner_title: "Chế độ Demo đang hoạt động"
       demo_banner_message: "Đây là môi trường minh họa. Thông tin đăng nhập đã được điền sẵn để tiện sử dụng. Vui lòng không nhập thông tin thật hoặc nhạy cảm."
+      passkey_button: Đăng nhập bằng khóa truy cập
+      passkey_unsupported: Trình duyệt này không hỗ trợ khóa truy cập.

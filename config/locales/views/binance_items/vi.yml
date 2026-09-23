@@ -26,6 +26,7 @@ vi:
         other: "Đã nhập %{count} tài khoản"
       none_selected: Chưa chọn tài khoản nào
       no_accounts: Không có tài khoản nào để nhập
+      invalid_sync_start_date: Ngày bắt đầu đồng bộ phải là một ngày hợp lệ trong quá khứ.
     binance_item:
       provider_name: Binance
       syncing: Đang đồng bộ...

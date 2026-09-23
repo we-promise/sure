@@ -10,6 +10,15 @@ vi:
         home: Trang chủ
         reports: Báo cáo
         transactions: Giao dịch
+        bills: Hóa đơn
+        plan: Kế hoạch
+        goals: Mục tiêu
+      insights: Thông tin chi tiết
+      resize_left_sidebar: Thay đổi kích thước thanh bên tài khoản
+      resize_right_sidebar: Thay đổi kích thước thanh bên trợ lý
+      release_highlight:
+        title: Có gì mới
+        done: Đã hiểu
     auth:
       existing_account: Đã có tài khoản?
       no_account: Mới dùng %{product_name}?
@@ -23,7 +32,11 @@ vi:
         are_you_sure: Bạn có chắc không?
         cannot_be_undone: Hành động này không thể hoàn tác.
         confirm: Xác nhận
+      notification_tray:
+        download_complete: Đã tải xuống xong
+        download_failed: Tải xuống thất bại. Vui lòng thử lại.
+        download_location: Tệp nằm trong thư mục Tải xuống của bạn.
     trial:
-      open_demo: Mở bản demo
+      open_demo: Bản demo công khai
       data_deleted_in_days: Dữ liệu sẽ bị xóa sau %{days} ngày
       contribute: Đóng góp

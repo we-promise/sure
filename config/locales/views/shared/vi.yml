@@ -40,3 +40,17 @@ vi:
       expense: Chi tiêu
       income: Thu nhập
       transfer: Chuyển khoản
+    preview: Bản xem trước
+    sync_toast:
+      message: Có dữ liệu mới
+      refresh: Làm mới
+    require_connector_owner: Bạn chỉ có thể quản lý các kết nối do bạn thêm
+    sidekiq_health_banner:
+      title: Một số dữ liệu có thể chưa được cập nhật
+      body: Các tác vụ nền không được xử lý, vì vậy số dư, giá trị tài sản ròng và việc đồng bộ tài khoản có thể bị lỗi thời hoặc thiếu.
+      cta: Xem tình trạng hệ thống
+      reasons:
+        redis_unreachable: Ứng dụng không kết nối được Redis. Hãy kiểm tra REDIS_URL và đảm bảo Redis đang chạy.
+        no_worker_processes: Không có tiến trình worker Sidekiq nào được kết nối. Hãy khởi động container worker hoặc systemd unit.
+        stale_heartbeat: Worker Sidekiq gần đây không gửi tín hiệu heartbeat. Có thể nó đã bị treo hoặc gặp sự cố.
+        queue_backed_up: Tác vụ cũ nhất trong hàng đợi đã chờ lâu hơn ngưỡng độ trễ cho phép. Worker vẫn hoạt động nhưng đang xử lý chậm.

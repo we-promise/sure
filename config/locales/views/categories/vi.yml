@@ -32,6 +32,7 @@ vi:
       delete_all: Xóa tất cả
       empty: Không tìm thấy danh mục
       new: Danh mục mới
+      merge: Gộp danh mục
     menu:
       loading: Đang tải...
     new:
@@ -42,6 +43,21 @@ vi:
       transfer: Chuyển khoản
       payment: Thanh toán
       trade: Giao dịch chứng khoán
+    merge:
+      title: Gộp danh mục
+      description: Chọn danh mục đích và các danh mục cần gộp vào đó. Các giao dịch và dòng ngân sách tương ứng sẽ được chuyển sang danh mục đích.
+      target_label: Gộp vào (danh mục đích)
+      select_target: Chọn danh mục đích...
+      sources_label: Danh mục cần gộp
+      sources_hint: Các danh mục đã chọn sẽ bị xóa sau khi giao dịch và dòng ngân sách của chúng được chuyển sang danh mục đích. Không chọn danh mục đích làm danh mục nguồn.
+      submit: Gộp mục đã chọn
+    perform_merge:
+      success:
+        other: Đã gộp thành công %{count} danh mục
+      no_categories_selected: Chưa chọn danh mục nào để gộp
+      target_not_found: Không tìm thấy danh mục đích
+      invalid_categories: Danh mục đã chọn không hợp lệ
+      target_selected_as_source: Hãy chọn danh mục đích và danh mục nguồn khác nhau.
   category:
     dropdowns:
       show:

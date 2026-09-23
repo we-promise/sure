@@ -1,0 +1,17 @@
+---
+vi:
+  onchain:
+    chains:
+      arbitrum: Arbitrum
+      base: Base
+      bitcoin: Bitcoin
+      ethereum: Ethereum
+      gnosis: Gnosis
+      optimism: Optimism
+      polygon: Polygon
+      solana: Solana
+    institution_name: Ví tự lưu ký
+  onchain_wallet_item:
+    movement:
+      received: Đã nhận %{quantity} %{symbol}
+      sent: Đã gửi %{quantity} %{symbol}

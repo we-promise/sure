@@ -1,0 +1,99 @@
+---
+vi:
+  providers:
+    trading212:
+      name: Trading 212
+      connection_description: Kết nối tài khoản đầu tư Trading 212 bằng khóa API
+      institution_name: Trading 212
+  trading212_items:
+    defaults:
+      name: Trading 212
+    trading212_item:
+      deletion_in_progress: Đang xóa
+      environment_label_live: Tài khoản thực
+      environment_label_demo: Tài khoản demo
+      syncing: Đang đồng bộ
+      requires_update: Khóa API cần được kiểm tra
+      error: Lỗi
+      synced: Đã đồng bộ %{time} trước. %{summary}.
+      never_synced: Chưa bao giờ đồng bộ.
+      setup_accounts: Thiết lập tài khoản
+      delete: Xóa
+      accounts_need_setup: Tài khoản cần được thiết lập
+      accounts_need_setup_description: Tài khoản Trading 212 của bạn cần được liên kết với một tài khoản Sure.
+      no_accounts_discovered: Chưa phát hiện tài khoản Trading 212 nào.
+      no_accounts_discovered_description: Chạy đồng bộ sau khi lưu khóa API để phát hiện tài khoản của bạn.
+    setup_accounts:
+      page_title: Thiết lập tài khoản Trading 212
+      dialog_title: Thiết lập tài khoản Trading 212 của bạn
+      subtitle: Liên kết tài khoản đầu tư Trading 212 của bạn.
+      info_box:
+        title: Nhập dữ liệu qua API Trading 212
+        items:
+          item_1: Các vị thế hiện tại kèm giá và số lượng
+          item_2: Toàn bộ lịch sử lệnh (mua và bán)
+          item_3: Cổ tức và giao dịch tiền mặt
+      status:
+        fetching_accounts: Đang tải tài khoản từ Trading 212...
+        no_accounts_found_title: Không tìm thấy tài khoản.
+        no_accounts_found_description: Sure không tìm thấy tài khoản Trading 212. Hãy kiểm tra xem khóa API của bạn có hợp lệ không.
+      available_accounts:
+        title: Tài khoản có sẵn
+        account_type_investment: Đầu tư
+        account_summary: '%{account_type} • Số dư: %{balance}'
+        account_id: 'ID tài khoản: %{account_id}'
+      link_existing:
+        description: Hoặc liên kết tài khoản Trading 212 đã phát hiện với một tài khoản đầu tư thủ công hiện có.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Chọn tài khoản...
+      linked_accounts:
+        title: Đã liên kết
+        linked_to_html: 'Đã liên kết với: %{account}'
+      buttons:
+        refresh: Làm mới
+        cancel: Hủy
+        back_to_settings: Quay lại Cài đặt
+        create_selected_accounts: Tạo các tài khoản đã chọn
+        link: Liên kết
+        done: Xong
+    sync:
+      status:
+        checking_credentials: Đang kiểm tra thông tin xác thực Trading 212...
+        importing_account: Đang nhập tài khoản Trading 212...
+        checking_configuration: Đang kiểm tra cấu hình tài khoản...
+        accounts_need_setup:
+          other: '%{count} tài khoản Trading 212 cần thiết lập...'
+        processing_activity: Đang xử lý vị thế và hoạt động...
+        calculating_balances: Đang tính số dư...
+    sync_status:
+      no_accounts: Chưa phát hiện tài khoản Trading 212 nào
+      all_linked:
+        other: Đã liên kết %{count} tài khoản
+      partial: '%{linked} đã liên kết, %{unlinked} cần thiết lập'
+    select_existing_account:
+      title: Liên kết tài khoản Trading 212
+      no_accounts_available: Chưa có tài khoản Trading 212 nào chưa liên kết.
+      run_sync_hint: Chạy đồng bộ từ Cài đặt > Nhà cung cấp sau khi lưu khóa API.
+      wait_for_sync: Chờ quá trình đồng bộ phát hiện tài khoản hoàn tất.
+      balance: Số dư
+      link: Liên kết
+      cancel: Hủy
+    create:
+      success: Đã cấu hình Trading 212 thành công.
+    update:
+      success: Đã cập nhật cấu hình Trading 212 thành công.
+    destroy:
+      success: Đã lên lịch xóa kết nối Trading 212.
+    select_accounts:
+      not_configured: Trading 212 chưa được cấu hình.
+    link_existing_account:
+      not_found: Không tìm thấy tài khoản hoặc cấu hình Trading 212.
+      only_manual_investment: Chỉ tài khoản đầu tư thủ công mới có thể liên kết với Trading 212.
+      already_linked: Tài khoản Trading 212 này đã được liên kết.
+      success: Đã liên kết thành công với tài khoản Trading 212.
+      failed: Không thể liên kết tài khoản Trading 212.
+    complete_account_setup:
+      success:
+        other: Đã tạo thành công %{count} tài khoản Trading 212.
+      none_selected: Chưa chọn tài khoản nào.
+      none_created: Không có tài khoản nào được tạo.

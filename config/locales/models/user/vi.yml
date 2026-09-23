@@ -16,5 +16,7 @@ vi:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: Quản trị viên không thể xóa tài khoản khi còn người dùng khác. Vui lòng xóa tất cả thành viên trước.
+              provider_item_has_other_accounts: Người dùng sở hữu tài khoản liên kết với một kết nối nhà cung cấp mà kết nối đó cũng có tài khoản thuộc người dùng khác. Hãy chuyển hoặc hủy liên kết các tài khoản đó trước khi thay đổi thành viên gia đình/nhóm.
+              cannot_remove_last_super_admin: Không thể xóa quản trị viên cấp cao đang hoạt động cuối cùng. Hãy nâng quyền một người dùng khác lên quản trị viên cấp cao trước.
             profile_image:
               invalid_file_size: kích thước tệp phải nhỏ hơn %{max_megabytes}MB

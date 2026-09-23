@@ -28,7 +28,7 @@ vi:
     enable_banking_items: Enable Banking
     exports: Xuất dữ liệu
     family_exports: Xuất dữ liệu
-    family_merchants: Nhà cung cấp
+    family_merchants: Người bán
     guides: Hướng dẫn
     holdings: Danh mục nắm giữ
     home: Trang chủ
@@ -46,7 +46,7 @@ vi:
     llm_usages: Sử dụng LLM
     loans: Khoản vay
     lunchflow_items: Lunch Flow
-    merchants: Nhà cung cấp
+    merchants: Người bán
     mercury_items: Mercury
     messages: Tin nhắn
     mfa: Xác thực hai yếu tố
@@ -66,7 +66,7 @@ vi:
     registrations: Đăng ký
     reports: Báo cáo
     rules: Quy tắc
-    securities: Chứng khoán
+    securities: Bảo mật
     security: Bảo mật
     self_hosting: Tự lưu trữ
     sessions: Đăng nhập
@@ -83,5 +83,12 @@ vi:
     transfer_matches: Khớp chuyển khoản
     transfers: Chuyển khoản
     users: Người dùng
-    valuations: Định giá
+    valuations: Ghi nhận số dư
     vehicles: Phương tiện
+    changelog: Có gì mới
+    feedback: Góp ý
+    mcp: Máy chủ MCP
+    monobank_items: Monobank
+    plan: Kế hoạch
+    redbark_items: Redbark
+    system_health: Tình trạng hệ thống

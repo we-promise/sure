@@ -32,6 +32,15 @@ vi:
           session_count: "Số phiên"
           never: "Chưa bao giờ"
           role: "Vai trò"
+          family: Gia đình / Nhóm
+          keep_current_family: Giữ gia đình/nhóm hiện tại
+          create_new_family_option: + Tạo gia đình/nhóm mới
+          new_family_name: Tên gia đình/nhóm mới
+          new_family_name_placeholder: Nhập tên để tạo gia đình/nhóm mới
+          new_family_moniker: Loại gia đình/nhóm mới
+          set_password: Đặt mật khẩu mới
+          password_placeholder: Để trống để giữ mật khẩu hiện tại
+          actions: Thao tác
         role_descriptions_title: "Mô tả vai trò"
         roles:
           guest: "Khách"
@@ -48,6 +57,64 @@ vi:
           expires: "Hết hạn %{date}"
           delete: "Xóa"
           delete_all: "Xóa tất cả"
+        family_monikers:
+          family: Gia đình
+          group: Nhóm
+        actions:
+          manage_user: Quản lý người dùng
+          update: Cập nhật người dùng
+          delete_user: Xóa người dùng
+          self_edit_warning: Thay đổi vai trò của chính bạn sẽ làm thay đổi quyền quản trị của bạn.
+          self_update_confirm: Bạn có chắc muốn cập nhật vai trò hoặc gia đình/nhóm của chính tài khoản mình?
+          last_super_admin_role_locked: Không thể thay đổi vai trò vì bạn là quản trị viên cấp cao cuối cùng trong hệ thống.
+        delete_confirm: Bạn có chắc muốn xóa người dùng này? Không thể hoàn tác thao tác này.
+        delete_confirm_last_user: Bạn có chắc muốn xóa người dùng này? Đây là người dùng cuối cùng trong gia đình/nhóm của họ, nên việc xóa sẽ xóa luôn toàn bộ gia đình/nhóm và mọi dữ liệu liên quan. Không thể hoàn tác thao tác này.
+        remove: Xóa người dùng
+        removed_sso_identities:
+          title: Danh tính SSO đã bị xóa
+          description: Các danh tính này không thể tạo hoặc kết nối lại tài khoản. Chỉ cho phép lại một danh tính khi việc xóa là do nhầm lẫn.
+          allow_again: Cho phép lại
+          confirm: Cho phép %{email} đăng nhập hoặc tạo tài khoản qua SSO trở lại?
+        auth_types:
+          sso: SSO
+          local: Cục bộ
+          local_and_sso: Cục bộ + SSO
+          sso_provider_tooltip: 'Nhà cung cấp SSO: %{providers}'
+        unused_families:
+          title: Gia đình / nhóm không sử dụng
+          family_id: 'ID gia đình: %{id}'
+          delete: Xóa gia đình không sử dụng
+          delete_confirm: Bạn có chắc muốn xóa gia đình/nhóm không sử dụng này? Không thể hoàn tác thao tác này.
+          empty: Không có gia đình/nhóm nào không sử dụng.
       update:
         success: "Vai trò người dùng đã được cập nhật thành công."
         failure: "Không thể cập nhật vai trò người dùng."
+        success_role: Đã cập nhật vai trò người dùng thành công.
+        success_password: Đã cập nhật mật khẩu người dùng thành công.
+        success_role_and_password: Đã cập nhật vai trò và mật khẩu người dùng thành công.
+        success_family: Đã cập nhật thành viên gia đình/nhóm của người dùng thành công.
+        family_required: Hãy chọn một gia đình/nhóm hiện có hoặc nhập tên cho gia đình/nhóm mới.
+        password_and_family_conflict: Không thể cập nhật mật khẩu và thành viên gia đình/nhóm cùng lúc.
+        password_too_short: Mật khẩu phải có ít nhất 8 ký tự.
+        password_missing_case: Mật khẩu phải có cả chữ hoa và chữ thường.
+        password_missing_number: Mật khẩu phải có ít nhất một chữ số.
+        password_missing_special: Mật khẩu phải có ít nhất một ký tự đặc biệt.
+        last_super_admin_error: Không thể hạ quyền quản trị viên cấp cao cuối cùng trong hệ thống.
+      destroy:
+        success: Đã thu hồi quyền truy cập của người dùng và lên lịch xóa vĩnh viễn.
+        failure: Không thể xóa người dùng.
+        cannot_remove_self: Bạn không thể xóa tài khoản của chính mình tại đây.
+        cannot_remove_last_super_admin: Bạn không thể xóa quản trị viên cấp cao đang hoạt động cuối cùng.
+        confirmation_mismatch: Địa chỉ email không khớp. Người dùng chưa bị xóa.
+      deletion:
+        title: Xóa vĩnh viễn người dùng
+        warning: Thao tác này sẽ thu hồi quyền truy cập ngay lập tức và lên lịch xóa vĩnh viễn người dùng cùng dữ liệu của họ. Không thể hoàn tác.
+        instruction: Nhập %{email} để xác nhận.
+        email_label: Email người dùng
+        cancel: Hủy
+        submit: Xóa vĩnh viễn người dùng
+    families:
+      destroy:
+        family_has_active_subscription: Gia đình/nhóm đang có gói đăng ký hoạt động và không thể xóa cho đến khi gói đăng ký bị hủy.
+        family_has_users: Gia đình/nhóm vẫn còn người dùng và không thể xóa.
+        success: Đã xóa gia đình/nhóm thành công.

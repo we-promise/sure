@@ -1,0 +1,10 @@
+---
+vi:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_chat_system: Câu lệnh hệ thống cho trò chuyện
+        ai_prompt_categorizer_openai: Câu lệnh phân loại giao dịch (OpenAI)
+        ai_prompt_categorizer_anthropic: Câu lệnh phân loại giao dịch (Anthropic)
+        ai_prompt_merchant_openai: Câu lệnh nhận diện người bán (OpenAI)
+        ai_prompt_merchant_anthropic: Câu lệnh nhận diện người bán (Anthropic)

@@ -1,0 +1,9 @@
+---
+vi:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Toàn bộ số dư của tài khoản này đã được dành riêng cho “%{goal_name}”. Hãy nhập số tiền để chia tài khoản.

@@ -14,11 +14,11 @@ vi:
     coverage:
       status:
         ambiguous: Không rõ ràng
-        covered: Đã phủ
+        covered: Đã bao phủ
         duplicate: Trùng lặp
         mismatched: Không khớp
         missing: Thiếu
-        not_expected: Không mong đợi
+        not_expected: Không yêu cầu
     create:
       duplicates:
         one: 1 sao kê trùng lặp đã bị bỏ qua.
@@ -100,7 +100,7 @@ vi:
       unmatched: Chưa khớp
     table:
       account: Tài khoản
-      actions: Hành động
+      actions: Thao tác
       download: Tải xuống
       edit: Chỉnh sửa
       file: Tệp

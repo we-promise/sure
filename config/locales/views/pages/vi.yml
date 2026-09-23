@@ -19,7 +19,7 @@ vi:
       heading: Yêu cầu cấu hình Redis
       subheading: Cài đặt Sure tự lưu trữ của bạn cần Redis được cấu hình đúng cách.
       why_required_title: Tại sao Redis là bắt buộc?
-      why_required_body: Sure sử dụng Redis để hỗ trợ các công việc nền Sidekiq cho các tác vụ như đồng bộ dữ liệu tài khoản, xử lý nhập khẩu và các hoạt động nền khác giúp dữ liệu tài chính của bạn luôn cập nhật.
+      why_required_body: Sure sử dụng Redis để hỗ trợ các công việc nền Sidekiq cho các tác vụ như đồng bộ dữ liệu tài khoản, xử lý nhập dữ liệu và các hoạt động nền khác giúp dữ liệu tài chính của bạn luôn cập nhật.
       view_setup_guide: Xem hướng dẫn cài đặt
       setup_guide_hint: Làm theo hướng dẫn cài đặt Docker đầy đủ để cấu hình Redis
       refresh_hint: "Sau khi bạn đã cấu hình Redis, hãy làm mới trang này để tiếp tục."
@@ -40,6 +40,18 @@ vi:
           cash_flow: "Dòng tiền"
           surplus: "Thặng dư"
           deficit: "Thâm hụt"
+        title: Biểu đồ Sankey mới
+        preview: Bản xem trước
+        preview_tooltip: Biểu đồ này sẽ thay thế biểu đồ ở trên vì nó dùng API dùng chung mới với ứng dụng Swift trên di động.
+        feedback_prompt: Hãy so sánh biểu đồ này với biểu đồ gốc ở trên và cho chúng tôi biết nếu có khác biệt nào ngoài thứ tự sắp xếp.
+        positive: Có vẻ đúng
+        negative: Có gì đó không đúng
+        feedback_title: Phản hồi về biểu đồ dòng tiền
+        feedback_loading: Đang tải biểu mẫu phản hồi…
+        feedback_unavailable: Hiện chưa thể gửi phản hồi. Vui lòng thử lại sau.
+        feedback_thanks: Cảm ơn bạn đã giúp cải thiện biểu đồ!
+        feedback_privacy: Phản hồi của bạn được gửi tới PostHog. Hãy mô tả vấn đề mà không kèm số tài khoản, số dư hoặc thông tin tài chính riêng tư khác.
+        feedback_submit: Gửi phản hồi
       welcome: "Chào mừng trở lại, %{name}"
       subtitle: "Đây là tình hình tài chính của bạn"
       new: "Mới"
@@ -66,12 +78,17 @@ vi:
         classifications:
           asset: "Tài sản"
           liability: "Nợ phải trả"
+        expand_all: Mở rộng tất cả
+        collapse_all: Thu gọn tất cả
       cashflow_sankey:
         title: "Dòng tiền"
         zoom_out: "Quay lại toàn bộ dòng tiền"
         no_data_title: "Không có dữ liệu dòng tiền cho khoảng thời gian này"
         no_data_description: "Thêm giao dịch để hiển thị dữ liệu dòng tiền hoặc mở rộng khoảng thời gian"
         add_transaction: "Thêm giao dịch"
+        loading: Đang tải dòng tiền…
+        load_error: Không thể tải dòng tiền. Vui lòng thử lại.
+        retry: Thử lại
       no_accounts:
         title: "Chưa có tài khoản nào"
         description: "Thêm tài khoản để hiển thị dữ liệu tài sản ròng"
@@ -95,3 +112,40 @@ vi:
         trades: "Giao dịch"
         no_investments: "Không có tài khoản đầu tư"
         add_investment: "Thêm tài khoản đầu tư để theo dõi danh mục của bạn"
+      sections_aria_label: Các phần của bảng điều khiển
+      widget_size:
+        label: Điều chỉnh kích thước
+        width_label: Chiều rộng
+        half: Một nửa
+        full: Toàn bộ
+        height_label: Chiều cao
+        compact: Thu gọn
+        auto: Tự động
+        tall: Cao
+      insights_feed:
+        title: Thông tin chi tiết
+      money_flow:
+        title: Tiền vào / ra
+        date_range: '%{start_date} đến %{end_date}'
+        month_picker_aria_label: Chọn tháng
+        filter_accounts: Lọc tài khoản (%{count})
+        filter_accounts_all: Tất cả tài khoản
+        period_scope_hint: Hiển thị các tháng bạn chọn tại đây — độc lập với khoảng thời gian của bảng điều khiển ở phía trên.
+        search_accounts: Tìm tài khoản
+        apply: Áp dụng
+        balance: Chênh lệch thu chi
+        chart_span: '%{count} tháng gần nhất'
+        income: Thu nhập
+        expenses: Chi tiêu
+      spending_trend:
+        title: Chi tiêu
+        date_range: '%{start_date} đến %{end_date}'
+        date_range_short: '%{start_date} - %{end_day}, %{year}'
+        date_range_short_single: '%{date}, %{year}'
+        month_picker_aria_label: Chọn tháng
+        period_scope_hint: Hiển thị tháng bạn chọn tại đây — độc lập với khoảng thời gian của bảng điều khiển ở phía trên.
+        no_data: Không có dữ liệu chi tiêu cho tháng này
+        previous_comparison_days: (1-%{end_day})
+    release_notes_unavailable:
+      name: Không có ghi chú phát hành
+      body_html: <p>Hiện không thể tải ghi chú phát hành mới nhất. Vui lòng quay lại sau hoặc truy cập trực tiếp <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>trang phát hành trên GitHub</a> của chúng tôi.</p>
