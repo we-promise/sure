@@ -126,6 +126,8 @@ class TransactionsController < ApplicationController
   def create
     account = Current.user.accessible_accounts.find_by(id: params.dig(:entry, :account_id))
 
+    raise ActiveRecord::RecordNotFound if account && !account.supports_manual_entries?
+
     if account.nil?
       @entry = Current.family.entries.new(entry_params)
       @entry.valid?
@@ -638,7 +640,7 @@ class TransactionsController < ApplicationController
     end
 
     def set_new_transaction_form_options
-      accessible_accounts_scope = accessible_accounts
+      accessible_accounts_scope = accessible_accounts.where.not(accountable_type: "Valuable")
 
       @account_currencies = accessible_accounts_scope.pluck(:id, :currency).to_h
       @manual_accounts = accessible_accounts_scope

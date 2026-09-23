@@ -18,7 +18,7 @@ class AccountStatementsController < ApplicationController
     @unmatched_pagy, @unmatched_statements = pagy(account_statements.unmatched, limit: safe_per_page, page_param: :unmatched_page)
     @linked_pagy, @linked_statements = pagy(linked_statement_scope, limit: safe_per_page, page_param: :linked_page)
     @total_storage_bytes = visible_storage_scope.sum(:byte_size)
-    @accounts = Current.user.accessible_accounts.visible.alphabetically
+    @accounts = Current.user.accessible_accounts.visible.alphabetically.select(&:supports_statements?)
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("account_statements.index.title"), account_statements_path ]
@@ -27,7 +27,7 @@ class AccountStatementsController < ApplicationController
   end
 
   def show
-    @accounts = Current.user.accessible_accounts.visible.alphabetically
+    @accounts = Current.user.accessible_accounts.visible.alphabetically.select(&:supports_statements?)
     @can_manage_statement = @statement.manageable_by?(Current.user)
     @reconciliation_checks = @statement.reconciliation_checks
     @breadcrumbs = [
@@ -83,7 +83,7 @@ class AccountStatementsController < ApplicationController
     if @statement.save
       redirect_to account_statement_path(@statement), notice: t("account_statements.update.success")
     else
-      @accounts = Current.user.accessible_accounts.visible.alphabetically
+      @accounts = Current.user.accessible_accounts.visible.alphabetically.select(&:supports_statements?)
       @can_manage_statement = @statement.manageable_by?(Current.user)
       @reconciliation_checks = @statement.reconciliation_checks
       flash.now[:alert] = @statement.errors.full_messages.to_sentence

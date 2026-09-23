@@ -1,0 +1,48 @@
+<%# locals: (lot:, account:, submit_label:) %>
+<% form_url = lot.persisted? ? valuable_item_path(lot) : valuable_items_path %>
+<% form_method = lot.persisted? ? :patch : :post %>
+<%= styled_form_with model: lot, url: form_url, method: form_method, class: "space-y-4", data: { turbo_frame: :_top, controller: "valuable-item-form" } do |form| %>
+  <% if lot.errors.any? %>
+    <%= render DS::Alert.new(message: lot.errors.full_messages.to_sentence, variant: :error, live: :assertive) %>
+  <% end %>
+  <%= hidden_field_tag :account_id, account.id if lot.new_record? %>
+  <%= form.text_field :description, label: t("valuable_items.form.description"), required: true %>
+  <%= form.date_field :acquired_on, label: t("valuable_items.form.acquired_on"), required: true, max: Date.current %>
+  <%= form.select :item_type, [[t("valuable_items.form.bullion"), "bullion"], [t("valuable_items.form.gemstone"), "gemstone"]], { label: t("valuable_items.form.item_type") }, required: true, data: { valuable_item_form_target: "itemType", action: "change->valuable-item-form#update" } %>
+  <%= form.select :material, [[t("valuable_items.materials.gold"), "gold"], [t("valuable_items.materials.silver"), "silver"], [t("valuable_items.materials.platinum"), "platinum"], [t("valuable_items.materials.palladium"), "palladium"], [t("valuable_items.materials.diamond"), "diamond"], [t("valuable_items.materials.ruby"), "ruby"], [t("valuable_items.materials.sapphire"), "sapphire"], [t("valuable_items.materials.emerald"), "emerald"], [t("valuable_items.materials.other"), "other"]], { label: t("valuable_items.form.material") }, required: true, data: { valuable_item_form_target: "material" } %>
+  <%= form.number_field :weight, label: t("valuable_items.form.weight"), min: 0.001, step: 0.001, required: true %>
+  <%= form.select :weight_unit, [[t("valuable_items.form.grams"), "gram"], [t("valuable_items.form.troy_ounces"), "troy_ounce"], [t("valuable_items.form.kilograms"), "kilogram"], [t("valuable_items.form.carats"), "carat"]], { label: t("valuable_items.form.weight_unit"), include_blank: true }, required: true, data: { valuable_item_form_target: "weightUnit" } %>
+  <div data-valuable-item-form-target="purity"><%= form.number_field :purity, label: t("valuable_items.form.purity"), min: 0.001, max: 100, step: 0.001 %></div>
+  <%= render DS::MerchantSelect.new(form: form, method: :merchant_id, merchants: account.family.merchants.alphabetically.to_a, selected_id: lot.merchant_id, include_blank: t("valuable_items.form.no_merchant"), label: t("valuable_items.form.merchant")) %>
+  <%= form.money_field :cost_amount, label: t("valuable_items.form.cost_amount"), default_currency: account.currency, disable_currency: true, required: true %>
+  <%= form.money_field :making_charge, label: t("valuable_items.form.making_charge"), default_currency: account.currency, disable_currency: true %>
+  <%= form.money_field :manual_value, label: t("valuable_items.form.manual_value"), default_currency: account.currency, disable_currency: true %>
+  <p class="text-xs text-secondary"><%= t("valuable_items.form.manual_value_hint") %></p>
+  <%= form.text_area :notes, label: t("valuable_items.form.notes") %>
+  <% if lot.invoice.attached? %>
+    <div class="rounded-xl bg-container-inset p-1">
+      <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+        <p><%= t("valuable_items.form.invoice") %></p>
+        <span class="text-subdued">&middot;</span>
+        <p>1</p>
+      </div>
+      <div class="flex items-center justify-between gap-3 rounded-lg bg-container px-3 py-3 shadow-border-xs">
+        <%= link_to valuable_item_invoice_path(lot), target: "_blank", data: { turbo_frame: :_top }, class: "flex min-w-0 items-center gap-2 text-sm font-medium text-primary hover:underline" do %>
+          <%= icon(lot.invoice.image? ? "image" : "file-text", size: "sm") %>
+          <span class="truncate"><%= lot.invoice.filename %></span>
+        <% end %>
+        <div class="flex shrink-0 items-center gap-1">
+          <%= render DS::Link.new(variant: :icon, icon: "eye", aria_label: t("valuable_items.form.view_invoice"), title: t("valuable_items.form.view_invoice"), href: valuable_item_invoice_path(lot), target: "_blank") %>
+          <%= render DS::Button.new(variant: :icon, icon: "trash-2", aria_label: t("valuable_items.form.remove_invoice"), title: t("valuable_items.form.remove_invoice"), href: valuable_item_invoice_path(lot), method: :delete, data: { turbo_confirm: t("valuable_items.form.remove_invoice_confirm"), turbo_frame: :_top }) %>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="rounded-xl bg-container-inset p-4">
+      <%= form.label :invoice, t("valuable_items.form.invoice"), class: "form-field__label" %>
+      <%= form.file_field :invoice, accept: ValuableItem::ALLOWED_INVOICE_CONTENT_TYPES.join(","), class: "form-field__input" %>
+      <p class="mt-2 text-xs text-secondary"><%= t("valuable_items.form.invoice_hint", max_size: ValuableItem::INVOICE_MAX_SIZE / 1.megabyte) %></p>
+    </div>
+  <% end %>
+  <%= form.submit submit_label %>
+<% end %>

@@ -40,6 +40,16 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_equal "+$110.00", component.converted_balance_display
   end
 
+  test "labels the family-currency equivalent for Gems and Bullion" do
+    valuable = @account.family.accounts.create!(name: "Gold", currency: "EUR", balance: 100, accountable: Valuable.new)
+    ExchangeRate.create!(date: Date.current, from_currency: "EUR", to_currency: "USD", rate: 1.1)
+
+    component = UI::Account::Chart.new(account: valuable)
+
+    assert_equal "Total Valuation", component.title
+    assert_equal "USD family-currency equivalent", component.converted_balance_label
+  end
+
   test "scopes all_time period to account history_start_date when history postdates family oldest entry date" do
     account_opening = 60.days.ago.to_date
     @account.stubs(:history_start_date).returns(account_opening)

@@ -6,7 +6,7 @@
     <% end %>
 
     <%
-      account_options = @goal.linked_accounts.map do |a|
+      account_options = @pledgeable_accounts.map do |a|
         # `manual` drives the "update your manual balance" helper copy. Key it
         # off the pledge kind actually saved (default_pledge_kind), so a manual
         # investment account — which pledges via transfer — shows the transfer

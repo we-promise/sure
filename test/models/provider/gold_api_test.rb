@@ -1,0 +1,75 @@
+require "test_helper"
+
+class Provider::GoldApiTest < ActiveSupport::TestCase
+  test "returns the XAU price per troy ounce in the requested currency" do
+    provider = Provider::GoldApi.new("test-key")
+    response = Struct.new(:body).new({
+      "timestamp" => Time.zone.parse("2026-09-03 12:00:00 UTC").to_i,
+      "price" => 3_110.34768,
+      "unit" => "troy_ounce"
+    }.to_json)
+    client = mock
+    client.expects(:get).with("/api/price/XAU/USD").yields(Struct.new(:headers).new({})).returns(response)
+    provider.stubs(:client).returns(client)
+
+    result = provider.fetch_gold_price(currency: "usd")
+
+    assert result.success?
+    assert_equal "USD", result.data.currency
+    assert_equal Date.new(2026, 9, 3), result.data.date
+    assert_in_delta 3_110.34768, result.data.price_per_troy_ounce, 0.00001
+  end
+
+  test "rejects an invalid quote currency without making a request" do
+    provider = Provider::GoldApi.new("test-key")
+    provider.expects(:client).never
+
+    result = provider.fetch_gold_price(currency: "US/../D")
+
+    assert_not result.success?
+    assert_instance_of Provider::GoldApi::Error, result.error
+  end
+
+  test "rejects an undated price response" do
+    provider = Provider::GoldApi.new("test-key")
+    response = Struct.new(:body).new({ "price" => 3_110.34768 }.to_json)
+    client = mock
+    client.expects(:get).with("/api/price/XAU/USD").yields(Struct.new(:headers).new({})).returns(response)
+    provider.stubs(:client).returns(client)
+
+    result = provider.fetch_gold_price(currency: "USD")
+
+    assert_not result.success?
+    assert_equal "GoldAPI returned no XAU timestamp", result.error.message
+  end
+
+  test "uses the active timezone to date a quote" do
+    Time.use_zone("Pacific/Honolulu") do
+      travel_to Time.utc(2026, 9, 12, 0, 30) do
+        provider = Provider::GoldApi.new("test-key")
+        response = Struct.new(:body).new({ "timestamp" => Time.current.to_i, "price" => 3_110.34768 }.to_json)
+        client = mock
+        client.expects(:get).with("/api/price/XAU/USD").yields(Struct.new(:headers).new({})).returns(response)
+        provider.stubs(:client).returns(client)
+
+        result = provider.fetch_gold_price(currency: "USD")
+
+        assert result.success?
+        assert_equal Date.current, result.data.date
+      end
+    end
+  end
+
+  test "requests the matching bullion symbol" do
+    provider = Provider::GoldApi.new("test-key")
+    response = Struct.new(:body).new({ "timestamp" => Time.zone.now.to_i, "price" => 1_000 }.to_json)
+    client = mock
+    client.expects(:get).with("/api/price/XPT/USD").yields(Struct.new(:headers).new({})).returns(response)
+    provider.stubs(:client).returns(client)
+
+    result = provider.fetch_bullion_price(symbol: "XPT", currency: "USD")
+
+    assert result.success?
+    assert_equal "XPT", result.data.symbol
+  end
+end

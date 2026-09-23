@@ -48,13 +48,15 @@ class UI::AccountPage < ApplicationComponent
       [ :activity, :holdings ]
     when "Loan"
       account.loan.amortizable? ? [ :activity, :overview, :schedule ] : [ :activity, :overview ]
+    when "Valuable"
+      [ :activity, :overview ]
     when "Property", "Vehicle"
       [ :activity, :overview ]
     else
       [ :activity ]
     end
 
-    base_tabs + [ :statements ]
+    account.supports_statements? ? base_tabs + [ :statements ] : base_tabs
   end
 
   def fx_coverage_start_date
@@ -80,7 +82,7 @@ class UI::AccountPage < ApplicationComponent
       activity_feed
     when :holdings, :overview, :schedule
       # Accountable is responsible for implementing the partial in the correct folder
-      render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account
+      render "#{account.accountable_type.underscore.pluralize}/tabs/#{tab}", account: account
     when :statements
       render_statement_tab
     end

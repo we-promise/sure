@@ -1,6 +1,7 @@
 class GoalPledgesController < ApplicationController
   before_action :require_preview_features!
   before_action :set_goal
+  before_action :set_pledgeable_accounts, only: %i[new create]
   before_action :set_pledge, only: %i[renew destroy]
   rescue_from ActiveRecord::RecordNotFound, with: :record_not_found
 
@@ -69,6 +70,10 @@ class GoalPledgesController < ApplicationController
       @pledge = @goal.goal_pledges.find(params[:id])
     end
 
+    def set_pledgeable_accounts
+      @pledgeable_accounts = @goal.linked_accounts.reject(&:valuable?)
+    end
+
     def pledge_params
       params.require(:goal_pledge).permit(:amount)
     end
@@ -79,8 +84,8 @@ class GoalPledgesController < ApplicationController
     end
 
     def preselected_account
-      requested = params[:account_id].presence && @goal.linked_accounts.find_by(id: params[:account_id])
-      requested || @goal.linked_accounts.first
+      requested = params[:account_id].presence && @pledgeable_accounts.find { |account| account.id.to_s == params[:account_id].to_s }
+      requested || @pledgeable_accounts.first
     end
 
     def record_not_found

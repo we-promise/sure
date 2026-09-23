@@ -1,0 +1,13 @@
+<%# locals: (account:, url:) %>
+<% if @error_message.present? %>
+  <%= render DS::Alert.new(message: @error_message, variant: :error) %>
+<% end %>
+<%= styled_form_with model: account, url: url, scope: :account, class: "space-y-4", data: { turbo_frame: :_top } do |form| %>
+  <%= form.hidden_field :accountable_type, value: "Valuable" %>
+  <%= form.hidden_field :return_to, value: params[:return_to] %>
+  <%= form.text_field :name, label: t("accounts.form.name_label"), required: true %>
+  <%= form.select :currency, currency_picker_options_for_family(Current.family, extra: [account.currency]), { label: t("valuables.form.currency") }, disabled: account.persisted? && account.valuable.lots.exists? %>
+  <%= render DS::Alert.new(message: t("valuables.form.instructions"), variant: :info) %>
+  <%= form.text_area :notes, label: t("accounts.form.notes_label") %>
+  <%= form.submit %>
+<% end %>

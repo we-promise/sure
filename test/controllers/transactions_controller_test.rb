@@ -113,6 +113,25 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "rejects manual transactions for Gems and Bullion accounts" do
+    account = @user.family.accounts.create!(name: "Gold collection", balance: 0, currency: "USD", accountable: Valuable.new)
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: account.id,
+          name: "Manual adjustment",
+          date: Date.current,
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction"
+        }
+      }
+    end
+
+    assert_response :not_found
+  end
+
   test "resubmitting the same idempotency key does not create a duplicate transaction" do
     idempotency_key = SecureRandom.uuid
     params = {
