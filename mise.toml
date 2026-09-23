@@ -1,6 +1,6 @@
 [tools]
-ruby = "3.4.7"
-node = "20"
+ruby = "3.4.9"
+node = "24"
 postgres = "16"
 redis = "7"
 
