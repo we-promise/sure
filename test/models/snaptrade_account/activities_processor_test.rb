@@ -317,40 +317,24 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 500.00, outbound.amount.to_f, "money out must be stored positive on an asset account"
   end
 
-  test "processes unit-bearing TRANSFER activities as zero-cash trades" do
+  test "processes TRANSFER as cash transaction even when units are present in payload" do
+    # In 401(k) accounts, payroll contributions arrive as type: TRANSFER with units and cash amount
     process_activities(
       build_trade_activity(
-        id: "xfer_asset_in",
+        id: "xfer_payroll_contrib",
         type: "TRANSFER",
-        symbol: "AAPL",
-        units: 10.0,
-        price: 150.00,
-        amount: 1500.00 # Notional amount must not create a cash transaction
-      ),
-      build_trade_activity(
-        id: "xfer_asset_out",
-        type: "TRANSFER",
-        symbol: "AAPL",
-        units: -4.0,
-        price: nil,
-        amount: -600.00
+        symbol: "5022",
+        units: 8.699,
+        price: 156.36,
+        amount: 1388.84
       )
     )
 
-    inbound = snaptrade_entry("xfer_asset_in")
-    outbound = snaptrade_entry("xfer_asset_out")
-
-    assert_not_nil inbound
-    assert_not_nil outbound
-    assert inbound.entryable.is_a?(Trade), "unit-bearing TRANSFER must be imported as a Trade"
-    assert outbound.entryable.is_a?(Trade), "unit-bearing TRANSFER must be imported as a Trade"
-
-    assert_equal BigDecimal("10.0"), inbound.entryable.qty
-    assert_equal BigDecimal("-4.0"), outbound.entryable.qty
-    assert_equal BigDecimal("0"), inbound.amount, "asset transfer must have zero cash impact"
-    assert_equal BigDecimal("0"), outbound.amount, "asset transfer must have zero cash impact"
-    assert_equal "Transfer", inbound.entryable.investment_activity_label
-    assert_equal "Transfer", outbound.entryable.investment_activity_label
+    entry = snaptrade_entry("xfer_payroll_contrib")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Transaction), "TRANSFER must be processed as a cash Transaction"
+    assert_equal BigDecimal("-1388.84"), entry.amount, "cash contribution amount must be preserved as negative inflow"
+    assert_equal "Transfer", entry.entryable.investment_activity_label
   end
 
   test "keeps cash TRANSFER with zero units on the cash transaction path" do
@@ -685,6 +669,184 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), receive.amount
     assert_equal "Other", retire.entryable.investment_activity_label
     assert_equal "Other", receive.entryable.investment_activity_label
+  end
+
+  test "processes STOCK_MERGER with cash-in-lieu or cash consideration preserving cash amount" do
+    process_activities(
+      build_trade_activity(
+        id: "merger_cash_in_lieu",
+        type: "STOCK_MERGER",
+        symbol: "AAPL",
+        units: -0.5,
+        price: nil,
+        amount: 45.00
+      )
+    )
+
+    entry = snaptrade_entry("merger_cash_in_lieu")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    assert_equal BigDecimal("-0.5"), entry.entryable.qty
+    assert_equal BigDecimal("-45.00"), entry.amount, "cash-in-lieu proceeds must be negative entry amount (money in)"
+    assert_equal BigDecimal("90.00"), entry.entryable.price
+  end
+
+  test "processes STOCK_MERGER with cash-only payload as a Transaction" do
+    process_activities(
+      build_cash_activity(
+        id: "merger_cash_only",
+        type: "STOCK_MERGER",
+        amount: 150.00,
+        settlement_date: Date.current.to_s
+      )
+    )
+
+    entry = snaptrade_entry("merger_cash_only")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Transaction)
+    assert_equal BigDecimal("-150.00"), entry.amount, "cash merger payout must be negative entry amount (money in)"
+    assert_equal "Other", entry.entryable.investment_activity_label
+  end
+
+  test "reclassifies pre-existing Transaction entry to Trade on resync without type collision error" do
+    # Simulate an account that previously synced a SPLIT activity under the old cash-only code
+    stale_entry = @account.entries.create!(
+      external_id: "split_reclass_test",
+      source: "snaptrade",
+      amount: 304071.61,
+      currency: "USD",
+      date: Date.current,
+      name: "DISTRIBUTION VANGUARD WORLD FD INF TECH ETF (VGT)",
+      entryable: Transaction.new(investment_activity_label: "Other")
+    )
+    stale_entry_id = stale_entry.id
+
+    assert stale_entry.entryable.is_a?(Transaction)
+
+    # Re-sync with the updated ActivitiesProcessor
+    process_activities(
+      build_trade_activity(
+        id: "split_reclass_test",
+        type: "SPLIT",
+        symbol: "VGT",
+        units: 3010.014,
+        price: 0.0,
+        amount: 304071.61
+      )
+    )
+
+    reclassified_entry = snaptrade_entry("split_reclass_test")
+    assert_not_nil reclassified_entry
+    assert_not_equal stale_entry_id, reclassified_entry.id, "stale entry should be replaced with reclassified entry"
+    assert reclassified_entry.entryable.is_a?(Trade), "entry must be reclassified to Trade"
+    assert_equal BigDecimal("3010.014"), reclassified_entry.entryable.qty
+    assert_equal BigDecimal("0.0"), reclassified_entry.amount, "split trade must have zero cash amount"
+    assert_equal BigDecimal("0.0"), reclassified_entry.entryable.price
+    assert_nil snaptrade_debug_log("split_reclass_test", level: "error")
+  end
+
+  test "reclassifies pre-existing Trade entry to Transaction on resync without type collision error" do
+    # Simulate an entry previously imported as a Trade (e.g. stock merger with units)
+    security = Security.find_or_create_by!(ticker: "AAPL") { |s| s.name = "Apple Inc"; s.currency = "USD" }
+    stale_entry = @account.entries.create!(
+      external_id: "merger_reclass_test",
+      source: "snaptrade",
+      amount: 0.0,
+      currency: "USD",
+      date: Date.current,
+      name: "STOCK_MERGER AAPL",
+      entryable: Trade.new(security: security, qty: 10, price: 150.0, currency: "USD")
+    )
+    stale_entry_id = stale_entry.id
+
+    assert stale_entry.entryable.is_a?(Trade)
+
+    # Re-sync as a cash-only merger payout (0 units)
+    process_activities(
+      build_cash_activity(
+        id: "merger_reclass_test",
+        type: "STOCK_MERGER",
+        amount: 500.00,
+        settlement_date: Date.current.to_s
+      )
+    )
+
+    reclassified_entry = snaptrade_entry("merger_reclass_test")
+    assert_not_nil reclassified_entry
+    assert_not_equal stale_entry_id, reclassified_entry.id, "stale trade entry should be replaced"
+    assert reclassified_entry.entryable.is_a?(Transaction), "entry must be reclassified to Transaction"
+    assert_equal BigDecimal("-500.00"), reclassified_entry.amount
+    assert_nil snaptrade_debug_log("merger_reclass_test", level: "error")
+  end
+
+  test "skips reclassification and preserves existing entry when import_locked" do
+    # When user manually locked an entry, resync must not destroy or reclassify it
+    locked_entry = @account.entries.create!(
+      external_id: "locked_split_test",
+      source: "snaptrade",
+      amount: 0.0,
+      currency: "USD",
+      date: Date.current,
+      name: "DISTRIBUTION VGT (Manual Lock)",
+      import_locked: true,
+      entryable: Transaction.new(investment_activity_label: "Other")
+    )
+    original_id = locked_entry.id
+
+    process_activities(
+      build_trade_activity(
+        id: "locked_split_test",
+        type: "SPLIT",
+        symbol: "VGT",
+        units: 3010.014,
+        price: 0.0,
+        amount: 304071.61
+      )
+    )
+
+    entry = snaptrade_entry("locked_split_test")
+    assert_not_nil entry
+    assert_equal original_id, entry.id, "locked entry ID must be preserved"
+    assert entry.entryable.is_a?(Transaction), "locked entry must not be converted to Trade"
+    assert_equal BigDecimal("0.0"), entry.amount
+
+    log = snaptrade_debug_log("locked_split_test", level: "warn")
+    assert_not_nil log
+    assert_includes log.message, "Skipping reclassification of protected entry"
+  end
+
+  test "skips reclassification and preserves existing entry when user_modified" do
+    user_entry = @account.entries.create!(
+      external_id: "user_modified_split_test",
+      source: "snaptrade",
+      amount: 0.0,
+      currency: "USD",
+      date: Date.current,
+      name: "Edited Split Entry",
+      user_modified: true,
+      entryable: Transaction.new(investment_activity_label: "Other")
+    )
+    original_id = user_entry.id
+
+    process_activities(
+      build_trade_activity(
+        id: "user_modified_split_test",
+        type: "SPLIT",
+        symbol: "VGT",
+        units: 100.0,
+        price: 0.0,
+        amount: 10000.00
+      )
+    )
+
+    entry = snaptrade_entry("user_modified_split_test")
+    assert_not_nil entry
+    assert_equal original_id, entry.id, "user-modified entry ID must be preserved"
+    assert entry.entryable.is_a?(Transaction), "user-modified entry must not be converted"
+
+    log = snaptrade_debug_log("user_modified_split_test", level: "warn")
+    assert_not_nil log
+    assert_includes log.message, "Skipping reclassification of protected entry"
   end
 
   test "processes zero-amount trade types when price and amount are omitted" do

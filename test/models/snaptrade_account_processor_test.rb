@@ -744,4 +744,51 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal "Transfer", xfer_entry.entryable.investment_activity_label
     assert_equal(-300.00, xfer_entry.amount.to_f)
   end
+
+  test "processor cleanly reclassifies pre-existing activity from transaction to trade on resync" do
+    security = securities(:aapl)
+
+    # 1. Simulate an entry already synced as a Transaction under old code
+    stale_entry = @account.entries.create!(
+      external_id: "resync_split_001",
+      source: "snaptrade",
+      amount: 1750.00,
+      currency: "USD",
+      date: Date.current,
+      name: "DISTRIBUTION AAPL",
+      entryable: Transaction.new(investment_activity_label: "Other")
+    )
+    stale_id = stale_entry.id
+
+    # 2. Configure raw payloads for the next sync
+    @snaptrade_account.update!(
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        {
+          "id" => "resync_split_001",
+          "type" => "SPLIT",
+          "symbol" => { "symbol" => security.ticker },
+          "units" => "10",
+          "price" => "0.0",
+          "amount" => "1750.00",
+          "settlement_date" => Date.current.to_s,
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    # 3. Run full account processor
+    result = SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    assert result[:activities_processed]
+
+    # 4. Verify stale entry was reclassified to Trade
+    entry = @account.entries.find_by(external_id: "resync_split_001", source: "snaptrade")
+    assert_not_nil entry
+    assert_not_equal stale_id, entry.id
+    assert entry.entryable.is_a?(Trade)
+    assert_equal BigDecimal("10"), entry.entryable.qty
+    assert_equal 0.0, entry.amount.to_f
+    assert_equal 0.0, entry.entryable.price.to_f
+  end
 end

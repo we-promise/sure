@@ -1,110 +1,75 @@
 class SnaptradeAccount::ActivitiesProcessor
   include SnaptradeAccount::DataHelpers
 
-  # Map SnapTrade activity types to Sure activity labels
-  # SnapTrade types: https://docs.snaptrade.com/docs/sandbox
-  SNAPTRADE_TYPE_TO_LABEL = {
-    # Trades
-    "BUY" => "Buy",
-    "SELL" => "Sell",
+  # Declarative configuration for SnapTrade activity types.
+  # Defines category (:trade, :unit_dependent, or :cash), investment activity label,
+  # quantity signing convention (:buy, :sell, or :preserve), and amount handling (:unconditional, :if_absent, or nil).
+  ACTIVITY_RULES = {
+    # Buys
+    "BUY" => { category: :trade, label: "Buy", sign: :buy },
 
-    # Cash & fees
-    "CONTRIBUTION" => "Contribution",
-    "WITHDRAWAL" => "Withdrawal",
-    "INTEREST" => "Interest",
-    "FEE" => "Fee",
-    "TAX" => "Fee",
-    "REBATE" => "Other",
-    "CASH" => "Contribution",     # Cash deposit (non-retirement)
+    # Sells
+    "SELL" => { category: :trade, label: "Sell", sign: :sell },
 
-    # Dividends & income
-    "DIVIDEND" => "Dividend",
-    "DIV" => "Dividend",
-    "REI" => "Reinvestment",
-    "REINVEST" => "Reinvestment",
-    "STOCK_DIVIDEND" => "Dividend",
-    "SUBSTITUTE_DIVIDEND" => "Dividend",
-    "RETURN_OF_CAPITAL" => "Dividend",
-    "DISTRIBUTION" => "Dividend",
+    # Reinvestments
+    "REI" => { category: :trade, label: "Reinvestment", sign: :buy },
+    "REINVEST" => { category: :trade, label: "Reinvestment", sign: :buy },
 
-    # Option activity types
-    "OPTION_BUY" => "Buy",        # Buy to open/close option
-    "OPTION_SELL" => "Sell",      # Sell to open/close option
-    "OPTIONEXPIRATION" => "Other", # Option expired worthless
-    "EXPIRED" => "Other",
-    "OPTIONASSIGNMENT" => "Other", # Option assignment
-    "ASSIGNED" => "Other",
-    "OPTIONEXERCISE" => "Other",   # Option exercised
-    "EXERCISED" => "Other",
+    # Options
+    "OPTION_BUY" => { category: :trade, label: "Buy", sign: :buy },
+    "OPTION_SELL" => { category: :trade, label: "Sell", sign: :sell },
+    "OPTIONASSIGNMENT" => { category: :trade, label: "Other", sign: :sell },
+    "ASSIGNED" => { category: :trade, label: "Other", sign: :sell },
+    "OPTIONEXERCISE" => { category: :trade, label: "Other", sign: :preserve },
+    "EXERCISED" => { category: :trade, label: "Other", sign: :preserve },
+    "OPTIONEXPIRATION" => { category: :trade, label: "Other", sign: :preserve, zero_amount: :unconditional },
+    "EXPIRED" => { category: :trade, label: "Other", sign: :preserve, zero_amount: :unconditional },
 
-    # Corporate actions
-    "SPLIT" => "Other",           # Forward stock split
-    "REVERSE_SPLIT" => "Other",   # Reverse stock split
-    "SPLIT_REVERSE" => "Other",   # Reverse stock split alias
-    "SPINOFF" => "Other",         # Corporate spinoff
-    "SPIN_OFF" => "Other",        # Spinoff alias
-    "STOCK_MERGER" => "Other",    # Stock merger
-    "MERGER" => "Other",          # Merger alias
-    "ADJUSTMENT" => "Other",      # One-time adjustment of cash or shares
-    "CORP_ACTION" => "Other",     # Corporate action alias
+    # Stock dividends and splits
+    "STOCK_DIVIDEND" => { category: :trade, label: "Dividend", sign: :buy, zero_amount: :unconditional },
+    "SPLIT" => { category: :trade, label: "Other", sign: :buy, zero_amount: :unconditional },
+    "REVERSE_SPLIT" => { category: :trade, label: "Other", sign: :sell, zero_amount: :unconditional },
+    "SPLIT_REVERSE" => { category: :trade, label: "Other", sign: :sell, zero_amount: :unconditional },
+    "SPINOFF" => { category: :trade, label: "Other", sign: :buy, zero_amount: :unconditional },
+    "SPIN_OFF" => { category: :trade, label: "Other", sign: :buy, zero_amount: :unconditional },
 
-    # Transfers
-    "TRANSFER" => "Transfer",
-    "TRANSFER_IN" => "Transfer",
-    "TRANSFER_OUT" => "Transfer",
-    "EXTERNAL_ASSET_TRANSFER_IN" => "Transfer",
-    "EXTERNAL_ASSET_TRANSFER_OUT" => "Transfer",
-    "INTERNAL_CASH_TRANSFER_IN" => "Transfer",
-    "INTERNAL_CASH_TRANSFER_OUT" => "Transfer",
-    "INTERNAL_ASSET_TRANSFER_IN" => "Transfer",
-    "INTERNAL_ASSET_TRANSFER_OUT" => "Transfer",
+    # Asset transfers
+    "EXTERNAL_ASSET_TRANSFER_IN" => { category: :trade, label: "Transfer", sign: :buy, zero_amount: :unconditional },
+    "EXTERNAL_ASSET_TRANSFER_OUT" => { category: :trade, label: "Transfer", sign: :sell, zero_amount: :unconditional },
+    "INTERNAL_ASSET_TRANSFER_IN" => { category: :trade, label: "Transfer", sign: :buy, zero_amount: :unconditional },
+    "INTERNAL_ASSET_TRANSFER_OUT" => { category: :trade, label: "Transfer", sign: :sell, zero_amount: :unconditional },
 
-    # Other
-    "JOURNAL" => "Other",
-    "OTHER" => "Other"
+    # Unit-dependent types:
+    # When units are present and non-zero, treated as a trade preserving signed units.
+    # When units are nil/zero, treated as a cash activity.
+    "ADJUSTMENT" => { category: :unit_dependent, label: "Other", sign: :preserve, zero_amount: :unconditional, cash_flow: :invert },
+    "STOCK_MERGER" => { category: :unit_dependent, label: "Other", sign: :preserve, zero_amount: :if_absent, cash_flow: :invert },
+    "MERGER" => { category: :unit_dependent, label: "Other", sign: :preserve, zero_amount: :if_absent, cash_flow: :invert },
+    "CORP_ACTION" => { category: :unit_dependent, label: "Other", sign: :preserve, zero_amount: :if_absent, cash_flow: :invert },
+
+    # Cash activities
+    "DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    "DIV" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    "CONTRIBUTION" => { category: :cash, label: "Contribution", cash_flow: :inflow },
+    "WITHDRAWAL" => { category: :cash, label: "Withdrawal", cash_flow: :outflow },
+    "TRANSFER" => { category: :cash, label: "Transfer", cash_flow: :invert },
+    "TRANSFER_IN" => { category: :cash, label: "Transfer", cash_flow: :inflow },
+    "TRANSFER_OUT" => { category: :cash, label: "Transfer", cash_flow: :outflow },
+    "INTERNAL_CASH_TRANSFER_IN" => { category: :cash, label: "Transfer", cash_flow: :inflow },
+    "INTERNAL_CASH_TRANSFER_OUT" => { category: :cash, label: "Transfer", cash_flow: :outflow },
+    "INTEREST" => { category: :cash, label: "Interest", cash_flow: :inflow },
+    "FEE" => { category: :cash, label: "Fee", cash_flow: :outflow },
+    "TAX" => { category: :cash, label: "Fee", cash_flow: :outflow },
+    "CASH" => { category: :cash, label: "Contribution", cash_flow: :inflow },
+    "REBATE" => { category: :cash, label: "Other", cash_flow: :inflow },
+    "RETURN_OF_CAPITAL" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    "DISTRIBUTION" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    "JOURNAL" => { category: :cash, label: "Other" },
+    "OTHER" => { category: :cash, label: "Other" }
   }.freeze
 
-  # Activity types that result in Trade records (involves securities)
-  TRADE_TYPES = %w[
-    BUY SELL REI REINVEST
-    OPTION_BUY OPTION_SELL OPTIONASSIGNMENT ASSIGNED OPTIONEXERCISE EXERCISED OPTIONEXPIRATION EXPIRED
-    STOCK_DIVIDEND SPLIT REVERSE_SPLIT SPLIT_REVERSE SPINOFF SPIN_OFF STOCK_MERGER MERGER
-    EXTERNAL_ASSET_TRANSFER_IN EXTERNAL_ASSET_TRANSFER_OUT
-    INTERNAL_ASSET_TRANSFER_IN INTERNAL_ASSET_TRANSFER_OUT
-  ].freeze
-
-  # Sell-side activity types (quantity should be negative)
-  SELL_SIDE_TYPES = %w[
-    SELL OPTION_SELL OPTIONASSIGNMENT ASSIGNED
-    REVERSE_SPLIT SPLIT_REVERSE
-    EXTERNAL_ASSET_TRANSFER_OUT INTERNAL_ASSET_TRANSFER_OUT
-  ].freeze
-
-  # Trade types where direction is not fixed by the activity name and the provider's signed
-  # units value must be preserved (e.g. positive for additions, negative for removals)
-  SIGN_PRESERVED_TRADE_TYPES = %w[
-    ADJUSTMENT TRANSFER
-    STOCK_MERGER MERGER
-    OPTIONEXPIRATION EXPIRED
-    OPTIONEXERCISE EXERCISED
-  ].freeze
-
-  # Trade types that represent non-cash share delivery/removal (splits, stock dividends, spinoffs, ACAT transfers)
-  # where cash impact must be zero regardless of any notional dollar value reported by the provider
-  ZERO_AMOUNT_TRADE_TYPES = %w[
-    STOCK_DIVIDEND SPLIT REVERSE_SPLIT SPLIT_REVERSE SPINOFF SPIN_OFF STOCK_MERGER MERGER
-    OPTIONEXPIRATION EXPIRED
-    EXTERNAL_ASSET_TRANSFER_IN EXTERNAL_ASSET_TRANSFER_OUT
-    INTERNAL_ASSET_TRANSFER_IN INTERNAL_ASSET_TRANSFER_OUT
-    ADJUSTMENT TRANSFER
-  ].freeze
-
-  # Activity types that result in Transaction records (cash movements)
-  CASH_TYPES = %w[
-    DIVIDEND DIV CONTRIBUTION WITHDRAWAL TRANSFER_IN TRANSFER_OUT TRANSFER
-    INTEREST FEE TAX CASH REBATE RETURN_OF_CAPITAL DISTRIBUTION SUBSTITUTE_DIVIDEND
-    INTERNAL_CASH_TRANSFER_IN INTERNAL_CASH_TRANSFER_OUT ADJUSTMENT
-  ].freeze
+  SNAPTRADE_TYPE_TO_LABEL = ACTIVITY_RULES.transform_values { |r| r[:label] }.freeze
 
   def initialize(snaptrade_account)
     @snaptrade_account = snaptrade_account
@@ -192,15 +157,19 @@ class SnaptradeAccount::ActivitiesProcessor
     end
 
     def trade_activity?(activity_type, data = {})
-      return true if TRADE_TYPES.include?(activity_type)
+      rule = ACTIVITY_RULES[activity_type]
+      return false unless rule
 
-      if SIGN_PRESERVED_TRADE_TYPES.include?(activity_type)
+      case rule[:category]
+      when :trade
+        true
+      when :unit_dependent
         units = parse_decimal(data[:units]) || parse_decimal(data["units"]) ||
                 parse_decimal(data[:quantity]) || parse_decimal(data["quantity"])
-        return true if units&.nonzero?
+        units&.nonzero? ? true : false
+      else
+        false
       end
-
-      false
     end
 
     def process_trade(data, activity_type, external_id)
@@ -258,18 +227,29 @@ class SnaptradeAccount::ActivitiesProcessor
         return
       end
 
+      rule = ACTIVITY_RULES[activity_type] || {}
+
       # Determine sign based on activity type (sell-side should be negative)
-      quantity = if SIGN_PRESERVED_TRADE_TYPES.include?(activity_type)
+      quantity = case rule[:sign]
+      when :preserve
         quantity
-      elsif SELL_SIDE_TYPES.include?(activity_type)
+      when :sell
         -quantity.abs
       else
         quantity.abs
       end
 
-      if ZERO_AMOUNT_TRADE_TYPES.include?(activity_type)
+      case rule[:zero_amount]
+      when :unconditional
         amount = BigDecimal("0.0")
         price = price.presence || BigDecimal("0.0")
+      when :if_absent
+        if amount&.nonzero?
+          amount = quantity.negative? ? -amount.abs : amount.abs
+        else
+          amount = BigDecimal("0.0")
+          price = price.presence || BigDecimal("0.0")
+        end
       else
         amount = if amount&.nonzero?
           quantity.negative? ? -amount.abs : amount.abs
@@ -322,6 +302,8 @@ class SnaptradeAccount::ActivitiesProcessor
 
       Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Importing trade: #{ticker} qty=#{quantity} price=#{price} amount=#{amount} fee=#{fee} date=#{activity_date}"
 
+      return unless reclassify_entry_if_needed(external_id, "Trade")
+
       result = import_adapter.import_trade(
         external_id: external_id,
         security: security,
@@ -368,6 +350,8 @@ class SnaptradeAccount::ActivitiesProcessor
 
       Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Importing cash activity: type=#{activity_type} amount=#{amount} date=#{activity_date}"
 
+      return unless reclassify_entry_if_needed(external_id, "Transaction")
+
       result = import_adapter.import_transaction(
         external_id: external_id,
         amount: amount,
@@ -380,14 +364,34 @@ class SnaptradeAccount::ActivitiesProcessor
       @transactions_count += 1 if result
     end
 
+    def reclassify_entry_if_needed(external_id, expected_type)
+      return true if external_id.blank?
+
+      existing = account.entries.find_by(external_id: external_id, source: "snaptrade")
+      return true unless existing && existing.entryable_type != expected_type
+
+      if existing.protected_from_sync?
+        capture_debug_log(
+          message: "Skipping reclassification of protected entry #{existing.id} (#{external_id})",
+          metadata: { activity_id: external_id, reason: "protected" }
+        )
+        return false
+      end
+
+      Rails.logger.info("SnaptradeAccount::ActivitiesProcessor - Reclassifying activity #{external_id} from #{existing.entryable_type} to #{expected_type}")
+      existing.destroy!
+      true
+    end
+
     def normalize_cash_amount(amount, activity_type)
-      case activity_type
-      when "WITHDRAWAL", "TRANSFER_OUT", "FEE", "TAX", "INTERNAL_CASH_TRANSFER_OUT"
+      rule = ACTIVITY_RULES[activity_type] || {}
+
+      case rule[:cash_flow]
+      when :outflow
         amount.abs   # Money out should be positive in Sure
-      when "CONTRIBUTION", "TRANSFER_IN", "DIVIDEND", "DIV", "INTEREST", "CASH",
-           "REBATE", "RETURN_OF_CAPITAL", "DISTRIBUTION", "SUBSTITUTE_DIVIDEND", "INTERNAL_CASH_TRANSFER_IN"
+      when :inflow
         -amount.abs  # Money in should be negative in Sure
-      when "TRANSFER", "ADJUSTMENT"
+      when :invert
         # Direction is not encoded in the type (unlike TRANSFER_IN/TRANSFER_OUT), so the
         # provider's sign is the only directional signal available. SnapTrade signs these
         # from the account's perspective (positive = money in), which is the inverse of
