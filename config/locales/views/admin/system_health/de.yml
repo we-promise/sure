@@ -83,6 +83,27 @@ de:
             function_calling_failure_reason: Fehlerursache beim Funktionsaufruf
             pdf_text_extraction_failure_reason: Fehlerursache bei der Textextraktion
             pdf_vision_processing_failure_reason: Fehlerursache bei der Bildverarbeitung oder nativen Dokumentverarbeitung
+            selected_provider: Ausgewählter Anbieter
+            effective_provider: Tatsächlich verwendeter Anbieter
+            model: Modell
+            endpoint: Endpunkt
+            function_calling: Function Calling (Tools)
+            pdf_text_extraction: 'PDF-Pfad: Textextraktion'
+            pdf_vision_processing: 'PDF-Pfad: Vision/nativ'
+            llm_request_timeout: Zeitlimit für LLM-Anfragen
+            probe_request_timeout: Zeitlimit für Health-Check-Prüfungen
+            openai_credentials: OpenAI-Zugangsdaten
+            openai_compatible_credentials: Zugangsdaten für OpenAI-kompatible API
+            anthropic_credentials: Anthropic-Zugangsdaten
+            adapter: Adapter
+            adapter_available: Adapter verfügbar
+            pgvector_extension: PostgreSQL-Erweiterung vector
+            pgvector_table: Tabelle für Vektor-Chunks
+            embedding_model: Embedding-Modell
+            embedding_endpoint: Embedding-Endpunkt
+            embedding_dimensions: Embedding-Dimensionen
+            storage_probe: pgvector-Speicherprüfung
+            embedding_probe: Prüfung des Embedding-Endpunkts
           failure_codes:
             model_not_available: Das konfigurierte Modell wurde vom Anbieter nicht zurückgegeben
             no_tool_call: Das Modell hat geantwortet, ohne das Prüfwerkzeug aufzurufen
@@ -118,3 +139,118 @@ de:
               title: Welche Einstellungen erfordern einen Neustart?
               database_backed: Änderungen an Anbieter, Modell und API-Schlüssel unter Einstellungen → Self-Hosting werden in der Datenbank gespeichert. rails-settings-cached verwirft beim Speichern den gemeinsamen Cache. Web- und Worker-Prozess verwenden daher bei der nächsten Anfrage oder Aufgabe den neuen Wert – kein Neustart erforderlich.
               env_backed: Die Embedding-Konfiguration und alle ausschließlich über Umgebungsvariablen gesetzten Werte werden beim Start des jeweiligen Containers festgelegt. Rails kann die Umgebung eines anderen Containers nicht ändern. Nach solchen Änderungen müssen daher sowohl der Web- als auch der Worker-Dienst neu gestartet oder neu erstellt werden. Wenn die Bereitstellung nur einen der Dienste neu startet oder ein Secret ohne Pod-Neustart aktualisiert, wird die Änderung nicht überall übernommen.
+          run_checks: Prüfungen erneut ausführen
+          last_checked: Live-Prüfungen vor %{time_ago} abgeschlossen. Die Ergebnisse werden kurz zwischengespeichert.
+          not_checked_help: Öffne die KI-Status-URL direkt oder führe die Prüfungen aus, um die Erreichbarkeit der Dienste zu verifizieren.
+          alerts:
+            custom_openai:
+              title: Die Prüfung des gehosteten Vector Stores ist an diesem benutzerdefinierten Endpunkt fehlgeschlagen
+              message: Der konfigurierte Endpunkt hat die Erreichbarkeitsprüfung über /v1/vector_stores nicht bestanden. Die meisten lokalen und OpenAI-kompatiblen Endpunkte implementieren diese API nicht. Chat und PDF-Verarbeitung können trotzdem funktionieren; für das übliche lokale Setup verwendest du pgvector mit einem separaten Embeddings-Endpunkt. Der Fehler wurde unter Einstellungen → Debug und in Rails.logger protokolliert.
+            function_calling_unsupported:
+              title: Das Modell unterstützt kein Function Calling
+              message: Der Endpunkt hat eine einfache Chat-Anfrage beantwortet, dieselbe Anfrage mit dem Parameter tools jedoch abgelehnt. Der KI-Assistent liest Konten, Transaktionen und Bestände über Funktionsaufrufe. Der Chat schlägt daher weiter fehl – oft mit einem wenig hilfreichen 404 –, bis ein Modell verwendet wird, das Tools unterstützt. Wähle ein Modell, dessen Anbieter Function Calling ausdrücklich unterstützt. Der Fehler wurde unter Einstellungen → Debug und in Rails.logger protokolliert.
+            function_calling_not_used:
+              title: Das Modell hat geantwortet, ohne das angeforderte Tool aufzurufen
+              message: Der Endpunkt hat den Parameter tools akzeptiert, aber das Modell hat mit Text geantwortet, statt das Health-Check-Tool aufzurufen. Ohne Tool-Aufrufe kann der KI-Assistent keine Finanzdaten lesen, sodass der Chat womöglich gar nicht oder mit erfundenen Zahlen antwortet. Wähle besser ein Modell, dessen Anbieter Function Calling ausdrücklich unterstützt.
+            llm_probe_failed:
+              title: Die LLM-Live-Prüfung ist fehlgeschlagen
+              message: Sure konnte nicht sowohl den konfigurierten Endpunkt als auch das Modell verifizieren. Der Fehler wurde unter Einstellungen → Debug und in Rails.logger protokolliert.
+            llm_model_not_available:
+              title: Das konfigurierte KI-Modell ist nicht verfügbar
+              message: Der Endpunkt hat geantwortet, das konfigurierte Modell aber weder aufgelistet noch bereitgestellt. Wähle ein aktives Modell für den ausgewählten Anbieter und führe die Prüfungen dann erneut aus. Für Gemini über eine OpenAI-kompatible Übersetzungsschicht verwendest du ein aktuell unterstütztes Modell wie gemini-2.5-flash.
+            pdf_text_extraction_failed:
+              title: Die synthetische PDF-Prüfung der Textextraktion ist fehlgeschlagen
+              message: Sure konnte den Text-first-Pfad nicht abschließen, der eingebetteten PDF-Text lokal extrahiert und an das konfigurierte Modell sendet. Es wurden keine Kundendaten gesendet. Der Fehler wurde unter Einstellungen → Debug und in Rails.logger protokolliert.
+            pdf_vision_processing_failed:
+              title: Die synthetische PDF-Prüfung für Vision/native Verarbeitung ist fehlgeschlagen
+              message: Sure konnte den PDF-Pfad über Bilder bzw. native Dokumentverarbeitung mit dem konfigurierten Modell nicht abschließen. Es wurden keine Kundendaten gesendet. Der Fehler wurde unter Einstellungen → Debug und in Rails.logger protokolliert.
+            vector_probe_failed:
+              title: Die Live-Prüfung der Dokumentsuche ist fehlgeschlagen
+              message: Sure konnte den ausgewählten Vector Store und alle erforderlichen Embedding-Dienste nicht verifizieren. Der Fehler wurde unter Einstellungen → Debug und in Rails.logger protokolliert.
+            pgvector_extension_not_enabled:
+              title: Die PostgreSQL-Erweiterung vector ist nicht aktiviert
+              message: Der pgvector-Adapter ist ausgewählt, aber PostgreSQL hat die Erweiterung vector für diese Datenbank nicht aktiviert. Verwende ein PostgreSQL-Image, das pgvector enthält, aktiviere die Erweiterung als Datenbankbesitzer oder Superuser und führe die Migrationen mit VECTOR_STORE_PROVIDER=pgvector erneut aus.
+            pgvector_table_not_found:
+              title: Die Tabelle vector_store_chunks fehlt
+              message: Die Erweiterung pgvector ist aktiviert, aber die Chunk-Tabelle wurde nicht gefunden. Prüfe den Migrationsstatus und führe die Vector-Store-Migration mit VECTOR_STORE_PROVIDER=pgvector erneut aus, damit Sure vector_store_chunks anlegen kann.
+            pgvector_probe_failed:
+              title: Die pgvector-Speicherprüfung ist fehlgeschlagen
+              message: Sure konnte die pgvector-Chunk-Tabelle nicht abfragen. Prüfe die PostgreSQL-Berechtigungen, die Erweiterung vector und die Migration für vector_store_chunks. Der Fehler wurde unter Einstellungen → Debug und in Rails.logger protokolliert.
+            embedding_dimensions_mismatch:
+              title: Die Embedding-Dimensionen stimmen nicht überein
+              message: Der Embedding-Endpunkt hat einen Vektor zurückgegeben, dessen Länge nicht zu EMBEDDING_DIMENSIONS passt. Setze EMBEDDING_MODEL und EMBEDDING_DIMENSIONS auf die dokumentierte Vektorgröße des Modells und starte Sure neu, damit die Umgebung übernommen wird. Passe danach die pgvector-Embedding-Spalte bzw. -Tabelle an oder erstelle sie neu, und bette Dokumente erneut ein, falls vorhandene Daten eine andere Größe verwendet haben.
+            embedding_probe_timeout:
+              title: Bei der Embedding-Live-Prüfung ist eine Zeitüberschreitung aufgetreten
+              message: Der Embedding-Endpunkt hat nicht innerhalb von AI_HEALTH_PROBE_TIMEOUT geantwortet. Erhöhe dieses Zeitlimit für die Prüfung, wenn der Anbieter langsam ist, und starte Sure dann neu, damit die Umgebung in jedem Prozess übernommen wird. Wenn auch normale KI-Chat-Aufrufe in eine Zeitüberschreitung laufen, erhöhe zusätzlich OPENAI_REQUEST_TIMEOUT.
+            embedding_probe_failed:
+              title: Die Embedding-Live-Prüfung ist fehlgeschlagen
+              message: Sure konnte über den konfigurierten Endpunkt und das Modell kein kurzes Test-Embedding erstellen. Prüfe EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN und die Logs des Embedding-Anbieters. Der Fehler wurde unter Einstellungen → Debug und in Rails.logger protokolliert.
+            qdrant:
+              title: Qdrant wird noch nicht unterstützt
+              message: Für den Qdrant-Adapter gibt es bisher nur ein Grundgerüst; Dokument-Upload und Suche schlagen derzeit fehl. Wähle OpenAI oder pgvector für die Dokumentsuche.
+            missing_vector_store:
+              title: Es ist kein Vector Store konfiguriert
+              message: Hochgeladene Dokumente können erst indexiert und durchsucht werden, wenn ein Vector-Store-Adapter und seine Voraussetzungen konfiguriert sind.
+            unavailable_vector_store:
+              title: Der ausgewählte Vector Store ist nicht verfügbar
+              message: Prüfe die Voraussetzungen des Adapters unten. Für pgvector muss die Datenbank die Erweiterung vector oder eine vorhandene Tabelle vector_store_chunks bereitstellen.
+          llm:
+            title: LLM und PDF-Verarbeitung
+            description: Die Live-Prüfungen verifizieren das konfigurierte Modell, lassen es wie der Assistent einen einfachen Funktionsaufruf ausführen und testen anschließend separat die Textextraktion sowie die Vision-/native Verarbeitung mit einem einseitigen synthetischen PDF ohne Kundendaten. Zugangsdaten werden nie angezeigt.
+          vector_store:
+            title: Vector Store und Dokumentsuche
+            description: Die Live-Prüfung fragt die API des gehosteten Vector Stores ab oder testet die pgvector-Tabelle und erstellt ein kurzes Embedding, ohne es zu speichern.
+          providers:
+            openai: OpenAI
+            openai_compatible: OpenAI-kompatibel
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Benutzerdefinierter Endpunkt
+          adapters:
+            openai: Gehosteter Vector Store von OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Konfiguriert
+            not_configured: Nicht konfiguriert
+            fallback: (Fallback)
+            not_set: Nicht gesetzt
+            "yes": Ja
+            "no": Nein
+            enabled: Aktiviert
+            available_not_enabled: Verfügbar, nicht aktiviert
+            not_available: Nicht verfügbar
+            available: Verfügbar
+            not_found: Nicht gefunden
+          function_calling_statuses:
+            supported: Live-Tool-Aufruf erfolgreich
+            unsupported: Vom tatsächlich verwendeten Anbieter/Modell nicht unterstützt
+            not_used: Tools akzeptiert, aber das Modell hat keines aufgerufen
+            failing: Live-Prüfung fehlgeschlagen
+            not_checked: Nicht geprüft
+            unavailable: Nicht verfügbar, solange kein LLM-Anbieter konfiguriert ist
+          pdf_statuses:
+            supported: Synthetische PDF-Prüfung bestanden
+            failing: Synthetische PDF-Prüfung fehlgeschlagen
+            unsupported: Deaktiviert oder vom tatsächlich verwendeten Anbieter/Modell nicht unterstützt
+            not_checked: Nicht geprüft
+            unavailable: Nicht verfügbar, solange kein LLM-Anbieter konfiguriert ist
+          probe_statuses:
+            passing: Live-Prüfung bestanden
+            failing: Live-Prüfung fehlgeschlagen
+            not_checked: Nicht geprüft
+            not_configured: Nicht konfiguriert
+          vector_statuses:
+            passing: Live-Prüfungen bestanden
+            failing: Live-Prüfung fehlgeschlagen
+            not_checked: Nicht geprüft
+            not_configured: Nicht konfiguriert
+            scaffolded: Nur Grundgerüst
+            missing: Nicht konfiguriert
+          local_setup:
+            title: Empfohlenes lokales Setup
+            description: Betreibe das LLM über deinen lokalen OpenAI-kompatiblen Endpunkt, speichere Dokumentvektoren in pgvector und richte die Embedding-Einstellungen auf einen OpenAI-kompatiblen Embeddings-Endpunkt aus. Das PostgreSQL-Image muss die Erweiterung vector enthalten, und die Embedding-Dimensionen müssen zum ausgewählten Modell passen.

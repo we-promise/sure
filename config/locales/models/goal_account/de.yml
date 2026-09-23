@@ -1,0 +1,9 @@
+---
+de:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Dieses Konto ist bereits vollständig für „%{goal_name}“ vorgemerkt. Gib einen Betrag ein, um es aufzuteilen.

@@ -44,7 +44,7 @@ de:
       confirm_accept: Händler löschen
       confirm_body: Bist du sicher, dass du diesen Händler löschen möchtest? Das Entfernen dieses Händlers
         wird alle zugehörigen Transaktionen trennen und kann deine Auswertungen beeinflussen.
-      confirm_title: Händler löschen
+      confirm_title: Händler löschen?
       delete: Händler löschen
       edit: Händler bearbeiten
     merge:

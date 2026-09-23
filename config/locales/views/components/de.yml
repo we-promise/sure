@@ -10,7 +10,7 @@ de:
       unlinked: "Nicht verknüpft: %{count}"
       institutions: "Institute: %{count}"
     transactions:
-      title: Buchungen
+      title: Transaktionen
       seen: "Erfasst: %{count}"
       imported: "Importiert: %{count}"
       updated: "Aktualisiert: %{count}"
@@ -41,27 +41,27 @@ de:
       recently: kürzlich
       errors: "Fehler: %{count}"
       pending_reconciled:
-        one: "%{count} ausstehende Doppelbuchung abgeglichen"
-        other: "%{count} ausstehende Doppelbuchungen abgeglichen"
-      view_reconciled: Abgeglichene Buchungen anzeigen
+        one: "%{count} doppelte ausstehende Transaktion abgeglichen"
+        other: "%{count} doppelte ausstehende Transaktionen abgeglichen"
+      view_reconciled: Abgeglichene Transaktionen anzeigen
       duplicate_suggestions:
         one: "%{count} mögliche Doppelbuchung zur Prüfung"
         other: "%{count} mögliche Doppelbuchungen zur Prüfung"
       view_duplicate_suggestions: Vorgeschlagene Duplikate anzeigen
       stale_pending:
-        one: "%{count} veraltete ausstehende Buchung (von Budgets ausgeschlossen)"
-        other: "%{count} veraltete ausstehende Buchungen (von Budgets ausgeschlossen)"
+        one: "%{count} veraltete ausstehende Transaktion (von Budgets ausgeschlossen)"
+        other: "%{count} veraltete ausstehende Transaktionen (von Budgets ausgeschlossen)"
       view_stale_pending: Betroffene Konten anzeigen
       stale_pending_count:
-        one: "%{count} Buchung"
-        other: "%{count} Buchungen"
+        one: "%{count} Transaktion"
+        other: "%{count} Transaktionen"
       stale_unmatched:
-        one: "%{count} ausstehende Buchung benötigt manuelle Prüfung"
-        other: "%{count} ausstehende Buchungen benötigen manuelle Prüfung"
-      view_stale_unmatched: Zu prüfende Buchungen anzeigen
+        one: "%{count} ausstehende Transaktion benötigt manuelle Prüfung"
+        other: "%{count} ausstehende Transaktionen benötigen manuelle Prüfung"
+      view_stale_unmatched: Zu prüfende Transaktionen anzeigen
       stale_unmatched_count:
-        one: "%{count} Buchung"
-        other: "%{count} Buchungen"
+        one: "%{count} Transaktion"
+        other: "%{count} Transaktionen"
       data_warnings: "Datenwarnungen: %{count}"
       notices: "Hinweise: %{count}"
       view_data_quality: Datenqualitätsdetails anzeigen
@@ -87,7 +87,7 @@ de:
           final_principal: Endgültige Restschuld
           final_value: Endgültiger Wert
           market_changes: Kursveränderungen
-          net_cash_flow: Netto-Zahlungsfluss
+          net_cash_flow: Netto-Cashflow
           net_principal_change: Netto-Veränderung der Restschuld
           net_value_change: Netto-Wertveränderung
           payments: Zahlungen

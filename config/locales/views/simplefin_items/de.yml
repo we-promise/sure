@@ -120,7 +120,7 @@ de:
       error: Beim Synchronisieren der Daten ist ein Fehler aufgetreten.
       no_accounts_description: Diese Verbindung enthält noch keine synchronisierten Konten.
       no_accounts_title: Keine Konten gefunden
-      requires_update: Erneute Authentifizierung erforderlich
+      requires_update: Neu verbinden
       setup_needed: Neue Konten bereit zur Einrichtung
       setup_description: Wähle die Kontotypen für deine neu importierten SimpleFIN-Konten aus.
       setup_action: Neue Konten einrichten

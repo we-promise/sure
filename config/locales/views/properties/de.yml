@@ -23,7 +23,7 @@ de:
       year_built: Baujahr
       year_built_placeholder: '2000'
     new:
-      title: Immobiliendetails eingeben
+      title: Immobilie manuell eingeben
       avm_description: Gib der Immobilie einen Namen und trag ihre Adresse ein. %{provider} sucht die Objektdaten und den geschätzten Marktwert für dich heraus.
       avm_option: Über %{provider} hinzufügen
       avm_preview_back: Zurück

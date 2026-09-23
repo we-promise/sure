@@ -15,6 +15,8 @@ de:
         user:
           attributes:
             base:
-              cannot_deactivate_admin_with_other_users: Admin kann das Konto nicht löschen, solange noch andere Benutzer vorhanden sind Bitte zuerst alle Mitglieder löschen
+              cannot_deactivate_admin_with_other_users: Admin kann das Konto nicht löschen, solange noch andere Benutzer vorhanden sind. Bitte zuerst alle Mitglieder löschen.
+              provider_item_has_other_accounts: Der Benutzer besitzt Konten, die mit einer Anbieterverbindung verknüpft sind, zu der auch Konten eines anderen Benutzers gehören. Verschiebe diese Konten oder trenne ihre Verknüpfung, bevor du die Familien-/Gruppenzugehörigkeit änderst.
+              cannot_remove_last_super_admin: Der letzte aktive Super-Admin kann nicht entfernt werden. Ernenne zuerst einen anderen Benutzer zum Super-Admin.
             profile_image:
               invalid_file_size: Dateigröße muss kleiner als %{max_megabytes}MB sein

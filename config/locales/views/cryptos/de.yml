@@ -5,7 +5,7 @@ de:
       edit: "%{account} bearbeiten"
     form:
       subtype_label: Kontotyp
-      subtype_prompt: Typ auswählen...
+      subtype_prompt: Kontotyp auswählen
       subtype_none: Nicht angegeben
       tax_treatment_label: Steuerbehandlung
       tax_treatment_hint: Die meisten Kryptowährungen werden in versteuerten Konten gehalten. Wähl eine andere Option bei steuerbegünstigten Konten (z. B. selbst verwaltetes IRA).

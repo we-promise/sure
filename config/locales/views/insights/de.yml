@@ -6,13 +6,13 @@ de:
       body: Öffne Sure, um deine neueste KI-Analyse anzusehen.
     actions:
       budget: Budget ansehen
-      cash_flow_warning: Wiederkehrende Buchungen prüfen
+      cash_flow_warning: Wiederkehrende Transaktionen prüfen
       idle_cash: Zum Konto
       maintained_goal_depleted: Rücklage ansehen
       net_worth_milestone: Bericht zum Nettovermögen ansehen
       savings_rate_change: Transaktionen dieses Monats ansehen
       spending_anomaly: Transaktionen zu %{category} ansehen
-      subscription_audit: Wiederkehrende Buchungen prüfen
+      subscription_audit: Wiederkehrende Transaktionen prüfen
     card:
       acknowledge: Verstanden
       acknowledge_title: Ausblenden, bis sich die Zahlen ändern

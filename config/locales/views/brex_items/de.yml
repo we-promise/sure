@@ -6,7 +6,7 @@ de:
       provider: Brex
       separator: " • "
     kinds:
-      cash: Bargeld
+      cash: Cash
       card: Karte
     statuses:
       ACTIVE: Aktiv
@@ -112,7 +112,7 @@ de:
         sign_in_html: Öffne %{link} und meld dich bei dem Konto an, das du verbinden willst
       keep_token_placeholder: Leer lassen, um das aktuelle Token beizubehalten
       not_configured: Nicht konfiguriert
-      sandbox_note_html: Leg für jedes Brex-Unternehmen und jeden API-Token, den du abgleichen willst, eine eigene benannte Verbindung an. Lass die Basis-URL für die Produktion leer. Staging ist auf von Brex freigegebene Tests beschränkt und funktioniert nicht mit Kunden-Tokens.
+      sandbox_note_html: Leg für jedes Brex-Unternehmen und jeden API-Token, den du synchronisieren willst, eine eigene benannte Verbindung an. Lass die Basis-URL für die Produktion leer. Staging ist auf von Brex freigegebene Tests beschränkt und funktioniert nicht mit Kunden-Tokens.
       setup_accounts: Konten einrichten
       setup_title: "Einrichtungsanweisungen:"
       sync: Synchronisieren
@@ -236,7 +236,7 @@ de:
       creating_accounts: Konten werden erstellt...
       historical_data_range: "Historischer Datenbereich:"
       subtitle: Wähl die richtigen Kontotypen für deine importierten Konten
-      sync_start_date_help: Wähl aus, wie weit zurück du den Transaktionsverlauf abgleichen willst. Verfügbar sind maximal 3 Jahre.
+      sync_start_date_help: Wähl aus, wie weit zurück du den Transaktionsverlauf synchronisieren willst. Verfügbar sind maximal 3 Jahre.
       sync_start_date_label: "Transaktionen synchronisieren ab:"
       title: Richte deine Brex-Konten ein
     complete_account_setup:
@@ -266,7 +266,7 @@ de:
       calculating_balances: Salden werden berechnet...
       checking_account_configuration: Kontokonfiguration wird geprüft...
       credentials_invalid: Ungültiges Brex-API-Token oder ungültige Kontoberechtigungen
-      failed: Der Abgleich ist fehlgeschlagen. Versuch es noch einmal oder wende dich an den Support.
+      failed: Die Synchronisierung ist fehlgeschlagen. Versuch es noch einmal oder wende dich an den Support.
       import_failed: Brex-Import fehlgeschlagen.
       importing_accounts: Konten werden von Brex importiert...
       processing_transactions: Transaktionen werden verarbeitet...

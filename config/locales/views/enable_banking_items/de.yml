@@ -12,7 +12,7 @@ de:
       invalid_callback: Ungültige Callback-Parameter.
       item_not_found: Verbindung nicht gefunden.
       session_failed: Autorisierung konnte nicht abgeschlossen werden
-      success: Mit deiner Bank verbunden. Deine Konten werden abgeglichen.
+      success: Mit deiner Bank verbunden. Deine Konten werden synchronisiert.
       unexpected_error: Ein unerwarteter Fehler ist aufgetreten. Versuch es noch einmal.
     complete_account_setup:
       all_skipped: Alle Konten wurden übersprungen. Du kannst sie später auf der Konten-Seite einrichten.
@@ -92,7 +92,7 @@ de:
       api_error: Bei der Kommunikation mit der Bank ist ein Fehler aufgetreten.
       network_unreachable: Der Bankdienst ist vorübergehend nicht erreichbar. Versuch es später noch einmal.
       session_invalid: Sitzung abgelaufen. Verbinde deine Bank neu.
-      unexpected: Beim Abgleich ist ein unerwarteter Fehler aufgetreten.
+      unexpected: Bei der Synchronisierung ist ein unerwarteter Fehler aufgetreten.
     select_existing_account:
       all_linked: Es sieht so aus, als wären bereits alle Enable-Banking-Konten verknüpft.
       balance: Saldo

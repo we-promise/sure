@@ -4,9 +4,9 @@ de:
     users:
       index:
         title: "Benutzerverwaltung"
-        description: Benutzerrollen für deine Instanz verwalten. Super-Admins haben Zugriff auf SSO-Provider und Benutzerverwaltung.
-        section_title: "Benutzer"
-        you: "(Sie)"
+        description: Benutzerrollen, Familien-/Gruppenzugehörigkeit und das Entfernen von Konten für deine Instanz verwalten. Super-Admins haben Zugriff auf die SSO-Anbieter-Einstellungen und die Benutzerverwaltung.
+        section_title: "Familien / Gruppen"
+        you: "(Du)"
         trial_ends_at: "Testversion endet"
         not_available: "k. A."
         no_users: "Keine Benutzer gefunden."
@@ -24,11 +24,20 @@ de:
           user: "Benutzer"
           trial_ends_at: "Testversion endet"
           family_accounts: "Familienkonten"
-          family_transactions: "Familienbuchungen"
+          family_transactions: "Transaktionen der Familie"
           last_login: "Letzte Anmeldung"
           session_count: "Anzahl Sitzungen"
           never: "Nie"
           role: "Rolle"
+          family: Familie / Gruppe
+          keep_current_family: Aktuelle Familie/Gruppe beibehalten
+          create_new_family_option: + Neue Familie/Gruppe erstellen
+          new_family_name: Name der neuen Familie/Gruppe
+          new_family_name_placeholder: Name eingeben, um eine neue Familie/Gruppe zu erstellen
+          new_family_moniker: Typ der neuen Familie/Gruppe
+          set_password: Neues Passwort festlegen
+          password_placeholder: Leer lassen, um das aktuelle beizubehalten
+          actions: Aktionen
         role_descriptions_title: "Rollenbeschreibungen"
         removed_sso_identities:
           title: "Entfernte SSO-Identitäten"
@@ -44,7 +53,7 @@ de:
           guest: "Assistenten-orientierte Nutzung mit eingeschränkten Rechten für Einführungsabläufe."
           member: "Standard-Zugriff. Kann eigene Konten, Buchungen und Einstellungen verwalten."
           admin: "Familien-Administrator. Zugriff auf erweiterte Einstellungen wie API-Schlüssel, Importe und KI-Prompts."
-          super_admin: "Instanz-Administrator. Kann SSO-Provider, Benutzerrollen verwalten und Benutzer für Support vertreten."
+          super_admin: "Instanz-Administrator. Kann SSO-Anbieter und Benutzerrollen verwalten und sich zu Supportzwecken als Benutzer anmelden."
         family_summary: "%{members} Mitglieder · %{accounts} Konten · %{transactions} Transaktionen"
         invitations:
           delete: Löschen
@@ -53,6 +62,59 @@ de:
           pending_label: Eingeladen (offen)
         no_subscription: Kein Abo
         unnamed_family: Familie/Gruppe ohne Namen
+        family_monikers:
+          family: Familie
+          group: Gruppe
+        actions:
+          manage_user: Benutzer verwalten
+          update: Benutzer aktualisieren
+          delete_user: Benutzer löschen
+          self_edit_warning: Wenn du deine eigene Rolle änderst, ändern sich deine Administratorrechte.
+          self_update_confirm: Möchtest du wirklich deine eigene Kontorolle oder Familie ändern?
+          last_super_admin_role_locked: Die Rolle kann nicht geändert werden, weil du der letzte Super-Admin im System bist.
+        delete_confirm: Möchtest du diesen Benutzer wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+        delete_confirm_last_user: Möchtest du diesen Benutzer wirklich löschen? Er ist der letzte Benutzer in seiner Familie/Gruppe, daher werden auch die gesamte Familie/Gruppe und alle zugehörigen Daten gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+        remove: Benutzer löschen
+        auth_types:
+          sso: SSO
+          local: Lokal
+          local_and_sso: Lokal + SSO
+          sso_provider_tooltip: 'SSO-Anbieter: %{providers}'
+        unused_families:
+          title: Ungenutzte Familien / Gruppen
+          family_id: 'Familien-ID: %{id}'
+          delete: Ungenutzte Familie löschen
+          delete_confirm: Möchtest du diese ungenutzte Familie/Gruppe wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+          empty: Keine ungenutzten Familien/Gruppen gefunden.
       update:
         success: "Benutzerrolle wurde erfolgreich aktualisiert."
-        failure: "Benutzerrolle konnte nicht aktualisiert werden."
+        failure: "Benutzerdaten (Rolle oder Familien-/Gruppenzugehörigkeit) konnten nicht aktualisiert werden."
+        success_role: Benutzerrolle wurde erfolgreich aktualisiert.
+        success_password: Benutzerpasswort wurde erfolgreich aktualisiert.
+        success_role_and_password: Benutzerrolle und Passwort wurden erfolgreich aktualisiert.
+        success_family: Familien-/Gruppenzugehörigkeit des Benutzers wurde erfolgreich aktualisiert.
+        family_required: Wähle eine bestehende Familie/Gruppe aus oder gib einen Namen für eine neue ein.
+        password_and_family_conflict: Passwort und Familien-/Gruppenzugehörigkeit können nicht gleichzeitig geändert werden.
+        password_too_short: Das Passwort muss mindestens 8 Zeichen lang sein.
+        password_missing_case: Das Passwort muss Groß- und Kleinbuchstaben enthalten.
+        password_missing_number: Das Passwort muss mindestens eine Ziffer enthalten.
+        password_missing_special: Das Passwort muss mindestens ein Sonderzeichen enthalten.
+        last_super_admin_error: Der letzte Super-Admin im System kann nicht herabgestuft werden.
+      destroy:
+        success: Zugriff des Benutzers entzogen und endgültige Löschung eingeplant.
+        failure: Benutzer konnte nicht entfernt werden.
+        cannot_remove_self: Du kannst dein eigenes Konto nicht hier entfernen.
+        cannot_remove_last_super_admin: Du kannst den letzten aktiven Super-Admin nicht entfernen.
+        confirmation_mismatch: Die E-Mail-Adresse stimmt nicht überein. Der Benutzer wurde nicht entfernt.
+      deletion:
+        title: Benutzer endgültig entfernen
+        warning: Dadurch wird der Zugriff sofort entzogen und die endgültige Löschung des Benutzers und seiner Daten eingeplant. Das kann nicht rückgängig gemacht werden.
+        instruction: Gib zur Bestätigung %{email} ein.
+        email_label: E-Mail-Adresse des Benutzers
+        cancel: Abbrechen
+        submit: Benutzer endgültig entfernen
+    families:
+      destroy:
+        family_has_active_subscription: Die Familie/Gruppe hat ein aktives Abo und kann erst gelöscht werden, wenn das Abo gekündigt ist.
+        family_has_users: Die Familie/Gruppe hat noch Benutzer und kann nicht gelöscht werden.
+        success: Familie/Gruppe wurde erfolgreich gelöscht.

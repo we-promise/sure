@@ -20,6 +20,7 @@ de:
     custom:
       label: Eigener Zeitraum
       label_short: Eigen
+      comparison_label: '%{start_date} bis %{end_date}'
     last_10_years:
       comparison_label: vs. vor 10 Jahren
       label: Letzte 10 Jahre
@@ -52,3 +53,4 @@ de:
       comparison_label: vs. Vormonat
       label: Letzter Monat
       label_short: Vormonat
+    range: '%{start_date} – %{end_date}'

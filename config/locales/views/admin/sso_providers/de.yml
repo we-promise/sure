@@ -1,11 +1,11 @@
 ---
 de:
   admin:
-    unauthorized: "Sie sind nicht berechtigt, auf diesen Bereich zuzugreifen."
+    unauthorized: "Du bist nicht berechtigt, auf diesen Bereich zuzugreifen."
     sso_providers:
       index:
         title: "SSO-Provider"
-        description: Single-Sign-On-Authentifizierungsprovider für deine Instanz verwalten
+        description: Single-Sign-On-Authentifizierungsprovider für deine Instanz verwalten.
         add_provider: "Provider hinzufügen"
         no_providers_title: "Keine SSO-Provider"
         no_providers_message: Füg deinen ersten SSO-Provider hinzu.
@@ -60,18 +60,18 @@ de:
         strategy_label: "Strategie"
         strategy_help: "Die zu verwendende Authentifizierungsstrategie"
         name_label: "Name"
-        name_placeholder: "z. B. openid_connect, keycloak, authentik"
+        name_placeholder: "z. B. keycloak, authentik"
         name_help: "Eindeutige Kennung (nur Kleinbuchstaben, Zahlen, Unterstriche)"
-        label_label: "Bezeichnung"
+        label_label: "Button-Beschriftung"
         label_placeholder: "z. B. Anmelden mit Keycloak"
         label_help: "Button-Text für Benutzer"
-        icon_label: "Icon"
-        icon_placeholder: "z. B. key, google, github"
-        icon_help: "Lucide-Icon-Name (optional)"
+        icon_label: "Icon (optional)"
+        icon_placeholder: "z. B. key, shield"
+        icon_help: "Lucide-Icon-Name für den Anmeldebutton"
         enabled_label: "Diesen Provider aktivieren"
         enabled_help: "Benutzer können sich bei Aktivierung mit diesem Provider anmelden"
-        issuer_label: "Issuer"
-        issuer_placeholder: "https://accounts.google.com"
+        issuer_label: "Issuer-URL"
+        issuer_placeholder: "https://your-idp.example.com/realms/your-realm"
         issuer_help: "OIDC-Issuer-URL (validiert .well-known/openid-configuration)"
         client_id_label: "Client ID"
         client_id_placeholder: "your-client-id"
@@ -80,8 +80,8 @@ de:
         client_secret_placeholder_new: "your-client-secret"
         client_secret_placeholder_existing: "••••••••••••••••"
         client_secret_help: "OAuth-Client-Secret (verschlüsselt in der Datenbank)"
-        client_secret_help_existing: " – leer lassen, um bestehendes beizubehalten"
-        redirect_uri_label: "Redirect URI"
+        client_secret_help_existing: "Leer lassen, um das bestehende Secret beizubehalten"
+        redirect_uri_label: "Callback-URL"
         redirect_uri_placeholder: "https://yourdomain.com/auth/openid_connect/callback"
         redirect_uri_help: "Callback-URL, die beim Identitätsanbieter eingetragen werden muss"
         copy_button: "Kopieren"
@@ -119,7 +119,7 @@ de:
         idp_metadata_url: "IdP-Metadaten-URL"
         idp_metadata_url_help: URL zu den SAML-Metadaten deines IdP. Andere SAML-Einstellungen werden dann automatisch gesetzt.
         manual_saml_config: "Manuelle Konfiguration (ohne Metadaten-URL)"
-        manual_saml_help: "Nur verwenden, wenn Ihr IdP keine Metadaten-URL bereitstellt."
+        manual_saml_help: "Nur verwenden, wenn dein IdP keine Metadaten-URL bereitstellt."
         idp_sso_url: "IdP-SSO-URL"
         idp_slo_url: "IdP-SLO-URL (optional)"
         idp_certificate: "IdP-Zertifikat"

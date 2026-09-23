@@ -135,7 +135,7 @@ de:
     index:
       transaction: Transaktion
       transactions: Transaktionen
-      import: Import
+      import: Importieren
       categorize_button:
         one: Kategorisieren (1)
         other: Kategorisieren (%{count})

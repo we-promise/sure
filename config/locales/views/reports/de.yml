@@ -117,7 +117,7 @@ de:
       withdrawals: Entnahmen im Zeitraum
       top_holdings: Top-Positionen
       holding: Position
-      weight: Gewicht
+      weight: Gewichtung
       value: Wert
       return: Rendite
       accounts: Anlagekonten
@@ -140,7 +140,7 @@ de:
       period_return: Rendite im Zeitraum
     investment_flows:
       title: Anlageflüsse
-      description: Verfolge Geldflüsse in und aus deinen Anlagekonten
+      description: Verfolge Geldflüsse in und aus deinen Anlagekonten durch Einzahlungen und Entnahmen.
       contributions: Einlagen
       withdrawals: Entnahmen
       net_flow: Nettozufluss
@@ -148,8 +148,8 @@ de:
       net_flow_description: Nettoveränderung gesamt
       withdrawals_description: Aus Investments entnommen
     transactions_breakdown:
-      title: Transaktionsübersicht
-      no_transactions: Keine Transaktionen für den ausgewählten Zeitraum und Filter gefunden
+      title: Aktivitätsübersicht
+      no_transactions: Keine Aktivität für den ausgewählten Zeitraum und Filter gefunden
       filters:
         title: Filter
         category: Kategorie
@@ -245,7 +245,7 @@ de:
         this_period: dieser Zeitraum
         top_holdings: Top-Positionen
         holding: Position
-        weight: Gewicht
+        weight: Gewichtung
         value: Wert
         return: Rendite
         period_return: Rendite im Zeitraum

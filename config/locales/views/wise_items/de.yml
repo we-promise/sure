@@ -51,7 +51,7 @@ de:
     provider_panel:
       accounts_link: Konten
       add_connection: Wise-Verbindung hinzufügen
-      configured_html: Verbunden und im Abgleich. Im Reiter %{accounts_link} verwaltest du deine Konten.
+      configured_html: Verbunden und synchronisiert. Im Reiter %{accounts_link} verwaltest du deine Konten.
       connect: Wise verbinden
       connection_name_label: Name der Verbindung
       connection_name_placeholder: Wise Privat
@@ -98,7 +98,7 @@ de:
       title: Wise-Guthaben wählen
     select_existing_account:
       cancel: Abbrechen
-      description: Wähl das Wise-Währungsguthaben, das mit diesem Konto verknüpft werden soll. Transaktionen werden automatisch abgeglichen.
+      description: Wähl das Wise-Währungsguthaben, das mit diesem Konto verknüpft werden soll. Transaktionen werden automatisch synchronisiert.
       link_account: Guthaben verknüpfen
       no_accounts_found: Keine unverknüpften Wise-Guthaben gefunden.
       not_found: Wise-Guthaben nicht gefunden.
@@ -107,7 +107,7 @@ de:
       already_connected_label: Bereits verbunden
       cancel: Abbrechen
       connect: Gewählte Profile verbinden
-      description: Dein Wise-Konto hat mehrere Profile. Wähl die aus, die du mit Sure abgleichen willst.
+      description: Dein Wise-Konto hat mehrere Profile. Wähl die aus, die du mit Sure synchronisieren willst.
       session_expired: Sitzung abgelaufen. Versuch die Verbindung noch einmal.
       subtitle: Wähl, welche Profile verbunden werden sollen
       title: Wise-Profile wählen
