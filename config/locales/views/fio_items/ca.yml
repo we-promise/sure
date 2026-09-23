@@ -52,7 +52,7 @@ ca:
       no_account_yet: 'Encara no hi ha cap compte: la primera sincronització detecta el compte al qual dona accés aquest token.'
       account_needs_setup: Encara no està enllaçat a cap compte de Sure.
       requires_update: Cal un token nou
-      requires_update_notice: Fio ha rebutjat aquest token. Els tokens són vàlids fins a 180 dies, tret que s'amplïin automàticament a cada inici de sessió a la banca, així que crea un token nou de només lectura a Configuració → API i enganxa'l a sota.
+      requires_update_notice: Fio ha rebutjat aquest token. Els tokens són vàlids fins a 180 dies, tret que s'ampliïn automàticament a cada inici de sessió a la banca, així que crea un token nou de només lectura a Configuració → API i enganxa'l a sota.
       last_synced: Sincronitzat fa %{timestamp}
       never_synced: Mai sincronitzat
       syncing: Sincronitzant...

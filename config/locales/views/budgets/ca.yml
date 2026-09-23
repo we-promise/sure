@@ -133,7 +133,7 @@ ca:
       household: Llar
     available_cash:
       heading: Efectiu disponible
-      subtitle: Al costat del pla anterior, però no en forma part.
+      subtitle: Al costat del pla de dalt, però no en forma part.
       available: Disponible en efectiu
       earmarked: Ja reservat per a objectius
       free: Realment lliure
