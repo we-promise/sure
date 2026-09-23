@@ -349,9 +349,24 @@ class AccountsController < ApplicationController
     end
 
     def visible_provider_items(items)
+      accessible_ids = @accessible_account_ids.to_a
+
       items.select do |item|
-        Current.user.admin? ||
-          (item.respond_to?(:accounts) && (item.accounts.map(&:id) & @accessible_account_ids).any?)
+        next true if Current.user.admin?
+
+        account_ids = item.respond_to?(:accounts) ? item.accounts.map(&:id) : []
+
+        # Ownership shows a member their own connection, importantly including
+        # one just created that has not synced any accounts yet. It must not
+        # widen what they can see: the card renders the item's accounts
+        # unfiltered, and is re-rendered by a family-wide broadcast with no
+        # viewer, so an owner is shown the card only while every account on it
+        # is already accessible to them.
+        if item.respond_to?(:owned_by?) && item.owned_by?(Current.user)
+          next true if (account_ids - accessible_ids).empty?
+        end
+
+        (account_ids & accessible_ids).any?
       end
     end
 
