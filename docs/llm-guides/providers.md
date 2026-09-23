@@ -122,19 +122,45 @@ would stop matching and a `!=` rule would start matching what it was written to
 exclude — silently, in both directions.
 
 [`Rule::ConditionFilter::TransactionName`](../../app/models/rule/condition_filter/transaction_name.rb)
-absorbs that: for `=` and `!=` only, a row whose `entries.source` is Plaid also
-matches on the text before `PlaidEntry::Processor::NAME_SEPARATOR`. Three
-properties make this safe, and a change here must preserve all of them:
+absorbs that: for `=` and `!=` only, a Plaid row also matches when its name is
+exactly the rule's value joined to the stored `original_description` by
+`PlaidEntry::Processor::NAME_SEPARATOR`. The comparison rebuilds the name; it does
+not pattern match it. These properties make it safe, and a change here must
+preserve all of them:
 
+- **Exact, not a prefix match.** When Plaid resolves no merchant, the name is the
+  bank's description alone, and banks write dashes of their own, so an ACH row
+  reading "ACH - PAYROLL DEPOSIT" would satisfy `= "ACH"` under any
+  `LIKE value || ' - %'`. That row's name was never changed by the combining, so
+  matching it would break a rule on a row this feature does not touch. Rebuilding
+  from the stored description means only a genuinely combined name can match.
 - **Provenance-gated.** Rules run against every transaction in the family
   ([`resource_scope`](../../app/models/rule/registry/transaction_resource.rb)), not
   just provider rows. Without the `source` gate, `= "Rent"` would start matching a
   manually entered "Rent insurance".
-- **Case-preserving.** `=` compiles to a plain `=` and is case-sensitive; the added
-  arm uses `LIKE`, never `ILIKE`.
+- **Case-preserving.** `=` compiles to a plain `=` and stays case-sensitive.
 - **NULL-safe.** `entries.source` is nullable, so the added arm is `NULL` for manual
   rows and a bare `NOT (...)` would drop them out of every `!=` rule. The predicate
   is wrapped in `COALESCE(..., FALSE)` before negation.
+- **Kept in step with the name.** The comparison trusts that the stored
+  `original_description` is the one the name was built from. A protected
+  (user-modified) entry keeps its name when Plaid resends it, so the processor
+  passes `name_extra_keys: { "plaid" => ["original_description"] }` and
+  [`Account::ProviderImportAdapter`](../../app/models/account/provider_import_adapter.rb)
+  keeps that value alongside the name rather than refreshing it. Without that, a
+  bank rewriting a pending transaction's description as it settles would flip
+  `=` and `!=` on an entry the user had already categorized.
+
+`like` and `not_like` rules are deliberately left alone, and they do see the
+change: the combined name contains the merchant as well as the description, so a
+`like "Amazon"` rule now reaches `Amazon - AMZN Mktp US*...` rows it could not
+before. That wider reach is the purpose of combining.
+
+One known gap: `Entry#split!` gives each child no `source` and no `extra`, while the
+split form prefills each child's name from the parent. A child of a combined Plaid
+transaction therefore keeps the combined name but not the provenance, so `=` and
+`!=` rules on the merchant do not reach it. Renaming the child, or using `like`,
+does.
 
 This is deliberately runtime behavior rather than a migration over saved rules:
 rewriting operators in place is irreversible, changes rules the user chose, and
