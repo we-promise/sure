@@ -179,9 +179,9 @@ module Enrichable
 
     # Views and totals filtered on provenance are cached under
     # Family#entries_cache_version, which only moves when an entry's timestamp
-    # changes. delete_all doesn't touch anything, so bump the owning entry
-    # (or the record itself for Entry) to invalidate those caches.
-    (respond_to?(:entry) ? entry : self)&.touch if removed_count.positive?
+    # changes. delete_all skips callbacks, so touch the record like a normal
+    # save would; `has_one :entry, touch: true` carries it to the entry.
+    touch if removed_count.positive?
 
     removed_count
   end
