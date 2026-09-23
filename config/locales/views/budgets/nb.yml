@@ -1,0 +1,135 @@
+---
+nb:
+  budgets:
+    switcher:
+      aria_label: Bytt budsjett
+      household: Husholdning
+    budget_donut:
+      spent: Brukt
+      new_budget: Nytt budsjett
+      of_budget: av %{amount}
+      unused: Ubrukt
+    budget_header:
+      today: I dag
+    budget_nav:
+      categories: Kategorier
+      setup: Oppsett
+    over_allocation_warning:
+      over_allocated_message: Du har fordelt mer enn budsjettet. Juster fordelingene.
+      fix_allocations: Juster fordelinger
+    actuals_summary:
+      income: Inntekter
+      expenses: Utgifter
+    budgeted_summary:
+      expected_income: Forventet inntekt
+      budgeted: Budsjettert
+      earned: '%{amount} tjent'
+      over: '%{amount} over'
+      left: '%{amount} igjen'
+      spent: '%{amount} brukt'
+    edit:
+      setup_title: Sett opp budsjettet ditt
+      setup_description: Skriv inn månedlig inntekt og planlagt forbruk nedenfor for å sette opp budsjettet.
+      budgeted_spending: Budsjettert forbruk
+      expected_income: Forventet inntekt
+      autosuggest_title: Foreslå inntekts- og forbruksbudsjett automatisk
+      autosuggest_description: Dette baseres på transaksjonshistorikken. AI kan gjøre feil, så kontroller før du fortsetter.
+      continue: Fortsett
+    name:
+      custom_range: '%{start} – %{end_date}'
+      month_year: '%{month}'
+    available_cash:
+      heading: Tilgjengelige midler
+      subtitle: Ved siden av planen over, ikke en del av den.
+      available: Tilgjengelig på konto
+      earmarked: Allerede satt av til mål
+      free: Helt fritt
+      goals_link: Se mål
+    show:
+      categories:
+        amount: Beløp
+        edit: Rediger
+        title: Kategorier
+      on_track_categories:
+        short_title: I rute
+        title: I rute
+      over_budget_categories:
+        short_title: Over budsjett
+        title: Over budsjett
+      filter:
+        all: Alle
+        aria_label: Filtrer budsjettkategorier
+        on_track: I rute
+        over_budget: Over budsjett
+      tabs:
+        actual: Faktisk
+        budgeted: Budsjettert
+    copy_previous_prompt:
+      title: Sett opp budsjettet ditt
+      description: Du kan kopiere budsjettet fra %{source_name} eller starte på nytt.
+      copy_button: Kopier fra %{source_name}
+      fresh_button: Start på nytt
+    copy_previous:
+      success: Budsjettet er kopiert fra %{source_name}
+      no_source: Fant ikke noe tidligere budsjett å kopiere fra
+      already_initialized: Dette budsjettet er allerede satt opp
+  budget_categories:
+    bills_reserved: '%{amount} reservert til regninger'
+    bills_reserved_unconvertible:
+      one: '%{count} regning er ikke reservert fordi valutakurs mangler'
+      other: '%{count} regninger er ikke reservert fordi valutakurs mangler'
+    allocation_progress:
+      budget_exceeded_html: Budsjettet er overskredet med <span class="text-red-500 privacy-sensitive">%{amount}</span>
+      left_to_allocate: igjen å fordele
+      over_set: '> 100 % fordelt'
+      percent_set: '%{percent} fordelt'
+    budget_category:
+      rolled_over: +%{amount} overført
+    budget_category_form:
+      monthly_average: '%{amount}/mnd snitt'
+      rollover_label: Overfør ubrukt
+      rollover_title: Overfør ubrukte midler i denne kategorien fra én måned til den neste
+      shared_placeholder: Delt
+      shared_title: La stå tomt for å dele budsjettet til overordnet kategori
+    confirm_button:
+      confirm: Bekreft
+    move:
+      button_title: Flytt penger fra denne kategorien
+      cancel: Avbryt
+      dialog_title: Flytt penger
+      no_destination: Dette er den eneste konvolutten det kan flyttes penger mellom akkurat nå – en kategori kan ikke sende til sin egen overordnede kategori eller underkategori.
+      submit: Flytt
+      amount_label: Beløp
+      available: '%{amount} tilgjengelig'
+      from_label: Fra
+      to_label: Til
+      success: Pengene er flyttet.
+      errors:
+        different_budgets: Begge kategoriene må tilhøre samme budsjett.
+        insufficient_funds: Det er mer enn denne kategorien har fått tildelt.
+        non_positive_amount: Skriv inn et beløp større enn null.
+        parent_child: Penger kan ikke flyttes mellom en kategori og dens egen underkategori – juster underkategorien direkte.
+        same_category: Velg en annen kategori å flytte pengene til.
+        uncategorized: Ukategorisert er ikke en ekte konvolutt, så penger kan ikke flyttes inn i eller ut av den.
+    no_categories:
+      oops: Oi!
+      no_categories_message: Du har ikke opprettet eller tildelt noen utgiftskategorier til transaksjonene dine ennå.
+      use_defaults: Bruk standarder (anbefalt)
+      new_category: Ny kategori
+    index:
+      title: Rediger kategoribudsjettene dine
+      description: Juster kategoribudsjettene for å sette grenser for forbruk. Midler som ikke er fordelt, tildeles automatisk som ukategorisert.
+    show:
+      category: Kategori
+      overview: Oversikt
+      spending: Forbruk %{date}
+      status: Status
+      overspent: overforbruk
+      left: igjen
+      budgeted: Budsjettert
+      rolled_over: Overført
+      monthly_average_spending: Gjennomsnittlig månedlig forbruk
+      monthly_median_spending: Månedlig medianforbruk
+      recent_transactions: Siste transaksjoner
+      view_all_transactions: Se alle transaksjoner i kategorien
+      no_transactions: Fant ingen transaksjoner i denne budsjettperioden.

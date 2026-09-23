@@ -4,9 +4,30 @@ nb:
     securities:
       show:
         disable_mfa: Deaktiver 2FA
-        disable_mfa_confirm: Er du sikker på at du vil deaktivere to-faktor autentisering?
+        disable_mfa_confirm: Er du sikker på at du vil deaktivere tofaktorautentisering?
           Dette vil gjøre kontoen din mindre sikker.
         enable_mfa: Aktiver 2FA
         mfa_description: Legg til et ekstra lag med sikkerhet til kontoen din ved å kreve
           en kode fra autentiseringsappen din når du logger inn
-        mfa_title: To-faktor autentisering
+        mfa_title: Tofaktorautentisering
+        mfa_enabled_status_html: Tofaktorautentisering er <span class="font-medium text-green-600">aktivert</span>
+        mfa_enabled_description: Kontoen din er beskyttet med et ekstra sikkerhetslag.
+        mfa_disabled_status_html: Tofaktorautentisering er <span class="font-medium text-red-600">deaktivert</span>
+        mfa_disabled_description: Aktiver 2FA for å legge til et ekstra sikkerhetslag på kontoen din.
+        webauthn_add: Legg til passnøkkel eller sikkerhetsnøkkel
+        webauthn_added: Lagt til %{date}
+        webauthn_description: Bruk en passnøkkel, Touch ID, Windows Hello eller en fysisk sikkerhetsnøkkel som andre faktor når du logger inn.
+        webauthn_empty: Ingen passnøkler eller sikkerhetsnøkler er registrert ennå.
+        webauthn_last_used: Sist brukt for %{time_ago} siden
+        webauthn_name_label: Navn på nøkkel
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey osv.
+        webauthn_remove: Fjern
+        webauthn_remove_confirm: Er du sikker på at du vil fjerne denne passnøkkelen eller sikkerhetsnøkkelen?
+        webauthn_remove_confirm_body: Du må registrere denne passnøkkelen eller sikkerhetsnøkkelen på nytt før den kan brukes til å bekrefte innlogging.
+        webauthn_title: Passnøkler og sikkerhetsnøkler
+        webauthn_unsupported: Denne nettleseren støtter ikke passnøkler eller sikkerhetsnøkler.
+  webauthn_credentials:
+    default_name: Sikkerhetsnøkkel
+    failure: Kunne ikke lagre passnøkkelen eller sikkerhetsnøkkelen. Prøv igjen.
+    mfa_required: Aktiver tofaktorautentisering før du legger til en passnøkkel eller sikkerhetsnøkkel.
+    success: Passnøkkelen eller sikkerhetsnøkkelen er fjernet.

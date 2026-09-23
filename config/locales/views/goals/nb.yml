@@ -1,0 +1,345 @@
+---
+nb:
+  goals:
+    color_picker:
+      trigger_label: Velg farge og ikon
+      color_heading: Farge
+      icon_heading: Ikon
+      poor_contrast: Dårlig kontrast. Velg en mørkere farge eller
+      auto_adjust: juster automatisk.
+    index:
+      title: Mål
+      subtitle: Spar til det som betyr noe.
+      new_goal: Nytt mål
+      empty_filtered: Ingen mål samsvarer.
+      pending_pledges_callout: Du har ventende spareløfter. Sure bekrefter dem ved neste synkronisering.
+      kpi:
+        contributed_label: Innskutt · siste 30 d
+        velocity_delta_up: ↑ %{percent}%% mot forrige 30 d
+        velocity_delta_down: ↓ %{percent}%% mot forrige 30 d
+        velocity_delta_flat: mot forrige 30 d
+        velocity_delta_zero_base: Første 30 d med aktivitet
+        needs_this_month_label: Trengs denne måneden
+        needs_this_month_sub:
+          one: '%{count} mål henger etter'
+          other: '%{count} mål henger etter'
+        needs_this_month_zero_sub: Ingen mål henger etter
+        on_track_label: Mål i rute
+        on_track_value: '%{on_track} av %{total}'
+        on_track_sub_parts:
+          reached:
+            one: '%{count} nådd'
+            other: '%{count} nådd'
+          behind:
+            one: '%{count} henger etter'
+            other: '%{count} henger etter'
+          no_date:
+            one: '%{count} uten frist'
+            other: '%{count} uten frist'
+          paused:
+            one: '%{count} satt på pause'
+            other: '%{count} satt på pause'
+        on_track_sub_all_good: Alle aktive mål er i rute
+        on_track_all_caught_up: Alt er à jour
+      goals_section:
+        heading: Mål
+        subtitle: Spar til det som betyr noe.
+      ongoing_section:
+        heading: Mål
+      archived_section:
+        heading: Arkivert
+      search:
+        placeholder: Søk i mål…
+        aria_label: Søk i mål
+        empty: Ingen mål samsvarer.
+        empty_with_query: Ingen mål samsvarer med «%{query}».
+        empty_with_filter: Ingen mål samsvarer med dette filteret.
+        empty_with_both: Ingen mål samsvarer med «%{query}» med dette filteret.
+        clear_search: Tøm søk
+        show_all: Vis alle
+      chips_aria: Filtrer mål etter status
+      chips:
+        all: Alle
+        on_track: I rute
+        behind: Henger etter
+        no_target_date: Uten frist
+        paused: På pause
+        completed: Fullført
+    new:
+      heading: Nytt mål
+      subtitle: Spar til noe bestemt.
+    edit:
+      heading: Rediger mål
+      save: Lagre endringer
+    create:
+      success: Målet er opprettet.
+    update:
+      success: Målet er oppdatert.
+    destroy:
+      success: Målet er slettet.
+    pause:
+      success: Målet er satt på pause.
+      invalid_transition: Målet kan ikke settes på pause fra nåværende status.
+    resume:
+      success: Målet er gjenopptatt.
+      invalid_transition: Målet kan ikke gjenopptas fra nåværende status.
+    complete:
+      success: Målet er merket som fullført.
+      invalid_transition: Målet kan ikke fullføres fra nåværende status.
+    archive:
+      success: Målet er arkivert.
+      invalid_transition: Målet kan ikke arkiveres fra nåværende status.
+    unarchive:
+      success: Målet er gjenopprettet.
+      invalid_transition: Målet kan ikke gjenopprettes fra nåværende status.
+    reopen:
+      success: Målet er gjenåpnet.
+      invalid_transition: Målet kan ikke gjenåpnes fra nåværende status.
+    consume:
+      title: Registrer et forbruk
+      subtitle: '%{goal}'
+      amount_label: Hvor mye brukte du?
+      amount_hint: '%{saved} står for øyeblikket bak dette målet.'
+      account_label: Fra hvilken konto?
+      earmark_note: Beløpet du registrerer, er ikke lenger øremerket for dette målet, så de andre målene dine på den kontoen får andelen sin tilbake.
+      cancel: Avbryt
+      submit: Registrer
+      success: '%{amount} registrert som brukt.'
+      errors:
+        non_positive: Angi et beløp større enn null.
+        maintained: En buffer tappes og fylles på igjen, den brukes ikke opp – underskuddet vises allerede på målet.
+        exceeds_target: Det er mer enn dette målet noen gang skulle spare.
+        account_required: Dette målet finansieres av flere kontoer – oppgi hvilken pengene ble tatt fra.
+        account_not_linked: Den kontoen finansierer ikke dette målet.
+        not_active: Dette målet er ikke lenger aktivt, så ingenting kan registreres på det.
+        exceeds_earmark: Det er mer enn målet har øremerket på denne kontoen.
+        transaction_already_claimed: Det uttaket er allerede tilordnet.
+        transaction_not_found: Det uttaket er ikke lenger tilgjengelig for tilordning.
+        no_linked_account: Dette målet har ingen finansieringskonto igjen.
+    unattributed_outflows:
+      heading: Penger gikk ut fra disse kontoene
+      body: Hvis noe av dette ble brukt på %{goal}, marker det, så teller det ikke lenger mot målet.
+      attribute: Det var denne
+    show:
+      edit: Rediger
+      consume: Jeg brukte noe av disse pengene
+      pause: Sett på pause
+      resume: Gjenoppta
+      complete: Merk som fullført
+      archive: Arkiver
+      unarchive: Gjenopprett
+      reopen: Gjenåpne mål
+      delete: Slett
+      reserve_shortfall:
+        heading: Bufferen er under målsaldoen
+        body: Du har %{saved} av %{target}. Sett inn %{missing} for å komme tilbake til målsaldoen.
+      record_pledge_cta: Registrer spareløfte
+      pledge_just_transferred: Registrer en overføring du har gjort
+      pledge_just_saved: Registrer penger du har satt av
+      funding_accounts_heading: Finansieringskontoer
+      funding_accounts:
+        earmarked_of: '%{earmarked} øremerket av %{balance}'
+        empty:
+          heading: Ingen finansieringskontoer tilknyttet ennå
+          body: Rediger målet for å knytte til bankkontoene du sparer på.
+      notes: Notater
+      funding_last_30d: siste 30 d
+      funding_last_90d: siste 90 d
+      status_callout:
+        depleted: '%{amount} under målsaldoen – fyll på for å bygge opp bufferen igjen'
+        behind: spar %{amount}/md. mer for å ta igjen
+        behind_covered: ventende spareløfter dekker gapet
+        on_track: når målet rundt %{date}
+        no_target_date: angi en måldato for å beregne når du er i mål
+      pending_pledge:
+        title:
+          zero: 'Venter: %{amount} til %{account} · utløper i dag'
+          one: 'Venter: %{amount} til %{account} · %{count} dag igjen'
+          other: 'Venter: %{amount} til %{account} · %{count} dager igjen'
+        body_transfer: Bekreftes automatisk når Sure finner et samsvarende innskudd ved neste synkronisering.
+        body_manual: Bekreftes neste gang du oppdaterer saldoen manuelt.
+        pledged_at: Registrert for %{time_ago} siden
+        extend: Forleng med 7 dager
+        cancel: Avbryt
+        confirm_cancel_title: Vil du avbryte dette spareløftet?
+        confirm_cancel_body: Spareløftet på %{amount} blir fjernet. Du kan registrere et nytt når som helst.
+        confirm_cancel_cta: Avbryt spareløfte
+      header:
+        target: Mål %{amount}
+        target_by: Mål %{amount} innen %{date}
+        target_by_past: Mål %{amount} · fristen var %{date}
+      ring:
+        including_used: Inkludert %{amount} som allerede er brukt
+        saved: Spart
+        of: av %{target}
+        to_go: '%{amount} igjen'
+        of_target: av målet
+        market_value: Markedsverdi %{amount}
+        aria_label: Målet er %{percent}% fullført. %{amount} av %{target} spart.
+        aria_label_with_used: Målet er %{percent}% fullført. %{amount} av %{target}, inkludert %{used} som allerede er brukt.
+      projection:
+        heading: Prognose
+        legend_saved: Spart
+        legend_projection: Prognose
+        legend_required: Nødvendig
+        reserve: En buffer holder en målsaldo, så det finnes ingen sluttdato å beregne.
+        reached: Du har nådd målet. Ingen prognose nødvendig.
+        no_target_date: Ingen måldato er angitt. Angi en for å beregne når du er i mål.
+        no_pace: Ingen innskudd ennå. Sett inn penger på en tilknyttet konto for å starte en prognose.
+        behind: Du når ikke målet i nåværende tempo.
+        on_track_html: I nåværende tempo når du dette målet rundt <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        aria_label: Prognosediagram for %{name}
+        today_marker: I dag
+        tooltip_projected: 'Beregnet: %{amount}'
+        tooltip_saved: 'Spart: %{amount}'
+        tooltip_target_relation: '%{percent}% av målet på %{target}'
+      catch_up:
+        title: Spar %{amount}/md. mer for å ta igjen
+        body: Nåværende tempo %{avg}/md. · %{required}/md. kreves for å nå målet.
+        adjust_target_cta: Juster målet i stedet
+      confirm_complete_title: Vil du merke dette målet som fullført?
+      confirm_complete_body: Pengene som er øremerket for det, frigjøres til de andre målene dine på samme konto. Det forsvinner fra listen over pågående mål, og du kan fortsatt arkivere eller gjenopprette det senere.
+      confirm_complete_body_short: Du er på %{progress}%, %{saved} av %{target}. Når du merker målet som fullført, registreres dette som resultatet ditt i stedet for det opprinnelige målet. Vil du fortsette, eller lukke dette og justere målet i stedet?
+      confirm_complete_cta: Merk som fullført
+      confirm_archive_title: Vil du arkivere dette målet?
+      confirm_archive_body: Arkiverte mål forsvinner fra hovedlisten. Du kan gjenopprette dem senere. Arkivering registrerer ikke hva du nådde – merk målet som fullført først hvis du vil beholde det.
+      confirm_archive_cta: Arkiver
+      confirm_delete_title: Vil du slette dette målet?
+      confirm_delete_body: '%{name} og historikken over spareløfter fjernes for godt. Tilknyttede kontoer, saldoer og transaksjoner påvirkes ikke. Arkiver målet i stedet hvis du vil beholde det som dokumentasjon.'
+      confirm_delete_cta: Slett mål
+      paused_banner:
+        title: Dette målet er satt på pause
+        body: Gjenoppta det for å fortsette å følge fremgangen din.
+        resume_cta: Gjenoppta mål
+      archived_banner:
+        title: Dette målet er arkivert
+        body: Gjenopprett det for å fortsette å spare, eller la det stå som dokumentasjon.
+        restore_cta: Gjenopprett mål
+      celebration:
+        heading_reserve: Bufferen er full
+        body_reserve: Bufferen din er på målsaldoen, %{saved} av %{target}. Du trenger ikke gjøre noe – pengene forblir øremerket.
+        heading: Målet er nådd. Godt jobbet!
+        body_reached: Du har nådd målet med %{saved} av %{target}. Det er ikke avsluttet ennå – pengene er fortsatt øremerket for det.
+        close_cta: Avslutt dette målet
+        close_hint: Når du avslutter målet, frigjøres de øremerkede pengene til de andre målene dine på samme konto. Gjør dette når du faktisk har brukt dem.
+        frozen: Nådd %{date} · %{amount}
+        body: Målet ble avsluttet med %{saved} av %{target}. Behold det som dokumentasjon, eller arkiver det nå.
+        archive_cta: Arkiver mål
+      inactive:
+        heading_paused: Dette målet er satt på pause
+        heading_archived: Dette målet er arkivert
+        body: '%{saved} av %{target} spart så langt.'
+      no_target_date:
+        heading: Legg til en måldato
+        body: Angi en frist for å beregne når du er i mål og følge nødvendig tempo.
+        cta: Angi måldato
+      empty:
+        heading: Ingen innskudd ennå
+        body: Overfør penger til den tilknyttede kontoen din. Sure fanger det opp ved neste synkronisering. Eller oppdater saldoen på den manuelle kontoen din.
+    errors:
+      not_found: Fant ikke dette målet. Det kan ha blitt slettet.
+    states:
+      active: Aktiv
+      paused: På pause
+      completed: Fullført
+      archived: Arkivert
+    status:
+      funded: Bufferen er full
+      depleted: Må fylles på
+      on_track: I rute
+      behind: Henger etter
+      reached: Nådd
+      completed: Fullført
+      no_target_date: Uten frist
+      paused: På pause
+      archived: Arkivert
+    empty_state:
+      heading: Ingen mål ennå
+      body: Sett et mål, knytt til kontoene du sparer på, og se fremgangen vokse.
+      subtitle: Sett et mål og begynn å spare mot det.
+      new_goal: Opprett ditt første mål
+      no_depository_accounts: Du trenger minst én bankkonto (brukskonto, sparekonto, HSA, tidsinnskudd, pengemarkedskonto) før du kan opprette et mål.
+      add_account: Legg til en konto
+    goal_card:
+      including_used: Inkludert %{amount} som allerede er brukt
+      no_accounts: Ingen tilknyttede kontoer
+      n_accounts: '%{first} +%{count}'
+      left: igjen
+      aria_progress: '%{percent}% av %{target}'
+      accounts:
+        one: '%{count} konto'
+        other: '%{count} kontoer'
+      no_target_date: Uten frist
+      completed: Fullført
+      past_due: Fristen er passert
+      days_left:
+        one: '%{count} dag igjen'
+        other: '%{count} dager igjen'
+      pace_with_target: '%{avg}/md. · mål %{target}/md.'
+      pace_no_target: '%{avg}/md. i snitt'
+      footer_paused: På pause
+      footer_archived: Arkivert
+      footer_reserve_intact: Bufferen er full
+      footer_reserve_short: '%{amount} må fylles på'
+      footer_reached: Målet er nådd
+      footer_catch_up: Spar %{amount}/md. for å ta igjen
+      footer_no_deadline: Uten frist
+      pending_pledge: Ventende spareløfte
+      pending_count:
+        one: '%{count} venter'
+        other: '%{count} venter'
+      footer_no_pledges: Ingen spareløfter bekreftet ennå
+      footer_last_today: Siste spareløfte bekreftet i dag
+      footer_last_days:
+        one: Siste spareløfte bekreftet for %{count} dag siden
+        other: Siste spareløfte bekreftet for %{count} dager siden
+    form:
+      target_modes:
+        fixed: Et fast beløp
+        months_of_expenses: Et antall måneder med utgifter
+      kinds:
+        one_off:
+          hint: Spar til noe, og avslutt målet når du bruker pengene.
+          label: Engangsmål
+        maintained:
+          hint: En saldo du holder ved like, for eksempel en bufferkonto. Avsluttes aldri.
+          label: Buffer som holdes ved like
+      create: Opprett mål
+      save: Lagre endringer
+      suggested_with_date: Spar {monthly}/md. fordelt på {accounts} for å nå det i tide.
+      suggested_no_date: Angi en måldato for å beregne når du er i mål.
+      errors:
+        name_required: Gi målet ditt et navn.
+        amount_required: Angi et mål over null.
+        accounts_required: Velg minst én finansieringskonto.
+      earmark:
+        headroom: '{left} igjen å øremerke på denne kontoen.'
+        prorata: Målene dine på denne kontoen utgjør {total} mot en saldo på {balance} – de vil utvikle seg forholdsmessig.
+        whole_balance: Denne kontoen finansierer det som er igjen etter de andre øremerkingene.
+        whole_balance_alone: Dette målet bruker hele saldoen på denne kontoen.
+      fields:
+        target_mode: Hvordan målsaldoen settes
+        target_months: Måneder med utgifter
+        target_months_hint: Beregnes på nytt den 1. hver måned ut fra medianen av de månedlige utgiftene dine.
+        name: Navn
+        name_placeholder: Bufferkonto, egenkapital til bolig…
+        target_amount: Målbeløp
+        target_balance: Målsaldo
+        target_balance_pending: Beregnes når du lagrer
+        target_balance_hint: Basert på medianen av de månedlige utgiftene dine for månedene ovenfor. Oppdateres hver måned.
+        target_date: Måldato
+        color: Farge
+        notes: Notater (valgfritt)
+        notes_placeholder: En påminnelse til fremtidige deg…
+        funding_accounts: Finansieringskontoer
+        funding_accounts_hint: Saldoen for dette målet er saldoen (eller den øremerkede delen) på disse kontoene.
+        whole_balance: Hele saldoen
+        earmark_for: Øremerk beløp for %{account}
+        earmark_hint: La beløpet stå tomt for å bruke hele saldoen på kontoen.
+      subtypes:
+        checking: Brukskonto
+        savings: Sparekonto
+        hsa: HSA
+        cd: Tidsinnskudd
+        money_market: Pengemarked
+        other: Annet

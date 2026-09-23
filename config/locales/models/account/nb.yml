@@ -3,10 +3,10 @@ nb:
   activerecord:
     attributes:
       account:
-        balance: Balanse
+        balance: Saldo
         currency: Valuta
-        family: Husholdning
-        family_id: Husholdning
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         name: Navn
         subtype: Undertype
     models:
@@ -15,7 +15,20 @@ nb:
       account/depository: Bankkonto
       account/investment: Investering
       account/loan: Lån
-      account/other_asset: Annet aktivum
+      account/other_asset: Annen eiendel
       account/other_liability: Annen gjeld
       account/property: Eiendom
       account/vehicle: Kjøretøy
+  account_order:
+    balance_asc:
+      label: Saldo (lav til høy)
+      label_short: Saldo ↑
+    balance_desc:
+      label: Saldo (høy til lav)
+      label_short: Saldo ↓
+    name_asc:
+      label: Navn (A–Å)
+      label_short: Navn ↑
+    name_desc:
+      label: Navn (Å–A)
+      label_short: Navn ↓

@@ -1,0 +1,36 @@
+---
+nb:
+  activerecord:
+    attributes:
+      goal:
+        name: Navn
+        target_amount: Målbeløp
+        currency: Valuta
+        target_date: Måldato
+        color: Farge
+        notes: Notater
+        state: Status
+        linked_accounts: Tilknyttede kontoer
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Velg minst én konto som skal finansiere dette målet.
+              whole_account_conflict_on_restore: 'Kan ikke gjenopprette dette målet: «%{account_name}» er nå helt øremerket for «%{goal_name}». Angi et beløp på ett av dem først.'
+            target_mode:
+              months_requires_maintained: Bare en buffer du vedlikeholder kan ha et mål angitt i måneder med utgifter.
+            target_months:
+              blank: Angi hvor mange måneder med utgifter denne bufferen skal dekke.
+              only_with_months_mode: Måneder med utgifter gjelder bare når målet er angitt på den måten.
+            linked_accounts:
+              must_be_fundable: Alle tilknyttede kontoer må være bank- eller investeringskontoer.
+              currency_mismatch: Alle tilknyttede kontoer må ha samme valuta.
+              must_belong_to_family: Tilknyttede kontoer må tilhøre samme husholdning som målet.
+            kind:
+              locked_while_released: Gjenåpne dette målet før du gjør det om til en buffer.
+              locked_once_consumed: Dette målet har allerede registrert penger som brukt, så det kan ikke bli en buffer.
+            target_amount:
+              below_consumed: Kan ikke sette et mål lavere enn det dette målet allerede har registrert som brukt.
+            currency:
+              locked_after_linked: Kan ikke endre valuta etter at målet er knyttet til kontoer.

@@ -6,18 +6,59 @@ nb:
     form:
       interest_rate: Rente
       interest_rate_placeholder: '5.25'
-      initial_balance: Opprinnelig lånebalanse
+      initial_balance: Opprinnelig lånebeløp
       rate_type: Rentetype
       term_months: Løpetid (måneder)
       term_months_placeholder: '360'
+      none: Ingen
+      subtype_prompt: Velg lånetype
+      subtype_none: Ingen
+      rate_type_adjustable: Justerbar
+      rate_type_fixed: Fast
+      rate_type_variable: Flytende
+      rate_changes: Renteendringer
+      rate_changes_hint: Hver rad angir renten som gjelder fra virkningsdatoen til neste rad. Hvis du oppgir en dato på nytt, erstattes den raden i stedet for at det legges til en ny.
+      rate_changes_empty: Ingen renteendringer registrert. Lånet løper med renten ovenfor.
+      rate_change_effective_date: Gjelder fra
+      rate_change_rate: Rente
+      rate_change_add: Legg til renteendring
+      rate_change_remove: Fjern
+      start_date: Utbetalingsdato
+      start_date_hint: Datoen lånet ble utbetalt. La feltet stå tomt for å bruke kontoens startdato.
     new:
       title: Angi lånedetaljer
     overview:
       interest_rate: Rente
       monthly_payment: Månedlig betaling
-      not_applicable: Ikke Aktuelt
-      original_principal: Opprinnelig hovedstol
-      remaining_principal: Gjenværende hovedstol
+      not_applicable: Ikke aktuelt
+      original_principal: Opprinnelig lånebeløp
+      remaining_principal: Gjenværende lånebeløp
       term: Løpetid
       type: Type
       unknown: Ukjent
+      original_payoff_date: Opprinnelig sluttdato
+    tabs:
+      schedule:
+        date: Dato
+        description: Beregnet ut fra opprinnelig lånebeløp, rente og løpetid, fra og med %{start_date}. Ekstra innbetalinger er ikke tatt med.
+        variable_rate_notice: Renten på dette lånet endres over tid. Nedbetalingsplanen beregnes på nytt ved hver registrerte endring, slik at opprinnelig sluttdato beholdes og terminbeløpet justeres. En endring som ikke er registrert ennå, vil forskyve disse tallene.
+        opening_payment: Første terminbeløp
+        interest: Renter
+        monthly_payment: Månedlig betaling
+        number: Nr.
+        payment: Terminbeløp
+        principal: Avdrag
+        remaining_balance: Restgjeld
+        total_cost: Total kostnad
+        total_interest: Totale renter
+      overview:
+        interest_rate: Rente
+        monthly_payment: Månedlig betaling
+        not_applicable: I/A
+        original_payoff_date: Opprinnelig sluttdato
+        original_principal: Opprinnelig lånebeløp
+        remaining_principal: Gjenværende lånebeløp
+        term: Løpetid
+        type: Type
+        unknown: Ukjent
+        edit_loan_details: Rediger lånedetaljer

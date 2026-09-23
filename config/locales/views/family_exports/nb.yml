@@ -12,7 +12,7 @@ nb:
     exporting: Eksporterer...
     index:
       title: Eksporter
-      new: Ny Eksport
+      new: Ny eksport
     table:
       title: Eksporter
       header:
@@ -27,5 +27,22 @@ nb:
           failed: Mislykket
         actions:
           delete: Slett
-          download: Laste ned
+          download: Last ned
+          mark_failed: Merk som mislykket
+          confirm_mark_failed: Denne eksporten har vært inaktiv en stund, og bakgrunnsjobben ble trolig avbrutt. Vil du merke den som mislykket? Du kan opprette en ny eksport med en gang.
       empty: Ingen eksporter ennå.
+    cancel:
+      cancelled: Eksporten er merket som mislykket. Du kan opprette en ny eksport med en gang.
+      not_cancellable: Denne eksporten kan ikke merkes som mislykket akkurat nå – jobben kan fortsatt kjøre. Prøv igjen når den har vært inaktiv i en time.
+    new:
+      dialog_title: Eksporter dataene dine
+      dialog_subtitle: Last ned alle økonomidataene dine
+      whats_included: 'Dette er inkludert:'
+      accounts_and_balances: Alle kontoer og saldoer
+      transaction_history: Transaksjonshistorikk
+      investment_trades: Investeringshandler
+      categories_tags_rules: Kategorier, tagger og regler
+      note_label: Merk
+      note_description: Denne eksporten inneholder alle dataene dine, men bare noen av dem kan importeres tilbake med CSV-importfunksjonen. Vi støtter import av kontoer, transaksjoner (med kategori og tagger) og handler. Andre kontodata kan ikke importeres og er kun til ditt eget arkiv.
+      cancel: Avbryt
+      export_data: Eksporter data

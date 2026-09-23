@@ -1,0 +1,6 @@
+---
+nb:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: SSO-identiteten kan logge inn eller opprette en konto igjen.

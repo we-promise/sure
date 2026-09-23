@@ -3,13 +3,14 @@ nb:
   tag:
     deletions:
       create:
-        deleted: Tag slettet
+        deleted: Taggen er slettet
       new:
         delete_and_leave_uncategorized: Slett "%{tag_name}"
-        delete_and_recategorize: Slett "%{tag_name}" og tildel ny tag
-        delete_tag: Slette tag?
-        explanation: "%{tag_name} vil bli fjernet fra transaksjoner og andre tagbare
-          enheter. I stedet for å la dem være uten tag, kan du også tildele en ny tag
+        delete_and_recategorize: Slett "%{tag_name}" og tildel ny tagg
+        delete_tag: Slette tagg?
+        explanation: "%{tag_name} vil bli fjernet fra transaksjoner og andre taggbare
+          enheter. I stedet for å la dem være uten tagg, kan du også tildele en ny tagg
           nedenfor."
-        replacement_tag_prompt: Velg tag
-        tag: Tag
+        replacement_tag_prompt: Velg tagg
+        tag: Tagg
+        delete_and_reassign: Slett og tildel ny tagg

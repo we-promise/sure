@@ -5,9 +5,14 @@ nb:
       import:
         currency: Valuta
         number_format: Tallformat
+        col_sep: Kolonneskilletegn
+        col_seps:
+          comma: Komma (,)
+          semicolon: Semikolon (;)
     errors:
       models:
         import:
           attributes:
             raw_file_str:
               invalid_csv_format: er ikke et gyldig CSV-format
+          duplicate_headers: 'CSV-overskriftene normaliseres til dupliserte kolonner: %{columns}'
