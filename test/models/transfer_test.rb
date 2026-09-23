@@ -223,12 +223,12 @@ class TransferTest < ActiveSupport::TestCase
     transfer.confirm!
 
     assert_equal category, outflow_entry.transaction.reload.category
+    assert_equal "funds_movement", inflow_entry.transaction.reload.kind
   end
 
   test "confirm! on an already-confirmed transfer does not re-apply kind" do
     transfer = transfers(:one)
     transfer.confirm!
-    outflow_kind = transfer.outflow_transaction.reload.kind
 
     transfer.outflow_transaction.update!(kind: "standard")
     transfer.confirm!

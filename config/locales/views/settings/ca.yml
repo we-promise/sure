@@ -539,6 +539,7 @@ ca:
       accounts_label: Comptes
       advanced_section_title: Avançat
       ai_prompts_label: Prompts d'IA
+      auto_matches_label: Coincidències automàtiques
       api_key_label: Clau API
       api_keys_label: Clau API
       appearance_label: Aparença

@@ -1,0 +1,31 @@
+---
+tr:
+  auto_matches:
+    title: Otomatik Eşleştirme
+    settings:
+      enable_label: Otomatik Eşleştirmeyi Etkinleştir
+      enable_description: Her senkronizasyonda hesaplar arasındaki transfer eşleşmelerini otomatik olarak algılar ve önerir. Öneriler, aşağıda onaylamadıkça uygulanmaz.
+    update_settings:
+      settings_updated: Otomatik eşleştirme ayarları güncellendi
+    bulk_update:
+      invalid_selection: Onaylamak veya reddetmek için en az bir öneri seçin
+      bulk_confirmed:
+        one: 1 transfer onaylandı
+        other: "%{count} transfer onaylandı"
+      bulk_rejected:
+        one: 1 transfer reddedildi
+        other: "%{count} transfer reddedildi"
+    empty:
+      title: Bekleyen otomatik eşleştirme önerisi yok
+      description: Bir senkronizasyon, hesaplarınızdan ikisi arasında olası bir transfer algıladığında, incelemeniz için burada görünecektir.
+    table:
+      from: Kimden
+      to: Kime
+      date: Tarih
+      actions: İşlemler
+      separator: "·"
+    bulk_actions:
+      selected_label: seçildi
+      confirm_selected: Seçilenleri onayla
+      reject_selected: Seçilenleri reddet
+      select_all: Tümünü seç

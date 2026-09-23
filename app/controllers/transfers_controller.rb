@@ -102,6 +102,14 @@ class TransfersController < ApplicationController
       format.html { redirect_back_or_to transactions_url, notice: t(".success") }
       format.turbo_stream
     end
+  rescue ActiveRecord::RecordNotFound
+    # confirm!/reject! raise this when a concurrent confirm/reject already
+    # resolved the transfer (see Transfer#confirm!, #reject!) -- surface it
+    # as a normal flash redirect instead of a raw 404 page.
+    respond_to do |format|
+      format.html { redirect_back_or_to transactions_url, alert: t(".already_resolved") }
+      format.turbo_stream { stream_redirect_back_or_to transactions_url, alert: t(".already_resolved") }
+    end
   end
 
   def update_tags
@@ -251,7 +259,9 @@ class TransfersController < ApplicationController
       if transfer_update_params.key?(:category_id)
         @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
       end
-      @transfer.update!(notes: transfer_update_params[:notes])
+      if transfer_update_params.key?(:notes)
+        @transfer.update!(notes: transfer_update_params[:notes])
+      end
     end
 
     def update_transfer_fees_and_amount

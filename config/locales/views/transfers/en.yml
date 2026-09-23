@@ -53,3 +53,4 @@ en:
       uncategorized: Uncategorized
     update:
       success: Transfer updated
+      already_resolved: This transfer was already confirmed or rejected.

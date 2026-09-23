@@ -675,6 +675,7 @@ fr:
       accounts_label: Comptes
       advanced_section_title: Avancé
       ai_prompts_label: Prompts IA
+      auto_matches_label: Rapprochements automatiques
       api_key_label: Clé API
       api_keys_label: Clés API
       appearance_label: Apparence

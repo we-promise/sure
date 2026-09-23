@@ -795,6 +795,7 @@ tr:
       accounts_label: Hesaplar
       advanced_section_title: Gelişmiş
       ai_prompts_label: Yapay Zeka İstemleri
+      auto_matches_label: Otomatik Eşleştirme
       api_key_label: API Anahtarı
       api_keys_label: API Anahtarları
       appearance_label: Görünüm

@@ -1,0 +1,31 @@
+---
+nl:
+  auto_matches:
+    title: Automatische matching
+    settings:
+      enable_label: Automatische matching inschakelen
+      enable_description: Detecteert en stelt automatisch overschrijvingsmatches tussen rekeningen voor bij elke synchronisatie. Suggesties worden pas toegepast nadat je ze hieronder bevestigt.
+    update_settings:
+      settings_updated: Instellingen voor automatische matching bijgewerkt
+    bulk_update:
+      invalid_selection: Selecteer minstens één suggestie om te bevestigen of af te wijzen
+      bulk_confirmed:
+        one: 1 overschrijving bevestigd
+        other: "%{count} overschrijvingen bevestigd"
+      bulk_rejected:
+        one: 1 overschrijving afgewezen
+        other: "%{count} overschrijvingen afgewezen"
+    empty:
+      title: Geen openstaande suggesties voor automatische matching
+      description: Wanneer een synchronisatie een waarschijnlijke overschrijving tussen twee van je rekeningen detecteert, verschijnt deze hier ter beoordeling.
+    table:
+      from: Van
+      to: Naar
+      date: Datum
+      actions: Acties
+      separator: "·"
+    bulk_actions:
+      selected_label: geselecteerd
+      confirm_selected: Selectie bevestigen
+      reject_selected: Selectie afwijzen
+      select_all: Alles selecteren

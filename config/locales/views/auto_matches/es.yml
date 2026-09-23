@@ -1,0 +1,31 @@
+---
+es:
+  auto_matches:
+    title: Coincidencias automáticas
+    settings:
+      enable_label: Activar coincidencia automática
+      enable_description: Detecta y sugiere automáticamente coincidencias de transferencias entre cuentas en cada sincronización. Las sugerencias no se aplican hasta que las confirmes a continuación.
+    update_settings:
+      settings_updated: Configuración de coincidencia automática actualizada
+    bulk_update:
+      invalid_selection: Selecciona al menos una sugerencia para confirmar o rechazar
+      bulk_confirmed:
+        one: Se confirmó 1 transferencia
+        other: "Se confirmaron %{count} transferencias"
+      bulk_rejected:
+        one: Se rechazó 1 transferencia
+        other: "Se rechazaron %{count} transferencias"
+    empty:
+      title: No hay sugerencias de coincidencia automática pendientes
+      description: Cuando una sincronización detecte una posible transferencia entre dos de tus cuentas, aparecerá aquí para su revisión.
+    table:
+      from: Desde
+      to: Hasta
+      date: Fecha
+      actions: Acciones
+      separator: "·"
+    bulk_actions:
+      selected_label: seleccionadas
+      confirm_selected: Confirmar selección
+      reject_selected: Rechazar selección
+      select_all: Seleccionar todo
