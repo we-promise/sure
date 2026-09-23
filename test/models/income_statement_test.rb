@@ -47,6 +47,26 @@ class IncomeStatementTest < ActiveSupport::TestCase
     end
   end
 
+  test "a new day invalidates cached daily series, family stats and category stats" do
+    period = Period.last_30_days
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::DailyExpenseTotals.expects(:new).twice.returns(stub(call: []))
+    IncomeStatement::FamilyStats.expects(:new).twice.returns(stub(call: []))
+    IncomeStatement::CategoryStats.expects(:new).twice.returns(stub(call: []))
+
+    # Scheduled entries are excluded as of "today", so a result cached
+    # yesterday must not be served once one of them has arrived.
+    [ Date.current, Date.current + 1.day ].each do |day|
+      travel_to day do
+        statement = IncomeStatement.new(@family)
+        statement.daily_expense_series(period: period)
+        statement.median_income
+        statement.median_expense(category: @food_category)
+      end
+    end
+  end
+
   test "calculates totals for transactions" do
     income_statement = IncomeStatement.new(@family)
     totals = income_statement.totals(date_range: Period.last_30_days.date_range)

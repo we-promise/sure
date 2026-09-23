@@ -123,6 +123,7 @@ class IncomeStatement
     Rails.cache.fetch([
       "income_statement", "daily_expense_series", family.id, user&.id,
       included_account_ids_hash, period.start_date, period.end_date,
+      Date.current, # excludes scheduled entries as of "today" -- must roll over daily
       *cache_freshness_key
     ]) do
       DailyExpenseTotals.new(
@@ -249,14 +250,16 @@ class IncomeStatement
     def family_stats(interval: "month")
       @family_stats ||= {}
       @family_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "family_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
+        "income_statement", "family_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version,
+        Date.current # excludes scheduled entries as of "today" -- must roll over daily
       ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
     def category_stats(interval: "month")
       @category_stats ||= {}
       @category_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "category_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version
+        "income_statement", "category_stats", family.id, user&.id, interval, included_account_ids_hash, family.entries_cache_version,
+        Date.current # excludes scheduled entries as of "today" -- must roll over daily
       ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
