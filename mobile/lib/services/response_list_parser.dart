@@ -1,8 +1,7 @@
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
-
 import 'api_config.dart';
+import 'api_http_client.dart';
 
 List<Map<String, dynamic>> extractJsonObjectList(
   dynamic responseData, {
@@ -38,7 +37,7 @@ Future<Map<String, dynamic>> fetchApiList<T>({
   final url = Uri.parse('${ApiConfig.baseUrl}$path');
 
   try {
-    final response = await http.get(
+    final response = await ApiHttpClient.instance.get(
       url,
       headers: {
         ...ApiConfig.getAuthHeaders(accessToken),
