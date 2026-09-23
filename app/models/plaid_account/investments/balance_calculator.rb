@@ -4,6 +4,11 @@ class PlaidAccount::Investments::BalanceCalculator
   NegativeCashBalanceError = Class.new(StandardError)
   NegativeTotalValueError = Class.new(StandardError)
 
+  # How close cash-by-subtraction has to land to zero before we treat the
+  # institution as one that reports positions and cash separately.  Holdings
+  # values arrive as JSON floats, so exact equality is not safe.
+  CASH_DERIVATION_TOLERANCE = 0.01
+
   def initialize(plaid_account, security_resolver:)
     @plaid_account = plaid_account
     @security_resolver = security_resolver
@@ -51,11 +56,33 @@ class PlaidAccount::Investments::BalanceCalculator
       total_investment_account_value - true_holdings_value
     end
 
-    # This is our source of truth.  We assume Plaid's `current_balance` reporting is 100% accurate
-    # Plaid guarantees `current_balance` AND/OR `available_balance` is always present, and based on the docs,
-    # `current_balance` should represent "total account value".
+    # Plaid guarantees `current_balance` AND/OR `available_balance` is always present, and based on the
+    # docs, `current_balance` should represent "total account value".  Most institutions report it that
+    # way and we take it as our source of truth.
+    #
+    # Some do not.  They report only the value of the positions in `current_balance` - or zero - and put
+    # the brokerage cash in `available_balance`, without sending a cash-equivalent holding either.  The
+    # cash then disappears: subtracting the holdings from `current_balance` lands on zero, so
+    # `cash_balance` reports nothing held and the account is understated by the whole cash amount.
+    #
+    # The tell is that zero arriving alongside an institution that still reports available cash - one
+    # that genuinely held none would report none.  Adding the two unconditionally is not an option: it
+    # would double-count every institution that already includes cash in `current_balance`.
     def total_investment_account_value
-      plaid_account.current_balance || plaid_account.available_balance
+      reported_total = plaid_account.current_balance
+
+      return plaid_account.available_balance if reported_total.nil?
+
+      available = plaid_account.available_balance
+
+      return reported_total unless available.present? && available.positive?
+      return reported_total unless cash_derives_to_zero?(reported_total)
+
+      reported_total + available
+    end
+
+    def cash_derives_to_zero?(reported_total)
+      (reported_total - true_holdings_value).abs < CASH_DERIVATION_TOLERANCE
     end
 
     # Plaid holdings summed up, LESS "brokerage cash" holdings (that we've manually identified)

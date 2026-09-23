@@ -80,4 +80,99 @@ class PlaidAccount::Investments::BalanceCalculatorTest < ActiveSupport::TestCase
     # We back this $3,000 from the $4,000 total to get $1,000 in cash balance.
     assert_equal 1000, balance_calculator.cash_balance
   end
+
+  test "adds available cash when the institution reports only positions in current balance" do
+    aapl_security_id = "plaid_aapl_security"
+
+    # Some brokerages report the value of the positions in `current_balance` and keep the
+    # brokerage cash in `available_balance`, sending no cash-equivalent holding at all.
+    @plaid_account.update!(
+      current_balance: 4000,
+      available_balance: 1500,
+      raw_holdings_payload: {
+        transactions: [],
+        holdings: [
+          {
+            security_id: aapl_security_id,
+            cost_basis: 4000,
+            institution_price: 200,
+            institution_value: 4000,
+            quantity: 20
+          }
+        ],
+        securities: [
+          {
+            security_id: aapl_security_id,
+            ticker_symbol: "AAPL",
+            is_cash_equivalent: false,
+            type: "equity",
+            market_identifier_code: "XNAS"
+          }
+        ]
+      }
+    )
+
+    balance_calculator = build_calculator
+
+    assert_equal 5500, balance_calculator.balance
+    assert_equal 1500, balance_calculator.cash_balance
+  end
+
+  test "uses available cash when the institution reports a zero current balance" do
+    # The same brokerages report zero rather than the positions when the account holds
+    # nothing but cash.  Zero is not nil, so it was taken as the total account value.
+    @plaid_account.update!(
+      current_balance: 0,
+      available_balance: 2500,
+      raw_holdings_payload: { transactions: [], holdings: [], securities: [] }
+    )
+
+    balance_calculator = build_calculator
+
+    assert_equal 2500, balance_calculator.balance
+    assert_equal 2500, balance_calculator.cash_balance
+  end
+
+  test "leaves a fully invested account alone when no cash is available" do
+    aapl_security_id = "plaid_aapl_security"
+
+    # Guards the case above: holdings equal the total here too, but the institution
+    # reports no available cash, so there is nothing to add and nothing to fix.
+    @plaid_account.update!(
+      current_balance: 3000,
+      available_balance: 0,
+      raw_holdings_payload: {
+        transactions: [],
+        holdings: [
+          {
+            security_id: aapl_security_id,
+            cost_basis: 3000,
+            institution_price: 200,
+            institution_value: 3000,
+            quantity: 15
+          }
+        ],
+        securities: [
+          {
+            security_id: aapl_security_id,
+            ticker_symbol: "AAPL",
+            is_cash_equivalent: false,
+            type: "equity",
+            market_identifier_code: "XNAS"
+          }
+        ]
+      }
+    )
+
+    balance_calculator = build_calculator
+
+    assert_equal 3000, balance_calculator.balance
+    assert_equal 0, balance_calculator.cash_balance
+  end
+
+  private
+    def build_calculator
+      security_resolver = PlaidAccount::Investments::SecurityResolver.new(@plaid_account)
+      PlaidAccount::Investments::BalanceCalculator.new(@plaid_account, security_resolver: security_resolver)
+    end
 end
