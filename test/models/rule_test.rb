@@ -55,6 +55,32 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal @groceries_category, transaction_entry2.transaction.category
   end
 
+  test "invert amount action uses existing account and name conditions with effective date" do
+    other_account = @family.accounts.create!(name: "Other account", balance: 1000, currency: "USD", accountable: Depository.new)
+    matching_deposit = create_transaction(date: Date.current, account: @account, name: "FIDELITY DEPOSIT", amount: -100)
+    unrelated_fidelity_transaction = create_transaction(date: Date.current, account: @account, name: "FIDELITY PURCHASE", amount: 25)
+    old_fidelity_deposit = create_transaction(date: 2.months.ago.to_date, account: @account, name: "FIDELITY DEPOSIT", amount: -75)
+    other_account_deposit = create_transaction(date: Date.current, account: other_account, name: "FIDELITY DEPOSIT", amount: -50)
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.month.ago.to_date,
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_account", operator: "=", value: @account.id),
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "deposit")
+      ],
+      actions: [ Rule::Action.new(action_type: "invert_transaction_amount") ]
+    )
+
+    assert_equal 1, rule.apply
+    assert_equal 100, matching_deposit.reload.amount
+    assert_equal 25, unrelated_fidelity_transaction.reload.amount
+    assert_equal(-75, old_fidelity_deposit.reload.amount)
+    assert_equal(-50, other_account_deposit.reload.amount)
+    assert_equal 0, rule.apply
+  end
+
   test "exclude transaction rule" do
     transaction_entry = create_transaction(date: Date.current, account: @account, merchant: @whole_foods_merchant)
 
