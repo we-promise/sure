@@ -184,7 +184,14 @@ jobs:
 
     steps:
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y google-chrome-stable curl libvips postgresql-client libpq-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            google-chrome-stable curl libvips postgresql-client libpq-dev
+          # The runner image ships a chromedriver that lags google-chrome-stable.
+          # Drop it so Selenium Manager resolves a driver matching the Chrome we
+          # just installed, instead of the stale one in PATH.
+          sudo rm -f /usr/bin/chromedriver
 
       - name: Checkout code
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1

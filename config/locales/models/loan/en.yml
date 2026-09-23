@@ -1,0 +1,8 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Rate change rows need both an effective date and a rate.
+          rate_change_before_origination: A rate change cannot take effect before the loan originated.
