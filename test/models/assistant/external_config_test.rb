@@ -59,11 +59,36 @@ class Assistant::ExternalConfigTest < ActiveSupport::TestCase
     end
   end
 
-  test "build_conversation_messages truncates to last 20 messages" do
+  test "build_conversation_messages trims to the configured token budget, keeping the newest" do
     chat = chats(:one)
+    chat.messages.destroy_all
 
-    # Create enough messages to exceed the 20-message cap
-    25.times do |i|
+    # ~40 tokens per message (see Assistant::TokenEstimator); a tight budget
+    # should drop the oldest ones rather than truncating by a flat count.
+    30.times do |i|
+      role_class = i.even? ? UserMessage : AssistantMessage
+      role_class.create!(chat: chat, content: "msg #{i} " + ("x" * 90), ai_model: "test")
+    end
+
+    with_env_overrides(
+      "EXTERNAL_ASSISTANT_URL" => "http://x",
+      "EXTERNAL_ASSISTANT_TOKEN" => "t",
+      "EXTERNAL_ASSISTANT_MAX_HISTORY_TOKENS" => "200"
+    ) do
+      external = Assistant::External.new(chat)
+      messages = external.send(:build_conversation_messages)
+
+      assert_operator messages.length, :<, 30
+      assert_match(/\Amsg 29 /, messages.last[:content])
+      assert messages.none? { |m| m[:content].start_with?("msg 0 ") }
+    end
+  end
+
+  test "build_conversation_messages keeps everything when the budget is generous" do
+    chat = chats(:one)
+    chat.messages.destroy_all
+
+    5.times do |i|
       role_class = i.even? ? UserMessage : AssistantMessage
       role_class.create!(chat: chat, content: "msg #{i}", ai_model: "test")
     end
@@ -72,9 +97,24 @@ class Assistant::ExternalConfigTest < ActiveSupport::TestCase
       external = Assistant::External.new(chat)
       messages = external.send(:build_conversation_messages)
 
-      assert_equal 20, messages.length
-      # Last message should be the most recent one we created
-      assert_equal "msg 24", messages.last[:content]
+      assert_equal 5, messages.length
+      assert_equal "msg 4", messages.last[:content]
+    end
+  end
+
+  test "max_history_tokens falls back to the default when unset or invalid" do
+    with_env_overrides("EXTERNAL_ASSISTANT_MAX_HISTORY_TOKENS" => nil) do
+      assert_equal Assistant::External::DEFAULT_MAX_HISTORY_TOKENS, Assistant::External.max_history_tokens
+    end
+
+    with_env_overrides("EXTERNAL_ASSISTANT_MAX_HISTORY_TOKENS" => "not-a-number") do
+      assert_equal Assistant::External::DEFAULT_MAX_HISTORY_TOKENS, Assistant::External.max_history_tokens
+    end
+  end
+
+  test "max_history_tokens reads a configured positive value" do
+    with_env_overrides("EXTERNAL_ASSISTANT_MAX_HISTORY_TOKENS" => "1000") do
+      assert_equal 1000, Assistant::External.max_history_tokens
     end
   end
 

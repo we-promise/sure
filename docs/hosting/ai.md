@@ -415,6 +415,7 @@ EXTERNAL_ASSISTANT_TOKEN=your-api-token
 EXTERNAL_ASSISTANT_AGENT_ID=main                 # Optional, defaults to "main"
 EXTERNAL_ASSISTANT_SESSION_KEY=agent:main:main   # Optional, for session persistence
 EXTERNAL_ASSISTANT_ALLOWED_EMAILS=user@example.com  # Optional, comma-separated allowlist
+EXTERNAL_ASSISTANT_MAX_HISTORY_TOKENS=4096       # Optional, conversation history budget sent to the agent
 ```
 
 When environment variables are set, the corresponding UI fields are disabled (env takes precedence).

@@ -25,6 +25,18 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
       scopes: "read_write"
     )
 
+    # For endpoint coverage that must go through the API-key auth path
+    # (see docs/llm-guides/api-endpoint-consistency.md) rather than OAuth.
+    @user.api_keys.active.destroy_all
+    @api_key = ApiKey.create!(
+      user: @user,
+      name: "Test Read Key",
+      scopes: [ "read" ],
+      source: "web",
+      display_key: "test_ro_#{SecureRandom.hex(8)}"
+    )
+    Redis.new.del("api_rate_limit:#{@api_key.id}")
+
     @chat = chats(:one)
   end
 
@@ -59,6 +71,43 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     response_body = JSON.parse(response.body)
     assert_equal @chat.id, response_body["id"]
     assert response_body["messages"].is_a?(Array)
+  end
+
+  test "index pagination reports the actual page limit" do
+    get "/api/v1/chats", headers: api_headers(@api_key)
+    assert_response :success
+
+    response_body = JSON.parse(response.body)
+    assert_equal 20, response_body["pagination"]["per_page"]
+  end
+
+  test "show pagination reports the actual page limit" do
+    get "/api/v1/chats/#{@chat.id}", headers: api_headers(@api_key)
+    assert_response :success
+
+    response_body = JSON.parse(response.body)
+    assert_equal 50, response_body["pagination"]["per_page"]
+  end
+
+  test "show returns the newest messages, in chronological order, once a chat exceeds one page" do
+    @chat.messages.destroy_all
+
+    60.times do |i|
+      role_class = i.even? ? UserMessage : AssistantMessage
+      role_class.create!(chat: @chat, content: "msg #{i}", ai_model: "test", created_at: i.minutes.from_now)
+    end
+
+    get "/api/v1/chats/#{@chat.id}", headers: api_headers(@api_key)
+    assert_response :success
+
+    response_body = JSON.parse(response.body)
+    contents = response_body["messages"].map { |m| m["content"] }
+
+    assert_equal 50, contents.length
+    # The oldest 10 (msg 0..9) fell off the newest-first page; the rest are
+    # present in ascending (display) order with the newest message last.
+    assert_equal "msg 10", contents.first
+    assert_equal "msg 59", contents.last
   end
 
   test "should create chat with write scope" do
