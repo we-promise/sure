@@ -72,6 +72,45 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-provider-name='apple wallet'] button[disabled]", text: "App Store"
   end
 
+  test "Wallet-only connections never offer Sync all including when repair is needed" do
+    Provider::PlaidAdapter.configuration.stubs(:configured?).returns(false)
+    Provider::PlaidEuAdapter.configuration.stubs(:configured?).returns(false)
+    users(:empty).update!(family: Family.create!(name: "Wallet only", currency: "USD"))
+    financekit_setup(user: users(:empty))
+    sign_in @user
+
+    [ "active", "repair_required" ].each do |status|
+      @item.update!(status: status)
+      get settings_providers_url
+
+      assert_response :success
+      assert_select "turbo-frame#financekit-providers-panel"
+      connections = @controller.view_assigns.values_at("connected", "needs_attention").flatten
+      assert_equal [ "financekit" ], connections.map { |entry| entry[:provider_key] }
+      assert_select "form[action=?]", sync_all_settings_providers_path, count: 0
+    end
+
+    @family.simplefin_items.create!(name: "Test bank", access_url: "https://example.com/access")
+    get settings_providers_url
+    assert_response :success
+    assert_select "form[action=?]", sync_all_settings_providers_path
+  end
+
+  test "Wallet settings retain disabled accounts but exclude pending deletion" do
+    financekit_setup
+    @source.account.update!(status: "disabled")
+    get settings_providers_url
+    assert_response :success
+    assert_select "turbo-frame#financekit-providers-panel a[href=?]", account_path(@source.account)
+
+    @source.account.update!(status: "pending_deletion")
+    get settings_providers_url
+    assert_response :success
+    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "a[href=?]", account_path(@source.account), count: 0
+    assert_select "[data-provider-name='apple wallet']"
+  end
+
   test "Wallet summary excludes another family's connections" do
     financekit_setup(user: users(:empty))
 

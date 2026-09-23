@@ -337,7 +337,7 @@ class Settings::ProvidersController < ApplicationController
       accessible_account_ids = Current.family.accounts.accessible_by(Current.user).pluck(:id).to_set
       @financekit_connections = Current.family.financekit_items.where(status: %w[active repair_required])
         .ordered.includes(:accounts).filter_map do |item|
-          accounts = item.accounts.select { |account| accessible_account_ids.include?(account.id) }
+          accounts = item.accounts.select { |account| accessible_account_ids.include?(account.id) && !account.pending_deletion? }
           { item: item, accounts: accounts } if accounts.any?
         end
 
@@ -348,6 +348,7 @@ class Settings::ProvidersController < ApplicationController
       @connected        = entries.select { |e| e[:summary][:status] == :ok }
       @needs_attention  = entries.select { |e| [ :warn, :err ].include?(e[:summary][:status]) }
       @available        = entries.select { |e| e[:summary][:status] == :off }
+      @can_sync_all = (@connected + @needs_attention).any? { |entry| entry[:sync_supported] != false }
 
       @health = view_context.provider_health_strip(connected: @connected, needs_attention: @needs_attention)
     end

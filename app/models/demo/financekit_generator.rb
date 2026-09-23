@@ -22,6 +22,8 @@ class Demo::FinancekitGenerator
   # Additive and repeatable: never replace an existing Wallet enrollment or
   # clear a family's data. These synthetic records need no device or feature flags.
   def generate!
+    raise "FinanceKit demo seeding is only available in development/test" unless Rails.env.local?
+
     @funding_accounts_to_sync = []
     item = @family.with_lock do
       existing = @family.financekit_items.find_by(enrollment_id: ENROLLMENT_ID)

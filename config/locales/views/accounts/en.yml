@@ -197,6 +197,7 @@ en:
       warning_can_delete: After unlinking, you will be able to delete the account if needed
       confirm_button: Confirm and unlink
     unlink:
+      managed_in_app: "Manage Apple Wallet connections in the Sure iOS app."
       success: "Account unlinked successfully. It is now a manual account."
       not_linked: "Account is not linked to a provider"
       error: "Failed to unlink account: %{error}"

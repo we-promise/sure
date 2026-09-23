@@ -3,6 +3,7 @@ class AccountsController < ApplicationController
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
   before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
+  before_action :ensure_provider_unlinkable, only: %i[confirm_unlink unlink]
   include Periodable
 
   def index
@@ -236,17 +237,9 @@ class AccountsController < ApplicationController
   end
 
   def confirm_unlink
-    unless @account.linked?
-      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
-    end
   end
 
   def unlink
-    unless @account.linked?
-      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
-      return
-    end
-
     begin
       Account.transaction do
         # Detach holdings from provider links before destroying them
@@ -317,6 +310,13 @@ class AccountsController < ApplicationController
   end
 
   private
+    def ensure_provider_unlinkable
+      return if @account.can_unlink_provider?
+
+      message = @account.linked? ? "managed_in_app" : "not_linked"
+      redirect_to account_path(@account), alert: t("accounts.unlink.#{message}")
+    end
+
     def family
       Current.family
     end

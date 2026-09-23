@@ -80,7 +80,7 @@ credentials or content type) do not create these model-level events.
 
 ## Local sample accounts
 
-The full demo generator includes a synthetic Apple Wallet connection with Apple
+In development/test, the full demo generator includes a synthetic Apple Wallet connection with Apple
 Card (`CreditCard`), Apple Cash, and Nancy's Apple Cash (`Depository`, subtype `cash`). It includes a
 year of card purchases/payments and cash purchases/top-ups, plus pending activity,
 source identities, balance observations, and acceptance/import timestamps.
@@ -105,8 +105,8 @@ with merchant-specific categories and paired transfers. Apple Card payments and
 Apple Cash top-ups come from the demo owner's manual Chase Premier Checking
 account; if absent, a funded Wallet Demo Checking account is created. Subsequent
 reruns preserve category edits and do not duplicate either transfer leg.
-The standalone task is restricted
-to development/test and does not enable FinanceKit feature flags or change user
+FinanceKit demo generation is restricted to development/test, including when
+called by the full generator or sample-data reset flow. It does not enable FinanceKit feature flags or change user
 permissions. These records simulate imported data; no iOS device is required.
 
 ## Wallet logo

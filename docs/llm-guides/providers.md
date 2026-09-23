@@ -18,6 +18,13 @@ connection name. A panel's setup form and instructions carry no logo.
 
 Give each new provider a registry entry with a brand domain. Only a provider with no single
 brand behind it (on-chain wallets) omits the domain and sets `logo_icon` instead.
+
+Apple Wallet is an explicitly requested exception to remote brand-image loading:
+its `apple.com` registry entry uses a bundled `logo_asset` through `ProviderLogo`
+so it displays the Wallet product icon even without Apple or Brandfetch access.
+Keep its generic Wallet icon fallback. Other branded providers retain the
+domain-based flow above.
+
 Institution logos are a separate concept and belong on accounts through
 `Account#logo_url`, never on a provider.
 

@@ -6,6 +6,20 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     @admin_user = create_user!(@family, "demo-admin@example.com")
   end
 
+  test "production sample reset skips synthetic Wallet enrollment and completes other seeding" do
+    Rails.stubs(:env).returns(ActiveSupport::EnvironmentInquirer.new("production"))
+    generator = Demo::Generator.new(seed: 42)
+    generator.stubs(:ensure_admin_user!).returns(@admin_user)
+    %i[create_realistic_categories! create_realistic_accounts! create_realistic_transactions!
+       generate_budget_auto_fill! generate_goals!].each do |step|
+      generator.expects(step).with(@family)
+    end
+    @family.expects(:sync_later)
+    Demo::FinancekitGenerator.expects(:new).never
+
+    generator.generate_new_user_data_for!(@family, email: @admin_user.email)
+  end
+
   test "monitoring api key creation reassigns stale demo monitoring key owned by another user" do
     stale_family = Family.create!(name: "Old Demo Family")
     stale_user = create_user!(stale_family, "old-demo-admin@example.com")

@@ -8,6 +8,17 @@ class Demo::FinancekitGeneratorTest < ActiveSupport::TestCase
     @checking.depository.update!(subtype: "checking")
   end
 
+  test "FinanceKit demo generation refuses nonlocal environments before writing data" do
+    Rails.stubs(:env).returns(ActiveSupport::EnvironmentInquirer.new("production"))
+
+    assert_no_difference [ "Account.count", "FinancekitItem.count", "Entry.count" ] do
+      error = assert_raises(RuntimeError) do
+        Demo::FinancekitGenerator.new(families(:dylan_family)).generate!
+      end
+      assert_match(/only available in development\/test/, error.message)
+    end
+  end
+
   test "seeds linked Apple Card and Apple Cash with source identities and realistic activity" do
     family = families(:dylan_family)
     flags_before = ENV.values_at("FINANCEKIT_ENABLED", "FINANCEKIT_FAMILY_IDS")

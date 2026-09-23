@@ -33,6 +33,32 @@ class FinancekitAccountsTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Synthetic shop"
   end
 
+  test "Wallet accounts cannot use generic unlink controls or endpoints" do
+    account = @source.account
+    provider = account.account_providers.sole
+    credential_digest = @item.credential_digest
+
+    get accounts_url
+    assert_response :success
+    assert_select "a[href=?]", confirm_unlink_account_path(account), count: 0
+    assert_select "a[href=?]", select_provider_account_path(account), count: 0
+
+    get confirm_unlink_account_url(account)
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.unlink.managed_in_app"), flash[:alert]
+
+    assert_no_difference [ "AccountProvider.count", "FinancekitAccount.count" ] do
+      delete unlink_account_url(account)
+    end
+    assert_redirected_to account_url(account)
+    assert_equal I18n.t("accounts.unlink.managed_in_app"), flash[:alert]
+    assert_equal provider, account.reload.account_providers.sole
+    assert_equal "active", @item.reload.status
+    assert_equal credential_digest, @item.credential_digest
+    accept_and_apply
+    assert account.entries.exists?(name: "Synthetic shop")
+  end
+
   test "index shows disabled Wallet accounts but excludes pending deletion" do
     @source.account.update!(status: "disabled")
     get accounts_url
