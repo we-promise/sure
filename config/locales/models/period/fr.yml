@@ -53,3 +53,4 @@ fr:
       comparison_label: vs. mois dernier
       label: Le mois dernier
       label_short: LM
+    range: '%{start_date} – %{end_date}'

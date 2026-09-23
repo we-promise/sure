@@ -16,6 +16,9 @@ fr:
       resize_left_sidebar: Redimensionner la barre latérale des comptes
       resize_right_sidebar: Redimensionner la barre latérale de l'assistant
       skip_to_main: Aller au contenu principal
+      release_highlight:
+        title: Nouveautés
+        done: Compris
     auth:
       existing_account: Déjà un compte ?
       no_account: Nouveau sur %{product_name} ?

@@ -9,6 +9,14 @@ fr:
         month_of_year: Mois
         weekday: Jour de la semaine
         weekday_ordinal: Rang dans le mois
+      recurring_transaction/recurrence_rules:
+        base: 'Règle de récurrence :'
+        frequency: Fréquence
+        interval: Intervalle
+        day_of_month: Jour du mois
+        weekday: Jour de la semaine
+        weekday_ordinal: Semaine du mois
+        month_of_year: Mois
     errors:
       models:
         recurrence_rule:

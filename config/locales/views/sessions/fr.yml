@@ -5,6 +5,7 @@ fr:
       invalid_credentials: Adresse e-mail ou mot de passe invalide.
       local_login_disabled: La connexion locale par mot de passe est désactivée. Veuillez
         utiliser l'authentification unique.
+      account_deactivated: Ce compte a été désactivé. Veuillez contacter un administrateur.
     destroy:
       logout_successful: Vous avez été déconnecté avec succès.
     failure:

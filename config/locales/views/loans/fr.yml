@@ -16,6 +16,15 @@ fr:
       subtype_prompt: Sélectionner le type de prêt
       term_months: Durée (mois)
       term_months_placeholder: '360'
+      rate_changes: Changements de taux
+      rate_changes_hint: Chaque ligne fixe le taux applicable à partir de sa date d'effet jusqu'au changement suivant. Saisir à nouveau une date remplace la ligne existante au lieu d'en ajouter une seconde.
+      rate_changes_empty: Aucun changement de taux enregistré. Le taux d'intérêt indiqué ci-dessus s'applique à toute la durée du prêt.
+      rate_change_effective_date: Date d'effet
+      rate_change_rate: Taux
+      rate_change_add: Ajouter un changement de taux
+      rate_change_remove: Supprimer
+      start_date: Date de déblocage
+      start_date_hint: Date à laquelle les fonds du prêt ont été débloqués. Laissez vide pour utiliser la date d'ouverture du compte.
     new:
       title: Saisir les détails du prêt
     overview:
@@ -27,6 +36,7 @@ fr:
       term: Durée
       type: Type
       unknown: Inconnu
+      original_payoff_date: Date de fin initiale
     tabs:
       overview:
         edit_loan_details: Modifier les détails du prêt
@@ -38,3 +48,17 @@ fr:
         term: Durée
         type: Type
         unknown: Inconnu
+        original_payoff_date: Date de fin initiale
+      schedule:
+        date: Date
+        description: Projection établie à partir du capital initial, du taux et de la durée, à compter du %{start_date}. Les remboursements anticipés ne sont pas pris en compte.
+        variable_rate_notice: Le taux de ce prêt évolue dans le temps. L'échéancier est recalculé à chaque changement enregistré, en conservant la date de fin initiale et en ajustant la mensualité ; un changement qui n'a pas encore été enregistré modifiera ces montants.
+        opening_payment: Mensualité initiale
+        interest: Intérêts
+        monthly_payment: Mensualité
+        number: N°
+        payment: Échéance
+        principal: Capital
+        remaining_balance: Capital restant dû
+        total_cost: Coût total
+        total_interest: Total des intérêts

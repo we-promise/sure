@@ -12,8 +12,7 @@ fr:
       manual: Manuel
     cleaned_up: "%{count} transactions récurrentes obsolètes nettoyées"
     cleanup_stale: Nettoyer les obsolètes
-    confirm_delete: Êtes-vous sûr(e) de vouloir supprimer cette transaction récurrente
-      ?
+    confirm_delete: "Supprimer %{name} de vos factures ? Vos transactions restent exactement telles quelles. Seuls la facture et son échéancier de paiement sont supprimés."
     confirm_delete_income: Supprimer %{name} de vos revenus ? Vos transactions restent exactement telles quelles. Seuls le revenu et son échéancier sont supprimés.
     confirmed: Facture ajoutée à vos transactions récurrentes
     create:

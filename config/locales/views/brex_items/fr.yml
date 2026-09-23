@@ -87,12 +87,12 @@ fr:
       partial_invalid: "%{created_count} comptes ont été associés avec succès, %{already_linked_count}
         comptes étaient déjà associés, %{invalid_count} comptes avaient des noms non
         valides"
-      partial_success: 'Compte(s) %{created_count} associé(s) avec succès. %{already_linked_count}
-        comptes étaient déjà associés : %{already_linked_names}'
+      partial_success: '%{created_count} compte(s) associé(s) avec succès. %{already_linked_count}
+        compte(s) déjà associé(s) : %{already_linked_names}'
       select_connection: Choisissez une connexion Brex avant de lier des comptes.
       success:
-        one: Compte %{count} associé avec succès
-        other: Comptes %{count} associés avec succès
+        one: "%{count} compte associé avec succès"
+        other: "%{count} comptes associés avec succès"
     link_existing_account:
       account_already_linked: Ce compte est déjà lié à un fournisseur
       api_error: 'Erreur API : %{message}'
@@ -286,7 +286,7 @@ fr:
       success: La synchronisation a commencé
     sync_status:
       all_synced:
-        one: Compte %{count} synchronisé
+        one: "%{count} compte synchronisé"
         other: "%{count} comptes synchronisés"
       no_accounts: Aucun compte trouvé
       partial_setup: "%{synced} synchronisé, %{pending} doit être configuré"

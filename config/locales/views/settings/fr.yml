@@ -7,6 +7,7 @@ fr:
         main_system_prompt:
           subtitle: Instructions fondamentales qui définissent le comportement de l'assistant AI dans toutes les conversations de chat
           title: Prompt Système Principal
+          label: Prompt système du chat
         merchant_detector:
           subtitle: L'IA identifie et enrichit les données de transaction avec des informations sur le marchand
           title: Détection du marchand
@@ -16,6 +17,27 @@ fr:
         transaction_categorizer:
           subtitle: L'IA catégorise automatiquement vos transactions en fonction de vos catégories définies
           title: Catégorisation des transactions
+        save: Enregistrer les prompts
+        save_confirm:
+          title: Enregistrer des prompts IA personnalisés ?
+          body: Les prompts personnalisés remplacent les instructions système intégrées et les garde-fous de sécurité (comme les restrictions sur les conseils financiers) pour votre foyer.
+          dont_show_again: Ne plus afficher cet avertissement
+          cancel: Annuler
+          confirm: Confirmer
+      prompt_field:
+        provider_label: Fournisseur
+        prompt_label: Prompt
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Rétablir la valeur par défaut
+        reset_confirm_title: Rétablir le prompt par défaut ?
+        reset_confirm_body: Votre prompt personnalisé sera supprimé et les instructions intégrées par défaut seront rétablies.
+        status_custom: Prompt personnalisé utilisé
+        status_default: Prompt intégré par défaut utilisé
+        format_risk: 'Votre prompt %{provider} ne contient plus l''exemple {"%{key}": ...}. Chaque requête demande toujours ce format, donc l''analyse de la réponse fonctionne en général, mais un prompt qui exige un autre format de sortie la fera échouer.'
+      update:
+        success: Prompts IA mis à jour
+        multiple_errors: Plusieurs prompts sont trop longs (%{count} caractères maximum)
     appearances:
       show:
         dashboard_subtitle: Personnalisez l'affichage du tableau de bord
@@ -36,9 +58,11 @@ fr:
         disable_modal_click_outside_description: Empêche les fenêtres modales de se fermer en cliquant à l'extérieur. Utile pour éviter de perdre accidentellement des modifications non sauvegardées.
         transactions_title: Transactions
         transactions_subtitle: Personnalisez l'affichage des transactions
+        dashboard_account_groups_title: Sections dépliées par défaut
+        dashboard_account_groups_description: Ces sections de comptes s'afficheront dépliées sur le tableau de bord et dans la barre latérale des comptes. Vous pouvez toujours les replier manuellement à tout moment.
     background_jobs:
       cancel:
-        cancelled: "L'opération a été marquée comme annulée."
+        cancelled: "Opération %{type} marquée comme perdue."
         cancelled_error: "Marqué en échec par un administrateur : la tâche en arrière-plan a été présumée perdue."
         not_cancellable: Cette opération ne peut pas être modifiée pour l'instant, sa tâche est peut-être encore en file d'attente ou en cours. Réessayez après 30 minutes d'inactivité.
       operation:
@@ -560,6 +584,9 @@ fr:
         trade_republic: Synchronisez votre compte d'investissement Trade Republic via une connexion web sécurisée en lecture seule.
         trading212: Synchronisez votre portefeuille d'investissement Trading 212 à l'aide d'une clé d'API en lecture seule.
         wise: Synchronisez automatiquement vos soldes multi-devises Wise et vos transferts internationaux.
+        monobank: Synchronisez vos cartes et cagnottes Monobank ukrainiennes avec un jeton API personnel.
+        fio: Synchronisez un compte Fio banka avec un jeton API en lecture seule.
+        coinspot: Synchronisez les soldes, valeurs en AUD, transferts, dépôts, retraits et l'historique des ordres CoinSpot avec une clé API en lecture seule.
       trade_republic_panel:
         accounts_discovered:
           one: 1 compte Trade Republic détecté.
@@ -636,6 +663,10 @@ fr:
           step_3: Collez les deux ci-dessous, sélectionnez votre environnement et la devise du compte, puis enregistrez.
         sync: Synchroniser
         update_configuration: Mettre à jour la configuration
+        syncing: Synchronisation...
+        disconnect: Déconnecter le compte Trading 212
+        default_account_name: Compte Trading 212
+        add_account: Ajouter un autre compte
       up_panel:
         step_1_html: Allez sur %{link} et générez un jeton d'accès personnel.
         step_2: Copiez votre jeton d'accès personnel.
@@ -643,6 +674,36 @@ fr:
       update:
         no_changes: Aucune modification n'a été apportée
         updated_successfully: Paramètres du fournisseur mis à jour avec succès
+      coinspot_panel:
+        step1_html: Accédez aux <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">paramètres API de CoinSpot</a>
+        step2: Créez une clé API avec un accès en lecture seule aux soldes et à l'historique.
+        step3: Collez la clé API et le secret ci-dessous.
+        read_only_title: Synchronisation de la plateforme en lecture seule uniquement
+        read_only_body: N'accordez aucune autorisation d'envoi, de retrait, de trading ou de transfert. Sure importe uniquement les soldes, les valeurs en AUD, les transferts, les dépôts, les retraits et l'historique des ordres exécutés.
+        default_connection_name: CoinSpot
+        add_connection: Ajouter une connexion CoinSpot
+        update_connection: Mettre à jour la connexion
+        connection_name_label: Nom de la connexion
+        connection_name_placeholder: CoinSpot principal
+        api_key_label: Clé API
+        api_key_placeholder: Collez votre clé API CoinSpot
+        keep_api_key_placeholder: Laissez vide pour conserver la clé API existante
+        api_secret_label: Secret API
+        api_secret_placeholder: Collez votre secret API CoinSpot
+        keep_api_secret_placeholder: Laissez vide pour conserver le secret API existant
+        setup_accounts: Configurer le compte
+        syncing: Synchronisation...
+        sync: Synchroniser
+        disconnect: Déconnecter
+        disconnect_confirm: Voulez-vous vraiment déconnecter %{name} ?
+      monobank_panel:
+        step_1_html: Rendez-vous sur %{link}, connectez-vous avec l'application Monobank et générez un jeton personnel.
+        step_2: 'Copiez le jeton : il ne s''affiche qu''une seule fois.'
+        step_3: Collez le jeton ci-dessous, enregistrez, puis liez les cartes et cagnottes que vous souhaitez suivre.
+      fio_panel:
+        step_1_html: Connectez-vous à la banque en ligne %{link} et ouvrez Settings → API.
+        step_2: Créez un jeton avec un accès en lecture seule (« Sledování účtu »). Sa création nécessite une authentification forte et il reste valable jusqu'à 180 jours.
+        step_3: 'Collez le jeton ci-dessous et enregistrez. Un jeton donne accès à un seul compte : ajoutez une connexion par compte Fio.'
     securities:
       show:
         disable_mfa: Désactiver la 2FA

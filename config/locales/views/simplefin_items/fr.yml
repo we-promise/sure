@@ -99,7 +99,7 @@ fr:
     setup_accounts:
       account_card:
         balance: Solde
-      account_type_checking_savings: Chèque ou épargne
+      account_type_checking_savings: Compte courant ou d'épargne
       account_type_checking_savings_desc: Comptes bancaires réguliers
       account_type_credit_card: Carte de crédit
       account_type_credit_card_desc: Comptes de carte de crédit

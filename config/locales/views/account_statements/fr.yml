@@ -2,13 +2,13 @@
 fr:
   account_statements:
     account_tab:
-      coverage_description: Mois historiques soutenus par des relevés téléchargés
-        et des vérifications de solde.
+      coverage_description: Mois de l'historique couverts par des relevés importés
+        et des contrôles de solde.
       coverage_range: "%{start} - %{end}"
-      coverage_title: Couverture du relevé
-      empty: Aucun relevé lié à ce compte pour l'instant.
+      coverage_title: Couverture des relevés
+      empty: Aucun relevé associé à ce compte pour l'instant.
       open_inbox: Boîte de réception
-      statements_title: Déclarations
+      statements_title: Relevés
       year_label: Année de couverture
     balance:
       unknown: Inconnu
@@ -16,45 +16,45 @@ fr:
       status:
         ambiguous: Ambigu
         covered: Couvert
-        duplicate: Dupliqué
-        mismatched: Incompatibilité
+        duplicate: Doublon
+        mismatched: Écart
         missing: Manquant
-        not_expected: Pas prévu
+        not_expected: Non attendu
     create:
       duplicates:
-        one: 1 instruction en double a été ignorée.
-        other: "%{count} instructions en double ont été ignorées."
-      invalid_file_type: Téléchargez une déclaration PDF, CSV ou XLSX en respectant
-        la taille limite.
+        one: "%{count} relevé en double a été ignoré."
+        other: "%{count} relevés en double ont été ignorés."
+      invalid_file_type: Importez un relevé PDF, CSV ou XLSX qui respecte la taille
+        maximale.
       no_files: Sélectionnez au moins un fichier de relevé.
       success:
-        one: 1 déclaration téléchargée.
-        other: "%{count} relevés téléchargés."
+        one: "%{count} relevé importé."
+        other: "%{count} relevés importés."
     destroy:
-      failure: La déclaration n'a pas pu être supprimée.
-      success: Déclaration supprimée.
+      failure: Le relevé n'a pas pu être supprimé.
+      success: Relevé supprimé.
     form:
-      account_upload: Télécharger la déclaration
-      files_hint: PDF, CSV ou XLSX. %{max_size}Mo maximum par fichier.
+      account_upload: Importer un relevé
+      files_hint: PDF, CSV ou XLSX. %{max_size} Mo maximum par fichier.
       files_label: Fichiers de relevés
-      inbox_upload: Télécharger
+      inbox_upload: Importer
     index:
       account_label: Compte
-      confidence: "%{confidence} correspond"
-      empty_linked: Aucune déclaration liée pour l'instant.
-      empty_unmatched: La boîte de réception des déclarations est vide.
-      leave_unmatched: Laisser non lié
-      linked_title: Déclarations liées
+      confidence: "Correspondance : %{confidence}"
+      empty_linked: Aucun relevé associé pour l'instant.
+      empty_unmatched: Aucun relevé en attente dans la boîte de réception.
+      leave_unmatched: Laisser non associé
+      linked_title: Relevés associés
       no_suggestion: Aucune suggestion
       storage_used: Stockage utilisé
-      title: Coffre-fort de relevés
-      unmatched_title: Boîte de réception non liée
-      upload_description: Téléchargez des relevés dans la boîte de réception ou choisissez
-        un compte à associer immédiatement.
-      upload_title: Télécharger des relevés
+      title: Coffre-fort des relevés
+      unmatched_title: Relevés non associés
+      upload_description: Importez des relevés dans la boîte de réception, ou choisissez
+        un compte pour les associer immédiatement.
+      upload_title: Importer des relevés
     link:
-      no_account: Choisissez un compte avant de lier ce relevé.
-      success: Instruction liée à %{account}.
+      no_account: Choisissez un compte avant d'associer ce relevé.
+      success: Relevé associé à %{account}.
     period:
       unknown: Période inconnue
     reconciliation:
@@ -62,61 +62,61 @@ fr:
         closing_balance: Solde de clôture
         opening_balance: Solde d'ouverture
         period_movement: Mouvements de la période
-        unknown_check: Chèque inconnu
-      matched: Correspondant
-      mismatched: Incompatibilité
+        unknown_check: Contrôle inconnu
+      matched: Concordant
+      mismatched: Écart
       unavailable: Non vérifié
     reject:
-      success: Correspondance de déclaration rejetée.
+      success: Suggestion d'association du relevé rejetée.
     show:
       account_label: Compte
-      account_last4_hint: Compte quatre derniers
-      account_name_hint: Indice de nom de compte
+      account_last4_hint: 4 derniers chiffres du compte
+      account_name_hint: Nom de compte indiqué
       closing_balance: Solde de clôture
       currency: Devise
       delete: Supprimer
-      difference: Différence
+      difference: Écart
       download: Télécharger
-      institution_name_hint: Indice d'établissement
-      ledger_amount: Solde Sure
-      link_suggestion: Suggestion de lien
-      linked_to: Lié à %{account}.
-      linking_title: Lien du compte
-      metadata_title: Métadonnées de la déclaration
+      institution_name_hint: Établissement indiqué
+      ledger_amount: Solde dans Sure
+      link_suggestion: Suggestion d'association
+      linked_to: Associé à %{account}.
+      linking_title: Compte associé
+      metadata_title: Informations du relevé
       no_suggestion: Aucune suggestion de compte pour l'instant.
       opening_balance: Solde d'ouverture
       period_end_on: Fin de période
       period_start_on: Début de période
-      reconciliation_title: Réconciliation
-      reconciliation_unavailable: Ajoutez une période de relevé et un solde d’ouverture
-        ou de clôture, puis assurez-vous que Sure dispose d’un historique de solde
-        pour ces dates.
+      reconciliation_title: Rapprochement
+      reconciliation_unavailable: Indiquez la période du relevé et un solde d'ouverture
+        ou de clôture, puis vérifiez que Sure dispose d'un historique de solde pour
+        ces dates.
       reject: Rejeter
-      save: Enregistrer l'instruction
-      statement_amount: Déclaration
-      suggested_account: Le compte suggéré est %{account} (confiance %{confidence}).
-      title: Déclaration
+      save: Enregistrer le relevé
+      statement_amount: Relevé
+      suggested_account: "Compte suggéré : %{account} (confiance %{confidence})."
+      title: Relevé
       unknown_value: Inconnu
       unlink: Dissocier
-      unmatched_account: Compte non lié
+      unmatched_account: Relevés non associés
     status:
-      linked: Lié
+      linked: Associé
       rejected: Rejeté
-      unmatched: non lié
+      unmatched: Non associé
     table:
       account: Compte
       actions: Actions
       download: Télécharger
       edit: Modifier
       file: Fichier
-      link_suggestion: Suggestion de lien
+      link_suggestion: Suggestion d'association
       period: Période
-      reconciliation: Réconciliation
+      reconciliation: Rapprochement
       reject: Rejeter la suggestion
-      suggestion: Suggestions
+      suggestion: Suggestion
       unlink: Dissocier
       view: Voir
     unlink:
-      success: La déclaration a été renvoyée dans la boîte de réception non liée.
+      success: Le relevé a été renvoyé dans les relevés non associés.
     update:
-      success: Déclaration mise à jour.
+      success: Relevé mis à jour.

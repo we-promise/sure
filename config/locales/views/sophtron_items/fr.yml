@@ -98,11 +98,11 @@ fr:
         dans Paramètres.
       partial_invalid: "%{created_count} comptes ont été associés avec succès, %{already_linked_count}
         étaient déjà associés, %{invalid_count} comptes avaient des noms non valides"
-      partial_success: 'Compte(s) %{created_count} associé(s) avec succès. %{already_linked_count}
-        comptes étaient déjà associés : %{already_linked_names}'
+      partial_success: '%{created_count} compte(s) associé(s) avec succès. %{already_linked_count}
+        compte(s) déjà associé(s) : %{already_linked_names}'
       success:
-        one: Compte %{count} associé avec succès
-        other: Comptes %{count} associés avec succès
+        one: "%{count} compte associé avec succès"
+        other: "%{count} comptes associés avec succès"
     link_existing_account:
       account_already_linked: Ce compte est déjà lié à un fournisseur
       api_error: Erreur de connexion API
@@ -160,11 +160,11 @@ fr:
       link_failed: Échec de l'association des comptes
       partial_invalid: Compte(s) %{created_count} lié(s). %{already_linked_count}
         était déjà associé, %{invalid_count} avait des noms non valides.
-      partial_success: Compte(s) %{created_count} lié(s). %{already_linked_count}
-        comptes étaient déjà associés.
+      partial_success: "%{created_count} compte(s) lié(s). %{already_linked_count}
+        compte(s) déjà associé(s)."
       success:
-        one: Compte %{count} associé avec succès.
-        other: Comptes %{count} associés avec succès.
+        one: "%{count} compte associé avec succès."
+        other: "%{count} comptes associés avec succès."
     render_connection_timeout:
       timeout: La connexion a expiré. Veuillez réessayer.
     select_accounts:
