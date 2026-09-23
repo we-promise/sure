@@ -104,6 +104,29 @@ class Financekit::LifecycleTest < ActiveSupport::TestCase
     assert_equal "lineage_writer_conflict", error.code
   end
 
+  test "unlink fences mapped replacement publishers without disconnecting unrelated Wallet connections" do
+    pending = Financekit::Enrollment.create!(@user, @enrollment.merge("enrollment_id" => SecureRandom.uuid)).item
+    FinancekitAccount.map!(pending, @source_id, @mapping_input)
+
+    other_source = SecureRandom.uuid
+    other_enrollment = @enrollment.deep_dup
+    other_enrollment["enrollment_id"] = SecureRandom.uuid
+    other_enrollment["consent"]["selected_source_account_ids"] = [ other_source ]
+    other = Financekit::Enrollment.create!(@user, other_enrollment).item
+    other_mapping = FinancekitAccount.map!(other, other_source, @mapping_input)
+    other_credential = other.activate!
+
+    @source.financekit_account_lineage.disconnect!
+
+    assert_equal "revoked", @item.reload.status
+    assert_equal "revoked", pending.reload.status
+    error = assert_raises(Financekit::Error) { pending.activate! }
+    assert_equal "activation_conflict", error.code
+    assert_equal "active", other.reload.status
+    assert other.authenticate_credential?(other_credential)
+    assert other_mapping.account.reload.linked?
+  end
+
   test "purging a publisher user releases provider links without another active writer" do
     account = @source.account
     lineage = @source.financekit_account_lineage
