@@ -477,7 +477,11 @@ uk:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Обробка не вдалася: %{error}"
       ready_for_review_title: "Готово до перевірки"
-      ready_for_review_description: "Ми витягнули %{count} транзакцій з вашої виписки. Перегляньте їх і застосуйте, щоб додати на рахунок."
+      ready_for_review_description:
+        one: "%{count} транзакція з вашої виписки ще не додана на цей рахунок. Перегляньте її та додайте."
+        few: "%{count} транзакції з вашої виписки ще не додані на цей рахунок. Перегляньте їх та додайте."
+        many: "%{count} транзакцій з вашої виписки ще не додані на цей рахунок. Перегляньте їх та додайте."
+        other: "%{count} транзакції з вашої виписки ще не додані на цей рахунок. Перегляньте їх та додайте."
       transactions_extracted: "Витягнуті транзакції"
       transactions_extracted_count:
         one: "%{count} транзакція"

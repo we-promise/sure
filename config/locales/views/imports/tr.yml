@@ -425,8 +425,9 @@ tr:
       publish_transactions:
         one: "%{count} İşlemi Ekle"
         other: "%{count} İşlemi Ekle"
-      ready_for_review_description: Ekstrenizden %{count} işlem çıkardık. Hesabınıza
-        eklemek için inceleyin ve onaylayın.
+      ready_for_review_description:
+        one: "Ekstrenizdeki %{count} işlem henüz bu hesapta değil. İnceleyip ekleyin."
+        other: "Ekstrenizdeki %{count} işlem henüz bu hesapta değil. İnceleyip ekleyin."
       ready_for_review_title: İncelemeye Hazır
       review_transactions: İşlemleri İncele
       save_account: Kaydet
