@@ -147,9 +147,18 @@ preserve all of them:
   (user-modified) entry keeps its name when Plaid resends it, so the processor
   passes `name_extra_keys: { "plaid" => ["original_description"] }` and
   [`Account::ProviderImportAdapter`](../../app/models/account/provider_import_adapter.rb)
-  keeps that value alongside the name rather than refreshing it. Without that, a
-  bank rewriting a pending transaction's description as it settles would flip
-  `=` and `!=` on an entry the user had already categorized.
+  keeps that value alongside the name rather than refreshing it. This guards one
+  narrow case: Plaid resending the *same* `transaction_id` in `modified` with a
+  different `original_description`. Plaid does not document whether that
+  happens, but says a posted transaction "cannot necessarily be considered
+  immutable", so the name and its description are not left to drift. It costs
+  nothing when the description does not change.
+
+  Settling is not that case. Plaid gives a posted transaction a new
+  `transaction_id` and links it through `pending_transaction_id`, so it arrives
+  as a new transaction that claims the pending entry, and there the name and
+  the description update together. Categorizing locks `category_id`, not the
+  name, so a categorized pending entry still takes the posted name.
 
 `like` and `not_like` rules are deliberately left alone, and they do see the
 change: the combined name contains the merchant as well as the description, so a

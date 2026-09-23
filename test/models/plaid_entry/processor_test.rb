@@ -377,8 +377,11 @@ class PlaidEntry::ProcessorTest < ActiveSupport::TestCase
   # namespace is refreshed. If the description the name was built from were
   # refreshed with it, the rule filter would rebuild a name that no longer matches
   # the real one: "= Target" would stop matching and "!= Target" would start.
-  # Banks can rewrite a pending transaction's description as it settles, and
-  # people categorize pending transactions, so this is a real path.
+  #
+  # This is the same transaction_id coming back in `modified` with a different
+  # description. Plaid does not document whether that happens, but says a posted
+  # transaction "cannot necessarily be considered immutable". Settling is a
+  # different path, covered by the next test.
   test "exact name rules keep matching after the description changes on a categorized entry" do
     first = plaid_transaction("drifting", description: "TARGET 00023")
     @category_matcher.stubs(:match).returns(categories(:food_and_drink))
@@ -397,6 +400,35 @@ class PlaidEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_includes name_rule_matches("=", "Target"), entry.transaction.id
     assert_not_includes name_rule_matches("!=", "Target"), entry.transaction.id
+  end
+
+  # Settling is where a bank's description really does change, and it does not
+  # need name_extra_keys. Plaid gives the posted transaction a new id and links
+  # it with pending_transaction_id, so it claims the pending entry as a new
+  # transaction, and the name and description update together. Categorizing
+  # locks category_id rather than the name, so the name still follows.
+  test "a categorized pending entry takes the posted name and description together" do
+    @category_matcher.stubs(:match).returns(categories(:food_and_drink))
+
+    pending = plaid_transaction("settling-pending", description: "TARGET PENDING").merge("pending" => true)
+    PlaidEntry::Processor.new(pending, plaid_account: @plaid_account, category_matcher: @category_matcher).process
+    entry = Entry.find_by!(external_id: "settling-pending", source: "plaid")
+
+    # What TransactionsController#update does when the user picks a category.
+    entry.transaction.update!(category: categories(:income))
+    entry.lock_saved_attributes!
+    entry.mark_user_modified!
+
+    posted = plaid_transaction("settling-posted", description: "TARGET 00023 SAN MATEO CA")
+               .merge("pending" => false, "pending_transaction_id" => "settling-pending")
+    PlaidEntry::Processor.new(posted, plaid_account: @plaid_account, category_matcher: @category_matcher).process
+    entry.reload
+
+    assert_equal "settling-posted", entry.external_id, "the posted transaction claims the pending entry"
+    assert_equal "Target - TARGET 00023 SAN MATEO CA", entry.name
+    assert_equal "TARGET 00023 SAN MATEO CA", entry.transaction.extra.dig("plaid", "original_description")
+    assert_equal categories(:income), entry.transaction.category, "the user's category survives"
+    assert_includes name_rule_matches("=", "Target"), entry.transaction.id
   end
 
   private
