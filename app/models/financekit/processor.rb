@@ -12,21 +12,23 @@ class Financekit::Processor
       return false unless batch && batch.status == "accepted" && (!batch.retry_at || batch.retry_at <= Time.current)
       capture = @item.financekit_batches.where(generation: @item.generation, capture_id: batch.capture_id).order(:chunk_index).to_a
       return false unless capture.size == batch.chunk_count && capture.map(&:chunk_index) == (0...batch.chunk_count).to_a &&
-        capture.all? { |part| part.status == "accepted" }
+        capture.all? { |part| part.status == "accepted" && (!part.retry_at || part.retry_at <= Time.current) }
 
-      Financekit.require!(batch.predecessor_digest == @item.predecessor_digest, "predecessor_conflict", 409)
       Financekit.require!(!@item.last_captured_at || batch.captured_at >= @item.last_captured_at,
         "stale_capture", 409)
       counts = { "upserted" => 0, "retracted" => 0, "review_required" => 0,
         "source_only" => 0, "settled" => 0, "balances" => 0, "accounts" => 0 }
       mappings = @item.selected_accounts.includes(financekit_account_lineage: :account)
         .index_by { |mapping| mapping.source_id.downcase }
+      predecessor_digest = @item.predecessor_digest
       capture.each do |part|
         batch = part
+        Financekit.require!(part.predecessor_digest == predecessor_digest, "predecessor_conflict", 409)
         data = JSON.parse(part.payload)
         Financekit::Payload.validate_batch!(data, @item)
         part.update!(status: "processing")
         data["events"].each { |event| apply_event!(event, mappings, part, counts) }
+        predecessor_digest = part.payload_digest
       end
       applied_at = Time.current
       sync = @item.syncs.create!(status: "completed", completed_at: applied_at,
@@ -101,6 +103,9 @@ class Financekit::Processor
         balance.currency = money["currency"]
         balance.direction = money["direction"]
       end
+      Financekit.require!(observation.amount == Financekit::Payload.money!(money) &&
+        observation.currency == money["currency"] && observation.direction == money["direction"],
+        "balance_observation_conflict", 409)
       counts["balances"] += 1 if observation.previously_new_record?
       return unless record["kind"] == "booked"
 
@@ -135,6 +140,7 @@ class Financekit::Processor
       # An unanswered review keeps the record out of the ledger. Importing it
       # on the next capture would decide the question the family was asked.
       if existed && identity.review_required?
+        settle_edited_pending_entry!(identity.entry, record)
         identity.save!
         counts["review_required"] += 1
         return
@@ -164,6 +170,16 @@ class Financekit::Processor
 
       account = mapping.account
       account.with_lock do
+        entry = identity.entry
+        entry&.lock!
+        if entry && protected_entry?(entry)
+          settle_edited_pending_entry!(entry, record)
+          identity.update!(review_required: true)
+          create_conflict!(mapping, identity, "protected_entry")
+          counts["review_required"] += 1
+          return
+        end
+
         adapter = Account::ProviderImportAdapter.new(account)
         entry = adapter.import_transaction(external_id: transaction_external_id(mapping, record.fetch("source_id")),
           amount: Financekit::Mapping.transaction_amount(record), currency: record.dig("amount", "currency"),
@@ -256,9 +272,25 @@ class Financekit::Processor
     end
 
     def protected_entry?(entry)
-      entry.protected_from_sync? || entry.transaction.transfer_id.present? || entry.reconciled_at.present? ||
+      entry.protected_from_sync? || entry.transaction.transfer.present? || entry.transaction.transfer_id.present? || entry.reconciled_at.present? ||
         entry.split_parent? || entry.split_child? || entry.locked_attributes.present? ||
         entry.transaction.locked_attributes.present?
+    end
+
+    # Preserve the shared importer's pending-to-booked exception for user edits,
+    # without changing the edited ledger fields or bypassing an import lock.
+    def settle_edited_pending_entry!(entry, record)
+      return unless entry && record["status"] == "booked"
+
+      Entry.transaction do
+        entry.lock!
+        return unless entry.user_modified? && !entry.excluded? && !entry.import_locked?
+
+        transaction = entry.transaction
+        if transaction.extra.dig("financekit", "pending")
+          transaction.update!(extra: transaction.extra.deep_merge("financekit" => { "pending" => false }))
+        end
+      end
     end
 
     def create_conflict!(mapping, identity, kind)

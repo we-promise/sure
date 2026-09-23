@@ -41,25 +41,46 @@ RSpec.describe "Api::V1::Financekit", type: :request do
     allow(ApiRateLimiter).to receive(:limit).and_return(nil)
   end
 
+  # Error behavior is covered in Minitest. Rswag still needs an example to emit
+  # each response during its documentation-only dry run.
   shared_examples "financekit normal API errors" do
     response "400", "Malformed or unsupported protocol" do
       schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test! skip: "Documentation only; behavior covered by Minitest"
     end
     response "401", "Invalid or missing authentication" do
       schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test! skip: "Documentation only; behavior covered by Minitest"
     end
     response "403", "Insufficient permission or publisher eligibility" do
       schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test! skip: "Documentation only; behavior covered by Minitest"
+    end
+    response "404", "Resource not found" do
+      schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test! skip: "Documentation only; behavior covered by Minitest"
     end
     response "409", "Enrollment, mapping, lineage, generation, or stream conflict" do
       schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test! skip: "Documentation only; behavior covered by Minitest"
+    end
+    response "413", "Payload or record limit exceeded" do
+      schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test! skip: "Documentation only; behavior covered by Minitest"
     end
     response "422", "Invalid typed record or consent" do
       schema "$ref" => "#/components/schemas/FinancekitError"
+      run_test! skip: "Documentation only; behavior covered by Minitest"
+    end
+    response "429", "Rate limited or publisher inbox full" do
+      schema "$ref" => "#/components/schemas/FinancekitError"
+      header "Retry-After", schema: { type: :integer }
+      run_test! skip: "Documentation only; behavior covered by Minitest"
     end
     response "503", "Feature unavailable" do
       schema "$ref" => "#/components/schemas/FinancekitError"
       header "Retry-After", schema: { type: :integer }
+      run_test! skip: "Documentation only; behavior covered by Minitest"
     end
   end
 
@@ -93,7 +114,7 @@ RSpec.describe "Api::V1::Financekit", type: :request do
   end
 
   path "/api/v1/financekit/connections/{id}" do
-    parameter name: :id, in: :path, type: :string, format: :uuid, required: true
+    parameter name: :id, in: :path, required: true, schema: { type: :string, format: :uuid }
     get "Read publisher health and paginated mappings" do
       tags "FinanceKit"
       produces "application/json"
@@ -108,6 +129,7 @@ RSpec.describe "Api::V1::Financekit", type: :request do
     end
     delete "Revoke a publisher and retain imported financial history" do
       tags "FinanceKit"
+      produces "application/json"
       security FINANCEKIT_WRITE_SECURITY
       response "204", "Publisher revoked" do
         run_test!
@@ -117,8 +139,8 @@ RSpec.describe "Api::V1::Financekit", type: :request do
   end
 
   path "/api/v1/financekit/connections/{connection_id}/account_mappings/{source_id}" do
-    parameter name: :connection_id, in: :path, type: :string, format: :uuid, required: true
-    parameter name: :source_id, in: :path, type: :string, format: :uuid, required: true
+    parameter name: :connection_id, in: :path, required: true, schema: { type: :string, format: :uuid }
+    parameter name: :source_id, in: :path, required: true, schema: { type: :string, format: :uuid }
     put "Explicitly create or link a canonical account lineage" do
       tags "FinanceKit"
       consumes "application/json"
@@ -136,7 +158,7 @@ RSpec.describe "Api::V1::Financekit", type: :request do
 
   %w[activate credential repair].each do |operation|
     path "/api/v1/financekit/connections/{connection_id}/#{operation}" do
-      parameter name: :connection_id, in: :path, type: :string, format: :uuid, required: true
+      parameter name: :connection_id, in: :path, required: true, schema: { type: :string, format: :uuid }
       post "#{operation.capitalize} the background publisher" do
         tags "FinanceKit"
         produces "application/json"
@@ -155,15 +177,16 @@ RSpec.describe "Api::V1::Financekit", type: :request do
   end
 
   path "/api/v1/financekit/publishers/{publisher_id}/batches" do
-    parameter name: :publisher_id, in: :path, type: :string, format: :uuid, required: true
+    parameter name: :publisher_id, in: :path, required: true, schema: { type: :string, format: :uuid }
     post "Durably accept an ordered FinanceKit publisher batch" do
       tags "FinanceKit"
       consumes "application/json"
       produces "application/json"
       security FINANCEKIT_PUBLISHER_SECURITY
       parameter name: :Authorization, in: :header, type: :string, required: true
-      parameter name: :'Idempotency-Key', in: :header, type: :string, format: :uuid, required: false
-      parameter name: :'X-Sure-Payload-SHA256', in: :header, type: :string, required: false
+      parameter name: :'Idempotency-Key', in: :header, required: false, schema: { type: :string, format: :uuid }
+      parameter name: :'X-Sure-Payload-SHA256', in: :header, required: false,
+        schema: { type: :string, pattern: '^[0-9a-f]{64}$' }
       parameter name: :body, in: :body, required: true, schema: { "$ref" => "#/components/schemas/FinancekitBatch" }
       let(:publisher_id) { connection.publisher_id }
       let(:Authorization) { "Bearer #{publisher_credential}" }
@@ -178,26 +201,35 @@ RSpec.describe "Api::V1::Financekit", type: :request do
         schema "$ref" => "#/components/schemas/FinancekitBatchReceipt"
         run_test!
       end
+      response "400", "Malformed or unsupported protocol" do
+        schema "$ref" => "#/components/schemas/FinancekitError"
+        run_test! skip: "Documentation only; behavior covered by Minitest"
+      end
       response "401", "Invalid publisher credential" do
         schema "$ref" => "#/components/schemas/FinancekitError"
+        run_test! skip: "Documentation only; behavior covered by Minitest"
       end
       response "409", "Digest, sequence, predecessor, generation, or idempotency conflict" do
         schema "$ref" => "#/components/schemas/FinancekitError"
+        run_test! skip: "Documentation only; behavior covered by Minitest"
       end
       response "413", "Payload or record limit exceeded" do
         schema "$ref" => "#/components/schemas/FinancekitError"
+        run_test! skip: "Documentation only; behavior covered by Minitest"
       end
       response "429", "Publisher inbox full" do
         schema "$ref" => "#/components/schemas/FinancekitError"
         header "Retry-After", schema: { type: :integer }
+        run_test! skip: "Documentation only; behavior covered by Minitest"
       end
     end
   end
 
   path "/api/v1/financekit/publishers/{publisher_id}/batches/{batch_id}" do
-    parameter name: :publisher_id, in: :path, type: :string, format: :uuid, required: true
-    parameter name: :batch_id, in: :path, type: :string, format: :uuid, required: true
+    parameter name: :publisher_id, in: :path, required: true, schema: { type: :string, format: :uuid }
+    parameter name: :batch_id, in: :path, required: true, schema: { type: :string, format: :uuid }
     get "Read the durable receipt for an accepted batch" do
+      description "Recover an accepted batch receipt, including its current processing status."
       tags "FinanceKit"
       produces "application/json"
       security FINANCEKIT_PUBLISHER_SECURITY
@@ -218,17 +250,24 @@ RSpec.describe "Api::V1::Financekit", type: :request do
         schema "$ref" => "#/components/schemas/FinancekitBatchReceipt"
         run_test!
       end
+      response "429", "Rate limited" do
+        schema "$ref" => "#/components/schemas/FinancekitError"
+        header "Retry-After", schema: { type: :integer }
+        run_test! skip: "Documentation only; behavior covered by Minitest"
+      end
       response "401", "Invalid publisher credential" do
         schema "$ref" => "#/components/schemas/FinancekitError"
+        run_test! skip: "Documentation only; behavior covered by Minitest"
       end
       response "404", "No batch with that identity in the current generation" do
         schema "$ref" => "#/components/schemas/FinancekitError"
+        run_test! skip: "Documentation only; behavior covered by Minitest"
       end
     end
   end
 
   path "/api/v1/financekit/connections/{connection_id}/conflicts" do
-    parameter name: :connection_id, in: :path, type: :string, format: :uuid, required: true
+    parameter name: :connection_id, in: :path, required: true, schema: { type: :string, format: :uuid }
     get "List conflicts requiring user review" do
       tags "FinanceKit"
       produces "application/json"
@@ -244,8 +283,8 @@ RSpec.describe "Api::V1::Financekit", type: :request do
   end
 
   path "/api/v1/financekit/connections/{connection_id}/conflicts/{id}" do
-    parameter name: :connection_id, in: :path, type: :string, format: :uuid, required: true
-    parameter name: :id, in: :path, type: :string, format: :uuid, required: true
+    parameter name: :connection_id, in: :path, required: true, schema: { type: :string, format: :uuid }
+    parameter name: :id, in: :path, required: true, schema: { type: :string, format: :uuid }
     patch "Resolve a FinanceKit import conflict" do
       tags "FinanceKit"
       consumes "application/json"

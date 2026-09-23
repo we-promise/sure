@@ -605,7 +605,7 @@
           "booked",
           "rejected",
           "memo",
-              "unknown"
+          "unknown"
         ]
       },
       "transacted_at": {
@@ -840,7 +840,8 @@
       },
       "chunk_count": {
         "type": "integer",
-        "minimum": 1
+        "minimum": 1,
+        "maximum": 100
       },
       "capture_mode": {
         "type": "string",
@@ -889,7 +890,9 @@
       "sequence",
       "payload_digest",
       "status",
-      "accepted_at"
+      "accepted_at",
+      "applied_at",
+      "error_code"
     ],
     "properties": {
       "connection_id": {
@@ -925,12 +928,25 @@
       "status": {
         "type": "string",
         "enum": [
-          "accepted"
+          "accepted",
+          "processing",
+          "applied",
+          "failed",
+          "revoked"
         ]
       },
       "accepted_at": {
         "type": "string",
         "format": "date-time"
+      },
+      "applied_at": {
+        "type": "string",
+        "format": "date-time",
+        "nullable": true
+      },
+      "error_code": {
+        "type": "string",
+        "nullable": true
       }
     }
   },

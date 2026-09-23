@@ -44,6 +44,62 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_equal "capture_conflict", error.code
   end
 
+  test "an oversized capture is rejected before filling the inbox" do
+    payload = financekit_payload(events: []).merge("chunk_count" => Financekit::MAX_QUEUED + 1)
+
+    assert_no_difference "FinancekitBatch.count" do
+      error = assert_raises(Financekit::Error) { accept_batch(payload) }
+      assert_equal "capture_limit", error.code
+      assert_equal 413, error.status
+    end
+    assert_equal "active", @item.reload.status
+  end
+
+  test "a bad predecessor inside a capture rolls back all of its ledger changes" do
+    first_payload = financekit_payload.merge("chunk_count" => 2)
+    first, = accept_batch(first_payload)
+    second_payload = financekit_payload(sequence: 2, predecessor_digest: "0" * 64, events: [])
+      .merge("capture_id" => first.capture_id, "chunk_index" => 1, "chunk_count" => 2)
+    second, = accept_batch(second_payload)
+
+    assert_not Financekit::Processor.new(@item).apply_next!
+
+    assert_empty @source.account.entries.reload
+    assert_empty @source.financekit_balance_observations.reload
+    assert_equal "revoked", first.reload.status
+    assert_equal "failed", second.reload.status
+    assert_equal "predecessor_conflict", second.error_code
+    assert_equal 1, @item.reload.next_sequence
+    assert_equal "repair_required", @item.status
+  end
+
+  test "a later chunk failure waits for its retry deadline before reapplying the capture" do
+    first_payload = financekit_payload(events: []).merge("chunk_count" => 2)
+    first, = accept_batch(first_payload)
+    second_payload = financekit_payload(sequence: 2, predecessor_digest: first.payload_digest)
+      .merge("capture_id" => first.capture_id, "chunk_index" => 1, "chunk_count" => 2)
+    second, = accept_batch(second_payload)
+    Account::ProviderImportAdapter.any_instance.stubs(:update_balance)
+      .raises(ActiveRecord::RecordInvalid.new(Account.new))
+    Rails.error.stubs(:report)
+
+    assert_not Financekit::Processor.new(@item).apply_next!
+    assert_equal 1, second.reload.attempts
+    deadline = second.retry_at
+    Financekit::MAX_ATTEMPTS.times { assert_not Financekit::Processor.new(@item).apply_next! }
+    assert_equal 1, second.reload.attempts
+    assert_equal "active", @item.reload.status
+    assert @item.authenticate_credential?(@credential)
+    assert_empty @source.account.entries.reload
+
+    Account::ProviderImportAdapter.any_instance.unstub(:update_balance)
+    travel_to deadline
+    assert Financekit::Processor.new(@item).apply_next!
+    assert_equal "applied", first.reload.status
+    assert_equal "applied", second.reload.status
+    assert_equal 1, @source.account.entries.reload.count
+  end
+
   test "repeated delivery returns the original receipt without another batch" do
     payload = financekit_payload
     original, raw = accept_batch(payload)

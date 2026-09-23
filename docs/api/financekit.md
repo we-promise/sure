@@ -44,7 +44,7 @@ Each immutable batch contains:
 - the exact selected account scope; and
 - up to 500 typed account, balance, transaction, or tombstone events.
 
-The server validates the complete payload before durably storing the exact bytes and returns 202 with a stable receipt. Retrying the same batch bytes returns the same receipt. Reusing its batch ID or stream position with different bytes returns 409. Up to 100 batches may wait per publisher, allowing later batches to arrive before a missing sequence.
+The server validates the complete payload before durably storing the exact bytes and returns 202 with a stable receipt. Retrying the same batch bytes returns the same receipt. Reusing its batch ID or stream position with different bytes returns 409. Up to 100 batches may wait per publisher, allowing later batches to arrive before a missing sequence. A capture must contain at most 100 chunks; larger histories must be split into multiple captures. Oversized captures are rejected with `413 capture_limit` before accepting any bytes into the inbox.
 
 The inbox worker applies only the next contiguous batch whose predecessor digest matches. Canonical changes, the applied receipt, and the stream cursor commit in one database transaction. A crash before commit leaves the batch retryable; a crash after commit leaves an applied receipt. Permanent validation or stream failure fences the generation, revokes later queued batches and the credential, and requires explicit repair.
 
@@ -60,7 +60,7 @@ Amounts are unsigned exact decimal strings with explicit currency and `credit` o
 - asset balance credit is money held and debit is overdraft;
 - credit-card balance debit is debt and credit is overpayment.
 
-Balance observations are append-only source history. Only the newest booked observation materializes the canonical account balance. Available balance never replaces booked balance.
+Balance observations are append-only source history. Only the newest booked observation materializes the canonical account balance. Reusing an observation identity with different money fails with `balance_observation_conflict` and requires repair; it never changes the retained observation or canonical balance. Available balance never replaces booked balance.
 
 Transaction identity is the stable account lineage plus the FinanceKit source UUID. The provider adapter disables heuristic amount/date matching. Same-ID pending-to-booked transitions are supported; a changed source UUID remains a separate identity. Source-only `rejected` and `memo` records do not invent ledger activity.
 

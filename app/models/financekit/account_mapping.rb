@@ -57,7 +57,7 @@ class Financekit::AccountMapping
 
     def replay!(existing)
       Financekit.require!(existing.mapping_digest == mapping_digest &&
-        [ existing.mapping_version, existing.mapping_version - 1 ].include?(@input["expected_version"]),
+        [ 0, existing.mapping_version, existing.mapping_version - 1 ].include?(@input["expected_version"]),
         "mapping_conflict", 409)
       existing
     end

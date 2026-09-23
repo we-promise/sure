@@ -20,7 +20,8 @@ components:
       type: http
       scheme: bearer
       bearerFormat: opaque publisher credential
-      description: Revocable credential restricted to one FinanceKit publisher upload URL.
+      description: Revocable credential restricted to one FinanceKit publisher upload
+        URL.
     oauth2:
       type: oauth2
       flows:
@@ -3770,8 +3771,8 @@ components:
         observed_at:
           type: string
           format: date-time
-      description: create requires booked_balance and observed_at; link requires a writable
-        same-family account_id and may carry a prior lineage_id
+      description: create requires booked_balance and observed_at; link requires a
+        writable same-family account_id and may carry a prior lineage_id
     FinancekitAccountMapping:
       type: object
       additionalProperties: false
@@ -4086,6 +4087,7 @@ components:
           - booked
           - rejected
           - memo
+          - unknown
         transacted_at:
           type: string
           format: date-time
@@ -4255,6 +4257,7 @@ components:
         chunk_count:
           type: integer
           minimum: 1
+          maximum: 100
         capture_mode:
           type: string
           enum:
@@ -4280,8 +4283,8 @@ components:
           items:
             "$ref": "#/components/schemas/FinancekitEvent"
       description: Immutable ordered publisher batch. sequence 1 omits predecessor_digest;
-        later batches carry the SHA-256 digest of the preceding payload. Omission never
-        deletes data.
+        later batches carry the SHA-256 digest of the preceding payload. Omission
+        never deletes data.
     FinancekitBatchReceipt:
       type: object
       additionalProperties: false
@@ -4295,6 +4298,8 @@ components:
       - payload_digest
       - status
       - accepted_at
+      - applied_at
+      - error_code
       properties:
         connection_id:
           type: string
@@ -4323,9 +4328,20 @@ components:
           type: string
           enum:
           - accepted
+          - processing
+          - applied
+          - failed
+          - revoked
         accepted_at:
           type: string
           format: date-time
+        applied_at:
+          type: string
+          format: date-time
+          nullable: true
+        error_code:
+          type: string
+          nullable: true
     FinancekitConflict:
       type: object
       required:
@@ -4379,7 +4395,10 @@ components:
       properties:
         resolution:
           type: string
-          description: "`keep_sure` closes the conflict without mutating the publisher stream. `retry_after_repair` closes the conflict, moves the connection to repair_required, revokes queued work and credentials, and requires POST /repair before uploads resume."
+          description: "`keep_sure` closes the conflict without mutating the publisher
+            stream. `retry_after_repair` closes the conflict, moves the connection
+            to repair_required, revokes queued work and credentials, and requires
+            POST /repair before uploads resume."
           enum:
           - keep_sure
           - retry_after_repair
@@ -6057,24 +6076,24 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
         '503':
           description: Feature unavailable
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/connections":
     post:
       summary: Enroll a FinanceKit device publisher
@@ -6084,6 +6103,7 @@ paths:
       - apiKeyAuth: []
       - oauth2:
         - read_write
+      parameters: []
       responses:
         '201':
           description: Publisher enrolled pending account mapping
@@ -6135,30 +6155,30 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
         '503':
           description: Feature unavailable
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               "$ref": "#/components/schemas/FinancekitEnrollment"
+        required: true
   "/api/v1/financekit/connections/{id}":
     parameters:
     - name: id
@@ -6175,6 +6195,15 @@ paths:
       - apiKeyAuth: []
       - oauth2:
         - read
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        schema:
+          type: integer
       responses:
         '200':
           description: Publisher health
@@ -6226,24 +6255,24 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
         '503':
           description: Feature unavailable
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
     delete:
       summary: Revoke a publisher and retain imported financial history
       tags:
@@ -6299,24 +6328,24 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
         '503':
           description: Feature unavailable
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/connections/{connection_id}/account_mappings/{source_id}":
     parameters:
     - name: connection_id
@@ -6339,6 +6368,7 @@ paths:
       - apiKeyAuth: []
       - oauth2:
         - read_write
+      parameters: []
       responses:
         '200':
           description: Stable account lineage binding
@@ -6390,30 +6420,30 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
         '503':
           description: Feature unavailable
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               "$ref": "#/components/schemas/FinancekitMappingRequest"
+        required: true
   "/api/v1/financekit/connections/{connection_id}/activate":
     parameters:
     - name: connection_id
@@ -6481,24 +6511,24 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
         '503':
           description: Feature unavailable
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/connections/{connection_id}/credential":
     parameters:
     - name: connection_id
@@ -6566,24 +6596,24 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
         '503':
           description: Feature unavailable
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/connections/{connection_id}/repair":
     parameters:
     - name: connection_id
@@ -6651,85 +6681,39 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
         '503':
           description: Feature unavailable
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/publishers/{publisher_id}/batches":
+    parameters:
+    - name: publisher_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     post:
       summary: Durably accept an ordered FinanceKit publisher batch
       tags:
       - FinanceKit
       security:
       - financekitPublisher: []
-      responses:
-        '202':
-          description: Immutable bytes accepted into the inbox
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitBatchReceipt"
-        '400':
-          description: Malformed or unsupported protocol
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '401':
-          description: Invalid or missing authentication
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '409':
-          description: Enrollment, mapping, lineage, generation, or stream conflict
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '413':
-          description: Payload or record limit exceeded
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '429':
-          description: Rate limited or publisher inbox full
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              "$ref": "#/components/schemas/FinancekitBatch"
       parameters:
-      - name: publisher_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
       - name: Authorization
         in: header
         required: true
@@ -6747,15 +6731,81 @@ paths:
         schema:
           type: string
           pattern: "^[0-9a-f]{64}$"
+      responses:
+        '202':
+          description: Immutable bytes accepted into the inbox
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitBatchReceipt"
+        '400':
+          description: Malformed or unsupported protocol
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '401':
+          description: Invalid publisher credential
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '409':
+          description: Digest, sequence, predecessor, generation, or idempotency conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '413':
+          description: Payload or record limit exceeded
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+        '429':
+          description: Publisher inbox full
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/FinancekitBatch"
+        required: true
   "/api/v1/financekit/publishers/{publisher_id}/batches/{batch_id}":
+    parameters:
+    - name: publisher_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: batch_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     get:
       summary: Read the durable receipt for an accepted batch
-      description: Recovers the receipt for a batch whose upload response was lost.
-        The receipt is stable for the life of the batch within its generation.
+      description: Recover an accepted batch receipt, including its current processing
+        status.
       tags:
       - FinanceKit
       security:
       - financekitPublisher: []
+      parameters:
+      - name: Authorization
+        in: header
+        required: true
+        schema:
+          type: string
       responses:
         '200':
           description: Durable receipt for a previously accepted batch
@@ -6763,8 +6813,18 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitBatchReceipt"
+        '429':
+          description: Rate limited
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
         '401':
-          description: Invalid or missing authentication
+          description: Invalid publisher credential
           content:
             application/json:
               schema:
@@ -6775,34 +6835,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
-        '429':
-          description: Rate limited
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-      parameters:
-      - name: publisher_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: batch_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-      - name: Authorization
-        in: header
-        required: true
-        schema:
-          type: string
   "/api/v1/financekit/connections/{connection_id}/conflicts":
     parameters:
     - name: connection_id
@@ -6877,24 +6909,24 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
         '503':
           description: Feature unavailable
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/connections/{connection_id}/conflicts/{id}":
     parameters:
     - name: connection_id
@@ -6917,6 +6949,7 @@ paths:
       - apiKeyAuth: []
       - oauth2:
         - read_write
+      parameters: []
       responses:
         '200':
           description: Conflict resolved
@@ -6968,30 +7001,30 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
         '503':
           description: Feature unavailable
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
           headers:
             Retry-After:
               schema:
                 type: integer
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitError"
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               "$ref": "#/components/schemas/FinancekitConflictResolution"
+        required: true
   "/api/v1/holdings":
     get:
       summary: List holdings

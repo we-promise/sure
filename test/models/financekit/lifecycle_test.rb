@@ -73,9 +73,17 @@ class Financekit::LifecycleTest < ActiveSupport::TestCase
     replacement_enrollment["enrollment_id"] = SecureRandom.uuid
     replacement_enrollment["replaces_connection_id"] = @item.id
     replacement = Financekit::Enrollment.create!(@user, replacement_enrollment).item
-    replacement_mapping = FinancekitAccount.map!(replacement, @source_id,
-      @mapping_input.except("booked_balance", "observed_at").merge(
-        "action" => "link", "account_id" => account.id, "lineage_id" => lineage.id))
+    input = @mapping_input.except("booked_balance", "observed_at").merge(
+      "action" => "link", "account_id" => account.id, "lineage_id" => lineage.id)
+    replacement_mapping = FinancekitAccount.map!(replacement, @source_id, input)
+    assert_equal 2, replacement_mapping.mapping_version
+    assert_no_difference "FinancekitAccount.count" do
+      assert_equal replacement_mapping, FinancekitAccount.map!(replacement, @source_id, input)
+    end
+    error = assert_raises(Financekit::Error) do
+      FinancekitAccount.map!(replacement, @source_id, input.merge("name" => "Changed mapping"))
+    end
+    assert_equal "mapping_conflict", error.code
     replacement.activate!
     @source = replacement_mapping
     payload = financekit_payload(item: replacement)

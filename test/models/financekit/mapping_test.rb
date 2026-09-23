@@ -95,6 +95,110 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal "source_reappeared", @item.financekit_conflicts.sole.kind
   end
 
+  test "reconciled entries retain ledger fields and produce a conflict on upsert" do
+    first = accept_and_apply
+    entry = @source.account.entries.sole
+    entry.mark_reconciled!
+    original = entry.attributes.slice("amount", "date", "name", "reconciled_at")
+    event = financekit_events.last
+    event["transaction"]["amount"] = money("99.00")
+    event["transaction"]["posted_at"] = "2026-09-02T12:00:00Z"
+    event["transaction"]["merchant_name"] = "Changed shop"
+
+    batch = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest, events: [ event ]))
+
+    assert_equal original, entry.reload.attributes.slice(*original.keys)
+    assert_equal 1, batch.counts.fetch("review_required")
+    assert_equal "protected_entry", @item.financekit_conflicts.sole.kind
+  end
+
+  test "attribute locks protect entries even without user_modified" do
+    first = accept_and_apply
+    entry = @source.account.entries.sole
+    entry.lock_attr!(:amount)
+    assert_not entry.user_modified?
+    event = financekit_events.last
+    event["transaction"]["amount"] = money("99.00")
+
+    accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest, events: [ event ]))
+
+    assert_equal BigDecimal("12.34"), entry.reload.amount
+    assert_equal "protected_entry", @item.financekit_conflicts.sole.kind
+  end
+
+  test "transfer pairs are protected from upserts and tombstones" do
+    first = accept_and_apply
+    entry = @source.account.entries.sole
+    other_account = @family.accounts.create!(name: "Transfer destination", balance: 0, currency: "USD",
+      accountable: Depository.new(subtype: "checking"))
+    other = other_account.entries.create!(name: "Transfer in", amount: -entry.amount, currency: entry.currency,
+      date: entry.date, entryable: Transaction.new)
+    transfer = Transfer.create!(inflow_transaction: other.transaction, outflow_transaction: entry.transaction)
+    event = financekit_events.last
+    event["transaction"]["amount"] = money("99.00")
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest, events: [ event ]))
+    tombstone = { "kind" => "transaction_tombstone",
+      "tombstone" => event["transaction"].slice("source_id", "source_account_id", "lineage_id", "mapping_version") }
+
+    accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest, events: [ tombstone ]))
+
+    assert_equal BigDecimal("12.34"), entry.reload.amount
+    assert Transfer.exists?(transfer.id)
+    assert_equal %w[protected_entry protected_tombstone], @item.financekit_conflicts.order(:kind).pluck(:kind)
+  end
+
+  test "an edited pending entry still settles while its conflict awaits review" do
+    event = financekit_events.last
+    event["transaction"]["status"] = "pending"
+    event["transaction"].delete("posted_at")
+    first = accept_and_apply(financekit_payload(events: [ event ]))
+    entry = @source.account.entries.sole
+    entry.update!(name: "User name", user_modified: true)
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest, events: [ event ]))
+    assert @source.financekit_transactions.sole.review_required?
+
+    accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest, events: [ financekit_events.last ]))
+
+    assert_equal "User name", entry.reload.name
+    assert_not entry.transaction.reload.pending?
+    assert_equal 1, @item.financekit_conflicts.open.count
+  end
+
+  test "retry after repair permits an unlocked transaction to import again" do
+    first = accept_and_apply
+    entry = @source.account.entries.sole
+    entry.update!(import_locked: true)
+    event = financekit_events.last
+    event["transaction"]["amount"] = money("99.00")
+    accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest, events: [ event ]))
+    conflict = @item.financekit_conflicts.sole
+
+    entry.unlock_for_sync!
+    conflict.resolve!(user: @user, resolution: "retry_after_repair")
+    assert_equal "repair_required", @item.reload.status
+    @item.repair!
+    batch = accept_and_apply(financekit_payload(events: [ event ]))
+
+    assert_equal BigDecimal("99.00"), entry.reload.amount
+    assert_equal 1, batch.counts.fetch("upserted")
+    assert_not @source.financekit_transactions.sole.review_required?
+    assert_empty @item.financekit_conflicts.open
+  end
+
+  test "conflicting balance observation reuse preserves the stored and canonical money" do
+    first = accept_and_apply
+    event = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    event["balance"]["money"] = money("999.00", "credit")
+    second, = accept_batch(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest, events: [ event ]))
+
+    assert_not Financekit::Processor.new(@item).apply_next!
+
+    assert_equal "balance_observation_conflict", second.reload.error_code
+    assert_equal "failed", second.status
+    assert_equal BigDecimal("112.66"), @source.account.reload.balance
+    assert_equal BigDecimal("112.66"), @source.financekit_balance_observations.sole.amount
+  end
+
   test "a second wallet account cannot map onto an already mapped canonical account" do
     other_source = SecureRandom.uuid
     @item.update!(status: "repair_required", consent: @item.consent.merge(
@@ -166,6 +270,14 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal 1, second.counts.fetch("review_required")
     assert_equal 1, account.entries.reload.count
     assert_equal 1, replacement.financekit_conflicts.count
+
+    replacement.financekit_conflicts.sole.resolve!(user: @user, resolution: "retry_after_repair")
+    replacement.repair!
+    repaired = accept_and_apply(financekit_payload(item: replacement, events: [ unknown_identity ]), item: replacement)
+
+    assert_equal 1, repaired.counts.fetch("upserted")
+    assert_equal 2, account.entries.reload.count
+    assert_empty replacement.financekit_conflicts.open
   end
 
   test "balance observations are retained while only the latest booked value is materialized" do

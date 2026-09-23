@@ -50,6 +50,7 @@ class Financekit::Payload
       Financekit.require!(data["snapshot_complete"] == false || data["capture_mode"] == "snapshot")
       Financekit.require!(data["chunk_index"].is_a?(Integer) && data["chunk_count"].is_a?(Integer) &&
         data["chunk_index"].between?(0, data["chunk_count"] - 1))
+      Financekit.require!(data["chunk_count"] <= Financekit::MAX_QUEUED, "capture_limit", 413)
       ids = data["selected_source_account_ids"]
       normalized_ids = ids.is_a?(Array) ? ids.map { |id| id.to_s.downcase } : []
       Financekit.require!(ids.is_a?(Array) && normalized_ids.uniq.size == ids.size &&

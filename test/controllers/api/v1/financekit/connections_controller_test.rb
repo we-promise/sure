@@ -1,4 +1,5 @@
 require "test_helper"
+require "rswag/specs/extended_schema"
 require_relative "../../../../support/financekit_test_helper"
 
 class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::IntegrationTest
@@ -68,6 +69,7 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     end
     assert_response :accepted
     assert_equal "accepted", response.parsed_body.fetch("status")
+    assert_receipt_schema
     assert_equal raw, FinancekitBatch.sole.payload
     assert_empty @source.account.entries
 
@@ -76,6 +78,7 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
       headers: @publisher_headers.except("Content-Type")
     assert_response :success
     assert_equal "applied", response.parsed_body.fetch("status")
+    assert_receipt_schema
     assert response.parsed_body.fetch("applied_at").present?
 
     get "/api/v1/accounts", headers: { "Authorization" => "Bearer #{@credential}" }
@@ -209,4 +212,13 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     get "/api/v1/financekit/connections/#{@item.id}", headers: { "X-Api-Key" => other_key.display_key }
     assert_response :forbidden
   end
+
+  private
+
+    def assert_receipt_schema
+      schemas = JSON.parse(Rails.root.join("docs/api/financekit/schemas.json").read)
+      schema = schemas.fetch("FinancekitBatchReceipt").merge(
+        "$schema" => "http://tempuri.org/rswag/specs/extended_schema")
+      assert_empty JSON::Validator.fully_validate(schema, response.body)
+    end
 end

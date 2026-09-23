@@ -30,7 +30,7 @@ Monitor queue depth, oldest accepted batch age, `repair_required` connections, a
 
 ## Capacity and retention
 
-Protocol 2 limits each publisher to 20 selected accounts, 500 events per batch, 1 MiB of JSON, and 100 accepted/processing batches. A client can upload any amount of history in consecutive chunks; the limits bound each transaction and inbox, not the total import.
+Protocol 2 limits each publisher to 20 selected accounts, 500 events per batch, 1 MiB of JSON, and 100 accepted/processing batches. Each capture is limited to 100 chunks so the complete capture fits in the inbox. A client can upload larger histories using multiple consecutive captures.
 
 Exact payload bytes are retained for seven days after apply, permanent failure, or revocation for response-loss recovery and operational investigation. Canonical financial data and source identity records follow Sure's normal family retention and deletion behavior. Family financial-data reset removes FinanceKit connections, lineages, observations, identities, conflicts, and batch receipts for that family.
 
