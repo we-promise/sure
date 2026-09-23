@@ -3,10 +3,13 @@
 class RedbarkAccount::Processor
   include RedbarkAccount::DataHelpers
 
-  attr_reader :redbark_account
+  attr_reader :redbark_account, :as_of
 
-  def initialize(redbark_account)
+  # `as_of` is the sync's own date, injected by the caller rather than read
+  # here: a detected rate change is keyed by it (we-promise/sure#3891).
+  def initialize(redbark_account, as_of: Date.current)
     @redbark_account = redbark_account
+    @as_of = as_of
   end
 
   def process
@@ -28,6 +31,11 @@ class RedbarkAccount::Processor
     else
       Rails.logger.warn "RedbarkAccount::Processor - No transactions payload to process"
     end
+
+    # A loan's rate, read from what the bank reported. After transactions, so a
+    # failure here cannot cost the user their entries; a raise would be caught
+    # by RedbarkItem#process_accounts and logged per account.
+    RedbarkAccount::LoanDetailsProcessor.new(redbark_account, as_of: as_of).process
 
     # Trigger immediate UI refresh so entries appear in the activity feed
     account.broadcast_sync_complete
