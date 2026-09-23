@@ -173,7 +173,8 @@ class Family < ApplicationRecord
   # this decides whose transaction descriptions reach a third party.
   #
   # Anything naming the provider calls this, including the rule confirmation
-  # screen's cost estimate, or it quotes a provider that will not run.
+  # screen's cost estimate, or it quotes a provider that will not run. Keep this
+  # side-effect free: views call it while rendering rule labels.
   def resolved_categorization_provider
     jev = configured_jev_provider if effective_categorization_provider == "jev"
 
@@ -225,23 +226,7 @@ class Family < ApplicationRecord
   # which JEV_ENDPOINT can set without passing the settings form's check.
   def configured_jev_provider
     Provider::Registry.get_provider(:jev)
-  rescue Provider::Error => error
-    # Without this the only symptom is categorization silently running on the
-    # provider the family did not choose. The endpoint is redacted because a
-    # gateway URL can carry a key in userinfo or the query string.
-    DebugLogEntry.capture(
-      category: "auto_categorization",
-      level: "error",
-      message: "Jev is misconfigured; falling back to the LLM provider",
-      source: self.class.name,
-      family: self,
-      provider: "jev",
-      metadata: {
-        endpoint: Provider::Jev.redacted_endpoint(Provider::Jev.effective_endpoint),
-        error_class: error.class.name,
-        error_message: error.message
-      }
-    )
+  rescue Provider::Error
     nil
   end
   private :configured_jev_provider

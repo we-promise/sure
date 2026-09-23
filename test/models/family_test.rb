@@ -556,42 +556,28 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
-  test "resolved_categorization_provider captures the rejected endpoint for the operator" do
+  test "resolved_categorization_provider does not write diagnostics from view-time callers" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")
     Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
 
-    with_env_overrides(REJECTED_JEV_ENV) do
-      assert_nil family.resolved_categorization_provider
+    assert_no_difference "DebugLogEntry.count" do
+      with_env_overrides(REJECTED_JEV_ENV) do
+        assert_nil family.resolved_categorization_provider
+      end
     end
-
-    entry = DebugLogEntry.order(:created_at).last
-    assert_equal "auto_categorization", entry.category
-    assert_equal "error", entry.level
-    assert_equal "jev", entry.provider_key
-    assert_equal family.id, entry.family_id
-    assert_equal REJECTED_JEV_ENV["JEV_ENDPOINT"], entry.metadata["endpoint"]
-    assert_equal "Provider::Jev::Error", entry.metadata["error_class"]
   end
 
-  test "the captured diagnostic holds no endpoint credentials" do
+  test "categorization_model_name does not write diagnostics from view-time callers" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")
     Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
 
-    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_ENDPOINT" => CREDENTIALED_JEV_ENDPOINT) do
-      assert_nil family.resolved_categorization_provider
+    assert_no_difference "DebugLogEntry.count" do
+      with_env_overrides(REJECTED_JEV_ENV) do
+        assert_nil family.categorization_model_name
+      end
     end
-
-    entry = DebugLogEntry.order(:created_at).last
-    assert_equal "http://gw.example.com/v1", entry.metadata["endpoint"]
-
-    # error_message embeds the endpoint the constructor rejected, so it leaks
-    # just as readily as the endpoint field if it is not redacted at the raise.
-    serialized = entry.metadata.to_json
-    assert_not_includes serialized, "s3cret"
-    assert_not_includes serialized, "QUERYSECRET"
-    assert_not_includes serialized, "frag"
   end
 
   test "shadow_categorization_provider returns nil when the Jev endpoint is rejected" do

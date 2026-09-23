@@ -218,6 +218,40 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal category, txn.reload.category
   end
 
+  test "logs the rejected Jev endpoint only when categorization actually runs" do
+    @family.update!(categorization_provider: "jev")
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+
+    @llm_provider.expects(:auto_categorize).returns(provider_success_response([
+      AutoCategorization.new(transaction_id: txn.id, category_name: category.name)
+    ])).once
+
+    with_env_overrides(
+      "JEV_API_KEY" => "test_api_key",
+      "JEV_ENDPOINT" => "http://someone:s3cret@gw.example.com/v1?api_key=QUERYSECRET#frag" # pipelock:ignore Credential in URL
+    ) do
+      assert_difference "DebugLogEntry.count", 2 do
+        Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ]).auto_categorize
+      end
+    end
+
+    entry = DebugLogEntry.where(message: "Jev is misconfigured; falling back to the LLM provider").sole
+    assert_equal "auto_categorization", entry.category
+    assert_equal "error", entry.level
+    assert_equal "jev", entry.provider_key
+    assert_equal @family, entry.family
+    assert_equal "http://gw.example.com/v1", entry.metadata["endpoint"]
+    assert_equal "Provider::Jev::Error", entry.metadata["error_class"]
+
+    # error_message embeds the endpoint the constructor rejected, so it leaks
+    # just as readily as the endpoint field if it is not redacted at the raise.
+    serialized = entry.metadata.to_json
+    assert_not_includes serialized, "s3cret"
+    assert_not_includes serialized, "QUERYSECRET"
+    assert_not_includes serialized, "frag"
+  end
+
   # Confidence has to change behaviour, not just appear in logs. Below the
   # threshold the answer is withheld and the transaction is left unlocked, so a
   # later run can still correct it.

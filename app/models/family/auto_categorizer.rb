@@ -122,13 +122,40 @@ class Family::AutoCategorizer
     def categorization_provider
       return @categorization_provider if defined?(@categorization_provider)
 
-      # Resolution lives on Family so the rule confirmation screen names the
-      # same provider this run will use. The preview flag gates whether the
-      # selector is offered at all (see
-      # docs/llm-guides/gating-a-preview-feature.md); it plays no part here, so
-      # a family that opted in and then chose the LLM provider gets the LLM
-      # provider.
-      @categorization_provider = family.resolved_categorization_provider
+      if family.effective_categorization_provider == "jev"
+        # Resolution usually lives on Family so UI and execution agree. This run
+        # path handles Jev directly because misconfiguration diagnostics write a
+        # DebugLogEntry, and view-time resolver calls must stay read-only.
+        jev = configured_jev_provider
+      end
+
+      @categorization_provider = jev || Provider::Registry.preferred_llm_provider
+    end
+
+    def configured_jev_provider
+      Provider::Registry.get_provider(:jev)
+    rescue Provider::Error => error
+      log_jev_misconfiguration(error)
+      nil
+    end
+
+    def log_jev_misconfiguration(error)
+      # Without this the only symptom is categorization silently running on the
+      # provider the family did not choose. The endpoint is redacted because a
+      # gateway URL can carry a key in userinfo or the query string.
+      DebugLogEntry.capture(
+        category: "auto_categorization",
+        level: "error",
+        message: "Jev is misconfigured; falling back to the LLM provider",
+        source: self.class.name,
+        family: family,
+        provider: "jev",
+        metadata: {
+          endpoint: Provider::Jev.redacted_endpoint(Provider::Jev.effective_endpoint),
+          error_class: error.class.name,
+          error_message: error.message
+        }
+      )
     end
 
     # Only providers reporting calibrated confidence can be gated. The LLM
