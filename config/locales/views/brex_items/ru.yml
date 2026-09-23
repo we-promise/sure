@@ -51,7 +51,7 @@ ru:
     create:
       success: Подключение Brex успешно создано
     default_card_name: Карта Brex
-    default_cash_name: Наличные Brex %{id}
+    default_cash_name: Brex Cash %{id}
     default_connection_name: Подключение Brex
     destroy:
       success: Подключение Brex удалено
@@ -71,7 +71,7 @@ ru:
       one: "%{name}"
     kinds:
       card: Карта
-      cash: Наличные
+      cash: Денежный счёт
     link_accounts:
       all_already_linked:
         few: "%{count} выбранных счёта уже связаны: %{names}"
@@ -228,7 +228,7 @@ ru:
         other_asset: Дополнительные параметры для других активов не требуются.
       subtypes:
         depository:
-          cd: Депозитный сертификат
+          cd: Срочный вклад
           checking: Расчётный
           hsa: Счёт медицинских сбережений
           money_market: Денежный рынок

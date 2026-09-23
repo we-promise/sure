@@ -14,11 +14,13 @@ ru:
       service_down_label: Сервис недоступен
       title: Ошибка подключения Lunch Flow
       unable_to_connect: Не удалось подключиться к Lunch Flow
+      unexpected_error: Произошла непредвиденная ошибка. Попробуйте позже.
     complete_account_setup:
       all_skipped: Все счета были пропущены. Счета не были созданы.
       creation_failed: 'Не удалось создать счета: %{error}'
       no_accounts: Нет счетов для настройки.
       success: Успешно создано %{count} счёт(а).
+      unexpected_error: Произошла непредвиденная ошибка
     create:
       success: Подключение к Lunch Flow успешно создано
     destroy:
@@ -78,6 +80,18 @@ ru:
       syncing: Синхронизация...
       total: Всего
       unlinked: Несвязанные
+      sync_status:
+        no_accounts: Счета не найдены
+        synced:
+          one: Синхронизирован %{count} счёт
+          few: Синхронизированы %{count} счёта
+          many: Синхронизировано %{count} счетов
+          other: Синхронизированы %{count} счёта
+        partial_setup:
+          one: '%{linked} синхронизировано, %{unlinked} требует настройки'
+          few: '%{linked} синхронизировано, %{unlinked} требуют настройки'
+          many: '%{linked} синхронизировано, %{unlinked} требуют настройки'
+          other: '%{linked} синхронизировано, %{unlinked} требуют настройки'
     select_accounts:
       accounts_selected: счетов выбрано
       api_error: 'Ошибка API: %{message}'
@@ -145,7 +159,7 @@ ru:
         other_asset: Дополнительные параметры для других активов не требуются.
       subtypes:
         depository:
-          cd: Депозитный сертификат
+          cd: Срочный вклад
           checking: Текущий
           hsa: Счёт медицинских сбережений
           money_market: Денежный рынок
@@ -173,6 +187,7 @@ ru:
         историю операций. Максимум доступно 3 года истории.
       sync_start_date_label: 'Начать синхронизацию операций с:'
       title: Настройте ваши счета Lunch Flow
+      page_title: Настройка счетов Lunch Flow
     setup_required:
       api_key_description: Прежде чем вы сможете связать счета Lunch Flow, вам нужно
         настроить ваш API-ключ Lunch Flow.
@@ -188,3 +203,7 @@ ru:
       success: Синхронизация начата
     update:
       success: Подключение к Lunch Flow обновлено
+    subtype_select:
+      placeholder:
+        subtype: Выберите подтип
+        type: Выберите тип
