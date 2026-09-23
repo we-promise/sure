@@ -173,6 +173,9 @@ en:
       reject_title: Keep as separate transactions
     summary:
       total_transactions: Total transactions
+      scheduled_count:
+        one: "including %{count} scheduled"
+        other: "including %{count} scheduled"
       income: Income
       expenses: Expenses
       inflow: Inflow

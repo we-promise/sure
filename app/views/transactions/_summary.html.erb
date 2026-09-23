@@ -9,6 +9,9 @@
   <div class="p-4 space-y-2">
     <p class="text-sm text-secondary"><%= t("transactions.summary.total_transactions") %></p>
     <p class="text-primary font-medium text-xl privacy-sensitive" id="total-transactions"><%= transactions_count %></p>
+    <% if totals.excluded_scheduled_count.positive? %>
+      <p class="text-xs text-secondary" id="scheduled-transactions-count"><%= t("transactions.summary.scheduled_count", count: totals.excluded_scheduled_count) %></p>
+    <% end %>
   </div>
   <div class="p-4 space-y-2">
     <% if show_transfers %>

@@ -333,6 +333,9 @@ fr:
       income: Revenus
       inflow: Entrées
       outflow: Sorties
+      scheduled_count:
+        one: dont %{count} planifiée
+        other: dont %{count} planifiées
       total_transactions: Total des transactions
     toggle_recurring_section: Afficher/masquer les transactions récurrentes à venir
     transaction:

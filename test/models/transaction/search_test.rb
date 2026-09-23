@@ -384,6 +384,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     totals = search.totals
 
     assert_equal 1, totals.count
+    assert_equal 1, totals.excluded_scheduled_count
     assert_equal Money.new(100, "USD"), totals.expense_money
   end
 
@@ -395,6 +396,7 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     totals = search.totals
 
     assert_equal 2, totals.count
+    assert_equal 0, totals.excluded_scheduled_count
     assert_equal Money.new(5100, "USD"), totals.expense_money
   end
 

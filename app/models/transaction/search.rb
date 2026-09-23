@@ -57,15 +57,24 @@ class Transaction::Search
       # the old logic would keep being served (same cache_key_base) after
       # deploy, disagreeing with the (uncached) transactions_scope list
       # until entries_cache_version next changes for that family.
-      Rails.cache.fetch("transaction_search_totals/v3/#{cache_key_base}") do
+      # v4: Totals gained excluded_scheduled_count.
+      Rails.cache.fetch("transaction_search_totals/v4/#{cache_key_base}") do
         scope = transactions_scope
+        excluded_scheduled_count = 0
 
         # Exclude scheduled (future-dated) entries from totals by default -- they
         # haven't happened yet, so they shouldn't count toward this period's
         # income/expenses (see Entry#scheduled?). An explicit end_date filter is
         # a deliberate request to look ahead (e.g. "next 30 days"), so it's
         # left untouched in that case.
-        scope = scope.where("entries.date <= ?", Date.current) if end_date.blank?
+        #
+        # The list still shows them, so count how many were left out -- the
+        # summary uses it to explain why the headline count is higher than
+        # what the income/expense figures cover.
+        if end_date.blank?
+          excluded_scheduled_count = scope.where("entries.date > ?", Date.current).count
+          scope = scope.where("entries.date <= ?", Date.current)
+        end
 
         # Exclude tax-advantaged accounts from totals calculation
         tax_advantaged_ids = family.tax_advantaged_account_ids
@@ -101,6 +110,7 @@ class Transaction::Search
 
         Totals.new(
           count: result&.transactions_count.to_i,
+          excluded_scheduled_count: excluded_scheduled_count,
           income_money: Money.new((result&.income_total || 0), family.currency),
           expense_money: Money.new((result&.expense_total || 0), family.currency),
           transfer_inflow_money: Money.new((result&.transfer_inflow_total || 0), family.currency),
@@ -123,7 +133,7 @@ class Transaction::Search
   end
 
   private
-    Totals = Data.define(:count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
+    Totals = Data.define(:count, :excluded_scheduled_count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
 
     # Filter query to include only active accounts if requested
     def apply_active_accounts_filter(query, active_accounts_only_filter)
