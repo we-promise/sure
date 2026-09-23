@@ -5,9 +5,10 @@ class TransactionImport < Import
 
       new_transactions = []
       updated_entries = []
+      ordered_entries = [] # every imported entry, new AND matched, in CSV row order
       claimed_entry_ids = Set.new # Track entries we've already claimed in this import
 
-      rows.each_with_index do |row, index|
+      rows.ordered.each_with_index do |row, index|
         mapped_account = if account
           account
         else
@@ -50,11 +51,12 @@ class TransactionImport < Import
           duplicate_entry.import = self
           duplicate_entry.import_locked = true  # Protect from provider sync overwrites
           updated_entries << duplicate_entry
+          ordered_entries << duplicate_entry
           claimed_entry_ids.add(duplicate_entry.id)
         else
           # Create new transaction (no duplicate found)
           # Mark as import_locked to protect from provider sync overwrites
-          new_transactions << Transaction.new(
+          new_transaction = Transaction.new(
             category: category,
             tags: tags,
             entry: Entry.new(
@@ -68,10 +70,24 @@ class TransactionImport < Import
               import_locked: true
             )
           )
+          new_transactions << new_transaction
+          ordered_entries << new_transaction.entry
         end
       end
 
-      # Save updated entries first
+      # reverse_chronological breaks date ties by created_at and then by a random UUID
+      # id, and a bulk insert stamps every row with the same created_at. Stamp EVERY
+      # imported entry -- new AND matched duplicates -- in CSV row order, so the first
+      # CSV row keeps the latest created_at and a same-day import (even one mixing new
+      # rows with matched existing ones) renders in the CSV's order.
+      import_time = Time.current
+      ordered_entries.each_with_index do |entry, index|
+        ordered_time = import_time - index.milliseconds
+        entry.created_at = ordered_time
+        entry.updated_at = ordered_time
+      end
+
+      # Save updated entries first (persists their re-ordered created_at)
       updated_entries.each do |entry|
         entry.transaction.save!
         entry.save!
