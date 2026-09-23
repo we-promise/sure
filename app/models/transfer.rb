@@ -108,6 +108,20 @@ class Transfer < ApplicationRecord
         next if transaction.nil?
         next unless Transaction.exists?(transaction.id)
         begin
+          # This leg didn't exist before Family::AutoTransferMatchable
+          # fabricated it as a stand-in counterpart (see
+          # #auto_create_missing_transfer_counterparts!) -- unlike a real,
+          # bank-synced transaction, there's no underlying data for it to
+          # revert to, so unlinking it must remove it entirely rather than
+          # downgrade it to a phantom "standard" transaction the user never
+          # created.
+          if transaction.extra&.dig("auto_generated_transfer_counterpart") == true
+            account = transaction.entry.account
+            transaction.entry.destroy!
+            account.sync_later
+            next
+          end
+
           transaction.update!(kind: "standard")
           # The entry survives this destroy (only the Transfer join row and
           # fee transactions go away), but its idempotency_key must not: a

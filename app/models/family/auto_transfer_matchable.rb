@@ -188,7 +188,89 @@ module Family::AutoTransferMatchable
     accounts.writable_by(user).visible.where.not(id: entry.account_id).find_by(iban: normalize_iban(counterparty_iban))
   end
 
+  # Family-wide counterpart to missing_transfer_suggestion_for: instead of
+  # only answering "what would the match dialog suggest for this one entry",
+  # this actually creates the missing counterpart transaction (on the
+  # destination account) plus a status: "pending" Transfer linking it to the
+  # outflow -- the same pending state auto_match_transfers! leaves behind
+  # for a genuine match, so it surfaces via the existing accept/reject pill
+  # (transactions/_transfer_match.html.erb) instead of requiring the user to
+  # find and open the manual match dialog themselves.
+  #
+  # Restricted to manual (unsynced) destination accounts only: a linked
+  # account's real transaction may simply not have posted yet, and
+  # fabricating a stand-in entry for it here would risk a duplicate once the
+  # provider's own import brings in the real one. A manual account has no
+  # such pending import to collide with.
+  #
+  # Currency is intentionally not converted -- only a same-currency
+  # destination account is eligible, keeping the fabricated entry's amount
+  # exact rather than dependent on same-day exchange-rate availability.
+  def auto_create_missing_transfer_counterparts!(account: nil)
+    outflow_entries = Entry.joins(:account)
+      .where(accounts: { family_id: id, status: [ "draft", "active" ] })
+      .where(entryable_type: "Transaction", excluded: false)
+      .where("entries.amount > 0")
+    outflow_entries = outflow_entries.where(account_id: account.id) if account
+
+    outflow_entries.includes(:account).find_each do |entry|
+      transaction = entry.entryable
+      next unless transaction.is_a?(Transaction)
+      next if transaction.transfer?
+      next if transaction.extra&.dig("counterparty_transfer_suggestion_dismissed") == true
+
+      counterparty_iban = transaction.counterparty_iban
+      next if counterparty_iban.blank?
+
+      # A real match candidate (an inflow transaction that already exists)
+      # is handled by auto_match_transfers! -- only fabricate a counterpart
+      # when there's genuinely nothing to match against yet.
+      next if transfer_match_candidates(outflow_transaction_id: transaction.id, account_id: account&.id).any?
+
+      target_account = accounts.where(status: [ "draft", "active" ])
+        .where.not(id: entry.account_id)
+        .find_by(iban: normalize_iban(counterparty_iban))
+      next unless target_account&.manual?
+      next unless target_account.currency == entry.currency
+
+      create_missing_transfer_counterpart!(entry, transaction, target_account)
+    end
+  end
+
   private
+    # Builds the fabricated inflow entry + its pending Transfer in one
+    # savepoint, so a race (a concurrent sync claiming this outflow for a
+    # different pairing, or creating the same counterpart independently)
+    # rolls back the whole attempt instead of leaving an orphaned entry
+    # with no Transfer behind it.
+    def create_missing_transfer_counterpart!(entry, transaction, target_account)
+      Transfer.transaction(requires_new: true) do
+        inflow_transaction = Transaction.new(
+          kind: "funds_movement",
+          extra: { "auto_generated_transfer_counterpart" => true },
+          entry: target_account.entries.build(
+            amount: -entry.amount,
+            currency: target_account.currency,
+            date: entry.date,
+            name: "Transfer from #{entry.account.name}"
+          )
+        )
+        inflow_transaction.save!
+
+        Transfer.create!(
+          inflow_transaction_id: inflow_transaction.id,
+          outflow_transaction_id: transaction.id,
+          status: "pending"
+        )
+
+        transaction.update!(kind: Transfer.kind_for_account(target_account))
+      end
+
+      target_account.sync_later
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+      nil
+    end
+
     # True when the inflow's destination account has its own IBAN set and it
     # matches the outflow transaction's recorded counterparty IBAN. Blank on
     # either side (no accounts.iban set, or the provider never supplied a
