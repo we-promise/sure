@@ -227,7 +227,7 @@ class TransactionsController < ApplicationController
             turbo_stream.replace(
               dom_id(@entry, :category_provenance),
               partial: "transactions/category_provenance",
-              locals: { transaction: @entry.transaction, provenance: @entry.transaction.category_provenance }
+              locals: { entry: @entry }
             ),
             turbo_stream.replace(
               dom_id(@entry),

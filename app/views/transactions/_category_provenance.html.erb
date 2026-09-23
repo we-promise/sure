@@ -1,9 +1,10 @@
-<%# locals: (transaction:, provenance: nil) %>
+<%# locals: (entry:) %>
 
 <%# The wrapper always renders (empty when no provenance) so the drawer can
     turbo-replace it after in-drawer category edits. %>
-<div id="<%= dom_id(transaction.entry, :category_provenance) %>">
-  <% if provenance %>
+<% transaction = entry.transaction %>
+<div id="<%= dom_id(entry, :category_provenance) %>">
+  <% if (provenance = transaction.category_provenance) %>
     <div class="px-3 pt-3 space-y-1" data-testid="category-provenance">
       <div class="flex items-center justify-between gap-2">
         <span class="text-sm text-secondary"><%= t(".title") %></span>
