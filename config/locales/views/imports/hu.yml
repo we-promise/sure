@@ -451,7 +451,7 @@ hu:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Feldolgozási hiba: %{error}"
       ready_for_review_title: Felülvizsgálatra kész
-      ready_for_review_description: "%{count} tranzakciót vontunk ki a kimutatásodból. Ellenőrizd és tedd közzé, hogy hozzáadódjon a számládhoz."
+      ready_for_review_description: "A kimutatásodból %{count} tranzakció még nincs ebben a számlában. Ellenőrizd, majd tedd közzé a hozzáadáshoz."
       transactions_extracted: Kinyert tranzakciók
       transactions_extracted_count:
         one: "%{count} tranzakció"

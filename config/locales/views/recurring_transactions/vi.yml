@@ -51,7 +51,7 @@ vi:
       inactive: Đã tạm dừng
       suggested: Có thể là hóa đơn
       paused: Đã tạm dừng
-      ended: Đã bỏ qua
+      ended: "Đã loại bỏ"
     badges:
       manual: Thủ công
     transfer_marked_as_recurring: Chuyển khoản đã được đánh dấu là định kỳ

@@ -468,7 +468,7 @@ zh-CN:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: 处理失败：%{error}
       ready_for_review_title: 可供审核
-      ready_for_review_description: 已提取 %{count} 条交易，请审核后导入。
+      ready_for_review_description: "对账单中有 %{count} 笔交易尚未加入此账户，请审核后导入。"
       transactions_extracted: 已提取交易
       transactions_extracted_count:
         one: "%{count} 笔交易"

@@ -13,7 +13,7 @@ hu:
     create:
       success: Befizetés rögzítve. A Sure a következő szinkronizáláskor megerősíti.
     renew:
-      success: A bejelentés függőségi ideje 7 nappal meghosszabbítva.
+      success: "A bejelentés időablaka 7 nappal meghosszabbítva."
       not_open: Csak függőben lévő bejelentések hosszabbíthatók meg.
     destroy:
       success: Bejelentés visszavonva.

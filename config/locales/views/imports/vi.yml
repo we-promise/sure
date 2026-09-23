@@ -467,7 +467,7 @@ vi:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Xử lý thất bại: %{error}"
       ready_for_review_title: Sẵn sàng xem xét
-      ready_for_review_description: "Chúng tôi đã trích xuất %{count} giao dịch từ sao kê. Xem lại và xác nhận để thêm vào tài khoản."
+      ready_for_review_description: "%{count} giao dịch trong sao kê chưa có trong tài khoản này. Hãy xem lại rồi nhập để thêm vào."
       transactions_extracted: Giao dịch đã trích xuất
       transactions_extracted_count:
         one: "%{count} giao dịch"
