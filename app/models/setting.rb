@@ -80,6 +80,9 @@ class Setting < RailsSettings::Base
   field :eodhd_api_key, type: :string, default: ENV["EODHD_API_KEY"]
   field :alpha_vantage_api_key, type: :string, default: ENV["ALPHA_VANTAGE_API_KEY"]
   field :tinkoff_invest_api_key, type: :string, default: ENV["TINKOFF_INVEST_API_KEY"]
+  # Mansa API (mansaapi.com) — African exchanges, including NGX (Nigeria),
+  # which none of the providers above cover. See Provider::Mansa.
+  field :mansa_api_key, type: :string, default: ENV["MANSA_API_KEY"]
 
   # Property valuation (AVM) provider API keys
   field :rentcast_api_key, type: :string, default: ENV["RENTCAST_API_KEY"]
@@ -100,6 +103,7 @@ class Setting < RailsSettings::Base
       eodhd_api_key
       alpha_vantage_api_key
       tinkoff_invest_api_key
+      mansa_api_key
       rentcast_api_key
       realie_api_key
       openai_access_token

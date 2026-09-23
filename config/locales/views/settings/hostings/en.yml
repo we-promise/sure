@@ -48,6 +48,7 @@ en:
         binance_public_hint: free, no API key -- crypto only (BTC, ETH, etc.)
         moex_public_hint: free, no API key -- Russian stocks, funds & bonds (MOEX), incl. RUB FX
         tinkoff_invest_hint: requires read-only token -- Russian stocks/funds/bonds prices + brand logos
+        requires_api_key_mansa: requires API key, 100 calls/day free tier -- NGX (Nigerian Exchange) only
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -60,6 +61,7 @@ en:
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
           gold_api: GoldAPI
+          mansa: Mansa
       gold_api_settings:
         title: Gems and Bullion Pricing
         description: Optional GoldAPI key for calculating gold, silver, platinum, and palladium valuations. The free plan is limited to 100 requests per month; Sure caches one quote per material and currency per day.
@@ -214,6 +216,16 @@ en:
         step_2_html: 'Go to your <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> to find your API token.'
         step_3: Copy your API token and paste it below.
         rate_limit_warning: "EODHD free tier is limited to 20 API calls per day. Best used as a supplementary provider for EU ETFs not available from other providers."
+      mansa_settings:
+        title: Mansa
+        description: Enter the API key from Mansa API. Supports NGX (Nigerian Exchange), not covered by any other provider here. Mansa covers other African exchanges too, but only NGX is verified against this integration.
+        env_configured_message: Successfully configured through the MANSA_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your Mansa API key here
+        show_details: "(show details)"
+        step_1_html: 'Visit <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> and claim your free API key -- no card required.'
+        step_2: Copy your API key and paste it below.
+        rate_limit_warning: "Mansa's free tier is limited to 100 API calls per day, and only exposes current quotes -- historical prices require a paid plan. Only NGX (Nigerian Exchange) is verified against this integration; other African exchanges Mansa covers are not yet supported here."
       alpha_vantage_settings:
         title: Alpha Vantage
         description: Enter the API key from Alpha Vantage. Supports EU ETFs on London Stock Exchange, XETRA, and other exchanges.

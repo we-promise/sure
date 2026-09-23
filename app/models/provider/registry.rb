@@ -142,6 +142,14 @@ class Provider::Registry
         Provider::AlphaVantage.new(api_key)
       end
 
+      def mansa
+        api_key = ENV["MANSA_API_KEY"].presence || Setting.mansa_api_key # pipelock:ignore
+
+        return nil unless api_key.present?
+
+        Provider::Mansa.new(api_key)
+      end
+
       def mfapi
         Provider::Mfapi.new
       end
@@ -213,7 +221,7 @@ class Provider::Registry
       when :exchange_rates
         %i[twelve_data yahoo_finance moex_public frankfurter]
       when :securities
-        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest]
+        %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest mansa]
       when :llm
         %i[openai anthropic]
       when :property_valuations
