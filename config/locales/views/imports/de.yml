@@ -385,8 +385,8 @@ de:
         provider_no_pdf_support: Der KI-Anbieter unterstützt keine PDF-Verarbeitung
       view_summary: Importübersicht anzeigen
       already_recorded_note:
-        one: '%{count} war bereits in diesem Konto und wurde dem Auszug zugeordnet.'
-        other: '%{count} waren bereits in diesem Konto und wurden dem Auszug zugeordnet.'
+        one: '%{count} Transaktion war bereits in diesem Konto und wurde dem Auszug zugeordnet.'
+        other: '%{count} Transaktionen waren bereits in diesem Konto und wurden dem Auszug zugeordnet.'
       complete_fully_reconciled:
         one: Jede Transaktion dieses Auszugs war bereits in deinem Konto. %{count} wurde zugeordnet und als abgeglichen markiert – es musste nichts importiert werden.
         other: Jede Transaktion dieses Auszugs war bereits in deinem Konto. Alle %{count} wurden zugeordnet und als abgeglichen markiert – es musste nichts importiert werden.

@@ -4,7 +4,7 @@ zh-TW:
     history_status:
       paid: 已付款
       skipped: 已跳過
-      missed: 未付款
+      missed: 已逾期
       scheduled: 未結清
     show:
       due_on: 到期日 %{date}

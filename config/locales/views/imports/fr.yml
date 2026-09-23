@@ -175,7 +175,7 @@ fr:
         empty_state_primary: Aucune catégorie ou étiquette trouvée dans ce fichier QIF.
         empty_state_secondary: Toutes les transactions seront importées sans catégories ni étiquettes.
         split_badge: scindée
-        split_warning_description: 'Ce fichier QIF contient des transactions scindées. Les transactions scindées ne sont pas encore prises en charge : chaque transaction scindée sera importée comme une transaction unique avec son montant total et sans catégorie. Les ventilations individuelles ne seront pas conservées.'
+        split_warning_description: 'Ce fichier QIF contient des transactions scindées. Vérifiez ci-dessous les catégories et étiquettes détectées pour les ventilations avant l’importation.'
         split_warning_title: Transactions scindées détectées
         submit: Continuer vers la revue
         tag_name_col: Nom de l'étiquette
@@ -193,7 +193,7 @@ fr:
     uploads:
       handle_qif_upload:
         qif_account_required: Sélectionnez un compte pour l'import QIF
-        qif_uploaded: Fichier QIF importé avec succès.
+        qif_uploaded: Fichier QIF téléversé avec succès.
       show:
         account_optional_label: Compte (facultatif)
         browse: Parcourir
@@ -213,7 +213,7 @@ fr:
         paste_csv_placeholder: Collez le contenu de votre fichier CSV ici
         qif_account_label: Compte
         qif_account_placeholder: Sélectionner un compte…
-        qif_description: Sélectionnez le compte auquel appartient ce fichier QIF, puis téléversez votre export .qif depuis Quicken.
+        qif_description: Sélectionnez un compte pour un fichier à compte unique, ou laissez vide si votre export QIF contient les noms des comptes.
         qif_file_hint: Fichiers .qif uniquement
         qif_file_prompt: pour ajouter votre fichier QIF ici
         qif_submit: Téléverser le QIF
@@ -233,7 +233,7 @@ fr:
         title: Importer depuis l'export
         upload_button: Téléverser le NDJSON
       update:
-        qif_uploaded: Fichier QIF importé avec succès.
+        qif_uploaded: Fichier QIF téléversé avec succès.
   imports:
     apply_template:
       no_template_found: Aucun modèle trouvé, veuillez configurer manuellement votre importation.
