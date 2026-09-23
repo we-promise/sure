@@ -35,6 +35,29 @@ class PlaidAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     processor.process
   end
 
+  test "does not bootstrap family categories during import" do
+    family = @plaid_account.current_account.family
+    family.categories.destroy_all
+    assert_empty family.categories
+
+    @plaid_account.update!(raw_transactions_payload: {
+      added: [ { "transaction_id" => "123" } ],
+      modified: [],
+      removed: []
+    })
+
+    # Isolate category behavior from entry processing
+    PlaidEntry::Processor.any_instance.stubs(:process)
+
+    processor = PlaidAccount::Transactions::Processor.new(@plaid_account)
+
+    assert_no_difference "Category.count" do
+      processor.process
+    end
+
+    assert_empty family.categories.reload
+  end
+
   test "removes transactions no longer in plaid" do
     destroyable_transaction_id = "destroy_me"
     @plaid_account.current_account.entries.create!(
