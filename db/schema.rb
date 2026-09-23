@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_16_220129) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -878,6 +878,159 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_220129) do
     t.index ["family_id", "merchant_id"], name: "idx_on_family_id_merchant_id_23e883e08f", unique: true
     t.index ["family_id"], name: "index_family_merchant_associations_on_family_id"
     t.index ["merchant_id"], name: "index_family_merchant_associations_on_merchant_id"
+  end
+
+  create_table "financekit_account_lineages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_financekit_account_lineages_on_account_id"
+    t.index ["family_id", "account_id"], name: "financekit_lineage_canonical_account", unique: true, where: "(account_id IS NOT NULL)"
+    t.index ["family_id"], name: "index_financekit_account_lineages_on_family_id"
+  end
+
+  create_table "financekit_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "accountable_type", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.uuid "financekit_account_lineage_id", null: false
+    t.uuid "financekit_item_id", null: false
+    t.string "institution_name"
+    t.string "ledger_timezone", null: false
+    t.string "mapping_digest", null: false
+    t.integer "mapping_version", default: 1, null: false
+    t.string "name", null: false
+    t.uuid "source_id", null: false
+    t.string "subtype", null: false
+    t.datetime "unavailable_at"
+    t.datetime "updated_at", null: false
+    t.index ["financekit_account_lineage_id"], name: "index_financekit_accounts_on_lineage_id"
+    t.index ["financekit_item_id", "financekit_account_lineage_id"], name: "financekit_item_lineage_identity", unique: true
+    t.index ["financekit_item_id", "source_id"], name: "index_financekit_accounts_on_financekit_item_id_and_source_id", unique: true
+    t.index ["financekit_item_id"], name: "index_financekit_accounts_on_financekit_item_id"
+  end
+
+  create_table "financekit_balance_observations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "amount", precision: 19, scale: 4, null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.string "direction", null: false
+    t.uuid "financekit_account_id"
+    t.uuid "financekit_account_lineage_id", null: false
+    t.string "kind", null: false
+    t.datetime "observed_at", null: false
+    t.uuid "source_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["financekit_account_id"], name: "index_financekit_balance_observations_on_financekit_account_id"
+    t.index ["financekit_account_lineage_id", "source_id", "kind", "observed_at"], name: "financekit_balance_observation_identity", unique: true
+    t.index ["financekit_account_lineage_id"], name: "index_financekit_balances_on_lineage_id"
+  end
+
+  create_table "financekit_batches", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "accepted_at", null: false
+    t.datetime "applied_at"
+    t.integer "attempts", default: 0, null: false
+    t.uuid "batch_id", null: false
+    t.uuid "capture_id", null: false
+    t.string "capture_mode", null: false
+    t.datetime "captured_at", null: false
+    t.integer "chunk_count", null: false
+    t.integer "chunk_index", null: false
+    t.jsonb "counts", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "downstream_completed_at"
+    t.string "error_code"
+    t.uuid "financekit_item_id", null: false
+    t.bigint "generation", null: false
+    t.binary "payload"
+    t.string "payload_digest", null: false
+    t.string "predecessor_digest"
+    t.datetime "retry_at"
+    t.bigint "sequence", null: false
+    t.boolean "snapshot_complete", default: false, null: false
+    t.string "status", default: "accepted", null: false
+    t.uuid "stream_id", null: false
+    t.uuid "sync_id"
+    t.datetime "updated_at", null: false
+    t.index ["financekit_item_id", "generation", "batch_id"], name: "financekit_batch_identity", unique: true
+    t.index ["financekit_item_id", "generation", "stream_id", "sequence"], name: "financekit_stream_sequence", unique: true
+    t.index ["financekit_item_id"], name: "index_financekit_batches_on_financekit_item_id"
+    t.index ["status", "retry_at"], name: "index_financekit_batches_on_status_and_retry_at"
+    t.index ["sync_id"], name: "index_financekit_batches_on_sync_id"
+    t.check_constraint "sequence > 0 AND generation > 0 AND chunk_index >= 0 AND chunk_count > 0 AND chunk_index < chunk_count", name: "financekit_batch_stream_values"
+  end
+
+  create_table "financekit_conflicts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "details", default: {}, null: false
+    t.uuid "family_id", null: false
+    t.uuid "financekit_account_lineage_id"
+    t.uuid "financekit_item_id", null: false
+    t.uuid "financekit_transaction_id"
+    t.string "kind", null: false
+    t.string "resolution"
+    t.datetime "resolved_at"
+    t.uuid "resolved_by_id"
+    t.string "status", default: "open", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_financekit_conflicts_on_family_id"
+    t.index ["financekit_account_lineage_id"], name: "index_financekit_conflicts_on_lineage_id"
+    t.index ["financekit_item_id", "status", "created_at"], name: "financekit_conflicts_status_created"
+    t.index ["financekit_item_id"], name: "index_financekit_conflicts_on_financekit_item_id"
+    t.index ["financekit_transaction_id"], name: "index_financekit_conflicts_on_financekit_transaction_id"
+    t.index ["resolved_by_id"], name: "index_financekit_conflicts_on_resolved_by_id"
+  end
+
+  create_table "financekit_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.jsonb "consent", null: false
+    t.datetime "created_at", null: false
+    t.string "credential_digest"
+    t.string "enrollment_digest", null: false
+    t.uuid "enrollment_id", null: false
+    t.uuid "family_id", null: false
+    t.bigint "generation", default: 1, null: false
+    t.datetime "last_accepted_at"
+    t.datetime "last_captured_at"
+    t.datetime "last_device_contact_at"
+    t.datetime "last_downstream_at"
+    t.datetime "last_imported_at"
+    t.bigint "next_sequence", default: 1, null: false
+    t.string "predecessor_digest"
+    t.uuid "publisher_id", null: false
+    t.string "repair_reason"
+    t.uuid "replaces_financekit_item_id"
+    t.string "status", default: "pending_mapping", null: false
+    t.uuid "stream_id"
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index ["family_id", "enrollment_id"], name: "index_financekit_items_on_family_id_and_enrollment_id", unique: true
+    t.index ["family_id"], name: "index_financekit_items_on_family_id"
+    t.index ["publisher_id"], name: "index_financekit_items_on_publisher_id", unique: true
+    t.index ["replaces_financekit_item_id"], name: "index_financekit_items_on_replaces_financekit_item_id"
+    t.index ["user_id"], name: "index_financekit_items_on_user_id"
+    t.check_constraint "generation > 0 AND next_sequence > 0", name: "financekit_items_positive_stream"
+  end
+
+  create_table "financekit_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "entry_id"
+    t.uuid "financekit_account_id"
+    t.uuid "financekit_account_lineage_id", null: false
+    t.bigint "generation", null: false
+    t.boolean "ledger_imported", default: false, null: false
+    t.jsonb "raw_payload"
+    t.boolean "review_required", default: false, null: false
+    t.bigint "sequence", null: false
+    t.uuid "source_id", null: false
+    t.string "status", null: false
+    t.datetime "tombstoned_at"
+    t.datetime "updated_at", null: false
+    t.index ["entry_id"], name: "index_financekit_transactions_on_entry_id"
+    t.index ["financekit_account_id"], name: "index_financekit_transactions_on_financekit_account_id"
+    t.index ["financekit_account_lineage_id", "source_id"], name: "financekit_transaction_lineage_identity", unique: true
+    t.index ["financekit_account_lineage_id"], name: "index_financekit_transactions_on_lineage_id"
   end
 
   create_table "fio_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2785,6 +2938,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_16_220129) do
   add_foreign_key "family_exports", "families"
   add_foreign_key "family_merchant_associations", "families"
   add_foreign_key "family_merchant_associations", "merchants"
+  add_foreign_key "financekit_account_lineages", "accounts", on_delete: :nullify
+  add_foreign_key "financekit_account_lineages", "families"
+  add_foreign_key "financekit_accounts", "financekit_account_lineages"
+  add_foreign_key "financekit_accounts", "financekit_items"
+  add_foreign_key "financekit_balance_observations", "financekit_account_lineages"
+  add_foreign_key "financekit_balance_observations", "financekit_accounts", on_delete: :nullify
+  add_foreign_key "financekit_batches", "financekit_items"
+  add_foreign_key "financekit_batches", "syncs", on_delete: :nullify
+  add_foreign_key "financekit_conflicts", "families"
+  add_foreign_key "financekit_conflicts", "financekit_account_lineages", on_delete: :nullify
+  add_foreign_key "financekit_conflicts", "financekit_items"
+  add_foreign_key "financekit_conflicts", "financekit_transactions", on_delete: :nullify
+  add_foreign_key "financekit_conflicts", "users", column: "resolved_by_id", on_delete: :nullify
+  add_foreign_key "financekit_items", "families"
+  add_foreign_key "financekit_items", "financekit_items", column: "replaces_financekit_item_id", on_delete: :nullify
+  add_foreign_key "financekit_items", "users"
+  add_foreign_key "financekit_transactions", "entries", on_delete: :nullify
+  add_foreign_key "financekit_transactions", "financekit_account_lineages"
+  add_foreign_key "financekit_transactions", "financekit_accounts", on_delete: :nullify
   add_foreign_key "fio_accounts", "fio_items"
   add_foreign_key "fio_items", "families"
   add_foreign_key "goal_accounts", "accounts", on_delete: :restrict
