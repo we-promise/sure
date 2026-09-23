@@ -43,12 +43,14 @@ required `transacted_at`, converted into the mapped account's ledger timezone.
 
 Bank sync lists Apple Wallet as a US / UK bank provider. Its App Store button is
 disabled with “Coming soon!” hover help; connections are managed in the iOS app.
+The screenshots use synthetic test data with Brandfetch disabled, showing the
+standard initials fallback.
 
 ![Available Apple Wallet provider](financekit/apple-wallet-available.png)
 
 Existing connections appear under Your Connections with sync status, acceptance
 and import timestamps, and links to accounts the viewer can access. Wallet accounts
-also appear in Accounts. This screenshot uses synthetic test data.
+also appear in Accounts.
 
 ![Connected Apple Wallet provider](financekit/apple-wallet-connected.png)
 
@@ -111,10 +113,9 @@ permissions. These records simulate imported data; no iOS device is required.
 
 ## Wallet logo
 
-The provider logo is bundled at `app/assets/images/providers/apple-wallet.png`,
-using Apple's [256-pixel Wallet icon](https://developer.apple.com/assets/elements/icons/wallet/wallet-128x128_2x.png).
-Rails serves this asset locally, so displaying the logo does not depend on Apple
-or Brandfetch being available.
+Apple Wallet uses the standard `ProviderLogo` flow with the `apple.com` domain:
+Brandfetch supplies the Apple logo when configured, with the usual initials
+fallback when the image is unavailable. No Wallet-specific asset is bundled.
 
 ## Capacity and retention
 
