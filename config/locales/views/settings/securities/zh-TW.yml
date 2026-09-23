@@ -4,7 +4,7 @@ zh-TW:
     securities:
       show:
         disable_mfa: 停用雙重驗證 (2FA)
-        disable_mfa_confirm: 您確定要停用雙重驗證嗎？
+        disable_mfa_confirm: 您確定要停用雙重驗證嗎？這將會降低您帳號的安全性。
         enable_mfa: 啟用雙重驗證 (2FA)
         mfa_enabled_status_html: 雙重驗證<span class="font-medium text-green-600">已啟用</span>
         mfa_enabled_description: 您的帳號已受到額外一層安全防護。
