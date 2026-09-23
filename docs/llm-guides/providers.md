@@ -155,7 +155,8 @@ preserve all of them:
   nothing when the description does not change.
 
   Settling is not that case. Plaid gives a posted transaction a new
-  `transaction_id` and links it through `pending_transaction_id`, so it arrives
+  `transaction_id` and links it through `pending_transaction_id` when there 
+  pending transaction that matches (can be null), so it arrives
   as a new transaction that claims the pending entry, and there the name and
   the description update together. Categorizing locks `category_id`, not the
   name, so a categorized pending entry still takes the posted name.
