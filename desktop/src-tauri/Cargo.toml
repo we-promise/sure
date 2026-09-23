@@ -26,4 +26,11 @@ sha2 = "0.10"
 base64 = "0.22"
 getrandom = "0.2"
 
+# Already in the tree through wry; used directly to save attachment responses.
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6"
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSObject", "NSString", "NSURLResponse"] }
+objc2-web-kit = { version = "0.3", default-features = false, features = ["std", "block2", "objc2-app-kit", "WKDownload", "WKNavigation", "WKNavigationAction", "WKNavigationDelegate", "WKNavigationResponse", "WKWebView"] }
+
 [dev-dependencies]
