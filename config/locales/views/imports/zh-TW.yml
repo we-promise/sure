@@ -22,7 +22,7 @@ zh-TW:
           one: 1 筆交易
           other: '%{count} 筆交易'
         split_warning_title: 偵測到拆分交易
-        split_warning_description: 這個 QIF 檔案含有拆分交易。目前尚未支援拆分，因此每筆拆分交易都會以完整金額、不帶分類的方式匯入成單一交易，個別的拆分明細不會保留。
+        split_warning_description: 這個 QIF 檔案含有拆分交易。匯入前請先檢視下方偵測到的拆分分類與標籤。
         split_badge: 拆分
         empty_state_primary: 這個 QIF 檔案中找不到任何分類或標籤。
         empty_state_secondary: 所有交易都會在沒有分類與標籤的情況下匯入。
@@ -113,6 +113,20 @@ zh-TW:
         instructions: 按「繼續」就會讀取您的 CSV，接著進入校正步驟。
       mint_import:
         date_format_label: 日期格式
+        account_optional: 帳戶（選填）
+        amount: 金額
+        apply_configuration: 套用設定
+        category_optional: 分類（選填）
+        currency: 幣別
+        date: 日期
+        format: 格式
+        incomes_negative: 收入為負數
+        incomes_positive: 收入為正數
+        intro: 我們已經幫您預先設定好 Mint 匯入，請直接前往下一步。
+        leave_empty: 留白
+        name_optional: 名稱（選填）
+        select_format: 選擇格式
+        tags_optional: 標籤（選填）
       actual_import:
         preconfigured_notice: 我們已經幫您預先設定好 Actual Budget 匯入，請直接前往下一步。
         leave_empty: 留白
@@ -145,6 +159,11 @@ zh-TW:
       show:
         description: 選擇 CSV 中對應各個欄位的項目。
         title: 設定您的匯入項目
+        template_found: 找到範本設定
+        template_description: 我們找到這個帳戶先前匯入時使用的設定。要將它套用到這次匯入嗎？
+        manually_configure: 手動設定
+        apply_template: 套用範本
+        sample_caption: 您上傳的 CSV 範例資料
     confirms:
       sure_import:
         title: 確認您的匯入
@@ -174,6 +193,7 @@ zh-TW:
     uploads:
       handle_qif_upload:
         qif_uploaded: QIF 檔案上傳成功。
+        qif_account_required: 請為 QIF 匯入選擇一個帳戶
       update:
         qif_uploaded: QIF 檔案上傳成功。
       show:
@@ -189,7 +209,7 @@ zh-TW:
         download_sample_csv: 下載 CSV 範例檔
         to_see_format: 即可查看必要的 CSV 格式
         qif_title: 上傳 QIF 檔案
-        qif_description: 選擇這個 QIF 檔案所屬的帳戶，然後上傳您從 Quicken 匯出的 .qif 檔案。
+        qif_description: 單一帳戶的檔案請選擇一個帳戶；如果您匯出的 QIF 檔已包含帳戶名稱，則可以留白。
         qif_account_label: 帳戶
         qif_account_placeholder: 選擇一個帳戶...
         qif_file_prompt: 即可在此加入您的 QIF 檔案
@@ -258,6 +278,7 @@ zh-TW:
     update:
       account_saved: 帳戶已儲存。
       invalid_account: 找不到帳戶。
+      account_locked: 這筆匯入已經執行，因此無法變更它的帳戶。如果需要匯入到其他帳戶，請先還原這筆匯入。
     publish:
       started: 您的匯入已在背景開始執行。
       max_rows_exceeded: 您的匯入超過了 %{max} 列的上限。
@@ -326,6 +347,7 @@ zh-TW:
       confirm: 確認
       select: 選擇
       progress: 第 %{step} 步，共 %{total} 步
+      label: 第 %{step} 步
     empty:
       message: 找不到匯入紀錄。
     index:
@@ -409,12 +431,12 @@ zh-TW:
       finalize_upload: 請先完成您的檔案上傳。
       finalize_mappings: 請先完成欄位對應再繼續。
     ready:
-      description: 發布這次匯入後，以下項目會加入您的帳戶。
+      description: 執行這次匯入後，以下項目會加入您的帳戶。
       title: 確認您的匯入資料
       summary_item_label: 項目
       summary_count_label: 數量
       empty_summary: 在此檔案中找不到可匯入的紀錄。檔案可能是空的，或各行不符合預期的匯出格式（每行應為包含「type」與「data」鍵的 JSON 物件，且類型須為此匯入支援的類型）。
-      publish_import: 發布匯入
+      publish_import: 執行匯入
       back_to_imports: 返回匯入清單
     errors:
       custom_column_requires_inflow: 自訂欄位匯入必須選擇一個流入欄位
@@ -449,7 +471,7 @@ zh-TW:
       processing_failed_with_message: '%{message}'
       processing_failed_generic: 處理失敗：%{error}
       ready_for_review_title: 可以開始檢視了
-      ready_for_review_description: 我們從您的對帳單中擷取了 %{count} 筆交易。請審核後發布，即可加入您的帳戶。
+      ready_for_review_description: 我們從您的對帳單中擷取了 %{count} 筆交易。請審核後匯入，即可加入您的帳戶。
       transactions_extracted: 擷取到的交易
       transactions_extracted_count:
         one: '%{count} 筆交易'
@@ -461,8 +483,29 @@ zh-TW:
       create_account: 建立帳戶
       save_account: 儲存
       publish_transactions:
-        one: 發布 %{count} 筆交易
-        other: 發布 %{count} 筆交易
+        one: 匯入 %{count} 筆交易
+        other: 匯入 %{count} 筆交易
       review_transactions: 檢視交易
       select_account_to_continue: 請先在上方選擇一個帳戶才能繼續。
       unknown_document_type: 未知
+      errors:
+        provider_not_configured: 尚未設定 AI 供應商
+        provider_no_pdf_support: AI 供應商不支援 PDF 處理
+      view_summary: 查看匯入摘要
+      already_recorded_note:
+        other: 有 %{count} 筆原本就在這個帳戶中，並已與對帳單配對。
+      complete_fully_reconciled:
+        other: 這份對帳單上的每筆交易都已在您的帳戶中。全部 %{count} 筆都已配對並標記為已對帳 — 不需要匯入任何交易。
+    summary:
+      title: 匯入摘要
+      subtitle: 這份對帳單上每筆交易在 %{account} 中的處理結果。
+      subtitle_no_account: 這份對帳單上每筆交易的處理結果。
+      extracted: 對帳單上找到的交易
+      already_recorded: 已有紀錄
+      already_recorded_hint: 已與這個帳戶中原有的交易配對，並標記為已對帳。
+      imported: 以新交易匯入
+      awaiting_review: 等待匯入
+      fully_reconciled:
+        other: 不需要匯入任何交易 — 全部 %{count} 筆交易都已有紀錄。
+      statement_evidence_html: 已與 %{statement} 對帳。
+      close: 關閉

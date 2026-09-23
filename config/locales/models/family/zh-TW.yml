@@ -1,0 +1,10 @@
+---
+zh-TW:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_chat_system: 聊天系統提示詞
+        ai_prompt_categorizer_openai: 交易分類器提示詞 (OpenAI)
+        ai_prompt_categorizer_anthropic: 交易分類器提示詞 (Anthropic)
+        ai_prompt_merchant_openai: 商家偵測提示詞 (OpenAI)
+        ai_prompt_merchant_anthropic: 商家偵測提示詞 (Anthropic)

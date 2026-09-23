@@ -98,10 +98,10 @@ zh-TW:
       base_url_placeholder: https://api.brex.com
       configured_html: 已設定完成，可以開始使用。請前往 %{accounts_link} 分頁管理並設定帳戶。
       connection_name_label: 連線名稱
-      connection_name_placeholder: 公司支票帳戶
+      connection_name_placeholder: 公司活存帳戶
       default_connection_name: Brex 連線
       disconnect_label: 中斷 %{name}
-      disconnect_confirm: 確定要中斷 %{name} 嗎？
+      disconnect_confirm: 確定要中斷與 %{name} 的連線嗎？
       encryption_warning:
         title: 資料庫加密未設定
         message: 在正式環境加入 Brex Token 之前，請先設定 Active Record 加密金鑰。沒有加密金鑰時，Sure 會像其他供應商的紀錄一樣，以明文儲存 Brex 的憑證與快照。
@@ -189,7 +189,7 @@ zh-TW:
       no_api_token: 找不到 Brex API Token，請在供應商設定中設定。
       account_types:
         skip: 跳過此帳戶
-        depository: 支票或儲蓄帳戶
+        depository: 活期或儲蓄帳戶
         credit_card: 信用卡
         investment: 投資帳戶
         loan: 貸款或房屋貸款
@@ -205,7 +205,7 @@ zh-TW:
         other_asset: 其他資產不需要額外選項。
       subtypes:
         depository:
-          checking: 支票帳戶 (Checking)
+          checking: 活期存款帳戶 (Checking)
           savings: 儲蓄帳戶 (Savings)
           hsa: 健康儲蓄帳戶 (HSA)
           cd: 定期存款 (CD)

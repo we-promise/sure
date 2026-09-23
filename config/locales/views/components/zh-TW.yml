@@ -99,6 +99,9 @@ zh-TW:
       trigger_label: 更多資訊
     link:
       opens_in_new_tab: （在新分頁開啟）
+    icon_picker:
+      no_matching_icons: 沒有符合的圖示
+      search_placeholder: 搜尋圖示...
   provider_sync_summary:
     title: 同步摘要
     last_sync: 上次同步：%{time_ago}前
@@ -140,23 +143,23 @@ zh-TW:
       recently: 不久
       errors: 錯誤：%{count}
       pending_reconciled:
-        one: 已對帳 %{count} 筆重複的待處理交易
-        other: 已對帳 %{count} 筆重複的待處理交易
+        one: 已對帳 %{count} 筆重複的待入帳交易
+        other: 已對帳 %{count} 筆重複的待入帳交易
       view_reconciled: 查看已對帳的交易
       duplicate_suggestions:
         one: '%{count} 筆可能重複的交易需要檢視'
         other: '%{count} 筆可能重複的交易需要檢視'
       view_duplicate_suggestions: 查看疑似重複的交易
       stale_pending:
-        one: '%{count} 筆過期的待處理交易（已排除於預算之外）'
-        other: '%{count} 筆過期的待處理交易（已排除於預算之外）'
+        one: '%{count} 筆過期的待入帳交易（已排除於預算之外）'
+        other: '%{count} 筆過期的待入帳交易（已排除於預算之外）'
       view_stale_pending: 查看受影響的帳戶
       stale_pending_count:
         one: '%{count} 筆交易'
         other: '%{count} 筆交易'
       stale_unmatched:
-        one: '%{count} 筆待處理交易需要手動檢視'
-        other: '%{count} 筆待處理交易需要手動檢視'
+        one: '%{count} 筆待入帳交易需要手動檢視'
+        other: '%{count} 筆待入帳交易需要手動檢視'
       view_stale_unmatched: 查看需要檢視的交易
       stale_unmatched_count:
         one: '%{count} 筆交易'

@@ -52,6 +52,7 @@ zh-TW:
       confirm_changes: 確認變更
     actions:
       value_placeholder: 輸入一個值
+      to_label: 為
     update:
       success: 規則已更新
     destroy:
@@ -104,6 +105,18 @@ zh-TW:
         expense: 支出
         transfer: 轉帳
         equal_to: 等於
+      operators:
+        contains: 包含
+        does_not_contain: 不包含
+        equal_to: 等於
+        is_equal_to: 等於
+        not_equal_to: 不等於
+        is_empty: 為空
+        is_not_empty: 不為空
+        greater_than: 大於
+        greater_or_equal_to: 大於或等於
+        less_than: 小於
+        less_than_or_equal_to: 小於或等於
   rule:
     conditions:
       condition_group:
@@ -113,3 +126,5 @@ zh-TW:
         any: 以下任一
         of_the_following_conditions: 條件
         add_condition: 新增條件
+      condition:
+        value_placeholder: 輸入一個值

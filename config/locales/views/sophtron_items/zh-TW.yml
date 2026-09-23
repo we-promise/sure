@@ -178,7 +178,7 @@ zh-TW:
       no_institution_connected: 尚未連接 Sophtron 機構。
       account_types:
         skip: 跳過此帳戶
-        depository: 支票或儲蓄帳戶
+        depository: 活期或儲蓄帳戶
         credit_card: 信用卡
         investment: 投資帳戶
         loan: 貸款或房屋貸款

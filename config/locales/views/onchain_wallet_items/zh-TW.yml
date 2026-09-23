@@ -1,0 +1,107 @@
+---
+zh-TW:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: 有活動紀錄
+      explanation: 這個地址格式適用於多個網路，而且每個網路上的餘額都不同。請選擇您要追蹤的網路。
+      no_activity_found: 沒有紀錄
+      subtitle: '%{address}'
+      title: 要使用哪個網路？
+    destroy:
+      success: 已排定刪除這個自託管錢包連線。
+    disconnect_asset:
+      success: 已停止追蹤 %{symbol}。它的帳戶與歷史紀錄都已保留。
+    disconnect_wallet:
+      success:
+        other: 已停止追蹤該地址上的 %{count} 項資產。
+    enable_crypto_prices:
+      not_self_hosted: 在此部署環境中，市場資料供應商由執行個體的管理者設定。
+      success: 已啟用加密貨幣價格。錢包價值會在下次同步後顯示。
+    errors:
+      address_required: 請輸入錢包地址。
+      already_linked: 這個地址已經在此網路上追蹤中。請使用「檢視代幣」變更要追蹤的資產。
+      chain_unreachable: 無法連線到這個網路的公開區塊鏈瀏覽器。請稍後再試。
+      rate_limited: 公開區塊鏈瀏覽器目前正在限制請求頻率。請過幾分鐘再試。
+      unexpected: 讀取這個錢包時發生錯誤。詳細資訊已記錄下來，以便支援團隊處理。
+      unrecognized_address: 這看起來不是任何支援網路上的地址。
+      wallet_not_found: 這個連線並未追蹤該錢包。
+    link_wallet:
+      errors:
+        none_tracked: 未追蹤任何資產：無法新增 %{assets}。請稍後再試。
+        nothing_selected: 請至少選擇一項要追蹤的資產。
+        some_failed: 無法追蹤 %{assets}，已略過。
+      success:
+        other: 正在追蹤這個錢包中的 %{count} 項資產。
+    manage:
+      assets_truncated: 這個地址持有的代幣數量超過單次讀取所能顯示的上限，因此只列出最可信的 %{count} 項。已追蹤的資產仍會繼續同步。
+      disconnect_asset: 停止追蹤
+      disconnect_asset_confirm: 要停止追蹤 %{symbol} 嗎？它的帳戶與歷史紀錄會保留，但不再更新。
+      disconnect_wallet: 中斷錢包連線
+      disconnect_wallet_confirm: 要停止追蹤這個地址上的所有資產嗎？
+      history_note: 中斷連線後，帳戶及其歷史紀錄都會保留，只是不再更新。
+      history_truncated: 無法讀取這個地址的所有轉帳紀錄：可能是歷史紀錄超過單次同步的範圍，或是區塊鏈瀏覽器拒絕了請求。餘額是完整的，但部分轉帳紀錄會缺漏。
+      native: 原生
+      no_wallets: 尚未追蹤任何錢包。
+      review_tokens: 檢視代幣
+      subtitle: 這個連線讀取的所有地址，以及每個地址上追蹤的項目。
+      title: 管理自託管錢包
+    new_wallet:
+      address_label: 錢包地址
+      address_placeholder: bc1...、0x... 或 Solana 地址
+      bitcoin_single_address_note: Bitcoin 一次只能追蹤一個地址。不支援延伸公鑰（xpub/ypub/zpub），因此若錢包將資金分散在多個衍生地址，只會顯示您輸入的那個地址的餘額。
+      chain_auto_detect: 自動偵測
+      chain_label: 網路
+      continue: 繼續
+      read_only_note: 只會讀取公開的鏈上資料。請絕對不要輸入助記詞或私鑰。
+      subtitle: 透過公開地址，追蹤由您自己保管私鑰的錢包。
+      title: 新增自託管錢包
+    onchain_wallet_item:
+      assets_tracked:
+        other: 追蹤中的資產：%{count} 項
+      sync: 立即同步
+      syncing: 同步中...
+    wallet_card:
+      addresses_tracked:
+        other: 追蹤中的地址：%{count} 個
+      deletion_in_progress: 正在移除...
+      delete: 移除連線
+      needs_attention: 需要處理
+      no_wallets_message: 從供應商設定連結一個地址，它就會顯示在這裡。
+      no_wallets_title: 尚未連結任何錢包
+      status: '%{timestamp}前已同步'
+      sync: 立即同步
+      status_never: 尚未同步
+      syncing: 同步中...
+    price_provider_warning:
+      body: 目前沒有任何已啟用的市場資料供應商能提供加密貨幣價格，因此這些錢包只會追蹤數量，價值會顯示為零。
+      enable: 啟用加密貨幣價格
+      exchange_rate_body: 加密貨幣以 USD 計價，但尚未設定匯率供應商來換算成 %{currency}，因此這些錢包只會追蹤數量，價值會顯示為零。請設定 EXCHANGE_RATE_PROVIDER — Frankfurter 不需要 API 金鑰。
+      exchange_rate_title: 尚未設定匯率供應商
+      link: 開啟市場資料設定
+      title: 尚未設定加密貨幣價格
+    provider_connection:
+      description: 透過公開地址，追蹤由您自己保管私鑰的錢包。
+      name: 自託管錢包
+    review_tokens:
+      save: 儲存追蹤的資產
+      subtitle: '%{chain} · %{address}'
+      title: 檢視追蹤的資產
+    token_review:
+      import_selected: 追蹤所選資產
+      subtitle: '%{chain} · %{address}'
+      title: 選擇要追蹤的項目
+    token_review_form:
+      assets_truncated: 這個地址持有的代幣數量超過單次讀取所能顯示的上限，因此只列出最可信的 %{count} 項。
+      cancel: 取消
+      explanation: 有已知價格的資產會預先勾選，其他則保持未勾選 — 錢包常會收到垃圾空投代幣，追蹤它們也沒有任何價值。
+      native: 原生
+      no_price: 無法取得價格；僅追蹤數量
+      nothing_found: 在這個網路上，我們看不到這個地址持有任何資產。
+    update:
+      success: 已更新自託管錢包連線。
+    update_tokens:
+      errors:
+        no_changes: 沒有任何變更；勾選的資產和原本相同。
+        none_tracked: 沒有任何變更：無法新增 %{assets}。請稍後再試。
+        some_failed: 無法追蹤 %{assets}，已略過。
+      success: 已更新追蹤的資產（新增 %{created} 項，移除 %{removed} 項）。

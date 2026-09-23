@@ -13,8 +13,8 @@ zh-TW:
         long: 定期存款 (CD)
         short: 定存
       checking:
-        long: 支票帳戶 (Checking)
-        short: 支票
+        long: 活期存款帳戶 (Checking)
+        short: 活存
       hsa:
         long: 健康儲蓄帳戶 (HSA)
         short: HSA

@@ -1,0 +1,6 @@
+---
+zh-TW:
+  sure_import:
+    preflight:
+      missing_reference: 第 %{line} 行的 %{type} 參照了不存在的 %{field} %{value}。
+      skipped_missing_reference: 第 %{line} 行的 %{type} 參照了不存在的 %{field} %{value}，匯入時將略過此項。

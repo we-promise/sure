@@ -21,6 +21,8 @@ zh-TW:
       recalculate_notice: 所有未來的交易與餘額都會依據這次的%{change_or_update}重新計算。
       change: 變動
       update: 更新
+      action_set: 設定
+      action_update: 更新
     create:
       account_updated: 帳戶已更新
     update:
@@ -58,3 +60,9 @@ zh-TW:
       settings: 設定
       opening_balance: 期初餘額
       update_value: 更新價值
+    confirm_create:
+      confirm: 確認
+      title: 確認新餘額
+    confirm_update:
+      title: 更新餘額
+      update: 更新

@@ -42,7 +42,7 @@ zh-TW:
         short: SIMPLE IRA
         long: SIMPLE IRA
       529_plan:
-        short: 529 Plan
+        short: 529 計畫
         long: 529 教育儲蓄計畫
       hsa:
         short: HSA
@@ -182,6 +182,9 @@ zh-TW:
       other:
         short: 其他
         long: 其他投資
+      cash_management:
+        short: CMA
+        long: 現金管理帳戶 (CMA)
     value_tooltip:
       cash: 現金
       holdings: 持股

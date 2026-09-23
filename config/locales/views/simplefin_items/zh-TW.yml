@@ -18,9 +18,9 @@ zh-TW:
     destroy:
       success: SimpleFIN 連線已排定移除。
     update:
-      success: SimpleFIN 連線已更新。
+      success: SimpleFIN 連線已成功更新！正在重新連線您的帳戶。
       errors:
-        blank_token: 缺少 SimpleFIN Access Token。請提供一組 Token，或改用「連結現有帳戶」繼續。
+        blank_token: 請輸入 SimpleFIN Setup Token。
         invalid_token: Token 無效。請確認您從 SimpleFIN Bridge 複製的是完整的 Token。
         token_compromised: 此 Token 可能已外洩、過期或已被使用。請建立一個新 Token。
         update_failed: 更新 SimpleFIN 連線失敗：%{message}
@@ -30,7 +30,7 @@ zh-TW:
         label: SimpleFIN 設定權杖 (Setup Token)：
         placeholder: 在此貼上您的 SimpleFIN Setup Token...
         help_text: Token 應為一串由字母和數字組成的長字串
-      title: 更新 SimpleFin 連線
+      title: 更新 SimpleFIN 連線
       header_subtitle: 取得一組新的 Setup Token 以重新連線您的 SimpleFIN 帳戶
       connection_needs_update: 您的 SimpleFIN 連線需要更新：
       step_1_html: 前往 <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> 建立一組新的 Setup Token
@@ -39,10 +39,10 @@ zh-TW:
       update: 更新
       cancel: 取消
     setup_accounts:
-      title: 設定您的 SimpleFin 帳戶
+      title: 設定您的 SimpleFIN 帳戶
       header_subtitle: 為您匯入的帳戶選擇正確的帳戶類型
-      choose_account_type: 請為每個 SimpleFin 帳戶選擇正確的帳戶類型：
-      account_type_checking_savings: 支票或儲蓄
+      choose_account_type: 請為每個 SimpleFIN 帳戶選擇正確的帳戶類型：
+      account_type_checking_savings: 活期或儲蓄
       account_type_checking_savings_desc: 一般的銀行帳戶
       account_type_credit_card: 信用卡
       account_type_credit_card_desc: 信用卡帳戶
@@ -53,7 +53,7 @@ zh-TW:
       account_type_other_asset: 其他資產
       account_type_other_asset_desc: 其他所有類型
       transaction_history_title: 交易紀錄：
-      transaction_history_description_html: SimpleFin 通常提供 <strong>60 至 90 天</strong>的交易紀錄，實際天數視您的銀行而定。完成初次設定後，新的交易就會自動同步。歷史資料的可取得範圍會因機構與帳戶類型而異。
+      transaction_history_description_html: SimpleFIN 通常提供 <strong>60 至 90 天</strong>的交易紀錄，實際天數視您的銀行而定。完成初次設定後，新的交易就會自動同步。歷史資料的可取得範圍會因機構與帳戶類型而異。
       account_type_label: 帳戶類型：
       create_accounts: 建立帳戶
       creating_accounts: 正在建立帳戶...
@@ -133,6 +133,7 @@ zh-TW:
       unlink_to_move: 若要更改連結，請先從帳戶的操作選單中解除連結。
       all_accounts_already_linked: 所有的 SimpleFIN 帳戶似乎都已連結。
       currently_linked_to: 目前連結至：%{account_name}
+      check_provider_health: 請到「設定 → 供應商」確認您的 SimpleFIN 連線運作正常。
     link_existing_account:
       success: 帳戶已成功連結至 SimpleFIN
       errors:
@@ -150,9 +151,24 @@ zh-TW:
       dismiss_aria: 忽略換卡建議
     reconciled_status:
       message:
-        one: 已對帳 %{count} 筆重複的待處理交易
-        other: 已對帳 %{count} 筆重複的待處理交易
+        one: 已對帳 %{count} 筆重複的待入帳交易
+        other: 已對帳 %{count} 筆重複的待入帳交易
     stale_pending_status:
       message:
-        one: 有 %{count} 筆待處理交易超過 %{days} 天
-        other: 有 %{count} 筆待處理交易超過 %{days} 天
+        one: 有 %{count} 筆待入帳交易超過 %{days} 天
+        other: 有 %{count} 筆待入帳交易超過 %{days} 天
+    sync_status:
+      no_accounts: 找不到帳戶
+      synced:
+        other: 已同步 %{count} 個帳戶
+      partial_setup:
+        other: 已同步 %{linked} 個，%{unlinked} 個需要設定
+    institution_summary:
+      none: 沒有已連線的機構
+      count:
+        other: '%{count} 個機構'
+    rate_limited:
+      daily_refresh: 您已達到 SimpleFIN 每日重新整理次數上限。請等 Bridge 重新整理後（最多 24 小時）再試一次。
+    stale_sync:
+      last_successful: 上次成功同步是在 %{count} 天前。您的 SimpleFIN 連線可能需要處理。
+      no_transactions: 已有 %{count} 天沒有新交易。請檢查您的 SimpleFIN 儀表板，確認銀行連線仍然有效。

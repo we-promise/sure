@@ -36,6 +36,8 @@ zh-TW:
       unavailable_description_html: 要使用 AI 助手，您需要設定 <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> 環境變數，或在您執行個體的「自行代管」設定中設定它。
       enable_button: 啟用 AI 對話
       disable_note: 隨時可以停用。所有送到我們 LLM 供應商的資料都經過匿名處理。
+    new:
+      default_title: 新對話 %{timestamp}
   assistant_messages:
     assistant_message:
       assistant_reasoning: 助手的推理過程

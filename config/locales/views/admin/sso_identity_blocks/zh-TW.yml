@@ -1,0 +1,6 @@
+---
+zh-TW:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: 此 SSO 身分已可再次登入或建立帳號。

@@ -17,9 +17,20 @@ zh-TW:
           attributes:
             base:
               at_least_one_linked_account_required: 請至少選擇一個帳戶來支應這個目標。
+              whole_account_conflict_on_restore: 無法還原這個目標：「%{account_name}」現在已全額指定給「%{goal_name}」。請先在其中一個目標輸入金額。
             linked_accounts:
               must_be_fundable: 所有已連結的帳戶都必須是現金或投資帳戶。
               currency_mismatch: 所有已連結的帳戶必須使用相同的幣別。
               must_belong_to_family: 已連結的帳戶必須和這個目標屬於同一個家庭。
             currency:
               locked_after_linked: 目標連結帳戶之後就不能再更改幣別了。
+            target_mode:
+              months_requires_maintained: 只有需要維持的預備金，才能以幾個月的支出來設定目標。
+            target_months:
+              blank: 請說明這筆預備金要支應幾個月的支出。
+              only_with_months_mode: 只有以支出月數設定目標時，才會用到支出月數。
+            kind:
+              locked_while_released: 請先重新開啟這個目標，才能把它改為預備金。
+              locked_once_consumed: 這個目標已經記錄過花用的金額，因此不能改為預備金。
+            target_amount:
+              below_consumed: 目標金額不能低於這個目標已記錄花用的金額。

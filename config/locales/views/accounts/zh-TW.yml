@@ -10,8 +10,8 @@ zh-TW:
       complete_setup: 完成設定
       edit: 編輯
       link_lunchflow: 連結 Lunch Flow
-      link_provider: 連結服務供應商
-      unlink_provider: 解除與服務供應商的連結
+      link_provider: 連結供應商
+      unlink_provider: 解除與供應商的連結
       change_simplefin_account: 更換 SimpleFIN 帳戶
       troubleshoot: 疑難排解
       enable: 啟用帳戶
@@ -66,8 +66,10 @@ zh-TW:
       import_accounts: 匯入帳戶
       container:
         select: 選擇
-        navigate: 前往
+        navigate: 瀏覽
         close: 關閉
+        next: 下一個
+        previous: 上一個
       method_selector:
         connected_entry: 連結帳戶
         connected_entry_eu: 連結歐盟 (EU) 帳戶
@@ -83,6 +85,7 @@ zh-TW:
         holdings: 持股
         overview: 概覽
         statements: 對帳單
+        schedule: 還款計畫
       activity:
         amount: 金額
         balance: 餘額
@@ -98,7 +101,7 @@ zh-TW:
         new_transaction: 新增交易
         new_transfer: 新增轉帳
         no_entries: 找不到任何紀錄
-        pending: 待處理
+        pending: 待入帳
         search:
           placeholder: 以名稱搜尋紀錄
         search_placeholder: 以名稱搜尋紀錄
@@ -137,6 +140,8 @@ zh-TW:
       new_debt: 新增負債
       new_account: 新增帳戶
       new_account_group: 新增%{account_group}
+      expand_all: 全部展開
+      collapse_all: 全部收合
     types:
       depository: 現金/存款
       investment: 投資

@@ -3,6 +3,7 @@ zh-TW:
   properties:
     edit:
       edit: 編輯 %{account}
+      title: 手動輸入不動產資料
     form:
       address_line1: 街道地址
       address_line1_placeholder: 例如：忠孝東路一段 123 號
@@ -100,3 +101,7 @@ zh-TW:
       agri_land:
         short: 農地
         long: 農業用地
+    form_tabs:
+      address: 地址
+      overview: 概覽
+      value: 價值

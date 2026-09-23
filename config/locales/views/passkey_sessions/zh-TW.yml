@@ -1,0 +1,4 @@
+---
+zh-TW:
+  passkey_sessions:
+    invalid_credential: 無法使用這個密碼金鑰登入。請再試一次，或改用密碼登入。

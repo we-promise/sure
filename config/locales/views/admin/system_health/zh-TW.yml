@@ -1,0 +1,256 @@
+---
+zh-TW:
+  admin:
+    system_health:
+      push_notifications:
+        send_test: 傳送測試推播通知
+        queueing: 正在排入佇列…
+        title: 推播通知
+        requested_at: 最近一次測試請求時間：%{time}
+        result_help: APNs 接受並不代表已送達您的裝置。重新整理即可查看 worker 的結果。結果會保留 24 小時。
+        device: 裝置 %{number}
+        pending: 等待中
+        refresh: 重新整理結果
+        columns:
+          device: 裝置
+          environment: APNs 環境
+          status: 結果
+          checked_at: 最後更新
+        environments:
+          sandbox: Sandbox
+          production: Production
+        messages:
+          enqueue_failed: 無法將測試排入佇列。請檢查 Sidekiq，然後重新整理下方結果。
+          ready: 傳送測試通知到您帳號下已註冊並啟用的 iOS 裝置。
+          queued: 測試通知已排入佇列。請重新整理下方結果以查看狀態。
+          hosted_only: 推播通知僅在代管模式下提供。
+          ineligible: 只有啟用中的超級管理員可以傳送測試通知。
+          no_devices: 請在 Sure iOS 應用程式中為這個帳號啟用推播通知，才能傳送測試。
+          disabled: 營運者已停用推播傳送。
+          not_configured: 尚未設定 APNs 憑證。
+          cooldown: 請等待 30 秒後再傳送下一次測試。
+          storage_unavailable: 無法儲存測試請求。請檢查共用快取的設定。
+        statuses:
+          queued: 已排入佇列
+          accepted: APNs 已接受
+          skipped: 已略過：已不符合資格
+          rejected: 遭 APNs 拒絕；請檢查推播偵錯紀錄
+          unregistered: 裝置註冊已失效
+          retrying: 暫時性失敗，重試中
+          failed: 失敗；請檢查推播偵錯紀錄
+          enqueue_failed: 無法排入佇列；請檢查 Sidekiq
+          expired: 已逾時，沒有最終結果
+      push_notification:
+        title: Sure 測試通知
+        body: 這是傳送給您 Sure 帳號的測試推播通知。
+      verify_worker_ai:
+        queued: Worker 檢查已排入佇列。待 worker 處理程序接手後（通常只需幾秒）就會顯示在下方。
+      show:
+        title: 系統健康狀態
+        tabs:
+          background_jobs: 背景工作
+          ai: AI 狀態
+        alert:
+          title: 背景工作沒有在執行
+        status_section_title: Sidekiq 狀態
+        status_section_description: 負責同步、餘額與淨資產計算的背景 worker 目前的狀態。
+        counters_section_title: 工作計數
+        counters_section_description: 所有佇列的 Sidekiq 彙總計數。
+        queues_section_title: 佇列
+        queues_section_description: 各佇列的深度與最舊工作的等待時間。延遲是指最舊的工作已等待的秒數。
+        labels:
+          status: 狀態
+          processes: Worker 處理程序
+          last_heartbeat: 最後心跳
+          max_queue_latency: 最舊工作等待時間
+          enqueued: 佇列中
+          retries: 重試中
+          failed: 失敗
+          processed_total: 已處理總數
+          queue: 佇列
+          size: 大小
+          latency: 延遲
+        values:
+          healthy: 正常
+          unhealthy: 效能降低
+          time_ago: '%{time_ago}前'
+          never: 從未
+          seconds: '%{seconds} 秒'
+          no_queues: 沒有已註冊的佇列，worker 可能沒有在執行。
+        ai:
+          run_checks: 重新執行檢查
+          last_checked: 即時檢查已於 %{time_ago}前完成。結果會短暫快取。
+          not_checked_help: 直接開啟 AI 狀態網址，或執行檢查來確認服務是否運作中。
+          alerts:
+            custom_openai:
+              title: 這個自訂端點的代管向量儲存庫檢查失敗
+              message: 設定的端點沒有通過 /v1/vector_stores 存活檢查。大多數本機與 OpenAI 相容端點都沒有實作這個 API。聊天與 PDF 處理可能仍可正常運作；一般的本機設定請改用 pgvector 搭配獨立的 embedding 端點。這次失敗已記錄在「設定 → 偵錯紀錄」與 Rails.logger。
+            function_calling_unsupported:
+              title: 此模型不支援函式呼叫
+              message: 端點能處理一般聊天請求，但拒絕了帶有 tools 參數的相同請求。AI 助理是透過函式呼叫讀取帳戶、交易與持股，因此在改用支援 tools 的模型之前，聊天會一直失敗（常常只回傳沒什麼幫助的 404）。請選擇供應商文件明確支援函式呼叫的模型。這次失敗已記錄在「設定 → 偵錯紀錄」與 Rails.logger。
+            function_calling_not_used:
+              title: 模型沒有呼叫要求的工具就直接回答
+              message: 端點接受了 tools 參數，但模型以文字回覆，沒有呼叫健康檢查工具。AI 助理若無法呼叫工具就讀不到財務資料，因此聊天可能沒有回應或捏造數字。建議選擇供應商文件明確支援函式呼叫的模型。
+            llm_probe_failed:
+              title: LLM 即時檢查失敗
+              message: Sure 無法同時驗證設定的端點與模型。這次失敗已記錄在「設定 → 偵錯紀錄」與 Rails.logger。
+            llm_model_not_available:
+              title: 設定的 AI 模型無法使用
+              message: 端點有回應，但沒有列出或提供設定的模型。請為所選供應商挑選一個可用的模型，然後重新執行檢查。若是透過 OpenAI 相容轉接層使用 Gemini，請使用目前支援的模型，例如 gemini-2.5-flash。
+            pdf_text_extraction_failed:
+              title: 合成 PDF 文字擷取檢查失敗
+              message: Sure 無法完成「文字優先」流程：在本機擷取 PDF 內嵌文字，再傳送給設定的模型。沒有傳送任何客戶資料。這次失敗已記錄在「設定 → 偵錯紀錄」與 Rails.logger。
+            pdf_vision_processing_failed:
+              title: 合成 PDF 視覺／原生檢查失敗
+              message: Sure 無法透過設定的模型完成圖片或原生文件 PDF 流程。沒有傳送任何客戶資料。這次失敗已記錄在「設定 → 偵錯紀錄」與 Rails.logger。
+            vector_probe_failed:
+              title: 文件搜尋即時檢查失敗
+              message: Sure 無法驗證所選的向量儲存庫以及所有必要的 embedding 服務。這次失敗已記錄在「設定 → 偵錯紀錄」與 Rails.logger。
+            pgvector_extension_not_enabled:
+              title: PostgreSQL vector 擴充功能尚未啟用
+              message: 已選擇 pgvector 轉接器，但 PostgreSQL 尚未為這個資料庫啟用 vector 擴充功能。請使用內含 pgvector 的 PostgreSQL 映像檔，再以資料庫擁有者或 superuser 身分啟用該擴充功能，並以 VECTOR_STORE_PROVIDER=pgvector 重新執行 migration。
+            pgvector_table_not_found:
+              title: 缺少 vector_store_chunks 資料表
+              message: pgvector 擴充功能已啟用，但找不到 chunks 資料表。請檢查 migration 狀態，然後以 VECTOR_STORE_PROVIDER=pgvector 重新執行向量儲存庫的 migration，讓 Sure 建立 vector_store_chunks。
+            pgvector_probe_failed:
+              title: pgvector 儲存檢查失敗
+              message: Sure 無法查詢 pgvector 的 chunks 資料表。請檢查 PostgreSQL 權限、vector 擴充功能以及 vector_store_chunks migration。這次失敗已記錄在「設定 → 偵錯紀錄」與 Rails.logger。
+            embedding_dimensions_mismatch:
+              title: Embedding 維度不符
+              message: Embedding 端點回傳的向量長度與 EMBEDDING_DIMENSIONS 不符。請將 EMBEDDING_MODEL 與 EMBEDDING_DIMENSIONS 設為該模型文件所列的向量大小，重新啟動 Sure 讓環境設定生效；若既有資料使用不同大小，還需要修改或重建 pgvector 的 embedding 欄位／資料表，並重新為文件產生 embedding。
+            embedding_probe_timeout:
+              title: Embedding 即時檢查逾時
+              message: Embedding 端點未在 AI_HEALTH_PROBE_TIMEOUT 之前回應。如果供應商速度較慢，請調高這個健康檢查逾時，然後重新啟動 Sure，讓每個處理程序都套用新的環境設定。如果一般 AI 聊天呼叫也會逾時，請另外調高 OPENAI_REQUEST_TIMEOUT。
+            embedding_probe_failed:
+              title: Embedding 即時檢查失敗
+              message: Sure 無法透過設定的端點與模型建立簡短的測試 embedding。請檢查 EMBEDDING_URI_BASE、EMBEDDING_MODEL、EMBEDDING_ACCESS_TOKEN 以及 embedding 供應商的紀錄。這次失敗已記錄在「設定 → 偵錯紀錄」與 Rails.logger。
+            qdrant:
+              title: 尚未實作 Qdrant 支援
+              message: Qdrant 轉接器目前只有基本架構，文件上傳與搜尋操作都會失敗。請改選 OpenAI 或 pgvector 來進行文件搜尋。
+            missing_vector_store:
+              title: 尚未設定向量儲存庫
+              message: 在設定好向量儲存庫轉接器及其需求之前，上傳的文件無法建立索引或被搜尋。
+            unavailable_vector_store:
+              title: 所選的向量儲存庫無法使用
+              message: 請檢查下方的轉接器需求。若使用 pgvector，資料庫必須提供 vector 擴充功能，或已有 vector_store_chunks 資料表。
+          llm:
+            title: LLM 與 PDF 處理
+            description: 即時檢查會驗證設定的模型，並像 AI 助理一樣要求它執行一次簡單的函式呼叫，接著再用一份不含任何客戶資料的單頁合成 PDF，分別測試文字擷取與視覺／原生處理。憑證內容絕不會顯示。
+          vector_store:
+            title: 向量儲存庫與文件搜尋
+            description: 即時檢查會查詢代管的向量儲存庫 API，或測試 pgvector 資料表並建立一筆不會儲存的簡短 embedding。
+          labels:
+            selected_provider: 所選供應商
+            effective_provider: 實際使用的供應商
+            model: 模型
+            endpoint: 端點
+            function_calling: 函式呼叫 (tools)
+            pdf_text_extraction: PDF 文字擷取流程
+            pdf_vision_processing: PDF 視覺／原生流程
+            llm_request_timeout: LLM 請求逾時
+            probe_request_timeout: 健康檢查逾時
+            openai_credentials: OpenAI 憑證
+            openai_compatible_credentials: OpenAI 相容 API 憑證
+            anthropic_credentials: Anthropic 憑證
+            adapter: 轉接器
+            adapter_available: 轉接器可用
+            pgvector_extension: PostgreSQL vector 擴充功能
+            pgvector_table: 向量 chunks 資料表
+            embedding_model: Embedding 模型
+            embedding_endpoint: Embedding 端點
+            embedding_dimensions: Embedding 維度
+            function_calling_failure_reason: 函式呼叫失敗原因
+            pdf_text_extraction_failure_reason: 文字擷取失敗原因
+            pdf_vision_processing_failure_reason: 視覺／原生處理失敗原因
+            storage_probe: pgvector 儲存檢查
+            embedding_probe: Embedding 端點檢查
+            failure_reason: 失敗原因
+          providers:
+            openai: OpenAI
+            openai_compatible: OpenAI 相容
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: 自訂端點
+          adapters:
+            openai: OpenAI 代管向量儲存庫
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: 已設定
+            not_configured: 未設定
+            fallback: （備援）
+            not_set: 未設定
+            "yes": 是
+            "no": 否
+            enabled: 已啟用
+            available_not_enabled: 可用，但未啟用
+            not_available: 無法使用
+            available: 可用
+            not_found: 找不到
+          function_calling_statuses:
+            supported: 即時工具呼叫成功
+            unsupported: 實際使用的供應商／模型不支援
+            not_used: 已接受 tools，但模型沒有呼叫任何工具
+            failing: 即時檢查失敗
+            not_checked: 尚未檢查
+            unavailable: 設定 LLM 供應商後才能使用
+          pdf_statuses:
+            supported: 合成 PDF 檢查通過
+            failing: 合成 PDF 檢查失敗
+            unsupported: 已停用，或實際使用的供應商／模型不支援
+            not_checked: 尚未檢查
+            unavailable: 設定 LLM 供應商後才能使用
+          probe_statuses:
+            passing: 即時檢查通過
+            failing: 即時檢查失敗
+            not_checked: 尚未檢查
+            not_configured: 未設定
+          vector_statuses:
+            passing: 即時檢查通過
+            failing: 即時檢查失敗
+            not_checked: 尚未檢查
+            not_configured: 未設定
+            scaffolded: 僅有基本架構
+            missing: 未設定
+          failure_codes:
+            model_not_available: 供應商沒有回傳設定的模型
+            no_tool_call: 模型沒有呼叫健康檢查工具就直接回答
+            tools_refused: 服務能處理不帶 tools 的相同請求，但帶上 tools 時會拒絕
+            invalid_response: 服務回傳了非預期的回應
+            dimensions_mismatch: Embedding 向量維度與設定的維度不符
+            extension_not_enabled: PostgreSQL vector 擴充功能尚未啟用
+            table_not_found: 找不到 vector_store_chunks 資料表
+            render_missing_binary: 這個容器中沒有 pdftoppm 轉譯工具 (poppler-utils)
+            timeout: 服務未在檢查逾時前回應
+            request_failed: 服務請求失敗
+            unsupported_provider: 此供應商不支援這項檢查
+          worker:
+            title: Worker 驗證
+            description: 上方的檢查是從這個 web 處理程序執行的。但大多數 AI 工作——助理回覆、PDF 處理、embedding、自動分類與商家偵測——其實是在 Sidekiq worker 處理程序中執行，而 worker 的網路存取、DNS、proxy 規則，甚至載入的憑證都可能不同。排入一次檢查，即可驗證 worker 本身的設定與連線。
+            verify_button: 驗證 worker 設定
+            coverage_notice: 每次檢查只會驗證一個 worker 處理程序，也就是取出該工作的那一個。若有多個 worker 副本，檢查通過並不代表每個 worker 都正常；請再排入一次檢查以抽查其他 worker。
+            empty:
+              title: 還沒有 worker 回報
+              description: 點擊「驗證 worker 設定」即可排入非同步檢查。worker 處理程序接手後，結果就會顯示在這裡。
+            labels:
+              process: Worker 處理程序
+              checked_at: 檢查時間
+              configuration: 設定
+            configuration_statuses:
+              match: 與 web 一致
+              mismatch: 與 web 不同
+            statuses:
+              passing: 通過
+              failing: 失敗
+              stale: 已過時
+            settings_origin:
+              title: 哪些設定需要重新啟動？
+              database_backed: 在「設定 → 自行代管」中變更的供應商、模型與 API 金鑰設定會儲存在資料庫。rails-settings-cached 會在寫入時讓共用快取失效，因此 web 與 worker 在下一個請求或排入的工作中都會讀到新值——不需要重新啟動。
+              env_backed: Embedding 設定，以及任何只透過環境變數設定的值，都會在各容器啟動時固定。Rails 無法變更其他容器的環境，因此變更這些設定需要重新啟動或重建 web 與 worker 兩個服務——任何只重新啟動其中一個的部署工具（部分推出、更新了 Secret 卻沒有重啟 pod）都不會套用變更。
+          local_setup:
+            title: 建議的本機設定
+            description: 透過本機的 OpenAI 相容端點執行 LLM，將文件向量儲存在 pgvector，並把 embedding 設定指向 OpenAI 相容的 embeddings 端點。PostgreSQL 映像檔必須包含 vector 擴充功能，且 embedding 維度必須與所選模型相符。

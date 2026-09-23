@@ -4,6 +4,7 @@ zh-TW:
     create:
       invalid_credentials: 電子郵件或密碼無效。
       local_login_disabled: 本機密碼登入功能已停用。請使用單一登入 (SSO)。
+      account_deactivated: 此帳號已被停用。請聯絡管理員。
     destroy:
       logout_successful: 您已成功登出。
     post_logout:
@@ -33,3 +34,5 @@ zh-TW:
       no_auth_methods_enabled: 目前未啟用任何驗證方式。請聯絡管理員。
       demo_banner_title: 示範模式已啟用
       demo_banner_message: 這是示範環境。為了方便使用，登入資訊已預先填寫。請勿在此輸入真實或敏感資料。
+      passkey_button: 使用密碼金鑰登入
+      passkey_unsupported: 這個瀏覽器不支援密碼金鑰。

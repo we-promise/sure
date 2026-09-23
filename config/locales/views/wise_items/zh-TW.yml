@@ -78,9 +78,23 @@ zh-TW:
         message: 在正式環境加入 Wise Token 之前，請先設定 Active Record 加密金鑰。未加密時 Token 會以明文儲存。
       instructions:
         sign_in_html: 前往 %{link} 並登入您的帳號
-        open_tokens: 前往 Settings → API tokens
+        open_tokens: 前往 Settings → Connect and manage apps → Developer tools → API tokens
         create_token: 建立一個唯讀存取的個人 API Token
         copy_token_html: 複製 Token 並貼到下方。Sure 只會用它來同步您的餘額與交易。
+      sync_start_date_label: 匯入交易的起始日期
+      sync_start_date_help: 會從此日期起匯入 Wise 對帳單。保留預設值可匯入最多一年的歷史紀錄。
+      import_all_history_label: 匯入完整交易紀錄
+      import_all_history_help: 取得所有歷史 Wise 對帳單，而不只是最近一年。
+      sca:
+        title: 強化客戶驗證 (SCA)
+        description: Wise 需要經過簽署的一次性 Token 驗證挑戰，才能讀取完整的交易對帳單（包括入帳款項）。請在此產生金鑰組，並將公鑰註冊至 Wise 以啟用此功能。
+        public_key_label: 公鑰 (PEM)
+        registered_help_html: 將此金鑰註冊至 Wise：Settings → Connect and manage apps → Developer tools → Public keys → Add public key。
+        copy: 複製
+        copied: 已複製！
+        generate: 產生金鑰組
+        regenerate: 重新產生金鑰組
+        regenerate_confirm: 這會產生新的金鑰組。在您自行從 Wise 帳戶中移除舊公鑰之前，Wise 仍會繼續接受它 - Sure 無法從遠端撤銷。您必須將新的公鑰註冊至 Wise，對帳單才能再次同步。要繼續嗎？
     provider_connection:
       default_name: Wise
       default_description: 連接您的 Wise 多幣別帳戶
@@ -148,3 +162,6 @@ zh-TW:
       not_found: 找不到 Wise 餘額。
       success: 帳戶已建立並連結成功。
       failed: 無法建立帳戶。請再試一次。
+    generate_sca_keypair:
+      success: 已產生新的 SCA 金鑰組。請將公鑰註冊至 Wise 以完成啟用。
+      failed: 無法產生新的 SCA 金鑰組。請再試一次。

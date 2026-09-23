@@ -63,6 +63,16 @@ zh-TW:
       success: 已從 %{source_name} 複製預算
       no_source: 找不到可以複製的先前預算
       already_initialized: 這份預算已經設定過了
+    switcher:
+      aria_label: 切換預算
+      household: 家庭
+    available_cash:
+      heading: 手頭現金
+      subtitle: 列在上方預算旁供參考，不計入預算。
+      available: 現金可用金額
+      earmarked: 已指定給目標
+      free: 真正可自由運用
+      goals_link: 查看目標
   budget_categories:
     allocation_progress:
       budget_exceeded_html: 預算超支 <span class="text-red-500 privacy-sensitive">%{amount}</span>
@@ -73,6 +83,8 @@ zh-TW:
       monthly_average: 平均每月 %{amount}
       shared_placeholder: 共享
       shared_title: 留白即共用上層分類的預算
+      rollover_label: 結轉
+      rollover_title: 將這個分類當月未用完的金額結轉到下個月
     confirm_button:
       confirm: 確認
     no_categories:
@@ -96,3 +108,27 @@ zh-TW:
       recent_transactions: 近期交易
       view_all_transactions: 查看這個分類的所有交易
       no_transactions: 這個預算期間內沒有任何交易。
+      rolled_over: 已結轉
+    bills_reserved: 已為帳單預留 %{amount}
+    bills_reserved_unconvertible:
+      other: 有 %{count} 筆帳單因無可用匯率而未預留
+    budget_category:
+      rolled_over: +%{amount} 已結轉
+    move:
+      button_title: 從這個分類移出資金
+      cancel: 取消
+      dialog_title: 移動資金
+      no_destination: 目前沒有其他分類可以與它互相移動資金 — 分類無法把錢移給自己的上層分類或子分類。
+      submit: 移動
+      amount_label: 金額
+      available: 可用 %{amount}
+      from_label: 從
+      to_label: 到
+      success: 資金已移動。
+      errors:
+        different_budgets: 兩個分類必須屬於同一份預算。
+        insufficient_funds: 這超過了這個分類已分配的金額。
+        non_positive_amount: 請輸入大於零的金額。
+        parent_child: 分類與其子分類之間無法移動資金 — 請直接調整子分類。
+        same_category: 請選擇另一個分類來接收這筆資金。
+        uncategorized: 「未分類」並不是真正的預算分類，因此無法將資金移入或移出。

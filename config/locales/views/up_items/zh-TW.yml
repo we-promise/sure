@@ -42,7 +42,7 @@ zh-TW:
       syncing: 同步中...
       sync: 同步
       disconnect: 中斷連線
-      disconnect_confirm: 確定要中斷 %{name} 嗎？
+      disconnect_confirm: 確定要中斷與 %{name} 的連線嗎？
     create:
       success: 已儲存 Up 連線。
     update:

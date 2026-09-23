@@ -1,0 +1,15 @@
+---
+zh-TW:
+  recurring_allocations:
+    over_allocation: 這樣分配的金額會超過該筆交易的金額
+    missing_rate: 沒有可用的匯率，請直接輸入金額
+    already_allocated: 這筆交易已經套用到此帳單
+    invalid: 無法記錄這筆付款
+    create:
+      success: 已套用付款
+    destroy:
+      success: 已取消連結付款
+    confirm:
+      success: 已將付款套用到帳單
+    reject:
+      success: 已略過。這筆交易不會再被建議給此帳單。

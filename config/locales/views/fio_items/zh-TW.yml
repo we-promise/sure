@@ -1,0 +1,139 @@
+---
+zh-TW:
+  providers:
+    fio:
+      name: Fio banka
+      description: 使用唯讀 API 權杖同步 Fio banka 帳戶
+  family:
+    fio:
+      create_fio_item:
+        default_name: Fio banka 連線
+  fio_item:
+    errors:
+      account_processing_failed: 無法同步 Fio 帳戶
+      account_mismatch: 這個權杖屬於另一個 Fio 帳戶，而不是這個連線目前同步的帳戶。請改為新增一個獨立的連線。
+      account_sync_schedule_failed: 無法排定 Fio 帳戶同步
+      statement_too_large: 這份對帳單的交易筆數超過 Fio 單次請求所能提供的上限。請把同步開始日期往後調，然後再同步一次。
+      statement_fetch_failed: 無法從 Fio 取得對帳單
+      history_locked: Fio 拒絕提供這段期間的對帳單。請在網路銀行的「設定 → API」中解鎖帳戶的完整歷史紀錄，然後在 10 分鐘內再次同步。
+      sync_failed: 無法同步 Fio 連線
+    sync:
+      status:
+        importing: 正在從 Fio 匯入對帳單...
+        checking_setup: 正在檢查帳戶設定...
+        needs_setup:
+          other: 有 %{count} 個帳戶需要設定...
+        processing: 正在處理交易...
+        calculating: 正在計算餘額...
+    sync_status:
+      no_accounts: 尚未找到帳戶
+      all_synced:
+        other: 已同步 %{count} 個帳戶
+      partial: 已同步 %{linked} 個，%{unlinked} 個需要設定
+  fio_items:
+    account_types:
+      depository: 活期或儲蓄帳戶
+      loan: 貸款、房貸或透支
+    provider_panel:
+      default_connection_name: Fio banka 連線
+      add_connection: 新增 Fio banka 連線
+      update_connection: 更新連線
+      connection_name_label: 連線名稱
+      connection_name_placeholder: 我的 Fio 帳戶
+      token_label: API 權杖（唯讀）
+      token_placeholder: 貼上 64 個字元的權杖
+      keep_token_placeholder: 留白即保留現有的權杖
+      sync_start_date_label: 匯入交易的起始日期
+      sync_start_date_hint: Fio 不需額外授權即可提供最近 90 天的資料。若要取得更早的紀錄，請在網路銀行的「設定 → API」（鎖頭圖示）中解鎖帳戶的完整歷史紀錄 — 這會開啟一段 10 分鐘的時間窗口 — 並在這段時間內同步。
+      one_account_notice: 一個權杖只能存取一個 Fio 帳戶，因此每個要追蹤的帳戶都需要新增一個連線。每個權杖每 30 秒只能使用一次；太早送出的同步會由下一次同步接手處理。
+      connected_account: 已連線的帳戶
+      no_account_yet: 尚無帳戶 — 第一次同步時會找出這個權杖可存取的帳戶。
+      account_needs_setup: 尚未連結到 Sure 帳戶。
+      requires_update: 需要新的權杖
+      requires_update_notice: Fio 拒絕了這個權杖。權杖最長有效 180 天，除非設定為每次登入網路銀行時自動延長；請在「設定 → API」中建立一個新的唯讀權杖，並貼在下方。
+      last_synced: '%{timestamp}前已同步'
+      never_synced: 從未同步
+      syncing: 同步中...
+      sync: 同步
+      setup_accounts: 設定帳戶
+      disconnect: 中斷連線
+      disconnect_confirm: 您確定要中斷與 %{name} 的連線嗎？
+    create:
+      success: Fio banka 連線已儲存。
+      token_required: 請貼上從 Fio 網路銀行取得的 API 權杖。
+    update:
+      success: Fio banka 連線已更新。
+    destroy:
+      success: 已排定刪除這個 Fio banka 連線。
+      unlink_failed: 無法中斷 Fio banka 連線
+    select_accounts:
+      title: 連結您的 Fio 帳戶
+      description: 這個權杖只能存取一個帳戶。請選擇要在 Sure 中如何追蹤它。
+      account_type_label: 帳戶類型
+      awaiting_first_sync: Fio 尚未回報這個權杖對應的帳戶。請執行一次同步後再回來。
+      already_linked: 這個連線的帳戶已經連結到 Sure 帳戶。
+      sync_now: 立即同步
+      no_credentials_configured: 請先在供應商設定中設定 Fio banka。
+      cancel: 取消
+      link_account: 連結帳戶
+    link_accounts:
+      success: 已將您的 Fio 帳戶連結到 %{account_name}。
+      no_account_found: 這個連線找不到尚未連結的 Fio 帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Fio banka。
+      unsupported_account_type: Fio 不支援這種帳戶類型。
+      link_failed: 無法連結這個帳戶。
+    select_existing_account:
+      title: 將 Fio 帳戶連結到 %{account_name}
+      description: 將這個權杖可存取的帳戶連結到您選擇的帳戶。
+      awaiting_first_sync: Fio 尚未回報這個權杖對應的帳戶。請執行一次同步後再回來。
+      already_linked: 這個連線的帳戶已經連結到 Sure 帳戶。
+      sync_now: 立即同步
+      no_credentials_configured: 請先在供應商設定中設定 Fio banka。
+      account_already_linked: 此帳戶已與供應商連結。
+      cancel: 取消
+      link_account: 連結帳戶
+    link_existing_account:
+      success: 已將您的 Fio 帳戶連結到 %{account_name}。
+      account_already_linked: 此帳戶已與供應商連結。
+      fio_account_already_linked: 這個 Fio 帳戶已經連結過了。
+      no_account_selected: 沒有可連結的 Fio 帳戶。
+      unsupported_account_type: Fio 只能同步現金與貸款帳戶。
+    setup_accounts:
+      title: 連結您的 Fio 帳戶
+      subtitle: 選擇這個權杖可存取的帳戶要以什麼形式出現在 Sure 中。
+      choose_account_type: 選擇帳戶類型
+      choose_account_type_description: 如果不想追蹤這個帳戶，請選擇略過。
+      account_type_label: 帳戶類型
+      account_types:
+        skip: 略過
+      create_account: 建立帳戶
+      awaiting_first_sync: 尚未找到帳戶
+      awaiting_first_sync_description: Fio 只會在對帳單中回報帳戶，因此帳戶會在第一次成功同步後出現。
+      sync_now: 立即同步
+      nothing_to_setup: 沒有需要設定的項目
+      account_already_handled: 這個連線的帳戶已經連結或略過了。
+      close: 關閉
+      cancel: 取消
+    complete_account_setup:
+      success: 已建立 %{account_name}。
+      skipped: 已略過這個 Fio 帳戶。
+      no_account: 沒有需要設定的 Fio 帳戶。
+      unsupported_account_type: Fio 不支援這種帳戶類型。
+      creation_failed: 無法建立 Sure 帳戶。
+    fio_item:
+      deletion_in_progress: 正在刪除
+      syncing: 同步中
+      requires_update: 需要新的權杖
+      error: 錯誤
+      status_with_summary: '%{timestamp}前已同步 · %{summary}'
+      status_never: 從未同步
+      delete: 刪除
+      requires_update_title: 需要新的權杖
+      requires_update_description: Fio 拒絕了這個連線的權杖。請在網路銀行的「設定 → API」中建立一個新的唯讀權杖。
+      update_token: 更新權杖
+      setup_needed: 需要設定帳戶
+      setup_description: 這個權杖可存取的帳戶尚未連結到 Sure 帳戶。
+      setup_action: 設定帳戶
+      no_accounts_title: 尚未匯入帳戶
+      no_accounts_description: Fio 只會在對帳單中回報帳戶，因此帳戶會在第一次成功同步後出現。
+      sync_now: 立即同步

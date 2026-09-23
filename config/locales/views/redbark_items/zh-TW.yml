@@ -50,8 +50,8 @@ zh-TW:
     destroy:
       success: 已移除 Redbark 連線
       unlink_failed:
-        one: 無法取消連結 %{count} 個帳戶。請再試一次。
-        other: 無法取消連結 %{count} 個帳戶。請再試一次。
+        one: 無法解除連結 %{count} 個帳戶。請再試一次。
+        other: 無法解除連結 %{count} 個帳戶。請再試一次。
     index:
       title: Redbark 連線
     loading:
@@ -140,7 +140,7 @@ zh-TW:
       select_all: 全選
       account_types:
         skip: 跳過此帳戶
-        depository: 支票或儲蓄帳戶
+        depository: 活期或儲蓄帳戶
         credit_card: 信用卡
         loan: 貸款或房屋貸款
         other_asset: 其他資產
@@ -154,7 +154,7 @@ zh-TW:
         other_asset: 其他資產不需要額外選項。
       subtypes:
         depository:
-          checking: 支票帳戶 (Checking)
+          checking: 活期存款帳戶 (Checking)
           savings: 儲蓄帳戶 (Savings)
           hsa: 健康儲蓄帳戶 (HSA)
           cd: 定期存款 (CD)

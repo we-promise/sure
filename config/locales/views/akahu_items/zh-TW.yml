@@ -20,7 +20,7 @@ zh-TW:
     errors:
       account_processing_failed: 無法同步 Akahu 帳戶
       account_sync_schedule_failed: 無法排程 Akahu 帳戶同步
-      pending_transactions_failed: 無法取得 Akahu 待處理交易
+      pending_transactions_failed: 無法取得 Akahu 待入帳交易
       transactions_failed: 無法取得 Akahu 交易
       sync_failed: 無法同步 Akahu 連線
     sync_status:
@@ -52,7 +52,7 @@ zh-TW:
       syncing: 同步中...
       sync: 同步
       disconnect: 中斷連線
-      disconnect_confirm: 確定要中斷 %{name} 嗎？
+      disconnect_confirm: 確定要中斷與 %{name} 的連線嗎？
     create:
       success: Akahu 連線已儲存。
     update:
