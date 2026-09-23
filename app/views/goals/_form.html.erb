@@ -30,7 +30,7 @@
         <label class="flex items-start gap-2 rounded-lg border border-primary p-3 cursor-pointer has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
           <%= f.radio_button :kind, kind,
                              class: "radio mt-0.5 shrink-0",
-                             data: { goal_kind_target: "radio", action: "change->goal-kind#refresh" } %>
+                             data: { goal_kind_target: "radio", action: "change->goal-kind#refresh change->goal-form#amountChanged" } %>
           <span class="min-w-0">
             <span class="block text-sm font-medium text-primary"><%= t("goals.form.kinds.#{kind}.label") %></span>
             <span class="block text-xs text-secondary"><%= t("goals.form.kinds.#{kind}.hint") %></span>
@@ -58,7 +58,7 @@
       <%= f.select :target_mode,
                    Goal::TARGET_MODES.map { |mode| [ t("goals.form.target_modes.#{mode}"), mode ] },
                    { label: t("goals.form.fields.target_mode") },
-                   data: { goal_kind_target: "modeSelect", action: "change->goal-kind#refresh" } %>
+                   data: { goal_kind_target: "modeSelect", action: "change->goal-kind#refresh change->goal-form#amountChanged" } %>
     </div>
 
     <div data-goal-kind-target="monthsField" class="hidden">
