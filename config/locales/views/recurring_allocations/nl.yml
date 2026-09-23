@@ -1,0 +1,15 @@
+---
+nl:
+  recurring_allocations:
+    over_allocation: Dan zou er meer worden toegewezen dan het bedrag van de transactie
+    missing_rate: Geen wisselkoers beschikbaar; voer het bedrag zelf in
+    already_allocated: Die transactie is al aan deze vaste last toegewezen
+    invalid: De betaling kon niet worden vastgelegd
+    create:
+      success: Betaling toegewezen
+    destroy:
+      success: Betaling ontkoppeld
+    confirm:
+      success: Betaling toegewezen aan de vaste last
+    reject:
+      success: Genegeerd. Die transactie wordt niet meer voorgesteld voor deze vaste last.

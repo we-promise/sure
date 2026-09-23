@@ -4,6 +4,8 @@ nl:
     create:
       failure: Kon uitnodiging niet verzenden
       success: Uitnodiging succesvol verzonden
+      existing_user_added: De gebruiker is toegevoegd aan uw huishouden.
+      existing_user_has_family_data: Deze gebruiker heeft al een eigen huishouden met accounts. Die accounts moeten eerst worden verwijderd of overgedragen voordat de gebruiker lid kan worden van uw huishouden.
     destroy:
       failure: Er was een probleem met het verwijderen van de uitnodiging.
       not_authorized: U bent niet gemachtigd om uitnodigingen te beheren.
@@ -15,5 +17,12 @@ nl:
       role_label: Rol
       role_member: Lid
       submit: Verstuur uitnodiging
-      subtitle: Verstuur een uitnodiging om lid te worden van uw familieaccount op %{product_name}
+      subtitle: Verstuur een uitnodiging om lid te worden van uw %{moniker}account op %{product_name}
       title: Nodig iemand uit
+      role_guest: Gast
+    accept_choice:
+      create_account: Nieuw account aanmaken
+      joined_household: U bent lid geworden van het huishouden.
+      message: '%{inviter} heeft u uitgenodigd om lid te worden als %{role}.'
+      sign_in_existing: Ik heb al een account
+      title: Lid worden van %{family}

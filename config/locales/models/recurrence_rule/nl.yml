@@ -1,0 +1,35 @@
+---
+nl:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        frequency: Frequentie
+        interval: Interval
+        day_of_month: Dag van de maand
+        weekday: Weekdag
+        weekday_ordinal: Week van de maand
+        month_of_year: Maand
+      recurring_transaction/recurrence_rules:
+        base: 'Herhalingsschema:'
+        frequency: Frequentie
+        interval: Interval
+        day_of_month: Dag van de maand
+        weekday: Weekdag
+        weekday_ordinal: Week van de maand
+        month_of_year: Maand
+    errors:
+      models:
+        recurrence_rule:
+          day_spec_required: Kies precies één van beide, een dag van de maand of een weekdag
+          attributes:
+            weekday:
+              required_for_weekly: is verplicht voor een wekelijks schema
+            weekday_ordinal:
+              not_allowed_for_weekly: is niet van toepassing op een wekelijks schema
+              required_with_weekday: is verplicht als er een weekdag is ingesteld
+              not_allowed_without_weekday: is alleen van toepassing als er een weekdag is ingesteld
+            day_of_month:
+              not_allowed_for_weekly: is niet van toepassing op een wekelijks schema
+            month_of_year:
+              required_for_yearly: is verplicht voor een jaarlijks schema
+              not_allowed: is alleen van toepassing op een jaarlijks schema

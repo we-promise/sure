@@ -14,19 +14,34 @@ nl:
           name: "Naam"
           strategy: "Strategie"
           status: "Status"
-          issuer: "Aanvrager"
+          issuer: "Uitgever"
           actions: "Acties"
           enabled: "Ingeschakeld"
           disabled: "Uitgeschakeld"
         legacy_providers_title: "Omgeving-Geconfigureerde Providers"
         legacy_providers_notice: "Deze providers zijn geconfigureerd via omgevingsvariabelen of YAML en kunnen niet via deze interface worden beheerd. Om ze hier te beheren, migreer ze naar database-gebaseerde providers door AUTH_PROVIDERS_SOURCE=db in te schakelen en ze opnieuw aan te maken in de UI."
         env_configured: "Omgeving/YAML"
+        page_title: SSO-providers
+        restart_required: Wijzigingen worden pas actief na een herstart van de server.
+        configured_providers: Geconfigureerde providers
+        enabled: Ingeschakeld
+        disabled: Uitgeschakeld
+        edit: Bewerken
+        enable: Inschakelen
+        disable: Uitschakelen
+        delete: Verwijderen
+        configuration_mode: Configuratiemodus
+        db_backed_providers: Providers uit de database
+        db_backed_providers_description: Providers uit de database laden in plaats van uit de YAML-configuratie
+        db_backed_providers_help_html: Stel <code class="bg-surface px-1 py-0.5 rounded text-xs">AUTH_PROVIDERS_SOURCE=db</code> in om providers uit de database te gebruiken. Wijzigingen zijn dan mogelijk zonder de server te herstarten.
       new:
         title: "SSO Provider toevoegen"
         description: "Configureer een nieuwe single sign-on authenticatieprovider"
+        provider_configuration: Providerconfiguratie
       edit:
         title: "SSO Provider bewerken"
         description: "Configuratie bijwerken voor %{label}"
+        provider_configuration: Providerconfiguratie
       create:
         success: "SSO provider succesvol aangemaakt."
       update:
@@ -78,17 +93,17 @@ nl:
         default_role_help: "Rol toegewezen aan gebruikers die zijn aangemaakt via just-in-time (JIT) SSO account provisioning. Standaard is Lid."
         role_member: "Lid"
         role_admin: "Beheerder"
-        role_super_admin: "Super Beheerder"
+        role_super_admin: "Superbeheerder"
         role_mapping_title: "Groep naar Rol Mapping (Optioneel)"
         role_mapping_help: "Koppel IdP groepen/claims aan applicatierollen. Gebruikers krijgen de hoogste overeenkomende rol toegewezen. Laat leeg om de bovenstaande standaard rol te gebruiken."
-        super_admin_groups: "Super Beheerder Groepen"
+        super_admin_groups: "Superbeheerdersgroepen"
         admin_groups: "Beheerder Groepen"
         member_groups: "Lid Groepen"
         groups_help: "Kommagescheiden lijst van IdP groepnamen. Gebruik * om alle groepen te matchen."
         advanced_title: "Geavanceerde OIDC Instellingen"
         scopes_label: "Aangepaste Scopes"
         scopes_help: "Spatie-gescheiden lijst van OIDC scopes. Laat leeg voor standaard (openid email profile). Voeg 'groups' toe om groep claims op te halen."
-        prompt_label: "Authenticatie Prompt"
+        prompt_label: "Authenticatieprompt"
         prompt_default: "Standaard (IdP beslist)"
         prompt_login: "Forceer Login (opnieuw authenticeren)"
         prompt_consent: "Forceer Toestemming (opnieuw autoriseren)"
@@ -111,3 +126,13 @@ nl:
         name_id_persistent: "Persistent"
         name_id_transient: "Tijdelijk"
         name_id_unspecified: "Niet gespecificeerd"
+        strategy_openid_connect: OpenID Connect
+        strategy_saml: SAML 2.0
+        strategy_google_oauth2: Google OAuth2
+        strategy_github: GitHub
+        saml_sp_callback_url_label: SP-callback-URL (ACS-URL)
+        saml_sp_callback_url_help: Configureer deze URL als Assertion Consumer Service-URL in uw IdP
+        create_provider: Provider aanmaken
+        update_provider: Provider bijwerken
+        role_guest: Gast
+        guest_groups: Gastgroepen

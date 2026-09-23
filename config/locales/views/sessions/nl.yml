@@ -4,12 +4,14 @@ nl:
     create:
       invalid_credentials: Ongeldige e-mail of wachtwoord.
       local_login_disabled: Lokale wachtwoordinlog is uitgeschakeld. Gebruik single sign-on.
+      account_deactivated: Dit account is gedeactiveerd. Neem contact op met een beheerder.
     destroy:
       logout_successful: U bent succesvol uitgelogd.
     post_logout:
       logout_successful: U bent succesvol uitgelogd.
     openid_connect:
       failed: Kon niet authenticeren via OpenID Connect.
+      account_linked: Account succesvol gekoppeld aan %{provider}
     failure:
       failed: Kon niet authenticeren.
       sso_provider_unavailable: "De SSO provider is momenteel niet beschikbaar. Probeer het later opnieuw of neem contact op met een beheerder."
@@ -21,12 +23,16 @@ nl:
       forgot_password: Wachtwoord vergeten?
       password: Wachtwoord
       submit: Inloggen
-      title: "%{product_name}"
+      title: Sure
       password_placeholder: Voer uw wachtwoord in
       openid_connect: Inloggen met OpenID Connect
       oidc: Inloggen met OpenID Connect
       google_auth_connect: Inloggen met Google
       local_login_admin_only: Lokale login is beperkt tot beheerders.
       no_auth_methods_enabled: Er zijn momenteel geen authenticatiemethoden ingeschakeld. Neem contact op met een beheerder.
-      demo_banner_title: "Demo modus actief"
+      demo_banner_title: "Demomodus actief"
       demo_banner_message: "Dit is een demonstratieomgeving. Inloggegevens zijn voor uw gemak vooraf ingevuld. Voer geen echte of gevoelige informatie in."
+      passkey_button: Inloggen met een passkey
+      passkey_unsupported: Deze browser ondersteunt geen passkeys.
+    mobile_sso_start:
+      redirecting_html: Doorsturen naar inloggen... <a href="%{url}">Klik hier</a> als u niet wordt doorgestuurd.

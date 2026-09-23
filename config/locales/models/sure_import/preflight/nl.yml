@@ -1,0 +1,6 @@
+---
+nl:
+  sure_import:
+    preflight:
+      missing_reference: Regel %{line} %{type} verwijst naar ontbrekend %{field} %{value}.
+      skipped_missing_reference: Regel %{line} %{type} verwijst naar ontbrekend %{field} %{value}. Deze wordt bij het importeren overgeslagen.

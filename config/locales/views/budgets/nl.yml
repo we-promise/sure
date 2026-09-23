@@ -15,6 +15,120 @@ nl:
         all: Alles
         on_track: Op schema
         over_budget: Over budget
+        aria_label: Budgetcategorieën filteren
       tabs:
-        actual: "Actueel"
+        actual: "Werkelijk"
         budgeted: "Begroot"
+    switcher:
+      aria_label: Budget wisselen
+      household: Huishouden
+    budget_donut:
+      spent: Uitgegeven
+      new_budget: Nieuw budget
+      of_budget: van %{amount}
+      unused: Ongebruikt
+    budget_header:
+      today: Vandaag
+    budget_nav:
+      categories: Categorieën
+      setup: Instellen
+    over_allocation_warning:
+      over_allocated_message: U hebt meer toegewezen dan uw budget. Corrigeer uw toewijzingen.
+      fix_allocations: Toewijzingen corrigeren
+    actuals_summary:
+      income: Inkomsten
+      expenses: Uitgaven
+    budgeted_summary:
+      expected_income: Verwachte inkomsten
+      budgeted: Begroot
+      earned: '%{amount} verdiend'
+      over: '%{amount} overschreden'
+      left: '%{amount} over'
+      spent: '%{amount} uitgegeven'
+    edit:
+      setup_title: Stel uw budget in
+      setup_description: Voer hieronder uw maandelijkse inkomsten en geplande uitgaven in om uw budget in te stellen.
+      budgeted_spending: Begrote uitgaven
+      expected_income: Verwachte inkomsten
+      autosuggest_title: Inkomsten en uitgavenbudget automatisch voorstellen
+      autosuggest_description: Dit is gebaseerd op uw transactiegeschiedenis. AI kan fouten maken; controleer het resultaat voordat u doorgaat.
+      continue: Doorgaan
+    name:
+      custom_range: '%{start} - %{end_date}'
+      month_year: '%{month}'
+    available_cash:
+      heading: Beschikbaar geld
+      subtitle: Naast het plan hierboven, geen onderdeel ervan.
+      available: Beschikbaar saldo
+      earmarked: Al gereserveerd voor doelen
+      free: Echt vrij besteedbaar
+      goals_link: Doelen bekijken
+    copy_previous_prompt:
+      title: Stel uw budget in
+      description: U kunt uw budget kopiëren van %{source_name} of opnieuw beginnen.
+      copy_button: Kopiëren van %{source_name}
+      fresh_button: Opnieuw beginnen
+    copy_previous:
+      success: Budget gekopieerd van %{source_name}
+      no_source: Geen eerder budget gevonden om van te kopiëren
+      already_initialized: Dit budget is al ingesteld
+  budget_categories:
+    bills_reserved: '%{amount} gereserveerd voor vaste lasten'
+    bills_reserved_unconvertible:
+      one: '%{count} vaste last is niet gereserveerd, geen wisselkoers beschikbaar'
+      other: '%{count} vaste lasten zijn niet gereserveerd, geen wisselkoers beschikbaar'
+    allocation_progress:
+      budget_exceeded_html: Budget overschreden met <span class="text-red-500 privacy-sensitive">%{amount}</span>
+      left_to_allocate: nog toe te wijzen
+      over_set: '> 100% toegewezen'
+      percent_set: '%{percent} toegewezen'
+    budget_category:
+      rolled_over: +%{amount} overgeheveld
+    budget_category_form:
+      monthly_average: '%{amount}/mnd gem.'
+      rollover_label: Overhevelen
+      rollover_title: Neem het ongebruikte geld van deze categorie mee naar de volgende maand
+      shared_placeholder: Gedeeld
+      shared_title: Laat leeg om het budget van de hoofdcategorie te delen
+    confirm_button:
+      confirm: Bevestigen
+    move:
+      button_title: Geld uit deze categorie verplaatsen
+      cancel: Annuleren
+      dialog_title: Geld verplaatsen
+      no_destination: Dit is op dit moment het enige potje waartussen geld kan worden verplaatst — een categorie kan geen geld naar haar eigen hoofd- of subcategorie sturen.
+      submit: Verplaatsen
+      amount_label: Bedrag
+      available: '%{amount} beschikbaar'
+      from_label: Van
+      to_label: Naar
+      success: Geld verplaatst.
+      errors:
+        different_budgets: Beide categorieën moeten bij hetzelfde budget horen.
+        insufficient_funds: Dat is meer dan aan deze categorie is toegewezen.
+        non_positive_amount: Voer een bedrag groter dan nul in.
+        parent_child: Geld kan niet worden verplaatst tussen een categorie en haar eigen subcategorie — pas de subcategorie direct aan.
+        same_category: Kies een andere categorie om het geld naartoe te verplaatsen.
+        uncategorized: Ongecategoriseerd is geen echt potje, dus er kan geen geld naartoe of vanaf worden verplaatst.
+    no_categories:
+      oops: Oeps!
+      no_categories_message: U hebt nog geen uitgavencategorieën aangemaakt of aan uw transacties toegewezen.
+      use_defaults: Standaardinstellingen gebruiken (aanbevolen)
+      new_category: Nieuwe categorie
+    index:
+      title: Bewerk uw categoriebudgetten
+      description: Pas categoriebudgetten aan om uitgavenlimieten in te stellen. Niet-toegewezen geld wordt automatisch als ongecategoriseerd ingedeeld.
+    show:
+      category: Categorie
+      overview: Overzicht
+      spending: Uitgaven %{date}
+      status: Status
+      overspent: te veel uitgegeven
+      left: over
+      budgeted: Begroot
+      rolled_over: Overgeheveld
+      monthly_average_spending: Gemiddelde maandelijkse uitgaven
+      monthly_median_spending: Mediane maandelijkse uitgaven
+      recent_transactions: Recente transacties
+      view_all_transactions: Alle transacties van deze categorie bekijken
+      no_transactions: Geen transacties gevonden voor deze budgetperiode.

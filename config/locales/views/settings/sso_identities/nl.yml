@@ -1,0 +1,7 @@
+---
+nl:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: De laatste gekoppelde login kan niet worden ontkoppeld
+        success: Login succesvol ontkoppeld

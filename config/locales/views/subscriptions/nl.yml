@@ -11,3 +11,13 @@ nl:
       redirect_to_stripe: "In de volgende stap wordt u doorgestuurd naar Stripe, dat creditcards voor ons verwerkt."
       trialing: "Uw gegevens worden over %{days} dagen verwijderd"
       trial_over: "Uw proefperiode is voorbij"
+      already_contributing: U draagt al bij. Hartelijk dank!
+      page_title: Upgraden
+      account_settings: Accountinstellingen
+      sign_out: Uitloggen
+    create:
+      welcome: Welkom bij Sure!
+      trial_already_used: U heeft al een proefperiode gestart of voltooid. Upgrade om verder te gaan.
+    success:
+      welcome_with_contribution: Welkom bij Sure! Bedankt voor uw bijdrage.
+      contribution_failed: Er is iets misgegaan bij het verwerken van uw bijdrage. Probeer het opnieuw.

@@ -1,0 +1,127 @@
+---
+nl:
+  providers:
+    akahu:
+      name: Akahu
+      description: Verbind Nieuw-Zeelandse bankrekeningen via Akahu
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Akahu-verbinding
+  akahu_account:
+    fallback: Akahu-account
+  akahu_entry:
+    notes:
+      reference: Referentie
+      particulars: Bijzonderheden
+      code: Code
+      other_account: Tegenrekening
+  akahu_item:
+    errors:
+      account_processing_failed: Akahu-account kon niet worden gesynchroniseerd
+      account_sync_schedule_failed: Synchronisatie van Akahu-account kon niet worden ingepland
+      pending_transactions_failed: Openstaande Akahu-transacties konden niet worden opgehaald
+      transactions_failed: Akahu-transacties konden niet worden opgehaald
+      sync_failed: Akahu-verbinding kon niet worden gesynchroniseerd
+    sync_status:
+      no_accounts: Geen accounts gevonden
+      all_synced:
+        one: '%{count} account gesynchroniseerd'
+        other: '%{count} accounts gesynchroniseerd'
+      partial: '%{linked} gesynchroniseerd, %{unlinked} moeten worden ingesteld'
+    institution_summary:
+      none: Geen instellingen verbonden
+      one: 1 instelling
+      count:
+        one: '%{count} instelling'
+        other: '%{count} instellingen'
+  akahu_items:
+    provider_panel:
+      default_connection_name: Akahu-verbinding
+      add_connection: Akahu-verbinding toevoegen
+      update_connection: Verbinding bijwerken
+      connection_name_label: Naam van verbinding
+      connection_name_placeholder: Hoofdverbinding Akahu
+      app_token_label: App-token
+      app_token_placeholder: Plak uw Akahu-app-token
+      keep_app_token_placeholder: Laat leeg om het bestaande app-token te behouden
+      user_token_label: Gebruikerstoken
+      user_token_placeholder: Plak uw Akahu-gebruikerstoken
+      keep_user_token_placeholder: Laat leeg om het bestaande gebruikerstoken te behouden
+      setup_accounts: Accounts instellen
+      syncing: Synchroniseren...
+      sync: Synchroniseren
+      disconnect: Verbinding verbreken
+      disconnect_confirm: Weet u zeker dat u de verbinding met %{name} wilt verbreken?
+    create:
+      success: Akahu-verbinding opgeslagen.
+    update:
+      success: Akahu-verbinding bijgewerkt.
+    destroy:
+      success: Akahu-verbinding is ingepland voor verwijdering.
+      unlink_failed: Verbinding met Akahu kon niet worden verbroken
+    select_accounts:
+      title: Akahu-accounts koppelen
+      description: Kies de Akahu-accounts die u wilt toevoegen.
+      no_accounts_found: Er zijn geen ongekoppelde Akahu-accounts gevonden.
+      no_credentials_configured: Configureer Akahu eerst in de provider-instellingen.
+      cancel: Annuleren
+      link_accounts: Accounts koppelen
+    link_accounts:
+      success:
+        one: '%{count} Akahu-account gekoppeld.'
+        other: '%{count} Akahu-accounts gekoppeld.'
+      no_accounts_selected: Selecteer ten minste één account.
+      no_credentials_configured: Configureer Akahu eerst in de provider-instellingen.
+      unsupported_account_type: Akahu ondersteunt dat accounttype niet.
+      link_failed: Er zijn geen accounts gekoppeld.
+    select_existing_account:
+      title: Akahu-account koppelen aan %{account_name}
+      description: Kies een ongekoppeld Akahu-account om aan dit account te koppelen.
+      no_accounts_found: Er zijn geen ongekoppelde Akahu-accounts gevonden.
+      no_credentials_configured: Configureer Akahu eerst in de provider-instellingen.
+      account_already_linked: Dit account is al aan een provider gekoppeld.
+      cancel: Annuleren
+      link_account: Account koppelen
+    link_existing_account:
+      success: Akahu-account gekoppeld aan %{account_name}.
+      account_already_linked: Dit account is al aan een provider gekoppeld.
+      akahu_account_already_linked: Dit Akahu-account is al gekoppeld.
+    setup_accounts:
+      title: Akahu-accounts instellen
+      subtitle: Kies hoe elk Akahu-account in Sure moet verschijnen.
+      no_credentials: Configureer eerst de Akahu-inloggegevens.
+      api_error: Akahu-accounts konden niet worden opgehaald.
+      fetch_failed: Accounts konden niet worden opgehaald
+      no_accounts_to_setup: Geen accounts om in te stellen
+      all_accounts_linked: Alle Akahu-accounts zijn al gekoppeld.
+      choose_account_type: Kies een accounttype
+      choose_account_type_description: Sla accounts over die u niet wilt volgen.
+      account_type_label: Accounttype
+      account_types:
+        skip: Overslaan
+        depository: Cash
+        credit_card: Creditcard
+        investment: Belegging
+        loan: Lening
+      create_accounts: Accounts aanmaken
+      cancel: Annuleren
+    complete_account_setup:
+      success:
+        one: '%{count} Akahu-account aangemaakt.'
+        other: '%{count} Akahu-accounts aangemaakt.'
+      all_skipped: Er zijn geen Akahu-accounts aangemaakt.
+      no_accounts: Er zijn geen Akahu-accounts geselecteerd.
+      creation_failed: Akahu-accounts konden niet worden aangemaakt.
+    akahu_item:
+      deletion_in_progress: Wordt verwijderd
+      syncing: Synchroniseren
+      error: Fout
+      status_with_summary: '%{timestamp} geleden gesynchroniseerd · %{summary}'
+      status_never: Nooit gesynchroniseerd
+      delete: Verwijderen
+      setup_needed: Accounts moeten worden ingesteld
+      setup_description: '%{linked} van %{total} accounts gekoppeld.'
+      setup_action: Accounts instellen
+      no_accounts_title: Nog geen accounts geïmporteerd
+      no_accounts_description: Haal Akahu-accounts op en kies welke u wilt koppelen.

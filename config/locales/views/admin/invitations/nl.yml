@@ -1,0 +1,8 @@
+---
+nl:
+  admin:
+    invitations:
+      destroy:
+        success: Uitnodiging verwijderd.
+      destroy_all:
+        success: Alle uitnodigingen voor deze familie/groep zijn verwijderd.

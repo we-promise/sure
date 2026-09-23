@@ -10,8 +10,8 @@ nl:
     money_field:
       label: Bedrag
     exchange_rate_tabs:
-      calculate_rate_tab: FX-tarief berekenen
-      convert_tab: Converteren met FX-tarief
+      calculate_rate_tab: Wisselkoers berekenen
+      convert_tab: Omrekenen met wisselkoers
       destination_amount: Doelbedrag
       exchange_rate: Wisselkoers
       exchange_rate_help: Kies hoe u het bedrag wilt invoeren.
@@ -24,3 +24,33 @@ nl:
       singular: Familie
     trend_change:
       no_change: "geen verandering"
+    preview: Preview
+    sync_toast:
+      message: Nieuwe gegevens beschikbaar
+      refresh: Vernieuwen
+    require_admin: Alleen beheerders kunnen deze actie uitvoeren
+    require_connector_owner: U kunt alleen verbindingen beheren die u zelf heeft toegevoegd
+    custom_confirm:
+      default_title: Weet u het zeker?
+      default_body: Dit kan niet ongedaan worden gemaakt.
+      default_btn_text: Bevestigen
+      resource_deletion_title: 'Verwijderen: %{resource}?'
+      resource_deletion_body: Weet u zeker dat u dit item (%{resource}) wilt verwijderen? Dit kan niet ongedaan worden gemaakt.
+      resource_deletion_btn_text: 'Verwijderen: %{resource}'
+    cancel: Annuleren
+    transaction_tabs:
+      expense: Uitgave
+      income: Inkomsten
+      transfer: Overboeking
+    sidekiq_health_banner:
+      title: Sommige gegevens zijn mogelijk verouderd
+      body: Achtergrondtaken worden niet verwerkt, waardoor saldi, nettovermogen en accountsynchronisaties verouderd kunnen zijn of ontbreken.
+      cta: Systeemstatus bekijken
+      reasons:
+        redis_unreachable: De app kan Redis niet bereiken. Controleer uw REDIS_URL en of Redis draait.
+        no_worker_processes: Er is geen Sidekiq-workerproces verbonden. Start de workercontainer of de systemd-unit.
+        stale_heartbeat: De Sidekiq-worker heeft recent geen heartbeat gemeld. Mogelijk is deze vastgelopen of gecrasht.
+        queue_backed_up: De oudste taak in de wachtrij wacht langer dan de toegestane latentie. De worker draait wel, maar loopt achter.
+  concerns:
+    self_hostable:
+      redis_configured: Redis is nu correct geconfigureerd! U kunt nu uw Sure-applicatie instellen.

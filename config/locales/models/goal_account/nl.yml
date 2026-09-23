@@ -1,0 +1,9 @@
+---
+nl:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Dit account is al volledig gereserveerd voor “%{goal_name}”. Voer een bedrag in om het te verdelen.

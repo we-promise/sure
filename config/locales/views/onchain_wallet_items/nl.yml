@@ -1,0 +1,111 @@
+---
+nl:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Activiteit gevonden
+      explanation: Dit adresformaat wordt door meer dan één netwerk gebruikt en de saldi verschillen per netwerk. Kies het netwerk dat u wilt volgen.
+      no_activity_found: Niets gevonden
+      subtitle: '%{address}'
+      title: Welk netwerk?
+    destroy:
+      success: De self-custody-verbinding is ingepland voor verwijdering.
+    disconnect_asset:
+      success: '%{symbol} wordt niet meer gevolgd. Het account en de geschiedenis zijn bewaard.'
+    disconnect_wallet:
+      success:
+        one: '%{count} asset op dat adres wordt niet meer gevolgd.'
+        other: '%{count} assets op dat adres worden niet meer gevolgd.'
+    enable_crypto_prices:
+      not_self_hosted: Marktgegevensproviders worden in deze installatie geconfigureerd door de beheerder van de instantie.
+      success: Cryptoprijzen zijn ingeschakeld. Walletwaarden verschijnen na de volgende synchronisatie.
+    errors:
+      address_required: Voer een walletadres in.
+      already_linked: Dit adres wordt al gevolgd op dit netwerk. Gebruik Tokens controleren om te wijzigen welke assets worden gevolgd.
+      chain_unreachable: De openbare explorer van dit netwerk is niet bereikbaar. Probeer het zo meteen opnieuw.
+      rate_limited: De openbare explorer beperkt op dit moment het aantal verzoeken. Probeer het over een paar minuten opnieuw.
+      unexpected: Er ging iets mis bij het uitlezen van deze wallet. De details zijn vastgelegd voor support.
+      unrecognized_address: Dit lijkt geen adres op een van de ondersteunde netwerken.
+      wallet_not_found: Deze wallet wordt niet gevolgd door deze verbinding.
+    link_wallet:
+      errors:
+        none_tracked: 'Er wordt niets gevolgd: %{assets} kon niet worden toegevoegd. Probeer het zo meteen opnieuw.'
+        nothing_selected: Kies ten minste één asset om te volgen.
+        some_failed: '%{assets} kon niet worden gevolgd en is weggelaten.'
+      success:
+        one: '%{count} asset uit deze wallet wordt gevolgd.'
+        other: '%{count} assets uit deze wallet worden gevolgd.'
+    manage:
+      assets_truncated: Dit adres bevat meer tokens dan in één keer kunnen worden uitgelezen, dus alleen de %{count} meest betrouwbare worden weergegeven. Alles wat al wordt gevolgd, blijft synchroniseren.
+      disconnect_asset: Niet meer volgen
+      disconnect_asset_confirm: '%{symbol} niet meer volgen? Het account en de geschiedenis blijven bewaard, maar worden niet meer bijgewerkt.'
+      disconnect_wallet: Wallet ontkoppelen
+      disconnect_wallet_confirm: Alle assets op dit adres niet meer volgen?
+      history_note: Bij ontkoppelen blijven de accounts en hun geschiedenis bewaard; ze worden alleen niet meer bijgewerkt.
+      history_truncated: Niet alle transfers van dit adres konden worden uitgelezen — er is meer geschiedenis dan één synchronisatie dekt, of de explorer weigerde het verzoek. De saldi zijn volledig; sommige transfers ontbreken.
+      native: Native
+      no_wallets: Er worden nog geen wallets gevolgd.
+      review_tokens: Tokens controleren
+      subtitle: Alle adressen die deze verbinding uitleest, en wat er per adres wordt gevolgd.
+      title: Self-custody-wallets beheren
+    new_wallet:
+      address_label: Walletadres
+      address_placeholder: bc1..., 0x... of een Solana-adres
+      bitcoin_single_address_note: Bitcoin wordt per adres gevolgd. Extended keys (xpub/ypub/zpub) worden niet ondersteund, dus bij een wallet die tegoeden over afgeleide adressen verspreidt, ziet u alleen het saldo van het adres dat u invoert.
+      chain_auto_detect: Automatisch detecteren
+      chain_label: Netwerk
+      continue: Doorgaan
+      read_only_note: Alleen openbare blockchaingegevens worden uitgelezen. Voer nooit een seedphrase of private key in.
+      subtitle: Volg een wallet waarvan u de sleutels beheert, via het openbare adres.
+      title: Self-custody-wallet toevoegen
+    onchain_wallet_item:
+      assets_tracked:
+        one: '%{count} asset gevolgd'
+        other: '%{count} assets gevolgd'
+      sync: Nu synchroniseren
+      syncing: Synchroniseren...
+    wallet_card:
+      addresses_tracked:
+        one: '%{count} adres gevolgd'
+        other: '%{count} adressen gevolgd'
+      deletion_in_progress: Verwijderen...
+      delete: Verbinding verwijderen
+      needs_attention: Aandacht vereist
+      no_wallets_message: Koppel een adres via de providerinstellingen om het hier te zien.
+      no_wallets_title: Nog geen wallets gekoppeld
+      status: '%{timestamp} geleden gesynchroniseerd'
+      sync: Nu synchroniseren
+      status_never: Nog niet gesynchroniseerd
+      syncing: Synchroniseren...
+    price_provider_warning:
+      body: Geen enkele ingeschakelde marktgegevensprovider kan crypto waarderen. Deze wallets volgen daarom hoeveelheden, maar tonen een waarde van nul.
+      enable: Cryptoprijzen inschakelen
+      exchange_rate_body: Crypto wordt geprijsd in USD en er is geen wisselkoersprovider geconfigureerd om dit om te rekenen naar %{currency}. Deze wallets volgen daarom hoeveelheden, maar tonen een waarde van nul. Stel EXCHANGE_RATE_PROVIDER in — Frankfurter heeft geen API-sleutel nodig.
+      exchange_rate_title: Er is geen wisselkoersprovider geconfigureerd
+      link: Instellingen voor marktgegevens openen
+      title: Cryptoprijzen zijn niet geconfigureerd
+    provider_connection:
+      description: Volg een wallet waarvan u de sleutels beheert, via het openbare adres.
+      name: Self-custody-wallet
+    review_tokens:
+      save: Gevolgde assets opslaan
+      subtitle: '%{chain} · %{address}'
+      title: Gevolgde assets controleren
+    token_review:
+      import_selected: Geselecteerde assets volgen
+      subtitle: '%{chain} · %{address}'
+      title: Kies wat u wilt volgen
+    token_review_form:
+      assets_truncated: Dit adres bevat meer tokens dan in één keer kunnen worden uitgelezen, dus alleen de %{count} meest betrouwbare worden weergegeven.
+      cancel: Annuleren
+      explanation: Assets met een bekende prijs zijn aangevinkt. Al het andere is niet aangevinkt — wallets verzamelen spam-airdrops, en die volgen levert geen waarde op.
+      native: Native
+      no_price: Geen prijs beschikbaar; alleen hoeveelheid wordt gevolgd
+      nothing_found: Op dit netwerk zien we niets op dit adres.
+    update:
+      success: De self-custody-verbinding is bijgewerkt.
+    update_tokens:
+      errors:
+        no_changes: Er is niets gewijzigd; dezelfde assets zijn nog steeds aangevinkt.
+        none_tracked: 'Er is niets gewijzigd: %{assets} kon niet worden toegevoegd. Probeer het zo meteen opnieuw.'
+        some_failed: '%{assets} kon niet worden gevolgd en is weggelaten.'
+      success: Gevolgde assets bijgewerkt (%{created} toegevoegd, %{removed} verwijderd).

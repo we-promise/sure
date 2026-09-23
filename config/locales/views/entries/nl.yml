@@ -2,13 +2,22 @@
 nl:
   entries:
     create:
-      success: Item aangemaakt
+      success: Boeking aangemaakt
     destroy:
-      success: Item verwijderd
+      success: Boeking verwijderd
     empty:
-      description: Probeer een item toe te voegen, filters te bewerken of uw zoekopdracht te verfijnen
-      title: Geen items gevonden
+      description: Probeer een boeking toe te voegen, filters te bewerken of uw zoekopdracht te verfijnen
+      title: Geen boekingen gevonden
     loading:
-      loading: Items laden...
+      loading: Boekingen laden...
     update:
-      success: Item bijgewerkt
+      success: Boeking bijgewerkt
+    unlock:
+      success: Boeking ontgrendeld. Het kan bij de volgende synchronisatie worden bijgewerkt.
+    protection:
+      tooltip: Beschermd tegen synchronisatie
+      title: Beschermd tegen synchronisatie
+      description: Uw wijzigingen aan deze boeking worden niet overschreven door synchronisatie met de provider.
+      locked_fields_label: 'Vergrendelde velden:'
+      unlock_button: Bijwerken via synchronisatie toestaan
+      unlock_confirm: Toestaan dat synchronisatie deze boeking bijwerkt? Uw wijzigingen kunnen bij de volgende synchronisatie worden overschreven.

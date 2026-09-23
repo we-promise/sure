@@ -2,7 +2,7 @@
 nl:
   enable_banking_items:
     authorize:
-      authorization_failed: Autorisatie starten mislukt
+      authorization_failed: "Autorisatie starten mislukt: %{message}"
       bank_required: Selecteer een bank.
       invalid_redirect: De ontvangen autorisatie URL is ongeldig. Probeer het opnieuw.
       redirect_uri_not_allowed: Redirect niet toegestaan. Configureer `%{callback_url}` in uw Enable Banking app instellingen.
@@ -35,6 +35,27 @@ nl:
         invalid_enable_banking_account: Ongeldige Enable Banking account geselecteerd
     new:
       link_enable_banking_title: Enable Banking koppelen
+      session_expired: Sessie verlopen - opnieuw autoriseren vereist
+      connected_bank: Verbonden bank
+      session_expires: Sessie verloopt
+      unknown: Onbekend
+      connection: Verbinding
+      configured: Geconfigureerd
+      ready_to_connect: Klaar om een bank te verbinden
+      sync: Synchroniseren
+      reconnect: Opnieuw verbinden
+      connect_bank: Bank verbinden
+      remove_confirm: Weet u zeker dat u deze verbinding wilt verwijderen?
+      remove: Verwijderen
+      add_connection: Verbinding toevoegen
+      not_configured: Enable Banking-verbinding niet geconfigureerd
+      not_configured_description: Voordat u Enable Banking-accounts kunt koppelen, moet u uw Enable Banking-verbinding configureren.
+      setup_steps_title: 'Stappen:'
+      setup_step_1_html: Ga naar <strong>Instellingen → Providers</strong>
+      setup_step_2_html: Zoek het onderdeel <strong>Enable Banking</strong>
+      setup_step_3: Voer uw Enable Banking-inloggegevens in
+      setup_step_4: Kom hier terug om uw accounts te koppelen
+      go_to_provider_settings: Naar providerinstellingen
     reauthorize:
       invalid_redirect: De ontvangen autorisatie URL is ongeldig. Probeer het opnieuw.
       reauthorization_failed: Opnieuw autoriseren mislukt
@@ -45,5 +66,50 @@ nl:
       description: Selecteer de bank die u wilt koppelen aan uw accounts.
       no_banks: Geen banken beschikbaar voor dit land/deze regio.
       title: Selecteer uw bank
+      beta_label: Bèta
+      no_search_results: Geen banken gevonden voor uw zoekopdracht.
+      search_label: Zoek uw bank
+      search_placeholder: Zoek uw bank...
     update:
       success: Enable Banking configuratie bijgewerkt.
+    errors:
+      api_error: Er is een communicatiefout met de bank opgetreden.
+      network_unreachable: De bankdienst is tijdelijk onbereikbaar. Probeer het later opnieuw.
+      session_invalid: Sessie verlopen. Verbind uw bank opnieuw.
+      unexpected: Er is een onverwachte fout opgetreden tijdens de synchronisatie.
+    enable_banking_item:
+      deletion_in_progress: Wordt verwijderd
+      provider_name: Enable Banking
+      syncing: Synchroniseren...
+      reconnect: Opnieuw verbinden
+      last_synced: Laatst gesynchroniseerd %{time} geleden
+      never_synced: Nooit gesynchroniseerd
+      update: Bijwerken
+      delete: Verwijderen
+      setup_needed: Instellen vereist
+      setup_needed_description:
+        one: '%{count} account geïmporteerd uit Enable Banking moet worden ingesteld'
+        other: '%{count} accounts geïmporteerd uit Enable Banking moeten worden ingesteld'
+      set_up_accounts: Accounts instellen
+      no_accounts_found: Geen accounts gevonden
+      no_accounts_found_description: Er zijn geen accounts gevonden bij Enable Banking. Probeer opnieuw te synchroniseren.
+    select_existing_account:
+      title: Enable Banking-account koppelen
+      all_linked: Alle Enable Banking-accounts lijken al gekoppeld te zijn.
+      try_after_sync: Als u net verbinding hebt gemaakt of hebt gesynchroniseerd, probeer het dan opnieuw zodra de synchronisatie is voltooid.
+      unlink_to_move: Om een ander account te koppelen, ontkoppelt u het eerst via het actiemenu van het account.
+      balance: Saldo
+      link: Koppelen
+      cancel: Annuleren
+    setup_accounts:
+      title: Uw Enable Banking-accounts instellen
+      header_subtitle: Kies de juiste accounttypen voor uw geïmporteerde accounts
+      choose_account_type: 'Kies het juiste accounttype voor elk Enable Banking-account:'
+      historical_data_range: 'Periode historische gegevens:'
+      sync_start_date_label: 'Transacties synchroniseren vanaf:'
+      sync_start_date_help: Kies hoe ver terug u de transactiegeschiedenis wilt synchroniseren. Maximaal 2 jaar geschiedenis beschikbaar.
+      account_type_label: 'Accounttype:'
+      balance: Saldo
+      create_accounts: Accounts aanmaken
+      creating_accounts: Accounts aanmaken...
+      cancel: Annuleren

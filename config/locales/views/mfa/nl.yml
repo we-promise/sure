@@ -30,5 +30,12 @@ nl:
       page_title: Twee-factor authenticatie verifiëren
       title: Twee-factor authenticatie
       verify_button: Verifiëren
+      or: of
+      webauthn_button: Passkey of beveiligingssleutel gebruiken
+      webauthn_unsupported: Deze browser ondersteunt geen passkeys of beveiligingssleutels.
     verify_code:
       invalid_code: Ongeldige authenticatiecode. Probeer het opnieuw.
+    verify_webauthn:
+      invalid_credential: Die passkey of beveiligingssleutel kon niet worden geverifieerd. Probeer het opnieuw.
+    webauthn_options:
+      unavailable: Er zijn geen passkeys of beveiligingssleutels beschikbaar voor dit account.

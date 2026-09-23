@@ -5,7 +5,7 @@ nl:
       edit: "%{account} bewerken"
     form:
       none: Geen
-      subtype_prompt: Selecteer investeringstype
+      subtype_prompt: Selecteer beleggingstype
     new:
       title: Accountsaldo invoeren
     show:
@@ -47,7 +47,7 @@ nl:
         long: 529 Onderwijs Spaarplan
       hsa:
         short: HSA
-        long: Gezondheidsspaarrekening
+        long: Zorgspaarrekening (HSA)
       ugma:
         short: UGMA
         long: UGMA Bewaarrekening
@@ -118,9 +118,81 @@ nl:
         long: Trust
       other:
         short: Overig
-        long: Overige investering
+        long: Overige belegging
+      cash_management:
+        short: CMA
+        long: Cash Management Account
+      nps:
+        short: NPS
+        long: National Pension System
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      indian_stocks:
+        short: Indiase aandelen
+        long: Indiase aandelen (Demat)
+      indian_equity:
+        short: Indiase aandelen
+        long: Indiase aandelen
+      indian_etf:
+        short: Indiase ETF
+        long: Indiase ETF
+      life_insurance:
+        short: Levensverzekering
+        long: Levensverzekering
+      ppf:
+        short: PPF
+        long: Public Provident Fund
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: National Savings Certificate
+      scss:
+        short: SCSS
+        long: Senior Citizens' Savings Scheme
+      fd:
+        short: FD
+        long: Termijndeposito (Fixed Deposit)
+      rd:
+        short: RD
+        long: Periodiek spaardeposito (Recurring Deposit)
+      pomis:
+        short: POMIS
+        long: Post Office Monthly Income Scheme
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: Goud-ETF
+        long: Goud-ETF
+      gold_mf:
+        short: Goudfonds
+        long: Goudbeleggingsfonds
+      sgb:
+        short: SGB
+        long: Sovereign Gold Bond
+      g_sec:
+        short: G-Sec
+        long: Staatsobligaties (G-Secs)
+      sdl:
+        short: SDL
+        long: Obligaties van deelstaten (SDL's)
+      corporate_bond:
+        short: Bedrijfsobligatie
+        long: Bedrijfsobligatie
+      infrastructure_bond:
+        short: Infra-obligatie
+        long: Infrastructuurobligatie
+      tax_free_bond:
+        short: Belastingvrije obligatie
+        long: Belastingvrije obligatie
+      gold:
+        short: Goud
+        long: Goud (fysiek of digitaal)
     value_tooltip:
       cash: Liquiditeiten
-      holdings: Bezittingen
+      holdings: Posities
       total: Portfolio saldo
-      total_value_tooltip: Het totale portfolio saldo is de som van makelaar liquiditeiten (beschikbaar voor handelen) en de huidige marktwaarde van uw bezittingen.
+      total_value_tooltip: Het totale portfolio saldo is de som van de liquiditeiten bij uw broker (beschikbaar om te handelen) en de huidige marktwaarde van uw posities.

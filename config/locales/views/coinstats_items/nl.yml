@@ -35,14 +35,23 @@ nl:
       not_configured_step3_html: Volg de <strong>installatie-instructies</strong> om de provider configuratie te voltooien
       go_to_settings: Ga naar Provider Instellingen
       setup_instructions: "Installatie-instructies:"
-      step1_html: Bezoek het <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> om een API Key te verkrijgen.
-      step2: Voer hieronder uw API Key in en klik op Configureren.
+      step1_html: Bezoek het <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> om een API-sleutel te verkrijgen.
+      step2: Voer hieronder uw API-sleutel in en klik op Configureren.
       step3_html: Na een succesvolle verbinding, bezoek het <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Accounts</a> tabblad om crypto wallets in te stellen.
-      api_key_label: API Key
+      api_key_label: API-sleutel
       api_key_placeholder: Vereist
       configure: Configureren
       update_configuration: Opnieuw configureren
       default_name: CoinStats Verbinding
+      link_wallet_title: Walletadres koppelen
+      link_wallet_description: Volg een self-custody wallet of één on-chain adres via CoinStats.
+      link_wallet_submit: Crypto wallet koppelen
+      link_exchange_title: Beurs-API koppelen
+      link_exchange_description: Gebruik een alleen-lezen API-sleutel van uw beurs, zodat CoinStats saldi en transacties kan synchroniseren vanuit Bitvavo, Binance en andere ondersteunde beurzen.
+      link_exchange_note: Als uw beurs activering van de API-sleutel of bevestiging per e-mail vereist, voltooi die stap dan voordat u hier koppelt.
+      exchange_select_blank: Selecteer een beurs
+      exchange_label: Beurs
+      link_exchange_submit: Beurs koppelen
     coinstats_item:
       deletion_in_progress: Crypto wallet gegevens worden verwijderd…
       provider_name: CoinStats
@@ -57,7 +66,13 @@ nl:
       status: Laatst gesynchroniseerd %{timestamp} geleden
       status_never: Nooit gesynchroniseerd
       status_with_summary: "Laatst gesynchroniseerd %{timestamp} geleden • %{summary}"
-      update_api_key: API Key bijwerken
+      update_api_key: API-sleutel bijwerken
       delete: Verwijderen
       no_wallets_title: Geen crypto wallets verbonden
       no_wallets_message: Er zijn momenteel geen crypto wallets verbonden met CoinStats.
+    link_exchange:
+      success: Beurs %{name} gekoppeld.
+      missing_params: Beurs en inloggegevens zijn verplicht.
+      invalid_exchange: De geselecteerde beurs wordt niet meer ondersteund.
+      failed: Koppelen van beurs mislukt.
+      error: 'Koppelen van beurs mislukt: %{message}.'

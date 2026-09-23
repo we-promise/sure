@@ -13,3 +13,13 @@ nl:
       success: Sessie verlaten
     reject:
       success: Verzoek afgewezen
+    super_admin_bar:
+      super_admin: Superbeheerder
+      jobs: Jobs
+      impersonating: Meekijken als
+      leave: Verlaten
+      terminate: Beëindigen
+      join_a_session: Kies een sessie
+      join: Deelnemen
+      uuid_placeholder: UUID
+      request_impersonation: Meekijken aanvragen

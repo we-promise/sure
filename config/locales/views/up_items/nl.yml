@@ -1,0 +1,116 @@
+---
+nl:
+  providers:
+    up:
+      name: Up
+      description: Verbind Australische Up-bankrekeningen via een persoonlijk toegangstoken
+  family:
+    up:
+      create_up_item:
+        default_name: Up-verbinding
+  up_account:
+    fallback: Up-account
+  up_item:
+    errors:
+      account_processing_failed: Kan Up-account niet synchroniseren
+      account_sync_schedule_failed: Kan synchronisatie van Up-account niet inplannen
+      transactions_failed: Kan Up-transacties niet ophalen
+      sync_failed: Kan Up-verbinding niet synchroniseren
+    sync_status:
+      no_accounts: Geen accounts gevonden
+      all_synced:
+        one: '%{count} account gesynchroniseerd'
+        other: '%{count} accounts gesynchroniseerd'
+      partial: '%{linked} gesynchroniseerd, %{unlinked} nog in te stellen'
+    institution_summary:
+      none: Geen instellingen verbonden
+      one: 1 instelling
+      count:
+        one: '%{count} instelling'
+        other: '%{count} instellingen'
+  up_items:
+    provider_panel:
+      default_connection_name: Up-verbinding
+      add_connection: Up-verbinding toevoegen
+      update_connection: Verbinding bijwerken
+      connection_name_label: Naam verbinding
+      connection_name_placeholder: Up hoofdrekening
+      access_token_label: Persoonlijk toegangstoken
+      access_token_placeholder: Plak uw persoonlijke Up-toegangstoken
+      keep_access_token_placeholder: Laat leeg om de bestaande token te behouden
+      setup_accounts: Accounts instellen
+      syncing: Synchroniseren...
+      sync: Synchroniseren
+      disconnect: Verbinding verbreken
+      disconnect_confirm: Weet u zeker dat u de verbinding met %{name} wilt verbreken?
+    create:
+      success: Up-verbinding opgeslagen.
+    update:
+      success: Up-verbinding bijgewerkt.
+    destroy:
+      success: Up-verbinding ingepland voor verwijdering.
+      unlink_failed: Kan de Up-verbinding niet verbreken
+    select_accounts:
+      title: Up-accounts koppelen
+      description: Kies de Up-accounts die u wilt toevoegen.
+      no_accounts_found: Geen ongekoppelde Up-accounts gevonden.
+      no_credentials_configured: Configureer eerst Up in de providerinstellingen.
+      cancel: Annuleren
+      link_accounts: Accounts koppelen
+    link_accounts:
+      success:
+        one: '%{count} Up-account gekoppeld.'
+        other: '%{count} Up-accounts gekoppeld.'
+      no_accounts_selected: Selecteer minstens één account.
+      no_credentials_configured: Configureer eerst Up in de providerinstellingen.
+      unsupported_account_type: Up ondersteunt dat accounttype niet.
+      link_failed: Er zijn geen accounts gekoppeld.
+    select_existing_account:
+      title: Up-account koppelen aan %{account_name}
+      description: Kies een ongekoppeld Up-account om aan dit account te koppelen.
+      no_accounts_found: Geen ongekoppelde Up-accounts gevonden.
+      no_credentials_configured: Configureer eerst Up in de providerinstellingen.
+      account_already_linked: Dit account is al aan een provider gekoppeld.
+      cancel: Annuleren
+      link_account: Account koppelen
+    link_existing_account:
+      success: Up-account gekoppeld aan %{account_name}.
+      account_already_linked: Dit account is al aan een provider gekoppeld.
+      up_account_already_linked: Dit Up-account is al gekoppeld.
+      no_account_selected: Selecteer een Up-account om te koppelen.
+    setup_accounts:
+      title: Up-accounts koppelen
+      subtitle: Kies hoe elk Up-account in Sure moet worden weergegeven.
+      no_credentials: Configureer eerst de Up-inloggegevens.
+      api_error: Kan Up-accounts niet ophalen.
+      fetch_failed: Kan accounts niet ophalen
+      no_accounts_to_setup: Geen accounts om in te stellen
+      all_accounts_linked: Alle Up-accounts zijn al gekoppeld.
+      choose_account_type: Kies een accounttype
+      choose_account_type_description: Sla accounts over die u niet wilt volgen.
+      account_type_label: Accounttype
+      account_types:
+        skip: Overslaan
+        depository: Cash
+        loan: Lening
+      create_accounts: Accounts aanmaken
+      cancel: Annuleren
+    complete_account_setup:
+      success:
+        one: '%{count} Up-account aangemaakt.'
+        other: '%{count} Up-accounts aangemaakt.'
+      all_skipped: Er zijn geen Up-accounts aangemaakt.
+      no_accounts: Er zijn geen Up-accounts geselecteerd.
+      creation_failed: Kan Up-accounts niet aanmaken.
+    up_item:
+      deletion_in_progress: Bezig met verwijderen
+      syncing: Bezig met synchroniseren
+      error: Fout
+      status_with_summary: '%{timestamp} geleden gesynchroniseerd · %{summary}'
+      status_never: Nooit gesynchroniseerd
+      delete: Verwijderen
+      setup_needed: Accounts moeten worden ingesteld
+      setup_description: '%{linked} van %{total} accounts gekoppeld.'
+      setup_action: Accounts instellen
+      no_accounts_title: Nog geen accounts geïmporteerd
+      no_accounts_description: Haal Up-accounts op en kies welke u wilt koppelen.

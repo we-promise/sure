@@ -1,0 +1,6 @@
+---
+nl:
+  syncs:
+    cancel:
+      cancelled: Synchronisatie geannuleerd. Wat al gesynchroniseerd was, blijft behouden; taken in de wachtrij zijn gestopt.
+      not_cancellable: Deze synchronisatie is al voltooid.

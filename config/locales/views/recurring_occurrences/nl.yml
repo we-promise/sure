@@ -1,0 +1,53 @@
+---
+nl:
+  recurring_occurrences:
+    history_status:
+      paid: Betaald
+      skipped: Overgeslagen
+      missed: Gemist
+      scheduled: Openstaand
+    show:
+      due_on: Te betalen op %{date}
+      paid_of: '%{paid} van %{expected} betaald'
+      paid_headline: '%{amount} betaald'
+      remaining: '%{amount} nog te betalen'
+      settled: Volledig betaald
+      overpaid: meer dan verwacht
+      skipped: Overgeslagen
+      missed: Gemarkeerd als gemist
+      payments: Betalingen
+      manual_payment: Handmatige betaling
+      unlink: Ontkoppelen
+      review_heading: Betaling controleren
+      find_heading: Betaling zoeken
+      add_heading: Nog een betaling toevoegen
+      other_matches: Andere waarschijnlijke overeenkomsten
+      no_ranked_candidates: Er lijkt hier nog niets op een betaling van deze vaste last.
+      search_all: Alle transacties doorzoeken
+      search_placeholder: Transacties zoeken
+      no_candidates: Geen transacties rond deze datum om te koppelen.
+      no_search_results: Niets gevonden voor %{query}.
+      link_payment: Betaling koppelen
+      not_this_one: Niet deze
+      cant_find: Kunt u de transactie niet vinden?
+      manual_explainer: Leg een betaling vast waarvan u weet dat die is gedaan, als geen enkele transactie hier overeenkomt.
+      manual_amount_label: Bedrag
+      manual_date_label: Datum
+      record_payment: Betaling vastleggen
+      mark_paid: Markeren als betaald
+      mark_paid_hint: Voldoet het restant zonder een transactie vast te leggen.
+      skip: Overslaan
+      snooze_week: Een week uitstellen
+      reopen: Heropenen
+      view_bill: Volledige vaste last bekijken
+    mark_paid:
+      success: Vaste last gemarkeerd als betaald
+    skip:
+      success: Vaste last overgeslagen
+    reopen:
+      success: Vaste last heropend
+    snooze:
+      success: Uitgesteld tot %{date}
+      invalid_date: Die datum kon niet worden gelezen
+    override_amount:
+      success: Verwacht bedrag bijgewerkt

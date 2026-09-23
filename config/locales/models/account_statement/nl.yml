@@ -1,0 +1,30 @@
+---
+nl:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Account
+        account_last4_hint: Laatste vier cijfers rekeningnummer
+        account_name_hint: Hint accountnaam
+        closing_balance: Eindsaldo
+        content_sha256: Inhoudshash
+        currency: Valuta
+        filename: Bestandsnaam
+        institution_name_hint: Hint instelling
+        opening_balance: Beginsaldo
+        original_file: Afschriftbestand
+        period_end_on: Einde periode
+        period_start_on: Begin periode
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: is al geüpload voor deze familie/groep
+            content_sha256:
+              duplicate_statement_file: is al geüpload voor deze familie/groep
+            original_file:
+              invalid_format: moet een PDF-, CSV- of XLSX-bestand zijn
+              too_large: is te groot. De maximale grootte is %{max_mb} MB
+            period_end_on:
+              on_or_after_start: moet op of na het begin van de periode liggen

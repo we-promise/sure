@@ -2,16 +2,17 @@
 nl:
   holdings:
     cash:
-      brokerage_cash: Makelaar liquiditeiten
+      brokerage_cash: Liquide middelen
     destroy:
-      success: Bezit verwijderd
+      success: Positie verwijderd
+      cannot_delete: U kunt deze positie niet verwijderen
     update:
       success: Kostprijs opgeslagen.
       error: Ongeldige kostprijs waarde.
     unlock_cost_basis:
-      success: Kostprijs ontgrendeld. Kan worden bijgewerkt bij volgende sync.
+      success: Kostprijs ontgrendeld. Kan worden bijgewerkt bij de volgende synchronisatie.
     cost_basis_sources:
-      manual: Gebruiker ingesteld
+      manual: Door gebruiker ingesteld
       calculated: Uit transacties
       provider: Van provider
     cost_basis_cell:
@@ -24,6 +25,7 @@ nl:
       save: Opslaan
       overwrite_confirm_title: Kostprijs overschrijven?
       overwrite_confirm_body: "Dit vervangt de huidige kostprijs van %{current}."
+      set: Instellen
     holding:
       per_share: per aandeel
       shares: "%{qty} aandelen"
@@ -34,24 +36,24 @@ nl:
         one: "%{count} positie"
         other: "%{count} posities"
       average_cost: Gemiddelde kostprijs
-      holdings: Bezittingen
+      holdings: Posities
       name: Naam
       new_holding: Nieuwe transactie
-      no_holdings: Geen bezittingen om weer te geven.
+      no_holdings: Geen posities om weer te geven.
       return: Totaal rendement
-      weight: Gewicht
+      weight: Weging
     missing_price_tooltip:
-      description: Deze investering heeft ontbrekende waarden en we konden het rendement of de waarde niet berekenen.
+      description: Deze belegging heeft ontbrekende waarden en we konden het rendement of de waarde niet berekenen.
       missing_data: Ontbrekende gegevens
     show:
       avg_cost_label: Gemiddelde kostprijs
       current_market_price_label: Huidige marktprijs
       delete: Verwijderen
-      delete_subtitle: Dit verwijdert het bezit en al uw bijbehorende transacties op dit account. Deze actie kan niet ongedaan worden gemaakt.
-      delete_title: Bezit verwijderen
+      delete_subtitle: Dit verwijdert de positie en al uw bijbehorende transacties op dit account. Deze actie kan niet ongedaan worden gemaakt.
+      delete_title: Positie verwijderen
       history: Geschiedenis
       overview: Overzicht
-      portfolio_weight_label: Portfolio gewicht
+      portfolio_weight_label: Portefeuilleweging
       settings: Instellingen
       ticker_label: Ticker
       trade_history_entry: "%{qty} aandelen van %{security} tegen %{price}"
@@ -61,4 +63,42 @@ nl:
       cost_basis_locked_description: Uw handmatig ingestelde kostprijs wordt niet gewijzigd door synchronisaties.
       unlock_cost_basis: Ontgrendelen
       unlock_confirm_title: Kostprijs ontgrendelen?
-      unlock_confirm_body: Dit maakt het mogelijk dat de kostprijs wordt bijgewerkt door provider syncs of transactieberekeningen.
+      unlock_confirm_body: Dit maakt het mogelijk dat de kostprijs wordt bijgewerkt door providersynchronisaties of transactieberekeningen.
+      edit_security: Effect bewerken
+      no_trade_history: Geen transactiegeschiedenis beschikbaar voor deze positie.
+      security_label: Effect
+      originally: was %{ticker}
+      search_security: Effect zoeken
+      search_security_placeholder: Zoek op ticker of naam
+      cancel: Annuleren
+      remap_security: Opslaan
+      provider_disabled_warning: Koersupdates gepauzeerd — provider %{provider} is uitgeschakeld. Kies hieronder een andere provider of schakel deze weer in via Instellingen.
+      truncated_history_warning: Koershistorie is pas beschikbaar vanaf %{date}. Voor eerdere datums heeft de geselecteerde provider geen gegevens — dit kan gebeuren als het effect pas na uw transactiedatum genoteerd werd, of als de provider in het huidige abonnement maar een beperkte historie aanbiedt.
+      switch_provider_label: Andere provider
+      switch_provider_description: '%{provider} is uitgeschakeld. Zoek dit effect bij een andere ingeschakelde provider.'
+      switch_provider_button: Wisselen
+      no_security_provider: Geen provider voor effecten geconfigureerd. Kan niet naar effecten zoeken.
+      security_remapped_label: Effect omgezet
+      provider_sent: 'Door provider verstuurd: %{ticker}'
+      reset_to_provider: Terugzetten naar provider
+      reset_confirm_title: Effect terugzetten naar provider?
+      reset_confirm_body: Hiermee wordt het effect gewijzigd van %{current} terug naar %{original} en worden alle bijbehorende transacties verplaatst.
+      shares_label: Aandelen
+      book_value_label: Boekwaarde
+      market_value_label: Marktwaarde
+      market_data_label: Marktgegevens
+      market_data_sync_button: Vernieuwen
+      last_price_update: Laatste koersupdate
+      syncing: Synchroniseren...
+      never: Nooit
+    remap_security:
+      success: Effect bijgewerkt.
+      security_not_found: Het geselecteerde effect is niet gevonden.
+    reset_security:
+      success: Effect teruggezet naar de waarde van de provider.
+    sync_prices:
+      success: Marktgegevens gesynchroniseerd.
+      unavailable: Synchronisatie van marktgegevens is niet beschikbaar voor offline effecten.
+      provider_error: Kan de laatste koersen niet ophalen. Probeer het over een paar minuten opnieuw.
+    errors:
+      security_collision: 'Kan niet omzetten: u hebt al een positie in %{ticker} op %{date}.'

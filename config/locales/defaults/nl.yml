@@ -42,6 +42,9 @@ nl:
       default: "%d-%m-%Y"
       long: "%e %B %Y"
       short: "%e %b"
+      month_year: '%B %Y'
+      short_month_year: '%b %Y'
+      short_with_year: '%e %b %Y'
     month_names:
     -
     - Januari
@@ -139,6 +142,7 @@ nl:
       wrong_length:
         one: heeft onjuiste lengte (moet %{count} teken lang zijn)
         other: heeft onjuiste lengte (moet %{count} tekens lang zijn)
+      in: moet binnen %{count} liggen
     template:
       body: 'Er zijn problemen met de volgende velden:'
       header:
@@ -147,6 +151,8 @@ nl:
   helpers:
     select:
       prompt: Maak een keuze
+      search_placeholder: Zoeken
+      default_label: Selecteer...
     submit:
       create: "%{model} toevoegen"
       submit: "%{model} opslaan"
@@ -167,6 +173,7 @@ nl:
       separator: ","
       significant: false
       strip_insignificant_zeros: false
+      round_mode: default
     human:
       decimal_units:
         format: "%n %u"
@@ -192,6 +199,8 @@ nl:
           kb: KB
           mb: MB
           tb: TB
+          eb: EB
+          pb: PB
     percentage:
       format:
         delimiter: ''
@@ -211,3 +220,17 @@ nl:
       long: "%d %B %Y %H:%M"
       short: "%d %b %H:%M"
     pm: "'s middags"
+  defaults:
+    brand_name: '%{brand_name}'
+    product_name: '%{product_name}'
+    common:
+      close: Sluiten
+  global:
+    expand: Uitvouwen
+  mcp:
+    errors:
+      invalid_session_id: Ongeldige MCP-session-id
+      unsupported_protocol_version: 'Niet-ondersteunde MCP-protocolversie: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris moeten https, loopback-http of een URI-schema van een native app gebruiken

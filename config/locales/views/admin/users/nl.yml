@@ -14,11 +14,107 @@ nl:
         roles:
           member: "Lid"
           admin: "Beheerder"
-          super_admin: "Super Beheerder"
+          super_admin: "Superbeheerder"
+          guest: Gast
         role_descriptions:
           member: "Basisgebruikersrechten. Kan eigen accounts, transacties en instellingen beheren."
-          admin: "Familiebeheerder. Kan geavanceerde instellingen zoals API-sleutels, importen en AI-prompts beheren."
-          super_admin: "Instancebeheerder. Kan SSO-providers, gebruikersrollen beheren en gebruikers imiteren voor ondersteuning."
+          admin: "Familiebeheerder. Kan geavanceerde instellingen zoals API Keys, imports en AI-prompts beheren."
+          super_admin: "Instancebeheerder. Kan SSO-providers, gebruikersrollen beheren en voor ondersteuning meekijken als gebruiker."
+          guest: Ervaring rond de assistent, met bewust beperkte rechten voor introductieworkflows.
+        unnamed_family: Naamloze familie/groep
+        no_subscription: Geen abonnement
+        family_summary: '%{members} leden · %{accounts} accounts · %{transactions} transacties'
+        filters:
+          role: Rol
+          role_all: Alle rollen
+          trial_status: Proefperiodestatus
+          trial_all: Alle
+          trial_expiring_soon: Verloopt binnen 7 dagen
+          trial_trialing: In proefperiode
+          submit: Filteren
+        summary:
+          trials_expiring_7_days: Proefperiodes die binnen 7 dagen verlopen
+        table:
+          user: Gebruiker
+          trial_ends_at: Einde proefperiode
+          family_accounts: Accounts van familie/groep
+          family_transactions: Transacties van familie/groep
+          last_login: Laatst ingelogd
+          session_count: Aantal sessies
+          never: Nooit
+          role: Rol
+          family: Familie / groep
+          keep_current_family: Huidige familie/groep behouden
+          create_new_family_option: + Nieuwe familie/groep aanmaken
+          new_family_name: Naam nieuwe familie/groep
+          new_family_name_placeholder: Voer een naam in om een nieuwe familie/groep aan te maken
+          new_family_moniker: Type nieuwe familie/groep
+          set_password: Nieuw wachtwoord instellen
+          password_placeholder: Leeg laten om het huidige te behouden
+          actions: Acties
+        family_monikers:
+          family: Familie
+          group: Groep
+        actions:
+          manage_user: Gebruiker beheren
+          update: Gebruiker bijwerken
+          delete_user: Gebruiker verwijderen
+          self_edit_warning: Als u uw eigen rol wijzigt, veranderen uw beheerdersrechten.
+          self_update_confirm: Weet u zeker dat u de rol of familie/groep van uw eigen account wilt wijzigen?
+          last_super_admin_role_locked: Rolwijziging is geblokkeerd omdat u de laatste superbeheerder in het systeem bent.
+        delete_confirm: Weet u zeker dat u deze gebruiker wilt verwijderen? Dit kan niet ongedaan worden gemaakt.
+        delete_confirm_last_user: Weet u zeker dat u deze gebruiker wilt verwijderen? Dit is de laatste gebruiker in de familie/groep, dus met deze gebruiker worden ook de hele familie/groep en alle bijbehorende gegevens verwijderd. Dit kan niet ongedaan worden gemaakt.
+        remove: Gebruiker verwijderen
+        removed_sso_identities:
+          title: Verwijderde SSO-identiteiten
+          description: Deze identiteiten kunnen geen account aanmaken of opnieuw koppelen. Sta een identiteit alleen weer toe als deze per ongeluk is verwijderd.
+          allow_again: Weer toestaan
+          confirm: '%{email} weer toestaan om via SSO in te loggen of een account aan te maken?'
+        auth_types:
+          sso: SSO
+          local: Lokaal
+          local_and_sso: Lokaal + SSO
+          sso_provider_tooltip: 'SSO-provider: %{providers}'
+        invitations:
+          pending_label: Uitgenodigd (in afwachting)
+          expires: Verloopt %{date}
+          delete: Verwijderen
+          delete_all: Alles verwijderen
+        unused_families:
+          title: Ongebruikte families / groepen
+          family_id: 'Familie-ID: %{id}'
+          delete: Ongebruikte familie verwijderen
+          delete_confirm: Weet u zeker dat u deze ongebruikte familie/groep wilt verwijderen? Dit kan niet ongedaan worden gemaakt.
+          empty: Geen ongebruikte families/groepen gevonden.
       update:
         success: "Gebruikersrol succesvol bijgewerkt."
         failure: "Gebruikersrol bijwerken mislukt."
+        success_role: Gebruikersrol bijgewerkt.
+        success_password: Gebruikerswachtwoord bijgewerkt.
+        success_role_and_password: Gebruikersrol en wachtwoord bijgewerkt.
+        success_family: Lidmaatschap van familie/groep van gebruiker bijgewerkt.
+        family_required: Selecteer een bestaande familie/groep of voer een naam in voor een nieuwe.
+        password_and_family_conflict: Wachtwoord en lidmaatschap van familie/groep kunnen niet tegelijk worden bijgewerkt.
+        password_too_short: Het wachtwoord moet ten minste 8 tekens lang zijn.
+        password_missing_case: Het wachtwoord moet zowel hoofdletters als kleine letters bevatten.
+        password_missing_number: Het wachtwoord moet ten minste één cijfer bevatten.
+        password_missing_special: Het wachtwoord moet ten minste één speciaal teken bevatten.
+        last_super_admin_error: De laatste superbeheerder in het systeem kan niet worden gedegradeerd.
+      destroy:
+        success: Toegang van gebruiker ingetrokken en definitieve verwijdering ingepland.
+        failure: Verwijderen van gebruiker mislukt.
+        cannot_remove_self: U kunt uw eigen account hier niet verwijderen.
+        cannot_remove_last_super_admin: U kunt de laatste actieve superbeheerder niet verwijderen.
+        confirmation_mismatch: Het e-mailadres kwam niet overeen. De gebruiker is niet verwijderd.
+      deletion:
+        title: Gebruiker definitief verwijderen
+        warning: Hiermee wordt de toegang direct ingetrokken en wordt de definitieve verwijdering van de gebruiker en diens gegevens ingepland. Dit kan niet ongedaan worden gemaakt.
+        instruction: Typ %{email} ter bevestiging.
+        email_label: E-mailadres gebruiker
+        cancel: Annuleren
+        submit: Gebruiker definitief verwijderen
+    families:
+      destroy:
+        family_has_active_subscription: De familie/groep heeft een actief abonnement en kan pas worden verwijderd nadat het abonnement is opgezegd.
+        family_has_users: De familie/groep heeft nog gebruikers en kan niet worden verwijderd.
+        success: Familie/groep verwijderd.

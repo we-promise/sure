@@ -41,6 +41,18 @@ nl:
           regenerate_key: "Nieuwe key aanmaken"
           revoke_key: "Key intrekken"
           revoke_confirmation: "Weet u zeker dat u deze API Key wilt intrekken? Deze actie kan niet ongedaan worden gemaakt en zal alle applicaties die deze key gebruiken onmiddellijk uitschakelen."
+          copy_api_key: API Key kopiëren
+          copy_store_securely: Kopieer deze key en bewaar hem veilig. U hebt hem nodig om uw API-verzoeken te authenticeren.
+          back_to_keys: Terug naar API Keys
+        newly_created:
+          page_title: API Key succesvol aangemaakt
+          heading: API Key succesvol aangemaakt!
+          key_ready: Uw nieuwe API Key "%{name}" is aangemaakt en klaar voor gebruik.
+          your_api_key: Uw API Key
+          copy_store_securely: Kopieer deze key en bewaar hem veilig. U hebt hem nodig om uw API-verzoeken te authenticeren.
+          copy_api_key: API Key kopiëren
+          how_to_use: Hoe u uw API Key gebruikt
+          continue: Doorgaan naar API Key-instellingen
       new:
         title: "API Key aanmaken"
         create_new_key: "Nieuwe API Key aanmaken"
@@ -49,7 +61,7 @@ nl:
         name_placeholder: "bijv. Productie App, Analytics Dashboard"
         name_help: "Kies een beschrijvende naam om het doel van deze key te identificeren."
         permissions_label: "Rechten"
-        permissions_help: "Selecteer de rechten die uw API Key nodig heeft. U kunt altijd een nieuwe key aanmaken met andere rechten."
+        permissions_help: "Selecteer de rechten die deze API Key moet hebben:"
         scope_details:
           read_accounts: "Accountinformatie, saldo's en accountgegevens bekijken"
           read_transactions: "Transactiegegevens, categorieën en transactiedetails bekijken"
@@ -59,6 +71,15 @@ nl:
         security_warning: "Uw API Key wordt slechts één keer getoond na aanmaak. Bewaar deze veilig en deel deze nooit publiekelijk. Als u deze verliest, moet u een nieuwe aanmaken."
         create_key: "API Key aanmaken"
         cancel: "Annuleren"
+        create_new_api_key: Nieuwe API Key aanmaken
+        subtitle: Genereer een nieuwe API Key om programmatisch toegang te krijgen tot uw Sure-gegevens.
+        name_help_text: Kies een beschrijvende naam zodat u deze key later kunt herkennen.
+        scope_read_only: Alleen lezen
+        scope_read_only_description: Uw accounts, transacties en saldo's bekijken
+        scope_read_write: Lezen/schrijven
+        scope_read_write_description: Uw gegevens bekijken en nieuwe transacties aanmaken
+        security_warning_body: Uw API Key wordt na het aanmaken slechts één keer getoond. Kopieer hem en bewaar hem veilig. Iedereen die over deze key beschikt, heeft toegang tot uw gegevens volgens de rechten die u selecteert.
+        save_api_key: API Key opslaan
       created:
         title: "API Key aangemaakt"
         success_title: "API Key succesvol aangemaakt"
@@ -74,3 +95,25 @@ nl:
         usage_instructions: "Gebruik uw API Key door deze toe te voegen in de X-Api-Key header:"
         copy_key: "API Key kopiëren"
         continue: "Doorgaan naar API Key instellingen"
+      create:
+        success: Uw API Key is succesvol aangemaakt
+      destroy:
+        revoked_successfully: API Key is succesvol ingetrokken
+        revoke_failed: Intrekken van API Key mislukt
+      shared:
+        active: Actief
+        created_ago: '%{time} geleden aangemaakt'
+        last_used_ago: '%{time} geleden voor het laatst gebruikt'
+        never_used: Nooit gebruikt
+        scope_read_only: Alleen lezen
+        scope_read_write: Lezen/schrijven
+      index:
+        title: API Keys
+        subtitle: Beheer API Keys voor programmatische toegang tot uw gegevens.
+        new_key: Nieuwe API Key
+        empty_heading: Nog geen API Keys
+        empty_description: Maak een API Key aan om programmatisch toegang te krijgen tot uw gegevens.
+        revoke_key: Intrekken
+        revoke_confirmation: Weet u zeker dat u "%{name}" wilt intrekken? Alle applicaties die deze key gebruiken, werken dan onmiddellijk niet meer.
+      key_reveal:
+        copied: Gekopieerd!

@@ -3,6 +3,9 @@ nl:
   transfers:
     create:
       success: Overboeking aangemaakt
+      exchange_rate_unavailable: Wisselkoers niet beschikbaar voor de geselecteerde valuta en datum
+      date_invalid: is ongeldig
+      stale_form: Dit formulier is al verzonden met andere gegevens. Vernieuw de pagina en probeer het opnieuw.
     destroy:
       success: Overboeking verwijderd
     form:
@@ -15,6 +18,13 @@ nl:
       submit: Maak overboeking aan
       to: Naar
       transfer: Overboeking
+      bank_charges: Bankkosten
+      outgoing_fee: Kosten uitgaande overboeking
+      incoming_fee: Kosten inkomende overboeking
+      destination_amount: Doelbedrag
+      destination_amount_display: 'Doelbedrag: %{amount}'
+      exchange_rate_display: 'Wisselkoers: %{rate}'
+      source_amount: Bronbedrag
     new:
       title: Nieuwe overboeking
     show:
@@ -27,5 +37,18 @@ nl:
       note_placeholder: Voeg een notitie toe aan deze overboeking
       overview: Overzicht
       settings: Instellingen
+      mark_recurring: Markeren als terugkerend
+      mark_recurring_subtitle: Volg deze overboeking als terugkerend patroon in het overzicht van aankomende transacties en op de pagina Terugkerend.
+      mark_recurring_title: Overboeking markeren als terugkerend
+      from: Van
+      to: Naar
+      date: Datum
+      transfer_amount: Overboekingsbedrag
+      total: Totaal
+      bank_charges: Bankkosten
+      source_fee: Kosten bronaccount
+      destination_fee: Kosten doelaccount
+      category: Categorie
+      uncategorized: Ongecategoriseerd
     update:
       success: Overboeking bijgewerkt
