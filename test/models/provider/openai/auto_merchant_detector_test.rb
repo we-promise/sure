@@ -82,8 +82,8 @@ class Provider::Openai::AutoMerchantDetectorTest < ActiveSupport::TestCase
     @client.expects(:chat).once
       .returns(chat_response(<<~JSON.squish))
         {"merchants":[
+          {"business_name":"Shell","business_url":"shell.com"},
           {"transaction_id":"1","business_name":"Amazon"},
-          {"transaction_id":"2","business_name":null,"business_url":null},
           {"transaction_id":"3","business_name":"Netflix","business_url":"netflix.com"},
           {"transaction_id":"4","business_name":"Spotify","business_url":"spotify.com"}
         ]}
@@ -91,8 +91,9 @@ class Provider::Openai::AutoMerchantDetectorTest < ActiveSupport::TestCase
 
     result = detector(json_mode: "auto").auto_detect_merchants
 
-    assert_equal 3, result.size
-    assert result.all? { |r| r.transaction_id.present? }
+    assert_equal %w[1 3 4], result.map(&:transaction_id), "only the id-less item should be dropped"
+    assert_equal "Amazon", result.first.business_name, "an omitted url field must not drop the merchant name"
+    assert_nil result.first.business_url
   end
 
   test "auto mode does not fire a second fallback when the none-mode retry returns HTTP 400" do

@@ -133,8 +133,8 @@ class Provider::Openai::AutoCategorizerTest < ActiveSupport::TestCase
     @client.expects(:chat).once
       .returns(chat_response(<<~JSON.squish))
         {"categorizations":[
-          {},
-          {"transaction_id":"2","category_name":null},
+          {"category_name":"Food"},
+          {"transaction_id":"2"},
           {"transaction_id":"3","category_name":"Food"},
           {"transaction_id":"4","category_name":"Food"}
         ]}
@@ -142,8 +142,8 @@ class Provider::Openai::AutoCategorizerTest < ActiveSupport::TestCase
 
     result = categorizer(json_mode: "auto").auto_categorize
 
-    assert_equal 3, result.size
-    assert result.all? { |r| r.transaction_id.present? }
+    assert_equal %w[2 3 4], result.map(&:transaction_id), "only the id-less item should be dropped"
+    assert_nil result.first.category_name, "an omitted category field should be kept as nil, not dropped"
   end
 
   test "auto mode still falls back to none mode on HTTP 400" do

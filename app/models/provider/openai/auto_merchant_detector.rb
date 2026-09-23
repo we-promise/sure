@@ -338,15 +338,12 @@ class Provider::Openai::AutoMerchantDetector
         raise Provider::Openai::ResponseFormatError, "Could not find merchants in response"
       end
 
-      # Drop items missing a transaction id or the required field keys (the
-      # schema requires all three keys; null values are allowed). Without this
-      # a {} item comes back as a nil-field row that looks like a real result,
-      # hiding a malformed batch from the auto-mode retry heuristic.
-      merchants.select! do |m|
-        (m["transaction_id"] || m["id"] || m["txn_id"]).present? &&
-          %w[business_name name merchant_name merchant].any? { |key| m.key?(key) } &&
-          %w[business_url url website].any? { |key| m.key?(key) }
-      end
+      # Drop items with no transaction id: they can't be correlated to a
+      # transaction, and left in they'd surface as nil-field rows that hide a
+      # malformed batch from the auto-mode retry heuristic. Missing name/url
+      # fields are fine (models in none/json_object mode often omit nulls) and
+      # are treated as "unknown" downstream.
+      merchants.select! { |m| (m["transaction_id"] || m["id"] || m["txn_id"]).present? }
 
       # Normalize field names (some LLMs use different naming)
       merchants.map do |m|
