@@ -41,7 +41,12 @@ class PlaidAccount::Processor
 
         # Initialize new account if not found
         if account.nil?
-          account = family.accounts.new
+          # Accounts are created here, inside the sync job, where Current.user
+          # is nil -- so Account#assign_default_owner would fall back to the
+          # family's first admin and silently hand a member's own connection to
+          # someone else. Seed the owner from the item that produced it, before
+          # the enrich_attributes calls below run validations.
+          account = family.accounts.new(owner: plaid_account.plaid_item&.owner)
           account.accountable = map_accountable(plaid_account.plaid_type)
         end
 

@@ -1,7 +1,7 @@
 # Represents a CoinStats API connection for a family.
 # Stores credentials and manages associated wallet and exchange portfolio accounts.
 class CoinstatsItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -32,12 +32,6 @@ class CoinstatsItem < ApplicationRecord
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  # Schedules this item for async deletion.
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   # Fetches latest wallet data from CoinStats API and updates local records.
   # @raise [StandardError] if provider is not configured or import fails
