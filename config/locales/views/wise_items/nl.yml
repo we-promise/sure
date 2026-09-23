@@ -60,7 +60,7 @@ nl:
       all_synced:
         one: '%{count} account gesynchroniseerd'
         other: '%{count} accounts gesynchroniseerd'
-      partial_setup: '%{synced} gesynchroniseerd, %{pending} moeten worden ingesteld'
+      partial_setup: "%{synced} gesynchroniseerd, %{pending} nog in te stellen"
     create:
       no_profiles_found: Geen Wise-profielen gevonden. Controleer uw API-token.
       invalid_token: Ongeldig API-token. Controleer het en probeer het opnieuw.

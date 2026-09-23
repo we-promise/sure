@@ -87,7 +87,9 @@ nl:
         copy_button: "Kopiëren"
         cancel: "Annuleren"
         submit: "Provider opslaan"
-        errors_title: "%{count} fout verhinderde het opslaan van deze provider:"
+        errors_title:
+          one: "Door een fout kon deze provider niet worden opgeslagen:"
+          other: "Door %{count} fouten kon deze provider niet worden opgeslagen:"
         provisioning_title: "Gebruikers Provisioning"
         default_role_label: "Standaard Rol voor Nieuwe Gebruikers"
         default_role_help: "Rol toegewezen aan gebruikers die zijn aangemaakt via just-in-time (JIT) SSO account provisioning. Standaard is Lid."

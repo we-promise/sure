@@ -146,7 +146,7 @@ pt-BR:
     select_existing_account:
       title: Vincular %{account_name} ao Wise
       description: Selecione o saldo em moeda do Wise que deseja vincular a esta conta. As transações serão sincronizadas automaticamente.
-      no_accounts_found: Nenhum saldo do Wise não vinculado encontrado.
+      no_accounts_found: "Nenhum saldo do Wise disponível para vincular."
       link_account: Vincular saldo
       cancel: Cancelar
     link_accounts:

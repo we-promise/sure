@@ -59,7 +59,9 @@ nl:
     new:
       title: Nieuwe handelaar
     perform_merge:
-      success: Succesvol %{count} handelaren samengevoegd
+      success:
+        one: "%{count} handelaar samengevoegd"
+        other: "%{count} handelaren samengevoegd"
       no_merchants_selected: Geen handelaren geselecteerd om samen te voegen
       target_not_found: Doelhandelaar niet gevonden
       invalid_merchants: Ongeldige handelaren geselecteerd

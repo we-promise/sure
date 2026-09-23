@@ -10,7 +10,7 @@ nl:
       optimism: Optimism
       polygon: Polygon
       solana: Solana
-    institution_name: Self-custody wallets
+    institution_name: "Wallets in eigen beheer"
   onchain_wallet_item:
     movement:
       received: '%{quantity} %{symbol} ontvangen'
