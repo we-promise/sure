@@ -227,6 +227,34 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_not_nil second.reload.downstream_completed_at
   end
 
+  test "overlapping downstream workers fan out once" do
+    batch, = accept_batch
+    assert Financekit::Processor.new(@item).apply_next!.present?
+    # Both snapshot the same incomplete ids before either performs, which is how
+    # a per-upload job and the periodic sweep overlap in production.
+    first = Financekit::Downstream.new(@item, FinancekitBatch.where(id: batch.id))
+    second = Financekit::Downstream.new(@item, FinancekitBatch.where(id: batch.id))
+    Family.any_instance.expects(:auto_match_transfers!).once.returns(nil)
+
+    first.perform!
+    second.perform!
+
+    assert_not_nil batch.reload.downstream_completed_at
+  end
+
+  test "a failure writing publisher health leaves the batches for recovery" do
+    batch, = accept_batch
+    assert Financekit::Processor.new(@item).apply_next!.present?
+    FinancekitItem.any_instance.stubs(:update!).raises(ActiveRecord::StatementInvalid.new("health write failed"))
+
+    Financekit::Downstream.new(@item, FinancekitBatch.where(id: batch.id)).perform!
+
+    # Completing the batch without the health write would hide it from the
+    # recovery sweep, which only looks for incomplete batches.
+    assert_nil batch.reload.downstream_completed_at
+    assert_nil FinancekitItem.find(@item.id).last_downstream_at
+  end
+
   test "the sweep recovers a backlog without materializing batch rows" do
     first = accept_and_apply
     second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,

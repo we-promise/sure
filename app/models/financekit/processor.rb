@@ -116,8 +116,7 @@ class Financekit::Processor
       # for the family and carry on with the rest of the capture.
       if observation.amount != amount || observation.currency != money["currency"] ||
           observation.direction != money["direction"]
-        create_observation_conflict!(mapping, record)
-        counts["review_required"] += 1
+        counts[create_observation_conflict!(mapping, record) ? "review_required" : "settled"] += 1
         return
       end
       counts["balances"] += 1 if observation.previously_new_record?
@@ -216,7 +215,9 @@ class Financekit::Processor
         # The family already chose to keep Sure's entry for this identity. The
         # tombstone is still recorded so the source cannot resurrect it, but the
         # protected entry stays and the answered conflict is not reopened.
-        identity.review_required = false
+        # Review state follows the same rule as resolution and upserts: it is
+        # open while any conflict about this record still is.
+        identity.review_required = identity.financekit_conflicts.open.exists?
         counts["settled"] += 1
       elsif entry
         Entry.transaction do
@@ -311,15 +312,28 @@ class Financekit::Processor
     end
 
     # Balance observations have no source transaction, so the conflict hangs off
-    # the lineage alone and one open row covers the lineage until it is answered.
+    # the lineage and carries the observation identity in its details. Returns
+    # whether the record still needs review.
+    #
+    # Matching on that identity rather than the lineage alone is what makes
+    # "keep Sure" durable here, the same way it is for a source transaction: the
+    # publisher re-sends the same disagreement on every capture that covers it,
+    # so keying the lookup on open rows made the decision last one capture. A
+    # different observation still opens its own conflict.
     def create_observation_conflict!(mapping, record)
-      @item.financekit_conflicts.find_or_create_by!(financekit_transaction: nil,
+      details = { "source_id" => record["source_id"], "kind" => record["kind"],
+        "observed_at" => record["observed_at"] }
+      history = @item.financekit_conflicts
+        .where(kind: "balance_observation_conflict",
+          financekit_account_lineage_id: mapping.financekit_account_lineage_id)
+        .where("details @> ?::jsonb", details.to_json)
+      return false if history.exists?(resolution: "keep_sure")
+      return true if history.open.exists?
+
+      @item.financekit_conflicts.create!(family: @item.family,
         financekit_account_lineage: mapping.financekit_account_lineage,
-        kind: "balance_observation_conflict", status: "open") do |conflict|
-        conflict.family = @item.family
-        conflict.details = { "source_id" => record["source_id"], "kind" => record["kind"],
-          "observed_at" => record["observed_at"] }
-      end
+        kind: "balance_observation_conflict", status: "open", details: details)
+      true
     end
 
     def create_conflict!(mapping, identity, kind)

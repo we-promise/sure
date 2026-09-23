@@ -21,6 +21,7 @@ class FinancekitConflict < ApplicationRecord
           financekit_transaction.update!(review_required: financekit_transaction.financekit_conflicts.open.exists?)
         end
       when "retry_after_repair"
+        release_conflicting_observation!
         financekit_item.mark_repair!("conflict_retry_requested")
         if financekit_transaction
           financekit_transaction.update!(review_required: financekit_transaction.financekit_conflicts.open.exists?)
@@ -28,4 +29,21 @@ class FinancekitConflict < ApplicationRecord
       end
     end
   end
+
+  private
+
+    # Asking the publisher to retry only means something if the stored
+    # observation stops blocking the replay. Observations are immutable, so the
+    # same money would disagree again after the repair and the conflict would
+    # simply reopen. Dropping the one the family declined lets the new
+    # generation supply the value they chose to accept; every other observation
+    # on the lineage is untouched, and the canonical balance still only moves
+    # when a newer booked value lands.
+    def release_conflicting_observation!
+      return unless kind == "balance_observation_conflict" && financekit_account_lineage
+
+      financekit_account_lineage.financekit_balance_observations
+        .where(source_id: details["source_id"], kind: details["kind"],
+          observed_at: details["observed_at"]).delete_all
+    end
 end

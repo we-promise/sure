@@ -1,10 +1,10 @@
 class Financekit::Downstream
+  ADVISORY_LOCK_SCOPE = "financekit_downstream".freeze
+
   # Takes a scope rather than loaded records and keeps only the ids. A pending
   # batch carries its payload — up to Financekit::MAX_BYTES, retained for seven
   # days — and an applied batch no longer counts against the inbox cap, so a
-  # backlog awaiting downstream work has no ceiling of its own. Snapshotting the
-  # ids up front also stops a capture applied concurrently from being marked
-  # done without a fan-out of its own.
+  # backlog awaiting downstream work has no ceiling of its own.
   def initialize(item, scope)
     @item = item
     @batch_ids = scope.where(downstream_completed_at: nil).pluck(:id)
@@ -13,22 +13,61 @@ class Financekit::Downstream
   def perform!
     return if @batch_ids.empty?
 
-    # Account syncs, transfer matching and rule application all cost the same
-    # whether one capture or fifty just landed, so a drain pays for them once
-    # rather than once per capture.
-    @item.selected_accounts.includes(financekit_account_lineage: :account).find_each do |mapping|
-      mapping.account&.sync_later
+    with_publisher_claim do
+      # Re-read inside the claim. Two workers can snapshot the same ids before
+      # either runs — a per-upload job and the periodic sweep overlap this way —
+      # and without this the second one repeats the whole family fan-out.
+      pending = FinancekitBatch.where(id: @batch_ids, downstream_completed_at: nil).pluck(:id)
+      next if pending.empty?
+
+      # Account syncs, transfer matching and rule application all cost the same
+      # whether one capture or fifty just landed, so a drain pays for them once
+      # rather than once per capture.
+      @item.selected_accounts.includes(financekit_account_lineage: :account).find_each do |mapping|
+        mapping.account&.sync_later
+      end
+      @item.family.auto_match_transfers!
+      @item.family.rules.where(active: true).find_each(&:apply_later)
+
+      # Both writes together, and after the scheduling above so nothing is
+      # enqueued from inside the transaction. Committing them separately left
+      # batches complete alongside stale publisher health, which the recovery
+      # sweep then skipped because it only looks for incomplete batches.
+      completed_at = Time.current
+      FinancekitBatch.transaction do
+        FinancekitBatch.where(id: pending)
+          .update_all(downstream_completed_at: completed_at, updated_at: completed_at)
+        @item.update!(last_downstream_at: completed_at)
+      end
     end
-    @item.family.auto_match_transfers!
-    @item.family.rules.where(active: true).find_each(&:apply_later)
-    completed_at = Time.current
-    FinancekitBatch.where(id: @batch_ids)
-      .update_all(downstream_completed_at: completed_at, updated_at: completed_at)
-    @item.update!(last_downstream_at: completed_at)
   rescue StandardError
     DebugLogEntry.capture(category: "provider_sync", level: "error",
       message: "FinanceKit downstream scheduling failed", source: self.class.name,
       provider_key: "financekit", family: @item.family,
       metadata: { financekit_item_id: @item.id, batches: @batch_ids.size })
   end
+
+  private
+
+    def with_publisher_claim
+      acquired = ActiveRecord::Base.connection.select_value(
+        ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?)", advisory_lock_key ])
+      )
+      # Another worker holds this publisher's downstream work. It completes the
+      # batches it claimed, and the sweep picks up anything left behind.
+      return unless acquired
+
+      begin
+        yield
+      ensure
+        ActiveRecord::Base.connection.execute(
+          ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", advisory_lock_key ])
+        )
+      end
+    end
+
+    def advisory_lock_key
+      # Matches the keying used by the other advisory-locked jobs in this app.
+      @advisory_lock_key ||= Digest::MD5.hexdigest("#{ADVISORY_LOCK_SCOPE}:#{@item.id}").to_i(16) % (2**62)
+    end
 end

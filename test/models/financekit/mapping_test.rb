@@ -220,6 +220,88 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal "active", @item.reload.status
   end
 
+  test "a balance decision the family keeps is not reopened by an identical replay" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+    @item.financekit_conflicts.open.sole.resolve!(user: @user, resolution: "keep_sure")
+
+    third = accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest,
+      events: [ disagreement ]))
+
+    assert_empty @item.financekit_conflicts.open
+    assert_equal 1, @item.financekit_conflicts.count
+    assert_equal 1, third.counts.fetch("settled")
+    assert_equal BigDecimal("112.66"), @source.account.reload.balance
+  end
+
+  test "a settled balance decision does not suppress a different disagreement" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+    @item.financekit_conflicts.open.sole.resolve!(user: @user, resolution: "keep_sure")
+
+    other = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    other["balance"]["observed_at"] = 1.minute.from_now.iso8601
+    other["balance"]["money"] = money("222.00", "credit")
+    accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: second.payload_digest,
+      events: [ other ], captured_at: 1.minute.from_now.iso8601))
+    accept_and_apply(financekit_payload(sequence: 4, predecessor_digest: FinancekitBatch.order(:sequence).last.payload_digest,
+      events: [ other.deep_dup.tap { |event| event["balance"]["money"] = money("333.00", "credit") } ],
+      captured_at: 1.minute.from_now.iso8601))
+
+    assert_equal 1, @item.financekit_conflicts.open.count
+  end
+
+  test "retry after repair releases the observation blocking the replay" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+
+    # An immutable observation would disagree again after the repair, so the
+    # retry only means something once the declined one is out of the way.
+    @item.financekit_conflicts.open.sole.resolve!(user: @user, resolution: "retry_after_repair")
+
+    assert_equal "repair_required", @item.reload.status
+    assert_empty @source.financekit_balance_observations.where(source_id: @balance_id, kind: "booked")
+  end
+
+  test "a tombstone leaves review open while another conflict is unresolved" do
+    accept_and_apply
+    entry = @source.account.entries.sole
+    entry.update!(locked_attributes: { "name" => Time.current.iso8601 })
+    identity = @source.financekit_transactions.sole
+    tombstone = {
+      "kind" => "transaction_tombstone",
+      "tombstone" => {
+        "source_id" => @transaction_id,
+        "source_account_id" => @source_id,
+        "lineage_id" => @source.financekit_account_lineage_id,
+        "mapping_version" => @source.mapping_version
+      }
+    }
+    upsert = accept_and_apply(financekit_payload(sequence: 2,
+      predecessor_digest: FinancekitBatch.order(:sequence).last.payload_digest,
+      events: [ financekit_events.last ]))
+    retraction = accept_and_apply(financekit_payload(sequence: 3, predecessor_digest: upsert.payload_digest,
+      events: [ tombstone ]))
+    identity.financekit_conflicts.open.find_by!(kind: "protected_entry")
+      .resolve!(user: @user, resolution: "keep_sure")
+
+    accept_and_apply(financekit_payload(sequence: 4, predecessor_digest: retraction.payload_digest,
+      events: [ tombstone ]))
+
+    assert_equal [ "protected_tombstone" ], identity.financekit_conflicts.open.pluck(:kind)
+    assert identity.reload.review_required, "review must stay open while a conflict about the record is"
+    assert_equal 1, @source.account.entries.reload.count
+  end
+
   test "a source identifier outside the v1-v5 range is accepted" do
     uuidv7 = "01890a5d-ac96-774b-bcce-b302099a8057"
     event = financekit_events.last
