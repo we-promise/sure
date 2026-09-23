@@ -35,8 +35,11 @@ class Rule::Registry::TransactionResource < Rule::Registry
       Rule::ActionExecutor::SendEmailNotification.new(rule)
     ]
 
-    if ai_enabled?
+    if auto_categorization_enabled?
       enabled_executors << Rule::ActionExecutor::AutoCategorize.new(rule)
+    end
+
+    if auto_merchant_detection_enabled?
       enabled_executors << Rule::ActionExecutor::AutoDetectMerchants.new(rule)
     end
 
@@ -44,7 +47,11 @@ class Rule::Registry::TransactionResource < Rule::Registry
   end
 
   private
-    def ai_enabled?
-      Provider::Registry.get_provider(:openai).present?
+    def auto_categorization_enabled?
+      family.resolved_categorization_provider.present?
+    end
+
+    def auto_merchant_detection_enabled?
+      Provider::Registry.preferred_llm_provider.present?
     end
 end

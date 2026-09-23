@@ -182,6 +182,17 @@ class Family < ApplicationRecord
     jev || Provider::Registry.preferred_llm_provider
   end
 
+  def categorization_model_name
+    provider = resolved_categorization_provider
+    return unless provider
+
+    case provider
+    when Provider::Jev then Provider::Jev.effective_model
+    when Provider::Anthropic then Provider::Anthropic.effective_model
+    else Provider::Openai.effective_model
+    end
+  end
+
   # Answers below this confidence are not applied. Zero applies everything and
   # is the default. Only providers reporting calibrated confidence can be gated;
   # the LLM providers return a bare category name. Clamped because the ENV

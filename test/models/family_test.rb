@@ -529,6 +529,22 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
+  test "categorization_model_name names the Jev model when Jev will categorize" do
+    family = families(:dylan_family)
+    family.stubs(:resolved_categorization_provider).returns(Provider::Jev.allocate)
+    Provider::Jev.stubs(:effective_model).returns("~typesafe/jev-latest")
+
+    assert_equal "~typesafe/jev-latest", family.categorization_model_name
+  end
+
+  test "categorization_model_name names the Anthropic model when Anthropic will categorize" do
+    family = families(:dylan_family)
+    family.stubs(:resolved_categorization_provider).returns(Provider::Anthropic.allocate)
+    Provider::Anthropic.stubs(:effective_model).returns("claude-sonnet-test")
+
+    assert_equal "claude-sonnet-test", family.categorization_model_name
+  end
+
   test "resolved_categorization_provider falls back to the LLM provider when the endpoint is rejected" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")

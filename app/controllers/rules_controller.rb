@@ -127,15 +127,8 @@ class RulesController < ApplicationController
     def auto_categorize_estimate(scope, transaction_count: nil)
       family = scope.is_a?(Rule) ? scope.family : scope
       count = transaction_count || scope.affected_resource_count
-      provider = family.resolved_categorization_provider
-      return [ nil, nil ] unless provider
-
-      model =
-        case provider
-        when Provider::Jev then Provider::Jev.effective_model
-        when Provider::Anthropic then Provider::Anthropic.effective_model
-        else Provider::Openai.effective_model
-        end
+      model = family.categorization_model_name
+      return [ nil, nil ] if model.blank?
 
       cost = LlmUsage.estimate_auto_categorize_cost(
         transaction_count: count,
