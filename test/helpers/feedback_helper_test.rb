@@ -11,6 +11,7 @@ class FeedbackHelperTest < ActionView::TestCase
     @config.stubs(:feedback_surveys).returns(@surveys)
     @config.stubs(:self_hosted_feedback_project).returns(@project)
     @config.stubs(:feedback_enabled).returns(true)
+    @config.stubs(:development_enabled).returns(false)
     Rails.env.stubs(:production?).returns(true)
   end
 
@@ -45,7 +46,25 @@ class FeedbackHelperTest < ActionView::TestCase
     end
   end
 
-  test "self-hosted feedback stays disabled outside production or after operator opt-out" do
+  test "self-hosted development requires explicit opt-in and respects feedback opt-out" do
+    stubs(:self_hosted?).returns(true)
+    Rails.env.stubs(:production?).returns(false)
+    Rails.env.stubs(:development?).returns(true)
+    assert_empty feedback_config(:sankey)
+    @config.stubs(:development_enabled).returns(true)
+    assert_equal @project.merge(survey_id: "shared-sankey"), feedback_config(:sankey)
+    @config.stubs(:feedback_enabled).returns(false)
+    assert_empty feedback_config(:sankey)
+  end
+
+  test "development override does not enable automated test environments" do
+    Rails.env.stubs(:production?).returns(false)
+    Rails.env.stubs(:development?).returns(false)
+    @config.stubs(:development_enabled).returns(true)
+    assert_not posthog_enabled?
+  end
+
+  test "self-hosted feedback stays disabled in tests or after operator opt-out" do
     stubs(:self_hosted?).returns(true)
     Rails.env.stubs(:production?).returns(false)
     assert_empty feedback_config(:sankey)

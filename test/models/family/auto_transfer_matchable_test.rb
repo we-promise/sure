@@ -105,8 +105,11 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordInvalid) { @family.auto_match_transfers! }
   end
 
-  test "auto-matches multi-currency transfers" do
+  test "auto-matches multi-currency transfers between linked accounts" do
     load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
 
@@ -114,33 +117,225 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
       @family.auto_match_transfers!
     end
 
-    # test match within lower 10% bound
+    # test match within lower bound of an explicitly widened tolerance
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
     create_transaction(date: Date.current, account: @credit_card, amount: -1330, currency: "CAD")
 
     assert_difference -> { Transfer.count } => 1 do
-      @family.auto_match_transfers!
+      @family.auto_match_transfers!(exchange_rate_tolerance: 0.1)
     end
 
-    # test match within upper 10% bound
+    # test match within upper bound of an explicitly widened tolerance
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1500)
     create_transaction(date: Date.current, account: @credit_card, amount: -2189, currency: "CAD")
 
     assert_difference -> { Transfer.count } => 1 do
-      @family.auto_match_transfers!
+      @family.auto_match_transfers!(exchange_rate_tolerance: 0.1)
     end
 
-    # test no match outside of slippage tolerance
+    # test no match outside of slippage tolerance, even when widened
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
     create_transaction(date: Date.current, account: @credit_card, amount: -1250, currency: "CAD")
 
     assert_difference -> { Transfer.count } => 0 do
+      @family.auto_match_transfers!(exchange_rate_tolerance: 0.1)
+    end
+  end
+
+  test "does not auto-match cross-currency transfers within the default tolerance when either account is manual" do
+    load_exchange_prices
+    # Neither @depository nor @credit_card is linked to a provider in this test,
+    # so they're both "manual" -- FX-tolerance matching should not apply to them
+    # even though the amounts fall within the default tolerance.
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
+    create_transaction(date: Date.current, account: @credit_card, amount: -1400, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
       @family.auto_match_transfers!
+    end
+
+    link_account!(@depository)
+
+    # Still one manual leg (credit_card) -- still excluded.
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    link_account!(@credit_card)
+
+    # Both sides now linked -- the same pair matches.
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "transfer_match_candidates does not restrict cross-currency matches to linked accounts by default" do
+    load_exchange_prices
+    # Neither account is linked. auto_match_transfers! would exclude this pair
+    # (see the test above), but a direct transfer_match_candidates call -- what
+    # the manual "match as transfer" dialog uses via
+    # Transaction#transfer_match_candidates -- must still surface it so a user
+    # can find and confirm a real cross-currency transfer involving a manual
+    # account, instead of being forced into creating a duplicate transaction.
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -1400, currency: "CAD")
+
+    candidate_pairs = @family.transfer_match_candidates.map do |candidate|
+      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
+    end
+
+    assert_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
+  test "the manual match dialog can still find a cross-currency counterpart on a manual account" do
+    load_exchange_prices
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -1400, currency: "CAD")
+
+    # Transaction#transfer_match_candidates is what TransferMatchesController#new
+    # uses to populate the "match an existing transaction" selector.
+    candidates = inflow.transaction.transfer_match_candidates
+    assert_includes candidates.map(&:outflow_transaction_id), outflow.entryable_id
+  end
+
+  test "the manual match dialog surfaces cross-currency matches beyond the tight automatic tolerance" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    # 5% FX slippage off the cached 1.40 rate: outside an operator-tightened 3%
+    # automatic tolerance, but within the 10% tolerance the manual dialog uses.
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 1000)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -1470, currency: "CAD")
+
+    with_env_overrides("TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE" => "0.03") do
+      assert_no_difference -> { Transfer.count } do
+        @family.auto_match_transfers!
+      end
+
+      candidates = inflow.transaction.transfer_match_candidates
+      assert_includes candidates.map(&:outflow_transaction_id), outflow.entryable_id
+    end
+  end
+
+  test "automatic cross-currency matching defaults to a 10% tolerance" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    # 5% off the cached 1.40 rate.
+    create_transaction(date: Date.current, account: @depository, amount: 1000)
+    create_transaction(date: Date.current, account: @credit_card, amount: -1470, currency: "CAD")
+
+    with_env_overrides("TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE" => nil) do
+      assert_difference -> { Transfer.count } => 1 do
+        @family.auto_match_transfers!
+      end
+    end
+  end
+
+  test "TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE sets the automatic tolerance" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    # 15% off the cached 1.40 rate: outside the 10% default.
+    create_transaction(date: Date.current, account: @depository, amount: 1000)
+    create_transaction(date: Date.current, account: @credit_card, amount: -1610, currency: "CAD")
+
+    with_env_overrides("TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE" => nil) do
+      assert_no_difference -> { Transfer.count } do
+        @family.auto_match_transfers!
+      end
+    end
+
+    with_env_overrides("TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE" => "0.2") do
+      assert_difference -> { Transfer.count } => 1 do
+        @family.auto_match_transfers!
+      end
+    end
+  end
+
+  # A bad value must not fail every sync: Family::Syncer and Account::Syncer both
+  # call auto_match_transfers! without a tolerance of their own.
+  test "an unusable TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE falls back to the default" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    [ "wide", "", "-0.1", "Infinity", "NaN" ].each do |value|
+      with_env_overrides("TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE" => value) do
+        assert_in_delta 0.1, Family::AutoTransferMatchable.exchange_rate_tolerance, 1e-9, "for #{value.inspect}"
+      end
+    end
+
+    # 5% off the cached 1.40 rate, inside the 10% fallback.
+    create_transaction(date: Date.current, account: @depository, amount: 1000)
+    create_transaction(date: Date.current, account: @credit_card, amount: -1470, currency: "CAD")
+
+    with_env_overrides("TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE" => "wide") do
+      assert_difference -> { Transfer.count } => 1 do
+        @family.auto_match_transfers!
+      end
+    end
+  end
+
+  # At 1.0 or more the lower bound reaches zero and any two cross-currency
+  # amounts within the date window would match.
+  test "TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE is capped at 50%" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    with_env_overrides("TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE" => "5") do
+      assert_in_delta 0.5, Family::AutoTransferMatchable.exchange_rate_tolerance, 1e-9
+    end
+
+    # Three times the cached 1.40 rate.
+    create_transaction(date: Date.current, account: @depository, amount: 1000)
+    create_transaction(date: Date.current, account: @credit_card, amount: -4200, currency: "CAD")
+
+    with_env_overrides("TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE" => "5") do
+      assert_no_difference -> { Transfer.count } do
+        @family.auto_match_transfers!
+      end
+    end
+  end
+
+  test "the manual match dialog is never narrower than the automatic tolerance" do
+    load_exchange_prices
+
+    # 15% off the cached 1.40 rate: outside the dialog's own 10%.
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 1000)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -1610, currency: "CAD")
+
+    with_env_overrides("TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE" => "0.2") do
+      candidates = inflow.transaction.transfer_match_candidates
+      assert_includes candidates.map(&:outflow_transaction_id), outflow.entryable_id
+    end
+  end
+
+  # linked_account_sql inlines the inverse of Account#manual?; this keeps the two
+  # from drifting apart.
+  test "linked_account_sql agrees with Account#manual?" do
+    plain = accounts(:depository)
+    via_provider = accounts(:credit_card)
+    link_account!(via_provider)
+
+    linked_ids = Account.where(id: [ plain.id, via_provider.id ])
+      .where(@family.send(:linked_account_sql, "accounts"))
+      .pluck(:id)
+
+    [ plain, via_provider ].each do |account|
+      assert_equal !account.reload.manual?, linked_ids.include?(account.id), account.name
     end
   end
 
   test "only matches inflow with correct currency when duplicate amounts exist" do
     load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
     create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -500, currency: "CAD")
     create_transaction(date: Date.current, account: @credit_card, amount: -500)
@@ -444,6 +639,9 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, ":account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id"
     assert_includes sql, "outflow_candidates.amount = -inflow_candidates.amount"
     assert_includes sql, "JOIN exchange_rates"
+    assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = inflow_accounts.id)"
+    assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)"
+    assert_includes sql, ":restrict_cross_currency_to_linked_accounts = FALSE"
   end
 
   # Regression tests for loan transfer kind assignment bug
@@ -567,6 +765,22 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   end
 
   private
+    # Simulates a live provider connection so `Account#manual?` (and the SQL
+    # query's equivalent check) treats the account as linked. `AccountProvider`
+    # validates its polymorphic `provider` association is present, so this needs
+    # a real (if otherwise-unused) PlaidAccount row rather than an arbitrary id.
+    def link_account!(account)
+      plaid_account = PlaidAccount.create!(
+        plaid_item: plaid_items(:one),
+        plaid_id: "acc_mock_#{SecureRandom.hex(6)}",
+        name: "Linked #{account.name}",
+        plaid_type: "depository",
+        currency: account.currency,
+        current_balance: 0
+      )
+      AccountProvider.create!(account: account, provider: plaid_account)
+    end
+
     def load_exchange_prices
       rates = {
         4.days.ago.to_date => 1.36,

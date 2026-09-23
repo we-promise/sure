@@ -720,6 +720,18 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
+      namespace :financekit do
+        get "capabilities", to: "connections#capabilities"
+        resources :connections, only: [ :create, :show, :destroy ] do
+          put "account_mappings/:source_id", to: "connections#mapping"
+          post :activate, to: "connections#activate"
+          post :credential, to: "connections#credential"
+          post :repair, to: "connections#repair"
+          resources :conflicts, only: [ :index, :update ]
+        end
+        post "publishers/:publisher_id/batches", to: "batches#create", as: :publisher_batches_upload
+        get "publishers/:publisher_id/batches/:batch_id", to: "batches#show", as: :publisher_batch_status
+      end
       # Authentication endpoints
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"
