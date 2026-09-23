@@ -6,14 +6,15 @@ class FinancekitInboxJob < ApplicationJob
     items.find_each do |item|
       next unless Financekit.enabled?(item.family)
 
-      applied = []
+      # Ids only: a drained capture still holds its payload bytes.
+      applied_ids = []
       Financekit::MAX_QUEUED.times do
         batch = Financekit::Processor.new(item).apply_next!
         break unless batch
 
-        applied << batch
+        applied_ids << batch.id
       end
-      Financekit::Downstream.new(applied).perform!
+      Financekit::Downstream.new(item, FinancekitBatch.where(id: applied_ids)).perform!
     end
     recover_lost_downstream_work!
     FinancekitBatch.where(status: %w[applied failed revoked]).where("updated_at < ?", 7.days.ago)
@@ -22,16 +23,17 @@ class FinancekitInboxJob < ApplicationJob
 
   private
 
-    # A lost job leaves applied batches with no downstream work. Load one
-    # publisher's backlog at a time so the sweep stays bounded.
+    # A lost job leaves applied batches with no downstream work. Bounded per
+    # pass and per publisher: the fan-out costs the same for one batch or many,
+    # so a larger backlog simply clears over the following sweeps.
     def recover_lost_downstream_work!
       pending = FinancekitBatch.where(status: "applied", downstream_completed_at: nil)
       pending.distinct.pluck(:financekit_item_id).each do |financekit_item_id|
-        batches = pending.where(financekit_item_id: financekit_item_id).to_a
-        next if batches.empty?
-        next unless Financekit.enabled?(batches.first.financekit_item.family)
+        item = FinancekitItem.find_by(id: financekit_item_id)
+        next unless item && Financekit.enabled?(item.family)
 
-        Financekit::Downstream.new(batches).perform!
+        scope = pending.where(financekit_item_id: financekit_item_id).limit(Financekit::MAX_QUEUED)
+        Financekit::Downstream.new(item, scope).perform!
       end
     end
 end

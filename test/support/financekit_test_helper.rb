@@ -123,7 +123,7 @@ module FinancekitTestHelper
     applied = Financekit::Processor.new(item).apply_next!
     assert applied
     # apply_next! no longer fans out on its own; the job batches a whole drain.
-    Financekit::Downstream.new([ applied ]).perform!
+    Financekit::Downstream.new(item, FinancekitBatch.where(id: applied.id)).perform!
     batch.reload
   end
 end

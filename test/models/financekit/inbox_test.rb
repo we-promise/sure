@@ -207,6 +207,27 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_not_nil @item.reload.last_downstream_at
   end
 
+  test "the sweep recovers a backlog without materializing batch rows" do
+    first = accept_and_apply
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: []))
+    FinancekitBatch.where(id: [ first.id, second.id ]).update_all(downstream_completed_at: nil)
+
+    # A pending batch still carries its payload bytes, so the recovery sweep
+    # must work from ids: loading the rows puts the whole backlog in memory.
+    loaded = 0
+    counter = ->(_name, _start, _finish, _id, payload) do
+      loaded += payload[:record_count].to_i if payload[:class_name] == "FinancekitBatch"
+    end
+    ActiveSupport::Notifications.subscribed(counter, "instantiation.active_record") do
+      FinancekitInboxJob.perform_now
+    end
+
+    assert_equal 0, loaded, "recovery sweep materialized #{loaded} FinancekitBatch rows"
+    assert_not_nil first.reload.downstream_completed_at
+    assert_not_nil second.reload.downstream_completed_at
+  end
+
   test "the sweep recovers applied batches whose downstream work was lost" do
     batch = accept_and_apply
     batch.update_columns(downstream_completed_at: nil)
