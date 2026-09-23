@@ -20,6 +20,13 @@ class ChatProvider with ChangeNotifier {
   bool _isPollingRequestInFlight = false;
 
   static const _pollingTimeout = Duration(seconds: 20);
+  static const int _kMaxMessages = 50;
+
+  /// Keeps only the most recent [_kMaxMessages] messages.
+  List<Message> _trimMessages(List<Message> msgs) {
+    if (msgs.length <= _kMaxMessages) return msgs;
+    return msgs.sublist(msgs.length - _kMaxMessages);
+  }
 
   /// Content length of the last assistant message from the previous poll.
   /// Used to detect when the LLM has finished writing (no growth between polls).
@@ -29,6 +36,11 @@ class ChatProvider with ChangeNotifier {
   /// Requires 2 consecutive stable polls before declaring the response complete,
   /// to avoid prematurely stopping on a brief server-side generation pause.
   int _stablePollingCount = 0;
+
+  /// IDs of all assistant messages that existed before the current polling
+  /// session. The stability check must not fire on any of these — only on a
+  /// genuinely new AI response.
+  Set<String> _sessionPriorAssistantIds = {};
 
   List<Chat> get chats => _chats;
   Chat? get currentChat => _currentChat;
@@ -90,7 +102,8 @@ class ChatProvider with ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        _currentChat = result['chat'] as Chat;
+        final chat = result['chat'] as Chat;
+        _currentChat = chat.copyWith(messages: _trimMessages(chat.messages));
         _errorMessage = null;
       } else {
         _errorMessage = result['error'] ?? 'Failed to fetch chat';
@@ -220,7 +233,7 @@ class ChatProvider with ChangeNotifier {
               .where((m) => m.id != optimisticMessage.id)
               .toList()
             ..add(message);
-          _currentChat = _currentChat!.copyWith(messages: updated);
+          _currentChat = _currentChat!.copyWith(messages: _trimMessages(updated));
         }
 
         _errorMessage = null;
@@ -369,6 +382,14 @@ class ChatProvider with ChangeNotifier {
     _stablePollingCount = 0;
     _isWaitingForResponse = true;
     _pollingStartTime = DateTime.now();
+
+    // Record all existing assistant message IDs so the stability check doesn't
+    // fire on any of them — we need to wait for the NEW response from this exchange.
+    _sessionPriorAssistantIds = {
+      for (final m in _currentChat?.messages ?? [])
+        if (m.isAssistant) m.id,
+    };
+
     notifyListeners();
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
@@ -391,11 +412,13 @@ class ChatProvider with ChangeNotifier {
     _isWaitingForResponse = false;
     _lastAssistantContentLength = null;
     _stablePollingCount = 0;
+    _sessionPriorAssistantIds = {};
   }
 
   /// Poll for updates
   Future<void> _pollForUpdates(String accessToken, String chatId) async {
     try {
+      // The backend returns the newest 50 messages without pagination.
       final result = await _chatService.getChat(
         accessToken: accessToken,
         chatId: chatId,
@@ -406,86 +429,111 @@ class ChatProvider with ChangeNotifier {
 
         if (_currentChat == null || _currentChat!.id != chatId) return;
 
-        final oldMessages = _currentChat!.messages;
-        final newMessages = updatedChat.messages;
-        final oldMessageCount = oldMessages.length;
-        final newMessageCount = newMessages.length;
+        final serverMessages = updatedChat.messages;
+        final localMessages = _currentChat!.messages;
+        final localById = <String, Message>{for (final m in localMessages) m.id: m};
+        final serverById = <String, Message>{for (final m in serverMessages) m.id: m};
 
-        final oldContentLengthById = <String, int>{};
-        for (final m in oldMessages) {
-          if (m.isAssistant) oldContentLengthById[m.id] = m.content.length;
-        }
-
-        bool shouldUpdate = false;
-
-        // New messages added
-        if (newMessageCount > oldMessageCount) {
-          shouldUpdate = true;
-          _lastAssistantContentLength = null;
-        } else if (newMessageCount == oldMessageCount) {
-          // Same count: check if any assistant message has more content
-          for (final m in newMessages) {
-            if (m.isAssistant) {
-              final oldLen = oldContentLengthById[m.id] ?? 0;
-              if (m.content.length > oldLen) {
-                shouldUpdate = true;
-                break;
-              }
+        // Detect assistant content growth on existing messages.
+        bool contentGrew = false;
+        for (final m in serverMessages) {
+          if (m.isAssistant) {
+            final oldLen = localById[m.id]?.content.length ?? 0;
+            if (m.content.length > oldLen) {
+              contentGrew = true;
+              break;
             }
           }
         }
 
-        if (shouldUpdate) {
-          _currentChat = updatedChat;
+        // Detect genuinely new messages not yet in local state.
+        bool hasNewMessage = false;
+        for (final m in serverMessages) {
+          if (!localById.containsKey(m.id)) {
+            hasNewMessage = true;
+            break;
+          }
+        }
+
+        if (contentGrew || hasNewMessage) {
+          // Rebuild: update existing messages with server versions and append
+          // any new arrivals. The merge itself never drops local messages —
+          // messages not in this poll response are kept as-is. The merged list
+          // is then trimmed to _kMaxMessages so the local cap stays in force.
+          final merged = [
+            for (final m in localMessages) serverById[m.id] ?? m,
+            for (final m in serverMessages)
+              if (!localById.containsKey(m.id)) m,
+          ]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+          // Drop ghost optimistic messages (pending_* IDs) created by createChat
+          // that have been confirmed by a real server user message with the same content.
+          final confirmedContents = {
+            for (final m in serverMessages)
+              if (m.role == 'user') m.content,
+          };
+          final cleaned = merged.where((m) {
+            if (m.id.startsWith('pending_') && m.role == 'user') {
+              return !confirmedContents.contains(m.content);
+            }
+            return true;
+          }).toList();
+
+          _currentChat = _currentChat!.copyWith(messages: _trimMessages(cleaned));
+          if (hasNewMessage) {
+            _lastAssistantContentLength = null;
+            _pollingStartTime = DateTime.now();
+          }
           notifyListeners();
         }
 
         if (updatedChat.error != null && updatedChat.error!.isNotEmpty) {
-          if (!shouldUpdate) {
-            _currentChat = updatedChat;
-          }
           _stopPolling();
           _errorMessage = updatedChat.error;
           notifyListeners();
           return;
         }
 
-        final lastMessage = updatedChat.messages.lastOrNull;
-        if (lastMessage != null && lastMessage.isAssistant) {
-          final newLen = lastMessage.content.length;
+        // Find the last NEW assistant message — one that didn't exist before
+        // this polling session started. The stability check must not fire on
+        // any pre-session assistant message (all IDs recorded in
+        // _sessionPriorAssistantIds at poll start).
+        final allMessages = _currentChat!.messages;
+        Message? newAssistantMsg;
+        for (int i = allMessages.length - 1; i >= 0; i--) {
+          final m = allMessages[i];
+          if (m.isAssistant && !_sessionPriorAssistantIds.contains(m.id)) {
+            newAssistantMsg = m;
+            break;
+          }
+        }
+
+        if (newAssistantMsg != null) {
+          final newLen = newAssistantMsg.content.length;
           final previousLen = _lastAssistantContentLength;
 
           if (newLen > (previousLen ?? -1)) {
             _lastAssistantContentLength = newLen;
             _stablePollingCount = 0;
             if (newLen > 0) {
-              // Content is growing — reset the inactivity clock.
               _pollingStartTime = DateTime.now();
-              return; // progress made, don't evaluate timeout this tick
+              return;
             }
-            // newLen == 0: empty placeholder, keep polling
           } else if (newLen > 0) {
-            // Content stable and non-empty.
-            // Require 2 consecutive stable polls before declaring done, to avoid
-            // stopping prematurely on a brief server-side generation pause.
             _stablePollingCount++;
             if (_stablePollingCount >= 2) {
               _stopPolling();
-              _lastAssistantContentLength = null;
               notifyListeners();
               return;
             }
           }
-          // newLen == 0 with previousLen already 0: still empty, keep polling
         }
+        // No new assistant message yet — keep polling.
       }
     } catch (e) {
-      // Network error — allow polling to continue; timeout check below will
-      // stop it if the deadline has passed.
       _log.warning('ChatProvider', 'Polling failed: ${e.runtimeType}');
     }
 
-    // Evaluate timeout only after the attempt, and only when no progress was made.
     if (_pollingStartTime != null &&
         DateTime.now().difference(_pollingStartTime!) >= _pollingTimeout) {
       _stopPolling();
