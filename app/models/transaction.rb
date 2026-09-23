@@ -151,9 +151,12 @@ class Transaction < ApplicationRecord
   # every normal save relies on (Family#entries_cache_version) never happens.
   def self.reassign_category!(scope, category_id)
     transaction do
-      # SELECT ... FOR UPDATE so a concurrent recategorization can't slip in
-      # between this read and the update below and be silently overwritten.
-      ids = scope.lock(true).pluck(:id)
+      # Lock the matched transaction rows up front so a concurrent edit blocks
+      # until this commits, and so our lock order (transactions, then entries)
+      # matches a normal save's and can't deadlock against one. Restricted to
+      # `transactions`: family-scoped callers join entries and accounts, and a
+      # bare FOR UPDATE would lock those rows too, stalling account syncs.
+      ids = scope.lock("FOR UPDATE OF transactions").pluck(:id)
       next 0 if ids.empty?
 
       # Touch entries through a subquery (the same pattern

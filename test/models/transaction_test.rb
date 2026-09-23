@@ -328,17 +328,19 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal 0, Transaction.reassign_category!(Transaction.none, categories(:income).id)
   end
 
-  test "reassign_category! locks the scoped rows before updating them" do
+  test "reassign_category! locks only the transaction rows before updating them" do
     transaction = transactions(:one)
+    family = transaction.entry.account.family
     selects = []
     subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
       selects << payload[:sql] if payload[:sql].match?(/\ASELECT/i)
     end
 
-    Transaction.reassign_category!(Transaction.where(id: transaction.id), categories(:income).id)
+    # Family scope joins entries and accounts; the lock must not cover them
+    Transaction.reassign_category!(family.transactions.where(id: transaction.id), categories(:income).id)
 
-    assert selects.any? { |sql| sql.include?("FOR UPDATE") },
-      "expected the id lookup to lock rows (SELECT ... FOR UPDATE)"
+    assert selects.any? { |sql| sql.include?("FOR UPDATE OF transactions") },
+      "expected the id lookup to lock transaction rows only (FOR UPDATE OF transactions)"
   ensure
     ActiveSupport::Notifications.unsubscribe(subscriber)
   end
