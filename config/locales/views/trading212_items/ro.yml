@@ -47,7 +47,7 @@ ro:
         manual_account_option: '%{name} (%{balance})'
         select_prompt: Selectează un cont...
       linked_accounts:
-        title: Deja conectat
+        title: Deja conectate
         linked_to_html: 'Conectat la: %{account}'
       buttons:
         refresh: Reîmprospătează

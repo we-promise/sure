@@ -139,7 +139,10 @@ ro:
           few: '%{count} înregistrări'
           other: '%{count} de înregistrări'
       pagination:
-        showing: Se afișează %{count} tranzacții
+        showing:
+          one: "Se afișează %{count} tranzacție"
+          few: "Se afișează %{count} tranzacții"
+          other: "Se afișează %{count} de tranzacții"
         previous: Anterioare
         next: Următoarele
     google_sheets_instructions:

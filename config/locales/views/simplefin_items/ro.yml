@@ -39,7 +39,10 @@ ro:
       update: Actualizează
       cancel: Anulează
     complete_account_setup:
-      success: Conturile SimpleFIN au fost configurate cu succes! Tranzacțiile și deținerile tale sunt importate în fundal.
+      success:
+        one: "A fost creat cu succes %{count} cont SimpleFIN! Tranzacțiile și deținerile tale sunt importate în fundal."
+        few: "Au fost create cu succes %{count} conturi SimpleFIN! Tranzacțiile și deținerile tale sunt importate în fundal."
+        other: "Au fost create cu succes %{count} de conturi SimpleFIN! Tranzacțiile și deținerile tale sunt importate în fundal."
       all_skipped: Toate conturile au fost omise. Nu a fost creat niciun cont.
       no_accounts: Nu există conturi de configurat.
       stale_accounts_processed: 'Conturi învechite: %{deleted} șterse, %{moved} mutate.'

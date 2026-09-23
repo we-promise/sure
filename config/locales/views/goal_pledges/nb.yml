@@ -8,8 +8,8 @@ nb:
       account_label: Til konto
       submit: Registrer spareløfte
       preview_zero: Nå er {current} av {target} spart.
-      preview_nonzero: Når {percent}%, {newTotal} av {target}.
-      preview_reached: Når målet ditt på {target}. Målet er nådd.
+      preview_nonzero: Du når {percent}%, {newTotal} av {target}.
+      preview_reached: Du når målet ditt på {target}. Målet er nådd.
     create:
       success: Spareløftet er registrert. Sure bekrefter det ved neste synkronisering.
     renew:

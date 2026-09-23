@@ -29,9 +29,9 @@ ro:
       wallet_not_found: Acest portofel nu este urmărit de această conexiune.
     link_wallet:
       errors:
-        none_tracked: 'Nu a fost urmărit nimic: %{assets} nu a(u) putut fi adăugat(e). Încearcă din nou peste câteva momente.'
+        none_tracked: 'Nu a fost urmărit nimic: nu s-au putut adăuga activele %{assets}. Încearcă din nou peste câteva momente.'
         nothing_selected: Alege cel puțin un activ de urmărit.
-        some_failed: '%{assets} nu a(u) putut fi urmărit(e) și a(u) fost omis(e).'
+        some_failed: 'Nu s-au putut urmări activele %{assets}; acestea au fost omise.'
       success:
         one: Se urmărește %{count} activ din acest portofel.
         few: Se urmăresc %{count} active din acest portofel.
@@ -110,6 +110,6 @@ ro:
     update_tokens:
       errors:
         no_changes: Nimic nu s-a schimbat; sunt bifate aceleași active.
-        none_tracked: 'Nimic nu s-a schimbat: %{assets} nu a(u) putut fi adăugat(e). Încearcă din nou peste câteva momente.'
-        some_failed: '%{assets} nu a(u) putut fi urmărit(e) și a(u) fost omis(e).'
+        none_tracked: 'Nimic nu s-a schimbat: nu s-au putut adăuga activele %{assets}. Încearcă din nou peste câteva momente.'
+        some_failed: 'Nu s-au putut urmări activele %{assets}; acestea au fost omise.'
       success: Activele urmărite au fost actualizate (%{created} adăugate, %{removed} eliminate).

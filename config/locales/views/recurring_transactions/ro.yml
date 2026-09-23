@@ -171,7 +171,7 @@ ro:
         other: Factura a fost actualizată, iar linkul de plată a fost copiat în alte %{count} de facturi
     manage:
       title: Facturile tale se află pe pagina Facturi
-      description: Declară, editează, pune pe pauză și plătește totul de acolo. Această pagină controlează detectarea.
+      description: Adaugă, editează, pune pe pauză și plătește totul de acolo. Această pagină controlează detectarea.
       cta: Deschide toate facturile
     settings:
       enable_label: Activează tranzacțiile recurente

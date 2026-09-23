@@ -22,7 +22,9 @@ nb:
         calculating: Beregner saldoer...
         importing_data: Importerer kontodata...
         checking_setup: Kontrollerer kontooppsettet...
-        needs_setup: '%{count} kontoer må settes opp...'
+        needs_setup:
+          one: '%{count} konto må settes opp...'
+          other: '%{count} kontoer må settes opp...'
       success: Synkronisering startet
     panel:
       setup_instructions: 'Oppsettinstruksjoner:'
