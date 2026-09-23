@@ -33,11 +33,6 @@ module Account::Linkable
   end
   alias_method :manual?, :unlinked?
 
-  # Wallet connections must use the publisher lifecycle managed by the iOS app.
-  def can_unlink_provider?
-    linked? && !account_providers.any? { |link| link.provider_type == "FinancekitAccountLineage" }
-  end
-
   # Returns the primary provider adapter for this account
   # If multiple providers exist, returns the first one
   def provider

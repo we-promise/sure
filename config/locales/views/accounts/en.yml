@@ -191,13 +191,13 @@ en:
       title: Unlink account from provider?
       description_html: "You are about to unlink <strong>%{account_name}</strong> from <strong>%{provider_name}</strong>. This will convert it to a manual account."
       warning_title: What this means
+      warning_wallet_connection: All accounts in this Apple Wallet connection will be unlinked. Their transactions and balances will be preserved. You can reconnect through the Sure iOS app with a new Wallet setup.
       warning_no_sync: The account will no longer sync automatically with your provider
       warning_manual_updates: You will need to add transactions and update balances manually
       warning_transactions_kept: All existing transactions and balances will be preserved
       warning_can_delete: After unlinking, you will be able to delete the account if needed
       confirm_button: Confirm and unlink
     unlink:
-      managed_in_app: "Manage Apple Wallet connections in the Sure iOS app."
       success: "Account unlinked successfully. It is now a manual account."
       not_linked: "Account is not linked to a provider"
       error: "Failed to unlink account: %{error}"

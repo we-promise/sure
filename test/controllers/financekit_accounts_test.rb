@@ -33,30 +33,125 @@ class FinancekitAccountsTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Synthetic shop"
   end
 
-  test "Wallet accounts cannot use generic unlink controls or endpoints" do
+  test "Wallet accounts can unlink and reconnect from a fresh client enrollment" do
+    accept_and_apply
     account = @source.account
-    provider = account.account_providers.sole
-    credential_digest = @item.credential_digest
+    entry = account.entries.sole
+    lineage = @source.financekit_account_lineage
+    old_stream = @item.reload.stream_id
+    queued, = accept_batch(financekit_payload(sequence: @item.next_sequence,
+      predecessor_digest: @item.predecessor_digest))
 
     get accounts_url
     assert_response :success
-    assert_select "a[href=?]", confirm_unlink_account_path(account), count: 0
-    assert_select "a[href=?]", select_provider_account_path(account), count: 0
+    assert_select "a[href=?]", confirm_unlink_account_path(account)
 
     get confirm_unlink_account_url(account)
-    assert_redirected_to account_url(account)
-    assert_equal I18n.t("accounts.unlink.managed_in_app"), flash[:alert]
+    assert_response :success
+    assert_includes response.body, I18n.t("accounts.confirm_unlink.warning_wallet_connection")
 
-    assert_no_difference [ "AccountProvider.count", "FinancekitAccount.count" ] do
+    assert_no_difference [ "Account.count", "Entry.count", "FinancekitAccount.count", "FinancekitTransaction.count" ] do
       delete unlink_account_url(account)
     end
+    assert_redirected_to accounts_url
+    assert_not account.reload.linked?
+    assert_equal "revoked", @item.reload.status
+    assert_not @item.authenticate_credential?(@credential)
+    assert_equal "revoked", queued.reload.status
+    assert_equal "connection_revoked", queued.error_code
+    assert_nil queued.payload
+    assert_not Financekit::Processor.new(@item).apply_next!
+    error = assert_raises(Financekit::Error) { accept_batch }
+    assert_equal "connection_revoked", error.code
+
+    get accounts_url
+    assert_select "#manual-accounts a[href=?]", account_path(account)
+    get account_url(account)
+    assert_response :success
+    assert_includes response.body, "Synthetic shop"
+
+    # A reset Swift client knows only its stable Apple source IDs, not the old
+    # connection, lineage, mapping version, stream or sequence.
+    fresh = Financekit::Enrollment.create!(@user, @enrollment.merge("enrollment_id" => SecureRandom.uuid)).item
+    assert_no_difference [ "Account.count", "FinancekitAccountLineage.count" ] do
+      @source = FinancekitAccount.map!(fresh, @source_id, @mapping_input)
+    end
+    assert_equal account, @source.account
+    assert_equal lineage, @source.financekit_account_lineage
+    assert_equal 2, @source.mapping_version
+    credential = fresh.activate!
+    assert fresh.authenticate_credential?(credential)
+    assert_not_equal old_stream, fresh.stream_id
+    assert_equal 1, fresh.next_sequence
+    assert_nil fresh.predecessor_digest
+    assert account.reload.linked?
+
+    assert_no_difference "Entry.count" do
+      accept_and_apply(financekit_payload(item: fresh), item: fresh)
+    end
+    assert_equal [ entry.id ], account.entries.reload.pluck(:id)
+
+    events = financekit_events
+    events.last["transaction"]["source_id"] = SecureRandom.uuid
+    events.last["transaction"]["transaction_description"] = "New purchase after reconnect"
+    events.last["transaction"]["merchant_name"] = "New purchase after reconnect"
+    fresh.reload
+    assert_difference "Entry.count", 1 do
+      accept_and_apply(financekit_payload(item: fresh, sequence: fresh.next_sequence,
+        predecessor_digest: fresh.predecessor_digest, events: events), item: fresh)
+    end
+    assert account.entries.exists?(name: "New purchase after reconnect")
+  end
+
+  test "unlink disconnects all accounts sharing the publisher even when FinanceKit is unavailable" do
+    second_source = SecureRandom.uuid
+    @item.update!(status: "repair_required", consent: @item.consent.merge(
+      "selected_source_account_ids" => [ @source_id, second_source ]))
+    second_mapping = FinancekitAccount.map!(@item, second_source, @mapping_input.merge("name" => "Apple Cash"))
+    @item.activate!
+    Financekit.stubs(:enabled?).returns(false)
+    @item.mark_repair!("test_failure")
+
+    delete unlink_account_url(@source.account)
+
+    assert_redirected_to accounts_url
+    assert_not @source.account.reload.linked?
+    assert_not second_mapping.account.reload.linked?
+    assert_equal "revoked", @item.reload.status
+    error = assert_raises(Financekit::Error) { @item.repair! }
+    assert_equal "connection_revoked", error.code
+  end
+
+  test "read only sharing and another family cannot disconnect a Wallet publisher" do
+    account = @source.account
+    viewer = users(:new_email)
+    account.account_shares.find_or_initialize_by(user: viewer).update!(permission: "read_only")
+    sign_in viewer
+
+    delete unlink_account_url(account)
     assert_redirected_to account_url(account)
-    assert_equal I18n.t("accounts.unlink.managed_in_app"), flash[:alert]
-    assert_equal provider, account.reload.account_providers.sole
     assert_equal "active", @item.reload.status
-    assert_equal credential_digest, @item.credential_digest
-    accept_and_apply
-    assert account.entries.exists?(name: "Synthetic shop")
+    assert account.reload.linked?
+
+    sign_in users(:family_admin)
+    delete unlink_account_url(account)
+    assert_response :not_found
+    assert_equal "active", @item.reload.status
+    assert account.reload.linked?
+  end
+
+  test "failed unlink rolls back the Wallet revocation and provider links" do
+    queued, = accept_batch
+    Account.any_instance.stubs(:update!).raises(ActiveRecord::RecordInvalid.new(@source.account))
+
+    delete unlink_account_url(@source.account)
+
+    assert_redirected_to account_url(@source.account)
+    assert_equal "active", @item.reload.status
+    assert @item.authenticate_credential?(@credential)
+    assert @source.account.reload.linked?
+    assert_equal "accepted", queued.reload.status
+    assert queued.payload.present?
   end
 
   test "index shows disabled Wallet accounts but excludes pending deletion" do

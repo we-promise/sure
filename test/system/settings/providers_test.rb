@@ -47,6 +47,32 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     end
   end
 
+  test "Wallet unlink confirmation disconnects the publisher and keeps account activity" do
+    financekit_setup(user: @user)
+    accept_and_apply
+
+    visit accounts_path
+    within "#financekit-accounts" do
+      find("button[aria-haspopup='menu']").click
+      click_link "Unlink from provider"
+    end
+    dialog = find("dialog[open]")
+    within dialog do
+      assert_text I18n.t("accounts.confirm_unlink.warning_wallet_connection")
+      dialog.native.save_screenshot(Rails.root.join("tmp", "apple-wallet-unlink.png"))
+      click_on "Confirm and unlink"
+    end
+
+    assert_no_selector "dialog[open]"
+    assert_current_path accounts_path
+    within "#manual-accounts" do
+      click_link "Test Wallet"
+    end
+    assert_current_path account_path(@source.account)
+    assert_text "Synthetic shop"
+    assert_equal "revoked", @item.reload.status
+  end
+
   test "shows status pill on section header for a configured provider" do
     SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
 

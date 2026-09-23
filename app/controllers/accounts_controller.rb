@@ -3,7 +3,7 @@ class AccountsController < ApplicationController
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
   before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
-  before_action :ensure_provider_unlinkable, only: %i[confirm_unlink unlink]
+  before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
   def index
@@ -242,6 +242,8 @@ class AccountsController < ApplicationController
   def unlink
     begin
       Account.transaction do
+        @account.provider_account_for("FinancekitAccountLineage")&.disconnect!
+
         # Detach holdings from provider links before destroying them
         provider_link_ids = @account.account_providers.pluck(:id)
         if provider_link_ids.any?
@@ -256,7 +258,7 @@ class AccountsController < ApplicationController
         # This follows the Plaid pattern where the provider account survives as "unlinked".
         # SnapTrade has limited connection slots (5 free), so preserving the record avoids
         # wasting a slot on reconnect.
-        @account.account_providers.destroy_all
+        @account.account_providers.reload.destroy_all
 
         # Remove legacy system links (foreign keys)
         @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
@@ -310,11 +312,10 @@ class AccountsController < ApplicationController
   end
 
   private
-    def ensure_provider_unlinkable
-      return if @account.can_unlink_provider?
+    def ensure_linked_account
+      return if @account.linked?
 
-      message = @account.linked? ? "managed_in_app" : "not_linked"
-      redirect_to account_path(@account), alert: t("accounts.unlink.#{message}")
+      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
     end
 
     def family

@@ -42,7 +42,7 @@ required `transacted_at`, converted into the mapped account's ledger timezone.
 ## Wallet in settings
 
 Bank sync lists Apple Wallet as a US / UK bank provider. Its App Store button is
-disabled with “Coming soon!” hover help; connections are managed in the iOS app.
+disabled with “Coming soon!” hover help; new connections are set up in the iOS app.
 The screenshots use synthetic test data with Brandfetch disabled, showing the
 standard initials fallback.
 
@@ -51,6 +51,16 @@ standard initials fallback.
 Existing connections appear under Your Connections with sync status, acceptance
 and import timestamps, and links to accounts the viewer can access. Wallet accounts
 also appear in Accounts.
+
+Accounts can be unlinked from the web UI. Because a publisher credential covers
+all selected Wallet accounts, unlinking one disconnects that Wallet connection
+and makes its accounts manual. This revokes the credential and queued uploads
+while preserving accounts, balances, transactions, and source identities. The
+iOS client can start a new enrollment with a new enrollment ID and map its Apple
+source account IDs again; existing accounts and imported transactions are reused
+without requiring the old connection or stream state.
+
+![Unlinking an Apple Wallet connection](financekit/apple-wallet-unlink.png)
 
 ![Connected Apple Wallet provider](financekit/apple-wallet-connected.png)
 
