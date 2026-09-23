@@ -65,3 +65,8 @@ pt-PT:
       sell: Venda
       settings: Definições
       type_label: Tipo
+    api_errors:
+      activity_label_must_match_type: investment_activity_label tem de ser %{label} quando type é %{type}
+      invalid_activity_label: Rótulo de atividade de investimento inválido
+      invalid_type: Tipo inválido
+      supported_types: 'type tem de ser um dos seguintes: %{types}'

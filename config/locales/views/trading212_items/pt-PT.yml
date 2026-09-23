@@ -36,7 +36,7 @@ pt-PT:
       status:
         fetching_accounts: A obter a conta da Trading 212...
         no_accounts_found_title: Não foi encontrada nenhuma conta.
-        no_accounts_found_description: A Sure não conseguiu encontrar uma conta Trading 212. Verifique se a sua chave de API é válida.
+        no_accounts_found_description: O Sure não conseguiu encontrar uma conta Trading 212. Verifique se a sua chave de API é válida.
       available_accounts:
         title: Conta disponível
         account_type_investment: Investimento
@@ -62,14 +62,14 @@ pt-PT:
         importing_account: A importar a conta Trading 212...
         checking_configuration: A verificar a configuração da conta...
         accounts_need_setup:
-          one: 1 conta Trading 212 precisa de configuração...
+          one: "%{count} conta Trading 212 precisa de configuração..."
           other: "%{count} contas Trading 212 precisam de configuração..."
         processing_activity: A processar posições e atividade...
         calculating_balances: A calcular saldos...
     sync_status:
       no_accounts: Ainda não foi detetada nenhuma conta Trading 212
       all_linked:
-        one: 1 conta associada
+        one: "%{count} conta associada"
         other: "%{count} contas associadas"
       partial: "%{linked} associadas, %{unlinked} precisam de configuração"
     select_existing_account:

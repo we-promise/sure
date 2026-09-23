@@ -1,0 +1,111 @@
+---
+pt-PT:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Atividade encontrada
+      explanation: Este formato de endereço é utilizado por mais do que uma rede, e os saldos em cada uma são diferentes. Escolha a que pretende acompanhar.
+      no_activity_found: Nada encontrado
+      subtitle: '%{address}'
+      title: Que rede?
+    destroy:
+      success: A ligação de autocustódia foi agendada para eliminação.
+    disconnect_asset:
+      success: Deixou de acompanhar %{symbol}. A respetiva conta e histórico foram mantidos.
+    disconnect_wallet:
+      success:
+        one: Deixou de acompanhar %{count} ativo nesse endereço.
+        other: Deixou de acompanhar %{count} ativos nesse endereço.
+    enable_crypto_prices:
+      not_self_hosted: Nesta instalação, os serviços de dados de mercado são configurados pelo operador da instância.
+      success: Os preços de criptomoedas estão ativados. Os valores das carteiras aparecem após a próxima sincronização.
+    errors:
+      address_required: Introduza um endereço de carteira.
+      already_linked: Esse endereço já está a ser acompanhado nesta rede. Utilize Rever tokens para alterar os ativos acompanhados.
+      chain_unreachable: Não foi possível contactar o explorador público desta rede. Tente novamente dentro de momentos.
+      rate_limited: O explorador público está a limitar os pedidos neste momento. Tente novamente dentro de alguns minutos.
+      unexpected: Ocorreu um erro ao ler esta carteira. Os detalhes foram registados para o suporte.
+      unrecognized_address: Isso não parece ser um endereço de nenhuma rede suportada.
+      wallet_not_found: Essa carteira não é acompanhada por esta ligação.
+    link_wallet:
+      errors:
+        none_tracked: 'Nada foi acompanhado: não foi possível adicionar %{assets}. Tente novamente dentro de momentos.'
+        nothing_selected: Escolha pelo menos um ativo para acompanhar.
+        some_failed: Não foi possível acompanhar %{assets}, pelo que ficou de fora.
+      success:
+        one: A acompanhar %{count} ativo desta carteira.
+        other: A acompanhar %{count} ativos desta carteira.
+    manage:
+      assets_truncated: Este endereço contém mais tokens do que uma única leitura apresenta, por isso só são listados os %{count} mais credíveis. Tudo o que já é acompanhado continua a sincronizar.
+      disconnect_asset: Deixar de acompanhar
+      disconnect_asset_confirm: Deixar de acompanhar %{symbol}? A respetiva conta e histórico são mantidos e deixam de ser atualizados.
+      disconnect_wallet: Desligar carteira
+      disconnect_wallet_confirm: Deixar de acompanhar todos os ativos deste endereço?
+      history_note: Ao desligar, as contas e o respetivo histórico são mantidos; apenas deixam de ser atualizados.
+      history_truncated: Não foi possível ler todas as transferências deste endereço — há mais histórico do que uma sincronização abrange, ou o explorador recusou o pedido. Os saldos estão completos; faltam algumas transferências.
+      native: Nativo
+      no_wallets: Ainda não há carteiras acompanhadas.
+      review_tokens: Rever tokens
+      subtitle: Todos os endereços que esta ligação lê e o que acompanha em cada um.
+      title: Gerir carteiras de autocustódia
+    new_wallet:
+      address_label: Endereço da carteira
+      address_placeholder: bc1..., 0x... ou um endereço Solana
+      bitcoin_single_address_note: O Bitcoin é acompanhado um endereço de cada vez. As chaves estendidas (xpub/ypub/zpub) não são suportadas, por isso uma carteira que distribui fundos por endereços derivados mostrará apenas o saldo do endereço que introduzir.
+      chain_auto_detect: Detetar automaticamente
+      chain_label: Rede
+      continue: Continuar
+      read_only_note: Apenas são lidos dados públicos da blockchain. Nunca introduza uma frase de recuperação (seed phrase) ou chave privada.
+      subtitle: Acompanhe uma carteira da qual detém as chaves, a partir do seu endereço público.
+      title: Adicionar uma carteira de autocustódia
+    onchain_wallet_item:
+      assets_tracked:
+        one: '%{count} ativo acompanhado'
+        other: '%{count} ativos acompanhados'
+      sync: Sincronizar agora
+      syncing: A sincronizar...
+    wallet_card:
+      addresses_tracked:
+        one: '%{count} endereço acompanhado'
+        other: '%{count} endereços acompanhados'
+      deletion_in_progress: A remover...
+      delete: Remover ligação
+      needs_attention: Requer atenção
+      no_wallets_message: Associe um endereço nas definições de serviços para o ver aqui.
+      no_wallets_title: Ainda nenhuma carteira associada
+      status: Sincronizada há %{timestamp}
+      sync: Sincronizar agora
+      status_never: Ainda não sincronizada
+      syncing: A sincronizar...
+    price_provider_warning:
+      body: Nenhum serviço de dados de mercado ativado consegue atribuir preço a criptomoedas, por isso estas carteiras acompanham quantidades mas apresentam um valor de zero.
+      enable: Ativar preços de criptomoedas
+      exchange_rate_body: As criptomoedas são avaliadas em USD e não está configurado nenhum serviço de taxas de câmbio para as converter para %{currency}, por isso estas carteiras acompanham quantidades mas apresentam um valor de zero. Defina EXCHANGE_RATE_PROVIDER — o Frankfurter não precisa de chave de API.
+      exchange_rate_title: Nenhum serviço de taxas de câmbio configurado
+      link: Abrir definições de dados de mercado
+      title: Os preços de criptomoedas não estão configurados
+    provider_connection:
+      description: Acompanhe uma carteira da qual detém as chaves, a partir do seu endereço público.
+      name: Carteira de autocustódia
+    review_tokens:
+      save: Guardar ativos acompanhados
+      subtitle: '%{chain} · %{address}'
+      title: Rever ativos acompanhados
+    token_review:
+      import_selected: Acompanhar ativos selecionados
+      subtitle: '%{chain} · %{address}'
+      title: Escolha o que acompanhar
+    token_review_form:
+      assets_truncated: Este endereço contém mais tokens do que uma única leitura apresenta, por isso só são listados os %{count} mais credíveis.
+      cancel: Cancelar
+      explanation: Os ativos com preço conhecido estão assinalados. Os restantes ficam por assinalar — as carteiras recebem airdrops de spam, e acompanhar um deles não tem qualquer valor associado.
+      native: Nativo
+      no_price: Sem preço disponível; acompanhado apenas pela quantidade
+      nothing_found: Não conseguimos ver nada neste endereço nesta rede.
+    update:
+      success: Ligação de autocustódia atualizada.
+    update_tokens:
+      errors:
+        no_changes: Nada foi alterado; os mesmos ativos continuam assinalados.
+        none_tracked: 'Nada foi alterado: não foi possível adicionar %{assets}. Tente novamente dentro de momentos.'
+        some_failed: Não foi possível acompanhar %{assets}, pelo que ficou de fora.
+      success: Ativos acompanhados atualizados (%{created} adicionados, %{removed} removidos).

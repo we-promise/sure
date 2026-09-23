@@ -15,6 +15,10 @@ pt-PT:
         reports: Relatórios
         goals: Objetivos
         transactions: Transações
+        bills: Faturas
+      release_highlight:
+        title: Novidades
+        done: Entendido
     auth:
       existing_account: Já tem conta?
       no_account: É novo no %{product_name}?
@@ -28,6 +32,10 @@ pt-PT:
         are_you_sure: Tem a certeza?
         cannot_be_undone: Esta ação é irreversível.
         confirm: Confirmar
+      notification_tray:
+        download_complete: Transferência concluída
+        download_failed: A transferência falhou. Tente novamente.
+        download_location: O ficheiro está na sua pasta Transferências.
     trial:
       open_demo: Abrir demo
       data_deleted_in_days: Dados removidos em %{days} dias

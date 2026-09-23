@@ -21,12 +21,12 @@ pt-PT:
         not_expected: Não esperado
     create:
       duplicates:
-        one: 1 extrato duplicado foi ignorado.
+        one: "%{count} extrato duplicado foi ignorado."
         other: "%{count} extratos duplicados foram ignorados."
       invalid_file_type: Carregue um extrato em PDF, CSV ou XLSX dentro do limite de tamanho.
       no_files: Selecione pelo menos um ficheiro de extrato.
       success:
-        one: 1 extrato carregado.
+        one: "%{count} extrato carregado."
         other: "%{count} extratos carregados."
     destroy:
       failure: Não foi possível eliminar o extrato.

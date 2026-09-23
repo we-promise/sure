@@ -12,7 +12,7 @@ pt-PT:
       subtitle: Poupe para o que realmente importa.
       new_goal: Novo objetivo
       empty_filtered: Nenhum objetivo encontrado.
-      pending_pledges_callout: Tem contribuições prometidas por confirmar. Sure confirmá-las-á na próxima sincronização.
+      pending_pledges_callout: Tem contribuições prometidas por confirmar. O Sure confirmá-las-á na próxima sincronização.
       kpi:
         contributed_label: Contribuído · últimos 30 dias
         velocity_delta_up: "↑ %{percent}%% vs. 30 dias anteriores"
@@ -21,23 +21,23 @@ pt-PT:
         velocity_delta_zero_base: Primeiros 30 dias de atividade
         needs_this_month_label: Necessário este mês
         needs_this_month_sub:
-          one: 1 objetivo em atraso
+          one: "%{count} objetivo em atraso"
           other: "%{count} objetivos em atraso"
         needs_this_month_zero_sub: Nenhum objetivo em atraso
         on_track_label: Objetivos dentro do previsto
         on_track_value: "%{on_track} de %{total}"
         on_track_sub_parts:
           reached:
-            one: 1 alcançado
+            one: "%{count} alcançado"
             other: "%{count} alcançados"
           behind:
-            one: 1 em atraso
+            one: "%{count} em atraso"
             other: "%{count} em atraso"
           no_date:
-            one: 1 sem prazo
+            one: "%{count} sem prazo"
             other: "%{count} sem prazo"
           paused:
-            one: 1 suspenso
+            one: "%{count} suspenso"
             other: "%{count} suspensos"
         on_track_sub_all_good: Todos os objetivos ativos dentro do previsto
         on_track_all_caught_up: Tudo recuperado
@@ -111,7 +111,7 @@ pt-PT:
         exceeds_target: Isso é mais do que este objetivo se propôs poupar.
         account_required: Este objetivo é financiado por várias contas — indique de qual saiu o dinheiro.
         account_not_linked: Essa conta não financia este objetivo.
-        not_active: Este objetivo já não está ativo, pelo que não pode ser registado nada contra ele.
+        not_active: Este objetivo já não está ativo, pelo que já não é possível registar nada nele.
         exceeds_earmark: Isso é mais do que esta conta tem reservado para o objetivo.
         transaction_already_claimed: Essa saída de fundos já foi atribuída.
         transaction_not_found: Essa saída de fundos já não está disponível para ser atribuída.
@@ -132,7 +132,7 @@ pt-PT:
       delete: Eliminar
       reserve_shortfall:
         heading: Reserva abaixo do nível
-        body: "Está a garantir %{saved} do objetivo de %{target}. Adicione %{missing} para a repor no nível mínimo."
+        body: "Tem %{saved} de %{target}. Adicione %{missing} para a repor no nível mínimo."
       record_pledge_cta: Registar contribuição
       pledge_just_transferred: Registar uma transferência que fez
       pledge_just_saved: Registar dinheiro que reservou
@@ -154,9 +154,9 @@ pt-PT:
       pending_pledge:
         title:
           zero: "Por confirmar: %{amount} em %{account} · expira hoje"
-          one: "Por confirmar: %{amount} em %{account} · falta 1 dia"
+          one: "Por confirmar: %{amount} em %{account} · falta %{count} dia"
           other: "Por confirmar: %{amount} em %{account} · faltam %{count} dias"
-        body_transfer: Confirma-se automaticamente quando a Sure detetar um depósito correspondente na próxima sincronização.
+        body_transfer: Confirma-se automaticamente quando o Sure detetar um depósito correspondente na próxima sincronização.
         body_manual: Confirma-se na próxima vez que atualizar o saldo manualmente.
         pledged_at: "Contribuição registada há %{time_ago}"
         extend: Alargar 7 dias
@@ -235,7 +235,7 @@ pt-PT:
         cta: Definir data-alvo
       empty:
         heading: Ainda não existem depósitos
-        body: Faça uma transferência para a sua conta associada. A Sure detetá-la-á na próxima sincronização. Ou atualize o saldo da sua conta manualmente.
+        body: Faça uma transferência para a sua conta associada. O Sure detetá-la-á na próxima sincronização. Ou atualize o saldo da sua conta manualmente.
     errors:
       not_found: Não foi possível encontrar este objetivo. Pode ter sido eliminado.
     states:
@@ -267,13 +267,13 @@ pt-PT:
       left: restante
       aria_progress: "%{percent}% de %{target}"
       accounts:
-        one: 1 conta
+        one: "%{count} conta"
         other: "%{count} contas"
       no_target_date: Sem prazo
       completed: Concluído
       past_due: Prazo ultrapassado
       days_left:
-        one: falta 1 dia
+        one: "falta %{count} dia"
         other: "faltam %{count} dias"
       pace_with_target: "%{avg}/mês · objetivo %{target}/mês"
       pace_no_target: "%{avg}/mês em média"
@@ -286,12 +286,12 @@ pt-PT:
       footer_no_deadline: Sem prazo
       pending_pledge: Contribuição por confirmar
       pending_count:
-        one: 1 por confirmar
+        one: "%{count} por confirmar"
         other: "%{count} por confirmar"
       footer_no_pledges: Ainda sem contribuições correspondidas
       footer_last_today: Última contribuição correspondida hoje
       footer_last_days:
-        one: Última contribuição correspondida há 1 dia
+        one: "Última contribuição correspondida há %{count} dia"
         other: "Última contribuição correspondida há %{count} dias"
     form:
       target_modes:

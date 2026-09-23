@@ -16,5 +16,5 @@ pt-PT:
             account:
               must_be_linked_to_goal: Escolha uma das contas associadas ao objetivo.
             currency:
-              must_match_goal: A moeda do compromisso tem de corresponder à moeda do objetivo.
-          duplicate_open_pledge: Já tem um compromisso em aberto para este montante nesta conta. Cancele ou alargue o existente antes de registar outro.
+              must_match_goal: A moeda da contribuição tem de corresponder à moeda do objetivo.
+          duplicate_open_pledge: Já tem uma contribuição por confirmar com este montante nesta conta. Cancele ou alargue a existente antes de registar outra.

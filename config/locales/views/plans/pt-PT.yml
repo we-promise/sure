@@ -9,7 +9,7 @@ pt-PT:
       edit_budget: Editar orçamento
       of_total: de %{total}
       days_left:
-        one: falta 1 dia
+        one: "falta %{count} dia"
         other: "faltam %{count} dias"
       percent_used: "%{percent}% utilizado"
       top_categories: Principais categorias
@@ -20,15 +20,15 @@ pt-PT:
       title: Os seus objetivos
       new_goal: Novo objetivo
       active_count:
-        one: 1 ativo
+        one: "%{count} ativo"
         other: "%{count} ativos"
       of_targets: de %{total} em todos os objetivos
       behind_count:
-        one: 1 em atraso em relação ao ritmo
+        one: "%{count} em atraso em relação ao ritmo"
         other: "%{count} em atraso em relação ao ritmo"
       pending_count:
-        one: 1 compromisso por confirmar
-        other: "%{count} compromissos por confirmar"
+        one: "%{count} contribuição por confirmar"
+        other: "%{count} contribuições por confirmar"
       all_on_pace: Tudo dentro do ritmo
       active_goals: Objetivos ativos
       pending_marker: por confirmar

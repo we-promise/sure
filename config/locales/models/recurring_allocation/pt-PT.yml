@@ -1,0 +1,9 @@
+---
+pt-PT:
+  activerecord:
+    errors:
+      models:
+        recurring_allocation:
+          attributes:
+            currency:
+              must_match_occurrence: tem de corresponder à moeda da ocorrência

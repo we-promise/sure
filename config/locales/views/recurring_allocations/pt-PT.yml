@@ -1,0 +1,15 @@
+---
+pt-PT:
+  recurring_allocations:
+    over_allocation: Isso atribuiria mais do que o montante da transação
+    missing_rate: Não existe taxa de câmbio disponível; introduza o montante explicitamente
+    already_allocated: Essa transação já está aplicada a esta fatura
+    invalid: Não foi possível registar o pagamento
+    create:
+      success: Pagamento aplicado
+    destroy:
+      success: Pagamento desassociado
+    confirm:
+      success: Pagamento aplicado à fatura
+    reject:
+      success: Ignorado. Essa transação não voltará a ser sugerida para esta fatura.

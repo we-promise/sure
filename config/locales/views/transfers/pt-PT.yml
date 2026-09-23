@@ -5,6 +5,7 @@ pt-PT:
       success: Transferência criada
       exchange_rate_unavailable: Taxa de câmbio indisponível para as moedas e data selecionadas
       date_invalid: é inválida
+      stale_form: Este formulário já foi submetido com dados diferentes. Atualize a página e tente novamente.
     destroy:
       success: Transferência removida
     form:
@@ -27,10 +28,10 @@ pt-PT:
     new:
       title: Nova transferência
     show:
-      delete: Eliminar transferência
-      delete_subtitle: Isto elimina a transferência. Não eliminará as transações
+      delete: Remover transferência
+      delete_subtitle: Isto remove a transferência. Não eliminará as transações
         subjacentes.
-      delete_title: Eliminar transferência?
+      delete_title: Remover transferência?
       details: Detalhes
       mark_recurring: Marcar como recorrente
       mark_recurring_subtitle: Acompanhe esta transferência como um padrão recorrente no feed
