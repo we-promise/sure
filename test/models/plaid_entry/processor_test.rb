@@ -372,4 +372,57 @@ class PlaidEntry::ProcessorTest < ActiveSupport::TestCase
 
     assert_equal "Netflix", Entry.find_by!(external_id: "identical-name", source: "plaid").name
   end
+
+  # A categorized entry keeps its name when Plaid resends it, but its Plaid
+  # namespace is refreshed. If the description the name was built from were
+  # refreshed with it, the rule filter would rebuild a name that no longer matches
+  # the real one: "= Target" would stop matching and "!= Target" would start.
+  # Banks can rewrite a pending transaction's description as it settles, and
+  # people categorize pending transactions, so this is a real path.
+  test "exact name rules keep matching after the description changes on a categorized entry" do
+    first = plaid_transaction("drifting", description: "TARGET 00023")
+    @category_matcher.stubs(:match).returns(categories(:food_and_drink))
+
+    PlaidEntry::Processor.new(first, plaid_account: @plaid_account, category_matcher: @category_matcher).process
+    entry = Entry.find_by!(external_id: "drifting", source: "plaid")
+    entry.mark_user_modified!
+
+    resent = plaid_transaction("drifting", description: "TARGET 00023 SAN MATEO CA")
+    PlaidEntry::Processor.new(resent, plaid_account: @plaid_account, category_matcher: @category_matcher).process
+    entry.reload
+
+    assert_equal "Target - TARGET 00023", entry.name, "a categorized entry keeps its name"
+    assert_equal "TARGET 00023", entry.transaction.extra.dig("plaid", "original_description"),
+      "the description the name was built from stays with it"
+
+    assert_includes name_rule_matches("=", "Target"), entry.transaction.id
+    assert_not_includes name_rule_matches("!=", "Target"), entry.transaction.id
+  end
+
+  private
+    # @param id [String] Plaid's transaction id
+    # @param description [String] the bank's original description
+    # @return [Hash] a Plaid transaction naming Target as the merchant
+    def plaid_transaction(id, description:)
+      {
+        "transaction_id" => id,
+        "merchant_name" => "Target",
+        "original_description" => description,
+        "amount" => 25,
+        "date" => Date.current,
+        "iso_currency_code" => "USD",
+        "personal_finance_category" => { "detailed" => "Food" },
+        "merchant_entity_id" => "#{id}-merchant"
+      }
+    end
+
+    # @param operator [String] "=" or "!="
+    # @param value [String] the value the rule compares against
+    # @return [Array<String>] transaction ids the rule selects in this account
+    def name_rule_matches(operator, value)
+      condition = Rule::Condition.new(
+        rule: rules(:one), condition_type: "transaction_name", operator: operator, value: value
+      )
+      condition.apply(condition.prepare(@plaid_account.current_account.transactions)).map(&:id)
+    end
 end

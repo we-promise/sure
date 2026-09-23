@@ -31,7 +31,10 @@ class PlaidEntry::Processor
       # plaid_extra is a full snapshot of what Plaid currently reports, so the
       # branch is replaced rather than merged — otherwise a nested value Plaid
       # stopped sending (say payment_meta.payee) would linger indefinitely.
-      replace_extra_namespaces: [ "plaid" ]
+      replace_extra_namespaces: [ "plaid" ],
+      # #name is built from original_description, and the rule filter rebuilds
+      # it from the stored copy, so the two have to move together.
+      name_extra_keys: { "plaid" => [ "original_description" ] }
     )
   end
 
@@ -87,12 +90,12 @@ class PlaidEntry::Processor
       plaid_transaction["original_description"]
     end
 
-    # Every key is emitted on every sync, including when the value is absent.
-    # Account::ProviderImportAdapter#import_transaction deep-merges this into
-    # the existing Transaction#extra, so an omitted key would leave the previous
-    # value in place forever once Plaid stops sending it — the drawer would go
-    # on showing metadata the provider has since cleared. Writing an explicit
-    # nil is what clears it.
+    # The whole branch is replaced on every import (see replace_extra_namespaces
+    # in #process), so a field Plaid stops sending is cleared by omission. Absent
+    # values are left out rather than stored as nil: they add nothing, and a nil
+    # key is one more name for a details rule to trip over.
+    #
+    # @return [Hash] the Plaid snapshot, under its own namespace
     def plaid_extra
       plaid = {
         "pending" => plaid_transaction["pending"],
@@ -102,7 +105,7 @@ class PlaidEntry::Processor
         "transaction_code" => plaid_transaction["transaction_code"].presence,
         "payment_meta" => compact_provider_hash(plaid_transaction["payment_meta"]),
         "counterparties" => compact_counterparties(plaid_transaction["counterparties"])
-      }
+      }.compact
 
       { "plaid" => plaid }
     end

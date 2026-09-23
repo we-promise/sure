@@ -40,8 +40,11 @@ class Account::ProviderImportAdapter
   # @param replace_extra_namespaces [Array<String>] Top-level `extra` keys the provider owns
   #   outright. Those branches are replaced rather than deep-merged, so a nested value the
   #   provider stops sending is actually removed instead of lingering.
+  # @param name_extra_keys [Hash{String=>Array<String>}] Keys, per namespace, that `name`
+  #   was built from. When a protected entry keeps its name, these keep their stored values
+  #   too, so the name and the data it came from cannot drift apart.
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [])
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {})
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -111,6 +114,7 @@ class Account::ProviderImportAdapter
           # ownership is the stronger claim, so those are left alone.
           if skip_reason == "user_modified" && !entry.import_locked?
             owned = extra.is_a?(Hash) ? extra.deep_stringify_keys.slice(*replace_extra_namespaces.map(&:to_s)) : nil
+            owned = keep_name_sources(entry, owned, name_extra_keys)
             apply_provider_extra(entry, owned, replace_extra_namespaces)
           end
 
@@ -1081,6 +1085,36 @@ class Account::ProviderImportAdapter
 
       entry.transaction.extra = existing.except(*replaced).deep_merge(incoming)
       entry.transaction.save!
+    end
+
+    # A protected entry keeps its name, so the values that name was built from have
+    # to stay as well. Rule::ConditionFilter::TransactionName rebuilds a Plaid name
+    # from the stored original_description; refreshing that value while the name
+    # stays put would make the rebuilt name disagree with the real one, and flip
+    # `=` and `!=` rules on the entry. The drawer shows the kept value too, so it
+    # agrees with the name the user sees.
+    #
+    # A key with nothing stored yet takes the incoming value: a row imported before
+    # the key existed was never combined, so there is nothing to keep in step.
+    #
+    # @param entry [Entry] the protected entry
+    # @param owned [Hash, nil] the incoming namespaces the provider owns
+    # @param name_extra_keys [Hash{String=>Array<String>}] keys the name was built from
+    # @return [Hash, nil] owned, with those keys carried over from what is stored
+    def keep_name_sources(entry, owned, name_extra_keys)
+      return owned if owned.blank? || name_extra_keys.blank?
+
+      stored = entry.transaction.extra || {}
+      name_extra_keys.each do |namespace, keys|
+        ns = namespace.to_s
+        next unless owned[ns].is_a?(Hash) && stored[ns].is_a?(Hash)
+
+        Array(keys).map(&:to_s).each do |key|
+          owned[ns][key] = stored[ns][key] if stored[ns].key?(key)
+        end
+      end
+
+      owned
     end
 
     # Removes the pending flag every provider writes under its own namespace,
