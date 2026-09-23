@@ -62,3 +62,5 @@ pin "utils/cash_flow_chart_data", to: "utils/cash_flow_chart_data.mjs"
 pin "utils/sankey_preview_analytics", to: "utils/sankey_preview_analytics.mjs"
 
 pin "utils/sankey_comparison", to: "utils/sankey_comparison.mjs"
+
+pin "utils/sankey_labels", to: "utils/sankey_labels.mjs"
