@@ -41,16 +41,9 @@ required `transacted_at`, converted into the mapped account's ledger timezone.
 
 ## Wallet in settings
 
-Bank sync lists Apple Wallet as a US / UK bank provider. Its App Store button is
-disabled with “Coming soon!” hover help; new connections are set up in the iOS app.
-The screenshots use synthetic test data with Brandfetch disabled, showing the
-standard initials fallback.
-
-![Available Apple Wallet provider](financekit/apple-wallet-available.png)
-
-Existing connections appear under Your Connections with sync status, acceptance
-and import timestamps, and links to accounts the viewer can access. Wallet accounts
-also appear in Accounts.
+Bank sync lists Apple Wallet as a US / UK bank provider. Existing connections
+appear under Your Connections with sync status, acceptance and import timestamps,
+and links to accounts the viewer can access. Wallet accounts also appear in Accounts.
 
 Accounts can be unlinked from the web UI. Because a publisher credential covers
 all selected Wallet accounts, unlinking one disconnects that Wallet connection
@@ -59,10 +52,6 @@ while preserving accounts, balances, transactions, and source identities. The
 iOS client can start a new enrollment with a new enrollment ID and map its Apple
 source account IDs again; existing accounts and imported transactions are reused
 without requiring the old connection or stream state.
-
-![Unlinking an Apple Wallet connection](financekit/apple-wallet-unlink.png)
-
-![Connected Apple Wallet provider](financekit/apple-wallet-connected.png)
 
 ## Debugging uploads
 
@@ -121,18 +110,8 @@ Wallet demo data is included in every environment by both the full generator
 and sample-data reset flow. It does not enable FinanceKit feature flags or change
 user permissions. These records simulate imported data; no iOS device is required.
 
-## Wallet logo
-
-Apple Wallet uses the standard `ProviderLogo` flow with the `apple.com` domain:
-Brandfetch supplies the Apple logo when configured, with the usual initials
-fallback when the image is unavailable. No Wallet-specific asset is bundled.
-
 ## Capacity and retention
 
 Protocol 2 limits each publisher to 20 selected accounts, 500 events per batch, 1 MiB of JSON, and 100 accepted/processing batches. Each capture is limited to 100 chunks so the complete capture fits in the inbox. A client can upload larger histories using multiple consecutive captures.
 
 Exact payload bytes are retained for seven days after apply, permanent failure, or revocation for response-loss recovery and operational investigation. Canonical financial data and source identity records follow Sure's normal family retention and deletion behavior. Family financial-data reset removes FinanceKit connections, lineages, observations, identities, conflicts, and batch receipts for that family.
-
-## Rollback
-
-Disable `FINANCEKIT_ENABLED` first. Existing Sure data remains readable, uploads return a retryable unavailable response, and workers stop applying FinanceKit batches. Do not drop the tables during an application rollback; keep receipts and lineage data until all deployed versions no longer reference them and the retention decision is explicit.
