@@ -2248,6 +2248,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
   end
 
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "asset_class"
+    t.string "asset_sub_class"
+    t.boolean "classification_locked", default: false, null: false
+    t.string "classification_source"
     t.string "country_code"
     t.datetime "created_at", null: false
     t.string "exchange_acronym"
@@ -2256,6 +2260,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.datetime "failed_fetch_at"
     t.integer "failed_fetch_count", default: 0, null: false
     t.date "first_provider_price_on"
+    t.string "industry"
     t.string "kind", default: "standard", null: false
     t.datetime "last_health_check_at"
     t.string "logo_url"
@@ -2263,6 +2268,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.boolean "offline", default: false, null: false
     t.string "offline_reason"
     t.string "price_provider"
+    t.string "region"
+    t.string "sector"
     t.string "ticker", null: false
     t.datetime "updated_at", null: false
     t.string "website_url"
@@ -2272,6 +2279,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.index ["kind"], name: "index_securities_on_kind"
     t.index ["price_provider", "offline_reason"], name: "index_securities_on_price_provider_and_offline_reason"
     t.index ["price_provider"], name: "index_securities_on_price_provider"
+    t.check_constraint "asset_class::text = ANY (ARRAY['alternative_investment'::character varying::text, 'commodity'::character varying::text, 'equity'::character varying::text, 'fixed_income'::character varying::text, 'liquidity'::character varying::text, 'real_estate'::character varying::text])", name: "chk_securities_asset_class"
+    t.check_constraint "asset_sub_class::text = ANY (ARRAY['bond'::character varying::text, 'cash'::character varying::text, 'collectible'::character varying::text, 'commodity'::character varying::text, 'cryptocurrency'::character varying::text, 'etf'::character varying::text, 'loan'::character varying::text, 'mutual_fund'::character varying::text, 'precious_metal'::character varying::text, 'private_equity'::character varying::text, 'real_estate'::character varying::text, 'stock'::character varying::text])", name: "chk_securities_asset_sub_class"
+    t.check_constraint "classification_source::text = ANY (ARRAY['provider'::character varying::text, 'manual'::character varying::text, 'ai'::character varying::text, 'default'::character varying::text])", name: "chk_securities_classification_source"
     t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
   end
 
