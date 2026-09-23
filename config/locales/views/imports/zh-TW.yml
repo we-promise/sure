@@ -471,7 +471,7 @@ zh-TW:
       processing_failed_with_message: '%{message}'
       processing_failed_generic: 處理失敗：%{error}
       ready_for_review_title: 可以開始檢視了
-      ready_for_review_description: 我們從您的對帳單中擷取了 %{count} 筆交易。請審核後匯入，即可加入您的帳戶。
+      ready_for_review_description: "您的對帳單中有 %{count} 筆交易尚未加入此帳戶。請審核後匯入。"
       transactions_extracted: 擷取到的交易
       transactions_extracted_count:
         one: '%{count} 筆交易'

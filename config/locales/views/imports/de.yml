@@ -366,7 +366,9 @@ de:
       publish_transactions:
         one: "%{count} Transaktion übernehmen"
         other: "%{count} Transaktionen übernehmen"
-      ready_for_review_description: Wir haben %{count} Transaktionen aus deinem Auszug gelesen. Prüf sie und übernimm sie in dein Konto.
+      ready_for_review_description:
+        one: "%{count} Transaktion aus deinem Auszug ist noch nicht in diesem Konto. Prüf sie und übernimm sie, um sie hinzuzufügen."
+        other: "%{count} Transaktionen aus deinem Auszug sind noch nicht in diesem Konto. Prüf sie und übernimm sie, um sie hinzuzufügen."
       ready_for_review_title: Bereit zur Prüfung
       review_transactions: Transaktionen prüfen
       save_account: Speichern

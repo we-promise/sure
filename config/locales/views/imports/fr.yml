@@ -382,8 +382,8 @@ fr:
         one: Publier %{count} transaction
         other: Publier %{count} transactions
       ready_for_review_description:
-        one: "Nous avons extrait %{count} transaction de votre relevé. Examinez-la et publiez-la pour l'ajouter."
-        other: "Nous avons extrait %{count} transactions de votre relevé. Examinez-les et publiez-les pour les ajouter."
+        one: "%{count} transaction de votre relevé ne figure pas encore dans ce compte. Examinez-la et publiez-la pour l'ajouter."
+        other: "%{count} transactions de votre relevé ne figurent pas encore dans ce compte. Examinez-les et publiez-les pour les ajouter."
       ready_for_review_title: Prêt pour l'examen
       review_transactions: Examiner les transactions
       save_account: Enregistrer
