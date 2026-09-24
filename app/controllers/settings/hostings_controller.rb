@@ -55,6 +55,8 @@ class Settings::HostingsController < ApplicationController
     # monthly request caps when a key is configured
     @rentcast_usage = Provider::Registry.get_provider(:rentcast)&.usage
     @realie_usage = Provider::Registry.get_provider(:realie)&.usage
+
+    load_external_assistant_models
   end
 
   def update
@@ -248,21 +250,17 @@ class Settings::HostingsController < ApplicationController
       Setting.public_send("#{key}=", parsed)
     end
 
-    if hosting_params.key?(:external_assistant_url)
-      Setting.external_assistant_url = hosting_params[:external_assistant_url]
-    end
-
-    update_encrypted_setting(:external_assistant_token)
-
-    if hosting_params.key?(:external_assistant_agent_id)
-      Setting.external_assistant_agent_id = hosting_params[:external_assistant_agent_id]
-    end
+    reselect_external_agent = update_external_assistant_settings!
 
     update_assistant_type
     update_categorization_provider
     update_categorization_tuning
 
-    redirect_to settings_hosting_path, notice: t(".success")
+    if reselect_external_agent
+      redirect_to settings_hosting_path, alert: t("settings.hostings.assistant_settings.external_agent_reselect")
+    else
+      redirect_to settings_hosting_path, notice: t(".success")
+    end
   rescue Setting::ValidationError => error
     # Preserve user-submitted OpenAI config so the form re-renders with their
     # input intact (issue #1824). The form auto-submits on blur, so a partial
@@ -275,6 +273,9 @@ class Settings::HostingsController < ApplicationController
     @jev_endpoint_input = hosting_params[:jev_endpoint] if hosting_params.key?(:jev_endpoint)
     @jev_model_input = hosting_params[:jev_model] if hosting_params.key?(:jev_model)
     flash.now[:alert] = error.message
+    # Nothing was saved, so reload the agent options from the stored config;
+    # otherwise the 422 page shows an empty, disabled agent dropdown.
+    load_external_assistant_models
     render :show, status: :unprocessable_entity
   end
 
@@ -286,6 +287,7 @@ class Settings::HostingsController < ApplicationController
   def disconnect_external_assistant
     Setting.external_assistant_url = nil
     Setting.external_assistant_token = nil
+    Setting.external_assistant_model = nil
     Setting.external_assistant_agent_id = nil
     Current.family.update!(assistant_type: "builtin") unless ENV["ASSISTANT_TYPE"].present?
     redirect_to settings_hosting_path, notice: t(".external_assistant_disconnected")
@@ -298,7 +300,96 @@ class Settings::HostingsController < ApplicationController
     # Strong parameters for the self-hosting settings form.
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_agent_id, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
+    end
+
+    def load_external_assistant_models
+      @external_assistant_models = []
+      @external_assistant_catalog_error = nil
+      effective_type = ENV["ASSISTANT_TYPE"].presence || Current.family.assistant_type
+      return unless effective_type == "external"
+
+      config = Assistant::External.config
+      return unless config.url.present? && config.token.present?
+
+      # Rendered synchronously, so keep a stalled gateway from holding the page.
+      @external_assistant_models = Assistant::External::ModelCatalog.new(
+        url: config.url,
+        token: config.token,
+        open_timeout: 3,
+        read_timeout: 5
+      ).models
+    rescue Assistant::External::ModelCatalog::Error => error
+      @external_assistant_catalog_error = error.message
+    end
+
+    # Validates the submitted endpoint, token and agent together before any of
+    # them is written, so a rejected change leaves the stored config untouched.
+    # Returns true when the connection changed and the old agent must be reselected.
+    def update_external_assistant_settings!
+      keys = %i[external_assistant_url external_assistant_token external_assistant_model]
+      return false unless keys.any? { |key| hosting_params.key?(key) }
+
+      current = Assistant::External.config
+      url = ENV["EXTERNAL_ASSISTANT_URL"].presence || submitted_external_assistant_url(current.url)
+      token = ENV["EXTERNAL_ASSISTANT_TOKEN"].presence || submitted_external_assistant_token(current.token)
+      connection_changed = url != current.url || token != current.token
+
+      model_submitted = hosting_params.key?(:external_assistant_model)
+      model = model_submitted ? hosting_params[:external_assistant_model].presence : Setting.external_assistant_model.presence
+      raise Setting::ValidationError, t("settings.hostings.assistant_settings.external_agent_required") if model_submitted && model.blank?
+
+      reselect = false
+      if model_submitted
+        unless external_assistant_model_ids(url, token).include?(model)
+          raise Setting::ValidationError, t("settings.hostings.assistant_settings.external_agent_invalid") unless connection_changed
+
+          # The agent list on the page came from the previous connection. Save
+          # the new connection, but never pair it with an agent it does not offer.
+          model = nil
+          reselect = true
+        end
+      elsif connection_changed && model.present? && ENV["EXTERNAL_ASSISTANT_MODEL"].blank?
+        available = begin
+          external_assistant_model_ids(url, token)
+        rescue Setting::ValidationError
+          []
+        end
+        unless available.include?(model)
+          model = nil
+          reselect = true
+        end
+      end
+
+      Setting.transaction do
+        Setting.external_assistant_url = hosting_params[:external_assistant_url] if hosting_params.key?(:external_assistant_url)
+        update_encrypted_setting(:external_assistant_token)
+        if model_submitted || reselect
+          Setting.external_assistant_model = model
+          Setting.external_assistant_agent_id = nil
+        end
+      end
+
+      reselect
+    end
+
+    def submitted_external_assistant_url(current_url)
+      return current_url unless hosting_params.key?(:external_assistant_url)
+
+      hosting_params[:external_assistant_url].presence
+    end
+
+    def submitted_external_assistant_token(current_token)
+      return current_token unless hosting_params.key?(:external_assistant_token)
+
+      value = hosting_params[:external_assistant_token].to_s.strip
+      value == "********" ? current_token : value.presence
+    end
+
+    def external_assistant_model_ids(url, token)
+      Assistant::External::ModelCatalog.new(url: url, token: token).models.pluck(:id)
+    rescue Assistant::External::ModelCatalog::Error => error
+      raise Setting::ValidationError, t("settings.hostings.assistant_settings.agent_discovery_error", error: error.message)
     end
 
     # Family-scoped, like assistant_type: it decides whose transaction data is

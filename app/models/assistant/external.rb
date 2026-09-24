@@ -1,5 +1,5 @@
 class Assistant::External < Assistant::Base
-  Config = Struct.new(:url, :token, :agent_id, :session_key, keyword_init: true)
+  Config = Struct.new(:url, :token, :model, :agent_id, :session_key, keyword_init: true)
   MAX_CONVERSATION_MESSAGES = 20
 
   class << self
@@ -8,7 +8,7 @@ class Assistant::External < Assistant::Base
     end
 
     def configured?
-      config.url.present? && config.token.present?
+      config.url.present? && config.token.present? && config.model.present?
     end
 
     def available_for?(user)
@@ -27,10 +27,41 @@ class Assistant::External < Assistant::Base
       Config.new(
         url: ENV["EXTERNAL_ASSISTANT_URL"].presence || Setting.external_assistant_url.presence,
         token: ENV["EXTERNAL_ASSISTANT_TOKEN"].presence || Setting.external_assistant_token.presence,
-        agent_id: ENV["EXTERNAL_ASSISTANT_AGENT_ID"].presence || Setting.external_assistant_agent_id.presence || "main",
+        model: selected_model || legacy_model,
+        agent_id: routing_agent_id,
         session_key: ENV.fetch("EXTERNAL_ASSISTANT_SESSION_KEY", "agent:main:main")
       )
     end
+
+    private
+      # Explicitly selected model (env or Settings), or nil when only legacy config exists.
+      def selected_model
+        ENV["EXTERNAL_ASSISTANT_MODEL"].presence || Setting.external_assistant_model.presence
+      end
+
+      # Pre-discovery installs routed with X-Agent-Id and defaulted to "main"
+      # when nothing was set. Keep that default so URL + token installs keep working.
+      def legacy_model
+        legacy = ENV["EXTERNAL_ASSISTANT_AGENT_ID"].presence || Setting.external_assistant_agent_id.presence || "main"
+        return legacy if legacy.start_with?("openclaw")
+
+        "openclaw/#{legacy}"
+      end
+
+      # The routing header always follows the model that is sent. A legacy
+      # EXTERNAL_ASSISTANT_AGENT_ID only applies while no model is selected.
+      def routing_agent_id
+        model = selected_model
+        return ENV["EXTERNAL_ASSISTANT_AGENT_ID"].presence || agent_id_for(legacy_model) if model.blank?
+
+        agent_id_for(model)
+      end
+
+      def agent_id_for(model)
+        return "main" if model.blank? || model.in?([ "openclaw", "openclaw/default" ])
+
+        model.delete_prefix("openclaw/").presence || "main"
+      end
   end
 
   def respond_to(message, assistant_message: nil)
@@ -83,6 +114,7 @@ class Assistant::External < Assistant::Base
       Assistant::External::Client.new(
         url: self.class.config.url,
         token: self.class.config.token,
+        model: self.class.config.model,
         agent_id: self.class.config.agent_id,
         session_key: self.class.config.session_key
       )
