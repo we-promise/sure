@@ -402,10 +402,12 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     ExchangeRate.delete_all
     ExchangeRatePair.delete_all
 
+    start_date = 30.days.ago.to_date
     clamp_date = 5.days.ago.to_date
     ExchangeRatePair.create!(
       from_currency: "USD", to_currency: "EUR",
       first_provider_rate_on: clamp_date,
+      provider_history_checked_from: start_date,
       provider_name: Setting.exchange_rate_provider.to_s
     )
 
@@ -429,7 +431,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
       exchange_rate_provider: @provider,
       from: "USD",
       to: "EUR",
-      start_date: 30.days.ago.to_date,
+      start_date: start_date,
       end_date: Date.current
     ).import_provider_rates
 
@@ -444,6 +446,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     ExchangeRatePair.create!(
       from_currency: "USD", to_currency: "EUR",
       first_provider_rate_on: clamp_date,
+      provider_history_checked_from: 30.days.ago.to_date,
       provider_name: Setting.exchange_rate_provider.to_s
     )
 
@@ -460,6 +463,296 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
       start_date: 30.days.ago.to_date,
       end_date: Date.current
     ).import_provider_rates
+  end
+
+  test "backfills older history once when account history predates the first rate marker" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    start_date = 30.days.ago.to_date
+    first_provider_rate_on = 10.days.ago.to_date
+    previously_checked_from = first_provider_rate_on
+    ExchangeRatePair.create!(
+      from_currency: "USD",
+      to_currency: "EUR",
+      first_provider_rate_on: first_provider_rate_on,
+      provider_history_checked_from: previously_checked_from,
+      provider_name: Setting.exchange_rate_provider.to_s
+    )
+
+    (first_provider_rate_on..Date.current).each do |date|
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date:, rate: 1.0)
+    end
+
+    fetch_start = get_provider_fetch_start_date(start_date)
+    provider_response = provider_success_response(
+      (fetch_start..Date.current).map do |date|
+        OpenStruct.new(from: "USD", to: "EUR", date:, rate: 1.0 + (date - fetch_start).to_i / 1000.0)
+      end
+    )
+
+    @provider.expects(:fetch_exchange_rates)
+             .once
+             .with(from: "USD", to: "EUR", start_date: fetch_start, end_date: Date.current)
+             .returns(provider_response)
+
+    2.times do
+      ExchangeRate::Importer.new(
+        exchange_rate_provider: @provider,
+        from: "USD",
+        to: "EUR",
+        start_date: start_date,
+        end_date: Date.current
+      ).import_provider_rates
+    end
+
+    pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
+    assert_equal fetch_start, pair.first_provider_rate_on
+    assert_equal fetch_start, pair.provider_history_checked_from
+    forward_dates = ExchangeRate.where(from_currency: "USD", to_currency: "EUR").pluck(:date)
+    inverse_dates = ExchangeRate.where(from_currency: "EUR", to_currency: "USD").pluck(:date)
+    assert_includes forward_dates, start_date
+    assert_includes inverse_dates, start_date
+  end
+
+  test "tracks the queried boundary when the database already contains a continuous prefix" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    start_date = 30.days.ago.to_date
+    prefetched_through = start_date + 7.days
+    first_provider_rate_on = 10.days.ago.to_date
+    ExchangeRatePair.create!(
+      from_currency: "USD",
+      to_currency: "EUR",
+      first_provider_rate_on: first_provider_rate_on,
+      provider_history_checked_from: first_provider_rate_on,
+      provider_name: Setting.exchange_rate_provider.to_s
+    )
+
+    (start_date..prefetched_through).each do |date|
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date:, rate: 1.0)
+    end
+    (first_provider_rate_on..Date.current).each do |date|
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date:, rate: 1.0)
+    end
+
+    first_missing_date = prefetched_through + 1.day
+    fetch_start = get_provider_fetch_start_date(first_missing_date)
+    assert_operator fetch_start, :>, start_date
+    provider_response = provider_success_response(
+      (fetch_start..Date.current).map do |date|
+        OpenStruct.new(from: "USD", to: "EUR", date:, rate: 1.1 + (date - fetch_start).to_i / 1000.0)
+      end
+    )
+
+    @provider.expects(:fetch_exchange_rates)
+             .once
+             .with(from: "USD", to: "EUR", start_date: fetch_start, end_date: Date.current)
+             .returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: start_date,
+      end_date: Date.current
+    ).import_provider_rates
+
+    pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
+    assert_equal fetch_start, pair.provider_history_checked_from
+    assert_equal Date.current, ExchangeRate.where(from_currency: "USD", to_currency: "EUR").maximum(:date)
+    assert_equal (Date.current - start_date).to_i + 1, ExchangeRate.where(from_currency: "USD", to_currency: "EUR", date: start_date..Date.current).count
+  end
+
+  test "does not repeat a successful history probe when no earlier rates exist" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    start_date = 30.days.ago.to_date
+    first_provider_rate_on = 10.days.ago.to_date
+    previously_checked_from = first_provider_rate_on
+    ExchangeRatePair.create!(
+      from_currency: "USD",
+      to_currency: "EUR",
+      first_provider_rate_on: first_provider_rate_on,
+      provider_history_checked_from: previously_checked_from,
+      provider_name: Setting.exchange_rate_provider.to_s
+    )
+
+    (first_provider_rate_on..Date.current).each do |date|
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date:, rate: 1.0)
+    end
+
+    fetch_start = get_provider_fetch_start_date(start_date)
+    provider_response = provider_success_response(
+      (first_provider_rate_on..Date.current).map do |date|
+        OpenStruct.new(from: "USD", to: "EUR", date:, rate: 1.0 + (date - first_provider_rate_on).to_i / 1000.0)
+      end
+    )
+
+    @provider.expects(:fetch_exchange_rates)
+             .once
+             .with(from: "USD", to: "EUR", start_date: fetch_start, end_date: Date.current)
+             .returns(provider_response)
+
+    2.times do
+      ExchangeRate::Importer.new(
+        exchange_rate_provider: @provider,
+        from: "USD",
+        to: "EUR",
+        start_date: start_date,
+        end_date: Date.current
+      ).import_provider_rates
+    end
+
+    pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
+    assert_equal first_provider_rate_on, pair.first_provider_rate_on
+    assert_equal fetch_start, pair.provider_history_checked_from
+    assert_not ExchangeRate.exists?(from_currency: "USD", to_currency: "EUR", date: start_date)
+  end
+
+  test "does not advance checked history boundary when provider request fails" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    start_date = 30.days.ago.to_date
+    previously_checked_from = 10.days.ago.to_date
+    ExchangeRatePair.create!(
+      from_currency: "USD",
+      to_currency: "EUR",
+      first_provider_rate_on: 10.days.ago.to_date,
+      provider_history_checked_from: previously_checked_from,
+      provider_name: Setting.exchange_rate_provider.to_s
+    )
+
+    @provider.expects(:fetch_exchange_rates).once.returns(
+      provider_error_response(Provider::TwelveData::RateLimitError.new("Rate limit exceeded"))
+    )
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: start_date,
+      end_date: Date.current
+    ).import_provider_rates
+
+    pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
+    assert_equal previously_checked_from, pair.provider_history_checked_from
+  end
+
+  test "discards a provider response when the configured provider changes in flight" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    original_provider = Setting.exchange_rate_provider
+    original_env_provider = ENV["EXCHANGE_RATE_PROVIDER"]
+    begin
+      ENV.delete("EXCHANGE_RATE_PROVIDER")
+      Setting.exchange_rate_provider = "twelve_data"
+      pair = ExchangeRatePair.for_pair(from: "USD", to: "EUR")
+      pair.update!(
+        first_provider_rate_on: 2.days.ago.to_date,
+        provider_history_checked_from: 2.days.ago.to_date
+      )
+
+      response = provider_success_response([
+        OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.2)
+      ])
+      provider = Object.new
+      provider.define_singleton_method(:fetch_exchange_rates) do |**_arguments|
+        Setting.exchange_rate_provider = "yahoo_finance"
+        ExchangeRatePair.for_pair(from: "USD", to: "EUR")
+        response
+      end
+
+      result = ExchangeRate::Importer.new(
+        exchange_rate_provider: provider,
+        provider_name: "twelve_data",
+        from: "USD",
+        to: "EUR",
+        start_date: Date.current,
+        end_date: Date.current
+      ).import_provider_rates
+
+      pair.reload
+      assert_equal 0, result
+      assert_equal "yahoo_finance", pair.provider_name
+      assert_nil pair.first_provider_rate_on
+      assert_nil pair.provider_history_checked_from
+      assert_equal 0, ExchangeRate.count
+    ensure
+      ENV["EXCHANGE_RATE_PROVIDER"] = original_env_provider
+      Setting.exchange_rate_provider = original_provider
+    end
+  end
+
+  test "rolls back both rate directions when the provider changes between upserts" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    original_env_provider = ENV["EXCHANGE_RATE_PROVIDER"]
+    begin
+      start_date = 3.days.ago.to_date
+      end_date = Date.current
+      fetch_start = get_provider_fetch_start_date(start_date)
+      response = provider_success_response(
+        (fetch_start..end_date).map do |date|
+          OpenStruct.new(from: "USD", to: "EUR", date:, rate: 1.1 + (date - fetch_start).to_i / 1000.0)
+        end
+      )
+
+      @provider.expects(:fetch_exchange_rates)
+               .twice
+               .with(from: "USD", to: "EUR", start_date: fetch_start, end_date: end_date)
+               .returns(response)
+
+      ENV["EXCHANGE_RATE_PROVIDER"] = "twelve_data"
+      importer = ExchangeRate::Importer.new(
+        exchange_rate_provider: @provider,
+        provider_name: "twelve_data",
+        from: "USD",
+        to: "EUR",
+        start_date: start_date,
+        end_date: end_date
+      )
+      original_upsert_rows = importer.method(:upsert_rows)
+      upsert_calls = 0
+      importer.define_singleton_method(:upsert_rows) do |rows|
+        result = original_upsert_rows.call(rows)
+        upsert_calls += 1
+        ENV["EXCHANGE_RATE_PROVIDER"] = "yahoo_finance" if upsert_calls == 1
+        result
+      end
+
+      assert_equal 0, importer.import_provider_rates
+      assert_equal 1, upsert_calls
+      assert_equal 0, ExchangeRate.count
+
+      pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
+      assert_equal "twelve_data", pair.provider_name
+      assert_nil pair.first_provider_rate_on
+      assert_nil pair.provider_history_checked_from
+
+      ExchangeRate::Importer.new(
+        exchange_rate_provider: @provider,
+        provider_name: "yahoo_finance",
+        from: "USD",
+        to: "EUR",
+        start_date: start_date,
+        end_date: end_date
+      ).import_provider_rates
+
+      pair.reload
+      assert_equal "yahoo_finance", pair.provider_name
+      assert_equal fetch_start, pair.first_provider_rate_on
+      assert_equal fetch_start, pair.provider_history_checked_from
+      assert_equal (end_date - start_date).to_i + 1, ExchangeRate.where(from_currency: "USD", to_currency: "EUR").count
+      assert_equal (end_date - start_date).to_i + 1, ExchangeRate.where(from_currency: "EUR", to_currency: "USD").count
+    ensure
+      ENV["EXCHANGE_RATE_PROVIDER"] = original_env_provider
+    end
   end
 
   test "clamps provider fetch to max_history_days when provider exposes limit" do
@@ -486,6 +779,9 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
       start_date: 60.days.ago.to_date,
       end_date: Date.current
     ).import_provider_rates
+
+    pair = ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR")
+    assert_equal expected_start, pair.provider_history_checked_from
   end
 
   private
