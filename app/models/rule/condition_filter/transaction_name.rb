@@ -6,11 +6,14 @@ class Rule::ConditionFilter::TransactionName < Rule::ConditionFilter
   # rule would quietly stop firing, and `!= "Target"` would quietly start,
   # matching the transactions it was written to exclude.
   #
-  # For those two operators a Plaid row therefore also matches on the merchant
-  # half alone — the text up to the separator. Every other operator is untouched,
-  # and so is every row from any other source: `=` stays case-sensitive (LIKE,
-  # never ILIKE) and a manually entered "Rent insurance" still does not satisfy
-  # `name = "Rent"`.
+  # For those two operators a Plaid row also matches when its name is exactly
+  # the rule's value, the separator and the stored original_description: the
+  # name PlaidEntry::Processor#name would have built from them. The name is
+  # rebuilt and compared with `=`, never matched as a prefix, because a prefix
+  # also catches dashes the bank wrote itself (see #plaid_aware_name_condition).
+  # Every other operator is untouched, and so is every row from any other
+  # source: `=` stays case-sensitive, and a manually entered "Rent insurance"
+  # still does not satisfy `name = "Rent"`.
   #
   # Scoped to Plaid deliberately. SimplefinEntry::Processor#name has always
   # emitted the same combined form, so SimpleFIN rules were written against

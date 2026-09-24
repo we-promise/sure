@@ -154,12 +154,14 @@ preserve all of them:
   immutable", so the name and its description are not left to drift. It costs
   nothing when the description does not change.
 
-  Settling is not that case. Plaid gives a posted transaction a new
-  `transaction_id` and links it through `pending_transaction_id` when there 
-  pending transaction that matches (can be null), so it arrives
-  as a new transaction that claims the pending entry, and there the name and
-  the description update together. Categorizing locks `category_id`, not the
-  name, so a categorized pending entry still takes the posted name.
+  Settling is not that case. A posted transaction gets a new `transaction_id`,
+  so it arrives as a new transaction rather than a resend of the pending one.
+  Plaid links the two through `pending_transaction_id` when it can match them
+  and leaves the field null when it cannot, in which case the adapter falls back
+  to an exact amount match on a recent pending entry. Whichever way it finds the
+  pending entry, the claim updates the name and the description together.
+  Categorizing locks `category_id`, not the name, so a categorized pending entry
+  still takes the posted name. A pending entry the user renamed keeps that name.
 
 `like` and `not_like` rules are deliberately left alone, and they do see the
 change: the combined name contains the merchant as well as the description, so a
