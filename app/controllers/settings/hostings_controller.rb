@@ -343,7 +343,7 @@ class Settings::HostingsController < ApplicationController
         read_timeout: 5
       ).models
     rescue Provider::Openai::ModelCatalog::Error => error
-      @openai_models_error = error.message
+      @openai_models_error = error
     end
 
     # Validates the submitted endpoint, token and agent together before any of

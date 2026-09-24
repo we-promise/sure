@@ -561,7 +561,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_select "input[name='setting[openai_model]']:not([list])"
       assert_select "datalist#openai-model-options", count: 0
-      assert_match "Model discovery returned HTTP 401.", response.body
+      assert_select "[data-testid='openai-model-discovery-hint']",
+                    text: I18n.t("settings.hostings.openai_settings.model_discovery_error.http_status", status: "401")
     end
   ensure
     Setting.openai_uri_base = nil
@@ -576,7 +577,66 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       get settings_hosting_url
 
       assert_response :success
-      assert_match I18n.t("provider.openai.model_catalog.errors.invalid_url"), response.body
+      assert_select "[data-testid='openai-model-discovery-hint']",
+                    text: I18n.t("settings.hostings.openai_settings.model_discovery_error.invalid_url")
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
+  # Cloudflare Workers AI's OpenAI-compatible base has no GET /models: it
+  # answers 405. The model field must stay plain free text with a hint.
+  CLOUDFLARE_AI_BASE = "https://api.cloudflare.com/client/v4/accounts/0123456789abcdef/ai/v1".freeze
+
+  def stub_cloudflare_models_405
+    stub_request(:get, "#{CLOUDFLARE_AI_BASE}/models").to_return(
+      status: 405,
+      headers: { "Content-Type" => "application/json" },
+      body: { result: nil, success: false, errors: [ { code: 7001, message: "GET not supported for requested URI." } ], messages: [] }.to_json
+    )
+  end
+
+  def assert_free_text_model_field_with_405_hint
+    assert_select "input[type='text'][name='setting[openai_model]']:not([list]):not([disabled])"
+    assert_select "datalist#openai-model-options", count: 0
+    assert_select "[data-testid='openai-model-discovery-hint']",
+                  text: "This endpoint doesn't list its models (HTTP 405). Type the model id; it will still work."
+  end
+
+  test "cloudflare base url without a token: rejected save keeps free text and shows the hint" do
+    with_self_hosting do
+      with_env_overrides("OPENAI_URI_BASE" => nil, "OPENAI_ACCESS_TOKEN" => nil, "OPENAI_MODEL" => nil) do
+        Setting.openai_access_token = nil
+        Setting.openai_uri_base = nil
+        Setting.openai_model = nil
+        request = stub_cloudflare_models_405
+
+        patch settings_hosting_url, params: { setting: { openai_access_token: "", openai_uri_base: CLOUDFLARE_AI_BASE, openai_model: "" } }
+
+        assert_response :unprocessable_entity
+        assert_requested request
+        assert_free_text_model_field_with_405_hint
+      end
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
+  test "cloudflare base url saved with a model: settings page keeps free text and shows the hint" do
+    with_self_hosting do
+      with_env_overrides("OPENAI_URI_BASE" => nil, "OPENAI_ACCESS_TOKEN" => nil, "OPENAI_MODEL" => nil) do
+        Setting.openai_uri_base = CLOUDFLARE_AI_BASE
+        Setting.openai_model = "@cf/meta/llama-3.1-8b-instruct"
+        stub_cloudflare_models_405
+
+        get settings_hosting_url
+
+        assert_response :success
+        assert_free_text_model_field_with_405_hint
+        assert_select "input[name='setting[openai_model]'][value='@cf/meta/llama-3.1-8b-instruct']"
+      end
     end
   ensure
     Setting.openai_uri_base = nil
