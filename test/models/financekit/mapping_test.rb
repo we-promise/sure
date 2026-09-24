@@ -32,6 +32,39 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 3, 1), Financekit::Mapping.ledger_date(record, "America/Los_Angeles")
   end
 
+  { "present" => Date.new(2026, 9, 1), "omitted" => Date.new(2026, 8, 31) }.each do |posted_at, expected_date|
+    test "booked transactions with posted_at #{posted_at} import using the existing ledger date precedence" do
+      events = financekit_events
+      events.last.fetch("transaction").delete("posted_at") if posted_at == "omitted"
+
+      batch = accept_and_apply(financekit_payload(events: events))
+
+      assert_equal "applied", batch.status
+      entry = @source.account.entries.sole
+      assert_equal expected_date, entry.date
+      assert_equal "booked", @source.financekit_transactions.sole.status
+      assert_not entry.transaction.pending?
+    end
+  end
+
+  test "pending transactions settle without posted_at while preserving identity and transacted date" do
+    events = financekit_events
+    transaction = events.last.fetch("transaction")
+    transaction["status"] = "pending"
+    transaction.delete("posted_at")
+    first = accept_and_apply(financekit_payload(events: events))
+    entry = @source.account.entries.sole
+    assert entry.transaction.pending?
+    assert_equal Date.new(2026, 8, 31), entry.date
+
+    transaction["status"] = "booked"
+    accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest, events: events))
+
+    assert_equal entry.id, @source.account.entries.sole.id
+    assert_equal Date.new(2026, 8, 31), entry.reload.date
+    assert_not entry.transaction.reload.pending?
+  end
+
   test "a malformed event rejects the whole batch before it enters the inbox" do
     events = financekit_events
     events.last.fetch("transaction")["amount"]["amount"] = 12.34

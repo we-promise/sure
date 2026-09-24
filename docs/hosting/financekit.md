@@ -32,12 +32,86 @@ After deploy:
 
 Monitor queue depth, oldest accepted batch age, `repair_required` connections, and downstream lag. Diagnostics may include publisher, batch, sequence, generation, and typed error codes. They must not include credentials, raw request bodies, transaction descriptions, merchant names, amounts, account names, or server authentication headers.
 
+## Transaction dates
+
+`posted_at` is optional, including for booked Apple Card transactions. When
+supplied, it must still be a valid timestamp no later than the capture timestamp.
+Ledger dates retain their existing precedence: `posted_at`, otherwise the
+required `transacted_at`, converted into the mapped account's ledger timezone.
+
+## Wallet in settings
+
+Bank sync lists Apple Wallet as a US / UK bank provider. Existing connections
+appear under Your Connections with sync status, acceptance and import timestamps,
+and links to accounts the viewer can access. Wallet accounts also appear in Accounts.
+
+Accounts can be unlinked from the web UI. Because a publisher credential covers
+all selected Wallet accounts, unlinking one disconnects that Wallet connection
+and makes its accounts manual. This revokes the credential and queued uploads
+while preserving accounts, balances, transactions, and source identities. The
+iOS client can start a new enrollment with a new enrollment ID and map its Apple
+source account IDs again; existing accounts and imported transactions are reused
+without requiring the old connection or stream state.
+
+## Debugging uploads
+
+Super admins can open `/settings/debug?provider_key=financekit` and filter further
+by family, level, or source. Events share `connection_id`, `publisher_id`,
+`generation`, `stream_id`, and `next_sequence`. Accepted batches also include
+`batch_id`, `capture_id`, sequence/chunk information, payload size, and event count.
+
+- `upload_accepted` means Sure stored the upload; it does not mean ledger import
+  has completed. An accepted sequence ahead of `next_sequence` is waiting for its
+  predecessor; a multi-chunk capture waits for all its chunks.
+- `upload_rejected` records a typed protocol error and HTTP status when an
+  authenticated upload fails validation. Identical accepted retries reuse their
+  receipt without another acceptance log.
+- `capture_imported` records the resulting sync ID and counts, including records
+  requiring conflict review.
+- `import_retry` includes the attempt count, retry deadline, error code, and
+  exception class. `import_failed` means repair is required; `import_blocked`
+  covers failures before a batch could be selected.
+- `downstream_completed` means account updates and rules were scheduled.
+  `downstream_failed` includes the affected account/provider link when available;
+  the inbox sweep retries this stage.
+
+These diagnostics deliberately omit exception messages and financial payloads.
+Requests rejected before reaching the batch inbox (such as invalid publisher
+credentials or content type) do not create these model-level events.
+
+## Sample accounts
+
+The standard demo account and transaction phases include a synthetic Apple Wallet connection with Apple
+Card (`CreditCard`), Apple Cash, and Nancy's Apple Cash (`Depository`, subtype `cash`). It includes a
+year of card purchases/payments and cash purchases/top-ups, plus pending activity,
+source identities, balance observations, and acceptance/import timestamps.
+Apple Cash receives a simulated 1% Daily Cash reward the day after each day's
+booked Apple Card purchases (excluding pending charges and payments), categorized
+as Cash Back. Six small gifts link the parent's Apple Cash to Nancy's account.
+Nancy spends some of each gift on candy, movies, after-school snacks, and ice
+cream: a few categorized purchases per month, with a positive running balance.
+These additions also populate older demo enrollments in place; stable source IDs
+prevent duplicate rewards, gifts, and purchases on reruns.
+
+To add just these accounts to an existing demo family without replacing its data:
+
+```sh
+FAMILY_ID=<demo-family-uuid> bin/rails demo_data:financekit
+```
+
+Alternatively use `DEMO_EMAIL=<demo-user-email>` (defaults to the configured demo
+email). `SEED=42` controls the generated amounts and merchants. Reruns preserve
+the existing demo enrollment and transactions, and upgrade older synthetic data
+with merchant-specific categories and paired transfers. Apple Card payments and
+Apple Cash top-ups come from the demo owner's manual Chase Premier Checking
+account; if absent, a funded Wallet Demo Checking account is created. Subsequent
+reruns preserve category edits and do not duplicate either transfer leg.
+Wallet demo data is included in every environment by both the full generator
+and sample-data reset flow. It does not enable FinanceKit feature flags or change
+user permissions. These records simulate imported data; no iOS device is required.
+
 ## Capacity and retention
 
 Protocol 2 limits each publisher to 20 selected accounts, 500 events per batch, 1 MiB of JSON, and 100 accepted/processing batches. Each capture is limited to 100 chunks so the complete capture fits in the inbox. A client can upload larger histories using multiple consecutive captures.
 
 Exact payload bytes are retained for seven days after apply, permanent failure, or revocation for response-loss recovery and operational investigation. Canonical financial data and source identity records follow Sure's normal family retention and deletion behavior. Family financial-data reset removes FinanceKit connections, lineages, observations, identities, conflicts, and batch receipts for that family.
-
-## Rollback
-
-Disable `FINANCEKIT_ENABLED` first. Existing Sure data remains readable, uploads return a retryable unavailable response, and workers stop applying FinanceKit batches. Do not drop the tables during an application rollback; keep receipts and lineage data until all deployed versions no longer reference them and the retention decision is explicit.

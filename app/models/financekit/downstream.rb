@@ -13,6 +13,15 @@ class Financekit::Downstream
   def perform!
     return if @batch_ids.empty?
 
+    # A drain covers a whole backlog, so diagnostics name the newest batch in it
+    # and count the rest: that keeps a capture traceable from upload through
+    # import to its downstream work without loading the payload bytes of every
+    # batch to describe them. Plucked up front so the failure path below needs
+    # no query of its own.
+    @identity = FinancekitBatch.where(id: @batch_ids)
+      .order(sequence: :desc, chunk_index: :desc).pick(:batch_id, :capture_id, :sequence)
+    account_provider = nil
+
     with_publisher_claim do
       # Re-read inside the claim. Two workers can snapshot the same ids before
       # either runs — a per-upload job and the periodic sweep overlap this way —
@@ -34,9 +43,13 @@ class Financekit::Downstream
       # landed, so a drain pays for it once rather than once per capture.
       completed_at = Time.current
       FinancekitBatch.transaction do
-        @item.selected_accounts.includes(financekit_account_lineage: :account).find_each do |mapping|
+        @item.selected_accounts.includes(financekit_account_lineage: [ :account, :account_provider ]).find_each do |mapping|
+          account_provider = mapping.financekit_account_lineage.account_provider
           mapping.account&.sync_later
         end
+        # Only the per-account fan-out above belongs to one account provider.
+        # Anything failing after it is the publisher's, so drop the attribution.
+        account_provider = nil
         @item.family.auto_match_transfers!
         @item.family.rules.where(active: true).find_each(&:apply_later)
 
@@ -44,15 +57,24 @@ class Financekit::Downstream
           .update_all(downstream_completed_at: completed_at, updated_at: completed_at)
         @item.update!(last_downstream_at: completed_at)
       end
+      Financekit::Diagnostics.capture(item: @item, source: self.class.name,
+        message: "FinanceKit downstream scheduling completed", event: "downstream_completed",
+        **identity_details(pending.size))
     end
-  rescue StandardError
-    DebugLogEntry.capture(category: "provider_sync", level: "error",
-      message: "FinanceKit downstream scheduling failed", source: self.class.name,
-      provider_key: "financekit", family: @item.family,
-      metadata: { financekit_item_id: @item.id, batches: @batch_ids.size })
+  rescue StandardError => error
+    Financekit::Diagnostics.capture(item: @item, source: self.class.name, level: "error",
+      message: "FinanceKit downstream scheduling failed", event: "downstream_failed",
+      account_provider: account_provider, error_class: error.class.name,
+      **identity_details(@batch_ids.size))
   end
 
   private
+    # Same metadata keys Financekit::Diagnostics derives from a single batch, so
+    # downstream events stay searchable alongside the rest of the capture.
+    def identity_details(batches)
+      batch_id, capture_id, sequence = @identity
+      { batches: batches, batch_id: batch_id, capture_id: capture_id, sequence: sequence }
+    end
 
     def with_publisher_claim
       acquired = ActiveRecord::Base.connection.select_value(
