@@ -83,6 +83,7 @@ class PlaidAccount::Investments::BalanceCalculator
       # total would value the positions at nothing and derive negative cash.
       return true_holdings_value + available if reported_total.zero?
 
+      return reported_total if cash_reported_in_holdings?
       return reported_total unless cash_derives_to_zero?(reported_total)
 
       reported_total + available
@@ -106,6 +107,21 @@ class PlaidAccount::Investments::BalanceCalculator
         end
 
         true_holdings.sum { |h| h["quantity"] * h["institution_price"] }
+      end
+    end
+
+    # An institution that sends its cash as a holding is describing the same
+    # money in `available`: a sweep fund sits in the holdings and is withdrawable
+    # too. Its value is inside `current_balance` already, so subtraction reaches
+    # zero for a reason that has nothing to do with cash being kept out - and
+    # adding `available` would count the sweep twice. Only `brokerage_cash?`
+    # pseudo-securities are taken out of the holdings sum; a money market fund
+    # is not one.
+    def cash_reported_in_holdings?
+      return @cash_reported_in_holdings if defined?(@cash_reported_in_holdings)
+
+      @cash_reported_in_holdings = holdings.any? do |h|
+        security_resolver.resolve(plaid_security_id: h["security_id"]).cash_equivalent?
       end
     end
 

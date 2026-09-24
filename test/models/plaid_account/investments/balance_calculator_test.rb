@@ -246,6 +246,59 @@ class PlaidAccount::Investments::BalanceCalculatorTest < ActiveSupport::TestCase
     assert_equal 0, balance_calculator.cash_balance
   end
 
+  test "does not count a sweep fund twice when the institution reports it as a holding" do
+    aapl_security_id = "plaid_aapl_security"
+    sweep_security_id = "plaid_cash_equivalent"
+
+    # A money market fund is a cash equivalent but not one of Plaid's brokerage
+    # cash pseudo-securities, so it stays in the holdings sum and subtraction
+    # reaches zero for a reason that has nothing to do with cash being withheld.
+    # `available` describes that same fund, which is withdrawable.
+    @plaid_account.update!(
+      current_balance: 4000,
+      available_balance: 1000,
+      raw_holdings_payload: {
+        transactions: [],
+        holdings: [
+          {
+            security_id: aapl_security_id,
+            cost_basis: 3000,
+            institution_price: 200,
+            institution_value: 3000,
+            quantity: 15
+          },
+          {
+            security_id: sweep_security_id,
+            cost_basis: 1000,
+            institution_price: 1,
+            institution_value: 1000,
+            quantity: 1000
+          }
+        ],
+        securities: [
+          {
+            security_id: aapl_security_id,
+            ticker_symbol: "AAPL",
+            is_cash_equivalent: false,
+            type: "equity",
+            market_identifier_code: "XNAS"
+          },
+          {
+            security_id: sweep_security_id,
+            ticker_symbol: "VMFXX",
+            is_cash_equivalent: true,
+            type: "mutual fund"
+          }
+        ]
+      }
+    )
+
+    balance_calculator = build_calculator
+
+    assert_equal 4000, balance_calculator.balance
+    assert_equal 0, balance_calculator.cash_balance
+  end
+
   private
     def build_calculator
       security_resolver = PlaidAccount::Investments::SecurityResolver.new(@plaid_account)
