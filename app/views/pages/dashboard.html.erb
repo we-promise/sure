@@ -82,17 +82,12 @@
                 icon in the header's hover cluster. Wired by the inline script
                 in _balance_sheet.html.erb (which finds it via this section). %>
             <% if section[:key] == "balance_sheet" && @balance_sheet.classification_groups.any? { |cg| cg.account_groups.any? } %>
-              <button
-                type="button"
-                class="flex items-center justify-center w-6 h-6 rounded-md text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors opacity-0 group-hover:opacity-100"
-                data-balance-sheet-expand-all="true"
-                data-expand-label="<%= t("pages.dashboard.balance_sheet.expand_all") %>"
-                data-collapse-label="<%= t("pages.dashboard.balance_sheet.collapse_all") %>"
-                aria-expanded="false"
-                aria-label="<%= t("pages.dashboard.balance_sheet.expand_all") %>">
-                <span data-icon="expand" aria-hidden="true"><%= icon("chevrons-up-down", size: "sm", class: "!w-3.5 !h-3.5") %></span>
-                <span data-icon="collapse" aria-hidden="true" style="display:none"><%= icon("chevrons-down-up", size: "sm", class: "!w-3.5 !h-3.5") %></span>
-              </button>
+              <%= render DS::ExpandToggle.new(
+                expand_label: t("pages.dashboard.balance_sheet.expand_all"),
+                collapse_label: t("pages.dashboard.balance_sheet.collapse_all"),
+                data: { balance_sheet_expand_all: true },
+                class_name: "opacity-0 group-hover:opacity-100"
+              ) %>
             <% end %>
             <% if section[:key] == "cashflow_sankey" && section[:locals][:sankey_data][:links].present? %>
               <button
