@@ -34,7 +34,7 @@
       </div>
     <% end %>
 
-    <% if account.persisted? && account.linked? %>
+    <% if account.persisted? && (account.supports_provider_balance_adjustment? || account.provider_balance_adjusted?) %>
       <div class="space-y-2 rounded-lg border border-primary p-3">
         <div class="space-y-1">
           <p class="text-sm text-primary"><%= t(".provider_balance_adjustment_label") %></p>

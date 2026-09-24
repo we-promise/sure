@@ -186,6 +186,10 @@ class SimplefinAccount::Processor
         balance
       end
 
+      # Unlike other processors, SimpleFIN resolves the adjustment here rather than
+      # passing `apply_provider_adjustment: true`, because the adjusted balance is
+      # also needed for `cash_balance` below. Do not resolve it again in
+      # `set_current_balance`; that would apply the adjustment twice.
       balance = account.resolve_provider_balance_adjustment(balance)
       cash_balance = balance if account.balance_type == :cash
 

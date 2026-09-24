@@ -944,4 +944,40 @@ class AccountTest < ActiveSupport::TestCase
     accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
     assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
   end
+
+  test "supports provider balance adjustments only when every provider applies them" do
+    assert_not @account.supports_provider_balance_adjustment?
+
+    AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    assert @account.reload.supports_provider_balance_adjustment?
+
+    AccountProvider.create!(account: @account, provider: mercury_accounts(:checking_account))
+    assert_not @account.reload.supports_provider_balance_adjustment?
+  end
+
+  test "supports provider balance adjustments for legacy SimpleFIN links" do
+    simplefin_account = SimplefinAccount.create!(
+      simplefin_item: SimplefinItem.create!(family: @family, name: "SimpleFIN", access_url: "https://example.com/token"),
+      name: "Legacy SimpleFIN checking",
+      account_id: "legacy_checking",
+      currency: "USD",
+      account_type: "checking",
+      current_balance: 100
+    )
+    @account.update!(simplefin_account: simplefin_account)
+
+    assert @account.supports_provider_balance_adjustment?
+  end
+
+  test "rejects a provider balance adjustment when the provider would overwrite it" do
+    AccountProvider.create!(account: @account, provider: mercury_accounts(:checking_account))
+    original_balance = @account.balance
+
+    result = @account.reload.set_provider_balance_adjustment(amount: "-25", reason: "Pending refund")
+
+    assert_not result.success?
+    assert_equal "This account's provider does not support balance adjustments", result.error
+    assert_equal 0, @account.reload.provider_balance_adjustment
+    assert_equal original_balance, @account.balance
+  end
 end

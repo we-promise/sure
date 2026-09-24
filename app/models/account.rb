@@ -48,6 +48,25 @@ class Account < ApplicationRecord
   VISIBLE_STATUSES = %w[draft active].freeze
   HISTORICAL_STATUSES = (VISIBLE_STATUSES + %w[disabled]).freeze
 
+  # Providers whose processors route synced balances through
+  # `set_current_balance(..., apply_provider_adjustment: true)` or
+  # `resolve_provider_balance_adjustment`. Other providers write the balance
+  # directly and would silently overwrite an adjustment on the next sync, so a
+  # provider is added here only once its processor applies the adjustment.
+  PROVIDER_BALANCE_ADJUSTMENT_PROVIDER_TYPES = %w[
+    CoinstatsAccount
+    EnableBankingAccount
+    IbkrAccount
+    IndexaCapitalAccount
+    PlaidAccount
+    QuestradeAccount
+    RedbarkAccount
+    SimplefinAccount
+    SnaptradeAccount
+    TradeRepublicAccount
+    Trading212Account
+  ].freeze
+
   scope :visible, -> { where(status: VISIBLE_STATUSES) }
   scope :historical, -> { where(status: HISTORICAL_STATUSES) }
   # Accounts whose data should be included in financial reports, dashboards,
@@ -691,6 +710,14 @@ class Account < ApplicationRecord
     provider_balance_adjustment.to_d.nonzero?
   end
 
+  def supports_provider_balance_adjustment?
+    provider_types = account_providers.map(&:provider_type)
+    provider_types << "PlaidAccount" if plaid_account_id.present?
+    provider_types << "SimplefinAccount" if simplefin_account_id.present?
+
+    provider_types.any? && (provider_types - PROVIDER_BALANCE_ADJUSTMENT_PROVIDER_TYPES).empty?
+  end
+
   def provider_adjusted_balance(provider_balance)
     provider_balance.to_d + provider_balance_adjustment.to_d
   end
@@ -725,7 +752,10 @@ class Account < ApplicationRecord
 
   def set_provider_balance_adjustment(amount:, reason:)
     amount = amount.presence&.to_d || 0.to_d
-    return Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "Only linked accounts support provider balance adjustments") unless linked?
+    # Clearing stays allowed so an adjustment set before a provider change can be removed.
+    unless linked? && (amount.zero? || supports_provider_balance_adjustment?)
+      return Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "This account's provider does not support balance adjustments")
+    end
 
     previous_adjustment = provider_balance_adjustment.to_d
     provider_balance = balance.to_d - previous_adjustment

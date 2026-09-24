@@ -142,6 +142,15 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1000, @account.cash_balance
   end
 
+  test "hides provider balance adjustment for providers that would overwrite it" do
+    AccountProvider.create!(account: @account, provider: mercury_accounts(:checking_account))
+
+    get edit_credit_card_path(@account)
+
+    assert_response :success
+    assert_no_match "provider_balance_adjustment", response.body
+  end
+
   test "requires a reason for a nonzero provider balance adjustment" do
     create_linked_plaid_account
 
