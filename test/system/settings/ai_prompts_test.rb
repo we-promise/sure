@@ -143,7 +143,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
     assert_no_selector "#confirm-dialog"
 
     within editor do
-      assert_equal default_text, find("textarea").value
+      assert_field "Prompt", with: default_text
       assert_text "Using the built-in default"
       assert find_button("Reset to default", disabled: true)
     end
