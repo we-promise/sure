@@ -76,6 +76,12 @@ class PlaidAccount::Investments::BalanceCalculator
       available = plaid_account.available_balance
 
       return reported_total unless available.present? && available.positive?
+
+      # Zero is the same report with nothing in the positions, so the holdings
+      # have to be added back rather than subtracted from: taking zero as the
+      # total would value the positions at nothing and derive negative cash.
+      return true_holdings_value + available if reported_total.zero?
+
       return reported_total unless cash_derives_to_zero?(reported_total)
 
       reported_total + available

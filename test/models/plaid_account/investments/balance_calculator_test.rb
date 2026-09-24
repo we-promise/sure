@@ -170,6 +170,43 @@ class PlaidAccount::Investments::BalanceCalculatorTest < ActiveSupport::TestCase
     assert_equal 0, balance_calculator.cash_balance
   end
 
+  test "adds positions back when the institution reports zero with holdings present" do
+    aapl_security_id = "plaid_aapl_security"
+
+    # The same zero report, but the account is not empty. Taking zero as the
+    # total would value the positions at nothing and derive negative cash.
+    @plaid_account.update!(
+      current_balance: 0,
+      available_balance: 1500,
+      raw_holdings_payload: {
+        transactions: [],
+        holdings: [
+          {
+            security_id: aapl_security_id,
+            cost_basis: 4000,
+            institution_price: 200,
+            institution_value: 4000,
+            quantity: 20
+          }
+        ],
+        securities: [
+          {
+            security_id: aapl_security_id,
+            ticker_symbol: "AAPL",
+            is_cash_equivalent: false,
+            type: "equity",
+            market_identifier_code: "XNAS"
+          }
+        ]
+      }
+    )
+
+    balance_calculator = build_calculator
+
+    assert_equal 5500, balance_calculator.balance
+    assert_equal 1500, balance_calculator.cash_balance
+  end
+
   private
     def build_calculator
       security_resolver = PlaidAccount::Investments::SecurityResolver.new(@plaid_account)
