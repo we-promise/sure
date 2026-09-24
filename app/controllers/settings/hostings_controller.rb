@@ -57,6 +57,7 @@ class Settings::HostingsController < ApplicationController
     @realie_usage = Provider::Registry.get_provider(:realie)&.usage
 
     load_external_assistant_models
+    load_openai_models
   end
 
   def update
@@ -276,6 +277,7 @@ class Settings::HostingsController < ApplicationController
     # Nothing was saved, so reload the agent options from the stored config;
     # otherwise the 422 page shows an empty, disabled agent dropdown.
     load_external_assistant_models
+    load_openai_models
     render :show, status: :unprocessable_entity
   end
 
@@ -321,6 +323,27 @@ class Settings::HostingsController < ApplicationController
       ).models
     rescue Assistant::External::ModelCatalog::Error => error
       @external_assistant_catalog_error = error.message
+    end
+
+    # Suggests model ids for a custom OpenAI-compatible endpoint (OpenRouter,
+    # Ollama, LiteLLM, ...). Only runs when a custom base URL is set: the model
+    # field stays free text, so a failed or empty listing never blocks saving.
+    # On a rejected update, list from the URL the admin just typed.
+    def load_openai_models
+      @openai_models = []
+      @openai_models_error = nil
+
+      uri_base = ENV["OPENAI_URI_BASE"].presence || @openai_uri_base_input.presence || Setting.openai_uri_base
+      return if uri_base.blank?
+
+      @openai_models = Provider::Openai::ModelCatalog.new(
+        uri_base: uri_base,
+        token: ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token,
+        open_timeout: 3,
+        read_timeout: 5
+      ).models
+    rescue Provider::Openai::ModelCatalog::Error => error
+      @openai_models_error = error.message
     end
 
     # Validates the submitted endpoint, token and agent together before any of
