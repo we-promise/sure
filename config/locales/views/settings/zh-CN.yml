@@ -322,7 +322,7 @@ zh-CN:
       security_label: 安全性
       self_hosting_label: 自托管
       sso_providers_label: SSO 提供商
-      statement_vault_label: 对账单库
+      statement_vault_label: 对账单
       tags_label: 标签
       transactions_section_title: 交易
       users_label: 用户
