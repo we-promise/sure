@@ -337,6 +337,23 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal target.email, log.user_email
   end
 
+  test "update rolls back the password change when the audit log write fails" do
+    target = users(:family_member)
+    original_digest = target.password_digest
+
+    SecurityAuditLog.stubs(:log_password_changed!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    patch admin_user_url(target), params: {
+      user: {
+        role: target.role,
+        password: "Secure1!pass"
+      }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal original_digest, target.reload.password_digest
+  end
+
   test "update does not log an audit entry when the password is unchanged" do
     target = users(:family_member)
 

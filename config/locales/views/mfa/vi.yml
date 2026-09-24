@@ -10,7 +10,9 @@ vi:
       title: Lưu mã dự phòng của bạn
     create:
       invalid_code: Mã xác minh không hợp lệ. Vui lòng thử lại.
+      setup_failed: Đã xảy ra lỗi khi bật xác thực hai yếu tố. Vui lòng thử lại.
     disable:
+      failure: Đã xảy ra lỗi khi tắt xác thực hai yếu tố. Vui lòng thử lại.
       success: Xác thực hai yếu tố đã bị tắt
     new:
       code_label: Mã xác minh

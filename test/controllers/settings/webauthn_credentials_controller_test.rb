@@ -81,7 +81,9 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
     assert_response :unprocessable_entity
   end
 
-  test "does not destroy the credential when the audit log write fails" do
+  test "still destroys the credential when the audit log write fails" do
+    # Log-and-continue, not transactional: a failed audit write must not
+    # block removing a security key the user believes is compromised.
     credential = @user.webauthn_credentials.create!(
       nickname: "YubiKey",
       credential_id: "credential-audit-fail",
@@ -89,11 +91,12 @@ class Settings::WebauthnCredentialsControllerTest < ActionDispatch::IntegrationT
     )
     SecurityAuditLog.stubs(:log_webauthn_credential_removed!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
 
-    assert_no_difference -> { @user.webauthn_credentials.count } do
+    assert_difference -> { @user.webauthn_credentials.count }, -1 do
       delete settings_webauthn_credential_path(credential)
     end
 
     assert_redirected_to settings_security_path
+    assert_not SecurityAuditLog.exists?(user: @user, event_type: "webauthn_credential_removed")
   end
 
   test "a rejected registration does not write an audit log" do

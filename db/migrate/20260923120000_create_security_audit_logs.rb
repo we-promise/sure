@@ -5,7 +5,7 @@
 # name, its `provider` column, and its existing 12 call sites are all
 # SSO-specific; folding unrelated event types into it would make "Sso" a
 # misnomer and risk touching working code for no benefit.
-class CreateSecurityAuditLogs < ActiveRecord::Migration[7.2]
+class CreateSecurityAuditLogs < ActiveRecord::Migration[8.1]
   def change
     create_table :security_audit_logs, id: :uuid do |t|
       # Nullable, not the FK's on_delete: :nullify, matching
@@ -14,8 +14,13 @@ class CreateSecurityAuditLogs < ActiveRecord::Migration[7.2]
       # what it did beforehand), not disappear or block the deletion.
       t.uuid :user_id
       t.string :event_type, null: false
-      t.string :ip_address
-      t.string :user_agent
+      # AR-encrypted (see SecurityAuditLog), like user_email below: these
+      # rows deliberately outlive the user (see the FK below), so the IP and
+      # user agent shouldn't be left recoverable in the clear once the
+      # account behind them is gone. `text`, not `string` — ciphertext runs
+      # longer than the plaintext and can exceed a varchar(255) limit.
+      t.text :ip_address
+      t.text :user_agent
       # AR-encrypted (see SecurityAuditLog) rather than folded into `metadata`
       # (plain jsonb): these rows deliberately outlive the user (see the FK
       # below), so this is the only copy of the user's email left once the

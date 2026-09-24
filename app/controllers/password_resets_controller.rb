@@ -42,6 +42,8 @@ class PasswordResetsController < ApplicationController
     else
       render :edit, status: :unprocessable_entity
     end
+  rescue ActiveRecord::ActiveRecordError
+    render :edit, status: :unprocessable_entity
   end
 
   private

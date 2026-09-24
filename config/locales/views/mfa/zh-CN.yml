@@ -10,7 +10,9 @@ zh-CN:
       title: 保存您的备用代码
     create:
       invalid_code: 验证码无效。请重试。
+      setup_failed: 启用双重认证时出错,请重试。
     disable:
+      failure: 禁用双重认证时出错,请重试。
       success: 双重认证已禁用
     new:
       code_label: 验证码

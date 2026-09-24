@@ -12,7 +12,9 @@ pt-PT:
       title: Guarde Os Seus Códigos de Cópia de Segurança
     create:
       invalid_code: Código de verificação inválido. Tente novamente.
+      setup_failed: Ocorreu um erro ao ativar a autenticação de dois fatores. Tente novamente.
     disable:
+      failure: Ocorreu um erro ao desativar a autenticação de dois fatores. Tente novamente.
       success: A autenticação de dois fatores foi desativada
     new:
       code_label: Código de Verificação

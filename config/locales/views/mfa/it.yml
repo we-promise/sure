@@ -10,7 +10,9 @@ it:
       title: Salva i tuoi codici di backup
     create:
       invalid_code: Codice di verifica non valido. Riprova.
+      setup_failed: Si è verificato un errore durante l'attivazione dell'autenticazione a due fattori. Riprova.
     disable:
+      failure: Si è verificato un errore durante la disattivazione dell'autenticazione a due fattori. Riprova.
       success: L'autenticazione a due fattori è stata disabilitata
     new:
       code_label: Codice di verifica

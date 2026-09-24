@@ -75,6 +75,10 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_nil @user.api_keys.find_by(name: "Never Persisted Key")
+    # Distinct from a validation failure (blank name, etc.): the key itself
+    # was valid, so the form re-render must say so rather than showing a
+    # blank/misleading error with nothing on the form explaining it.
+    assert_equal I18n.t("settings.api_keys.create.creation_failed"), flash[:alert]
   end
 
   test "create rejects blank name" do

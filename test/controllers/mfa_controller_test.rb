@@ -76,6 +76,20 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_empty @user.otp_backup_codes
   end
 
+  test "create refuses to touch an already-enabled MFA even with a wrong code" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    assert @user.otp_required?
+
+    assert_no_difference "SecurityAuditLog.count" do
+      post mfa_path, params: { code: "invalid" }
+    end
+
+    assert_redirected_to root_path
+    assert @user.reload.otp_required?
+    assert @user.otp_secret.present?
+  end
+
   test "verify shows MFA verification page" do
     @user.setup_mfa!
     @user.enable_mfa!
@@ -324,7 +338,27 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert SecurityAuditLog.exists?(user: @user, event_type: "mfa_disabled")
   end
 
-  test "does not disable MFA when the audit log write fails" do
+  test "disable while impersonating attributes the audit entry to the impersonator, not the victim" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    impersonator = users(:sure_support_staff)
+    sign_in impersonator
+    post join_impersonation_sessions_path, params: { impersonation_session_id: impersonation_sessions(:in_progress).id }
+    assert_response :redirect
+
+    delete disable_mfa_path
+
+    log = SecurityAuditLog.find_by(user: @user, event_type: "mfa_disabled")
+    assert_not_nil log
+    assert_equal impersonator.id, log.metadata["actor_user_id"]
+  end
+
+  test "still disables MFA when the audit log write fails" do
+    # Log-and-continue, not transactional: a failed audit write must not
+    # block turning off a security control the user is actively trying to
+    # disable (e.g. because they believe it's compromised).
     @user.setup_mfa!
     @user.enable_mfa!
     @user.webauthn_credentials.create!(
@@ -337,9 +371,10 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     delete disable_mfa_path
 
     assert_redirected_to settings_security_path
-    assert @user.reload.otp_required?
-    assert @user.otp_secret.present?
-    assert_not_empty @user.webauthn_credentials
+    assert_not @user.reload.otp_required?
+    assert_nil @user.otp_secret
+    assert_empty @user.webauthn_credentials
+    assert_not SecurityAuditLog.exists?(user: @user, event_type: "mfa_disabled")
   end
 
   private

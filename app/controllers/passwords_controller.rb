@@ -8,6 +8,8 @@ class PasswordsController < ApplicationController
     else
       render :edit, status: :unprocessable_entity
     end
+  rescue ActiveRecord::ActiveRecordError
+    render :edit, status: :unprocessable_entity
   end
 
   private
@@ -16,7 +18,7 @@ class PasswordsController < ApplicationController
       ActiveRecord::Base.transaction do
         next false unless Current.user.update(password_params)
 
-        SecurityAuditLog.log_password_changed!(user: Current.user, request: request)
+        SecurityAuditLog.log_password_changed!(user: Current.user, request: request, actor: Current.true_user)
 
         true
       end

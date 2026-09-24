@@ -2321,10 +2321,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_140000) do
   create_table "security_audit_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "event_type", null: false
-    t.string "ip_address"
+    t.text "ip_address"
     t.jsonb "metadata", default: {}, null: false
     t.datetime "updated_at", null: false
-    t.string "user_agent"
+    t.text "user_agent"
     t.text "user_email"
     t.uuid "user_id"
     t.index ["created_at"], name: "index_security_audit_logs_on_created_at"
