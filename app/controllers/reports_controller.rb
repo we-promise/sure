@@ -98,6 +98,16 @@ class ReportsController < ApplicationController
   end
 
   private
+    # A pending auto-matched transfer leg keeps kind == "standard" until
+    # confirmed (Transfer#confirm!), so `kind NOT IN BUDGET_EXCLUDED_KINDS`
+    # alone lets it through as both an expense and an income row. Mirrors
+    # IncomeStatement::ScopedTransactionsQuery#exclude_pending_transfers_sql.
+    def exclude_pending_transfer_legs(scope)
+      scope
+        .where.not(id: Transfer.pending.select(:inflow_transaction_id))
+        .where.not(id: Transfer.pending.select(:outflow_transaction_id))
+    end
+
     def setup_report_data(show_flash: false)
       @period_type = params[:period_type]&.to_sym || :monthly
       @start_date = parse_date_param(:start_date) || default_start_date
@@ -366,6 +376,7 @@ class ReportsController < ApplicationController
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: :parent)
+      transactions = exclude_pending_transfer_legs(transactions)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
       # Apply filters (includes finance account scoping)
@@ -740,6 +751,7 @@ class ReportsController < ApplicationController
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: [])
+      transactions = exclude_pending_transfer_legs(transactions)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
       transactions = apply_transaction_filters(transactions)
@@ -779,6 +791,7 @@ class ReportsController < ApplicationController
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
         .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
         .includes(entry: :account, category: [])
+      transactions = exclude_pending_transfer_legs(transactions)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
       transactions = apply_transaction_filters(transactions)
