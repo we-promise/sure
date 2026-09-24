@@ -293,6 +293,28 @@ module Family::AutoTransferMatchable
             inflow_family_rates.from_currency = inflow_candidates.currency AND
             inflow_family_rates.to_currency = :family_currency
           )
+          LEFT JOIN (
+            SELECT DISTINCT
+              route_outflows.account_id AS outflow_account_id,
+              route_inflows.account_id AS inflow_account_id
+            FROM transfers confirmed_transfers
+            JOIN entries route_outflows ON (
+              route_outflows.entryable_type = 'Transaction' AND
+              route_outflows.entryable_id = confirmed_transfers.outflow_transaction_id
+            )
+            JOIN entries route_inflows ON (
+              route_inflows.entryable_type = 'Transaction' AND
+              route_inflows.entryable_id = confirmed_transfers.inflow_transaction_id
+            )
+            JOIN accounts route_accounts ON route_accounts.id = route_outflows.account_id
+            WHERE
+              :restrict_cross_currency_to_linked_accounts = TRUE AND
+              confirmed_transfers.status = 'confirmed' AND
+              route_accounts.family_id = :family_id
+          ) confirmed_routes ON (
+            confirmed_routes.outflow_account_id = outflow_candidates.account_id AND
+            confirmed_routes.inflow_account_id = inflow_candidates.account_id
+          )
           LEFT JOIN transfers existing_transfers ON (
             existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
             existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
@@ -323,22 +345,7 @@ module Family::AutoTransferMatchable
             (
               :restrict_cross_currency_to_linked_accounts = FALSE OR
               (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")}) OR
-              EXISTS (
-                SELECT 1
-                FROM transfers confirmed_transfers
-                JOIN entries confirmed_inflows ON (
-                  confirmed_inflows.entryable_type = 'Transaction' AND
-                  confirmed_inflows.entryable_id = confirmed_transfers.inflow_transaction_id
-                )
-                JOIN entries confirmed_outflows ON (
-                  confirmed_outflows.entryable_type = 'Transaction' AND
-                  confirmed_outflows.entryable_id = confirmed_transfers.outflow_transaction_id
-                )
-                WHERE
-                  confirmed_transfers.status = 'confirmed' AND
-                  confirmed_inflows.account_id = inflow_candidates.account_id AND
-                  confirmed_outflows.account_id = outflow_candidates.account_id
-              )
+              confirmed_routes.outflow_account_id IS NOT NULL
             )
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.match_rank ASC, transfer_match_candidates.date_diff ASC
