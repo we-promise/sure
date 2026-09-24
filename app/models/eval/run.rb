@@ -38,7 +38,11 @@ class Eval::Run < ApplicationRecord
       metrics: calculated_metrics,
       total_prompt_tokens: results.sum(:prompt_tokens),
       total_completion_tokens: results.sum(:completion_tokens),
-      total_cost: results.sum(:cost)
+      # nil, not 0, when nothing reported a cost. `sum` returns 0 over all-NULL,
+      # and Eval::Reporters::ComparisonReporter picks the cheapest run with
+      # `total_cost || Float::INFINITY` — so a stored 0 would beat every
+      # instrumented run and crown whichever provider measures cost least.
+      total_cost: (results.sum(:cost) if results.where.not(cost: nil).exists?)
     )
   end
 

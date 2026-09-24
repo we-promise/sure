@@ -152,7 +152,8 @@ class Financekit::Payload
           Financekit.require!(record["merchant_category_code"].is_a?(Integer) && record["merchant_category_code"].between?(-32_768, 32_767))
         end
         Financekit.require!(timestamp!(record["transacted_at"]) <= capture)
-        Financekit.require!(record.key?("posted_at")) if record["status"] == "booked"
+        # Apple Card can be booked without a posted date; ledger_date already
+        # falls back to the required transacted_at in the account's timezone.
         Financekit.require!(timestamp!(record["posted_at"]) <= capture) if record.key?("posted_at")
         unique!(seen, [ "transaction", mapping.financekit_account_lineage_id, record["source_id"].downcase ])
       end
