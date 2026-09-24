@@ -23,20 +23,27 @@ class Rule::ConditionFilter::TransactionType < Rule::ConditionFilter
     # Logic matches Transaction::Search#apply_type_filter for consistency.
     # `kind` alone misses a pending auto-match: its legs still carry
     # kind == "standard" until confirmed, so also excluding/including rows
-    # with a `transfer` association keeps unconfirmed matches out of
-    # income/expense rule matching the same way they're excluded once
-    # confirmed.
+    # that are a leg of a still-pending transfer keeps unconfirmed matches
+    # out of income/expense rule matching the same way they're excluded once
+    # confirmed. (NOT `transfer_id` -- that column exists on `transactions`
+    # but nothing in the app ever writes it; `Transaction#transfer` reads
+    # `transfer_as_inflow`/`transfer_as_outflow` instead, see
+    # Transaction::Transferable.)
     case value
     when "income"
       scope.where("entries.amount < 0")
            .where.not(kind: Transaction::TRANSFER_KINDS)
-           .where(transfer_id: nil)
+           .where.not(id: Transfer.pending.select(:inflow_transaction_id))
+           .where.not(id: Transfer.pending.select(:outflow_transaction_id))
     when "expense"
       scope.where("entries.amount >= 0")
            .where.not(kind: Transaction::TRANSFER_KINDS)
-           .where(transfer_id: nil)
+           .where.not(id: Transfer.pending.select(:inflow_transaction_id))
+           .where.not(id: Transfer.pending.select(:outflow_transaction_id))
     when "transfer"
-      scope.where(kind: Transaction::TRANSFER_KINDS).or(scope.where.not(transfer_id: nil))
+      scope.where(kind: Transaction::TRANSFER_KINDS)
+           .or(scope.where(id: Transfer.pending.select(:inflow_transaction_id)))
+           .or(scope.where(id: Transfer.pending.select(:outflow_transaction_id)))
     else
       scope
     end

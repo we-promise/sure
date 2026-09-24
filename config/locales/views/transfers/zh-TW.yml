@@ -50,3 +50,4 @@ zh-TW:
       uncategorized: 未分類
     update:
       success: 轉帳已更新
+      already_resolved: 此轉帳已被確認或拒絕。

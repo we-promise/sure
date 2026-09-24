@@ -312,6 +312,10 @@ class RecurringTransactionsController < ApplicationController
         .merge(Entry.excluding_split_parents)
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
         .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+        # A pending auto-matched leg keeps kind == "standard" until confirmed
+        # (Transfer#confirm!), so the kind check above misses it.
+        .where.not(transactions: { id: Transfer.pending.select(:inflow_transaction_id) })
+        .where.not(transactions: { id: Transfer.pending.select(:outflow_transaction_id) })
 
       if @picker_query.present?
         pattern = "%#{ActiveRecord::Base.sanitize_sql_like(@picker_query)}%"
