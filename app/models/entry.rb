@@ -546,6 +546,10 @@ class Entry < ApplicationRecord
 
       return 0 unless has_updates
 
+      # account_id => earliest of old/new date, for entries whose date moved
+      sync_windows = {}
+      rescheduled_ids = []
+
       transaction do
         all.each do |entry|
           changed = false
@@ -562,6 +566,12 @@ class Entry < ApplicationRecord
               entry.update! attrs
               entry.transaction.record_category_usage! if entry.transaction?
               changed = true
+
+              if entry.saved_change_to_date?
+                window_start = entry.saved_change_to_date.compact.min
+                sync_windows[entry.account] = [ sync_windows[entry.account], window_start ].compact.min
+                rescheduled_ids << entry.id
+              end
             end
           end
 
@@ -579,6 +589,11 @@ class Entry < ApplicationRecord
           end
         end
       end
+
+      # Moving a date changes balances (and may make an entry scheduled), so
+      # mirror Entry#sync_account_later -- once per account, not per entry.
+      sync_windows.each { |account, window_start| account.sync_later(window_start_date: window_start) }
+      EntryScheduledSyncJob.schedule_for_entries(Entry.where(id: rescheduled_ids)) if rescheduled_ids.any?
 
       all.size
     end

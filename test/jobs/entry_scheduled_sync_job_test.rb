@@ -19,6 +19,19 @@ class EntryScheduledSyncJobTest < ActiveJob::TestCase
     end
   end
 
+  test "schedule_for_entries enqueues one job per account and date, skipping non-scheduled entries" do
+    account = accounts(:depository)
+    date = 3.days.from_now.to_date
+    first = create_transaction(account: account, date: date)
+    second = create_transaction(account: account, date: date)
+    later = create_transaction(account: account, date: date + 1.day)
+    today = create_transaction(account: account, date: Date.current)
+
+    assert_enqueued_jobs 2, only: EntryScheduledSyncJob do
+      EntryScheduledSyncJob.schedule_for_entries(Entry.where(id: [ first.id, second.id, later.id, today.id ]))
+    end
+  end
+
   test "perform triggers a sync for the entry's account" do
     entry = create_transaction(account: accounts(:depository), date: 3.days.from_now.to_date)
 

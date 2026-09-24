@@ -21,4 +21,14 @@ class EntryScheduledSyncJob < ApplicationJob
     run_at = entry.date.beginning_of_day + 5.minutes
     set(wait_until: run_at).perform_later(entry.id)
   end
+
+  # Batch variant for paths that write many entries without going through
+  # Entry#sync_account_later (imports, bulk updates). Enqueues one job per
+  # (account, date) -- they'd all sync the same account on the same day.
+  def self.schedule_for_entries(entries)
+    entries.where("entries.date > ?", Date.current)
+           .select("DISTINCT ON (entries.account_id, entries.date) entries.*")
+           .order("entries.account_id, entries.date")
+           .each { |entry| schedule_for(entry) }
+  end
 end
