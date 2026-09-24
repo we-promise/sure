@@ -376,6 +376,22 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(200, "USD"), totals.income_money  # $200
   end
 
+  test "totals excludes both legs of a still-pending auto-matched transfer" do
+    outflow_entry = create_transaction(account: @checking_account, amount: 190, kind: "standard")
+    inflow_entry = create_transaction(account: @credit_card_account, amount: -190, kind: "standard")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    # Unrelated, unmatched transactions so the totals aren't trivially zero
+    create_transaction(account: @checking_account, amount: 50, kind: "standard")
+    create_transaction(account: @checking_account, amount: -30, kind: "standard")
+
+    search = Transaction::Search.new(@family)
+    totals = search.totals
+
+    assert_equal Money.new(50, "USD"), totals.expense_money
+    assert_equal Money.new(30, "USD"), totals.income_money
+  end
+
   test "totals handles multi-currency transactions with exchange rates" do
     # Create EUR transaction
     eur_entry = create_transaction(

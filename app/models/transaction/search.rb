@@ -64,14 +64,27 @@ class Transaction::Search
         tax_advantaged_ids = family.tax_advantaged_account_ids
         scope = scope.where.not(accounts: { id: tax_advantaged_ids }) if tax_advantaged_ids.present?
 
+        # A pending auto-matched transfer leg keeps kind == "standard" until
+        # confirmed (Transfer#confirm!), so `kind NOT IN (...)` alone isn't
+        # enough here either -- see IncomeStatement::ScopedTransactionsQuery
+        # #exclude_pending_transfers_sql for the same exclusion applied to
+        # the dashboard/report totals.
+        pending_transfer_exclusion_sql = <<~SQL.chomp
+          AND NOT EXISTS (
+            SELECT 1 FROM transfers pending_transfers
+            WHERE pending_transfers.status = 'pending'
+              AND (pending_transfers.inflow_transaction_id = transactions.id OR pending_transfers.outflow_transaction_id = transactions.id)
+          )
+        SQL
+
         result = scope
                   .select(
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
+                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) #{pending_transfer_exclusion_sql} THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
+                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) #{pending_transfer_exclusion_sql} THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
