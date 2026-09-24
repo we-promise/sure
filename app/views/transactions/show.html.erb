@@ -63,11 +63,27 @@
                 label: t(".name_label"),
                 disabled: @entry.split_child? || edit_locked,
                 "data-auto-submit-form-target": "auto" %>
-          <%= f.date_field :date,
-                label: t(".date_label"),
-                max: Date.current,
-                disabled: @entry.linked? || split_locked || edit_locked,
-                "data-auto-submit-form-target": "auto" %>
+          <%= render "transactions/date_time_fields",
+            f: f,
+            date_label: t(".date_label"),
+            time_label: t(".time_label"),
+            clear_time_label: t(".clear_time"),
+            date_options: {
+              max: Date.current,
+              disabled: @entry.linked? || split_locked || edit_locked,
+              data: { "auto-submit-form-target": "auto" }
+            },
+            time_options: {
+              disabled: @entry.linked? || edit_locked,
+              data: {
+                "auto-submit-form-target": "auto",
+                autosubmit_trigger_event: "blur",
+                clear_field_target: "input"
+              }
+            },
+            clear_button_options: {
+              disabled: @entry.linked? || edit_locked
+            } %>
           <% unless @entry.transaction.transfer? %>
             <div class="flex items-center gap-2">
               <%= f.select :nature,
