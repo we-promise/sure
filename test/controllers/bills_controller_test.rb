@@ -1535,6 +1535,19 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       "a timeline row prints income minus obligations, which is a deficit on a window that earns nothing")
   end
 
+  test "income suggestions are excluded from the suggested series strip" do
+    create_suggested(name: "Visible bill", account: accounts(:depository))
+    create_suggested(name: "Income suggestion", account: accounts(:depository)).tap do |series|
+      series.update!(bill_type: "income")
+    end
+
+    get bills_url
+
+    assert_response :success
+    assert_match "Visible bill", response.body
+    assert_no_match "Income suggestion", response.body
+  end
+
   private
 
     def declare_scheduled_income(frequency:, weekday: nil, day_of_month: nil)

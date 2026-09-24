@@ -594,8 +594,9 @@ class BillsController < ApplicationController
 
     def accessible_suggested_series
       Current.family.recurring_transactions
-             .accessible_by(Current.user)
-             .suggested
+            .accessible_by(Current.user)
+            .suggested
+            .where.not(bill_type: "income")
     end
 
     # Family-wide, not user-scoped: occurrence materialization is the same
