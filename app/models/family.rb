@@ -661,12 +661,13 @@ class Family < ApplicationRecord
     Time.zone
   end
 
-  private
+  # How often to write a DebugLogEntry for the same (family, bad value)
+  # pair. `resolved_time_zone` runs on every request and every sync, so
+  # without this an affected family would write one row per call forever.
+  INVALID_TIMEZONE_LOG_INTERVAL = 1.day
+  private_constant :INVALID_TIMEZONE_LOG_INTERVAL
 
-    # How often to write a DebugLogEntry for the same (family, bad value)
-    # pair. `resolved_time_zone` runs on every request and every sync, so
-    # without this an affected family would write one row per call forever.
-    INVALID_TIMEZONE_LOG_INTERVAL = 1.day
+  private
 
     def log_invalid_timezone_once
       cache_key = [ "invalid_family_timezone", id, timezone ]

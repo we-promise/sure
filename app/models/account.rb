@@ -76,28 +76,6 @@ class Account < ApplicationRecord
     balance_money + scheduled_entries_total_money
   end
 
-  # Converts a scheduled entry's amount into this account's currency, signed
-  # the same way flows_for_date treats it (see Balance::BaseCalculator).
-  # Returns nil when the entry should not contribute -- a Buy/Sell trade
-  # (moves value between cash and holdings, not into/out of the account) or
-  # an unconvertible currency pair. Dropping the latter instead of using the
-  # raw, unconverted amount matches Balance::SyncCache#converted_entries,
-  # which drops the same entry outright once it materializes (see #1143) --
-  # a projection that doesn't drop it would disagree with the balance it's
-  # supposed to preview.
-  def convert_scheduled_entry_amount(entry)
-    return nil if entry.entryable_type == "Trade" && entry.entryable.qty.nonzero?
-
-    custom_rate = entry.entryable.exchange_rate if entry.entryable.respond_to?(:exchange_rate)
-    converted = begin
-      entry.amount_money.exchange_to(currency, date: entry.date, custom_rate: custom_rate).amount
-    rescue Money::ConversionError
-      return nil
-    end
-
-    asset? ? -converted : converted
-  end
-
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
   VISIBLE_STATUSES = %w[draft active].freeze
@@ -784,6 +762,28 @@ class Account < ApplicationRecord
           .includes(:entryable)
           .filter_map { |entry| (amount = convert_scheduled_entry_amount(entry)) && [ entry.date, amount ] }
       end
+    end
+
+    # Converts a scheduled entry's amount into this account's currency, signed
+    # the same way flows_for_date treats it (see Balance::BaseCalculator).
+    # Returns nil when the entry should not contribute -- a Buy/Sell trade
+    # (moves value between cash and holdings, not into/out of the account) or
+    # an unconvertible currency pair. Dropping the latter instead of using the
+    # raw, unconverted amount matches Balance::SyncCache#converted_entries,
+    # which drops the same entry outright once it materializes (see #1143) --
+    # a projection that doesn't drop it would disagree with the balance it's
+    # supposed to preview.
+    def convert_scheduled_entry_amount(entry)
+      return nil if entry.entryable_type == "Trade" && entry.entryable.qty.nonzero?
+
+      custom_rate = entry.entryable.exchange_rate if entry.entryable.respond_to?(:exchange_rate)
+      converted = begin
+        entry.amount_money.exchange_to(currency, date: entry.date, custom_rate: custom_rate).amount
+      rescue Money::ConversionError
+        return nil
+      end
+
+      asset? ? -converted : converted
     end
 
     def assign_default_owner

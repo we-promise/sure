@@ -69,8 +69,9 @@ class Transaction::Search
         # left untouched in that case.
         #
         # The list still shows them, so count how many were left out -- the
-        # summary uses it to explain why the headline count is higher than
-        # what the income/expense figures cover.
+        # summary uses it to say how many of the listed rows are scheduled.
+        # (Tax-advantaged accounts, filtered below, also stay out of the
+        # money figures; this count deliberately ignores that.)
         if end_date.blank?
           excluded_scheduled_count = scope.where("entries.date > ?", Date.current).count
           scope = scope.where("entries.date <= ?", Date.current)
