@@ -273,6 +273,9 @@ class Settings::HostingsController < ApplicationController
     @jev_endpoint_input = hosting_params[:jev_endpoint] if hosting_params.key?(:jev_endpoint)
     @jev_model_input = hosting_params[:jev_model] if hosting_params.key?(:jev_model)
     flash.now[:alert] = error.message
+    # Nothing was saved, so reload the agent options from the stored config;
+    # otherwise the 422 page shows an empty, disabled agent dropdown.
+    load_external_assistant_models
     render :show, status: :unprocessable_entity
   end
 

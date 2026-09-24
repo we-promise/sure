@@ -32,18 +32,14 @@
   <% end %>
   <% if effective_type == "external" %>
 
-    <div class="p-4 bg-container-inset border border-secondary rounded-lg" data-testid="external-assistant-info">
-      <div class="flex items-start gap-2">
-        <%= icon "info", class: "w-5 h-5 text-link mt-0.5 flex-shrink-0" %>
-        <div>
-          <p class="text-sm font-medium text-primary mb-2"><%= t(".external_info.title") %></p>
-          <ul class="list-disc list-inside text-xs text-secondary space-y-1 ml-2">
-            <% t(".external_info.items").each do |item| %>
-              <li><%= item %></li>
-            <% end %>
-          </ul>
-        </div>
-      </div>
+    <div data-testid="external-assistant-info">
+      <%= render DS::Alert.new(title: t(".external_info.title"), variant: :info) do %>
+        <ul class="list-disc list-inside space-y-1">
+          <% t(".external_info.items").each do |item| %>
+            <li><%= item %></li>
+          <% end %>
+        </ul>
+      <% end %>
     </div>
 
     <div class="flex items-center gap-2 text-sm mb-4">

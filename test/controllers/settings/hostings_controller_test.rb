@@ -709,6 +709,33 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "validation error page keeps the discovered agent options" do
+    with_self_hosting do
+      with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil, "EXTERNAL_ASSISTANT_MODEL" => nil) do
+        users(:family_admin).family.update!(assistant_type: "external")
+        Setting.external_assistant_url = "https://agent.example.com/v1/chat/completions"
+        Setting.external_assistant_token = "secret"
+        Setting.external_assistant_model = "openclaw/main"
+        Assistant::External::ModelCatalog.any_instance.stubs(:models).returns([
+          { id: "openclaw/main", label: "main (openclaw/main)" },
+          { id: "openclaw/research", label: "research (openclaw/research)" }
+        ])
+
+        patch settings_hosting_url, params: { setting: { external_assistant_model: "openclaw/missing" } }
+
+        assert_response :unprocessable_entity
+        assert_select "select[name='setting[external_assistant_model]']:not([disabled])" do
+          assert_select "option[selected][value='openclaw/main']"
+          assert_select "option[value='openclaw/research']"
+        end
+      end
+    end
+  ensure
+    Setting.external_assistant_url = nil
+    Setting.external_assistant_token = nil
+    Setting.external_assistant_model = nil
+  end
+
   test "rejected external assistant changes leave stored settings untouched" do
     with_self_hosting do
       with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil, "EXTERNAL_ASSISTANT_MODEL" => nil) do
