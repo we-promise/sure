@@ -24,10 +24,49 @@ export default class extends Controller {
     this.form = this.element.closest("form");
     this.canonicalizeForSubmit = this.canonicalizeForSubmit.bind(this);
     this.form?.addEventListener("formdata", this.canonicalizeForSubmit);
+
+    // The field is a plain text input (not type="number"), so nothing else
+    // stops a second decimal separator from being typed — and an amount
+    // evaluateAmountExpression rejects (more than one comma/dot) is left
+    // untouched by both #normalizeAmount and #canonicalizeForSubmit below,
+    // so it would otherwise reach the server exactly as typed and get
+    // silently mismangled by Rails' decimal typecast. Blocking the keystroke
+    // that would create a second separator keeps that state unreachable by
+    // typing in the first place.
+    this.guardSeparator = this.guardSeparator.bind(this);
+    this.amountTarget.addEventListener("beforeinput", this.guardSeparator);
   }
 
   disconnect() {
     this.form?.removeEventListener("formdata", this.canonicalizeForSubmit);
+    this.amountTarget.removeEventListener("beforeinput", this.guardSeparator);
+  }
+
+  // Only guards plain typed characters (inputType "insertText"): paste has
+  // its own handling (#pasteAmount, which replaces the whole value with an
+  // already-clean parse), and IME composition/autofill are left alone so
+  // this never fights a browser or assistive-tech input method. Scoped to
+  // the number *token* under the cursor (bounded by +-*/ on either side),
+  // not the whole field, so a second operand's own decimal point in an
+  // expression like "12,50+4,30" still works — only a second separator
+  // within the same number is blocked, unless it's replacing the existing
+  // one (a text selection that spans it), so correcting via select-and-
+  // retype still works.
+  guardSeparator(event) {
+    if (event.inputType !== "insertText" || !/[.,]/.test(event.data || "")) return;
+
+    const { selectionStart, selectionEnd, value } = event.target;
+    let tokenStart = selectionStart;
+    while (tokenStart > 0 && !/[+\-*/]/.test(value[tokenStart - 1])) tokenStart--;
+    let tokenEnd = selectionEnd;
+    while (tokenEnd < value.length && !/[+\-*/]/.test(value[tokenEnd])) tokenEnd++;
+
+    const existingOffset = value.slice(tokenStart, tokenEnd).search(/[.,]/);
+    if (existingOffset === -1) return;
+    const existingIndex = tokenStart + existingOffset;
+    if (selectionStart <= existingIndex && existingIndex < selectionEnd) return;
+
+    event.preventDefault();
   }
 
   handleCurrencyChange(e) {
