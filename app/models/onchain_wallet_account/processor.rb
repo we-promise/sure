@@ -46,15 +46,20 @@ class OnchainWalletAccount::Processor
   def repair_display_only_movements
     return 0 unless account
 
-    normalized = normalize_legacy_transfers
+    normalized, amount_changed = normalize_legacy_transfers
 
     candidates = display_only_entries
-    return normalized if candidates.empty?
+    upgraded = 0
+    if candidates.any? && (security = resolve_security)
+      upgraded = candidates.count { |entry| upgrade_to_trade(entry, security) }
+    end
 
-    security = resolve_security
-    return normalized if security.nil?
+    # Zeroing a legacy amount rewrites history, but only an account sync persists
+    # the recalculated balances — and an idle wallet schedules none of its own.
+    # Without this its chart keeps the phantom cash until some other sync runs.
+    account.sync_later if amount_changed
 
-    normalized + candidates.count { |entry| upgrade_to_trade(entry, security) }
+    normalized + upgraded
   end
 
   private
@@ -312,17 +317,22 @@ class OnchainWalletAccount::Processor
     #
     # Scoped to this processor's own external_id prefix and to `source:
     # SOURCE`, so a trade the user entered by hand is never touched.
+    # @return [Array(Integer, Boolean)] entries normalized, and whether any
+    #   amount changed — the part that needs a balance recalculation
     def normalize_legacy_transfers
       entries = account.entries
                        .where(source: SOURCE, entryable_type: "Trade")
                        .where("external_id LIKE ?", "#{holding_external_id}_%")
                        .includes(:entryable)
                        .to_a
-      return 0 if entries.empty?
+      return [ 0, false ] if entries.empty?
 
-      entries.count do |entry|
+      amount_changed = false
+
+      count = entries.count do |entry|
         trade = entry.entryable
         expected_name = movement_name(trade.qty.to_d)
+        amount_changed ||= !entry.amount.zero?
         already_normalized = trade.investment_activity_label == TRANSFER_LABEL &&
                              entry.name == expected_name &&
                              entry.amount.zero?
@@ -338,6 +348,8 @@ class OnchainWalletAccount::Processor
         end
         true
       end
+
+      [ count, amount_changed ]
     end
 
     def display_only_entries

@@ -312,7 +312,11 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     # A transfer written before transfers became cash-neutral.
     entry.update!(amount: -75)
 
-    assert_equal 1, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+    # The corrected amount only reaches the chart once an account sync
+    # recalculates the balances, so the repair has to ask for one.
+    assert_difference -> { @account.syncs.count }, 1 do
+      assert_equal 1, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+    end
     assert_equal 0, entry.reload.amount
   end
 
@@ -322,7 +326,9 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     store_movements(fake_movement(external_id: "tx1", amount: "1.5", timestamp: date))
     OnchainWalletAccount::Processor.new(@onchain_account).process
 
-    assert_equal 0, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+    assert_no_difference -> { @account.syncs.count } do
+      assert_equal 0, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+    end
   end
 
   test "the repair leaves a movement alone while its price is still unknown" do
