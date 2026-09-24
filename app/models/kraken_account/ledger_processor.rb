@@ -16,6 +16,10 @@ class KrakenAccount::LedgerProcessor
   # Ledger types we import as Transaction entries.
   SUPPORTED_TYPES = %w[deposit withdrawal staking earn fee].freeze
 
+  # Types whose fee is charged on top of a movement with an external counterparty,
+  # and so must stay a separate entry for transfer matching to work.
+  SPLIT_FEE_TYPES = %w[deposit withdrawal].freeze
+
   # Ledger types we intentionally ignore (handled elsewhere or out of scope).
   SKIP_TYPES = %w[trade transfer margin rollover settled adjustment].freeze
 
@@ -93,9 +97,14 @@ class KrakenAccount::LedgerProcessor
       raw_fee    = ledger["fee"].to_d
       date       = Time.zone.at(ledger["time"].to_d).to_date
 
-      # Compute the total balance impact: Kraken applies amount - fee to the balance.
-      # abs_impact captures the full magnitude of the cash movement for this event.
-      abs_impact = (raw_amount - raw_fee).abs
+      # Kraken applies amount - fee to the balance, and reports the two separately.
+      # Deposits and withdrawals are emitted as two entries so the movement keeps the
+      # figure the counterparty actually sees: a bank records the transfer net of
+      # Kraken's fee, and Transfer requires both legs to sum to zero, so folding the
+      # fee in here makes the entry permanently unmatchable. Other ledger types have
+      # no counterparty to reconcile against and keep the combined figure.
+      split_fee = SPLIT_FEE_TYPES.include?(type) && !raw_fee.zero?
+      abs_impact = split_fee ? raw_amount.abs : (raw_amount - raw_fee).abs
       return if abs_impact.zero?
 
       normalized = normalizer.normalize(raw_asset)
@@ -127,6 +136,34 @@ class KrakenAccount::LedgerProcessor
       )
 
       @existing_external_ids << external_id
+
+      process_ledger_fee(external_id, ledger_id, ledger, raw_fee, symbol, date) if split_fee
+    end
+
+    # Kraken's fee is always a cost, so it is an outflow whichever way the principal
+    # moved. Its own external_id keeps it idempotent alongside the principal entry.
+    def process_ledger_fee(principal_external_id, ledger_id, ledger, raw_fee, symbol, date)
+      fee_external_id = "#{principal_external_id}_fee"
+      return if @existing_external_ids.include?(fee_external_id)
+
+      fee_amount, price_missing = resolve_amount(raw_fee.abs, symbol, date)
+      return if fee_amount.nil? || fee_amount.zero?
+
+      account.entries.create!(
+        date: date,
+        name: "Fee #{raw_fee.abs} #{symbol}",
+        amount: fee_amount.abs,
+        currency: target_currency,
+        external_id: fee_external_id,
+        source: "kraken",
+        entryable: Transaction.new(
+          kind: transaction_kind("fee"),
+          investment_activity_label: activity_label("fee"),
+          extra: build_extra(ledger_id, ledger, ledger["asset"].to_s, price_missing)
+        )
+      )
+
+      @existing_external_ids << fee_external_id
     end
 
     # Returns [family_currency_amount, price_missing_bool] or [nil, nil] on hard failure.
