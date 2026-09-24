@@ -9,7 +9,7 @@
     when :err  then "border border-destructive-subtle"
     else            "border border-transparent"
     end
-  sync_action   = entry[:partial].present? ? render("settings/providers/sync_button", provider_key: entry[:provider_key], last_synced_at: last_synced) : nil
+  sync_action   = entry[:partial].present? && entry[:sync_supported] != false ? render("settings/providers/sync_button", provider_key: entry[:provider_key], last_synced_at: last_synced) : nil
   status_pill   = render("settings/providers/status_pill", status: status)
   maturity_lbl  = Settings::ProviderCard.maturity_label(entry[:maturity])
   details_data  = entry[:auto_open_param].present? ? { controller: "auto-open", auto_open_param_value: entry[:auto_open_param] } : {}
