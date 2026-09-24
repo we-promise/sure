@@ -21,10 +21,7 @@ class AutoSyncScheduler
 
     hour, minute = time_str.split(":").map(&:to_i)
     timezone = ActiveSupport::TimeZone[timezone_str] || ActiveSupport::TimeZone["UTC"]
-    local_time = timezone.now.change(hour: hour, min: minute, sec: 0)
-    utc_time = local_time.utc
-
-    cron = "#{utc_time.min} #{utc_time.hour} * * *"
+    cron = "#{minute} #{hour} * * * #{timezone.tzinfo.name}"
 
     job = Sidekiq::Cron::Job.create(
       name: JOB_NAME,
