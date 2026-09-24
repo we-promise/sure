@@ -281,6 +281,21 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_not_nil second.reload.downstream_completed_at
   end
 
+  test "the sweep recovers a bounded backlog in the publisher's own order" do
+    first = accept_and_apply
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: []))
+    FinancekitBatch.where(id: [ first.id, second.id ]).update_all(downstream_completed_at: nil)
+
+    # One batch per pass, so the pass has to choose. Without an order Postgres
+    # may return either, and the choice decides which capture waits for the
+    # next sweep.
+    stub_const(Financekit, :MAX_QUEUED, 1) { FinancekitInboxJob.perform_now }
+
+    assert_not_nil first.reload.downstream_completed_at
+    assert_nil second.reload.downstream_completed_at
+  end
+
   test "the sweep recovers applied batches whose downstream work was lost" do
     batch = accept_and_apply
     batch.update_columns(downstream_completed_at: nil)

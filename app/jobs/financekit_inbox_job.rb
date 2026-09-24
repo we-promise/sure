@@ -34,7 +34,12 @@ class FinancekitInboxJob < ApplicationJob
         item = FinancekitItem.find_by(id: financekit_item_id)
         next unless item && Financekit.enabled?(item.family)
 
-        scope = pending.where(financekit_item_id: financekit_item_id).limit(Financekit::MAX_QUEUED)
+        # Ordered because the limit makes the choice matter: without it Postgres
+        # may return any MAX_QUEUED of the backlog, so the same rows can lose
+        # every sweep while newer ones complete. Stream order is the publisher's
+        # own order and matches the financekit_stream_sequence index.
+        scope = pending.where(financekit_item_id: financekit_item_id)
+          .order(:generation, :stream_id, :sequence).limit(Financekit::MAX_QUEUED)
         Financekit::Downstream.new(item, scope).perform!
       end
     end
