@@ -55,4 +55,24 @@ class AutoMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to auto_matches_url
     assert_not @family.reload.auto_match_transfers_disabled?
   end
+
+  test "update_settings enqueues an immediate match scan when re-enabling" do
+    @family.update!(auto_match_transfers_disabled: true)
+
+    assert_enqueued_with(job: AutoMatchTransfersJob, args: [ @family ]) do
+      patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "false" }
+    end
+  end
+
+  test "update_settings does not enqueue a match scan when disabling" do
+    assert_no_enqueued_jobs(only: AutoMatchTransfersJob) do
+      patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
+    end
+  end
+
+  test "update_settings does not enqueue a match scan when the setting doesn't change" do
+    assert_no_enqueued_jobs(only: AutoMatchTransfersJob) do
+      patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "false" }
+    end
+  end
 end

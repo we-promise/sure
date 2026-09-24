@@ -50,3 +50,4 @@ uk:
       uncategorized: Без категорії
     update:
       success: Переказ оновлено
+      already_resolved: Цей переказ уже підтверджено або відхилено.

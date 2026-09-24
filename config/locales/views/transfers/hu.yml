@@ -43,3 +43,4 @@ hu:
       transfer_amount: '[Transfer amount]'
     update:
       success: Átutalás frissítve
+      already_resolved: Ez az átutalás már meg lett erősítve vagy elutasítva.

@@ -29,3 +29,4 @@ nl:
       settings: Instellingen
     update:
       success: Overboeking bijgewerkt
+      already_resolved: Deze overschrijving is al bevestigd of afgewezen.

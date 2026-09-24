@@ -48,3 +48,4 @@ es:
       uncategorized: Sin categorizar
     update:
       success: Transferencia actualizada
+      already_resolved: Esta transferencia ya se confirmó o rechazó.

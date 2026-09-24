@@ -19,7 +19,13 @@ class AutoMatchesController < ApplicationController
   def update_settings
     was_disabled = Current.family.auto_match_transfers_disabled?
     Current.family.update!(auto_match_settings_params)
-    cleanup_pending_auto_matches! if !was_disabled && Current.family.auto_match_transfers_disabled?
+    now_disabled = Current.family.auto_match_transfers_disabled?
+
+    cleanup_pending_auto_matches! if !was_disabled && now_disabled
+    # Re-enabling should have an immediate effect rather than waiting for the
+    # next scheduled sync -- run the (potentially slow, family-wide) match
+    # scan in the background instead of blocking this request.
+    AutoMatchTransfersJob.perform_later(Current.family) if was_disabled && !now_disabled
 
     respond_to do |format|
       format.html do
