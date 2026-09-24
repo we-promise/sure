@@ -13,20 +13,13 @@ class FinancekitConflict < ApplicationRecord
       lock!
       Financekit.require!(status == "open", "conflict_already_resolved", 409)
       update!(status: "resolved", resolution: resolution, resolved_by: user, resolved_at: Time.current)
-      case resolution
-      when "keep_sure"
-        # Same rule as retry_after_repair below: a record is under review while
-        # it still has an open conflict, whichever resolution closed this one.
-        if financekit_transaction
-          financekit_transaction.update!(review_required: financekit_transaction.financekit_conflicts.open.exists?)
-        end
-      when "retry_after_repair"
+      if resolution == "retry_after_repair"
         release_conflicting_observation!
         financekit_item.mark_repair!("conflict_retry_requested")
-        if financekit_transaction
-          financekit_transaction.update!(review_required: financekit_transaction.financekit_conflicts.open.exists?)
-        end
       end
+      # Both resolutions land on the same rule: a record is under review while
+      # it still has an open conflict, whichever resolution closed this one.
+      financekit_transaction&.refresh_review_required!
     end
   end
 

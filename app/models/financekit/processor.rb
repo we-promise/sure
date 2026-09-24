@@ -149,8 +149,7 @@ class Financekit::Processor
       # capture that covers it, so without this the resolved conflict reopens
       # on the next batch and the family is asked the same question forever.
       if settled_by_family?(identity)
-        identity.review_required = identity.financekit_conflicts.open.exists?
-        identity.save!
+        identity.refresh_review_required!
         counts["settled"] += 1
         return
       end
@@ -222,7 +221,7 @@ class Financekit::Processor
         # protected entry stays and the answered conflict is not reopened.
         # Review state follows the same rule as resolution and upserts: it is
         # open while any conflict about this record still is.
-        identity.review_required = identity.financekit_conflicts.open.exists?
+        identity.review_required = identity.review_required_from_conflicts
         counts["settled"] += 1
       elsif entry
         Entry.transaction do
