@@ -93,10 +93,11 @@ namespace :evals do
       provider: provider,
       model: model,
       name: run_name,
-      status: "pending"
+      status: "pending",
+      provider_config: split_config
     )
 
-    runner = dataset.runner_class.new(eval_run)
+    runner = runner_class_for(dataset, provider).new(eval_run)
 
     puts "Running evaluation..."
     start_time = Time.current
@@ -200,10 +201,10 @@ namespace :evals do
 
   desc "Generate report for specific runs"
   task :report, [ :run_ids ] => :environment do |_t, args|
-    run_ids = (args[:run_ids] || ENV["RUN_IDS"])&.split(",")
+    run_ids = run_ids_from(args[:run_ids], args.extras, "RUN_IDS")
 
     runs = if run_ids.present?
-      Eval::Run.where(id: run_ids)
+      runs_for!(run_ids)
     else
       Eval::Run.completed.order(created_at: :desc).limit(5)
     end
@@ -231,6 +232,77 @@ namespace :evals do
       puts
       puts "Exported to: #{csv_path}"
     end
+  end
+
+  desc "Report the Bayes -> provider cascade (provider accuracy on the residual Bayes declines)"
+  task :cascade, [ :bayes_run_id, :provider_run_ids ] => :environment do |_t, args|
+    bayes_id = args[:bayes_run_id] || ENV["BAYES"]
+    provider_ids = run_ids_from(args[:provider_run_ids], args.extras, "PROVIDERS")
+
+    if bayes_id.blank? || provider_ids.blank?
+      puts "Usage: rake evals:cascade[bayes_run_id,provider_run_id1,provider_run_id2]"
+      puts "   or: BAYES=<run_id> PROVIDERS=<id1>,<id2> rake evals:cascade"
+      puts
+      puts "Produce the runs first, all on the same split:"
+      puts "  PROVIDER=bayes SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,naive-bayes]'"
+      puts "  PROVIDER=jev SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,~typesafe/jev-latest]'"
+      exit 1
+    end
+
+    bayes_run = runs_for!([ bayes_id ]).first
+    provider_runs = runs_for!(provider_ids)
+
+    puts Eval::Reporters::CascadeReport.new(bayes_run: bayes_run, provider_runs: provider_runs)
+  end
+
+  desc "Analyze a candidate run against a baseline (calibration, disagreement, verdict)"
+  task :analyze, [ :baseline_run_id, :candidate_run_id ] => :environment do |_t, args|
+    baseline_id = args[:baseline_run_id] || ENV["BASELINE"]
+    candidate_id = args[:candidate_run_id] || ENV["CANDIDATE"]
+
+    if baseline_id.blank? || candidate_id.blank?
+      puts "Usage: rake evals:analyze[baseline_run_id,candidate_run_id]"
+      puts "   or: BASELINE=<run_id> CANDIDATE=<run_id> rake evals:analyze"
+      puts
+      puts "The candidate is the provider under evaluation; the baseline is what"
+      puts "it would replace. Both runs must cover the same dataset."
+      exit 1
+    end
+
+    baseline = Eval::Run.find(baseline_id)
+    candidate = Eval::Run.find(candidate_id)
+
+    puts "=" * 80
+    puts "Candidate Analysis"
+    puts "=" * 80
+    puts "  Dataset:   #{candidate.dataset.name}"
+    puts "  Baseline:  #{baseline.provider}:#{baseline.model}"
+    puts "  Candidate: #{candidate.provider}:#{candidate.model}"
+    puts
+
+    puts Eval::Reporters::ComparisonReporter.new([ baseline, candidate ]).to_table
+    puts
+
+    puts "-" * 80
+    puts "Confidence calibration -- #{candidate.provider}:#{candidate.model}"
+    puts "-" * 80
+    puts Eval::Metrics::Calibration.new(candidate).to_table
+    puts
+
+    disagreement = Eval::Reporters::DisagreementReport.new(baseline, candidate)
+    puts "-" * 80
+    puts "Disagreement"
+    puts "-" * 80
+    puts disagreement.to_table
+    puts
+
+    puts "-" * 80
+    puts Eval::Reporters::Recommendation.new(
+      baseline: baseline,
+      candidate: candidate,
+      disagreement: disagreement
+    ).to_table
+    puts
   end
 
   desc "Quick smoke test to verify provider configuration"
@@ -748,14 +820,76 @@ namespace :evals do
 
   private
 
+    # Bayes is trained per-family rather than called as a provider, so it needs
+    # its own runner regardless of the dataset's eval_type.
+    def runner_class_for(dataset, provider)
+      return Eval::Runners::BayesRunner if provider.to_s == "bayes"
+
+      dataset.runner_class
+    end
+
+    # A run restricted to one side of the train/test split. Only set when asked
+    # for: an unsplit run still evaluates the whole dataset, which is what the
+    # existing single-provider benchmarks do.
+    # Rake binds only the arguments a task declares, so `rake 'x[a,b,c]'` on a
+    # two-argument task puts "c" in `extras` rather than dropping it. Reading
+    # both means the comma form works for any number of ids and the CLI needs
+    # no second separator.
+    def run_ids_from(value, extras, env_key)
+      ids = value.present? ? [ value, *extras ] : ENV[env_key].to_s.split(",")
+
+      ids.map(&:strip).reject(&:blank?)
+    end
+
+    # All-or-nothing: `where(id: ids)` returns whatever matched, so a single
+    # mistyped id would quietly narrow the report rather than fail, and the
+    # output gives no hint that a run is missing. Comparing like for like
+    # against ids the caller asked for by name is the only way to tell the
+    # difference between "this run scored badly" and "this run was never read".
+    def runs_for!(ids)
+      runs = Eval::Run.where(id: ids).to_a
+      missing = ids - runs.map(&:id)
+
+      if missing.any?
+        puts "Error: no run found for #{missing.join(', ')}"
+        exit 1
+      end
+
+      runs
+    end
+
+    def split_config
+      role = ENV["SPLIT_ROLE"].presence
+      return {} if role.blank?
+
+      {
+        "split_role" => role,
+        "split_seed" => (ENV["SPLIT_SEED"].presence || Eval::Runners::SampleSplit::DEFAULT_SEED).to_i,
+        "split_ratio" => (ENV["SPLIT_RATIO"].presence || Eval::Runners::SampleSplit::DEFAULT_TRAIN_RATIO).to_f
+      }
+    end
+
     def format_metric_value(value)
       case value
+      when nil
+        # Distinguishes "the provider reported nothing" from a measured zero.
+        # Printing a bare blank reads as a value of none, which for cost is the
+        # difference between free and unmeasured.
+        "not reported"
       when Float
-        value.round(4)
+        format_metric_float(value)
       when BigDecimal
-        value.to_f.round(4)
+        format_metric_float(value.to_f)
       else
         value
       end
+    end
+
+    # Per-sample costs run around 1e-5, which 4 decimal places renders as 0.0 —
+    # reporting a paid provider as free. Small magnitudes keep more places.
+    def format_metric_float(value)
+      return value.round(4) if value.zero? || value.abs >= 0.01
+
+      value.round(8)
     end
 end
