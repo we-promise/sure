@@ -301,6 +301,30 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_not upgraded.excluded
   end
 
+  test "the repair zeroes the legacy cash amount on a priced transfer" do
+    date = 3.days.ago.to_date
+    price_asset_at(date, 50)
+    store_movements(fake_movement(external_id: "tx1", amount: "1.5", timestamp: date))
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    entry = onchain_entry("tx1")
+    assert_equal "Trade", entry.entryable_type
+    # A transfer written before transfers became cash-neutral.
+    entry.update!(amount: -75)
+
+    assert_equal 1, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+    assert_equal 0, entry.reload.amount
+  end
+
+  test "the repair leaves an already normalized transfer alone" do
+    date = 3.days.ago.to_date
+    price_asset_at(date, 50)
+    store_movements(fake_movement(external_id: "tx1", amount: "1.5", timestamp: date))
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    assert_equal 0, OnchainWalletAccount::Processor.new(@onchain_account).repair_display_only_movements
+  end
+
   test "the repair leaves a movement alone while its price is still unknown" do
     store_movements(fake_movement(external_id: "tx1", amount: "1", timestamp: 3.days.ago.to_date))
     OnchainWalletAccount::Processor.new(@onchain_account).process
