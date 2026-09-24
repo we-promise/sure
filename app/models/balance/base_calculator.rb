@@ -54,6 +54,39 @@ class Balance::BaseCalculator
       end
     end
 
+    # True only for the opening anchor's own date — a pre-entry baseline,
+    # unlike reconciliation/current_anchor, which are handled separately.
+    def use_opening_anchor_for_date?(date)
+      account.has_opening_anchor? && date == account.opening_anchor_date
+    end
+
+    # Converts same-day cash flow columns into their signed balance impact.
+    def cash_flows_total(flows)
+      (flows[:cash_inflows] - flows[:cash_outflows]) * flows_factor
+    end
+
+    # Converts same-day non-cash flow columns into their signed balance impact.
+    def non_cash_flows_total(flows)
+      (flows[:non_cash_inflows] - flows[:non_cash_outflows]) * flows_factor
+    end
+
+    # Splits the opening anchor's total into a pre-entry cash/non-cash baseline.
+    # For investment accounts, holdings_value_for_date is already post-trade,
+    # so back this date's trade flow out of it first to avoid double-counting.
+    def opening_anchor_starting_balances
+      if account.balance_type == :investment
+        anchor_flows = flows_for_date(account.opening_anchor_date)
+        pre_trade_non_cash = holdings_value_for_date(account.opening_anchor_date) - non_cash_flows_total(anchor_flows)
+        return [ account.opening_anchor_balance - pre_trade_non_cash, pre_trade_non_cash ]
+      end
+
+      cash = derive_cash_balance_on_date_from_total(
+        total_balance: account.opening_anchor_balance,
+        date: account.opening_anchor_date
+      )
+      [ cash, account.opening_anchor_balance - cash ]
+    end
+
     def cash_adjustments_for_date(start_cash, end_cash, net_cash_flows)
       return 0 unless account.balance_type != :non_cash
 

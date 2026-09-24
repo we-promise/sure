@@ -104,6 +104,33 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal 3.days.ago.to_date, calculator.calculation_start_date
   end
 
+  # The opening_anchor balance is a pre-entry baseline, so a transaction dated
+  # on that same day is added on top to derive the day's end balance.
+  test "opening anchor with a same-day transaction is not dropped" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 3.days.ago.to_date, amount: -200 } # 200 deposit ON the opening anchor day
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: 3.days.ago.to_date,
+          legacy_balances: { balance: 1200, cash_balance: 1200 },
+          balances: { start: 1000, start_cash: 1000, start_non_cash: 0, end_cash: 1200, end_non_cash: 0, end: 1200 },
+          flows: { cash_inflows: 200, cash_outflows: 0 },
+          adjustments: 0
+        }
+      ]
+    )
+  end
+
   test "reconciliation valuation sets absolute balance before applying subsequent transactions" do
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },
@@ -572,6 +599,77 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  # Regression: holdings_value_for_date is already post-trade, so adding that
+  # day's flows on top of a total-minus-holdings split would double-count.
+  test "opening anchor with a same-day trade on an investment account is not double-counted" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "trade", date: 3.days.ago.to_date, ticker: "AAPL", qty: 5, price: 100 } # $500 buy ON the opening anchor day
+      ],
+      holdings: [
+        { date: 3.days.ago.to_date, ticker: "AAPL", qty: 5, price: 100, amount: 500 }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: 3.days.ago.to_date, # $1000 pre-trade, split $500 cash / $500 holdings post-trade
+          legacy_balances: { balance: 1000, cash_balance: 500 },
+          balances: { start: 1000, start_cash: 1000, start_non_cash: 0, end_cash: 500, end_non_cash: 500, end: 1000 },
+          flows: { cash_inflows: 0, cash_outflows: 500, non_cash_inflows: 500, non_cash_outflows: 0, net_market_flows: 0 },
+          adjustments: 0
+        }
+      ]
+    )
+  end
+
+  # Regression: a backfilled entry earlier than the anchor pushes the anchor's
+  # own date mid-loop, and that date also has a same-day trade.
+  test "opening anchor mid-loop with a same-day trade on an investment account is not double-counted" do
+    account = create_account_with_ledger(
+      account: { type: Investment, currency: "USD" },
+      entries: [
+        { type: "reconciliation", date: 5.days.ago.to_date, balance: 2000 }, # before the anchor
+        { type: "opening_anchor", date: 4.days.ago.to_date, balance: 1000 },
+        { type: "trade", date: 4.days.ago.to_date, ticker: "AAPL", qty: 5, price: 100 } # $500 buy ON the opening anchor day
+      ],
+      holdings: [
+        { date: 5.days.ago.to_date, ticker: "AAPL", qty: 0, price: 100, amount: 0 },
+        { date: 4.days.ago.to_date, ticker: "AAPL", qty: 5, price: 100, amount: 500 }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: 5.days.ago.to_date,
+          legacy_balances: { balance: 2000, cash_balance: 2000 },
+          balances: { start: 0, start_cash: 0, start_non_cash: 0, end_cash: 2000, end_non_cash: 0, end: 2000 },
+          flows: 0,
+          adjustments: { cash_adjustments: 2000, non_cash_adjustments: 0 }
+        },
+        {
+          # Anchor's own 1000, split 500 cash / 500 holdings by the same-day trade.
+          # The -1000 adjustment captures the gap from the pre-anchor reconciliation.
+          date: 4.days.ago.to_date,
+          legacy_balances: { balance: 1000, cash_balance: 500 },
+          balances: { start: 2000, start_cash: 2000, start_non_cash: 0, end_cash: 500, end_non_cash: 500, end: 1000 },
+          flows: { cash_inflows: 0, cash_outflows: 500, non_cash_inflows: 500, non_cash_outflows: 0, net_market_flows: 0 },
+          adjustments: { cash_adjustments: -1000, non_cash_adjustments: 0 }
+        }
+      ]
+    )
+  end
+
   test "investment account interest trade is classified as cash-only, not non-cash outflow" do
     account = create_account_with_ledger(
       account: { type: Investment, currency: "USD" },
@@ -708,6 +806,44 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
           balances: { start: 20500, start_cash: 20500, start_non_cash: 0, end_cash: 20400, end_non_cash: 0, end: 20400 },
           flows: { cash_inflows: 0, cash_outflows: 100 },
           adjustments: 0
+        }
+      ]
+    )
+  end
+
+  # Regression: the opening anchor still resets even when window_start_date
+  # lands exactly on its date and seeds from a persisted prior-day balance.
+  test "incremental sync still applies the opening anchor's own flows when the window starts on its date" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "reconciliation", date: 5.days.ago.to_date, balance: 500 },
+        { type: "opening_anchor", date: 4.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 4.days.ago.to_date, amount: -200 }
+      ]
+    )
+
+    full = Balance::ForwardCalculator.new(account).calculate
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 4.days.ago.to_date)
+    incremental = calculator.calculate
+
+    assert calculator.incremental?, "expected to seed from the persisted prior-day balance, not fall back"
+    assert_equal [ 4.days.ago.to_date ], incremental.map(&:date)
+    assert_equal full.find { |b| b.date == 4.days.ago.to_date }.cash_balance, incremental.first.cash_balance
+
+    assert_calculated_ledger_balances(
+      calculated_data: incremental,
+      expected_data: [
+        {
+          # Anchor's 1000 + the same-day 200 deposit; the 500 gap from the
+          # pre-anchor reconciliation becomes the adjustment.
+          date: 4.days.ago.to_date,
+          legacy_balances: { balance: 1200, cash_balance: 1200 },
+          balances: { start: 500, start_cash: 500, start_non_cash: 0, end_cash: 1200, end_non_cash: 0, end: 1200 },
+          flows: { cash_inflows: 200, cash_outflows: 0 },
+          adjustments: { cash_adjustments: 500, non_cash_adjustments: 0 }
         }
       ]
     )

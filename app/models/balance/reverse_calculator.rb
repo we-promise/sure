@@ -14,7 +14,8 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
       # backfilled with a date earlier than the opening anchor are still
       # materialized. Reconciliation waypoints below the anchor reset the
       # balance on their own dates; use_opening_anchor_for_date? still keys off
-      # the anchor's real date, so the anchor's own treatment is unchanged.
+      # the anchor's real date, and a same-day transaction is added on top of
+      # that baseline.
       account.current_anchor_date.downto(calculation_start_date).map do |date|
         flows = flows_for_date(date)
         valuation = sync_cache.get_valuation(date)
@@ -22,14 +23,12 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
         non_cash_adjustments = 0
 
         if use_opening_anchor_for_date?(date)
-          end_cash_balance = derive_cash_balance_on_date_from_total(
-            total_balance: account.opening_anchor_balance,
-            date: date
-          )
-          end_non_cash_balance = account.opening_anchor_balance - end_cash_balance
+          start_cash_balance, start_non_cash_balance = opening_anchor_starting_balances
 
-          start_cash_balance = end_cash_balance
-          start_non_cash_balance = end_non_cash_balance
+          # The opening anchor is a pre-entry baseline, not an end-of-day
+          # snapshot, so this day's own flows are added on top.
+          end_cash_balance = start_cash_balance + cash_flows_total(flows)
+          end_non_cash_balance = start_non_cash_balance + non_cash_flows_total(flows)
           market_value_change = 0
         elsif valuation && valuation.entryable.reconciliation?
           # Reconciliation waypoint: hard-reset the END-of-day balance to the
@@ -112,13 +111,6 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
       derive_non_cash_balance(end_non_cash_balance, date, direction: :reverse)
     end
 
-    # Checks if this date should use the opening anchor balance instead of deriving it.
-    # Only the opening_anchor_date itself gets this treatment — reconciliation waypoints
-    # are handled separately in the calculate loop above.
-    def use_opening_anchor_for_date?(date)
-      account.has_opening_anchor? && date == account.opening_anchor_date
-    end
-
     # Applies the one-day bridge from the opening anchor to the first derived day.
     def use_opening_boundary_adjustment_for_date?(date)
       account.has_opening_anchor? && date == account.opening_anchor_date.next_day
@@ -141,24 +133,16 @@ class Balance::ReverseCalculator < Balance::BaseCalculator
       }
     end
 
-    # Splits the opening anchor total into the calculator's persisted components.
+    # Adds the anchor date's own flows, so this matches the end-of-day value
+    # the opening_anchor branch above produces for that same date.
     def opening_balance_components
-      opening_cash_balance = derive_cash_balance_on_date_from_total(
-        total_balance: account.opening_anchor_balance,
-        date: account.opening_anchor_date
-      )
+      start_cash_balance, start_non_cash_balance = opening_anchor_starting_balances
+      anchor_flows = flows_for_date(account.opening_anchor_date)
 
-      [ opening_cash_balance, account.opening_anchor_balance - opening_cash_balance ]
-    end
-
-    # Converts same-day cash flow columns into their signed balance impact.
-    def cash_flows_total(flows)
-      (flows[:cash_inflows] - flows[:cash_outflows]) * flows_factor
-    end
-
-    # Converts same-day non-cash flow columns into their signed balance impact.
-    def non_cash_flows_total(flows)
-      (flows[:non_cash_inflows] - flows[:non_cash_outflows]) * flows_factor
+      [
+        start_cash_balance + cash_flows_total(anchor_flows),
+        start_non_cash_balance + non_cash_flows_total(anchor_flows)
+      ]
     end
 
     # Keeps boundary non-cash math market-value-aware for investment accounts.
