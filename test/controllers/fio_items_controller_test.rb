@@ -212,4 +212,26 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     selected_option = css_select("select[name='account_type'] option[selected='selected']").first
     assert_equal "Depository", selected_option["value"]
   end
+
+  # Upstream added Fio after this branch was written, so the coverage guard in
+  # `ProviderLinkAuthorizationCoverageTest` flagged it the moment this branch
+  # merged `main` -- which is the guard doing exactly its job: a provider that
+  # can link to an existing account must not ship without the #3534 checks.
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_fio_items_url,
+    link_url: :link_existing_account_fio_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Checking", balance: 0, currency: "CZK",
+                               accountable: Depository.new)
+    },
+    provider_account: -> {
+      @fio_item.fio_accounts.create!(
+        fio_account_id: SecureRandom.hex(6), name: "Fio Checking", bank_id: "2010",
+        currency: "CZK", current_balance: 100
+      )
+    },
+    provider_param: :fio_account_id,
+    params: -> { { fio_item_id: @fio_item.id } }
+  )
 end
