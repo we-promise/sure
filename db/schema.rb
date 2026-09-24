@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1004,6 +1004,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.string "status", default: "open", null: false
     t.datetime "updated_at", null: false
     t.index ["family_id"], name: "index_financekit_conflicts_on_family_id"
+    t.index ["financekit_account_lineage_id", "details"], name: "financekit_conflicts_open_observation", unique: true, where: "(((status)::text = 'open'::text) AND ((kind)::text = 'balance_observation_conflict'::text))"
     t.index ["financekit_account_lineage_id"], name: "index_financekit_conflicts_on_lineage_id"
     t.index ["financekit_item_id", "status", "created_at"], name: "financekit_conflicts_status_created"
     t.index ["financekit_item_id"], name: "index_financekit_conflicts_on_financekit_item_id"

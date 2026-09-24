@@ -301,6 +301,48 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal 1, batch.counts.fetch("settled")
   end
 
+  test "one lineage keeps one open balance question when two publishers race" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+    raised = @item.financekit_conflicts.open.sole
+
+    # A replacement device keeps the lineage of the device it replaces, so both
+    # connections can look for an open question, find none, and then both
+    # insert. Checking first cannot settle that; the index has to.
+    enrollment = @enrollment.deep_dup
+    enrollment["enrollment_id"] = SecureRandom.uuid
+    enrollment["replaces_connection_id"] = @item.id
+    replacement = Financekit::Enrollment.create!(@user, enrollment).item
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      replacement.financekit_conflicts.create!(family: @family,
+        financekit_account_lineage: raised.financekit_account_lineage,
+        kind: "balance_observation_conflict", status: "open", details: raised.details)
+    end
+    assert_equal 1, FinancekitConflict.where(family: @family).open.count
+  end
+
+  test "losing the race for a balance question still applies the rest of the capture" do
+    first = accept_and_apply
+    disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }
+    disagreement["balance"]["money"] = money("999.00", "credit")
+    # Stands in for the other publisher inserting between the check and this
+    # insert: the question is open either way, so the import carries on rather
+    # than failing the batch and spending an attempt.
+    FinancekitConflict.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique.new("duplicate key"))
+
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: [ disagreement ]))
+
+    assert_equal "applied", second.status
+    assert_equal 1, second.counts.fetch("review_required")
+    assert_equal "active", @item.reload.status
+    assert_equal BigDecimal("112.66"), @source.account.reload.balance
+  end
+
   test "a balance decision matches an equivalent timestamp in another format" do
     first = accept_and_apply
     disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }

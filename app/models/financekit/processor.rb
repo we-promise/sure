@@ -343,9 +343,23 @@ class Financekit::Processor
       return false if history.exists?(resolution: "keep_sure")
       return true if history.open.exists?
 
-      @item.financekit_conflicts.create!(family: @item.family,
-        financekit_account_lineage: mapping.financekit_account_lineage,
-        kind: "balance_observation_conflict", status: "open", details: details)
+      # The check above cannot settle it alone: two publishers can share one
+      # lineage — a replacement device keeps the lineage of the device it
+      # replaces — so both can find no open row and then both insert. The
+      # financekit_conflicts_open_observation index decides which one wins. In a
+      # savepoint because a unique violation aborts the surrounding transaction,
+      # and this import has the rest of the capture still to apply.
+      begin
+        FinancekitConflict.transaction(requires_new: true) do
+          @item.financekit_conflicts.create!(family: @item.family,
+            financekit_account_lineage: mapping.financekit_account_lineage,
+            kind: "balance_observation_conflict", status: "open", details: details)
+        end
+      rescue ActiveRecord::RecordNotUnique
+        # The other publisher asked first. The question is open either way, and
+        # the row belongs to whichever connection got there first.
+        nil
+      end
       true
     end
 
