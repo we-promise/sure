@@ -62,10 +62,36 @@ class Provider::Openai::ModelCatalogTest < ActiveSupport::TestCase
     assert_includes assert_raises(Provider::Openai::ModelCatalog::Error) { catalog.models }.message, "Model discovery is unavailable"
   end
 
-  test "rejects non-HTTP base URLs" do
-    error = assert_raises(Provider::Openai::ModelCatalog::Error) do
-      Provider::Openai::ModelCatalog.new(uri_base: "ftp://llm.example.com/v1", token: "secret").models
+  test "rejects non-HTTP and hostless base URLs as catalog errors" do
+    [ "ftp://llm.example.com/v1", "http:/foo", "http:foo", "http:///v1", "https://" ].each do |uri_base|
+      error = assert_raises(Provider::Openai::ModelCatalog::Error, "expected #{uri_base.inspect} to be rejected") do
+        Provider::Openai::ModelCatalog.new(uri_base: uri_base, token: "secret").models
+      end
+      assert_includes error.message, I18n.t("provider.openai.model_catalog.errors.invalid_url")
     end
-    assert_includes error.message, "only HTTP and HTTPS endpoints are supported"
+  end
+
+  test "forwards static OPENAI_EXTRA_HEADERS but not session placeholders" do
+    extra = { "X-Gateway-Key" => "static-key", "X-Session-Id" => "{session_id}" }.to_json
+    request = stub_request(:get, "https://llm.example.com/v1/models")
+      .with(headers: { "X-Gateway-Key" => "static-key" }) { |req| !req.headers.key?("X-Session-Id") }
+      .to_return(status: 200, body: { data: [ { id: "my-model" } ] }.to_json)
+
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => extra) do
+      Provider::Openai::ModelCatalog.new(uri_base: "https://llm.example.com/v1", token: "secret").models
+    end
+
+    assert_requested request
+  end
+
+  test "error messages come from locale keys" do
+    stub_request(:get, "https://llm.example.com/v1/models").to_return(status: 503)
+
+    I18n.with_locale(:en) do
+      error = assert_raises(Provider::Openai::ModelCatalog::Error) do
+        Provider::Openai::ModelCatalog.new(uri_base: "https://llm.example.com/v1", token: "secret").models
+      end
+      assert_equal I18n.t("provider.openai.model_catalog.errors.http_status", status: "503"), error.message
+    end
   end
 end
