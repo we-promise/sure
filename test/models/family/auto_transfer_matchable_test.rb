@@ -8,6 +8,8 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     @depository = accounts(:depository)
     @credit_card = accounts(:credit_card)
     @loan = accounts(:loan)
+    # A manual account with no fixture transfers to or from @depository
+    @other_asset = accounts(:other_asset)
   end
 
   test "auto-matches transfers" do
@@ -164,6 +166,45 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
     # Both sides now linked -- the same pair matches.
     assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "auto-matches cross-currency transfers between manual accounts with a confirmed transfer in the same direction" do
+    load_family_currency_rates
+    confirm_transfer!(from: @depository, to: @other_asset)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    inflow = create_transaction(date: Date.current, account: @other_asset, amount: -680, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+
+    transfer = Transfer.find_by!(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+    assert_equal "pending", transfer.status
+  end
+
+  test "a confirmed transfer in the opposite direction does not enable cross-currency auto-matching for manual accounts" do
+    load_family_currency_rates
+    confirm_transfer!(from: @other_asset, to: @depository)
+
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    create_transaction(date: Date.current, account: @other_asset, amount: -680, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "a pending transfer between manual accounts does not enable cross-currency auto-matching" do
+    load_family_currency_rates
+    confirm_transfer!(from: @depository, to: @other_asset).update!(status: "pending")
+
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    create_transaction(date: Date.current, account: @other_asset, amount: -680, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
       @family.auto_match_transfers!
     end
   end
@@ -694,6 +735,12 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
       @family.transfer_match_candidates.map do |candidate|
         [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
       end
+    end
+
+    def confirm_transfer!(from:, to:)
+      outflow = create_transaction(date: 20.days.ago.to_date, account: from, amount: 100)
+      inflow = create_transaction(date: 20.days.ago.to_date, account: to, amount: -100)
+      Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: outflow.transaction, status: "confirmed")
     end
 
     # Only rates to the family currency (USD) are synced; there is no direct GBP -> CAD rate

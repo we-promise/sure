@@ -186,6 +186,11 @@ module Family::AutoTransferMatchable
     # branch additionally requires both accounts to have a live provider connection
     # (Plaid/SimpleFIN/account_providers). Manual accounts always participate in the first
     # branch's exact-amount, same-currency matching, which carries no such ambiguity.
+    # A user-confirmed transfer between the same two accounts, in the same direction,
+    # is the exception: it shows money really moves along that route (e.g. a manual
+    # RUB wallet that regularly converts into a manual THB account), so cross-currency
+    # auto-matching is allowed there too. Auto-matched transfers stay pending until the
+    # user confirms them.
     #
     # The restriction is opt-in (default false) rather than baked into the branch
     # unconditionally: Family#auto_match_transfers! passes true because a coincidental match
@@ -317,7 +322,23 @@ module Family::AutoTransferMatchable
             (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
             (
               :restrict_cross_currency_to_linked_accounts = FALSE OR
-              (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")})
+              (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")}) OR
+              EXISTS (
+                SELECT 1
+                FROM transfers confirmed_transfers
+                JOIN entries confirmed_inflows ON (
+                  confirmed_inflows.entryable_type = 'Transaction' AND
+                  confirmed_inflows.entryable_id = confirmed_transfers.inflow_transaction_id
+                )
+                JOIN entries confirmed_outflows ON (
+                  confirmed_outflows.entryable_type = 'Transaction' AND
+                  confirmed_outflows.entryable_id = confirmed_transfers.outflow_transaction_id
+                )
+                WHERE
+                  confirmed_transfers.status = 'confirmed' AND
+                  confirmed_inflows.account_id = inflow_candidates.account_id AND
+                  confirmed_outflows.account_id = outflow_candidates.account_id
+              )
             )
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.match_rank ASC, transfer_match_candidates.date_diff ASC
