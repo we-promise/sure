@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import evaluateAmountExpression from "utils/evaluate_amount_expression";
 
 // Single-form controller for the goal create / edit modal.
 //
@@ -89,7 +90,7 @@ export default class extends Controller {
   // button only enables when a submit would actually succeed.
   isValid() {
     const name = this.hasNameInputTarget ? this.nameInputTarget.value.trim() : "";
-    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
+    const amount = this.#amount();
     const accountOk = !this.requireAccountValue || this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
     return name.length > 0 && Number.isFinite(amount) && amount > 0 && accountOk;
   }
@@ -116,7 +117,7 @@ export default class extends Controller {
     event.preventDefault();
 
     const nameEmpty = !(this.hasNameInputTarget && this.nameInputTarget.value.trim().length > 0);
-    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
+    const amount = this.#amount();
     const amountInvalid = !(Number.isFinite(amount) && amount > 0);
     const noAccount = this.requireAccountValue && !this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
 
@@ -150,7 +151,7 @@ export default class extends Controller {
   updateSuggested() {
     if (!this.hasSuggestedTarget) return;
 
-    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
+    const amount = this.#amount();
     const dateValue = this.hasDateInputTarget ? this.dateInputTarget.value : null;
     const checkedCount = this.linkedAccountCheckboxTargets.filter((cb) => cb.checked).length;
 
@@ -190,6 +191,17 @@ export default class extends Controller {
   clearFieldError(input, errorEl) {
     if (input) input.classList.remove(...this.constructor.INVALID_INPUT_CLASSES);
     if (errorEl) errorEl.classList.add("hidden");
+  }
+
+  // Same locale-aware/expression parsing the money field itself normalizes
+  // to on blur (see money_field_controller.js), rather than raw
+  // Number.parseFloat, which reads a comma decimal like "0,50" as 0 and
+  // wedges the submit button/validation permanently for an otherwise-valid
+  // amount.
+  #amount() {
+    if (!this.hasAmountInputTarget) return Number.NaN;
+    const result = evaluateAmountExpression(this.amountInputTarget.value);
+    return result === null ? Number.NaN : result;
   }
 
   #money(value) {
