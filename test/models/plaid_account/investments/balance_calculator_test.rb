@@ -207,6 +207,45 @@ class PlaidAccount::Investments::BalanceCalculatorTest < ActiveSupport::TestCase
     assert_equal 1500, balance_calculator.cash_balance
   end
 
+  test "leaves an account carrying a margin loan alone" do
+    aapl_security_id = "plaid_aapl_security"
+
+    # Plaid reports borrowed funds separately, so a positive margin loan is the
+    # signal that `available` may be buying power rather than settled cash.
+    # Without this the shape below reads exactly like the case above.
+    @plaid_account.update!(
+      current_balance: 4000,
+      available_balance: 8000,
+      raw_payload: { "balances" => { "margin_loan_amount" => 2500 } },
+      raw_holdings_payload: {
+        transactions: [],
+        holdings: [
+          {
+            security_id: aapl_security_id,
+            cost_basis: 4000,
+            institution_price: 200,
+            institution_value: 4000,
+            quantity: 20
+          }
+        ],
+        securities: [
+          {
+            security_id: aapl_security_id,
+            ticker_symbol: "AAPL",
+            is_cash_equivalent: false,
+            type: "equity",
+            market_identifier_code: "XNAS"
+          }
+        ]
+      }
+    )
+
+    balance_calculator = build_calculator
+
+    assert_equal 4000, balance_calculator.balance
+    assert_equal 0, balance_calculator.cash_balance
+  end
+
   private
     def build_calculator
       security_resolver = PlaidAccount::Investments::SecurityResolver.new(@plaid_account)
