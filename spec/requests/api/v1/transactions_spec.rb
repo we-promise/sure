@@ -166,6 +166,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
             properties: {
               account_id: { type: :string, format: :uuid, description: 'Account ID (required)' },
               date: { type: :string, format: :date, description: 'Transaction date' },
+              time: { type: :string, description: 'Optional time of day, 24-hour HH:MM' },
               amount: { type: :number, description: 'Transaction amount' },
               name: { type: :string, description: 'Transaction name/description' },
               description: { type: :string, description: 'Alternative to name field' },
@@ -190,6 +191,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
           transaction: {
             account_id: account.id,
             date: Date.current.to_s,
+            time: '14:30',
             amount: 50.00,
             name: 'Test purchase',
             nature: 'expense',
@@ -309,6 +311,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
             type: :object,
             properties: {
               date: { type: :string, format: :date },
+              time: { type: :string, description: 'Optional time of day, 24-hour HH:MM. Send an empty string to clear it.' },
               amount: { type: :number },
               name: { type: :string },
               description: { type: :string, description: 'Alternative to name field' },

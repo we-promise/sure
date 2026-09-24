@@ -327,6 +327,71 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @account.id, response_data["account"]["id"]
   end
 
+  test "should create transaction with an optional time" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Test Transaction",
+        amount: 25.00,
+        date: Date.current,
+        time: "14:30",
+        currency: "USD",
+        nature: "expense"
+      }
+    }
+
+    post api_v1_transactions_url,
+         params: transaction_params,
+         headers: api_headers(@api_key)
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_equal "14:30", response_data["time"]
+  end
+
+  test "should create transaction with no time and return null" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Test Transaction",
+        amount: 25.00,
+        date: Date.current,
+        currency: "USD",
+        nature: "expense"
+      }
+    }
+
+    post api_v1_transactions_url,
+         params: transaction_params,
+         headers: api_headers(@api_key)
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_nil response_data["time"]
+  end
+
+  test "should reject an invalid time on create" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Test Transaction",
+        amount: 25.00,
+        date: Date.current,
+        time: "not-a-time",
+        currency: "USD",
+        nature: "expense"
+      }
+    }
+
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: transaction_params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "should create transaction with external idempotency key" do
     transaction_params = {
       transaction: {
@@ -664,6 +729,203 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     response_data = JSON.parse(response.body)
     assert_equal "Updated Transaction Name", response_data["name"]
+  end
+
+  test "should update transaction time" do
+    update_params = {
+      transaction: {
+        time: "08:00"
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_equal "08:00", response_data["time"]
+  end
+
+  test "should clear transaction time when explicitly blanked" do
+    @transaction.entry.update!(time: "08:00")
+
+    update_params = {
+      transaction: {
+        time: ""
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_nil response_data["time"]
+    assert_nil @transaction.entry.reload.time
+  end
+
+  test "should reject an invalid time on update and not clear the existing time" do
+    @transaction.entry.update!(time: "08:00")
+
+    update_params = {
+      transaction: {
+        time: "not-a-time"
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "08:00", @transaction.entry.reload.time.strftime("%H:%M")
+  end
+
+  test "should update split child's time directly" do
+    parent = create_transaction(amount: 100, name: "Grocery Store", account: @account)
+    parent.update!(time: "09:15")
+    child = parent.split!([
+      { name: "Part 1", amount: 60 },
+      { name: "Part 2", amount: 40 }
+    ]).first
+
+    put api_v1_transaction_url(child.transaction),
+        params: { transaction: { time: "10:00" } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert_equal "10:00", response_data["time"]
+    assert_equal "10:00", child.reload.time.strftime("%H:%M")
+    assert_equal "09:15", parent.reload.time.strftime("%H:%M")
+  end
+
+  test "should update split child's time when an unpermitted field is also present" do
+    parent = create_transaction(amount: 100, name: "Grocery Store", account: @account)
+    child = parent.split!([
+      { name: "Part 1", amount: 60 },
+      { name: "Part 2", amount: 40 }
+    ]).first
+
+    put api_v1_transaction_url(child.transaction),
+        params: { transaction: { time: "10:00", unsupported_field: "ignored" } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    response_data = JSON.parse(response.body)
+    assert_equal "10:00", response_data["time"]
+    assert_equal "10:00", child.reload.time.strftime("%H:%M")
+  end
+
+  test "should reject split child update that changes a field other than time" do
+    parent = create_transaction(amount: 100, name: "Grocery Store", account: @account)
+    child = parent.split!([
+      { name: "Part 1", amount: 60 },
+      { name: "Part 2", amount: 40 }
+    ]).first
+
+    put api_v1_transaction_url(child.transaction),
+        params: { transaction: { name: "Renamed" } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert_equal "validation_failed", response_data["error"]
+    assert_equal "Split child transactions cannot be edited directly. Use the split editor.", response_data["message"]
+    assert_equal "Part 1", child.reload.name
+  end
+
+  test "should reject split child update with malformed tag_ids" do
+    parent = create_transaction(amount: 100, name: "Grocery Store", account: @account)
+    child = parent.split!([
+      { name: "Part 1", amount: 60 },
+      { name: "Part 2", amount: 40 }
+    ]).first
+    child.transaction.update!(tag_ids: [ tags(:one).id ])
+
+    put api_v1_transaction_url(child.transaction),
+        params: { transaction: { tag_ids: nil } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    response_data = JSON.parse(response.body)
+    assert_equal "validation_failed", response_data["error"]
+    assert_equal [ tags(:one).id ], child.reload.transaction.tag_ids
+  end
+
+  test "should forbid split child time update by a member without edit permission on the account" do
+    shared_user = users(:family_member) # read_only share on credit_card, see test/fixtures/account_shares.yml
+    shared_api_key = ApiKey.create!(
+      user: shared_user,
+      name: "Shared Member Key",
+      scopes: [ "read_write" ],
+      display_key: "test_shared_#{SecureRandom.hex(8)}"
+    )
+
+    parent = create_transaction(amount: 100, name: "Shared Account Purchase", account: accounts(:credit_card))
+    child = parent.split!([
+      { name: "Part 1", amount: 60 },
+      { name: "Part 2", amount: 40 }
+    ]).first
+
+    put api_v1_transaction_url(child.transaction),
+        params: { transaction: { time: "10:00" } },
+        headers: api_headers(shared_api_key)
+
+    assert_response :forbidden
+    response_data = JSON.parse(response.body)
+    assert_equal "forbidden", response_data["error"]
+    assert_nil child.reload.time
+  end
+
+  test "should allow split child time update by a member with full_control on the account" do
+    shared_user = users(:family_member) # full_control share on depository, see test/fixtures/account_shares.yml
+    shared_api_key = ApiKey.create!(
+      user: shared_user,
+      name: "Shared Member Key",
+      scopes: [ "read_write" ],
+      display_key: "test_shared_#{SecureRandom.hex(8)}"
+    )
+
+    parent = create_transaction(amount: 100, name: "Shared Depository Purchase", account: accounts(:depository))
+    child = parent.split!([
+      { name: "Part 1", amount: 60 },
+      { name: "Part 2", amount: 40 }
+    ]).first
+
+    put api_v1_transaction_url(child.transaction),
+        params: { transaction: { time: "10:00" } },
+        headers: api_headers(shared_api_key)
+
+    assert_response :success
+    assert_equal "10:00", child.reload.time.strftime("%H:%M")
+  end
+
+  test "should forbid split child user_modified update by a member without edit permission on the account" do
+    shared_user = users(:family_member) # read_only share on credit_card, see test/fixtures/account_shares.yml
+    shared_api_key = ApiKey.create!(
+      user: shared_user,
+      name: "Shared Member Key",
+      scopes: [ "read_write" ],
+      display_key: "test_shared_#{SecureRandom.hex(8)}"
+    )
+
+    parent = create_transaction(amount: 100, name: "Shared Account Purchase", account: accounts(:credit_card))
+    child = parent.split!([
+      { name: "Part 1", amount: 60 },
+      { name: "Part 2", amount: 40 }
+    ]).first
+
+    put api_v1_transaction_url(child.transaction),
+        params: { transaction: { user_modified: true } },
+        headers: api_headers(shared_api_key)
+
+    assert_response :forbidden
+    response_data = JSON.parse(response.body)
+    assert_equal "forbidden", response_data["error"]
+    assert_not child.reload.user_modified?
   end
 
   test "should protect transaction from provider sync when updated with user_modified true" do
