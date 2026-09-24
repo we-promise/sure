@@ -242,8 +242,15 @@ class OnchainWalletAccount::Processor
           security: security,
           quantity: quantity,
           price: price,
-          # Sure's convention for trades: money leaves the account on a buy.
-          amount: -(quantity * price).round(4),
+          # A transfer moves no cash. A self-custody wallet has no cash side for
+          # this leg, so booking one fabricates a balance the account never
+          # held: the reverse balance calculator then carries a phantom cash
+          # figure across every gap between transfers (a wallet reads negative
+          # before its first deposit, a sold-out position stays negative through
+          # its zero-holding gap, and a live position's line is roughly double).
+          # The value lives in qty/price -- and therefore cost basis -- which is
+          # all a transfer needs.
+          amount: 0,
           currency: currency,
           date: date,
           # Named here because the shared helper says "Buy 0.5 shares of

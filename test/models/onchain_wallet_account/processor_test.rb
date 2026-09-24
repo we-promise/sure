@@ -98,7 +98,9 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Trade", entry.entryable_type
     assert_equal BigDecimal("1.5"), entry.entryable.qty
     assert_equal 50, entry.entryable.price
-    assert_equal(-75, entry.amount)
+    # Cash-neutral: a transfer moves no cash, so booking one here would
+    # fabricate a balance the wallet never held (see write_trade).
+    assert_equal 0, entry.amount
     # A trade is the shape this ledger needs to carry quantity and cost basis,
     # but coins arriving at an address were not bought here — and the name is
     # the one the movement already had before a price existed for it, so it does
@@ -117,7 +119,7 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by(external_id: "onchain_#{@onchain_account.id}_tx2")
     assert_equal(-1, entry.entryable.qty)
-    assert_equal 50, entry.amount
+    assert_equal 0, entry.amount
     assert_equal "Transfer", entry.entryable.investment_activity_label
     assert_equal "Sent 1.0 FAKE", entry.name
   end
@@ -257,7 +259,7 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     entry = onchain_entry("tx1")
     assert_equal "Trade", entry.entryable_type
     assert_equal BigDecimal("1.5"), entry.entryable.qty
-    assert_equal(-60, entry.amount)
+    assert_equal 0, entry.amount
     assert_equal 1, @account.entries.where(external_id: entry.external_id).count
   end
 
@@ -295,7 +297,7 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal entry.external_id, upgraded.external_id
     assert_equal BigDecimal("1.5"), upgraded.entryable.qty
     assert_equal 40, upgraded.entryable.price
-    assert_equal(-60, upgraded.amount)
+    assert_equal 0, upgraded.amount
     assert_not upgraded.excluded
   end
 
