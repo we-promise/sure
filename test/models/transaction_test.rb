@@ -328,19 +328,25 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal 0, Transaction.reassign_category!(Transaction.none, categories(:income).id)
   end
 
-  test "reassign_category! locks only the transaction rows before updating them" do
+  test "reassign_category! only writes to transactions and their entries" do
     transaction = transactions(:one)
     family = transaction.entry.account.family
-    selects = []
+    updates = []
     subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
-      selects << payload[:sql] if payload[:sql].match?(/\ASELECT/i)
+      updates << payload[:sql] if payload[:sql].match?(/\AUPDATE/i)
     end
 
-    # Family scope joins entries and accounts; the lock must not cover them
+    # Family scope joins entries and accounts; the UPDATE ... RETURNING takes
+    # row locks on transactions only, so it must not write or lock the joined
+    # tables. The entries UPDATE is the cache-busting touch.
     Transaction.reassign_category!(family.transactions.where(id: transaction.id), categories(:income).id)
 
-    assert selects.any? { |sql| sql.include?("FOR UPDATE OF transactions") },
-      "expected the id lookup to lock transaction rows only (FOR UPDATE OF transactions)"
+    assert updates.any? { |sql| sql.match?(/UPDATE\s+"?transactions"?/) && sql.include?("RETURNING") },
+      "expected an UPDATE ... RETURNING on transactions"
+    assert updates.any? { |sql| sql.match?(/UPDATE\s+"?entries"?/) },
+      "expected the entries touch"
+    assert updates.none? { |sql| sql.match?(/UPDATE\s+"?accounts"?/) },
+      "expected no write (or row lock) on joined accounts"
   ensure
     ActiveSupport::Notifications.unsubscribe(subscriber)
   end

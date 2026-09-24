@@ -151,25 +151,25 @@ class Transaction < ApplicationRecord
   # every normal save relies on (Family#entries_cache_version) never happens.
   def self.reassign_category!(scope, category_id)
     transaction do
-      # Lock the matched transaction rows up front so a concurrent edit blocks
-      # until this commits, and so our lock order (transactions, then entries)
-      # matches a normal save's and can't deadlock against one. Restricted to
-      # `transactions`: family-scoped callers join entries and accounts, and a
-      # bare FOR UPDATE would lock those rows too, stalling account syncs.
-      ids = scope.lock("FOR UPDATE OF transactions").pluck(:id)
-      next 0 if ids.empty?
+      # UPDATE ... RETURNING captures exactly the rows it reassigned, so the
+      # entry touch below covers the same set: a transaction entering the
+      # scope between a separate lock/touch and the update would be updated
+      # without its entry being touched, leaving report caches stale. The
+      # UPDATE takes row locks on `transactions` only (family scopes join
+      # entries and accounts) and taking them before the entry locks keeps
+      # our lock order the same as a normal save's.
+      updated_ids = connection.select_values(<<~SQL)
+        UPDATE transactions
+        SET category_id = #{connection.quote(category_id)}
+        WHERE id IN (#{scope.select(:id).to_sql})
+        RETURNING id
+      SQL
 
-      # Touch entries through a subquery (the same pattern
-      # Entry.mark_user_modified_for_transactions! uses) while `scope` still
-      # matches — after the update it wouldn't — so the SQL carries no
-      # materialized id list.
-      Entry.where(entryable_type: "Transaction", entryable_id: scope.select(:id)).touch_all
+      next 0 if updated_ids.empty?
 
-      # Re-evaluate `scope`'s predicate for the update itself: the row locks
-      # keep concurrent edits out, and rows that entered the scope since the
-      # pluck are reassigned instead of being left behind (or nulled by the
-      # FK when the source category is destroyed).
-      scope.update_all(category_id: category_id)
+      Entry.where(entryable_type: "Transaction", entryable_id: updated_ids).touch_all
+
+      updated_ids.size
     end
   end
 
