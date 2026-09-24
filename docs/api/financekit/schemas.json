@@ -378,6 +378,31 @@
       },
       "pagination": {
         "$ref": "#/components/schemas/Pagination"
+      },
+      "purge_requested_at": {
+        "allOf": [
+          {
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "nullable": true
+      },
+      "purge_completed_at": {
+        "allOf": [
+          {
+            "type": "string",
+            "format": "date-time"
+          }
+        ],
+        "nullable": true
+      },
+      "disposition": {
+        "type": "string",
+        "enum": [
+          "retain",
+          "discard"
+        ]
       }
     }
   },
@@ -1047,7 +1072,8 @@
       "max_queued_batches",
       "transaction_statuses",
       "amount_precision",
-      "amount_scale"
+      "amount_scale",
+      "connection_dispositions"
     ],
     "properties": {
       "available": {
@@ -1091,6 +1117,16 @@
       },
       "amount_scale": {
         "type": "integer"
+      },
+      "connection_dispositions": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": [
+            "retain",
+            "discard"
+          ]
+        }
       }
     }
   },

@@ -301,6 +301,25 @@ class Financekit::MappingTest < ActiveSupport::TestCase
     assert_equal 1, batch.counts.fetch("settled")
   end
 
+  test "the lineage records whether FinanceKit created the canonical account" do
+    assert_equal "created", @source.financekit_account_lineage.account_origin
+
+    account = @family.accounts.create!(name: "Everyday", balance: 0, currency: "USD",
+      accountable: Depository.new(subtype: "checking"))
+    enrollment = @enrollment.deep_dup
+    enrollment["enrollment_id"] = SecureRandom.uuid
+    other_source_id = SecureRandom.uuid
+    enrollment["consent"]["selected_source_account_ids"] = [ other_source_id ]
+    other_item = Financekit::Enrollment.create!(@user, enrollment).item
+    linked = FinancekitAccount.map!(other_item, other_source_id,
+      @mapping_input.except("booked_balance", "observed_at").merge("action" => "link",
+        "account_id" => account.id))
+
+    # Only an account FinanceKit brought into existence is FinanceKit's to destroy
+    # when a family disconnects and asks for the import to be undone.
+    assert_equal "linked", linked.financekit_account_lineage.account_origin
+  end
+
   test "one lineage keeps one open balance question when two publishers race" do
     first = accept_and_apply
     disagreement = financekit_events.find { |record| record["kind"] == "balance_upsert" }

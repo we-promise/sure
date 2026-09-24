@@ -213,6 +213,55 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     assert_response :forbidden
   end
 
+  test "disconnecting retains imported history unless the client asks otherwise" do
+    accept_and_apply
+    account = @source.account
+
+    delete "/api/v1/financekit/connections/#{@item.id}", headers: @headers
+    assert_response :no_content
+
+    # The response a client already gets, and the behaviour the published spec
+    # promises: the connection goes, the money stays.
+    assert_equal "revoked", @item.reload.status
+    assert_nil @item.purge_requested_at
+    assert_equal 1, account.entries.where(source: "financekit").count
+    assert_empty enqueued_jobs.select { |job| job[:job] == FinancekitPurgeJob }
+  end
+
+  test "disconnecting with discard is accepted and hands the deletion to a job" do
+    accept_and_apply
+
+    # Query string, which is what the published spec documents: a DELETE body is
+    # not carried reliably by every HTTP client.
+    delete "/api/v1/financekit/connections/#{@item.id}?disposition=discard", headers: @headers
+
+    # Accepted rather than completed: a year of history is not deleted inside a
+    # request, so the client polls the connection for purge_completed_at.
+    assert_response :accepted
+    assert_equal "discard", response.parsed_body.fetch("disposition")
+    assert_equal "revoked", response.parsed_body.fetch("status")
+    assert_not_nil response.parsed_body.fetch("purge_requested_at")
+    assert_nil response.parsed_body.fetch("purge_completed_at")
+    assert_equal 1, enqueued_jobs.count { |job| job[:job] == FinancekitPurgeJob }
+  end
+
+  test "an unknown disposition is refused without revoking the connection" do
+    delete "/api/v1/financekit/connections/#{@item.id}?disposition=shred", headers: @headers
+
+    assert_response :unprocessable_entity
+    assert_equal "invalid_disposition", response.parsed_body.fetch("error")
+    assert_equal "active", @item.reload.status
+  end
+
+  test "capabilities advertise the dispositions this build supports" do
+    get "/api/v1/financekit/capabilities", headers: @headers
+
+    assert_response :success
+    # Feature-detected rather than hardcoded, so a client keeps working when a
+    # provider gains discard or a build withholds it.
+    assert_equal %w[retain discard], response.parsed_body.fetch("connection_dispositions")
+  end
+
   private
 
     def assert_receipt_schema

@@ -3916,6 +3916,21 @@ components:
             "$ref": "#/components/schemas/FinancekitAccountMapping"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+        purge_requested_at:
+          allOf:
+          - type: string
+            format: date-time
+          nullable: true
+        purge_completed_at:
+          allOf:
+          - type: string
+            format: date-time
+          nullable: true
+        disposition:
+          type: string
+          enum:
+          - retain
+          - discard
     FinancekitPublisherConfiguration:
       allOf:
       - "$ref": "#/components/schemas/FinancekitConnection"
@@ -4416,6 +4431,7 @@ components:
       - transaction_statuses
       - amount_precision
       - amount_scale
+      - connection_dispositions
       properties:
         available:
           type: boolean
@@ -4445,6 +4461,13 @@ components:
           type: integer
         amount_scale:
           type: integer
+        connection_dispositions:
+          type: array
+          items:
+            type: string
+            enum:
+            - retain
+            - discard
     FinancekitError:
       type: object
       additionalProperties: false
@@ -6274,16 +6297,38 @@ paths:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
     delete:
-      summary: Revoke a publisher and retain imported financial history
+      summary: Revoke a publisher, retaining or discarding imported financial history
       tags:
       - FinanceKit
       security:
       - apiKeyAuth: []
       - oauth2:
         - read_write
+      parameters:
+      - name: disposition
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - retain
+          - discard
+        description: 'What happens to the data this connection imported. retain (the
+          default) keeps every account, balance and transaction. discard removes them:
+          accounts FinanceKit created are destroyed, accounts it was linked to are
+          emptied of FinanceKit-sourced entries and rebalanced, and source identities,
+          balance observations and conflicts are deleted. Irreversible, and it removes
+          imported entries the family later reconciled, excluded or edited. Supported
+          dispositions are advertised by GET /api/v1/financekit/capabilities.'
       responses:
         '204':
-          description: Publisher revoked
+          description: Publisher revoked, imported history retained
+        '202':
+          description: Publisher revoked, discard of imported history accepted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitConnection"
         '400':
           description: Malformed or unsupported protocol
           content:

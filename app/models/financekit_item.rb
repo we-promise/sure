@@ -1,5 +1,9 @@
 class FinancekitItem < ApplicationRecord
   include Syncable
+  include ProviderDisconnectable
+
+  # FinanceKit implements discard: see Financekit::Purge.
+  self.supports_discard = true
 
   before_destroy :release_orphaned_lineage_links
 
@@ -112,8 +116,24 @@ class FinancekitItem < ApplicationRecord
     end
   end
 
-  def disconnect!
-    family.with_lock { revoke!(release_lineages_except: []) }
+  # A retain disconnect is the long-standing behaviour: revoke the credential and
+  # the links, leave every account and transaction standing. A discard adds the
+  # removal of what this connection imported, which runs in the background
+  # because a year of card history is not a request-sized amount of deleting.
+  def disconnect!(disposition: ProviderDisconnectable::DEFAULT_DISPOSITION)
+    discard = discarding?(disposition)
+    family.with_lock do
+      revoke!(release_lineages_except: [])
+      # Recorded inside the revoke so the intent is durable before any job
+      # exists. A deletion the family asked for must not be lost to a queue that
+      # happened to be unreachable a moment later.
+      update!(purge_requested_at: Time.current) if discard
+    end
+    request_purge! if discard
+  end
+
+  def purge_pending?
+    purge_requested_at.present? && purge_completed_at.nil?
   end
 
   def revoke!(release_lineages_except: [])
@@ -138,6 +158,19 @@ class FinancekitItem < ApplicationRecord
 
   private
 
+    # Enqueued outside the revoke transaction so an enqueue failure is visible
+    # here rather than deferred to commit. The marker stays set either way: the
+    # sweep in FinancekitInboxJob finishes a purge whose job never ran, and
+    # rolling the request back would leave the family believing their data was
+    # deleted when it was not.
+    def request_purge!
+      FinancekitPurgeJob.perform_later(self)
+    rescue StandardError => error
+      Financekit::Diagnostics.capture(item: self, source: self.class.name, level: "warn",
+        message: "FinanceKit purge enqueue failed", event: "purge_enqueue_failed",
+        error_class: error.class.name)
+    end
+
     def competing_active_writer?(mappings, excluding:)
       FinancekitAccount.joins(:financekit_item)
         .where(financekit_account_lineage_id: mappings.map(&:financekit_account_lineage_id),
@@ -155,9 +188,6 @@ class FinancekitItem < ApplicationRecord
     end
 
     def release_lineage_link!(lineage)
-      other_active_writer = FinancekitAccount.joins(:financekit_item)
-        .where(financekit_account_lineage_id: lineage.id, financekit_items: { status: "active" })
-        .where.not(financekit_item_id: id).exists?
-      lineage.account_provider&.destroy! unless other_active_writer
+      lineage.account_provider&.destroy! unless lineage.other_active_writer_than?(self)
     end
 end

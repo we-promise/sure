@@ -5,7 +5,8 @@ class Api::V1::Financekit::ConnectionsController < Api::V1::Financekit::BaseCont
       delivery: "background_publisher", max_payload_bytes: Financekit::MAX_BYTES,
       max_records: Financekit::MAX_RECORDS, max_accounts: Financekit::MAX_ACCOUNTS,
       max_queued_batches: Financekit::MAX_QUEUED, transaction_statuses: Financekit::Payload::STATUSES,
-      amount_precision: 19, amount_scale: 4 })
+      amount_precision: 19, amount_scale: 4,
+      connection_dispositions: FinancekitItem.supported_dispositions })
   end
 
   def create
@@ -44,11 +45,25 @@ class Api::V1::Financekit::ConnectionsController < Api::V1::Financekit::BaseCont
   end
 
   def destroy
-    connection.disconnect!
-    head :no_content
+    # Retain keeps the response it has always had, so a client that sends no
+    # disposition sees no change. Discard is accepted rather than completed: the
+    # deletion runs in the background, and the connection payload lets the client
+    # show what it is waiting on.
+    connection.disconnect!(disposition: disposition)
+    return head :no_content unless disposition == ProviderDisconnectable::DISCARD
+
+    render_json(connection_data(connection).merge(disposition: disposition), status: :accepted)
   end
 
   private
+
+    def disposition
+      @disposition ||= begin
+        value = params[:disposition].presence&.to_s || ProviderDisconnectable::DEFAULT_DISPOSITION
+        Financekit.require!(connection.disposition_supported?(value), "invalid_disposition")
+        value
+      end
+    end
 
     def connection_data(item)
       { id: item.id, connection_id: item.id, publisher_id: item.publisher_id, status: item.status,
@@ -56,7 +71,8 @@ class Api::V1::Financekit::ConnectionsController < Api::V1::Financekit::BaseCont
         repair_reason: item.repair_reason, last_device_contact_at: item.last_device_contact_at,
         last_accepted_at: item.last_accepted_at, last_imported_at: item.last_imported_at,
         last_downstream_at: item.last_downstream_at, last_captured_at: item.last_captured_at,
-        open_conflicts: item.financekit_conflicts.open.count }
+        open_conflicts: item.financekit_conflicts.open.count,
+        purge_requested_at: item.purge_requested_at, purge_completed_at: item.purge_completed_at }
     end
 
     def mapping_data(mapping)

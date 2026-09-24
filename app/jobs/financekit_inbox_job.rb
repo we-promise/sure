@@ -19,11 +19,35 @@ class FinancekitInboxJob < ApplicationJob
       Financekit::Downstream.new(item, FinancekitBatch.where(id: applied_ids)).perform!
     end
     recover_lost_downstream_work!
+    recover_lost_purges!
     FinancekitBatch.where(status: %w[applied failed revoked]).where("updated_at < ?", 7.days.ago)
       .where.not(payload: nil).update_all(payload: nil, updated_at: Time.current)
   end
 
   private
+
+    # A discard the family asked for outlives the job that was meant to carry it
+    # out: the request is recorded on the connection, so an enqueue that never
+    # landed or a job that died partway is finished here. Financekit::Purge is
+    # resumable -- it skips lineages it has already discarded -- so repeating it
+    # costs nothing but is never skipped.
+    def recover_lost_purges!
+      # Materialized rather than find_each: that would discard the order and the
+      # bound, and the oldest request is the one that has been waiting.
+      FinancekitItem.where.not(purge_requested_at: nil).where(purge_completed_at: nil)
+        .order(:purge_requested_at).limit(Financekit::MAX_QUEUED).to_a.each do |item|
+        # Deliberately not gated on Financekit.enabled?, unlike every other pass
+        # in this job. The controller exempts disconnecting from the feature flag
+        # for the same reason: the flag governs whether Sure accepts new data, not
+        # whether a family may have what it already took removed. Gating here
+        # would strand an accepted deletion the moment the flag went off.
+        Financekit::Purge.new(item).perform!
+      rescue StandardError
+        # Purge already recorded the failure and left the request standing for the
+        # next sweep. One publisher's failure must not strand the others.
+        next
+      end
+    end
 
     # A lost job leaves applied batches with no downstream work. Bounded per
     # pass and per publisher: the fan-out costs the same for one batch or many,

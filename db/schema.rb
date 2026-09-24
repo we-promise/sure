@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_24_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_24_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -910,6 +910,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_120000) do
 
   create_table "financekit_account_lineages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id"
+    t.string "account_origin"
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
     t.string "status", default: "active", null: false
@@ -917,6 +918,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_120000) do
     t.index ["account_id"], name: "index_financekit_account_lineages_on_account_id"
     t.index ["family_id", "account_id"], name: "financekit_lineage_canonical_account", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["family_id"], name: "index_financekit_account_lineages_on_family_id"
+    t.check_constraint "account_origin IS NULL OR (account_origin::text = ANY (ARRAY['created'::character varying, 'linked'::character varying]::text[]))", name: "financekit_lineage_account_origin"
   end
 
   create_table "financekit_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1028,6 +1030,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_120000) do
     t.bigint "next_sequence", default: 1, null: false
     t.string "predecessor_digest"
     t.uuid "publisher_id", null: false
+    t.datetime "purge_completed_at"
+    t.datetime "purge_requested_at"
     t.string "repair_reason"
     t.uuid "replaces_financekit_item_id"
     t.string "status", default: "pending_mapping", null: false
@@ -1037,6 +1041,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_120000) do
     t.index ["family_id", "enrollment_id"], name: "index_financekit_items_on_family_id_and_enrollment_id", unique: true
     t.index ["family_id"], name: "index_financekit_items_on_family_id"
     t.index ["publisher_id"], name: "index_financekit_items_on_publisher_id", unique: true
+    t.index ["purge_requested_at"], name: "financekit_items_pending_purge", where: "(purge_completed_at IS NULL)"
     t.index ["replaces_financekit_item_id"], name: "index_financekit_items_on_replaces_financekit_item_id"
     t.index ["user_id"], name: "index_financekit_items_on_user_id"
     t.check_constraint "generation > 0 AND next_sequence > 0", name: "financekit_items_positive_stream"

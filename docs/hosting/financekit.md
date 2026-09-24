@@ -53,6 +53,50 @@ iOS client can start a new enrollment with a new enrollment ID and map its Apple
 source account IDs again; existing accounts and imported transactions are reused
 without requiring the old connection or stream state.
 
+### Disconnect dispositions
+
+`DELETE /api/v1/financekit/connections/{id}` takes an optional `disposition`
+query parameter saying what happens to the data the connection imported. The
+dispositions a build supports are advertised as `connection_dispositions` in the
+capabilities response, so a client feature-detects rather than hardcoding.
+
+`retain` is the default and the behaviour above: the connection is revoked and
+every account, balance and transaction stays. The response is `204 No Content`,
+unchanged for clients that send no disposition. The web unlink flow always
+retains — a person unlinking one account has not consented to delete the data in
+the others the connection covered.
+
+`discard` revokes the connection and then removes what it imported. It answers
+`202 Accepted` with the connection payload: a year of card history is not deleted
+inside a request, so the work runs in the background and the client polls the
+connection until `purge_completed_at` is set. Per Wallet account:
+
+- An account FinanceKit created is destroyed, with everything on it.
+- An account FinanceKit was linked to is emptied of entries sourced from
+  FinanceKit and handed back to sync, which recomputes its balance from the
+  history the family had before FinanceKit arrived. The account itself stays.
+- Source identities, balance observations and conflicts for that lineage are
+  deleted, and the lineage is marked discarded so a later enrollment starts clean
+  rather than reusing it.
+
+Two consequences worth stating plainly. A discard removes imported entries even
+where the family later reconciled, excluded, split or edited them — a partial
+deletion would be worse than none, having told them the data was gone. And where
+an imported transaction had been matched into a transfer, the transfer record and
+its fees go with it; the transaction on the other account survives, unpaired.
+
+An account lineage that another live connection still publishes into is left
+entirely alone, which is what happens during a device replacement window when two
+connections reference one lineage. The connection row itself survives as a
+revoked receipt; it holds no financial values, and its batch payloads were
+dropped at revocation.
+
+Discard is irreversible, and the request outlives the job that carries it out:
+the intent is recorded on the connection, and the FinanceKit inbox sweep finishes
+any purge whose job was lost. That sweep is deliberately not gated on the
+FinanceKit feature flag — the flag governs whether Sure accepts new data, not
+whether a family may have what it already took removed.
+
 ## Debugging uploads
 
 Super admins can open `/settings/debug?provider_key=financekit` and filter further
@@ -114,4 +158,4 @@ user permissions. These records simulate imported data; no iOS device is require
 
 Protocol 2 limits each publisher to 20 selected accounts, 500 events per batch, 1 MiB of JSON, and 100 accepted/processing batches. Each capture is limited to 100 chunks so the complete capture fits in the inbox. A client can upload larger histories using multiple consecutive captures.
 
-Exact payload bytes are retained for seven days after apply, permanent failure, or revocation for response-loss recovery and operational investigation. Canonical financial data and source identity records follow Sure's normal family retention and deletion behavior. Family financial-data reset removes FinanceKit connections, lineages, observations, identities, conflicts, and batch receipts for that family.
+Exact payload bytes are retained for seven days after apply, permanent failure, or revocation for response-loss recovery and operational investigation. Canonical financial data and source identity records follow Sure's normal family retention and deletion behavior, except where a client disconnects with `disposition=discard` (see [Disconnect dispositions](#disconnect-dispositions)), which removes them for that connection. Family financial-data reset removes FinanceKit connections, lineages, observations, identities, conflicts, and batch receipts for that family.
