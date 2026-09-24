@@ -413,6 +413,21 @@ en:
         eyebrow: Setup
         need_help: "Need help?"
       connect: Connect
+      financekit:
+        app_store: App Store
+        coming_soon: Coming soon!
+        description: "Manage Apple Wallet connections in the Sure iOS app. Wallet data syncs while the app is open; unattended background sync is not available yet."
+        summary: Wallet sync
+        accounts: Linked accounts
+        linked_accounts:
+          one: 1 linked account
+          other: "%{count} linked accounts"
+        status:
+          active: Sync active
+          repair_required: Repair required — open the Sure iOS app
+        last_accepted_at: Last accepted by Sure
+        last_imported_at: Last imported into your family
+        not_yet: Not yet
       groups:
         your_connections: Your connections
         available: Available
@@ -437,11 +452,13 @@ en:
       sync_provider_in_progress: Sync started.
       recently_synced: Synced recently. Try again in a moment.
       taglines:
+        financekit: Sync (some) FinanceKit accounts through the Sure iOS app.
         akahu: Sync New Zealand financial institutions via Akahu.
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         redbark: Sync Australian bank accounts via Redbark open banking.
         monobank: Sync Ukrainian Monobank cards and jars with a personal API token.
+        fio: Sync a Fio banka account with a read-only API token.
         enable_banking: Sync European bank accounts via PSD2 open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
         wise: Sync your Wise multi-currency balances and international transfers automatically.
@@ -622,6 +639,10 @@ en:
         step_1_html: "Go to %{link}, sign in with the Monobank app and generate a personal token."
         step_2: "Copy the token — it is shown only once."
         step_3: "Paste the token below, save, then link the cards and jars you want to track."
+      fio_panel:
+        step_1_html: "Sign in to %{link} internet banking and open Settings → API."
+        step_2: 'Create a token with read-only access ("Sledování účtu"). It needs strong authorization and is valid for up to 180 days.'
+        step_3: "Paste the token below and save. One token reaches one account, so add a connection per Fio account."
       simplefin_panel:
         step_1_html: "Go to %{link} for a one-time setup token."
         step_2: "Paste the token below and connect."
