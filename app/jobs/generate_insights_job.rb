@@ -106,9 +106,10 @@ class GenerateInsightsJob < ApplicationJob
             generated_at: Time.current,
             dedup_key: generated.dedup_key
           )
-        elsif existing.metadata != metadata
-          # The numbers changed materially: refresh the prose and resurface the
-          # insight even if the user had read or dismissed the stale version.
+        elsif existing.metadata != metadata || existing.currency != generated.currency
+          # The numbers (or the currency they're denominated in) changed
+          # materially: refresh the prose and resurface the insight even if
+          # the user had read or dismissed the stale version.
           existing.update!(
             priority: generated.priority,
             status: "active",

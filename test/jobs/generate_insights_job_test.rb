@@ -191,6 +191,27 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert insight.read?
   end
 
+  # An account's currency can be edited by the user without its balance
+  # crossing a bucket boundary, so metadata alone would miss it — and the
+  # stored body's formatted amount is denominated in the now-stale currency.
+  test "a currency change resurfaces and rewrites the insight even when metadata is unchanged" do
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    insight.mark_read!
+
+    Insight::BodyWriter.any_instance.expects(:write).returns("rewritten body")
+    stub_generated([ generated_insight(currency: "EUR") ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert_equal "EUR", insight.currency
+    assert_equal "rewritten body", insight.body
+    assert insight.active?
+    assert_not insight.read?
+  end
+
   # The title is built from I18n and the generator's own data, not written by
   # the model. A goal or category renamed since the insight was stored left it
   # naming something that no longer exists, for the rest of the month.
@@ -327,7 +348,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     # display_balance changes only the formatted facts, leaving metadata (the
     # material-change signal) untouched — mirrors a balance drifting slightly
     # between runs without crossing a bucket boundary.
-    def generated_insight(balance: 5000.0, display_balance: nil, priority: "low", title: "Idle cash in Test Checking")
+    def generated_insight(balance: 5000.0, display_balance: nil, priority: "low", title: "Idle cash in Test Checking", currency: "USD")
       Insight::Generator::GeneratedInsight.new(
         insight_type: "idle_cash",
         priority: priority,
@@ -335,7 +356,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
         template_key: "idle_cash",
         facts: { account: "Test Checking", balance: "$#{(display_balance || balance).to_i}", idle_days: 60 },
         metadata: { account_id: "test-account", balance: balance },
-        currency: "USD",
+        currency: currency,
         period_start: nil,
         period_end: nil,
         dedup_key: "idle_cash:test-account:2026-07"
