@@ -940,6 +940,7 @@ RSpec.configure do |config|
             properties: {
               id: { type: :string, format: :uuid },
               date: { type: :string, format: :date },
+              time: { type: :string, nullable: true, description: 'Optional time of day, 24-hour HH:MM' },
               amount: { type: :string, description: 'Formatted amount, rounded to the currency display precision' },
               amount_decimal: {
                 type: :string,
