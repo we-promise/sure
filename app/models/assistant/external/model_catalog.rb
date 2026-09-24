@@ -9,11 +9,9 @@ class Assistant::External::ModelCatalog < Provider::Openai::ModelCatalog
 
   private
     def models_uri
-      uri = URI(@url)
-      raise URI::InvalidURIError, "only HTTP and HTTPS endpoints are supported" unless uri.is_a?(URI::HTTP)
-
+      uri = http_uri(@url)
       path = uri.path.sub(%r{/chat/completions/?\z}, "/models")
-      raise URI::InvalidURIError, "endpoint must end in /chat/completions" if path == uri.path
+      raise URI::InvalidURIError, I18n.t("assistant.external.model_catalog.errors.chat_completions_required") if path == uri.path
 
       uri.path = path
       uri.query = nil
@@ -31,7 +29,13 @@ class Assistant::External::ModelCatalog < Provider::Openai::ModelCatalog
       end
     end
 
-    def error_subject
-      "Agent discovery"
+    # The gateway has its own URL and token; OPENAI_EXTRA_HEADERS belong to
+    # the builtin provider.
+    def extra_headers
+      {}
+    end
+
+    def i18n_scope
+      "assistant.external.model_catalog"
     end
 end

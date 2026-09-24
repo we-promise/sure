@@ -5,3 +5,9 @@ en:
       model_catalog:
         default_agent_label: "Default agent (%{id})"
         named_agent_label: "%{name} (%{id})"
+        errors:
+          http_status: "Agent discovery returned HTTP %{status}."
+          invalid_response: "Agent discovery returned an invalid response."
+          invalid_response_detail: "Agent discovery returned an invalid response: %{detail}"
+          unavailable: "Agent discovery is unavailable: %{detail}"
+          chat_completions_required: "endpoint must end in /chat/completions"
