@@ -56,6 +56,19 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     api_key_without_read&.destroy
   end
 
+  test "returns the authenticated user's ownership share alongside the full balance" do
+    account = accounts(:depository)
+    account.update!(ownership_percentage: 60)
+
+    get "/api/v1/accounts", params: {}, headers: api_headers(@api_key)
+    assert_response :success
+
+    data = JSON.parse(response.body)["accounts"].find { |a| a["id"] == account.id }
+    assert_equal 60.0, data["ownership_percentage"]
+    assert_equal account.balance_money.format, data["balance"]
+    assert_equal account.owned_balance_money_for(@user).format, data["owned_balance"]
+  end
+
   test "should return user's family accounts successfully" do
     get "/api/v1/accounts", params: {}, headers: api_headers(@api_key)
 

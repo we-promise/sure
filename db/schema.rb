@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_23_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -35,6 +35,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.uuid "account_id", null: false
     t.datetime "created_at", null: false
     t.boolean "include_in_finances", default: true, null: false
+    t.decimal "ownership_percentage", precision: 5, scale: 2, default: "100.0", null: false
     t.string "permission", default: "read_only", null: false
     t.datetime "updated_at", null: false
     t.uuid "user_id", null: false
@@ -42,6 +43,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.index ["account_id"], name: "index_account_shares_on_account_id"
     t.index ["user_id", "include_in_finances"], name: "index_account_shares_on_user_id_and_include_in_finances"
     t.index ["user_id"], name: "index_account_shares_on_user_id"
+    t.check_constraint "ownership_percentage >= 0::numeric AND ownership_percentage <= 100::numeric", name: "chk_account_shares_ownership_percentage"
     t.check_constraint "permission::text = ANY (ARRAY['full_control'::character varying::text, 'read_write'::character varying::text, 'read_only'::character varying::text])", name: "chk_account_shares_permission"
   end
 
@@ -116,6 +118,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.string "name"
     t.text "notes"
     t.uuid "owner_id"
+    t.decimal "ownership_percentage", precision: 5, scale: 2, default: "100.0", null: false
     t.uuid "plaid_account_id"
     t.uuid "simplefin_account_id"
     t.string "status", default: "active"
@@ -135,6 +138,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.index ["plaid_account_id"], name: "index_accounts_on_plaid_account_id"
     t.index ["simplefin_account_id"], name: "index_accounts_on_simplefin_account_id"
     t.index ["status"], name: "index_accounts_on_status"
+    t.check_constraint "ownership_percentage >= 0::numeric AND ownership_percentage <= 100::numeric", name: "chk_accounts_ownership_percentage"
   end
 
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

@@ -481,6 +481,26 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal 200, series.values.last.trend.current.amount
   end
 
+  test "scales the series to the viewing user's ownership share" do
+    account = accounts(:depository)
+    account.balances.destroy_all
+    member = users(:family_member)
+    account.update!(ownership_percentage: 70)
+    account.account_shares.find_by!(user: member).update!(ownership_percentage: 30)
+    create_balance(account: account, date: Date.current, balance: 1000)
+
+    build = ->(user) do
+      Balance::ChartSeriesBuilder.new(
+        account_ids: [ account.id ], currency: "USD", period: Period.last_30_days, interval: "1 day", user: user
+      ).balance_series.last.value.amount
+    end
+
+    assert_equal 700, build.call(account.owner)
+    assert_equal 300, build.call(member)
+    assert_equal 1000, build.call(nil)
+    assert_equal 1000, build.call(users(:empty)) # neither owner nor co-owner: full account
+  end
+
   private
     def create_holding(account:, security:, date:, qty:, price:, cost_basis:)
       Holding.create!(

@@ -113,6 +113,55 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_not_includes account_ids, excluded_account.id
   end
 
+  test "counts only the viewing user's ownership share" do
+    owner = users(:empty)
+    member = users(:new_email)
+
+    property = create_account(balance: 1000, accountable: Property.new, owner: owner, ownership_percentage: 60)
+    mortgage = create_account(balance: 400, accountable: Loan.new, owner: owner, ownership_percentage: 50)
+    property.share_with!(member).update!(ownership_percentage: 40)
+    mortgage.share_with!(member)
+
+    owner_sheet = BalanceSheet.new(@family, user: owner)
+    assert_equal 600, owner_sheet.assets.total
+    assert_equal 200, owner_sheet.liabilities.total
+    assert_equal 400, owner_sheet.net_worth
+
+    member_sheet = BalanceSheet.new(@family, user: member)
+    assert_equal 400, member_sheet.assets.total
+    assert_equal 400, member_sheet.liabilities.total # share defaults to 100
+    assert_equal 0, member_sheet.net_worth
+  end
+
+  test "net worth series is scaled to the viewing user's share and matches the balance sheet" do
+    owner = users(:empty)
+    member = users(:new_email)
+    account = create_account(balance: 1000, accountable: Depository.new, owner: owner, ownership_percentage: 60)
+    account.share_with!(member).update!(ownership_percentage: 40)
+    create_balance(account: account, date: Date.current, balance: 1000)
+
+    period = Period.last_30_days
+    owner_series = BalanceSheet.new(@family, user: owner).net_worth_series(period: period)
+    member_series = BalanceSheet.new(@family, user: member).net_worth_series(period: period)
+
+    assert_equal 600, owner_series.values.last.value.amount
+    assert_equal 400, member_series.values.last.value.amount
+    assert_equal BalanceSheet.new(@family, user: owner).net_worth, owner_series.values.last.value.amount
+  end
+
+  test "series reflects an edited ownership percentage" do
+    owner = users(:empty)
+    account = create_account(balance: 1000, accountable: Depository.new, owner: owner, ownership_percentage: 60)
+    create_balance(account: account, date: Date.current, balance: 1000)
+    period = Period.last_30_days
+
+    assert_equal 600, BalanceSheet.new(@family, user: owner).net_worth_series(period: period).values.last.value.amount
+
+    account.update!(ownership_percentage: 25)
+
+    assert_equal 250, BalanceSheet.new(@family, user: owner).net_worth_series(period: period).values.last.value.amount
+  end
+
   test "calculates asset group totals" do
     create_account(balance: 1000, accountable: Depository.new)
     create_account(balance: 2000, accountable: Depository.new)

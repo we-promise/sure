@@ -2,13 +2,20 @@
   <% dialog.with_header(title: t(".title")) %>
   <% dialog.with_body do %>
     <% if @account.owned_by?(Current.user) %>
-      <% if @family_members.any? %>
-        <%= styled_form_with url: account_sharing_path(@account), method: :patch, class: "space-y-4" do |form| %>
+      <%= styled_form_with url: account_sharing_path(@account), method: :patch, class: "space-y-4" do |form| %>
+        <%# Placeholder ownership UI: functional, not final design. %>
+        <div class="bg-container-inset rounded-xl p-4">
+          <label for="owner_ownership_percentage" class="text-sm text-primary font-medium"><%= t(".your_ownership") %></label>
+          <p class="text-xs text-secondary"><%= t(".ownership_description") %></p>
+          <input type="number" id="owner_ownership_percentage" name="owner_ownership_percentage" value="<%= @account.ownership_percentage.to_f %>" min="0" max="100" step="0.01" autocomplete="off" class="mt-2 text-sm border border-primary rounded-lg px-3 py-1.5 bg-container text-primary w-full">
+        </div>
+        <% if @family_members.any? %>
           <div class="bg-container-inset rounded-xl p-1">
             <div class="px-4 py-2">
-              <div class="grid grid-cols-3 gap-4">
+              <div class="grid grid-cols-4 gap-4">
                 <p class="uppercase text-xs text-secondary font-medium"><%= t(".member") %></p>
                 <p class="uppercase text-xs text-secondary font-medium"><%= t(".permission") %></p>
+                <p class="uppercase text-xs text-secondary font-medium"><%= t(".ownership") %></p>
                 <p class="uppercase text-xs text-secondary font-medium text-right"><%= t(".shared") %></p>
               </div>
             </div>
@@ -16,7 +23,7 @@
               <% share = @account_shares[member.id] %>
               <div class="flex items-center bg-container p-4 shadow-border-xs rounded-lg mt-2">
                 <input type="hidden" name="sharing[members][<%= index %>][user_id]" value="<%= member.id %>">
-                <div class="grid grid-cols-3 gap-4 items-center w-full">
+                <div class="grid grid-cols-4 gap-4 items-center w-full">
                   <div class="flex items-center gap-2">
                     <div class="w-8 h-8 rounded-full bg-surface-inset flex items-center justify-center text-xs font-medium text-secondary">
                       <%= member.initials %>
@@ -33,6 +40,9 @@
                       <% end %>
                     </select>
                   </div>
+                  <div>
+                    <input type="number" name="sharing[members][<%= index %>][ownership_percentage]" aria-labelledby="member-name-<%= index %>" value="<%= (share&.ownership_percentage || 100).to_f %>" min="0" max="100" step="0.01" autocomplete="off" class="text-sm border border-primary rounded-lg px-3 py-1.5 bg-container text-primary w-full">
+                  </div>
                   <div class="flex justify-end">
                     <%= render DS::Toggle.new(
                       id: "sharing_members_#{index}_shared",
@@ -45,12 +55,12 @@
               </div>
             <% end %>
           </div>
-          <div class="flex justify-end">
-            <%= render DS::Button.new(text: t(".save"), type: :submit, class: "md:w-auto w-full justify-center") %>
-          </div>
+        <% else %>
+          <p class="text-sm text-secondary"><%= t(".no_members", moniker: family_moniker_downcase) %></p>
         <% end %>
-      <% else %>
-        <p class="text-sm text-secondary"><%= t(".no_members", moniker: family_moniker_downcase) %></p>
+        <div class="flex justify-end">
+          <%= render DS::Button.new(text: t(".save"), type: :submit, class: "md:w-auto w-full justify-center") %>
+        </div>
       <% end %>
     <% else %>
       <%# Non-owner can only toggle finance inclusion %>
@@ -66,6 +76,7 @@
               <p class="text-xs text-secondary"><%= t(".permissions.#{share.permission}") %></p>
             </div>
           </div>
+          <p class="text-sm text-primary"><%= t(".your_ownership_readonly", percentage: number_to_percentage(share.ownership_percentage, precision: 2, strip_insignificant_zeros: true)) %></p>
 
           <%= styled_form_with url: account_sharing_path(@account), method: :patch, class: "space-y-4" do |form| %>
             <input type="hidden" name="update_finance_inclusion" value="1">

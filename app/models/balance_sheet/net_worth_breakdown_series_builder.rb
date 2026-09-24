@@ -113,7 +113,8 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
         currency: family.currency,
         period: period,
         interval: INTERVAL,
-        favorable_direction: favorable_direction
+        favorable_direction: favorable_direction,
+        user: user
       ).balance_series
     end
 

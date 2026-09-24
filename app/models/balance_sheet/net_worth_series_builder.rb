@@ -11,7 +11,8 @@ class BalanceSheet::NetWorthSeriesBuilder
         account_active_until_dates: disabled_account_active_until_dates,
         currency: family.currency,
         period: period,
-        favorable_direction: "up"
+        favorable_direction: "up",
+        user: user
       )
 
       builder.balance_series

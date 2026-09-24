@@ -21,6 +21,10 @@ class AccountSharingsController < ApplicationController
       return
     end
 
+    if params.key?(:owner_ownership_percentage)
+      @account.update!(ownership_percentage: params[:owner_ownership_percentage])
+    end
+
     eligible_members = Current.family.users.where.not(id: @account.owner_id).where(active: true)
 
     AccountShare.transaction do
@@ -32,10 +36,13 @@ class AccountSharingsController < ApplicationController
 
         if ActiveModel::Type::Boolean.new.cast(member_params[:shared])
           permission = AccountShare::PERMISSIONS.include?(member_params[:permission]) ? member_params[:permission] : (share&.permission || "read_only")
+          attrs = { permission: permission }
+          attrs[:ownership_percentage] = member_params[:ownership_percentage] if member_params[:ownership_percentage].present?
+
           if share
-            share.update!(permission: permission)
+            share.update!(attrs)
           else
-            @account.account_shares.create!(user: user, permission: permission, include_in_finances: true)
+            @account.account_shares.create!(attrs.merge(user: user, include_in_finances: true))
           end
         elsif share
           share.destroy!
@@ -44,6 +51,8 @@ class AccountSharingsController < ApplicationController
     end
 
     redirect_back_or_to accounts_path, notice: t("account_sharings.update.success")
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back_or_to account_path(@account), alert: e.record.errors.full_messages.to_sentence
   end
 
   private
@@ -56,7 +65,7 @@ class AccountSharingsController < ApplicationController
       return [] unless params.dig(:sharing, :members)
 
       params.require(:sharing).permit(
-        members: [ :user_id, :shared, :permission ]
+        members: [ :user_id, :shared, :permission, :ownership_percentage ]
       )[:members]&.values || []
     end
 end
