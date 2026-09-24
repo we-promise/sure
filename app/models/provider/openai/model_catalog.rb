@@ -8,7 +8,19 @@ require "json"
 # such as OpenClaw. Every failure (HTTP status, bad payload, TLS, timeouts)
 # surfaces as Error so callers can show a message instead of a 500.
 class Provider::Openai::ModelCatalog
-  Error = Class.new(StandardError)
+  # kind is one of :http_status, :invalid_response, :invalid_url, :unavailable;
+  # status is the HTTP status for :http_status. Callers use them to pick a
+  # short hint instead of showing the full message.
+  class Error < StandardError
+    attr_reader :kind, :status
+
+    def initialize(message = nil, kind: nil, status: nil)
+      super(message)
+      @kind = kind
+      @status = status
+    end
+  end
+
   DEFAULT_URI_BASE = "https://api.openai.com/v1".freeze
   CONNECTION_ERRORS = [
     Net::OpenTimeout,
@@ -43,12 +55,14 @@ class Provider::Openai::ModelCatalog
       http.request(request)
     end
 
-    raise Error, error_text(:http_status, status: response.code) unless response.is_a?(Net::HTTPSuccess)
+    unless response.is_a?(Net::HTTPSuccess)
+      raise Error.new(error_text(:http_status, status: response.code), kind: :http_status, status: response.code)
+    end
 
     payload = JSON.parse(response.body)
     entries = payload.is_a?(Hash) ? payload["data"] : nil
     unless entries.is_a?(Array) && entries.all? { |entry| entry.is_a?(Hash) }
-      raise Error, error_text(:invalid_response)
+      raise Error.new(error_text(:invalid_response), kind: :invalid_response)
     end
 
     entries.filter_map do |model|
@@ -57,10 +71,12 @@ class Provider::Openai::ModelCatalog
 
       { id: id, label: label_for(id) }
     end.uniq { |model| model[:id] }
-  rescue JSON::ParserError, URI::InvalidURIError => e
-    raise Error, error_text(:invalid_response_detail, detail: e.message)
+  rescue URI::InvalidURIError => e
+    raise Error.new(error_text(:invalid_response_detail, detail: e.message), kind: :invalid_url)
+  rescue JSON::ParserError => e
+    raise Error.new(error_text(:invalid_response_detail, detail: e.message), kind: :invalid_response)
   rescue *CONNECTION_ERRORS => e
-    raise Error, error_text(:unavailable, detail: e.message)
+    raise Error.new(error_text(:unavailable, detail: e.message), kind: :unavailable)
   end
 
   private

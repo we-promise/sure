@@ -57,7 +57,8 @@
     </datalist>
     <p class="text-xs text-secondary mt-1"><%= t(".model_discovered", count: @openai_models.size) %></p>
   <% elsif @openai_models_error.present? %>
-    <p class="text-xs text-secondary mt-1"><%= t(".model_discovery_error", error: @openai_models_error) %></p>
+    <% hint_kind = %i[http_status invalid_response invalid_url unavailable].include?(@openai_models_error.kind) ? @openai_models_error.kind : :unavailable %>
+    <p class="text-xs text-secondary mt-1" data-testid="openai-model-discovery-hint"><%= t(".model_discovery_error.#{hint_kind}", status: @openai_models_error.status) %></p>
   <% end %>
   <p class="text-xs text-secondary mt-1">
     <%= t(".model_function_calling_help") %>

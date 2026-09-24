@@ -53,13 +53,18 @@ class Provider::Openai::ModelCatalogTest < ActiveSupport::TestCase
     catalog = Provider::Openai::ModelCatalog.new(uri_base: "https://llm.example.com/v1", token: "bad")
 
     stub_request(:get, "https://llm.example.com/v1/models").to_return(status: 401, body: "{}")
-    assert_equal "Model discovery returned HTTP 401.", assert_raises(Provider::Openai::ModelCatalog::Error) { catalog.models }.message
+    error = assert_raises(Provider::Openai::ModelCatalog::Error) { catalog.models }
+    assert_equal "Model discovery returned HTTP 401.", error.message
+    assert_equal :http_status, error.kind
+    assert_equal "401", error.status
 
     stub_request(:get, "https://llm.example.com/v1/models").to_return(status: 200, body: { object: "list" }.to_json)
     assert_equal "Model discovery returned an invalid response.", assert_raises(Provider::Openai::ModelCatalog::Error) { catalog.models }.message
 
     stub_request(:get, "https://llm.example.com/v1/models").to_raise(OpenSSL::SSL::SSLError)
-    assert_includes assert_raises(Provider::Openai::ModelCatalog::Error) { catalog.models }.message, "Model discovery is unavailable"
+    error = assert_raises(Provider::Openai::ModelCatalog::Error) { catalog.models }
+    assert_includes error.message, "Model discovery is unavailable"
+    assert_equal :unavailable, error.kind
   end
 
   test "rejects non-HTTP and hostless base URLs as catalog errors" do
@@ -68,6 +73,7 @@ class Provider::Openai::ModelCatalogTest < ActiveSupport::TestCase
         Provider::Openai::ModelCatalog.new(uri_base: uri_base, token: "secret").models
       end
       assert_includes error.message, I18n.t("provider.openai.model_catalog.errors.invalid_url")
+      assert_equal :invalid_url, error.kind
     end
   end
 
