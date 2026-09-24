@@ -81,6 +81,10 @@ class PlaidAccount::Investments::BalanceCalculator
       # Zero is the same report with nothing in the positions, so the holdings
       # have to be added back rather than subtracted from: taking zero as the
       # total would value the positions at nothing and derive negative cash.
+      # ... unless the cash is one of those positions, in which case the
+      # holdings already are the whole account and `available` is describing
+      # the same fund again.
+      return true_holdings_value if reported_total.zero? && cash_reported_in_holdings?
       return true_holdings_value + available if reported_total.zero?
 
       return reported_total if cash_reported_in_holdings?

@@ -299,6 +299,42 @@ class PlaidAccount::Investments::BalanceCalculatorTest < ActiveSupport::TestCase
     assert_equal 0, balance_calculator.cash_balance
   end
 
+  test "does not count a sweep fund twice when the reported total is zero" do
+    sweep_security_id = "plaid_cash_equivalent"
+
+    # The zero branch adds the holdings back, so the sweep would be counted
+    # once in the holdings and once again through `available`.
+    @plaid_account.update!(
+      current_balance: 0,
+      available_balance: 1000,
+      raw_holdings_payload: {
+        transactions: [],
+        holdings: [
+          {
+            security_id: sweep_security_id,
+            cost_basis: 1000,
+            institution_price: 1,
+            institution_value: 1000,
+            quantity: 1000
+          }
+        ],
+        securities: [
+          {
+            security_id: sweep_security_id,
+            ticker_symbol: "VMFXX",
+            is_cash_equivalent: true,
+            type: "mutual fund"
+          }
+        ]
+      }
+    )
+
+    balance_calculator = build_calculator
+
+    assert_equal 1000, balance_calculator.balance
+    assert_equal 0, balance_calculator.cash_balance
+  end
+
   private
     def build_calculator
       security_resolver = PlaidAccount::Investments::SecurityResolver.new(@plaid_account)
