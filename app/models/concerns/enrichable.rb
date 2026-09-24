@@ -175,13 +175,15 @@ module Enrichable
 
       # Delete AI enrichment records
       removed_count = ai_enrichments.delete_all
-    end
 
-    # Views and totals filtered on provenance are cached under
-    # Family#entries_cache_version, which only moves when an entry's timestamp
-    # changes. delete_all skips callbacks, so touch the record like a normal
-    # save would; `has_one :entry, touch: true` carries it to the entry.
-    touch if removed_count.positive?
+      # Views and totals filtered on provenance are cached under
+      # Family#entries_cache_version, which only moves when an entry's
+      # timestamp changes. delete_all skips callbacks, so touch the record
+      # like a normal save would; `has_one :entry, touch: true` carries it to
+      # the entry. This stays inside the transaction so the cache invalidation
+      # commits or rolls back with the deletion.
+      touch if removed_count.positive?
+    end
 
     removed_count
   end
