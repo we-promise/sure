@@ -34,6 +34,11 @@
           <p><%= @pagy.count %></p>
         </div>
 
+        <%# Deliberately NOT wrapping the table: each row's Confirm/Reject
+            button renders its own button_to form (DS::Button#href), and a
+            <form> cannot legally contain another <form> -- browsers flatten
+            nested forms, which merged every row's authenticity_token into
+            this one and broke individual confirm/reject with a CSRF error. %>
         <%= form_with url: bulk_update_auto_matches_path, method: :patch, data: { turbo_frame: "_top", action: "submit->auto-match-bulk-select#populateIds" } do %>
           <div class="hidden items-center justify-between gap-2 px-4 py-2 mb-1 rounded-lg bg-container shadow-border-xs"
                data-auto-match-bulk-select-target="bar">
@@ -49,34 +54,34 @@
               </button>
             </div>
           </div>
-
-          <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
-            <table class="w-full">
-              <thead>
-                <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
-                  <th class="text-left py-3 pl-4 pr-2 w-8">
-                    <%= check_box_tag "select_all", "1", false,
-                        class: "checkbox checkbox--light",
-                        data: {
-                          auto_match_bulk_select_target: "selectAll",
-                          action: "auto-match-bulk-select#toggleAll"
-                        },
-                        aria: { label: t("auto_matches.bulk_actions.select_all") } %>
-                  </th>
-                  <th class="text-left py-3 px-2"><%= t("auto_matches.table.from") %></th>
-                  <th class="text-left py-3 px-2"><%= t("auto_matches.table.to") %></th>
-                  <th class="text-left py-3 px-2"><%= t("auto_matches.table.date") %></th>
-                  <th class="text-right py-3 px-2"><%= t("auto_matches.table.actions") %></th>
-                </tr>
-              </thead>
-              <tbody>
-                <% @pending_transfers.each do |transfer| %>
-                  <%= render "pending_transfer", transfer: transfer %>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
         <% end %>
+
+        <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+                <th class="text-left py-3 pl-4 pr-2 w-8">
+                  <%= check_box_tag "select_all", "1", false,
+                      class: "checkbox checkbox--light",
+                      data: {
+                        auto_match_bulk_select_target: "selectAll",
+                        action: "auto-match-bulk-select#toggleAll"
+                      },
+                      aria: { label: t("auto_matches.bulk_actions.select_all") } %>
+                </th>
+                <th class="text-left py-3 px-2"><%= t("auto_matches.table.from") %></th>
+                <th class="text-left py-3 px-2"><%= t("auto_matches.table.to") %></th>
+                <th class="text-left py-3 px-2"><%= t("auto_matches.table.date") %></th>
+                <th class="text-right py-3 px-2"><%= t("auto_matches.table.actions") %></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @pending_transfers.each do |transfer| %>
+                <%= render "pending_transfer", transfer: transfer %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
 
         <% if @pagy.pages > 1 %>
           <div class="px-2 py-2">

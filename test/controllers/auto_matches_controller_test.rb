@@ -42,6 +42,32 @@ class AutoMatchesControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr##{ActionView::RecordIdentifier.dom_id(outflow_entry.transaction.transfer)}", false
   end
 
+  # Regression: the bulk-select <form> used to wrap the whole table,
+  # including each row's own Confirm/Reject button_to form. Nested <form>
+  # elements are invalid HTML -- browsers flatten them, which merged every
+  # row's authenticity_token into the outer form and made clicking an
+  # individual Confirm/Reject button submit the *bulk* form instead,
+  # raising ActionController::InvalidAuthenticityToken in production.
+  test "index does not nest the per-row confirm/reject forms inside the bulk-select form" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500)
+    @family.auto_match_transfers!
+
+    get auto_matches_url
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    bulk_form = doc.at_css("form[action='#{bulk_update_auto_matches_path}']")
+    assert_not_nil bulk_form
+    assert_empty bulk_form.css("form"), "no <form> should be nested inside the bulk-update form"
+
+    row = doc.at_css("tr##{ActionView::RecordIdentifier.dom_id(outflow_entry.transaction.transfer)}")
+    row_forms = row.css("form")
+    assert_equal 2, row_forms.size, "expected the row's own confirm and reject forms"
+    assert row_forms.all? { |f| f["action"].start_with?(transfer_path(outflow_entry.transaction.transfer)) },
+      "the per-row confirm/reject forms should still target the transfer"
+  end
+
   test "update_settings disables auto match" do
     patch update_settings_auto_matches_url, params: { auto_match_transfers_disabled: "true" }
     assert_redirected_to auto_matches_url
