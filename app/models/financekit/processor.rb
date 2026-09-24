@@ -40,6 +40,8 @@ class Financekit::Processor
         last_imported_at: applied_at, last_captured_at: last.captured_at)
       batch = last
     end
+    Financekit::Diagnostics.capture(item: @item, batch: batch, source: self.class.name,
+      message: "FinanceKit capture imported", event: "capture_imported", counts: batch.counts, sync_id: batch.sync_id)
     Financekit::Downstream.new(batch).perform!
     true
   rescue ActiveRecord::RecordInvalid => error
@@ -54,16 +56,16 @@ class Financekit::Processor
     # unlucky save.
     Rails.error.report(error, handled: true,
       context: { financekit_item_id: @item.id, batch_id: batch&.batch_id })
-    fail_batch!(batch, "import_validation", permanent: false)
+    fail_batch!(batch, "import_validation", permanent: false, error_class: error.class.name)
     false
   rescue Financekit::Error, JSON::ParserError => error
     # Not retryable. The stored payload is immutable, so a protocol violation
     # or bytes that no longer parse give every later attempt the same input.
-    fail_batch!(batch, error.is_a?(Financekit::Error) ? error.code : "import_validation", permanent: true)
+    fail_batch!(batch, error.is_a?(Financekit::Error) ? error.code : "import_validation", permanent: true, error_class: error.class.name)
     false
   rescue StandardError => error
     Rails.error.report(error, handled: true, context: { financekit_item_id: @item.id, batch_id: batch&.batch_id })
-    fail_batch!(batch, "processing_error", permanent: false)
+    fail_batch!(batch, "processing_error", permanent: false, error_class: error.class.name)
     false
   end
 
@@ -219,10 +221,10 @@ class Financekit::Processor
         end
       end
       identity.save!
-      DebugLogEntry.capture(category: "provider_sync", level: "info", message: "FinanceKit tombstone processed",
-        source: self.class.name, provider_key: "financekit", family: @item.family,
-        metadata: { batch_id: batch.batch_id, source_identity_id: identity.id,
-          review_required: identity.review_required })
+      Financekit::Diagnostics.capture(item: @item, batch: batch, source: self.class.name,
+        message: "FinanceKit tombstone processed", event: "tombstone_processed",
+        account_provider: mapping.financekit_account_lineage.account_provider,
+        source_identity_id: identity.id, review_required: identity.review_required)
     end
 
     # A conflict the family resolved with "keep_sure" settles that source
@@ -301,8 +303,12 @@ class Financekit::Processor
       end
     end
 
-    def fail_batch!(batch, code, permanent:)
-      return unless batch
+    def fail_batch!(batch, code, permanent:, error_class:)
+      unless batch
+        Financekit::Diagnostics.capture(item: @item, source: self.class.name, level: "error",
+          message: "FinanceKit import blocked", event: "import_blocked", error_code: code, error_class: error_class)
+        return
+      end
 
       @item.with_lock do
         batch.reload
@@ -319,8 +325,10 @@ class Financekit::Processor
             retry_at: Time.current + (2**attempts).minutes)
         end
       end
-      DebugLogEntry.capture(category: "provider_sync", level: "error", message: "FinanceKit import requires attention",
-        source: self.class.name, provider_key: "financekit", family: @item.family,
-        metadata: { batch_id: batch.batch_id, error_code: code })
+      retrying = batch.status == "accepted"
+      Financekit::Diagnostics.capture(item: @item, batch: batch, source: self.class.name,
+        level: retrying ? "warn" : "error",
+        message: retrying ? "FinanceKit import retry scheduled" : "FinanceKit import requires repair",
+        event: retrying ? "import_retry" : "import_failed", error_code: code, error_class: error_class)
     end
 end
