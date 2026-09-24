@@ -210,7 +210,9 @@ class Provider::Openai::AutoMerchantDetector
       # Models that can't reason in strict mode often:
       # 1. Return null for everything, OR
       # 2. Simply omit transactions they can't detect (returning fewer results than input)
-      null_count = result.count { |r| r.business_name.nil? || r.business_name == "null" }
+      # A detection is only usable downstream with both a name and a URL, so an
+      # item missing either counts as a failure for the retry heuristic.
+      null_count = result.count { |r| r.business_name.blank? || r.business_url.blank? }
       missing_count = transactions.size - result.size
       failed_count = null_count + missing_count
       failed_ratio = transactions.size > 0 ? failed_count.to_f / transactions.size : 0.0

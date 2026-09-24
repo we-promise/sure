@@ -96,6 +96,33 @@ class Provider::Openai::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_nil result.first.business_url
   end
 
+  test "auto mode retries when strict results lack a usable business_url" do
+    @client.expects(:chat).twice
+      .returns(
+        chat_response('{"merchants":[{"transaction_id":"1","business_name":"Amazon"}]}'),
+        chat_response('{"merchants":[{"transaction_id":"1","business_name":"Amazon","business_url":"amazon.com"}]}')
+      )
+
+    result = detector(json_mode: "auto").auto_detect_merchants
+
+    assert_equal "amazon.com", result.first.business_url
+  end
+
+  test "auto mode still falls back to none mode on HTTP 400" do
+    call_params = []
+    @client.expects(:chat).twice
+      .with { |args| call_params << args[:parameters]; true }
+      .raises(Faraday::BadRequestError.new("400"))
+      .then
+      .returns(chat_response('{"merchants":[{"transaction_id":"1","business_name":"Amazon","business_url":"amazon.com"}]}'))
+
+    result = detector(json_mode: "auto").auto_detect_merchants
+
+    assert_equal "Amazon", result.first.business_name
+    assert call_params.first[:response_format].present?
+    assert_nil call_params.second[:response_format]
+  end
+
   test "auto mode does not fire a second fallback when the none-mode retry returns HTTP 400" do
     @client.expects(:chat).twice
       .returns(chat_response('{"merchants":[{"transaction_id":"1"'))
