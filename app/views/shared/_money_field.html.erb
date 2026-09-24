@@ -103,8 +103,12 @@
         toggling a flow element's display shifts everything below it at the
         exact moment the field blurs — i.e. exactly when a user clicks past
         it to the next field — which was intermittently swallowing that
-        click in a system test. %>
-    <div class="hidden group-focus-within:flex items-center gap-1 absolute left-0 top-full mt-1 z-10 bg-container border border-primary rounded-md p-1 shadow-sm">
+        click in a system test. Styled flush against the field's own bottom
+        edge (full width, no top border, matching background/border/radius)
+        rather than as a separate floating card with its own border and
+        gap, so out-of-flow positioning doesn't read as visually detached
+        from the field it belongs to. %>
+    <div class="hidden group-focus-within:flex items-center gap-1 absolute left-0 right-0 top-full -mt-px z-10 bg-container border border-t-0 border-secondary rounded-b-md p-1">
       <%= render DS::Button.new(text: "+", variant: :outline, size: :sm,
             data: { action: "mousedown->money-field#insertOperator touchstart->money-field#insertOperator", "money-field-operator-param": "+" },
             aria: { label: t(".operator_add") }) %>
