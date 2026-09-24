@@ -48,13 +48,21 @@
     ) %>
     <% end %>
 
-    <%= f.date_field :date,
-      label: t(".date"),
-      required: true,
-      min: Entry.min_supported_date,
-      max: Date.current,
-      value: f.object.date || Date.current,
-      data: { transaction_form_target: "date", action: "change->transaction-form#checkCurrencyDifference" } %>
+    <%= render "transactions/date_time_fields",
+      f: f,
+      date_label: t(".date"),
+      time_label: t(".time"),
+      clear_time_label: t(".clear_time"),
+      date_options: {
+        required: true,
+        min: Entry.min_supported_date,
+        max: Date.current,
+        value: f.object.date || Date.current,
+        data: { transaction_form_target: "date", action: "change->transaction-form#checkCurrencyDifference" }
+      },
+      time_options: {
+        data: { clear_field_target: "input" }
+      } %>
 
     <% convert_input = capture do %>
       <%= f.fields_for :entryable do |ef| %>

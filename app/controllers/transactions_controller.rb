@@ -355,6 +355,7 @@ class TransactionsController < ApplicationController
       new_entry = @entry.account.entries.create!(
         name: params[:trade_name] || Trade.build_name(is_sell ? "sell" : "buy", qty, security.ticker),
         date: @entry.date,
+        time: @entry.time,
         amount: signed_amount,
         currency: @entry.currency,
         notes: conversion_note,
@@ -568,7 +569,7 @@ class TransactionsController < ApplicationController
 
     def entry_params
       entry_params = params.require(:entry).permit(
-        :name, :date, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
+        :name, :date, :time, :amount, :currency, :excluded, :notes, :nature, :entryable_type,
         entryable_attributes: [ :id, :category_id, :merchant_id, :kind, :investment_activity_label, :exchange_rate, { tag_ids: [] } ]
       )
 

@@ -1655,6 +1655,10 @@ components:
         date:
           type: string
           format: date
+        time:
+          type: string
+          nullable: true
+          description: Optional time of day, 24-hour HH:MM
         amount:
           type: string
         currency:
@@ -9791,6 +9795,9 @@ paths:
                       type: string
                       format: date
                       description: Transaction date
+                    time:
+                      type: string
+                      description: Optional time of day, 24-hour HH:MM
                     amount:
                       type: number
                       description: Transaction amount
@@ -9908,6 +9915,10 @@ paths:
                     date:
                       type: string
                       format: date
+                    time:
+                      type: string
+                      description: Optional time of day, 24-hour HH:MM. Send an empty
+                        string to clear it.
                     amount:
                       type: number
                     name:

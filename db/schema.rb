@@ -720,6 +720,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
     t.datetime "reconciled_at"
     t.uuid "reconciled_by_statement_id"
     t.string "source"
+    t.time "time"
     t.datetime "updated_at", null: false
     t.boolean "user_modified", default: false, null: false
     t.index "lower((name)::text)", name: "index_entries_on_lower_name"

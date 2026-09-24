@@ -141,7 +141,9 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert_includes scope.pluck(:id), @entry.child_entries.first.id
   end
 
-  test "children inherit parent's account, date, and currency" do
+  test "children inherit parent's account, date, currency, and time" do
+    @entry.update!(time: "09:15")
+
     children = @entry.split!([
       { name: "Part 1", amount: 50, category_id: nil },
       { name: "Part 2", amount: 50, category_id: nil }
@@ -151,7 +153,23 @@ class EntrySplitTest < ActiveSupport::TestCase
       assert_equal @entry.account_id, child.account_id
       assert_equal @entry.date, child.date
       assert_equal @entry.currency, child.currency
+      assert_equal @entry.time, child.time
     end
+  end
+
+  test "a child's time can be changed independently of its parent after split" do
+    @entry.update!(time: "09:15")
+
+    children = @entry.split!([
+      { name: "Part 1", amount: 50, category_id: nil },
+      { name: "Part 2", amount: 50, category_id: nil }
+    ])
+
+    child = children.first
+    child.update!(time: "10:00")
+
+    assert_equal "10:00", child.reload.time.strftime("%H:%M")
+    assert_equal "09:15", @entry.reload.time.strftime("%H:%M")
   end
 
   test "split_parent? returns true when entry has children" do
