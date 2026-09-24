@@ -2,6 +2,7 @@
 
 class Provider::Kraken
   include HTTParty
+  include Provider::RateLimitable  # fully qualified: Provider::Kraken does not inherit from Provider, unlike the other includers
   extend SslConfigurable
 
   class Error < StandardError; end
@@ -11,6 +12,14 @@ class Provider::Kraken
   class NonceError < Error; end
   class OTPRequiredError < Error; end
   class ApiError < Error; end
+
+  # Kraken meters private endpoints with a decaying counter: Ledgers and
+  # TradesHistory each cost 2 points against a cap of ~15-20 that refills at
+  # under 1 point/second. Paginated backfills (MAX_LEDGER_PAGES = 200) issue
+  # those calls back to back and exhaust it, so requests are spaced out.
+  # Public endpoints are limited separately, per IP, at about the same rate,
+  # so the one interval covers both.
+  MIN_REQUEST_INTERVAL = 1.0
 
   BASE_URL = "https://api.kraken.com"
   PRIVATE_PREFIX = "/0/private"
@@ -79,11 +88,13 @@ class Provider::Kraken
     attr_reader :nonce_generator
 
     def public_get(method, params = {})
+      throttle_request
       response = self.class.get("#{PUBLIC_PREFIX}/#{method}", query: params)
       handle_response(response)
     end
 
     def private_post(method, params = {})
+      throttle_request
       path = "#{PRIVATE_PREFIX}/#{method}"
       request_params = { "nonce" => nonce_generator.call.to_s }.merge(stringify_params(params))
       body = URI.encode_www_form(request_params)
