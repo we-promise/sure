@@ -568,6 +568,21 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     Setting.openai_model = nil
   end
 
+  test "settings page survives a stored openai base url without a host" do
+    with_self_hosting do
+      Setting.openai_uri_base = "http:/foo"
+      Setting.openai_model = "my-model"
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_match I18n.t("provider.openai.model_catalog.errors.invalid_url"), response.body
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
   test "does not call a models endpoint without a custom openai base url" do
     with_self_hosting do
       with_env_overrides("OPENAI_URI_BASE" => nil) do

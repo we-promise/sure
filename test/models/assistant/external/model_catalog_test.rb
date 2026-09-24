@@ -67,4 +67,16 @@ class Assistant::External::ModelCatalogTest < ActiveSupport::TestCase
       assert_includes error.message, "Agent discovery is unavailable"
     end
   end
+
+  test "does not forward the builtin provider's OPENAI_EXTRA_HEADERS to the gateway" do
+    request = stub_request(:get, "https://agent.example.com/v1/models")
+      .with { |req| !req.headers.key?("X-Gateway-Key") }
+      .to_return(status: 200, body: { data: [ { id: "openclaw/main" } ] }.to_json)
+
+    with_env_overrides("OPENAI_EXTRA_HEADERS" => { "X-Gateway-Key" => "static-key" }.to_json) do
+      Assistant::External::ModelCatalog.new(url: "https://agent.example.com/v1/chat/completions", token: "secret").models
+    end
+
+    assert_requested request
+  end
 end

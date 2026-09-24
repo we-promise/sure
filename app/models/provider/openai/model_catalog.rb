@@ -37,17 +37,18 @@ class Provider::Openai::ModelCatalog
     request = Net::HTTP::Get.new(uri.request_uri)
     request["Authorization"] = "Bearer #{@token}" if @token.present?
     request["Accept"] = "application/json"
+    extra_headers.each { |name, value| request[name] = value }
 
     response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https", open_timeout: @open_timeout, read_timeout: @read_timeout) do |http|
       http.request(request)
     end
 
-    raise Error, "#{error_subject} returned HTTP #{response.code}." unless response.is_a?(Net::HTTPSuccess)
+    raise Error, error_text(:http_status, status: response.code) unless response.is_a?(Net::HTTPSuccess)
 
     payload = JSON.parse(response.body)
     entries = payload.is_a?(Hash) ? payload["data"] : nil
     unless entries.is_a?(Array) && entries.all? { |entry| entry.is_a?(Hash) }
-      raise Error, "#{error_subject} returned an invalid response."
+      raise Error, error_text(:invalid_response)
     end
 
     entries.filter_map do |model|
@@ -57,16 +58,14 @@ class Provider::Openai::ModelCatalog
       { id: id, label: label_for(id) }
     end.uniq { |model| model[:id] }
   rescue JSON::ParserError, URI::InvalidURIError => e
-    raise Error, "#{error_subject} returned an invalid response: #{e.message}"
+    raise Error, error_text(:invalid_response_detail, detail: e.message)
   rescue *CONNECTION_ERRORS => e
-    raise Error, "#{error_subject} is unavailable: #{e.message}"
+    raise Error, error_text(:unavailable, detail: e.message)
   end
 
   private
     def models_uri
-      uri = URI(@uri_base)
-      raise URI::InvalidURIError, "only HTTP and HTTPS endpoints are supported" unless uri.is_a?(URI::HTTP)
-
+      uri = http_uri(@uri_base)
       uri.path = "#{uri.path.chomp('/')}/#{openrouter?(uri) ? 'models/user' : 'models'}"
       uri.query = nil
       uri.fragment = nil
@@ -82,11 +81,35 @@ class Provider::Openai::ModelCatalog
       host == "openrouter.ai" || host.end_with?(".openrouter.ai")
     end
 
+    # Parses an absolute http(s) URL with a host. Rejects values URI accepts
+    # but Net::HTTP can't use, such as "http:foo" (no host, nil path) or
+    # "http:/foo" (no host).
+    def http_uri(value)
+      uri = URI(value.to_s.strip)
+      unless uri.is_a?(URI::HTTP) && uri.host.present? && !uri.opaque
+        raise URI::InvalidURIError, I18n.t("provider.openai.model_catalog.errors.invalid_url")
+      end
+
+      uri.path = uri.path.to_s
+      uri
+    end
+
+    # Static OPENAI_EXTRA_HEADERS, so gateways that route or authenticate on a
+    # header accept discovery too. Session-scoped values ({session_id}) only
+    # resolve inside a chat, so they are left out.
+    def extra_headers
+      Provider::Openai.extra_headers.reject { |_, value| value.include?("{session_id}") }
+    end
+
     def label_for(id)
       id
     end
 
-    def error_subject
-      "Model discovery"
+    def error_text(kind, **options)
+      I18n.t("#{i18n_scope}.errors.#{kind}", **options)
+    end
+
+    def i18n_scope
+      "provider.openai.model_catalog"
     end
 end
