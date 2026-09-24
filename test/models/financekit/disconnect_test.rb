@@ -156,20 +156,6 @@ class Financekit::DisconnectTest < ActiveSupport::TestCase
     assert_not_nil @item.reload.purge_completed_at
   end
 
-  test "the sweep still finishes a discard after the feature is switched off" do
-    accept_and_apply
-    account = @source.account
-    @item.disconnect!(disposition: "discard")
-    Financekit.stubs(:enabled?).returns(false)
-
-    FinancekitInboxJob.perform_now
-
-    # The flag governs whether Sure accepts new data, not whether a family may
-    # have what it already took removed.
-    assert_not Account.exists?(account.id)
-    assert_not_nil @item.reload.purge_completed_at
-  end
-
   test "a provider that has not declared discard offers only retain" do
     unconverted = Class.new { include ProviderDisconnectable }
 

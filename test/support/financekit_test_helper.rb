@@ -2,9 +2,7 @@ module FinancekitTestHelper
   def financekit_setup(user: users(:family_admin))
     travel_to Time.utc(2026, 9, 10, 12)
     @user = user
-    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
     @family = @user.family
-    Financekit.stubs(:enabled?).returns(true)
     @source_id = "11111111-1111-4111-8111-111111111111"
     @balance_id = "22222222-2222-4222-8222-222222222222"
     @transaction_id = "33333333-3333-4333-8333-333333333333"

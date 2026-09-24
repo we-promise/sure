@@ -6107,16 +6107,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/connections":
     post:
       summary: Enroll a FinanceKit device publisher
@@ -6178,16 +6168,6 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
           headers:
             Retry-After:
               schema:
@@ -6286,16 +6266,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
     delete:
       summary: Revoke a publisher, retaining or discarding imported financial history
       tags:
@@ -6373,16 +6343,6 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
           headers:
             Retry-After:
               schema:
@@ -6473,16 +6433,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
       requestBody:
         content:
           application/json:
@@ -6556,16 +6506,6 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
           headers:
             Retry-After:
               schema:
@@ -6649,16 +6589,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/connections/{connection_id}/repair":
     parameters:
     - name: connection_id
@@ -6726,16 +6656,6 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
           headers:
             Retry-After:
               schema:
@@ -6962,16 +6882,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/connections/{connection_id}/conflicts/{id}":
     parameters:
     - name: connection_id
@@ -7046,16 +6956,6 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
           headers:
             Retry-After:
               schema:

@@ -10,7 +10,7 @@ RSpec.describe "Api::V1::Financekit", type: :request do
   end
   let(:user) do
     family.users.create!(email: "financekit-api-#{SecureRandom.hex(8)}@example.com", password: "password123",
-      password_confirmation: "password123", role: "admin", preferences: { "preview_features_enabled" => true })
+      password_confirmation: "password123", role: "admin")
   end
   let(:api_key) do
     key = ApiKey.generate_secure_key
@@ -73,11 +73,6 @@ RSpec.describe "Api::V1::Financekit", type: :request do
       run_test! skip: "Documentation only; behavior covered by Minitest"
     end
     response "429", "Rate limited or publisher inbox full" do
-      schema "$ref" => "#/components/schemas/FinancekitError"
-      header "Retry-After", schema: { type: :integer }
-      run_test! skip: "Documentation only; behavior covered by Minitest"
-    end
-    response "503", "Feature unavailable" do
       schema "$ref" => "#/components/schemas/FinancekitError"
       header "Retry-After", schema: { type: :integer }
       run_test! skip: "Documentation only; behavior covered by Minitest"

@@ -45,12 +45,19 @@ class FinancekitItem < ApplicationRecord
     ActiveSupport::SecurityUtils.secure_compare(credential_digest, candidate)
   end
 
+  # Re-checked on every upload rather than trusted from enrollment: a credential
+  # outlives the state that issued it, and the enroller can be deactivated, moved
+  # to another family or demoted between captures.
+  #
+  # No feature flag and no preview opt-in. Admin is the one standing requirement,
+  # because a publisher writes into accounts the whole family reads; the
+  # writable-accounts check below is what confines it to accounts this user may
+  # actually touch.
   def require_publisher!
     error = status == "repair_required" ? "repair_required" : "connection_revoked"
     Financekit.require!(status == "active", error, 403)
-    Financekit.require!(Financekit.enabled?(family), "unavailable", 503)
     user.reload
-    Financekit.require!(user.active? && user.family_id == family_id && user.admin? && user.preview_features_enabled?,
+    Financekit.require!(user.active? && user.family_id == family_id && user.admin?,
       "publisher_forbidden", 403)
     Financekit.require!(!pending_account_setup?, "account_setup_required", 409)
     permitted_ids = family.accounts.writable_by(user).pluck(:id)

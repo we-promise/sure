@@ -4,24 +4,32 @@ This guide covers Sure's server-side ingestion of FinanceKit uploads. It applies
 
 Sure's server-side worker and scheduled inbox sweep are required for either delivery mode. They apply accepted batches, retry processing, complete downstream account updates, and remove expired payload bytes. These server jobs are separate from the iOS app's ability to run in the background.
 
-FinanceKit is default-off and requires:
+FinanceKit needs no server-side configuration to switch on. There is no feature
+flag and no family allowlist: any deployment running this code serves the
+publisher endpoints. Whether a build offers Wallet sync at all is decided in the
+iOS client through StoreKit, which the server cannot observe and does not try to.
 
-- `FINANCEKIT_ENABLED=true`;
-- `FINANCEKIT_FAMILY_IDS`, a comma-separated exact family UUID allowlist;
-- an active enrolling family administrator with preview features enabled; and
+What it does require:
+
+- an active family administrator to enroll, because a publisher writes into
+  accounts the whole family reads. Every upload re-checks this, so a
+  deactivated, demoted or reassigned enroller stops publishing; and
 - the scheduled `FinancekitInboxJob` sweep in addition to jobs enqueued when a batch arrives.
+
+Nothing beyond admin gates it. The mapped accounts are further confined to those
+the enrolling user may write, so an admin cannot publish into an account they
+have no access to.
 
 No Apple Wallet entitlement, private key, or FinanceKit framework is installed on the server. Sure never receives the user's Apple credentials. The iOS app obtains Wallet authorization directly from Apple and uploads only the accounts the user selected and consented to share.
 
 ## Deployment
 
-Deploy the migration, application, worker, and scheduler with the feature flag disabled. The migration introduces publisher connections, stable account lineages, immutable batch receipts, source transaction identities, balance observations, and conflicts.
+Deploy the migration, application, worker, and scheduler. The migration introduces publisher connections, stable account lineages, immutable batch receipts, source transaction identities, balance observations, and conflicts. The endpoints are live as soon as the application is, so treat the deploy itself as the enablement step and run the checks below before announcing it.
 
 After deploy:
 
 1. Confirm the high-priority job queue and recurring scheduler are healthy.
-2. Enable only a disposable test family.
-3. Enroll and activate a synthetic publisher over HTTPS.
+2. Enroll and activate a synthetic publisher over HTTPS, using a disposable test family.
 4. Upload sequences 2 then 1 and confirm the inbox applies them in order.
 5. Retry identical bytes and confirm the receipt is stable and no ledger row duplicates.
 6. Rotate the credential and confirm the prior credential cannot upload or call normal APIs.
@@ -93,9 +101,7 @@ dropped at revocation.
 
 Discard is irreversible, and the request outlives the job that carries it out:
 the intent is recorded on the connection, and the FinanceKit inbox sweep finishes
-any purge whose job was lost. That sweep is deliberately not gated on the
-FinanceKit feature flag — the flag governs whether Sure accepts new data, not
-whether a family may have what it already took removed.
+any purge whose job was lost.
 
 ## Debugging uploads
 
@@ -151,8 +157,8 @@ Apple Cash top-ups come from the demo owner's manual Chase Premier Checking
 account; if absent, a funded Wallet Demo Checking account is created. Subsequent
 reruns preserve category edits and do not duplicate either transfer leg.
 Wallet demo data is included in every environment by both the full generator
-and sample-data reset flow. It does not enable FinanceKit feature flags or change
-user permissions. These records simulate imported data; no iOS device is required.
+and sample-data reset flow. It does not change user permissions. These records
+simulate imported data; no iOS device is required.
 
 ## Capacity and retention
 

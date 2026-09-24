@@ -1,7 +1,9 @@
 class Api::V1::Financekit::ConnectionsController < Api::V1::Financekit::BaseController
   def capabilities
-    available = Financekit.enabled?(current_resource_owner.family)
-    render_json({ available: available, protocol_versions: [ Financekit::VERSION ],
+    # Kept in the response because the client reads it, but it no longer answers
+    # "has an operator switched this family on" -- there is no such switch. It
+    # says this build speaks the publisher protocol, which it does by existing.
+    render_json({ available: true, protocol_versions: [ Financekit::VERSION ],
       delivery: "background_publisher", max_payload_bytes: Financekit::MAX_BYTES,
       max_records: Financekit::MAX_RECORDS, max_accounts: Financekit::MAX_ACCOUNTS,
       max_queued_batches: Financekit::MAX_QUEUED, transaction_statuses: Financekit::Payload::STATUSES,

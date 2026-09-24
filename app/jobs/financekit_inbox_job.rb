@@ -4,8 +4,6 @@ class FinancekitInboxJob < ApplicationJob
   def perform(item_id = nil)
     items = item_id ? FinancekitItem.where(id: item_id) : FinancekitItem.where(status: "active")
     items.find_each do |item|
-      next unless Financekit.enabled?(item.family)
-
       # Ids only: a drained capture still holds its payload bytes. Every part of
       # a multi-chunk capture is collected, so none is left for the sweep below
       # to fan out a second time in this same run.
@@ -36,11 +34,6 @@ class FinancekitInboxJob < ApplicationJob
       # bound, and the oldest request is the one that has been waiting.
       FinancekitItem.where.not(purge_requested_at: nil).where(purge_completed_at: nil)
         .order(:purge_requested_at).limit(Financekit::MAX_QUEUED).to_a.each do |item|
-        # Deliberately not gated on Financekit.enabled?, unlike every other pass
-        # in this job. The controller exempts disconnecting from the feature flag
-        # for the same reason: the flag governs whether Sure accepts new data, not
-        # whether a family may have what it already took removed. Gating here
-        # would strand an accepted deletion the moment the flag went off.
         Financekit::Purge.new(item).perform!
       rescue StandardError
         # Purge already recorded the failure and left the request standing for the
@@ -56,7 +49,7 @@ class FinancekitInboxJob < ApplicationJob
       pending = FinancekitBatch.where(status: "applied", downstream_completed_at: nil)
       pending.distinct.pluck(:financekit_item_id).each do |financekit_item_id|
         item = FinancekitItem.find_by(id: financekit_item_id)
-        next unless item && Financekit.enabled?(item.family)
+        next unless item
 
         # Ordered because the limit makes the choice matter: without it Postgres
         # may return any MAX_QUEUED of the backlog, so the same rows can lose
