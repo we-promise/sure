@@ -327,6 +327,71 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @account.id, response_data["account"]["id"]
   end
 
+  test "should create transaction with an optional time" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Test Transaction",
+        amount: 25.00,
+        date: Date.current,
+        time: "14:30",
+        currency: "USD",
+        nature: "expense"
+      }
+    }
+
+    post api_v1_transactions_url,
+         params: transaction_params,
+         headers: api_headers(@api_key)
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_equal "14:30", response_data["time"]
+  end
+
+  test "should create transaction with no time and return null" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Test Transaction",
+        amount: 25.00,
+        date: Date.current,
+        currency: "USD",
+        nature: "expense"
+      }
+    }
+
+    post api_v1_transactions_url,
+         params: transaction_params,
+         headers: api_headers(@api_key)
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_nil response_data["time"]
+  end
+
+  test "should reject an invalid time on create" do
+    transaction_params = {
+      transaction: {
+        account_id: @account.id,
+        name: "Test Transaction",
+        amount: 25.00,
+        date: Date.current,
+        time: "not-a-time",
+        currency: "USD",
+        nature: "expense"
+      }
+    }
+
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: transaction_params,
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "should create transaction with external idempotency key" do
     transaction_params = {
       transaction: {
@@ -664,6 +729,58 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     response_data = JSON.parse(response.body)
     assert_equal "Updated Transaction Name", response_data["name"]
+  end
+
+  test "should update transaction time" do
+    update_params = {
+      transaction: {
+        time: "08:00"
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_equal "08:00", response_data["time"]
+  end
+
+  test "should clear transaction time when explicitly blanked" do
+    @transaction.entry.update!(time: "08:00")
+
+    update_params = {
+      transaction: {
+        time: ""
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    response_data = JSON.parse(response.body)
+    assert_nil response_data["time"]
+    assert_nil @transaction.entry.reload.time
+  end
+
+  test "should reject an invalid time on update and not clear the existing time" do
+    @transaction.entry.update!(time: "08:00")
+
+    update_params = {
+      transaction: {
+        time: "not-a-time"
+      }
+    }
+
+    put api_v1_transaction_url(@transaction),
+        params: update_params,
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "08:00", @transaction.entry.reload.time.strftime("%H:%M")
   end
 
   test "should protect transaction from provider sync when updated with user_modified true" do
