@@ -125,6 +125,15 @@ class Security::Resolver
 
       return nil unless match
 
+      if exchange_operating_mic.present?
+        ticker_matches = match.ticker&.upcase.to_s == symbol
+        exchange_matches = exchange_operating_mics_equivalent?(match.exchange_operating_mic, exchange_operating_mic)
+
+        # An explicit exchange scopes the lookup; do not persist a broad-search
+        # result that matches neither the requested ticker nor exchange.
+        return nil unless ticker_matches || exchange_matches
+      end
+
       find_or_create_provider_match!(match)
     end
 
