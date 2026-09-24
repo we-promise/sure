@@ -162,6 +162,23 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 250, BalanceSheet.new(@family, user: owner).net_worth_series(period: period).values.last.value.amount
   end
 
+  test "cached net worth series reflects two share edits within the same second" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    owner = users(:empty)
+    member = users(:new_email)
+    account = create_account(balance: 1000, accountable: Depository.new, owner: owner)
+    share = account.share_with!(member)
+    create_balance(account: account, date: Date.current, balance: 1000)
+    period = Period.last_30_days
+    latest = -> { BalanceSheet.new(@family, user: member).net_worth_series(period: period).values.last.value.amount }
+
+    share.update!(ownership_percentage: 40)
+    assert_equal 400, latest.call
+
+    share.update!(ownership_percentage: 10)
+    assert_equal 100, latest.call
+  end
+
   test "calculates asset group totals" do
     create_account(balance: 1000, accountable: Depository.new)
     create_account(balance: 2000, accountable: Depository.new)

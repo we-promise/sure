@@ -62,4 +62,29 @@ class AccountSharingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name$='ownership_percentage']", count: 0
     assert_match "40%", response.body
   end
+
+  test "invalid member percentage rolls back the owner percentage" do
+    sign_in @owner
+
+    patch account_sharing_url(@account), params: {
+      owner_ownership_percentage: "60",
+      sharing: { members: { "0" => { user_id: @member.id, shared: "1", ownership_percentage: "150" } } }
+    }
+
+    assert_redirected_to account_url(@account)
+    assert_equal 100, @account.reload.ownership_percentage
+  end
+
+  test "blank member percentage is rejected instead of silently ignored" do
+    sign_in @owner
+    share = @account.account_shares.find_by!(user: @member)
+    share.update!(ownership_percentage: 40)
+
+    patch account_sharing_url(@account), params: {
+      sharing: { members: { "0" => { user_id: @member.id, shared: "1", ownership_percentage: "" } } }
+    }
+
+    assert_redirected_to account_url(@account)
+    assert_equal 40, share.reload.ownership_percentage
+  end
 end

@@ -21,13 +21,12 @@ class AccountSharingsController < ApplicationController
       return
     end
 
-    if params.key?(:owner_ownership_percentage)
-      @account.update!(ownership_percentage: params[:owner_ownership_percentage])
-    end
-
     eligible_members = Current.family.users.where.not(id: @account.owner_id).where(active: true)
 
+    # The owner's own percentage and every member's change persist together or not at all.
     AccountShare.transaction do
+      @account.update!(ownership_percentage: params[:owner_ownership_percentage]) if params.key?(:owner_ownership_percentage)
+
       sharing_members_params.each do |member_params|
         user = eligible_members.find_by(id: member_params[:user_id])
         next unless user
@@ -37,7 +36,7 @@ class AccountSharingsController < ApplicationController
         if ActiveModel::Type::Boolean.new.cast(member_params[:shared])
           permission = AccountShare::PERMISSIONS.include?(member_params[:permission]) ? member_params[:permission] : (share&.permission || "read_only")
           attrs = { permission: permission }
-          attrs[:ownership_percentage] = member_params[:ownership_percentage] if member_params[:ownership_percentage].present?
+          attrs[:ownership_percentage] = member_params[:ownership_percentage] if member_params.key?(:ownership_percentage)
 
           if share
             share.update!(attrs)
