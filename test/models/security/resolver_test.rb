@@ -54,6 +54,38 @@ class Security::ResolverTest < ActiveSupport::TestCase
     end
   end
 
+  test "keeps a provider candidate when only its ticker matches" do
+    ticker_only = Security.new(ticker: "BOND", exchange_operating_mic: nil, country_code: nil)
+
+    Security.expects(:search_provider)
+            .with("BOND", exchange_operating_mic: "MISX")
+            .returns([ ticker_only ])
+
+    assert_difference "Security.count", 1 do
+      resolved = Security::Resolver.new("BOND", exchange_operating_mic: "MISX").resolve
+
+      assert_equal "BOND", resolved.ticker
+      assert_nil resolved.exchange_operating_mic
+      refute resolved.offline
+    end
+  end
+
+  test "falls back to the selected security when provider candidates match neither ticker nor exchange" do
+    unrelated = Security.new(ticker: "AGG", exchange_operating_mic: nil, country_code: nil)
+
+    Security.expects(:search_provider).returns([ unrelated ])
+
+    assert_difference "Security.count", 1 do
+      resolved = Security::Resolver.new("BOND", exchange_operating_mic: "MISX").resolve
+
+      assert_equal "BOND", resolved.ticker
+      assert_equal "MISX", resolved.exchange_operating_mic
+      assert resolved.offline
+    end
+
+    assert_nil Security.find_by(ticker: "AGG")
+  end
+
   test "resolves offline security" do
     Security.expects(:search_provider).returns([])
 

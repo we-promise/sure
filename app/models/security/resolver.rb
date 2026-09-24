@@ -80,11 +80,8 @@ class Security::Resolver
       return nil unless exchange_operating_mic.present?
 
       match = provider_search_result.find do |s|
-        ticker_matches = s.ticker&.upcase.to_s == symbol.upcase.to_s
-        exchange_matches = exchange_operating_mics_equivalent?(
-          s.exchange_operating_mic,
-          exchange_operating_mic
-        )
+        ticker_matches = ticker_matches?(s)
+        exchange_matches = exchange_matches?(s)
 
         if country_code && exchange_operating_mic
           ticker_matches && exchange_matches && country_matches?(s.country_code)
@@ -114,8 +111,8 @@ class Security::Resolver
       # 4. Rank by exchange_operating_mic relevance (lower index in the list is more relevant)
       sorted_candidates = filtered_candidates.sort_by do |s|
         [
-          s.ticker&.upcase.to_s == symbol.upcase.to_s ? 0 : 1,
-          exchange_operating_mic.present? && exchange_operating_mics_equivalent?(s.exchange_operating_mic, exchange_operating_mic) ? 0 : 1,
+          ticker_matches?(s) ? 0 : 1,
+          exchange_matches?(s) ? 0 : 1,
           sorted_country_codes_by_relevance.index(s.country_code&.upcase.to_s) || sorted_country_codes_by_relevance.length,
           sorted_exchange_operating_mics_by_relevance.index(Security.canonical_exchange_operating_mic(s.exchange_operating_mic)) || sorted_exchange_operating_mics_by_relevance.length
         ]
@@ -124,6 +121,12 @@ class Security::Resolver
       match = sorted_candidates.first
 
       return nil unless match
+
+      if exchange_operating_mic.present?
+        # An explicit exchange scopes the lookup; do not persist a broad-search
+        # result that matches neither the requested ticker nor exchange.
+        return nil unless ticker_matches?(match) || exchange_matches?(match)
+      end
 
       find_or_create_provider_match!(match)
     end
@@ -171,6 +174,14 @@ class Security::Resolver
     def country_matches?(candidate_country)
       return true if candidate_country.blank?
       candidate_country.upcase == country_code.upcase
+    end
+
+    def ticker_matches?(candidate)
+      candidate.ticker&.upcase.to_s == symbol
+    end
+
+    def exchange_matches?(candidate)
+      exchange_operating_mics_equivalent?(candidate.exchange_operating_mic, exchange_operating_mic)
     end
 
     def exchange_operating_mics_equivalent?(left, right)
