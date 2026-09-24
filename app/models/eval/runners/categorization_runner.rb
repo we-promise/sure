@@ -101,7 +101,9 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
           hierarchical_match: hierarchical,
           null_expected: expected_category.nil?,
           null_returned: actual_category.nil?,
-          latency_ms: per_sample_latency
+          latency_ms: per_sample_latency,
+          metadata: confidence_metadata(categorization),
+          **usage_attributes(categorization)
         )
       end
     end
@@ -122,6 +124,32 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
           metadata: { "error" => error_message }
         )
       end
+    end
+
+    # Providers that report calibrated confidence (Jev) carry it alongside the
+    # chosen category; next-token providers return the bare name. Stored in
+    # metadata so calibration can be measured without a schema change.
+    def confidence_metadata(categorization)
+      return {} unless categorization.respond_to?(:confidence)
+
+      {
+        "confidence" => categorization.confidence,
+        "probabilities" => categorization.probabilities
+      }.compact
+    end
+
+    # Providers that spend one request per transaction report usage per sample,
+    # so cost and tokens can be attributed directly. Batching providers bill per
+    # call rather than per transaction and report nothing here.
+    def usage_attributes(categorization)
+      usage = categorization.usage if categorization.respond_to?(:usage)
+      return {} if usage.blank?
+
+      {
+        cost: usage["cost"],
+        prompt_tokens: usage["input_tokens"],
+        completion_tokens: usage["output_tokens"]
+      }.compact
     end
 
     # Determine the effective JSON mode for a batch based on expected null ratio

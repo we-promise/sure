@@ -214,6 +214,27 @@ class Settings::HostingsController < ApplicationController
       end
     end
 
+    update_encrypted_setting(:jev_api_key)
+
+    if hosting_params.key?(:jev_endpoint)
+      raw_endpoint = hosting_params[:jev_endpoint].to_s.strip
+      if raw_endpoint.blank?
+        Setting.jev_endpoint = nil
+      else
+        # Provider::Jev owns the rule so settings, JEV_ENDPOINT and eval-time
+        # construction cannot drift apart; the controller's job is only to turn
+        # a rejection into a message instead of a 500.
+        unless Provider::Jev.endpoint_allowed?(raw_endpoint)
+          raise Setting::ValidationError, t(".invalid_jev_endpoint")
+        end
+        Setting.jev_endpoint = raw_endpoint
+      end
+    end
+
+    if hosting_params.key?(:jev_model)
+      Setting.jev_model = hosting_params[:jev_model].presence
+    end
+
     LLM_NUMERIC_MINIMUMS.each do |key, minimum|
       next unless hosting_params.key?(key)
       raw = hosting_params[key].to_s.strip
@@ -232,6 +253,8 @@ class Settings::HostingsController < ApplicationController
     reselect_external_agent = update_external_assistant_settings!
 
     update_assistant_type
+    update_categorization_provider
+    update_categorization_tuning
 
     if reselect_external_agent
       redirect_to settings_hosting_path, alert: t("settings.hostings.assistant_settings.external_agent_reselect")
@@ -247,6 +270,8 @@ class Settings::HostingsController < ApplicationController
     @openai_model_input = hosting_params[:openai_model] if hosting_params.key?(:openai_model)
     @anthropic_base_url_input = hosting_params[:anthropic_base_url] if hosting_params.key?(:anthropic_base_url)
     @anthropic_model_input = hosting_params[:anthropic_model] if hosting_params.key?(:anthropic_model)
+    @jev_endpoint_input = hosting_params[:jev_endpoint] if hosting_params.key?(:jev_endpoint)
+    @jev_model_input = hosting_params[:jev_model] if hosting_params.key?(:jev_model)
     flash.now[:alert] = error.message
     render :show, status: :unprocessable_entity
   end
@@ -272,7 +297,7 @@ class Settings::HostingsController < ApplicationController
     # Strong parameters for the self-hosting settings form.
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
     end
 
     def load_external_assistant_models
@@ -362,6 +387,57 @@ class Settings::HostingsController < ApplicationController
       Assistant::External::ModelCatalog.new(url: url, token: token).models.pluck(:id)
     rescue Assistant::External::ModelCatalog::Error => error
       raise Setting::ValidationError, t("settings.hostings.assistant_settings.agent_discovery_error", error: error.message)
+    end
+
+    # Family-scoped, like assistant_type: it decides whose transaction data is
+    # sent to Jev. Guarded by the preview gate because the selector that submits
+    # it is only rendered for opted-in users.
+    def update_categorization_provider
+      return unless params[:family].present? && params[:family][:categorization_provider].present?
+      return if ENV["CATEGORIZATION_PROVIDER"].present?
+      return unless preview_features_enabled?
+
+      provider = params[:family][:categorization_provider]
+      return unless Family::CATEGORIZATION_PROVIDERS.include?(provider)
+
+      Current.family.update!(categorization_provider: provider)
+    end
+
+    # Family-scoped like categorization_provider. Validated here rather than
+    # leaning on the DB check constraint, which would surface as a 500 instead
+    # of the inline error the rest of this form gives.
+    def update_categorization_tuning
+      return unless params[:family].present?
+      return unless preview_features_enabled?
+
+      updates = {}
+
+      if params[:family][:categorization_confidence_threshold].present? && ENV["CATEGORIZATION_CONFIDENCE_THRESHOLD"].blank?
+        updates[:categorization_confidence_threshold] = unit_interval!(
+          params[:family][:categorization_confidence_threshold],
+          t("settings.hostings.categorization_provider_selector.confidence_threshold_label")
+        )
+      end
+
+      if params[:family][:categorization_shadow_rate].present? && ENV["CATEGORIZATION_SHADOW_RATE"].blank?
+        updates[:categorization_shadow_rate] = unit_interval!(
+          params[:family][:categorization_shadow_rate],
+          t("settings.hostings.categorization_provider_selector.shadow_rate_label")
+        )
+      end
+
+      Current.family.update!(updates) if updates.any?
+    end
+
+    def unit_interval!(raw, field_label)
+      value = Float(raw.to_s.strip) rescue nil
+
+      if value.nil? || value.negative? || value > 1
+        raise Setting::ValidationError,
+              t("settings.hostings.update.invalid_categorization_rate", field: field_label)
+      end
+
+      value
     end
 
     def update_assistant_type
