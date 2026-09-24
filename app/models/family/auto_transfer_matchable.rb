@@ -46,6 +46,7 @@ module Family::AutoTransferMatchable
       {
         date_window:,
         family_id: id,
+        family_currency: currency,
         inflow_transaction_id:,
         outflow_transaction_id:,
         account_id:,
@@ -193,6 +194,12 @@ module Family::AutoTransferMatchable
     # off so a user can still find and confirm a real cross-currency transfer that happens to
     # involve a manual account, rather than being forced into creating a duplicate.
     #
+    # The cross-currency branch prefers the direct pair rate. Exchange rates are only
+    # synced from each account currency to the family currency, so a transfer between
+    # two non-family currencies (e.g. RUB -> THB in a USD family) has no direct rate;
+    # the cross rate is then derived through the family currency
+    # (RUB -> USD / THB -> USD).
+    #
     # NOTE: this is passed through `.squish`, which collapses all whitespace (including
     # newlines) into single spaces -- a `--` SQL line comment anywhere in this heredoc would
     # swallow the remainder of the query. Put explanatory comments here in Ruby instead.
@@ -255,11 +262,38 @@ module Family::AutoTransferMatchable
             outflow_candidates.currency <> inflow_candidates.currency
           )
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
-          JOIN exchange_rates ON (
-            exchange_rates.date = outflow_candidates.date AND
-            exchange_rates.from_currency = outflow_candidates.currency AND
-            exchange_rates.to_currency = inflow_candidates.currency
-          )
+          JOIN LATERAL (
+            SELECT COALESCE(
+              (
+                SELECT direct_rates.rate
+                FROM exchange_rates direct_rates
+                WHERE
+                  direct_rates.date = outflow_candidates.date AND
+                  direct_rates.from_currency = outflow_candidates.currency AND
+                  direct_rates.to_currency = inflow_candidates.currency
+              ),
+              (
+                CASE WHEN outflow_candidates.currency = :family_currency THEN 1 ELSE (
+                  SELECT outflow_family_rates.rate
+                  FROM exchange_rates outflow_family_rates
+                  WHERE
+                    outflow_family_rates.date = outflow_candidates.date AND
+                    outflow_family_rates.from_currency = outflow_candidates.currency AND
+                    outflow_family_rates.to_currency = :family_currency
+                ) END
+              ) / NULLIF(
+                CASE WHEN inflow_candidates.currency = :family_currency THEN 1 ELSE (
+                  SELECT inflow_family_rates.rate
+                  FROM exchange_rates inflow_family_rates
+                  WHERE
+                    inflow_family_rates.date = outflow_candidates.date AND
+                    inflow_family_rates.from_currency = inflow_candidates.currency AND
+                    inflow_family_rates.to_currency = :family_currency
+                ) END,
+                0
+              )
+            ) AS rate
+          ) transfer_exchange_rates ON transfer_exchange_rates.rate IS NOT NULL
           LEFT JOIN transfers existing_transfers ON (
             existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
             existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
@@ -278,7 +312,7 @@ module Family::AutoTransferMatchable
             outflow_accounts.status IN ('draft', 'active') AND
             existing_transfers.id IS NULL AND
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
-            ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * exchange_rates.rate, 0))
+            ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * transfer_exchange_rates.rate, 0))
               BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
