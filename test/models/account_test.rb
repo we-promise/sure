@@ -920,4 +920,31 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_nil account.history_start_date
   end
+
+  test "ownership percentage is validated between 0 and 100" do
+    account = accounts(:depository)
+
+    account.ownership_percentage = 60
+    assert account.valid?
+
+    account.ownership_percentage = 100.5
+    assert_not account.valid?
+
+    account.ownership_percentage = -1
+    assert_not account.valid?
+  end
+
+  test "ownership percentage resolves per viewing user" do
+    account = accounts(:investment)
+    account.account_shares.where(user: users(:family_member)).destroy_all
+    account.update!(ownership_percentage: 60)
+    account.share_with!(users(:family_member)).update!(ownership_percentage: 40)
+    account.reload
+
+    assert_equal 60, account.ownership_percentage_for(account.owner)
+    assert_equal 40, account.ownership_percentage_for(users(:family_member))
+    assert_equal 100, account.ownership_percentage_for(nil)
+    assert_equal 100, account.ownership_percentage_for(users(:empty))
+    assert_equal account.balance * BigDecimal("0.4"), account.owned_balance_for(users(:family_member))
+  end
 end

@@ -160,6 +160,22 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_equal family_oldest, component.period.start_date
   end
 
+  test "shows no ownership share line when the user counts the full account" do
+    Current.stubs(:user).returns(@account.owner)
+
+    assert_nil UI::Account::Chart.new(account: @account).ownership_share_display
+  end
+
+  test "shows the user's ownership share and owned amount when below 100%" do
+    @account.update!(ownership_percentage: 40)
+    Current.stubs(:user).returns(@account.owner)
+
+    display = UI::Account::Chart.new(account: @account).ownership_share_display
+
+    assert_includes display, "40%"
+    assert_includes display, @account.owned_balance_money_for(@account.owner).format
+  end
+
   private
     # 10 shares at $100 market price; gain = 1000 - cost_basis * 10
     def create_holding(cost_basis:)

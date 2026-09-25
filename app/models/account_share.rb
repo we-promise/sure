@@ -6,6 +6,7 @@ class AccountShare < ApplicationRecord
 
   validates :permission, inclusion: { in: PERMISSIONS }
   validates :user_id, uniqueness: { scope: :account_id }
+  validates :ownership_percentage, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
   validate :cannot_share_with_owner
   validate :user_in_same_family
 

@@ -15,6 +15,10 @@ en:
         read_write_description: Can categorize, tag, and add notes
         read_only: View only
         read_only_description: Can only view account data
+      ownership: Ownership %
+      your_ownership: Your ownership share (%)
+      ownership_description: Share of this account counted in your net worth. Each person's share is set here by the owner.
+      your_ownership_readonly: "Your ownership share: %{percentage} (set by the account owner)"
       save: Save sharing settings
       owner_label: "Owner: %{name}"
       shared_with_count:

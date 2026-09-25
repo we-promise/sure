@@ -49,6 +49,19 @@ class UI::Account::Chart < ApplicationComponent
     converted_balance_money&.then { |money| signed_format(money) }
   end
 
+  # Placeholder: the current user's share of the account, shown only when it is
+  # not 100%. Nil otherwise.
+  def ownership_share_display
+    percentage = account.ownership_percentage_for(Current.user)
+    return if percentage == 100
+
+    I18n.t(
+      "UI.account.chart.ownership_share",
+      percentage: ActiveSupport::NumberHelper.number_to_percentage(percentage, precision: 2, strip_insignificant_zeros: true),
+      amount: account.owned_balance_money_for(Current.user).format
+    )
+  end
+
   # Label displayed above the main indicator, based on account type and chart view.
   def title
     case account.accountable_type

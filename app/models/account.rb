@@ -9,6 +9,7 @@ class Account < ApplicationRecord
   after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
+  validates :ownership_percentage, numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 100 }
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
@@ -684,6 +685,34 @@ class Account < ApplicationRecord
 
   def shared?
     account_shares.any?
+  end
+
+  # Percentage (0-100) of this account that +user+ counts towards their own net
+  # worth. The owner's share lives on the account; co-owners' shares live on
+  # their AccountShare. Anyone else (or no user) sees the full account.
+  def ownership_percentage_for(user)
+    return BigDecimal("100") if user.nil?
+    return ownership_percentage if owned_by?(user)
+
+    share = if account_shares.loaded?
+      account_shares.find { |s| s.user_id == user.id }
+    else
+      account_shares.find_by(user: user)
+    end
+
+    share ? share.ownership_percentage : BigDecimal("100")
+  end
+
+  def ownership_fraction_for(user)
+    ownership_percentage_for(user) / 100
+  end
+
+  def owned_balance_for(user)
+    balance * ownership_fraction_for(user)
+  end
+
+  def owned_balance_money_for(user)
+    Money.new(owned_balance_for(user), currency)
   end
 
   def permission_for(user)

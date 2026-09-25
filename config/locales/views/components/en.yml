@@ -61,6 +61,7 @@ en:
           start_value: The asset value at the beginning of this day
       chart:
         no_data_available: "No data available"
+        ownership_share: "Your share: %{percentage} (%{amount})"
         title:
           balance: Balance
           cash_value: Cash value

@@ -113,6 +113,90 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_not_includes account_ids, excluded_account.id
   end
 
+  test "counts only the viewing user's ownership share" do
+    owner = users(:empty)
+    member = users(:new_email)
+
+    property = create_account(balance: 1000, accountable: Property.new, owner: owner, ownership_percentage: 60)
+    mortgage = create_account(balance: 400, accountable: Loan.new, owner: owner, ownership_percentage: 50)
+    property.share_with!(member).update!(ownership_percentage: 40)
+    mortgage.share_with!(member)
+
+    owner_sheet = BalanceSheet.new(@family, user: owner)
+    assert_equal 600, owner_sheet.assets.total
+    assert_equal 200, owner_sheet.liabilities.total
+    assert_equal 400, owner_sheet.net_worth
+
+    member_sheet = BalanceSheet.new(@family, user: member)
+    assert_equal 400, member_sheet.assets.total
+    assert_equal 400, member_sheet.liabilities.total # share defaults to 100
+    assert_equal 0, member_sheet.net_worth
+  end
+
+  test "net worth series is scaled to the viewing user's share and matches the balance sheet" do
+    owner = users(:empty)
+    member = users(:new_email)
+    account = create_account(balance: 1000, accountable: Depository.new, owner: owner, ownership_percentage: 60)
+    account.share_with!(member).update!(ownership_percentage: 40)
+    create_balance(account: account, date: Date.current, balance: 1000)
+
+    period = Period.last_30_days
+    owner_series = BalanceSheet.new(@family, user: owner).net_worth_series(period: period)
+    member_series = BalanceSheet.new(@family, user: member).net_worth_series(period: period)
+
+    assert_equal 600, owner_series.values.last.value.amount
+    assert_equal 400, member_series.values.last.value.amount
+    assert_equal BalanceSheet.new(@family, user: owner).net_worth, owner_series.values.last.value.amount
+  end
+
+  test "series reflects an edited ownership percentage" do
+    owner = users(:empty)
+    account = create_account(balance: 1000, accountable: Depository.new, owner: owner, ownership_percentage: 60)
+    create_balance(account: account, date: Date.current, balance: 1000)
+    period = Period.last_30_days
+
+    assert_equal 600, BalanceSheet.new(@family, user: owner).net_worth_series(period: period).values.last.value.amount
+
+    account.update!(ownership_percentage: 25)
+
+    assert_equal 250, BalanceSheet.new(@family, user: owner).net_worth_series(period: period).values.last.value.amount
+  end
+
+  test "cached net worth series reflects two share edits within the same second" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    owner = users(:empty)
+    member = users(:new_email)
+    account = create_account(balance: 1000, accountable: Depository.new, owner: owner)
+    share = account.share_with!(member)
+    create_balance(account: account, date: Date.current, balance: 1000)
+    period = Period.last_30_days
+    latest = -> { BalanceSheet.new(@family, user: member).net_worth_series(period: period).values.last.value.amount }
+
+    share.update!(ownership_percentage: 40)
+    assert_equal 400, latest.call
+
+    share.update!(ownership_percentage: 10)
+    assert_equal 100, latest.call
+  end
+
+  test "a share added within the same second as an earlier one is visible despite the cached account ids" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    owner = users(:empty)
+    member = users(:new_email)
+    first = create_account(balance: 1000, accountable: Depository.new, owner: owner)
+    second = create_account(balance: 500, accountable: Depository.new, owner: owner)
+
+    travel_to Time.zone.parse("2026-09-25 12:00:00.100"), with_usec: true do
+      first.share_with!(member)
+      assert_equal 1000, BalanceSheet.new(@family, user: member).assets.total
+    end
+
+    travel_to Time.zone.parse("2026-09-25 12:00:00.600"), with_usec: true do
+      second.share_with!(member)
+      assert_equal 1500, BalanceSheet.new(@family, user: member).assets.total
+    end
+  end
+
   test "calculates asset group totals" do
     create_account(balance: 1000, accountable: Depository.new)
     create_account(balance: 2000, accountable: Depository.new)

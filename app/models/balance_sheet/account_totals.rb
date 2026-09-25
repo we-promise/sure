@@ -66,7 +66,7 @@ class BalanceSheet::AccountTotals
 
     # Returns the cache key for storing visible account IDs, invalidated on data updates.
     def cache_key
-      shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_i : nil
+      shares_version = user ? AccountShare.where(user: user).maximum(:updated_at)&.to_f : nil
       family.build_cache_key(
         [ "balance_sheet_account_ids", user&.id, shares_version ].compact.join("_"),
         invalidate_on_data_updates: true
@@ -98,12 +98,14 @@ class BalanceSheet::AccountTotals
       end
     end
 
-    # Converts an account's balance to the family's currency using pre-fetched exchange rates.
-    # @return [BigDecimal] balance in the family's currency
+    # Converts the viewing user's share of an account's balance to the family's
+    # currency using pre-fetched exchange rates.
+    # @return [BigDecimal] owned balance in the family's currency
     def converted_balance_for(account)
-      return account.balance if account.currency == family.currency
+      owned_balance = account.owned_balance_for(user)
+      return owned_balance if account.currency == family.currency
 
       rate = exchange_rates[account.currency]
-      account.balance * rate
+      owned_balance * rate
     end
 end
