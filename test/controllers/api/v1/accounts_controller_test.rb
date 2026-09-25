@@ -69,6 +69,23 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal account.owned_balance_money_for(@user).format, data["owned_balance"]
   end
 
+  test "loads ownership shares without a query per shared account" do
+    co_owner = users(:intro_user)
+    co_owner.update!(family: families(:dylan_family))
+
+    3.times do |i|
+      account = families(:dylan_family).accounts.create!(name: "Shared #{i}", balance: 1000, currency: "USD", accountable: Depository.new, owner: co_owner)
+      account.share_with!(@user).update!(ownership_percentage: 25)
+    end
+
+    queries = capture_sql_queries { get "/api/v1/accounts", params: {}, headers: api_headers(@api_key) }
+
+    assert_response :success
+    assert_operator queries.count { |sql| sql.include?('FROM "account_shares"') }, :<=, 2
+    shares = JSON.parse(response.body)["accounts"].select { |a| a["name"].start_with?("Shared") }
+    assert_equal [ 25.0 ], shares.map { |a| a["ownership_percentage"] }.uniq
+  end
+
   test "should return user's family accounts successfully" do
     get "/api/v1/accounts", params: {}, headers: api_headers(@api_key)
 
