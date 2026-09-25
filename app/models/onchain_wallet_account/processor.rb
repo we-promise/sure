@@ -327,12 +327,14 @@ class OnchainWalletAccount::Processor
                        .to_a
       return [ 0, false ] if entries.empty?
 
-      amount_changed = false
+      # Computed independently of the per-entry predicate below, so the
+      # `account.sync_later` trigger can't silently stop firing if that
+      # predicate is ever relaxed.
+      amount_changed = entries.any? { |entry| !entry.amount.zero? }
 
       count = entries.count do |entry|
         trade = entry.entryable
         expected_name = movement_name(trade.qty.to_d)
-        amount_changed ||= !entry.amount.zero?
         already_normalized = trade.investment_activity_label == TRANSFER_LABEL &&
                              entry.name == expected_name &&
                              entry.amount.zero?
@@ -340,11 +342,10 @@ class OnchainWalletAccount::Processor
 
         Entry.transaction do
           trade.update!(investment_activity_label: TRANSFER_LABEL)
-          entry.update!(name: expected_name)
-          # A transfer moves no cash, so the amount is always zero — clearing a
-          # pre-fix signed value here is what removes the phantom cash on the
-          # next sync for a wallet that never moves again.
-          entry.update!(amount: 0)
+          # One write for both entry columns — the name wording and the
+          # cash-neutral amount (a pre-fix signed value here is what leaves the
+          # phantom cash on a wallet that never moves again).
+          entry.update!(name: expected_name, amount: 0)
         end
         true
       end
