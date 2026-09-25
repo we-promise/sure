@@ -92,9 +92,18 @@ class AutoMatchesController < ApplicationController
     # the toggle later expecting the same pairs to resurface.
     def cleanup_pending_auto_matches!
       family_transaction_ids = Current.family.transactions.select(:id)
+      # Only clean up genuine auto-match suggestions -- both legs still
+      # kind == "standard" (mirrors Transfer#kinds_still_standard?). A
+      # pending transfer imported with a kind already set
+      # (Family::DataImporter, Demo::Generator) isn't an auto-match
+      # suggestion; destroying it here would also reset both legs' kind to
+      # "standard" (Transfer#destroy!), silently wiping e.g. an
+      # investment_contribution classification.
       Transfer.pending
         .where(inflow_transaction_id: family_transaction_ids)
         .where(outflow_transaction_id: family_transaction_ids)
+        .joins(:inflow_transaction, :outflow_transaction)
+        .where(inflow_transaction: { kind: "standard" }, outflow_transaction: { kind: "standard" })
         .find_each(&:destroy!)
     end
 
