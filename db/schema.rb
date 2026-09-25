@@ -372,7 +372,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_140000) do
     t.index ["budget_id", "category_id"], name: "index_budget_categories_on_budget_id_and_category_id", unique: true
     t.index ["budget_id"], name: "index_budget_categories_on_budget_id"
     t.index ["category_id"], name: "index_budget_categories_on_category_id"
-    t.check_constraint "rolled_over_amount >= 0::numeric", name: "chk_budget_categories_rolled_over_amount_non_negative"
   end
 
   create_table "budget_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1123,6 +1122,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_140000) do
     t.check_constraint "allocated_amount IS NULL OR allocated_amount >= 0::numeric", name: "chk_goal_accounts_allocation_non_negative"
   end
 
+  create_table "goal_expense_categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "category_id", null: false
+    t.datetime "created_at", null: false
+    t.uuid "goal_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category_id"], name: "index_goal_expense_categories_on_category_id"
+    t.index ["goal_id", "category_id"], name: "index_goal_expense_categories_on_goal_id_and_category_id", unique: true
+    t.index ["goal_id"], name: "index_goal_expense_categories_on_goal_id"
+  end
+
   create_table "goal_pledges", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.decimal "amount", precision: 19, scale: 4, null: false
@@ -1151,11 +1160,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_140000) do
     t.string "currency", null: false
     t.uuid "family_id", null: false
     t.string "icon"
+    t.boolean "include_uncategorized_expenses", default: false, null: false
     t.string "kind", default: "one_off", null: false
     t.string "name", null: false
     t.text "notes"
     t.string "progress_basis", default: "balance", null: false
     t.string "state", default: "active", null: false
+    t.uuid "tag_id"
     t.decimal "target_amount", precision: 19, scale: 4, null: false
     t.date "target_date"
     t.string "target_mode", default: "fixed", null: false
@@ -1163,6 +1174,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_140000) do
     t.datetime "updated_at", null: false
     t.index ["family_id", "state"], name: "index_goals_on_family_id_and_state"
     t.index ["family_id"], name: "index_goals_on_family_id"
+    t.index ["tag_id"], name: "index_goals_on_tag_id"
     t.check_constraint "char_length(name::text) <= 255", name: "chk_savings_goals_name_length"
     t.check_constraint "consumed_amount >= 0::numeric", name: "chk_goals_consumed_amount_non_negative"
     t.check_constraint "kind::text = ANY (ARRAY['one_off'::character varying::text, 'maintained'::character varying::text])", name: "chk_goals_kind_enum"
@@ -2994,10 +3006,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_140000) do
   add_foreign_key "fio_items", "families"
   add_foreign_key "goal_accounts", "accounts", on_delete: :restrict
   add_foreign_key "goal_accounts", "goals", on_delete: :cascade
+  add_foreign_key "goal_expense_categories", "categories"
+  add_foreign_key "goal_expense_categories", "goals"
   add_foreign_key "goal_pledges", "accounts", on_delete: :restrict
   add_foreign_key "goal_pledges", "goals", on_delete: :cascade
   add_foreign_key "goal_pledges", "transactions", column: "matched_transaction_id", on_delete: :nullify
   add_foreign_key "goals", "families", on_delete: :cascade
+  add_foreign_key "goals", "tags"
   add_foreign_key "holdings", "account_providers"
   add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"

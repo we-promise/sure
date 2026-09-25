@@ -7,6 +7,7 @@ pt-BR:
       success: Transferência removida
     form:
       amount: Valor
+      category: Categoria
       date: Data
       expense: Despesa
       from: De
@@ -15,6 +16,7 @@ pt-BR:
       submit: Criar transferência
       to: Para
       transfer: Transferência
+      uncategorized: Sem categoria
     new:
       title: Nova transferência
     show:

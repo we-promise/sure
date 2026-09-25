@@ -10,6 +10,7 @@ pt-PT:
     form:
       amount: Montante
       bank_charges: Comissões Bancárias
+      category: Categoria
       outgoing_fee: Comissão de transferência de saída
       incoming_fee: Comissão de transferência de entrada
       date: Data
@@ -24,6 +25,7 @@ pt-PT:
       submit: Criar transferência
       to: Para
       transfer: Transferência
+      uncategorized: Sem categoria
     new:
       title: Nova transferência
     show:

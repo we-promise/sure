@@ -8,6 +8,7 @@ tr:
     form:
       amount: Tutar
       bank_charges: Banka ücretleri
+      category: Kategori
       date: Tarih
       destination_amount: Hedef tutar
       destination_amount_display: 'Hedef tutar: %{amount}'
@@ -22,6 +23,7 @@ tr:
       submit: Transfer oluştur
       to: Kime
       transfer: Transfer
+      uncategorized: Kategorisiz
     new:
       title: Yeni transfer
     show:
