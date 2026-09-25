@@ -155,12 +155,16 @@ class TransactionTest < ActiveSupport::TestCase
     assert_not Transaction.new(kind: "cc_payment").category_editable?
   end
 
-  test "category_editable? defers to Transfer#categorizable? when a Transfer record exists" do
+  test "category_editable? checks the transaction's own kind, not the paired leg's, when a Transfer record exists" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
-    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "investment_contribution")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "funds_movement")
     Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
 
     assert outflow_entry.transaction.reload.category_editable?
+    # The inflow leg of an investment/loan transfer is always "funds_movement"
+    # (Transfer::Creator), so it must stay non-editable even though its
+    # paired outflow (and Transfer#categorizable?) is categorizable.
+    assert_not inflow_entry.transaction.reload.category_editable?
 
     fm_outflow = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "funds_movement")
     fm_inflow = create_transaction(date: Date.current, account: accounts(:connected), amount: -500, kind: "funds_movement")
