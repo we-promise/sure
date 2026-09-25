@@ -35,11 +35,37 @@ export default class extends Controller {
     // typing in the first place.
     this.guardSeparator = this.guardSeparator.bind(this);
     this.amountTarget.addEventListener("beforeinput", this.guardSeparator);
+
+    // The field being a text input means the browser applies no numeric
+    // constraint at all (unlike the old type="number" field, which refused
+    // to even hold a typeMismatch value): without this, an unparseable
+    // amount like "100-" or "5/0" is left in the field untouched (by design,
+    // see #normalizeAmount below) and would be submitted to the server
+    // verbatim, where Rails' lenient decimal typecast (String#to_d) parses
+    // only the leading valid portion instead of raising — silently turning
+    // "100-" into 100. Tracking validity live on every keystroke (rather
+    // than only on blur/submit) means the browser's native constraint
+    // validation — which runs before "submit"/"formdata" even fire — is
+    // already up to date by the time a submit is attempted, including via
+    // Enter in the field, which unlike a submit-button click doesn't blur
+    // it first.
+    this.updateValidity = this.updateValidity.bind(this);
+    this.amountTarget.addEventListener("input", this.updateValidity);
   }
 
   disconnect() {
     this.form?.removeEventListener("formdata", this.canonicalizeForSubmit);
     this.amountTarget.removeEventListener("beforeinput", this.guardSeparator);
+    this.amountTarget.removeEventListener("input", this.updateValidity);
+  }
+
+  // A blank field is left to the existing `required` attribute (if any) to
+  // flag, not this — only non-empty text that fails to parse as an amount
+  // or expression is a typeMismatch-equivalent here.
+  updateValidity() {
+    const raw = this.amountTarget.value.trim();
+    const invalid = raw !== "" && evaluateAmountExpression(raw) === null;
+    this.amountTarget.setCustomValidity(invalid ? "Enter a valid amount or expression." : "");
   }
 
   // Only guards plain typed characters (inputType "insertText"): paste has
@@ -161,6 +187,9 @@ export default class extends Controller {
   // Bound to "mousedown"/"touchstart", not "click": those fire before the
   // input loses focus, so calling preventDefault() here stops the field
   // from blurring (which would otherwise dismiss the on-screen keyboard).
+  // Also bound to "keydown.enter"/"keydown.space" for keyboard activation;
+  // preventDefault there is harmless (DS::Button is type="button", and the
+  // only other default it'd stop is page scroll on Space).
   insertOperator(event) {
     event.preventDefault();
     const operator = event.params.operator;
