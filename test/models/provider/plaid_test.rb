@@ -32,6 +32,22 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     end
   end
 
+  test "omits optional callback URLs when they are not provided" do
+    request = mock
+    Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
+      params[:webhook].nil? && params[:redirect_uri].nil?
+    end.returns(request)
+    @plaid.client.expects(:link_token_create).with(request).returns("response")
+
+    result = @plaid.get_link_token(
+      user_id: "test-user-id",
+      webhooks_url: nil,
+      redirect_url: nil
+    )
+
+    assert_equal "response", result
+  end
+
   test "requests liability products only for liability account types" do
     request = mock
     Plaid::LinkTokenCreateRequest.expects(:new).with do |params|

@@ -23,6 +23,14 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal statement.filename, import.pdf_filename
   end
 
+  test "operation_name stays account and import type while file_name uses the PDF filename" do
+    statement = create_pdf_statement
+    import = PdfImport.create_from_statement!(statement: statement)
+
+    assert_equal "#{import.account.name} #{import.type.titleize.gsub(/ Import\z/, '')}", import.operation_name
+    assert_equal statement.filename, import.file_name
+  end
+
   test "ai_processed? returns false when no summary present" do
     assert_not @import.ai_processed?
   end
@@ -65,7 +73,7 @@ class PdfImportTest < ActiveSupport::TestCase
   end
 
   test "column_keys returns transaction columns" do
-    assert_equal %i[date amount name category notes], @import.column_keys
+    assert_equal %i[date amount name merchant category tags notes], @import.column_keys
   end
 
   test "required_column_keys returns date and amount" do
@@ -94,6 +102,47 @@ class PdfImportTest < ActiveSupport::TestCase
     end
 
     assert_equal "importing", import.reload.status
+  end
+
+  test "codex provider selection is persisted for a queued import" do
+    import = PdfImport.create_from_statement!(statement: create_pdf_statement)
+
+    assert import.process_with_ai_later(provider: "codex")
+
+    assert_equal "codex", import.reload.ai_provider
+    assert_equal "importing", import.status
+  end
+
+  test "process_with_ai uses Codex results without an API provider" do
+    import = PdfImport.create_from_statement!(statement: create_pdf_statement)
+    import.update!(ai_provider: "codex")
+    result = Provider::LlmConcept::PdfProcessingResult.new(
+      summary: "Statement summary",
+      document_type: "bank_statement",
+      extracted_data: {
+        "transactions" => [ { "date" => "2026-09-01", "amount" => "10", "name" => "Payroll" } ]
+      }
+    )
+    provider = mock("codex_provider")
+    provider.expects(:supports_pdf_processing?).returns(true)
+    provider.expects(:process_pdf).returns(Provider::Response.new(success?: true, data: result, error: nil))
+    Provider::Codex.expects(:new).returns(provider)
+
+    assert_equal result, import.process_with_ai
+    assert_equal "Statement summary", import.reload.ai_summary
+    assert import.has_extracted_transactions?
+  end
+
+  test "Codex imports do not fall back to an API provider without transactions" do
+    import = PdfImport.create_from_statement!(statement: create_pdf_statement)
+    import.update!(
+      ai_provider: "codex",
+      document_type: "bank_statement",
+      extracted_data: { "transactions" => [] }
+    )
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    assert_equal import.extracted_data, import.extract_transactions
   end
 
   test "process_with_ai_later does not enqueue duplicate jobs while importing" do

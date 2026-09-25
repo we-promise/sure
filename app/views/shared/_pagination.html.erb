@@ -1,71 +1,78 @@
-<%# locals: (pagy:) %>
+<%# locals: (pagy:, show_all: false, per_page: nil, all_label: nil, per_page_label: nil) %>
 
-<nav class="flex w-full items-center justify-between">
-  <%# min-w-0 so the series pill can actually shrink below its content width;
-      without it the flex item keeps its intrinsic size and overflows the nav. %>
-  <div class="flex min-w-0 items-center gap-1 mr-3">
-    <div>
-      <% if pagy.prev %>
-        <%= link_to pagy_url_for(pagy, pagy.prev),
-              data: { turbo_frame: :_top },
-              class: "inline-flex items-center p-2 text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
-          <%= icon("chevron-left") %>
-        <% end %>
-      <% else %>
-        <div class="inline-flex items-center p-2 text-sm font-medium hover:border-secondary">
-          <%= icon("chevron-left") %>
-        </div>
-      <% end %>
-    </div>
-    <%# A flex row, not a block: as a block the inline-flex page links flowed as
-        inline content and wrapped like words, dropping the last page onto a
-        second line. `overflow-x-auto` is the backstop for a container too
-        narrow even for the reduced set (see PaginationHelper). %>
-    <% series = pagy.series %>
-    <% mobile_plan = pagination_mobile_plan(series) %>
-    <div class="rounded-xl p-1 bg-container-inset flex items-center flex-nowrap overflow-x-auto max-w-full">
-      <% series.each_with_index do |series_item, index| %>
-        <% mobile_state = mobile_plan[index] %>
-        <%# Stands in for the run of pages hidden from here on a phone, so the
-            remaining numbers don't read as adjacent. Mirrors the real gap's
-            markup and disappears from `sm` up, where the run is shown. %>
-        <% if mobile_state == :collapsed %>
-          <span class="inline-flex sm:hidden shrink-0 items-center px-2 py-1 text-sm font-medium text-secondary" aria-hidden="true">...</span>
-        <% end %>
-        <% if series_item.is_a?(Integer) %>
-          <%= link_to pagy_url_for(pagy, series_item),
+<% selected_per_page = per_page.presence || pagy&.limit || "10" %>
+<% per_page_options = [[ "10", "10" ], [ "20", "20" ], [ "30", "30" ], [ "50", "50" ], [ "100", "100" ]] %>
+<% per_page_options << [ all_label.presence || t("shared.pagination.all", default: "All"), "all" ] if show_all %>
+
+<nav class="flex w-full items-center justify-between <%= "justify-end" unless pagy %>">
+  <% if pagy %>
+    <%# min-w-0 so the series pill can actually shrink below its content width;
+        without it the flex item keeps its intrinsic size and overflows the nav. %>
+    <div class="flex min-w-0 items-center gap-1 mr-3">
+      <div>
+        <% if pagy.prev %>
+          <%= link_to pagy_url_for(pagy, pagy.prev),
                 data: { turbo_frame: :_top },
-                class: class_names("rounded-md px-2 py-1 shrink-0 items-center text-sm font-medium text-secondary hover:border-secondary hover:text-secondary", mobile_state == :visible ? "inline-flex" : "hidden sm:inline-flex") do %>
-            <%= series_item %>
+                class: "inline-flex items-center p-2 text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
+            <%= icon("chevron-left") %>
           <% end %>
-        <% elsif series_item.is_a?(String) %>
-          <%= link_to pagy_url_for(pagy, series_item),
+        <% else %>
+          <div class="inline-flex items-center p-2 text-sm font-medium hover:border-secondary">
+            <%= icon("chevron-left") %>
+          </div>
+        <% end %>
+      </div>
+      <%# A flex row, not a block: as a block the inline-flex page links flowed as
+          inline content and wrapped like words, dropping the last page onto a
+          second line. `overflow-x-auto` is the backstop for a container too
+          narrow even for the reduced set (see PaginationHelper). %>
+      <% series = pagy.series %>
+      <% mobile_plan = pagination_mobile_plan(series) %>
+      <div class="rounded-xl p-1 bg-container-inset flex items-center flex-nowrap overflow-x-auto max-w-full">
+        <% series.each_with_index do |series_item, index| %>
+          <% mobile_state = mobile_plan[index] %>
+          <%# Stands in for the run of pages hidden from here on a phone, so the
+              remaining numbers don't read as adjacent. Mirrors the real gap's
+              markup and disappears from `sm` up, where the run is shown. %>
+          <% if mobile_state == :collapsed %>
+            <span class="inline-flex sm:hidden shrink-0 items-center px-2 py-1 text-sm font-medium text-secondary" aria-hidden="true">...</span>
+          <% end %>
+          <% if series_item.is_a?(Integer) %>
+            <%= link_to pagy_url_for(pagy, series_item),
+                  data: { turbo_frame: :_top },
+                  class: class_names("rounded-md px-2 py-1 shrink-0 items-center text-sm font-medium text-secondary hover:border-secondary hover:text-secondary", mobile_state == :visible ? "inline-flex" : "hidden sm:inline-flex") do %>
+              <%= series_item %>
+            <% end %>
+          <% elsif series_item.is_a?(String) %>
+            <%= link_to pagy_url_for(pagy, series_item),
+                  data: { turbo_frame: :_top },
+                  class: "rounded-md px-2 py-1 bg-container border border-secondary shadow-xs inline-flex shrink-0 items-center text-sm font-medium text-primary" do %>
+              <%= series_item %>
+            <% end %>
+          <% elsif series_item == :gap %>
+            <span class="inline-flex shrink-0 items-center px-2 py-1 text-sm font-medium text-secondary">...</span>
+          <% end %>
+        <% end %>
+      </div>
+      <div>
+        <% if pagy.next %>
+          <%= link_to pagy_url_for(pagy, pagy.next),
                 data: { turbo_frame: :_top },
-                class: "rounded-md px-2 py-1 bg-container border border-secondary shadow-xs inline-flex shrink-0 items-center text-sm font-medium text-primary" do %>
-            <%= series_item %>
+                class: "inline-flex items-center p-2 text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
+            <%= icon("chevron-right") %>
           <% end %>
-        <% elsif series_item == :gap %>
-          <span class="inline-flex shrink-0 items-center px-2 py-1 text-sm font-medium text-secondary">...</span>
+        <% else %>
+          <div class="inline-flex items-center p-2 text-sm font-medium hover:border-secondary">
+            <%= icon("chevron-right") %>
+          </div>
         <% end %>
-      <% end %>
+      </div>
     </div>
-    <div>
-      <% if pagy.next %>
-        <%= link_to pagy_url_for(pagy, pagy.next),
-              data: { turbo_frame: :_top },
-              class: "inline-flex items-center p-2 text-sm font-medium text-secondary hover:border-secondary hover:text-secondary" do %>
-          <%= icon("chevron-right") %>
-        <% end %>
-      <% else %>
-        <div class="inline-flex items-center p-2 text-sm font-medium hover:border-secondary">
-          <%= icon("chevron-right") %>
-        </div>
-      <% end %>
-    </div>
-  </div>
+  <% end %>
   <div class="flex items-center gap-4">
     <%= select_tag :per_page,
-                   options_for_select(["10", "20", "30", "50", "100"], pagy.limit),
+                   options_for_select(per_page_options, selected_per_page),
+                   aria: { label: per_page_label.presence || t("shared.pagination.rows_per_page", default: "Rows per page") },
                    data: { controller: "selectable-link" },
                    class: "py-1.5 pr-8 text-sm text-primary font-medium bg-container-inset border border-secondary rounded-lg focus:border-secondary focus:ring-secondary focus-visible:ring-secondary" %>
   </div>

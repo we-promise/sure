@@ -60,6 +60,18 @@
                  textarea_id: "family_ai_prompt_merchant" %>
     <% end %>
 
+    <%= render layout: "settings/ai_prompts/prompt_section",
+               locals: { icon_name: "file-text",
+                         title: t(".codex_pdf_import.title"),
+                         subtitle: t(".codex_pdf_import.subtitle"),
+                         open: @family.errors[:ai_prompt_codex_pdf].present? } do %>
+      <%= render "settings/ai_prompts/prompt_field",
+                 form: form, family: @family,
+                 prompts: [ { key: :codex_pdf, label: t(".codex_pdf_import.label") } ],
+                 textarea_id: "family_ai_prompt_codex_pdf" %>
+      <p class="text-xs text-secondary"><%= t(".codex_pdf_import.help") %></p>
+    <% end %>
+
     <div class="flex justify-end">
       <%= form.submit t(".save") %>
     </div>

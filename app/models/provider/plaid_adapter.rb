@@ -33,51 +33,61 @@ class Provider::PlaidAdapter < Provider::Base
 
     # US configuration
     if family.can_connect_plaid_us?
-      configs << {
-        key: "plaid_us",
-        name: "Plaid",
-        description: "Connect to your US bank via Plaid",
-        can_connect: true,
-        member_connectable: member_connectable?,
-        new_account_path: ->(accountable_type, return_to) {
-          Rails.application.routes.url_helpers.new_plaid_item_path(
-            region: "us",
-            accountable_type: accountable_type
-          )
-        },
-        existing_account_path: ->(account_id) {
-          Rails.application.routes.url_helpers.select_existing_account_plaid_items_path(
-            account_id: account_id,
-            region: "us"
-          )
-        }
-      }
+      configs.concat(connection_configs_for_region(:us))
     end
 
     # EU configuration
     if family.can_connect_plaid_eu?
-      configs << {
-        key: "plaid_eu",
-        name: "Plaid (EU)",
-        description: "Connect to your EU bank via Plaid",
+      configs.concat(connection_configs_for_region(:eu))
+    end
+
+    configs
+  end
+
+  def self.connection_configs_for_region(region)
+    profiles = Provider::PlaidProfile.configured_for_region(region)
+    if profiles.empty?
+      profiles = [ Provider::PlaidProfile::Profile.new(
+        key: "default",
+        region: region.to_s,
+        client_id: nil,
+        secret: nil,
+        environment: "sandbox",
+        label: region.to_sym == :eu ? "Plaid EU" : "Plaid"
+      ) ]
+    end
+
+    profiles.map do |profile|
+      profile_key = profile.key == "default" ? nil : profile.key
+      provider_key = region.to_sym == :eu ? "plaid_eu" : "plaid_us"
+      suffix = profile_key ? "_#{profile_key}" : ""
+      name = if profile.key == "default"
+        region.to_sym == :eu ? "Plaid (EU)" : "Plaid"
+      else
+        region.to_sym == :eu ? "Plaid EU (#{profile.label})" : "Plaid (#{profile.label})"
+      end
+
+      {
+        key: "#{provider_key}#{suffix}",
+        name: name,
+        description: "Connect to your #{region.to_sym == :eu ? "European" : "US"} bank via Plaid",
         can_connect: true,
         member_connectable: member_connectable?,
         new_account_path: ->(accountable_type, return_to) {
           Rails.application.routes.url_helpers.new_plaid_item_path(
-            region: "eu",
+            region: region,
+            profile: profile.key,
             accountable_type: accountable_type
           )
         },
         existing_account_path: ->(account_id) {
           Rails.application.routes.url_helpers.select_existing_account_plaid_items_path(
             account_id: account_id,
-            region: "eu"
+            region: region
           )
         }
       }
     end
-
-    configs
   end
 
   # Mutex for thread-safe configuration loading

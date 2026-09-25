@@ -109,6 +109,34 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  test "create persists the selected Plaid profile" do
+    @plaid_provider = mock
+    Provider::Registry.expects(:plaid_provider_for_region).with("us", profile: "secondary").returns(@plaid_provider)
+
+    @plaid_provider.expects(:exchange_public_token).with("public-secondary").returns(
+      OpenStruct.new(access_token: "access-secondary", item_id: "item-secondary")
+    )
+
+    with_env_overrides(
+      PLAID_PROFILE_SECONDARY_CLIENT_ID: "secondary-client",
+      PLAID_PROFILE_SECONDARY_SECRET: "secondary-secret",
+      PLAID_PROFILE_SECONDARY_ENV: "sandbox"
+    ) do
+      assert_difference "PlaidItem.count", 1 do
+        post plaid_items_url, params: {
+          plaid_item: {
+            public_token: "public-secondary",
+            region: "us",
+            profile: "secondary",
+            metadata: { institution: { name: "Secondary Bank" } }
+          }
+        }
+      end
+    end
+
+    assert_equal "secondary", PlaidItem.find_by(plaid_id: "item-secondary").plaid_profile
+  end
+
   test "destroy" do
     delete plaid_item_url(plaid_items(:one))
 

@@ -80,6 +80,23 @@ Go to [https://dashboard.plaid.com](https://dashboard.plaid.com) and register fo
 
 # Setting Up Sure to Use Plaid
 
+### Local development with Production credentials
+
+Sure can use Plaid Production credentials from a local development instance.
+For local development, Sure omits Plaid's optional OAuth redirect URI and
+webhook URL by default, so `http://localhost` does not need to be registered
+in Plaid. This supports desktop web Link sessions.
+
+If you are using an HTTPS tunnel or another public host, set these optional
+variables in `.env.local` and add the exact redirect URI in Plaid Dashboard:
+
+```bash
+PLAID_REDIRECT_URI=https://your-public-host.example/accounts
+DEV_WEBHOOKS_URL=https://your-public-host.example
+```
+
+Use the full HTTPS URL, including `/accounts`, for `PLAID_REDIRECT_URI`.
+
 1. After your Plaid account is registered, go to [https://dashboard.plaid.com/developers/api](https://dashboard.plaid.com/developers/api) or click **Developers > API** in the sidebar, then click **Configure** next to Allowed redirect URIs.
 2. Click **Add new URI**, type your domain, and add `/accounts` at the end (for example: `https://budget.yourdomain.com/accounts`).
 3. Click **Save changes**.
@@ -98,6 +115,34 @@ PLAID_ENV: ${PLAID_ENV}
    PLAID_ENV: production  # (use 'production' for Full/Limited Production Access, or 'sandbox' for Sandbox Access)
 ```
 8. Restart Sure.
+
+### Multiple authorized Plaid applications
+
+Sure keeps the existing `PLAID_CLIENT_ID` / `PLAID_SECRET` credentials as the
+`default` profile. To make additional authorized Plaid applications available
+when creating a new connection, add one environment-variable group per
+application:
+
+```bash
+PLAID_PROFILE_PRIMARY_CLIENT_ID=client_id_from_the_first_application
+PLAID_PROFILE_PRIMARY_SECRET=secret_from_the_first_application
+PLAID_PROFILE_PRIMARY_ENV=production
+PLAID_PROFILE_PRIMARY_REGION=us
+PLAID_PROFILE_PRIMARY_LABEL=Primary
+
+PLAID_PROFILE_SECONDARY_CLIENT_ID=client_id_from_the_second_application
+PLAID_PROFILE_SECONDARY_SECRET=secret_from_the_second_application
+PLAID_PROFILE_SECONDARY_ENV=production
+PLAID_PROFILE_SECONDARY_REGION=us
+PLAID_PROFILE_SECONDARY_LABEL=Secondary
+```
+
+The profile name is the portion between `PLAID_PROFILE_` and `_CLIENT_ID`.
+`_ENV` defaults to `sandbox`, and `_REGION` defaults to `us`. Restart Sure
+after changing these variables. The Accounts connection menu will show one
+Plaid option per configured profile. Each `PlaidItem` stores the selected
+profile, so later syncs, update flows, item removal, and webhook verification
+continue using the correct Plaid application.
 
 ---
 

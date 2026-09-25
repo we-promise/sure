@@ -4,6 +4,7 @@ require "test_helper"
 # transactions that are not already recorded, and should mark the rest reconciled.
 class PdfImportReconciliationTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include ActiveJob::TestHelper
 
   setup do
     @account = accounts(:depository)
@@ -159,6 +160,50 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
 
     assert_difference -> { @account.entries.count }, 1 do
       @import.import!
+    end
+  end
+
+  test "publishing attaches the source PDF to new and reconciled transactions" do
+    existing = create_transaction(account: @account, date: @date, amount: 50, name: "Existing Coffee")
+    @import.update!(extracted_data: { "transactions" => [
+      extracted(date: @date, amount: -50, name: "Coffee Shop"),
+      extracted(date: @date, amount: -12, name: "Bookstore")
+    ] })
+    @import.generate_rows_from_extracted_data
+    @import.rows.find_by!(name: "Bookstore").update_and_sync(
+      category_id: categories(:food_and_drink).id,
+      merchant_id: merchants(:amazon).id,
+      tag_ids: [ tags(:one).id ]
+    )
+
+    @import.import!
+
+    blob_id = @statement.original_file.blob.id
+    assert_includes existing.reload.attachments.pluck(:blob_id), blob_id
+    imported = @import.reload.entries.find_by!(name: "Bookstore").entryable
+    assert_equal categories(:food_and_drink), imported.category
+    assert_equal merchants(:amazon), imported.merchant
+    assert_equal [ tags(:one) ], imported.tags.to_a
+    assert_includes imported.attachments.pluck(:blob_id), blob_id
+  end
+
+  test "publishing schedules all transaction rules for newly imported transactions" do
+    @family.rules.create!(
+      name: "Imported groceries",
+      resource_type: "transaction",
+      effective_date: 1.year.ago.to_date,
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Bookstore")
+      ],
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id)
+      ]
+    )
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -12, name: "Bookstore") ] })
+    @import.generate_rows_from_extracted_data
+
+    assert_enqueued_with job: ApplyAllRulesJob do
+      @import.publish
     end
   end
 

@@ -1,6 +1,6 @@
 <%# locals: (row:) %>
 
-<div style="grid-template-columns: repeat(<%= row.import.column_keys.count %>, minmax(150px, 1fr));" class="first:rounded-tl-lg first:rounded-tr-lg last:rounded-bl-lg last:rounded-br-lg grid divide-x divide-alpha-black-200 theme-dark:divide-alpha-white-200 group">
+<div style="grid-template-columns: repeat(<%= row.import.column_keys.count %>, minmax(150px, 1fr));" class="first:rounded-tl-lg first:rounded-tr-lg last:rounded-bl-lg last:rounded-br-lg grid divide-x divide-alpha-black-200 theme-dark:divide-alpha-white-200 group privacy-sensitive privacy-sensitive-interactive">
   <% row.import.column_keys.each_with_index do |key, idx| %>
     <%= turbo_frame_tag dom_id(row, key), title: row.valid? ? nil : row.errors.full_messages.join(", ") do %>
       <%= form_with(
@@ -13,19 +13,55 @@
               auto_submit_form_trigger_value: "blur",
               mobile_cell_interaction_error_value: !cell_is_valid?(row, key) ? row.errors[key].join(", ") : "",
             }
-          ) do |form| %>
-        <div class="relative">
-          <%= form.text_field key,
-                "data-auto-submit-form-target": "auto",
-                "data-action": "focus->mobile-cell-interaction#highlightCell blur->mobile-cell-interaction#unhighlightCell touchstart->mobile-cell-interaction#handleCellTouch",
-                "data-mobile-cell-interaction-target": "field",
-                class: [
-                  cell_class(row, key),
-                  idx == 0 ? "group-first:rounded-tl-lg group-last:rounded-bl-lg" : "",
-                  idx == row.import.column_keys.count - 1 ? "group-first:rounded-tr-lg group-last:rounded-br-lg" : "",
-                  "focus:outline-none focus:z-10 relative",
-                ],
-                disabled: row.import.complete? %>
+        ) do |form| %>
+        <% custom_field = case key
+        when :category
+          render DS::CategorySelect.new(
+            form: form,
+            categories: import_row_categories,
+            selected_id: row.category_id,
+            disabled: row.import.complete?,
+            auto_submit: true,
+            blank_label: t("transactions.form.category_prompt"),
+            show_label: false
+          )
+        when :merchant
+          render DS::MerchantSelect.new(
+            form: form,
+            method: :merchant_id,
+            merchants: import_row_merchants,
+            selected_id: row.merchant_id,
+            disabled: row.import.complete?,
+            auto_submit: true,
+            include_blank: t("transactions.form.none")
+          )
+        when :tags
+          render DS::TagSelect.new(
+            form: form,
+            tags: import_row_tags,
+            selected_ids: row.tag_ids,
+            disabled: row.import.complete?,
+            auto_submit: true,
+            show_label: false
+          )
+        end %>
+
+        <div class="relative <%= custom_field.present? ? cell_class(row, key) : "" %>">
+          <% if custom_field.present? %>
+            <%= custom_field %>
+          <% else %>
+            <%= form.text_field key,
+                  "data-auto-submit-form-target": "auto",
+                  "data-action": "focus->mobile-cell-interaction#highlightCell blur->mobile-cell-interaction#unhighlightCell touchstart->mobile-cell-interaction#handleCellTouch",
+                  "data-mobile-cell-interaction-target": "field",
+                  class: [
+                    cell_class(row, key),
+                    idx == 0 ? "group-first:rounded-tl-lg group-last:rounded-bl-lg" : "",
+                    idx == row.import.column_keys.count - 1 ? "group-first:rounded-tr-lg group-last:rounded-br-lg" : "",
+                    "focus:outline-none focus:z-10 relative",
+                  ],
+                  disabled: row.import.complete? %>
+          <% end %>
 
           <% if !cell_is_valid?(row, key) %>
             <span class="absolute right-2 top-1/2 -translate-y-1/2 text-destructive md:hidden"

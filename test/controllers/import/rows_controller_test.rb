@@ -70,6 +70,21 @@ class Import::RowsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to import_row_path(@import, @row)
   end
 
+  test "updates category, merchant, and tags from the clean-step controls" do
+    patch import_row_path(@import, @row), params: {
+      import_row: {
+        category_id: categories(:food_and_drink).id,
+        merchant_id: merchants(:amazon).id,
+        tag_ids: [ tags(:one).id ]
+      }
+    }
+
+    @row.reload
+    assert_equal categories(:food_and_drink).name, @row.category
+    assert_equal merchants(:amazon).id, @row.merchant_id
+    assert_equal [ tags(:one).name ], @row.tags_list
+  end
+
   private
     def assert_row_fields(row, fields)
       fields.each do |field|

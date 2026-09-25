@@ -26,6 +26,7 @@ class TransactionImport < Import
 
         category = mappings.categories.mappable_for(row.category)
         tags = row.tags_list.map { |tag| mappings.tags.mappable_for(tag) }.compact
+        merchant = row.merchant
 
         # Use account's currency when no currency column was mapped in CSV, with family currency as fallback
         effective_currency = currency_col_label.present? ? row.currency : (mapped_account.currency.presence || family.currency)
@@ -46,6 +47,7 @@ class TransactionImport < Import
           # Update existing transaction instead of creating a new one
           duplicate_entry.transaction.category = category if category.present?
           duplicate_entry.transaction.tags = tags if tags.any?
+          duplicate_entry.transaction.merchant = merchant if merchant.present?
           duplicate_entry.notes = row.notes if row.notes.present?
           duplicate_entry.import = self
           duplicate_entry.import_locked = true  # Protect from provider sync overwrites
@@ -56,6 +58,7 @@ class TransactionImport < Import
           # Mark as import_locked to protect from provider sync overwrites
           new_transactions << Transaction.new(
             category: category,
+            merchant: merchant,
             tags: tags,
             entry: Entry.new(
               account: mapped_account,
@@ -87,7 +90,7 @@ class TransactionImport < Import
   end
 
   def column_keys
-    base = %i[date amount name currency category tags notes]
+    base = %i[date amount name currency merchant category tags notes]
     base.unshift(:account) if account.nil?
     base
   end
@@ -106,8 +109,8 @@ class TransactionImport < Import
 
   def csv_template
     template = <<~CSV
-      date*,amount*,name,currency,category,tags,account,notes
-      2024-05-15,-45.99,Grocery Store,USD,Food,groceries|essentials,Checking Account,Monthly grocery run
+      date*,amount*,name,currency,merchant,category,tags,account,notes
+      2024-05-15,-45.99,Grocery Store,USD,Amazon,Food,groceries|essentials,Checking Account,Monthly grocery run
       2024-05-16,1500.00,Salary,,Income,,Main Account,
       2024-05-17,-12.50,Coffee Shop,,,coffee,,
     CSV

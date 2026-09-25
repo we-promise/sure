@@ -1,7 +1,7 @@
 class RuleJob < ApplicationJob
   queue_as :medium_priority
 
-  def perform(rule, ignore_attribute_locks: false, execution_type: "manual")
+  def perform(rule, ignore_attribute_locks: false, execution_type: "manual", transaction_ids: nil)
     executed_at = Time.current
     transactions_queued = 0
     transactions_processed = 0
@@ -13,7 +13,7 @@ class RuleJob < ApplicationJob
 
     begin
       # Count matching transactions before processing (queued count)
-      transactions_queued = rule.affected_resource_count
+      transactions_queued = rule.affected_resource_count(transaction_ids: transaction_ids)
 
       # Create the RuleRun record first with pending status
       # We'll update it after we know if there are async jobs
@@ -31,7 +31,11 @@ class RuleJob < ApplicationJob
       )
 
       # Apply the rule and get the result
-      result = rule.apply(ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
+      result = rule.apply(
+        ignore_attribute_locks: ignore_attribute_locks,
+        rule_run: rule_run,
+        transaction_ids: transaction_ids
+      )
 
       if result.is_a?(Hash) && result[:async]
         # Async actions were executed

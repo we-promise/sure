@@ -89,6 +89,7 @@ en:
       execution_types:
         manual: Manual
         scheduled: Scheduled
+        import: Import
       statuses:
         pending: Pending
         success: Success

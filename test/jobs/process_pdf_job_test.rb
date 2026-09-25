@@ -131,6 +131,30 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert @import.error.present?
   end
 
+  test "marks an incomplete AI response as failed" do
+    attach_pdf!(@import)
+    incomplete_result = Provider::LlmConcept::PdfProcessingResult.new(
+      summary: nil,
+      document_type: "other",
+      extracted_data: {}
+    )
+    provider = mock("llm_provider")
+    provider.stubs(:supports_pdf_processing?).returns(true)
+    provider.expects(:process_pdf).returns(
+      Provider::Response.new(
+        success?: true,
+        data: incomplete_result,
+        error: nil
+      )
+    )
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+
+    ProcessPdfJob.perform_now(@import)
+
+    assert_equal "failed", @import.reload.status
+    assert_includes @import.error, "incomplete result"
+  end
+
   test "skips already failed import" do
     attach_pdf!(@import)
     @import.update!(status: :failed)

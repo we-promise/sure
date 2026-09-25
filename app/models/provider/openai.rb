@@ -77,6 +77,7 @@ class Provider::Openai < Provider
     client_options[:extra_headers] = static_headers if static_headers.present?
 
     @client = ::OpenAI::Client.new(**client_options)
+    @access_token = access_token
     @uri_base = llm_uri_base
     if custom_provider? && llm_model.blank?
       raise Error, "Model is required when using a custom OpenAI‑compatible provider"
@@ -131,6 +132,23 @@ class Provider::Openai < Provider
 
   def max_response_tokens
     positive_budget(ENV["LLM_MAX_RESPONSE_TOKENS"], Setting.llm_max_response_tokens, 512)
+  end
+
+  # Ollama thinking models can spend the entire request producing reasoning and
+  # leave the OpenAI-compatible `message.content` empty. PDF extraction needs a
+  # compact JSON answer, so allow local Ollama users to disable that mode.
+  def disable_ollama_thinking?
+    custom_provider? && ActiveModel::Type::Boolean.new.cast(ENV["OLLAMA_DISABLE_THINKING"])
+  end
+
+  def pdf_processing_client
+    return client unless ActiveModel::Type::Boolean.new.cast(ENV["OLLAMA_NATIVE_API"])
+
+    @pdf_processing_client ||= OllamaClient.new(
+      base_uri: @uri_base,
+      access_token: @access_token,
+      request_timeout: self.class.request_timeout
+    )
   end
 
   # The response cap is only sent to the provider when someone explicitly
@@ -323,10 +341,11 @@ class Provider::Openai < Provider
       )
 
       result = PdfProcessor.new(
-        client,
+        pdf_processing_client,
         model: effective_model,
         pdf_content: pdf_content,
         custom_provider: custom_provider?,
+        disable_thinking: disable_ollama_thinking?,
         langfuse_trace: trace,
         family: family,
         max_response_tokens: max_response_tokens
@@ -348,9 +367,12 @@ class Provider::Openai < Provider
       )
 
       result = BankStatementExtractor.new(
-        client: client,
+        client: pdf_processing_client,
         pdf_content: pdf_content,
-        model: effective_model
+        model: effective_model,
+        custom_provider: custom_provider?,
+        disable_thinking: disable_ollama_thinking?,
+        max_response_tokens: max_response_tokens
       ).extract
 
       upsert_langfuse_trace(trace: trace, output: { transaction_count: result[:transactions].size })

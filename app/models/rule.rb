@@ -36,8 +36,8 @@ class Rule < ApplicationRecord
     end
   end
 
-  def affected_resource_count
-    matching_resources_scope.count
+  def affected_resource_count(transaction_ids: nil)
+    matching_resources_scope(transaction_ids: transaction_ids).count
   end
 
   # Public wrapper around the private matching scope so callers can read the
@@ -75,13 +75,17 @@ class Rule < ApplicationRecord
     transaction_ids.size
   end
 
-  def apply(ignore_attribute_locks: false, rule_run: nil)
+  def apply(ignore_attribute_locks: false, rule_run: nil, transaction_ids: nil)
     total_modified = 0
     total_async_jobs = 0
     has_async = false
 
     actions.each do |action|
-      result = action.apply(matching_resources_scope, ignore_attribute_locks: ignore_attribute_locks, rule_run: rule_run)
+      result = action.apply(
+        matching_resources_scope(transaction_ids: transaction_ids),
+        ignore_attribute_locks: ignore_attribute_locks,
+        rule_run: rule_run
+      )
 
       if result.is_a?(Hash) && result[:async]
         has_async = true
@@ -128,8 +132,9 @@ class Rule < ApplicationRecord
   end
 
   private
-    def matching_resources_scope
+    def matching_resources_scope(transaction_ids: nil)
       scope = registry.resource_scope
+      scope = scope.where(id: transaction_ids) if transaction_ids
 
       # 1. Prepare the query with joins required by conditions
       conditions.each do |condition|

@@ -10,6 +10,7 @@ x-rails-env: &rails_env
   BINDING: "0.0.0.0"
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: postgres
+  PGUSER: postgres
   BUNDLE_PATH: /bundle
   REDIS_URL: redis://redis:6379/1
   SELENIUM_REMOTE_URL: http://selenium:4444
@@ -25,6 +26,8 @@ services:
       - bundle_cache:/bundle
     ports:
       - ${PORT:-3000}:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: sleep infinity
     environment:
       <<: *rails_env
@@ -42,6 +45,8 @@ services:
       - bundle_cache:/bundle
     command: bundle exec sidekiq
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       <<: *rails_env
     depends_on:
@@ -54,7 +59,7 @@ services:
     restart: unless-stopped
   
   db:
-    image: postgres:16
+    image: pgvector/pgvector:pg16-trixie
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:

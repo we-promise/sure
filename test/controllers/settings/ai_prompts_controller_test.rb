@@ -5,6 +5,7 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
     get settings_ai_prompts_path
     assert_response :success
+    assert_select "textarea#family_ai_prompt_codex_pdf"
   end
 
   test "non-admin member cannot view family AI prompts" do
@@ -29,6 +30,18 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to settings_ai_prompts_path
     assert_equal "Be terse.", admin.family.reload.ai_prompt(:chat_system)
+  end
+
+  test "admin can update the Codex PDF prompt" do
+    admin = users(:family_admin)
+    sign_in admin
+
+    patch settings_ai_prompts_path, params: {
+      family: { ai_prompt_codex_pdf: "Extract only transactions." }
+    }
+
+    assert_redirected_to settings_ai_prompts_path
+    assert_equal "Extract only transactions.", admin.family.reload.ai_prompt(:codex_pdf)
   end
 
   test "a blank prompt resets the family back to the built-in default" do

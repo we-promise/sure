@@ -170,7 +170,7 @@ class Provider::Openai::BankStatementExtractorTest < ActiveSupport::TestCase
     assert_equal(-100.0, result[:transactions][2][:amount])
   end
 
-  test "handles malformed JSON response gracefully" do
+  test "raises when the AI returns malformed JSON" do
     mock_response = {
       "choices" => [ {
         "message" => {
@@ -189,9 +189,7 @@ class Provider::Openai::BankStatementExtractorTest < ActiveSupport::TestCase
 
     extractor.stubs(:extract_pages_from_pdf).returns([ "Page 1 text" ])
 
-    result = extractor.extract
-
-    # Should return empty transactions on parse error
-    assert_equal [], result[:transactions]
+    error = assert_raises(Provider::Openai::Error) { extractor.extract }
+    assert_equal "AI returned invalid transaction JSON", error.message
   end
 end

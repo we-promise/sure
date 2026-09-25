@@ -372,6 +372,29 @@ For self-hosted deployments, you can configure AI settings through the web inter
 
 **Note:** Environment variables take precedence over UI settings. When an env var is set, the corresponding UI field is disabled.
 
+## Codex subscription PDF imports
+
+Self-hosted users who have a ChatGPT/Codex subscription but no OpenAI API key can
+process PDFs with the locally authenticated Codex CLI. This is separate from the
+OpenAI API provider and does not turn a ChatGPT subscription into an API key.
+
+1. Install the Codex CLI on the host running the Sure worker.
+2. Run `codex login` as the same operating-system user that runs the worker.
+3. Optionally set `CODEX_COMMAND`, `CODEX_MODEL`, `CODEX_REASONING_EFFORT`, and `CODEX_REQUEST_TIMEOUT`.
+4. Optionally customize the instructions under **Settings → AI Prompts → Codex PDF Import**.
+5. Open Imports and choose **Import PDF with Codex**.
+
+The import is queued as a background job and enters the same transaction review
+and publish flow as API-backed PDF imports. The normal **Import document** option
+continues to use the configured API-compatible provider. Codex processing extracts
+statement metadata and transactions in one structured response, so it does not
+require `OPENAI_ACCESS_TOKEN`.
+
+The worker must be able to access the Codex login state. In containers, mount the
+Codex home directory or provide an equivalent authenticated Codex configuration to
+the worker container. If the CLI is unavailable or not authenticated, the Codex
+option is not shown or the import is marked failed with a retryable error.
+
 ## External AI Assistant
 
 Instead of using the built-in LLM (which calls OpenAI or a local model directly), you can delegate chat to an **external AI agent**. The agent receives the conversation, can call back to Sure's financial data via MCP, and streams a response.

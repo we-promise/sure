@@ -149,11 +149,40 @@
                       </div>
                     </div>
                     <%= icon("chevron-right") %>
-                    <%= form.file_field :import_file, accept: @document_upload_extensions.join(","), class: "hidden", onchange: "this.form.submit()" %>
+                    <%= form.file_field :import_file, accept: @document_upload_extensions.join(","), multiple: true, class: "hidden", onchange: "this.form.submit()" %>
                   </label>
                 <% end %>
 
                 <%= render "shared/ruler" %>
+              </li>
+            <% end %>
+
+            <% if (params[:type].nil? || params[:type] == "PdfImport") && @codex_pdf_processing_available %>
+              <li data-controller="drag-and-drop-import">
+                <%= styled_form_with url: imports_path, scope: :import, multipart: true, class: "w-full", data: { turbo: false, drag_and_drop_import_target: "form" } do |form| %>
+                  <%= form.hidden_field :type, value: "PdfImport" %>
+                  <%= form.hidden_field :ai_provider, value: "codex" %>
+                  <label class="flex items-center justify-between p-4 group cursor-pointer w-full">
+                    <div class="flex items-center gap-2">
+                      <div class="bg-container-inset rounded-md w-8 h-8 flex items-center justify-center">
+                        <span class="text-primary">
+                          <%= icon("sparkles", color: "current") %>
+                        </span>
+                      </div>
+                      <div class="text-left">
+                        <span class="text-sm text-primary group-hover:text-secondary block">
+                          <%= t("imports.create.import_pdf_codex") %>
+                        </span>
+                        <span class="text-xs text-secondary">
+                          <%= t("imports.create.import_pdf_codex_description") %>
+                        </span>
+                      </div>
+                    </div>
+                    <%= icon("chevron-right") %>
+                  <%= form.file_field :import_file, accept: ".pdf,application/pdf", multiple: true, class: "hidden", onchange: "this.form.submit()", data: { drag_and_drop_import_target: "input" } %>
+                  </label>
+                <% end %>
+                <%= render "imports/drag_drop_overlay", title: t("imports.create.codex_pdf_drop_title"), subtitle: t("imports.create.codex_pdf_drop_subtitle") %>
               </li>
             <% end %>
           </ul>

@@ -51,4 +51,40 @@ class RuleJobTest < ActiveJob::TestCase
     assert_equal 10, rule_run.transactions_modified
     assert_equal 10, rule_run.transactions_blocked
   end
+
+  test "scopes imported rule runs to the newly imported transactions" do
+    imported = create_transaction(
+      account: @account,
+      name: "Imported Whole Foods",
+      date: Date.current
+    )
+    unrelated = create_transaction(
+      account: @account,
+      name: "Whole Foods History",
+      date: Date.current
+    )
+
+    rule = @family.rules.create!(
+      name: "Imported groceries",
+      resource_type: "transaction",
+      effective_date: 1.year.ago.to_date,
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods")
+      ],
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_category", value: @groceries.id)
+      ]
+    )
+
+    RuleJob.perform_now(
+      rule,
+      ignore_attribute_locks: true,
+      execution_type: "import",
+      transaction_ids: [ imported.id ]
+    )
+
+    assert_equal @groceries, imported.reload.category
+    assert_nil unrelated.reload.category
+    assert_equal 1, rule.rule_runs.order(:created_at).last.transactions_queued
+  end
 end

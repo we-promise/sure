@@ -63,6 +63,7 @@ module Assistant
         Function::GetIncomeStatement,
         Function::GetBudget,
         Function::ImportBankStatement,
+        Function::ImportStatementTransactions,
         Function::SearchFamilyFiles,
         Function::CreateGoal,
         Function::GetTags,

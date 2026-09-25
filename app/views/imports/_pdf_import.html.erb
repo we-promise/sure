@@ -125,6 +125,7 @@
 
       <div class="space-y-2 flex flex-col">
         <%= render DS::Link.new(text: t("imports.pdf_import.try_again"), href: new_import_path, variant: "primary", full_width: true) %>
+        <%= render DS::Link.new(text: t("imports.pdf_import.manual_import"), href: new_import_path(type: "TransactionImport"), variant: "secondary", full_width: true) %>
         <%= render DS::Button.new(
               text: t("imports.pdf_import.delete_import"),
               href: import_path(import),

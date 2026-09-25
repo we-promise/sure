@@ -1,0 +1,13 @@
+en:
+  settings:
+    ai_subscriptions:
+      show:
+        page_title: AI Subscriptions
+        codex:
+          title: Codex subscription
+          subtitle: Connect subscription-backed AI services for local Sure features.
+          description: Use an authenticated Codex subscription for PDF imports without an OpenAI API key.
+          available: CLI available
+          unavailable: Not configured
+          setup_help: Set up Codex authentication for the worker before importing PDFs. Subscription sign-in is handled by Codex CLI and is not stored as an API key in Sure.
+          prompt_settings: Configure Codex prompts

@@ -9,6 +9,8 @@ class PlaidItem < ApplicationRecord
   enum :plaid_region, { us: "us", eu: "eu" }
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
+  validates :plaid_profile, presence: true
+
   # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :access_token, deterministic: true
@@ -48,6 +50,7 @@ class PlaidItem < ApplicationRecord
       webhooks_url: webhooks_url,
       redirect_url: redirect_url,
       region: plaid_region,
+      profile: plaid_profile,
       access_token: access_token,
       account_selection_enabled: account_selection_enabled
     )

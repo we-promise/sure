@@ -12,10 +12,23 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     get imports_url
 
     assert_response :success
+    assert_select "button[data-action='click->privacy-mode#toggle']", count: 1
+    assert_select "[data-controller='bulk-select']"
+    assert_select "[data-bulk-select-target='selectionBar']"
+    assert_select "input[data-bulk-select-target='row']", count: @user.family.imports.where(type: Import::TYPES).count
+    assert_select "form#bulk-delete-form"
+    assert_select "input[name='bulk_delete[entry_ids][]']"
 
     @user.family.imports.ordered.each do |import|
       assert_select "#" + dom_id(import), count: 1
     end
+  end
+
+  test "marks import file names as privacy-sensitive" do
+    get imports_url
+
+    assert_response :success
+    assert_select "#import_pdf_with_rows span.privacy-sensitive", count: 1
   end
 
   test "gets new" do
@@ -24,6 +37,99 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_select "turbo-frame#modal"
+  end
+
+  test "shows the subscription-backed Codex PDF option when Codex is available" do
+    Provider::Codex.stubs(:configured?).returns(true)
+
+    get new_import_url
+
+    assert_response :success
+    assert_select "input[name='import[ai_provider]'][value='codex']"
+    assert_select "input[name='import[import_file][]'][accept='.pdf,application/pdf'][multiple]"
+  end
+
+  test "previews an accessible PDF import inline" do
+    statement = AccountStatement.create_from_upload!(
+      family: @user.family,
+      account: nil,
+      file: uploaded_file(
+        filename: "review_statement.pdf",
+        content_type: "application/pdf",
+        content: file_fixture("imports/sample_bank_statement.pdf").binread
+      )
+    )
+    import = PdfImport.create_from_statement!(statement: statement)
+
+    get preview_import_url(import)
+
+    assert_response :success
+    assert_equal "application/pdf", response.media_type
+    assert_includes response.headers.fetch("Content-Disposition"), "inline"
+    assert_equal statement.original_file.download, response.body
+  end
+
+  test "does not preview a PDF import from another family" do
+    statement = AccountStatement.create_from_upload!(
+      family: families(:empty),
+      account: nil,
+      file: uploaded_file(
+        filename: "other_family_statement.pdf",
+        content_type: "application/pdf",
+        content: file_fixture("imports/sample_bank_statement.pdf").binread
+      )
+    )
+    import = PdfImport.create_from_statement!(statement: statement)
+
+    get preview_import_url(import)
+
+    assert_response :not_found
+  end
+
+  test "queues a Codex PDF import without requiring an API provider" do
+    Provider::Codex.stubs(:configured?).returns(true)
+
+    assert_difference "Import.where(type: 'PdfImport').count", 1 do
+      assert_enqueued_with job: ProcessPdfJob do
+        post imports_url, params: {
+          import: {
+            type: "PdfImport",
+            ai_provider: "codex",
+            import_file: file_fixture_upload("imports/sample_bank_statement.pdf", "application/pdf")
+          }
+        }
+      end
+    end
+
+    assert_equal "codex", PdfImport.order(:created_at).last.ai_provider
+    assert_redirected_to import_path(PdfImport.order(:created_at).last)
+  end
+
+  test "queues multiple Codex PDF imports" do
+    Provider::Codex.stubs(:configured?).returns(true)
+    uploads = 2.times.map do |index|
+      tempfile = Tempfile.new([ "statement-#{index}", ".pdf" ])
+      tempfile.binmode
+      tempfile.write(File.binread(file_fixture("imports/sample_bank_statement.pdf")))
+      tempfile.write("\n% unique test PDF #{index}\n")
+      tempfile.rewind
+      Rack::Test::UploadedFile.new(tempfile.path, "application/pdf", true, original_filename: "statement-#{index}.pdf")
+    end
+
+    assert_difference "Import.where(type: 'PdfImport').count", 2 do
+      assert_enqueued_jobs 2, only: ProcessPdfJob do
+        post imports_url, params: {
+          import: {
+            type: "PdfImport",
+            ai_provider: "codex",
+            import_file: uploads
+          }
+        }
+      end
+    end
+
+    assert_equal %w[codex codex], PdfImport.order(:created_at).last(2).map(&:ai_provider)
+    assert_redirected_to imports_path
   end
 
   test "cancel marks a lost import as failed" do
@@ -150,6 +256,38 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_not created_import.pdf_file.attached?
     assert_redirected_to import_url(created_import)
     assert_equal I18n.t("imports.create.pdf_processing"), flash[:notice]
+  end
+
+  test "uploads multiple pdf documents independently" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.pdf])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    valid_pdf = uploaded_file(
+      filename: "first_statement.pdf",
+      content_type: "application/pdf",
+      content: file_fixture("imports/sample_bank_statement.pdf").binread
+    )
+    invalid_pdf = uploaded_file(
+      filename: "invalid_statement.pdf",
+      content_type: "application/pdf",
+      content: "not a pdf"
+    )
+
+    assert_difference [ "AccountStatement.count", "Import.where(type: 'PdfImport').count" ], 1 do
+      assert_enqueued_jobs 1, only: ProcessPdfJob do
+        post imports_url, params: {
+          import: {
+            type: "DocumentImport",
+            import_file: [ valid_pdf, invalid_pdf ]
+          }
+        }
+      end
+    end
+
+    assert_redirected_to imports_path
+    assert_equal I18n.t("imports.create.pdf_processing_many", count: 1), flash[:notice]
+    assert_includes flash[:alert], "invalid_statement.pdf"
   end
 
   test "uploads pdf import through account statement" do
@@ -409,6 +547,61 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to imports_path
+  end
+
+  test "bulk destroys selected pending imports in the current family" do
+    imports = [ imports(:transaction), imports(:trade) ]
+
+    assert_difference "Import.count", -2 do
+      delete destroy_all_imports_url, params: {
+        bulk_delete: { entry_ids: imports.map(&:id) }
+      }
+    end
+
+    assert_redirected_to imports_path
+    assert_equal "2 imports deleted.", flash[:notice]
+  end
+
+  test "bulk destroys completed imports with no committed data" do
+    import = imports(:pdf_processed)
+
+    assert_difference "Import.count", -1 do
+      delete destroy_all_imports_url, params: {
+        bulk_delete: { import_ids: [ import.id ] }
+      }
+    end
+
+    assert_redirected_to imports_path
+    assert_equal "1 import deleted.", flash[:notice]
+  end
+
+  test "bulk destroy does not delete completed imports with committed data" do
+    import = imports(:pdf_processed)
+    Import.any_instance.stubs(:data_committed?).returns(true)
+
+    assert_no_difference "Import.count" do
+      delete destroy_all_imports_url, params: {
+        bulk_delete: { import_ids: [ import.id ] }
+      }
+    end
+
+    assert_redirected_to imports_path
+    assert_equal "1 import could not be deleted. Completed imports must be reverted first.", flash[:alert]
+  end
+
+  test "bulk destroy cannot delete another family's imports" do
+    import = imports(:transaction)
+    other_family_import = Import.create!(family: families(:empty), type: "TransactionImport")
+
+    assert_no_difference "Import.where(family_id: other_family_import.family_id).count" do
+      delete destroy_all_imports_url, params: {
+        bulk_delete: { import_ids: [ other_family_import.id ] }
+      }
+    end
+
+    assert_redirected_to imports_path
+    assert other_family_import.reload
+    assert_equal "No deletable imports were selected.", flash[:alert]
   end
 
   test "respects SURE_IMPORT_MAX_NDJSON_SIZE_MB when creating Sure import (#3010)" do

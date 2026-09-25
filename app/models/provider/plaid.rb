@@ -4,6 +4,14 @@ class Provider::Plaid
   SUPPORTED_PLAID_PRODUCTS = %w[transactions investments liabilities].freeze
   MAX_HISTORY_DAYS = Rails.env.development? ? 90 : 730
 
+  def self.configuration_for(profile)
+    configuration = Plaid::Configuration.new
+    configuration.server_index = Plaid::Configuration::Environment.fetch(profile.environment)
+    configuration.api_key["PLAID-CLIENT-ID"] = profile.client_id
+    configuration.api_key["PLAID-SECRET"] = profile.secret
+    configuration
+  end
+
   def initialize(config, region: :us)
     @client = Plaid::PlaidApi.new(
       Plaid::ApiClient.new(config)
@@ -47,10 +55,11 @@ class Provider::Plaid
       user: { client_user_id: user_id },
       client_name: "Sure Finances",
       country_codes: country_codes,
-      language: "en",
-      webhook: webhooks_url,
-      redirect_uri: redirect_url
+      language: "en"
     }
+
+    request_params[:webhook] = webhooks_url if webhooks_url.present?
+    request_params[:redirect_uri] = redirect_url if redirect_url.present?
 
     if access_token.present?
       request_params[:access_token] = access_token

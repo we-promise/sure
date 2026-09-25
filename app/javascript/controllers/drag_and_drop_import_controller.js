@@ -53,13 +53,21 @@ export default class extends Controller {
 
     if (event.dataTransfer.files.length > 0) {
       const file = event.dataTransfer.files[0]
-      // Simple validation
-      if (file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv")) {
+      if (this.accepts(file)) {
         this.inputTarget.files = event.dataTransfer.files
         this.formTarget.requestSubmit()
       } else {
-        alert("Please upload a valid CSV file.")
+        alert("Please upload a supported file.")
       }
     }
+  }
+
+  accepts(file) {
+    const accepted = (this.inputTarget.accept || "").split(",").map((value) => value.trim().toLowerCase())
+    const filename = file.name.toLowerCase()
+
+    return accepted.length === 0 || accepted.some((value) =>
+      value.startsWith(".") ? filename.endsWith(value) : file.type.toLowerCase() === value
+    )
   }
 }

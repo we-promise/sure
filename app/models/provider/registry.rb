@@ -32,8 +32,18 @@ class Provider::Registry
       nil
     end
 
-    def plaid_provider_for_region(region)
+    def plaid_provider_for_region(region, profile: nil)
+      if profile.present? && profile.to_s != "default"
+        plaid_profile = Provider::PlaidProfile.find!(profile, region: region)
+
+        return Provider::Plaid.new(Provider::Plaid.configuration_for(plaid_profile), region: region.to_sym)
+      end
+
       region.to_sym == :us ? plaid_us : plaid_eu
+    end
+
+    def plaid_provider_profiles_for_region(region)
+      Provider::PlaidProfile.configured_for_region(region)
     end
 
     private

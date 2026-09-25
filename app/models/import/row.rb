@@ -1,5 +1,6 @@
 class Import::Row < ApplicationRecord
   belongs_to :import, counter_cache: true
+  belongs_to :merchant, optional: true
 
   validates :amount, numericality: true, allow_blank: true
   validates :currency, presence: true
@@ -16,6 +17,43 @@ class Import::Row < ApplicationRecord
     else
       split_tags(tags).map(&:strip)
     end
+  end
+
+  # The clean step uses the same category picker as transaction editing, while
+  # the import mapping still stores category names. Keep the row's existing
+  # string representation in sync with the selected category ID.
+  def category_id
+    category_name = category.to_s.split(":", 2).last.strip
+    return if category_name.blank?
+
+    import.family.categories.find_by(name: category_name)&.id
+  end
+
+  def category_id=(value)
+    self.category = import.family.categories.find_by(id: value)&.name.to_s
+  end
+
+  def merchant_id=(value)
+    self[:merchant_id] = if value.blank?
+      nil
+    elsif import&.family
+      import.family.available_merchants.find_by(id: value)&.id
+    end
+  end
+
+  # Import rows store tag names for the existing mapping workflow, while the
+  # clean-step selector works with tag IDs.
+  def tag_ids
+    names = tags_list.reject(&:blank?)
+    return [] if names.empty?
+
+    import.family.tags.where(name: names).pluck(:id)
+  end
+
+  def tag_ids=(values)
+    ids = Array(values).reject(&:blank?).map(&:to_s)
+    tags_by_id = import.family.tags.where(id: ids).index_by { |tag| tag.id.to_s }
+    self.tags = ids.filter_map { |id| tags_by_id[id]&.name }.join("|")
   end
 
   def date_iso

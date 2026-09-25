@@ -40,6 +40,12 @@ en:
         next_step: Next step
         all_rows: All rows
         error_rows: Error rows
+        source_pdf: Source PDF
+        open_pdf: Open PDF
+        hide_pdf: Hide PDF
+        show_pdf: Show PDF
+        all_transactions: All transactions
+        rows_per_page: Transactions per page
     configurations:
       update:
         success: Import configured successfully.
@@ -275,6 +281,7 @@ en:
       amount: "Amount"
       name: "Name"
       currency: "Currency"
+      merchant: "Merchant"
       category: "Category"
       tags: "Tags"
       account: "Account"
@@ -384,10 +391,19 @@ en:
     table:
       title: Imports
       header:
+        select: Select
         date: Date
         operation: Operation
+        file_name: File name
         status: Status
         actions: Actions
+      import: import
+      imports: imports
+      selected: selected
+      select_all: Select all deletable imports
+      select_import: Select %{type} import
+      delete_selected: Delete selected imports
+      no_file_name: —
       row:
         type_labels:
           transaction_import: "Transaction"
@@ -418,6 +434,15 @@ en:
           mark_failed: Mark as failed
           confirm_mark_failed: This import has been inactive for a while and its background job was likely interrupted. Mark it as failed so you can try again? No imported data is kept.
       empty: No imports yet.
+    destroy_all:
+      deleted:
+        one: 1 import deleted.
+        other: "%{count} imports deleted."
+      skipped:
+        one: 1 import could not be deleted. Completed imports must be reverted first.
+        other: "%{count} imports could not be deleted. Completed imports must be reverted first."
+      none_selected: No deletable imports were selected.
+      revert_first: This completed import contains imported data. Revert it before deleting.
     new:
       description: Import from a financial tool or upload raw data files.
       tab_financial_tools: Financial Tools & Files
@@ -447,14 +472,24 @@ en:
       ndjson_uploaded: NDJSON file uploaded successfully.
       pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
       pdf_processing: Your PDF is being processed. You will receive an email when analysis is complete.
+      pdf_processing_many:
+        one: 1 PDF is being processed. You will receive an email when analysis is complete.
+        other: "%{count} PDFs are being processed. You will receive an email when analysis is complete."
       invalid_pdf: The uploaded file is not a valid PDF.
       duplicate_pdf_unavailable: This PDF is already stored as a statement you cannot access.
       document_too_large: Document file is too large. Maximum size is %{max_size}MB.
       invalid_document_file_type: Invalid document file type for the active vector store.
       document_uploaded: Document uploaded successfully.
+      document_uploaded_many:
+        one: 1 document uploaded successfully.
+        other: "%{count} documents uploaded successfully."
       document_upload_failed: We couldn't upload the document to the vector store. Please try again.
       invalid_ndjson_file_type: Invalid file type or format. Please upload a valid .ndjson or .json export file.
       document_provider_not_configured: No vector store is configured for document uploads.
+      import_pdf_codex: Import PDF with Codex
+      import_pdf_codex_description: Select one or more PDFs using your locally authenticated Codex subscription; no API key required.
+      codex_pdf_drop_title: Drop PDFs to import with Codex
+      codex_pdf_drop_subtitle: Your locally authenticated Codex worker will analyze each file.
     show:
       finalize_upload: Please finalize your file upload.
       finalize_mappings: Please finalize your mappings before proceeding.
@@ -487,6 +522,7 @@ en:
       failed_title: Processing failed
       failed_description: We were unable to process your PDF document. Please try again or contact support.
       try_again: Try again
+      manual_import: Import transactions manually
       delete_import: Delete import
       complete_title: Document analyzed
       complete_description: We've analyzed your PDF and here's what we found.
@@ -502,6 +538,7 @@ en:
       errors:
         provider_not_configured: AI provider not configured
         provider_no_pdf_support: AI provider does not support PDF processing
+        incomplete_response: AI returned an incomplete result. Try again or import the transactions manually.
       ready_for_review_title: Ready for Review
       ready_for_review_description:
         one: "%{count} transaction from your statement isn't in this account yet. Review and publish it to add it."

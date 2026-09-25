@@ -1,7 +1,7 @@
 class ImportsController < ApplicationController
   include SettingsHelper
 
-  before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
+  before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary preview]
   before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
 
   def update
@@ -48,6 +48,18 @@ class ImportsController < ApplicationController
     raise ActiveRecord::RecordNotFound unless @import.is_a?(PdfImport)
   end
 
+  def preview
+    raise ActiveRecord::RecordNotFound unless @import.is_a?(PdfImport) && @import.pdf_uploaded?
+
+    pdf_content = @import.pdf_file_content
+    raise ActiveRecord::RecordNotFound if pdf_content.blank?
+
+    send_data pdf_content,
+      type: "application/pdf",
+      disposition: "inline",
+      filename: @import.pdf_filename.presence || "statement.pdf"
+  end
+
   def cancel
     if @import.force_fail!
       redirect_to imports_path, notice: t(".cancelled")
@@ -70,10 +82,22 @@ class ImportsController < ApplicationController
   def new
     @pending_import = Current.family.imports.ordered.pending.first
     @document_upload_extensions = document_upload_supported_extensions
+    @codex_pdf_processing_available = Provider::Codex.configured?
   end
 
   def create
-    file = import_params[:import_file]
+    files = Array(import_params[:import_file]).compact
+    file = files.first
+
+    if files.size > 1 && pdf_import_request?
+      create_multiple_pdf_imports(files, ai_provider: requested_ai_provider)
+      return
+    end
+
+    if files.size > 1 && document_upload_request?
+      create_multiple_document_imports(files)
+      return
+    end
 
     if file.present? && document_upload_request?
       create_document_import(file)
@@ -91,7 +115,7 @@ class ImportsController < ApplicationController
         redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
         return
       end
-      create_pdf_import(file)
+      create_pdf_import(file, ai_provider: requested_ai_provider)
       return
     end
 
@@ -157,9 +181,43 @@ class ImportsController < ApplicationController
   end
 
   def destroy
+    unless @import.directly_deletable?
+      redirect_to imports_path, alert: t("imports.destroy_all.revert_first")
+      return
+    end
+
     @import.destroy
 
     redirect_to imports_path, notice: t(".deleted")
+  end
+
+  def destroy_all
+    submitted_ids = params.dig(:bulk_delete, :entry_ids).presence || params.dig(:bulk_delete, :import_ids)
+    import_ids = Array(submitted_ids).filter_map { |id| id.to_s.presence }
+    imports = Current.family.imports.where(id: import_ids).includes(:account_statement)
+    deleted_count = 0
+    skipped_count = 0
+
+    imports.each do |import|
+      if import.account_statement.blank? || import.account_statement.manageable_by?(Current.user)
+        if import.directly_deletable?
+          import.destroy!
+          deleted_count += 1
+        else
+          skipped_count += 1
+        end
+      else
+        skipped_count += 1
+      end
+    end
+
+    notices = []
+    notices << t("imports.destroy_all.deleted", count: deleted_count) if deleted_count.positive?
+    alerts = []
+    alerts << t("imports.destroy_all.skipped", count: skipped_count) if skipped_count.positive?
+    alerts << t("imports.destroy_all.none_selected") if deleted_count.zero? && skipped_count.zero?
+
+    redirect_to imports_path, notice: notices.presence&.join(" "), alert: alerts.presence&.join(" ")
   end
 
   private
@@ -169,7 +227,7 @@ class ImportsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(:import_file)
+      params.require(:import).permit(:import_file, :ai_provider, import_file: [])
     end
 
     def require_statement_import_permission!
@@ -179,17 +237,135 @@ class ImportsController < ApplicationController
       redirect_back_or_to redirect_target, alert: t("accounts.not_authorized")
     end
 
-    def create_pdf_import(file)
+    def create_pdf_import(file, ai_provider: "api")
       return redirect_to new_import_path, alert: t("accounts.not_authorized") unless AccountStatement.statement_manager?(Current.user)
       return redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte) if file.size > Import::MAX_PDF_SIZE
 
-      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
-      pdf_import.process_with_ai_later
+      pdf_import = create_pdf_import_record(file, ai_provider: ai_provider)
       redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
     rescue AccountStatement::DuplicateUploadError
       redirect_to new_import_path, alert: t("imports.create.duplicate_pdf_unavailable")
     rescue AccountStatement::InvalidUploadError
       redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
+    end
+
+    def create_multiple_pdf_imports(files, ai_provider: "api")
+      unless AccountStatement.statement_manager?(Current.user)
+        redirect_to new_import_path, alert: t("accounts.not_authorized")
+        return
+      end
+
+      processed_count = 0
+      errors = []
+
+      files.each do |file|
+        filename = file.original_filename.to_s
+
+        unless file.content_type.in?(Import::ALLOWED_PDF_MIME_TYPES) && valid_pdf_file?(file)
+          errors << "#{filename}: #{t('imports.create.invalid_pdf')}"
+          next
+        end
+
+        if file.size > Import::MAX_PDF_SIZE
+          errors << "#{filename}: #{t('imports.create.pdf_too_large', max_size: Import::MAX_PDF_SIZE / 1.megabyte)}"
+          next
+        end
+
+        pdf_import = create_pdf_import_record(file, ai_provider: ai_provider)
+        processed_count += 1 if pdf_import.importing?
+      rescue AccountStatement::DuplicateUploadError
+        errors << "#{filename}: #{t('imports.create.duplicate_pdf_unavailable')}"
+      rescue AccountStatement::InvalidUploadError
+        errors << "#{filename}: #{t('imports.create.invalid_pdf')}"
+      rescue StandardError => e
+        Rails.logger.error("Batch PDF import failed for #{filename}: #{e.class}: #{e.message}")
+        errors << "#{filename}: #{t('imports.create.pdf_processing_failed', default: 'PDF processing could not be started.')}"
+      end
+
+      if processed_count.positive?
+        redirect_to imports_path,
+          notice: t("imports.create.pdf_processing_many", count: processed_count),
+          alert: errors.presence&.join("\n")
+      else
+        redirect_to new_import_path, alert: errors.presence&.join("\n") || t("imports.create.invalid_pdf")
+      end
+    end
+
+    def create_multiple_document_imports(files)
+      adapter = VectorStore.adapter
+      unless adapter
+        redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
+        return
+      end
+
+      supported_extensions = adapter.supported_extensions.map(&:downcase)
+      processed_count = 0
+      uploaded_count = 0
+      errors = []
+
+      files.each do |file|
+        filename = file.original_filename.to_s
+
+        if file.content_type.in?(Import::ALLOWED_PDF_MIME_TYPES)
+          if !valid_pdf_file?(file)
+            errors << "#{filename}: #{t('imports.create.invalid_pdf')}"
+            next
+          end
+
+          unless AccountStatement.statement_manager?(Current.user)
+            errors << "#{filename}: #{t('accounts.not_authorized')}"
+            next
+          end
+
+          if file.size > Import::MAX_PDF_SIZE
+            errors << "#{filename}: #{t('imports.create.pdf_too_large', max_size: Import::MAX_PDF_SIZE / 1.megabyte)}"
+            next
+          end
+
+          pdf_import = create_pdf_import_record(file)
+          processed_count += 1 if pdf_import.importing?
+        else
+          ext = File.extname(filename).downcase
+
+          if file.size > Import::MAX_PDF_SIZE
+            errors << "#{filename}: #{t('imports.create.document_too_large', max_size: Import::MAX_PDF_SIZE / 1.megabyte)}"
+            next
+          end
+
+          unless supported_extensions.include?(ext)
+            errors << "#{filename}: #{t('imports.create.invalid_document_file_type')}"
+            next
+          end
+
+          uploaded_count += 1 if Current.family.upload_document(file_content: file.read, filename: filename)
+        end
+      rescue AccountStatement::DuplicateUploadError
+        errors << "#{filename}: #{t('imports.create.duplicate_pdf_unavailable')}"
+      rescue AccountStatement::InvalidUploadError
+        errors << "#{filename}: #{t('imports.create.invalid_pdf')}"
+      rescue StandardError => e
+        Rails.logger.error("Batch document upload failed for #{filename}: #{e.class}: #{e.message}")
+        errors << "#{filename}: #{t('imports.create.document_upload_failed')}"
+      end
+
+      if processed_count.positive? || uploaded_count.positive?
+        notices = []
+        notices << t("imports.create.pdf_processing_many", count: processed_count) if processed_count.positive?
+        notices << t("imports.create.document_uploaded_many", count: uploaded_count) if uploaded_count.positive?
+        redirect_to imports_path, notice: notices.join(" "), alert: errors.presence&.join("\n")
+      else
+        redirect_to new_import_path, alert: errors.presence&.join("\n") || t("imports.create.document_upload_failed")
+      end
+    end
+
+    def create_pdf_import_record(file, ai_provider: "api")
+      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
+      pdf_import.process_with_ai_later(provider: ai_provider)
+      pdf_import
+    end
+
+    def requested_ai_provider
+      params.dig(:import, :ai_provider).to_s == "codex" && Provider::Codex.configured? ? "codex" : "api"
     end
 
     def create_document_import(file)
@@ -244,6 +420,10 @@ class ImportsController < ApplicationController
 
     def document_upload_request?
       params.dig(:import, :type) == "DocumentImport"
+    end
+
+    def pdf_import_request?
+      params.dig(:import, :type) == "PdfImport"
     end
 
     def sure_import_request?

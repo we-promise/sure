@@ -14,6 +14,7 @@ module ImportsHelper
       amount: I18n.t("imports.column_labels.amount"),
       name: I18n.t("imports.column_labels.name"),
       currency: I18n.t("imports.column_labels.currency"),
+      merchant: I18n.t("imports.column_labels.merchant"),
       category: I18n.t("imports.column_labels.category"),
       tags: I18n.t("imports.column_labels.tags"),
       account: I18n.t("imports.column_labels.account"),
@@ -78,6 +79,18 @@ module ImportsHelper
   def cell_is_valid?(row, field)
     row.valid? # populate errors
     !row.errors.key?(field)
+  end
+
+  def import_row_categories
+    @import_row_categories ||= Current.family.categories.alphabetically_by_hierarchy.to_a
+  end
+
+  def import_row_merchants
+    @import_row_merchants ||= Current.family.available_merchants_for(Current.user).alphabetically.to_a
+  end
+
+  def import_row_tags
+    @import_row_tags ||= Current.family.tags.alphabetically.to_a
   end
 
   private

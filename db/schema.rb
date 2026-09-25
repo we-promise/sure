@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_25_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1283,6 +1283,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.string "exchange_operating_mic"
     t.uuid "import_id", null: false
     t.string "merchant_color"
+    t.uuid "merchant_id"
     t.string "merchant_website"
     t.string "name"
     t.text "notes"
@@ -1295,6 +1296,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.datetime "updated_at", null: false
     t.index ["import_id", "source_row_number"], name: "index_import_rows_on_import_id_and_source_row_number", unique: true
     t.index ["import_id"], name: "index_import_rows_on_import_id"
+    t.index ["merchant_id"], name: "index_import_rows_on_merchant_id"
     t.check_constraint "source_row_number > 0", name: "chk_import_rows_source_row_number_positive"
   end
 
@@ -1345,6 +1347,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.string "account_col_label"
     t.uuid "account_id"
     t.uuid "account_statement_id"
+    t.string "ai_provider", default: "api", null: false
     t.text "ai_summary"
     t.string "amount_col_label"
     t.string "amount_type_identifier_value"
@@ -1391,6 +1394,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.index ["import_session_id", "client_chunk_id"], name: "idx_imports_on_session_client_chunk", unique: true, where: "((import_session_id IS NOT NULL) AND (client_chunk_id IS NOT NULL))"
     t.index ["import_session_id", "sequence"], name: "idx_imports_on_session_sequence", unique: true, where: "((import_session_id IS NOT NULL) AND (sequence IS NOT NULL))"
     t.index ["import_session_id"], name: "index_imports_on_import_session_id"
+    t.check_constraint "ai_provider::text = ANY (ARRAY['api'::character varying, 'codex'::character varying]::text[])", name: "chk_imports_ai_provider"
     t.check_constraint "checksum IS NULL OR length(checksum::text) = 64", name: "chk_imports_checksum_sha256_length"
     t.check_constraint "client_chunk_id IS NULL OR btrim(client_chunk_id::text) <> ''::text", name: "chk_imports_client_chunk_id_present"
     t.check_constraint "import_session_id IS NULL OR checksum IS NOT NULL", name: "chk_imports_session_checksum_present"
@@ -1923,6 +1927,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.string "next_cursor"
     t.uuid "owner_id"
     t.string "plaid_id", null: false
+    t.string "plaid_profile", default: "default", null: false
     t.string "plaid_region", default: "us", null: false
     t.jsonb "raw_institution_payload", default: {}
     t.jsonb "raw_payload", default: {}
@@ -1932,6 +1937,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
     t.index ["family_id"], name: "index_plaid_items_on_family_id"
     t.index ["owner_id"], name: "index_plaid_items_on_owner_id"
     t.index ["plaid_id"], name: "index_plaid_items_on_plaid_id", unique: true
+    t.index ["plaid_region", "plaid_profile"], name: "index_plaid_items_on_plaid_region_and_plaid_profile"
   end
 
   create_table "properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3002,6 +3008,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_22_230000) do
   add_foreign_key "impersonation_sessions", "users", column: "impersonated_id"
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"
   add_foreign_key "import_rows", "imports"
+  add_foreign_key "import_rows", "merchants", on_delete: :nullify
   add_foreign_key "import_sessions", "families"
   add_foreign_key "import_source_mappings", "families"
   add_foreign_key "import_source_mappings", "import_sessions", column: ["import_session_id", "family_id"], primary_key: ["id", "family_id"], name: "fk_import_source_mappings_session_family", on_delete: :cascade

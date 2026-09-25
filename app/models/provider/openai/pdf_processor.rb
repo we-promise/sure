@@ -2,10 +2,10 @@ class Provider::Openai::PdfProcessor
   include Provider::Openai::Concerns::UsageRecorder
 
   attr_reader :client, :model, :pdf_content, :custom_provider, :langfuse_trace, :family, :max_response_tokens,
-              :processing_mode
+              :processing_mode, :disable_thinking
 
   def initialize(client, model: "", pdf_content: nil, custom_provider: false, langfuse_trace: nil, family: nil,
-                 max_response_tokens:, processing_mode: :auto)
+                 max_response_tokens:, processing_mode: :auto, disable_thinking: false)
     @client = client
     @model = model
     @pdf_content = pdf_content
@@ -14,6 +14,7 @@ class Provider::Openai::PdfProcessor
     @family = family
     @max_response_tokens = max_response_tokens
     @processing_mode = processing_mode
+    @disable_thinking = disable_thinking
   end
 
   def process
@@ -125,7 +126,7 @@ class Provider::Openai::PdfProcessor
           }
         ],
         response_format: { type: "json_object" }
-      }
+      }.merge(provider_parameters).merge(response_token_parameters)
 
       response = client.chat(parameters: params)
 
@@ -189,7 +190,7 @@ class Provider::Openai::PdfProcessor
           { role: "user", content: content }
         ],
         max_tokens: max_response_tokens
-      }
+      }.merge(provider_parameters)
 
       response = client.chat(parameters: params)
 
@@ -249,9 +250,19 @@ class Provider::Openai::PdfProcessor
 
     def parse_response_generic(response)
       raw = response.dig("choices", 0, "message", "content")
+      raise Provider::Openai::Error, "No response from AI" if raw.blank?
+
       parsed = parse_json_flexibly(raw)
 
       build_result(parsed)
+    end
+
+    def provider_parameters
+      disable_thinking ? { think: false } : {}
+    end
+
+    def response_token_parameters
+      custom_provider ? { max_tokens: max_response_tokens } : {}
     end
 
     def build_result(parsed)

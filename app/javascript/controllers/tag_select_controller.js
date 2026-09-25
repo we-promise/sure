@@ -228,7 +228,11 @@ export default class extends Controller {
 
   async submitForm() {
     if (!this.autoSubmitValue) return;
-    if (!this.hasUpdateUrlValue || !this.updateUrlValue) return;
+    if (!this.hasUpdateUrlValue || !this.updateUrlValue) {
+      const form = this.element.closest("form");
+      if (form) form.requestSubmit();
+      return;
+    }
 
     if (this.submitAbortController) this.submitAbortController.abort();
 

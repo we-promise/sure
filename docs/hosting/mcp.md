@@ -151,6 +151,7 @@ At the time of writing, `tools/list` includes:
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
 | `update_budget` | Update budget allocations for a month |
 | `import_bank_statement` | Import bank statement data |
+| `import_statement_transactions` | Create a reviewable transaction import from rows extracted by Codex or another subscription-backed assistant; does not require an OpenAI API key |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
 
 ### Preview Tools
@@ -188,6 +189,14 @@ refuse series on accounts shared with the user read-only.
 They exist for agents that maintain a document-backed record of a family's
 wealth over time. See
 [Wealth history with an external agent harness](../llm-guides/wealth-agent-harness.md).
+
+### PDF imports from a Codex subscription
+
+Connect Codex to the MCP URL from Settings → MCP, drop a PDF into the Codex
+conversation, and ask it to extract the statement transactions. Codex can then
+call `import_statement_transactions` with the selected account and extracted
+rows. Sure creates a normal reviewable import and does not need
+`OPENAI_ACCESS_TOKEN` for that extraction path.
 
 ## Example Requests
 

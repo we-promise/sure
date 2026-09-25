@@ -4,7 +4,7 @@
 
 <%= content_for :previous_path, @import.is_a?(PdfImport) ? import_path(@import) : import_configuration_path(@import) %>
 
-<div class="space-y-4 mx-auto max-w-5xl">
+<div class="space-y-4 mx-auto w-full max-w-screen-2xl" data-controller="import-clean-layout" data-import-clean-layout-pdf-visible-value="<%= @show_pdf %>">
   <div class="text-center space-y-2 max-w-[400px] mx-auto mb-4">
     <h2 class="text-3xl text-primary font-medium"><%= t(".title") %></h2>
     <p class="text-secondary text-sm"><%= t(".description") %></p>
@@ -35,34 +35,99 @@
 
       <div class="flex justify-center w-full md:w-auto">
         <div class="bg-surface-inset rounded-lg inline-flex p-1 space-x-2 text-sm text-primary font-medium w-full md:w-auto">
-          <%= link_to t(".all_rows"), import_clean_path(@import, per_page: params[:per_page], view: "all"), class: "p-2 rounded-lg flex-1 md:flex-auto text-center #{params[:view] != 'errors' ? 'bg-container' : ''}" %>
-          <%= link_to t(".error_rows"), import_clean_path(@import, per_page: params[:per_page], view: "errors"), class: "p-2 rounded-lg flex-1 md:flex-auto text-center #{params[:view] == 'errors' ? 'bg-container' : ''}" %>
+          <%= link_to t(".all_rows"), import_clean_path(@import, per_page: params[:per_page], view: "all", show_pdf: params[:show_pdf]), class: "p-2 rounded-lg flex-1 md:flex-auto text-center #{params[:view] != 'errors' ? 'bg-container' : ''}" %>
+          <%= link_to t(".error_rows"), import_clean_path(@import, per_page: params[:per_page], view: "errors", show_pdf: params[:show_pdf]), class: "p-2 rounded-lg flex-1 md:flex-auto text-center #{params[:view] == 'errors' ? 'bg-container' : ''}" %>
         </div>
       </div>
     </div>
   <% end %>
 
-  <div class="pb-12">
-    <div class="bg-container-inset rounded-xl p-1 mb-6">
-      <div class="overflow-x-auto">
-        <div style="grid-template-columns: repeat(<%= @import.column_keys.count %>, minmax(150px, 1fr));" class="grid items-center uppercase text-xs font-medium text-secondary py-3">
-          <% @import.column_keys.each do |key| %>
-            <div class="px-5"><%= import_col_label(key) %></div>
-          <% end %>
-        </div>
-
-        <div class="bg-container shadow-border-xs rounded-xl divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
-          <% @rows.each do |row| %>
-            <%= render "import/rows/form", row: row %>
-          <% end %>
-        </div>
+  <div class="flex justify-end gap-2">
+    <button type="button"
+            class="inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring"
+            data-action="click->privacy-mode#toggle"
+            data-privacy-mode-target="toggle"
+            title="<%= t("layouts.application.privacy_mode") %>"
+            aria-label="<%= t("layouts.application.privacy_mode") %>"
+            aria-pressed="false">
+      <%= icon("eye-off", size: "sm", data: { privacy_mode_target: "iconOff" }) %>
+      <%= icon("eye", size: "sm", class: "hidden", data: { privacy_mode_target: "iconOn" }) %>
+    </button>
+    <% if @import.is_a?(PdfImport) && @import.pdf_uploaded? %>
+      <div data-import-clean-layout-target="hidePdfControl" class="<%= "hidden" unless @show_pdf %>">
+        <%= render DS::Button.new(
+              text: t(".hide_pdf"),
+              variant: :outline,
+              size: :sm,
+              icon: "eye-off",
+              data: { action: "click->import-clean-layout#togglePdf" },
+              aria: { expanded: @show_pdf, label: t(".hide_pdf") }
+            ) %>
       </div>
-    </div>
+      <div data-import-clean-layout-target="showPdfControl" class="<%= "hidden" if @show_pdf %>">
+        <%= render DS::Button.new(
+              text: t(".show_pdf"),
+              variant: :outline,
+              size: :sm,
+              icon: "eye",
+              data: { action: "click->import-clean-layout#togglePdf" },
+              aria: { expanded: @show_pdf, label: t(".show_pdf") }
+            ) %>
+      </div>
+    <% end %>
   </div>
 
-  <div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full p-12">
-    <div class="shadow-border-xs rounded-lg p-3 max-w-2xl mx-auto bg-container">
-      <%= render "shared/pagination", pagy: @pagy %>
+  <div class="grid gap-6 lg:grid-cols-4">
+    <div data-import-clean-layout-target="table" class="pb-12 min-w-0 <%= @show_pdf ? "lg:col-span-3" : "lg:col-span-4" %>">
+      <div class="bg-container-inset rounded-xl p-1 mb-6">
+        <div class="overflow-x-auto">
+          <div style="grid-template-columns: repeat(<%= @import.column_keys.count %>, minmax(150px, 1fr));" class="grid items-center uppercase text-xs font-medium text-secondary py-3">
+            <% @import.column_keys.each do |key| %>
+              <div class="px-5"><%= import_col_label(key) %></div>
+            <% end %>
+          </div>
+
+          <div class="bg-container shadow-border-xs rounded-xl divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
+            <% @rows.each do |row| %>
+              <%= render "import/rows/form", row: row %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <% if @pagy || @show_all %>
+        <div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full p-12">
+          <div class="shadow-border-xs rounded-lg p-3 max-w-2xl mx-auto bg-container">
+            <%= render "shared/pagination",
+                  pagy: @pagy,
+                  show_all: true,
+                  per_page: @per_page,
+                  all_label: t(".all_transactions"),
+                  per_page_label: t(".rows_per_page") %>
+          </div>
+        </div>
+      <% end %>
     </div>
+
+    <% if @import.is_a?(PdfImport) && @import.pdf_uploaded? %>
+      <aside data-import-clean-layout-target="pdf" class="space-y-3 lg:col-span-1 lg:sticky lg:top-4 lg:self-start <%= "hidden" unless @show_pdf %>">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="font-medium text-primary"><%= t("import.cleans.show.source_pdf") %></h2>
+          <%= render DS::Link.new(
+                text: t("import.cleans.show.open_pdf"),
+                href: preview_import_path(@import),
+                variant: "secondary",
+                icon: "external-link",
+                target: "_blank"
+              ) %>
+        </div>
+
+        <iframe
+          src="<%= preview_import_path(@import) %>"
+          title="<%= t("import.cleans.show.source_pdf") %>"
+          loading="lazy"
+          class="w-full h-screen min-h-96 rounded-xl border border-primary bg-container privacy-sensitive privacy-sensitive-interactive"></iframe>
+      </aside>
+    <% end %>
   </div>
 </div>

@@ -1,11 +1,14 @@
 class Provider::Openai::BankStatementExtractor
   MAX_CHARS_PER_CHUNK = 3000
-  attr_reader :client, :pdf_content, :model
+  attr_reader :client, :pdf_content, :model, :custom_provider, :disable_thinking, :max_response_tokens
 
-  def initialize(client:, pdf_content:, model:)
+  def initialize(client:, pdf_content:, model:, custom_provider: false, disable_thinking: false, max_response_tokens: 512)
     @client = client
     @pdf_content = pdf_content
     @model = model
+    @custom_provider = custom_provider
+    @disable_thinking = disable_thinking
+    @max_response_tokens = max_response_tokens
   end
 
   def extract
@@ -105,7 +108,7 @@ class Provider::Openai::BankStatementExtractor
           { role: "user", content: "Extract transactions:\n\n#{text}" }
         ],
         response_format: { type: "json_object" }
-      }
+      }.merge(provider_parameters).merge(response_token_parameters)
 
       response = client.chat(parameters: params)
       content = response.dig("choices", 0, "message", "content")
@@ -133,7 +136,15 @@ class Provider::Openai::BankStatementExtractor
       JSON.parse(cleaned)
     rescue JSON::ParserError => e
       Rails.logger.error("BankStatementExtractor JSON parse error: #{e.message} (content_length=#{content.to_s.bytesize})")
-      { "transactions" => [] }
+      raise Provider::Openai::Error, "AI returned invalid transaction JSON"
+    end
+
+    def provider_parameters
+      disable_thinking ? { think: false } : {}
+    end
+
+    def response_token_parameters
+      custom_provider ? { max_tokens: max_response_tokens } : {}
     end
 
     def deduplicate_transactions(transactions)

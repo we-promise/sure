@@ -8,6 +8,7 @@
     "selenium"
   ],
   "workspaceFolder": "/workspace",
+  "forwardPorts": [3000],
   "containerEnv": {
     "GIT_EDITOR": "code --wait",
     "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",

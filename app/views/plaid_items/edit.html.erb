@@ -3,6 +3,7 @@
   <%= render "plaid_items/auto_link_opener",
            link_token: @link_token,
            region: @plaid_item.plaid_region,
+           profile: @plaid_item.plaid_profile,
            item_id: @plaid_item.id,
            is_update: true %>
 <% end %>

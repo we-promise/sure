@@ -6,7 +6,7 @@ class WebhooksController < ApplicationController
     webhook_body = request.body.read
     plaid_verification_header = request.headers["Plaid-Verification"]
 
-    client = Provider::Registry.plaid_provider_for_region(:us)
+    client = plaid_webhook_provider(:us, webhook_body)
 
     client.validate_webhook!(plaid_verification_header, webhook_body)
 
@@ -23,7 +23,7 @@ class WebhooksController < ApplicationController
     webhook_body = request.body.read
     plaid_verification_header = request.headers["Plaid-Verification"]
 
-    client = Provider::Registry.plaid_provider_for_region(:eu)
+    client = plaid_webhook_provider(:eu, webhook_body)
 
     client.validate_webhook!(plaid_verification_header, webhook_body)
 
@@ -56,4 +56,14 @@ class WebhooksController < ApplicationController
       head :bad_request
     end
   end
+
+  private
+    def plaid_webhook_provider(region, webhook_body)
+      item_id = JSON.parse(webhook_body).fetch("item_id")
+      plaid_item = PlaidItem.find_by(plaid_id: item_id, plaid_region: region.to_s)
+
+      plaid_item&.plaid_provider || Provider::Registry.plaid_provider_for_region(region)
+    rescue JSON::ParserError, KeyError
+      Provider::Registry.plaid_provider_for_region(region)
+    end
 end

@@ -143,6 +143,11 @@ en:
         merchant_detector:
           title: Merchant Detector
           subtitle: AI identifies and enriches transaction data with merchant information
+        codex_pdf_import:
+          title: Codex PDF Import
+          subtitle: Instructions used when your subscription-backed Codex analyzes uploaded PDFs
+          label: Codex PDF import prompt
+          help: This controls the instructions only. Sure still supplies the PDF text and page images and enforces the structured output schema.
       update:
         success: AI prompts updated
         multiple_errors: "Multiple prompts are too long (maximum is %{count} characters)"
@@ -328,14 +333,14 @@ en:
       show:
         page_title: MCP Server
         connect_title: Connect an AI assistant
-        connect_subtitle: Paste this URL into Claude.ai (or any MCP-compatible client) to connect it to your Sure account.
+        connect_subtitle: Paste this URL into Codex, Claude.ai, ChatGPT developer mode, or another MCP-compatible client to connect it to your Sure account.
         copy_url: Copy
         copied: Copied!
-        how_to_connect_title: How to connect Claude
-        step_1: "Open Claude.ai and go to Settings → Customize → Connectors."
+        how_to_connect_title: How to connect an AI assistant
+        step_1: "Open your AI assistant's MCP or connector settings."
         step_2: Click "Add connector" and paste the MCP server URL above.
         step_3: Click Connect — you'll be redirected to Sure to sign in and authorize access.
-        step_4: Once authorized, Claude can read your accounts, transactions, and balance data.
+        step_4: Once authorized, the assistant can read your accounts, transactions, and balance data.
         connected_title: Connected clients
         connected_subtitle: These apps currently have access to your Sure data. Revoke any you no longer use.
         unknown_client: Unknown client
@@ -350,6 +355,7 @@ en:
       ai_prompts_label: AI Prompts
       background_jobs_label: Background jobs
       api_key_label: API Keys
+      ai_subscriptions_label: AI Subscriptions
       payment_label: Payment
       categories_label: Categories
       feedback_label: Feedback

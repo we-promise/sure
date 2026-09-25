@@ -1,7 +1,7 @@
 class RuleRun < ApplicationRecord
   belongs_to :rule
 
-  validates :execution_type, inclusion: { in: %w[manual scheduled] }
+  validates :execution_type, inclusion: { in: %w[manual scheduled import] }
   validates :status, inclusion: { in: %w[pending success failed] }
   validates :executed_at, presence: true
   validates :transactions_queued, numericality: { greater_than_or_equal_to: 0 }

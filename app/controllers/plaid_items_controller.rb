@@ -9,15 +9,17 @@ class PlaidItemsController < ApplicationController
 
   def new
     region = params[:region] == "eu" ? :eu : :us
+    @plaid_profile = params[:profile].presence || "default"
     webhooks_url = region == :eu ? plaid_eu_webhooks_url : plaid_us_webhooks_url
 
     @link_token = Current.family.get_link_token(
       webhooks_url: webhooks_url,
-      redirect_url: accounts_url,
+      redirect_url: plaid_redirect_url,
       accountable_type: params[:accountable_type] || "Depository",
-      region: region
+      region: region,
+      profile: @plaid_profile
     )
-  rescue Plaid::ApiError => e
+  rescue Plaid::ApiError, Provider::Registry::Error => e
     handle_link_token_error(e)
   end
 
@@ -26,7 +28,7 @@ class PlaidItemsController < ApplicationController
 
     @link_token = @plaid_item.get_update_link_token(
       webhooks_url: webhooks_url,
-      redirect_url: accounts_url,
+      redirect_url: plaid_redirect_url,
       account_selection_enabled: @plaid_item.us? && params[:add_accounts] == "true",
     )
   rescue Plaid::ApiError => e
@@ -37,10 +39,13 @@ class PlaidItemsController < ApplicationController
     Current.family.create_plaid_item!(
       public_token: plaid_item_params[:public_token],
       item_name: item_name,
-      region: plaid_item_params[:region]
+      region: plaid_item_params[:region],
+      profile: plaid_item_params[:profile].presence || "default"
     )
 
     redirect_to accounts_path, notice: t(".success")
+  rescue Plaid::ApiError, Provider::Registry::Error => e
+    handle_link_token_error(e)
   end
 
   def destroy
@@ -118,7 +123,7 @@ class PlaidItemsController < ApplicationController
     end
 
     def plaid_item_params
-      params.require(:plaid_item).permit(:public_token, :region, metadata: {})
+    params.require(:plaid_item).permit(:public_token, :region, :profile, metadata: {})
     end
 
     def item_name
@@ -148,7 +153,7 @@ class PlaidItemsController < ApplicationController
     end
 
     def safe_parse_plaid_error(error)
-      JSON.parse(error.response_body.to_s)
+      JSON.parse(error.respond_to?(:response_body) ? error.response_body.to_s : "")
     rescue JSON::ParserError
       {}
     end
@@ -177,14 +182,26 @@ class PlaidItemsController < ApplicationController
       end
     end
 
+    # Plaid allows desktop web Link sessions without a redirect URI. This is
+    # important for local development with Production credentials because
+    # localhost is not a valid Production OAuth redirect target. A public
+    # HTTPS URI can be opted into with PLAID_REDIRECT_URI.
+    def plaid_redirect_url
+      return accounts_url unless Rails.env.development?
+
+      ENV["PLAID_REDIRECT_URI"].presence
+    end
+
     def plaid_us_webhooks_url
       return webhooks_plaid_url if Rails.env.production?
+      return if Rails.env.development? && ENV["DEV_WEBHOOKS_URL"].blank?
 
       ENV.fetch("DEV_WEBHOOKS_URL", root_url.chomp("/")) + "/webhooks/plaid"
     end
 
     def plaid_eu_webhooks_url
       return webhooks_plaid_eu_url if Rails.env.production?
+      return if Rails.env.development? && ENV["DEV_WEBHOOKS_URL"].blank?
 
       ENV.fetch("DEV_WEBHOOKS_URL", root_url.chomp("/")) + "/webhooks/plaid_eu"
     end

@@ -5,6 +5,7 @@ export default class extends Controller {
   static values = {
     linkToken: String,
     region: { type: String, default: "us" },
+    profile: { type: String, default: "default" },
     isUpdate: { type: Boolean, default: false },
     itemId: String,
   };
@@ -118,6 +119,7 @@ export default class extends Controller {
           public_token: public_token,
           metadata: metadata,
           region: this.regionValue,
+          profile: this.profileValue,
         },
       }),
     }).then((response) => {

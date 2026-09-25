@@ -18,6 +18,7 @@ class Settings::ApiKeysControllerTest < ActionDispatch::IntegrationTest
     get settings_api_keys_path
     assert_response :success
     assert_includes response.body, "Listed Key"
+    assert_select "h1", text: I18n.t("settings.api_keys.index.title")
   end
 
   test "new always renders form (no redirect when key exists)" do

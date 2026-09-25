@@ -6,22 +6,23 @@ module Family::PlaidConnectable
   end
 
   def can_connect_plaid_us?
-    plaid(:us).present?
+    plaid_provider_profiles(:us).any?
   end
 
   # If Plaid provider is configured and user is in the EU region
   def can_connect_plaid_eu?
-    plaid(:eu).present? && self.eu?
+    plaid_provider_profiles(:eu).any? && self.eu?
   end
 
-  def create_plaid_item!(public_token:, item_name:, region:)
-    public_token_response = plaid(region).exchange_public_token(public_token)
+  def create_plaid_item!(public_token:, item_name:, region:, profile: "default")
+    public_token_response = plaid(region, profile:).exchange_public_token(public_token)
 
     plaid_item = plaid_items.create!(
       name: item_name,
       plaid_id: public_token_response.item_id,
       access_token: public_token_response.access_token,
       plaid_region: region,
+      plaid_profile: profile.presence || "default",
       owner: Current.user
     )
 
@@ -30,10 +31,11 @@ module Family::PlaidConnectable
     plaid_item
   end
 
-  def get_link_token(webhooks_url:, redirect_url:, accountable_type: nil, region: :us, access_token: nil, account_selection_enabled: false)
-    return nil unless plaid(region)
+  def get_link_token(webhooks_url:, redirect_url:, accountable_type: nil, region: :us, access_token: nil, account_selection_enabled: false, profile: "default")
+    provider = plaid(region, profile:)
+    return nil unless provider
 
-    plaid(region).get_link_token(
+    provider.get_link_token(
       user_id: self.id,
       webhooks_url: webhooks_url,
       redirect_url: redirect_url,
@@ -44,7 +46,15 @@ module Family::PlaidConnectable
   end
 
   private
-    def plaid(region)
-      Provider::Registry.plaid_provider_for_region(region)
+    def plaid(region, profile: "default")
+      if profile.present? && profile.to_s != "default"
+        Provider::Registry.plaid_provider_for_region(region, profile:)
+      else
+        Provider::Registry.plaid_provider_for_region(region)
+      end
+    end
+
+    def plaid_provider_profiles(region)
+      Provider::Registry.plaid_provider_profiles_for_region(region)
     end
 end

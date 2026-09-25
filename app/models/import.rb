@@ -288,6 +288,7 @@ class Import < ApplicationRecord
     family.sync_later
 
     update! status: :complete
+    apply_post_import_rules_later
   rescue => error
     update! status: :failed, error: error.message
   end
@@ -394,6 +395,7 @@ class Import < ApplicationRecord
         amount: sanitize_number(csv_value(row, amount_col_label, "amount", "balance")).to_s,
         currency: (csv_value(row, currency_col_label, "currency") || default_currency).to_s,
         name: (csv_value(row, name_col_label, "name") || default_row_name).to_s,
+        merchant_id: merchant_id_for(csv_value(row, "merchant", "payee", "payer")),
         category: csv_value(row, category_col_label, "category").to_s,
         tags: csv_value(row, tags_col_label, "tags").to_s,
         entity_type: csv_value(row, entity_type_col_label, "entity_type", "account_type", "type").to_s,
@@ -470,6 +472,21 @@ class Import < ApplicationRecord
 
   def revertable?
     complete? || revert_failed?
+  end
+
+  def operation_name
+    [ account&.name, type.titleize.gsub(/ Import\z/, "") ].compact.join(" ")
+  end
+
+  def file_name
+    nil
+  end
+
+  # Completed imports that committed accounts or entries must be reverted
+  # before deletion. A completed import with no committed data (for example,
+  # an AI-only PDF classification) can be removed directly.
+  def directly_deletable?
+    !(complete? || revert_failed?) || !data_committed?
   end
 
   def has_unassigned_account?
@@ -575,12 +592,23 @@ class Import < ApplicationRecord
       # no-op, subclasses can implement for customization of algorithm
     end
 
+    # Import types can enqueue work that should run after their transactions
+    # have been committed. The base import has no post-publication rule step.
+    def apply_post_import_rules_later
+    end
+
     def default_row_name
       "Imported item"
     end
 
     def default_currency
       account&.currency || family.currency
+    end
+
+    def merchant_id_for(name)
+      return if name.blank?
+
+      family.available_merchants.find_by(name: name.to_s.strip)&.id
     end
 
     def csv_value(row, label, *aliases)

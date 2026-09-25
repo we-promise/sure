@@ -1,7 +1,10 @@
 class PdfImport < Import
+  AI_PROVIDERS = %w[api codex].freeze
+
   has_one_attached :pdf_file, dependent: :purge_later
 
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
+  validates :ai_provider, inclusion: { in: AI_PROVIDERS }
   validate :account_statement_matches_import
 
   class << self
@@ -129,6 +132,8 @@ class PdfImport < Import
 
         Transaction.new(
           category: mappings.categories.mappable_for(row.category),
+          merchant: row.merchant,
+          tags: row.tags_list.map { |tag| mappings.tags.mappable_for(tag) }.compact,
           entry: Entry.new(
             account: account,
             date: row.date_iso,
@@ -149,6 +154,7 @@ class PdfImport < Import
 
       Transaction.import!(new_transactions, recursive: true) if new_transactions.any?
       reconcile_entries!(reconciled_now, at: reconciled_at)
+      attach_statement_pdf_to_imported_transactions!(reconciled_now)
     end
   end
 
@@ -200,8 +206,18 @@ class PdfImport < Import
     ai_summary.present?
   end
 
-  def process_with_ai_later
-    return false unless with_lock { pending? && !ai_processed? && rows_count.zero? && pdf_uploaded? && update!(status: :importing) }
+  def file_name
+    pdf_filename
+  end
+
+  def process_with_ai_later(provider: nil)
+    claimed = with_lock do
+      next false unless pending? && !ai_processed? && rows_count.zero? && pdf_uploaded?
+
+      update!(ai_provider: provider) if provider.present? && AI_PROVIDERS.include?(provider.to_s)
+      update!(status: :importing)
+    end
+    return false unless claimed
 
     begin
       ProcessPdfJob.perform_later(self)
@@ -216,7 +232,11 @@ class PdfImport < Import
   def process_with_ai
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # process_pdf (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
+    provider = if ai_provider == "codex"
+      Provider::Codex.new
+    else
+      Provider::Registry.preferred_llm_provider
+    end
     raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
     raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_no_pdf_support") unless provider.supports_pdf_processing?
 
@@ -231,9 +251,14 @@ class PdfImport < Import
     end
 
     result = response.data
+    if result.summary.blank? && result.extracted_data.blank?
+      raise Provider::Error, I18n.t("imports.pdf_import.errors.incomplete_response")
+    end
+
     update!(
       ai_summary: result.summary,
-      document_type: result.document_type
+      document_type: result.document_type,
+      extracted_data: result.extracted_data.presence || extracted_data
     )
 
     result
@@ -241,6 +266,12 @@ class PdfImport < Import
 
   def extract_transactions
     return unless statement_with_transactions?
+    # Codex already owns the PDF extraction step for subscription-backed
+    # imports. An empty transaction list is a valid result (for example, a
+    # statement period with no activity), so never fall back to the API
+    # provider for these imports.
+    return extracted_data if ai_provider == "codex"
+    return extracted_data if has_extracted_transactions?
 
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # extract_bank_statement (PR #1985).
@@ -304,7 +335,9 @@ class PdfImport < Import
           date: format_date_for_import(txn["date"]),
           amount: txn["amount"].to_s,
           name: txn["name"].to_s,
+          merchant_id: merchant_id_for(txn["merchant"] || txn["payee"] || txn["payer"]),
           category: txn["category"].to_s,
+          tags: txn["tags"].to_s,
           notes: txn["notes"].to_s,
           currency: currency
         )
@@ -321,7 +354,9 @@ class PdfImport < Import
           date: row.date,
           amount: row.amount,
           name: row.name,
+          merchant_id: row.merchant_id,
           category: row.category,
+          tags: row.tags,
           notes: row.notes,
           currency: row.currency
         }
@@ -416,7 +451,7 @@ class PdfImport < Import
   end
 
   def column_keys
-    %i[date amount name category notes]
+    %i[date amount name merchant category tags notes]
   end
 
   def requires_csv_workflow?
@@ -450,6 +485,7 @@ class PdfImport < Import
     base << Import::CategoryMapping if rows.where.not(category: [ nil, "" ]).exists?
     # Note: PDF imports use direct account selection in the UI, not AccountMapping
     # AccountMapping is designed for CSV imports where rows have different account values
+    base << Import::TagMapping if rows.where.not(tags: [ nil, "" ]).exists?
     base
   end
 
@@ -482,6 +518,21 @@ class PdfImport < Import
       end
 
       [ unmatched, matched ]
+    end
+
+    # Rules operate on persisted transactions, so run them after publication
+    # has committed the PDF import. Scope the run to transactions created by
+    # this import so publishing a statement never re-applies rules to the
+    # rest of the family's history.
+    def apply_post_import_rules_later
+      transaction_ids = entries.where(entryable_type: "Transaction").pluck(:entryable_id)
+      return if transaction_ids.empty? || !family.rules.where(resource_type: "transaction").exists?
+
+      ApplyAllRulesJob.perform_later(
+        family,
+        execution_type: "import",
+        transaction_ids: transaction_ids
+      )
     end
 
     # Name is deliberately not part of the match: statement descriptions and
@@ -528,6 +579,36 @@ class PdfImport < Import
       )
     end
 
+    def attach_statement_pdf_to_imported_transactions!(reconciled_now = [])
+      blob = statement_pdf_blob
+      return if blob.blank?
+
+      entries_to_attach = entries.includes(:entryable).to_a + reconciled_entries.includes(:entryable).to_a + reconciled_now
+      entries_to_attach.map(&:entryable).compact.uniq(&:id).each do |transaction|
+        next unless transaction.is_a?(Transaction)
+        next if transaction.attachments.exists?(blob_id: blob.id)
+
+        transaction.attachments.attach(blob)
+      end
+    end
+
+    def detach_statement_pdf_from_reconciled_transactions!
+      blob = statement_pdf_blob
+      return if blob.blank?
+
+      reconciled_entries.includes(:entryable).each do |entry|
+        transaction = entry.entryable
+        next unless transaction.is_a?(Transaction)
+
+        transaction.attachments.attachments.where(blob_id: blob.id).destroy_all
+      end
+    end
+
+    def statement_pdf_blob
+      return account_statement.original_file.blob if statement_backed?
+      return pdf_file.blob if pdf_file.attached?
+    end
+
     # Regeneration can empty the row set (everything now matches) or refill it
     # (the new account matches nothing). Status has to follow, using the same
     # rule ProcessPdfJob applies after initial processing -- otherwise a
@@ -562,6 +643,7 @@ class PdfImport < Import
     # regenerating re-judges every statement line against what the account
     # actually holds now, so the review screen offers exactly what is missing.
     def revert_derived_state!
+      detach_statement_pdf_from_reconciled_transactions!
       release_reconciliations!(account_id)
       return unless has_extracted_transactions?
 

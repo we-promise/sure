@@ -399,6 +399,7 @@ Rails.application.routes.draw do
     end
     resources :sso_identities, only: :destroy
     resources :api_keys, only: [ :index, :show, :new, :create, :destroy ]
+    resource :ai_subscriptions, controller: "ai_subscriptions", only: :show
     resource :mcp, controller: "mcp", only: :show do
       delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
     end
@@ -501,12 +502,14 @@ Rails.application.routes.draw do
   end
 
   resources :imports, only: %i[index new show create update destroy] do
+    delete :destroy_all, on: :collection
     member do
       post :publish
       put :revert
       put :apply_template
       post :cancel
       get :summary
+      get :preview
     end
 
     resource :upload, only: %i[show update], module: :import

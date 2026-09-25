@@ -15,6 +15,7 @@
               class="form-field__input w-full flex items-center gap-2 <%= "cursor-not-allowed text-subdued" if disabled %>"
               data-merchant-select-target="button"
               data-action="click->merchant-select#toggle"
+              aria-label="<%= label || helpers.t("transactions.form.merchant_label") %>"
               aria-haspopup="listbox"
               aria-expanded="false"
               aria-controls="<%= menu_id %>"
