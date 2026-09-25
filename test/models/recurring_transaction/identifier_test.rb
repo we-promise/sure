@@ -33,6 +33,63 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert_not_includes names, "Shop refund"
   end
 
+  test "investment account activity is not offered as a bill or an income source" do
+    # Brokerage and retirement feeds deliver dividends, reinvestments and
+    # payroll contributions as plain Transaction rows, monthly and tightly
+    # clustered -- the exact shape the detector looks for.
+    investment = accounts(:investment)
+    assert_equal "Investment", investment.accountable_type
+
+    3.times do |i|
+      # A monthly dividend reinvestment: looks exactly like a subscription.
+      investment.entries.create!(
+        date: (i + 1).months.ago.to_date,
+        amount: 7.24,
+        currency: "USD",
+        name: "REINVESTMENT FIDELITY US BOND INDEX",
+        entryable: Transaction.new
+      )
+
+      # A payroll 401k contribution: an inflow, so it reads as recurring income.
+      investment.entries.create!(
+        date: (i + 1).months.ago.to_date,
+        amount: -437.50,
+        currency: "USD",
+        name: "LEGAL & GENERAL S&P DC CIT",
+        entryable: Transaction.new
+      )
+    end
+
+    # Crypto is excluded by the same constant. Without its own entries the test
+    # would still pass if "Crypto" were dropped from NON_BILLABLE_ACCOUNTABLE_TYPES.
+    crypto = accounts(:crypto)
+    assert_equal "Crypto", crypto.accountable_type
+
+    3.times do |i|
+      crypto.entries.create!(
+        date: (i + 1).months.ago.to_date, amount: 12.50, currency: "USD",
+        name: "EXCHANGE TRADING FEE", entryable: Transaction.new
+      )
+      crypto.entries.create!(
+        date: (i + 1).months.ago.to_date, amount: -60.00, currency: "USD",
+        name: "STAKING REWARD", entryable: Transaction.new
+      )
+    end
+
+    bill_names = @identifier.candidate_patterns(sign: :outflow, min_occurrences: 2).map { |p| p[:name] }
+    assert_not_includes bill_names, "REINVESTMENT FIDELITY US BOND INDEX"
+    assert_not_includes bill_names, "EXCHANGE TRADING FEE"
+
+    income_names = @identifier.income_source_candidates(min_occurrences: 2).map { |c| c[:name] }
+    assert_not_includes income_names, "LEGAL & GENERAL S&P DC CIT"
+    assert_not_includes income_names, "STAKING REWARD"
+
+    # And the automatic pipeline does not create series for them either.
+    assert_no_difference "@family.recurring_transactions.count" do
+      @identifier.identify_recurring_patterns
+    end
+  end
+
   test "candidate_patterns offers undeclared recurring shapes and skips claimed, junk, and wrong-sign ones" do
     account = @family.accounts.first
 

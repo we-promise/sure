@@ -207,4 +207,73 @@ class Security::ResolverTest < ActiveSupport::TestCase
     assert_equal db_security, resolved
     assert_nil resolved.reload.price_provider, "Disabled providers should be rejected"
   end
+
+  test "canonicalizes legacy WAR MIC to XWAR on resolve and reuses existing row" do
+    legacy = Security.create!(ticker: "KTY", exchange_operating_mic: "XWAR", country_code: "PL")
+    legacy.update_columns(exchange_operating_mic: "WAR")
+
+    Security.expects(:search_provider).never
+
+    resolved = Security::Resolver.new("KTY", exchange_operating_mic: "WAR", country_code: "PL").resolve
+
+    assert_equal legacy.id, resolved.id
+    assert_equal "XWAR", resolved.reload.exchange_operating_mic
+  end
+
+  test "WAR and XWAR resolve to the same security without creating a duplicate" do
+    match = Security.new(ticker: "KTY", exchange_operating_mic: "XWAR", country_code: "PL", price_provider: "eodhd")
+
+    Security.expects(:search_provider)
+            .with("KTY", exchange_operating_mic: "XWAR", country_code: "PL")
+            .returns([ match ])
+
+    Setting.stubs(:enabled_securities_providers).returns([ "eodhd" ])
+
+    assert_difference "Security.count", 1 do
+      resolved = Security::Resolver.new(
+        "KTY",
+        exchange_operating_mic: "WAR",
+        country_code: "PL",
+        price_provider: "eodhd"
+      ).resolve
+
+      assert_equal "XWAR", resolved.exchange_operating_mic
+    end
+
+    Security.expects(:search_provider).never
+
+    assert_no_difference "Security.count" do
+      again = Security::Resolver.new(
+        "KTY",
+        exchange_operating_mic: "XWAR",
+        country_code: "PL",
+        price_provider: "eodhd"
+      ).resolve
+
+      assert_equal "XWAR", again.exchange_operating_mic
+      assert_equal 1, Security.where("UPPER(ticker) = ?", "KTY").count
+    end
+  end
+
+  test "prefers canonical XWAR when both WAR and XWAR rows exist" do
+    canonical = Security.create!(ticker: "KTY", exchange_operating_mic: "XWAR", country_code: "PL")
+    legacy = Security.new(ticker: "KTY", exchange_operating_mic: "WAR", country_code: "PL")
+    legacy.save!(validate: false)
+
+    Security.expects(:search_provider).never
+
+    resolved = Security::Resolver.new("KTY", exchange_operating_mic: "WAR", country_code: "PL").resolve
+
+    assert_equal canonical.id, resolved.id
+    assert_equal "XWAR", resolved.exchange_operating_mic
+  end
+
+  test "persists WAR lookups as canonical XWAR" do
+    Security.expects(:search_provider).returns([])
+
+    resolved = Security::Resolver.new("KTY", exchange_operating_mic: "WAR", country_code: "PL").resolve
+
+    assert resolved.persisted?
+    assert_equal "XWAR", resolved.exchange_operating_mic
+  end
 end
