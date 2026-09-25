@@ -385,10 +385,17 @@ en:
     table:
       title: Imports
       header:
+        select: Select
         date: Date
         operation: Operation
         status: Status
         actions: Actions
+      import: import
+      imports: imports
+      selected: selected
+      select_all: Select all deletable imports
+      select_import: Select %{type} import
+      delete_selected: Delete selected imports
       row:
         type_labels:
           transaction_import: "Transaction"
@@ -419,6 +426,14 @@ en:
           mark_failed: Mark as failed
           confirm_mark_failed: This import has been inactive for a while and its background job was likely interrupted. Mark it as failed so you can try again? No imported data is kept.
       empty: No imports yet.
+    destroy_all:
+      deleted:
+        one: 1 import deleted.
+        other: "%{count} imports deleted."
+      skipped:
+        one: 1 import could not be deleted. Revert completed imports with committed data first.
+        other: "%{count} imports could not be deleted. Revert completed imports with committed data first."
+      none_selected: No deletable imports were selected.
     new:
       description: Import from a financial tool or upload raw data files.
       tab_financial_tools: Financial Tools & Files

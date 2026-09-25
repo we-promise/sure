@@ -173,6 +173,32 @@ class ImportsController < ApplicationController
     redirect_to imports_path, notice: t(".deleted")
   end
 
+  def destroy_all
+    import_ids = Array(params.dig(:bulk_delete, :import_ids)).filter_map { |id| id.to_s.presence }
+    imports = Current.family.imports.where(id: import_ids).includes(:account_statement)
+    deleted_count = 0
+    skipped_count = 0
+
+    imports.each do |import|
+      can_manage_statement = import.account_statement.blank? || import.account_statement.manageable_by?(Current.user)
+
+      if can_manage_statement && import.directly_deletable?
+        import.destroy!
+        deleted_count += 1
+      else
+        skipped_count += 1
+      end
+    end
+
+    notices = []
+    notices << t("imports.destroy_all.deleted", count: deleted_count) if deleted_count.positive?
+    alerts = []
+    alerts << t("imports.destroy_all.skipped", count: skipped_count) if skipped_count.positive?
+    alerts << t("imports.destroy_all.none_selected") if deleted_count.zero? && skipped_count.zero?
+
+    redirect_to imports_path, notice: notices.presence&.join(" "), alert: alerts.presence&.join(" ")
+  end
+
   private
     def set_import
       @import = Current.family.imports.includes(:account, :account_statement).find(params[:id])

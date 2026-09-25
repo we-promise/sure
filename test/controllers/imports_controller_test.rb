@@ -13,6 +13,11 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
 
+    assert_select "[data-controller='bulk-select']"
+    assert_select "[data-bulk-select-target='selectionBar']"
+    assert_select "form#bulk-delete-form"
+    assert_select "input[data-bulk-select-target='row']", count: @user.family.imports.where(type: Import::TYPES).count
+
     @user.family.imports.ordered.each do |import|
       assert_select "#" + dom_id(import), count: 1
     end
@@ -466,6 +471,47 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to imports_path
     assert_equal I18n.t("imports.destroy.not_deletable"), flash[:alert]
+  end
+
+  test "bulk deletes selected imports in the current family" do
+    imports = [ imports(:transaction), imports(:trade) ]
+
+    assert_difference "Import.count", -2 do
+      delete destroy_all_imports_url, params: {
+        bulk_delete: { import_ids: imports.map(&:id) }
+      }
+    end
+
+    assert_redirected_to imports_path
+    assert_equal "2 imports deleted.", flash[:notice]
+  end
+
+  test "bulk deletion skips completed imports with committed data" do
+    import = imports(:transaction)
+    import.update!(status: :complete)
+    entries(:transaction).update!(import: import)
+
+    assert_no_difference "Import.count" do
+      delete destroy_all_imports_url, params: {
+        bulk_delete: { import_ids: [ import.id ] }
+      }
+    end
+
+    assert_redirected_to imports_path
+    assert_equal "1 import could not be deleted. Revert completed imports with committed data first.", flash[:alert]
+  end
+
+  test "bulk deletion is scoped to the current family" do
+    other_family_import = Import.create!(family: families(:empty), type: "TransactionImport")
+
+    assert_no_difference "Import.count" do
+      delete destroy_all_imports_url, params: {
+        bulk_delete: { import_ids: [ other_family_import.id ] }
+      }
+    end
+
+    assert_redirected_to imports_path
+    assert_equal "No deletable imports were selected.", flash[:alert]
   end
 
   test "respects SURE_IMPORT_MAX_NDJSON_SIZE_MB when creating Sure import (#3010)" do
