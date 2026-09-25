@@ -46,7 +46,7 @@ module Family::AutoTransferMatchable
       {
         date_window:,
         family_id: id,
-        family_currency: currency,
+        family_currency: primary_currency_code,
         inflow_transaction_id:,
         outflow_transaction_id:,
         account_id:,

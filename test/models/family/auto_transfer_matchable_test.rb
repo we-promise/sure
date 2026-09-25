@@ -211,6 +211,16 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
   end
 
+  test "derives family currency cross rates through the primary currency when the family currency is blank" do
+    @family.update_column(:currency, nil)
+    load_family_currency_rates
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -680, currency: "CAD")
+
+    assert_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
   test "does not suggest a family currency cross rate outside the exchange rate tolerance" do
     load_family_currency_rates
 
