@@ -73,6 +73,6 @@
   </div>
 
   <div class="max-w-3xl mx-auto flex flex-col items-center">
-    <%= render partial: "import/confirms/mappings", locals: { import: @import, mapping_class: step_mapping_class, step_idx: step_idx } %>
+    <%= render partial: "import/confirms/mappings", locals: { import: @import, mapping_class: step_mapping_class, step_idx: step_idx, batch_imports: @batch_imports || [] } %>
   </div>
 <% end %>

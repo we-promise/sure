@@ -36,13 +36,18 @@ export default class extends Controller {
   }
 
   submitBulkRequest(e) {
-    const form = e.target.closest("form");
-    const scope = e.params.scope;
-    const param = e.params.param || "entry_ids";
+    const actionElement = e.currentTarget;
+    const form = actionElement.closest("form");
+    const scope = e.params.scope || actionElement.dataset.bulkSelectScopeParam;
+    const idParam = e.params.param || actionElement.dataset.bulkSelectParam || "entry_ids";
+    const selectedIds = this.rowTargets
+      .filter((row) => row.checked && !row.disabled)
+      .map((row) => row.dataset.id);
+
     this._addHiddenFormInputsForSelectedIds(
       form,
-      `${scope}[${param}][]`,
-      this.selectedIdsValue,
+      `${scope}[${idParam}][]`,
+      selectedIds,
     );
     form.requestSubmit();
   }

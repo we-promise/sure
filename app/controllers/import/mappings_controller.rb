@@ -9,6 +9,17 @@ class Import::MappingsController < ApplicationController
       mappable: mappable,
       value: mapping_params[:value]
 
+    sibling_imports.each do |sibling|
+      sibling_mapping = sibling.mappings.find_by(type: mapping.type, key: mapping.key)
+      next unless sibling_mapping
+
+      sibling_mapping.update!(
+        create_when_empty: mapping.create_when_empty,
+        mappable: mapping.mappable,
+        value: mapping.value
+      )
+    end
+
     redirect_back_or_to import_confirm_path(@import)
   end
 
@@ -19,6 +30,13 @@ class Import::MappingsController < ApplicationController
 
     def set_import
       @import = Current.family.imports.find(params[:import_id])
+    end
+
+    def sibling_imports
+      ids = Array(session[:same_format_csv_import_ids]).map(&:to_s)
+      return Import.none unless ids.include?(@import.id.to_s)
+
+      Current.family.imports.where(id: ids).where.not(id: @import.id)
     end
 
     def mappable

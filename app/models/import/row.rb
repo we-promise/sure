@@ -1,6 +1,8 @@
 class Import::Row < ApplicationRecord
   belongs_to :import, counter_cache: true
   belongs_to :merchant, optional: true
+  before_validation :normalize_date
+  before_save :normalize_date
 
   validates :amount, numericality: true, allow_blank: true
   validates :currency, presence: true
@@ -68,13 +70,17 @@ class Import::Row < ApplicationRecord
     end
   end
 
-  def update_and_sync(params)
+  def update_and_sync(params, sync_mappings: true)
     assign_attributes(params)
     save!(validate: false)
-    import.sync_mappings
+    import.sync_mappings if sync_mappings
   end
 
   private
+    def normalize_date
+      self.date = import.normalized_date_value(date) if date.present?
+    end
+
     # Supports historical comma-delimited exports and pipe-delimited templates.
     # Backslash escapes comma, pipe, and backslash so tag names can contain either delimiter.
     def split_tags(value)

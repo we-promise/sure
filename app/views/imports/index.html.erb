@@ -46,18 +46,18 @@
                 <%= check_box_tag "import_selection", 1, false,
                                   class: "checkbox checkbox--light align-middle",
                                   aria: { label: t("imports.table.select_all") },
-                                  data: { action: "bulk-select#togglePageSelection" } %>
+                                  data: { action: "change->bulk-select#togglePageSelection" } %>
               </th>
-              <th class="px-2 py-3 pr-4 text-left w-44 whitespace-nowrap">
+              <th class="px-2 py-3 pr-4 text-left min-w-44">
                 <%= t("imports.table.header.date") %>
               </th>
               <th class="px-2 py-3 pl-4 text-left min-w-0">
                 <%= t("imports.table.header.operation") %>
               </th>
-              <th class="px-2 py-3 text-left min-w-0">
+              <th class="px-2 py-3 text-left min-w-32">
                 <%= t("imports.table.header.file_name") %>
               </th>
-              <th class="px-2 py-3 text-left w-24 whitespace-nowrap">
+              <th class="px-2 py-3 text-left min-w-24">
                 <%= t("imports.table.header.status") %>
               </th>
               <th class="px-2 py-3 text-right w-24 whitespace-nowrap">
@@ -71,16 +71,17 @@
                 class="border-b border-subdued hover:bg-surface-hover cursor-pointer"
                 data-action="click->bulk-select#toggleRowSelection">
               <td class="p-0 w-10 text-center align-middle">
-                <%= check_box_tag "bulk_delete[entry_ids][]", import.id, false,
+                <%= check_box_tag "bulk_delete[import_ids][]", import.id, false,
                                   class: "checkbox checkbox--light align-middle",
                                   disabled: !import.directly_deletable?,
                                   aria: { label: t("imports.table.select_import", type: import.type.titleize) },
                                   data: {
+                                    action: "change->bulk-select#toggleRowSelection",
                                     id: import.id,
                                     bulk_select_target: "row"
                                   } %>
               </td>
-              <td class="px-2 py-3 pr-4 w-44 whitespace-nowrap">
+              <td class="px-2 py-3 pr-4 min-w-44">
                 <span class="text-sm text-secondary">
                   <%= l(import.updated_at, format: :long) %>
                 </span>
@@ -96,7 +97,7 @@
                   <%= import.file_name.presence || t("imports.table.no_file_name") %>
                 </span>
               </td>
-              <td class="px-2 py-3 w-24 whitespace-nowrap">
+              <td class="px-2 py-3 min-w-24">
                 <% if import.pending? %>
                   <%= render "shared/badge" do %>
                     <%= t("imports.table.row.status.in_progress") %>
@@ -189,31 +190,51 @@
         </p>
       <% end %>
     </div>
-  <div data-bulk-select-target="selectionBar" class="fixed bottom-6 z-50 hidden flex items-center justify-between rounded-xl bg-surface-inset border-secondary shadow-border-xs px-4 text-sm text-primary left-1/2 -translate-x-1/2 w-[90%] max-w-md py-1.5">
-    <div class="flex items-center gap-2">
-      <%= check_box_tag "selected_imports", 1, true, class: "checkbox checkbox--light", data: { action: "bulk-select#deselectAll" } %>
-      <p data-bulk-select-target="selectionBarText"></p>
+    <div data-bulk-select-target="selectionBar" class="fixed bottom-6 z-50 hidden flex flex-wrap items-center justify-center gap-3 rounded-xl bg-surface-inset border-secondary shadow-border-xs px-4 text-sm text-primary left-1/2 -translate-x-1/2 w-[90%] max-w-3xl py-2">
+      <div class="flex items-center gap-2 mr-auto">
+        <%= check_box_tag "selected_imports", 1, true, class: "checkbox checkbox--light", data: { action: "bulk-select#deselectAll" } %>
+        <p data-bulk-select-target="selectionBarText"></p>
+      </div>
+
+      <% if @bulk_accounts.any? %>
+        <%= styled_form_with url: assign_account_all_imports_path, scope: :bulk_account, method: :patch,
+                             class: "flex items-center gap-2",
+                             data: { turbo_frame: "_top" } do |form| %>
+          <%= form.select :account_id, @bulk_accounts.pluck(:name, :id),
+                          { include_blank: t("imports.table.select_account"), label: false },
+                          { required: true, aria: { label: t("imports.table.select_account") } } %>
+          <%= render DS::Button.new(
+            variant: :secondary,
+            size: :sm,
+            text: t("imports.table.assign_account"),
+            data: {
+              bulk_select_scope_param: "bulk_account",
+              bulk_select_param: "import_ids",
+              action: "bulk-select#submitBulkRequest"
+            }
+          ) %>
+        <% end %>
+      <% end %>
+
+      <%= form_with url: destroy_all_imports_path, method: :delete, id: "bulk-delete-form",
+                    data: {
+                      turbo_confirm: CustomConfirm.for_resource_deletion("import").to_data_attribute,
+                      turbo_frame: "_top"
+                    } do %>
+        <%= render DS::Button.new(
+          variant: :destructive,
+          size: :sm,
+          text: t("imports.table.delete_selected"),
+          icon: "trash-2",
+          aria_label: t("imports.table.delete_selected"),
+          data: {
+            bulk_select_scope_param: "bulk_delete",
+            bulk_select_param: "import_ids",
+            action: "bulk-select#submitBulkRequest"
+          }
+        ) %>
+      <% end %>
     </div>
-
-    <%= form_with url: destroy_all_imports_path, method: :delete, id: "bulk-delete-form",
-                  data: {
-                    turbo_confirm: CustomConfirm.for_resource_deletion("import").to_data_attribute,
-                    turbo_frame: "_top"
-                  } do %>
-      <%= render DS::Button.new(
-        variant: :destructive,
-        size: :sm,
-        text: t("imports.table.delete_selected"),
-        icon: "trash-2",
-        aria_label: t("imports.table.delete_selected"),
-        data: {
-          bulk_select_scope_param: "bulk_delete",
-          action: "bulk-select#submitBulkRequest"
-        }
-      ) %>
-    <% end %>
-  </div>
-
   </div>
 
   <% if @pagy.pages > 1 %>

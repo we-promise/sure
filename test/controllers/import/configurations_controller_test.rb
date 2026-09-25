@@ -9,6 +9,7 @@ class Import::ConfigurationsControllerTest < ActionDispatch::IntegrationTest
   test "show" do
     get import_configuration_url(@import)
     assert_response :success
+    assert_select "select[name='import[merchant_col_label]']"
   end
 
   test "template suggestion renders German copy and preserves action destinations" do
@@ -80,6 +81,7 @@ class Import::ConfigurationsControllerTest < ActionDispatch::IntegrationTest
         date_col_label: "Date",
         date_format: "%Y-%m-%d",
         name_col_label: "Name",
+        merchant_col_label: "Merchant",
         category_col_label: "Category",
         tags_col_label: "Tags",
         amount_col_label: "Amount",
@@ -97,6 +99,7 @@ class Import::ConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Date", @import.date_col_label
     assert_equal "%Y-%m-%d", @import.date_format
     assert_equal "Name", @import.name_col_label
+    assert_equal "Merchant", @import.merchant_col_label
     assert_equal "Category", @import.category_col_label
     assert_equal "Tags", @import.tags_col_label
     assert_equal "Amount", @import.amount_col_label

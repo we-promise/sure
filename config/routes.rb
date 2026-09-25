@@ -504,6 +504,7 @@ Rails.application.routes.draw do
   resources :imports, only: %i[index new show create update destroy] do
     delete :destroy_all, on: :collection
     post :verify_pending, on: :collection
+    patch :assign_account_all, on: :collection
     member do
       post :publish
       put :revert
@@ -519,7 +520,9 @@ Rails.application.routes.draw do
     resource :confirm, only: :show, module: :import
     resource :qif_category_selection, only: %i[show update], module: :import
 
-    resources :rows, only: %i[show update], module: :import
+    resources :rows, only: %i[show update destroy], module: :import do
+      delete :destroy_invalid, on: :collection
+    end
     resources :mappings, only: :update, module: :import
   end
 
@@ -563,6 +566,7 @@ Rails.application.routes.draw do
 
     member do
       get :convert_to_trade
+      get :source_file, controller: :transaction_attachments
       post :create_trade_from_transaction
       post :mark_as_recurring
       post :merge_duplicate

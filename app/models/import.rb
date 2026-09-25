@@ -81,6 +81,8 @@ class Import < ApplicationRecord
   belongs_to :account_statement, optional: true
   belongs_to :import_session, optional: true
 
+  has_one_attached :source_file, dependent: :purge_later
+
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
   before_save :ensure_utf8_encoding
@@ -388,15 +390,15 @@ class Import < ApplicationRecord
       {
         source_row_number: index,
         account: csv_value(row, account_col_label, "account", "account_name").to_s,
-        date: csv_value(row, date_col_label, "date").to_s,
+        date: normalized_date_value(csv_value(row, date_col_label, "date").to_s),
         qty: sanitize_number(csv_value(row, qty_col_label, "qty", "quantity")).to_s,
         ticker: csv_value(row, ticker_col_label, "ticker").to_s,
         exchange_operating_mic: csv_value(row, exchange_operating_mic_col_label, "exchange_operating_mic").to_s,
         price: sanitize_number(csv_value(row, price_col_label, "price")).to_s,
         amount: sanitize_number(csv_value(row, amount_col_label, "amount", "balance")).to_s,
-        currency: (csv_value(row, currency_col_label, "currency") || default_currency).to_s,
+        currency: (csv_value(row, currency_col_label) || default_currency).to_s,
         name: (csv_value(row, name_col_label, "name") || default_row_name).to_s,
-        merchant_id: merchant_id_for(csv_value(row, "merchant", "payee", "payer")),
+        merchant_id: merchant_id_for(import_merchant_value(row)),
         category: csv_value(row, category_col_label, "category").to_s,
         tags: csv_value(row, tags_col_label, "tags").to_s,
         entity_type: csv_value(row, entity_type_col_label, "entity_type", "account_type", "type").to_s,
@@ -408,22 +410,60 @@ class Import < ApplicationRecord
     update_column(:rows_count, rows.count)
   end
 
-  def sync_mappings
+  def sync_mappings(batch_imports: [ self ])
+    batch_imports = Array(batch_imports).uniq
+
     transaction do
       mapping_steps.each do |mapping_class|
-        mappables_by_key = mapping_class.mappables_by_key(self)
-
-        updated_mappings = mappables_by_key.map do |key, mappable|
-          mapping = mappings.find_or_initialize_by(key: key, import: self, type: mapping_class.name)
-          mapping.mappable = mappable
-          mapping.create_when_empty = key.present? && mappable.nil?
-          mapping
+        mappables_by_key = batch_imports.each_with_object({}) do |batch_import, combined|
+          mapping_class.mappables_by_key(batch_import).each do |key, mappable|
+            combined[key] ||= mappable
+          end
         end
 
-        updated_mappings.each { |m| m.save(validate: false) }
-        mapping_class.where.not(id: updated_mappings.map(&:id)).destroy_all
+        batch_imports.each do |batch_import|
+          updated_mappings = mappables_by_key.map do |key, mappable|
+            mapping = batch_import.mappings.find_or_initialize_by(key: key, type: mapping_class.name)
+            mapping.mappable = mappable
+            mapping.create_when_empty = key.present? && mappable.nil?
+            mapping
+          end
+
+          updated_mappings.each { |mapping| mapping.save(validate: false) }
+          batch_import.mappings.where(type: mapping_class.name).where.not(id: updated_mappings.map(&:id)).destroy_all
+        end
       end
     end
+  end
+
+  # CSV exports sometimes put a timestamp after a date even when the selected
+  # format only describes the date. Keep the date portion in the cleanup field
+  # so the value shown to the user matches what will be imported.
+  def normalized_date_value(value)
+    return value if value.blank?
+
+    if date_format.present? && (parsed = parse_date_prefix(value, date_format))
+      return parsed.strftime(date_format)
+    end
+
+    candidate_formats = (Family::DATE_FORMATS.map(&:last) + CSV_ONLY_DATE_FORMATS.map(&:last)).uniq
+    matches = candidate_formats.filter_map do |format|
+      parsed = parse_date_prefix(value, format)
+      [ parsed, format ] if parsed
+    end
+    parsed_dates = matches.map(&:first).uniq
+    return value unless parsed_dates.one?
+
+    output_format = date_format.presence || matches.find { |parsed, _format| parsed == parsed_dates.first }.last
+    parsed_dates.first.strftime(output_format)
+  rescue Date::Error, ArgumentError, TypeError
+    value
+  end
+
+  def parse_date_prefix(value, format)
+    Date.strptime(value, format)
+  rescue Date::Error, ArgumentError, TypeError
+    nil
   end
 
   def mapping_steps
@@ -432,6 +472,14 @@ class Import < ApplicationRecord
 
   def rows_ordered
     rows.ordered
+  end
+
+  def file_name
+    source_filename.presence || ndjson_file_name
+  end
+
+  def ndjson_file_name
+    ndjson_file.filename.to_s if respond_to?(:ndjson_file) && ndjson_file.attached?
   end
 
   def uploaded?
@@ -479,10 +527,6 @@ class Import < ApplicationRecord
     [ account&.name, type.titleize.gsub(/ Import\z/, "") ].compact.join(" ")
   end
 
-  def file_name
-    nil
-  end
-
   # Completed imports that committed accounts or entries must be reverted
   # before deletion. A completed import with no committed data (for example,
   # an AI-only PDF classification) can be removed directly.
@@ -510,7 +554,7 @@ class Import < ApplicationRecord
   def apply_template!(import_template)
     update!(
       import_template.attributes.slice(
-        "date_col_label", "amount_col_label", "name_col_label",
+        "date_col_label", "amount_col_label", "name_col_label", "merchant_col_label",
         "category_col_label", "tags_col_label", "account_col_label",
         "qty_col_label", "ticker_col_label", "price_col_label",
         "entity_type_col_label", "notes_col_label", "currency_col_label",
@@ -600,6 +644,21 @@ class Import < ApplicationRecord
 
     def default_row_name
       "Imported item"
+    end
+
+    def import_merchant_value(row)
+      if merchant_col_label.present?
+        csv_value(row, merchant_col_label)
+      else
+        csv_value(row, "merchant", "payee", "payer")
+      end
+    end
+
+    def merchant_id_for(value)
+      merchant_name = value.to_s.strip.presence
+      return if merchant_name.blank?
+
+      family.merchants.find_by(name: merchant_name)&.id
     end
 
     def default_currency

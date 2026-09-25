@@ -70,6 +70,7 @@ class ImportsController < ApplicationController
 
   def index
     @pagy, @imports = pagy(Current.family.imports.where(type: Import::TYPES).ordered, limit: safe_per_page)
+    @bulk_accounts = accessible_accounts.visible.alphabetically
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.imports"), imports_path ]
@@ -86,7 +87,9 @@ class ImportsController < ApplicationController
   end
 
   def create
-    files = Array(import_params[:import_file]).compact
+    files = Array(import_params[:import_file]).filter_map do |upload|
+      upload if upload.respond_to?(:original_filename) && upload.respond_to?(:content_type)
+    end
     file = files.first
 
     if files.size > 1 && pdf_import_request?
@@ -144,7 +147,9 @@ class ImportsController < ApplicationController
 
       # Stream reading is not fully applicable here as we store the raw string in the DB,
       # but we have validated size beforehand to prevent memory exhaustion from massive files.
-      import.update!(raw_file_str: file.read)
+      import.update!(raw_file_str: file.read, source_filename: file.original_filename)
+      file.rewind
+      import.source_file.attach(file)
 
       redirect_to import_configuration_path(import), notice: t("imports.create.csv_uploaded")
     else
@@ -182,7 +187,7 @@ class ImportsController < ApplicationController
 
   def destroy
     unless @import.directly_deletable?
-      redirect_to imports_path, alert: t("imports.destroy_all.revert_first")
+      redirect_to imports_path, alert: t("imports.destroy.not_deletable")
       return
     end
 
@@ -199,13 +204,11 @@ class ImportsController < ApplicationController
     skipped_count = 0
 
     imports.each do |import|
-      if import.account_statement.blank? || import.account_statement.manageable_by?(Current.user)
-        if import.directly_deletable?
-          import.destroy!
-          deleted_count += 1
-        else
-          skipped_count += 1
-        end
+      can_manage_statement = import.account_statement.blank? || import.account_statement.manageable_by?(Current.user)
+
+      if can_manage_statement && import.directly_deletable?
+        import.destroy!
+        deleted_count += 1
       else
         skipped_count += 1
       end
@@ -245,6 +248,46 @@ class ImportsController < ApplicationController
     alert = t("imports.verify_pending.skipped", count: skipped_count) if skipped_count.positive?
 
     redirect_to imports_path, notice: notice, alert: alert
+  end
+
+  def assign_account_all
+    account = accessible_accounts.visible.find_by(id: params.dig(:bulk_account, :account_id))
+    unless account
+      redirect_to imports_path, alert: t("imports.assign_account_all.invalid_account")
+      return
+    end
+
+    import_ids = Array(params.dig(:bulk_account, :import_ids)).filter_map { |id| id.to_s.presence }
+    imports = Current.family.imports.where(id: import_ids).includes(:account_statement)
+    assigned_count = 0
+    skipped_count = 0
+
+    imports.each do |import|
+      can_manage_statement = import.account_statement.blank? || import.account_statement.manageable_by?(Current.user)
+
+      import.with_lock do
+        assignable = can_manage_statement &&
+                     import.requires_csv_workflow? &&
+                     !import.data_committed? &&
+                     !import.importing? &&
+                     !import.reverting?
+
+        if assignable
+          import.update!(account: account)
+          assigned_count += 1
+        else
+          skipped_count += 1
+        end
+      end
+    end
+
+    notices = []
+    notices << t("imports.assign_account_all.assigned", count: assigned_count) if assigned_count.positive?
+    alerts = []
+    alerts << t("imports.assign_account_all.skipped", count: skipped_count) if skipped_count.positive?
+    alerts << t("imports.assign_account_all.none_selected") if assigned_count.zero? && skipped_count.zero?
+
+    redirect_to imports_path, notice: notices.presence&.join(" "), alert: alerts.presence&.join(" ")
   end
 
   private

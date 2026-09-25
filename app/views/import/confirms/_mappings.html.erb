@@ -1,4 +1,4 @@
-<%# locals: (import:, mapping_class:, step_idx:) %>
+<%# locals: (import:, mapping_class:, step_idx:, batch_imports: []) %>
 
 <% mappings = mapping_class.for_import(import) %>
 <% is_last_step = step_idx == import.mapping_steps.count - 1 %>
@@ -50,7 +50,15 @@
           <div class="shadow-border-xs rounded-md divide-y divide-alpha-black-100 text-sm">
             <% mappings.sort_by(&:key).each do |mapping| %>
               <div class="px-5 py-3 bg-container first:rounded-tl-xl first:rounded-tr-xl last:rounded-bl-xl last:rounded-br-xl">
-                <%= render partial: "import/mappings/form", locals: { mapping: mapping } %>
+                <% values_count = if batch_imports.present?
+                  batch_imports.sum do |batch_import|
+                    batch_mapping = batch_import.mappings.find_by(type: mapping_class.name, key: mapping.key)
+                    batch_mapping ? batch_mapping.values_count : 0
+                  end
+                else
+                  mapping.values_count
+                end %>
+                <%= render partial: "import/mappings/form", locals: { mapping: mapping, values_count: values_count } %>
               </div>
             <% end %>
           </div>
@@ -62,7 +70,11 @@
       <%= render DS::Link.new(
         text: t(".next"),
         variant: "primary",
-        href: is_last_step ? import_path(import) : url_for(step: step_idx + 2),
+        href: if is_last_step
+          @batch_first_import ? imports_path : import_path(import)
+        else
+          url_for(step: step_idx + 2)
+        end,
         icon: "arrow-right",
         icon_position: "right",
         class: "w-full md:w-auto"

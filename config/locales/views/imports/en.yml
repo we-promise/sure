@@ -40,12 +40,28 @@ en:
         next_step: Next step
         all_rows: All rows
         error_rows: Error rows
+        delete_all_error_rows:
+          one: Delete the %{count} error row
+          other: Delete all %{count} error rows
+        delete_all_error_rows_confirm:
+          one: "Delete the %{count} invalid row from this CSV group? This cannot be undone."
+          other: "Delete all %{count} invalid rows from this CSV group? This cannot be undone."
         source_pdf: Source PDF
+        source_file: Source file
         open_pdf: Open PDF
         hide_pdf: Hide PDF
         show_pdf: Show PDF
         all_transactions: All transactions
         rows_per_page: Transactions per page
+    rows:
+      destroy:
+        delete_row: Delete row
+        confirm: Delete this row from the import?
+        success: Row deleted.
+        completed_import: Completed imports cannot be edited.
+        invalid_rows_success:
+          one: Deleted 1 invalid row.
+          other: Deleted %{count} invalid rows.
     configurations:
       update:
         success: Import configured successfully.
@@ -81,6 +97,7 @@ en:
         leave_empty: Leave empty
         account_label: Account
         name_label: Name
+        merchant_label: Merchant
         category_label: Category
         tags_label: Tags
         notes_label: Notes
@@ -235,6 +252,13 @@ en:
         qif_submit: Upload QIF
         browse: Browse
         csv_file_prompt: to add your CSV file here
+        same_format_question: Are all selected CSVs in the same format?
+        same_format_yes: Yes — configure, clean, and map them together
+        same_format_no: No — import each CSV separately
+        same_format_description: Each CSV will still appear as its own import with its own filename.
+        files_selected:
+          one: "%{count} CSV file selected"
+          other: "%{count} CSV files selected"
         description: Paste or upload your CSV file below.  Please review the instructions
           in the table below before beginning.
         instructions_1: Below is an example CSV with columns available for import.
@@ -281,8 +305,8 @@ en:
       amount: "Amount"
       name: "Name"
       currency: "Currency"
-      merchant: "Merchant"
       category: "Category"
+      merchant: "Merchant"
       tags: "Tags"
       account: "Account"
       notes: "Notes"
@@ -337,6 +361,24 @@ en:
       no_template_found: "No template found, please manually configure your import."
     destroy:
       deleted: "Your import has been deleted."
+      not_deletable: "This import contains data that must be reverted first."
+    destroy_all:
+      deleted:
+        one: "1 import was deleted."
+        other: "%{count} imports were deleted."
+      skipped:
+        one: "1 import could not be deleted. Revert completed imports first."
+        other: "%{count} imports could not be deleted. Revert completed imports first."
+      none_selected: "No deletable imports were selected."
+    assign_account_all:
+      assigned:
+        one: "Account set for 1 CSV import."
+        other: "Account set for %{count} CSV imports."
+      skipped:
+        one: "1 selected import could not be assigned. Only CSV imports without imported data can be changed."
+        other: "%{count} selected imports could not be assigned. Only CSV imports without imported data can be changed."
+      invalid_account: "Choose an account you can access."
+      none_selected: "No imports were selected."
     failure:
       title: Import failed
       description: Please check that your file format, for any errors and that all required fields are filled, then come back and try again.
@@ -413,6 +455,8 @@ en:
       select_all: Select all deletable imports
       select_import: Select %{type} import
       delete_selected: Delete selected imports
+      select_account: Choose account
+      assign_account: Set account
       no_file_name: —
       row:
         type_labels:

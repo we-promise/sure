@@ -18,7 +18,7 @@ class Import::UploadsController < ApplicationController
       handle_qif_upload
     elsif @import.is_a?(SureImport)
       update_sure_import_upload
-    elsif csv_uploads.present?
+    elsif csv_uploads.any?
       handle_csv_uploads
     elsif csv_valid?(csv_str)
       save_csv_import!(@import, csv_str)
@@ -67,35 +67,49 @@ class Import::UploadsController < ApplicationController
     end
 
     def handle_csv_uploads
+      if csv_uploads.any? { |upload| !valid_csv_file?(upload) }
+        flash.now[:alert] = t("import.uploads.show.csv_invalid", default: "Must be valid CSV with headers and at least one row of data")
+        render :show, status: :unprocessable_entity
+        return
+      end
+
       uploads = csv_uploads.map do |upload|
         content = upload.read
         upload.rewind
         [ upload, content ]
       end
 
-      if uploads.any? { |_, content| content.bytesize > Import::MAX_CSV_SIZE }
+      if uploads.any? { |upload, content| upload.size > Import::MAX_CSV_SIZE || content.bytesize > Import::MAX_CSV_SIZE }
         flash.now[:alert] = t("imports.create.file_too_large", max_size: Import::MAX_CSV_SIZE / 1.megabyte)
         render :show, status: :unprocessable_entity
         return
       end
 
-      unless uploads.all? { |_, content| csv_valid?(content) }
+      unless uploads.all? { |_upload, content| csv_valid?(content) }
         flash.now[:alert] = t("import.uploads.show.csv_invalid", default: "Must be valid CSV with headers and at least one row of data")
         render :show, status: :unprocessable_entity
         return
       end
 
       account = import_account_id.present? ? accessible_accounts.find(import_account_id) : nil
-
-      uploads.each_with_index do |(_, content), index|
-        import = index.zero? ? @import : build_csv_import(account)
-        save_csv_import!(import, content, account: account)
+      imports = ActiveRecord::Base.transaction do
+        uploads.each_with_index.map do |(file, content), index|
+          import = index.zero? ? @import : build_csv_import(account)
+          save_csv_import!(import, content, account: account, file: file)
+          import
+        end
       end
 
-      if uploads.one?
-        redirect_to import_configuration_path(@import, template_hint: true), notice: t("imports.create.csv_uploaded")
+      if uploads_share_format? && imports.length > 1
+        session[:same_format_csv_import_ids] = imports.map(&:id)
       else
-        redirect_to imports_path, notice: t("imports.create.csv_uploaded_many", count: uploads.size)
+        session.delete(:same_format_csv_import_ids)
+      end
+
+      if uploads.one? || uploads_share_format?
+        redirect_to import_configuration_path(imports.first, template_hint: true), notice: t("imports.create.csv_uploaded")
+      else
+        redirect_to imports_path, notice: t("imports.create.csv_uploaded_many", count: imports.size)
       end
     end
 
@@ -108,10 +122,26 @@ class Import::UploadsController < ApplicationController
       )
     end
 
-    def save_csv_import!(import, content, account: nil)
+    def save_csv_import!(import, content, account: nil, file: nil)
       import.account = account
-      import.assign_attributes(raw_file_str: content, col_sep: upload_params[:col_sep])
+      import.assign_attributes(
+        raw_file_str: content,
+        col_sep: upload_params[:col_sep],
+        source_filename: file&.original_filename
+      )
       import.save!(validate: false)
+      if file
+        file.rewind
+        import.source_file.attach(file)
+      end
+    end
+
+    def uploads_share_format?
+      ActiveModel::Type::Boolean.new.cast(upload_params[:same_format])
+    end
+
+    def valid_csv_file?(file)
+      file.size <= Import::MAX_CSV_SIZE && Import::ALLOWED_CSV_MIME_TYPES.include?(file.content_type)
     end
 
     def handle_qif_upload
@@ -138,12 +168,15 @@ class Import::UploadsController < ApplicationController
       redirect_to import_qif_category_selection_path(@import), notice: t(".qif_uploaded")
     end
 
-    def csv_str
-      @csv_str ||= csv_uploads.first&.read || upload_params[:raw_file_str]
+    def csv_uploads
+      uploads = upload_params[:import_files].presence || upload_params[:import_file]
+      Array(uploads).filter_map do |upload|
+        upload if upload.respond_to?(:read) && upload.respond_to?(:original_filename)
+      end
     end
 
-    def csv_uploads
-      Array(upload_params[:import_file]).select { |upload| upload.respond_to?(:read) }
+    def csv_str
+      @csv_str ||= csv_uploads.first&.read || upload_params[:raw_file_str]
     end
 
     def csv_valid?(str)
@@ -173,7 +206,7 @@ class Import::UploadsController < ApplicationController
     end
 
     def upload_params
-      params.require(:import).permit(:raw_file_str, :import_file, :ndjson_file, :col_sep, import_file: [])
+      params.require(:import).permit(:raw_file_str, :import_file, :ndjson_file, :col_sep, :same_format, import_file: [], import_files: [])
     end
 
     def import_account_id

@@ -1,4 +1,14 @@
 <%# locals: (transaction:, can_upload: false, can_delete: false) %>
+<% source_file = nil %>
+<% source_statement = transaction.entry.reconciled_by_statement %>
+<% if source_statement&.viewable_by?(Current.user) && source_statement.original_file.attached? %>
+  <% source_file = source_statement.original_file %>
+<% else %>
+  <% source_import = transaction.entry.import %>
+  <% if source_import&.requires_csv_workflow? && source_import.account_id == transaction.entry.account_id && source_import.source_file.attached? %>
+    <% source_file = source_import.source_file %>
+  <% end %>
+<% end %>
 
 <div id="transaction_attachments_<%= transaction.id %>" class="pb-4">
   <!-- Upload Form -->
@@ -67,10 +77,44 @@
   <% end %>
 
   <!-- Attachments List -->
-  <% if transaction.attachments.any? %>
+  <% if transaction.attachments.any? || source_file.present? %>
     <div class="space-y-2">
-      <h4 class="text-sm font-medium text-primary"><%= t(".files", count: transaction.attachments.count) %></h4>
+      <h4 class="text-sm font-medium text-primary"><%= t(".files", count: transaction.attachments.count + (source_file.present? ? 1 : 0)) %></h4>
       <div class="space-y-2">
+        <% if source_file.present? %>
+          <div class="flex items-center justify-between p-3 border border-primary rounded-lg bg-container">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="flex-shrink-0">
+                <%= icon "file-text", size: "sm", color: "secondary" %>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-medium text-primary truncate"><%= source_file.filename %></p>
+                <p class="text-xs text-secondary"><%= number_to_human_size(source_file.byte_size) %></p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <%= render DS::Link.new(
+                    href: source_file_transaction_path(transaction, disposition: :inline),
+                    variant: :outline,
+                    size: :sm,
+                    icon: "eye",
+                    text: "",
+                    target: "_blank"
+                  ) %>
+
+              <%= render DS::Link.new(
+                    href: source_file_transaction_path(transaction, disposition: :attachment),
+                    variant: :outline,
+                    size: :sm,
+                    icon: "download",
+                    text: "",
+                    data: { turbo: false }
+                  ) %>
+            </div>
+          </div>
+        <% end %>
+
         <% transaction.attachments.each do |attachment| %>
           <div class="flex items-center justify-between p-3 border border-primary rounded-lg bg-container">
             <div class="flex items-center gap-3">

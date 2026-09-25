@@ -1,8 +1,21 @@
-<%# locals: (row:) %>
+<%# locals: (row:, categories:, merchants:, tags:, batch_clean: false, batch_clean_id: nil) %>
 
-<div style="grid-template-columns: repeat(<%= row.import.column_keys.count %>, minmax(150px, 1fr));" class="first:rounded-tl-lg first:rounded-tr-lg last:rounded-bl-lg last:rounded-br-lg grid divide-x divide-alpha-black-200 theme-dark:divide-alpha-white-200 group privacy-sensitive privacy-sensitive-interactive">
+<div style="grid-template-columns: <%= batch_clean ? "5rem 12rem" : "5rem" %> repeat(<%= row.import.column_keys.count %>, minmax(0, 1fr));" class="first:rounded-tl-lg first:rounded-tr-lg last:rounded-bl-lg last:rounded-br-lg grid divide-x divide-alpha-black-200 theme-dark:divide-alpha-white-200 group privacy-sensitive privacy-sensitive-interactive">
+  <div class="sticky left-0 z-20 flex items-center justify-center bg-container group-first:rounded-tl-lg group-last:rounded-bl-lg">
+    <%= button_to import_row_path(row.import, row, view: params[:view], per_page: params[:per_page], batch_clean_id: batch_clean_id),
+                  method: :delete,
+                  class: "inline-flex items-center justify-center text-destructive hover:text-destructive-hover",
+                  aria: { label: t("import.rows.destroy.delete_row") },
+                  data: { turbo_confirm: t("import.rows.destroy.confirm") },
+                  disabled: row.import.complete? do %>
+      <%= icon "trash-2", class: "w-5 h-5 text-destructive" %>
+    <% end %>
+  </div>
+  <% if batch_clean %>
+    <div class="min-w-0 truncate px-3 py-2 text-xs text-secondary" title="<%= row.import.file_name %>"><%= row.import.file_name %></div>
+  <% end %>
   <% row.import.column_keys.each_with_index do |key, idx| %>
-    <%= turbo_frame_tag dom_id(row, key), title: row.valid? ? nil : row.errors.full_messages.join(", ") do %>
+    <%= turbo_frame_tag dom_id(row, key), title: row.valid? ? nil : row.errors.full_messages.join(", "), class: "min-w-0" do %>
       <%= form_with(
             model: [row.import, row],
             scope: :import_row,
@@ -13,44 +26,40 @@
               auto_submit_form_trigger_value: "blur",
               mobile_cell_interaction_error_value: !cell_is_valid?(row, key) ? row.errors[key].join(", ") : "",
             }
-        ) do |form| %>
-        <% custom_field = case key
-        when :category
-          render DS::CategorySelect.new(
-            form: form,
-            categories: import_row_categories,
-            selected_id: row.category_id,
-            disabled: row.import.complete?,
-            auto_submit: true,
-            blank_label: t("transactions.form.category_prompt"),
-            show_label: false
-          )
-        when :merchant
-          render DS::MerchantSelect.new(
-            form: form,
-            method: :merchant_id,
-            merchants: import_row_merchants,
-            selected_id: row.merchant_id,
-            disabled: row.import.complete?,
-            auto_submit: true,
-            include_blank: t("transactions.form.none")
-          )
-        when :tags
-          render DS::TagSelect.new(
-            form: form,
-            tags: import_row_tags,
-            selected_ids: row.tag_ids,
-            disabled: row.import.complete?,
-            auto_submit: true,
-            show_label: false
-          )
-        end %>
-
-        <div class="relative <%= custom_field.present? ? cell_class(row, key) : "" %>">
-          <% if custom_field.present? %>
-            <%= custom_field %>
+          ) do |form| %>
+        <div class="relative">
+          <% if key == :category %>
+            <%= render DS::CategorySelect.new(
+                  form: form,
+                  categories: categories,
+                  selected_id: row.category_id,
+                  blank_label: t("transactions.form.category_prompt"),
+                  disabled: row.import.complete?,
+                  auto_submit: true,
+                  show_label: false
+                ) %>
+          <% elsif key == :merchant_id %>
+            <%= render DS::MerchantSelect.new(
+                  form: form,
+                  method: :merchant_id,
+                  merchants: merchants,
+                  selected_id: row.merchant_id,
+                  include_blank: t("transactions.form.none"),
+                  disabled: row.import.complete?,
+                  auto_submit: true
+                ) %>
+          <% elsif key == :tags %>
+            <%= render DS::TagSelect.new(
+                  form: form,
+                  tags: tags,
+                  selected_ids: row.tag_ids,
+                  disabled: row.import.complete?,
+                  auto_submit: true,
+                  show_label: false
+                ) %>
           <% else %>
             <%= form.text_field key,
+                  value: key == :date ? row.import.normalized_date_value(row.date) : row[key],
                   "data-auto-submit-form-target": "auto",
                   "data-action": "focus->mobile-cell-interaction#highlightCell blur->mobile-cell-interaction#unhighlightCell touchstart->mobile-cell-interaction#handleCellTouch",
                   "data-mobile-cell-interaction-target": "field",

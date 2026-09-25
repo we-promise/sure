@@ -8,6 +8,14 @@ class TransactionAttachmentsController < ApplicationController
     redirect_to rails_blob_url(@attachment, disposition: disposition)
   end
 
+  def source_file
+    source_file = source_file_for_transaction
+    raise ActiveRecord::RecordNotFound unless source_file&.attached?
+
+    disposition = params[:disposition] == "attachment" ? "attachment" : "inline"
+    redirect_to rails_blob_url(source_file.blob, disposition: disposition)
+  end
+
   def create
     unless @can_upload
       redirect_back_or_to transaction_path(@transaction), alert: t("accounts.not_authorized")
@@ -88,10 +96,26 @@ class TransactionAttachmentsController < ApplicationController
   private
 
     def set_transaction
+      transaction_id = params[:transaction_id].presence || params[:id]
       @transaction = Current.family.transactions
                        .joins(entry: :account)
                        .merge(Account.accessible_by(Current.user))
-                       .find(params[:transaction_id])
+                       .find(transaction_id)
+    end
+
+    def source_file_for_transaction
+      entry = @transaction.entry
+      statement = entry.reconciled_by_statement
+      if statement&.viewable_by?(Current.user) && statement.original_file.attached?
+        return statement.original_file
+      end
+
+      import = entry.import
+      return unless import&.family_id == Current.family.id &&
+                    import.requires_csv_workflow? &&
+                    import.account_id == entry.account_id
+
+      import.source_file if import.source_file.attached?
     end
 
     def set_attachment

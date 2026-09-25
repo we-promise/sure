@@ -16,6 +16,7 @@ module ImportsHelper
       currency: I18n.t("imports.column_labels.currency"),
       merchant: I18n.t("imports.column_labels.merchant"),
       category: I18n.t("imports.column_labels.category"),
+      merchant_id: I18n.t("imports.column_labels.merchant"),
       tags: I18n.t("imports.column_labels.tags"),
       account: I18n.t("imports.column_labels.account"),
       notes: I18n.t("imports.column_labels.notes"),

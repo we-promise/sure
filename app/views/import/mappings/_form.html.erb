@@ -1,4 +1,4 @@
-<%# locals: (mapping:) %>
+<%# locals: (mapping:, values_count: mapping.values_count) %>
 
 <%= styled_form_with model: mapping,
                      scope: :import_mapping,
@@ -24,6 +24,6 @@
   <%= form.hidden_field :type, value: mapping.type, id: dom_id(mapping, :type) %>
 
   <span class="justify-self-end">
-    <%= mapping.values_count %>
+    <%= values_count %>
   </span>
 <% end %>

@@ -46,6 +46,7 @@ class TransactionImport < Import
         if duplicate_entry
           # Update existing transaction instead of creating a new one
           duplicate_entry.transaction.category = category if category.present?
+          duplicate_entry.transaction.merchant = merchant if merchant.present?
           duplicate_entry.transaction.tags = tags if tags.any?
           duplicate_entry.transaction.merchant = merchant if merchant.present?
           duplicate_entry.notes = row.notes if row.notes.present?
@@ -90,7 +91,7 @@ class TransactionImport < Import
   end
 
   def column_keys
-    base = %i[date amount name currency merchant category tags notes]
+    base = %i[date amount name category merchant_id tags notes]
     base.unshift(:account) if account.nil?
     base
   end

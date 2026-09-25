@@ -25,6 +25,7 @@
               aria-haspopup="listbox"
               aria-expanded="false"
               aria-controls="<%= menu_id %>"
+              <%= "aria-label=#{helpers.t('transactions.form.category')}" unless show_label %>
               <%= "disabled" if disabled %>>
 
         <span data-category-select-target="selectionContainer"
