@@ -397,13 +397,15 @@ module TradeRepublicAccount::DataHelpers
     end
 
     def resolve_offline_isin_security(isin, name)
-      security = Security.find_by(ticker: isin) ||
-        Security.new(ticker: isin)
+      Security.transaction(requires_new: true) do
+        security = Security.find_by(ticker: isin) ||
+          Security.new(ticker: isin)
 
-      security.name = name.presence || security.name || isin
-      security.offline = true
-      security.save!
-      security
+        security.name = name.presence || security.name || isin
+        security.offline = true
+        security.save!
+        security
+      end
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
       Security.find_by(ticker: isin)
     end

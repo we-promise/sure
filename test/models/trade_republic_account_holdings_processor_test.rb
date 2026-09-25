@@ -415,6 +415,26 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal "LU3176111881", holding.security.ticker
   end
 
+  test "a concurrent offline ISIN insert does not abort the account sync" do
+    isin = "LU3176111881"
+    winner = Security.create!(ticker: isin, name: "Existing ISIN", offline: true)
+    duplicate = Security.new(ticker: isin)
+    duplicate.stubs(:valid?).returns(true) # Let the database unique index reject the insert.
+    Security.stubs(:find_by).with(ticker: isin).returns(nil, winner)
+    Security.stubs(:search_provider).returns([])
+
+    ActiveRecord::Base.transaction do
+      import_position(isin: isin, quantity: "3", price: "10")
+
+      assert_equal winner.id, @account.holdings.first.security_id
+      @account.update!(name: "Sync continued")
+    end
+
+    assert_equal "Sync continued", @account.reload.name
+    assert_equal 1, Security.where(ticker: isin).count
+    assert winner.reload.offline?
+  end
+
   test "maps a Trade Republic Tradegate symbol to the Tradegate MIC" do
     Security.stubs(:search_provider).returns([])
 
