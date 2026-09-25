@@ -358,9 +358,7 @@ class Account < ApplicationRecord
     end
 
     def create_from_binance_account(binance_account)
-      account = create_from_crypto_exchange_account(binance_account, family: binance_account.binance_item.family)
-      account.set_opening_anchor_balance(balance: 0)
-      account
+      create_from_crypto_exchange_account(binance_account, family: binance_account.binance_item.family)
     end
 
     def create_from_ibkr_account(ibkr_account)
@@ -480,7 +478,16 @@ class Account < ApplicationRecord
           }
         }
 
-        create_and_sync(attributes, skip_initial_sync: true)
+        account = create_and_sync(attributes, skip_initial_sync: true)
+
+        # An exchange account's ledger is imported from inception, so it opens at
+        # zero. Without this it inherits create_and_sync's default: an opening
+        # balance equal to what the account is worth *today*, dated two years ago
+        # -- so an exchange older than that imports its whole history on top of
+        # its present value, and every entry before the anchor sits ahead of its
+        # own opening balance.
+        account.set_opening_anchor_balance(balance: 0)
+        account
       end
 
       def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
