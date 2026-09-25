@@ -518,20 +518,12 @@ class SureImportTest < ActiveSupport::TestCase
   end
 
   test "preflight reports blocking errors before publish_later enqueues" do
-    @family.categories.create!(
-      name: "Groceries",
-      color: "#407706",
-      lucide_icon: "shopping-basket"
-    )
     attach_ndjson(build_ndjson([
-      { type: "Account", data: {
-        id: "account-1",
-        name: "Blocked Account",
-        balance: "100",
-        currency: "USD",
-        accountable_type: "Depository"
-      } },
-      { type: "Category", data: { id: "category-1", name: "Groceries" } }
+      { type: "Valuation", data: {
+        account_id: "missing-account",
+        date: "2024-01-01",
+        amount: "100"
+      } }
     ]))
 
     assert_no_enqueued_jobs do
@@ -541,7 +533,7 @@ class SureImportTest < ActiveSupport::TestCase
     end
 
     assert_equal "failed", @import.reload.status
-    assert_includes @import.error, "Category name \"Groceries\" already exists"
+    assert_includes @import.error, "references missing account_id"
   end
 
   test "publish_later reports unsupported records through preflight before publishable check" do
@@ -762,6 +754,304 @@ class SureImportTest < ActiveSupport::TestCase
     assert_includes result.error_message, "references missing parent_id"
   end
 
+  test "provider merchant referenced by a transaction resolves during preflight and publish" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Provider Merchant Checking",
+        balance: "1000.00",
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable: { subtype: "checking" }
+      } },
+      { type: "ProviderMerchant", data: {
+        id: "provider-merchant-1",
+        name: "AMZN MKTP",
+        source: "plaid",
+        provider_merchant_id: "plaid_amzn"
+      } },
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "account-1",
+        merchant_id: "provider-merchant-1",
+        date: "2024-01-15",
+        amount: "42.50",
+        name: "Amazon purchase",
+        currency: "USD"
+      } }
+    ]))
+
+    result = @import.sure_preflight
+    assert result.valid?, result.error_message
+
+    assert_difference -> { ProviderMerchant.count }, 1 do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+
+    entry = @family.entries.find_by!(name: "Amazon purchase")
+    merchant = entry.entryable.merchant
+
+    assert_instance_of ProviderMerchant, merchant
+    assert_equal "AMZN MKTP", merchant.name
+    assert_equal "plaid", merchant.source
+    assert_equal "plaid_amzn", merchant.provider_merchant_id
+  end
+
+  test "provider merchant import reuses an existing matching record instead of duplicating or overwriting it" do
+    existing = ProviderMerchant.create!(
+      name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn", website_url: "https://amazon.com"
+    )
+
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Provider Merchant Checking",
+        balance: "1000.00",
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable: { subtype: "checking" }
+      } },
+      { type: "ProviderMerchant", data: {
+        id: "provider-merchant-1",
+        name: "AMZN MKTP",
+        source: "plaid",
+        provider_merchant_id: "plaid_amzn",
+        website_url: "https://should-not-overwrite.example.com"
+      } },
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "account-1",
+        merchant_id: "provider-merchant-1",
+        date: "2024-01-15",
+        amount: "42.50",
+        name: "Amazon purchase",
+        currency: "USD"
+      } }
+    ]))
+
+    assert_no_difference -> { ProviderMerchant.count } do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+
+    existing.reload
+    assert_equal "https://amazon.com", existing.website_url
+
+    entry = @family.entries.find_by!(name: "Amazon purchase")
+    assert_equal existing.id, entry.entryable.merchant_id
+  end
+
+  test "provider merchant import never writes to an existing match, even when its fields are blank" do
+    existing = ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn")
+
+    attach_ndjson(provider_merchant_ndjson(
+      website_url: "https://amazon.com", logo_url: "https://cdn.example.com/amzn.png", color: "#123456"
+    ))
+
+    assert_no_difference -> { ProviderMerchant.count } do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+    existing.reload
+    assert_nil existing.website_url
+    assert_nil existing.logo_url
+    assert_nil existing.color
+    assert_equal existing.id, @family.entries.find_by!(name: "Amazon purchase").entryable.merchant_id
+  end
+
+  {
+    "RecordNotUnique" => -> { ActiveRecord::RecordNotUnique.new("duplicate key") },
+    "RecordInvalid" => -> { ActiveRecord::RecordInvalid.new(ProviderMerchant.new.tap { |merchant| merchant.errors.add(:name, :taken) }) }
+  }.each do |label, build_error|
+    test "provider merchant import recovers when another import wins the creation race (#{label})" do
+      winner = ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn")
+      attach_ndjson(provider_merchant_ndjson)
+
+      ProviderMerchant.stubs(:find_by_import_data).returns(nil).then.returns(winner)
+      ProviderMerchant.stubs(:create!).raises(build_error.call)
+
+      assert_no_difference -> { ProviderMerchant.count } do
+        @import.import!
+      end
+
+      assert_equal winner.id, @family.entries.find_by!(name: "Amazon purchase").entryable.merchant_id
+    end
+  end
+
+  test "provider merchant import surfaces validation errors that are not a lost creation race" do
+    attach_ndjson(provider_merchant_ndjson)
+    invalid = ActiveRecord::RecordInvalid.new(ProviderMerchant.new.tap { |merchant| merchant.errors.add(:name, :blank) })
+    ProviderMerchant.stubs(:find_by_import_data).returns(nil)
+    ProviderMerchant.stubs(:create!).raises(invalid)
+
+    assert_raises(ActiveRecord::RecordInvalid) { @import.import! }
+  end
+
+  test "preflight warns with the actual diff when an existing provider merchant differs from the file" do
+    ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn", website_url: "https://amazon.com")
+    attach_ndjson(provider_merchant_ndjson(website_url: "https://amazon.co.uk"))
+
+    result = @import.sure_preflight
+
+    assert result.valid?, result.error_message
+    assert_equal 1, result.provider_merchant_diff_warnings.size
+    details = result.provider_merchant_diff_warnings.first[:details]
+    assert_equal "AMZN MKTP", details[:merchant_name]
+    assert_equal(
+      [ { field: "website_url", imported_value: "https://amazon.co.uk", kept_value: "https://amazon.com" } ],
+      details[:diff]
+    )
+  end
+
+  test "preflight does not warn when the provider merchant is new or identical" do
+    attach_ndjson(provider_merchant_ndjson(website_url: "https://amazon.com"))
+    assert_empty @import.sure_preflight.provider_merchant_diff_warnings
+
+    ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn", website_url: "https://amazon.com")
+    assert_empty @import.sure_preflight.provider_merchant_diff_warnings
+  end
+
+  test "a transaction merchant_id unresolvable in the export is a warning, not a blocking preflight error (#3113)" do
+    attach_ndjson(build_ndjson([
+      { type: "Account", data: {
+        id: "account-1",
+        name: "Old Export Checking",
+        balance: "1000.00",
+        currency: "USD",
+        accountable_type: "Depository",
+        accountable: { subtype: "checking" }
+      } },
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "account-1",
+        merchant_id: "merchant-never-exported",
+        date: "2024-01-15",
+        amount: "42.50",
+        name: "Amazon purchase",
+        currency: "USD"
+      } }
+    ]))
+
+    result = @import.sure_preflight
+    assert result.valid?, result.error_message
+    assert_equal 1, result.skipped_missing_merchant_count
+    assert result.warnings.any? { |warning| warning[:code] == "skipped_missing_merchant_reference" }
+
+    @import.publish
+
+    assert_equal "complete", @import.status
+    entry = @family.entries.find_by!(name: "Amazon purchase")
+    assert_nil entry.entryable.merchant_id
+  end
+
+  test "a missing account_id (not merchant_id) on a transaction is still a blocking preflight error" do
+    attach_ndjson(build_ndjson([
+      { type: "Transaction", data: {
+        id: "transaction-1",
+        account_id: "missing-account",
+        date: "2024-01-15",
+        amount: "42.50",
+        name: "Orphaned transaction",
+        currency: "USD"
+      } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert_not result.valid?
+    assert_equal 0, result.skipped_missing_merchant_count
+    assert result.errors.any? { |error| error[:code] == "missing_reference" }
+  end
+
+  test "publishing reuses an existing family category, tag and merchant matched by name instead of failing (#3113)" do
+    existing_category = @family.categories.create!(name: "Groceries", color: "#111111", lucide_icon: "shapes")
+    existing_tag = @family.tags.create!(name: "Reviewed", color: "#222222")
+    existing_merchant = @family.merchants.create!(name: "Local Cafe", color: "#333333")
+
+    category_count = @family.categories.count
+    tag_count = @family.tags.count
+    merchant_count = @family.merchants.count
+
+    attach_ndjson(build_ndjson([
+      { type: "Category", data: { id: "category-1", name: "Groceries", color: "#407706", lucide_icon: "shopping-cart" } },
+      { type: "Tag", data: { id: "tag-1", name: "Reviewed", color: "#12B76A" } },
+      { type: "Merchant", data: { id: "merchant-1", name: "Local Cafe", color: "#12B76A" } }
+    ]))
+
+    result = @import.sure_preflight
+    assert result.valid?, result.error_message
+    assert_equal 3, result.warnings.count { |warning| warning[:code] == "existing_taxonomy_collision" }
+
+    @import.publish
+
+    assert_equal "complete", @import.status
+    assert_equal category_count, @family.categories.count
+    assert_equal tag_count, @family.tags.count
+    assert_equal merchant_count, @family.merchants.count
+
+    assert_equal "#407706", existing_category.reload.color
+    assert_equal "#12B76A", existing_tag.reload.color
+    assert_equal "#12B76A", existing_merchant.reload.color
+
+    @import.reload
+    assert_equal "matched", @import.verification_status
+    assert_equal({ "categories" => 1, "tags" => 1, "merchants" => 1 }, @import.readback_verification["reused_record_counts"])
+  end
+
+  test "family merchant import carries website_url and leaves an existing one alone when the file omits it" do
+    kept = @family.merchants.create!(name: "Kept Cafe", website_url: "https://kept.example")
+    updated = @family.merchants.create!(name: "Updated Cafe", website_url: "https://old.example")
+
+    attach_ndjson(build_ndjson([
+      { type: "Merchant", data: { id: "m-new", name: "New Cafe", website_url: "https://new.example" } },
+      { type: "Merchant", data: { id: "m-kept", name: "Kept Cafe" } },
+      { type: "Merchant", data: { id: "m-updated", name: "Updated Cafe", website_url: "https://fresh.example" } }
+    ]))
+
+    @import.publish
+
+    assert_equal "complete", @import.status
+    assert_equal "https://new.example", @family.merchants.find_by!(name: "New Cafe").website_url
+    assert_equal "https://kept.example", kept.reload.website_url
+    assert_equal "https://fresh.example", updated.reload.website_url
+  end
+
+  test "a named recurring transaction whose merchant is missing imports without a merchant" do
+    attach_ndjson(recurring_with_missing_merchant_ndjson(name: "Gym membership"))
+
+    result = @import.sure_preflight
+    assert result.valid?, result.error_message
+    assert_equal 1, result.skipped_missing_merchant_count
+    assert_equal 0, result.skipped_unnamed_recurring_count
+
+    assert_difference -> { @family.recurring_transactions.count }, 1 do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+    recurring = @family.recurring_transactions.find_by!(name: "Gym membership")
+    assert_nil recurring.merchant_id
+  end
+
+  test "an unnamed recurring transaction whose merchant is missing is skipped and reported as such" do
+    attach_ndjson(recurring_with_missing_merchant_ndjson)
+
+    result = @import.sure_preflight
+    assert result.valid?, result.error_message
+    assert_equal 1, result.skipped_unnamed_recurring_count
+    assert_equal 0, result.skipped_missing_merchant_count
+
+    assert_no_difference -> { @family.recurring_transactions.count } do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+  end
+
   private
 
     def attach_ndjson(ndjson)
@@ -771,6 +1061,36 @@ class SureImportTest < ActiveSupport::TestCase
         content_type: "application/x-ndjson"
       )
       @import.sync_ndjson_rows_count!
+    end
+
+    def provider_merchant_ndjson(**merchant_attrs)
+      build_ndjson([
+        { type: "Account", data: {
+          id: "account-1", name: "Provider Merchant Checking", balance: "1000.00", currency: "USD",
+          accountable_type: "Depository", accountable: { subtype: "checking" }
+        } },
+        { type: "ProviderMerchant", data: {
+          id: "provider-merchant-1", name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn"
+        }.merge(merchant_attrs) },
+        { type: "Transaction", data: {
+          id: "transaction-1", account_id: "account-1", merchant_id: "provider-merchant-1",
+          date: "2024-01-15", amount: "42.50", name: "Amazon purchase", currency: "USD"
+        } }
+      ])
+    end
+
+    def recurring_with_missing_merchant_ndjson(**recurring_attrs)
+      build_ndjson([
+        { type: "Account", data: {
+          id: "account-1", name: "Recurring Checking", balance: "1000.00", currency: "USD",
+          accountable_type: "Depository", accountable: { subtype: "checking" }
+        } },
+        { type: "RecurringTransaction", data: {
+          id: "recurring-1", account_id: "account-1", merchant_id: "merchant-never-exported",
+          amount: "11.99", currency: "USD", expected_day_of_month: 28,
+          last_occurrence_date: "2026-08-28", next_expected_date: "2026-09-28"
+        }.merge(recurring_attrs) }
+      ])
     end
 
     def build_ndjson(records)
@@ -832,7 +1152,7 @@ class Import::PreflightTest < ActiveSupport::TestCase
     @family = families(:dylan_family)
   end
 
-  test "SureImport preflight reports strict taxonomy collisions" do
+  test "SureImport preflight reuses an existing taxonomy match by name instead of blocking (#3113)" do
     @family.tags.create!(name: "Reviewed", color: "#12B76A")
     ndjson = build_ndjson([
       { type: "Tag", data: { id: "tag-1", name: "Reviewed" } }
@@ -846,8 +1166,9 @@ class Import::PreflightTest < ActiveSupport::TestCase
       payload = response.payload[:data]
 
       assert_equal :ok, response.status
-      assert_equal false, payload[:valid]
-      assert_equal "existing_taxonomy_collision", payload[:errors].first[:code]
+      assert_equal true, payload[:valid]
+      assert_empty payload[:errors]
+      assert_includes payload[:warnings], "Line 1 Tag name \"Reviewed\" already exists in this family and will be reused."
     end
   end
 
