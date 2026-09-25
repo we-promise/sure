@@ -36,7 +36,6 @@ class Financekit::LifecycleTest < ActiveSupport::TestCase
   test "family reset removes publisher source records without touching another family" do
     Provider::Plaid.any_instance.stubs(:remove_item)
     other = users(:empty)
-    other.update!(preferences: other.preferences.merge("preview_features_enabled" => true))
     source_id = SecureRandom.uuid
     enrollment = @enrollment.deep_dup
     enrollment["enrollment_id"] = SecureRandom.uuid
