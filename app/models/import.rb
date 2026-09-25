@@ -394,6 +394,7 @@ class Import < ApplicationRecord
         amount: sanitize_number(csv_value(row, amount_col_label, "amount", "balance")).to_s,
         currency: (csv_value(row, currency_col_label, "currency") || default_currency).to_s,
         name: (csv_value(row, name_col_label, "name") || default_row_name).to_s,
+        merchant_id: merchant_id_for(import_merchant_value(row)),
         category: csv_value(row, category_col_label, "category").to_s,
         tags: csv_value(row, tags_col_label, "tags").to_s,
         entity_type: csv_value(row, entity_type_col_label, "entity_type", "account_type", "type").to_s,
@@ -492,7 +493,7 @@ class Import < ApplicationRecord
   def apply_template!(import_template)
     update!(
       import_template.attributes.slice(
-        "date_col_label", "amount_col_label", "name_col_label",
+        "date_col_label", "amount_col_label", "name_col_label", "merchant_col_label",
         "category_col_label", "tags_col_label", "account_col_label",
         "qty_col_label", "ticker_col_label", "price_col_label",
         "entity_type_col_label", "notes_col_label", "currency_col_label",
@@ -577,6 +578,14 @@ class Import < ApplicationRecord
 
     def default_row_name
       "Imported item"
+    end
+
+    def import_merchant_value(row)
+      if merchant_col_label.present?
+        csv_value(row, merchant_col_label)
+      else
+        csv_value(row, "merchant", "payee", "payer")
+      end
     end
 
     def default_currency

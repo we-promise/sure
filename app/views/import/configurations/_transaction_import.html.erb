@@ -111,6 +111,9 @@
   <%= form.select :name_col_label,
                   import.csv_headers,
                   { include_blank: t(".leave_empty"), label: t(".name_label") } %>
+  <%= form.select :merchant_col_label,
+                  import.csv_headers,
+                  { include_blank: t(".leave_empty"), label: t(".merchant_label", default: "Merchant") } %>
   <%= form.select :category_col_label,
                   import.csv_headers,
                   { include_blank: t(".leave_empty"), label: t(".category_label") } %>

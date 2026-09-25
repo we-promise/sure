@@ -75,6 +75,7 @@ en:
         leave_empty: Leave empty
         account_label: Account
         name_label: Name
+        merchant_label: Merchant
         category_label: Category
         tags_label: Tags
         notes_label: Notes

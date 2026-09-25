@@ -17,6 +17,7 @@ class Import::Preflight
     date_col_label
     amount_col_label
     name_col_label
+    merchant_col_label
     category_col_label
     tags_col_label
     notes_col_label
