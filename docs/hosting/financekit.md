@@ -4,24 +4,32 @@ This guide covers Sure's server-side ingestion of FinanceKit uploads. It applies
 
 Sure's server-side worker and scheduled inbox sweep are required for either delivery mode. They apply accepted batches, retry processing, complete downstream account updates, and remove expired payload bytes. These server jobs are separate from the iOS app's ability to run in the background.
 
-FinanceKit is default-off and requires:
+FinanceKit needs no server-side configuration to switch on. There is no feature
+flag and no family allowlist: any deployment running this code serves the
+publisher endpoints. Whether a build offers Wallet sync at all is decided in the
+iOS client through StoreKit, which the server cannot observe and does not try to.
 
-- `FINANCEKIT_ENABLED=true`;
-- `FINANCEKIT_FAMILY_IDS`, a comma-separated exact family UUID allowlist;
-- an active enrolling family administrator with preview features enabled; and
+What it does require:
+
+- an active family administrator to enroll, because a publisher writes into
+  accounts the whole family reads. Every upload re-checks this, so a
+  deactivated, demoted or reassigned enroller stops publishing; and
 - the scheduled `FinancekitInboxJob` sweep in addition to jobs enqueued when a batch arrives.
+
+Nothing beyond admin gates it. The mapped accounts are further confined to those
+the enrolling user may write, so an admin cannot publish into an account they
+have no access to.
 
 No Apple Wallet entitlement, private key, or FinanceKit framework is installed on the server. Sure never receives the user's Apple credentials. The iOS app obtains Wallet authorization directly from Apple and uploads only the accounts the user selected and consented to share.
 
 ## Deployment
 
-Deploy the migration, application, worker, and scheduler with the feature flag disabled. The migration introduces publisher connections, stable account lineages, immutable batch receipts, source transaction identities, balance observations, and conflicts.
+Deploy the migration, application, worker, and scheduler. The migration introduces publisher connections, stable account lineages, immutable batch receipts, source transaction identities, balance observations, and conflicts. The endpoints are live as soon as the application is, so treat the deploy itself as the enablement step and run the checks below before announcing it.
 
 After deploy:
 
 1. Confirm the high-priority job queue and recurring scheduler are healthy.
-2. Enable only a disposable test family.
-3. Enroll and activate a synthetic publisher over HTTPS.
+2. Enroll and activate a synthetic publisher over HTTPS, using a disposable test family.
 4. Upload sequences 2 then 1 and confirm the inbox applies them in order.
 5. Retry identical bytes and confirm the receipt is stable and no ledger row duplicates.
 6. Rotate the credential and confirm the prior credential cannot upload or call normal APIs.
@@ -52,6 +60,48 @@ while preserving accounts, balances, transactions, and source identities. The
 iOS client can start a new enrollment with a new enrollment ID and map its Apple
 source account IDs again; existing accounts and imported transactions are reused
 without requiring the old connection or stream state.
+
+### Disconnect dispositions
+
+`DELETE /api/v1/financekit/connections/{id}` takes an optional `disposition`
+query parameter saying what happens to the data the connection imported. The
+dispositions a build supports are advertised as `connection_dispositions` in the
+capabilities response, so a client feature-detects rather than hardcoding.
+
+`retain` is the default and the behaviour above: the connection is revoked and
+every account, balance and transaction stays. The response is `204 No Content`,
+unchanged for clients that send no disposition. The web unlink flow always
+retains — a person unlinking one account has not consented to delete the data in
+the others the connection covered.
+
+`discard` revokes the connection and then removes what it imported. It answers
+`202 Accepted` with the connection payload: a year of card history is not deleted
+inside a request, so the work runs in the background and the client polls the
+connection until `purge_completed_at` is set. Per Wallet account:
+
+- An account FinanceKit created is destroyed, with everything on it.
+- An account FinanceKit was linked to is emptied of entries sourced from
+  FinanceKit and handed back to sync, which recomputes its balance from the
+  history the family had before FinanceKit arrived. The account itself stays.
+- Source identities, balance observations and conflicts for that lineage are
+  deleted, and the lineage is marked discarded so a later enrollment starts clean
+  rather than reusing it.
+
+Two consequences worth stating plainly. A discard removes imported entries even
+where the family later reconciled, excluded, split or edited them — a partial
+deletion would be worse than none, having told them the data was gone. And where
+an imported transaction had been matched into a transfer, the transfer record and
+its fees go with it; the transaction on the other account survives, unpaired.
+
+An account lineage that another live connection still publishes into is left
+entirely alone, which is what happens during a device replacement window when two
+connections reference one lineage. The connection row itself survives as a
+revoked receipt; it holds no financial values, and its batch payloads were
+dropped at revocation.
+
+Discard is irreversible, and the request outlives the job that carries it out:
+the intent is recorded on the connection, and the FinanceKit inbox sweep finishes
+any purge whose job was lost.
 
 ## Debugging uploads
 
@@ -107,11 +157,11 @@ Apple Cash top-ups come from the demo owner's manual Chase Premier Checking
 account; if absent, a funded Wallet Demo Checking account is created. Subsequent
 reruns preserve category edits and do not duplicate either transfer leg.
 Wallet demo data is included in every environment by both the full generator
-and sample-data reset flow. It does not enable FinanceKit feature flags or change
-user permissions. These records simulate imported data; no iOS device is required.
+and sample-data reset flow. It does not change user permissions. These records
+simulate imported data; no iOS device is required.
 
 ## Capacity and retention
 
 Protocol 2 limits each publisher to 20 selected accounts, 500 events per batch, 1 MiB of JSON, and 100 accepted/processing batches. Each capture is limited to 100 chunks so the complete capture fits in the inbox. A client can upload larger histories using multiple consecutive captures.
 
-Exact payload bytes are retained for seven days after apply, permanent failure, or revocation for response-loss recovery and operational investigation. Canonical financial data and source identity records follow Sure's normal family retention and deletion behavior. Family financial-data reset removes FinanceKit connections, lineages, observations, identities, conflicts, and batch receipts for that family.
+Exact payload bytes are retained for seven days after apply, permanent failure, or revocation for response-loss recovery and operational investigation. Canonical financial data and source identity records follow Sure's normal family retention and deletion behavior, except where a client disconnects with `disposition=discard` (see [Disconnect dispositions](#disconnect-dispositions)), which removes them for that connection. Family financial-data reset removes FinanceKit connections, lineages, observations, identities, conflicts, and batch receipts for that family.
