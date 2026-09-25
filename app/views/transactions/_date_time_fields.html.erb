@@ -1,0 +1,22 @@
+<%# locals: (f:, date_label:, time_label:, clear_time_label:, date_options: {}, time_options: {}, clear_button_options: {}) %>
+
+<div class="flex items-end gap-2" data-controller="clear-field">
+  <%= f.date_field :date,
+        label: date_label,
+        container_class: "flex-[3]",
+        **date_options %>
+  <%= f.time_field :time,
+        label: time_label,
+        container_class: "flex-[2]",
+        include_seconds: false,
+        **time_options %>
+  <%= render DS::Button.new(
+        variant: "icon",
+        icon: "x",
+        title: clear_time_label,
+        aria_label: clear_time_label,
+        class: "shrink-0 mb-1",
+        data: { action: "clear-field#clear" },
+        **clear_button_options
+      ) %>
+</div>

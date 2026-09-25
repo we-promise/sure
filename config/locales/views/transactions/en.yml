@@ -51,6 +51,8 @@ en:
       submit: Add transaction
       tag_search_placeholder: Search or create tag
       tags_label: Tags
+      time: Time
+      clear_time: Clear time
       transfer: Transfer
     create:
       created: Transaction created
@@ -76,6 +78,8 @@ en:
       amount: Amount
       category_label: Category
       date_label: Date
+      time_label: Time
+      clear_time: Clear time
       delete: Delete
       delete_subtitle: This permanently deletes the transaction, affects your historical
         balances, and cannot be undone.

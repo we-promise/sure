@@ -113,6 +113,84 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "creates with an optional time" do
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "New transaction",
+          date: Date.current,
+          time: "14:30",
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: @entry.entryable_type,
+          entryable_attributes: { category_id: Category.first.id }
+        }
+      }
+    end
+
+    created_entry = Entry.order(:created_at).last
+    assert_equal "14:30", created_entry.time.strftime("%H:%M")
+  end
+
+  test "updating with a blank time clears it" do
+    @entry.update!(time: "09:15")
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        name: @entry.name,
+        date: @entry.date,
+        time: "",
+        currency: @entry.currency,
+        amount: @entry.amount.abs,
+        nature: @entry.amount.negative? ? "inflow" : "outflow",
+        entryable_type: @entry.entryable_type
+      }
+    }
+
+    assert_nil @entry.reload.time
+  end
+
+  test "creating with an invalid time returns a validation error" do
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "New transaction",
+          date: Date.current,
+          time: "not-a-time",
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: @entry.entryable_type,
+          entryable_attributes: { category_id: Category.first.id }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "updating with an invalid time returns a validation error and does not clear the existing time" do
+    @entry.update!(time: "09:15")
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        name: @entry.name,
+        date: @entry.date,
+        time: "not-a-time",
+        currency: @entry.currency,
+        amount: @entry.amount.abs,
+        nature: @entry.amount.negative? ? "inflow" : "outflow",
+        entryable_type: @entry.entryable_type
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal "09:15", @entry.reload.time.strftime("%H:%M")
+  end
+
   test "resubmitting the same idempotency key does not create a duplicate transaction" do
     idempotency_key = SecureRandom.uuid
     params = {
@@ -1572,6 +1650,28 @@ end
       "a member without access to the admin-only account must not reuse the admin's cached uncategorized count"
   ensure
     Rails.cache = original_cache
+  end
+
+  test "converting a timed transaction to a trade preserves the time" do
+    account = accounts(:investment)
+    entry = create_transaction(account: account, amount: 100, date: Date.current, time: "14:30")
+
+    post create_trade_from_transaction_transaction_url(entry.transaction),
+      params: { security_id: securities(:aapl).id, qty: 10, price: 10 }
+
+    new_entry = account.entries.order(:created_at).last
+    assert_equal "14:30", new_entry.time.strftime("%H:%M")
+  end
+
+  test "converting an untimed transaction to a trade leaves the time blank" do
+    account = accounts(:investment)
+    entry = create_transaction(account: account, amount: 100, date: Date.current, time: nil)
+
+    post create_trade_from_transaction_transaction_url(entry.transaction),
+      params: { security_id: securities(:aapl).id, qty: 10, price: 10 }
+
+    new_entry = account.entries.order(:created_at).last
+    assert_nil new_entry.time
   end
 
   private
