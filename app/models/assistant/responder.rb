@@ -191,10 +191,11 @@ class Assistant::Responder
               output.to_json
             end
 
+            # The tool message `name` field is deprecated in the OpenAI API and
+            # rejected with a 400 by several OpenAI-compatible endpoints.
             messages << {
               role: "tool",
               tool_call_id: fn_result[:call_id],
-              name: fn_result[:name],
               content: content
             }
           end

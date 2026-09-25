@@ -25,12 +25,16 @@ class ToolCall::Function < ToolCall
   end
 
   def to_tool_call
+    # OpenAI requires `function.arguments` to be a JSON-encoded string. Some
+    # OpenAI-compatible endpoints reject an object payload with a 400.
+    arguments = function_arguments.is_a?(String) ? function_arguments : function_arguments.to_json
+
     {
       id: provider_call_id,
       type: "function",
       function: {
         name: function_name,
-        arguments: function_arguments
+        arguments: arguments
       }
     }
   end
