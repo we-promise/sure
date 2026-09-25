@@ -317,6 +317,16 @@ en:
     publish:
       started: "Your import has started in the background."
       max_rows_exceeded: "Your import exceeds the maximum row count of %{max}."
+    verify_pending:
+      button: Verify ready imports
+      confirm: Verify all ready imports that are currently in progress?
+      started:
+        one: "%{count} import is being verified in the background."
+        other: "%{count} imports are being verified in the background."
+      none_ready: No in-progress transaction imports are ready to verify.
+      skipped:
+        one: "%{count} in-progress import was skipped because it still needs configuration or permission."
+        other: "%{count} in-progress imports were skipped because they still need configuration or permission."
     revert:
       started: "Import is reverting in the background."
     cancel:

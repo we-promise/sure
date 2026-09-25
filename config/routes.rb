@@ -503,6 +503,7 @@ Rails.application.routes.draw do
 
   resources :imports, only: %i[index new show create update destroy] do
     delete :destroy_all, on: :collection
+    post :verify_pending, on: :collection
     member do
       post :publish
       put :revert

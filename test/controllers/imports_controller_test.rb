@@ -18,6 +18,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[data-bulk-select-target='row']", count: @user.family.imports.where(type: Import::TYPES).count
     assert_select "form#bulk-delete-form"
     assert_select "input[name='bulk_delete[entry_ids][]']"
+    assert_select "form[action='#{verify_pending_imports_path}']"
 
     @user.family.imports.ordered.each do |import|
       assert_select "#" + dom_id(import), count: 1
@@ -141,6 +142,33 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to imports_path
     assert_equal "failed", import.reload.status
     assert_equal Import.lost_error_message, import.error
+  end
+
+  test "queues every ready pending transaction import for verification" do
+    import = imports(:pdf_with_rows)
+    import.generate_rows_from_extracted_data
+
+    assert_enqueued_with job: ImportJob, args: [ import ] do
+      post verify_pending_imports_url
+    end
+
+    assert_redirected_to imports_url
+    assert_equal "importing", import.reload.status
+    assert_equal I18n.t("imports.verify_pending.started", count: 1), flash[:notice]
+    assert_nil flash[:alert]
+  end
+
+  test "skips pending transaction imports that are not ready" do
+    import = imports(:transaction)
+
+    assert_no_enqueued_jobs only: ImportJob do
+      post verify_pending_imports_url
+    end
+
+    assert_redirected_to imports_url
+    assert_equal "pending", import.reload.status
+    assert_equal I18n.t("imports.verify_pending.none_ready"), flash[:notice]
+    assert_equal I18n.t("imports.verify_pending.skipped", count: 1), flash[:alert]
   end
 
   test "cancel refuses an import that is not presumed lost" do

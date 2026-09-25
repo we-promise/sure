@@ -220,7 +220,44 @@ class ImportsController < ApplicationController
     redirect_to imports_path, notice: notices.presence&.join(" "), alert: alerts.presence&.join(" ")
   end
 
+  def verify_pending
+    started_count = 0
+    skipped_count = 0
+
+    pending_transaction_imports.each do |import|
+      unless import.publishable? && statement_import_manageable?(import)
+        skipped_count += 1
+        next
+      end
+
+      import.publish_later
+      started_count += 1
+    rescue StandardError => error
+      skipped_count += 1
+      Rails.logger.warn("Bulk import verification skipped #{import.type} #{import.id}: #{error.class}: #{error.message}")
+    end
+
+    notice = if started_count.positive?
+      t("imports.verify_pending.started", count: started_count)
+    else
+      t("imports.verify_pending.none_ready")
+    end
+    alert = t("imports.verify_pending.skipped", count: skipped_count) if skipped_count.positive?
+
+    redirect_to imports_path, notice: notice, alert: alert
+  end
+
   private
+    def pending_transaction_imports
+      Current.family.imports
+        .where(type: Import::TRANSACTION_IMPORT_TYPES, status: :pending)
+        .includes(:account, :account_statement, :mappings, :rows)
+    end
+
+    def statement_import_manageable?(import)
+      import.account_statement.blank? || import.account_statement.manageable_by?(Current.user)
+    end
+
     def set_import
       @import = Current.family.imports.includes(:account, :account_statement).find(params[:id])
       raise ActiveRecord::RecordNotFound if @import.account_statement.present? && !@import.account_statement.viewable_by?(Current.user)
