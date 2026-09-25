@@ -85,7 +85,7 @@ uk:
       # Australia
       super:
         short: Super
-        long: Суперannuation
+        long: "Суперфонд"
       smsf:
         short: SMSF
         long: Самокерований суперфонд

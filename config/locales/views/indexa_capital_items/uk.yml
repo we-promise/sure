@@ -86,8 +86,8 @@ uk:
       link_failed: "Не вдалося прив'язати рахунки"
       no_accounts_selected: "Будь ласка, виберіть принаймні один рахунок"
       no_api_key: "Облікові дані IndexaCapital не знайдено. Будь ласка, налаштуйте їх у налаштуваннях постачальника."
-      partial_invalid: "Успішно прив'язано %{created_count} рахунок(и), %{already_linked_count} уже було прив'язано, %{invalid_count} рахунок(и) мали недійсні назви"
-      partial_success: "Успішно прив'язано %{created_count} рахунок(и). %{already_linked_count} рахунок(и) уже було прив'язано: %{already_linked_names}"
+      partial_invalid: "Прив'язано рахунків: %{created_count}; уже були прив'язані: %{already_linked_count}; з недійсними назвами: %{invalid_count}"
+      partial_success: "Прив'язано рахунків: %{created_count}. Уже були прив'язані (%{already_linked_count}): %{already_linked_names}"
       success:
         one: "Успішно прив'язано %{count} рахунок"
         other: "Успішно прив'язано %{count} рахунків"
@@ -236,6 +236,10 @@ uk:
       all_skipped: "Всі рахунки було пропущено. Жоден рахунок не було створено."
       creation_failed: "Не вдалося створити рахунки: %{error}"
       no_accounts: "Немає рахунків для налаштування."
-      success: "Успішно створено %{count} рахунок(и)."
+      success:
+        one: "Успішно створено %{count} рахунок."
+        few: "Успішно створено %{count} рахунки."
+        many: "Успішно створено %{count} рахунків."
+        other: "Успішно створено %{count} рахунку."
     preload_accounts:
       no_credentials_configured: "Будь ласка, спочатку налаштуйте свої облікові дані IndexaCapital в налаштуваннях постачальника."

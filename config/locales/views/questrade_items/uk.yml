@@ -100,8 +100,8 @@ uk:
       link_failed: "Не вдалося пов'язати рахунки"
       no_accounts_selected: "Будь ласка, виберіть принаймні один рахунок"
       no_api_key: "Ключ API Questrade не знайдено. Будь ласка, налаштуйте його в налаштуваннях постачальника."
-      partial_invalid: "Успішно пов'язано %{created_count} рахунок(и), %{already_linked_count} вже було пов'язано, %{invalid_count} рахунок(и) мав(ли) недійсні назви"
-      partial_success: "Успішно пов'язано %{created_count} рахунок(и). %{already_linked_count} рахунок(и) вже було пов'язано: %{already_linked_names}"
+      partial_invalid: "Прив'язано рахунків: %{created_count}; уже були прив'язані: %{already_linked_count}; з недійсними назвами: %{invalid_count}"
+      partial_success: "Прив'язано рахунків: %{created_count}. Уже були прив'язані (%{already_linked_count}): %{already_linked_names}"
       success:
         one: "Успішно пов'язано %{count} рахунок"
         other: "Успішно пов'язано %{count} рахунків"
@@ -288,7 +288,11 @@ uk:
       all_skipped: "Усі рахунки було пропущено. Жоден рахунок не було створено."
       creation_failed: "Не вдалося створити рахунки: %{error}"
       no_accounts: "Немає рахунків для налаштування."
-      success: "Успішно створено %{count} рахунок(и)."
+      success:
+        one: "Успішно створено %{count} рахунок."
+        few: "Успішно створено %{count} рахунки."
+        many: "Успішно створено %{count} рахунків."
+        other: "Успішно створено %{count} рахунку."
 
     # Preload accounts
     preload_accounts:

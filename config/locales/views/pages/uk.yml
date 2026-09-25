@@ -136,7 +136,11 @@ uk:
         search_accounts: Пошук рахунків
         apply: Застосувати
         balance: Сальдо транзакцій
-        chart_span: 'Останні місяці: %{count}'
+        chart_span:
+          one: "Останній %{count} місяць"
+          few: "Останні %{count} місяці"
+          many: "Останні %{count} місяців"
+          other: "Останні %{count} місяця"
         income: Доходи
         expenses: Витрати
       spending_trend:

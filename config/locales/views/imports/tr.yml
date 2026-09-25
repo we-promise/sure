@@ -204,10 +204,7 @@ tr:
         empty_state_primary: Bu QIF dosyasında hiç kategori veya etiket bulunamadı.
         empty_state_secondary: Tüm işlemler kategori veya etiket olmadan içe aktarılacaktır.
         split_badge: bölünmüş
-        split_warning_description: Bu QIF dosyası bölünmüş işlemler içeriyor. Bölünmüş
-          işlemler henüz desteklenmediğinden, her bölünmüş işlem tam tutarıyla ve
-          kategorisiz tek bir işlem olarak içe aktarılacaktır. Ayrı bölünme dökümleri
-          korunmayacaktır.
+        split_warning_description: "Bu QIF dosyası bölünmüş işlemler içeriyor. İçe aktarmadan önce aşağıda algılanan bölünmüş işlem kategorilerini ve etiketlerini gözden geçirin."
         split_warning_title: Bölünmüş işlemler tespit edildi
         submit: İncelemeye devam et
         tag_name_col: Etiket adı

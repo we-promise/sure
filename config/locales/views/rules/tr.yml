@@ -104,7 +104,7 @@ tr:
       sort_name: Ad
       sort_updated_at: Güncellenme Tarihi
       toggle_sort_direction: Sıralama yönünü değiştir
-    no_action: İşlem yok
+    no_action: "Eylem yok"
     no_condition: Koşul yok
     recent_runs:
       columns:

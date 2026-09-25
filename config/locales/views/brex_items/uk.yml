@@ -77,8 +77,8 @@ uk:
       link_failed: "Не вдалося прив'язати рахунки"
       no_accounts_selected: "Будь ласка, виберіть принаймні один рахунок"
       no_api_token: "Токен API Brex не знайдено. Будь ласка, налаштуйте його в налаштуваннях постачальника."
-      partial_invalid: "Успішно прив'язано %{created_count} рахунок(и), %{already_linked_count} рахунок(и) уже було прив'язано, %{invalid_count} рахунок(и) мали недійсні назви"
-      partial_success: "Успішно прив'язано %{created_count} рахунок(и). %{already_linked_count} рахунок(и) уже було прив'язано: %{already_linked_names}"
+      partial_invalid: "Прив'язано рахунків: %{created_count}; уже були прив'язані: %{already_linked_count}; з недійсними назвами: %{invalid_count}"
+      partial_success: "Прив'язано рахунків: %{created_count}. Уже були прив'язані (%{already_linked_count}): %{already_linked_names}"
       select_connection: "Виберіть підключення Brex перед прив'язкою рахунків."
       success:
         one: "Успішно прив'язано %{count} рахунок"
@@ -252,11 +252,19 @@ uk:
     complete_account_setup:
       all_skipped: "Всі рахунки було пропущено. Жоден рахунок не було створено."
       creation_failed: "Не вдалося створити рахунки: %{error}"
-      creation_failed_count: "Не вдалося створити %{count} рахунок(и)."
+      creation_failed_count:
+        one: "Не вдалося створити %{count} рахунок."
+        few: "Не вдалося створити %{count} рахунки."
+        many: "Не вдалося створити %{count} рахунків."
+        other: "Не вдалося створити %{count} рахунку."
       no_accounts: "Немає рахунків для налаштування."
-      partial_skipped: "Успішно створено %{created_count} рахунок(и); %{skipped_count} рахунок(и) було пропущено."
-      partial_success: "Успішно створено %{created_count} рахунок(и), але %{failed_count} рахунок(и) не вдалося створити."
-      success: "Успішно створено %{count} рахунок(и)."
+      partial_skipped: "Створено рахунків: %{created_count}; пропущено: %{skipped_count}."
+      partial_success: "Створено рахунків: %{created_count}; не вдалося створити: %{failed_count}."
+      success:
+        one: "Успішно створено %{count} рахунок."
+        few: "Успішно створено %{count} рахунки."
+        many: "Успішно створено %{count} рахунків."
+        other: "Успішно створено %{count} рахунку."
       unexpected_error: "Сталася неочікувана помилка."
     sync:
       success: "Синхронізацію розпочато"
