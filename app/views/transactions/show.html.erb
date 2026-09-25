@@ -82,6 +82,8 @@
                     disabled: @entry.linked? || split_locked || edit_locked,
                     disable_currency: @entry.linked? || split_locked || edit_locked %>
             </div>
+          <% end %>
+          <% if @entry.transaction.category_editable? %>
             <%= f.fields_for :entryable do |ef| %>
               <%= render DS::CategorySelect.new(
                     form: ef,
@@ -111,6 +113,8 @@
                 ),
                 { label: t(".account_label") },
                 { disabled: true } %>
+          <% end %>
+          <% if @entry.transaction.category_editable? %>
             <%= f.fields_for :entryable do |ef| %>
               <%= render DS::MerchantSelect.new(
                     form: ef,

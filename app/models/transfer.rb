@@ -1,6 +1,6 @@
 class Transfer < ApplicationRecord
-  belongs_to :inflow_transaction, class_name: "Transaction"
-  belongs_to :outflow_transaction, class_name: "Transaction"
+  belongs_to :inflow_transaction, class_name: "Transaction", inverse_of: :transfer_as_inflow
+  belongs_to :outflow_transaction, class_name: "Transaction", inverse_of: :transfer_as_outflow
 
   has_many :fee_transactions, class_name: "Transaction", dependent: :destroy
 
@@ -92,7 +92,7 @@ class Transfer < ApplicationRecord
   end
 
   def categorizable?
-    to_account&.accountable_type == "Loan"
+    !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(outflow_transaction&.kind)
   end
 
   def reject!

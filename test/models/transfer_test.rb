@@ -157,6 +157,42 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "funds_movement", Transfer.kind_for_account(accounts(:depository))
   end
 
+  test "categorizable? is true for loan payment transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "loan_payment")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:loan), amount: -500, kind: "loan_payment")
+
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    assert transfer.categorizable?
+  end
+
+  test "categorizable? is true for investment contribution transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "investment_contribution")
+
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    assert transfer.categorizable?
+  end
+
+  test "categorizable? is false for regular funds movement transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:connected), amount: -500, kind: "funds_movement")
+
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    refute transfer.categorizable?
+  end
+
+  test "categorizable? is false for credit card payment transfers" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "cc_payment")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500, kind: "cc_payment")
+
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    refute transfer.categorizable?
+  end
+
   test "has_source_fee? returns true when source fee present" do
     transfer = transfers(:one)
     entry = accounts(:depository).entries.create!(name: "Fee", date: Date.current, amount: 5, currency: "USD", entryable: Transaction.new(kind: "standard"))

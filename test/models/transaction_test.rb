@@ -143,6 +143,32 @@ class TransactionTest < ActiveSupport::TestCase
     end
   end
 
+  test "category_editable? is true for non-transfer kinds" do
+    assert Transaction.new(kind: "standard").category_editable?
+    assert Transaction.new(kind: "one_time").category_editable?
+  end
+
+  test "category_editable? without a Transfer record falls back to UNCATEGORIZED_EXCLUDED_KINDS" do
+    assert Transaction.new(kind: "loan_payment").category_editable?
+    assert Transaction.new(kind: "investment_contribution").category_editable?
+    assert_not Transaction.new(kind: "funds_movement").category_editable?
+    assert_not Transaction.new(kind: "cc_payment").category_editable?
+  end
+
+  test "category_editable? defers to Transfer#categorizable? when a Transfer record exists" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "investment_contribution")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    assert outflow_entry.transaction.reload.category_editable?
+
+    fm_outflow = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "funds_movement")
+    fm_inflow = create_transaction(date: Date.current, account: accounts(:connected), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: fm_inflow.transaction, outflow_transaction: fm_outflow.transaction)
+
+    assert_not fm_outflow.transaction.reload.category_editable?
+  end
+
   test "all transaction kinds are valid" do
     valid_kinds = %w[standard funds_movement cc_payment loan_payment one_time investment_contribution]
 

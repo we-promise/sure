@@ -151,6 +151,20 @@ class Transaction < ApplicationRecord
     TRANSFER_KINDS.include?(kind)
   end
 
+  # Whether the user can assign a category (and merchant/tags) to this
+  # transaction. Regular transactions always qualify. For transfers, this
+  # defers to Transfer#categorizable? when a Transfer record exists; if not
+  # (e.g. a provider-imported transfer whose counterpart hasn't been matched
+  # yet), it falls back to the same UNCATEGORIZED_EXCLUDED_KINDS distinction
+  # the "Uncategorized" bucket already uses, so a transaction is never
+  # counted there without a way to actually categorize it.
+  def category_editable?
+    return true unless transfer?
+    return transfer.categorizable? if transfer.present?
+
+    !UNCATEGORIZED_EXCLUDED_KINDS.include?(kind)
+  end
+
   def set_category!(category)
     if category.is_a?(String)
       category = entry.account.family.categories.find_or_create_by!(
