@@ -1,4 +1,17 @@
 <%= content_for :page_title, t(".title") %>
+<%= content_for :page_actions do %>
+  <button type="button"
+          class="inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring"
+          data-action="click->privacy-mode#toggle"
+          data-privacy-mode-target="toggle"
+          title="<%= t("layouts.application.privacy_mode") %>"
+          aria-label="<%= t("layouts.application.privacy_mode") %>"
+          aria-pressed="false">
+    <%= icon("eye-off", size: "sm", data: { privacy_mode_target: "iconOff" }) %>
+    <%= icon("eye", size: "sm", class: "hidden", data: { privacy_mode_target: "iconOn" }) %>
+  </button>
+<% end %>
+
 <%= settings_section do %>
   <div data-controller="bulk-select"
        data-bulk-select-singular-label-value="<%= t("imports.table.import") %>"
@@ -29,6 +42,9 @@
               </th>
               <th class="px-2 py-3 pl-4 text-left min-w-0">
                 <%= t("imports.table.header.operation") %>
+              </th>
+              <th class="px-2 py-3 text-left min-w-0">
+                <%= t("imports.table.header.file_name") %>
               </th>
               <th class="px-2 py-3 text-left w-24 whitespace-nowrap">
                 <%= t("imports.table.header.status") %>
@@ -65,6 +81,11 @@
                   <% end %>
                   <%= import.type.titleize.gsub(/ Import\z/, "") %>
                 <% end %>
+              </td>
+              <td class="px-2 py-3 min-w-0">
+                <span class="text-sm text-secondary block break-all privacy-sensitive">
+                  <%= import.file_name.presence || t("imports.table.no_file_name") %>
+                </span>
               </td>
               <td class="px-2 py-3 w-24 whitespace-nowrap">
                 <% if import.pending? %>

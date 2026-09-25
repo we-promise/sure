@@ -200,6 +200,10 @@ class PdfImport < Import
     super || reconciled_entries.exists?
   end
 
+  def file_name
+    pdf_filename
+  end
+
   def ai_processed?
     ai_summary.present?
   end

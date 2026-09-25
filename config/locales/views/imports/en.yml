@@ -388,6 +388,7 @@ en:
         select: Select
         date: Date
         operation: Operation
+        file_name: File name
         status: Status
         actions: Actions
       import: import
@@ -396,6 +397,7 @@ en:
       select_all: Select all deletable imports
       select_import: Select %{type} import
       delete_selected: Delete selected imports
+      no_file_name: —
       row:
         type_labels:
           transaction_import: "Transaction"

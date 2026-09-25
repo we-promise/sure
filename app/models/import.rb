@@ -472,6 +472,10 @@ class Import < ApplicationRecord
     complete? || revert_failed?
   end
 
+  def file_name
+    nil
+  end
+
   # Terminal imports that did not commit data can be removed without a revert.
   # This includes PDF imports left in an unknown UI state after processing
   # stopped before rows or derived reconciliation data were written.

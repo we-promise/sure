@@ -13,6 +13,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
 
+    assert_select "button[data-action='click->privacy-mode#toggle']", count: 1
     assert_select "[data-controller='bulk-select']"
     assert_select "[data-bulk-select-target='selectionBar']"
     assert_select "form#bulk-delete-form"
@@ -21,6 +22,20 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     @user.family.imports.ordered.each do |import|
       assert_select "#" + dom_id(import), count: 1
     end
+  end
+
+  test "shows PDF file names as privacy-sensitive values" do
+    import = imports(:pdf_processed)
+    import.pdf_file.attach(
+      io: StringIO.new(file_fixture("imports/sample_bank_statement.pdf").binread),
+      filename: "checking-january.pdf",
+      content_type: "application/pdf"
+    )
+
+    get imports_url
+
+    assert_response :success
+    assert_select "##{dom_id(import)} span.privacy-sensitive", text: "checking-january.pdf"
   end
 
   test "gets new" do
