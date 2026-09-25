@@ -465,12 +465,22 @@ class Account < ApplicationRecord
     private
 
       def create_from_crypto_exchange_account(provider_account, family:)
+        # The provider record carries the exchange's *reporting* currency -- Kraken
+        # quotes everything in USD -- which says nothing about what the user
+        # values the account in. The account's own currency is the one its
+        # balance and holdings are shown in, so it is the family's; entries keep
+        # whatever currency they were made in and convert at display, as on
+        # every other account.
+        provider_currency = provider_account.currency.presence || family.currency
+        balance = (provider_account.current_balance || 0).to_d
+        balance = convert_provider_balance(balance, from: provider_currency, to: family.currency)
+
         attributes = {
           family: family,
           name: provider_account.name,
-          balance: (provider_account.current_balance || 0).to_d,
+          balance: balance,
           cash_balance: 0,
-          currency: provider_account.currency.presence || family.currency,
+          currency: family.currency,
           accountable_type: "Crypto",
           accountable_attributes: {
             subtype: "exchange",
@@ -488,6 +498,14 @@ class Account < ApplicationRecord
         # own opening balance.
         account.set_opening_anchor_balance(balance: 0)
         account
+      end
+
+      def convert_provider_balance(amount, from:, to:)
+        return amount if from == to || amount.zero?
+
+        Money.new(amount, from).exchange_to(to).amount
+      rescue Money::ConversionError
+        amount
       end
 
       def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
