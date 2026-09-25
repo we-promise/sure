@@ -48,8 +48,25 @@ class Provider::Base
   #   - can_connect: Boolean, whether family can connect to this provider
   #   - new_account_path: Proc that generates path for new account flow
   #   - existing_account_path: Proc that generates path for linking existing account
+  #   - member_connectable: Boolean, whether a non-admin member may connect it
   def self.connection_configs(family:)
     []
+  end
+
+  # The provider item class that represents a connection for this adapter, if
+  # the provider has one. Used to read the item's declared credential scope.
+  # @return [Class, nil]
+  def self.connection_item_class
+    nil
+  end
+
+  # May a non-admin household member create one of these connections? False
+  # unless the item class has declared `credential_scope :per_connection`, so
+  # an unclassified provider stays admin-only.
+  # @return [Boolean]
+  def self.member_connectable?
+    klass = connection_item_class
+    klass.respond_to?(:member_connectable?) && klass.member_connectable?
   end
 
   # Returns the provider type (class name)

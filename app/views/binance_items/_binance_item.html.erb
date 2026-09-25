@@ -6,11 +6,7 @@
       <div class="flex items-center gap-2">
         <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
-        <div class="flex items-center justify-center h-8 w-8 rounded-full" style="background-color: rgba(240, 185, 11, 0.15);">
-          <div class="flex items-center justify-center">
-            <%= icon "coins", size: "sm", class: "text-[#F0B90B]" %>
-          </div>
-        </div>
+        <%= render ProviderLogo.new(provider_key: :binance) %>
 
         <div class="pl-1 text-sm flex-1">
           <div class="flex items-center gap-2">

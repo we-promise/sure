@@ -49,9 +49,29 @@
             label: t(".institution_domain_label"),
             placeholder: account.provider&.institution_domain || t(".institution_domain_placeholder") %>
 
-        <%= form.text_field :iban,
+        <%# Never pre-filled with the stored (decrypted) value -- write-only,
+            like a password field (password_field also masks keystrokes as
+            they're typed, matching that convention visually too). A blank
+            submit means "unchanged"; the "Remove IBAN" toggle below is the
+            only way to actually clear it. The "already set" placeholder
+            leads with a fixed run of bullets (not the real value's length)
+            so a stored IBAN is visually obvious at a glance, the same way a
+            password manager shows a filled field -- the placeholder text
+            alone was easy to miss. %>
+        <%= form.password_field :iban,
+            value: nil,
             label: t(".iban_label"),
-            placeholder: t(".iban_placeholder") %>
+            placeholder: account.iban.present? ? t(".iban_set_placeholder") : t(".iban_placeholder") %>
+
+        <% if account.iban.present? %>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-sm"><%= t(".iban_remove_label") %></span>
+            <%# Not a real model attribute (the field is write-only, so there's
+                no stored value to reflect back) -- rendered directly rather
+                than via form.toggle, which would call account.remove_iban. %>
+            <%= render DS::Toggle.new(id: "account_remove_iban", name: "account[remove_iban]", checked: false) %>
+          </div>
+        <% end %>
 
         <%= form.text_area :notes,
             label: t(".notes_label"),

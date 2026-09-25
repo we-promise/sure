@@ -458,12 +458,15 @@ class HoldingTest < ActiveSupport::TestCase
     # A coin bought elsewhere at one price and moved in at another was never
     # bought here, so counting the day it arrived as its cost reports a gain of
     # zero on a position that may have doubled.
-    test "a transfer does not set the cost basis" do
+    test "an internal movement does not set the cost basis" do
       holding = holdings(:one)
-      holding.account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
 
-      assert_nil holding.avg_cost,
-        "a transferred position has no cost basis this app can know"
+      Trade::INTERNAL_MOVEMENT_LABELS.each do |label|
+        holding.account.trades.each { |trade| trade.update!(investment_activity_label: label) }
+
+        assert_nil holding.avg_cost,
+          "a position moved by #{label} has no cost basis this app can know"
+      end
     end
 
     # `!=` is NULL for an unlabelled row, so a naive exclusion drops the ordinary

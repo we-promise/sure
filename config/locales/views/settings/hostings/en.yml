@@ -47,6 +47,7 @@ en:
         binance_public_hint: free, no API key -- crypto only (BTC, ETH, etc.)
         moex_public_hint: free, no API key -- Russian stocks, funds & bonds (MOEX), incl. RUB FX
         tinkoff_invest_hint: requires read-only token -- Russian stocks/funds/bonds prices + brand logos
+        requires_api_key_mansa: requires API key, 100 calls/day free tier -- NGX (Nigerian Exchange) only
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -58,6 +59,7 @@ en:
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
+          mansa: Mansa
       assistant_settings:
         title: AI Assistant
         description: Choose how the chat assistant responds. Builtin uses your configured LLM provider directly. External delegates to a remote AI agent that can call back to Sure's financial tools via MCP.
@@ -75,9 +77,21 @@ en:
         token_label: API Token
         token_placeholder: Enter the token from your agent provider
         token_help: The authentication token provided by your external agent. This is sent as a Bearer token with each request.
-        agent_id_label: Agent ID (Optional)
+        agent_id_label: Agent (Required)
         agent_id_placeholder: "main (default)"
-        agent_id_help: Routes to a specific agent when the provider hosts multiple. Leave blank for the default.
+        agent_id_help: Sure loads this list from the endpoint's /v1/models response. The selected agent controls routing; its underlying model is managed by the external service.
+        agent_discovery_configure_first: Save a valid endpoint URL and API token to load available agents.
+        external_agent_required: Select an external agent before saving.
+        external_agent_invalid: Select an agent returned by the configured endpoint.
+        external_agent_reselect: The endpoint changed and the previously selected agent is not available there. Select an agent from the new endpoint.
+        agent_discovery_error: "Could not load agents: %{error}"
+        external_info:
+          title: External AI configuration
+          items:
+            - Enter the full OpenAI-compatible endpoint URL ending in /v1/chat/completions.
+            - Sure discovers available agents from /v1/models after the endpoint and token are saved.
+            - The external service chooses the model behind each agent; Sure only selects the agent route.
+            - Authentication, endpoint, or agent errors are returned by the external service. Check its logs when a request fails.
         disconnect_title: External connection
         disconnect_description: Remove the external assistant connection and switch back to the builtin assistant.
         disconnect_button: Disconnect
@@ -85,20 +99,20 @@ en:
           title: Disconnect external assistant?
           body: This will remove the saved URL, token, and agent ID, and switch to the builtin assistant. You can reconnect later by entering new credentials.
       brand_fetch_settings:
-        description: Enter the Client ID provided by Brand Fetch
-        env_configured_message: You have successfully configured your Brand Fetch Client ID through the BRAND_FETCH_CLIENT_ID environment variable.
+        description: Enter the Client ID provided by Brandfetch
+        env_configured_message: You have successfully configured your Brandfetch Client ID through the BRAND_FETCH_CLIENT_ID environment variable.
         show_details: "(show details)"
-        setup_step_1_html: 'Visit <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> and create a free Brand Fetch Developer account.'
+        setup_step_1_html: 'Visit <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> and create a free Brandfetch Developer account.'
         setup_step_2_html: 'Go to the <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> page.'
         setup_step_3: 'Tap the eye icon under the "Your Client ID" section to reveal your Client ID and paste it below.'
         label: Client ID
         placeholder: Enter your Client ID here
-        title: Brand Fetch Settings
+        title: Brandfetch Settings
         high_res_label: Enable high-resolution logos
         high_res_description: When enabled, logos will be retrieved at 120x120 resolution instead of 40x40. This provides sharper images on high-DPI displays.
       llm_provider_selector:
         title: AI Provider
-        description: Choose which LLM powers AI chat. Batch operations (transaction categorization, merchant detection, and PDF processing) currently always use OpenAI.
+        description: Choose which LLM powers AI chat, merchant detection and PDF processing. Transaction categorization is configured separately below.
         env_configured_message: Successfully configured through the LLM_PROVIDER environment variable.
         provider_label: Active LLM provider
         provider_openai: OpenAI
@@ -118,6 +132,44 @@ en:
         model_label: Default Model (Optional)
         model_placeholder: "claude-sonnet-4-6 (default)"
         model_help: Used for chat and PDF processing. Batch operations (categorize, merchant detection) default to Haiku for cost.
+      categorization_provider_selector:
+        title: Transaction Categorization
+        preview_pill: Preview
+        description: Choose which provider categorizes transactions. This is separate from the AI provider above, which handles chat and PDF processing.
+        env_notice: "Set to %{type} through environment variables."
+        provider_label: Categorization provider
+        provider_llm: AI provider (OpenAI or Anthropic)
+        provider_jev: Jev (TypeSafe)
+        provider_help: The AI provider reads a batch of transactions and writes back category names. Jev picks from your category list and returns a calibrated confidence for each transaction.
+        jev_configured: Jev API key configured.
+        jev_not_configured: Jev is selected but has no API key configured. Categorization keeps using the AI provider until you add one below.
+        data_retention_heading: Data sharing
+        data_retention_direct: Transaction descriptions, amounts and your category names are sent to TypeSafe to be categorized. Review their retention policy before enabling this on real data.
+        data_retention_proxied: Transaction descriptions, amounts and your category names are sent to %{host}, which forwards them to TypeSafe. Review both providers' retention policies before enabling this on real data.
+        confidence_threshold_label: Minimum confidence (0–1)
+        confidence_threshold_help: Below this confidence the category is not applied and the transaction is left uncategorized, so a later run can try again. Nothing is discarded. Set to 0 to apply every answer.
+        confidence_threshold_env_notice: Locked by the CATEGORIZATION_CONFIDENCE_THRESHOLD environment variable.
+        shadow_rate_label: Shadow comparison rate (0–1)
+        shadow_rate_help: Runs the provider you did NOT select alongside the one you did, recording where they disagree without changing any category. This doubles the API spend on every categorization run it samples. Set to 0 to turn it off.
+        shadow_rate_env_notice: Locked by the CATEGORIZATION_SHADOW_RATE environment variable.
+      categorization_shadow_results:
+        shadow_results_heading: Shadow comparison
+        shadow_results_empty: No comparisons recorded yet. Set a shadow comparison rate above 0 and run categorization to collect some.
+        shadow_results_summary: "%{agreement}%% agreement across %{count} sampled transactions."
+        shadow_disagreements_heading: Most recent disagreements
+        shadow_disagreement_row: "%{applied_provider} chose %{applied_category}; %{shadow_provider} chose %{shadow_category}."
+        shadow_disagreement_confidence: "(confidence %{confidence})"
+        shadow_no_disagreements: The two providers agreed on every sampled transaction.
+        shadow_no_category: no category
+      jev_settings:
+        env_configured_message: Successfully configured through environment variables.
+        api_key_label: API Key
+        api_key_placeholder: Enter your TypeSafe API key
+        endpoint_label: Endpoint (Optional)
+        endpoint_placeholder: "https://api.typesafe.ai/v1/systemone (default)"
+        model_label: Model (Optional)
+        model_placeholder: "jev-latest (default)"
+        model_help: Defaults to TypeSafe directly. To reach Jev through OpenRouter instead, set the endpoint to https://openrouter.ai/api/alpha/decisions and the model to ~typesafe/jev-latest.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
@@ -207,6 +259,16 @@ en:
         step_2_html: 'Go to your <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> to find your API token.'
         step_3: Copy your API token and paste it below.
         rate_limit_warning: "EODHD free tier is limited to 20 API calls per day. Best used as a supplementary provider for EU ETFs not available from other providers."
+      mansa_settings:
+        title: Mansa
+        description: Enter the API key from Mansa API. Supports NGX (Nigerian Exchange), not covered by any other provider here. Mansa covers other African exchanges too, but only NGX is verified against this integration.
+        env_configured_message: Successfully configured through the MANSA_API_KEY environment variable.
+        label: API Key
+        placeholder: Enter your Mansa API key here
+        show_details: "(show details)"
+        step_1_html: 'Visit <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> and claim your free API key -- no card required.'
+        step_2: Copy your API key and paste it below.
+        rate_limit_warning: "Mansa's free tier is limited to 100 API calls per day, and only exposes current quotes -- historical prices require a paid plan. Only NGX (Nigerian Exchange) is verified against this integration; other African exchanges Mansa covers are not yet supported here."
       alpha_vantage_settings:
         title: Alpha Vantage
         description: Enter the API key from Alpha Vantage. Supports EU ETFs on London Stock Exchange, XETRA, and other exchanges.
@@ -242,6 +304,8 @@ en:
         invalid_llm_budget: "%{field} must be a whole number ≥ %{minimum}."
         invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
         anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
+        invalid_jev_endpoint: Jev Endpoint must be an https URL. Plain http is accepted only for localhost.
+        invalid_categorization_rate: "%{field} must be a number between 0 and 1."
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       disconnect_external_assistant:
         external_assistant_disconnected: External assistant disconnected
