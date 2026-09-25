@@ -48,8 +48,9 @@ class AccountSharingsControllerTest < ActionDispatch::IntegrationTest
     get account_sharing_url(@account)
 
     assert_response :success
-    assert_select "input[name='owner_ownership_percentage']"
-    assert_select "input[name$='[ownership_percentage]']"
+    # Inside .form-field, which supplies the border and padding of design system inputs
+    assert_select ".form-field input.form-field__input[name='owner_ownership_percentage'][value='100.0']"
+    assert_select ".form-field input.form-field__input[name$='[ownership_percentage]'][max='100']"
   end
 
   test "shared user sees their share as read-only text" do
