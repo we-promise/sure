@@ -113,6 +113,40 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("imports.create.document_uploaded"), flash[:notice]
   end
 
+  test "uploads multiple documents independently" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
+    family_document = family_documents(:tax_return)
+    Family.any_instance.expects(:upload_document).with do |file_content:, filename:, **|
+      assert_equal "notes.txt", filename
+      assert_equal "plain text", file_content
+      true
+    end.returns(family_document)
+
+    valid_pdf = file_fixture_upload("imports/sample_bank_statement.pdf", "application/pdf")
+    text_file = Rack::Test::UploadedFile.new(
+      StringIO.new("plain text"),
+      "text/plain",
+      original_filename: "notes.txt"
+    )
+
+    assert_difference [ "AccountStatement.count", "Import.where(type: 'PdfImport').count" ], 1 do
+      assert_enqueued_jobs 1, only: ProcessPdfJob do
+        post imports_url, params: {
+          import: {
+            type: "DocumentImport",
+            import_file: [ valid_pdf, text_file ]
+          }
+        }
+      end
+    end
+
+    assert_redirected_to imports_url
+    assert_equal "1 PDF is being processed. You will receive an email when analysis is complete. 1 document uploaded successfully.", flash[:notice]
+  end
+
   test "summary renders the import outcome for a pdf import" do
     get summary_import_url(imports(:pdf_with_rows))
 

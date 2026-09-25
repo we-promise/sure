@@ -447,11 +447,17 @@ en:
       ndjson_uploaded: NDJSON file uploaded successfully.
       pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
       pdf_processing: Your PDF is being processed. You will receive an email when analysis is complete.
+      pdf_processing_many:
+        one: 1 PDF is being processed. You will receive an email when analysis is complete.
+        other: "%{count} PDFs are being processed. You will receive an email when analysis is complete."
       invalid_pdf: The uploaded file is not a valid PDF.
       duplicate_pdf_unavailable: This PDF is already stored as a statement you cannot access.
       document_too_large: Document file is too large. Maximum size is %{max_size}MB.
       invalid_document_file_type: Invalid document file type for the active vector store.
       document_uploaded: Document uploaded successfully.
+      document_uploaded_many:
+        one: 1 document uploaded successfully.
+        other: "%{count} documents uploaded successfully."
       document_upload_failed: We couldn't upload the document to the vector store. Please try again.
       invalid_ndjson_file_type: Invalid file type or format. Please upload a valid .ndjson or .json export file.
       document_provider_not_configured: No vector store is configured for document uploads.

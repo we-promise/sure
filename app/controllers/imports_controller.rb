@@ -73,7 +73,13 @@ class ImportsController < ApplicationController
   end
 
   def create
-    file = import_params[:import_file]
+    files = Array(import_params[:import_file]).compact
+    file = files.first
+
+    if files.size > 1 && document_upload_request?
+      create_multiple_document_imports(files)
+      return
+    end
 
     if file.present? && document_upload_request?
       create_document_import(file)
@@ -169,7 +175,7 @@ class ImportsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(:import_file)
+      params.require(:import).permit(:import_file, import_file: [])
     end
 
     def require_statement_import_permission!
@@ -183,13 +189,85 @@ class ImportsController < ApplicationController
       return redirect_to new_import_path, alert: t("accounts.not_authorized") unless AccountStatement.statement_manager?(Current.user)
       return redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte) if file.size > Import::MAX_PDF_SIZE
 
-      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
-      pdf_import.process_with_ai_later
+      pdf_import = create_pdf_import_record(file)
       redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
     rescue AccountStatement::DuplicateUploadError
       redirect_to new_import_path, alert: t("imports.create.duplicate_pdf_unavailable")
     rescue AccountStatement::InvalidUploadError
       redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
+    end
+
+    def create_multiple_document_imports(files)
+      adapter = VectorStore.adapter
+      unless adapter
+        redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
+        return
+      end
+
+      supported_extensions = adapter.supported_extensions.map(&:downcase)
+      processed_count = 0
+      uploaded_count = 0
+      errors = []
+
+      files.each do |file|
+        filename = file.original_filename.to_s
+
+        if file.content_type.in?(Import::ALLOWED_PDF_MIME_TYPES)
+          unless valid_pdf_file?(file)
+            errors << "#{filename}: #{t('imports.create.invalid_pdf')}"
+            next
+          end
+
+          unless AccountStatement.statement_manager?(Current.user)
+            errors << "#{filename}: #{t('accounts.not_authorized')}"
+            next
+          end
+
+          if file.size > Import::MAX_PDF_SIZE
+            errors << "#{filename}: #{t('imports.create.pdf_too_large', max_size: Import::MAX_PDF_SIZE / 1.megabyte)}"
+            next
+          end
+
+          pdf_import = create_pdf_import_record(file)
+          processed_count += 1 if pdf_import.importing?
+        else
+          ext = File.extname(filename).downcase
+
+          if file.size > Import::MAX_PDF_SIZE
+            errors << "#{filename}: #{t('imports.create.document_too_large', max_size: Import::MAX_PDF_SIZE / 1.megabyte)}"
+            next
+          end
+
+          unless supported_extensions.include?(ext)
+            errors << "#{filename}: #{t('imports.create.invalid_document_file_type')}"
+            next
+          end
+
+          uploaded_count += 1 if Current.family.upload_document(file_content: file.read, filename: filename)
+        end
+      rescue AccountStatement::DuplicateUploadError
+        errors << "#{filename}: #{t('imports.create.duplicate_pdf_unavailable')}"
+      rescue AccountStatement::InvalidUploadError
+        errors << "#{filename}: #{t('imports.create.invalid_pdf')}"
+      rescue StandardError => e
+        Rails.logger.error("Batch document upload failed for #{filename}: #{e.class}: #{e.message}")
+        errors << "#{filename}: #{t('imports.create.document_upload_failed')}"
+      end
+
+      if processed_count.positive? || uploaded_count.positive?
+        notices = []
+        notices << t("imports.create.pdf_processing_many", count: processed_count) if processed_count.positive?
+        notices << t("imports.create.document_uploaded_many", count: uploaded_count) if uploaded_count.positive?
+        redirect_to imports_path, notice: notices.join(" "), alert: errors.presence&.join("\n")
+      else
+        redirect_to new_import_path, alert: errors.presence&.join("\n") || t("imports.create.document_upload_failed")
+      end
+    end
+
+    def create_pdf_import_record(file)
+      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
+      pdf_import.process_with_ai_later
+      pdf_import
     end
 
     def create_document_import(file)

@@ -149,7 +149,7 @@
                       </div>
                     </div>
                     <%= icon("chevron-right") %>
-                    <%= form.file_field :import_file, accept: @document_upload_extensions.join(","), class: "hidden", onchange: "this.form.submit()" %>
+                    <%= form.file_field :import_file, accept: @document_upload_extensions.join(","), multiple: true, class: "hidden", onchange: "this.form.submit()" %>
                   </label>
                 <% end %>
 
