@@ -93,6 +93,31 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_not_includes non_transfer_ids, payment_entry.entryable.id
   end
 
+  test "type filter classifies a still-pending auto-matched leg as transfer, not expense or income" do
+    # A pending auto-match leaves both legs at kind == "standard" until
+    # confirmed (Transfer#confirm!), so `kind (NOT) IN (...)` alone
+    # misclassifies them. Regression for jjmata's round-3 finding: the
+    # transfer filter dropped these legs while expense/income picked them up
+    # -- exactly inverted from the post-confirmation (and main) behavior.
+    outflow_entry = create_transaction(account: @checking_account, amount: 190, kind: "standard")
+    inflow_entry = create_transaction(account: @credit_card_account, amount: -190, kind: "standard")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    transfer_ids = Transaction::Search.new(@family, filters: { types: [ "transfer" ] }).transactions_scope.pluck(:id)
+    assert_includes transfer_ids, outflow_entry.entryable.id
+    assert_includes transfer_ids, inflow_entry.entryable.id
+
+    expense_ids = Transaction::Search.new(@family, filters: { types: [ "expense" ] }).transactions_scope.pluck(:id)
+    assert_not_includes expense_ids, outflow_entry.entryable.id
+
+    income_ids = Transaction::Search.new(@family, filters: { types: [ "income" ] }).transactions_scope.pluck(:id)
+    assert_not_includes income_ids, inflow_entry.entryable.id
+
+    non_transfer_ids = Transaction::Search.new(@family, filters: { types: [ "expense", "income" ] }).transactions_scope.pluck(:id)
+    assert_not_includes non_transfer_ids, outflow_entry.entryable.id
+    assert_not_includes non_transfer_ids, inflow_entry.entryable.id
+  end
+
   test "search category filter handles uncategorized transactions correctly with kind filtering" do
     # Create uncategorized transactions of different kinds
     uncategorized_standard = create_transaction(
@@ -390,6 +415,13 @@ class Transaction::SearchTest < ActiveSupport::TestCase
 
     assert_equal Money.new(50, "USD"), totals.expense_money
     assert_equal Money.new(30, "USD"), totals.income_money
+    # A pending leg is subtracted from income/expense above -- it must land
+    # in the transfer totals instead, not vanish from all four (regression
+    # for jjmata's round-3 finding: it previously counted toward
+    # transactions_count while contributing to none of the four totals).
+    assert_equal Money.new(190, "USD"), totals.transfer_outflow_money
+    assert_equal Money.new(190, "USD"), totals.transfer_inflow_money
+    assert_equal 4, totals.count
   end
 
   test "totals handles multi-currency transactions with exchange rates" do
