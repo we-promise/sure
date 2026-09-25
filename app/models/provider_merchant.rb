@@ -10,7 +10,7 @@ class ProviderMerchant < Merchant
     by_provider_id || find_by(name: data["name"], source: source)
   end
 
-  # color is deliberately not compared: nothing ever sets it on a ProviderMerchant.
+  # color is not compared: ProviderMerchant does not support color.
   def import_diff(data)
     %w[website_url name provider_merchant_id].filter_map do |field|
       imported_value = data[field].presence

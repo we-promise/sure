@@ -863,6 +863,17 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal existing.id, @family.entries.find_by!(name: "Amazon purchase").entryable.merchant_id
   end
 
+  test "a color in the file is not read when a provider merchant is created" do
+    attach_ndjson(provider_merchant_ndjson(color: "#123456"))
+
+    assert_difference -> { ProviderMerchant.count }, 1 do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+    assert_nil ProviderMerchant.where(name: "AMZN MKTP", source: "plaid").pick(:color)
+  end
+
   {
     "RecordNotUnique" => -> { ActiveRecord::RecordNotUnique.new("duplicate key") },
     "RecordInvalid" => -> { ActiveRecord::RecordInvalid.new(ProviderMerchant.new.tap { |merchant| merchant.errors.add(:name, :taken) }) }

@@ -884,6 +884,21 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "does not export a color for a provider merchant" do
+    provider_merchant = ProviderMerchant.create!(name: "Colorless", source: "plaid")
+    @account.entries.create!(
+      date: Date.parse("2024-05-02"), amount: 5, name: "Colorless purchase", currency: "USD",
+      entryable: Transaction.new(merchant: provider_merchant)
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      data = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        .find { |record| record["type"] == "ProviderMerchant" && record.dig("data", "id") == provider_merchant.id }["data"]
+
+      assert_not data.key?("color")
+    end
+  end
+
   test "exports provider merchants referenced by recurring transactions in NDJSON" do
     provider_merchant = ProviderMerchant.create!(name: "Recurring Provider Merchant", source: "ai")
     @family.recurring_transactions.create!(
