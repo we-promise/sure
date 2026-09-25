@@ -6,6 +6,7 @@ import {
   shift,
 } from "@floating-ui/dom";
 import { Controller } from "@hotwired/stimulus";
+import { fixedStrategyPlatform } from "utils/floating_position";
 
 /**
  * Positioned panel for mixed content (forms, pickers, account menus).
@@ -127,6 +128,7 @@ export default class extends Controller {
       placement: useMobileFullwidth ? "bottom" : this.placementValue,
       middleware: [offset(this.offsetValue), flip({ padding: 5 }), shift({ padding: 5 })],
       strategy: "fixed",
+      platform: fixedStrategyPlatform,
     }).then(({ x, y }) => {
       if (useMobileFullwidth) {
         Object.assign(this.contentTarget.style, {
