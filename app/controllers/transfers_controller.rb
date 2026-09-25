@@ -87,13 +87,15 @@ class TransfersController < ApplicationController
   end
 
   def update
+    return reject_transfer if transfer_update_params[:status] == "rejected"
+
     outflow_account = @transfer.outflow_transaction.entry.account
     return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
 
     Transfer.transaction do
       update_transfer_status
       update_transfer_fees_and_amount
-      update_transfer_details unless transfer_update_params[:status] == "rejected"
+      update_transfer_details
     end
 
     respond_to do |format|
@@ -122,8 +124,7 @@ class TransfersController < ApplicationController
   end
 
   def destroy
-    outflow_account = @transfer.outflow_transaction.entry.account
-    return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
+    return unless require_account_permission!(unlinkable_endpoint, redirect_path: transactions_url)
 
     @transfer.destroy!
     redirect_back_or_to transactions_url, notice: t(".success")
@@ -190,16 +191,37 @@ class TransfersController < ApplicationController
 
   private
     def set_transfer
-      # Finds the transfer and ensures the user has access to it
+      # Finds the transfer and ensures the user has access to it. Unlinking
+      # (reject/destroy) only needs access to one side, so a user can undo a
+      # match against an account that is not shared with them.
       accessible_transaction_ids = Current.family.transactions
         .joins(entry: :account)
         .merge(Account.accessible_by(Current.user))
         .select(:id)
 
-      @transfer = Transfer
-                    .where(id: params[:id])
-                    .where(inflow_transaction_id: accessible_transaction_ids)
-                    .first!
+      scope = Transfer.where(id: params[:id])
+      accessible = scope.where(inflow_transaction_id: accessible_transaction_ids)
+      accessible = accessible.or(scope.where(outflow_transaction_id: accessible_transaction_ids)) if action_name.in?(%w[update destroy])
+
+      @transfer = accessible.first!
+    end
+
+    def reject_transfer
+      return unless require_account_permission!(unlinkable_endpoint, redirect_path: transactions_url)
+
+      @transfer.reject!
+
+      respond_to do |format|
+        format.html { redirect_back_or_to transactions_url, notice: t(".success") }
+        format.turbo_stream
+      end
+    end
+
+    # The first endpoint the user can write to, falling back to the outflow
+    # account so the permission check fails with the usual redirect.
+    def unlinkable_endpoint
+      endpoints = [ @transfer.from_account, @transfer.to_account ].compact
+      endpoints.find { |account| account.permission_for(Current.user).in?([ :owner, :full_control ]) } || endpoints.first
     end
 
     def transfer_params
