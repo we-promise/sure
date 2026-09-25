@@ -8,19 +8,19 @@ pt-PT:
         one: Encontrada %{count} possível fatura. Reveja-a abaixo.
         other: Encontradas %{count} possíveis faturas. Reveja-as abaixo.
       none_found: Não foram encontrados novos padrões recorrentes. Pode adicionar faturas manualmente.
-      already_running: A deteção já está em curso. Volte a verificar dentro de momentos.
+      already_running: A deteção está em curso. Verifique novamente dentro de alguns momentos.
     feed:
       calendar_name: Faturas Sure
     ai_prompts:
       due_before_paycheck: O que tenho a pagar antes do próximo salário?
       subscriptions_up: Que subscrições aumentaram de preço este ano?
       monthly_subscriptions: Quanto pago por mês em subscrições?
-      safe_to_spend: Quanto posso gastar em segurança neste período?
+      safe_to_spend: Quanto posso gastar neste período sem comprometer o meu orçamento?
     smart_configurations:
       show:
         trigger: Deixar a IA configurar
         title: Sugestões da IA para %{name}
-        intro: Assinale as alterações a aplicar. As que não forem assinaladas ficam exatamente como estão.
+        intro: Selecione as alterações a aplicar. As restantes permanecem inalteradas.
         no_changes: Esta fatura já corresponde ao seu histórico de pagamentos. Não há nada a alterar.
         failed: Não foi possível analisar esta fatura neste momento. A configuração não foi alterada.
         field_name: Nome
@@ -138,7 +138,7 @@ pt-PT:
         one: Vence amanhã, %{date}
         other: Vence dentro de %{count} dias, %{date}
     views:
-      aria_label: Vistas de faturas
+      aria_label: Visualização de faturas
       overview: Visão geral
       calendar: Calendário
       paycheck: Plano de rendimentos
@@ -259,8 +259,8 @@ pt-PT:
       add_income: Adicionar rendimento
       review_with_ai: Rever com IA
       detected_review:
-        one: Encontrámos %{count} pagamento recorrente nas suas transações. Reveja-o para que os totais aqui correspondam ao que realmente paga.
-        other: Encontrámos %{count} pagamentos recorrentes nas suas transações. Reveja-os para que os totais aqui correspondam ao que realmente paga.
+        one: Encontrámos %{count} pagamento recorrente. Confirme-o para garantir que os totais refletem o que realmente paga.
+        other: Encontrámos %{count} pagamentos recorrentes. Confirme-os para garantir que os totais refletem o que realmente paga.
       detected_review_action: Rever
       needs_review: Por rever
       notice_trial: O período experimental de %{name} termina a %{date}

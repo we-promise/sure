@@ -19,7 +19,7 @@ pt-PT:
       heading: Configuração de Redis Necessária
       subheading: A sua instalação do Sure com alojamento próprio precisa que o Redis esteja configurado corretamente.
       why_required_title: Porque é que o Redis é necessário?
-      why_required_body: O Sure utiliza o Redis para potenciar os trabalhos em segundo plano do Sidekiq para tarefas como sincronizar dados de contas, processar importações e outras operações em segundo plano que mantêm os seus dados financeiros atualizados.
+      why_required_body: O Sure utiliza o Redis para executar tarefas em segundo plano através do Sidekiq, como sincronizar contas, processar importações e manter os seus dados financeiros atualizados.
       view_setup_guide: Ver Guia de Configuração
       setup_guide_hint: Siga o nosso guia completo de configuração Docker para configurar o Redis
       refresh_hint: "Depois de configurar o Redis, atualize esta página para continuar."

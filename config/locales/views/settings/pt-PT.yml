@@ -44,7 +44,7 @@ pt-PT:
         actions:
           mark_stale: "Marcar como obsoleta"
           mark_failed: "Marcar como falhada"
-          release_claim: "Libertar bloqueio"
+          release_claim: "Remover bloqueio"
       cancel:
         cancelled: "%{type} marcada como perdida."
         not_cancellable: "Esta operação não pode ser modificada neste momento — a respetiva tarefa pode ainda estar em fila ou em execução. Tente novamente depois de ter estado inativa durante 30 minutos."
