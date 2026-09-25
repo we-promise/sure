@@ -179,6 +179,24 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 100, latest.call
   end
 
+  test "a share added within the same second as an earlier one is visible despite the cached account ids" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    owner = users(:empty)
+    member = users(:new_email)
+    first = create_account(balance: 1000, accountable: Depository.new, owner: owner)
+    second = create_account(balance: 500, accountable: Depository.new, owner: owner)
+
+    travel_to Time.zone.parse("2026-09-25 12:00:00.100"), with_usec: true do
+      first.share_with!(member)
+      assert_equal 1000, BalanceSheet.new(@family, user: member).assets.total
+    end
+
+    travel_to Time.zone.parse("2026-09-25 12:00:00.600"), with_usec: true do
+      second.share_with!(member)
+      assert_equal 1500, BalanceSheet.new(@family, user: member).assets.total
+    end
+  end
+
   test "calculates asset group totals" do
     create_account(balance: 1000, accountable: Depository.new)
     create_account(balance: 2000, accountable: Depository.new)
