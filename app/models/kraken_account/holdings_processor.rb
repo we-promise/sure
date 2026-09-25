@@ -72,8 +72,7 @@ class KrakenAccount::HoldingsProcessor
     end
 
     def resolve_security(symbol)
-      ticker = symbol.to_s.include?(":") ? symbol.to_s : "CRYPTO:#{symbol}"
-      KrakenAccount::SecurityResolver.resolve(ticker, symbol)
+      KrakenAccount::SecurityResolver.resolve(symbol)
     end
 
     def log_stale_rate(symbol, field, rate_date)

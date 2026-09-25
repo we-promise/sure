@@ -380,7 +380,7 @@ class KrakenAccount::LedgerProcessor
     end
 
     def resolve_security(base_symbol)
-      KrakenAccount::SecurityResolver.resolve("CRYPTO:#{base_symbol}", base_symbol)
+      KrakenAccount::SecurityResolver.resolve(base_symbol)
     end
 
     # The price on the day the units moved, not the price today. Falls back to
