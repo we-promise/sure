@@ -4,6 +4,7 @@ import parseAmountPaste from "utils/parse_amount_paste";
 import evaluateAmountExpression, {
   formatAmountForDisplay,
   formatUnroundedAmount,
+  precisionFromStep,
 } from "utils/evaluate_amount_expression";
 
 // Connects to data-controller="money-field"
@@ -244,9 +245,6 @@ export default class extends Controller {
       return this.precisionValue;
     }
 
-    const step = Number(this.amountTarget.step);
-    if (!Number.isFinite(step) || step <= 0) return null;
-
-    return Math.max(0, Math.ceil(-Math.log10(step)));
+    return precisionFromStep(this.amountTarget.step);
   }
 }

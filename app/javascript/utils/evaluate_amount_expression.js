@@ -187,3 +187,18 @@ export function formatAmountForDisplay(amount, precision, raw) {
     ? formatted.replace(".", ",")
     : formatted
 }
+
+// Derives a decimal-places count from an <input step="..."> attribute (e.g.
+// "0.01" -> 2, "1" -> 0). BTC's step arrives as "1.0e-08", so this works
+// numerically rather than by counting characters after a dot. Returns null
+// for step="any" (or any other non-positive/non-finite step), matching the
+// step="any" fields (trade amount, price, fee) that want an unrounded value
+// rather than being truncated to a default that would drop a sub-cent
+// crypto price to "0.00". Shared by money_field_controller (its own
+// precision-value override takes priority over this) and goal_form_controller
+// (which has no such override, only the rendered field's step).
+export function precisionFromStep(step) {
+  const parsed = Number(step)
+  if (!Number.isFinite(parsed) || parsed <= 0) return null
+  return Math.max(0, Math.ceil(-Math.log10(parsed)))
+}
