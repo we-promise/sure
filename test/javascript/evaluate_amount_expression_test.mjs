@@ -8,7 +8,7 @@ const MODULE_URL = new URL(
   import.meta.url,
 )
 
-const { default: evaluateAmountExpression, formatAmountForDisplay } =
+const { default: evaluateAmountExpression, formatAmountForDisplay, precisionFromStep } =
   await import(MODULE_URL)
 
 describe("evaluateAmountExpression", () => {
@@ -444,5 +444,33 @@ describe("formatAmountForDisplay", () => {
     it("still substitutes a comma when the raw text used one", () => {
       assert.equal(formatAmountForDisplay(0.1 + 0.2, null, "0,1+0,2"), "0,3")
     })
+  })
+})
+
+describe("precisionFromStep", () => {
+  it("derives 2 decimal places from a 0.01 step", () => {
+    assert.equal(precisionFromStep("0.01"), 2)
+  })
+
+  it("derives 0 decimal places from a whole-number step", () => {
+    assert.equal(precisionFromStep("1"), 0)
+  })
+
+  it("derives 8 decimal places from BTC's exponential step", () => {
+    assert.equal(precisionFromStep("1.0e-08"), 8)
+  })
+
+  it("returns null for step=\"any\"", () => {
+    assert.equal(precisionFromStep("any"), null)
+  })
+
+  it("returns null for a zero or negative step", () => {
+    assert.equal(precisionFromStep("0"), null)
+    assert.equal(precisionFromStep("-1"), null)
+  })
+
+  it("returns null for an empty or missing step", () => {
+    assert.equal(precisionFromStep(""), null)
+    assert.equal(precisionFromStep(undefined), null)
   })
 })

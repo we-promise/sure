@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
-import evaluateAmountExpression from "utils/evaluate_amount_expression";
+import evaluateAmountExpression, { precisionFromStep } from "utils/evaluate_amount_expression";
 
 // Single-form controller for the goal create / edit modal.
 //
@@ -198,10 +198,23 @@ export default class extends Controller {
   // Number.parseFloat, which reads a comma decimal like "0,50" as 0 and
   // wedges the submit button/validation permanently for an otherwise-valid
   // amount.
+  //
+  // Rounded to the amount field's own precision (derived from its `step`,
+  // same as money_field_controller#fieldPrecision) rather than left as the
+  // raw evaluated result: money_field_controller's blur normalization does
+  // this same rounding before the field is submitted, so an amount that
+  // reads as positive here (e.g. "0.001" with a 2-decimal currency) but
+  // rounds to "0.00" on submit would otherwise pass this validation and
+  // then get rejected server-side (Goal#target_amount must be > 0) — a
+  // false "valid" state reachable by submitting via Enter before blur ever
+  // runs.
   #amount() {
     if (!this.hasAmountInputTarget) return Number.NaN;
     const result = evaluateAmountExpression(this.amountInputTarget.value);
-    return result === null ? Number.NaN : result;
+    if (result === null) return Number.NaN;
+
+    const precision = precisionFromStep(this.amountInputTarget.step);
+    return precision === null ? result : Number(result.toFixed(precision));
   }
 
   #money(value) {
