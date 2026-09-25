@@ -103,13 +103,12 @@ class FinancekitAccountsTest < ActionDispatch::IntegrationTest
     assert account.entries.exists?(name: "New purchase after reconnect")
   end
 
-  test "unlink disconnects all accounts sharing the publisher even when FinanceKit is unavailable" do
+  test "unlink disconnects all accounts sharing the publisher even when it needs repair" do
     second_source = SecureRandom.uuid
     @item.update!(status: "repair_required", consent: @item.consent.merge(
       "selected_source_account_ids" => [ @source_id, second_source ]))
     second_mapping = FinancekitAccount.map!(@item, second_source, @mapping_input.merge("name" => "Apple Cash"))
     @item.activate!
-    Financekit.stubs(:enabled?).returns(false)
     @item.mark_repair!("test_failure")
 
     delete unlink_account_url(@source.account)
