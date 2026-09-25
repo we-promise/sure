@@ -447,6 +447,8 @@ en:
       ndjson_uploaded: NDJSON file uploaded successfully.
       pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
       pdf_processing: Your PDF is being processed. You will receive an email when analysis is complete.
+      import_pdf_codex: Import PDF with Codex
+      import_pdf_codex_description: Use your locally authenticated Codex subscription; no API key required.
       invalid_pdf: The uploaded file is not a valid PDF.
       duplicate_pdf_unavailable: This PDF is already stored as a statement you cannot access.
       document_too_large: Document file is too large. Maximum size is %{max_size}MB.
@@ -502,6 +504,7 @@ en:
       errors:
         provider_not_configured: AI provider not configured
         provider_no_pdf_support: AI provider does not support PDF processing
+        incomplete_response: AI returned an incomplete result. Try again or import the transactions manually.
       ready_for_review_title: Ready for Review
       ready_for_review_description:
         one: "%{count} transaction from your statement isn't in this account yet. Review and publish it to add it."

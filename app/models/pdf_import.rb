@@ -1,7 +1,10 @@
 class PdfImport < Import
+  AI_PROVIDERS = %w[api codex].freeze
+
   has_one_attached :pdf_file, dependent: :purge_later
 
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
+  validates :ai_provider, inclusion: { in: AI_PROVIDERS }
   validate :account_statement_matches_import
 
   class << self
@@ -200,8 +203,14 @@ class PdfImport < Import
     ai_summary.present?
   end
 
-  def process_with_ai_later
-    return false unless with_lock { pending? && !ai_processed? && rows_count.zero? && pdf_uploaded? && update!(status: :importing) }
+  def process_with_ai_later(provider: nil)
+    claimed = with_lock do
+      next false unless pending? && !ai_processed? && rows_count.zero? && pdf_uploaded?
+
+      update!(ai_provider: provider) if provider.present? && AI_PROVIDERS.include?(provider.to_s)
+      update!(status: :importing)
+    end
+    return false unless claimed
 
     begin
       ProcessPdfJob.perform_later(self)
@@ -216,7 +225,11 @@ class PdfImport < Import
   def process_with_ai
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # process_pdf (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
+    provider = if ai_provider == "codex"
+      Provider::Codex.new
+    else
+      Provider::Registry.preferred_llm_provider
+    end
     raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
     raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_no_pdf_support") unless provider.supports_pdf_processing?
 
@@ -231,9 +244,14 @@ class PdfImport < Import
     end
 
     result = response.data
+    if result.summary.blank? && result.extracted_data.blank?
+      raise Provider::Error, I18n.t("imports.pdf_import.errors.incomplete_response")
+    end
+
     update!(
       ai_summary: result.summary,
-      document_type: result.document_type
+      document_type: result.document_type,
+      extracted_data: result.extracted_data.presence || extracted_data
     )
 
     result
@@ -241,6 +259,12 @@ class PdfImport < Import
 
   def extract_transactions
     return unless statement_with_transactions?
+
+    # Codex owns the extraction step for subscription-backed imports. An empty
+    # transaction list is still a valid result, so do not fall back to an API
+    # provider when no transactions were found.
+    return extracted_data if ai_provider == "codex"
+    return extracted_data if has_extracted_transactions?
 
     # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
     # extract_bank_statement (PR #1985).

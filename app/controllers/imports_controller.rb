@@ -70,6 +70,7 @@ class ImportsController < ApplicationController
   def new
     @pending_import = Current.family.imports.ordered.pending.first
     @document_upload_extensions = document_upload_supported_extensions
+    @codex_pdf_processing_available = Provider::Codex.configured?
   end
 
   def create
@@ -91,7 +92,7 @@ class ImportsController < ApplicationController
         redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
         return
       end
-      create_pdf_import(file)
+      create_pdf_import(file, ai_provider: requested_ai_provider)
       return
     end
 
@@ -169,7 +170,7 @@ class ImportsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(:import_file)
+      params.require(:import).permit(:import_file, :ai_provider)
     end
 
     def require_statement_import_permission!
@@ -179,17 +180,26 @@ class ImportsController < ApplicationController
       redirect_back_or_to redirect_target, alert: t("accounts.not_authorized")
     end
 
-    def create_pdf_import(file)
+    def create_pdf_import(file, ai_provider: "api")
       return redirect_to new_import_path, alert: t("accounts.not_authorized") unless AccountStatement.statement_manager?(Current.user)
       return redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte) if file.size > Import::MAX_PDF_SIZE
 
-      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
-      pdf_import.process_with_ai_later
+      pdf_import = create_pdf_import_record(file, ai_provider: ai_provider)
       redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
     rescue AccountStatement::DuplicateUploadError
       redirect_to new_import_path, alert: t("imports.create.duplicate_pdf_unavailable")
     rescue AccountStatement::InvalidUploadError
       redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
+    end
+
+    def create_pdf_import_record(file, ai_provider: "api")
+      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
+      pdf_import.process_with_ai_later(provider: ai_provider)
+      pdf_import
+    end
+
+    def requested_ai_provider
+      params.dig(:import, :ai_provider).to_s == "codex" && Provider::Codex.configured? ? "codex" : "api"
     end
 
     def create_document_import(file)
