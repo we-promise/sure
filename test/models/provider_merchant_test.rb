@@ -74,4 +74,35 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     )
     assert_empty without_id.import_diff({ "name" => "Acme" })
   end
+
+  test "does not support color: writes are discarded and the stored value is NULL" do
+    assert_nil ProviderMerchant.new(name: "New", source: "plaid", color: "#123456").color
+
+    created = ProviderMerchant.create!(name: "Colored", source: "plaid", color: "#123456")
+
+    assert_nil created.color
+    assert_nil ProviderMerchant.where(id: created.id).pick(:color)
+  end
+
+  test "does not support color: a stale value on an old row is never read and is cleared on the next save" do
+    legacy = ProviderMerchant.create!(name: "Legacy", source: "plaid")
+    legacy.update_column(:color, "#654321")
+
+    assert_nil ProviderMerchant.find(legacy.id).color, "a stale value must not reach a view"
+    assert_equal "#654321", ProviderMerchant.where(id: legacy.id).pick(:color), "still stored until the row is saved"
+
+    ProviderMerchant.find(legacy.id).update!(website_url: "https://legacy.example")
+
+    assert_nil ProviderMerchant.where(id: legacy.id).pick(:color)
+    assert_equal "https://legacy.example", legacy.reload.website_url
+  end
+
+  test "family merchants are unaffected and converting a provider merchant still gives the copy a color" do
+    assert_match(/\A#[0-9A-Fa-f]{6}\z/, @family.merchants.create!(name: "Mine").color)
+
+    converted = @provider_merchant.convert_to_family_merchant_for(@family, name: "Acme Mine", color: "#4da568")
+
+    assert_equal "#4da568", converted.color
+    assert_nil @provider_merchant.reload.color
+  end
 end

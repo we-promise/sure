@@ -315,7 +315,8 @@ class Family::DataExporter
       # Export provider-assigned merchants (auto-detected by bank sync/AI enrichment)
       # referenced by this family's transactions and recurring transactions. These
       # are shared across every family on the instance, so only the ones actually
-      # in use here are included -- see #3113.
+      # in use here are included -- see #3113. ProviderMerchant does not support
+      # color, so none is exported for it.
       referenced_provider_merchants.each do |merchant|
         lines << {
           type: "ProviderMerchant",
@@ -324,7 +325,6 @@ class Family::DataExporter
             name: merchant.name,
             source: merchant.source,
             provider_merchant_id: merchant.provider_merchant_id,
-            color: merchant.color,
             logo_url: merchant.logo_url,
             website_url: merchant.website_url,
             created_at: merchant.created_at,

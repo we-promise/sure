@@ -528,6 +528,7 @@ class Family::DataImporter
       end
     end
 
+    # ProviderMerchant does not support color, so a color in the file is not read.
     # The savepoint keeps a lost race from aborting the surrounding import transaction.
     # A race usually surfaces as the name-uniqueness validation (RecordInvalid) rather
     # than the index (RecordNotUnique); either way, reuse the winner if it exists and
@@ -538,7 +539,6 @@ class Family::DataImporter
           name: data["name"],
           source: source,
           provider_merchant_id: data["provider_merchant_id"].presence,
-          color: data["color"],
           logo_url: data["logo_url"],
           website_url: data["website_url"]
         )

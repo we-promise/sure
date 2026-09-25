@@ -10,7 +10,7 @@ class ProviderMerchant < Merchant
     by_provider_id || find_by(name: data["name"], source: source)
   end
 
-  # color is deliberately not compared: nothing ever sets it on a ProviderMerchant.
+  # color is not compared: ProviderMerchant does not support color.
   def import_diff(data)
     %w[website_url name provider_merchant_id].filter_map do |field|
       imported_value = data[field].presence
@@ -19,6 +19,27 @@ class ProviderMerchant < Merchant
       { field: field, imported_value: imported_value, kept_value: self[field] }
     end
   end
+
+  # ProviderMerchant does not support color. merchants.color is a legacy column from
+  # when every merchant was family-owned, and FamilyMerchant is the only type that
+  # uses it. It is switched off in three overlapping places, so no path can store or
+  # show one for this type:
+  #
+  # ProviderMerchant does not support color: reads are always nil, so a stale value
+  # on an old row never reaches a view, and writes are discarded.
+  def color = nil
+
+  def color=(_value)
+    super(nil)
+  end
+
+  # ProviderMerchant does not support color: this clears a stale stored value so the
+  # next save writes NULL (see NullProviderMerchantColors for the one-off cleanup).
+  before_validation { self.color = nil }
+
+  # ProviderMerchant does not support color: states the contract. It can't fail today,
+  # because the accessors and the hook above have already discarded any value.
+  validates :color, absence: true
 
   # Convert this ProviderMerchant to a FamilyMerchant for a specific family.
   # Only affects transactions belonging to that family.
