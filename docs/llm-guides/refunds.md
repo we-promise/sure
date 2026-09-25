@@ -43,7 +43,17 @@ breakdowns and CSV exports; linked purchase net cost uses dated refund rates.
 Archive restoration skips absent and unchanged refund links. Explicit null still
 clears a link when replaying a session. Missing purchase references leave refunds
 unlinked in permissive imports; strict session imports reject missing references
-to avoid silently losing archive relationships.
+to avoid silently losing archive relationships. A pairing the current rules no
+longer accept -- an archived purchase that is excluded or pending -- imports as an
+unlinked refund with a logged warning, rather than failing every record in the
+archive.
+
+The purchase side of a link is validated when the link is created or the refund's
+kind changes, not on every later save. `refundable_purchase?` reads the purchase's
+live state, so re-checking it continuously let an unrelated change to the purchase
+leave the refund permanently unsavable. Keep drift out at the source instead: the
+guards on exclusion, splitting, transfers and trade conversion are what hold the
+invariant, and a new one belongs there rather than in the refund's own validation.
 
 The nullable indexed self-reference is introduced by
 `20260906120000_add_refund_of_to_transactions.rb`. No historical transactions are

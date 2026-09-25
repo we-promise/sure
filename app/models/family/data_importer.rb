@@ -936,7 +936,19 @@ class Family::DataImporter
           transaction = records.fetch(transaction_id)
           next if transaction.refund_of_id == purchase_id
 
-          transaction.update!(refund_of: purchase_id && records.fetch(purchase_id))
+          purchase = purchase_id && records.fetch(purchase_id)
+          # An archive can hold a pairing today's rules no longer accept (a
+          # purchase excluded or re-marked pending after it was linked). The
+          # refund itself still imports; only the link is dropped, rather than
+          # failing every record in the archive over one stale pairing.
+          if purchase && !purchase.refundable_purchase?
+            Rails.logger.warn(
+              "Skipped refund link for transaction #{transaction.id}: purchase #{purchase.id} is no longer a linkable purchase"
+            )
+            next
+          end
+
+          transaction.update!(refund_of: purchase)
         end
       end
     end

@@ -109,6 +109,20 @@ class Family::RefundExportTest < ActiveSupport::TestCase
     assert_empty @target.transactions
   end
 
+  test "an archived purchase that is no longer linkable imports without failing the archive" do
+    refund = create_transaction(account: @account, name: "Refund", amount: -800)
+    refund.transaction.mark_as_refund!(purchase: @purchase.transaction)
+    # Reachable through Entry.auto_exclude_stale_pending, which writes with update_all.
+    @purchase.update_column(:excluded, true)
+
+    restore_export
+
+    assert_equal 2, @target.transactions.count
+    restored = @target.transactions.refund.sole
+    assert restored.refund?
+    assert_nil restored.refund_of_id
+  end
+
   private
     def export_records
       records = nil

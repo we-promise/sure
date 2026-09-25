@@ -279,6 +279,18 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "refusing to exclude a linked purchase explains why and keeps the stored state" do
+    purchase = create_transaction(account: accounts(:depository), amount: 1000)
+    refund = create_transaction(account: accounts(:depository), amount: -400)
+    refund.transaction.mark_as_refund!(purchase: purchase.transaction)
+
+    patch transaction_url(purchase), params: { entry: { excluded: true } }
+
+    assert_response :unprocessable_entity
+    assert_not purchase.reload.excluded?
+    assert_includes response.body, I18n.t("activerecord.errors.messages.refund_links_present")
+  end
+
   test "updates with transaction details" do
     assert_no_difference [ "Entry.count", "Transaction.count" ] do
       patch transaction_url(@entry), params: {

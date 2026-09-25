@@ -39,6 +39,36 @@ class Transaction::RefundableTest < ActiveSupport::TestCase
     assert @purchase.update(excluded: true)
   end
 
+  test "a purchase that drifts out of linkable state does not brick its refund" do
+    @credit.transaction.mark_as_refund!(purchase: @purchase.transaction)
+    # Entry validations block the UI toggle, but Entry.auto_exclude_stale_pending
+    # writes through update_all, so the drift is still reachable.
+    @purchase.update_column(:excluded, true)
+
+    refund = @credit.transaction.reload
+    assert refund.update(merchant: nil, category: categories(:food_and_drink)),
+      refund.errors.full_messages.to_sentence
+    assert refund.reload.refund?
+    assert_equal @purchase.transaction, refund.refund_of
+  end
+
+  test "a purchase that is not linkable cannot be linked in the first place" do
+    @purchase.update_column(:excluded, true)
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      @credit.transaction.mark_as_refund!(purchase: @purchase.transaction)
+    end
+    assert @credit.transaction.reload.standard?
+  end
+
+  test "dropping refund classification while a purchase link remains is still rejected" do
+    @credit.transaction.mark_as_refund!(purchase: @purchase.transaction)
+    refund = @credit.transaction.reload
+
+    assert_not refund.update(kind: "standard")
+    assert refund.errors.of_kind?(:refund_of, :invalid)
+  end
+
   test "an uncategorized purchase preserves the refund category and enrichment eligibility" do
     @purchase.transaction.update!(category: nil)
     @credit.transaction.update!(category: categories(:food_and_drink))

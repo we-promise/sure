@@ -68,7 +68,13 @@ module Transaction::Refundable
         errors.add(:base, :invalid_refund)
       end
 
-      if refund_of
+      # Only validated while the link itself moves. `refundable_purchase?`
+      # reads the purchase's live state, so re-checking it on every later save
+      # let an unrelated change to the purchase (excluded, pending) make the
+      # refund permanently unsavable. The purchase's own guards -- exclusion,
+      # splitting, transfers, trade conversion -- keep that state from drifting
+      # at the source instead.
+      if refund_of && (refund_of_id_changed? || kind_changed?)
         unless refund? && refund_of != self && refund_of.refundable_purchase? &&
             entry&.account&.family_id == refund_of.entry.account.family_id
           errors.add(:refund_of, :invalid)

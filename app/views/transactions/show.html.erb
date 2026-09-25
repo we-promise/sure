@@ -6,6 +6,13 @@
     </div>
   <% end %>
   <% dialog.with_body do %>
+    <%# Validation errors (e.g. excluding a purchase that still has linked refunds) %>
+    <% if @entry.errors.any? %>
+      <div class="mx-4 my-3">
+        <%= render DS::Alert.new(message: @entry.errors.full_messages.to_sentence, variant: :error, live: :alert) %>
+      </div>
+    <% end %>
+
     <%# Potential duplicate alert %>
     <% if @entry.transaction.has_potential_duplicate? %>
       <% potential_match = @entry.transaction.potential_duplicate_entry %>

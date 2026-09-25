@@ -235,6 +235,11 @@ class TransactionsController < ApplicationController
         end
       end
     else
+      # Drop the rejected assignment so the re-rendered drawer shows the state
+      # that is actually persisted (e.g. an exclude toggle that was refused),
+      # while keeping the errors the template surfaces. `restore_attributes`
+      # does not touch `errors`.
+      @entry.restore_attributes
       assign_mark_recurring_state
       render :show, status: :unprocessable_entity
     end
