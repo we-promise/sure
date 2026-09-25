@@ -143,7 +143,7 @@ class Import::UploadsController < ApplicationController
     end
 
     def csv_uploads
-      Array(upload_params[:import_file]).compact
+      Array(upload_params[:import_file]).select { |upload| upload.respond_to?(:read) }
     end
 
     def csv_valid?(str)

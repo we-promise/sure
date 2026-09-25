@@ -60,6 +60,26 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert imported.all? { |import| import.raw_file_str == file_fixture("imports/valid.csv").read }
   end
 
+  test "ignores empty multipart file placeholders when uploading multiple csv files" do
+    uploads = [
+      "",
+      file_fixture_upload("imports/valid.csv"),
+      file_fixture_upload("imports/valid.csv")
+    ]
+
+    assert_difference "Import.where(type: 'TransactionImport').count", 1 do
+      patch import_upload_url(@import), params: {
+        import: {
+          import_file: uploads,
+          col_sep: ","
+        }
+      }
+    end
+
+    assert_redirected_to imports_url
+    assert_equal I18n.t("imports.create.csv_uploaded_many", count: 2), flash[:notice]
+  end
+
   test "account select does not leak unshared family accounts (#1803)" do
     sign_in users(:family_member)
 
