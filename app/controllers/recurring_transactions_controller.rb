@@ -136,6 +136,8 @@ class RecurringTransactionsController < ApplicationController
     # Accessible, not merely same-family: prefilling reads the entry's name,
     # amount and account straight back to the user.
     if (entry = Current.accessible_entries.find_by(id: params[:entry_id]))
+      raise ActiveRecord::RecordNotFound if entry.transaction? && entry.transaction.refund?
+
       prefill_recurring_from_entry(entry)
     else
       # Fresh dialog: offer detected-but-undeclared recurring shapes as
@@ -311,7 +313,7 @@ class RecurringTransactionsController < ApplicationController
         .where(income ? "entries.amount < 0" : "entries.amount > 0")
         .merge(Entry.excluding_split_parents)
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
-        .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+        .where.not(transactions: { kind: Transaction::TRANSFER_KINDS + [ "refund" ] })
 
       if @picker_query.present?
         pattern = "%#{ActiveRecord::Base.sanitize_sql_like(@picker_query)}%"

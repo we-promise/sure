@@ -16,6 +16,32 @@ class RecurringAllocationsControllerTest < ActionDispatch::IntegrationTest
     @occurrence = @series.recurring_occurrences.order(:due_on).first
   end
 
+  test "direct requests cannot attach refunds to income occurrences" do
+    @series.update!(amount: -95, bill_type: "income")
+    entry = @series.account.entries.create!(name: "Refund", amount: -95, currency: "USD",
+      date: Date.current, entryable: Transaction.new(kind: "refund"))
+
+    assert_no_difference "RecurringAllocation.count" do
+      post recurring_occurrence_allocations_url(@occurrence), params: { entry_id: entry.id }
+    end
+    assert_redirected_to bills_path
+    assert_equal I18n.t("recurring_allocations.invalid"), flash[:alert]
+  end
+
+  test "confirming a payment reclassified as a refund returns a useful error" do
+    @series.update!(amount: -95, bill_type: "income")
+    entry = @series.account.entries.create!(name: "Refund", amount: -95, currency: "USD",
+      date: Date.current, entryable: Transaction.new)
+    suggestion = RecurringTransaction::Allocator.new(@occurrence).allocate_matched!(
+      entry: entry, state: "suggested", confidence: 0.7, signals: {})
+    entry.transaction.reload.mark_as_refund!
+
+    post confirm_recurring_allocation_url(suggestion)
+    assert_redirected_to bills_path
+    assert_equal I18n.t("recurring_allocations.invalid"), flash[:alert]
+    assert suggestion.reload.allocation_suggested?
+  end
+
   test "allocation writes redirect when the family has turned recurring transactions off" do
     @family.update!(recurring_transactions_disabled: true)
 
