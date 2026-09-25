@@ -334,7 +334,7 @@ class Settings::HostingsController < ApplicationController
       @openai_models_error = nil
 
       uri_base = ENV["OPENAI_URI_BASE"].presence || @openai_uri_base_input.presence || Setting.openai_uri_base
-      return if uri_base.blank?
+      return if uri_base.blank? || ENV["OPENAI_MODEL"].present?
 
       @openai_models = Provider::Openai::ModelCatalog.new(
         uri_base: uri_base,
