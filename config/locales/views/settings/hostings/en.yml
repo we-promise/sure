@@ -77,9 +77,21 @@ en:
         token_label: API Token
         token_placeholder: Enter the token from your agent provider
         token_help: The authentication token provided by your external agent. This is sent as a Bearer token with each request.
-        agent_id_label: Agent ID (Optional)
+        agent_id_label: Agent (Required)
         agent_id_placeholder: "main (default)"
-        agent_id_help: Routes to a specific agent when the provider hosts multiple. Leave blank for the default.
+        agent_id_help: Sure loads this list from the endpoint's /v1/models response. The selected agent controls routing; its underlying model is managed by the external service.
+        agent_discovery_configure_first: Save a valid endpoint URL and API token to load available agents.
+        external_agent_required: Select an external agent before saving.
+        external_agent_invalid: Select an agent returned by the configured endpoint.
+        external_agent_reselect: The endpoint changed and the previously selected agent is not available there. Select an agent from the new endpoint.
+        agent_discovery_error: "Could not load agents: %{error}"
+        external_info:
+          title: External AI configuration
+          items:
+            - Enter the full OpenAI-compatible endpoint URL ending in /v1/chat/completions.
+            - Sure discovers available agents from /v1/models after the endpoint and token are saved.
+            - The external service chooses the model behind each agent; Sure only selects the agent route.
+            - Authentication, endpoint, or agent errors are returned by the external service. Check its logs when a request fails.
         disconnect_title: External connection
         disconnect_description: Remove the external assistant connection and switch back to the builtin assistant.
         disconnect_button: Disconnect
