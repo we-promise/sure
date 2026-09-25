@@ -5,10 +5,10 @@
     <%= render "categories/menu", transaction: transaction, in_split_group: in_split_group %>
   <% else %>
     <div class="hidden lg:flex">
-      <%= render "categories/badge", category: transaction.transfer&.payment? ? payment_category :  transfer_category %>
+      <%= render "categories/badge", category: transaction.payment? ? payment_category : transfer_category %>
     </div>
     <div class="flex lg:hidden">
-      <%= render "categories/badge_mobile", category: transaction.transfer&.payment? ? payment_category :  transfer_category %>
+      <%= render "categories/badge_mobile", category: transaction.payment? ? payment_category : transfer_category %>
     </div>
   <% end %>
 </div>

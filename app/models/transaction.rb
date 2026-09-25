@@ -166,6 +166,15 @@ class Transaction < ApplicationRecord
     !UNCATEGORIZED_EXCLUDED_KINDS.include?(kind)
   end
 
+  # Whether this non-editable transfer leg is a liability payment (shown
+  # with the "Payment" badge instead of "Transfer"). Falls back to the
+  # transaction's own kind when there's no Transfer record yet (e.g. a
+  # provider-imported cc_payment leg whose counterpart hasn't been matched),
+  # the same pattern category_editable? uses.
+  def payment?
+    transfer&.payment? || kind == "cc_payment"
+  end
+
   def set_category!(category)
     if category.is_a?(String)
       category = entry.account.family.categories.find_or_create_by!(

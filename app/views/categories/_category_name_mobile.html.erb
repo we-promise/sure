@@ -2,6 +2,6 @@
   <% if transaction.category_editable? %>
     <%= transaction.category&.display_name || Category.uncategorized.display_name %>
   <% else %>
-    <%= transaction.transfer&.payment? ? payment_category.display_name :  transfer_category.display_name %>
+    <%= transaction.payment? ? payment_category.display_name : transfer_category.display_name %>
   <% end %>
 </span>

@@ -173,6 +173,20 @@ class TransactionTest < ActiveSupport::TestCase
     assert_not fm_outflow.transaction.reload.category_editable?
   end
 
+  test "payment? is true for cc_payment kind without a Transfer record" do
+    assert Transaction.new(kind: "cc_payment").payment?
+    assert_not Transaction.new(kind: "funds_movement").payment?
+  end
+
+  test "payment? defers to Transfer#payment? when a Transfer record exists" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "cc_payment")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500, kind: "cc_payment")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    assert outflow_entry.transaction.reload.payment?
+    assert inflow_entry.transaction.reload.payment?
+  end
+
   test "all transaction kinds are valid" do
     valid_kinds = %w[standard funds_movement cc_payment loan_payment one_time investment_contribution]
 
