@@ -493,6 +493,8 @@ class Family::DataImporter
           color: data["color"],
           logo_url: data["logo_url"]
         )
+        # Older or hand-built files omit website_url; don't clear an existing one.
+        merchant.website_url = data["website_url"] if data.key?("website_url")
         merchant.save!
         map_source!(:merchants, old_id, merchant)
         increment_summary("Merchant", created ? :created : :updated)

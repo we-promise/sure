@@ -984,6 +984,24 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal "#12B76A", existing_merchant.reload.color
   end
 
+  test "family merchant import carries website_url and leaves an existing one alone when the file omits it" do
+    kept = @family.merchants.create!(name: "Kept Cafe", website_url: "https://kept.example")
+    updated = @family.merchants.create!(name: "Updated Cafe", website_url: "https://old.example")
+
+    attach_ndjson(build_ndjson([
+      { type: "Merchant", data: { id: "m-new", name: "New Cafe", website_url: "https://new.example" } },
+      { type: "Merchant", data: { id: "m-kept", name: "Kept Cafe" } },
+      { type: "Merchant", data: { id: "m-updated", name: "Updated Cafe", website_url: "https://fresh.example" } }
+    ]))
+
+    @import.publish
+
+    assert_equal "complete", @import.status
+    assert_equal "https://new.example", @family.merchants.find_by!(name: "New Cafe").website_url
+    assert_equal "https://kept.example", kept.reload.website_url
+    assert_equal "https://fresh.example", updated.reload.website_url
+  end
+
   private
 
     def attach_ndjson(ndjson)
