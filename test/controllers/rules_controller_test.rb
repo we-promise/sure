@@ -241,6 +241,36 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_select "td", text: "10 / 7 / 4 / 3"
   end
 
+  # The confirmation screen used to hardcode :openai, so it quoted a provider
+  # that would not run — an Anthropic install saw the OpenAI model, and a family
+  # on Jev saw whichever LLM model happened to be configured.
+  test "confirm names the provider that will actually categorize" do
+    rule = rules(:one)
+    rule.actions.create!(action_type: "auto_categorize")
+    @user.family.update!(categorization_provider: "jev")
+    # The general stub catches the :openai lookup preferred_llm_provider makes;
+    # the specific one wins for :jev.
+    Provider::Registry.stubs(:get_provider).returns(nil)
+    Provider::Registry.stubs(:get_provider).with(:jev).returns(Provider::Jev.allocate)
+    Provider::Jev.stubs(:effective_model).returns("~typesafe/jev-latest")
+
+    get confirm_rule_url(rule)
+
+    assert_response :success
+    assert_match "~typesafe/jev-latest", response.body
+  end
+
+  test "confirm does not name Jev when the family has not selected it" do
+    rule = rules(:one)
+    rule.actions.create!(action_type: "auto_categorize")
+    assert_equal "llm", @user.family.categorization_provider
+
+    get confirm_rule_url(rule)
+
+    assert_response :success
+    assert_no_match "~typesafe/jev-latest", response.body
+  end
+
   test "should get confirm_all" do
     get confirm_all_rules_url
     assert_response :success

@@ -352,7 +352,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assistant_message = pending_assistant_message
 
@@ -372,7 +373,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => nil,
-      "EXTERNAL_ASSISTANT_TOKEN" => nil
+      "EXTERNAL_ASSISTANT_TOKEN" => nil,
+      "EXTERNAL_ASSISTANT_MODEL" => nil
     ) do
       # Ensure Settings are also cleared to avoid test pollution from
       # other tests that may have set these values in the same process.
@@ -401,7 +403,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assert_no_difference "AssistantMessage.count" do
         assistant.respond_to(@message)
@@ -429,7 +432,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assert_no_difference "AssistantMessage.count" do
         assistant.respond_to(@message)
@@ -452,7 +456,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assistant.respond_to(@message)
 
@@ -468,7 +473,7 @@ class AssistantTest < ActiveSupport::TestCase
     @chat.user.family.update!(assistant_type: "external")
 
     # Phase 1: Without config, errors gracefully
-    with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil) do
+    with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil, "EXTERNAL_ASSISTANT_MODEL" => nil) do
       Setting.external_assistant_url = nil
       Setting.external_assistant_token = nil
       Setting.clear_cache
@@ -495,7 +500,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assistant = Assistant::External.new(@chat)
       assistant_message = pending_assistant_message
@@ -525,7 +531,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assistant.respond_to(@message)
 
@@ -543,7 +550,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assistant_message = pending_assistant_message
       assistant.respond_to(@message, assistant_message: assistant_message)
