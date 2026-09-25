@@ -33,11 +33,11 @@ module Transaction::Refundable
       self.extra = extra.merge("refund" => { "previous_kind" => kind }) unless refund?
       self.kind = "refund"
       self.refund_of = purchase
-      self.category = purchase.category if purchase
+      self.category = purchase.category if purchase&.category
       save!
       lock_attr!(:kind)
       lock_attr!(:refund_of_id)
-      lock_attr!(:category_id) if purchase
+      lock_attr!(:category_id) if purchase&.category
       entry.mark_user_modified!
     end
   end
@@ -46,6 +46,8 @@ module Transaction::Refundable
     with_lock do
       previous_kind = extra.dig("refund", "previous_kind").presence_in(%w[standard cc_payment]) || "standard"
       update!(kind: previous_kind, refund_of: nil, extra: extra.except("refund"))
+      # Undo is still an explicit classification choice; provider enrichment
+      # must not replace it on the next sync.
       lock_attr!(:kind)
       lock_attr!(:refund_of_id)
       entry.mark_user_modified!

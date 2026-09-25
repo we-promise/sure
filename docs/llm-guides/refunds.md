@@ -9,7 +9,9 @@ that month's spending, potentially below zero.
 The optional `refund_of_id` links a refund to its original purchase. Several
 refunds may reference one purchase. A combined refund can be split using the
 existing transaction split workflow before linking each child to a purchase.
-Linking copies the purchase category but does not change either bank amount.
+Linking copies and locks the purchase category when present; an uncategorized
+purchase preserves the refund's category and its existing lock state. Linking
+does not change either bank amount.
 Sender names, amounts and currencies do not need to match. Purchase detail net
 cost uses each refund's dated exchange rate and displays unavailable when a rate
 cannot be obtained. It includes only refunds accessible to the viewer.
@@ -22,8 +24,9 @@ annotation-only account shares cannot change classification.
 Use `Transaction#mark_as_refund!(purchase: nil)` and `#clear_refund!` for manual
 classification, preserving enrichment locks and provider metadata. Unpaired
 credit-card payments may be corrected to refunds; undo restores their prior
-kind. Auto-transfer matching and recurring-income identification exclude refunds.
-Unlink before splitting linked transactions or creating transfers. Deleting a
+kind. Undo remains a manual classification, protected from provider enrichment.
+Auto-transfer matching and recurring-income identification exclude refunds.
+Unlink before excluding a linked purchase, splitting linked transactions or creating transfers. Deleting a
 purchase leaves its credits classified as unlinked refunds.
 
 Expense aggregates must preserve signs: do not wrap their sums in `ABS`, clip
@@ -31,6 +34,16 @@ refund-only categories to zero or move negative spending into income. Budget
 visualization percentages can be zero while actual spending remains negative.
 The bank-direction `Entry#classification` is retained for API compatibility;
 financial reports and refund filters use the transaction kind.
+
+The transaction search's expense and refund filters are separate row types.
+Search totals describe the selected rows: select both to see net spending for
+those rows. Reports retain their existing current-rate conversion for category
+breakdowns and CSV exports; linked purchase net cost uses dated refund rates.
+
+Archive restoration skips absent and unchanged refund links. Explicit null still
+clears a link when replaying a session. Missing purchase references leave refunds
+unlinked in permissive imports; strict session imports reject missing references
+to avoid silently losing archive relationships.
 
 The nullable indexed self-reference is introduced by
 `20260906120000_add_refund_of_to_transactions.rb`. No historical transactions are

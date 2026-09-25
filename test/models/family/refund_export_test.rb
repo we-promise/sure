@@ -60,14 +60,66 @@ class Family::RefundExportTest < ActiveSupport::TestCase
     assert_equal Money.new(500, "USD"), restored.purchase_net_cost_money
   end
 
+  test "unlinked archive transactions do not issue refund link updates" do
+    create_transaction(account: @account, name: "Unlinked refund", amount: -50, kind: "refund")
+    Transaction.any_instance.expects(:update!).never
+
+    restore_export
+
+    assert_equal 2, @target.transactions.count
+    assert_nil @target.transactions.refund.sole.refund_of_id
+  end
+
+  test "replaying an archive can explicitly clear an existing refund link" do
+    refund = create_transaction(account: @account, name: "Refund", amount: -800)
+    refund.transaction.mark_as_refund!(purchase: @purchase.transaction)
+    session = @target.import_sessions.create!
+    records = export_records
+    Family::DataImporter.new(@target, records.map(&:to_json).join("\n"), import_session: session).import!
+    restored = @target.transactions.refund.sole
+    assert_not_nil restored.refund_of_id
+
+    records.find { |record| record.dig("data", "id") == refund.transaction.id }["data"]["refund_of_id"] = nil
+    Family::DataImporter.new(@target, records.map(&:to_json).join("\n"), import_session: session).import!
+
+    assert_nil restored.reload.refund_of_id
+    assert restored.refund?
+    assert_equal 2, @target.transactions.count
+  end
+
+  test "missing purchase links are optional outside strict session imports" do
+    refund = create_transaction(account: @account, name: "Refund", amount: -800)
+    refund.transaction.mark_as_refund!(purchase: @purchase.transaction)
+    records = export_records.reject { |record| record.dig("data", "id") == @purchase.transaction.id }
+
+    Family::DataImporter.new(@target, records.map(&:to_json).join("\n")).import!
+
+    assert_nil @target.transactions.refund.sole.refund_of_id
+  end
+
+  test "strict session imports reject missing purchase links instead of silently losing them" do
+    refund = create_transaction(account: @account, name: "Refund", amount: -800)
+    refund.transaction.mark_as_refund!(purchase: @purchase.transaction)
+    records = export_records.reject { |record| record.dig("data", "id") == @purchase.transaction.id }
+    session = @target.import_sessions.create!
+
+    assert_raises(Family::DataImporter::MissingReferenceError) do
+      Family::DataImporter.new(@target, records.map(&:to_json).join("\n"), import_session: session).import!
+    end
+    assert_empty @target.transactions
+  end
+
   private
-    def restore_export
+    def export_records
       Zip::File.open_buffer(Family::DataExporter.new(@family).generate_export) do |zip|
-        records = zip.read("all.ndjson").lines.map { |line| JSON.parse(line) }
-        # Import must not rely on UUID or chronological ordering.
-        transactions, others = records.partition { |record| record["type"] == "Transaction" }
-        transactions.sort_by! { |record| record["data"]["amount"].to_d }
-        Family::DataImporter.new(@target, (others + transactions).map(&:to_json).join("\n")).import!
+        zip.read("all.ndjson").lines.map { |line| JSON.parse(line) }
       end
+    end
+
+    def restore_export
+      # Import must not rely on UUID or chronological ordering.
+      transactions, others = export_records.partition { |record| record["type"] == "Transaction" }
+      transactions.sort_by! { |record| record["data"]["amount"].to_d }
+      Family::DataImporter.new(@target, (others + transactions).map(&:to_json).join("\n")).import!
     end
 end

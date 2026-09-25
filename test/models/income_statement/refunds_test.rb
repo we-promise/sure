@@ -72,4 +72,26 @@ class IncomeStatement::RefundsTest < ActiveSupport::TestCase
     assert_equal 0, statement.expense_totals(period: @period).total
     assert_equal 0, statement.refund_totals(period: @period).total
   end
+
+  test "refund only budgets retain negative spending but report zero percent spent" do
+    create_transaction(account: @account, amount: -800, category: @category, kind: "refund")
+    budget = Budget.find_or_bootstrap(@family, start_date: Date.current.beginning_of_month)
+    budget.update!(budgeted_spending: 1000)
+
+    assert_equal(-800, budget.actual_spending)
+    assert_equal 0, budget.percent_of_budget_spent
+    assert_equal 1800, budget.available_to_spend
+  end
+
+  test "search totals ignore cache entries written before refund support" do
+    create_transaction(account: @account, amount: 1000, category: @category)
+    create_transaction(account: @account, amount: -800, category: @category, kind: "refund")
+    search = Transaction::Search.new(@family)
+    cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(cache)
+    cache.write("transaction_search_totals/v3/#{search.cache_key_base}", "legacy totals")
+
+    assert_equal Money.new(200, "USD"), search.totals.expense_money
+    assert_equal Money.new(800, "USD"), search.totals.refund_money
+  end
 end

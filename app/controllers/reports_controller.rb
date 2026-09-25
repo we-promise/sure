@@ -431,7 +431,7 @@ class ReportsController < ApplicationController
       process_entry = ->(category, entry, is_trade) do
         type = entry.transaction? && entry.transaction.refund? ? "expense" : (entry.amount > 0 ? "expense" : "income")
         begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, date: entry.date).amount
+          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
         rescue Money::ConversionError
           converted_amount = entry.amount.abs
         end
@@ -800,7 +800,7 @@ class ReportsController < ApplicationController
 
         # Convert to family currency
         begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency, date: entry.date).amount
+          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
         rescue Money::ConversionError
           converted_amount = entry.amount.abs
         end

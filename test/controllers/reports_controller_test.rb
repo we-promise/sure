@@ -96,6 +96,27 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "report breakdown and export retain current rate conversion for purchases and refunds" do
+    category = @family.categories.create!(name: "Foreign shopping")
+    date = Date.current - 10.days
+    create_transaction(account: accounts(:depository), amount: 100, currency: "EUR", date: date, category: category)
+    create_transaction(account: accounts(:depository), amount: -20, currency: "EUR", date: date, category: category, kind: "refund")
+    ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "USD", date: date).update!(rate: 1.1)
+    ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "USD", date: Date.current).update!(rate: 1.5)
+
+    get reports_path(period_type: :custom, start_date: date, end_date: Date.current)
+
+    assert_response :ok
+    expense = controller.view_assigns.fetch("transactions").find { |row| row[:category_id] == category.id && row[:type] == "expense" }
+    assert_equal 120, expense.fetch(:total)
+
+    get export_transactions_reports_path(format: :csv, period_type: :custom, start_date: date, end_date: Date.current)
+
+    assert_response :ok
+    expense = controller.view_assigns.fetch("export_data").fetch(:expenses).find { |row| row[:category] == category.name }
+    assert_equal 120, expense.fetch(:total)
+  end
+
   # The desktop app clones these into the tray when a download such as the CSV
   # export ends, since it has no download list of its own, and reads their data
   # attributes for its native notification.
