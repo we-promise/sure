@@ -105,3 +105,5 @@ zh-TW:
         round_up: Round up
         buy: 買入
         sell: 賣出
+        buy_trade_name: "買入 %{quantity} 份 %{instrument}"
+        sell_trade_name: "賣出 %{quantity} 份 %{instrument}"

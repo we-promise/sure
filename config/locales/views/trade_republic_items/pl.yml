@@ -10,6 +10,7 @@ pl:
     activities:
       labels:
         buy: Kupno
+        buy_trade_name: "Zakup %{quantity} akcji %{instrument}"
         card_fee: Opłata za kartę
         card_payment: Płatność kartą
         card_refund: Zwrot na kartę
@@ -19,6 +20,7 @@ pl:
         interest: Odsetki
         round_up: Round up
         sell: Sprzedaż
+        sell_trade_name: "Sprzedaż %{quantity} akcji %{instrument}"
         tax_refund: Zwrot podatku
         withdrawal: Wypłata
     complete_account_setup:

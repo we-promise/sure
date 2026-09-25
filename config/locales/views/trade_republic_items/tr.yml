@@ -105,3 +105,5 @@ tr:
         round_up: Round up
         buy: Alış
         sell: Satış
+        buy_trade_name: "%{instrument} için %{quantity} adet alış"
+        sell_trade_name: "%{instrument} için %{quantity} adet satış"

@@ -79,3 +79,5 @@ nl:
         round_up: Round up
         buy: Koop
         sell: Verkoop
+        buy_trade_name: "Koop %{quantity} aandelen %{instrument}"
+        sell_trade_name: "Verkoop %{quantity} aandelen %{instrument}"

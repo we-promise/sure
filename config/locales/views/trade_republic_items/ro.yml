@@ -81,3 +81,5 @@ ro:
         round_up: Round up
         buy: Cumpărare
         sell: Vânzare
+        buy_trade_name: "Cumpărare: %{quantity} acțiuni %{instrument}"
+        sell_trade_name: "Vânzare: %{quantity} acțiuni %{instrument}"

@@ -207,7 +207,7 @@ class TradeRepublicAccount::ActivitiesProcessor
         fee:            fee,
         currency:       detail[:currency].presence || currency,
         date:           date,
-        name:           build_trade_name(security.ticker, signed_quantity),
+        name:           build_trade_name(detail[:name], security, signed_quantity),
         source:         "trade_republic",
         activity_label: is_buy ? "Buy" : "Sell"
       )
@@ -531,8 +531,15 @@ class TradeRepublicAccount::ActivitiesProcessor
       )
     end
 
-    def build_trade_name(ticker, signed_quantity)
-      action = signed_quantity.negative? ? t("sell") : t("buy")
-      "#{action} #{signed_quantity.abs} shares of #{ticker}"
+    def build_trade_name(provider_name, security, signed_quantity)
+      name = provider_name.presence || security.name.presence || security.ticker
+      instrument = name.casecmp?(security.ticker) ? name : "#{name} (#{security.ticker})"
+      quantity = signed_quantity.abs.to_s("F").sub(/\.0+\z/, "")
+      key = signed_quantity.negative? ? "sell_trade_name" : "buy_trade_name"
+      locale = @trade_republic_account.trade_republic_item.family.locale.presence || I18n.default_locale
+
+      I18n.with_locale(locale) do
+        t(key, quantity: ActiveSupport::NumberHelper.number_to_delimited(quantity), instrument: instrument)
+      end
     end
 end

@@ -79,3 +79,5 @@ hu:
         round_up: Round up
         buy: Vétel
         sell: Eladás
+        buy_trade_name: "%{quantity} db %{instrument} vétele"
+        sell_trade_name: "%{quantity} db %{instrument} eladása"

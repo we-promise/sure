@@ -79,3 +79,5 @@ ru:
         round_up: Round up
         buy: Покупка
         sell: Продажа
+        buy_trade_name: "Покупка %{quantity} акций %{instrument}"
+        sell_trade_name: "Продажа %{quantity} акций %{instrument}"

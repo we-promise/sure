@@ -40,6 +40,53 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("13.439945").to_s, trade.entryable.qty.to_s
   end
 
+  test "trade names use the family locale and provider security name on every import" do
+    @family.update!(locale: "nl")
+    Security.create!(ticker: "ISPA", exchange_operating_mic: "XETR", name: "Old security name")
+    event = order_execution_detail(
+      event_id: "evt_localized_name", quantity: "0.623752", isin: "IE00B3RBWM25", amount: "25.00"
+    ).deep_merge(detail: {
+      name: "STOXX Global Dividend 100 EUR (Dist)", symbol: "ISPA", exchange_slug: "XETR"
+    })
+
+    I18n.with_locale(:en) { import_event(event) }
+
+    entry = find_trade("trade_republic_event_evt_localized_name")
+    assert_equal "Koop 0,623752 aandelen STOXX Global Dividend 100 EUR (Dist) (ISPA)", entry.name
+
+    @family.update!(locale: "en")
+    I18n.with_locale(:nl) { import_event(event) }
+
+    assert_equal entry.id, find_trade("trade_republic_event_evt_localized_name").id
+    assert_equal "Buy 0.623752 shares of STOXX Global Dividend 100 EUR (Dist) (ISPA)", entry.reload.name
+  end
+
+  test "sell names fall back to the ticker without repeating it" do
+    @family.update!(locale: "en")
+    event = order_execution_detail(
+      event_id: "evt_ticker_name", quantity: "-20.0", isin: "IE00B3RBWM25", amount: "80.00"
+    ).deep_merge(detail: { name: nil })
+
+    import_event(event)
+
+    assert_equal "Sell 20 shares of IE00B3RBWM25", find_trade("trade_republic_event_evt_ticker_name").name
+  end
+
+  test "existing Trade Republic locales provide trade name templates" do
+    locale_files = Dir[Rails.root.join("config/locales/views/trade_republic_items/*.yml")]
+
+    locale_files.each do |path|
+      locale = File.basename(path, ".yml")
+      %w[buy_trade_name sell_trade_name].each do |key|
+        translation = I18n.t("trade_republic_items.activities.labels.#{key}",
+                             locale: locale, fallback: false, quantity: "1", instrument: "Fund (FUND)")
+
+        assert_includes translation, "1", "Missing #{key} translation for #{locale}"
+        assert_includes translation, "Fund (FUND)", "Missing #{key} translation for #{locale}"
+      end
+    end
+  end
+
   test "trade reuses exchange symbol fetched for its portfolio position" do
     Security.stubs(:search_provider).returns([])
     @tr_account.update!(raw_positions_payload: [

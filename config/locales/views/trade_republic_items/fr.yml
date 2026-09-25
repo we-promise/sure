@@ -170,6 +170,8 @@ fr:
         round_up: Round up
         buy: Achat
         sell: Vente
+        buy_trade_name: "Achat de %{quantity} parts de %{instrument}"
+        sell_trade_name: "Vente de %{quantity} parts de %{instrument}"
     update:
       pin_required: Saisissez votre code PIN Trade Republic pour vous réauthentifier.
       success: Configuration Trade Republic mise à jour avec succès.
