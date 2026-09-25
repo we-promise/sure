@@ -92,3 +92,31 @@ end
 # Additional metadata
 json.created_at transaction.created_at.iso8601
 json.updated_at transaction.updated_at.iso8601
+
+# Split information (parent relation + child parts)
+json.parent_id transaction.entry.parent_entry&.transaction&.id
+# child_entries has no ordering, so raw DB order varies between reads. Sort by
+# creation to mirror the order the caller supplied the parts in, matching
+# Family::DataExporter#split_child_entries_for_export.
+child_parts = transaction.entry.child_entries.select(&:persisted?).sort_by { |child| [ child.created_at, child.id ] }
+if child_parts.any?
+  json.splits child_parts do |child|
+    json.id child.transaction.id
+    json.date child.date
+    json.name child.name
+    json.amount child.amount_money.format
+    json.excluded child.excluded
+    if child.transaction.category.present?
+      json.category do
+        json.id child.transaction.category.id
+        json.name child.transaction.category.name
+        json.color child.transaction.category.color
+        json.icon child.transaction.category.lucide_icon
+      end
+    else
+      json.category nil
+    end
+  end
+else
+  json.splits []
+end
