@@ -273,6 +273,83 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal "twelve_data", security.price_provider
   end
 
+  test "a concurrent exchange security insert does not abort the account sync" do
+    winner = Security.create!(
+      ticker: "BAS", exchange_operating_mic: "XETR", name: "BASF",
+      offline: true, offline_reason: "health_check_failed"
+    )
+    duplicate = Security.new(ticker: "BAS", exchange_operating_mic: "XETR")
+    duplicate.stubs(:valid?).returns(true) # Let the database unique index reject the insert.
+    Security.stubs(:find_by_ticker_and_exchange).returns(nil, winner)
+    Security.stubs(:find_or_initialize_by_ticker_and_exchange).returns(duplicate)
+    Security.stubs(:search_provider).returns([])
+
+    ActiveRecord::Base.transaction do
+      import_position(isin: "DE000BASF111", quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+
+      assert_equal winner.id, @account.holdings.first.security_id
+      @account.update!(name: "Sync continued")
+    end
+
+    assert_equal "Sync continued", @account.reload.name
+    assert_equal 1, Security.where(ticker: "BAS", exchange_operating_mic: "XETR").count
+    assert winner.reload.offline?
+    assert_equal "health_check_failed", winner.offline_reason
+  end
+
+  test "a concurrent provider-confirmed insert reuses the confirmed ticker" do
+    winner = Security.create!(
+      ticker: "BAS.DE", exchange_operating_mic: "XETR", name: "BASF",
+      offline: true, offline_reason: "health_check_failed"
+    )
+    duplicate = Security.new(ticker: "BAS.DE", exchange_operating_mic: "XETR")
+    duplicate.stubs(:valid?).returns(true) # Let the database unique index reject the insert.
+    Security.stubs(:search_provider).returns([
+      Security.new(ticker: "BAS.DE", exchange_operating_mic: "XETR", name: "BASF")
+    ])
+    Security.stubs(:find_or_initialize_by_ticker_and_exchange).returns(duplicate)
+    processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
+    processor.stubs(:available_price_provider).returns("twelve_data")
+
+    ActiveRecord::Base.transaction do
+      @tr_account.update!(raw_positions_payload: [
+        position_payload(isin: "DE000BASF111", quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+      ])
+      processor.process
+
+      assert_equal winner.id, @account.holdings.first.security_id
+      @account.update!(name: "Sync continued")
+    end
+
+    assert_equal "Sync continued", @account.reload.name
+    assert_equal 1, Security.where(ticker: "BAS.DE", exchange_operating_mic: "XETR").count
+    assert_not Security.exists?(ticker: "BAS", exchange_operating_mic: "XETR")
+    assert winner.reload.offline?
+    assert_equal "health_check_failed", winner.offline_reason
+    assert_equal "twelve_data", winner.price_provider
+  end
+
+  test "a provider-confirmed ticker found by validation reuses the existing security" do
+    winner = Security.create!(ticker: "BAS.DE", exchange_operating_mic: "XETR", name: "BASF")
+    Security.stubs(:search_provider).returns([
+      Security.new(ticker: "BAS.DE", exchange_operating_mic: "XETR", name: "BASF")
+    ])
+    Security.stubs(:find_or_initialize_by_ticker_and_exchange).returns(
+      Security.new(ticker: "BAS.DE", exchange_operating_mic: "XETR")
+    )
+    processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
+    processor.stubs(:available_price_provider).returns("twelve_data")
+    @tr_account.update!(raw_positions_payload: [
+      position_payload(isin: "DE000BASF111", quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+    ])
+
+    processor.process
+
+    assert_equal winner.id, @account.holdings.first.security_id
+    assert_equal "twelve_data", winner.reload.price_provider
+    assert_not Security.exists?(ticker: "BAS", exchange_operating_mic: "XETR")
+  end
+
   test "rematch prefers exchange market values and merges cost basis on collision" do
     Security.stubs(:search_provider).returns([])
 

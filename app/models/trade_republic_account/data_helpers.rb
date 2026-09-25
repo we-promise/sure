@@ -304,7 +304,9 @@ module TradeRepublicAccount::DataHelpers
         price_provider: price_provider
       )
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
-      Security.find_by_ticker_and_exchange(ticker: symbol, exchange_operating_mic: mic)
+      existing = Security.find_by_ticker_and_exchange(ticker: symbol, exchange_operating_mic: mic)
+      ensure_price_provider!(existing, price_provider) if existing
+      existing
     end
 
     # Exact ticker + MIC only — never fall through to Security::Resolver's
@@ -320,15 +322,27 @@ module TradeRepublicAccount::DataHelpers
 
       return nil unless match
 
-      security = Security.find_or_initialize_by_ticker_and_exchange(
-        ticker: match.ticker,
-        exchange_operating_mic: match.exchange_operating_mic.presence || mic
-      )
-      security.name = match.name.presence || name.presence || security.name || match.ticker
-      security.country_code = match.country_code.presence || country_code_for_mic(mic)
-      security.price_provider = price_provider if security.price_provider.blank?
-      security.save!
-      security
+      match_mic = match.exchange_operating_mic.presence || mic
+      Security.transaction(requires_new: true) do
+        security = Security.find_or_initialize_by_ticker_and_exchange(
+          ticker: match.ticker,
+          exchange_operating_mic: match_mic
+        )
+        security.name = match.name.presence || name.presence || security.name || match.ticker
+        security.country_code = match.country_code.presence || country_code_for_mic(mic)
+        security.price_provider = price_provider if security.price_provider.blank?
+        security.save!
+        security
+      end
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique => e
+      existing = Security.find_by_ticker_and_exchange(ticker: match.ticker, exchange_operating_mic: match_mic)
+      if existing
+        ensure_price_provider!(existing, price_provider)
+        existing
+      else
+        Rails.logger.warn("TradeRepublicAccount - Provider security confirm failed for #{symbol}/#{mic}: #{e.message}")
+        nil
+      end
     rescue StandardError => e
       Rails.logger.warn("TradeRepublicAccount - Provider security confirm failed for #{symbol}/#{mic}: #{e.message}")
       nil
@@ -354,15 +368,17 @@ module TradeRepublicAccount::DataHelpers
     end
 
     def find_or_create_exchange_security!(ticker:, exchange_operating_mic:, name:, price_provider:)
-      security = Security.find_or_initialize_by_ticker_and_exchange(
-        ticker: ticker,
-        exchange_operating_mic: exchange_operating_mic
-      )
-      security.name = name.presence || security.name || ticker
-      security.country_code = country_code_for_mic(exchange_operating_mic)
-      security.price_provider = price_provider if price_provider.present? && security.price_provider.blank?
-      security.save!
-      security
+      Security.transaction(requires_new: true) do
+        security = Security.find_or_initialize_by_ticker_and_exchange(
+          ticker: ticker,
+          exchange_operating_mic: exchange_operating_mic
+        )
+        security.name = name.presence || security.name || ticker
+        security.country_code = country_code_for_mic(exchange_operating_mic)
+        security.price_provider = price_provider if price_provider.present? && security.price_provider.blank?
+        security.save!
+        security
+      end
     end
 
     def country_code_for_mic(mic)
