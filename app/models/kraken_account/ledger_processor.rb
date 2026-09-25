@@ -18,8 +18,12 @@
 class KrakenAccount::LedgerProcessor
   include KrakenAccount::UsdConverter
 
-  # Ledger types we import.
-  SUPPORTED_TYPES = %w[deposit withdrawal staking earn fee].freeze
+  # Ledger types we import. `spend` and `receive` are the two halves of Kraken's
+  # dust sweep -- "convert small balances" -- and they move units like any other
+  # entry. Left out they were not skipped but dropped, silently, by the guard
+  # below, so a swept position stayed on the books at its pre-sweep quantity
+  # forever.
+  SUPPORTED_TYPES = %w[deposit withdrawal staking earn fee spend receive].freeze
 
   # Types whose fee is charged on top of a movement with an external counterparty,
   # and so must stay a separate entry for transfer matching to work.
@@ -231,6 +235,10 @@ class KrakenAccount::LedgerProcessor
       when "staking"               then "Dividend"
       when "earn"                  then "Interest"
       when "fee"                   then "Fee"
+      # A dust sweep exchanges one asset for another inside the exchange. Both
+      # halves are internal movements, so neither invents a cost basis.
+      when "spend"                 then "Sweep Out"
+      when "receive"               then "Sweep In"
       end
     end
 
@@ -425,8 +433,8 @@ class KrakenAccount::LedgerProcessor
     # True when the ledger event represents money flowing INTO the account.
     def inflow?(type)
       case type
-      when "deposit", "staking", "earn" then true
-      when "withdrawal", "fee"          then false
+      when "deposit", "staking", "earn", "receive" then true
+      when "withdrawal", "fee", "spend"            then false
       else false
       end
     end
@@ -439,6 +447,8 @@ class KrakenAccount::LedgerProcessor
       when "staking"    then "Staking reward #{qty} #{symbol}"
       when "earn"       then "Earn reward #{qty} #{symbol}"
       when "fee"        then "Fee #{qty} #{symbol}"
+      when "spend"      then "Converted #{qty} #{symbol}"
+      when "receive"    then "Received #{qty} #{symbol}"
       else "#{type.capitalize} #{qty} #{symbol}"
       end
     end
@@ -450,6 +460,8 @@ class KrakenAccount::LedgerProcessor
       when "staking"    then "Dividend"
       when "earn"       then "Interest"
       when "fee"        then "Fee"
+      when "spend"      then "Sweep Out"
+      when "receive"    then "Sweep In"
       end
     end
 
