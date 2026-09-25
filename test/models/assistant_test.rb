@@ -651,7 +651,7 @@ class AssistantTest < ActiveSupport::TestCase
     assert_not_nil tool_result_entry, "tool_result message missing from history"
     assert_equal "call_abc", tool_call_entry[:tool_calls].first[:id]
     assert_equal "call_abc", tool_result_entry[:tool_call_id]
-    assert_equal "get_net_worth", tool_result_entry[:name]
+    assert_not tool_result_entry.key?(:name), "tool messages must not carry the deprecated `name` field"
   end
 
   private
