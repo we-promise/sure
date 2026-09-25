@@ -1,0 +1,89 @@
+# Example values file demonstrating the use of extraEnvFrom
+# to simplify environment variable management
+#
+# This example shows how to use extraEnvFrom to inject all keys
+# from a secret instead of listing each one individually
+
+image:
+  repository: ghcr.io/we-promise/sure
+  tag: "0.6.6"
+  pullPolicy: IfNotPresent
+
+rails:
+  env: production
+  
+  # RECOMMENDED APPROACH: Use extraEnvFrom to inject all keys from a secret
+  # This replaces the need for a long list of individual extraEnvVars entries
+  extraEnvFrom:
+    - secretRef:
+        name: sure-demo  # All keys from this secret become environment variables
+  
+  # Optional: You can combine multiple sources
+  # extraEnvFrom:
+  #   - secretRef:
+  #       name: sure-secrets          # Sensitive application secrets
+  #   - configMapRef:
+  #       name: app-config            # Non-sensitive configuration
+  #   - secretRef:
+  #       name: third-party-api-keys  # API keys for external services
+  
+  # Only use extraEnvVars for specific keys that need special handling
+  # extraEnvVars:
+  #   - name: SPECIFIC_KEY
+  #     valueFrom:
+  #       secretKeyRef:
+  #         name: another-secret
+  #         key: specific-key
+
+  settings:
+    SELF_HOSTED: "true"
+    ONBOARDING_STATE: "open"
+
+# Database configuration (using in-cluster CNPG)
+cnpg:
+  enabled: true
+  cluster:
+    enabled: true
+    name: "sure-db"
+    instances: 1
+    storage:
+      size: 10Gi
+
+# Redis configuration (using in-cluster operator)
+redisOperator:
+  enabled: true
+  managed:
+    enabled: true
+  replicas: 1
+
+web:
+  enabled: true
+  replicas: 1
+  
+  # Optional: web-specific environment variables
+  # extraEnvFrom:
+  #   - configMapRef:
+  #       name: web-specific-config
+
+worker:
+  enabled: true
+  replicas: 1
+  
+  # Optional: worker-specific environment variables
+  # extraEnvFrom:
+  #   - configMapRef:
+  #       name: worker-specific-config
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Optional: Enable ingress for external access
+ingress:
+  enabled: false
+  className: ""
+  hosts:
+    - host: sure.local
+      paths:
+        - path: /
+          pathType: Prefix
