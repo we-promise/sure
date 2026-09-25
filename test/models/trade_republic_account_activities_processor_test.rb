@@ -927,6 +927,33 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_card_deleted")
   end
 
+  test "hidden financial events are skipped and unprotected prior imports are removed" do
+    cash_account, cash_sure = create_linked_cash_account!
+    Account::ProviderImportAdapter.new(cash_sure).import_transaction(
+      external_id: "trade_republic_event_evt_card_hidden",
+      amount: BigDecimal("12.00"),
+      currency: "EUR",
+      date: Date.parse("2026-08-01"),
+      name: "Hidden payment",
+      source: "trade_republic",
+      investment_activity_label: "Card payment"
+    )
+
+    cash_account.update!(raw_timeline_payload: [ {
+      id: "evt_card_hidden",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "CARD_TRANSACTION",
+      category: "POC_CREATED",
+      hidden: true,
+      title: "Hidden payment",
+      detail: { amount: "12.00", currency: "EUR" }
+    } ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_card_hidden")
+  end
+
   test "administrative and created-order events are ignored without logging or importing" do
     cash_account, = create_linked_cash_account!
     cash_account.update!(raw_timeline_payload: [

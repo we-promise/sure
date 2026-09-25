@@ -101,6 +101,7 @@ module TradeRepublicAccount::DataHelpers
 
       event = event.with_indifferent_access
       return true if truthy_flag?(event[:deleted])
+      return true if truthy_flag?(event[:hidden])
 
       status = event[:status].to_s.upcase
       return true if NON_IMPORTABLE_STATUSES.include?(status)
@@ -114,6 +115,7 @@ module TradeRepublicAccount::DataHelpers
 
       event = event.with_indifferent_access
       return "deleted" if truthy_flag?(event[:deleted])
+      return "hidden" if truthy_flag?(event[:hidden])
 
       status = event[:status].to_s.upcase
       return "status:#{status.downcase}" if NON_IMPORTABLE_STATUSES.include?(status)
