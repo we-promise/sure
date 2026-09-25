@@ -48,13 +48,16 @@ end %>
     </div>
 
     <%# MOBILE - Top nav %>
-    <nav class="lg:hidden flex justify-between items-center p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
+    <nav class="lg:hidden relative flex justify-between items-center p-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
       <% if intro_mode %>
       <% else %>
-        <%= icon("panel-left", as_button: true, data: { action: "app-layout#openMobileSidebar"}) %>
+        <div class="flex items-center gap-1">
+          <%= icon("panel-left", as_button: true, data: { action: "app-layout#openMobileSidebar"}) %>
+          <%= render "layouts/shared/insights_button" %>
+        </div>
       <% end %>
 
-      <%= link_to home_path, class: "block" do %>
+      <%= link_to home_path, class: "absolute left-1/2 -translate-x-1/2" do %>
         <%= image_tag "logomark-color.svg", class: "w-9 h-9 mx-auto" %>
       <% end %>
 
@@ -159,37 +162,7 @@ end %>
           </div>
 
           <div class="flex items-center gap-2">
-            <%# Preview-gated. Gating the whole block (rather than just the
-                link) also keeps the unread COUNT off every page render for
-                users who haven't opted in. No preview dot on the icon: the
-                unread badge already occupies that corner. %>
-            <% if Current.family && preview_features_enabled? %>
-              <% unread_insights_count = Current.family.insights.active.count %>
-              <%# Prefetch disabled: /insights marks insights read on real visits
-                  and deliberately skips prefetch requests, so a prefetched
-                  response served on click would never clear the badge. %>
-              <%= link_to insights_path,
-                    class: "relative inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring",
-                    aria: { label: t("layouts.application.insights") },
-                    data: { turbo_prefetch: false } do %>
-                <%# `as: :span` + `html_class:` so the tooltip trigger fills this
-                    already-focusable link (full hover target). DS::Tooltip
-                    binds keyboard focus on the closest <a>/<summary> ancestor.
-                    Unread count stays a hand-rolled inverse chip — DS::Pill's
-                    filled neutral tone is not theme-swapped and disappears on
-                    dark nav surfaces. %>
-                <%= render DS::Tooltip.new(
-                      text: t("layouts.application.insights"),
-                      icon: "lightbulb",
-                      size: "sm",
-                      as: :span,
-                      html_class: "size-full items-center justify-center"
-                    ) %>
-                <% if unread_insights_count.positive? %>
-                  <span class="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-inverse text-inverse text-[10px] font-medium flex items-center justify-center pointer-events-none"><%= unread_insights_count > 9 ? "9+" : unread_insights_count %></span>
-                <% end %>
-              <% end %>
-            <% end %>
+            <%= render "layouts/shared/insights_button" %>
 
             <button type="button"
                     class="inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring"
@@ -257,7 +230,7 @@ end %>
       <% end %>
     <% end %>
 <%# Preserve the account sidebar's group open/closed state across Turbo Drive navigations so the sidebar height stays stable and the scroll position is not clamped to the top. See the inline script below for details. %>
-<%= javascript_tag nonce: true do %>
+<script nonce="<%= content_security_policy_nonce %>">
   // Preserves the account sidebar's group open/closed state across Turbo Drive
   // navigations so the sidebar height stays stable and the scroll position
   // (restored by the `preserve-scroll` controller) is not clamped to the top.
@@ -404,6 +377,6 @@ end %>
     restore();
   })();
 
-<% end %>
+</script>
   </div>
 <% end %>

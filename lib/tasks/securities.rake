@@ -116,4 +116,20 @@ namespace :securities do
     puts "  Mode: #{dry_run ? 'Dry run (no changes made)' : 'Live run (changes applied)'}"
     puts "\nDe-duplication complete!"
   end
+
+  desc "Relabel Warsaw (XWAR/WAR) security_prices wrongly stored as USD to PLN. Args: dry_run (default true)"
+  task :backfill_warsaw_price_currency, [ :dry_run ] => :environment do |_t, args|
+    raw_dry = args[:dry_run].presence || ENV["DRY_RUN"].presence
+    dry_run = case raw_dry.to_s.strip.downcase
+    when "0", "false", "no", "n" then false
+    when "1", "true", "yes", "y" then true
+    when "" then true
+    else
+      true
+    end
+
+    puts "Warsaw price currency backfill (dry_run: #{dry_run})..."
+    result = Security::WarsawPriceCurrencyBackfill.new(dry_run: dry_run, sync_accounts: !dry_run).call
+    puts result.to_h.to_json
+  end
 end
