@@ -223,6 +223,35 @@ class ImportsController < ApplicationController
     redirect_to imports_path, notice: notices.presence&.join(" "), alert: alerts.presence&.join(" ")
   end
 
+  def revert_all
+    import_ids = Array(params.dig(:bulk_revert, :import_ids)).filter_map { |id| id.to_s.presence }
+    imports = Current.family.imports.where(id: import_ids).includes(:account_statement)
+    started_count = 0
+    skipped_count = 0
+
+    imports.each do |import|
+      can_manage_statement = import.account_statement.blank? || import.account_statement.manageable_by?(Current.user)
+
+      scheduled = import.with_lock do
+        next false unless can_manage_statement && import.revertable? && !import.directly_deletable?
+
+        import.revert_later
+        true
+      end
+
+      scheduled ? started_count += 1 : skipped_count += 1
+    rescue StandardError => error
+      skipped_count += 1
+      Rails.logger.warn("Bulk import revert skipped #{import.type} #{import.id}: #{error.class}: #{error.message}")
+    end
+
+    notice = t("imports.revert_all.started", count: started_count) if started_count.positive?
+    alert = t("imports.revert_all.skipped", count: skipped_count) if skipped_count.positive?
+    alert ||= t("imports.revert_all.none_selected") if started_count.zero? && skipped_count.zero?
+
+    redirect_to imports_path, notice: notice, alert: alert
+  end
+
   def verify_pending
     started_count = 0
     skipped_count = 0

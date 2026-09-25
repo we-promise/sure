@@ -452,9 +452,10 @@ en:
       import: import
       imports: imports
       selected: selected
-      select_all: Select all deletable imports
+      select_all: Select all available imports
       select_import: Select %{type} import
       delete_selected: Delete selected imports
+      revert_selected: Revert selected imports
       select_account: Choose account
       assign_account: Set account
       no_file_name: —
@@ -488,6 +489,15 @@ en:
           mark_failed: Mark as failed
           confirm_mark_failed: This import has been inactive for a while and its background job was likely interrupted. Mark it as failed so you can try again? No imported data is kept.
       empty: No imports yet.
+    revert_all:
+      confirm: Revert selected completed imports? Their imported data will be removed, and the imports will return to review so they can be tried again.
+      started:
+        one: Reverting 1 import. It will return to review when complete.
+        other: Reverting %{count} imports. They will return to review when complete.
+      skipped:
+        one: 1 selected import could not be reverted.
+        other: "%{count} selected imports could not be reverted."
+      none_selected: No imports were selected for reverting.
     destroy_all:
       deleted:
         one: 1 import deleted.

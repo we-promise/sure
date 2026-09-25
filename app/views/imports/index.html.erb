@@ -73,7 +73,7 @@
               <td class="p-0 w-10 text-center align-middle">
                 <%= check_box_tag "bulk_delete[import_ids][]", import.id, false,
                                   class: "checkbox checkbox--light align-middle",
-                                  disabled: !import.directly_deletable?,
+                                  disabled: !import.directly_deletable? && !import.revertable?,
                                   aria: { label: t("imports.table.select_import", type: import.type.titleize) },
                                   data: {
                                     action: "change->bulk-select#toggleRowSelection",
@@ -214,6 +214,25 @@
             }
           ) %>
         <% end %>
+      <% end %>
+
+      <%= form_with url: revert_all_imports_path, method: :put, id: "bulk-revert-form",
+                    data: {
+                      turbo_confirm: t("imports.revert_all.confirm"),
+                      turbo_frame: "_top"
+                    } do %>
+        <%= render DS::Button.new(
+          variant: :outline_destructive,
+          size: :sm,
+          text: t("imports.table.revert_selected"),
+          icon: "rotate-ccw",
+          aria_label: t("imports.table.revert_selected"),
+          data: {
+            bulk_select_scope_param: "bulk_revert",
+            bulk_select_param: "import_ids",
+            action: "bulk-select#submitBulkRequest"
+          }
+        ) %>
       <% end %>
 
       <%= form_with url: destroy_all_imports_path, method: :delete, id: "bulk-delete-form",
