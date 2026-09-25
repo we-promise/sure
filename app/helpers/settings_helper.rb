@@ -129,6 +129,18 @@ module SettingsHelper
     end
   end
 
+  def financekit_provider_summary(connections)
+    return { status: :off } if connections.empty?
+
+    items = connections.map { |connection| connection[:item] }
+    count = connections.flat_map { |connection| connection[:accounts].map(&:id) }.uniq.size
+    {
+      status: items.any? { |item| item.status == "repair_required" } ? :warn : :ok,
+      meta: t("settings.providers.financekit.linked_accounts", count: count),
+      last_synced_at: items.filter_map(&:last_imported_at).max
+    }
+  end
+
   def settings_nav_footer
     previous_setting = adjacent_setting(request.path, -1)
     next_setting = adjacent_setting(request.path, 1)
