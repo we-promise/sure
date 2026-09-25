@@ -25,6 +25,13 @@ class SureImport::Preflight
 
     # Shared ProviderMerchants that already exist with different details than the
     # file carries. The existing record is kept as-is, so the user sees what differs.
+    # Unnamed recurring transactions whose merchant is missing can't be imported
+    # (a series needs a merchant or a name), so they are skipped rather than
+    # imported without a merchant.
+    def skipped_unnamed_recurring_count
+      warnings.count { |warning| warning[:code] == "skipped_unnamed_recurring" }
+    end
+
     def provider_merchant_diff_warnings
       warnings.select { |warning| warning[:code] == "provider_merchant_diff" }
     end
@@ -322,11 +329,17 @@ class SureImport::Preflight
       }
       if SOFT_REFERENCE_TYPES.include?(type)
         add_warning(:skipped_missing_reference, I18n.t("sure_import.preflight.skipped_missing_reference", **interpolations))
+      elsif unnamed_recurring_without_merchant?(record, type, field)
+        add_warning(:skipped_unnamed_recurring, I18n.t("sure_import.preflight.skipped_unnamed_recurring", **interpolations))
       elsif SOFT_REFERENCE_FIELDS.fetch(type, []).include?(field)
         add_warning(:skipped_missing_merchant_reference, I18n.t("sure_import.preflight.skipped_missing_merchant_reference", **interpolations))
       else
         add_error(:missing_reference, I18n.t("sure_import.preflight.missing_reference", **interpolations))
       end
+    end
+
+    def unnamed_recurring_without_merchant?(record, type, field)
+      type == "RecurringTransaction" && field == "merchant_id" && record[:data]["name"].blank?
     end
 
     def validate_tag_references(record, type)

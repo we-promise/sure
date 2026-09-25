@@ -472,6 +472,30 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, I18n.t("imports.ready.missing_merchant_warning_title")
   end
 
+  test "explains that unnamed recurring transactions with a missing merchant will be skipped" do
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Account", data: {
+        id: "account-1", name: "Checking", balance: "1000.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } },
+      { type: "RecurringTransaction", data: {
+        id: "recurring-1", account_id: "account-1", merchant_id: "merchant-never-exported",
+        amount: "11.99", currency: "USD", expected_day_of_month: 28,
+        last_occurrence_date: "2026-08-28", next_expected_date: "2026-09-28"
+      } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("imports.ready.missing_merchant_warning_title")
+    assert_includes response.body, I18n.t("imports.ready.skipped_recurring_description", count: 1).squish
+    assert_not_includes response.body, "merchant reference in this file"
+  end
+
   test "shows a friendly notice when a Sure import reuses existing categories, tags or merchants by name (#3113)" do
     @user.family.categories.create!(name: "Groceries", color: "#407706", lucide_icon: "shopping-basket")
     import = @user.family.imports.create!(type: "SureImport")

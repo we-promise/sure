@@ -479,6 +479,13 @@ en:
           with an export taken before provider-assigned merchants were added to Sure exports. You can still
           publish this import -- the affected records will just import without a merchant, and you can tag
           them afterward.
+      skipped_recurring_description:
+        one: >-
+          1 recurring transaction has no name and its merchant is missing, so it will be skipped.
+          Automatically detected recurring transactions are rebuilt after the import.
+        other: >-
+          %{count} recurring transactions have no name and their merchants are missing, so they will be skipped.
+          Automatically detected recurring transactions are rebuilt after the import.
       reused_taxonomy_notice_title: Some categories, tags or merchants already exist
       reused_taxonomy_notice_description:
         one: >-

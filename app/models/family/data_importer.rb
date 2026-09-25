@@ -566,7 +566,11 @@ class Family::DataImporter
         next if data["account_id"].present? && new_account_id.blank?
 
         new_merchant_id = remap_optional_id(:merchants, data["merchant_id"], record_type: "RecurringTransaction")
-        next if data["merchant_id"].present? && new_merchant_id.blank?
+        # A series needs a merchant or a name; a named one imports without its merchant.
+        if data["merchant_id"].present? && new_merchant_id.blank? && data["name"].blank?
+          increment_summary("RecurringTransaction", :skipped)
+          next
+        end
 
         expected_day_of_month = recurring_expected_day_for(data["expected_day_of_month"])
         next unless expected_day_of_month

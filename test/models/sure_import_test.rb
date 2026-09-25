@@ -1020,6 +1020,38 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal "https://fresh.example", updated.reload.website_url
   end
 
+  test "a named recurring transaction whose merchant is missing imports without a merchant" do
+    attach_ndjson(recurring_with_missing_merchant_ndjson(name: "Gym membership"))
+
+    result = @import.sure_preflight
+    assert result.valid?, result.error_message
+    assert_equal 1, result.skipped_missing_merchant_count
+    assert_equal 0, result.skipped_unnamed_recurring_count
+
+    assert_difference -> { @family.recurring_transactions.count }, 1 do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+    recurring = @family.recurring_transactions.find_by!(name: "Gym membership")
+    assert_nil recurring.merchant_id
+  end
+
+  test "an unnamed recurring transaction whose merchant is missing is skipped and reported as such" do
+    attach_ndjson(recurring_with_missing_merchant_ndjson)
+
+    result = @import.sure_preflight
+    assert result.valid?, result.error_message
+    assert_equal 1, result.skipped_unnamed_recurring_count
+    assert_equal 0, result.skipped_missing_merchant_count
+
+    assert_no_difference -> { @family.recurring_transactions.count } do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+  end
+
   private
 
     def attach_ndjson(ndjson)
@@ -1044,6 +1076,20 @@ class SureImportTest < ActiveSupport::TestCase
           id: "transaction-1", account_id: "account-1", merchant_id: "provider-merchant-1",
           date: "2024-01-15", amount: "42.50", name: "Amazon purchase", currency: "USD"
         } }
+      ])
+    end
+
+    def recurring_with_missing_merchant_ndjson(**recurring_attrs)
+      build_ndjson([
+        { type: "Account", data: {
+          id: "account-1", name: "Recurring Checking", balance: "1000.00", currency: "USD",
+          accountable_type: "Depository", accountable: { subtype: "checking" }
+        } },
+        { type: "RecurringTransaction", data: {
+          id: "recurring-1", account_id: "account-1", merchant_id: "merchant-never-exported",
+          amount: "11.99", currency: "USD", expected_day_of_month: 28,
+          last_occurrence_date: "2026-08-28", next_expected_date: "2026-09-28"
+        }.merge(recurring_attrs) }
       ])
     end
 

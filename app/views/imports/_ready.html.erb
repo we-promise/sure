@@ -4,6 +4,7 @@
 <% import_summary_empty = resources_with_counts.empty? %>
 <% sure_preflight_result = import.is_a?(SureImport) ? import.sure_preflight : nil %>
 <% missing_merchant_count = sure_preflight_result&.skipped_missing_merchant_count.to_i %>
+<% skipped_recurring_count = sure_preflight_result&.skipped_unnamed_recurring_count.to_i %>
 <% reused_taxonomy_count = sure_preflight_result&.reused_taxonomy_count.to_i %>
 <% provider_merchant_diffs = sure_preflight_result&.provider_merchant_diff_warnings || [] %>
 
@@ -13,11 +14,14 @@
 </div>
 
 <div class="mx-auto max-w-2xl space-y-4">
-  <% if missing_merchant_count > 0 %>
+  <% if missing_merchant_count > 0 || skipped_recurring_count > 0 %>
     <%= render DS::Alert.new(
       variant: :warning,
       title: t(".missing_merchant_warning_title"),
-      message: t(".missing_merchant_warning_description", count: missing_merchant_count)
+      message: [
+        (t(".missing_merchant_warning_description", count: missing_merchant_count) if missing_merchant_count > 0),
+        (t(".skipped_recurring_description", count: skipped_recurring_count) if skipped_recurring_count > 0)
+      ].compact.join(" ")
     ) %>
   <% end %>
 
