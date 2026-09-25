@@ -75,8 +75,10 @@ class KrakenAccount::Processor
       security = KrakenAccount::SecurityResolver.resolve("CRYPTO:#{base_symbol}", base_symbol)
       return unless security
 
-      entry_amount = type == "buy" ? -cost : cost
+      # Sure's convention is positive = money out, so a buy is +cost and a sell
+      # -cost, which is also what `qty * price` yields once qty carries its sign.
       trade_qty = type == "buy" ? qty : -qty
+      entry_amount = type == "buy" ? cost : -cost
       label = type == "buy" ? "Buy" : "Sell"
 
       account.entries.create!(
