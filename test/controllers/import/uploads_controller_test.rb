@@ -9,6 +9,7 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
   test "show" do
     get import_upload_url(@import)
     assert_response :success
+    assert_select "input#import_import_file_csv[multiple]"
   end
 
   test "uploads valid csv by copy and pasting" do
@@ -33,6 +34,30 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to import_configuration_url(@import, template_hint: true)
     assert_equal "CSV uploaded successfully.", flash[:notice]
+  end
+
+  test "uploads multiple csv files as separate imports" do
+    uploads = [
+      file_fixture_upload("imports/valid.csv"),
+      file_fixture_upload("imports/valid.csv")
+    ]
+
+    assert_difference "Import.where(type: 'TransactionImport').count", 1 do
+      patch import_upload_url(@import), params: {
+        import: {
+          import_file: uploads,
+          col_sep: ","
+        }
+      }
+    end
+
+    assert_redirected_to imports_url
+    assert_equal I18n.t("imports.create.csv_uploaded_many", count: 2), flash[:notice]
+
+    imported = @user.family.imports.where(type: "TransactionImport").order(:created_at).last(2)
+    assert_equal 2, imported.size
+    assert imported.all?(&:uploaded?)
+    assert imported.all? { |import| import.raw_file_str == file_fixture("imports/valid.csv").read }
   end
 
   test "account select does not leak unshared family accounts (#1803)" do

@@ -479,6 +479,9 @@ en:
       file_too_large: File is too large. Maximum size is %{max_size}MB.
       invalid_file_type: Invalid file type. Please upload a CSV file.
       csv_uploaded: CSV uploaded successfully.
+      csv_uploaded_many:
+        one: 1 CSV file uploaded successfully.
+        other: "%{count} CSV files uploaded successfully. Configure each import from the Imports page."
       ndjson_uploaded: NDJSON file uploaded successfully.
       pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
       pdf_processing: Your PDF is being processed. You will receive an email when analysis is complete.

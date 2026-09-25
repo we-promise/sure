@@ -131,7 +131,7 @@
                   <p class="text-md font-medium text-primary"></p>
                 </div>
 
-                <%= form.file_field :import_file, id: "import_import_file_csv", class: "hidden", "data-auto-submit-form-target": "auto", "data-file-upload-target": "input", "data-drag-and-drop-import-target": "input" %>
+                <%= form.file_field :import_file, id: "import_import_file_csv", multiple: true, class: "hidden", "data-auto-submit-form-target": "auto", "data-file-upload-target": "input", "data-drag-and-drop-import-target": "input" %>
               </div>
             </label>
 
