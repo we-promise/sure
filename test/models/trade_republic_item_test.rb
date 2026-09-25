@@ -115,6 +115,12 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
       "title" => "Legal documents",
       "subtitle" => "Accepted"
     }
+    order_created = {
+      "id" => "evt_order_created",
+      "eventType" => "TRADING_ORDER_CREATED",
+      "title" => "SanDisk",
+      "subtitle" => "Limit buy created"
+    }
     mapping_gap = {
       "id" => "evt_gap",
       "eventType" => "BRAND_NEW_MAPPING_GAP",
@@ -126,7 +132,7 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
       name: "Portfolio",
       trade_republic_account_id: "DE-DQ-P",
       currency: "EUR",
-      raw_timeline_payload: [ shared, admin, legal_docs, mapping_gap ]
+      raw_timeline_payload: [ shared, admin, legal_docs, order_created, mapping_gap ]
     )
     item.trade_republic_accounts.create!(
       kind: "cash",
@@ -138,7 +144,7 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
 
     summary = item.data_quality_summary
 
-    assert_equal 5, summary[:events]
+    assert_equal 6, summary[:events]
     assert_equal 1, summary[:unknown_events]
   end
 

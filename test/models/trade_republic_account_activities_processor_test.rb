@@ -851,14 +851,23 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_card_deleted")
   end
 
-  test "admin lifecycle events are ignored silently without unknown logging" do
+  test "administrative and created-order events are ignored without logging or importing" do
     cash_account, = create_linked_cash_account!
-    cash_account.update!(raw_timeline_payload: [ {
-      id: "evt_card_verify",
-      timestamp: "2026-08-01T10:00:00Z",
-      eventType: "CARD_VERIFICATION",
-      title: "Card verification"
-    } ])
+    cash_account.update!(raw_timeline_payload: [
+      {
+        id: "evt_card_verify",
+        timestamp: "2026-08-01T10:00:00Z",
+        eventType: "CARD_VERIFICATION",
+        title: "Card verification"
+      },
+      {
+        id: "evt_limit_buy_created",
+        timestamp: "2026-09-22T13:36:39Z",
+        eventType: "TRADING_ORDER_CREATED",
+        title: "SanDisk",
+        subtitle: "Limit buy created"
+      }
+    ])
 
     assert_no_difference "DebugLogEntry.count" do
       assert_no_difference "Entry.where(source: 'trade_republic').count" do
