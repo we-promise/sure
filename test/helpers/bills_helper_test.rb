@@ -202,6 +202,19 @@ class BillsHelperTest < ActionView::TestCase
     assert_match(/due/i, label)
   end
 
+  # An every-2-years bill's current cycle can be a year or more out, and
+  # "Due in 707 days, Sep 1" did not say which September.
+  test "a cycle due in another year names the year" do
+    travel_to Date.new(2026, 9, 25) do
+      later = build_occurrence(due_on: Date.new(2028, 9, 1), status: "scheduled")
+      soon = build_occurrence(due_on: Date.new(2026, 10, 5), status: "scheduled")
+
+      assert_includes occurrence_due_label(later), I18n.l(Date.new(2028, 9, 1), format: :short_with_year)
+      assert_includes occurrence_due_label(soon), I18n.l(Date.new(2026, 10, 5), format: :short)
+      assert_not_includes occurrence_due_label(soon), "2026"
+    end
+  end
+
   test "a cycle past its grace is still labelled overdue" do
     occurrence = build_occurrence(due_on: Date.current - 30, status: "scheduled")
     assert_equal :overdue, occurrence.derived_state, "precondition: grace exhausted"

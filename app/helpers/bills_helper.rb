@@ -252,7 +252,7 @@ module BillsHelper
   def occurrence_due_label(occurrence)
     due = occurrence.effective_due_on
     days = (due - Date.current).to_i
-    date = l(due, format: :short)
+    date = bills_upcoming_date(due)
 
     # A settled cycle is not late. This label only ever looked at dates, so a
     # bill paid three weeks after its due date reported "Overdue by 20 days"
