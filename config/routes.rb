@@ -399,6 +399,10 @@ Rails.application.routes.draw do
     end
     resources :sso_identities, only: :destroy
     resources :api_keys, only: [ :index, :show, :new, :create, :destroy ]
+    resource :ai_subscriptions, controller: "ai_subscriptions", only: :show
+    post "ai_subscriptions/codex/login", to: "ai_subscriptions#start_codex_login", as: :ai_subscriptions_codex_login
+    post "ai_subscriptions/codex/logout", to: "ai_subscriptions#sign_out_codex", as: :ai_subscriptions_codex_logout
+    get "ai_subscriptions/codex/login_status", to: "ai_subscriptions#codex_login_status", as: :ai_subscriptions_codex_login_status
     resource :mcp, controller: "mcp", only: :show do
       delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
     end

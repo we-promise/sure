@@ -378,16 +378,18 @@ Self-hosted users who have a ChatGPT/Codex subscription but no OpenAI API key ca
 process PDFs with the locally authenticated Codex CLI. This is separate from the
 OpenAI API provider and does not turn a ChatGPT subscription into an API key.
 
-1. Install the Codex CLI on the host running the Sure worker.
-2. Run `codex login` as the same operating-system user that runs the worker.
-3. Optionally set `CODEX_COMMAND`, `CODEX_MODEL`, `CODEX_REASONING_EFFORT`, and `CODEX_REQUEST_TIMEOUT`.
-4. Open Imports and choose **Import PDF with Codex**.
+1. Install the Codex CLI in the environment running the Sure worker.
+2. Open **Settings → AI Subscriptions** and choose **Sign in with ChatGPT**.
+3. Complete the device sign-in in the OpenAI page shown by Sure. Sure never receives or stores your OpenAI password.
+4. Optionally set `CODEX_COMMAND`, `CODEX_MODEL`, `CODEX_REASONING_EFFORT`, and `CODEX_REQUEST_TIMEOUT`.
+5. Open Imports and choose **Import PDF with Codex**.
 
 The import is queued as a background job and enters the same transaction review
 and publish flow as API-backed PDF imports. The worker must be able to access the
-Codex login state. In containers, mount the Codex home directory or provide an
-equivalent authenticated Codex configuration to the worker container. If the CLI
-is unavailable, the Codex option is not shown.
+Codex login state. In containers, the development compose file provides a shared
+`codex-home` volume to the app and worker services. Keep an equivalent persistent
+`CODEX_HOME` volume mounted in other deployments. If the CLI is unavailable, the
+subscription sign-in button is not shown and the Codex import option is not shown.
 
 ## External AI Assistant
 

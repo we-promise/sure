@@ -12,6 +12,8 @@ class Provider::Codex < Provider
 
   Error = Class.new(Provider::Error)
   DEFAULT_TIMEOUT = 10.minutes
+  LOGIN_TIMEOUT = 15.minutes
+  LOGIN_STATE_TTL = 20.minutes
   MAX_TEXT_SIZE = 100_000
   MAX_PAGES = 5
   DEFAULT_PROMPT = <<~PROMPT.freeze
@@ -30,15 +32,122 @@ class Provider::Codex < Provider
       executable_path.present?
     end
 
+    def authentication_status
+      command = executable_path
+      return { state: "unavailable" } if command.blank?
+
+      _stdout, _stderr, status = Open3.capture3(command, "login", "status")
+      { state: status.success? ? "connected" : "not_connected" }
+    rescue StandardError => e
+      Rails.logger.warn("Codex login status check failed: #{e.class}: #{e.message}")
+      { state: "not_connected" }
+    end
+
+    def perform_logout
+      command = executable_path
+      return false if command.blank?
+
+      _stdout, stderr, status = Open3.capture3(command, "logout")
+      return true if status.success?
+
+      Rails.logger.warn("Codex logout failed: #{stderr.to_s.truncate(500)}")
+      false
+    rescue StandardError => e
+      Rails.logger.warn("Codex logout failed: #{e.class}: #{e.message}")
+      false
+    end
+
+    def prepare_login(login_id)
+      write_login_state(login_id, state: "queued")
+    end
+
+    def login_state(login_id)
+      return if login_id.blank?
+
+      Rails.cache.read(login_cache_key(login_id))
+    end
+
+    def perform_device_login(login_id)
+      command = executable_path
+      if command.blank?
+        write_login_state(login_id, state: "unavailable")
+        return
+      end
+
+      write_login_state(login_id, state: "starting")
+      stdin = output = wait_thread = nil
+
+      begin
+        stdin, output, wait_thread = Open3.popen2e(command, "login", "--device-auth")
+        stdin.close
+
+        Timeout.timeout(LOGIN_TIMEOUT) do
+          output.each_line { |line| record_login_output(login_id, line) }
+        end
+
+        authenticated = authentication_status[:state] == "connected"
+        write_login_state(login_id, state: authenticated ? "connected" : "failed")
+      rescue Timeout::Error
+        terminate_login_process(wait_thread)
+        write_login_state(login_id, state: "timed_out")
+      rescue StandardError => e
+        Rails.logger.warn("Codex login failed: #{e.class}: #{e.message}")
+        write_login_state(login_id, state: "failed")
+      ensure
+        output&.close unless output&.closed?
+        wait_thread&.join(1)
+      end
+    end
+
     def executable_path
       command = ENV["CODEX_COMMAND"].presence || "codex"
       return command if command.start_with?("/") && File.executable?(command)
+      command = File.basename(command) if command.start_with?("/")
 
       ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).filter_map do |directory|
         path = File.join(directory, command)
         path if File.executable?(path)
       end.first
     end
+
+    private
+
+      def write_login_state(login_id, attributes)
+        existing = login_state(login_id) || {}
+        Rails.cache.write(
+          login_cache_key(login_id),
+          existing.merge(attributes.stringify_keys),
+          expires_in: LOGIN_STATE_TTL
+        )
+      end
+
+      def login_cache_key(login_id)
+        "codex-login:#{login_id}"
+      end
+
+      def record_login_output(login_id, line)
+        text = line.to_s.gsub(/\e\[[0-?]*[ -\/]*[@-~]/, "").strip
+        return if text.blank?
+
+        login_url = text[%r{https?://[^\s<>()]+}]&.delete_suffix(",")
+        user_code = text[/\b[A-Z0-9]{4,}(?:-[A-Z0-9]{4,})+\b/]
+        write_login_state(
+          login_id,
+          {
+            state: "awaiting_auth",
+            login_url: login_url,
+            user_code: user_code
+          }.compact
+        )
+      end
+
+      def terminate_login_process(wait_thread)
+        return unless wait_thread&.alive?
+
+        Process.kill("TERM", wait_thread.pid)
+      rescue Errno::ESRCH
+        nil
+      end
   end
 
   def initialize(

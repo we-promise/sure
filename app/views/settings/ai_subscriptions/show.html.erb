@@ -1,0 +1,77 @@
+<%= content_for :page_title, t(".page_title") %>
+
+<% codex_cli_state = @codex_status&.fetch(:state, nil) %>
+<% codex_state = if codex_cli_state == "connected"
+                   "connected"
+                 else
+                   @codex_login_state&.fetch("state", nil) || codex_cli_state || "unavailable"
+                 end %>
+
+<%= settings_section title: t(".codex.title"), subtitle: t(".codex.subtitle") do %>
+  <div class="bg-surface-inset rounded-xl p-4">
+    <div class="flex items-start justify-between gap-4">
+      <div class="flex items-start gap-3 min-w-0">
+        <%= render DS::FilledIcon.new(
+          icon: "bot",
+          rounded: true,
+          size: "lg"
+        ) %>
+        <div class="min-w-0">
+          <h3 class="font-medium text-primary"><%= t(".codex.title") %></h3>
+          <p class="text-secondary text-sm mt-1"><%= t(".codex.description") %></p>
+        </div>
+      </div>
+
+      <%= render DS::Pill.new(
+        label: t(".codex.statuses.#{codex_state}"),
+        tone: codex_state == "connected" ? :success : :neutral,
+        show_dot: true,
+        marker: false
+      ) %>
+    </div>
+
+    <div class="mt-4 pt-4 border-t border-primary space-y-3">
+      <p class="text-sm text-secondary"><%= t(".codex.setup_help") %></p>
+      <% if codex_state == "connected" %>
+        <div class="flex flex-wrap items-center gap-3">
+          <%= render DS::Link.new(
+            text: t(".codex.prompt_settings"),
+            href: settings_ai_prompts_path,
+            variant: "secondary",
+            icon: "settings"
+          ) %>
+          <%= render DS::Button.new(
+            text: t(".codex.sign_out"),
+            href: settings_ai_subscriptions_codex_logout_path,
+            method: :post,
+            variant: "outline_destructive",
+            icon: "log-out",
+            confirm: t(".codex.sign_out_confirmation")
+          ) %>
+        </div>
+      <% elsif @codex_available %>
+        <%= render DS::Button.new(
+          text: t(".codex.sign_in"),
+          href: settings_ai_subscriptions_codex_login_path,
+          method: :post,
+          variant: "primary",
+          icon: "log-in",
+          data: { turbo: false }
+        ) %>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<% if @codex_login_id.present? %>
+  <%= turbo_frame_tag "codex-login-status",
+                      data: {
+                        controller: "polling",
+                        polling_url_value: settings_ai_subscriptions_codex_login_status_path(login_id: @codex_login_id),
+                        polling_interval_value: 2000
+                      } do %>
+    <%= render "settings/ai_subscriptions/codex_login_status",
+               login_id: @codex_login_id,
+               state: @codex_login_state || { "state" => "queued" } %>
+  <% end %>
+<% end %>

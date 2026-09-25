@@ -1,0 +1,36 @@
+services:
+  app:
+    build:
+      args:
+        INSTALL_CODEX: "true"
+    ports: !reset []
+    environment:
+      POSTGRES_DB: sure_pr_3716
+
+  worker:
+    build:
+      args:
+        INSTALL_CODEX: "true"
+    environment:
+      POSTGRES_DB: sure_pr_3716
+
+  db:
+    ports: !override
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: sure_pr_3716
+
+  selenium:
+    ports: !override
+      - "4446:4444"
+      - "7902:7900"
+
+volumes:
+  postgres-data:
+    name: sure-pr-3716-postgres-data
+  redis-data:
+    name: sure-pr-3716-redis-data
+  bundle_cache:
+    name: sure-pr-3716-bundle-cache
+  codex-home:
+    name: sure-pr-3716-codex-home

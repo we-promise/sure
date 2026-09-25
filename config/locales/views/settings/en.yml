@@ -350,6 +350,7 @@ en:
       ai_prompts_label: AI Prompts
       background_jobs_label: Background jobs
       api_key_label: API Keys
+      ai_subscriptions_label: AI Subscriptions
       payment_label: Payment
       categories_label: Categories
       feedback_label: Feedback
@@ -377,6 +378,7 @@ en:
       users_label: Users
       whats_new_label: What's new
       api_keys_label: API Keys
+      ai_subscriptions_label: AI Subscriptions
       appearance_label: Appearance
       bank_sync_label: Bank sync
       debug_label: Debug

@@ -1,0 +1,34 @@
+en:
+  settings:
+    ai_subscriptions:
+      show:
+        page_title: AI Subscriptions
+        codex:
+          title: Codex subscription
+          subtitle: Connect subscription-backed AI services for local Sure features.
+          description: Use an authenticated Codex subscription for PDF imports without an OpenAI API key.
+          statuses:
+            connected: Connected
+            not_connected: Not connected
+            unavailable: CLI unavailable
+            queued: Starting sign-in
+            starting: Starting sign-in
+            awaiting_auth: Awaiting ChatGPT sign-in
+            failed: Sign-in failed
+            timed_out: Sign-in timed out
+            missing: Sign-in unavailable
+          setup_help: Set up Codex authentication for the worker before importing PDFs. Subscription sign-in is handled by Codex CLI and is not stored as an API key in Sure.
+          sign_in: Sign in with ChatGPT
+          sign_out: Sign out of ChatGPT
+          sign_out_confirmation: Sign out of the Codex subscription on this Sure installation?
+          signed_out: Signed out of ChatGPT successfully.
+          sign_out_failed: Could not sign out of ChatGPT. Check the Codex CLI and worker logs.
+          prompt_settings: Configure Codex prompts
+        login_ready_title: Finish signing in with ChatGPT
+        login_ready_description: Open the OpenAI sign-in page, enter the one-time code shown below, complete authentication, and return here. Sure never receives or stores your OpenAI password.
+        open_openai_login: Open OpenAI sign-in
+        login_complete: Codex is connected. PDF imports can use this subscription.
+        login_unavailable: The Codex CLI is not available in the worker container. Install it or set CODEX_COMMAND before starting sign-in.
+        login_timed_out: The sign-in session expired. Start sign-in again.
+        login_failed: Codex sign-in failed. Start sign-in again or inspect the worker logs.
+        login_waiting: Waiting for the Codex worker to start sign-in.

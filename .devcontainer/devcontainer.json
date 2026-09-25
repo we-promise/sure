@@ -1,6 +1,9 @@
 {
   "name": "Sure",
-  "dockerComposeFile": "docker-compose.yml",
+  "dockerComposeFile": [
+    "docker-compose.yml",
+    "docker-compose.local.yml"
+  ],
   "service": "app",
   "runServices": [
     "db",
@@ -8,6 +11,12 @@
     "selenium"
   ],
   "workspaceFolder": "/workspace",
+  "portsAttributes": {
+    "3000": {
+      "label": "Sure PR #3716 (manually forward to 3060)",
+      "onAutoForward": "ignore"
+    }
+  },
   "containerEnv": {
     "GIT_EDITOR": "code --wait",
     "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}",

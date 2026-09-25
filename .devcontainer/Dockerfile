@@ -28,6 +28,15 @@ RUN apt-get update -qq \
 
 RUN gem install bundler foreman
 
+# The Codex subscription flow is opt-in. Local development enables this build
+# argument so the Settings UI can launch `codex login --device-auth`; production
+# deployments can install the CLI separately and set CODEX_COMMAND.
+ARG INSTALL_CODEX=false
+RUN if [ "$INSTALL_CODEX" = "true" ]; then \
+      curl -fsSL https://chatgpt.com/codex/install.sh | sh; \
+    fi
+ENV PATH="/root/.local/bin:${PATH}"
+
 # Install Node.js 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
   && apt-get install -y nodejs \

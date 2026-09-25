@@ -50,4 +50,29 @@ class Provider::CodexTest < ActiveSupport::TestCase
     assert_includes prompt, Provider::Codex.default_prompt.strip
     assert_includes prompt, "Coffee Shop -12.50"
   end
+
+  test "extracts device login details from colorized cli output" do
+    Provider::Codex.expects(:write_login_state).with(
+      "login-id",
+      {
+        state: "awaiting_auth",
+        login_url: "https://auth.openai.com/codex/device",
+        user_code: "WJQW-ANFT6"
+      }
+    )
+
+    Provider::Codex.send(
+      :record_login_output,
+      "login-id",
+      "  \e[94mhttps://auth.openai.com/codex/device\e[0m  \e[94mWJQW-ANFT6\e[0m\n"
+    )
+  end
+
+  test "logs out through the Codex CLI" do
+    status = mock
+    status.stubs(:success?).returns(true)
+    Open3.expects(:capture3).with(Provider::Codex.executable_path, "logout").returns([ "", "", status ])
+
+    assert Provider::Codex.perform_logout
+  end
 end

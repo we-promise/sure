@@ -13,6 +13,7 @@ x-rails-env: &rails_env
   BUNDLE_PATH: /bundle
   REDIS_URL: redis://redis:6379/1
   SELENIUM_REMOTE_URL: http://selenium:4444
+  CODEX_HOME: /codex-home
 
 services:
   app:
@@ -23,6 +24,7 @@ services:
       - ./.bashrc:/root/.bashrc:ro,cached
       - ..:/workspace:cached
       - bundle_cache:/bundle
+      - codex-home:/codex-home
     ports:
       - ${PORT:-3000}:3000
     command: sleep infinity
@@ -40,6 +42,7 @@ services:
     volumes:
       - ..:/workspace:cached
       - bundle_cache:/bundle
+      - codex-home:/codex-home
     command: bundle exec sidekiq
     restart: unless-stopped
     environment:
@@ -78,3 +81,4 @@ volumes:
   postgres-data:
   redis-data:
   bundle_cache:
+  codex-home:

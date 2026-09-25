@@ -1,0 +1,38 @@
+<% status = state.fetch("state", "missing") %>
+<% waiting = status.in?(%w[queued starting awaiting_auth]) %>
+
+<%= turbo_frame_tag "codex-login-status",
+                    data: waiting ? {
+                      controller: "polling",
+                      polling_url_value: settings_ai_subscriptions_codex_login_status_path(login_id: login_id),
+                      polling_interval_value: 2000
+                    } : {} do %>
+  <div class="bg-container rounded-xl shadow-border-xs p-4 mt-4">
+    <% if status == "awaiting_auth" && state["login_url"].present? %>
+      <h3 class="font-medium text-primary"><%= t("settings.ai_subscriptions.show.login_ready_title") %></h3>
+      <p class="text-secondary text-sm mt-1"><%= t("settings.ai_subscriptions.show.login_ready_description") %></p>
+      <div class="flex flex-wrap items-center gap-3 mt-4">
+        <%= render DS::Link.new(
+          text: t("settings.ai_subscriptions.show.open_openai_login"),
+          href: state["login_url"],
+          target: "_blank",
+          variant: "primary",
+          icon: "external-link"
+        ) %>
+        <% if state["user_code"].present? %>
+          <code class="bg-surface-inset rounded-lg px-3 py-2 text-sm text-primary"><%= state["user_code"] %></code>
+        <% end %>
+      </div>
+    <% elsif status == "connected" %>
+      <p class="text-sm text-primary"><%= t("settings.ai_subscriptions.show.login_complete") %></p>
+    <% elsif status == "unavailable" %>
+      <p class="text-sm text-secondary"><%= t("settings.ai_subscriptions.show.login_unavailable") %></p>
+    <% elsif status == "timed_out" %>
+      <p class="text-sm text-secondary"><%= t("settings.ai_subscriptions.show.login_timed_out") %></p>
+    <% elsif status == "failed" || status == "missing" %>
+      <p class="text-sm text-secondary"><%= t("settings.ai_subscriptions.show.login_failed") %></p>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t("settings.ai_subscriptions.show.login_waiting") %></p>
+    <% end %>
+  </div>
+<% end %>
