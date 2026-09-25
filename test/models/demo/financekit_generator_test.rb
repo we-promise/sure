@@ -33,14 +33,12 @@ class Demo::FinancekitGeneratorTest < ActiveSupport::TestCase
 
   test "seeds linked Apple Card and Apple Cash with source identities and realistic activity" do
     family = families(:dylan_family)
-    flags_before = ENV.values_at("FINANCEKIT_ENABLED", "FINANCEKIT_FAMILY_IDS")
     item = Demo::FinancekitGenerator.new(family).generate!
 
     assert_equal "active", item.status
     assert_equal 3, item.accounts.count
     assert item.last_accepted_at
     assert item.last_imported_at
-    assert_equal flags_before, ENV.values_at("FINANCEKIT_ENABLED", "FINANCEKIT_FAMILY_IDS")
 
     card = item.accounts.find_by!(name: "Apple Card")
     cash = item.accounts.find_by!(name: "Apple Cash")

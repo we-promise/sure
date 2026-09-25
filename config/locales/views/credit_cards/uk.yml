@@ -17,12 +17,3 @@ uk:
       treat_balance_as_available_credit_label: "Баланс — це доступний кредит"
     new:
       title: "Введіть дані кредитної картки"
-    overview:
-      amount_owed: "Сума боргу"
-      annual_fee: "Річна плата"
-      apr: "Річна процентна ставка"
-      available_credit: "Доступний кредит"
-      edit_account_details: "Редагувати дані рахунку"
-      expiration_date: "Дата закінчення терміну дії"
-      minimum_payment: "Мінімальний платіж"
-      unknown: "Невідомо"

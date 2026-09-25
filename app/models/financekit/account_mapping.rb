@@ -78,7 +78,10 @@ class Financekit::AccountMapping
       account = @item.family.accounts.create!(owner: @item.user, name: @input["name"], currency: @input["currency"],
         balance: Financekit::Mapping.balance(@input["booked_balance"], @input["accountable_type"]),
         accountable: type.new(subtype: @input["subtype"]), status: "active")
-      [ account, @item.family.financekit_account_lineages.create!(account: account) ]
+      # FinanceKit brought this account into existence, so a discard may take it
+      # away again. Recorded on the lineage rather than the mapping because the
+      # lineage owns the canonical account across device replacement.
+      [ account, @item.family.financekit_account_lineages.create!(account: account, account_origin: "created") ]
     end
 
     def link_account_and_lineage!
@@ -90,7 +93,9 @@ class Financekit::AccountMapping
         @item.family.financekit_account_lineages.find_by(account: account)
       end
       Financekit.require!(!lineage || lineage.account_id == account.id, "lineage_account_conflict", 409)
-      lineage ||= @item.family.financekit_account_lineages.create!(account: account)
+      # The family owned this account before FinanceKit reached it, so a discard
+      # empties it and leaves it standing.
+      lineage ||= @item.family.financekit_account_lineages.create!(account: account, account_origin: "linked")
       [ account, lineage ]
     end
 

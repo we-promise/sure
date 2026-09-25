@@ -15,12 +15,3 @@ tr:
       minimum_payment_placeholder: '100'
     new:
       title: Kredi kartı bilgilerini girin
-    overview:
-      amount_owed: Borç Tutarı
-      annual_fee: Yıllık Ücret
-      apr: Yıllık Faiz Oranı (APR)
-      available_credit: Kullanılabilir Kredi
-      edit_account_details: Hesap ayrıntılarını düzenle
-      expiration_date: Son Kullanma Tarihi
-      minimum_payment: Asgari Ödeme
-      unknown: Bilinmiyor

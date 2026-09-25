@@ -15,12 +15,3 @@ ru:
       minimum_payment_placeholder: '100'
     new:
       title: Введите данные кредитной карты
-    overview:
-      amount_owed: Задолженность
-      annual_fee: Годовая плата
-      apr: Годовая процентная ставка (APR)
-      available_credit: Доступный кредит
-      edit_account_details: Изменить данные счёта
-      expiration_date: Дата окончания
-      minimum_payment: Минимальный платёж
-      unknown: Неизвестно
