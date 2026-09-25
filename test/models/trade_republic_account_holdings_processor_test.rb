@@ -160,6 +160,119 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert Security.exists?(id: isin_security.id)
   end
 
+  test "existing exchange securities keep provider-managed offline states during position imports" do
+    [
+      [ "DE000BASF111", "BAS", "health_check_failed" ],
+      [ "DE000BASF222", "BAS2", "provider_disabled" ]
+    ].each do |isin, symbol, reason|
+      security = Security.create!(
+        ticker: symbol,
+        exchange_operating_mic: "XETR",
+        name: symbol,
+        offline: true,
+        offline_reason: reason
+      )
+
+      import_position(isin: isin, quantity: "5", price: "42.50", symbol: symbol, exchange_slug: "XETR")
+
+      holding = @account.holdings.find_by!(security: security)
+      assert_equal BigDecimal("42.50"), holding.price
+      assert security.reload.offline?
+      assert_equal reason, security.offline_reason
+    end
+  end
+
+  test "a ticker rematch uses a new online security while the failed ISIN security stays offline" do
+    Security.stubs(:search_provider).returns([])
+    isin = "DE000BASF111"
+
+    import_position(isin: isin, quantity: "5", price: "40")
+    old_security = Security.find_by!(ticker: isin)
+    old_security.update!(offline_reason: "health_check_failed")
+    holding = @account.holdings.find_by!(security: old_security)
+
+    import_position(isin: isin, quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+
+    new_security = Security.find_by!(ticker: "BAS", exchange_operating_mic: "XETR")
+    assert old_security.reload.offline?
+    assert_equal "health_check_failed", old_security.offline_reason
+    assert_not new_security.offline?
+    assert_equal new_security.id, holding.reload.security_id
+    assert_equal BigDecimal("42.50"), holding.price
+  end
+
+  test "a ticker rematch preserves an existing ticker security's offline state" do
+    Security.stubs(:search_provider).returns([])
+    isin = "DE000BASF111"
+
+    import_position(isin: isin, quantity: "5", price: "40")
+    old_security = Security.find_by!(ticker: isin)
+    holding = @account.holdings.find_by!(security: old_security)
+    ticker_security = Security.create!(
+      ticker: "BAS",
+      exchange_operating_mic: "XETR",
+      name: "BASF",
+      offline: true,
+      offline_reason: "health_check_failed"
+    )
+
+    import_position(isin: isin, quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+
+    assert ticker_security.reload.offline?
+    assert_equal "health_check_failed", ticker_security.offline_reason
+    assert_equal ticker_security.id, holding.reload.security_id
+    assert_equal BigDecimal("42.50"), holding.price
+  end
+
+  test "provider confirmation preserves an existing exchange security's offline state" do
+    security = Security.create!(
+      ticker: "BAS.DE",
+      exchange_operating_mic: "XETR",
+      name: "BASF",
+      offline: true,
+      offline_reason: "health_check_failed"
+    )
+    Security.stubs(:search_provider).returns([
+      Security.new(ticker: "BAS.DE", exchange_operating_mic: "XETR", name: "BASF")
+    ])
+    @tr_account.update!(raw_positions_payload: [
+      position_payload(isin: "DE000BASF111", quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+    ])
+    processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
+    processor.stubs(:available_price_provider).returns("twelve_data")
+
+    processor.process
+
+    assert_equal security.id, @account.holdings.first.security_id
+    assert security.reload.offline?
+    assert_equal "health_check_failed", security.offline_reason
+    assert_equal "twelve_data", security.price_provider
+  end
+
+  test "exchange security creation path preserves an existing offline security" do
+    security = Security.create!(
+      ticker: "BAS",
+      exchange_operating_mic: "XETR",
+      name: "BASF",
+      offline: true,
+      offline_reason: "health_check_failed"
+    )
+    processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
+
+    resolved = processor.send(
+      :find_or_create_exchange_security!,
+      ticker: "BAS",
+      exchange_operating_mic: "XETR",
+      name: "BASF",
+      price_provider: "twelve_data"
+    )
+
+    assert_equal security.id, resolved.id
+    assert security.reload.offline?
+    assert_equal "health_check_failed", security.offline_reason
+    assert_equal "twelve_data", security.price_provider
+  end
+
   test "rematch prefers exchange market values and merges cost basis on collision" do
     Security.stubs(:search_provider).returns([])
 

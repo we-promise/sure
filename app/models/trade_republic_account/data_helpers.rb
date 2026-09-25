@@ -290,14 +290,14 @@ module TradeRepublicAccount::DataHelpers
         exchange_operating_mic: mic
       )
       if existing
-        ensure_online_price_provider!(existing, price_provider)
+        ensure_price_provider!(existing, price_provider)
         return existing
       end
 
       confirmed = confirm_exchange_security_with_provider(symbol, mic, name, price_provider)
       return confirmed if confirmed
 
-      create_online_security!(
+      find_or_create_exchange_security!(
         ticker: symbol,
         exchange_operating_mic: mic,
         name: name,
@@ -327,8 +327,6 @@ module TradeRepublicAccount::DataHelpers
       security.name = match.name.presence || name.presence || security.name || match.ticker
       security.country_code = match.country_code.presence || country_code_for_mic(mic)
       security.price_provider = price_provider if security.price_provider.blank?
-      security.offline = false
-      security.offline_reason = nil
       security.save!
       security
     rescue StandardError => e
@@ -355,7 +353,7 @@ module TradeRepublicAccount::DataHelpers
       end
     end
 
-    def create_online_security!(ticker:, exchange_operating_mic:, name:, price_provider:)
+    def find_or_create_exchange_security!(ticker:, exchange_operating_mic:, name:, price_provider:)
       security = Security.find_or_initialize_by_ticker_and_exchange(
         ticker: ticker,
         exchange_operating_mic: exchange_operating_mic
@@ -363,8 +361,6 @@ module TradeRepublicAccount::DataHelpers
       security.name = name.presence || security.name || ticker
       security.country_code = country_code_for_mic(exchange_operating_mic)
       security.price_provider = price_provider if price_provider.present? && security.price_provider.blank?
-      security.offline = false
-      security.offline_reason = nil
       security.save!
       security
     end
@@ -375,10 +371,8 @@ module TradeRepublicAccount::DataHelpers
       Security::EXCHANGES.dig(mic.to_s.upcase, "country")
     end
 
-    def ensure_online_price_provider!(security, price_provider)
+    def ensure_price_provider!(security, price_provider)
       attrs = {}
-      attrs[:offline] = false if security.offline?
-      attrs[:offline_reason] = nil if security.offline_reason.present?
       if price_provider.present? && security.price_provider.blank?
         attrs[:price_provider] = price_provider
       end
