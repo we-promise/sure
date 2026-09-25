@@ -1,11 +1,15 @@
-<%# locals: (account:) %>
+<%# locals: (account:, projection:, as_of: Date.current) %>
 
+<%# `as_of` is the page's one reference date: the chart above the tabs and
+    this table shade "past" against the same day. `projection` is the loan's
+    payoff projection for that date, built once for the page and shared with
+    the chart. %>
+<% today = as_of %>
 <% schedule = account.loan.amortization_schedule %>
 <% payments = schedule.payments %>
-<% today = Date.current %>
 
 <div class="space-y-4">
-  <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
     <%# A re-amortising loan has no single monthly payment, so the card says
         which one this is rather than implying the figure holds for the term. %>
     <%= summary_card title: schedule.re_amortising? ? t(".opening_payment") : t(".monthly_payment") do %>
@@ -18,6 +22,20 @@
 
     <%= summary_card title: t(".total_cost") do %>
       <%= format_money schedule.total_paid %>
+    <% end %>
+
+    <%# When the loan will actually be paid off: the projection from today's
+        balance at the contract's repayment, as the chart above draws it. The
+        Overview tab has the contract's own date. A balance that repayment no
+        longer clears has no date to give. %>
+    <%= summary_card title: t(".forecasted_payoff_date") do %>
+      <% if projection.payoff_date %>
+        <%= l projection.payoff_date, format: :long %>
+      <% elsif projection.applicable? %>
+        <%= t(".forecasted_payoff_not_converged") %>
+      <% else %>
+        <%= t(".not_applicable") %>
+      <% end %>
     <% end %>
   </div>
 

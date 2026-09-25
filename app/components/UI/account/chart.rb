@@ -1,10 +1,74 @@
 class UI::Account::Chart < ApplicationComponent
-  attr_reader :account
+  attr_reader :account, :loan_chart
 
-  def initialize(account:, period: nil, view: nil)
+  # `loan_chart` is a Loan::PayoffChart payload, built by the controller for a
+  # loan account with a schedule and nil for everything else. When present the
+  # inner chart element becomes the loan balance chart -- recorded balance,
+  # original schedule and projection on one axis -- and the rest of this card
+  # (title, hero figure, trend, period picker, Turbo frame) is unchanged. Every
+  # other account type takes the branch it always took (#100, decision 7).
+  # The page's reference date travels inside the payload (`today`), so the
+  # component takes no date of its own.
+  def initialize(account:, period: nil, view: nil, loan_chart: nil)
     @account = account
     @period = period
     @view = view
+    @loan_chart = loan_chart
+  end
+
+  def loan_chart?
+    loan_chart.present?
+  end
+
+  def loan_chart_id
+    dom_id(account, :loan_chart)
+  end
+
+  # The series with a line inside the domain, in drawing order, each with the
+  # style the controller gives it. Style is carried by the legend as well as
+  # the line: solid is fact, dashed is forecast, and hue alone would fail in
+  # greyscale and under deuteranopia.
+  LOAN_SERIES_STYLES = {
+    "actual" => { token: "--color-success", dashed: false },
+    "scheduled" => { token: "--color-destructive", dashed: true },
+    "projected" => { token: "--color-success", dashed: true }
+  }.freeze
+
+  def loan_legend
+    LOAN_SERIES_STYLES.select { |key, _| loan_chart[:visible].map(&:to_s).include?(key) }
+  end
+
+  def loan_projected_payoff_date
+    loan_chart[:projected_payoff_date] && Date.iso8601(loan_chart[:projected_payoff_date])
+  end
+
+  # The projection ran but the contracted repayment never clears the balance:
+  # there is a line to draw and no payoff date to quote.
+  def loan_projection_not_converged?
+    loan_chart[:projected].any? && loan_projected_payoff_date.nil?
+  end
+
+  # Never "behind": the projection walks only the remaining contracted dates,
+  # so months_saved is zero or positive. A borrower whose balance the contract
+  # no longer clears has no payoff date at all and takes the not-converged
+  # notice instead, with the balloon it would leave.
+  def loan_schedule_comparison
+    months = loan_chart[:months_saved].to_i
+    return I18n.t("UI.account.chart.loan.on_schedule") if months.zero?
+
+    I18n.t("UI.account.chart.loan.months_saved", count: months)
+  end
+
+  def loan_balloon_money
+    Money.new(loan_chart[:balloon].to_f, loan_chart[:currency])
+  end
+
+  # Never negative: the card renders only with a projected payoff date, and the
+  # projection converges only when today's balance is at or below the
+  # contract's, so it can only save interest. A larger balance takes the
+  # not-converged notice instead.
+  def loan_interest_saved_money
+    Money.new(loan_chart[:interest_saved].to_f, loan_chart[:currency])
   end
 
   def period
@@ -70,7 +134,10 @@ class UI::Account::Chart < ApplicationComponent
     when "CreditCard", "OtherLiability"
       I18n.t("UI.account.chart.title.debt_balance")
     when "Loan"
-      I18n.t("UI.account.chart.title.remaining_principal_balance")
+      # The loan balance chart plots what is still owed, principal and any
+      # capitalised interest, so its title drops "principal". A loan without
+      # a schedule keeps the chart, and the title, it always had.
+      loan_chart? ? I18n.t("UI.account.chart.title.loan_remaining_balance") : I18n.t("UI.account.chart.title.remaining_principal_balance")
     else
       I18n.t("UI.account.chart.title.balance")
     end
@@ -97,8 +164,9 @@ class UI::Account::Chart < ApplicationComponent
     @view ||= "balance"
   end
 
+  # Read by the trend, its comparison label and the chart mount; built once.
   def series
-    account.balance_series(period: period, view: view)
+    @series ||= account.balance_series(period: period, view: view)
   end
 
   # Current total unrealized gains, taken from the series so the main indicator
@@ -107,11 +175,32 @@ class UI::Account::Chart < ApplicationComponent
     series.values.last&.value || Money.new(0, account.currency)
   end
 
+  # A loan's chart offers a subset of the shared periods
+  # (Loan::PayoffChart::WINDOW_KEYS); every other chart offers every period.
+  def period_picker_options
+    Loan::PayoffChart.window_options if loan_chart?
+  end
+
+  # A saved period the loan chart does not offer shows the whole life, so its
+  # picker reads All.
+  def period_picker_selected
+    return period unless loan_chart?
+
+    Loan::PayoffChart::WINDOW_KEYS.include?(period.key.to_s) ? period.key.to_s : "all_time"
+  end
+
+  # On a loan the change line compares today's balance with the amount
+  # borrowed, whatever window is picked (owner review of #3474).
   def trend
-    series.trend
+    return series.trend unless loan_chart?
+
+    Trend.new(current: account.balance_money, previous: account.loan.original_balance,
+              favorable_direction: account.favorable_direction)
   end
 
   def comparison_label
+    return I18n.t("UI.account.chart.loan.since_start") if loan_chart?
+
     start_date = series.start_date
     return period.comparison_label if start_date.blank?
 
