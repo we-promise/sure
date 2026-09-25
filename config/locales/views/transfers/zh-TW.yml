@@ -5,6 +5,7 @@ zh-TW:
       success: 轉帳已建立
       exchange_rate_unavailable: 所選幣別與日期沒有可用的匯率
       date_invalid: 無效
+      stale_form: 此表單已用不同的內容送出過。請重新整理頁面後再試一次。
     destroy:
       success: 轉帳已移除
     form:
@@ -13,14 +14,14 @@ zh-TW:
       outgoing_fee: 轉出手續費
       incoming_fee: 轉入手續費
       date: 日期
-      destination_amount: 目標金額
-      destination_amount_display: 目標金額：%{amount}
+      destination_amount: 轉入金額
+      destination_amount_display: 轉入金額：%{amount}
       exchange_rate_display: 匯率：%{rate}
       expense: 支出
       from: 從
       income: 收入
       select_account: 選擇帳戶
-      source_amount: 來源金額
+      source_amount: 轉出金額
       submit: 建立轉帳
       to: 至
       transfer: 轉帳

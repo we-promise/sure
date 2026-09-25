@@ -24,7 +24,7 @@ zh-TW:
     select_accounts:
       not_configured: 尚未設定 SnapTrade。
     oauth_authorize:
-      not_configured: 尚未設定 SnapTrade OAuth。請設定 SNAPTRADE_OAUTH_CLIENT_ID 與 SNAPTRADE_OAUTH_CLIENT_SECRET，重新啟動應用程式後再試。
+      not_configured: SnapTrade 瀏覽器授權除了 SNAPTRADE_OAUTH_CLIENT_ID 之外，還需要 SNAPTRADE_OAUTH_CLIENT_SECRET。請設定後重新啟動，或改用裝置代碼授權。
     oauth_callback:
       success: SnapTrade 授權完成。
       access_denied: SnapTrade 授權已取消。
@@ -76,7 +76,7 @@ zh-TW:
       account_number: 帳戶：
       account_type_label: 帳戶類型
       account_types:
-        depository: 支票或儲蓄帳戶
+        depository: 活期或儲蓄帳戶
         credit_card: 信用卡
         investment: 投資帳戶
         crypto: 加密貨幣帳戶
@@ -117,14 +117,33 @@ zh-TW:
         other: 另有 %{count} 個帳戶可以設定
       no_accounts_title: 沒有偵測到任何帳戶
       no_accounts_description: 連結一家券商以匯入您的投資帳戶。
+    oauth_device_flow:
+      title: 連接 SnapTrade
+      subtitle: 使用裝置代碼授權 Sure 存取 SnapTrade。
+      instructions: 開啟 SnapTrade 並確認此裝置代碼，然後回到這裡完成設定。
+      code_label: 裝置代碼
+      open_snaptrade: 開啟 SnapTrade
+      start_button: 開始授權
+      complete_button: 我已授權 SnapTrade
+      cancel_button: 取消
+      missing_client_id: 尚未設定 SnapTrade OAuth。請在 .env.local 中加入 SNAPTRADE_OAUTH_CLIENT_ID，重新啟動應用程式後再試一次。
+    start_oauth_device_flow:
+      failed: 無法開始 SnapTrade 裝置授權。請再試一次。
+    complete_oauth_device_flow:
+      success: SnapTrade 授權完成。
+      device_code_required: 此連線目前沒有進行中的 SnapTrade 裝置授權。請重新開始以取得新的代碼。
+      authorization_pending: SnapTrade 尚未收到您的確認。請在 SnapTrade 中核准此代碼後再試一次。
+      expired: 此裝置代碼已過期。請重新開始授權。
+      access_denied: SnapTrade 授權已被拒絕。
+      failed: 無法完成 SnapTrade 裝置授權。請再試一次。
   providers:
     snaptrade:
       name: SnapTrade
       connection_description: 透過 SnapTrade 連結您的券商（支援 25 家以上）
       description: SnapTrade 可連結 25 家以上的主要券商（Fidelity、Vanguard、Schwab、Robinhood 等），並提供含活動標籤與成本基礎的完整交易紀錄。
       oauth_setup_step_1_html: 在 <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a> 註冊一個 OAuth 應用程式
-      oauth_setup_step_2_html: 將這個應用程式的回呼網址（<code>%{callback_url}</code>）加入已註冊的 redirect URI
-      oauth_setup_step_3: 在環境變數中設定 SNAPTRADE_OAUTH_CLIENT_ID 與 SNAPTRADE_OAUTH_CLIENT_SECRET，然後重新啟動
+      oauth_setup_step_2_html: 僅限瀏覽器流程：將這個應用程式的回呼網址（<code>%{callback_url}</code>）加入已註冊的 redirect URI
+      oauth_setup_step_3: 在環境變數中設定 SNAPTRADE_OAUTH_CLIENT_ID 並重新啟動，這樣就能使用裝置代碼流程；若也要使用瀏覽器流程，請再加上 SNAPTRADE_OAUTH_CLIENT_SECRET
       free_tier_warning: SnapTrade 的免費方案涵蓋 20 個券商連線。
       oauth_title: SnapTrade OAuth
       oauth_status_ready: 授權 Sure 讀取您的 SnapTrade 帳戶資料。
@@ -152,9 +171,11 @@ zh-TW:
       no_connections: 找不到任何券商連線。
       delete_connection: 刪除
       delete_connection_title: 要刪除券商連線嗎？
-      delete_connection_body: 這會從 SnapTrade 永久移除 %{brokerage} 連線，該券商的所有帳戶都會取消連結。日後要再同步這些帳戶就得重新連結。
+      delete_connection_body: 這會從 SnapTrade 永久移除 %{brokerage} 連線，該券商的所有帳戶都會解除連結。日後要再同步這些帳戶就得重新連結。
       delete_connection_confirm: 刪除連線
       manage_at_snaptrade: 在 SnapTrade 管理連線
+      oauth_status_ready_device: 使用裝置代碼授權 Sure 讀取您的 SnapTrade 帳戶資料。
+      oauth_device_button: 使用裝置代碼
   snaptrade_item:
     sync_status:
       no_accounts: 找不到帳戶

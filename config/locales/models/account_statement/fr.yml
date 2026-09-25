@@ -20,9 +20,9 @@ fr:
         account_statement:
           attributes:
             checksum:
-              duplicate_statement_file: a déjà été téléchargé pour cette famille
+              duplicate_statement_file: a déjà été importé pour ce foyer
             content_sha256:
-              duplicate_statement_file: a déjà été téléchargé pour cette famille
+              duplicate_statement_file: a déjà été importé pour ce foyer
             original_file:
               invalid_format: doit être un fichier PDF, CSV ou XLSX
               too_large: est trop grand. La taille maximale est de %{max_mb} Mo.

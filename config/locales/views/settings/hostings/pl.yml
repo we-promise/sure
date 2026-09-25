@@ -185,10 +185,10 @@ pl:
       openai_settings:
         access_token_label: Token dostępu
         access_token_placeholder: Wprowadź tutaj token dostępu
-        ai_response_timeout_help: 'Domyślnie: 90. Obejmuje całą turę, więc licz to
-          jako sumę: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT,
-          plus czas wykonania narzędzi i czas w kolejce. Obniżenie ASSISTANT_MAX_TOOL_CALL_ITERATIONS
-          zmniejsza potrzebną wartość i często jest lepszą dźwignią na wolnym sprzęcie.'
+        ai_response_timeout_help: 'Domyślnie: 90. Dotyczy wyłącznie limitu czasu całej
+          tury czatu, więc ustaw go jako sumę: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS)
+          × limit czasu żądania, plus czas wykonania narzędzi i czas w kolejce. AI_RESPONSE_TIMEOUT
+          nadpisuje to pole.'
         ai_response_timeout_label: Limit czasu odpowiedzi w sekundach (opcjonalnie)
         budget_description: Dotyczy wywołań kompatybilnych z OpenAI (czat, auto-kategoryzacja,
           wykrywanie kontrahenta i przetwarzanie PDF). Wartości domyślne są ostrożne
@@ -225,7 +225,7 @@ pl:
         model_label: Model (opcjonalne)
         model_placeholder: gpt-4.1 (domyślnie)
         openai_request_timeout_help: 'Domyślnie: 60. Dotyczy każdego żądania HTTP
-          zgodnego z OpenAI, w tym automatycznej kategoryzacji, wykrywania sprzedawcy,
+          zgodnego z OpenAI, w tym automatycznej kategoryzacji, wykrywania kontrahenta,
           czatu, przetwarzania PDF oraz wywołań magazynu wektorów. OPENAI_REQUEST_TIMEOUT
           nadpisuje to pole.'
         openai_request_timeout_label: Limit czasu żądania w sekundach (opcjonalnie)
@@ -262,6 +262,7 @@ pl:
           tinkoff_invest: T-Invest (T-Bank)
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
+          mansa: Mansa
         requires_api_key: wymaga klucza API
         requires_api_key_alpha_vantage: wymaga klucza API, limit 25 zapytań dziennie
         requires_api_key_eodhd: wymaga klucza API, limit 20 zapytań dziennie
@@ -275,6 +276,7 @@ pl:
         title: Wybór dostawcy
         twelve_data_hint: wymaga klucza API, 800 jednostek dziennie
         yahoo_finance_hint: za darmo, bez klucza API
+        requires_api_key_mansa: wymaga klucza API, darmowy plan 100 zapytań/dzień -- tylko NGX (Nigerian Exchange)
       realie_settings:
         description: Wprowadź klucz API Realie, aby przy dodawaniu nieruchomości pobierać
           szczegóły i szacunkową wartość nieruchomości w USA. Darmowy plan jest ograniczony
@@ -418,3 +420,13 @@ pl:
           nieoczekiwaną odpowiedź. Sprawdź połączenie internetowe i spróbuj ponownie
           później.
         unavailable_title: Nie udało się zweryfikować Yahoo Finance.
+      mansa_settings:
+        title: Mansa
+        description: Wprowadź klucz API z Mansa API. Obsługuje NGX (Nigerian Exchange), której nie obejmuje żaden inny dostępny tu dostawca. Mansa obsługuje też inne giełdy afrykańskie, ale z tą integracją zweryfikowano tylko NGX.
+        env_configured_message: Skonfigurowano pomyślnie przez zmienną środowiskową MANSA_API_KEY.
+        label: Klucz API
+        placeholder: Wprowadź tutaj swój klucz API Mansa
+        show_details: (pokaż szczegóły)
+        step_1_html: Odwiedź <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> i odbierz darmowy klucz API -- karta płatnicza nie jest wymagana.
+        step_2: Skopiuj swój klucz API i wklej go poniżej.
+        rate_limit_warning: Darmowy plan Mansa jest ograniczony do 100 zapytań API dziennie i udostępnia tylko bieżące notowania -- ceny historyczne wymagają płatnego planu. Z tą integracją zweryfikowano tylko NGX (Nigerian Exchange); inne giełdy afrykańskie obsługiwane przez Mansa nie są tu jeszcze wspierane.

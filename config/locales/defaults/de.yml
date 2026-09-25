@@ -52,6 +52,7 @@ de:
       short: "%e. %b"
       month_year: "%B %Y"
       short_month_year: "%b %Y"
+      short_with_year: '%e. %b %Y'
     month_names:
     -
     - Januar
@@ -235,3 +236,10 @@ de:
       long: "%A, %d. %B %Y, %H:%M Uhr"
       short: "%d. %b, %H:%M Uhr"
     pm: nachmittags
+  mcp:
+    errors:
+      invalid_session_id: Ungültige MCP-Session-ID
+      unsupported_protocol_version: 'Nicht unterstützte MCP-Protokollversion: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris müssen https, Loopback-http oder das URI-Schema einer nativen App verwenden

@@ -26,6 +26,7 @@ zh-TW:
         other: 已匯入 %{count} 個帳戶
       none_selected: 沒有選擇任何帳戶
       no_accounts: 沒有可匯入的帳戶
+      invalid_sync_start_date: 同步開始日期必須是過去的有效日期。
     binance_item:
       provider_name: Binance
       syncing: 同步中...

@@ -231,7 +231,7 @@ pl:
               — uruchom test ponownie, żeby sprawdzić kolejny.
             description: Powyższe testy uruchomiono z tego procesu web. Większość
               pracy AI — odpowiedzi asystenta, przetwarzanie PDF, embeddingi, automatyczna
-              kategoryzacja i wykrywanie sprzedawcy — działa w rzeczywistości w procesie
+              kategoryzacja i wykrywanie kontrahenta — działa w rzeczywistości w procesie
               workera Sidekiq, który może różnić się dostępem do sieci, DNS, regułami
               proxy, a nawet wczytanymi poświadczeniami. Uruchom test, żeby zweryfikować
               własną konfigurację i łączność workera.
@@ -284,7 +284,7 @@ pl:
           kolejce. Opóźnienie to liczba sekund oczekiwania najstarszego zadania.
         queues_section_title: Kolejki
         status_section_description: Aktualny stan procesu w tle, który obsługuje synchronizacje,
-          salda i obliczenia wartości netto.
+          salda i obliczenia majątku netto.
         status_section_title: Status Sidekiq
         tabs:
           ai: Status AI
@@ -300,3 +300,44 @@ pl:
       verify_worker_ai:
         queued: Test workera dodano do kolejki. Pojawi się poniżej, gdy proces workera
           go podejmie, zwykle w ciągu kilku sekund.
+      push_notifications:
+        send_test: Wyślij testowe powiadomienie push
+        queueing: Dodawanie do kolejki…
+        title: Powiadomienia push
+        requested_at: Ostatni test zlecono %{time}
+        result_help: Przyjęcie przez APNs nie potwierdza dostarczenia na urządzenie. Odśwież, aby zobaczyć wyniki z procesu roboczego. Wyniki są przechowywane przez 24 godziny.
+        device: Urządzenie %{number}
+        pending: Oczekuje
+        refresh: Odśwież wyniki
+        columns:
+          device: Urządzenie
+          environment: Środowisko APNs
+          status: Wynik
+          checked_at: Ostatnia aktualizacja
+        environments:
+          sandbox: Sandbox
+          production: Produkcja
+        messages:
+          enqueue_failed: Nie udało się dodać testu do kolejki. Sprawdź Sidekiq i odśwież poniższe wyniki.
+          ready: Wyślij testowe powiadomienie na włączone urządzenia iOS zarejestrowane na Twoim koncie.
+          queued: Testowe powiadomienie dodano do kolejki. Odśwież poniższe wyniki, aby sprawdzić jego stan.
+          hosted_only: Powiadomienia push są dostępne tylko w wersji hostowanej.
+          ineligible: Testowe powiadomienie może wysłać tylko aktywny superadministrator.
+          no_devices: Włącz powiadomienia push w aplikacji Sure na iOS dla tego konta, aby wysłać test.
+          disabled: Wysyłanie powiadomień push zostało wyłączone przez operatora.
+          not_configured: Dane uwierzytelniające APNs nie są skonfigurowane.
+          cooldown: Odczekaj 30 sekund przed wysłaniem kolejnego testu.
+          storage_unavailable: Nie udało się zapisać żądania testu. Sprawdź konfigurację współdzielonej pamięci podręcznej.
+        statuses:
+          queued: W kolejce
+          accepted: Przyjęte przez APNs
+          skipped: 'Pominięto: urządzenie nie spełnia już warunków'
+          rejected: Odrzucone przez APNs; sprawdź logi debugowania push
+          unregistered: Rejestracja urządzenia jest już nieważna
+          retrying: Ponawianie po tymczasowym błędzie
+          failed: Niepowodzenie; sprawdź logi debugowania push
+          enqueue_failed: Nie udało się dodać do kolejki; sprawdź Sidekiq
+          expired: Wygasło bez ostatecznego wyniku
+      push_notification:
+        title: Testowe powiadomienie Sure
+        body: To jest testowe powiadomienie push dla Twojego konta Sure.

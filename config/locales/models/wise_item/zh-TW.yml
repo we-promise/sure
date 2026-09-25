@@ -1,0 +1,12 @@
+---
+zh-TW:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: SCA 私鑰
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: 無法儲存，因為這個安裝環境尚未設定 Active Record encryption

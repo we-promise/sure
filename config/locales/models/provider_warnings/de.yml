@@ -2,3 +2,10 @@
 de:
   provider_warnings:
     limited_investment_data: Dieser Anbieter liefert nur eingeschränkte Investmentdaten. Kennzeichnungen wie Kauf, Verkauf oder Dividende fehlen, was die Budgetgenauigkeit beeinträchtigen kann. Leg dir Regeln an, um Investment-Transaktionen auszuschließen oder zu kategorisieren.
+    lunchflow_accounts_failed:
+      one: 'Lunchflow-Import: %{count} Konto konnte nicht aktualisiert werden'
+      other: 'Lunchflow-Import: %{count} Konten konnten nicht aktualisiert werden'
+    lunchflow_transactions_failed:
+      one: 'Lunchflow-Import: Abruf der Transaktionen für %{count} Konto fehlgeschlagen'
+      other: 'Lunchflow-Import: Abruf der Transaktionen für %{count} Konten fehlgeschlagen'
+    lunchflow_import_error: 'Lunchflow-Import: %{error}'

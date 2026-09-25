@@ -182,6 +182,9 @@ fr:
       workplace_pension_uk:
         long: Pension d'entreprise
         short: Pension
+      cash_management:
+        short: CMA
+        long: Compte de gestion de trésorerie (CMA)
     value_tooltip:
       cash: Liquidités
       holdings: Titres

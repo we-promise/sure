@@ -43,6 +43,18 @@ zh-TW:
           cash_flow: "現金流"
           surplus: "盈餘"
           deficit: "赤字"
+        title: 新版桑基圖
+        preview: 預覽
+        preview_tooltip: 這個圖表使用與行動版 Swift 用戶端共用的新 API，之後將取代上方的圖表。
+        feedback_prompt: 請將這張圖表與上方的原始圖表比較，如果除了排序之外還有其他差異，請告訴我們。
+        positive: 看起來正確
+        negative: 有地方不對
+        feedback_title: 現金流圖表意見回饋
+        feedback_loading: 正在載入意見回饋表單…
+        feedback_unavailable: 目前無法提供意見回饋，請稍後再試。
+        feedback_thanks: 感謝您協助我們改善這張圖表！
+        feedback_privacy: 您的回覆會傳送給 PostHog。描述問題時請勿包含帳戶號碼、餘額或其他私人財務資訊。
+        feedback_submit: 送出意見回饋
       welcome: 歡迎回來，%{name}
       subtitle: 這是您目前的財務概況
       new: 新增帳戶
@@ -79,6 +91,8 @@ zh-TW:
         classifications:
           asset: 資產
           liability: 負債
+        expand_all: 全部展開
+        collapse_all: 全部收合
       insights_feed:
         title: 洞察
       cashflow_sankey:
@@ -87,6 +101,9 @@ zh-TW:
         no_data_title: 此時段內無現金流資料
         no_data_description: 新增交易紀錄以顯示現金流資料，或擴大時間範圍
         add_transaction: 新增交易
+        loading: 正在載入現金流…
+        load_error: 無法載入現金流，請再試一次。
+        retry: 再試一次
       no_accounts:
         title: 尚無帳戶
         description: 新增帳戶以顯示淨資產資料
@@ -123,3 +140,12 @@ zh-TW:
         chart_span: 最近 %{count} 個月
         income: 收入
         expenses: 支出
+      spending_trend:
+        title: 支出
+        date_range: '%{start_date} 至 %{end_date}'
+        date_range_short: '%{year} 年 %{start_date} - %{end_day} 日'
+        date_range_short_single: '%{year} 年 %{date}'
+        month_picker_aria_label: 選擇月份
+        period_scope_hint: 顯示您在這裡選擇的月份，與上方儀表板的時間區間無關。
+        no_data: 這個月沒有支出資料
+        previous_comparison_days: （1-%{end_day} 日）

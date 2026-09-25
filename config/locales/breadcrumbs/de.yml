@@ -71,7 +71,7 @@ de:
     registrations: Registrieren
     reports: Berichte
     rules: Regeln
-    securities: Wertpapiere
+    securities: Sicherheit
     security: Sicherheit
     self_hosting: Self-Hosting
     sessions: Anmelden
@@ -91,3 +91,4 @@ de:
     users: Benutzer
     valuations: Saldostände
     vehicles: Fahrzeuge
+    monobank_items: Monobank

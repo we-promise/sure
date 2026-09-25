@@ -48,9 +48,8 @@ pl:
         name_help_text: Wybierz opisową nazwę, która pomoże Ci rozpoznać ten klucz
           później.
         name_label: Nazwa klucza API
-        name_placeholder: np. Aplikacja produkcyjna, Dashboard analityczny
-        permissions_help: Wybierz uprawnienia potrzebne dla klucza API. Zawsze możesz
-          utworzyć nowy klucz z innymi uprawnieniami.
+        name_placeholder: np. Moja aplikacja budżetowa, Tracker portfela
+        permissions_help: 'Wybierz uprawnienia, które ma mieć ten klucz API:'
         permissions_label: Uprawnienia
         save_api_key: Zapisz klucz API
         scope_details:

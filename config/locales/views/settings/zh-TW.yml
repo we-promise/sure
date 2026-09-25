@@ -120,12 +120,34 @@ zh-TW:
         main_system_prompt:
           title: 主系統提示詞 (System Prompt)
           subtitle: 核心指令，決定 AI 助手在每一段對話中的行為
+          label: 聊天系統提示詞
         transaction_categorizer:
           title: 交易分類器
           subtitle: AI 會根據您定義的分類自動為交易分類
         merchant_detector:
           title: 商家偵測器
           subtitle: AI 會辨識交易資料並自動補全商家資訊
+        save: 儲存提示詞
+        save_confirm:
+          title: 要儲存自訂 AI 提示詞嗎？
+          body: 自訂提示詞會取代內建的系統指令與安全防護機制（例如理財建議限制），並套用到您的整個家庭。
+          dont_show_again: 不再顯示此警告
+          cancel: 取消
+          confirm: 確認
+      prompt_field:
+        provider_label: 供應商
+        prompt_label: 提示詞
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: 重設為預設值
+        reset_confirm_title: 要重設為預設提示詞嗎？
+        reset_confirm_body: 這會捨棄您的自訂提示詞，並還原內建的預設指令。
+        status_custom: 使用您的自訂提示詞
+        status_default: 使用內建預設值
+        format_risk: '您的 %{provider} 提示詞移除了 {"%{key}": ...} 範例。每次請求仍會要求該格式，因此通常仍能正確解析，但若覆寫內容要求不同的輸出格式，就會導致解析失敗。'
+      update:
+        success: AI 提示詞已更新
+        multiple_errors: 有多個提示詞過長（上限為 %{count} 個字元）
     payments:
       show:
         page_title: 付款
@@ -162,6 +184,8 @@ zh-TW:
         dashboard_two_column_description: 在大螢幕上以兩欄顯示儀表板小工具，每個小工具的標題列都有各自的寬度與高度控制項。關閉時，小工具會排成單欄。
         split_grouped_title: 將拆分交易分組
         split_grouped_description: 在交易清單中，將拆分交易歸在其母交易之下顯示。關閉時，拆分出來的子項會各自成為一列。
+        dashboard_account_groups_title: 預設展開
+        dashboard_account_groups_description: 這些帳戶區塊在儀表板與帳戶側邊欄中會預設展開。您仍可隨時手動收合。
     preferences:
       show:
         country: 國家
@@ -209,6 +233,20 @@ zh-TW:
         theme_subtitle: 選擇您偏好的應用程式主題
         theme_system: 系統設定
         theme_title: 主題
+        budget_title: 預算
+        budget_subtitle: 設定預算的運作方式
+        personal_budgets: 個人預算
+        personal_budgets_hint: 為每位家庭成員啟用各自的預算。
+        household_budget_enabled: 家庭預算
+        household_budget_enabled_hint: 在個人預算之外，另外保留一份共用的家庭預算。關閉後只使用個人預算。
+        budget_sharing_title: 預算共享
+        budget_sharing_subtitle: 讓其他成員檢視或編輯您的個人預算
+        budget_sharing_no_members: 您的%{moniker}中沒有其他成員可以共享
+        budget_sharing_permission_label: '%{name} 的存取權'
+        budget_sharing_permissions:
+          none: 無存取權
+          read_only: 僅檢視
+          read_write: 可編輯
     profiles:
       destroy:
         cannot_remove_self: 您無法將自己從帳號中移除。
@@ -252,7 +290,7 @@ zh-TW:
         invite_member: 新增成員
         last_name: 姓氏
         page_title: 個人資料
-        pending: 待處理
+        pending: 待接受
         profile_subtitle: 自訂您在 %{product_name} 上的顯示方式
         profile_title: 個人資訊
         remove_invitation: 移除邀請
@@ -275,7 +313,7 @@ zh-TW:
         mfa_description: 登入時除了密碼，還會要求輸入驗證應用程式產生的驗證碼，為您的帳號多一層保護。
         enable_mfa: 啟用雙重驗證 (2FA)
         disable_mfa: 停用雙重驗證 (2FA)
-        disable_mfa_confirm: 您確定要停用雙重驗證嗎？這將會降低您帳號的安全性。
+        disable_mfa_confirm: 您確定要停用雙重驗證嗎？
         sso_title: 已連結的帳號
         sso_subtitle: 管理您的單一登入帳號連結
         sso_disconnect: 中斷連線
@@ -343,6 +381,7 @@ zh-TW:
       appearance_label: 外觀
       bank_sync_label: 銀行同步
       debug_label: 偵錯
+      system_health_label: 系統健康狀態
     settings_nav_link_large:
       next: 下一步
       previous: 返回
@@ -364,6 +403,7 @@ zh-TW:
         warn: 需要處理
         err: 錯誤
         false: 未設定
+        "off": 未設定
       maturity:
         beta: Beta
         alpha: Alpha
@@ -416,6 +456,11 @@ zh-TW:
         sophtron: 連結美國與加拿大的銀行及公用事業帳戶。
         plaid: 透過 Plaid 連結數千家美國金融機構。
         plaid_eu: 透過 Plaid 連結歐洲金融機構（PSD2／開放銀行）。
+        monobank: 使用個人 API Token 同步烏克蘭 Monobank 的卡片與存錢罐（jar）。
+        fio: 使用唯讀 API Token 同步 Fio banka 帳戶。
+        coinspot: 使用唯讀 API 金鑰同步 CoinSpot 的餘額、AUD 價值、轉帳、存入、提領與訂單紀錄。
+        onchain_wallet: 透過公開地址追蹤自託管的 Bitcoin、EVM 與 Solana 錢包。
+        trade_republic: 透過安全的唯讀網頁登入同步您的 Trade Republic 投資帳戶。
       search_filters:
         aria_label: 搜尋供應商
         placeholder: 搜尋供應商
@@ -438,7 +483,7 @@ zh-TW:
         step3: 複製您的 API 金鑰與 API Secret，貼到下方
         api_key_label: API 金鑰
         api_key_placeholder: 輸入您的 Coinbase API 金鑰
-        api_secret_label: API 密鑰 (API Secret)
+        api_secret_label: 私密金鑰 (API Secret)
         api_secret_placeholder: 輸入您的 Coinbase API Secret
         connect_button: 連結 Coinbase
         syncing: 同步中...
@@ -456,7 +501,7 @@ zh-TW:
         ip_hint_contact_admin: 請聯絡您的管理員取得應用程式伺服器的對外 IP 位址。
         api_key_label: API 金鑰
         api_key_placeholder: 貼上您的 Binance API Key
-        api_secret_label: API 密鑰 (API Secret)
+        api_secret_label: 私密金鑰 (API Secret)
         api_secret_placeholder: 貼上您的 Binance API Secret
         connect_button: 連結 Binance
         syncing: 同步中...
@@ -486,7 +531,7 @@ zh-TW:
         syncing: 同步中...
         sync: 同步
         disconnect: 中斷連線
-        disconnect_confirm: 確定要中斷 %{name} 嗎？
+        disconnect_confirm: 確定要中斷與 %{name} 的連線嗎？
       enable_banking_panel:
         callback_url_instruction: 回呼網址請使用 %{callback_url}。
         connection_error: 連線錯誤
@@ -633,3 +678,107 @@ zh-TW:
         accounts_tab: 帳戶管理
         status_configured_suffix: 分頁管理已偵測到的帳戶。
         not_configured: 尚未設定。
+      drawer_trust_statement_encryption_unconfigured: 唯讀存取。Sure 永遠無法動用您的資金。在正式環境中儲存供應商憑證前，請先設定明確的加密金鑰。
+      provider_setup_encryption_warning:
+        title: 缺少加密金鑰
+        message: 這個自行代管的安裝尚未設定明確的 Active Record 加密金鑰。在正式環境中儲存供應商憑證前，請先設定 primary_key、deterministic_key 與 key_derivation_salt。
+      coinspot_panel:
+        step1_html: 前往 <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot API 設定</a>
+        step2: 建立一組只能讀取餘額與歷史紀錄的 API 金鑰。
+        step3: 將 API 金鑰與私密金鑰貼到下方。
+        read_only_title: 只做唯讀的交易所同步
+        read_only_body: 請不要授予傳送、提領、交易或轉帳權限。Sure 只會匯入餘額、AUD 價值、轉帳、存入、提領與已完成的訂單紀錄。
+        default_connection_name: CoinSpot
+        add_connection: 新增 CoinSpot 連線
+        update_connection: 更新連線
+        connection_name_label: 連線名稱
+        connection_name_placeholder: 主要 CoinSpot
+        api_key_label: API 金鑰
+        api_key_placeholder: 貼上您的 CoinSpot API 金鑰
+        keep_api_key_placeholder: 留白即維持現有的 API 金鑰
+        api_secret_label: 私密金鑰 (API Secret)
+        api_secret_placeholder: 貼上您的 CoinSpot API Secret
+        keep_api_secret_placeholder: 留白即維持現有的 API Secret
+        setup_accounts: 設定帳戶
+        syncing: 同步中...
+        sync: 同步
+        disconnect: 中斷連線
+        disconnect_confirm: 確定要中斷與 %{name} 的連線嗎？
+      onchain_wallet_panel:
+        add_wallet: 新增錢包
+        advanced: 進階
+        disconnect_all: 中斷所有錢包連線
+        disconnect_all_confirm: 這會移除所有追蹤中的地址及其帳戶。要繼續嗎？
+        etherscan_api_key_label: Etherscan API 金鑰（選填）
+        etherscan_api_key_placeholder: 貼上 Etherscan API 金鑰
+        etherscan_hint: 不需要金鑰也能讀取 Ethereum 資料。新增 Etherscan 金鑰只會提高 Ethereum 的請求頻率上限。
+        keep_etherscan_api_key: 留白即維持現有的金鑰
+        manage_wallets: 管理錢包
+        keyless_body: Sure 只會讀取公開的鏈上資料，不涉及任何私鑰、助記詞或簽章，也無法動用任何資產。
+        keyless_title: 唯讀，不需要私鑰
+        save: 儲存
+        sync_start_date_hint: 此日期之前的轉帳會被忽略。留白則匯入區塊鏈瀏覽器回報的所有紀錄。
+        sync_start_date_label: 忽略此日期之前的轉帳
+      monobank_panel:
+        step_1_html: 前往 %{link}，使用 Monobank 應用程式登入並產生個人 Token。
+        step_2: 複製 Token — 它只會顯示一次。
+        step_3: 將 Token 貼到下方並儲存，然後連結您要追蹤的卡片與存錢罐（jar）。
+      fio_panel:
+        step_1_html: 登入 %{link} 網路銀行，開啟 Settings → API。
+        step_2: 建立一組唯讀權限（"Sledování účtu"）的 Token。建立時需要強力驗證，有效期限最長 180 天。
+        step_3: 將 Token 貼到下方並儲存。一組 Token 只能存取一個帳戶，因此每個 Fio 帳戶都要新增一個連線。
+      trade_republic_panel:
+        encryption_warning:
+          title: 尚未設定加密
+          message: 在設定 Active Record Encryption 之前，無法安全地儲存 Trade Republic 的憑證與工作階段資料。
+        steps:
+          step_1: 輸入您登入 Trade Republic 應用程式所用的電話號碼與 PIN，然後儲存。
+          step_2: 系統要求時，輸入驗證器應用程式中的驗證碼。
+          step_3: 收到提示時，在 Trade Republic 應用程式中核准登入。
+        phone_number_label: 電話號碼
+        phone_number_placeholder_new: +49 170 1234567
+        phone_number_placeholder_existing: 留白即維持目前的電話號碼
+        pin_label: PIN
+        pin_placeholder_new: 您的 Trade Republic 應用程式 PIN
+        pin_placeholder_existing: 留白即維持目前的 PIN
+        currency_label: 帳戶幣別
+        connect: 登入
+        confirm_login: 檢查登入狀態
+        complete_login: 繼續
+        authenticator_code_label: 驗證器驗證碼（如有要求）
+        authenticator_code_placeholder: 6 位數驗證碼
+        push_login_notice: 請現在於 Trade Republic 應用程式中核准登入。Sure 會在背景自動檢查，您也可以自行檢查狀態。
+        check_login_status: 立即檢查狀態
+        authenticator_code_notice: 請輸入驗證器應用程式中的驗證碼。
+        approval_pending: 已開始登入。請在 Trade Republic 應用程式中核准；Sure 正在自動檢查。
+        awaiting_confirmation: 正在等待 Trade Republic 應用程式中的核准。
+        awaiting_authenticator_code: 需要驗證器驗證碼。
+        login_expired: 核准請求已過期。
+        restart_login: 重新開始登入
+        connection_success:
+          title: 已成功連結 Trade Republic
+          message: 您的 Trade Republic 連線已準備就緒。
+          description: Sure 正在背景同步您的 Trade Republic 資料。
+          close: 完成
+        qr_login: 使用 QR Code 登入
+        qr_cancel: 取消 QR Code 登入
+        qr_back_to_credentials: 返回電話號碼與 PIN
+        qr_loading: 正在準備 QR Code…
+        qr_instruction: 使用 Trade Republic 應用程式掃描 QR Code 並核准登入。
+        qr_success: 已核准登入。Sure 正在重新整理供應商頁面。
+        qr_error: 無法開始 QR Code 登入，請再試一次。
+        save_configuration: 儲存並開始登入
+        update_configuration: 更新設定
+        sync: 同步
+        disconnect: 中斷 Trade Republic 連線
+        disconnect_confirm: 要中斷 Trade Republic 連線嗎？已同步的帳戶會變成手動帳戶。
+        status_configured_prefix: 已連線。請前往
+        accounts_tab: 帳戶管理
+        setup_accounts: 設定帳戶
+        accounts_discovered:
+          other: 已偵測到 %{count} 個 Trade Republic 帳戶。
+        status_configured_suffix: 分頁管理已偵測到的帳戶。
+        not_configured: 尚未設定。
+    budget_shares:
+      update:
+        success: 已更新預算共享設定

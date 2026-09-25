@@ -10,10 +10,10 @@ de:
       reference: Verwendungszweck
   akahu_item:
     errors:
-      account_processing_failed: Das Akahu-Konto ließ sich nicht abgleichen
-      account_sync_schedule_failed: Der Abgleich des Akahu-Kontos ließ sich nicht einplanen
+      account_processing_failed: Das Akahu-Konto ließ sich nicht synchronisieren
+      account_sync_schedule_failed: Die Synchronisierung des Akahu-Kontos ließ sich nicht einplanen
       pending_transactions_failed: Die offenen Akahu-Transaktionen ließen sich nicht abrufen
-      sync_failed: Die Akahu-Verbindung ließ sich nicht abgleichen
+      sync_failed: Die Akahu-Verbindung ließ sich nicht synchronisieren
       transactions_failed: Die Akahu-Transaktionen ließen sich nicht abrufen
     institution_summary:
       count:

@@ -18,17 +18,34 @@ fr:
         title: Bilan
         value: Valeur
         weight: Poids
+        expand_all: Tout déplier
+        collapse_all: Tout replier
       cashflow_preview:
         node_labels:
           cash_flow: "Flux de trésorerie"
           surplus: "Excédent"
           deficit: "Déficit"
+        title: Nouveau diagramme de Sankey
+        preview: Aperçu
+        preview_tooltip: Ce diagramme remplacera la visualisation ci-dessus, car il s'appuie sur une nouvelle API partagée avec l'application mobile Swift.
+        feedback_prompt: Comparez ce diagramme avec l'original ci-dessus et dites-nous s'il présente des différences autres que l'ordre de tri.
+        positive: Tout semble correct
+        negative: Quelque chose ne va pas
+        feedback_title: Avis sur le diagramme de flux de trésorerie
+        feedback_loading: Chargement du formulaire d'avis…
+        feedback_unavailable: Le formulaire d'avis n'est pas disponible pour le moment. Veuillez réessayer plus tard.
+        feedback_thanks: Merci de nous aider à améliorer ce diagramme !
+        feedback_privacy: Votre réponse est envoyée à PostHog. Décrivez le problème sans numéros de compte, soldes ni autres informations financières privées.
+        feedback_submit: Envoyer mon avis
       cashflow_sankey:
         add_transaction: Ajouter une transaction
         no_data_description: Ajoutez des transactions pour afficher les données de flux de trésorerie ou étendez la période
         no_data_title: Aucune donnée de flux de trésorerie pour cette période
         title: Flux de trésorerie
         zoom_out: Retour à la trésorerie totale
+        loading: Chargement du flux de trésorerie…
+        load_error: Impossible de charger le flux de trésorerie. Veuillez réessayer.
+        retry: Réessayer
       drag_to_reorder: Glisser pour réorganiser la section
       insights_feed:
         title: Analyses
@@ -84,6 +101,9 @@ fr:
         period_scope_hint: Affiche le mois choisi ici, indépendamment de la période sélectionnée en haut du tableau de bord.
         previous_month: Mois précédent
         title: Dépenses
+        date_range_short: '%{start_date} – %{end_day}, %{year}'
+        date_range_short_single: '%{date} %{year}'
+        previous_comparison_days: (1-%{end_day})
       subtitle: Voici ce qui se passe avec vos finances
       toggle_section: Afficher/masquer la section
       welcome: Content de vous revoir, %{name}

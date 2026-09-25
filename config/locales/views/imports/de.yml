@@ -10,7 +10,7 @@ de:
           one: "1 Kategorie gefunden"
           other: "%{count} Kategorien gefunden"
         category_name_col: Kategoriename
-        transactions_col: Buchungen
+        transactions_col: Transaktionen
         tags_heading: Tags
         tags_found:
           one: "1 Tag gefunden"
@@ -22,8 +22,8 @@ de:
         empty_state_primary: In dieser QIF-Datei wurden keine Kategorien oder Tags gefunden.
         empty_state_secondary: Alle Transaktionen werden ohne Kategorien und Tags importiert.
         submit: Weiter zur Überprüfung
-        split_warning_title: Aufgeteilte Buchungen erkannt
-        split_warning_description: "Diese QIF-Datei enthält aufgeteilte Buchungen. Aufgeteilte Buchungen werden noch nicht unterstützt – jede aufgeteilte Buchung wird als einzelne Buchung mit ihrem Gesamtbetrag und ohne Kategorie importiert. Die einzelnen Aufteilungsdetails werden nicht übernommen."
+        split_warning_title: Aufgeteilte Transaktionen erkannt
+        split_warning_description: "Diese QIF-Datei enthält aufgeteilte Buchungen. Prüf vor dem Import die unten erkannten Kategorien und Tags der Aufteilungen."
         split_badge: aufgeteilt
       update:
         success: Kategorien und Tags gespeichert.
@@ -193,7 +193,7 @@ de:
     uploads:
       show:
         qif_title: QIF-Datei hochladen
-        qif_description: Wähle das Konto, zu dem diese QIF-Datei gehört, und lade deinen .qif-Export aus Quicken hoch.
+        qif_description: Wähle bei Dateien mit nur einem Konto das Konto aus, oder lass das Feld leer, wenn dein QIF-Export Kontonamen enthält.
         qif_account_label: Konto
         qif_account_placeholder: Konto auswählen…
         qif_file_prompt: um deine QIF-Datei hier hinzuzufügen
@@ -221,6 +221,7 @@ de:
         upload_csv_tab: CSV hochladen
       handle_qif_upload:
         qif_uploaded: QIF-Datei hochgeladen.
+        qif_account_required: Wähl ein Konto für den QIF-Import aus
       sure_import:
         browse: Durchsuchen
         browse_hint: um deine Datei all.ndjson hinzuzufügen
@@ -268,7 +269,7 @@ de:
           complete: Abgeschlossen
           failed: Fehlgeschlagen
         actions:
-          revert: Zurücksetzen
+          revert: Zurücknehmen
           confirm_revert: Dadurch werden importierte Transaktionen gelöscht. Du kannst deine Daten aber jederzeit wieder einsehen und erneut importieren.
           delete: Löschen
           view: Anzeigen
@@ -290,7 +291,7 @@ de:
           ynab_import: YNAB
       empty: Noch keine Importe vorhanden.
     new:
-      description: Du kannst verschiedene Datentypen manuell über CSV importieren oder eine unserer Importvorlagen wie Mint verwenden.
+      description: Importiere aus einem Finanz-Tool oder lade Rohdaten-Dateien hoch.
       import_accounts: Konten importieren
       import_categories: Kategorien importieren
       import_file: Dokument importieren
@@ -303,7 +304,7 @@ de:
       requires_account: Importiere zuerst Konten, um diese Option zu nutzen.
       resume: "%{type} fortsetzen"
       sources: Quellen
-      title: Neuer CSV-Import
+      title: Neuer Import
       import_actual: Aus Actual Budget importieren
       import_merchants: Händler importieren
       import_sure: Aus Sure importieren
@@ -336,7 +337,7 @@ de:
     document_types:
       bank_statement: Kontoauszug
       credit_card_statement: Kreditkartenabrechnung
-      investment_statement: Wertpapierabrechnung
+      investment_statement: Depotauszug
       financial_document: Finanzdokument
       contract: Vertrag
       other: Sonstiges Dokument
@@ -365,7 +366,9 @@ de:
       publish_transactions:
         one: "%{count} Transaktion übernehmen"
         other: "%{count} Transaktionen übernehmen"
-      ready_for_review_description: Wir haben %{count} Transaktionen aus deinem Auszug gelesen. Prüf sie und übernimm sie in dein Konto.
+      ready_for_review_description:
+        one: "%{count} Transaktion aus deinem Auszug ist noch nicht in diesem Konto. Prüf sie und übernimm sie, um sie hinzuzufügen."
+        other: "%{count} Transaktionen aus deinem Auszug sind noch nicht in diesem Konto. Prüf sie und übernimm sie, um sie hinzuzufügen."
       ready_for_review_title: Bereit zur Prüfung
       review_transactions: Transaktionen prüfen
       save_account: Speichern
@@ -379,13 +382,23 @@ de:
         one: "%{count} Transaktion"
         other: "%{count} Transaktionen"
       unknown_document_type: Unbekannt
+      errors:
+        provider_not_configured: KI-Anbieter nicht konfiguriert
+        provider_no_pdf_support: Der KI-Anbieter unterstützt keine PDF-Verarbeitung
+      view_summary: Importübersicht anzeigen
+      already_recorded_note:
+        one: '%{count} Transaktion war bereits in diesem Konto und wurde dem Auszug zugeordnet.'
+        other: '%{count} Transaktionen waren bereits in diesem Konto und wurden dem Auszug zugeordnet.'
+      complete_fully_reconciled:
+        one: Jede Transaktion dieses Auszugs war bereits in deinem Konto. %{count} wurde zugeordnet und als abgeglichen markiert – es musste nichts importiert werden.
+        other: Jede Transaktion dieses Auszugs war bereits in deinem Konto. Alle %{count} wurden zugeordnet und als abgeglichen markiert – es musste nichts importiert werden.
     ready:
-      description: Hier ist eine Zusammenfassung der neuen Elemente, die deinem Konto hinzugefügt werden, sobald du diesen Import veröffentlichst.
+      description: Hier ist eine Zusammenfassung der neuen Elemente, die deinem Konto hinzugefügt werden, sobald du diesen Import übernimmst.
       title: Importdaten bestätigen
       summary_item_label: Eintrag
       summary_count_label: Anzahl
       empty_summary: In dieser Datei wurden keine importierbaren Datensätze gefunden. Sie ist möglicherweise leer, oder die Zeilen entsprechen nicht dem erwarteten Exportformat (jede Zeile sollte ein JSON-Objekt mit den Schlüsseln „type“ und „data“ und unterstützten Typen sein).
-      publish_import: Import veröffentlichen
+      publish_import: Import übernehmen
       back_to_imports: Zurück zu Importen
     apply_template:
       no_template_found: Keine Vorlage gefunden, richte deinen Import selbst ein.
@@ -486,3 +499,18 @@ de:
     update:
       account_saved: Konto gespeichert.
       invalid_account: Konto nicht gefunden.
+      account_locked: Dieser Import wurde bereits übernommen, daher lässt sich sein Konto nicht mehr ändern. Nimm ihn zuerst zurück, wenn du ihn in ein anderes Konto importieren willst.
+    summary:
+      title: Importübersicht
+      subtitle: Was aus jeder Transaktion dieses Auszugs in %{account} geworden ist.
+      subtitle_no_account: Was aus jeder Transaktion dieses Auszugs geworden ist.
+      extracted: Im Auszug gefunden
+      already_recorded: Bereits erfasst
+      already_recorded_hint: Einer bereits vorhandenen Transaktion dieses Kontos zugeordnet und als abgeglichen markiert.
+      imported: Neu importiert
+      awaiting_review: Warten auf Import
+      fully_reconciled:
+        one: Es musste nichts importiert werden – die einzige Transaktion des Auszugs war bereits erfasst.
+        other: Es musste nichts importiert werden – alle %{count} Transaktionen waren bereits erfasst.
+      statement_evidence_html: Abgeglichen mit %{statement}.
+      close: Schließen

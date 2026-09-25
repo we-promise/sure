@@ -46,6 +46,12 @@ zh-TW:
       tag_search_placeholder: 搜尋或建立標籤
       tags_label: 標籤
       transfer: 轉帳
+      category_search_placeholder: 搜尋分類
+      create_category: 建立「%{name}」
+      create_category_error: 無法建立分類
+      create_merchant: 建立
+      create_merchant_error: 無法建立商家
+      merchant_search_placeholder: 搜尋或建立商家
     create:
       created: 交易已建立
     update:
@@ -59,7 +65,7 @@ zh-TW:
       mark_recurring_subtitle: 將此筆交易追蹤為定期交易。系統會根據過去 6 個月的類似交易自動計算金額變動範圍。
       mark_recurring_title: 定期交易
       merge_duplicate: 好，合併
-      potential_duplicate_description: 這筆待處理交易可能和下面那筆已入帳的交易是同一筆。若是如此，請合併這兩筆，以免重複計算。
+      potential_duplicate_description: 這筆待入帳交易可能和下面那筆已入帳的交易是同一筆。若是如此，請合併這兩筆，以免重複計算。
       potential_duplicate_title: 偵測到可能重複的交易
       transfer: 轉帳
       account_label: 帳戶
@@ -82,7 +88,7 @@ zh-TW:
       convert_to_trade_button: 轉換為證券交易
       transfer_matcher_description: 把這筆交易和另一個帳戶中對應的那一筆連結起來。
       pending_duplicate_merger_title: 與已入帳交易重複？
-      pending_duplicate_merger_description: 手動把這筆待處理交易和已入帳的那一筆合併。
+      pending_duplicate_merger_description: 手動把這筆待入帳交易和已入帳的那一筆合併。
       pending_duplicate_merger_button: 開啟合併工具
       merchant_label: 商家
       name_label: 名稱
@@ -104,6 +110,10 @@ zh-TW:
       transfer_or_debt_payment: 轉帳或債務還款？
       open_matcher: 開啟配對工具
       convert: 轉換
+      create_bill: 建立帳單
+      applied_to_title: 此筆付款支付的帳單
+      applied_to_detail: '%{amount} 用於支付 %{date} 到期的帳單'
+      applied_to_unreviewed: 需要檢視
     activity_labels:
       buy: 買入
       sell: 賣出
@@ -122,7 +132,7 @@ zh-TW:
     mark_recurring_subtitle: 將此筆交易追蹤為定期交易。系統會根據過去 6 個月的類似交易自動計算金額變動範圍。
     mark_recurring_title: 定期交易
     potential_duplicate_title: 偵測到可能重複的交易
-    potential_duplicate_description: 這筆待處理交易可能和下面那筆已入帳的交易是同一筆。若是如此，請合併這兩筆，以免重複計算。
+    potential_duplicate_description: 這筆待入帳交易可能和下面那筆已入帳的交易是同一筆。若是如此，請合併這兩筆，以免重複計算。
     merge_duplicate:
       success: 交易合併成功
       failure: 無法合併交易
@@ -137,8 +147,8 @@ zh-TW:
       reject_match: 拒絕配對
       transfer_confirmed: 轉帳已確認
     transaction:
-      pending: 待處理
-      pending_tooltip: 待處理交易 - 入帳後可能會有變動
+      pending: 待入帳
+      pending_tooltip: 待入帳交易 - 入帳後可能會有變動
       linked_with_provider: 已與 %{provider} 連結
       activity_type_tooltip: 投資活動類型
       possible_duplicate: 重複？
@@ -301,14 +311,14 @@ zh-TW:
           on_or_before: '%{date} 當日或之前'
           transfer: 轉帳
           confirmed: 已確認
-          pending: 待處理
+          pending: 待入帳
         type_filter:
           expense: 支出
           income: 收入
           transfer: 轉帳
         status_filter:
           confirmed: 已確認
-          pending: 待處理
+          pending: 待入帳
       menu:
         account_filter: 帳戶
         amount_filter: 金額

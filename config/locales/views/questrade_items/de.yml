@@ -50,10 +50,10 @@ de:
       loading_title: Wird geladen
     panel:
       disconnect: Trennen
-      disconnect_confirm: Diese Questrade-Verbindung wirklich trennen? Dadurch werden alle synchronisierten Kontodaten entfernt.
-      eyebrow: Questrade
+      disconnect_confirm: Questrade trennen? Dadurch wird die Verbindung entfernt und die Verknüpfung der synchronisierten Konten aufgehoben.
+      eyebrow: Einrichtung · nur am Desktop
       field_descriptions: 'Erläuterung der Felder:'
-      help_text: Sure nutzt diese Zugangsdaten nur, um deine Questrade-Konten, Bestände und Aktivitäten zu synchronisieren.
+      help_text: Questrade-API-Dokumentation
       fields:
         api_server:
           description: Dein Questrade-API-Server
@@ -73,12 +73,12 @@ de:
       status_configured_html: Eingerichtet und einsatzbereit. Im Reiter <a href="%{accounts_path}" class="link">Konten</a> verwaltest und richtest du Konten ein.
       status_not_configured: Nicht eingerichtet
       steps:
-        s1_html: Öffne dein <strong>Questrade-Dashboard</strong>.
-        s2: Erstelle oder kopiere deine API-Zugangsdaten.
-        s3_html: Füge den <strong>Refresh Token</strong> und den API-Server unten ein.
-        s4: Speichere die Verbindung.
-        s5: Starte einen Sync, um Konten zu finden.
-        s6: Richte die gefundenen Konten im Konten-Reiter ein.
+        s1_html: 'Melde dich in einem Desktop-Browser im <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">Questrade-Portal</a> an. Die API-Einstellungen sind in der mobilen App nicht verfügbar.'
+        s2: Öffne die Einstellungen und bearbeite unter „Allgemeine Einstellungen“ die IQ-API-Einstellungen.
+        s3_html: Klicke im Fenster „API-Zugriff“ unter <strong>My applications</strong> auf <strong>Manage</strong>.
+        s4: Registriere eine persönliche App mit Name und Beschreibung und speichere sie.
+        s5: Füge ein neues Gerät hinzu und erzeuge einen Token.
+        s6: Füge den erzeugten Token unten ein und speichere.
       step_1: Öffne dein Questrade-Dashboard und hol dir deine Zugangsdaten
       step_2: Trag die Zugangsdaten unten ein und klick auf Speichern
       step_3: Nach erfolgreicher Verbindung richtest du im Reiter „Konten“ die neuen Konten ein
@@ -132,8 +132,8 @@ de:
       cancel: Abbrechen
       cancel_button: Abbrechen
       configure_name_in_provider: Import nicht möglich – hinterleg den Kontonamen in Questrade
-      connect_hint: Verbinde ein Questrade-Konto, um den automatischen Abgleich zu nutzen.
-      description: Wähl ein Questrade-Konto, das mit diesem Konto verknüpft werden soll. Transaktionen werden automatisch abgeglichen und Dubletten entfernt.
+      connect_hint: Verbinde ein Questrade-Konto, um die automatische Synchronisierung zu nutzen.
+      description: Wähl ein Questrade-Konto, das mit diesem Konto verknüpft werden soll. Transaktionen werden automatisch synchronisiert und Dubletten entfernt.
       dialog_title: Mit einem Questrade-Konto verknüpfen
       header: Mit Questrade verknüpfen
       link_account: Konto verknüpfen
@@ -148,12 +148,12 @@ de:
       no_credentials_configured: Richte zuerst deine Questrade-Zugangsdaten in den Anbietereinstellungen ein.
       no_name_placeholder: "(kein Name)"
       settings_link: Zu den Anbietereinstellungen
-      subtitle: Ein Questrade-Konto wählen
+      subtitle: Verknüpf dieses Konto mit einem deiner Questrade-Konten
       page_title: Questrade-Konto verknüpfen
       title: "%{account_name} mit Questrade verknüpfen"
     setup_accounts:
       account_type_label: 'Kontoart:'
-      all_linked: Alle Questrade-Konten sind bereits eingerichtet.
+      all_linked: Alle Questrade-Konten sind bereits verknüpft.
       account_types:
         credit_card: Kreditkarte
         crypto: Krypto-Konto
@@ -187,7 +187,7 @@ de:
       no_accounts_to_setup: Keine Konten einzurichten
       no_api_key: Der Questrade-API-Key ist nicht eingerichtet. Prüf deine Verbindungseinstellungen.
       select_all: Alle auswählen
-      subtitle: Wähl die passende Kontoart für deine importierten Konten
+      subtitle: Wähl, wie jedes Konto importiert werden soll
       page_title: Questrade-Konten einrichten
       subtype_labels:
         credit_card: ''

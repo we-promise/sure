@@ -5,8 +5,8 @@ fr:
       none_created: Aucun compte n'a été créé.
       none_selected: Aucun compte n'a été sélectionné.
       success:
-        one: Le compte %{count} Interactive Brokers a été créé avec succès.
-        other: Comptes %{count} Interactive Brokers créés avec succès.
+        one: "%{count} compte Interactive Brokers créé avec succès."
+        other: "%{count} comptes Interactive Brokers créés avec succès."
     create:
       success: Interactive Brokers configuré avec succès.
     defaults:
@@ -42,7 +42,7 @@ fr:
     select_existing_account:
       balance: Solde
       cancel: Annuler
-      link: Lien
+      link: Lier
       no_accounts_available: Aucun compte Interactive Brokers non lié n’est encore
         disponible.
       run_sync_hint: Exécutez une synchronisation depuis Paramètres > Fournisseurs
@@ -60,7 +60,7 @@ fr:
         cancel: Annuler
         create_selected_accounts: Créer les comptes sélectionnés
         done: Terminé
-        link: Lien
+        link: Lier
         refresh: Actualiser
       dialog_title: Configurez vos comptes Interactive Brokers
       info_box:

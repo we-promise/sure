@@ -12,7 +12,7 @@ pl:
       manual: Ręczna
     cleaned_up: 'Wyczyszczone nieaktualne transakcje cykliczne: %{count}'
     cleanup_stale: Wyczyść nieaktualne
-    confirm_delete: Czy na pewno chcesz usunąć tę transakcję cykliczną?
+    confirm_delete: Usunąć %{name} z Twoich rachunków? Twoje transakcje pozostaną bez zmian. To usuwa tylko rachunek i jego harmonogram płatności.
     confirm_delete_income: Usunąć %{name} jako przychód? Twoje transakcje pozostaną
       bez zmian. To usuwa tylko przychód i jego harmonogram.
     confirmed: Rachunek dodany do Twoich transakcji cyklicznych
@@ -141,9 +141,9 @@ pl:
       description: Stamtąd zgłaszaj, edytuj, wstrzymuj i płać wszystko. Ta strona
         steruje wykrywaniem.
       title: Twoje rachunki znajdziesz na stronie Rachunki
-    marked_active: Transakcję cykliczną oznaczono jako aktywną
+    marked_active: Wznowiono.
     marked_as_recurring: Transakcja została oznaczona jako cykliczna
-    marked_inactive: Transakcję cykliczną oznaczono jako nieaktywną
+    marked_inactive: Wstrzymano. Nie pojawi się ponownie, dopóki go nie wznowisz.
     new:
       candidate_meta: "%{count}× · ostatnio %{date}"
       income_title: Dodaj przychód
@@ -172,7 +172,7 @@ pl:
       income_title: Znajdź wpływ, od którego zaczniesz
       no_results: Nic nie pasuje do „%{query}”. Spróbuj mniej słów albo wróć i wypełnij
         formularz samodzielnie.
-      search_placeholder: Szukaj po nazwie, notatkach lub sprzedawcy
+      search_placeholder: Szukaj po nazwie, notatkach lub kontrahencie
       showing_recent: Pokazano %{count} najnowszych. Wyszukaj, aby zawęzić.
       title: Znajdź transakcję, od której zaczniesz
     picker_row:

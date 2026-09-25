@@ -53,3 +53,4 @@ fr:
       transfer: Transfert
     trend_change:
       no_change: pas de changement
+    require_connector_owner: Vous ne pouvez gérer que les connexions que vous avez ajoutées

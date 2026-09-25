@@ -25,6 +25,8 @@ zh-TW:
       status_never: 需要同步資料
       syncing: 同步中...
       update: 更新
+      add_accounts: 新增帳戶
+      provider_name: Plaid
     select_existing_account:
       no_available_accounts: 沒有可連結的 Plaid 帳戶，請先連結一個新的 Plaid 帳戶。
       title: 將 %{account_name} 連結至 Plaid

@@ -17,9 +17,20 @@ de:
           attributes:
             base:
               at_least_one_linked_account_required: Wähl mindestens ein Konto, aus dem dieses Ziel gespeist wird.
+              whole_account_conflict_on_restore: 'Dieses Ziel kann nicht wiederhergestellt werden: „%{account_name}“ ist inzwischen vollständig für „%{goal_name}“ vorgemerkt. Gib zuerst bei einem der beiden einen Betrag ein.'
             currency:
               locked_after_linked: Die Währung lässt sich nicht mehr ändern, sobald das Ziel mit Konten verknüpft ist.
             linked_accounts:
               currency_mismatch: Alle verknüpften Konten müssen dieselbe Währung haben.
               must_be_fundable: Alle verknüpften Konten müssen Bank- oder Investmentkonten sein.
               must_belong_to_family: Verknüpfte Konten müssen zur selben Familie gehören wie das Ziel.
+            target_mode:
+              months_requires_maintained: Nur bei einer Rücklage, die du dauerhaft hältst, lässt sich das Ziel in Monatsausgaben angeben.
+            target_months:
+              blank: Gib an, wie viele Monatsausgaben diese Rücklage abdecken soll.
+              only_with_months_mode: Monatsausgaben gelten nur, wenn das Ziel auf diese Weise festgelegt ist.
+            kind:
+              locked_while_released: Öffne dieses Ziel wieder, bevor du es in eine Rücklage umwandelst.
+              locked_once_consumed: Für dieses Ziel wurde bereits Geld als ausgegeben erfasst, daher kann es keine Rücklage werden.
+            target_amount:
+              below_consumed: Der Zielbetrag darf nicht unter dem liegen, was für dieses Ziel bereits als ausgegeben erfasst wurde.

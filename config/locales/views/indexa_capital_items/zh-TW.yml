@@ -165,7 +165,7 @@ zh-TW:
       select_all: 全選
       account_types:
         skip: 跳過此帳戶
-        depository: 支票或儲蓄帳戶
+        depository: 活期或儲蓄帳戶
         credit_card: 信用卡
         investment: 投資帳戶
         crypto: 加密貨幣帳戶
@@ -184,7 +184,7 @@ zh-TW:
         crypto: 加密貨幣帳戶將用於追蹤持倉和交易。
       subtypes:
         depository:
-          checking: 支票帳戶 (Checking)
+          checking: 活期存款帳戶 (Checking)
           savings: 儲蓄帳戶 (Savings)
           hsa: 健康儲蓄帳戶 (HSA)
           cd: 定期存款 (CD)

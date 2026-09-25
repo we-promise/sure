@@ -52,3 +52,5 @@ zh-TW:
     custom:
       label_short: 自訂
       label: 自訂期間
+      comparison_label: （對比 %{start_date} 至 %{end_date}）
+    range: '%{start_date} – %{end_date}'

@@ -1,0 +1,10 @@
+---
+de:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_chat_system: System-Prompt für den Chat
+        ai_prompt_categorizer_openai: Prompt für die Transaktionskategorisierung (OpenAI)
+        ai_prompt_categorizer_anthropic: Prompt für die Transaktionskategorisierung (Anthropic)
+        ai_prompt_merchant_openai: Prompt für die Händlererkennung (OpenAI)
+        ai_prompt_merchant_anthropic: Prompt für die Händlererkennung (Anthropic)

@@ -15,13 +15,13 @@ de:
       success: Wertpapier erfolgreich aktualisiert.
       security_not_found: Das ausgewählte Wertpapier konnte nicht gefunden werden.
     reset_security:
-      success: Wertpapier auf Provider-Wert zurückgesetzt.
+      success: Wertpapier auf Anbieter-Wert zurückgesetzt.
     errors:
       security_collision: 'Umbildung nicht möglich: Du hast bereits eine Position für %{ticker} am %{date}.'
     cost_basis_sources:
       manual: Vom Benutzer gesetzt
       calculated: Aus Trades
-      provider: Vom Provider
+      provider: Vom Anbieter
     cost_basis_cell:
       unknown: "--"
       set_cost_basis_header: "Einstandspreis für %{ticker} setzen (%{qty} Anteile)"
@@ -42,15 +42,15 @@ de:
       average_cost: Durchschnittlicher Einstandspreis
       holdings: Positionen
       name: Name
-      new_holding: Neue Transaktion
-      no_holdings: Keine Positionen vorhanden
+      new_holding: Neue Aktivität
+      no_holdings: Keine Positionen vorhanden.
       positions:
         one: "%{count} Position"
         other: "%{count} Positionen"
       return: Gesamtrendite
       weight: Gewichtung
     missing_price_tooltip:
-      description: Bei dieser Position fehlen Werte, deshalb ließen sich Rendite und Wert nicht berechnen
+      description: Bei dieser Position fehlen Werte, deshalb ließen sich Rendite und Wert nicht berechnen.
       missing_data: Fehlende Daten
     show:
       avg_cost_label: Durchschnittlicher Einstandspreis
@@ -70,11 +70,11 @@ de:
       search_security_placeholder: Nach Ticker oder Name suchen
       cancel: Abbrechen
       remap_security: Speichern
-      no_security_provider: Wertpapier-Provider nicht konfiguriert. Suche nach Wertpapieren nicht möglich.
+      no_security_provider: Wertpapier-Anbieter nicht konfiguriert. Suche nach Wertpapieren nicht möglich.
       security_remapped_label: Wertpapier umgebildet
-      provider_sent: "Provider: %{ticker}"
-      reset_to_provider: Auf Provider zurücksetzen
-      reset_confirm_title: Wertpapier auf Provider zurücksetzen?
+      provider_sent: "Anbieter: %{ticker}"
+      reset_to_provider: Auf Anbieter zurücksetzen
+      reset_confirm_title: Wertpapier auf Anbieter zurücksetzen?
       reset_confirm_body: "Das Wertpapier wird von %{current} zurück auf %{original} geändert; alle zugehörigen Trades werden verschoben."
       ticker_label: Ticker
       trade_history_entry: "%{qty} Anteile von %{security} zu %{price}"
@@ -87,7 +87,7 @@ de:
       cost_basis_locked_description: Dein manuell gesetzter Einstandspreis wird durch Syncs nicht geändert.
       unlock_cost_basis: Freigeben
       unlock_confirm_title: Einstandspreis freigeben?
-      unlock_confirm_body: Der Einstandspreis kann dann durch Provider-Syncs oder Trade-Berechnungen aktualisiert werden.
+      unlock_confirm_body: Der Einstandspreis kann dann durch Anbieter-Syncs oder Trade-Berechnungen aktualisiert werden.
       last_price_update: Letzte Kursaktualisierung
       market_data_label: Marktdaten
       market_data_sync_button: Aktualisieren
@@ -101,4 +101,4 @@ de:
     sync_prices:
       provider_error: Die aktuellen Kurse ließen sich nicht abrufen. Versuch es in ein paar Minuten noch einmal.
       success: Marktdaten aktualisiert.
-      unavailable: Für Offline-Wertpapiere gibt es keinen Marktdaten-Abgleich.
+      unavailable: Für Offline-Wertpapiere gibt es keine Marktdaten-Synchronisierung.

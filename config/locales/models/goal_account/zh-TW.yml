@@ -1,0 +1,9 @@
+---
+zh-TW:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: 這個帳戶已全額指定給「%{goal_name}」。請輸入金額，讓這個帳戶由多個目標分用。

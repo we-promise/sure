@@ -15,6 +15,10 @@ zh-TW:
         reports: 報表
         goals: 目標
         transactions: 交易紀錄
+        bills: 帳單
+      release_highlight:
+        title: 新功能
+        done: 我知道了
     auth:
       existing_account: 已經有帳號了？
       no_account: 第一次使用 %{product_name} 嗎？
@@ -28,6 +32,10 @@ zh-TW:
         are_you_sure: 您確定嗎？
         cannot_be_undone: 這個動作無法復原。
         confirm: 確認
+      notification_tray:
+        download_complete: 下載完成
+        download_failed: 下載失敗，請再試一次。
+        download_location: 檔案位於您的「下載」資料夾。
     trial:
       open_demo: 開放示範
       data_deleted_in_days: 資料將在 %{days} 天後刪除

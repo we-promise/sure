@@ -6,7 +6,7 @@ pl:
       cash_flow_warning: Przejrzyj cykliczne transakcje
       idle_cash: Przejdź do konta
       maintained_goal_depleted: Zobacz rezerwę
-      net_worth_milestone: Zobacz raport wartości netto
+      net_worth_milestone: Zobacz raport majątku netto
       savings_rate_change: Zobacz transakcje z tego miesiąca
       spending_anomaly: Zobacz transakcje %{category}
       subscription_audit: Przejrzyj cykliczne transakcje
@@ -81,7 +81,7 @@ pl:
         dniach."
       maintained_goal_depleted: "%{goal} zawiera %{saved} z docelowych %{target}.
         Brakuje %{missing}."
-      net_worth_milestone: Twoja wartość netto przekroczyła %{milestone} i wynosi
+      net_worth_milestone: Twój majątek netto przekroczył %{milestone} i wynosi
         teraz %{net_worth}.
       savings_rate_change:
         down: Zaoszczędziłeś %{current_rate}% swojego dochodu w ciągu %{month}, spadek
@@ -112,7 +112,7 @@ pl:
         negative: Twoje saldo gotówki może być ujemne
       idle_cash: Nieaktywna gotówka na %{account}
       maintained_goal_depleted: "%{goal} spadł poniżej swojego poziomu"
-      net_worth_milestone: 'Kamień milowy wartości netto: %{milestone}'
+      net_worth_milestone: 'Kamień milowy majątku netto: %{milestone}'
       savings_rate_change:
         down: Twoja stopa oszczędności spadła w ciągu %{month}
         up: Twoja stopa oszczędności poprawiła się w ciągu %{month}
@@ -126,7 +126,7 @@ pl:
       cash_flow_warning: Przepływy pieniężne
       idle_cash: Nieaktywna gotówka
       maintained_goal_depleted: Rezerwa
-      net_worth_milestone: Wartość netto
+      net_worth_milestone: Majątek netto
       savings_rate_change: Stopa oszczędności
       spending_anomaly: Wydatki
       subscription_audit: Subskrypcje

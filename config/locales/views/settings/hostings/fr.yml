@@ -158,6 +158,7 @@ fr:
           tinkoff_invest: T-Invest (T-Bank)
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
+          mansa: Mansa
         requires_api_key: nécessite une clé API
         requires_api_key_alpha_vantage: nécessite une clé API, limite de 25 appels/jour
         requires_api_key_eodhd: nécessite une clé API, limite de 20 appels/jour
@@ -166,6 +167,7 @@ fr:
         tinkoff_invest_hint: requiert un jeton en lecture seule -- cours des actions/fonds/obligations russes + logos des marques
         twelve_data_hint: nécessite une clé API, 800 crédits/jour
         yahoo_finance_hint: gratuit, aucune clé API requise
+        requires_api_key_mansa: clé API requise, offre gratuite de 100 appels/jour -- NGX (Nigerian Exchange) uniquement
       realie_settings:
         description: Saisissez votre clé d'API Realie pour consulter les caractéristiques et les estimations de valeur des biens immobiliers américains lors de l'ajout d'un bien. L'offre gratuite est limitée à 25 requêtes d'API par mois, partagées entre les recherches de biens et les actualisations quotidiennes de valorisation. Sur une offre payante, relevez le plafond avec la variable d'environnement REALIE_MAX_REQUESTS_PER_MONTH.
         env_configured_message: Configuré avec succès via la variable d'environnement REALIE_API_KEY.
@@ -265,3 +267,13 @@ fr:
         troubleshooting: Vérifiez votre connexion Internet et les paramètres de votre pare-feu. Yahoo Finance peut être temporairement indisponible.
         unavailable_message: Yahoo Finance est injoignable ou a renvoyé une réponse inattendue. Vérifiez votre connexion Internet et réessayez plus tard.
         unavailable_title: Impossible de vérifier Yahoo Finance.
+      mansa_settings:
+        title: Mansa
+        description: Saisissez la clé de l'API Mansa. Prend en charge NGX (Nigerian Exchange), qu'aucun autre fournisseur ne couvre ici. Mansa couvre aussi d'autres places boursières africaines, mais seule NGX a été vérifiée avec cette intégration.
+        env_configured_message: Configuré avec succès via la variable d'environnement MANSA_API_KEY.
+        label: Clé API
+        placeholder: Saisissez votre clé API Mansa ici
+        show_details: (afficher les détails)
+        step_1_html: Rendez-vous sur <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> et obtenez votre clé API gratuite -- aucune carte bancaire requise.
+        step_2: Copiez votre clé API et collez-la ci-dessous.
+        rate_limit_warning: L'offre gratuite de Mansa est limitée à 100 appels API par jour et ne fournit que les cotations en cours -- les cours historiques nécessitent un abonnement payant. Seule NGX (Nigerian Exchange) a été vérifiée avec cette intégration ; les autres places boursières africaines couvertes par Mansa ne sont pas encore prises en charge ici.

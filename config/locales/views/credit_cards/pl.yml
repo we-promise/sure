@@ -18,6 +18,11 @@ pl:
         Zadłużenie jest wtedy wyliczane z limitu kredytowego podanego przez bank albo
         z pola Dostępny limit kredytowy, jeśli bank go nie podaje.
       treat_balance_as_available_credit_label: Saldo to dostępny limit kredytowy
+      simplefin_balance_sign_auto: Automatycznie
+      simplefin_balance_sign_credit: Nadpłata (bank jest Ci winien)
+      simplefin_balance_sign_debt: Zadłużenie (jesteś winien bankowi)
+      simplefin_balance_sign_description: Wymuś interpretację tylko wtedy, gdy SimpleFIN podaje niejednoznaczny znak salda. Opcja automatyczna nadal korzysta z historii transakcji i salda od dostawcy.
+      simplefin_balance_sign_label: Znaczenie salda SimpleFIN
     new:
       title: Wprowadź dane karty kredytowej
     overview:

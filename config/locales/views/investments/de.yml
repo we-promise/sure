@@ -182,8 +182,11 @@ de:
       tax_free_bond:
         long: Steuerfreie Anleihe
         short: Steuerfreie Anleihe
+      cash_management:
+        short: CMA
+        long: Cash Management Account
     value_tooltip:
-      cash: Bargeld
+      cash: Depotguthaben
       holdings: Positionen
       total: Portfoliostand
-      total_value_tooltip: Der gesamte Portfoliostand setzt sich aus dem verfügbaren Depotguthaben zum Handel und dem aktuellen Marktwert deiner Positionen zusammen
+      total_value_tooltip: Der gesamte Portfoliostand setzt sich aus dem verfügbaren Depotguthaben zum Handel und dem aktuellen Marktwert deiner Positionen zusammen.

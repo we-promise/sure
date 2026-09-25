@@ -58,7 +58,7 @@ zh-TW:
       title: 連結 Enable Banking 帳戶
       all_linked: 所有 Enable Banking 帳戶看起來都已經連結過了。
       try_after_sync: 如果您剛完成連線或同步，請在同步完成後再試一次。
-      unlink_to_move: 要改連結別的帳戶，請先從該帳戶的動作選單取消連結。
+      unlink_to_move: 要改連結別的帳戶，請先從該帳戶的動作選單解除連結。
       balance: 餘額
       link: 連結
       cancel: 取消

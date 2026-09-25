@@ -98,8 +98,8 @@ de:
       cancel: Abbrechen
       cancel_button: Abbrechen
       configure_name_in_provider: Import nicht möglich – hinterleg den Kontonamen in Redbark
-      connect_hint: Verbinde ein Redbark-Konto, um den automatischen Abgleich zu nutzen.
-      description: Wähl ein Redbark-Konto, das mit diesem Konto verknüpft werden soll. Transaktionen werden automatisch abgeglichen und Dubletten entfernt.
+      connect_hint: Verbinde ein Redbark-Konto, um die automatische Synchronisierung zu nutzen.
+      description: Wähl ein Redbark-Konto, das mit diesem Konto verknüpft werden soll. Transaktionen werden automatisch synchronisiert und Dubletten entfernt.
       header: Mit Redbark verknüpfen
       link_account: Konto verknüpfen
       link_button: Dieses Konto verknüpfen

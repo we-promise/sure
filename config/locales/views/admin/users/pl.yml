@@ -123,7 +123,7 @@ pl:
           title: Nieużywane rodziny / grupy
         you: "(Ty)"
       update:
-        failure: Nie udało się zaktualizować roli użytkownika.
+        failure: Nie udało się zaktualizować danych użytkownika (roli lub członkostwa w rodzinie/grupie).
         family_required: Wybierz istniejącą rodzinę/grupę albo wpisz nazwę nowej.
         last_super_admin_error: Nie można zdegradować ostatniego super administratora
           w systemie.

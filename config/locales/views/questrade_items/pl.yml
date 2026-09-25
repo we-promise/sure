@@ -181,7 +181,7 @@ pl:
       none_available: Brak dostępnych niepołączonych kont Questrade.
       page_title: Połącz konto Questrade
       settings_link: Przejdź do ustawień dostawcy
-      subtitle: Wybierz konto Questrade
+      subtitle: Połącz to konto z jednym z Twoich kont Questrade
       title: Połącz %{account_name} z Questrade
     setup_accounts:
       account_type_label: 'Typ konta:'
@@ -235,7 +235,7 @@ pl:
       subtype_messages:
         credit_card: Karty kredytowe zostaną automatycznie skonfigurowane jako konta
           kart kredytowych.
-        crypto: Konta kryptowalutowe zostaną skonfigurowane do śledzenia portfeli
+        crypto: Konta kryptowalutowe zostaną skonfigurowane do śledzenia pozycji
           i transakcji.
         other_asset: Nie są wymagane żadne dodatkowe opcje dla innych aktywów.
       subtypes:
@@ -285,7 +285,7 @@ pl:
         importing: Importowanie kont z Questrade...
         importing_data: Importowanie danych kont...
         needs_setup: 'Konta wymagające konfiguracji: %{count}...'
-        processing: Przetwarzanie portfeli i aktywności...
+        processing: Przetwarzanie pozycji i aktywności...
       success: Synchronizacja rozpoczęta
     sync_status:
       no_accounts: Nie znaleziono kont

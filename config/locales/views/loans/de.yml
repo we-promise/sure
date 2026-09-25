@@ -33,7 +33,7 @@ de:
       not_applicable: Nicht zutreffend
       original_payoff_date: Ursprüngliches Ablösedatum
       original_principal: Ursprünglicher Kreditbetrag
-      remaining_principal: Verbleibender Kreditbetrag
+      remaining_principal: Restschuld
       term: Laufzeit
       type: Typ
       unknown: Unbekannt
@@ -57,7 +57,7 @@ de:
         monthly_payment: Monatsrate
         not_applicable: "–"
         original_payoff_date: Ursprüngliches Ablösedatum
-        original_principal: Ursprüngliche Kreditsumme
+        original_principal: Ursprünglicher Kreditbetrag
         remaining_principal: Restschuld
         term: Laufzeit
         type: Art

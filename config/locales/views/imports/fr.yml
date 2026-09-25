@@ -69,6 +69,11 @@ fr:
       show:
         description: Sélectionnez les colonnes qui correspondent à chaque champ dans votre CSV.
         title: Configurez votre importation
+        template_found: Configuration modèle trouvée
+        template_description: Nous avons trouvé la configuration d'un import précédent pour ce compte. Voulez-vous l'appliquer à cet import ?
+        manually_configure: Configurer manuellement
+        apply_template: Appliquer le modèle
+        sample_caption: Extrait des données de votre fichier CSV
       trade_import:
         account_label: Compte
         apply_configuration: Appliquer la configuration
@@ -143,14 +148,14 @@ fr:
         sure_mapping_label: "%{mapping} dans %{product_name}"
         unassigned_account: Avez-vous besoin de créer un nouveau compte pour les lignes non affectées ?
       show:
-        account_mapping_description: Affectez tous les comptes de votre fichier importé aux comptes existants. Vous pouvez également ajouter de nouveaux comptes ou les laisser sans catégorie.
+        account_mapping_description: Associez tous les comptes de votre fichier importé aux comptes existants dans %{product_name}. Vous pouvez aussi créer de nouveaux comptes ou les laisser non affectés.
         account_mapping_title: Attribuez vos comptes
-        account_type_mapping_description: Affectez tous les types de comptes importés dans votre fichier
+        account_type_mapping_description: Associez tous les types de comptes de votre fichier importé à ceux de %{product_name}
         account_type_mapping_title: Attribuez vos types de comptes
-        category_mapping_description: Affectez toutes les catégories importées dans votre fichier aux catégories existantes. Vous pouvez également ajouter de nouvelles catégories ou les laisser non catégorisées.
+        category_mapping_description: Associez toutes les catégories de votre fichier importé aux catégories existantes dans %{product_name}. Vous pouvez aussi créer de nouvelles catégories ou laisser les transactions sans catégorie.
         category_mapping_title: Attribuez vos catégories
         invalid_data: Vous avez des données invalides, veuillez les modifier jusqu'à ce que toutes les erreurs soient résolues
-        tag_mapping_description: Affectez toutes les étiquettes importées dans votre fichier aux étiquettes existantes. Vous pouvez également ajouter de nouvelles étiquettes ou les laisser non catégorisées.
+        tag_mapping_description: Associez toutes les étiquettes de votre fichier importé aux étiquettes existantes dans %{product_name}. Vous pouvez aussi créer de nouvelles étiquettes ou les laisser non affectées.
         tag_mapping_title: Attribuez vos étiquettes
       sure_import:
         cancel: Annuler
@@ -170,7 +175,7 @@ fr:
         empty_state_primary: Aucune catégorie ou étiquette trouvée dans ce fichier QIF.
         empty_state_secondary: Toutes les transactions seront importées sans catégories ni étiquettes.
         split_badge: scindée
-        split_warning_description: 'Ce fichier QIF contient des transactions scindées. Les transactions scindées ne sont pas encore prises en charge : chaque transaction scindée sera importée comme une transaction unique avec son montant total et sans catégorie. Les ventilations individuelles ne seront pas conservées.'
+        split_warning_description: 'Ce fichier QIF contient des transactions scindées. Vérifiez ci-dessous les catégories et étiquettes détectées pour les ventilations avant l’importation.'
         split_warning_title: Transactions scindées détectées
         submit: Continuer vers la revue
         tag_name_col: Nom de l'étiquette
@@ -197,8 +202,8 @@ fr:
         csv_invalid: Doit être un CSV valide avec des en-têtes et au moins une ligne de données
         description: Collez ou téléversez votre fichier CSV ci-dessous. Veuillez examiner les instructions dans le tableau ci-dessous avant de commencer.
         download_sample_csv: Téléchargez un exemple de fichier CSV
-        drop_csv_subtitle: Votre fichier sera téléchargé automatiquement
-        drop_csv_title: Déposez le CSV pour télécharger
+        drop_csv_subtitle: Votre fichier sera importé automatiquement
+        drop_csv_title: Déposez un fichier CSV pour l'importer
         instructions_1: Voici un exemple de CSV avec des colonnes disponibles pour l'importation.
         instructions_2: Votre CSV doit avoir une ligne d'en-tête
         instructions_3: Vous pouvez nommer vos colonnes comme vous le souhaitez. Vous les associerez à un stade ultérieur.
@@ -208,15 +213,15 @@ fr:
         paste_csv_placeholder: Collez le contenu de votre fichier CSV ici
         qif_account_label: Compte
         qif_account_placeholder: Sélectionner un compte…
-        qif_description: Sélectionnez le compte auquel appartient ce fichier QIF, puis téléversez votre export .qif depuis Quicken.
+        qif_description: Sélectionnez un compte pour un fichier à compte unique, ou laissez vide si votre export QIF contient les noms des comptes.
         qif_file_hint: Fichiers .qif uniquement
         qif_file_prompt: pour ajouter votre fichier QIF ici
         qif_submit: Téléverser le QIF
         qif_title: Téléverser le fichier QIF
         title: Importez vos données
         to_see_format: pour voir le format CSV requis
-        upload_csv_button: Télécharger CSV
-        upload_csv_tab: Télécharger CSV
+        upload_csv_button: Importer un CSV
+        upload_csv_tab: Importer un CSV
       sure_import:
         browse: Parcourir
         browse_hint: pour ajouter votre fichier all.ndjson ici
@@ -228,7 +233,7 @@ fr:
         title: Importer depuis l'export
         upload_button: Téléverser le NDJSON
       update:
-        qif_uploaded: Fichier QIF téléchargé avec succès.
+        qif_uploaded: Fichier QIF téléversé avec succès.
   imports:
     apply_template:
       no_template_found: Aucun modèle trouvé, veuillez configurer manuellement votre importation.
@@ -377,8 +382,8 @@ fr:
         one: Publier %{count} transaction
         other: Publier %{count} transactions
       ready_for_review_description:
-        one: "Nous avons extrait %{count} transaction de votre relevé. Examinez-la et publiez-la pour l'ajouter."
-        other: "Nous avons extrait %{count} transactions de votre relevé. Examinez-les et publiez-les pour les ajouter."
+        one: "%{count} transaction de votre relevé ne figure pas encore dans ce compte. Examinez-la et publiez-la pour l'ajouter."
+        other: "%{count} transactions de votre relevé ne figurent pas encore dans ce compte. Examinez-les et publiez-les pour les ajouter."
       ready_for_review_title: Prêt pour l'examen
       review_transactions: Examiner les transactions
       save_account: Enregistrer

@@ -2,23 +2,23 @@
 de:
   coinstats_items:
     create:
-      success: CoinStats-Provider-Verbindung wurde erfolgreich eingerichtet.
+      success: CoinStats-Anbieter-Verbindung wurde erfolgreich eingerichtet.
       default_name: CoinStats-Verbindung
       errors:
         validation_failed: "Validierung fehlgeschlagen: %{message}."
     update:
-      success: CoinStats-Provider-Verbindung wurde erfolgreich aktualisiert.
+      success: CoinStats-Anbieter-Verbindung wurde erfolgreich aktualisiert.
       errors:
         validation_failed: "Validierung fehlgeschlagen: %{message}."
     destroy:
-      success: CoinStats-Provider-Verbindung wurde zur Löschung vorgemerkt.
+      success: CoinStats-Anbieter-Verbindung wurde zur Löschung vorgemerkt.
     link_wallet:
       success: "%{count} Krypto-Wallet(s) erfolgreich verknüpft."
       missing_params: "Fehlende erforderliche Parameter: Adresse und Blockchain."
       failed: Verknüpfung des Krypto-Wallets fehlgeschlagen.
       error: "Krypto-Wallet-Verknüpfung fehlgeschlagen: %{message}."
     new:
-      title: Krypto-Wallet mit CoinStats verknüpfen
+      title: Krypto mit CoinStats verknüpfen
       blockchain_fetch_error: Blockchains konnten nicht geladen werden. Bitte später erneut versuchen.
       address_label: Adresse
       address_placeholder: Erforderlich
@@ -26,12 +26,12 @@ de:
       blockchain_placeholder: Erforderlich
       blockchain_select_blank: Blockchain auswählen
       link: Krypto-Wallet verknüpfen
-      not_configured_title: CoinStats-Provider-Verbindung nicht konfiguriert
-      not_configured_message: Zum Verknüpfen eines Krypto-Wallets musst du zuerst die CoinStats-Provider-Verbindung konfigurieren.
-      not_configured_step1_html: Geh zu <strong>Einstellungen → Provider</strong>
-      not_configured_step2_html: Such den <strong>CoinStats</strong>-Provider
+      not_configured_title: CoinStats-Anbieter-Verbindung nicht konfiguriert
+      not_configured_message: Zum Verknüpfen eines Krypto-Wallets musst du zuerst die CoinStats-Anbieter-Verbindung konfigurieren.
+      not_configured_step1_html: Geh zu <strong>Einstellungen → Anbieter</strong>
+      not_configured_step2_html: Such den <strong>CoinStats</strong>-Anbieter
       not_configured_step3_html: Folg den <strong>Einrichtungsanweisungen</strong> zur Konfiguration
-      go_to_settings: Zu den Provider-Einstellungen
+      go_to_settings: Zu den Anbieter-Einstellungen
       setup_instructions: "Einrichtungsanleitung:"
       step1_html: Öffne das <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a>, um einen API-Key zu erhalten.
       step2: Trag deinen API-Key unten ein und klick auf Konfigurieren.
@@ -43,7 +43,7 @@ de:
       default_name: CoinStats-Verbindung
       exchange_label: Börse
       exchange_select_blank: Börse wählen
-      link_exchange_description: Nutz einen API-Key mit Lesezugriff, damit CoinStats Guthaben und Transaktionen von Bitvavo, Binance und weiteren unterstützten Börsen abgleichen kann.
+      link_exchange_description: Nutz einen API-Key mit Lesezugriff, damit CoinStats Guthaben und Transaktionen von Bitvavo, Binance und weiteren unterstützten Börsen synchronisieren kann.
       link_exchange_note: Wenn deine Börse den API-Key erst freischalten oder per E-Mail bestätigen lässt, erledige das, bevor du hier verknüpfst.
       link_exchange_submit: Börse verknüpfen
       link_exchange_title: Börsen-API verknüpfen

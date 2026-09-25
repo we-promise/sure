@@ -2,4 +2,4 @@
 pl:
   models:
     merchant:
-      no_merchant: Brak sprzedawcy
+      no_merchant: Brak kontrahenta

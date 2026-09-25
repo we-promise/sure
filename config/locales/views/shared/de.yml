@@ -5,7 +5,7 @@ de:
       accept: Bestätigen
       body_html: "<p>Diese Entscheidung kann nicht rückgängig gemacht werden</p>"
       cancel: Abbrechen
-      title: Bist du sicher
+      title: Bist du sicher?
     money_field:
       label: Betrag
     exchange_rate_tabs:
@@ -23,6 +23,9 @@ de:
       default_body: Das lässt sich nicht rückgängig machen.
       default_btn_text: Bestätigen
       default_title: Bist du sicher?
+      resource_deletion_title: '%{resource} löschen?'
+      resource_deletion_body: Möchtest du „%{resource}“ wirklich löschen? Das lässt sich nicht rückgängig machen.
+      resource_deletion_btn_text: '%{resource} löschen'
     family_moniker:
       group_plural: Gruppen
       group_singular: Gruppe
@@ -48,6 +51,7 @@ de:
         no_worker_processes: "Es ist kein Sidekiq-Worker verbunden. Starte den Worker-Container oder die systemd-Unit."
         stale_heartbeat: "Der Sidekiq-Worker hat seit einiger Zeit kein Lebenszeichen gesendet. Möglicherweise hängt er oder ist abgestürzt."
         queue_backed_up: "Die älteste Hintergrundaufgabe in der Warteschlange wartet bereits länger als vorgesehen. Der Worker läuft, kommt aber mit der Verarbeitung nicht hinterher."
+    require_connector_owner: Du kannst nur Verbindungen verwalten, die du selbst hinzugefügt hast
   concerns:
     self_hostable:
       redis_configured: Redis ist jetzt richtig eingerichtet! Du kannst deine Sure-Installation nun einrichten.

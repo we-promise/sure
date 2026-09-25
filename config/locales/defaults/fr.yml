@@ -234,3 +234,6 @@ fr:
       long: "%A %d %B %Y %Hh%M"
       short: "%d %b %Hh%M"
     pm: pm
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris doit utiliser https, http en loopback ou un schéma d'URI d'application native

@@ -14,6 +14,7 @@ fr:
   rules:
     actions:
       value_placeholder: Entrez une valeur
+      to_label: sur
     apply_all:
       ai_cost_message: Cela utilisera l'IA pour catégoriser jusqu'à %{transactions}
         transactions.

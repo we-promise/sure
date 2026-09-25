@@ -30,7 +30,7 @@ de:
       subtitle: Wähl ein SnapTrade-Konto zur Verknüpfung
       no_accounts: "Keine unverknüpften SnapTrade-Konten verfügbar."
       connect_hint: Möglicherweise musst du zuerst einen Broker verbinden.
-      settings_link: "Zu den Provider-Einstellungen"
+      settings_link: "Zu den Anbieter-Einstellungen"
       linking_to: "Verknüpfe mit Konto:"
       balance_label: "Saldo:"
       link_button: "Verknüpfen"
@@ -59,7 +59,7 @@ de:
       info_cost_basis: "Einstandskosten pro Position (falls verfügbar)"
       info_activities: "Handelshistorie mit Aktivitätslabels (Kaufen, Verkaufen, Dividende usw.)"
       info_history: "Bis zu 3 Jahre Buchungshistorie"
-      free_tier_note: "SnapTrade Free Tier erlaubt 5 Broker-Verbindungen. Nutzung im SnapTrade-Dashboard prüfen."
+      free_tier_note: "Der kostenlose Tarif von SnapTrade erlaubt 20 Broker-Verbindungen."
       no_accounts_title: "Keine Konten gefunden"
       no_accounts_message: Es wurden keine Broker-Konten gefunden. Das kommt vor, wenn du die Verbindung abgebrochen hast oder dein Broker nicht unterstützt wird.
       try_again: "Broker verbinden"
@@ -111,7 +111,7 @@ de:
       no_accounts_title: "Keine Konten gefunden"
       no_accounts_description: Verbinde einen Broker, um deine Anlagekonten zu importieren.
     oauth_authorize:
-      not_configured: SnapTrade OAuth fehlt. Setz SNAPTRADE_OAUTH_CLIENT_ID und SNAPTRADE_OAUTH_CLIENT_SECRET und starte die App neu.
+      not_configured: Die SnapTrade-Autorisierung im Browser benötigt neben SNAPTRADE_OAUTH_CLIENT_ID auch SNAPTRADE_OAUTH_CLIENT_SECRET. Setz die Variable und starte neu, oder autorisiere stattdessen mit einem Gerätecode.
     oauth_callback:
       access_denied: Die SnapTrade-Freigabe wurde abgebrochen.
       failed: Die SnapTrade-Freigabe ließ sich nicht abschließen. Versuch es noch einmal.
@@ -142,7 +142,7 @@ de:
       name: "SnapTrade"
       connection_description: Verbinde deinen Broker über SnapTrade (25+ Broker unterstützt)
       description: "SnapTrade verbindet mit 25+ großen Brokern (Fidelity, Vanguard, Schwab, Robinhood usw.) und liefert vollständige Handelshistorie mit Aktivitätslabels und Einstandskosten."
-      free_tier_warning: "Free Tier enthält 5 Broker-Verbindungen. Weitere erfordern einen kostenpflichtigen SnapTrade-Plan."
+      free_tier_warning: "Der kostenlose Tarif von SnapTrade umfasst 20 Broker-Verbindungen."
       status_connected:
         one: "%{count} Konto von SnapTrade"
         other: "%{count} Konten von SnapTrade"
@@ -165,7 +165,7 @@ de:
       no_connections: "Keine Broker-Verbindungen gefunden."
       delete_connection: "Löschen"
       delete_connection_title: "Broker-Verbindung löschen?"
-      delete_connection_body: Die Verbindung zu %{brokerage} wird dauerhaft von SnapTrade entfernt. Alle Konten dieses Brokers werden getrennt. Für einen neuen Abgleich musst du dich erneut verbinden.
+      delete_connection_body: Die Verbindung zu %{brokerage} wird dauerhaft von SnapTrade entfernt. Alle Konten dieses Brokers werden getrennt. Für eine neue Synchronisierung musst du dich erneut verbinden.
       delete_connection_confirm: "Verbindung löschen"
       manage_at_snaptrade: Verbindungen bei SnapTrade verwalten
       oauth_connect_button: Mit SnapTrade verbinden

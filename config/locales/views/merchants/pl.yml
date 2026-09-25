@@ -87,7 +87,11 @@ pl:
     perform_merge:
       invalid_merchants: Wybrano nieprawidłowych kontrahentów
       no_merchants_selected: Nie wybrano kontrahentów do scalenia
-      success: Pomyślnie scalono %{count} kontrahentów
+      success:
+        one: "Pomyślnie scalono %{count} kontrahenta"
+        few: "Pomyślnie scalono %{count} kontrahentów"
+        many: "Pomyślnie scalono %{count} kontrahentów"
+        other: "Pomyślnie scalono %{count} kontrahenta"
       target_not_found: Nie znaleziono kontrahenta docelowego
     provider_merchant:
       edit: Edytuj

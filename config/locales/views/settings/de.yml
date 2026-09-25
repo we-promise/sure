@@ -7,22 +7,44 @@ de:
   settings:
     ai_prompts:
       show:
-        page_title: KI-Eingabeaufforderungen
+        page_title: KI-Prompts
         openai_label: OpenAI
         disable_ai: KI-Assistent deaktivieren
         prompt_instructions: Prompt-Anweisungen
         main_system_prompt:
           title: Hauptsystem-Prompt
           subtitle: Zentrale Anweisungen, die definieren, wie sich der KI-Assistent in allen Chat-Gesprächen verhält
+          label: System-Prompt für den Chat
         transaction_categorizer:
           title: Transaktionskategorisierung
           subtitle: Die KI kategorisiert deine Transaktionen automatisch basierend auf deinen definierten Kategorien
         merchant_detector:
           title: Händlererkennung
           subtitle: Die KI identifiziert und ergänzt Transaktionsdaten mit Händlerinformationen
+        save: Prompts speichern
+        save_confirm:
+          title: Eigene KI-Prompts speichern?
+          body: Eigene Prompts ersetzen die integrierten Systemanweisungen und Schutzmechanismen (etwa die Einschränkungen bei Finanzberatung) für deine gesamte Familie.
+          dont_show_again: Diese Warnung nicht mehr anzeigen
+          cancel: Abbrechen
+          confirm: Bestätigen
+      prompt_field:
+        provider_label: Anbieter
+        prompt_label: Prompt
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Auf Standard zurücksetzen
+        reset_confirm_title: Auf den Standard-Prompt zurücksetzen?
+        reset_confirm_body: Dein eigener Prompt wird verworfen und die integrierten Standardanweisungen werden wiederhergestellt.
+        status_custom: Eigener Prompt aktiv
+        status_default: Integrierter Standard aktiv
+        format_risk: 'In deinem %{provider}-Prompt fehlt das Beispiel {"%{key}": ...}. Jede Anfrage verlangt weiterhin dieses Format, daher funktioniert die Auswertung meist trotzdem. Ein Prompt, der ein anderes Ausgabeformat verlangt, macht sie jedoch kaputt.'
+      update:
+        success: KI-Prompts aktualisiert
+        multiple_errors: Mehrere Prompts sind zu lang (maximal %{count} Zeichen)
     payments:
       show:
-        page_title: Zahlung
+        page_title: Zahlungen
         subscription_subtitle: Aktualisiere deine Kreditkartendaten
         subscription_title: Abonnement verwalten
         choose_level: Stufe wählen
@@ -83,6 +105,20 @@ de:
         sharing_subtitle: Lege fest, wie Konten in deiner %{moniker} geteilt werden
         sharing_title: Freigaben der %{moniker}
         translations_notice: 'Bitte beachte: Wir arbeiten noch an den Übersetzungen für verschiedene Sprachen.'
+        budget_title: Budget
+        budget_subtitle: Lege fest, wie sich deine Budgets verhalten
+        personal_budgets: Persönliche Budgets
+        personal_budgets_hint: Aktiviert eigene Budgets für jedes Mitglied.
+        household_budget_enabled: Haushaltsbudget
+        household_budget_enabled_hint: Behalte neben den persönlichen Budgets ein gemeinsames Haushaltsbudget. Schalte es aus, um nur persönliche Budgets zu nutzen.
+        budget_sharing_title: Budgetfreigabe
+        budget_sharing_subtitle: Erlaube anderen Mitgliedern, dein persönliches Budget anzusehen oder zu bearbeiten
+        budget_sharing_no_members: In deiner %{moniker} gibt es keine weiteren Mitglieder, mit denen du teilen kannst
+        budget_sharing_permission_label: Zugriff für %{name}
+        budget_sharing_permissions:
+          none: Kein Zugriff
+          read_only: Nur ansehen
+          read_write: Darf bearbeiten
     appearances:
       show:
         modals_title: Modale Fenster
@@ -103,6 +139,8 @@ de:
         theme_title: Design
         transactions_subtitle: Lege fest, wie Transaktionen angezeigt werden
         transactions_title: Transaktionen
+        dashboard_account_groups_title: Standardmäßig ausgeklappt
+        dashboard_account_groups_description: Diese Kontobereiche sind im Dashboard und in der Kontoseitenleiste zunächst ausgeklappt. Du kannst sie jederzeit manuell einklappen.
     profiles:
       destroy:
         cannot_remove_self: Du kannst dich nicht selbst aus dem Konto entfernen.
@@ -140,7 +178,7 @@ de:
         group_title: Gruppenmitglieder
         household_form_input_placeholder: Haushaltsnamen eingeben
         household_form_label: Haushaltsname
-        household_subtitle: Verwalte die Mitglieder deiner %{moniker}
+        household_subtitle: "Eingeladene Personen können sich im Konto deiner %{moniker} anmelden und auf gemeinsame Daten zugreifen."
         household_title: Haushalt
         invitation_link: Einladungslink
         invite_member: Mitglied hinzufügen
@@ -185,7 +223,7 @@ de:
     settings_nav:
       accounts_label: Konten
       advanced_section_title: Erweitert
-      ai_prompts_label: KI-Eingabeaufforderungen
+      ai_prompts_label: KI-Prompts
       api_key_label: API-Schlüssel
       payment_label: Zahlung
       categories_label: Kategorien
@@ -222,7 +260,7 @@ de:
       next: Weiter
       previous: Zurück
     user_avatar_field:
-      accepted_formats: JPG oder PNG, maximal 5 MB
+      accepted_formats: JPG oder PNG, maximal 5 MB.
       choose: Foto hochladen
       choose_label: (optional)
       change: Foto ändern
@@ -306,11 +344,11 @@ de:
       clear_filter: Filter löschen
       connect: Verbinden
       drawer_trust_statement: Nur Lesezugriff. Sure kann kein Geld bewegen, und deine Zugangsdaten liegen verschlüsselt.
-      drawer_trust_statement_encryption_unconfigured: Nur Lesezugriff. Sure kann kein Geld bewegen. Konfiguriere explizite Verschlüsselungsschlüssel, bevor du Provider-Zugangsdaten in Produktion speicherst.
+      drawer_trust_statement_encryption_unconfigured: Nur Lesezugriff. Sure kann kein Geld bewegen. Konfiguriere explizite Verschlüsselungsschlüssel, bevor du Anbieter-Zugangsdaten in Produktion speicherst.
       empty_filter: Kein Anbieter passt zu deinem Filter.
       provider_setup_encryption_warning:
         title: Verschlüsselungsschlüssel fehlen
-        message: Diese selbst gehostete Installation hat keine expliziten Active-Record-Verschlüsselungsschlüssel konfiguriert. Konfiguriere primary_key, deterministic_key und key_derivation_salt, bevor du Provider-Zugangsdaten in Produktion speicherst.
+        message: Diese selbst gehostete Installation hat keine expliziten Active-Record-Verschlüsselungsschlüssel konfiguriert. Konfiguriere primary_key, deterministic_key und key_derivation_salt, bevor du Anbieter-Zugangsdaten in Produktion speicherst.
       groups:
         available: Verfügbar
         empty_available: Alle verfügbaren Anbieter sind verbunden.
@@ -481,6 +519,9 @@ de:
         trading212: Synchronisiert dein Trading-212-Depot über einen API-Key mit Lesezugriff.
         trade_republic: Synchronisiert dein Trade-Republic-Konto über einen sicheren Web-Login mit Lesezugriff.
         wise: Synchronisiert deine Wise-Guthaben in mehreren Währungen und internationale Überweisungen automatisch.
+        monobank: Synchronisiert ukrainische Monobank-Karten und -Sparbüchsen („Jars“) über einen persönlichen API-Token.
+        fio: Synchronisiert ein Konto bei der Fio banka über einen API-Token mit Lesezugriff.
+        coinspot: Synchronisiert Guthaben, AUD-Werte, Überträge, Ein- und Auszahlungen sowie den Orderverlauf bei CoinSpot über einen API-Key mit Lesezugriff.
       trading212_panel:
         accounts_tab: Konten
         api_key_label: API ID
@@ -546,7 +587,7 @@ de:
         qr_back_to_credentials: Zurück zu Telefonnummer und PIN
         qr_loading: QR-Code wird vorbereitet …
         qr_instruction: Scanne den QR-Code mit deiner Trade-Republic-App und bestätige die Anmeldung.
-        qr_success: Anmeldung bestätigt. Sure lädt die Provider-Übersicht neu.
+        qr_success: Anmeldung bestätigt. Sure lädt die Anbieter-Übersicht neu.
         qr_error: Der QR-Login konnte nicht gestartet werden. Bitte versuche es erneut.
         save_configuration: Speichern und Login starten
         update_configuration: Konfiguration aktualisieren
@@ -568,6 +609,36 @@ de:
       update:
         no_changes: Es wurde nichts geändert
         updated_successfully: Anbietereinstellungen gespeichert
+      coinspot_panel:
+        step1_html: Öffne die <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot-API-Einstellungen</a>
+        step2: Lege einen API-Key an, der nur Lesezugriff auf Guthaben und Verlauf hat.
+        step3: Füge API-Key und Secret unten ein.
+        read_only_title: Nur lesender Börsen-Sync
+        read_only_body: Erteile keine Rechte für Senden, Auszahlung, Handel oder Überträge. Sure importiert ausschließlich Guthaben, AUD-Werte, Überträge, Ein- und Auszahlungen sowie abgeschlossene Orders.
+        default_connection_name: CoinSpot
+        add_connection: CoinSpot-Verbindung hinzufügen
+        update_connection: Verbindung aktualisieren
+        connection_name_label: Name der Verbindung
+        connection_name_placeholder: CoinSpot Haupt
+        api_key_label: API-Key
+        api_key_placeholder: CoinSpot-API-Key einfügen
+        keep_api_key_placeholder: Leer lassen, um den bisherigen API-Key zu behalten
+        api_secret_label: API-Secret
+        api_secret_placeholder: CoinSpot-API-Secret einfügen
+        keep_api_secret_placeholder: Leer lassen, um das bisherige API-Secret zu behalten
+        setup_accounts: Konto einrichten
+        syncing: Sync läuft …
+        sync: Sync
+        disconnect: Trennen
+        disconnect_confirm: '%{name} wirklich trennen?'
+      monobank_panel:
+        step_1_html: Öffne %{link}, melde dich mit der Monobank-App an und erzeuge einen persönlichen Token.
+        step_2: Kopiere den Token – er wird nur einmal angezeigt.
+        step_3: Füge den Token unten ein, speichere und verknüpfe dann die Karten und Sparbüchsen („Jars“), die du verfolgen möchtest.
+      fio_panel:
+        step_1_html: Melde dich im Internetbanking von %{link} an und öffne Einstellungen → API.
+        step_2: Erstelle einen Token mit Lesezugriff („Sledování účtu“). Er erfordert eine starke Authentifizierung und ist bis zu 180 Tage gültig.
+        step_3: Füge den Token unten ein und speichere. Ein Token gilt nur für ein Konto, lege also für jedes Fio-Konto eine eigene Verbindung an.
     background_jobs:
       cancel:
         cancelled: "%{type} als verloren markiert."
@@ -688,8 +759,11 @@ de:
         page_title: MCP-Server
         revoke: Entziehen
         revoke_confirm: Zugriff für diesen Client entziehen?
-        step_1: Öffne Claude.ai und geh zu Einstellungen → Integrationen.
-        step_2: Klick auf „Integration hinzufügen“ und füge die MCP-Server-URL von oben ein.
+        step_1: Öffne Claude.ai und geh zu Einstellungen → Anpassen → Konnektoren.
+        step_2: Klick auf „Konnektor hinzufügen“ und füge die MCP-Server-URL von oben ein.
         step_3: Klick auf Verbinden. Du wirst zu Sure weitergeleitet, um dich anzumelden und den Zugriff freizugeben.
         step_4: Nach der Freigabe kann Claude deine Konten, Transaktionen und Salden lesen.
         unknown_client: Unbekannter Client
+    budget_shares:
+      update:
+        success: Einstellungen zur Budgetfreigabe aktualisiert

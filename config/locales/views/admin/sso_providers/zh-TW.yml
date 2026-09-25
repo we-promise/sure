@@ -37,9 +37,11 @@ zh-TW:
       new:
         title: 新增 SSO 供應商
         description: 設定一個新的單一登入驗證供應商
+        provider_configuration: 供應商設定
       edit:
         title: 編輯 SSO 供應商
         description: 更新 %{label} 的設定
+        provider_configuration: 供應商設定
       create:
         success: SSO 供應商建立成功。
       update:

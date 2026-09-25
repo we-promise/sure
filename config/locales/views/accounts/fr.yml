@@ -71,6 +71,8 @@ fr:
         close: Fermer
         navigate: Naviguer
         select: Sélectionnez
+        next: Suivant
+        previous: Précédent
       import_accounts: Importer des comptes
       method_selector:
         connected_entry: Lier un compte
@@ -129,12 +131,13 @@ fr:
         include_in_reports: Inclure dans les rapports
         manage: Gérer les comptes
         sharing: Partage
-        statements: Déclarations
+        statements: Relevés
       tabs:
         activity: Activité
         holdings: Holdings
         overview: Aperçu
-        statements: Déclarations
+        statements: Relevés
+        schedule: Échéancier
     sidebar:
       configure_providers: Configurez vos fournisseurs ici.
       missing_data: Données historiques manquantes
@@ -147,6 +150,8 @@ fr:
         all: Tout
         assets: Actifs
         debts: Dettes
+      expand_all: Tout déplier
+      collapse_all: Tout replier
     subtype_regions:
       au: Australie
       ca: Canada

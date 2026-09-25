@@ -3,7 +3,7 @@ de:
   coinbase_items:
     create:
       default_name: Coinbase
-      success: Mit Coinbase verbunden! Deine Konten werden abgeglichen.
+      success: Mit Coinbase verbunden! Deine Konten werden synchronisiert.
     update:
       success: Coinbase-Konfiguration wurde erfolgreich aktualisiert.
     destroy:

@@ -6,7 +6,7 @@ de:
     complete:
       success: Sitzung abgeschlossen
     create:
-      success: Anfrage an Benutzer gesendet Warte auf Bestätigung
+      success: Anfrage an Benutzer gesendet. Warte auf Bestätigung.
     join:
       success: Sitzung beigetreten
     leave:

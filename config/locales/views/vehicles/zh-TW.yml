@@ -13,6 +13,8 @@ zh-TW:
       model_placeholder: 例如：Camry
       year: 年份
       year_placeholder: '2023'
+      mileage_unit_kilometers: 公里
+      mileage_unit_miles: 英里
     new:
       title: 輸入車輛詳情
     overview:

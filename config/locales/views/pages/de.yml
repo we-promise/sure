@@ -38,17 +38,34 @@ de:
         no_liability: Noch keine Verbindlichkeiten
         value: Wert
         weight: Anteil
+        expand_all: Alle aufklappen
+        collapse_all: Alle zuklappen
       cashflow_preview:
         node_labels:
-          cash_flow: "Zahlungsfluss"
+          cash_flow: "Cashflow"
           surplus: "Überschuss"
           deficit: "Fehlbetrag"
+        title: Neues Sankey-Diagramm
+        preview: Vorschau
+        preview_tooltip: Dieses Diagramm ersetzt die Darstellung oben, da es eine neue, mit dem mobilen Swift-Client gemeinsam genutzte API verwendet.
+        feedback_prompt: Vergleich dieses Diagramm mit dem ursprünglichen oben und sag uns, ob es sich abgesehen von der Sortierung unterscheidet.
+        positive: Sieht richtig aus
+        negative: Irgendwas stimmt nicht
+        feedback_title: Feedback zum Cashflow-Diagramm
+        feedback_loading: Feedback-Formular wird geladen …
+        feedback_unavailable: Feedback ist gerade nicht verfügbar. Versuch es später noch einmal.
+        feedback_thanks: Danke, dass du hilfst, das Diagramm zu verbessern!
+        feedback_privacy: Deine Antwort wird an PostHog gesendet. Beschreib das Problem ohne Kontonummern, Salden oder andere private Finanzdaten.
+        feedback_submit: Feedback senden
       cashflow_sankey:
         title: "Cashflow"
         no_data_title: "Keine Cashflow-Daten für diesen Zeitraum"
         no_data_description: "Füge Transaktionen hinzu, um Cashflow-Daten anzuzeigen, oder erweitere den Zeitraum."
         add_transaction: "Transaktion hinzufügen"
-        zoom_out: Zurück zum gesamten Zahlungsfluss
+        zoom_out: Zurück zum gesamten Cashflow
+        loading: Cashflow wird geladen …
+        load_error: Der Cashflow ließ sich nicht laden. Versuch es noch einmal.
+        retry: Erneut versuchen
       no_accounts:
         title: "Noch keine Konten vorhanden"
         description: "Füge Konten hinzu, um Daten zum Nettovermögen anzuzeigen."
@@ -58,15 +75,15 @@ de:
         total_outflows: "Gesamtausgaben"
         categories: "Kategorien"
         value: "Wert"
-        weight: "Gewicht"
+        weight: "Anteil"
       investment_summary:
         title: Investments
         total_return: "Gesamtrendite"
         holding: "Position"
-        weight: "Gewicht"
+        weight: "Anteil"
         value: "Wert"
         return: "Rendite"
-        period_activity: "%{period} Aktivität"
+        period_activity: "Aktivität: %{period}"
         contributions: "Einlagen"
         withdrawals: "Entnahmen"
         trades: "Trades"
@@ -97,6 +114,15 @@ de:
         label: Größe anpassen
         tall: Hoch
         width_label: Breite
+      spending_trend:
+        title: Ausgaben
+        date_range: '%{start_date} bis %{end_date}'
+        date_range_short: '%{start_date} – %{end_day}, %{year}'
+        date_range_short_single: '%{date} %{year}'
+        month_picker_aria_label: Monat wählen
+        period_scope_hint: Zeigt den Monat, den du hier wählst – unabhängig vom Zeitraum oben im Dashboard.
+        no_data: Keine Ausgabendaten für diesen Monat
+        previous_comparison_days: (1.–%{end_day}.)
     feedback:
       bug_report: Fehler melden
       description: Sag uns, was dir auffällt. Links zu Videos oder Screenshots sind willkommen.
@@ -118,7 +144,7 @@ de:
       setup_guide_hint: Folge unserer Docker-Anleitung, um Redis einzurichten
       subheading: Deine selbst gehostete Sure-Installation braucht ein richtig eingerichtetes Redis.
       view_setup_guide: Anleitung öffnen
-      why_required_body: 'Sure nutzt Redis für die Sidekiq-Hintergrundjobs: Kontodaten abgleichen, Importe verarbeiten und alles andere, was deine Finanzdaten aktuell hält.'
+      why_required_body: 'Sure nutzt Redis für die Sidekiq-Hintergrundjobs: Kontodaten synchronisieren, Importe verarbeiten und alles andere, was deine Finanzdaten aktuell hält.'
       why_required_title: Wofür braucht Sure Redis?
     release_notes_unavailable:
       body_html: "<p>Die aktuellen Release Notes lassen sich gerade nicht abrufen. Versuch es später noch einmal oder öffne direkt unsere <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub-Release-Seite</a>.</p>"

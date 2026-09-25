@@ -16,33 +16,43 @@ pl:
       subtype_prompt: Wybierz typ pożyczki
       term_months: Okres (miesiące)
       term_months_placeholder: '360'
+      rate_changes: Zmiany oprocentowania
+      rate_changes_hint: Każdy wiersz określa oprocentowanie obowiązujące od jego daty obowiązywania do następnej zmiany. Ponowne wpisanie tej samej daty zastępuje istniejący wiersz zamiast dodawać drugi.
+      rate_changes_empty: Brak zapisanych zmian oprocentowania. Pożyczka ma oprocentowanie podane powyżej.
+      rate_change_effective_date: Data obowiązywania
+      rate_change_rate: Oprocentowanie
+      rate_change_add: Dodaj zmianę oprocentowania
+      rate_change_remove: Usuń
+      start_date: Data udzielenia pożyczki
+      start_date_hint: Data wypłaty środków z pożyczki. Zostaw puste, aby użyć daty otwarcia konta.
     new:
       title: Wprowadź dane pożyczki
     overview:
       interest_rate: Oprocentowanie
       monthly_payment: Rata miesięczna
       not_applicable: Nie dotyczy
-      original_principal: Kapitał początkowy
-      remaining_principal: Pozostały kapitał
+      original_principal: Początkowa kwota pożyczki
+      remaining_principal: Pozostała kwota pożyczki
       term: Okres
       type: Typ
       unknown: Nieznane
+      original_payoff_date: Pierwotna data spłaty
     tabs:
       overview:
         edit_loan_details: Edytuj szczegóły pożyczki
         interest_rate: Oprocentowanie
         monthly_payment: Rata miesięczna
         not_applicable: Nie dotyczy
-        original_principal: Kapitał początkowy
-        remaining_principal: Pozostały kapitał
+        original_principal: Początkowa kwota pożyczki
+        remaining_principal: Pozostała kwota pożyczki
         term: Okres
         type: Typ
         unknown: Nieznany
+        original_payoff_date: Pierwotna data spłaty
       schedule:
         date: Data
         description: Prognoza na podstawie początkowego salda, oprocentowania i okresu,
-          licząc od %{start_date}. Dodatkowe wpłaty i zmiany oprocentowania nie są
-          uwzględnione.
+          licząc od %{start_date}. Dodatkowe wpłaty nie są uwzględnione.
         interest: Odsetki
         monthly_payment: Rata miesięczna
         number: "#"
@@ -52,3 +62,5 @@ pl:
         remaining_balance: Pozostałe saldo
         total_cost: Całkowity koszt
         total_interest: Suma odsetek
+        variable_rate_notice: Oprocentowanie tej pożyczki zmienia się w czasie. Harmonogram jest przeliczany przy każdej zapisanej zmianie — pierwotna data spłaty pozostaje bez zmian, a zmienia się wysokość raty. Zmiana, która nie została jeszcze zapisana, wpłynie na te wartości.
+        opening_payment: Rata początkowa

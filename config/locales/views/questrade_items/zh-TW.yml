@@ -49,6 +49,17 @@ zh-TW:
           description: 您的 Questrade api server
           placeholder_new: 在此貼上 api server
           placeholder_update: 輸入新的 api server 以更新
+      eyebrow: 設定 · 僅限桌面版
+      help_text: Questrade API 文件
+      disconnect: 中斷連線
+      disconnect_confirm: 要中斷 Questrade 連線嗎？這會移除此連線，並解除連結已同步的帳戶。
+      steps:
+        s1_html: 在桌面瀏覽器登入 <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">Questrade 入口網站</a>。行動應用程式中沒有 API 設定。
+        s2: 開啟 Settings，在 General settings 下編輯 IQ API settings。
+        s3_html: 在 API 存取視窗中，點選 <strong>My applications</strong> 下方的 <strong>Manage</strong>。
+        s4: 註冊一個個人應用程式並填寫名稱與說明，然後儲存。
+        s5: 新增一個裝置並產生 Token。
+        s6: 將產生的 Token 貼到下方並儲存。
     create:
       success: Questrade 連線建立成功
     update:
@@ -134,6 +145,13 @@ zh-TW:
       settings_link: 前往供應商設定
       subtitle: 選擇一個 Questrade 帳戶
       title: 將 %{account_name} 與 Questrade 連結
+      page_title: 連結 Questrade 帳戶
+      dialog_title: 連結至 Questrade 帳戶
+      linking_label: 正在連結
+      none_available: 沒有可用的未連結 Questrade 帳戶。
+      buttons:
+        cancel: 取消
+        link: 連結
     link_existing_account:
       account_already_linked: 此帳戶已與供應商連結
       api_error: API 錯誤：%{message}
@@ -160,7 +178,7 @@ zh-TW:
       select_all: 全選
       account_types:
         skip: 跳過此帳戶
-        depository: 支票或儲蓄帳戶
+        depository: 活期或儲蓄帳戶
         credit_card: 信用卡
         investment: 投資帳戶
         crypto: 加密貨幣帳戶
@@ -179,7 +197,7 @@ zh-TW:
         crypto: 加密貨幣帳戶將用於追蹤持倉和交易。
       subtypes:
         depository:
-          checking: 支票帳戶 (Checking)
+          checking: 活期存款帳戶 (Checking)
           savings: 儲蓄帳戶 (Savings)
           hsa: 健康儲蓄帳戶 (HSA)
           cd: 定期存款 (CD)
@@ -213,6 +231,18 @@ zh-TW:
       sync_start_date_help: 選擇您希望回溯同步交易歷史的時間範圍。
       sync_start_date_label: 開始同步交易的日期：
       title: 設定您的 Questrade 帳戶
+      page_title: 設定 Questrade 帳戶
+      dialog_title: 設定您的 Questrade 帳戶
+      all_linked: 所有 Questrade 帳戶都已連結。
+      import_as: 匯入為
+      buttons:
+        cancel: 取消
+        create: 建立帳戶
+        done: 完成
+      types:
+        investment: 投資
+        depository: 現金／存款
+        skip: 跳過此帳戶
     setup_required:
       title: 請先連接 Questrade
       not_configured_title: 尚未連接 Questrade

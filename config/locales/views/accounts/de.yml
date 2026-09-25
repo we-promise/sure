@@ -4,8 +4,8 @@ de:
     account:
       edit: Bearbeiten
       link_lunchflow: Mit Lunch Flow verknüpfen
-      link_provider: Mit Provider verknüpfen
-      unlink_provider: Von Provider trennen
+      link_provider: Mit Anbieter verknüpfen
+      unlink_provider: Von Anbieter trennen
       troubleshoot: Fehlerbehebung
       enable: Konto aktivieren
       disable: Konto deaktivieren
@@ -30,7 +30,7 @@ de:
       cannot_delete_linked: Ein verknüpftes Konto lässt sich nicht löschen. Trenn es zuerst.
       failed: Löschen fehlgeschlagen. Versuch es später noch einmal.
     empty:
-      empty_message: Füge ein Konto über eine Verbindung, einen Import oder manuell hinzu
+      empty_message: Füge ein Konto über eine Verbindung, einen Import oder manuell hinzu.
       new_account: Neues Konto
       no_accounts: Noch keine Konten vorhanden
     form:
@@ -65,8 +65,8 @@ de:
         link_with_provider: "Mit %{provider} verknüpfen"
         lunchflow_entry: Lunch-Flow-Konto verknüpfen
         manual_entry: Kontostand manuell eingeben
-        title: Wie möchtest du es hinzufügen
-      title: Was möchtest du hinzufügen
+        title: Wie möchtest du es hinzufügen?
+      title: Was möchtest du hinzufügen?
       container:
         close: Schließen
         navigate: Navigieren
@@ -99,9 +99,9 @@ de:
         balance: Kontostand
         owed: Geschuldeter Betrag
       menu:
-        confirm_accept: "%{name} löschen"
-        confirm_body_html: "<p>Wenn du dieses Konto löschst, werden dessen Wertverläufe gelöscht, was sich auf verschiedene Bereiche deines Gesamtvermögens auswirkt Diese Aktion beeinflusst direkt deine Nettovermögensberechnung und die Kontodiagramme</p><br /> <p>Nach dem Löschen kann das Konto nicht wiederhergestellt werden Du müsstest es als neues Konto hinzufügen</p>"
-        confirm_title: Konto löschen
+        confirm_accept: "„%{name}“ löschen"
+        confirm_body_html: "<p>Wenn du dieses Konto löschst, werden dessen Wertverläufe gelöscht, was sich auf verschiedene Bereiche deines Gesamtvermögens auswirkt. Diese Aktion beeinflusst direkt deine Nettovermögensberechnung und die Kontodiagramme.</p><br /> <p>Nach dem Löschen kann das Konto nicht wiederhergestellt werden. Du müsstest es als neues Konto hinzufügen.</p>"
+        confirm_title: Konto löschen?
         edit: Bearbeiten
         import: Transaktionen importieren
         import_trades: Trades importieren
@@ -126,7 +126,7 @@ de:
     sidebar:
       missing_data: Fehlende historische Daten
       missing_data_description: "%{product} verwendet Drittanbieter, um historische Wechselkurse, Wertpapierpreise und weitere Daten abzurufen. Diese Daten sind erforderlich, um genaue historische Kontostände zu berechnen."
-      configure_providers: Konfiguriere deine Anbieter hier
+      configure_providers: Konfiguriere deine Anbieter hier.
       tabs:
         all: Alle
         assets: Vermögen
@@ -135,6 +135,8 @@ de:
       new_debt: Neue Verbindlichkeit
       new_account: Neues Konto
       new_account_group: "Neue %{account_group}"
+      expand_all: Alle aufklappen
+      collapse_all: Alle zuklappen
     types:
       depository: Bankkonto
       investment: Investment
@@ -151,10 +153,10 @@ de:
       ca: Kanada
       au: Australien
       eu: Europa
-      generic: Generisch
+      generic: Allgemein
       in: Indien
     tax_treatments:
-      taxable: Versteuerbar
+      taxable: Steuerpflichtig
       tax_deferred: Steuerlich aufgeschoben
       tax_exempt: Steuerfrei
       tax_advantaged: Steuerbegünstigt
@@ -164,24 +166,24 @@ de:
       tax_exempt: Beiträge nach Steuer, Gewinne nicht besteuert
       tax_advantaged: Besondere Steuervorteile unter Bedingungen
     confirm_unlink:
-      title: Konto vom Provider trennen?
+      title: Konto vom Anbieter trennen?
       description_html: Du bist dabei, <strong>%{account_name}</strong> von <strong>%{provider_name}</strong> zu trennen. Das Konto wird danach manuell geführt.
       warning_title: Was das bedeutet
-      warning_no_sync: Das Konto wird nicht mehr automatisch mit dem Provider synchronisiert
-      warning_manual_updates: Du musst Buchungen und Salden selbst pflegen
-      warning_transactions_kept: Bestehende Buchungen und Salden bleiben erhalten
+      warning_no_sync: Das Konto wird nicht mehr automatisch mit dem Anbieter synchronisiert
+      warning_manual_updates: Du musst Transaktionen und Salden selbst pflegen
+      warning_transactions_kept: Bestehende Transaktionen und Salden bleiben erhalten
       warning_can_delete: Nach dem Trennen kannst du das Konto bei Bedarf löschen
       confirm_button: Bestätigen und trennen
     unlink:
       success: "Konto erfolgreich getrennt. Es ist jetzt ein manuelles Konto."
-      not_linked: "Konto ist mit keinem Provider verknüpft"
+      not_linked: "Konto ist mit keinem Anbieter verknüpft"
       error: "Konto konnte nicht getrennt werden: %{error}"
       generic_error: Ein unerwarteter Fehler ist aufgetreten. Versuch es noch einmal.
     select_provider:
-      title: Provider zum Verknüpfen auswählen
+      title: Anbieter zum Verknüpfen auswählen
       description: Wähle den Anbieter, mit dem %{account_name} verknüpft werden soll
-      already_linked: "Konto ist bereits mit einem Provider verknüpft"
-      no_providers: "Derzeit sind keine Provider konfiguriert"
+      already_linked: "Konto ist bereits mit einem Anbieter verknüpft"
+      no_providers: "Derzeit sind keine Anbieter konfiguriert"
     not_authorized: Du darfst dieses Konto nicht verwalten
     types_plural:
       credit_card: Kreditkarten
@@ -196,8 +198,8 @@ de:
 
   email_confirmations:
     new:
-      invalid_token: Ungültiger oder abgelaufener Bestätigungslink
-      success_login: Deine E-Mail-Adresse wurde bestätigt Bitte melde dich mit deiner neuen Adresse an
+      invalid_token: Ungültiger oder abgelaufener Bestätigungslink.
+      success_login: Deine E-Mail-Adresse wurde bestätigt. Bitte melde dich mit deiner neuen Adresse an.
   account:
     entries:
       destroy:

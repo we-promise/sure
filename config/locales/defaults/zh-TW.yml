@@ -51,6 +51,7 @@ zh-TW:
       short: '%m月%d日'
       month_year: '%Y年%-m月'
       short_month_year: '%Y年%b'
+      short_with_year: '%Y年%m月%d日'
     month_names:
     - null
     - 一月
@@ -225,3 +226,10 @@ zh-TW:
       long: '%Y年%m月%d日 %H:%M'
       short: '%m月%d日 %H:%M'
     pm: 下午
+  mcp:
+    errors:
+      invalid_session_id: 無效的 MCP session id
+      unsupported_protocol_version: 不支援的 MCP 協定版本：%{version}
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris 必須使用 https、loopback http 或原生應用程式的 URI scheme

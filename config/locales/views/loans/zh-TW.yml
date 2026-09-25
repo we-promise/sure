@@ -13,6 +13,18 @@ zh-TW:
       none: 無
       subtype_prompt: 選擇貸款類型
       subtype_none: 無
+      rate_type_adjustable: 可調整利率
+      rate_type_fixed: 固定利率
+      rate_type_variable: 浮動利率
+      rate_changes: 利率變動
+      rate_changes_hint: 每一列設定的利率，會從其生效日期起適用到下一列為止。重複輸入同一個日期會取代該列，而不會新增第二列。
+      rate_changes_empty: 尚未記錄任何利率變動。這筆貸款將以上方的利率計算。
+      rate_change_effective_date: 生效日期
+      rate_change_rate: 利率
+      rate_change_add: 新增利率變動
+      rate_change_remove: 移除
+      start_date: 貸款撥款日
+      start_date_hint: 貸款撥款的日期。留白則使用帳戶的開戶日期。
     new:
       title: 輸入貸款詳情
     overview:
@@ -24,6 +36,7 @@ zh-TW:
       term: 貸款期限
       type: 類型
       unknown: 未知
+      original_payoff_date: 原定清償日期
     tabs:
       overview:
         interest_rate: 利率
@@ -35,3 +48,17 @@ zh-TW:
         type: 類型
         unknown: 未知
         edit_loan_details: 編輯貸款詳細資料
+        original_payoff_date: 原定清償日期
+      schedule:
+        date: 日期
+        description: 依原始餘額、利率與期限推算，自 %{start_date} 起算。未反映額外還款。
+        variable_rate_notice: 這筆貸款的利率會隨時間變動。還款計畫會在每次記錄的利率變動時重新攤還，維持原定清償日期並調整每期還款金額；尚未記錄的利率變動將會改變這些數字。
+        opening_payment: 首期還款額
+        interest: 利息
+        monthly_payment: 每月還款額
+        number: '#'
+        payment: 還款額
+        principal: 本金
+        remaining_balance: 剩餘本金
+        total_cost: 總還款金額
+        total_interest: 總利息

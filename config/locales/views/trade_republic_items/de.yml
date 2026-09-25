@@ -50,6 +50,8 @@ de:
           pending: Ausstehend
           syncing: Wird synchronisiert
           stale: Veraltet
+      deletion_in_progress: Wird gelöscht
+      never_synced: Noch nie synchronisiert.
     setup_accounts:
       page_title: "Trade-Republic-Konto einrichten"
       dialog_title: "Dein Trade-Republic-Konto einrichten"
@@ -93,15 +95,24 @@ de:
         importing_account: "Trade-Republic-Konto wird importiert..."
         processing_activity: "Positionen und Aktivitäten werden verarbeitet..."
         calculating_balances: "Kontostände werden berechnet..."
+        checking_configuration: Kontokonfiguration wird geprüft...
+        accounts_need_setup:
+          one: '%{count} Trade-Republic-Konto muss eingerichtet werden...'
+          other: '%{count} Trade-Republic-Konten müssen eingerichtet werden...'
     repair:
       scheduled: "Die Reparatur der Trade-Republic-Daten wurde eingeplant."
     select_existing_account:
       title: "Trade-Republic-Konto verknüpfen"
       link: "Verknüpfen"
       cancel: "Abbrechen"
+      no_accounts_available: Es sind noch keine unverknüpften Trade-Republic-Konten verfügbar.
+      run_sync_hint: Schließe die Anmeldung ab und starte einen Sync unter Einstellungen > Anbieter.
+      wait_for_sync: Warte, bis der Sync zur Kontoerkennung abgeschlossen ist.
+      balance: Saldo
     initiate_login:
       pin_required: "Gib deine Trade-Republic-PIN ein, um eine neue Anmeldung zu starten."
       verification_required: "Anmeldung gestartet. Bestätige sie über %{method} und klicke anschließend auf Anmeldung bestätigen."
+      not_configured: Trade Republic ist nicht konfiguriert.
     initiate_qr_login:
       not_configured: "Trade Republic ist nicht konfiguriert."
     poll_login:
@@ -115,19 +126,29 @@ de:
       still_pending: "Noch nicht bestätigt. Bestätige die Anmeldung in der Trade-Republic-App und versuche es danach erneut."
       success: "Trade Republic wurde erfolgreich verbunden."
       login_expired: "Die Anmeldeanfrage ist abgelaufen. Bitte starte sie erneut."
+      no_pending_login: Es ist keine Anmeldung ausstehend. Starte zuerst eine neue Anmeldung.
     link_existing_account:
       not_found: "Konto oder Trade-Republic-Konfiguration nicht gefunden."
       success: "Erfolgreich mit dem Trade-Republic-Konto verknüpft."
       processing_failed: "Das Konto wurde verknüpft, aber die erste Datenverarbeitung ist fehlgeschlagen. Ein Sync wurde geplant; prüfe das Debug-Log, falls die Daten unvollständig bleiben."
+      only_manual_investment: Nur manuelle Investmentkonten können mit Trade Republic verknüpft werden.
+      already_linked: Dieses Trade-Republic-Konto ist bereits verknüpft.
+      failed: Das Trade-Republic-Konto konnte nicht verknüpft werden.
     complete_account_setup:
       none_selected: "Es wurden keine Konten ausgewählt."
       partial_failure:
         one: "Ein ausgewähltes Trade-Republic-Konto konnte nicht vollständig eingerichtet werden. Prüfe das Debug-Log und versuche es erneut."
         other: "%{count} ausgewählte Trade-Republic-Konten konnten nicht vollständig eingerichtet werden. Prüfe das Debug-Log und versuche es erneut."
+      success:
+        one: '%{count} Trade-Republic-Konto erfolgreich angelegt.'
+        other: '%{count} Trade-Republic-Konten erfolgreich angelegt.'
+      none_created: Es wurden keine Konten angelegt.
     update:
       pin_required: "Gib deine Trade-Republic-PIN ein, um die Verbindung erneut zu authentifizieren."
+      success: Trade-Republic-Konfiguration erfolgreich aktualisiert.
     destroy:
       unlink_failed: "Trade Republic konnte nicht vollständig getrennt werden. Die Verbindung bleibt für einen sicheren erneuten Versuch erhalten."
+      success: Die Trade-Republic-Verbindung wird gelöscht.
     activities:
       labels:
         contribution: Einzahlung
@@ -141,3 +162,13 @@ de:
         tax_refund: Steuerrückerstattung
         buy: Kauf
         sell: Verkauf
+    sync_status:
+      no_accounts: Noch kein Trade-Republic-Konto gefunden
+      all_linked:
+        one: '%{count} Konto verknüpft'
+        other: '%{count} Konten verknüpft'
+      partial: '%{linked} verknüpft, %{unlinked} einzurichten'
+    create:
+      success: Trade Republic gespeichert. Bestätige die Anmeldung in der Trade-Republic-App, um die Verbindung abzuschließen.
+    select_accounts:
+      not_configured: Trade Republic ist nicht konfiguriert.

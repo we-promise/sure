@@ -2,3 +2,8 @@
 zh-TW:
   provider_warnings:
     limited_investment_data: 這個供應商的投資資料有限，沒有活動標籤（買入、賣出、股息），預算可能因此不準。建議建立規則，把投資交易排除或另外歸類。
+    lunchflow_accounts_failed:
+      other: Lunchflow 匯入：%{count} 個帳戶更新失敗
+    lunchflow_transactions_failed:
+      other: Lunchflow 匯入：%{count} 個帳戶的交易擷取失敗
+    lunchflow_import_error: Lunchflow 匯入：%{error}

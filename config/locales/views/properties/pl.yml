@@ -67,7 +67,7 @@ pl:
       avm_us_only: "%{provider} obsługuje wyłącznie nieruchomości położone w Stanach
         Zjednoczonych."
       next: Dalej
-      title: Wprowadź dane nieruchomości
+      title: Wprowadź nieruchomość ręcznie
     overview:
       living_area: Powierzchnia użytkowa
       market_value: Wartość rynkowa

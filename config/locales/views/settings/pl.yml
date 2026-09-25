@@ -24,8 +24,8 @@ pl:
             we wszystkich rozmowach
           title: Główny prompt systemowy
         merchant_detector:
-          subtitle: AI identyfikuje i wzbogaca dane transakcji o informacje o sprzedawcy
-          title: Wykrywanie sprzedawcy
+          subtitle: AI identyfikuje i wzbogaca dane transakcji o informacje o kontrahencie
+          title: Wykrywanie kontrahenta
         openai_label: OpenAI
         page_title: Prompty AI
         prompt_instructions: Instrukcje promptów
@@ -50,8 +50,8 @@ pl:
         dashboard_subtitle: Dostosuj sposób wyświetlania pulpitu
         dashboard_title: Pulpit
         dashboard_two_column_description: Wyświetlaj widżety pulpitu w dwóch kolumnach
-          na dużych ekranach. Gdy opcja jest wyłączona, widżety układają się w jednej
-          kolumnie.
+          na dużych ekranach, z ustawieniami szerokości i wysokości w nagłówku każdego
+          widżetu. Gdy opcja jest wyłączona, widżety układają się w jednej kolumnie.
         dashboard_two_column_title: Układ dwukolumnowy
         disable_modal_click_outside_description: Zapobiega zamykaniu okien modalnych
           po kliknięciu poza nimi. Przydatne, aby uniknąć przypadkowej utraty niezapisanych
@@ -72,6 +72,8 @@ pl:
         theme_title: Motyw
         transactions_subtitle: Dostosuj sposób wyświetlania transakcji
         transactions_title: Transakcje
+        dashboard_account_groups_title: Domyślnie rozwinięte
+        dashboard_account_groups_description: Te sekcje kont będą domyślnie rozwinięte na pulpicie i na pasku bocznym kont. Nadal możesz je w każdej chwili zwinąć ręcznie.
     background_jobs:
       cancel:
         cancelled: "%{type} oznaczono jako utracone."
@@ -224,7 +226,7 @@ pl:
         contributions_note: Tutaj pojawią się wpłaty na rzecz %{product_name}.
         currently_on_plan: Obecnie na planie
         manage: Zarządzaj
-        not_contributing_emphasis: nie wpłaca
+        not_contributing_emphasis: nie wpłacasz
         not_contributing_prefix: Obecnie
         page_title: Płatności
         payment_via_stripe: Płatność przez Stripe
@@ -322,7 +324,7 @@ pl:
           title: Usuń członka
         confirm_reset:
           body: Czy na pewno chcesz zresetować swoje konto? Spowoduje to usunięcie
-            wszystkich kont, kategorii, sprzedawców, tagów i innych danych. Tej akcji
+            wszystkich kont, kategorii, kontrahentów, tagów i innych danych. Tej akcji
             nie można cofnąć.
           title: Zresetować konto?
         confirm_reset_with_sample_data:
@@ -347,7 +349,7 @@ pl:
         invitation_link: Odnośnik do zaproszenia
         invite_member: Dodaj członka
         last_name: Nazwisko
-        page_title: Informacje profilowe
+        page_title: Dane profilu
         pending: Oczekujące
         profile_subtitle: Dostosuj sposób, w jaki wyświetlasz się w %{product_name}
         profile_title: Dane osobiste
@@ -355,7 +357,7 @@ pl:
         remove_member: Usuń członka
         resend_confirmation_link: poproś o nowy e-mail potwierdzający
         reset_account: Zresetuj konto
-        reset_account_warning: Reset konta usunie wszystkie konta, kategorie, sprzedawców,
+        reset_account_warning: Reset konta usunie wszystkie konta, kategorie, kontrahentów,
           tagi i inne dane, ale pozostawi Twoje konto użytkownika.
         reset_account_with_sample_data: Zresetuj i załaduj dane
         reset_account_with_sample_data_warning: Usuń wszystkie istniejące dane i załaduj
@@ -373,7 +375,7 @@ pl:
       bank_sync:
         lede: Połącz konta zewnętrzne, aby transakcje, salda i posiadane aktywa trafiały
           do Sure automatycznie.
-        page_title: Synchronizacja banku
+        page_title: Synchronizacja z bankiem
       binance_panel:
         api_key_label: Klucz API
         api_key_placeholder: Wklej swój klucz API Binance
@@ -459,12 +461,10 @@ pl:
         unknown: Nieznane
         update_connection: Zaktualizuj połączenie
       encryption_error:
-        message: Klucze szyfrowania Active Record nie są skonfigurowane. Upewnij się,
-          że dane uwierzytelniające szyfrowania (active_record_encryption.primary_key,
-          active_record_encryption.deterministic_key oraz active_record_encryption.key_derivation_salt)
-          są poprawnie ustawione w poświadczeniach Rails lub zmiennych środowiskowych
-          przed użyciem dostawców synchronizacji.
-        title: Wymagana konfiguracja szyfrowania
+        message: Synchronizacja z bankiem wymaga skonfigurowanego szyfrowania Active
+          Record. Ustaw primary_key, deterministic_key i key_derivation_salt w poświadczeniach
+          Rails lub w zmiennych środowiskowych.
+        title: Brak kluczy szyfrowania
       groups:
         available: Dostępne
         empty_available: Wszyscy dostępni dostawcy są połączeni.
@@ -707,6 +707,8 @@ pl:
           API tylko do odczytu.
         wise: Synchronizuj automatycznie swoje wielowalutowe salda i przelewy międzynarodowe
           Wise.
+        fio: Synchronizuj konto w Fio banka za pomocą tokenu API tylko do odczytu.
+        coinspot: Synchronizuj salda CoinSpot, wartości w AUD, przelewy, wpłaty, wypłaty i historię zleceń za pomocą klucza API tylko do odczytu.
       trade_republic_panel:
         accounts_discovered:
           few: Wykryto %{count} konta Trade Republic.
@@ -807,6 +809,32 @@ pl:
       update:
         no_changes: Nie wprowadzono żadnych zmian
         updated_successfully: Ustawienia dostawcy zostały zaktualizowane
+      coinspot_panel:
+        step1_html: Przejdź do <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">ustawień API CoinSpot</a>
+        step2: Utwórz klucz API z dostępem tylko do odczytu sald i historii.
+        step3: Wklej poniżej klucz API i sekret.
+        read_only_title: Tylko synchronizacja giełdy w trybie odczytu
+        read_only_body: Nie nadawaj uprawnień do wysyłania, wypłat, handlu ani przelewów. Sure importuje wyłącznie salda, wartości w AUD, przelewy, wpłaty, wypłaty i historię zrealizowanych zleceń.
+        default_connection_name: CoinSpot
+        add_connection: Dodaj połączenie z CoinSpot
+        update_connection: Zaktualizuj połączenie
+        connection_name_label: Nazwa połączenia
+        connection_name_placeholder: Główny CoinSpot
+        api_key_label: Klucz API
+        api_key_placeholder: Wklej swój klucz API CoinSpot
+        keep_api_key_placeholder: Zostaw puste, aby zachować obecny klucz API
+        api_secret_label: Sekret API
+        api_secret_placeholder: Wklej swój sekret API CoinSpot
+        keep_api_secret_placeholder: Zostaw puste, aby zachować obecny sekret API
+        setup_accounts: Skonfiguruj konto
+        syncing: Synchronizowanie...
+        sync: Synchronizuj
+        disconnect: Rozłącz
+        disconnect_confirm: Czy na pewno chcesz rozłączyć %{name}?
+      fio_panel:
+        step_1_html: Zaloguj się do bankowości internetowej %{link} i otwórz Ustawienia → API.
+        step_2: Utwórz token z dostępem tylko do odczytu („Sledování účtu”). Wymaga on silnej autoryzacji i jest ważny do 180 dni.
+        step_3: Wklej poniżej token i zapisz. Jeden token daje dostęp do jednego konta, więc dodaj osobne połączenie dla każdego konta Fio.
     securities:
       show:
         encryption_warning:
@@ -839,26 +867,26 @@ pl:
       accounts_label: Konta
       advanced_section_title: Zaawansowane
       ai_prompts_label: Prompty AI
-      api_key_label: Klucz API
-      api_keys_label: Klucz API
+      api_key_label: Klucze API
+      api_keys_label: Klucze API
       appearance_label: Wygląd
       background_jobs_label: Zadania w tle
-      bank_sync_label: Synchronizacja banku
+      bank_sync_label: Synchronizacja z bankiem
       categories_label: Kategorie
-      debug_label: Debug
+      debug_label: Debugowanie
       exports_label: Eksporty
       feedback_label: Opinie
       general_section_title: Ogólne
       guides_label: Przewodniki
       imports_label: Importy
-      llm_usage_label: Zużycie LLM
+      llm_usage_label: Użycie LLM
       logout: Wyloguj
       mcp_label: MCP
-      merchants_label: Sprzedawcy
+      merchants_label: Kontrahenci
       other_section_title: Więcej
       payment_label: Płatności
       preferences_label: Preferencje
-      profile_label: Informacje profilowe
+      profile_label: Dane profilu
       providers_label: Dostawcy
       recurring_transactions_label: Cykliczne
       rules_label: Reguły

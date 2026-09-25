@@ -17,7 +17,7 @@ pl:
       change: zmiany
       credit_card_balance: saldo karty kredytowej
       crypto_balance: saldo kryptowalut
-      holdings_value: Wartość portfela
+      holdings_value: Wartość pozycji
       liability_balance: saldo zobowiązania
       loan_balance: saldo pożyczki
       'on': w dniu

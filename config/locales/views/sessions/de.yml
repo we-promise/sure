@@ -23,7 +23,7 @@ de:
       forgot_password: Passwort vergessen?
       password: Passwort
       submit: Anmelden
-      title: Melde dich bei deinem Konto an
+      title: Sure
       password_placeholder: Passwort eingeben
       openid_connect: Mit OpenID Connect anmelden
       oidc: Mit OpenID Connect anmelden

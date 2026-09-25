@@ -199,7 +199,7 @@ de:
       creating_accounts: Konten werden erstellt...
       historical_data_range: "Historischer Datenbereich:"
       subtitle: Wähl die richtigen Kontotypen für deine importierten Konten
-      sync_start_date_help: Wähl aus, wie weit zurück du den Transaktionsverlauf abgleichen willst. Verfügbar sind maximal 3 Jahre.
+      sync_start_date_help: Wähl aus, wie weit zurück du den Transaktionsverlauf synchronisieren willst. Verfügbar sind maximal 3 Jahre.
       sync_start_date_label: "Transaktionen synchronisieren ab:"
       title: Richte deine Sophtron-Konten ein
     complete_account_setup:

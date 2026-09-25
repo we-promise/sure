@@ -32,6 +32,15 @@ zh-TW:
           session_count: 工作階段數
           never: 從未
           role: 角色
+          family: 家庭／群組
+          keep_current_family: 保留目前的家庭／群組
+          create_new_family_option: + 建立新的家庭／群組
+          new_family_name: 新家庭／群組名稱
+          new_family_name_placeholder: 輸入名稱以建立新的家庭／群組
+          new_family_moniker: 新家庭／群組類型
+          set_password: 設定新密碼
+          password_placeholder: 留白則保留目前密碼
+          actions: 操作
         role_descriptions_title: 角色說明
         roles:
           guest: 訪客
@@ -48,6 +57,64 @@ zh-TW:
           expires: '%{date} 到期'
           delete: 刪除
           delete_all: 全部刪除
+        family_monikers:
+          family: 家庭
+          group: 群組
+        actions:
+          manage_user: 管理使用者
+          update: 更新使用者
+          delete_user: 刪除使用者
+          self_edit_warning: 變更自己的角色會改變您的管理權限。
+          self_update_confirm: 確定要更新您自己帳號的角色或家庭／群組嗎？
+          last_super_admin_role_locked: 您是系統中最後一位超級管理員，因此無法變更角色。
+        delete_confirm: 確定要刪除這位使用者嗎？這個動作無法復原。
+        delete_confirm_last_user: 確定要刪除這位使用者嗎？這是其家庭／群組中的最後一位使用者，刪除後也會一併刪除整個家庭／群組及所有相關資料。這個動作無法復原。
+        remove: 刪除使用者
+        removed_sso_identities:
+          title: 已移除的 SSO 身分
+          description: 這些身分無法建立或重新連結帳號。只有在誤刪時才重新允許某個身分。
+          allow_again: 重新允許
+          confirm: 要允許 %{email} 再次透過 SSO 登入或建立帳號嗎？
+        auth_types:
+          sso: SSO
+          local: 本機
+          local_and_sso: 本機 + SSO
+          sso_provider_tooltip: SSO 供應商：%{providers}
+        unused_families:
+          title: 未使用的家庭／群組
+          family_id: 家庭 ID：%{id}
+          delete: 刪除未使用的家庭
+          delete_confirm: 確定要刪除這個未使用的家庭／群組嗎？這個動作無法復原。
+          empty: 找不到未使用的家庭／群組。
       update:
         success: 使用者角色更新成功。
         failure: 使用者角色更新失敗。
+        success_role: 使用者角色已更新。
+        success_password: 使用者密碼已更新。
+        success_role_and_password: 使用者角色與密碼已更新。
+        success_family: 使用者的家庭／群組成員資格已更新。
+        family_required: 請選擇現有的家庭／群組，或輸入名稱建立新的家庭／群組。
+        password_and_family_conflict: 無法同時更新密碼與家庭／群組成員資格。
+        password_too_short: 密碼長度至少需要 8 個字元。
+        password_missing_case: 密碼必須同時包含大寫與小寫字母。
+        password_missing_number: 密碼必須至少包含一個數字。
+        password_missing_special: 密碼必須至少包含一個特殊字元。
+        last_super_admin_error: 無法將系統中最後一位超級管理員降級。
+      destroy:
+        success: 已撤銷使用者的存取權，並排定永久刪除。
+        failure: 移除使用者失敗。
+        cannot_remove_self: 您無法在這裡移除自己的帳號。
+        cannot_remove_last_super_admin: 您無法移除最後一位啟用中的超級管理員。
+        confirmation_mismatch: 電子郵件地址不符，使用者未被移除。
+      deletion:
+        title: 永久移除使用者
+        warning: 這會立即撤銷存取權，並排定永久刪除該使用者及其資料。這個動作無法復原。
+        instruction: 請輸入 %{email} 以確認。
+        email_label: 使用者電子郵件
+        cancel: 取消
+        submit: 永久移除使用者
+    families:
+      destroy:
+        family_has_active_subscription: 此家庭／群組仍有有效的訂閱，必須先取消訂閱才能刪除。
+        family_has_users: 此家庭／群組仍有使用者，無法刪除。
+        success: 家庭／群組已刪除。

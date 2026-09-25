@@ -5,6 +5,7 @@ de:
     no_condition: Keine Bedingung
     actions:
       value_placeholder: Wert eingeben
+      to_label: auf
     apply_all:
       button: Alle anwenden
       confirm_title: Alle Regeln anwenden
@@ -34,7 +35,7 @@ de:
           blocked: Blockiert
       execution_types:
         manual: Manuell
-        scheduled: Geplant
+        scheduled: Automatisch
       statuses:
         pending: Ausstehend
         success: Erfolgreich
@@ -51,6 +52,18 @@ de:
         expense: Ausgabe
         transfer: Überweisung
         equal_to: Gleich
+      operators:
+        contains: Enthält
+        does_not_contain: Enthält nicht
+        equal_to: Gleich
+        is_equal_to: Ist gleich
+        not_equal_to: Ungleich
+        is_empty: Ist leer
+        is_not_empty: Ist nicht leer
+        greater_than: Größer als
+        greater_or_equal_to: Größer oder gleich
+        less_than: Kleiner als
+        less_than_or_equal_to: Kleiner oder gleich
     confirm:
       ai_cost_no_estimate_html: Damit kategorisiert die KI %{count} Transaktion(en).
       ai_cost_title: Geschätzte KI-Kosten

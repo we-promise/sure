@@ -12,9 +12,13 @@ de:
         reports: Berichte
         transactions: Transaktionen
         goals: Ziele
+        bills: Rechnungen
       insights: Insights
       resize_left_sidebar: Breite der Kontenleiste ändern
       resize_right_sidebar: Breite der Assistenzleiste ändern
+      release_highlight:
+        title: Was ist neu
+        done: Verstanden
     auth:
       existing_account: Du hast bereits ein Konto?
       no_account: Neu bei %{product_name}?
@@ -29,7 +33,11 @@ de:
         are_you_sure: Bist du sicher?
         cannot_be_undone: Das lässt sich nicht rückgängig machen.
         confirm: Bestätigen
+      notification_tray:
+        download_complete: Download abgeschlossen
+        download_failed: Download fehlgeschlagen. Versuch es noch einmal.
+        download_location: Die Datei liegt in deinem Ordner „Downloads“.
     trial:
-      open_demo: Offene Demo
+      open_demo: Demo öffnen
       data_deleted_in_days: Daten werden in %{days} Tagen gelöscht
       contribute: Beitragen

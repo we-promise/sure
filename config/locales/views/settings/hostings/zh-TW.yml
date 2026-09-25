@@ -57,9 +57,11 @@ zh-TW:
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
+          mansa: Mansa
         title: 供應商選擇
         description: 選擇用於取得匯率和證券價格的服務。Yahoo Finance 是免費的且不需要 API 金鑰。Twelve Data 需要免費的 API 金鑰，但可能提供更廣的資料涵蓋範圍。
         securities_provider_label: 證券（股價）資料供應商
+        requires_api_key_mansa: 需要 API 金鑰，免費方案每天 100 次呼叫 - 僅限 NGX（奈及利亞交易所）
       assistant_settings:
         title: AI 助手
         description: 選擇聊天助手的回應方式。內建模式會直接使用您設定的 LLM 供應商；外部模式則交給遠端 AI 代理處理，該代理可以透過 MCP 回頭呼叫 Sure 的財務工具。
@@ -84,7 +86,7 @@ zh-TW:
         disconnect_description: 移除外部助手連線，改回使用內建助手。
         disconnect_button: 中斷連線
         confirm_disconnect:
-          title: 要中斷外部助手嗎？
+          title: 要中斷與外部助手的連線嗎？
           body: 這會移除已儲存的網址、Token 與 Agent ID，並切換回內建助手。日後輸入新的憑證就能重新連線。
       brand_fetch_settings:
         description: 輸入 Brandfetch 提供的 Client ID
@@ -144,6 +146,14 @@ zh-TW:
         max_items_per_call_label: 每批項目數上限（選填）
         max_items_per_call_help: 自動分類／商家辨識每批次的上限。預設值：25。過大的批次會自動切分以符合上下文視窗。
         title: OpenAI
+        model_function_calling_help: AI 助手會透過函式呼叫 (function calling) 讀取您的資料，因此請選擇供應商文件中註明支援工具／函式呼叫的模型。不支援的模型會在聊天時失敗，並回傳難以判讀的供應商錯誤。
+        model_function_calling_link: 檢查已設定的模型
+        timeout_heading: 逾時設定
+        timeout_description: 控制相容 OpenAI 的模型呼叫最多可執行多久，超過後 Sure 就會放棄。如果您在效能較慢的硬體上執行本機模型，請將這些數值調高。
+        openai_request_timeout_label: 請求逾時秒數（選填）
+        openai_request_timeout_help: 預設值：60。適用於每一個相容 OpenAI 的 HTTP 請求，包括自動分類、商家辨識、聊天、PDF 處理與向量儲存庫呼叫。OPENAI_REQUEST_TIMEOUT 環境變數會覆寫此欄位。
+        ai_response_timeout_label: 回應逾時秒數（選填）
+        ai_response_timeout_help: 預設值：90。僅適用於聊天整輪回應的監控計時，因此請以總和來設定：(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × 請求逾時，再加上工具執行與排隊時間。AI_RESPONSE_TIMEOUT 環境變數會覆寫此欄位。
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance 提供免費的股票價格、匯率和金融資料存取，且不需要 API 金鑰。
@@ -193,6 +203,7 @@ zh-TW:
         step_1: 開啟 T-Bank 投資，接著進入 Settings，然後是 API tokens（需要已開立的 T-Bank 券商帳戶）。
         step_2: 建立一個唯讀存取的 Token。
         step_3: 複製 Token 並貼到下方。
+        moex_only_notice: 上方未啟用價格功能 - 只要設定了 Token，無論上方核取方塊是否勾選，T-Invest 都會用來取得您所有證券的品牌標誌。
       eodhd_settings:
         title: EODHD
         description: 輸入 EODHD 提供的 API Token。支援 LSE、XETRA 與其他國際交易所的歐洲 ETF。
@@ -256,6 +267,16 @@ zh-TW:
         auto_sync_description: 啟用後，所有帳戶都會在指定時間每天自動同步。
         auto_sync_time_label: 同步時間 (HH:MM)
         auto_sync_time_description: 指定每天要進行自動同步的時間。
-        include_pending_label: 納入待處理交易
-        include_pending_description: 啟用後，待處理（尚未清算）的交易會被匯入，並在入帳時自動核對。如果您的銀行提供的待處理資料不可靠，請關閉這個選項。
+        include_pending_label: 納入待入帳交易
+        include_pending_description: 啟用後，待入帳（尚未清算）的交易會被匯入，並在入帳時自動核對。如果您的銀行提供的待入帳資料不可靠，請關閉這個選項。
         env_configured_message: 這項設定已停用，因為系統設定了供應商的環境變數（SIMPLEFIN_INCLUDE_PENDING 或 PLAID_INCLUDE_PENDING）。移除它才能啟用這項設定。
+      mansa_settings:
+        title: Mansa
+        description: 輸入 Mansa API 提供的 API 金鑰。支援 NGX（奈及利亞交易所），這是此處其他供應商都未涵蓋的市場。Mansa 也涵蓋其他非洲交易所，但此整合只驗證過 NGX。
+        env_configured_message: 已透過 MANSA_API_KEY 環境變數成功設定。
+        label: API 金鑰
+        placeholder: 在此輸入您的 Mansa API 金鑰
+        show_details: （顯示詳細資訊）
+        step_1_html: 前往 <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> 領取您的免費 API 金鑰，不需要信用卡。
+        step_2: 複製您的 API 金鑰並貼到下方。
+        rate_limit_warning: Mansa 免費方案每天限用 100 次 API 呼叫，且只提供目前報價；歷史價格需要付費方案。此整合只驗證過 NGX（奈及利亞交易所）；Mansa 涵蓋的其他非洲交易所目前尚未在此支援。

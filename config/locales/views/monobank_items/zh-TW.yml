@@ -1,0 +1,129 @@
+---
+zh-TW:
+  providers:
+    monobank:
+      name: Monobank
+      description: 使用個人 API 權杖連結烏克蘭 Monobank 的卡片與存錢罐
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Monobank 連線
+  monobank_account:
+    jar_fallback: Monobank 存錢罐
+    card_types:
+      black: Black 卡
+      white: White 卡
+      platinum: Platinum 卡
+      iron: Iron 卡
+      yellow: Yellow 卡
+      eaid: eAid 卡
+      fop: 商業帳戶
+      jar: 存錢罐
+      unknown: Monobank 卡
+  monobank_item:
+    errors:
+      account_processing_failed: 無法同步 Monobank 帳戶
+      account_sync_schedule_failed: 無法排定 Monobank 帳戶同步
+      transactions_failed: 無法取得 Monobank 對帳單
+      sync_failed: 無法同步 Monobank 連線
+    sync:
+      status:
+        importing: 正在從 Monobank 匯入帳戶...
+        checking_setup: 正在檢查帳戶設定...
+        needs_setup:
+          other: 有 %{count} 個帳戶需要設定...
+        processing: 正在處理交易...
+        calculating: 正在計算餘額...
+    sync_status:
+      no_accounts: 找不到帳戶
+      all_synced:
+        other: 已同步 %{count} 個帳戶
+      partial: 已同步 %{linked} 個，%{unlinked} 個需要設定
+    institution_summary:
+      none: 尚未連線任何機構
+      one: 1 個機構
+      count:
+        other: '%{count} 個機構'
+  monobank_items:
+    provider_panel:
+      default_connection_name: Monobank 連線
+      add_connection: 新增 Monobank 連線
+      update_connection: 更新連線
+      connection_name_label: 連線名稱
+      connection_name_placeholder: 我的 Monobank
+      access_token_label: 個人 API 權杖
+      access_token_placeholder: 貼上您的 Monobank 個人權杖
+      keep_access_token_placeholder: 留白即保留現有的權杖
+      setup_accounts: 設定帳戶
+      syncing: 同步中...
+      sync: 同步
+      disconnect: 中斷連線
+      disconnect_confirm: 您確定要中斷與 %{name} 的連線嗎？
+      rate_limit_notice: Monobank 每分鐘只允許一次請求，因此每次同步只會取得少數幾個帳戶，較早的歷史紀錄會分成多次同步逐步取得。
+    create:
+      success: Monobank 連線已儲存。
+    update:
+      success: Monobank 連線已更新。
+    destroy:
+      success: 已排定刪除這個 Monobank 連線。
+      unlink_failed: 無法中斷 Monobank 連線
+    select_accounts:
+      title: 連結 Monobank 帳戶
+      description: 選擇要新增的 Monobank 卡片或存錢罐。
+      no_accounts_found: 找不到尚未連結的 Monobank 帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Monobank。
+      cancel: 取消
+      link_accounts: 連結帳戶
+    link_accounts:
+      success:
+        other: 已連結 %{count} 個 Monobank 帳戶。
+      no_accounts_selected: 請至少選擇一個帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Monobank。
+      unsupported_account_type: Monobank 不支援這種帳戶類型。
+      link_failed: 沒有連結任何帳戶。
+    select_existing_account:
+      title: 將 Monobank 帳戶連結到 %{account_name}
+      description: 選擇一個尚未連結的 Monobank 帳戶，連結到這個帳戶。
+      no_accounts_found: 找不到尚未連結的 Monobank 帳戶。
+      no_credentials_configured: 請先在供應商設定中設定 Monobank。
+      account_already_linked: 此帳戶已與供應商連結。
+      cancel: 取消
+      link_account: 連結帳戶
+    link_existing_account:
+      success: 已將 Monobank 帳戶連結到 %{account_name}。
+      account_already_linked: 此帳戶已與供應商連結。
+      monobank_account_already_linked: 這個 Monobank 帳戶已經連結過了。
+      no_account_selected: 請選擇要連結的 Monobank 帳戶。
+    setup_accounts:
+      title: 連結 Monobank 帳戶
+      subtitle: 選擇每張 Monobank 卡片或每個存錢罐要以什麼形式出現在 Sure 中。
+      no_credentials: 請先設定 Monobank 憑證。
+      api_error: 無法從 Monobank 重新整理帳戶，因此改為顯示上次同步時儲存的帳戶。
+      no_accounts_to_setup: 沒有需要設定的帳戶
+      all_accounts_linked: 所有 Monobank 帳戶都已連結。
+      choose_account_type: 選擇帳戶類型
+      choose_account_type_description: 略過您不想追蹤的帳戶。
+      account_type_label: 帳戶類型
+      account_types:
+        skip: 略過
+        depository: 現金
+      create_accounts: 建立帳戶
+      cancel: 取消
+    complete_account_setup:
+      success:
+        other: 已建立 %{count} 個 Monobank 帳戶。
+      all_skipped: 沒有建立任何 Monobank 帳戶。
+      no_accounts: 沒有選擇任何 Monobank 帳戶。
+      creation_failed: 無法建立 Monobank 帳戶。
+    monobank_item:
+      deletion_in_progress: 正在刪除
+      syncing: 同步中
+      error: 錯誤
+      status_with_summary: '%{timestamp}前已同步 · %{summary}'
+      status_never: 從未同步
+      delete: 刪除
+      setup_needed: 需要設定帳戶
+      setup_description: 已連結 %{total} 個帳戶中的 %{linked} 個。
+      setup_action: 設定帳戶
+      no_accounts_title: 尚未匯入帳戶
+      no_accounts_description: 從 Monobank 取得帳戶，並選擇要連結哪些帳戶。

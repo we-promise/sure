@@ -23,8 +23,7 @@ pl:
       description: SnapTrade łączy się z ponad 25 głównymi biurami maklerskimi (Fidelity,
         Vanguard, Schwab, Robinhood itp.) i udostępnia pełną historię transakcji z
         etykietami aktywności oraz podstawą kosztową.
-      free_tier_warning: Plan bezpłatny obejmuje 5 połączeń z biurami maklerskimi.
-        Dodatkowe połączenia wymagają płatnego planu SnapTrade.
+      free_tier_warning: Darmowy plan SnapTrade obejmuje 20 połączeń z biurami maklerskimi.
       loading_connections: Ładowanie połączeń...
       manage_at_snaptrade: Zarządzaj połączeniami w SnapTrade
       manage_connections: Zarządzaj połączeniami
@@ -91,7 +90,7 @@ pl:
       discovering: Odnajdywanie kont...
       importing: Importowanie kont z SnapTrade...
       needs_setup: "%{count} kont wymaga konfiguracji..."
-      processing: Przetwarzanie aktywów i aktywności...
+      processing: Przetwarzanie pozycji i aktywności...
   snaptrade_items:
     callback:
       no_item: Nie znaleziono konfiguracji SnapTrade.
@@ -192,14 +191,13 @@ pl:
       create_button: Utwórz wybrane konta
       creating: Tworzenie kont...
       done_button: Gotowe
-      free_tier_note: Plan bezpłatny SnapTrade umożliwia 5 połączeń z biurami maklerskimi.
-        Sprawdź swój pulpit SnapTrade, aby zobaczyć bieżące użycie.
+      free_tier_note: Darmowy plan SnapTrade umożliwia 20 połączeń z biurami maklerskimi.
       header: Skonfiguruj swoje konta SnapTrade
       info_activities: Historia transakcji z etykietami aktywności (Kupno, Sprzedaż,
         Dywidenda itp.)
       info_cost_basis: Podstawa kosztowa na pozycję (gdy dostępna)
       info_history: Do 3 lat historii transakcji
-      info_holdings: Aktywa z aktualnymi cenami i ilościami
+      info_holdings: Pozycje z aktualnymi cenami i ilościami
       info_title: Dane inwestycyjne SnapTrade
       link_button: Połącz
       linked_accounts: Już połączone

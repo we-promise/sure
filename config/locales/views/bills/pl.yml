@@ -231,7 +231,7 @@ pl:
       due_date: Dopasowanie po terminie płatności
       exact_amount: Dokładna kwota
       name_matches: Nazwa pasuje
-      same_merchant: Ten sam sprzedawca
+      same_merchant: Ten sam kontrahent
     month_pulse:
       bill_count:
         few: "%{count} rachunki"

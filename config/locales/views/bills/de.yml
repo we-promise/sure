@@ -23,3 +23,291 @@ de:
       add_bill: Rechnung hinzufügen
       add_income: Einkommen hinzufügen
       review_with_ai: Mit KI prüfen
+      left_to_pay: noch zu zahlen
+      paid_so_far: Bisher bezahlt
+      hero_past_due: '%{amount} überfällig'
+      hero_next_seven: '%{amount} fällig in den nächsten 7 Tagen'
+      detected_review:
+        one: Wir haben %{count} wiederkehrende Zahlung in deinen Transaktionen gefunden. Prüfe sie, damit die Summen hier dem entsprechen, was du tatsächlich zahlst.
+        other: Wir haben %{count} wiederkehrende Zahlungen in deinen Transaktionen gefunden. Prüfe sie, damit die Summen hier dem entsprechen, was du tatsächlich zahlst.
+      detected_review_action: Jetzt prüfen
+      needs_review: Prüfung nötig
+      notice_trial: Testphase von %{name} endet am %{date}
+      notice_renewal: '%{name} verlängert sich am %{date}'
+      notice_price: '%{name} hat den Preis geändert: %{from} → %{to} (%{percent})'
+      notices_routine:
+        one: '%{count} kleinere Änderung'
+        other: '%{count} kleinere Änderungen'
+      suggestion_line: '%{entry} sieht nach einer Zahlung für %{bill} aus'
+      suggestion_unknown_entry: Eine Transaktion
+      confidence: '%{percent}% Übereinstimmung'
+      accept: Übernehmen
+      reject: Nicht diese Rechnung
+      summary_label: Diesen Monat fällig
+      summary_count:
+        one: '%{count} Rechnung fällig'
+        other: '%{count} Rechnungen fällig'
+      summary_needs_action:
+        one: '%{count} braucht dich'
+        other: '%{count} brauchen dich'
+      all_automatic: alle per automatischer Zahlung
+      recurring_label: Wiederkehrende Verpflichtungen
+      recurring_monthly: '%{amount} pro Monat'
+      recurring_annual: '%{amount} pro Jahr'
+      unconvertible:
+        one: '%{count} Rechnung ist nicht enthalten, da kein Wechselkurs verfügbar ist'
+        other: '%{count} Rechnungen sind nicht enthalten, da kein Wechselkurs verfügbar ist'
+      overdue: Überfällig
+      needs_attention: Handlungsbedarf
+      attention_overdue_total: '%{amount} überfällig'
+      this_month: Dieser Monat
+      later: Nach diesem Monat
+      paid_this_month: Diesen Monat bezahlt
+      dormant: Inaktiv
+      kpi_remaining: Offen in diesem Monat
+      kpi_paid: Diesen Monat bezahlt
+      kpi_next_seven: Fällig in 7 Tagen
+      kpi_past_due: Überfällig
+      paid_count:
+        one: '%{count} Rechnung beglichen'
+        other: '%{count} Rechnungen beglichen'
+      needs_action_count:
+        one: '%{count} braucht dich'
+        other: '%{count} brauchen dich'
+      empty:
+        title: Noch keine Rechnungen
+        description: Rechnungen sind deine wiederkehrenden Ausgaben. Sure findet sie automatisch in deinem Transaktionsverlauf, und du kannst jeder einen Zahlungslink hinzufügen, um direkt von hier aus zu bezahlen.
+        action: Wiederkehrende Transaktionen finden
+        no_history_description: Noch keine Transaktionen. Verbinde ein Konto oder importiere deinen Verlauf, dann findet Sure deine Rechnungen automatisch – oder füge eine manuell hinzu.
+    row_overdue: Überfällig
+    row_today: Heute
+    detect:
+      found:
+        one: '%{count} mögliche Rechnung gefunden. Prüfe sie unten.'
+        other: '%{count} mögliche Rechnungen gefunden. Prüfe sie unten.'
+      none_found: Keine neuen wiederkehrenden Muster gefunden. Du kannst Rechnungen manuell hinzufügen.
+      already_running: Die Erkennung läuft bereits. Schau gleich noch einmal vorbei.
+    feed:
+      calendar_name: Sure-Rechnungen
+    ai_prompts:
+      due_before_paycheck: Was ist vor meinem nächsten Gehaltseingang fällig?
+      subscriptions_up: Welche Abos sind dieses Jahr teurer geworden?
+      monthly_subscriptions: Wie viel zahle ich monatlich für Abos?
+      safe_to_spend: Wie viel kann ich in diesem Zeitraum bedenkenlos ausgeben?
+    smart_configurations:
+      show:
+        trigger: Von KI konfigurieren lassen
+        title: KI-Vorschläge für %{name}
+        intro: Markiere die Änderungen, die übernommen werden sollen. Nicht markierte bleiben genau so, wie sie sind.
+        no_changes: Diese Rechnung passt bereits zu ihrem Zahlungsverlauf. Es gibt nichts zu ändern.
+        failed: Diese Rechnung konnte gerade nicht analysiert werden. Ihre Konfiguration bleibt unverändert.
+        field_name: Name
+        field_amount: Betrag
+        field_schedule: Zeitplan
+        field_category: Kategorie
+        field_kind: Art
+        field_autopay: Automatische Zahlung
+        uncategorized: Ohne Kategorie
+        autopay_off: Aus
+        autopay_on: An
+        apply: Auswahl übernehmen
+    detail:
+      current: Aktuell
+      next_payment: Nächste Zahlung
+      around: um den %{date}
+      rules: So wird diese Rechnung zugeordnet
+      rule_named: „%{name}“
+      rule_amount_range: von %{min} bis %{max}
+      rule_aliases: Passt auch zu %{names}
+      rule_learned_tolerance: Beträge, die höchstens %{percent} vom üblichen Betrag abweichen, werden dieser Rechnung zugeordnet
+      history_title: Letzte 12 Monate
+      history_aria: Zahlungen der letzten zwölf Monate
+      key_metrics: Pro Jahr
+      year: Jahr
+      spent_per_year: Ausgegeben
+      avg_payment: Ø Zahlung
+      average: Durchschnittlich gezahlt
+      range: '%{min} bis %{max}'
+      annualized: Pro Jahr
+      ytd: Dieses Jahr gezahlt
+      last_account: Zuletzt verwendetes Konto
+      upcoming: Demnächst
+      recent_payments: Letzte Zahlungen
+      manual_payment: Manuelle Zahlung
+      history: Verlauf
+      payment_count:
+        one: '%{count} Zahlung'
+        other: '%{count} Zahlungen'
+      notes: Notizen
+      trial_chip: Testphase endet am %{date}
+      renews_chip: Verlängert sich am %{date}
+      cancelled_chip: Gekündigt am %{date}
+      price_changes: Preisänderungen
+      price_change_line: '%{from} → %{to}'
+    month_pulse:
+      bill_count:
+        one: '%{count} Rechnung'
+        other: '%{count} Rechnungen'
+      left_to_pay: noch zu zahlen
+      pulse_paid: bezahlt
+      pulse_overdue: überfällig
+      pulse_next_seven: in den nächsten 7 Tagen
+      pulse_bar_aria: '%{percent}% der Rechnungen dieses Monats bezahlt'
+      next_up: Als Nächstes
+      view_upcoming: Anstehende ansehen
+      date_today: Heute
+      date_tomorrow: Morgen
+      unconvertible:
+        one: '%{count} Rechnung ist nicht enthalten, da kein Wechselkurs verfügbar ist'
+        other: '%{count} Rechnungen sind nicht enthalten, da kein Wechselkurs verfügbar ist'
+    summary:
+      remaining: '%{amount} offen'
+      paid_headline: '%{amount} bezahlt'
+      cost_line: Im Schnitt %{average} pro Zahlung, etwa %{annualized} pro Jahr
+    pane:
+      close: Details einklappen
+    add_bill: Rechnung hinzufügen
+    manage: Verwalten
+    find_payment: Zahlung suchen
+    add_payment: Zahlung hinzufügen
+    review_match: Zuordnung prüfen
+    resolve: Klären
+    manage_payments: Zahlungen verwalten
+    view_full_bill: Ganze Rechnung ansehen
+    match:
+      same_merchant: Gleicher Händler
+      name_matches: Name stimmt überein
+      exact_amount: Exakter Betrag
+      amount_off: '%{amount} Abweichung'
+      due_date: Am Fälligkeitsdatum
+      days_before:
+        one: '%{count} Tag vor Fälligkeit'
+        other: '%{count} Tage vor Fälligkeit'
+      days_after:
+        one: '%{count} Tag nach Fälligkeit'
+        other: '%{count} Tage nach Fälligkeit'
+    attention:
+      needs_review: Zuordnung muss geprüft werden
+      partial: Teilweise · %{amount} offen
+      amount_changed: Betrag geändert
+      overdue:
+        one: '%{count} Tag überfällig'
+        other: '%{count} Tage überfällig'
+    paid_label: Bezahlt
+    paid_over_short: Mehr bezahlt
+    installment_progress: Rate %{done_plus_one} von %{total}
+    partial_progress: '%{paid} von %{expected} bezahlt'
+    cancelled_still_scheduled: Du hast dies am %{date} als gekündigt markiert, aber es ist noch geplant, daher erscheinen weiterhin künftige Rechnungen.
+    paid_over: '%{paid} bezahlt, mehr als erwartet'
+    remaining_label: offen
+    debt_payment: · Schuldenzahlung
+    paid_from: von %{account}
+    amount_range: zwischen %{min} und %{max}
+    possible_duplicate: Mögliches Duplikat
+    pay_period:
+      paycheck_on: Gehaltseingang %{date}
+      before_next_paycheck: Vor deinem nächsten Gehaltseingang
+      due_before_date: '%{amount} fällig vor dem %{date}'
+    paycheck:
+      unconvertible:
+        one: '%{count} Verpflichtung ist nicht enthalten, da kein Wechselkurs verfügbar ist'
+        other: '%{count} Verpflichtungen sind nicht enthalten, da kein Wechselkurs verfügbar ist'
+      income_section_title: Einkommensplan
+      manage: Verwalten
+      add_income: Einkommen hinzufügen
+      income_paused: Pausiert, nicht eingeplant
+      income_detected: Automatisch erkannt, legt keine Zahltage fest
+      income_next_payday: nächster am %{date}
+      income_source_count:
+        one: '%{count} Einkommensquelle'
+        other: '%{count} Einkommensquellen'
+      next_on: Nächster am %{date}
+      no_upcoming_income: Ab jetzt ist kein Einkommen geplant.
+      empty:
+        title: Lege deinen Einkommensplan fest
+        description: Füge dein Einkommen hinzu, um zu sehen, was jeder Zahltag abdecken muss. Erkannte Zuflüsse legen deine Zahltage nie von selbst fest – das machst du.
+        action: Einkommen hinzufügen
+      all_clear:
+        title: Nichts abzudecken
+        description: Bis zum %{date} werden keine Rechnungen fällig, in diesem Zeitraum ist also nichts verplant.
+      safe_after_bills: Frei nach Rechnungen
+      short_after_bills: Fehlbetrag nach Rechnungen
+      period_source: ' · %{source}'
+      period_source_multiple: ' · %{count} Einkommensquellen'
+      before_next_paycheck: Vor dem %{date}
+      no_income_arriving: Kein Einkommen erwartet
+      income_amount: '%{amount} Einkommen'
+      due_this_period: In diesem Zeitraum fällig
+      reserved_ahead: Vorab zurückgelegt
+      safe_short: Frei
+      short_short: Fehlt
+      reserved_footer:
+        one: Vorab zurückgelegt für %{count} spätere Rechnung
+        other: Vorab zurückgelegt für %{count} spätere Rechnungen
+      bills_this_period:
+        one: Rechnungen in diesem Zeitraum · %{count}
+        other: Rechnungen in diesem Zeitraum · %{count}
+      bills_before_payday:
+        one: Rechnungen vor deinem nächsten Zahltag · %{count}
+        other: Rechnungen vor deinem nächsten Zahltag · %{count}
+      of_total: von %{amount}
+      bridge_label: Vor deinem nächsten Gehaltseingang
+      bridge_amount: · %{amount} fällig
+      bridge_split: Fällig vor dem %{date}, gedeckt durch die %{cash} auf deinen Konten.
+      shortfall_label: Fehlbetrag vor deinem nächsten Zahltag
+      shortfall_amount: · %{amount}
+      shortfall_split: '%{obligations} sind vor dem %{date} fällig, und auf deinen Konten liegen %{cash}.'
+      shortfall_largest: 'Größte anstehende Verpflichtung:'
+      review_plan: Plan prüfen
+      allocation_aria: Von %{income} Einkommen sind %{due} jetzt fällig, %{reserved} für später zurückgelegt und %{safe} frei verfügbar.
+      allocation_aria_short: '%{income} Einkommen fließen in die hier gebundenen Verpflichtungen, und es fehlen weitere %{short}.'
+    reset_feed_token:
+      done: Feed-Link zurückgesetzt. Kalender-Apps mit dem alten Link werden nicht mehr aktualisiert; abonniere den Kalender mit dem neuen Link erneut.
+      confirm: Link des Kalender-Feeds zurücksetzen? Alle bisher geteilten Links funktionieren dann nicht mehr.
+    calendar:
+      subscribe_ical: Abonnieren (iCal)
+      reset_feed: Link zurücksetzen
+      previous_month: Vorheriger Monat
+      next_month: Nächster Monat
+      today: Heute
+      month_totals: '%{expected} erwartet · %{paid} bezahlt'
+      empty_month: In diesem Monat sind keine Rechnungen fällig.
+    all:
+      search_placeholder: Rechnungen durchsuchen
+      any_status: Alle Status
+      status_filters:
+        overdue: Überfällig
+        due: Bald fällig
+        partial: Teilweise bezahlt
+        paid: Bezahlt
+        paused: Pausiert
+        ended: Verworfen
+      subscription_monthly: Pro Monat
+      subscription_annual: Pro Jahr
+      subscription_active: Aktiv
+      subscription_price_changes: Preisänderungen in diesem Jahr
+      subscription_price_change_line: '%{from} → %{to} (%{percent}%)'
+      any_type: Alle Arten
+      sort_due: Nach nächster Fälligkeit
+      sort_name: Nach Name
+      sort_amount: Nach Betrag
+      no_matches_title: Keine Treffer
+      no_matches_description: Entferne einen Filter oder leere die Suche.
+      col_name: Name
+      col_type: Art
+      col_frequency: Häufigkeit
+      col_amount: Betrag
+      col_next: Nächste Fälligkeit
+      next_short: nächste am %{date}
+      col_status: Status
+      col_actions: Aktionen
+      monthly_equivalent: '%{amount}/Monat'
+      types:
+        bill: Rechnung
+        subscription: Abo
+        installment: Ratenzahlung
+        income: Einkommen
+        transfer: Überweisung
+        other: Sonstiges
+    show:
+      edit: Rechnung bearbeiten

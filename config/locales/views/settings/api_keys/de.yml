@@ -39,7 +39,7 @@ de:
           never_expires: Läuft nie ab
           permissions: Berechtigungen
           usage_instructions_title: Verwendung deines API-Schlüssels
-          usage_instructions: So nutzt du die %{product_name}-API
+          usage_instructions: "Füge deinen API-Schlüssel bei Anfragen an die %{product_name}-API in den X-Api-Key-Header ein:"
           regenerate_key: Neuen Schlüssel erstellen
           revoke_key: Schlüssel widerrufen
           revoke_confirmation: Bist du sicher, dass du diesen API-Schlüssel widerrufen möchtest? Diese Aktion kann nicht rückgängig gemacht werden und deaktiviert sofort alle Anwendungen, die diesen Schlüssel verwenden.
@@ -60,10 +60,10 @@ de:
         create_new_key: Neuen API-Schlüssel erstellen
         description: Konfiguriere deinen neuen API-Schlüssel mit einem aussagekräftigen Namen und den passenden Berechtigungen.
         name_label: Name des API-Schlüssels
-        name_placeholder: z. B. Produktions-App, Analyse-Dashboard
+        name_placeholder: z. B. Meine Budget-App, Portfolio-Tracker
         name_help: Wähle einen aussagekräftigen Namen, um den Zweck dieses Schlüssels leichter zu erkennen.
         permissions_label: Berechtigungen
-        permissions_help: Wähle die Berechtigungen, die dein API-Schlüssel benötigt. Du kannst jederzeit einen neuen Schlüssel mit anderen Berechtigungen erstellen.
+        permissions_help: "Wähle die Berechtigungen, die dieser API-Schlüssel haben soll:"
         scope_details:
           read_accounts: Zeigt Kontoinformationen, Kontostände und kontobezogene Daten an.
           read_transactions: Zeigt Transaktionsdaten, Kategorien und Transaktionsdetails an.

@@ -1,0 +1,141 @@
+---
+fr:
+  providers:
+    fio:
+      name: Fio banka
+      description: Synchronisez un compte Fio banka avec un jeton API en lecture seule
+  family:
+    fio:
+      create_fio_item:
+        default_name: Connexion Fio banka
+  fio_item:
+    errors:
+      account_processing_failed: Impossible de synchroniser le compte Fio
+      account_mismatch: Ce jeton appartient à un autre compte Fio que celui déjà synchronisé par cette connexion. Ajoutez-le plutôt comme une connexion distincte.
+      account_sync_schedule_failed: Impossible de planifier la synchronisation du compte Fio
+      statement_too_large: Le relevé contient plus de transactions que Fio n'en renvoie en une seule requête. Avancez la date de début de synchronisation, puis relancez la synchronisation.
+      statement_fetch_failed: Impossible de récupérer le relevé auprès de Fio
+      history_locked: Fio a refusé cette période de relevé. Débloquez l'historique complet du compte dans votre banque en ligne, sous Settings → API, puis relancez la synchronisation dans les 10 minutes.
+      sync_failed: Impossible de synchroniser la connexion Fio
+    sync:
+      status:
+        importing: Importation du relevé depuis Fio...
+        checking_setup: Vérification de la configuration du compte...
+        needs_setup:
+          one: '%{count} compte à configurer...'
+          other: '%{count} comptes à configurer...'
+        processing: Traitement des transactions...
+        calculating: Calcul des soldes...
+    sync_status:
+      no_accounts: Aucun compte trouvé pour l'instant
+      all_synced:
+        one: '%{count} compte synchronisé'
+        other: '%{count} comptes synchronisés'
+      partial: '%{linked} synchronisé(s), %{unlinked} à configurer'
+  fio_items:
+    account_types:
+      depository: Compte courant ou d'épargne
+      loan: Prêt, crédit immobilier ou découvert
+    provider_panel:
+      default_connection_name: Connexion Fio banka
+      add_connection: Ajouter une connexion Fio banka
+      update_connection: Mettre à jour la connexion
+      connection_name_label: Nom de la connexion
+      connection_name_placeholder: Mon compte Fio
+      token_label: Jeton API (lecture seule)
+      token_placeholder: Collez le jeton de 64 caractères
+      keep_token_placeholder: Laissez vide pour conserver le jeton existant
+      sync_start_date_label: Importer les transactions à partir du
+      sync_start_date_hint: 'Fio fournit les 90 derniers jours sans autorisation supplémentaire. Pour un historique plus ancien, débloquez l''historique complet du compte dans votre banque en ligne, sous Settings → API (icône de cadenas) : cela ouvre une fenêtre de 10 minutes pendant laquelle vous devez lancer la synchronisation.'
+      one_account_notice: 'Un jeton donne accès à un seul compte Fio : ajoutez donc une connexion pour chaque compte à suivre. Un jeton ne peut être utilisé qu''une fois toutes les 30 secondes ; une synchronisation demandée plus tôt sera prise en compte par la suivante.'
+      connected_account: Compte connecté
+      no_account_yet: 'Aucun compte pour l''instant : la première synchronisation détectera le compte associé à ce jeton.'
+      account_needs_setup: Pas encore lié à un compte Sure.
+      requires_update: Nouveau jeton requis
+      requires_update_notice: Fio a refusé ce jeton. Les jetons sont valables jusqu'à 180 jours, sauf s'ils sont prolongés automatiquement à chaque connexion à la banque en ligne. Créez un nouveau jeton en lecture seule sous Settings → API et collez-le ci-dessous.
+      last_synced: Synchronisé il y a %{timestamp}
+      never_synced: Jamais synchronisé
+      syncing: Synchronisation...
+      sync: Synchroniser
+      setup_accounts: Configurer le compte
+      disconnect: Déconnecter
+      disconnect_confirm: Voulez-vous vraiment déconnecter %{name} ?
+    create:
+      success: Connexion Fio banka enregistrée.
+      token_required: Collez le jeton API généré dans la banque en ligne Fio.
+    update:
+      success: Connexion Fio banka mise à jour.
+    destroy:
+      success: Suppression de la connexion Fio banka planifiée.
+      unlink_failed: Impossible de déconnecter la connexion Fio banka
+    select_accounts:
+      title: Lier votre compte Fio
+      description: Ce jeton donne accès à un seul compte. Choisissez comment le suivre dans Sure.
+      account_type_label: Type de compte
+      awaiting_first_sync: Fio n'a pas encore renvoyé le compte associé à ce jeton. Lancez une synchronisation, puis revenez ici.
+      already_linked: Le compte de cette connexion est déjà lié à un compte Sure.
+      sync_now: Synchroniser maintenant
+      no_credentials_configured: Configurez d'abord Fio banka dans les paramètres des fournisseurs.
+      cancel: Annuler
+      link_account: Lier le compte
+    link_accounts:
+      success: Votre compte Fio est lié à %{account_name}.
+      no_account_found: Aucun compte Fio non lié n'a été trouvé pour cette connexion.
+      no_credentials_configured: Configurez d'abord Fio banka dans les paramètres des fournisseurs.
+      unsupported_account_type: Fio ne prend pas en charge ce type de compte.
+      link_failed: Le compte n'a pas pu être lié.
+    select_existing_account:
+      title: Lier le compte Fio à %{account_name}
+      description: Reliez le compte associé à ce jeton au compte que vous avez choisi.
+      awaiting_first_sync: Fio n'a pas encore renvoyé le compte associé à ce jeton. Lancez une synchronisation, puis revenez ici.
+      already_linked: Le compte de cette connexion est déjà lié à un compte Sure.
+      sync_now: Synchroniser maintenant
+      no_credentials_configured: Configurez d'abord Fio banka dans les paramètres des fournisseurs.
+      account_already_linked: Ce compte est déjà lié à un fournisseur.
+      cancel: Annuler
+      link_account: Lier le compte
+    link_existing_account:
+      success: Votre compte Fio est lié à %{account_name}.
+      account_already_linked: Ce compte est déjà lié à un fournisseur.
+      fio_account_already_linked: Ce compte Fio est déjà lié.
+      no_account_selected: Aucun compte Fio n'était disponible pour la liaison.
+      unsupported_account_type: Fio ne peut synchroniser que des comptes de liquidités et des prêts.
+    setup_accounts:
+      title: Lier votre compte Fio
+      subtitle: Choisissez comment le compte associé à ce jeton doit apparaître dans Sure.
+      choose_account_type: Choisissez un type de compte
+      choose_account_type_description: Ignorez-le si vous ne souhaitez pas suivre ce compte.
+      account_type_label: Type de compte
+      account_types:
+        skip: Ignorer
+      create_account: Créer le compte
+      awaiting_first_sync: Aucun compte trouvé pour l'instant
+      awaiting_first_sync_description: Fio ne communique le compte que dans un relevé ; il apparaîtra donc après la première synchronisation réussie.
+      sync_now: Synchroniser maintenant
+      nothing_to_setup: Rien à configurer
+      account_already_handled: Le compte de cette connexion est déjà lié ou a été ignoré.
+      close: Fermer
+      cancel: Annuler
+    complete_account_setup:
+      success: '%{account_name} a été créé.'
+      skipped: Le compte Fio a été ignoré.
+      no_account: Aucun compte Fio n'était à configurer.
+      unsupported_account_type: Fio ne prend pas en charge ce type de compte.
+      creation_failed: Impossible de créer le compte Sure.
+    fio_item:
+      deletion_in_progress: Suppression en cours
+      syncing: Synchronisation
+      requires_update: Nouveau jeton requis
+      error: Erreur
+      status_with_summary: Synchronisé il y a %{timestamp} · %{summary}
+      status_never: Jamais synchronisé
+      delete: Supprimer
+      requires_update_title: Nouveau jeton requis
+      requires_update_description: Fio a refusé le jeton de cette connexion. Créez un nouveau jeton en lecture seule dans votre banque en ligne, sous Settings → API.
+      update_token: Mettre à jour le jeton
+      setup_needed: Configuration du compte requise
+      setup_description: Le compte associé à ce jeton n'est pas encore lié à un compte Sure.
+      setup_action: Configurer le compte
+      no_accounts_title: Aucun compte importé pour l'instant
+      no_accounts_description: Fio ne communique le compte que dans un relevé ; il apparaîtra donc après la première synchronisation réussie.
+      sync_now: Synchroniser maintenant

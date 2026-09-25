@@ -73,9 +73,9 @@ zh-TW:
       base_url_label: Base URL（選填）
       base_url_placeholder: https://api.mercury.com/api/v1（預設）
       connection_name_label: 連線名稱
-      connection_name_placeholder: 公司支票帳戶
+      connection_name_placeholder: 公司活存帳戶
       default_connection_name: Mercury 連線
-      disconnect_confirm: 確定要中斷 %{name} 嗎？
+      disconnect_confirm: 確定要中斷與 %{name} 的連線嗎？
       instructions:
         copy_token_html: 複製<strong>完整的 Token</strong>（包含 <code>secret-token:</code> 前綴），並在下方新增為一個具名連線
         create_token: 建立一組具備「Read Only」存取權的新 API Token
@@ -142,7 +142,7 @@ zh-TW:
       no_api_token: 尚未設定 Mercury API Token，請檢查您的連線設定。
       account_types:
         skip: 跳過此帳戶
-        depository: 支票或儲蓄帳戶
+        depository: 活期或儲蓄帳戶
         credit_card: 信用卡
         investment: 投資帳戶
         loan: 貸款或房屋貸款
@@ -158,7 +158,7 @@ zh-TW:
         other_asset: 其他資產不需要額外選項。
       subtypes:
         depository:
-          checking: 支票帳戶 (Checking)
+          checking: 活期存款帳戶 (Checking)
           savings: 儲蓄帳戶 (Savings)
           hsa: 健康儲蓄帳戶 (HSA)
           cd: 定期存款 (CD)

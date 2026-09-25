@@ -16,5 +16,7 @@ zh-TW:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: 當系統內仍有其他使用者時，管理員無法刪除帳號。請先刪除所有成員。
+              provider_item_has_other_accounts: 此使用者擁有的帳戶所屬的供應商連線中，也有其他使用者擁有的帳戶。變更家庭／群組成員資格前，請先移動這些帳戶或解除連結。
+              cannot_remove_last_super_admin: 無法移除最後一位啟用中的超級管理員。請先將其他使用者升級為超級管理員。
             profile_image:
               invalid_file_size: 檔案大小必須小於 %{max_megabytes}MB

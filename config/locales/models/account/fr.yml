@@ -18,8 +18,8 @@ fr:
       account:
         balance: Solde
         currency: Devise
-        family: Famille
-        family_id: Famille
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         name: Nom
         subtype: Sous-type
     models:

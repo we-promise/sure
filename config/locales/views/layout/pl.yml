@@ -32,7 +32,11 @@ pl:
       footer:
         privacy_policy: Polityka prywatności
         terms_of_service: Warunki korzystania
+      notification_tray:
+        download_complete: Pobieranie zakończone
+        download_failed: Pobieranie nie powiodło się. Spróbuj ponownie.
+        download_location: Plik znajduje się w folderze Pobrane.
     trial:
       contribute: Wesprzyj
       data_deleted_in_days: Dane zostaną usunięte za %{days} dni
-      open_demo: Otwórz demo
+      open_demo: Otwarte demo

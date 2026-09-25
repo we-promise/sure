@@ -147,7 +147,7 @@ pl:
         statements: Wyciągi
       tabs:
         activity: Aktywność
-        holdings: Portfel
+        holdings: Pozycje
         overview: Przegląd
         schedule: Harmonogram
         statements: Wyciągi
@@ -165,6 +165,8 @@ pl:
         all: Wszystkie
         assets: Aktywa
         debts: Zobowiązania
+      expand_all: Rozwiń wszystkie
+      collapse_all: Zwiń wszystkie
     subtype_regions:
       au: Australia
       ca: Kanada

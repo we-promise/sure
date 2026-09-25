@@ -12,9 +12,9 @@ de:
     fallback: Up-Konto
   up_item:
     errors:
-      account_processing_failed: Das Up-Konto ließ sich nicht abgleichen
-      account_sync_schedule_failed: Der Abgleich des Up-Kontos ließ sich nicht einplanen
-      sync_failed: Die Up-Verbindung ließ sich nicht abgleichen
+      account_processing_failed: Das Up-Konto ließ sich nicht synchronisieren
+      account_sync_schedule_failed: Die Synchronisierung des Up-Kontos ließ sich nicht einplanen
+      sync_failed: Die Up-Verbindung ließ sich nicht synchronisieren
       transactions_failed: Die Up-Transaktionen ließen sich nicht abrufen
     institution_summary:
       count:
