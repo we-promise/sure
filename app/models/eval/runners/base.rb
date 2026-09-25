@@ -30,8 +30,27 @@ class Eval::Runners::Base
       raise NotImplementedError, "Subclasses must implement #calculate_metrics"
     end
 
+    # The whole dataset unless the run asks for one side of a train/test split.
+    # Bayes has to be trained on held-out samples, so every provider it is
+    # compared against must be evaluated on the same test set — a provider
+    # scored over the full dataset is not comparable to one scored over the
+    # residual. See Eval::Runners::SampleSplit.
     def samples
-      eval_run.dataset.samples
+      return eval_run.dataset.samples if split_role.blank?
+
+      sample_split.for_role(split_role)
+    end
+
+    def split_role
+      eval_run.provider_config["split_role"].presence
+    end
+
+    def sample_split
+      @sample_split ||= Eval::Runners::SampleSplit.new(
+        eval_run.dataset.samples,
+        seed: eval_run.provider_config.fetch("split_seed", Eval::Runners::SampleSplit::DEFAULT_SEED),
+        train_ratio: eval_run.provider_config.fetch("split_ratio", Eval::Runners::SampleSplit::DEFAULT_TRAIN_RATIO)
+      )
     end
 
     def provider
@@ -45,26 +64,11 @@ class Eval::Runners::Base
   private
 
     def build_provider
-      case eval_run.provider
-      when "openai"
-        build_openai_provider
-      else
-        raise "Unsupported provider: #{eval_run.provider}"
-      end
-    end
-
-    def build_openai_provider
-      access_token = eval_run.provider_config["access_token"].presence ||
-                     ENV["OPENAI_ACCESS_TOKEN"].presence ||
-                     Setting.openai_access_token
-
-      raise "OpenAI access token not configured" unless access_token.present?
-
-      uri_base = eval_run.provider_config["uri_base"].presence ||
-                 ENV["OPENAI_URI_BASE"].presence ||
-                 Setting.openai_uri_base
-
-      Provider::Openai.new(access_token, uri_base: uri_base, model: model)
+      Eval::ProviderFactory.build(
+        provider: eval_run.provider,
+        model: model,
+        config: eval_run.provider_config
+      )
     end
 
     def record_result(sample:, actual_output:, correct:, **attributes)
