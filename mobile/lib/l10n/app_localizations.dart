@@ -325,14 +325,32 @@ abstract class AppLocalizations {
   /// Empty-state heading on the chat list screen.
   ///
   /// In en, this message translates to:
-  /// **'No chats yet'**
+  /// **'AI is ready when you are'**
   String get chatListEmpty;
 
   /// Empty-state subtitle on the chat list screen.
   ///
   /// In en, this message translates to:
-  /// **'Start a conversation with your AI assistant'**
+  /// **'Start a new conversation with Sure when you have a question about your finances.'**
   String get chatListEmptySubtitle;
+
+  /// Snackbar shown when the user tries to open or send chat while AI is disabled for the account.
+  ///
+  /// In en, this message translates to:
+  /// **'AI is not enabled yet for this account. Please contact support or an administrator to turn it on.'**
+  String get chatAiDisabledMessage;
+
+  /// Heading of the empty state shown in place of chat screens when AI is disabled for the account.
+  ///
+  /// In en, this message translates to:
+  /// **'AI is not enabled yet'**
+  String get aiDisabledEmptyTitle;
+
+  /// Subtitle of the empty state shown in place of chat screens when AI is disabled for the account.
+  ///
+  /// In en, this message translates to:
+  /// **'When AI is enabled for this account, your chats with Sure will appear here.'**
+  String get aiDisabledEmptySubtitle;
 
   /// Title for the delete-chat confirmation dialog.
   ///
@@ -1719,36 +1737,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to load chat'**
   String get chatConversationLoadError;
-
-  /// Title for the dialog prompting the user to enable AI chat.
-  ///
-  /// In en, this message translates to:
-  /// **'Turn on AI Chat?'**
-  String get navEnableAiChatTitle;
-
-  /// Body text for the enable-AI-chat dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'AI Chat is currently disabled in your account settings. Would you like to turn it on now?'**
-  String get navEnableAiChatContent;
-
-  /// Dismiss button in the enable-AI-chat dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Not now'**
-  String get navEnableAiChatNotNow;
-
-  /// Confirm button in the enable-AI-chat dialog.
-  ///
-  /// In en, this message translates to:
-  /// **'Turn on AI'**
-  String get navEnableAiChatConfirm;
-
-  /// Snackbar shown when enabling AI chat fails.
-  ///
-  /// In en, this message translates to:
-  /// **'Unable to enable AI right now.'**
-  String get navEnableAiChatFailed;
 
   /// Tooltip for the edit button on a transaction row.
   ///
