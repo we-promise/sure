@@ -200,7 +200,7 @@ class PdfImport < Import
   end
 
   def ai_processed?
-    ai_summary.present?
+    ai_summary.present? || extracted_data.present?
   end
 
   def process_with_ai_later(provider: nil)

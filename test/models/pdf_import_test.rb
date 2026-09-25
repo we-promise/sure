@@ -31,6 +31,12 @@ class PdfImportTest < ActiveSupport::TestCase
     assert @processed_import.ai_processed?
   end
 
+  test "ai_processed? returns true when extracted data is present without a summary" do
+    @import.update!(extracted_data: { "transactions" => [] })
+
+    assert @import.ai_processed?
+  end
+
   test "uploaded? delegates to pdf_uploaded?" do
     assert_not @import.uploaded?
   end

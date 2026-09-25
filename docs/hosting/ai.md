@@ -378,7 +378,9 @@ Self-hosted users who have a ChatGPT/Codex subscription but no OpenAI API key ca
 process PDFs with the locally authenticated Codex CLI. This is separate from the
 OpenAI API provider and does not turn a ChatGPT subscription into an API key.
 
-1. Install the Codex CLI in the environment running the Sure worker.
+1. Install the Codex CLI and the `poppler-utils` package (which provides
+   `pdftoppm`) in the environment running the Sure worker. `pdftoppm` is
+   required when processing scanned PDFs or attaching PDF page images.
 2. Open **Settings → AI Subscriptions** and choose **Sign in with ChatGPT**.
 3. Complete the device sign-in in the OpenAI page shown by Sure. Sure never receives or stores your OpenAI password.
 4. Optionally set `CODEX_COMMAND`, `CODEX_MODEL`, `CODEX_REASONING_EFFORT`, and `CODEX_REQUEST_TIMEOUT`.
