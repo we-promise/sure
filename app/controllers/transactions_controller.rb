@@ -4,6 +4,7 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_unlock, only: :unlock
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
+  before_action :reject_refund_conversion, only: %i[convert_to_trade create_trade_from_transaction mark_as_recurring]
 
   helper_method :new_transaction_idempotency_key
 
@@ -234,6 +235,11 @@ class TransactionsController < ApplicationController
         end
       end
     else
+      # Drop the rejected assignment so the re-rendered drawer shows the state
+      # that is actually persisted (e.g. an exclude toggle that was refused),
+      # while keeping the errors the template surfaces. `restore_attributes`
+      # does not touch `errors`.
+      @entry.restore_attributes
       assign_mark_recurring_state
       render :show, status: :unprocessable_entity
     end
@@ -471,6 +477,13 @@ class TransactionsController < ApplicationController
   end
 
   private
+    def reject_refund_conversion
+      transaction = accessible_transactions.find(params[:id])
+      return unless transaction.refund? || (action_name != "mark_as_recurring" && transaction.refund_linked?)
+
+      redirect_back_or_to transactions_path, alert: t("activerecord.errors.messages.refund_links_present")
+    end
+
     # Scoped by user (not just family) because Current.accessible_entries is
     # user-scoped for family sharing (see Current#accessible_entries).
     #

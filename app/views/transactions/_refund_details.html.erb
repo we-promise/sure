@@ -1,0 +1,18 @@
+<%# locals: (details:) %>
+<div class="space-y-3 text-sm">
+  <% if details[:purchase] %>
+    <%= render DS::Link.new(text: details[:purchase].entry.name, href: transaction_path(details[:purchase].entry), frame: :drawer, icon: "shopping-bag") %>
+  <% end %>
+  <% if details[:refunds].any? %>
+    <p class="text-secondary"><%= t("refunds.net_cost_hint") %></p>
+    <p class="text-primary privacy-sensitive" data-testid="purchase-net-cost">
+      <%= t("refunds.net_cost") %>:
+      <%= details[:net_cost] ? format_money(details[:net_cost]) : t("refunds.missing_rate") %>
+    </p>
+    <% details[:refunds].each do |refund| %>
+      <%= render DS::Link.new(text: entry_name_detailed(refund.entry), href: transaction_path(refund.entry), frame: :drawer, icon: "undo-2") %>
+    <% end %>
+  <% else %>
+    <p class="text-secondary"><%= t("refunds.explanation") %></p>
+  <% end %>
+</div>

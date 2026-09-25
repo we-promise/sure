@@ -7,7 +7,8 @@ class Rule::ConditionFilter::TransactionType < Rule::ConditionFilter
     [
       [ I18n.t("rules.condition_filters.transaction_type.income"), "income" ],
       [ I18n.t("rules.condition_filters.transaction_type.expense"), "expense" ],
-      [ I18n.t("rules.condition_filters.transaction_type.transfer"), "transfer" ]
+      [ I18n.t("rules.condition_filters.transaction_type.transfer"), "transfer" ],
+      [ I18n.t("rules.condition_filters.transaction_type.refund"), "refund" ]
     ]
   end
 
@@ -24,10 +25,12 @@ class Rule::ConditionFilter::TransactionType < Rule::ConditionFilter
     case value
     when "income"
       scope.where("entries.amount < 0")
-           .where.not(kind: Transaction::TRANSFER_KINDS)
+           .where.not(kind: Transaction::TRANSFER_KINDS + [ "refund" ])
     when "expense"
       scope.where("entries.amount >= 0")
-           .where.not(kind: Transaction::TRANSFER_KINDS)
+           .where.not(kind: Transaction::TRANSFER_KINDS + [ "refund" ])
+    when "refund"
+      scope.where(kind: "refund")
     when "transfer"
       scope.where(kind: Transaction::TRANSFER_KINDS)
     else

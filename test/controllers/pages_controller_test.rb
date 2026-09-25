@@ -88,6 +88,11 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       .once
       .returns(fake_income_period_total)
 
+    income_statement.expects(:build_period_total)
+      .with(classification: "expense", period: kind_of(Period), rows: [])
+      .once
+      .returns(fake_expense_period_total)
+
     get root_path
 
     assert_response :ok
@@ -139,6 +144,36 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_includes sankey_data.fetch("nodes").map { |node| node.fetch("id") }, "cash_flow_node"
     assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
+    sankey_data.fetch("links").each do |link|
+      assert_kind_of Numeric, link.fetch("percentage"), "Sankey comparison requires JSON numbers"
+    end
+  end
+
+  test "a refund suppresses only its own parent category subcategories in the sankey" do
+    shopping = @family.categories.create!(name: "Refunded shopping")
+    clothing = @family.categories.create!(name: "Returned clothing", parent: shopping)
+    travel = @family.categories.create!(name: "Travel without refunds")
+    fares = @family.categories.create!(name: "Train fares", parent: travel)
+    account = accounts(:depository)
+    create_transaction(account: account, amount: 100, category: clothing)
+    create_transaction(account: account, amount: -150, category: clothing, kind: "refund")
+    create_transaction(account: account, amount: 200, category: shopping)
+    create_transaction(account: account, amount: 50, category: fares)
+
+    get root_path
+
+    assert_response :ok
+    chart = css_select("[data-controller='sankey-chart']").first
+    data = JSON.parse(chart["data-sankey-chart-data-value"])
+    ids = data.fetch("nodes").pluck("id")
+    assert_includes ids, "expense_sub_#{fares.id}"
+    assert_includes ids, "expense_#{shopping.id}"
+    assert_not_includes ids, "expense_sub_#{clothing.id}"
+    assert_not_includes ids, "income_sub_#{clothing.id}"
+    assert data.fetch("links").all? { |link| link.fetch("value").positive? }
+    data.fetch("links").each do |link|
+      assert_kind_of Numeric, link.fetch("percentage"), "Refund periods must also produce numeric percentages"
+    end
   end
 
   test "dashboard sankey nodes carry a stable filter_value, including opposite-direction subcategories" do
