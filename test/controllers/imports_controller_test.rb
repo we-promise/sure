@@ -445,6 +445,29 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to imports_path
   end
 
+  test "deletes a completed import with no committed data" do
+    import = imports(:pdf_processed)
+
+    assert_difference "Import.count", -1 do
+      delete import_url(import)
+    end
+
+    assert_redirected_to imports_path
+  end
+
+  test "does not delete a completed import with committed data" do
+    import = imports(:transaction)
+    import.update!(status: :complete)
+    entries(:transaction).update!(import: import)
+
+    assert_no_difference "Import.count" do
+      delete import_url(import)
+    end
+
+    assert_redirected_to imports_path
+    assert_equal I18n.t("imports.destroy.not_deletable"), flash[:alert]
+  end
+
   test "respects SURE_IMPORT_MAX_NDJSON_SIZE_MB when creating Sure import (#3010)" do
     configured_limit = 2.megabytes
     SureImport.stubs(:max_ndjson_size).returns(configured_limit)

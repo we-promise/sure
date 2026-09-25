@@ -23,6 +23,20 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal "reverting", import.reload.status
   end
 
+  test "directly_deletable? allows terminal imports without committed data" do
+    import = imports(:pdf_processed)
+
+    assert import.directly_deletable?
+  end
+
+  test "directly_deletable? protects terminal imports with committed data" do
+    import = imports(:transaction)
+    import.update!(status: :complete)
+    entries(:transaction).update!(import: import)
+
+    assert_not import.directly_deletable?
+  end
+
   test "clean fails stuck imports but leaves PdfImports to their own reclaim" do
     stuck_csv = imports(:transaction)
     stuck_csv.update_columns(status: "importing", updated_at: 7.hours.ago)

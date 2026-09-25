@@ -196,6 +196,10 @@ class PdfImport < Import
     statement_backed? || pdf_file.attached?
   end
 
+  def data_committed?
+    super || reconciled_entries.exists?
+  end
+
   def ai_processed?
     ai_summary.present?
   end

@@ -320,6 +320,7 @@ en:
       no_template_found: "No template found, please manually configure your import."
     destroy:
       deleted: "Your import has been deleted."
+      not_deletable: "This import contains committed data. Revert it before deleting."
     failure:
       title: Import failed
       description: Please check that your file format, for any errors and that all required fields are filled, then come back and try again.

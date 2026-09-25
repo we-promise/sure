@@ -472,6 +472,13 @@ class Import < ApplicationRecord
     complete? || revert_failed?
   end
 
+  # Terminal imports that did not commit data can be removed without a revert.
+  # This includes PDF imports left in an unknown UI state after processing
+  # stopped before rows or derived reconciliation data were written.
+  def directly_deletable?
+    !data_committed? || !(complete? || revert_failed?)
+  end
+
   def has_unassigned_account?
     mappings.accounts.where(key: "").any?
   end

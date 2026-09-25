@@ -163,6 +163,11 @@ class ImportsController < ApplicationController
   end
 
   def destroy
+    unless @import.directly_deletable?
+      redirect_to imports_path, alert: t("imports.destroy.not_deletable")
+      return
+    end
+
     @import.destroy
 
     redirect_to imports_path, notice: t(".deleted")
