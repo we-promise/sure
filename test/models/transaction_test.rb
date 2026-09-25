@@ -187,6 +187,20 @@ class TransactionTest < ActiveSupport::TestCase
     assert inflow_entry.transaction.reload.payment?
   end
 
+  test "payment? stays false for a non-payment transfer even if a later sync leaves a stale cc_payment kind" do
+    # Account::ProviderImportAdapter can reassign an already-matched
+    # transaction's kind on a later sync without touching its Transfer
+    # record. Simulate that here: a regular funds_movement transfer (to a
+    # non-liability account) whose outflow transaction's kind was later
+    # (incorrectly) left as "cc_payment".
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:connected), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    outflow_entry.transaction.update_column(:kind, "cc_payment")
+
+    assert_not outflow_entry.transaction.reload.payment?
+  end
+
   test "all transaction kinds are valid" do
     valid_kinds = %w[standard funds_movement cc_payment loan_payment one_time investment_contribution]
 
