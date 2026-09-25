@@ -48,16 +48,19 @@ class OnchainWalletAccount::Processor
 
     normalized, amount_changed = normalize_legacy_transfers
 
+    # Scheduled as soon as the amount is corrected, before the upgrade pass —
+    # which can raise (a failed trade write `upgrade_to_trade` is allowed to
+    # throw), and the syncer's per-account rescue would otherwise skip this and
+    # leave the chart with phantom cash until some unrelated sync ran. Zeroing a
+    # legacy amount rewrites history, but only an account sync persists the
+    # recalculated balances, and an idle wallet schedules none of its own.
+    account.sync_later if amount_changed
+
     candidates = display_only_entries
     upgraded = 0
     if candidates.any? && (security = resolve_security)
       upgraded = candidates.count { |entry| upgrade_to_trade(entry, security) }
     end
-
-    # Zeroing a legacy amount rewrites history, but only an account sync persists
-    # the recalculated balances — and an idle wallet schedules none of its own.
-    # Without this its chart keeps the phantom cash until some other sync runs.
-    account.sync_later if amount_changed
 
     normalized + upgraded
   end
