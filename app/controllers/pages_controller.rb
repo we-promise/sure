@@ -50,7 +50,7 @@ class PagesController < ApplicationController
     expense_totals = income_statement.expense_totals(period: @period)
     net_totals = income_statement.net_category_totals(period: @period)
 
-    @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency, refunds_present: income_statement.refund_totals(period: @period).total.positive?)
+    @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency, refund_totals: income_statement.refund_totals(period: @period))
     @outflows_data = build_outflows_donut_data(net_totals)
     # Preview-gated: skip the query outright rather than loading rows the
     # section won't be built from.
@@ -259,7 +259,7 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, refunds_present: false)
+    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, refund_totals:)
       nodes = []
       links = []
       node_indices = {}
@@ -278,10 +278,12 @@ class PagesController < ApplicationController
       refund_credit = net_totals.net_expense_categories.sum { |ct| ct.total.negative? ? -ct.total : 0 }.to_f
       cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", total_income + refund_credit, 100.0, "var(--color-success)")
 
-      # Build netted subcategory data from raw totals
-      # Refund periods use net parent categories. Gross child flows can exceed
-      # a net parent and imply fictitious income when a child has a refund.
-      net_subcategories_by_parent = refunds_present ? {} : build_net_subcategories(expense_totals, income_totals)
+      # Gross child flows can exceed a net parent or imply fictitious income
+      # when a child has a refund. Flatten only the affected parent categories.
+      refund_parent_ids = refund_totals.category_totals.filter_map do |ct|
+        ct.category.parent_id || ct.category.id if ct.total.positive?
+      end
+      net_subcategories_by_parent = build_net_subcategories(expense_totals, income_totals).except(*refund_parent_ids)
 
       # Process net income categories (flow: subcategory -> parent -> cash_flow)
       process_net_category_nodes(

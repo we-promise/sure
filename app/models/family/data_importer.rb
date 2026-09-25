@@ -898,7 +898,9 @@ class Family::DataImporter
         entry.save!
 
         map_source!(:transactions, old_id, transaction)
-        @refund_links[transaction.id] = data["refund_of_id"] if data.key?("refund_of_id")
+        if data.key?("refund_of_id") && (data["refund_of_id"].present? || transaction.refund_of_id.present?)
+          @refund_links[transaction.id] = data["refund_of_id"]
+        end
         split_rows = importable_split_rows(data)
 
         if split_rows.any?
@@ -931,7 +933,10 @@ class Family::DataImporter
         # purchases and their validation associations across links in the batch.
         records = @family.transactions.includes(entry: :account).find(links.flatten.compact.uniq).index_by(&:id)
         links.each do |transaction_id, purchase_id|
-          records.fetch(transaction_id).update!(refund_of: purchase_id && records.fetch(purchase_id))
+          transaction = records.fetch(transaction_id)
+          next if transaction.refund_of_id == purchase_id
+
+          transaction.update!(refund_of: purchase_id && records.fetch(purchase_id))
         end
       end
     end
@@ -965,8 +970,7 @@ class Family::DataImporter
           tag_ids: mapped_tag_ids(row["tag_ids"], record_type: "Transaction"),
           tag_ids_provided: row.key?("tag_ids"),
           kind: row["kind"],
-          refund_of_id: row["refund_of_id"],
-          refund_of_id_provided: row.key?("refund_of_id")
+          refund_of_id: row["refund_of_id"]
         }
       end
     end
@@ -997,7 +1001,7 @@ class Family::DataImporter
         end
 
         map_source!(:transactions, row[:old_id], transaction) if row[:old_id].present?
-        @refund_links[transaction.id] = row[:refund_of_id] if row[:refund_of_id_provided]
+        @refund_links[transaction.id] = row[:refund_of_id] if row[:refund_of_id].present?
         @created_entries << child_entry
       end
     end

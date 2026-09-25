@@ -52,7 +52,10 @@ class Transaction::Search
   # Compute totals for the specific search, excluding tax-advantaged accounts
   def totals
     @totals ||= begin
-      Rails.cache.fetch("transaction_search_totals/v3/#{cache_key_base}") do
+      # Bump the version whenever Totals members or aggregation semantics change.
+      # v4 adds refund_money and nets refunds against expenses, not income; v3
+      # payloads have an incompatible Data layout and may survive deployment.
+      Rails.cache.fetch("transaction_search_totals/v4/#{cache_key_base}") do
         scope = transactions_scope
 
         # Exclude tax-advantaged accounts from totals calculation

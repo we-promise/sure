@@ -3,7 +3,6 @@
 class Api::V1::TransactionsController < Api::V1::BaseController
   include Pagy::Backend
 
-
   # Ensure proper scope authorization for read vs write access
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update, :destroy ]

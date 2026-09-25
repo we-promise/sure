@@ -34,6 +34,7 @@ class Entry < ApplicationRecord
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
   validate :refund_direction_unchanged
+  validate :cannot_exclude_refund_linked_purchase
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
 
@@ -605,6 +606,12 @@ class Entry < ApplicationRecord
       return unless excluded_changed?(from: true, to: false) && split_parent?
 
       errors.add(:excluded, "cannot be toggled off for a split transaction")
+    end
+
+    def cannot_exclude_refund_linked_purchase
+      return unless transaction? && excluded_changed?(to: true)
+
+      errors.add(:base, :refund_links_present) if transaction.purchase_refunds.exists?
     end
 
     def split_child_date_matches_parent

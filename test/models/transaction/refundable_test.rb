@@ -28,6 +28,37 @@ class Transaction::RefundableTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), @purchase.transaction.purchase_net_cost_money
   end
 
+  test "linked purchases must be unlinked before exclusion" do
+    @credit.transaction.mark_as_refund!(purchase: @purchase.transaction)
+
+    assert_not @purchase.update(excluded: true)
+    assert_not @purchase.reload.excluded?
+    assert @credit.transaction.update(category: categories(:food_and_drink))
+
+    @credit.transaction.clear_refund!
+    assert @purchase.update(excluded: true)
+  end
+
+  test "an uncategorized purchase preserves the refund category and enrichment eligibility" do
+    @purchase.transaction.update!(category: nil)
+    @credit.transaction.update!(category: categories(:food_and_drink))
+
+    @credit.transaction.mark_as_refund!(purchase: @purchase.transaction)
+
+    assert_equal categories(:food_and_drink), @credit.transaction.reload.category
+    assert_not @credit.transaction.locked?(:category_id)
+    @credit.transaction.enrich_attribute(:category_id, categories(:one).id, source: "test")
+    assert_equal categories(:one), @credit.transaction.reload.category
+  end
+
+  test "clearing a refund preserves the explicit classification against provider enrichment" do
+    @credit.transaction.mark_as_refund!
+    @credit.transaction.clear_refund!
+    @credit.transaction.enrich_attribute(:kind, "cc_payment", source: "test")
+
+    assert @credit.transaction.reload.standard?
+  end
+
   test "refunds can be classified without a known purchase and cleared" do
     @credit.transaction.mark_as_refund!
     assert @credit.transaction.reload.refund?
@@ -83,6 +114,27 @@ class Transaction::RefundableTest < ActiveSupport::TestCase
     create_transaction(account: accounts(:credit_card), amount: 800)
     candidates = @credit.account.family.transfer_match_candidates(inflow_transaction_id: @credit.transaction.id)
     assert_empty candidates
+  end
+
+  test "linked purchases are excluded from same and cross currency transfer matching" do
+    same_currency = create_transaction(account: accounts(:credit_card), amount: -1000)
+    foreign_currency = create_transaction(account: accounts(:credit_card), amount: -900, currency: "EUR")
+    ExchangeRate.find_or_initialize_by(from_currency: "USD", to_currency: "EUR", date: @purchase.date).update!(rate: 0.9)
+    family = @purchase.account.family
+
+    [ same_currency, foreign_currency ].each do |inflow|
+      assert_equal 1, family.transfer_match_candidates(
+        inflow_transaction_id: inflow.transaction.id, outflow_transaction_id: @purchase.transaction.id
+      ).size
+    end
+
+    @credit.transaction.mark_as_refund!(purchase: @purchase.transaction)
+
+    [ same_currency, foreign_currency ].each do |inflow|
+      assert_empty family.transfer_match_candidates(
+        inflow_transaction_id: inflow.transaction.id, outflow_transaction_id: @purchase.transaction.id
+      )
+    end
   end
 
   test "a refund larger than the purchase retains the actual credit" do
