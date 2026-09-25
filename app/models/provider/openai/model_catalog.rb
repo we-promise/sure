@@ -66,6 +66,9 @@ class Provider::Openai::ModelCatalog
     end
 
     entries.filter_map do |model|
+      capabilities = model["capabilities"]
+      next if capabilities.is_a?(Hash) && capabilities["chat_completion"] == false
+
       id = model["id"].to_s
       next if id.blank?
 
