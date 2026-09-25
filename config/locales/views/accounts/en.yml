@@ -28,6 +28,9 @@ en:
       data_not_available: Data not available for the selected period
     create:
       success: "%{type} account created"
+    currency_breakdown:
+      description: Native balance per currency, before exchange-rate conversion.
+      title: Balance by currency
     set_default:
       depository_only: "Only cash and credit card accounts can be set as default."
     destroy:
