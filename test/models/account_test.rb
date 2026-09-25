@@ -16,6 +16,52 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "normalizes iban by stripping spaces and upcasing" do
+    @account.iban = "de89 3704 0044 0532 0130 00"
+    @account.valid?
+
+    assert_equal "DE89370400440532013000", @account.iban # pipelock:ignore IBAN
+  end
+
+  test "normalizes iban by stripping tabs, newlines, and non-breaking spaces" do
+    @account.iban = "de89\t3704\n0044 0532 0130 00"
+    @account.valid?
+
+    assert_equal "DE89370400440532013000", @account.iban # pipelock:ignore IBAN
+  end
+
+  test "normalizes iban by stripping dots, dashes, and other punctuation" do
+    @account.iban = "de89.3704-0044/0532:0130'00"
+    @account.valid?
+
+    assert_equal "DE89370400440532013000", @account.iban # pipelock:ignore IBAN
+  end
+
+  test "leaves a blank iban as nil" do
+    @account.iban = ""
+    @account.valid?
+
+    assert_nil @account.iban
+  end
+
+  test "rejects a duplicate iban within the same family" do
+    @account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+    other = @family.accounts.create!(name: "Other account", balance: 0, currency: "USD", accountable: Depository.new)
+
+    other.iban = "AT611904300234573201" # pipelock:ignore IBAN
+
+    assert_not other.valid?
+    assert_includes other.errors[:iban], "has already been taken"
+  end
+
+  test "allows the same iban across different families" do
+    @account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+    other_family = families(:empty)
+    other_family_account = other_family.accounts.build(name: "Other family account", balance: 0, currency: "USD", accountable: Depository.new, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    assert other_family_account.valid?
+  end
+
   test "default owner prefers a family admin before a super admin" do
     family = families(:empty)
     admin = users(:empty)

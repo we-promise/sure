@@ -31,6 +31,28 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "imports a manually entered account iban" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Test Checking",
+          balance: "1500.00",
+          currency: "USD",
+          accountable_type: "Depository",
+          accountable: { subtype: "checking" },
+          iban: "DE89370400440532013000" # pipelock:ignore IBAN
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    result = importer.import!
+
+    assert_equal "DE89370400440532013000", result[:accounts].first.iban # pipelock:ignore IBAN
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {
@@ -495,6 +517,25 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     merchant = @family.merchants.find_by(name: "Amazon")
     assert_not_nil merchant
+  end
+
+  test "imports a manually entered merchant iban" do
+    ndjson = build_ndjson([
+      {
+        type: "Merchant",
+        data: {
+          id: "merchant-1",
+          name: "Landlord",
+          iban: "AT611904300234573201" # pipelock:ignore IBAN
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    importer.import!
+
+    merchant = @family.merchants.find_by(name: "Landlord")
+    assert_equal "AT611904300234573201", merchant.iban # pipelock:ignore IBAN
   end
 
   test "imports recurring transactions with remapped account and merchant references" do
