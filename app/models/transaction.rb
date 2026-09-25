@@ -152,18 +152,25 @@ class Transaction < ApplicationRecord
   end
 
   # Whether the user can assign a category (and merchant/tags) to this
-  # transaction. Regular transactions always qualify. For transfers, this
-  # checks the transaction's own kind against UNCATEGORIZED_EXCLUDED_KINDS —
-  # the same distinction the "Uncategorized" bucket already uses — rather
-  # than deferring to Transfer#categorizable?, which only looks at the
-  # outflow leg's kind. Transfer::Creator always gives the inflow leg
-  # "funds_movement" regardless of the outflow's kind (loan_payment,
-  # investment_contribution, ...), so deferring would make the excluded
-  # inflow leg editable whenever its paired outflow is categorizable.
+  # transaction. Regular transactions always qualify. For transfers:
+  #   - No Transfer record yet (e.g. an unmatched provider-imported leg):
+  #     fall back to this transaction's own kind against
+  #     UNCATEGORIZED_EXCLUDED_KINDS, the same distinction the
+  #     "Uncategorized" bucket already uses.
+  #   - The inflow leg is always locked. Transfer::Creator always gives it
+  #     kind "funds_movement" regardless of the outflow's kind (loan_payment,
+  #     investment_contribution, ...), so it never has anything of its own to
+  #     categorize.
+  #   - The outflow leg defers to Transfer#categorizable?, which is based on
+  #     the (stable) destination account rather than kind, so it stays
+  #     correct even if a later provider sync leaves a stale kind on this
+  #     transaction.
   def category_editable?
     return true unless transfer?
+    return !UNCATEGORIZED_EXCLUDED_KINDS.include?(kind) unless transfer
+    return false if transfer_as_inflow
 
-    !UNCATEGORIZED_EXCLUDED_KINDS.include?(kind)
+    transfer.categorizable?
   end
 
   # Whether this non-editable transfer leg is a liability payment (shown

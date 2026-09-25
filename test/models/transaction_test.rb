@@ -155,7 +155,7 @@ class TransactionTest < ActiveSupport::TestCase
     assert_not Transaction.new(kind: "cc_payment").category_editable?
   end
 
-  test "category_editable? checks the transaction's own kind, not the paired leg's, when a Transfer record exists" do
+  test "category_editable? locks the inflow leg and defers the outflow leg to Transfer#categorizable? when a Transfer record exists" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
     inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "funds_movement")
     Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
@@ -171,6 +171,20 @@ class TransactionTest < ActiveSupport::TestCase
     Transfer.create!(inflow_transaction: fm_inflow.transaction, outflow_transaction: fm_outflow.transaction)
 
     assert_not fm_outflow.transaction.reload.category_editable?
+  end
+
+  test "category_editable? stays true for the outflow leg even if a later sync leaves a stale funds_movement kind" do
+    # Account::ProviderImportAdapter can reassign an already-matched
+    # transaction's kind on a later sync without touching its Transfer.
+    # Transfer#categorizable? is destination-account based (stable), so
+    # delegating to it -- rather than reading this transaction's own kind
+    # directly -- keeps category_editable? correct despite the stale kind.
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    outflow_entry.transaction.update_column(:kind, "funds_movement")
+
+    assert outflow_entry.transaction.reload.category_editable?
   end
 
   test "payment? is true for cc_payment kind without a Transfer record" do
