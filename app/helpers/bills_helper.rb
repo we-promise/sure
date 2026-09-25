@@ -1,4 +1,12 @@
 module BillsHelper
+  # A bill's next due date reads "Oct 5" when it falls this year and gains the
+  # year otherwise, so an every-2-years bill never shows "Sep 1" for a date
+  # that is years out. Same rule as Period#label. Payment dates are historical
+  # and always carry the year instead.
+  def bills_upcoming_date(date)
+    l(date, format: date.year == Date.current.year ? :short : :short_with_year)
+  end
+
   # One-shot AI features (smart-fill, smart-configure) need both the user's
   # consent AND a resolvable LLM provider -- an unconfigured self-hosted
   # install renders no AI affordances at all, following the Rules registry's

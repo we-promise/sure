@@ -28,6 +28,13 @@ export default class extends Controller {
         presets.includes(preset) || (unit !== null && units.includes(unit));
 
       group.classList.toggle("hidden", !visible);
+
+      // A hidden field still submits and is still constraint-validated, so a
+      // stale out-of-range count behind a hidden group blocked Save with no
+      // visible error. Disabled fields do neither.
+      for (const field of group.querySelectorAll("input, select, textarea")) {
+        field.disabled = !visible;
+      }
     });
   }
 }

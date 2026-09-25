@@ -6,6 +6,13 @@ class BillsHelperTest < ActionView::TestCase
   # ApplicationHelper rather than this module.
   include ApplicationHelper
 
+  test "an upcoming date gains the year only when it falls in another one" do
+    travel_to Date.new(2026, 9, 25) do
+      assert_equal I18n.l(Date.new(2026, 10, 5), format: :short), bills_upcoming_date(Date.new(2026, 10, 5))
+      assert_equal I18n.l(Date.new(2028, 9, 1), format: :short_with_year), bills_upcoming_date(Date.new(2028, 9, 1))
+    end
+  end
+
   # The matcher has always stored WHY it matched something, in match_signals.
   # Nothing rendered it, so the app showed a bare percentage instead of the
   # facts the percentage is made of.
