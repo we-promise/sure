@@ -20,8 +20,17 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
 
       calc_start_date.upto(calc_end_date).map do |date|
         valuation = sync_cache.get_valuation(date)
+        flows = flows_for_date(date)
 
-        if valuation
+        if use_opening_anchor_for_date?(date)
+          # A pre-entry baseline, so this day's own flows are added on top,
+          # regardless of loop position. start_cash_balance/start_non_cash_balance
+          # stay as whatever was carried in, so a gap from backfilled entries
+          # still surfaces below as an adjustment.
+          anchor_cash_balance, anchor_non_cash_balance = opening_anchor_starting_balances
+          end_cash_balance = anchor_cash_balance + cash_flows_total(flows)
+          end_non_cash_balance = anchor_non_cash_balance + non_cash_flows_total(flows)
+        elsif valuation
           end_cash_balance = derive_cash_balance_on_date_from_total(
             total_balance: valuation.amount,
             date: date
@@ -32,11 +41,10 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
           end_non_cash_balance = derive_end_non_cash_balance(start_non_cash_balance: start_non_cash_balance, date: date)
         end
 
-        flows = flows_for_date(date)
         market_value_change = market_value_change_on_date(date, flows)
 
-        cash_adjustments = cash_adjustments_for_date(start_cash_balance, end_cash_balance, (flows[:cash_inflows] - flows[:cash_outflows]) * flows_factor)
-        non_cash_adjustments = non_cash_adjustments_for_date(start_non_cash_balance, end_non_cash_balance, (flows[:non_cash_inflows] - flows[:non_cash_outflows]) * flows_factor)
+        cash_adjustments = cash_adjustments_for_date(start_cash_balance, end_cash_balance, cash_flows_total(flows))
+        non_cash_adjustments = non_cash_adjustments_for_date(start_non_cash_balance, end_non_cash_balance, non_cash_flows_total(flows))
 
         output_balance = build_balance(
           date: date,
@@ -116,11 +124,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
       # only affects the pre-anchor opening day's adjustment, not later totals.
       return [ 0, 0 ] if calculation_start_date < account.opening_anchor_date
 
-      cash = derive_cash_balance_on_date_from_total(
-        total_balance: account.opening_anchor_balance,
-        date: account.opening_anchor_date
-      )
-      [ cash, account.opening_anchor_balance - cash ]
+      opening_anchor_starting_balances
     end
 
     # The balance record for the day immediately before the incremental window.

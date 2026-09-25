@@ -390,6 +390,62 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
   end
 
 
+  # The opening_anchor balance is a pre-entry baseline, so a transaction dated
+  # on that same day is added on top to derive the day's END value.
+  test "opening anchor with a same-day transaction is not dropped" do
+    account = create_account_with_ledger(
+      account: { type: Depository, balance: 20000, cash_balance: 20000, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 20000 },
+        { type: "transaction", date: 4.days.ago, amount: -500 }, # 500 deposit ON the opening anchor day
+        { type: "opening_anchor", date: 4.days.ago, balance: 15000 }
+      ]
+    )
+
+    calculated = Balance::ReverseCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: Date.current,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 1.day.ago,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 2.days.ago,
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 20000, start_cash: 20000, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 3.days.ago, # Opening boundary adjustment bridges to the anchor's post-flow end (15500)
+          legacy_balances: { balance: 20000, cash_balance: 20000 },
+          balances: { start: 15500, start_cash: 15500, start_non_cash: 0, end_cash: 20000, end_non_cash: 0, end: 20000 },
+          flows: 0,
+          adjustments: { cash_adjustments: 4500, non_cash_adjustments: 0 }
+        },
+        {
+          date: 4.days.ago, # Start is the anchor's raw baseline (15000); end adds the +500 deposit
+          legacy_balances: { balance: 15500, cash_balance: 15500 },
+          balances: { start: 15000, start_cash: 15000, start_non_cash: 0, end_cash: 15500, end_non_cash: 0, end: 15500 },
+          flows: { cash_inflows: 500, cash_outflows: 0 },
+          adjustments: 0
+        } # Opening anchor
+      ]
+    )
+  end
+
   # Investment account balances are made of two components: cash and holdings.
   test "anchors on investment accounts calculate cash balance dynamically based on holdings value" do
     account = create_account_with_ledger(
@@ -423,6 +479,45 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
           flows: { market_flows: 0 },
           adjustments: 0
         } # Since $10,000 of holdings, cash has to be $5,000 to reach $15,000 total value
+      ]
+    )
+  end
+
+  # Regression: holdings_value_for_date is already post-trade, so adding that
+  # day's flows on top of a total-minus-holdings split would double-count.
+  test "opening anchor with a same-day trade on an investment account is not double-counted" do
+    account = create_account_with_ledger(
+      account: { type: Investment, balance: 1000, cash_balance: 500, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: 1.day.ago, balance: 1000 },
+        { type: "trade", date: 2.days.ago, ticker: "AAPL", qty: 5, price: 100 }, # $500 buy ON the opening anchor day
+        { type: "opening_anchor", date: 2.days.ago, balance: 1000 }
+      ],
+      holdings: [
+        { date: 2.days.ago, ticker: "AAPL", qty: 5, price: 100, amount: 500 },
+        { date: 1.day.ago, ticker: "AAPL", qty: 5, price: 100, amount: 500 }
+      ]
+    )
+
+    calculated = Balance::ReverseCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: 1.day.ago,
+          legacy_balances: { balance: 1000, cash_balance: 500 },
+          balances: { start: 1000, start_cash: 500, start_non_cash: 500, end_cash: 500, end_non_cash: 500, end: 1000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 2.days.ago, # $1000 pre-trade, split $500 cash / $500 holdings post-trade
+          legacy_balances: { balance: 1000, cash_balance: 500 },
+          balances: { start: 1000, start_cash: 1000, start_non_cash: 0, end_cash: 500, end_non_cash: 500, end: 1000 },
+          flows: { cash_inflows: 0, cash_outflows: 500, non_cash_inflows: 500, non_cash_outflows: 0 },
+          adjustments: 0
+        }
       ]
     )
   end
@@ -588,6 +683,48 @@ class Balance::ReverseCalculatorTest < ActiveSupport::TestCase
           balances: { start: 200000, start_cash: 0, start_non_cash: 200000, end_cash: 0, end_non_cash: 200000, end: 200000 },
           flows: 0,
           adjustments: { cash_adjustments: 0, non_cash_adjustments: 0 }
+        }
+      ]
+    )
+  end
+
+  # Regression: a loan payment dated on the opening anchor's own day must reduce
+  # the non-cash (principal) balance, not just the cash side, same as any other day.
+  test "opening anchor with a same-day loan payment reduces the non-cash balance" do
+    account = create_account_with_ledger(
+      account: { type: Loan, balance: 18000, cash_balance: 0, currency: "USD" },
+      entries: [
+        { type: "current_anchor", date: Date.current, balance: 18000 },
+        { type: "transaction", date: 2.days.ago, amount: -2000 }, # loan payment ON the opening anchor day
+        { type: "opening_anchor", date: 2.days.ago, balance: 20000 }
+      ]
+    )
+
+    calculated = Balance::ReverseCalculator.new(account).calculate
+
+    assert_calculated_ledger_balances(
+      calculated_data: calculated,
+      expected_data: [
+        {
+          date: Date.current,
+          legacy_balances: { balance: 18000, cash_balance: 0 },
+          balances: { start: 18000, start_cash: 0, start_non_cash: 18000, end_cash: 0, end_non_cash: 18000, end: 18000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 1.day.ago,
+          legacy_balances: { balance: 18000, cash_balance: 0 },
+          balances: { start: 18000, start_cash: 0, start_non_cash: 18000, end_cash: 0, end_non_cash: 18000, end: 18000 },
+          flows: 0,
+          adjustments: 0
+        },
+        {
+          date: 2.days.ago, # Start is the anchor's raw 20000 principal; end reflects the 2000 payment
+          legacy_balances: { balance: 18000, cash_balance: 0 },
+          balances: { start: 20000, start_cash: 0, start_non_cash: 20000, end_cash: 0, end_non_cash: 18000, end: 18000 },
+          flows: { non_cash_inflows: 2000, non_cash_outflows: 0, cash_inflows: 0, cash_outflows: 0 },
+          adjustments: 0
         }
       ]
     )
