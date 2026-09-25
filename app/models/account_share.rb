@@ -9,6 +9,9 @@ class AccountShare < ApplicationRecord
   validate :cannot_share_with_owner
   validate :user_in_same_family
 
+  before_save :lock_parent_account
+  before_destroy :lock_parent_account
+
   scope :with_permission, ->(permission) { where(permission: permission) }
 
   def full_control?
@@ -32,6 +35,10 @@ class AccountShare < ApplicationRecord
   end
 
   private
+
+    def lock_parent_account
+      account&.lock!
+    end
 
     def cannot_share_with_owner
       if account && user && account.owner_id == user_id
