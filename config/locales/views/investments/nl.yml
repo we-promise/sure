@@ -195,4 +195,4 @@ nl:
       cash: Liquiditeiten
       holdings: Posities
       total: Portfolio saldo
-      total_value_tooltip: Het totale portfolio saldo is de som van de liquiditeiten bij uw broker (beschikbaar om te handelen) en de huidige marktwaarde van uw posities.
+      total_value_tooltip: Het totale portfoliosaldo is de som van de liquiditeiten bij uw broker (beschikbaar om te handelen) en de huidige marktwaarde van uw posities.

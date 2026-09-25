@@ -229,7 +229,7 @@ nl:
     expand: Uitvouwen
   mcp:
     errors:
-      invalid_session_id: Ongeldige MCP-session-id
+      invalid_session_id: Ongeldige MCP-sessie-ID
       unsupported_protocol_version: 'Niet-ondersteunde MCP-protocolversie: %{version}'
   oauth:
     registration:

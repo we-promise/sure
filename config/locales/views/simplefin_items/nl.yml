@@ -8,7 +8,7 @@ nl:
       connect: Verbinden
       cancel: Annuleren
     create:
-      success: SimpleFIN verbinding succesvol toegevoegd! Uw accounts verschijnen binnenkort terwijl ze op de achtergrond synchroniseren.
+      success: SimpleFIN-verbinding succesvol toegevoegd! Uw accounts verschijnen binnenkort terwijl ze op de achtergrond synchroniseren.
       errors:
         blank_token: Voer een SimpleFIN setup token in.
         invalid_token: Ongeldige setup token. Controleer of u de volledige token van SimpleFIN Bridge heeft gekopieerd.
@@ -16,9 +16,9 @@ nl:
         create_failed: "Verbinden mislukt: %{message}"
         unexpected: Er is een onverwachte fout opgetreden. Probeer het opnieuw.
     destroy:
-      success: SimpleFIN verbinding wordt verwijderd
+      success: SimpleFIN-verbinding wordt verwijderd
     update:
-      success: SimpleFIN verbinding succesvol bijgewerkt! Uw accounts worden opnieuw verbonden.
+      success: SimpleFIN-verbinding succesvol bijgewerkt! Uw accounts worden opnieuw verbonden.
       errors:
         blank_token: Voer een SimpleFIN setup token in.
         invalid_token: Ongeldige setup token. Controleer of u de volledige token van SimpleFIN Bridge heeft gekopieerd.
@@ -86,8 +86,8 @@ nl:
       all_skipped: "Alle accounts zijn overgeslagen. Geen accounts zijn aangemaakt."
       no_accounts: "Geen accounts om in te stellen."
       success:
-        one: "Succesvol %{count} SimpleFIN account aangemaakt! Uw transacties en posities worden op de achtergrond geïmporteerd."
-        other: "Succesvol %{count} SimpleFIN accounts aangemaakt! Uw transacties en posities worden op de achtergrond geïmporteerd."
+        one: "Succesvol %{count} SimpleFIN-account aangemaakt! Uw transacties en posities worden op de achtergrond geïmporteerd."
+        other: "Succesvol %{count} SimpleFIN-accounts aangemaakt! Uw transacties en posities worden op de achtergrond geïmporteerd."
       stale_accounts_processed: "Verouderde accounts: %{deleted} verwijderd, %{moved} verplaatst."
       stale_accounts_errors:
         one: "%{count} verouderde accountactie mislukt. Controleer logs voor details."
@@ -96,7 +96,7 @@ nl:
       add_new: Nieuwe verbinding toevoegen
       confirm_accept: Verbinding verwijderen
       confirm_body: Dit zal permanent alle accounts in deze groep en alle bijbehorende gegevens verwijderen.
-      confirm_title: SimpleFIN verbinding verwijderen?
+      confirm_title: SimpleFIN-verbinding verwijderen?
       delete: Verwijderen
       deletion_in_progress: "(verwijdering bezig...)"
       error: Fout opgetreden bij synchroniseren van gegevens
@@ -104,7 +104,7 @@ nl:
       no_accounts_title: Geen accounts gevonden
       requires_update: Opnieuw verbinden
       setup_needed: Nieuwe accounts klaar om in te stellen
-      setup_description: Kies accounttypes voor uw nieuw geïmporteerde SimpleFIN accounts.
+      setup_description: Kies accounttypes voor uw nieuw geïmporteerde SimpleFIN-accounts.
       setup_action: Nieuwe Accounts Instellen
       status: "Laatst gesynchroniseerd %{timestamp} geleden"
       status_never: Nooit gesynchroniseerd
@@ -125,13 +125,13 @@ nl:
       rate_limited_recently: Recent limiet bereikt
     select_existing_account:
       title: "Koppel %{account_name} aan SimpleFIN"
-      description: Selecteer een SimpleFIN account om te koppelen aan uw bestaande account
+      description: Selecteer een SimpleFIN-account om te koppelen aan uw bestaande account
       cancel: Annuleren
       link_account: Account koppelen
       no_accounts_found: "Geen SimpleFIN-accounts gevonden voor deze %{moniker}."
       wait_for_sync: Als u zojuist verbonden of gesynchroniseerd heeft, probeer het opnieuw nadat de synchronisatie is voltooid.
       unlink_to_move: Om een koppeling te verplaatsen, koppel deze eerst los via het actiemenu van het account.
-      all_accounts_already_linked: Alle SimpleFIN accounts lijken al gekoppeld te zijn.
+      all_accounts_already_linked: Alle SimpleFIN-accounts lijken al gekoppeld te zijn.
       currently_linked_to: "Momenteel gekoppeld aan: %{account_name}"
       check_provider_health: Controleer onder Instellingen → Providers of uw SimpleFIN-verbinding goed werkt.
 
@@ -139,7 +139,7 @@ nl:
       success: Account succesvol gekoppeld aan SimpleFIN
       errors:
         only_manual: Alleen handmatige accounts kunnen worden gekoppeld
-        invalid_simplefin_account: Ongeldig SimpleFIN account geselecteerd
+        invalid_simplefin_account: Ongeldig SimpleFIN-account geselecteerd
         different_provider: Dit account is gekoppeld aan een andere provider. Ontkoppel het eerst van die provider en koppel het daarna aan SimpleFIN.
     reconciled_status:
       message:

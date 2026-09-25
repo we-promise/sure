@@ -18,7 +18,7 @@ nl:
           guest: Gast
         role_descriptions:
           member: "Basisgebruikersrechten. Kan eigen accounts, transacties en instellingen beheren."
-          admin: "Familiebeheerder. Kan geavanceerde instellingen zoals API Keys, imports en AI-prompts beheren."
+          admin: "Familiebeheerder. Kan geavanceerde instellingen zoals API-sleutels, imports en AI-prompts beheren."
           super_admin: "Instancebeheerder. Kan SSO-providers, gebruikersrollen beheren en voor ondersteuning meekijken als gebruiker."
           guest: Ervaring rond de assistent, met bewust beperkte rechten voor introductieworkflows.
         unnamed_family: Naamloze familie/groep

@@ -2,11 +2,11 @@
 nl:
   breadcrumbs:
     account_sharings: Account delen
-    account_statements: Afschriftenkluis
+    account_statements: Afschriften
     accounts: Accounts
     ai_prompts: AI-prompts
-    api_key: API Key
-    api_keys: API Keys
+    api_key: API-sleutel
+    api_keys: API-sleutels
     appearance: Weergave
     appearances: Weergave
     bank_sync: Banksynchronisatie

@@ -21,18 +21,18 @@ nl:
     create:
       success: Enable Banking configuratie succesvol.
     destroy:
-      success: Enable Banking verbinding is in de wachtrij voor verwijdering geplaatst.
+      success: Enable Banking-verbinding is in de wachtrij voor verwijdering geplaatst.
     link_accounts:
       already_linked: De geselecteerde accounts zijn al gekoppeld.
       link_failed: Accounts koppelen mislukt
       no_accounts_selected: Geen accounts geselecteerd.
-      no_session: Geen actieve Enable Banking verbinding. Maak eerst verbinding met een bank.
+      no_session: Geen actieve Enable Banking-verbinding. Maak eerst verbinding met een bank.
       success: Succesvol %{count} accounts gekoppeld.
     link_existing_account:
       success: Account succesvol gekoppeld aan Enable Banking
       errors:
         only_manual: Alleen handmatige accounts kunnen worden gekoppeld
-        invalid_enable_banking_account: Ongeldige Enable Banking account geselecteerd
+        invalid_enable_banking_account: Ongeldige Enable Banking-account geselecteerd
     new:
       link_enable_banking_title: Enable Banking koppelen
       session_expired: Sessie verlopen - opnieuw autoriseren vereist

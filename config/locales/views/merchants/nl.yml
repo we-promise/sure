@@ -18,11 +18,11 @@ nl:
       new: Nieuwe handelaar
       merge: Handelaren samenvoegen
       title: Handelaren
-      family_title: "%{moniker}handelaren"
-      family_empty: Nog geen %{moniker}handelaren
-      provider_title: Provider handelaren
-      provider_empty: Nog geen provider handelaren gekoppeld aan deze %{moniker}
-      provider_read_only: Provider handelaren worden gesynchroniseerd vanuit uw verbonden instellingen. Ze kunnen hier niet worden bewerkt.
+      family_title: Eigen handelaren
+      family_empty: Nog geen eigen handelaren
+      provider_title: Providerhandelaren
+      provider_empty: Nog geen providerhandelaren gekoppeld aan deze %{moniker}
+      provider_read_only: Providerhandelaren worden gesynchroniseerd vanuit uw verbonden instellingen. Ze kunnen hier niet worden bewerkt.
       provider_info: Deze handelaren zijn automatisch gedetecteerd door uw bankverbindingen of AI. U kunt ze bewerken om uw eigen kopie aan te maken, of verwijderen om ze los te koppelen van uw transacties.
       unlinked_title: Recent losgekoppeld
       unlinked_info: Deze handelaren zijn recent verwijderd van uw transacties. Ze verdwijnen uit deze lijst na 30 dagen tenzij ze opnieuw worden toegewezen aan een transactie.
@@ -52,7 +52,7 @@ nl:
       target_label: Samenvoegen in (doel)
       select_target: Selecteer doelhandelaar...
       sources_label: Samen te voegen handelaren
-      sources_hint: Geselecteerde handelaren worden samengevoegd in het doel. Familiehandelaren worden verwijderd, provider handelaren worden losgekoppeld.
+      sources_hint: Geselecteerde handelaren worden samengevoegd in het doel. Eigen handelaren worden verwijderd, providerhandelaren worden losgekoppeld.
       submit: Geselecteerde samenvoegen
       sources_search_placeholder: Handelaren zoeken...
       no_merchants_found: Geen overeenkomende handelaren gevonden

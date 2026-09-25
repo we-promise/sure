@@ -26,7 +26,7 @@ nl:
       provider_name: Plaid
     select_existing_account:
       title: "%{account_name} koppelen aan Plaid"
-      description: Selecteer een Plaid account om te koppelen aan uw bestaande account
+      description: Selecteer een Plaid-account om te koppelen aan uw bestaande account
       cancel: Annuleren
       link_account: Account koppelen
       no_available_accounts: Geen beschikbare Plaid-accounts om te koppelen. Verbind eerst een nieuw Plaid-account.

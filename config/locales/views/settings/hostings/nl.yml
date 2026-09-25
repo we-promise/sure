@@ -32,7 +32,7 @@ nl:
         property_valuation_providers: Providers voor vastgoedwaardering
       provider_selection:
         title: Providerselectie
-        description: Kies welke service te gebruiken voor het ophalen van wisselkoersen en effectenprijzen. Yahoo Finance is gratis en vereist geen API Key. Twelve Data vereist een gratis API Key maar biedt mogelijk meer gegevensdekking.
+        description: Kies welke service te gebruiken voor het ophalen van wisselkoersen en effectenprijzen. Yahoo Finance is gratis en vereist geen API-sleutel. Twelve Data vereist een gratis API-sleutel maar biedt mogelijk meer gegevensdekking.
         exchange_rate_provider_label: Wisselkoersprovider
         securities_provider_label: Effecten (aandelenprijzen) provider
         env_configured_message: Providerselectie is uitgeschakeld omdat er omgevingsvariabelen zijn ingesteld. Om selectie hier in te schakelen, verwijder deze omgevingsvariabelen uit uw configuratie.
@@ -52,21 +52,21 @@ nl:
         exchange_rate_description: Kies één provider voor het ophalen van wisselkoersen.
         securities_title: Effectenproviders
         securities_description: Schakel een of meer providers in voor het ophalen van koersen van aandelen, ETF's en beleggingsfondsen. Bij het zoeken worden alle ingeschakelde providers geraadpleegd en worden de resultaten samengevoegd.
-        twelve_data_hint: vereist API Key, 800 credits/dag
-        yahoo_finance_hint: gratis, geen API Key nodig
-        requires_api_key: vereist API Key
-        requires_api_key_eodhd: vereist API Key, limiet van 20 calls/dag
-        requires_api_key_alpha_vantage: vereist API Key, limiet van 25 calls/dag
-        mfapi_hint: gratis, geen API Key -- alleen Indiase beleggingsfondsen
-        binance_public_hint: gratis, geen API Key -- alleen crypto (BTC, ETH, enz.)
-        moex_public_hint: gratis, geen API Key -- Russische aandelen, fondsen en obligaties (MOEX), incl. RUB FX
+        twelve_data_hint: vereist API-sleutel, 800 credits/dag
+        yahoo_finance_hint: gratis, geen API-sleutel nodig
+        requires_api_key: vereist API-sleutel
+        requires_api_key_eodhd: vereist API-sleutel, limiet van 20 calls/dag
+        requires_api_key_alpha_vantage: vereist API-sleutel, limiet van 25 calls/dag
+        mfapi_hint: gratis, geen API-sleutel -- alleen Indiase beleggingsfondsen
+        binance_public_hint: gratis, geen API-sleutel -- alleen crypto (BTC, ETH, enz.)
+        moex_public_hint: gratis, geen API-sleutel -- Russische aandelen, fondsen en obligaties (MOEX), incl. RUB FX
         tinkoff_invest_hint: vereist alleen-lezen token -- koersen van Russische aandelen/fondsen/obligaties + merklogo's
-        requires_api_key_mansa: vereist API Key, gratis tier met 100 calls/dag -- alleen NGX (Nigerian Exchange)
+        requires_api_key_mansa: vereist API-sleutel, gratis tier met 100 calls/dag -- alleen NGX (Nigerian Exchange)
       brand_fetch_settings:
         description: Voer het Client ID in dat door Brandfetch is verstrekt
         label: Client ID
         placeholder: Voer hier uw Client ID in
-        title: Brandfetch instellingen
+        title: Brandfetch-instellingen
         env_configured_message: U hebt uw Brandfetch Client ID succesvol geconfigureerd via de omgevingsvariabele BRAND_FETCH_CLIENT_ID.
         show_details: (details tonen)
         setup_step_1_html: Ga naar <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> en maak een gratis Brandfetch Developer-account aan.
@@ -108,9 +108,9 @@ nl:
         ai_response_timeout_help: 'Standaard: 90. Geldt alleen voor de watchdog van een volledige chatbeurt, dus stel deze in als som: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × time-out per verzoek, plus de tijd voor het uitvoeren van tools en de wachtrij. AI_RESPONSE_TIMEOUT overschrijft dit veld.'
       yahoo_finance_settings:
         title: Yahoo Finance
-        description: Yahoo Finance biedt gratis toegang tot aandelenkoersen, wisselkoersen en financiële gegevens zonder API Key vereiste.
+        description: Yahoo Finance biedt gratis toegang tot aandelenkoersen, wisselkoersen en financiële gegevens zonder dat er een API-sleutel nodig is.
         status_active: Yahoo Finance is actief en werkt
-        status_inactive: Yahoo Finance verbinding mislukt
+        status_inactive: Yahoo Finance-verbinding mislukt
         connection_failed: Kan geen verbinding maken met Yahoo Finance
         troubleshooting: Controleer uw internetverbinding en firewallinstellingen. Yahoo Finance kan tijdelijk niet beschikbaar zijn.
         status_healthy: Yahoo Finance is actief en werkt.
@@ -123,10 +123,10 @@ nl:
         status_unknown: De status van Yahoo Finance wordt gecontroleerd.
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} dagelijkse API-calls gebruikt (%{percentage})"
-        description: Voer de API Key in die door Twelve Data is verstrekt
+        description: Voer de API-sleutel in die door Twelve Data is verstrekt
         env_configured_message: Succesvol geconfigureerd via de TWELVE_DATA_API_KEY omgevingsvariabele.
-        label: API Key
-        placeholder: Voer hier uw API Key in
+        label: API-sleutel
+        placeholder: Voer hier uw API-sleutel in
         plan: "%{plan} plan"
         title: Twelve Data
         show_details: (details tonen)
@@ -191,15 +191,15 @@ nl:
         provider_openai: OpenAI
         provider_anthropic: Anthropic (Claude)
         provider_help: Een andere provider kiezen wordt van kracht bij de volgende chat. Configureer hieronder de inloggegevens van de actieve provider.
-        not_configured_hint: Voeg hieronder een %{provider} API Key toe om deze te activeren.
+        not_configured_hint: Voeg hieronder een API-sleutel voor %{provider} toe om deze te activeren.
         data_retention_heading: Gegevensverwerking
         data_retention: API-invoer wordt standaard niet gebruikt om modellen te trainen; de gehoste API's van de providers bewaren gegevens ongeveer 30 dagen voor misbruikbewaking. Aangepaste of zelfgehoste endpoints volgen uw eigen beleid.
       anthropic_settings:
         title: Anthropic (Claude)
-        description: Voer uw Anthropic API Key in. Laat de basis-URL desgewenst naar AWS Bedrock of GCP Vertex verwijzen.
+        description: Voer uw Anthropic-API-sleutel in. Laat de basis-URL desgewenst naar AWS Bedrock of GCP Vertex verwijzen.
         env_configured_message: Succesvol geconfigureerd via omgevingsvariabelen.
-        access_token_label: API Key
-        access_token_placeholder: Voer uw Anthropic API Key in
+        access_token_label: API-sleutel
+        access_token_placeholder: Voer uw Anthropic-API-sleutel in
         base_url_label: Basis-URL (optioneel)
         base_url_placeholder: https://api.anthropic.com (standaard)
         model_label: Standaardmodel (optioneel)
@@ -207,17 +207,17 @@ nl:
         model_help: Gebruikt voor chat en pdf-verwerking. Batchbewerkingen (categoriseren, handelaren detecteren) gebruiken standaard Haiku vanwege de kosten.
       rentcast_settings:
         title: RentCast
-        description: Voer uw RentCast API Key in om bij het toevoegen van een woning Amerikaanse vastgoedgegevens en waardeschattingen op te zoeken. De gratis tier is beperkt tot 50 API-verzoeken per maand, gedeeld tussen het opzoeken van woningen en dagelijkse waarderingsupdates. Verhoog met een betaald abonnement de limiet met de omgevingsvariabele RENTCAST_MAX_REQUESTS_PER_MONTH.
+        description: Voer uw RentCast-API-sleutel in om bij het toevoegen van een woning Amerikaanse vastgoedgegevens en waardeschattingen op te zoeken. De gratis tier is beperkt tot 50 API-verzoeken per maand, gedeeld tussen het opzoeken van woningen en dagelijkse waarderingsupdates. Verhoog met een betaald abonnement de limiet met de omgevingsvariabele RENTCAST_MAX_REQUESTS_PER_MONTH.
         env_configured_message: Succesvol geconfigureerd via de omgevingsvariabele RENTCAST_API_KEY.
-        label: API Key
-        placeholder: Voer hier uw RentCast API Key in
+        label: API-sleutel
+        placeholder: Voer hier uw RentCast-API-sleutel in
         usage: '%{used} van %{limit} maandelijkse verzoeken gebruikt'
       realie_settings:
         title: Realie
-        description: Voer uw Realie API Key in om bij het toevoegen van een woning Amerikaanse vastgoedgegevens en waardeschattingen op te zoeken. De gratis tier is beperkt tot 25 API-verzoeken per maand, gedeeld tussen het opzoeken van woningen en dagelijkse waarderingsupdates. Verhoog met een betaald abonnement de limiet met de omgevingsvariabele REALIE_MAX_REQUESTS_PER_MONTH.
+        description: Voer uw Realie-API-sleutel in om bij het toevoegen van een woning Amerikaanse vastgoedgegevens en waardeschattingen op te zoeken. De gratis tier is beperkt tot 25 API-verzoeken per maand, gedeeld tussen het opzoeken van woningen en dagelijkse waarderingsupdates. Verhoog met een betaald abonnement de limiet met de omgevingsvariabele REALIE_MAX_REQUESTS_PER_MONTH.
         env_configured_message: Succesvol geconfigureerd via de omgevingsvariabele REALIE_API_KEY.
-        label: API Key
-        placeholder: Voer hier uw Realie API Key in
+        label: API-sleutel
+        placeholder: Voer hier uw Realie-API-sleutel in
         usage: '%{used} van %{limit} maandelijkse verzoeken gebruikt'
       tiingo_settings:
         title: Tiingo
@@ -253,23 +253,23 @@ nl:
         rate_limit_warning: De gratis tier van EODHD is beperkt tot 20 API-calls per dag. Het meest geschikt als aanvullende provider voor Europese ETF's die niet via andere providers beschikbaar zijn.
       mansa_settings:
         title: Mansa
-        description: Voer de API Key van Mansa API in. Ondersteunt NGX (Nigerian Exchange), die door geen enkele andere provider hier wordt gedekt. Mansa dekt ook andere Afrikaanse beurzen, maar alleen NGX is geverifieerd voor deze integratie.
+        description: Voer de API-sleutel van Mansa API in. Ondersteunt NGX (Nigerian Exchange), die door geen enkele andere provider hier wordt gedekt. Mansa dekt ook andere Afrikaanse beurzen, maar alleen NGX is geverifieerd voor deze integratie.
         env_configured_message: Succesvol geconfigureerd via de omgevingsvariabele MANSA_API_KEY.
-        label: API Key
-        placeholder: Voer hier uw Mansa API Key in
+        label: API-sleutel
+        placeholder: Voer hier uw Mansa-API-sleutel in
         show_details: (details tonen)
-        step_1_html: Ga naar <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> en vraag uw gratis API Key aan -- geen kaart nodig.
-        step_2: Kopieer uw API Key en plak deze hieronder.
+        step_1_html: Ga naar <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> en vraag uw gratis API-sleutel aan -- geen kaart nodig.
+        step_2: Kopieer uw API-sleutel en plak deze hieronder.
         rate_limit_warning: De gratis tier van Mansa is beperkt tot 100 API-calls per dag en levert alleen actuele koersen -- voor historische koersen is een betaald abonnement nodig. Alleen NGX (Nigerian Exchange) is geverifieerd voor deze integratie; andere Afrikaanse beurzen die Mansa dekt, worden hier nog niet ondersteund.
       alpha_vantage_settings:
         title: Alpha Vantage
-        description: Voer de API Key van Alpha Vantage in. Ondersteunt Europese ETF's op de London Stock Exchange, XETRA en andere beurzen.
+        description: Voer de API-sleutel van Alpha Vantage in. Ondersteunt Europese ETF's op de London Stock Exchange, XETRA en andere beurzen.
         env_configured_message: Succesvol geconfigureerd via de omgevingsvariabele ALPHA_VANTAGE_API_KEY.
-        label: API Key
-        placeholder: Voer hier uw Alpha Vantage API Key in
+        label: API-sleutel
+        placeholder: Voer hier uw Alpha Vantage-API-sleutel in
         show_details: (details tonen)
-        step_1_html: Ga naar <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> en vraag uw gratis API Key aan.
-        step_2: Kopieer de API Key en plak deze hieronder.
+        step_1_html: Ga naar <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> en vraag uw gratis API-sleutel aan.
+        step_2: Kopieer de API-sleutel en plak deze hieronder.
         rate_limit_warning: De gratis tier van Alpha Vantage is beperkt tot 25 API-calls per dag. Het meest geschikt als aanvullende provider voor Europese ETF's die niet via andere providers beschikbaar zijn.
         no_health_check_note: Een verbindingscontrole is voor deze provider niet beschikbaar vanwege de strikte rate limit.
       disconnect_external_assistant:

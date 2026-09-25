@@ -2,19 +2,19 @@
 nl:
   coinstats_items:
     create:
-      success: CoinStats provider verbinding succesvol geconfigureerd.
+      success: CoinStats-providerverbinding succesvol geconfigureerd.
       default_name: CoinStats Verbinding
       errors:
         validation_failed: "Validatie mislukt: %{message}."
     update:
-      success: CoinStats provider verbinding succesvol bijgewerkt.
+      success: CoinStats-providerverbinding succesvol bijgewerkt.
       errors:
         validation_failed: "Validatie mislukt: %{message}."
     destroy:
-      success: CoinStats provider verbinding ingepland voor verwijdering.
+      success: CoinStats-providerverbinding ingepland voor verwijdering.
     link_wallet:
       success:
-        one: "%{count} crypto wallet succesvol gekoppeld."
+        one: "%{count} cryptowallet succesvol gekoppeld."
         other: "%{count} crypto wallets succesvol gekoppeld."
       missing_params: "Ontbrekende vereiste parameters: adres en blockchain."
       failed: Crypto wallet koppelen mislukt.
@@ -28,8 +28,8 @@ nl:
       blockchain_placeholder: Vereist
       blockchain_select_blank: Selecteer een Blockchain
       link: Crypto Wallet koppelen
-      not_configured_title: CoinStats provider verbinding niet geconfigureerd
-      not_configured_message: Om een crypto wallet te koppelen moet u eerst de CoinStats provider verbinding configureren.
+      not_configured_title: CoinStats-providerverbinding niet geconfigureerd
+      not_configured_message: Om een cryptowallet te koppelen moet u eerst de CoinStats-providerverbinding configureren.
       not_configured_step1_html: Ga naar <strong>Instellingen → Providers</strong>
       not_configured_step2_html: Zoek de <strong>CoinStats</strong> provider
       not_configured_step3_html: Volg de <strong>installatie-instructies</strong> om de provider configuratie te voltooien
@@ -59,7 +59,7 @@ nl:
       sync_status:
         no_accounts: Geen crypto wallets gevonden
         all_synced:
-          one: "%{count} crypto wallet gesynchroniseerd"
+          one: "%{count} cryptowallet gesynchroniseerd"
           other: "%{count} crypto wallets gesynchroniseerd"
         partial_sync: "%{linked_count} crypto wallets gesynchroniseerd, %{unlinked_count} hebben setup nodig"
       reconnect: Opnieuw verbinden

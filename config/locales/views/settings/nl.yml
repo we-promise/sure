@@ -217,7 +217,7 @@ nl:
         sso_warning_message: Dit is uw enige inlogmethode. U zou een wachtwoord moeten instellen in uw beveiligingsinstellingen voordat u loskoppelt, anders kunt u worden buitengesloten van uw account.
         encryption_warning:
           title: Encryptiesleutels ontbreken
-          intro: 'Gevoelige gegevens (API Keys, providertokens, MFA-geheimen en persoonsgegevens) worden onversleuteld opgeslagen. Stel de volgende sleutels in uw omgevingsvariabelen of Rails credentials in om encryptie in te schakelen:'
+          intro: 'Gevoelige gegevens (API-sleutels, providertokens, MFA-geheimen en persoonsgegevens) worden onversleuteld opgeslagen. Stel de volgende sleutels in uw omgevingsvariabelen of Rails credentials in om encryptie in te schakelen:'
           keys:
             - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
             - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
@@ -227,7 +227,7 @@ nl:
       accounts_label: Accounts
       advanced_section_title: Geavanceerd
       ai_prompts_label: AI Prompts
-      api_key_label: API Keys
+      api_key_label: API-sleutels
       payment_label: Betaling
       categories_label: Categorieën
       feedback_label: Feedback
@@ -246,7 +246,7 @@ nl:
       tags_label: Tags
       transactions_section_title: Transacties
       whats_new_label: Wat is er nieuw
-      api_keys_label: API Keys
+      api_keys_label: API-sleutels
       bank_sync_label: Banksynchronisatie
       background_jobs_label: Achtergrondtaken
       exports_label: Exports
@@ -254,7 +254,7 @@ nl:
       providers_label: Providers
       mcp_label: MCP
       sso_providers_label: SSO-providers
-      statement_vault_label: Afschriftenkluis
+      statement_vault_label: Afschriften
       system_health_label: Systeemstatus
       users_label: Gebruikers
       appearance_label: Weergave
@@ -456,12 +456,12 @@ nl:
         mercury: Synchroniseer uw zakelijke Mercury-rekeningen automatisch.
         brex: Synchroniseer Brex-rekening- en bedrijfscreditcardactiviteit met alleen-lezen toegang.
         coinbase: Importeer uw Coinbase-cryptoposities en volg het rendement.
-        binance: Synchroniseer uw Binance-spotsaldi met een alleen-lezen API Key.
-        kraken: Synchroniseer Kraken-saldi en uitgevoerde spottransacties met een alleen-lezen API Key.
-        coinspot: Synchroniseer CoinSpot-saldi, AUD-waarden, overboekingen, stortingen, opnames en ordergeschiedenis met een alleen-lezen API Key.
+        binance: Synchroniseer uw Binance-spotsaldi met een alleen-lezen API-sleutel.
+        kraken: Synchroniseer Kraken-saldi en uitgevoerde spottransacties met een alleen-lezen API-sleutel.
+        coinspot: Synchroniseer CoinSpot-saldi, AUD-waarden, overboekingen, stortingen, opnames en ordergeschiedenis met een alleen-lezen API-sleutel.
         onchain_wallet: Volg Bitcoin-, EVM- en Solana-wallets in eigen beheer via hun openbare adressen.
         snaptrade: Verbind beleggingsrekeningen via het SnapTrade-aggregatienetwerk.
-        trading212: Synchroniseer uw Trading 212-beleggingsportefeuille met een alleen-lezen API Key.
+        trading212: Synchroniseer uw Trading 212-beleggingsportefeuille met een alleen-lezen API-sleutel.
         trade_republic: Synchroniseer uw Trade Republic-beleggingsrekening via een beveiligde alleen-lezen weblogin.
         ibkr: Synchroniseer Interactive Brokers-beleggingsrekeningen via Flex Query-imports.
         questrade: Synchroniseer uw Questrade-beleggingsrekeningen rechtstreeks via de Questrade API.
@@ -487,10 +487,10 @@ nl:
       coinbase_panel:
         setup_instructions: 'Coinbase verbinden:'
         step1_html: Ga naar <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API-instellingen</a>
-        step2: Maak een nieuwe API Key aan met alleen-lezen rechten (accounts bekijken, transacties bekijken)
-        step3: Kopieer uw API Key en API Secret en plak ze hieronder
-        api_key_label: API Key
-        api_key_placeholder: Voer uw Coinbase API Key in
+        step2: Maak een nieuwe API-sleutel aan met alleen-lezen rechten (accounts bekijken, transacties bekijken)
+        step3: Kopieer uw API-sleutel en API Secret en plak ze hieronder
+        api_key_label: API-sleutel
+        api_key_placeholder: Voer uw Coinbase-API-sleutel in
         api_secret_label: API Secret
         api_secret_placeholder: Voer uw Coinbase API Secret in
         connect_button: Coinbase verbinden
@@ -498,17 +498,17 @@ nl:
         sync: Synchroniseren
         disconnect_confirm: Weet u zeker dat u deze Coinbase-verbinding wilt verbreken? Uw gesynchroniseerde accounts worden handmatige accounts.
       binance_panel:
-        setup_instructions: 'Maak een alleen-lezen API Key aan om Binance te verbinden:'
+        setup_instructions: 'Maak een alleen-lezen API-sleutel aan om Binance te verbinden:'
         step1_html: Ga naar <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>
-        step2: Maak een nieuwe API Key aan met alleen de rechten "Enable Reading"
-        step3: Plak hieronder uw API Key en Secret
-        no_withdraw_title: Alleen een alleen-lezen key
-        no_withdraw_body: Schakel geen opnamerechten in bij het aanmaken van uw Binance API Key. Sure heeft alleen leestoegang nodig.
+        step2: Maak een nieuwe API-sleutel aan met alleen de rechten "Enable Reading"
+        step3: Plak hieronder uw API-sleutel en Secret
+        no_withdraw_title: Alleen een alleen-lezen sleutel
+        no_withdraw_body: Schakel geen opnamerechten in bij het aanmaken van uw Binance-API-sleutel. Sure heeft alleen leestoegang nodig.
         ip_hint_title: IP-whitelisting vereist
-        ip_hint_body: 'Voeg het uitgaande IP-adres van de appserver toe aan de whitelist van de Binance API Key:'
+        ip_hint_body: 'Voeg het uitgaande IP-adres van de appserver toe aan de whitelist van de Binance-API-sleutel:'
         ip_hint_contact_admin: Neem contact op met uw beheerder voor het uitgaande IP-adres van de appserver.
-        api_key_label: API Key
-        api_key_placeholder: Plak uw Binance API Key
+        api_key_label: API-sleutel
+        api_key_placeholder: Plak uw Binance-API-sleutel
         api_secret_label: API Secret
         api_secret_placeholder: Plak uw Binance API Secret
         connect_button: Binance verbinden
@@ -520,8 +520,8 @@ nl:
         disconnect_confirm: Weet u zeker dat u de verbinding met Binance wilt verbreken?
       kraken_panel:
         step1_html: Ga naar <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API-instellingen</a>
-        step2: Maak een API Key aan met alleen Query Funds en Query Closed Orders & Trades.
-        step3: Plak hieronder de API Key en de private key.
+        step2: Maak een API-sleutel aan met alleen Query Funds en Query Closed Orders & Trades.
+        step3: Plak hieronder de API-sleutel en de private key.
         read_only_title: Alleen-lezen synchronisatie van de beurs
         read_only_body: Verleen geen rechten voor handelen, annuleren, opnemen, exporteren, ledger, Earn, staking of overboekingen. Sure importeert alleen saldi, posities en uitgevoerde spottransacties.
         default_connection_name: Kraken
@@ -529,9 +529,9 @@ nl:
         update_connection: Verbinding bijwerken
         connection_name_label: Naam verbinding
         connection_name_placeholder: Kraken hoofdaccount
-        api_key_label: API Key
-        api_key_placeholder: Plak uw Kraken API Key
-        keep_api_key_placeholder: Leeg laten om de bestaande API Key te behouden
+        api_key_label: API-sleutel
+        api_key_placeholder: Plak uw Kraken-API-sleutel
+        keep_api_key_placeholder: Leeg laten om de bestaande API-sleutel te behouden
         api_secret_label: Private Key
         api_secret_placeholder: Plak uw Kraken private key
         keep_api_secret_placeholder: Leeg laten om de bestaande private key te behouden
@@ -542,8 +542,8 @@ nl:
         disconnect_confirm: Weet u zeker dat u de verbinding met %{name} wilt verbreken?
       coinspot_panel:
         step1_html: Ga naar <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot API-instellingen</a>
-        step2: Maak een API Key aan met alleen-lezen toegang tot saldi en geschiedenis.
-        step3: Plak hieronder de API Key en het secret.
+        step2: Maak een API-sleutel aan met alleen-lezen toegang tot saldi en geschiedenis.
+        step3: Plak hieronder de API-sleutel en het secret.
         read_only_title: Alleen-lezen synchronisatie van de beurs
         read_only_body: Verleen geen rechten voor verzenden, opnemen, handelen of overboekingen. Sure importeert alleen saldi, AUD-waarden, overboekingen, stortingen, opnames en de geschiedenis van voltooide orders.
         default_connection_name: CoinSpot
@@ -551,9 +551,9 @@ nl:
         update_connection: Verbinding bijwerken
         connection_name_label: Naam verbinding
         connection_name_placeholder: CoinSpot hoofdaccount
-        api_key_label: API Key
-        api_key_placeholder: Plak uw CoinSpot API Key
-        keep_api_key_placeholder: Leeg laten om de bestaande API Key te behouden
+        api_key_label: API-sleutel
+        api_key_placeholder: Plak uw CoinSpot-API-sleutel
+        keep_api_key_placeholder: Leeg laten om de bestaande API-sleutel te behouden
         api_secret_label: API Secret
         api_secret_placeholder: Plak uw CoinSpot API Secret
         keep_api_secret_placeholder: Leeg laten om het bestaande API Secret te behouden
@@ -567,10 +567,10 @@ nl:
         advanced: Geavanceerd
         disconnect_all: Alle wallets ontkoppelen
         disconnect_all_confirm: Hiermee worden alle gevolgde adressen en de bijbehorende accounts verwijderd. Doorgaan?
-        etherscan_api_key_label: Etherscan API Key (optioneel)
-        etherscan_api_key_placeholder: Plak een Etherscan API Key
-        etherscan_hint: Ethereum-gegevens kunnen zonder key worden gelezen. Een Etherscan-key verhoogt alleen de rate limit voor Ethereum.
-        keep_etherscan_api_key: Leeg laten om de bestaande key te behouden
+        etherscan_api_key_label: Etherscan-API-sleutel (optioneel)
+        etherscan_api_key_placeholder: Plak een Etherscan-API-sleutel
+        etherscan_hint: Ethereum-gegevens kunnen zonder sleutel worden gelezen. Een Etherscan-sleutel verhoogt alleen de rate limit voor Ethereum.
+        keep_etherscan_api_key: Leeg laten om de bestaande sleutel te behouden
         manage_wallets: Wallets beheren
         keyless_body: Sure leest alleen openbare blockchaingegevens. Er zijn geen sleutels, seed phrases of handtekeningen nodig, en er kan niets worden uitgegeven.
         keyless_title: Alleen-lezen, geen sleutels nodig
@@ -608,12 +608,12 @@ nl:
         select_country: Selecteer land...
         country_label: Land
       lunchflow_panel:
-        step_1_html: Ga naar %{link} en maak een API Key aan.
-        step_2: Plak hieronder uw key en maak verbinding.
+        step_1_html: Ga naar %{link} en maak een API-sleutel aan.
+        step_2: Plak hieronder uw sleutel en maak verbinding.
         step_3: Ga daarna naar Accounts om uw gesynchroniseerde accounts te koppelen.
-        api_key_label: API Key
-        api_key_placeholder_new: Plak hier de API Key
-        api_key_placeholder_update: Voer een nieuwe API Key in om bij te werken
+        api_key_label: API-sleutel
+        api_key_placeholder_new: Plak hier de API-sleutel
+        api_key_placeholder_update: Voer een nieuwe API-sleutel in om bij te werken
         base_url_label: Basis-URL (optioneel)
         base_url_placeholder: https://lunchflow.app/api/v1 (standaard)
         save_and_connect: Opslaan en verbinden
@@ -760,7 +760,7 @@ nl:
       trading212_panel:
         steps:
           step_1: Ga naar Trading 212 → Instellingen → API (web of mobiele app).
-          step_2: Genereer een nieuwe API Key — Trading 212 toont u dan een API ID en een Secret Key.
+          step_2: Genereer een nieuwe API-sleutel — Trading 212 toont u dan een API ID en een Secret Key.
           step_3: Plak beide hieronder, kies uw omgeving en rekeningvaluta en sla op.
         api_key_label: API ID
         api_key_placeholder_new: Plak uw Trading 212 API ID

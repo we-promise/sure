@@ -61,7 +61,7 @@ nl:
         connected_entry: Account koppelen
         connected_entry_eu: EU-account koppelen
         link_with_provider: "Koppel met %{provider}"
-        lunchflow_entry: Koppel Lunch Flow account
+        lunchflow_entry: Koppel Lunch Flow-account
         manual_entry: Voer accountsaldo in
         title: Hoe wilt u het toevoegen?
       title: Wat wilt u toevoegen?
