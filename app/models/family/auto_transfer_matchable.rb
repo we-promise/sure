@@ -36,7 +36,8 @@ module Family::AutoTransferMatchable
     outflow_transaction_id: nil,
     account_id: nil,
     include_rejected: true,
-    restrict_cross_currency_to_linked_accounts: false
+    restrict_cross_currency_to_linked_accounts: false,
+    require_common_writer: false
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
@@ -51,6 +52,7 @@ module Family::AutoTransferMatchable
         account_id:,
         include_rejected:,
         restrict_cross_currency_to_linked_accounts:,
+        require_common_writer:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
@@ -69,7 +71,10 @@ module Family::AutoTransferMatchable
       account_id: account&.id,
       include_rejected: false,
       exchange_rate_tolerance:,
-      restrict_cross_currency_to_linked_accounts: true
+      restrict_cross_currency_to_linked_accounts: true,
+      # Only pair accounts that at least one member can write to on both sides, so
+      # someone can always confirm or reject the match.
+      require_common_writer: true
     )
     transaction_ids = candidates_scope.flat_map do |match|
       [ match.inflow_transaction_id, match.outflow_transaction_id ]
@@ -177,6 +182,30 @@ module Family::AutoTransferMatchable
       tolerance
     end
 
+    # Mirrors Account.writable_by: a family member who owns, or has a
+    # full_control share on, both the inflow and the outflow account.
+    def common_writer_condition_sql
+      <<~SQL.squish
+        (:require_common_writer = FALSE OR EXISTS (
+          SELECT 1 FROM users writers
+          WHERE
+            writers.family_id = :family_id AND
+            (writers.id = inflow_accounts.owner_id OR EXISTS (
+              SELECT 1 FROM account_shares inflow_shares
+              WHERE inflow_shares.account_id = inflow_accounts.id AND
+                inflow_shares.user_id = writers.id AND
+                inflow_shares.permission = 'full_control'
+            )) AND
+            (writers.id = outflow_accounts.owner_id OR EXISTS (
+              SELECT 1 FROM account_shares outflow_shares
+              WHERE outflow_shares.account_id = outflow_accounts.id AND
+                outflow_shares.user_id = writers.id AND
+                outflow_shares.permission = 'full_control'
+            ))
+        ))
+      SQL
+    end
+
     # The second UNION branch below (cross-currency, FX-rate-tolerance matching) is a
     # coincidence guess -- amount x FX-rate within a tolerance band, not an exact amount
     # match -- and a manual account has no institution behind it confirming money actually
@@ -237,7 +266,8 @@ module Family::AutoTransferMatchable
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
-            (:include_rejected = TRUE OR rejected_transfers.id IS NULL)
+            (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
+            #{common_writer_condition_sql}
           UNION ALL
           SELECT
             inflow_candidates.entryable_id AS inflow_transaction_id,
@@ -286,7 +316,8 @@ module Family::AutoTransferMatchable
             (
               :restrict_cross_currency_to_linked_accounts = FALSE OR
               (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")})
-            )
+            ) AND
+            #{common_writer_condition_sql}
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.date_diff ASC
       SQL

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class TransfersControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     sign_in users(:family_admin)
   end
@@ -667,6 +669,58 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "can reject a match when only the outflow account is accessible" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+
+    assert_difference -> { Transfer.count } => -1, -> { RejectedTransfer.count } => 1 do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+  end
+
+  test "can reject a match when only the inflow account is accessible" do
+    transfer = cross_owner_transfer(outflow_account: member_loan, inflow_account: accounts(:depository))
+
+    assert_difference -> { Transfer.count } => -1, -> { RejectedTransfer.count } => 1 do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+
+    assert_redirected_to transactions_url
+  end
+
+  test "can unlink a match when only one side is accessible" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+
+    assert_difference -> { Transfer.count }, -1 do
+      delete transfer_url(transfer)
+    end
+  end
+
+  test "cannot edit a match without write access to the outflow account" do
+    transfer = cross_owner_transfer(outflow_account: member_loan, inflow_account: accounts(:depository))
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed", notes: "Nope" } }
+
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert transfer.reload.pending?
+    assert_nil transfer.notes
+  end
+
+  test "cannot reject a match when neither side is accessible" do
+    vehicle = accounts(:vehicle)
+    vehicle.update!(owner: users(:family_member))
+    transfer = cross_owner_transfer(outflow_account: vehicle, inflow_account: member_loan)
+
+    assert_no_difference -> { Transfer.count } do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+
+    assert_response :not_found
+  end
+
   test "mark_as_recurring creates a recurring transfer" do
     transfer = transfers(:one)
     family = users(:family_admin).family
@@ -710,4 +764,17 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
     assert_equal I18n.t("recurring_transactions.transfer_feature_disabled"), flash[:alert]
   end
+
+  private
+    # A loan owned by family_member and not shared with family_admin
+    def member_loan
+      accounts(:loan).tap { |loan| loan.update!(owner: users(:family_member)) }
+    end
+
+    def cross_owner_transfer(outflow_account:, inflow_account:)
+      outflow = create_transaction(account: outflow_account, amount: 250, kind: "funds_movement")
+      inflow = create_transaction(account: inflow_account, amount: -250, kind: "funds_movement")
+
+      Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+    end
 end

@@ -3,7 +3,7 @@ class TransferMatchesController < ApplicationController
 
   def new
     @accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
-    @transfer_match_candidates = @entry.transaction.transfer_match_candidates
+    @transfer_match_candidates = writable_transfer_match_candidates
   end
 
   def create
@@ -38,6 +38,17 @@ class TransferMatchesController < ApplicationController
   private
     def set_entry
       @entry = Current.accessible_entries.find(params[:transaction_id])
+    end
+
+    # Family-wide candidates, limited to counterparts in accounts the user can
+    # write to (create would reject the others anyway).
+    def writable_transfer_match_candidates
+      writable_account_ids = @accounts.map(&:id).to_set
+
+      @entry.transaction.transfer_match_candidates.select do |candidate|
+        counterpart = @entry.amount.negative? ? candidate.outflow_transaction : candidate.inflow_transaction
+        writable_account_ids.include?(counterpart.entry.account_id)
+      end
     end
 
     def transfer_match_params
