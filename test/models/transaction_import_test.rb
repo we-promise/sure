@@ -70,6 +70,21 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal "complete", @import.status
   end
 
+  test "maps the configured merchant column onto import rows" do
+    @import.update!(
+      raw_file_str: "date,name,amount,merchant\n01/01/2024,Amazon purchase,-20.50,Amazon\n",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      merchant_col_label: "merchant",
+      date_format: "%m/%d/%Y"
+    )
+
+    @import.generate_rows_from_csv
+
+    assert_equal merchants(:amazon).id, @import.rows.reload.first.merchant_id
+  end
+
   test "imports transactions with separate type column for signage convention" do
     import = <<~CSV
       date,amount,amount_type
