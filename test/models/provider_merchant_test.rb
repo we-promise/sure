@@ -58,4 +58,16 @@ class ProviderMerchantTest < ActiveSupport::TestCase
       merchant.import_diff({ "name" => "Acme Inc", "website_url" => "https://acme.io" })
     )
   end
+
+  test "import_diff flags a different non-blank provider_merchant_id but not a missing one" do
+    with_id = ProviderMerchant.create!(name: "Acme", source: "lunchflow", provider_merchant_id: "id-1")
+    without_id = ProviderMerchant.create!(name: "Acme", source: "akahu")
+
+    assert_equal(
+      [ { field: "provider_merchant_id", imported_value: "id-2", kept_value: "id-1" } ],
+      with_id.import_diff({ "name" => "Acme", "provider_merchant_id" => "id-2" })
+    )
+    assert_empty with_id.import_diff({ "name" => "Acme", "provider_merchant_id" => "id-1" })
+    assert_empty without_id.import_diff({ "name" => "Acme", "provider_merchant_id" => "id-2" })
+  end
 end

@@ -541,7 +541,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
   test "import ready notices use singular and plural wording" do
     {
-      "imports.ready.missing_merchant_warning_description" => [ "1 transaction references", "2 transactions reference" ],
+      "imports.ready.missing_merchant_warning_description" => [ "1 merchant reference in this file", "2 merchant references in this file" ],
       "imports.ready.reused_taxonomy_notice_description" => [ "1 category, tag or merchant", "2 categories, tags or merchants" ],
       "imports.ready.provider_merchant_diff_description" => [ "1 merchant in this file", "2 merchants in this file" ]
     }.each do |key, (singular, plural)|

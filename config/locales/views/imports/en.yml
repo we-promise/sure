@@ -470,14 +470,14 @@ en:
       missing_merchant_warning_title: Some merchants are missing from this export
       missing_merchant_warning_description:
         one: >-
-          1 transaction references a merchant that isn't included in this file. This can happen
+          1 merchant reference in this file points to a merchant that isn't included. This can happen
           with an export taken before provider-assigned merchants were added to Sure exports. You can still
-          publish this import -- that transaction will just import without a merchant, and you can tag
+          publish this import -- the affected record will just import without a merchant, and you can tag
           it afterward.
         other: >-
-          %{count} transactions reference merchants that aren't included in this file. This can happen
+          %{count} merchant references in this file point to merchants that aren't included. This can happen
           with an export taken before provider-assigned merchants were added to Sure exports. You can still
-          publish this import -- those transactions will just import without a merchant, and you can tag
+          publish this import -- the affected records will just import without a merchant, and you can tag
           them afterward.
       reused_taxonomy_notice_title: Some categories, tags or merchants already exist
       reused_taxonomy_notice_description:
@@ -502,6 +502,7 @@ en:
       provider_merchant_diff_fields:
         website_url: Website
         name: Name
+        provider_merchant_id: Provider ID
       provider_merchant_diff_row: "%{field}: keeping %{kept}, file has %{imported}"
     errors:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"

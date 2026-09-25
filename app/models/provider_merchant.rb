@@ -12,9 +12,10 @@ class ProviderMerchant < Merchant
 
   # color is deliberately not compared: nothing ever sets it on a ProviderMerchant.
   def import_diff(data)
-    %w[website_url name].filter_map do |field|
+    %w[website_url name provider_merchant_id].filter_map do |field|
       imported_value = data[field].presence
       next if imported_value.blank? || imported_value == self[field]
+      next if field == "provider_merchant_id" && self[field].blank?
 
       { field: field, imported_value: imported_value, kept_value: self[field] }
     end

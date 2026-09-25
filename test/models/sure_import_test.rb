@@ -863,18 +863,32 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal existing.id, @family.entries.find_by!(name: "Amazon purchase").entryable.merchant_id
   end
 
-  test "provider merchant import recovers when another import wins the creation race" do
-    winner = ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn")
-    attach_ndjson(provider_merchant_ndjson)
+  {
+    "RecordNotUnique" => -> { ActiveRecord::RecordNotUnique.new("duplicate key") },
+    "RecordInvalid" => -> { ActiveRecord::RecordInvalid.new(ProviderMerchant.new.tap { |merchant| merchant.errors.add(:name, :taken) }) }
+  }.each do |label, build_error|
+    test "provider merchant import recovers when another import wins the creation race (#{label})" do
+      winner = ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn")
+      attach_ndjson(provider_merchant_ndjson)
 
-    ProviderMerchant.stubs(:find_by_import_data).returns(nil).then.returns(winner)
-    ProviderMerchant.stubs(:create!).raises(ActiveRecord::RecordNotUnique.new("duplicate key"))
+      ProviderMerchant.stubs(:find_by_import_data).returns(nil).then.returns(winner)
+      ProviderMerchant.stubs(:create!).raises(build_error.call)
 
-    assert_no_difference -> { ProviderMerchant.count } do
-      @import.import!
+      assert_no_difference -> { ProviderMerchant.count } do
+        @import.import!
+      end
+
+      assert_equal winner.id, @family.entries.find_by!(name: "Amazon purchase").entryable.merchant_id
     end
+  end
 
-    assert_equal winner.id, @family.entries.find_by!(name: "Amazon purchase").entryable.merchant_id
+  test "provider merchant import surfaces validation errors that are not a lost creation race" do
+    attach_ndjson(provider_merchant_ndjson)
+    invalid = ActiveRecord::RecordInvalid.new(ProviderMerchant.new.tap { |merchant| merchant.errors.add(:name, :blank) })
+    ProviderMerchant.stubs(:find_by_import_data).returns(nil)
+    ProviderMerchant.stubs(:create!).raises(invalid)
+
+    assert_raises(ActiveRecord::RecordInvalid) { @import.import! }
   end
 
   test "preflight warns with the actual diff when an existing provider merchant differs from the file" do
@@ -982,6 +996,10 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal "#407706", existing_category.reload.color
     assert_equal "#12B76A", existing_tag.reload.color
     assert_equal "#12B76A", existing_merchant.reload.color
+
+    @import.reload
+    assert_equal "matched", @import.verification_status
+    assert_equal({ "categories" => 1, "tags" => 1, "merchants" => 1 }, @import.readback_verification["reused_record_counts"])
   end
 
   test "family merchant import carries website_url and leaves an existing one alone when the file omits it" do

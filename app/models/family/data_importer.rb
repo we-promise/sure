@@ -529,6 +529,9 @@ class Family::DataImporter
     end
 
     # The savepoint keeps a lost race from aborting the surrounding import transaction.
+    # A race usually surfaces as the name-uniqueness validation (RecordInvalid) rather
+    # than the index (RecordNotUnique); either way, reuse the winner if it exists and
+    # let anything else propagate.
     def create_provider_merchant(data, source)
       ProviderMerchant.transaction(requires_new: true) do
         ProviderMerchant.create!(
@@ -540,8 +543,8 @@ class Family::DataImporter
           website_url: data["website_url"]
         )
       end
-    rescue ActiveRecord::RecordNotUnique
-      ProviderMerchant.find_by_import_data(data, source)
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+      ProviderMerchant.find_by_import_data(data, source) || raise
     end
 
     def import_recurring_transactions(records)
