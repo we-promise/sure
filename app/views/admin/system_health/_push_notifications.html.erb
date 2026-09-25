@@ -1,0 +1,58 @@
+<section id="push-notifications" class="bg-container rounded-xl shadow-border-xs p-4 space-y-4" data-testid="push-notification-status" aria-labelledby="push-notifications-title">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="space-y-1">
+      <h2 id="push-notifications-title" class="text-lg font-semibold text-primary"><%= t("admin.system_health.push_notifications.title") %></h2>
+      <% if latest_test %>
+        <p class="text-sm text-secondary"><%= t("admin.system_health.push_notifications.requested_at", time: l(latest_test[:created_at], format: :long)) %></p>
+      <% end %>
+    </div>
+    <%= render DS::Button.new(
+      href: send_test_push_admin_system_health_path,
+      method: :post,
+      variant: :outline,
+      size: :sm,
+      icon: "bell-ring",
+      text: t("admin.system_health.push_notifications.send_test"),
+      disabled: disabled_reason.present?,
+      class: "disabled:opacity-50",
+      aria: { describedby: "push-notification-help" },
+      data: { turbo_submits_with: t("admin.system_health.push_notifications.queueing") }
+    ) %>
+  </div>
+
+  <p id="push-notification-help" class="text-sm text-secondary">
+    <%= t("admin.system_health.push_notifications.messages.#{disabled_reason || :ready}") %>
+  </p>
+
+  <% if latest_test %>
+    <div class="space-y-3">
+      <p class="text-sm text-secondary"><%= t("admin.system_health.push_notifications.result_help") %></p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead>
+            <tr class="border-b border-primary text-secondary">
+              <% %w[device environment status checked_at].each do |column| %>
+                <th scope="col" class="py-2 font-medium"><%= t("admin.system_health.push_notifications.columns.#{column}") %></th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody>
+            <% results.each_with_index do |result, index| %>
+              <tr class="border-b border-primary text-primary">
+                <th scope="row" class="py-2 font-medium"><%= t("admin.system_health.push_notifications.device", number: index + 1) %></th>
+                <td class="py-2"><%= t("admin.system_health.push_notifications.environments.#{result[:environment]}") %></td>
+                <td class="py-2"><%= t("admin.system_health.push_notifications.statuses.#{result[:status]}") %></td>
+                <td class="py-2"><%= result[:checked_at] ? l(result[:checked_at], format: :long) : t("admin.system_health.push_notifications.pending") %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <%= render DS::Button.new(
+        href: admin_system_health_path(tab: "background_jobs", anchor: "push-notifications"), method: :get,
+        variant: :outline, size: :sm, icon: "refresh-cw",
+        text: t("admin.system_health.push_notifications.refresh")
+      ) %>
+    </div>
+  <% end %>
+</section>

@@ -8,13 +8,35 @@
     <%= helpers.icon("chevron-down", size: "sm") %>
   <% end %>
 
+  <%# Both pickers navigate a Turbo frame — the dashboard's `dashboard_sections`
+      and, implicitly, the account page's own container frame — and a frame
+      navigation leaves the address bar alone. Without an explicit visit action
+      a stale ?start_date/&end_date from a chart drag-select would outlive a
+      preset pick and come back on refresh. See `turbo_action_for` for why the
+      checked row replaces rather than advances. %>
   <% periods.each do |period| %>
+    <% period_selected = selected?(period.key) %>
     <% menu.with_item(
          variant: :link,
          text: period.label_short,
          href: href_for(period.key),
          frame: frame,
-         selected: selected?(period.key)
+         selected: period_selected,
+         data: { turbo_action: turbo_action_for(period_selected) }
+       ) %>
+  <% end %>
+
+  <% if custom_selected? %>
+    <%# Last, so the presets keep their positions. Without this row a custom
+        range leaves the list with nothing checked, which reads as "no selection"
+        and hides the fact that picking a preset is how you leave it. %>
+    <% menu.with_item(
+         variant: :link,
+         text: selected.label_short,
+         href: custom_href,
+         frame: frame,
+         selected: true,
+         data: { turbo_action: turbo_action_for(true) }
        ) %>
   <% end %>
 <% end %>

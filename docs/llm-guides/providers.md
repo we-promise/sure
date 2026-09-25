@@ -5,6 +5,22 @@ selection and `Provided` concerns. For a new securities price provider, follow
 [the complete workflow](adding-a-securities-provider.md), including response
 types, MIC mapping, currency handling, settings encryption, UI, locales and tests.
 
+## Provider logos
+
+A provider's logo comes from [`ProviderLogo`](../../app/components/provider_logo.rb): the
+Brandfetch icon for the `domain` in its
+[`Provider::Metadata::REGISTRY`](../../app/models/provider/metadata.rb) entry, falling back
+to `logo_icon`, then `logo_text` initials on `logo_color`. Anything identifying a provider
+renders `render ProviderLogo.new(provider_key: :<x>)` — the `_<x>_item` card on Accounts,
+the Bank Sync cards and connection rows, and the connection rows in
+`settings/providers/_<x>_panel` — rather than a hand-built badge or the first letter of a
+connection name. A panel's setup form and instructions carry no logo.
+
+Give each new provider a registry entry with a brand domain. Only a provider with no single
+brand behind it (on-chain wallets) omits the domain and sets `logo_icon` instead.
+Institution logos are a separate concept and belong on accounts through
+`Account#logo_url`, never on a provider.
+
 ## Support diagnostics
 
 When a provider sync/import path encounters a recoverable error, suspicious partial
@@ -33,6 +49,7 @@ metadata produces no badge; manual/CSV imports have no pending concept.
 | SimpleFIN | [`SimplefinEntry::Processor.pending?`](../../app/models/simplefin_entry/processor.rb) accepts an explicitly truthy `pending` flag, or `posted` equal to numeric `0` or string `"0"` with a present, positive `transacted_at` timestamp. A blank/missing `posted` value does **not** imply pending. Writes `extra["simplefin"]["pending"]` as true or false so a posted update clears stale pending metadata. |
 | Plaid | [`PlaidEntry::Processor`](../../app/models/plaid_entry/processor.rb) stores bank/credit transaction `pending` and `pending_transaction_id` under `extra["plaid"]`; the linking ID supports pending-to-posted reconciliation. The investment transaction processor does not store pending metadata. |
 | Lunchflow | [`LunchflowEntry::Processor`](../../app/models/lunchflow_entry/processor.rb) stores the boolean-cast `isPending` value under `extra["lunchflow"]["pending"]` when the upstream key is present. |
+| Monobank | [`MonobankEntry::Processor`](../../app/models/monobank_entry/processor.rb) treats a `hold: true` statement item as pending and writes `extra["monobank"]["pending"]`. Monobank may settle a hold under a *different* id, so the settled record reconciles onto the pending entry through [`Account::ProviderImportAdapter`](../../app/models/account/provider_import_adapter.rb)'s amount/date lookup. A hold that simply disappears is pruned, but only when the statement request actually covered its date range, and never when the entry is `protected_from_sync?` — those only lose the pending flag. `currencyCode` on a statement item is the **operation** currency, not the account's — it varies between items on one account — so entries take their currency from `MonobankAccount#currency` and `currencyCode`/`operationAmount` populate `fx_from`/`fx_amount`. Those two are emitted only for a recognized foreign operation — a known `currencyCode` differing from the account currency, and for `fx_amount` a parseable `operationAmount`, whose failure is captured as a `provider_sync_error`. Independently of that, `operation_amount` keeps the raw minor-unit figure whenever it differs from `amount`. |
 
 SimpleFIN additionally stores `extra["simplefin"]["fx_from"]` when transaction and
 account currencies differ, and `fx_date` from the transacted date with posted-date
@@ -67,6 +84,15 @@ Pending inclusion is provider- and layer-specific:
   that configuration as `include_pending:`. A direct [provider call](../../app/models/provider/lunchflow.rb)
   defaults the argument to false and adds `include_pending=true` only when enabled;
   it does not consult the shared SimpleFIN/Plaid setting.
+- **Monobank:** the [initializer](../../config/initializers/monobank.rb) defaults
+  `config.x.monobank.include_pending` to true; `MONOBANK_INCLUDE_PENDING=0` imports
+  only settled transactions. The same initializer bounds a sync against Monobank's
+  one-request-per-minute limit and 31-day statement window
+  (`max_statement_requests_per_sync`, `pending_lookback_days`,
+  `initial_history_days`); read [the hosting guide](../hosting/monobank.md) before
+  changing the [importer](../../app/models/monobank_item/importer.rb)'s request
+  budgeting, and keep the pending lookback wide enough that live holds stay in the
+  payload instead of being pruned as stale.
 
 ## Raw payload debugging
 
@@ -80,3 +106,15 @@ but its [importer](../../app/models/up_item/importer.rb) logs raw transactions o
 when `Rails.env.local?` is also true. The dump contains PII: preserve this local-only
 guard and do not enable raw Up dumps in managed/production. This guard is specific
 to Up; the SimpleFIN and Lunchflow flags do not provide the same environment gate.
+
+`MONOBANK_DEBUG_RAW=1` behaves like the Up flag: its
+[importer](../../app/models/monobank_item/importer.rb) dumps raw payloads only when
+`Rails.env.local?` is also true, because the dump contains PII (merchant and
+counterparty names, IBANs, amounts, account ids). Preserve that local-only guard.
+
+`FIO_DEBUG_RAW=1` has the same local-only guard in the
+[importer](../../app/models/fio_item/importer.rb). Fio additionally authenticates by
+putting the token in the **URL path**, so neither [the client](../../app/models/provider/fio.rb)
+nor the importer may put a resolved URL into an exception message, a log line or debug
+metadata; requests are labelled with a static operation name instead. Fio reports no
+pending state, so it is deliberately absent from `Transaction::PENDING_PROVIDERS`.

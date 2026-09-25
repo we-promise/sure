@@ -1,4 +1,14 @@
 class Account::ProviderImportAdapter
+  # Matches a transaction any provider has flagged pending, for the lookups below that
+  # join `transactions` directly. Derived from Transaction::PENDING_PROVIDERS rather
+  # than spelled out, so a newly supported provider cannot silently drop out of
+  # pending→posted reconciliation. Frozen constant built from a frozen provider list:
+  # no user input reaches the SQL (same reasoning as Transaction::PENDING_CHECK_SQL).
+  PENDING_LOOKUP_SQL = Transaction::PENDING_PROVIDERS
+    .map { |provider| "(transactions.extra -> '#{provider}' ->> 'pending')::boolean = true" }
+    .join(" OR ")
+    .freeze
+
   attr_reader :account, :skipped_entries
 
   def initialize(account)
@@ -25,8 +35,9 @@ class Account::ProviderImportAdapter
   # @param pending_transaction_id [String, nil] Plaid's linking ID for pending→posted reconciliation
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
+  # @param allow_heuristic_matching [Boolean] Claim likely duplicates using amount/date matching
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true)
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -83,7 +94,7 @@ class Account::ProviderImportAdapter
       # This handles the case where a user manually created or CSV imported a transaction
       # before linking their account to a provider
       # Note: We don't pass name here to allow matching even when provider formats names differently
-      if entry.new_record?
+      if entry.new_record? && allow_heuristic_matching
         duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
         if duplicate
           # Check if duplicate is protected - if so, link but don't modify
@@ -114,7 +125,7 @@ class Account::ProviderImportAdapter
 
         # PRIORITY 2: Fallback to EXACT amount match (for SimpleFIN and providers without linking IDs)
         # Only searches backward in time - pending date must be <= posted date
-        if pending_match.nil?
+        if pending_match.nil? && allow_heuristic_matching
           pending_match = find_pending_transaction(date: date, amount: amount, currency: currency, source: source)
           if pending_match
             Rails.logger.info("Reconciling pending→posted via exact amount match: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
@@ -224,8 +235,6 @@ class Account::ProviderImportAdapter
         auto_category = account.family.investment_contributions_category
       elsif account.accountable_type == "Loan" && amount.negative?
         auto_kind = "loan_payment"
-      elsif account.accountable_type == "CreditCard" && amount.negative?
-        auto_kind = "cc_payment"
       end
       auto_kind ||= kind.presence
 
@@ -262,7 +271,7 @@ class Account::ProviderImportAdapter
 
       # AFTER save: For NEW posted transactions, check for fuzzy matches to SUGGEST (not auto-claim)
       # This handles tip adjustments where auto-matching is too risky
-      if is_new_posted
+      if is_new_posted && allow_heuristic_matching
         # PRIORITY 1: Try medium-confidence fuzzy match (≤30% amount difference)
         fuzzy_suggestion = find_pending_transaction_fuzzy(
           date: date,
@@ -619,7 +628,7 @@ class Account::ProviderImportAdapter
   # @param security [Security] The security object
   # @param quantity [BigDecimal, Numeric] Number of shares (negative for sells, positive for buys)
   # @param price [BigDecimal, Numeric] Price per share
-  # @param amount [BigDecimal, Numeric] Total trade value
+  # @param amount [BigDecimal, Numeric] Total cash impact of the trade, fee included
   # @param currency [String] Currency code
   # @param date [Date, String] Trade date
   # @param name [String, nil] Optional custom name for the trade
@@ -627,8 +636,9 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name
   # @param activity_label [String, nil] Investment activity label (e.g., "Buy", "Sell", "Reinvestment")
   # @param exchange_rate [BigDecimal, Numeric, nil] Optional provider-supplied FX rate into the account currency
+  # @param fee [BigDecimal, Numeric, nil] Optional provider-reported transaction fee, already included in `amount`
   # @return [Entry] The created entry with trade
-  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil)
+  def import_trade(security:, quantity:, price:, amount:, currency:, date:, name: nil, external_id: nil, source:, activity_label: nil, exchange_rate: nil, fee: nil)
     raise ArgumentError, "security is required" if security.nil?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -669,6 +679,7 @@ class Account::ProviderImportAdapter
         investment_activity_label: activity_label || (quantity > 0 ? "Buy" : "Sell")
       }
       trade_attributes[:exchange_rate] = exchange_rate unless exchange_rate.nil?
+      trade_attributes[:fee] = fee unless fee.nil?
 
       entry.entryable.assign_attributes(trade_attributes)
 
@@ -788,23 +799,15 @@ class Account::ProviderImportAdapter
     # 4. Same currency
     # 5. Date within window (pending can post days later)
     # 6. Is a Transaction (not Trade or Valuation)
-    # 7. Has pending=true in transaction.extra["simplefin"]["pending"] or extra["plaid"]["pending"]
+    # 7. Has pending=true in transaction.extra[<provider>]["pending"] for any provider
+    #    in Transaction::PENDING_PROVIDERS
     candidates = account.entries
       .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
       .where(source: source)
       .where(amount: amount)
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
-      .where(<<~SQL.squish)
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'redbark' ->> 'pending')::boolean = true
-      SQL
+      .where(PENDING_LOOKUP_SQL)
       .order(date: :desc) # Prefer most recent pending transaction
 
     candidates.first
@@ -846,16 +849,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending ON or BEFORE posted
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
-      .where(<<~SQL.squish)
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'redbark' ->> 'pending')::boolean = true
-      SQL
+      .where(PENDING_LOOKUP_SQL)
 
     # If merchant_id is provided, prioritize matching by merchant
     if merchant_id.present?
@@ -920,16 +914,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date)
       .where("ABS(entries.amount) BETWEEN ? AND ?", min_pending_abs, max_pending_abs)
-      .where(<<~SQL.squish)
-        (transactions.extra -> 'simplefin' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'plaid' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'lunchflow' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'enable_banking' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'akahu' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'up' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'mercury' ->> 'pending')::boolean = true
-        OR (transactions.extra -> 'redbark' ->> 'pending')::boolean = true
-      SQL
+      .where(PENDING_LOOKUP_SQL)
 
     # For low confidence, require BOTH merchant AND name match (stronger signal needed)
     if merchant_id.present? && name.present?

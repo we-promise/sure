@@ -10,17 +10,17 @@
         }
       ) %>
   <div class="my-2" id="list" data-list-filter-target="list">
-    <% Current.family.assigned_merchants_for(Current.user).alphabetically.each do |merchant| %>
+    <% ([ Merchant.no_merchant ] + Current.family.assigned_merchants_for(Current.user).alphabetically).each do |merchant| %>
       <div class="filterable-item flex items-center gap-2 p-2" data-filter-name="<%= merchant.name %>">
         <%= form.check_box :merchants,
                            {
                              multiple: true,
-                             checked: @q[:merchants]&.include?(merchant.name),
+                             checked: @q[:merchants]&.include?(merchant.filter_value),
                              class: "checkbox checkbox--light"
                            },
-                           merchant.name,
+                           merchant.filter_value,
                            nil %>
-        <%= form.label :merchants, value: merchant.name, class: "text-sm text-primary flex items-center gap-2" do %>
+        <%= form.label :merchants, value: merchant.filter_value, class: "text-sm text-primary flex items-center gap-2" do %>
           <div class="hidden lg:flex">
             <% if merchant.logo_url.present? %>
               <%= image_tag Setting.transform_brand_fetch_url(merchant.logo_url),

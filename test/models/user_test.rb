@@ -321,7 +321,7 @@ class UserTest < ActiveSupport::TestCase
   test "ai_available? returns true when openai access token set in settings" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil, EXTERNAL_ASSISTANT_MODEL: nil do
       Setting.openai_access_token = nil
       assert_not @user.ai_available?
 
@@ -336,7 +336,7 @@ class UserTest < ActiveSupport::TestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
     @user.family.update!(assistant_type: "external")
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main" do
       Setting.openai_access_token = nil
       assert @user.ai_available?
     end
@@ -348,7 +348,7 @@ class UserTest < ActiveSupport::TestCase
   test "ai_available? returns false when external assistant is configured but family type is builtin" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main" do
       Setting.openai_access_token = nil
       assert_not @user.ai_available?
     end
@@ -360,7 +360,7 @@ class UserTest < ActiveSupport::TestCase
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
     @user.family.update!(assistant_type: "external")
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "other@example.com" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main", EXTERNAL_ASSISTANT_ALLOWED_EMAILS: "other@example.com" do
       Setting.openai_access_token = nil
       assert_not @user.ai_available?
     end
@@ -413,7 +413,7 @@ class UserTest < ActiveSupport::TestCase
   test "new member defaults show_ai_sidebar to false when AI is not available" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil, EXTERNAL_ASSISTANT_MODEL: nil do
       Setting.openai_access_token = nil
       user = User.new(
         family: families(:empty),
@@ -432,7 +432,7 @@ class UserTest < ActiveSupport::TestCase
   test "new admin defaults show_ai_sidebar to true even when AI is not available" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil, EXTERNAL_ASSISTANT_MODEL: nil do
       Setting.openai_access_token = nil
       user = User.new(
         family: families(:empty),
@@ -464,7 +464,7 @@ class UserTest < ActiveSupport::TestCase
   test "new guest defaults show_ai_sidebar to false when AI is not available" do
     Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
     previous = Setting.openai_access_token
-    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil do
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil, EXTERNAL_ASSISTANT_URL: nil, EXTERNAL_ASSISTANT_TOKEN: nil, EXTERNAL_ASSISTANT_MODEL: nil do
       Setting.openai_access_token = nil
       user = User.new(
         family: families(:empty),
@@ -718,6 +718,82 @@ class UserTest < ActiveSupport::TestCase
     assert_equal new_family, account.reload.family
     assert_equal new_family, plaid_item.reload.family
     assert_equal new_family, statement.reload.family
+
+    # The connection's owner has to follow it across, or it would be left
+    # pointing at a user in the family it just left.
+    assert_equal user, plaid_item.owner
+  end
+
+  test "transfer_to_family! moves unmapped FinanceKit items owned by the user" do
+    user = users(:family_member)
+    source_family = user.family
+    new_family = Family.create!(name: "Transferred FinanceKit Family")
+    user.update!(role: "admin", preferences: user.preferences.merge("preview_features_enabled" => true))
+    financekit_item = Financekit::Enrollment.create!(user, {
+      "enrollment_id" => SecureRandom.uuid,
+      "protocol_version" => Financekit::VERSION,
+      "consent" => {
+        "version" => 1,
+        "granted_at" => Time.current.iso8601,
+        "selected_source_account_ids" => [ SecureRandom.uuid ],
+        "upload_authorized" => true,
+        "family_visibility_acknowledged" => true,
+        "remote_processing_acknowledged" => true
+      }
+    }).item
+
+    user.transfer_to_family!(new_family, role: "admin")
+
+    assert_equal new_family, user.reload.family
+    assert_equal new_family, financekit_item.reload.family
+    assert financekit_item.pending_account_setup?
+    assert_not_equal source_family, financekit_item.family
+  end
+
+  test "transfer_to_family! rejects FinanceKit lineages mapped by another user" do
+    user = users(:family_member)
+    other_user = users(:family_admin)
+    source_family = user.family
+    new_family = Family.create!(name: "Rejected FinanceKit Family")
+    moved_account = Account.create!(family: source_family, owner: user, name: "Shared FinanceKit Checking",
+      balance: 100, currency: "USD", accountable: Depository.new(subtype: "checking"))
+    AccountShare.create!(account: moved_account, user: other_user, permission: "full_control")
+    other_user.update!(preferences: other_user.preferences.merge("preview_features_enabled" => true))
+    source_id = SecureRandom.uuid
+    financekit_item = Financekit::Enrollment.create!(other_user, {
+      "enrollment_id" => SecureRandom.uuid,
+      "protocol_version" => Financekit::VERSION,
+      "consent" => {
+        "version" => 1,
+        "granted_at" => Time.current.iso8601,
+        "selected_source_account_ids" => [ source_id ],
+        "upload_authorized" => true,
+        "family_visibility_acknowledged" => true,
+        "remote_processing_acknowledged" => true
+      }
+    }).item
+    FinancekitAccount.map!(financekit_item, source_id, {
+      "expected_version" => 0,
+      "action" => "link",
+      "account_id" => moved_account.id,
+      "name" => "Shared FinanceKit Checking",
+      "institution_name" => "Apple Wallet",
+      "currency" => "USD",
+      "accountable_type" => "Depository",
+      "subtype" => "checking",
+      "ledger_timezone" => "America/New_York"
+    })
+    financekit_item.activate!
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      user.transfer_to_family!(new_family, role: "admin")
+    end
+
+    assert_includes error.record.errors[:base], I18n.t("activerecord.errors.models.user.attributes.base.provider_item_has_other_accounts")
+    assert_equal source_family, user.reload.family
+    assert_equal source_family, moved_account.reload.family
+    assert_equal source_family, financekit_item.reload.family
+    assert_equal source_family, financekit_item.financekit_account_lineages.sole.reload.family
   end
 
   test "transfer_to_family! rejects provider items linked to accounts outside the transfer" do
@@ -962,6 +1038,53 @@ class UserTest < ActiveSupport::TestCase
     end
   end
 
+  test "purging an impersonated user nullifies the admin's active_impersonator_session instead of failing" do
+    admin = users(:sure_support_staff)
+    target = users(:family_member)
+    impersonation = ImpersonationSession.create!(impersonator: admin, impersonated: target, status: :in_progress)
+    admin_session = admin.sessions.create!(active_impersonator_session: impersonation)
+
+    # UserPurgeJob may run before the admin's next request notices the
+    # target is gone — dependent: :destroy on User#impersonated_support_sessions
+    # destroys the ImpersonationSession row underneath the admin's still-live
+    # Session. Without ON DELETE SET NULL on that FK, this raises
+    # ActiveRecord::InvalidForeignKey instead of completing the purge.
+    perform_enqueued_jobs do
+      target.purge
+    end
+
+    assert_not User.exists?(target.id)
+    assert_nil admin_session.reload.active_impersonator_session_id
+  end
+
+  test "with_active_lock! rejects an inactive user without yielding" do
+    @user.update_column(:active, false)
+    yielded = false
+
+    assert_raises(User::InactiveError) do
+      @user.with_active_lock! { yielded = true }
+    end
+
+    assert_not yielded
+  end
+
+  test "with_active_lock! translates RecordNotFound only when the lock itself can't find the row" do
+    @user.stubs(:with_lock).raises(ActiveRecord::RecordNotFound)
+
+    assert_raises(User::InactiveError) do
+      @user.with_active_lock! { flunk "should not yield when the row can't be locked" }
+    end
+  end
+
+  test "with_active_lock! does not misreport a RecordNotFound raised inside the yielded block" do
+    # A failure unrelated to the user's own activity status (e.g. resolving
+    # some other record inside the caller's block) must propagate as-is,
+    # not get swallowed into "this user is inactive".
+    assert_raises(ActiveRecord::RecordNotFound) do
+      @user.with_active_lock! { raise ActiveRecord::RecordNotFound, "unrelated record missing" }
+    end
+  end
+
   test "deactivate refuses the last active super admin" do
     family = Family.create!(name: "Sole admin family", locale: "en", date_format: "%m-%d-%Y", currency: "USD")
     target = User.create!(
@@ -1016,5 +1139,45 @@ class UserTest < ActiveSupport::TestCase
     admin2.update!(role: :super_admin)
 
     assert admin1.update(role: :member)
+  end
+
+  test "deactivating a user revokes their API keys, access tokens, and authorization grants" do
+    user = users(:family_member)
+    api_key = ApiKey.create!( # pipelock:ignore
+      user: user,
+      name: "Test Key",
+      display_key: "test_revoke_key_#{SecureRandom.hex(8)}",
+      scopes: [ "read" ]
+    )
+    app = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}",
+      redirect_uri: "https://example.com/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+    # An unexchanged authorization code — the step before a token is minted,
+    # which /oauth/token would otherwise still accept post-deactivation.
+    grant = Doorkeeper::AccessGrant.create!(
+      application: app,
+      resource_owner_id: user.id,
+      redirect_uri: app.redirect_uri,
+      expires_in: 10.minutes,
+      scopes: "read_write"
+    )
+
+    assert api_key.active?
+    assert_nil token.revoked_at
+    assert_nil grant.revoked_at
+
+    user.deactivate
+
+    assert api_key.reload.revoked?
+    assert token.reload.revoked_at.present?
+    assert grant.reload.revoked_at.present?
   end
 end

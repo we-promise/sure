@@ -98,7 +98,10 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
   test "imports STANDARD balances and creates WiseAccount records" do
     provider = FakeWiseProvider.new
 
-    result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    result = nil
+    assert_no_difference -> { DebugLogEntry.where(provider_key: "wise").count } do
+      result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+    end
 
     assert result[:success]
     assert_equal 1, result[:accounts_created]
@@ -505,6 +508,20 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
 
     assert_equal 1, jar.raw_transactions_payload.size
     assert_empty standard.raw_transactions_payload.select { |a| a["type"] == "BALANCE_CASHBACK" }
+  end
+
+  test "stops activity pagination when Wise repeats a cursor" do
+    activity = build_interbalance("To <strong>Jar</strong>", resource_id: "5001")
+    repeated_cursor = "repeated-cursor"
+    provider = FakeWiseProvider.new
+    provider.define_singleton_method(:get_activities) do |_profile_id, cursor: nil, size: 100|
+      calls << :get_activities
+      { "activities" => Array.new(size, activity), "cursor" => repeated_cursor }
+    end
+
+    WiseItem::Importer.new(@wise_item, wise_provider: provider).import
+
+    assert_equal 2, provider.calls.count(:get_activities)
   end
 
   # Returns failed result when balances fetch fails

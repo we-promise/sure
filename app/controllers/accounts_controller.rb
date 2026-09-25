@@ -3,6 +3,7 @@ class AccountsController < ApplicationController
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
   before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
+  before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
   def index
@@ -13,12 +14,18 @@ class AccountsController < ApplicationController
           .with_attached_logo
           .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
+    @financekit_accounts = Current.family.accounts
+      .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
+      .joins(:account_providers).where(account_providers: { provider_type: "FinancekitAccountLineage" })
+      .distinct.with_attached_logo.includes(:accountable, account_providers: :provider).order(:name)
     @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:plaid_accounts))
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.with_attached_logo)
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
     @redbark_items = visible_provider_items(family.redbark_items.ordered.with_attached_logo.includes(:redbark_accounts))
     @akahu_items = visible_provider_items(family.akahu_items.ordered.with_attached_logo.includes(:akahu_accounts))
     @up_items = visible_provider_items(family.up_items.ordered.with_attached_logo.includes(:up_accounts))
+    @monobank_items = visible_provider_items(family.monobank_items.ordered.with_attached_logo.includes(:monobank_accounts))
+    @fio_items = visible_provider_items(family.fio_items.active.ordered.with_attached_logo.includes(:fio_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts))
     @mercury_items = visible_provider_items(family.mercury_items.ordered.with_attached_logo.includes(:mercury_accounts))
@@ -33,6 +40,8 @@ class AccountsController < ApplicationController
     )
     @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))
     @kraken_items = visible_provider_items(family.kraken_items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts))
+    @coinspot_items = visible_provider_items(family.coinspot_items.ordered.with_attached_logo.includes(:coinspot_accounts, :accounts))
+    @trading212_items = visible_provider_items(family.trading212_items.ordered.with_attached_logo.includes(:trading212_accounts)).sort_by(&:created_at)
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
     @trade_republic_items = visible_provider_items(
@@ -228,19 +237,13 @@ class AccountsController < ApplicationController
   end
 
   def confirm_unlink
-    unless @account.linked?
-      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
-    end
   end
 
   def unlink
-    unless @account.linked?
-      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
-      return
-    end
-
     begin
       Account.transaction do
+        @account.provider_account_for("FinancekitAccountLineage")&.disconnect!
+
         # Detach holdings from provider links before destroying them
         provider_link_ids = @account.account_providers.pluck(:id)
         if provider_link_ids.any?
@@ -255,7 +258,7 @@ class AccountsController < ApplicationController
         # This follows the Plaid pattern where the provider account survives as "unlinked".
         # SnapTrade has limited connection slots (5 free), so preserving the record avoids
         # wasting a slot on reconnect.
-        @account.account_providers.destroy_all
+        @account.account_providers.reload.destroy_all
 
         # Remove legacy system links (foreign keys)
         @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
@@ -309,6 +312,12 @@ class AccountsController < ApplicationController
   end
 
   private
+    def ensure_linked_account
+      return if @account.linked?
+
+      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
+    end
+
     def family
       Current.family
     end
@@ -343,9 +352,24 @@ class AccountsController < ApplicationController
     end
 
     def visible_provider_items(items)
+      accessible_ids = @accessible_account_ids.to_a
+
       items.select do |item|
-        Current.user.admin? ||
-          (item.respond_to?(:accounts) && (item.accounts.map(&:id) & @accessible_account_ids).any?)
+        next true if Current.user.admin?
+
+        account_ids = item.respond_to?(:accounts) ? item.accounts.map(&:id) : []
+
+        # Ownership shows a member their own connection, importantly including
+        # one just created that has not synced any accounts yet. It must not
+        # widen what they can see: the card renders the item's accounts
+        # unfiltered, and is re-rendered by a family-wide broadcast with no
+        # viewer, so an owner is shown the card only while every account on it
+        # is already accessible to them.
+        if item.respond_to?(:owned_by?) && item.owned_by?(Current.user)
+          next true if (account_ids - accessible_ids).empty?
+        end
+
+        (account_ids & accessible_ids).any?
       end
     end
 
@@ -357,6 +381,8 @@ class AccountsController < ApplicationController
         @redbark_items,
         @akahu_items,
         @up_items,
+        @monobank_items,
+        @fio_items,
         @enable_banking_items,
         @coinstats_items,
         @mercury_items,
@@ -368,13 +394,15 @@ class AccountsController < ApplicationController
         @sophtron_items,
         @binance_items,
         @kraken_items,
+        @coinspot_items,
+        @trading212_items,
         @questrade_items,
         @wise_items,
         @trade_republic_items,
         @onchain_wallet_items
       ].flatten.compact
 
-      accounts = @manual_accounts.to_a
+      accounts = @manual_accounts.to_a + @financekit_accounts.to_a
       items.each do |item|
         next unless item.respond_to?(:accounts)
         accounts.concat(item.accounts)
@@ -503,6 +531,13 @@ class AccountsController < ApplicationController
         @up_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
+      # Monobank sync stats
+      @monobank_sync_stats_map = {}
+      @monobank_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @monobank_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
       # Enable Banking sync stats
       @enable_banking_sync_stats_map = {}
       @enable_banking_latest_sync_error_map = {}
@@ -625,6 +660,13 @@ class AccountsController < ApplicationController
       @wise_items.each do |item|
         latest_sync = item.latest_sync_record
         @wise_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Fio sync stats
+      @fio_sync_stats_map = {}
+      @fio_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @fio_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
     end
 end

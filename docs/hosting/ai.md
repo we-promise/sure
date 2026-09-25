@@ -755,6 +755,9 @@ an account roster and category names. The roster collapses to counts beyond
 25 accounts, categories beyond 60 names, and both collapse whenever the
 configured context window is below 4096 tokens.
 
+A family admin can replace the static half from **Settings → AI Prompts**
+without a redeploy; see [Custom System Prompts](#custom-system-prompts).
+
 ### Adding a New Assistant Type
 
 To add a custom assistant implementation:
@@ -1287,18 +1290,68 @@ byte-identical on every request (providers cache and discount an
 exactly-repeated prefix), and a trailing `## Session context` block holding
 everything volatile (date, currency, account roster, categories).
 
-To customize:
-1. Fork the repository
-2. Edit the `STATIC_INSTRUCTIONS` constant (keep customizations there so the
-   prompt stays cacheable; only put genuinely per-request data in the session
-   context builders)
-3. Rebuild and deploy
-
 **What you can customize:**
 - Tone and personality
 - Response format
 - Rules and constraints
 - Domain expertise
+
+#### In the browser (per family, no redeploy)
+
+A family admin can edit the prompts at **Settings → AI Prompts**. Overrides are
+stored per family, so one family's edits never affect another on the same
+deployment. Five prompts are editable: the chat system prompt, plus the
+transaction categorizer and merchant detector for each of OpenAI and Anthropic.
+Those last two are worded independently per provider, which is why each gets its
+own field.
+
+Each field opens with its built-in default instructions, or the family override
+if one was saved. Leaving a field blank falls back to the default, and clicking
+**Reset to default** asks for confirmation before restoring the original text.
+A status label and live character counter sit below each field, with an override
+cap of 20,000 characters per prompt.
+
+The categorizer and merchant detector ship two OpenAI variants: a terse one for
+smaller local models and a detailed one written for larger models. A single
+override replaces both, so on a deployment pointed at a custom endpoint
+(`OPENAI_URI_BASE` set) those fields open with the terse variant your models
+receive.
+
+Overriding the chat prompt gives up some prompt caching. The static half is
+byte-stable so providers discount the repeated prefix; a family that overrides it
+gets its own prefix, which no longer shares a cache entry with other families on
+the same API key. The first request after each edit also pays full price. The
+result is a small, temporary increase in cost.
+
+Evals always score the default. `Eval::Runners::ChatRunner` reads
+`STATIC_INSTRUCTIONS` directly, which keeps eval scores reproducible. Editing a
+family's prompt does not change them.
+
+Custom OpenAI-compatible endpoints need a little more care. The categorizer and
+merchant parsers look for a `{"categorizations": [...]}` or `{"merchants": [...]}`
+wrapper key, but Sure also asks for that key in a per-request message your
+override does not replace, so rewording or dropping the example JSON is safe on
+its own. Parsing breaks when an override *contradicts* the output format:
+asking for reasoning before the answer, a different wrapper key, YAML, or tags
+around the result. Smaller local models tend to follow the system prompt over
+the per-request one. Because of that, the editor still warns when a custom
+OpenAI override drops the example JSON: the request-level fallback usually
+covers it, but the warning is a precaution for models that don't fall back
+that way.
+
+That risk applies to every mode except a strict schema the endpoint honors:
+`none` applies no constraint, `json_object` guarantees JSON but not the shape,
+and `auto` (the default) retries in `none` mode once more than half the results
+come back empty. Native OpenAI (strict schema) and Anthropic (forced tool use)
+enforce the shape server-side.
+
+#### In code (the default every family starts from)
+
+1. Fork the repository
+2. Edit the `STATIC_INSTRUCTIONS` constant (keep customizations there so the
+   prompt stays cacheable; only put genuinely per-request data in the session
+   context builders)
+3. Rebuild and deploy
 
 ### Function Calling
 
@@ -1631,6 +1684,29 @@ throttle('chats/create', limit: 10, period: 1.minute) do |req|
 end
 ```
 
+## External chat assistant
+
+The External assistant delegates chat to a remote OpenAI-compatible agent gateway. It is separate from the Builtin LLM provider described above.
+
+Configure it in **Settings → Self-Hosting → AI Assistant**, or with:
+
+```bash
+ASSISTANT_TYPE=external
+EXTERNAL_ASSISTANT_URL=https://your-agent-host/v1/chat/completions
+EXTERNAL_ASSISTANT_TOKEN=your-gateway-token # pipelock:ignore
+EXTERNAL_ASSISTANT_MODEL=openclaw/main
+```
+
+Configuration behavior:
+
+- `EXTERNAL_ASSISTANT_URL` is the full chat-completions endpoint. Sure sends requests to this URL verbatim; it does not append `/v1/chat/completions`.
+- The Settings form requires an agent selection. After the URL and token are saved, Sure requests the sibling `/v1/models` endpoint and shows the returned entries as agent choices. If you change the endpoint or token and the previously selected agent is not offered there, Sure saves the new connection and asks you to pick an agent again.
+- The selected value is sent as the OpenAI-compatible `model` routing value, such as `openclaw/main`. This selects an external agent. It does not select or change the LLM configured behind that agent.
+- The gateway must return standard streaming chat-completion events (`choices[0].delta.content`) followed by `data: [DONE]`.
+- An authentication, endpoint, or agent-selection failure comes from the external gateway. Check the gateway's response and logs when Sure reports an HTTP error.
+
+Upgrading: deployments that set only the URL and token keep working. When no agent is selected, Sure uses `openclaw/main`, which matches the previous implicit `main` agent. `EXTERNAL_ASSISTANT_AGENT_ID` is still read for existing deployments and maps to `openclaw/<id>` until an agent is selected. Once a model is selected in Settings or with `EXTERNAL_ASSISTANT_MODEL`, the agent routing header always follows that model. New configurations should use `EXTERNAL_ASSISTANT_MODEL`.
+
 ## Resources
 
 - [OpenAI Documentation](https://platform.openai.com/docs)
@@ -1652,4 +1728,4 @@ For issues with AI features:
 
 ---
 
-**Last Updated:** August 2026
+**Last Updated:** September 2026
