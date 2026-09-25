@@ -193,6 +193,20 @@ class TransferTest < ActiveSupport::TestCase
     refute transfer.categorizable?
   end
 
+  test "categorizable? bases on destination account even if the outflow's kind is stale" do
+    # Account::ProviderImportAdapter can reassign an already-matched leg's
+    # kind on a later sync without touching its Transfer. Simulate a stale
+    # "funds_movement" kind left on the outflow of an investment_contribution
+    # transfer -- categorizable? must still key off to_account, not the kind.
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "investment_contribution")
+
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    outflow_entry.transaction.update_column(:kind, "funds_movement")
+
+    assert transfer.reload.categorizable?
+  end
+
   test "has_source_fee? returns true when source fee present" do
     transfer = transfers(:one)
     entry = accounts(:depository).entries.create!(name: "Fee", date: Date.current, amount: 5, currency: "USD", entryable: Transaction.new(kind: "standard"))

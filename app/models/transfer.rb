@@ -91,8 +91,15 @@ class Transfer < ApplicationRecord
     "transfer"
   end
 
+  # Based on the destination account rather than outflow_transaction.kind:
+  # Account::ProviderImportAdapter can overwrite an already-matched leg's
+  # kind on a later sync without touching this Transfer, and to_account is
+  # stable across that (see Transaction#payment?, which has the same
+  # to_account-based reasoning for the same class of staleness).
   def categorizable?
-    !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(outflow_transaction&.kind)
+    return true unless to_account
+
+    !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(Transfer.kind_for_account(to_account))
   end
 
   def reject!
