@@ -8,12 +8,17 @@
 # sub-account transfers (type="transfer") and margin events (type="margin",
 # "rollover", "settled") are also skipped.
 #
-# Sign convention (Sure): negative = inflow/income, positive = outflow/expense.
-# Deposits and rewards are negative; withdrawals and fees are positive.
+# Fiat entries are cash and become Transactions, with Sure's sign convention:
+# negative = inflow/income, positive = outflow/expense, so deposits and rewards
+# are negative and withdrawals and fees positive.
+#
+# Crypto entries are not cash. They move units, so they become Trades carrying a
+# quantity and the price on the day, with a zero amount -- see
+# process_crypto_ledger_entry.
 class KrakenAccount::LedgerProcessor
   include KrakenAccount::UsdConverter
 
-  # Ledger types we import as Transaction entries.
+  # Ledger types we import.
   SUPPORTED_TYPES = %w[deposit withdrawal staking earn fee].freeze
 
   # Types whose fee is charged on top of a movement with an external counterparty,
@@ -46,6 +51,8 @@ class KrakenAccount::LedgerProcessor
                       .pluck(:external_id, :name, :user_modified)
     @existing_external_ids = existing.map(&:first).to_set
     @existing_principals = existing.to_h { |external_id, name, user_modified| [ external_id, [ name, user_modified ] ] }
+
+    warm_crypto_prices
 
     raw_ledgers.each do |ledger_id, ledger|
       process_ledger_entry(ledger_id, ledger)
@@ -109,11 +116,24 @@ class KrakenAccount::LedgerProcessor
       # Kraken's fee, and Transfer requires both legs to sum to zero, so folding the
       # fee in here makes the entry permanently unmatchable. Other ledger types have
       # no counterparty to reconcile against and keep the combined figure.
-      split_fee = SPLIT_FEE_TYPES.include?(type) && !raw_fee.zero?
+      normalized  = normalizer.normalize(raw_asset)
+      symbol      = normalized[:symbol]
+      base_symbol = normalized[:price_symbol]
+      fiat        = fiat?(base_symbol)
+
+      # A crypto fee is paid in the units themselves, so it only reduces the
+      # quantity; there is no second cash movement to split out.
+      split_fee = fiat && SPLIT_FEE_TYPES.include?(type) && !raw_fee.zero?
       abs_impact = split_fee ? raw_amount.abs : (raw_amount - raw_fee).abs
 
-      normalized = normalizer.normalize(raw_asset)
-      symbol     = normalized[:symbol]
+      unless fiat
+        process_crypto_ledger_entry(
+          external_id: external_id, ledger_id: ledger_id, ledger: ledger, type: type,
+          raw_asset: raw_asset, base_symbol: base_symbol, symbol: symbol,
+          qty: abs_impact, date: date
+        )
+        return
+      end
 
       # The principal is in from an earlier pass, or there is none: a correction
       # row can carry a fee against a zero amount. Either way the fee is checked
@@ -156,6 +176,107 @@ class KrakenAccount::LedgerProcessor
       @existing_external_ids << external_id
 
       process_ledger_fee(external_id, ledger_id, ledger, raw_fee, symbol, date) if split_fee
+    end
+
+    # Crypto moves units, not cash. A staking reward does not put euros in the
+    # account -- it puts coins in it -- and a deposit or withdrawal of coin is a
+    # position change with no cash leg at all. Recorded as a Transaction the
+    # quantity is lost entirely, so Holding::ReverseCalculator has nothing to
+    # reverse and carries today's position backwards through history, while the
+    # cash balance moves by an amount that never existed.
+    #
+    # `amount` is deliberately zero: Balance::BaseCalculator classifies a trade by
+    # its amount regardless of label, so anything else would reintroduce the
+    # phantom cash. The units and their price carry the value instead.
+    def process_crypto_ledger_entry(external_id:, ledger_id:, ledger:, type:, raw_asset:, base_symbol:, symbol:, qty:, date:)
+      security = resolve_security(base_symbol)
+      return unless security
+
+      price, price_missing = unit_price_on(security, base_symbol, date)
+      signed_qty = inflow?(type) ? qty.abs : -qty.abs
+
+      account.entries.create!(
+        date: date,
+        name: build_name(type, qty, symbol),
+        amount: 0,
+        currency: target_currency,
+        external_id: external_id,
+        source: "kraken",
+        entryable: Trade.new(
+          security: security,
+          qty: signed_qty,
+          price: price,
+          currency: target_currency,
+          investment_activity_label: crypto_activity_label(type),
+          extra: build_extra(ledger_id, ledger, raw_asset, price_missing)
+        )
+      )
+
+      @existing_external_ids << external_id
+    end
+
+    # A coin arriving from outside has a cost nothing here knows, so it is a
+    # Transfer and the basis becomes unknown from that date -- the same treatment
+    # an inbound share transfer already gets. A reward is acquired at the market
+    # price on the day, which is both its basis and the income it represents.
+    def crypto_activity_label(type)
+      case type
+      when "deposit", "withdrawal" then Trade::TRANSFER_LABEL
+      when "staking"               then "Dividend"
+      when "earn"                  then "Interest"
+      when "fee"                   then "Fee"
+      end
+    end
+
+    def fiat?(base_symbol)
+      KrakenAccount::FIAT_CURRENCIES.include?(base_symbol.to_s.upcase)
+    end
+
+    # One bulk request per asset for the span the ledger covers, the same call
+    # MarketDataImporter makes, so that the per-entry lookup below is a
+    # database read. Left to find_or_fetch_price it was one provider request
+    # per entry -- thousands on a first import.
+    def warm_crypto_prices
+      spans = {}
+      raw_ledgers.each_value do |ledger|
+        next unless SUPPORTED_TYPES.include?(ledger["type"].to_s.downcase)
+
+        base_symbol = normalizer.normalize(ledger["asset"].to_s)[:price_symbol]
+        next if base_symbol.blank? || fiat?(base_symbol)
+
+        date = Time.zone.at(ledger["time"].to_d).to_date
+        span = (spans[base_symbol] ||= [ date, date ])
+        span[0] = date if date < span[0]
+        span[1] = date if date > span[1]
+      end
+
+      spans.each do |base_symbol, (from, to)|
+        security = resolve_security(base_symbol)
+        security&.import_provider_prices(start_date: from, end_date: to)
+      rescue StandardError => e
+        Rails.logger.warn "KrakenAccount::LedgerProcessor - could not warm prices for #{base_symbol}: #{e.message}"
+      end
+    end
+
+    def resolve_security(base_symbol)
+      KrakenAccount::SecurityResolver.resolve("CRYPTO:#{base_symbol}", base_symbol)
+    end
+
+    # The price on the day the units moved, not the price today. Falls back to
+    # the balance snapshot's price, which is what the whole processor used to
+    # use, and flags the entry so the staleness is visible in `extra`.
+    def unit_price_on(security, base_symbol, date)
+      price = security.prices.find_by(date: date)
+      if price&.price.present?
+        converted = Money.new(price.price, price.currency).exchange_to(target_currency).amount
+        return [ converted, false ]
+      end
+
+      fallback, = resolve_amount(1.to_d, base_symbol, date)
+      [ fallback || 0, true ]
+    rescue StandardError
+      fallback, = resolve_amount(1.to_d, base_symbol, date)
+      [ fallback || 0, true ]
     end
 
     # Kraken's fee is always a cost, so it is an outflow whichever way the principal
