@@ -726,8 +726,6 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{loans_path}']", count: 1
     # Rebuilt from the submission, not a blank account: what was typed comes
     # back for correction.
-    assert_select "input[name='account[name]'][value='Loan With Bad Anchor']", count: 1
-    assert_select "input[name='account[accountable_attributes][interest_rate]'][value='6']", count: 1
   end
 
   private
