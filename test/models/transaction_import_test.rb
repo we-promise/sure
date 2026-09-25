@@ -187,6 +187,11 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal [ "Food|Dining", "essentials" ], Import::Row.new(tags: "Food\\|Dining|essentials").tags_list
   end
 
+  test "category_id returns nil when the import row has no category" do
+    assert_nil Import::Row.new(category: nil).category_id
+    assert_nil Import::Row.new(category: "").category_id
+  end
+
   test "does not create duplicate when matching transaction exists with same name" do
     account = accounts(:depository)
 

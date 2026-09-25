@@ -23,7 +23,7 @@ class Import::Row < ApplicationRecord
   # the import mapping still stores category names. Keep the row's existing
   # string representation in sync with the selected category ID.
   def category_id
-    category_name = category.to_s.split(":", 2).last.strip
+    category_name = category.to_s.split(":", 2).last.to_s.strip
     return if category_name.blank?
 
     import.family.categories.find_by(name: category_name)&.id
