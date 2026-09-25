@@ -28,12 +28,3 @@ en:
       treat_balance_as_available_credit_label: Balance is available credit
     new:
       title: Enter credit card details
-    overview:
-      amount_owed: Amount Owed
-      annual_fee: Annual Fee
-      apr: APR
-      available_credit: Available Credit
-      edit_account_details: Edit account details
-      expiration_date: Expiration Date
-      minimum_payment: Minimum Payment
-      unknown: Unknown
