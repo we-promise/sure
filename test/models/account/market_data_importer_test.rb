@@ -62,6 +62,23 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
            "Inverse rates should be computed automatically"
   end
 
+  test "imports account exchange rates into the primary currency when the family currency is blank" do
+    family = Family.create!(name: "Smith", currency: "")
+
+    account = family.accounts.create!(
+      name: "Chequing",
+      currency: "CAD",
+      balance: 100,
+      accountable: Depository.new
+    )
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "CAD", to: "USD", start_date: anything, end_date: anything)
+             .returns(provider_success_response([]))
+
+    Account::MarketDataImporter.new(account).import_all
+  end
+
   test "syncs security prices for securities traded by the account" do
     family = Family.create!(name: "Smith", currency: "USD")
 

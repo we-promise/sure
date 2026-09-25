@@ -28,7 +28,7 @@ class Account::MarketDataImporter
 
     # 2. ACCOUNT-BASED PAIR – convert the account currency to the family currency (if different)
     if foreign_account?
-      key = [ account.currency, account.family.currency ]
+      key = [ account.currency, account.family.primary_currency_code ]
       pair_dates[key] = [ pair_dates[key], account.start_date ].compact.min
     end
 
@@ -122,6 +122,6 @@ class Account::MarketDataImporter
 
     def foreign_account?
       return false if account.family.nil?
-      account.currency != account.family.currency
+      account.currency != account.family.primary_currency_code
     end
 end
