@@ -119,5 +119,3 @@ uk:
         round_up: Round up
         buy: Купівля
         sell: Продаж
-        buy_trade_name: "Купівля %{quantity} акцій %{instrument}"
-        sell_trade_name: "Продаж %{quantity} акцій %{instrument}"

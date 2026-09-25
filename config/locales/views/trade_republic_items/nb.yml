@@ -79,5 +79,3 @@ nb:
         round_up: Round up
         buy: Kjøp
         sell: Salg
-        buy_trade_name: "Kjøp av %{quantity} aksjer i %{instrument}"
-        sell_trade_name: "Salg av %{quantity} aksjer i %{instrument}"

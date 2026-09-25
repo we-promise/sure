@@ -105,5 +105,3 @@ zh-CN:
         round_up: Round up
         buy: 买入
         sell: 卖出
-        buy_trade_name: "买入 %{quantity} 份 %{instrument}"
-        sell_trade_name: "卖出 %{quantity} 份 %{instrument}"

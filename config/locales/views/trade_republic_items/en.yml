@@ -176,5 +176,3 @@ en:
         round_up: Round up
         buy: Buy
         sell: Sell
-        buy_trade_name: "Buy %{quantity} shares of %{instrument}"
-        sell_trade_name: "Sell %{quantity} shares of %{instrument}"

@@ -105,5 +105,3 @@ es:
         round_up: Round up
         buy: Compra
         sell: Venta
-        buy_trade_name: "Compra de %{quantity} acciones de %{instrument}"
-        sell_trade_name: "Venta de %{quantity} acciones de %{instrument}"

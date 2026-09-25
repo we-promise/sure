@@ -537,13 +537,9 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     def build_trade_name(provider_name, security, signed_quantity)
       name = provider_name.presence || security.name.presence || security.ticker
-      instrument = name.casecmp?(security.ticker) ? name : "#{name} (#{security.ticker})"
       quantity = signed_quantity.abs.to_s("F").sub(/\.0+\z/, "")
-      key = signed_quantity.negative? ? "sell_trade_name" : "buy_trade_name"
-      locale = @trade_republic_account.trade_republic_item.family.locale.presence || I18n.default_locale
+      return "#{security.ticker} · #{quantity}x" if name.casecmp?(security.ticker)
 
-      I18n.with_locale(locale) do
-        t(key, quantity: ActiveSupport::NumberHelper.number_to_delimited(quantity), instrument: instrument)
-      end
+      "#{security.ticker} · #{quantity}x #{name}"
     end
 end

@@ -105,5 +105,3 @@ vi:
         round_up: Round up
         buy: Mua
         sell: Bán
-        buy_trade_name: "Mua %{quantity} cổ phiếu %{instrument}"
-        sell_trade_name: "Bán %{quantity} cổ phiếu %{instrument}"
