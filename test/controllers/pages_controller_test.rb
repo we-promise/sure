@@ -144,6 +144,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_includes sankey_data.fetch("nodes").map { |node| node.fetch("id") }, "cash_flow_node"
     assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
+    sankey_data.fetch("links").each do |link|
+      assert_kind_of Numeric, link.fetch("percentage"), "Sankey comparison requires JSON numbers"
+    end
   end
 
   test "a refund suppresses only its own parent category subcategories in the sankey" do
@@ -168,6 +171,9 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes ids, "expense_sub_#{clothing.id}"
     assert_not_includes ids, "income_sub_#{clothing.id}"
     assert data.fetch("links").all? { |link| link.fetch("value").positive? }
+    data.fetch("links").each do |link|
+      assert_kind_of Numeric, link.fetch("percentage"), "Refund periods must also produce numeric percentages"
+    end
   end
 
   test "dashboard sankey nodes carry a stable filter_value, including opposite-direction subcategories" do

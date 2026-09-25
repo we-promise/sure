@@ -47,14 +47,14 @@ class Transaction::RefundableTest < ActiveSupport::TestCase
 
     assert_equal categories(:food_and_drink), @credit.transaction.reload.category
     assert_not @credit.transaction.locked?(:category_id)
-    @credit.transaction.enrich_attribute(:category_id, categories(:one).id, source: "test")
+    @credit.transaction.enrich_attribute(:category_id, categories(:one).id, source: "plaid")
     assert_equal categories(:one), @credit.transaction.reload.category
   end
 
   test "clearing a refund preserves the explicit classification against provider enrichment" do
     @credit.transaction.mark_as_refund!
     @credit.transaction.clear_refund!
-    @credit.transaction.enrich_attribute(:kind, "cc_payment", source: "test")
+    @credit.transaction.enrich_attribute(:kind, "cc_payment", source: "plaid")
 
     assert @credit.transaction.reload.standard?
   end
@@ -145,7 +145,7 @@ class Transaction::RefundableTest < ActiveSupport::TestCase
 
   test "manual refund classification is protected from provider enrichment" do
     @credit.transaction.mark_as_refund!(purchase: @purchase.transaction)
-    @credit.transaction.enrich_attribute(:kind, "standard", source: "test")
+    @credit.transaction.enrich_attribute(:kind, "standard", source: "plaid")
     assert @credit.transaction.reload.refund?
   end
 end

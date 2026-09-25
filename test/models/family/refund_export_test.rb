@@ -111,9 +111,11 @@ class Family::RefundExportTest < ActiveSupport::TestCase
 
   private
     def export_records
+      records = nil
       Zip::File.open_buffer(Family::DataExporter.new(@family).generate_export) do |zip|
-        zip.read("all.ndjson").lines.map { |line| JSON.parse(line) }
+        records = zip.read("all.ndjson").lines.map { |line| JSON.parse(line) }
       end
+      records
     end
 
     def restore_export

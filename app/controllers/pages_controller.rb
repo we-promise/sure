@@ -300,7 +300,7 @@ class PagesController < ApplicationController
       # Process net expense categories (flow: cash_flow -> parent -> subcategory)
       process_net_category_nodes(
         categories: net_totals.net_expense_categories,
-        total: net_totals.net_expense_categories.sum { |ct| [ ct.total, 0 ].max },
+        total: net_totals.net_expense_categories.sum { |ct| [ ct.total, 0 ].max }.to_f.round(2),
         prefix: "expense",
         net_subcategories_by_parent: net_subcategories_by_parent,
         add_node: add_node,
