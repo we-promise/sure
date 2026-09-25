@@ -7,6 +7,12 @@ module AccountableResource
     before_action :set_account, only: [ :show ]
     before_action :set_manageable_account, only: [ :edit, :update ]
     before_action :set_link_options, only: :new
+
+    # The new/edit dialogs are fetched into the "modal" turbo frame; Turbo
+    # discards everything outside the frame, so skip the application layout
+    # (which renders the account sidebar twice) for those requests. create/
+    # update are included for their validation-error re-renders.
+    layout -> { turbo_frame_request? ? false : "application" }, only: %i[new edit create update]
   end
 
   class_methods do
