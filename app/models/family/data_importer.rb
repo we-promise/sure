@@ -501,10 +501,9 @@ class Family::DataImporter
 
     # ProviderMerchant rows share the :merchants id-mapping namespace with
     # Merchant, so Transaction/RecurringTransaction merchant_id resolution below
-    # needs no changes to accept either source. Unlike FamilyMerchant, a
-    # ProviderMerchant is shared across every family on the instance, so an
-    # existing match is reused as-is (only backfilling attributes it doesn't
-    # have yet) rather than overwritten with this export's data.
+    # needs no changes to accept either source. A ProviderMerchant is shared
+    # across every family on the instance, so an existing match is reused as-is:
+    # an import never writes to a record it did not create.
     def import_provider_merchants(records)
       records.each do |record|
         data = record["data"]
@@ -518,34 +517,29 @@ class Family::DataImporter
           next
         end
 
-        merchant = find_provider_merchant(data, source)
-        created = merchant.blank?
-
-        if created
-          merchant = ProviderMerchant.new(
-            name: data["name"],
-            source: source,
-            provider_merchant_id: data["provider_merchant_id"].presence,
-            color: data["color"],
-            logo_url: data["logo_url"],
-            website_url: data["website_url"]
-          )
-          merchant.save!
-        else
-          assign_if_blank(merchant, :logo_url, data["logo_url"].presence)
-          assign_if_blank(merchant, :website_url, data["website_url"].presence)
-          merchant.save! if merchant.changed?
-        end
+        merchant = ProviderMerchant.find_by_import_data(data, source)
+        merchant ||= create_provider_merchant(data, source)
+        created = merchant.previously_new_record?
 
         map_source!(:merchants, old_id, merchant)
         increment_summary("ProviderMerchant", created ? :created : :updated)
       end
     end
 
-    def find_provider_merchant(data, source)
-      provider_merchant_id = data["provider_merchant_id"].presence
-      by_provider_id = ProviderMerchant.find_by(provider_merchant_id: provider_merchant_id, source: source) if provider_merchant_id
-      by_provider_id || ProviderMerchant.find_by(name: data["name"], source: source)
+    # The savepoint keeps a lost race from aborting the surrounding import transaction.
+    def create_provider_merchant(data, source)
+      ProviderMerchant.transaction(requires_new: true) do
+        ProviderMerchant.create!(
+          name: data["name"],
+          source: source,
+          provider_merchant_id: data["provider_merchant_id"].presence,
+          color: data["color"],
+          logo_url: data["logo_url"],
+          website_url: data["website_url"]
+        )
+      end
+    rescue ActiveRecord::RecordNotUnique
+      ProviderMerchant.find_by_import_data(data, source)
     end
 
     def import_recurring_transactions(records)

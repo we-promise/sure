@@ -4,6 +4,22 @@ class ProviderMerchant < Merchant
   validates :name, uniqueness: { scope: [ :source ] }
   validates :source, presence: true
 
+  def self.find_by_import_data(data, source)
+    provider_merchant_id = data["provider_merchant_id"].presence
+    by_provider_id = find_by(provider_merchant_id: provider_merchant_id, source: source) if provider_merchant_id
+    by_provider_id || find_by(name: data["name"], source: source)
+  end
+
+  # color is deliberately not compared: nothing ever sets it on a ProviderMerchant.
+  def import_diff(data)
+    %w[website_url name].filter_map do |field|
+      imported_value = data[field].presence
+      next if imported_value.blank? || imported_value == self[field]
+
+      { field: field, imported_value: imported_value, kept_value: self[field] }
+    end
+  end
+
   # Convert this ProviderMerchant to a FamilyMerchant for a specific family.
   # Only affects transactions belonging to that family.
   # Returns the newly created FamilyMerchant.

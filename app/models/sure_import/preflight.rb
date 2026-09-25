@@ -22,6 +22,12 @@ class SureImport::Preflight
     def reused_taxonomy_count
       warnings.count { |warning| warning[:code] == "existing_taxonomy_collision" }
     end
+
+    # Shared ProviderMerchants that already exist with different details than the
+    # file carries. The existing record is kept as-is, so the user sees what differs.
+    def provider_merchant_diff_warnings
+      warnings.select { |warning| warning[:code] == "provider_merchant_diff" }
+    end
   end
 
   REQUIRED_FIELDS = {
@@ -110,6 +116,7 @@ class SureImport::Preflight
     validate_accountables
     validate_split_lines
     validate_references
+    validate_provider_merchant_diffs
     validate_duplicate_valuations
     Result.new(
       errors: @errors,
@@ -360,9 +367,35 @@ class SureImport::Preflight
       end
     end
 
+    def validate_provider_merchant_diffs
+      @records["ProviderMerchant"].each do |record|
+        data = record[:data]
+        source = data["source"].to_s
+        next unless ProviderMerchant.sources.key?(source)
+
+        diff = ProviderMerchant.find_by_import_data(data, source)&.import_diff(data)
+        next if diff.blank?
+
+        add_warning(
+          :provider_merchant_diff,
+          I18n.t(
+            "sure_import.preflight.provider_merchant_diff",
+            line: record[:line_number],
+            name: data["name"],
+            fields: diff.pluck(:field).join(", ")
+          ),
+          details: { merchant_name: data["name"], diff: diff }
+        )
+      end
+    end
+
     def blank_required_value?(value) = value.blank?
 
     def add_error(code, message) = @errors << { code: code.to_s, message: message }
 
-    def add_warning(code, message) = @warnings << { code: code.to_s, message: message }
+    def add_warning(code, message, details: nil)
+      warning = { code: code.to_s, message: message }
+      warning[:details] = details if details
+      @warnings << warning
+    end
 end

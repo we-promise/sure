@@ -844,6 +844,63 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal existing.id, entry.entryable.merchant_id
   end
 
+  test "provider merchant import never writes to an existing match, even when its fields are blank" do
+    existing = ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn")
+
+    attach_ndjson(provider_merchant_ndjson(
+      website_url: "https://amazon.com", logo_url: "https://cdn.example.com/amzn.png", color: "#123456"
+    ))
+
+    assert_no_difference -> { ProviderMerchant.count } do
+      @import.publish
+    end
+
+    assert_equal "complete", @import.status
+    existing.reload
+    assert_nil existing.website_url
+    assert_nil existing.logo_url
+    assert_nil existing.color
+    assert_equal existing.id, @family.entries.find_by!(name: "Amazon purchase").entryable.merchant_id
+  end
+
+  test "provider merchant import recovers when another import wins the creation race" do
+    winner = ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn")
+    attach_ndjson(provider_merchant_ndjson)
+
+    ProviderMerchant.stubs(:find_by_import_data).returns(nil).then.returns(winner)
+    ProviderMerchant.stubs(:create!).raises(ActiveRecord::RecordNotUnique.new("duplicate key"))
+
+    assert_no_difference -> { ProviderMerchant.count } do
+      @import.import!
+    end
+
+    assert_equal winner.id, @family.entries.find_by!(name: "Amazon purchase").entryable.merchant_id
+  end
+
+  test "preflight warns with the actual diff when an existing provider merchant differs from the file" do
+    ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn", website_url: "https://amazon.com")
+    attach_ndjson(provider_merchant_ndjson(website_url: "https://amazon.co.uk"))
+
+    result = @import.sure_preflight
+
+    assert result.valid?, result.error_message
+    assert_equal 1, result.provider_merchant_diff_warnings.size
+    details = result.provider_merchant_diff_warnings.first[:details]
+    assert_equal "AMZN MKTP", details[:merchant_name]
+    assert_equal(
+      [ { field: "website_url", imported_value: "https://amazon.co.uk", kept_value: "https://amazon.com" } ],
+      details[:diff]
+    )
+  end
+
+  test "preflight does not warn when the provider merchant is new or identical" do
+    attach_ndjson(provider_merchant_ndjson(website_url: "https://amazon.com"))
+    assert_empty @import.sure_preflight.provider_merchant_diff_warnings
+
+    ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn", website_url: "https://amazon.com")
+    assert_empty @import.sure_preflight.provider_merchant_diff_warnings
+  end
+
   test "a transaction merchant_id unresolvable in the export is a warning, not a blocking preflight error (#3113)" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {
@@ -936,6 +993,22 @@ class SureImportTest < ActiveSupport::TestCase
         content_type: "application/x-ndjson"
       )
       @import.sync_ndjson_rows_count!
+    end
+
+    def provider_merchant_ndjson(**merchant_attrs)
+      build_ndjson([
+        { type: "Account", data: {
+          id: "account-1", name: "Provider Merchant Checking", balance: "1000.00", currency: "USD",
+          accountable_type: "Depository", accountable: { subtype: "checking" }
+        } },
+        { type: "ProviderMerchant", data: {
+          id: "provider-merchant-1", name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn"
+        }.merge(merchant_attrs) },
+        { type: "Transaction", data: {
+          id: "transaction-1", account_id: "account-1", merchant_id: "provider-merchant-1",
+          date: "2024-01-15", amount: "42.50", name: "Amazon purchase", currency: "USD"
+        } }
+      ])
     end
 
     def build_ndjson(records)

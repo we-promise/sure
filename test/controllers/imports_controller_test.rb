@@ -501,6 +501,55 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, I18n.t("imports.ready.reused_taxonomy_notice_title")
   end
 
+  test "shows the differences when an existing provider merchant differs from the Sure import file" do
+    ProviderMerchant.create!(name: "AMZN MKTP", source: "plaid", website_url: "https://amazon.com")
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Account", data: {
+        id: "account-1", name: "Checking", balance: "1000.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } },
+      { type: "ProviderMerchant", data: { id: "pm-1", name: "AMZN MKTP", source: "plaid", website_url: "https://amazon.co.uk" } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_includes response.body, I18n.t("imports.ready.provider_merchant_diff_title")
+    assert_includes response.body, "AMZN MKTP"
+    assert_includes response.body, "keeping https://amazon.com, file has https://amazon.co.uk"
+  end
+
+  test "does not show the provider merchant differences notice without a difference" do
+    import = @user.family.imports.create!(type: "SureImport")
+    ndjson = [
+      { type: "Account", data: {
+        id: "account-1", name: "Checking", balance: "1000.00", currency: "USD",
+        accountable_type: "Depository", accountable: { subtype: "checking" }
+      } }
+    ].map(&:to_json).join("\n")
+    import.ndjson_file.attach(io: StringIO.new(ndjson), filename: "all.ndjson", content_type: "application/x-ndjson")
+    import.sync_ndjson_rows_count!
+
+    get import_url(import)
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("imports.ready.provider_merchant_diff_title")
+  end
+
+  test "import ready notices use singular and plural wording" do
+    {
+      "imports.ready.missing_merchant_warning_description" => [ "1 transaction references", "2 transactions reference" ],
+      "imports.ready.reused_taxonomy_notice_description" => [ "1 category, tag or merchant", "2 categories, tags or merchants" ],
+      "imports.ready.provider_merchant_diff_description" => [ "1 merchant in this file", "2 merchants in this file" ]
+    }.each do |key, (singular, plural)|
+      assert_includes I18n.t(key, count: 1), singular
+      assert_includes I18n.t(key, count: 2), plural
+    end
+  end
+
   test "PDF import account select does not leak unshared family accounts (#1803)" do
     sign_in users(:family_member)
     pdf_import = imports(:pdf_with_rows)

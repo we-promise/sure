@@ -34,4 +34,28 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     assert_nil entry.entryable.merchant_id
     assert entry.user_modified?, "unlinked transaction's entry must be flagged so provider sync won't re-link it"
   end
+
+  test "find_by_import_data prefers provider_merchant_id over name, scoped to source" do
+    by_id = ProviderMerchant.create!(name: "Renamed Upstream", source: "plaid", provider_merchant_id: "plaid_acme")
+    ProviderMerchant.create!(name: "Acme", source: "lunchflow")
+
+    found = ProviderMerchant.find_by_import_data({ "name" => "Old Name", "provider_merchant_id" => "plaid_acme" }, "plaid")
+
+    assert_equal by_id, found
+    assert_equal @provider_merchant, ProviderMerchant.find_by_import_data({ "name" => "Acme Synced" }, "plaid")
+    assert_nil ProviderMerchant.find_by_import_data({ "name" => "Acme Synced" }, "lunchflow")
+  end
+
+  test "import_diff reports only non-blank website_url and name differences" do
+    merchant = ProviderMerchant.create!(name: "Acme", source: "plaid", provider_merchant_id: "plaid_acme", website_url: "https://acme.com")
+
+    assert_empty merchant.import_diff({ "name" => "Acme", "website_url" => "https://acme.com", "color" => "#123456" })
+    assert_empty merchant.import_diff({ "name" => "Acme", "website_url" => "" })
+
+    assert_equal(
+      [ { field: "website_url", imported_value: "https://acme.io", kept_value: "https://acme.com" },
+        { field: "name", imported_value: "Acme Inc", kept_value: "Acme" } ],
+      merchant.import_diff({ "name" => "Acme Inc", "website_url" => "https://acme.io" })
+    )
+  end
 end
