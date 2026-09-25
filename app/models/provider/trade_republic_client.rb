@@ -1291,9 +1291,12 @@ class Provider::TradeRepublicClient
       tax_amount = decimal_from_row(taxes)
       price = decimal_from_row(price_row)
       if price.nil? && quantity&.nonzero? && amount
+        # Provider cash totals embed costs: buy total = gross + fees/taxes,
+        # sell total = gross - fees/taxes. Recover share price accordingly.
+        # Quantity is already signed negative for sells (subtitle/title markers).
         deductions = fee_amount.to_d.abs + tax_amount.to_d.abs
-        net = amount.abs - deductions
-        price = net / quantity.abs if net.positive?
+        gross = quantity.negative? ? amount.abs + deductions : amount.abs - deductions
+        price = gross / quantity.abs if gross.positive?
       end
       return nil if quantity.nil? && amount.nil?
 

@@ -569,7 +569,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "1024.92", detail["amount"]
   end
 
-  test "normalize_event_detail derives share price from total net of fees" do
+  test "normalize_event_detail derives buy share price from total net of fees" do
     detail = @client.send(:normalize_event_detail, {
       "sections" => [
         { "title" => "Overview", "data" => [
@@ -579,10 +579,30 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
         ] },
         { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B5BMR087" } } } } ] }
       ]
-    })
+    }, item: { "title" => "Core S&P 500", "subtitle" => "Buy" })
 
     assert_equal "511.96", detail["price"]
     assert_equal "1.0", detail["fees"]
+  end
+
+  test "normalize_event_detail derives sell share price from proceeds plus fees and taxes" do
+    detail = @client.send(:normalize_event_detail, {
+      "sections" => [
+        { "title" => "Overview", "data" => [
+          { "title" => "Shares", "detail" => { "text" => "2" } },
+          { "title" => "Fee", "detail" => { "text" => "€1.00" } },
+          { "title" => "Tax", "detail" => { "text" => "€0.50" } },
+          { "title" => "Total", "detail" => { "text" => "€1,022.42" } }
+        ] },
+        { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B5BMR087" } } } } ] }
+      ]
+    }, item: { "title" => "Core S&P 500", "subtitle" => "Sell" })
+
+    # Sell cash = gross - fee - tax → 1022.42 = 2*511.96 - 1 - 0.50
+    assert_equal "-2.0", detail["quantity"]
+    assert_equal "511.96", detail["price"]
+    assert_equal "1.0", detail["fees"]
+    assert_equal "0.5", detail["taxes"]
   end
 
   test "trade_detail_needs_price_backfill detects complete trades without price" do
