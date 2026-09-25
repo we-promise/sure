@@ -20,6 +20,13 @@ class KrakenAccount::SecurityResolver
   # ETH2.S, DOT28.S -- and those are the same asset in a different wallet.
   STAKING_SUFFIX = /(\d+)?\.[A-Z]+\z/
 
+  # Kraken's own legacy codes for the same asset: XBT and XXBT are BTC, XETH is
+  # ETH, ZEUR is EUR. Shared with AssetNormalizer so a symbol canonicalised here
+  # and one canonicalised there cannot disagree -- which is how BTC ended up
+  # split across CRYPTO:BTC and CRYPTO:XBT.
+  FIAT_PREFIXES = KrakenAccount::AssetNormalizer::FIAT_PREFIXES
+  SYMBOL_FALLBACKS = KrakenAccount::AssetNormalizer::SYMBOL_FALLBACKS
+
   class << self
     def resolve(asset_symbol)
       asset = canonical_asset(asset_symbol)
@@ -36,7 +43,9 @@ class KrakenAccount::SecurityResolver
     def canonical_asset(symbol)
       value = symbol.to_s.strip.upcase
       value = value.split(":", 2).last.to_s if value.include?(":")
-      value.sub(STAKING_SUFFIX, "")
+      value = value.sub(STAKING_SUFFIX, "")
+      value = FIAT_PREFIXES[value] || value
+      SYMBOL_FALLBACKS[value] || value
     end
 
     private

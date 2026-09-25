@@ -350,7 +350,7 @@ class KrakenAccount::LedgerProcessor
     end
 
     def fiat?(base_symbol)
-      KrakenAccount::FIAT_CURRENCIES.include?(base_symbol.to_s.upcase)
+      KrakenAccount::FIAT_CURRENCIES.include?(KrakenAccount::SecurityResolver.canonical_asset(base_symbol))
     end
 
     # One bulk request per asset for the span the ledger covers, the same call
