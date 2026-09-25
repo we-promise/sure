@@ -120,6 +120,36 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_equal 0, projection.months_saved, "no months are saved by a loan that never finishes"
   end
 
+  # CodeRabbit on #3474: `accounts.balance` is nullable and Money.new(nil)
+  # raises, and the Schedule tab reads the projection outside the chart's
+  # rescue. A loan with no balance yet has nothing to project.
+  test "a loan with no balance yet is not applicable rather than raising" do
+    loan = build_loan(term_months: 24)
+    loan.account.update_columns(balance: nil)
+
+    projection = loan.payoff_projection(as_of: @today)
+
+    assert_not projection.applicable?
+    assert_nil projection.payoff_date
+    assert_equal 0, projection.current_balance.amount
+  end
+
+  # jjmata on #3474: the projection pays the contract's own repayment and never
+  # settles early, so it converges only when today's balance is at or below
+  # the contract's. A converged projection therefore never adds interest, which
+  # is why the chart has no "additional interest" card.
+  test "a loan even slightly behind does not converge, so a converged projection never adds interest" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today) + 500)
+
+    projection = loan.payoff_projection(as_of: @today)
+
+    assert projection.applicable?
+    assert_not projection.converged?
+    assert_nil projection.payoff_date
+    assert_operator projection.balloon_amount.amount, :>, 0
+  end
+
   test "is not applicable to a loan with no schedule or nothing left to owe" do
     unamortizable = build_loan(term_months: 24, rate_type: "")
     assert_not unamortizable.payoff_projection(as_of: @today).applicable?

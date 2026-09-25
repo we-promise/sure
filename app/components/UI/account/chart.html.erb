@@ -54,7 +54,7 @@
             <%= I18n.l(loan_projected_payoff_date, format: :long) %>
             <span class="block text-xs text-secondary mt-1"><%= loan_schedule_comparison %></span>
           <% } %>
-          <%= render "accounts/summary_card", title: loan_interest_saved_title, content: capture { %>
+          <%= render "accounts/summary_card", title: t("UI.account.chart.loan.interest_saved"), content: capture { %>
             <%= loan_interest_saved_money.format %>
           <% } %>
           <%# The basis of the comparison, beside the figures it governs: the
@@ -86,9 +86,10 @@
         <% end %>
       </ul>
 
-      <%# Real DOM text, not only the SVG's aria-label (gate G6). The chart has no
-          data table of its own: the Schedule tab carries the figures. %>
-      <p class="sr-only"><%= loan_chart[:aria_description] %></p>
+      <%# Real DOM text, not only the SVG's aria-label. The chart has no data
+          table of its own: the Schedule tab carries the figures. It quotes the
+          balance, so it is privacy-sensitive like every other balance here. %>
+      <p class="sr-only privacy-sensitive"><%= loan_chart[:aria_description] %></p>
     <% else %>
       <div class="h-64 pb-4">
         <% if series.any? %>

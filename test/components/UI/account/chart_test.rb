@@ -65,12 +65,19 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_no_selector "[data-controller='loan-payoff-chart']"
   end
 
-  # Owner review of #3474: the balance a loan's chart plots is what is still
-  # owed, and the title says so without "principal".
-  test "a loan account's chart is titled remaining balance" do
-    render_inline(UI::Account::Chart.new(account: accounts(:loan)))
+  # The balance a loan's chart plots is what is still owed, and the title says
+  # so without "principal". Only the loan chart: a loan without a schedule
+  # keeps the title every loan had (jjmata on #3474).
+  test "a loan account's chart is titled remaining balance only when it has the loan chart" do
+    loan_account = accounts(:loan)
+    payload = Loan::PayoffChart.new(loan_account.loan, as_of: Date.current).payload
+    assert_not_nil payload, "the loan fixture must have a schedule, or this test asserts nothing"
 
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: payload))
     assert_selector "p", exact_text: "Remaining balance"
+
+    render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: nil))
+    assert_selector "p", exact_text: "Remaining principal balance"
   end
 
   test "a loan without a chart payload falls back to the chart every account has" do
@@ -147,23 +154,20 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     render_inline(UI::Account::Chart.new(account: loan_account))
   end
 
-  # Owner review of #3474: a loan's picker offers timescales that run forward
-  # from its start date, labelled M, 90D, YTD, 1Y, 5Y, 10Y and All. The keys are
-  # the shared periods', so a pick stays the user's default everywhere, and a
-  # saved period the loan chart does not offer reads as All.
-  test "a loan's period picker offers windows that run from its start" do
+  # A loan's picker offers a subset of the shared periods, under their own
+  # labels, so a pick stays the user's default everywhere and means the same
+  # dates it does on every other chart. A saved period the loan chart does not
+  # offer reads as All.
+  test "a loan's period picker offers a subset of the shared periods" do
     loan_account = accounts(:loan)
     payload = Loan::PayoffChart.new(loan_account.loan, as_of: Date.current).payload
     assert_not_nil payload, "the loan fixture must have a schedule, or this test asserts nothing"
 
     render_inline(UI::Account::Chart.new(account: loan_account, loan_chart: payload, period: Period.from_key("last_5_years")))
 
-    {
-      "current_month" => "M", "last_90_days" => "90D", "current_year" => "YTD", "last_365_days" => "1Y",
-      "last_5_years" => "5Y", "last_10_years" => "10Y", "all_time" => "All"
-    }.each do |key, label|
+    %w[current_month last_90_days current_year last_365_days last_5_years last_10_years all_time].each do |key|
       # The label's own span: the link also holds the menu's check-mark slot.
-      assert_selector "a[href*='period=#{key}'] span", exact_text: label, visible: :all
+      assert_selector "a[href*='period=#{key}'] span", exact_text: Period.from_key(key).label_short, visible: :all
     end
     assert_no_selector "a[href*='period=last_30_days']", visible: :all
     assert_selector "button", text: "5Y"

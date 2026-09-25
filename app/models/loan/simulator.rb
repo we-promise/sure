@@ -114,7 +114,6 @@ class Loan
         payment_date = @payment_schedule[index]
         period_start = index.zero? ? @accrual_start_date : @payment_schedule[index - 1]
 
-
         # See the class comment: opening rate charges the period, closing rate
         # sizes the payment.
         accrual_rate = monthly_rate(@accrual_rate_for.call(period_start))

@@ -131,7 +131,6 @@ de:
           aria_description: "Kreditsaldo-Diagramm. Erfasster Saldo %{current_balance}. Ursprünglich geplante Tilgung %{scheduled_payoff_date}. Voraussichtliche Tilgung ab dem heutigen Saldo %{projected_payoff_date}."
           aria_actual_history_starts: "Die erfasste Saldenhistorie beginnt am %{date}."
           interactive_chart: "interaktives Diagramm"
-          interest_added: "Zusätzliche Zinsen"
           interest_saved: "Eingesparte Zinsen"
           legend: "Diagrammreihen"
           months_saved:
@@ -146,14 +145,6 @@ de:
           scheduled: "Ursprünglicher Tilgungsplan"
           since_start: "seit Kreditbeginn"
           today: "Heute"
-          windows:
-            all_time: "Alle"
-            current_month: "M"
-            current_year: "YTD"
-            last_10_years: "10J"
-            last_365_days: "1J"
-            last_5_years: "5J"
-            last_90_days: "90T"
         no_data_available: Keine Daten vorhanden
         title:
           balance: Saldo
@@ -162,6 +153,7 @@ de:
           estimated_property_value: Geschätzter Immobilienwert
           estimated_vehicle_value: Geschätzter Fahrzeugwert
           holdings_value: Wert der Bestände
+          loan_remaining_balance: Verbleibender Saldo
           remaining_principal_balance: Verbleibende Restschuld
           total_account_value: Gesamtwert des Kontos
           total_gains: Gesamtgewinn

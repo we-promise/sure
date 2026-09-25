@@ -63,13 +63,12 @@ class UI::Account::Chart < ApplicationComponent
     Money.new(loan_chart[:balloon].to_f, loan_chart[:currency])
   end
 
+  # Never negative: the card renders only with a projected payoff date, and the
+  # projection converges only when today's balance is at or below the
+  # contract's, so it can only save interest. A larger balance takes the
+  # not-converged notice instead.
   def loan_interest_saved_money
-    Money.new(loan_chart[:interest_saved].to_f.abs, loan_chart[:currency])
-  end
-
-  def loan_interest_saved_title
-    key = loan_chart[:interest_saved].to_f.negative? ? "interest_added" : "interest_saved"
-    I18n.t("UI.account.chart.loan.#{key}")
+    Money.new(loan_chart[:interest_saved].to_f, loan_chart[:currency])
   end
 
   def period
@@ -135,7 +134,10 @@ class UI::Account::Chart < ApplicationComponent
     when "CreditCard", "OtherLiability"
       I18n.t("UI.account.chart.title.debt_balance")
     when "Loan"
-      I18n.t("UI.account.chart.title.remaining_principal_balance")
+      # The loan balance chart plots what is still owed, principal and any
+      # capitalised interest, so its title drops "principal". A loan without
+      # a schedule keeps the chart, and the title, it always had.
+      loan_chart? ? I18n.t("UI.account.chart.title.loan_remaining_balance") : I18n.t("UI.account.chart.title.remaining_principal_balance")
     else
       I18n.t("UI.account.chart.title.balance")
     end
@@ -173,9 +175,8 @@ class UI::Account::Chart < ApplicationComponent
     series.values.last&.value || Money.new(0, account.currency)
   end
 
-  # A loan's chart offers its own timescales, each running forward from the
-  # loan's start (Loan::PayoffChart::WINDOWS); every other chart offers every
-  # period.
+  # A loan's chart offers a subset of the shared periods
+  # (Loan::PayoffChart::WINDOW_KEYS); every other chart offers every period.
   def period_picker_options
     Loan::PayoffChart.window_options if loan_chart?
   end
@@ -185,7 +186,7 @@ class UI::Account::Chart < ApplicationComponent
   def period_picker_selected
     return period unless loan_chart?
 
-    Loan::PayoffChart::WINDOWS.key?(period.key.to_s) ? period.key.to_s : "all_time"
+    Loan::PayoffChart::WINDOW_KEYS.include?(period.key.to_s) ? period.key.to_s : "all_time"
   end
 
   # On a loan the change line compares today's balance with the amount

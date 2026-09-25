@@ -42,8 +42,11 @@ class Loan
       loan.account.currency
     end
 
+    # `accounts.balance` is nullable, and Money.new(nil) raises. A loan with no
+    # balance yet has nothing to project, so it reads as zero: applicable? is
+    # then false and the Schedule tab's card says so instead of the page failing.
     def current_balance
-      @current_balance ||= Money.new(loan.account.balance, currency)
+      @current_balance ||= Money.new(loan.account.balance || 0, currency)
     end
 
     def payments

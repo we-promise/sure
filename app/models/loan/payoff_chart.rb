@@ -10,12 +10,14 @@ class Loan
   #              made are in here without being named: they are why today's
   #              balance is what it is.
   #
-  # The picked timescale governs the x-domain (#100, decision 4), running
-  # forward from origination (owner review of #3474). Under "All" the domain
-  # runs origination -> the later payoff date so every series has room; under a
-  # window it runs origination -> the window's end, and the forward series show
-  # only when that reaches past today. `Period` is not touched to achieve this:
-  # the payload carries the domain and the controller draws to it.
+  # The picked period governs the x-domain, and it means what it means on
+  # every other chart: 1Y is the last year, YTD the current calendar year,
+  # clamped so no window opens before the loan does. Under "All" the domain
+  # runs origination -> the later payoff date so every series has room. A
+  # bounded window ends today, so the forward series draw under All alone;
+  # the cards beside the chart quote the projection whatever the window.
+  # `Period` is not touched to achieve this: the payload carries the domain
+  # and the controller draws to it.
   #
   # The actual series is never queried past today. Balance::ChartSeriesBuilder
   # carries the last observation forward, so asking it for future dates would
@@ -23,29 +25,27 @@ class Loan
   class PayoffChart
     SERIES = %i[actual scheduled projected].freeze
 
-    # The timescales a loan's chart offers, keyed by the shared Period key the
-    # picker saves as the user's default. Each maps the loan's start date and
-    # today to where the window ends: M the first month, 90D the first ninety
-    # days, YTD origination to today, 1Y, 5Y and 10Y the first years. All has no
-    # end and shows the whole life.
-    #
-    # Only these keys are loan windows. Any other Period key, including one added
-    # to Period::PERIODS later, shows the whole life, because the picker's choice
-    # is shared with every account page. A test keeps these keys a subset of
-    # Period::PERIODS so a renamed period cannot silently stop matching.
-    WINDOWS = {
-      "current_month" => ->(start, _as_of) { start >> 1 },
-      "last_90_days" => ->(start, _as_of) { start + 90 },
-      "current_year" => ->(_start, as_of) { as_of },
-      "last_365_days" => ->(start, _as_of) { start >> 12 },
-      "last_5_years" => ->(start, _as_of) { start >> 60 },
-      "last_10_years" => ->(start, _as_of) { start >> 120 },
-      "all_time" => nil
-    }.freeze
+    # The periods a loan's chart offers, a subset of the shared Period keys the
+    # picker saves as the user's default. The short ones a loan has no use for
+    # (7D, 30D, a custom range) are left out; any other Period key, including
+    # one added to Period::PERIODS later, shows the whole life, because the
+    # picker's choice is shared with every account page. A test keeps these
+    # keys a subset of Period::PERIODS so a renamed period cannot silently
+    # stop matching.
+    WINDOW_KEYS = %w[
+      current_month
+      last_90_days
+      current_year
+      last_365_days
+      last_5_years
+      last_10_years
+      all_time
+    ].freeze
 
-    # [key, label] pairs for the loan chart's period picker, in WINDOWS order.
+    # [key, label] pairs for the loan chart's period picker, in WINDOW_KEYS
+    # order, under the shared periods' own labels.
     def self.window_options
-      WINDOWS.keys.map { |key| [ key, I18n.t("UI.account.chart.loan.windows.#{key}") ] }
+      WINDOW_KEYS.map { |key| [ key, Period.from_key(key).label_short ] }
     end
 
     # `projection` lets a caller that also shows the forecast elsewhere on the
@@ -109,46 +109,40 @@ class Loan
         loan.account.currency
       end
 
-      # Every window on a loan's chart runs forward from origination rather than
-      # back from today (owner review of #3474), so 1Y is the loan's first year.
       # No period, "All", and any period the loan chart does not offer -- the
       # picker's choice is shared with every account -- mean the whole life.
       # Upstream's "All" starts at the family's oldest entry, which for a loan
-      # younger than the family is years before it existed.
+      # younger than the family is years before it existed, so the whole life
+      # takes its own dates from the loan rather than from the period.
       def whole_life?
-        window_end.nil?
-      end
-
-      # Where the chosen window ends, before it is capped at the whole life's
-      # end; nil for the whole life.
-      def window_end
-        return @window_end if defined?(@window_end)
-
-        @window_end = period && WINDOWS[period.key.to_s]&.call(loan.origination_date, as_of)
+        period.nil? || period.key.to_s == "all_time" || !WINDOW_KEYS.include?(period.key.to_s)
       end
 
       # Memoised, as is domain_end: visible? reads the domain for every point,
       # and a loan with no start date finds its origination through the
       # account's first valuation, which is a lookup each time it is asked.
+      #
+      # A window opens where the period does, but never before the loan: a
+      # lead-in before origination would read as a balance that was not there.
       def domain_start
-        @domain_start ||= loan.origination_date
+        @domain_start ||= whole_life? ? loan.origination_date : [ period.start_date, loan.origination_date ].max
       end
 
       # The whole life reaches far enough to hold every line: the contract's
       # payoff and the projection's, whichever is later, and never before today.
-      # A window ends where it ends, but never past that and never on its start.
+      # A window ends where the period does, but never past that and never on
+      # its start.
       def domain_end
         @domain_end ||= begin
           whole_life_end = [ schedule.payoff_date, projection.payoff_date, as_of ].compact.max
-          whole_life? ? whole_life_end : [ [ window_end, whole_life_end ].min, domain_start + 1 ].max
+          whole_life? ? whole_life_end : [ [ period.end_date, whole_life_end ].min, domain_start + 1 ].max
         end
       end
 
-      # Recorded balances from origination to today, or to the window's end when
-      # that comes first. Nothing before the first materialised balance: the
-      # series builder carries the last observation forward and reports zero
-      # before there is one, and a flat zero lead-in reads as a balance that
-      # was not there.
+      # Recorded balances inside the domain and no later than today. Nothing
+      # before the first materialised balance: the series builder carries the
+      # last observation forward and reports zero before there is one, and a
+      # flat zero lead-in reads as a balance that was not there.
       def actual_series
         first_balance_date = loan.account.balances.minimum(:date)
         return [] if first_balance_date.nil?
