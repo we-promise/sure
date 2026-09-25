@@ -8,7 +8,32 @@ module <%= class_name %>Item::Unlinking
   # - Detaches any AccountProvider links for each <%= class_name %>Account
   # - Detaches Holdings that point at the AccountProvider links
   # Returns a per-account result payload for observability
-  def unlink_all!(dry_run: false)
+  #
+  # `disposition` says what happens to the data this provider imported. The
+  # vocabulary lives in ProviderDisconnectable:
+  #
+  #   retain  -- keep every account, balance and transaction. The default, and
+  #              what unlinking has always meant: the data describes the family's
+  #              money, not the connection that fetched it.
+  #   discard -- also remove what this provider imported. Destructive and
+  #              irreversible, so it is only accepted from a provider that has
+  #              declared `self.supports_discard = true` on its item model and
+  #              implemented the removal.
+  #
+  # This scaffold implements retain only. To add discard, declare the capability
+  # on <%= class_name %>Item, implement the removal, and call it from the branch
+  # below. Financekit::Purge is the worked example: it decides per account whether
+  # the provider created it (destroy it) or was linked to one the family already
+  # had (empty it and let sync recompute the balance), skips accounts another live
+  # connection still writes, and runs in a background job because deleting a
+  # year of history is not request-sized work.
+  def unlink_all!(dry_run: false, disposition: ProviderDisconnectable::DEFAULT_DISPOSITION)
+    # Rejected rather than ignored: silently retaining data after being asked to
+    # delete it is the one failure here that would matter to a family.
+    unless disposition.to_s == ProviderDisconnectable::RETAIN
+      raise ArgumentError, "<%= class_name %>Item does not implement the #{disposition} disposition"
+    end
+
     results = []
 
     <%= file_name %>_accounts.find_each do |provider_account|
