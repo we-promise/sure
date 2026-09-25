@@ -15,7 +15,6 @@ class ProviderMerchant < Merchant
     %w[website_url name provider_merchant_id].filter_map do |field|
       imported_value = data[field].presence
       next if imported_value.blank? || imported_value == self[field]
-      next if field == "provider_merchant_id" && self[field].blank?
 
       { field: field, imported_value: imported_value, kept_value: self[field] }
     end
