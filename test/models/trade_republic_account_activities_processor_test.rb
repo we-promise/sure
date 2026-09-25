@@ -383,6 +383,35 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1022.92"), trade.amount
   end
 
+  test "buy and sell fallbacks include taxes alongside fees" do
+    Security.stubs(:search_provider).returns([])
+
+    import_event(order_execution_detail(
+      event_id: "evt_buy_tax",
+      quantity: "2",
+      isin: "IE00B5BMR087",
+      amount: nil
+    ).deep_merge(detail: { fees: "1.00", taxes: "0.50", price: "511.96", name: "Core S&P 500" }))
+
+    buy = find_trade("trade_republic_event_evt_buy_tax")
+    assert_equal BigDecimal("511.96"), buy.entryable.price
+    assert_equal BigDecimal("1.00"), buy.entryable.fee
+    assert_equal BigDecimal("-1025.42"), buy.amount # 2*511.96 + 1 + 0.50
+
+    import_event(order_execution_detail(
+      event_id: "evt_sell_tax",
+      quantity: "-2",
+      isin: "IE00B5BMR087",
+      amount: "1022.42"
+    ).deep_merge(detail: { fees: "1.00", taxes: "0.50" }))
+
+    sell = find_trade("trade_republic_event_evt_sell_tax")
+    # Sell cash 1022.42 = gross - fee - tax → price (1022.42+1.50)/2
+    assert_equal BigDecimal("511.96"), sell.entryable.price
+    assert_equal BigDecimal("1.00"), sell.entryable.fee
+    assert_equal BigDecimal("1022.42"), sell.amount
+  end
+
   test "reprocessing updates fee and share price on an existing trade" do
     import_event(order_execution_detail(
       event_id: "evt_fee_update",

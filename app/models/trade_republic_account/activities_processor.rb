@@ -175,25 +175,29 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       fee = parse_decimal(detail[:fees])&.abs
       fee = nil if fee&.zero?
+      tax = parse_decimal(detail[:taxes])&.abs
+      tax = nil if tax&.zero?
+      # Match the client detail parser: cash totals embed fees and taxes.
+      costs = (fee || 0) + (tax || 0)
 
-      # Prefer the provider share price. Fall back to cash amount net of fees
+      # Prefer the provider share price. Fall back to cash amount net of costs
       # so the per-share price is not inflated by transaction costs.
       price = parse_decimal(detail[:price])
       price = nil if price&.zero?
       amount = parse_decimal(detail[:amount])
       if (!amount || amount.zero?) && price
         gross = quantity.abs * price.abs
-        # Fee increases buy cost and reduces sell proceeds (same as SnapTrade /
+        # Costs increase buy cost and reduce sell proceeds (same as SnapTrade /
         # manual trades).
-        amount = is_buy ? gross + (fee || 0) : gross - (fee || 0)
+        amount = is_buy ? gross + costs : gross - costs
       end
       return false unless amount && !amount.zero?
 
       signed_amount = is_buy ? -amount.abs : amount.abs
       if price.nil?
-        # Provider totals include fees: buy total = gross + fee, sell total =
-        # gross - fee. Recover share price from the cash amount accordingly.
-        gross = is_buy ? amount.abs - (fee || 0) : amount.abs + (fee || 0)
+        # Provider totals include costs: buy total = gross + costs, sell total =
+        # gross - costs. Recover share price from the cash amount accordingly.
+        gross = is_buy ? amount.abs - costs : amount.abs + costs
         price = gross / signed_quantity.abs if gross.positive?
         price ||= amount.abs / signed_quantity.abs
       end
