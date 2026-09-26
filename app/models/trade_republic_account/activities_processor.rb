@@ -258,7 +258,9 @@ class TradeRepublicAccount::ActivitiesProcessor
             event_type: event[:eventType],
             title: event[:title],
             subtitle: event[:subtitle],
-            provider_detail: detail.except(:amount, :signed_amount, :currency)
+            provider_detail: detail.except(
+              :amount, :signed_amount, :currency, Provider::TradeRepublicClient::PRICE_BACKFILL_ATTEMPTED_AT_KEY
+            )
           }.compact
         }
       )

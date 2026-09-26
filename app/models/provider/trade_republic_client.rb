@@ -79,6 +79,8 @@ class Provider::TradeRepublicClient
   # sync. The remainder drains the oldest stored incomplete events; leftover
   # budget returns to additional new events.
   MAX_TIMELINE_DETAILS_DELTA_RESERVED = 50
+  PRICE_BACKFILL_RETRY_INTERVAL = 1.day
+  PRICE_BACKFILL_ATTEMPTED_AT_KEY = "price_backfill_attempted_at"
   # Cap instrument lookups for sold / historical trade ISINs that are absent
   # from the current portfolio snapshot.
   MAX_INSTRUMENT_LOOKUPS = 100
@@ -410,13 +412,30 @@ class Provider::TradeRepublicClient
 
     # Complete trades (isin + quantity) that still lack a share price — usually
     # stored before we parsed execution price / fees from timeline details.
-    def trade_detail_needs_price_backfill?(event)
+    # Trade Republic sometimes publishes the price late, so an unsuccessful
+    # attempt is retried at most once per PRICE_BACKFILL_RETRY_INTERVAL.
+    def trade_detail_needs_price_backfill?(event, now = Time.current)
+      return false unless trade_detail_missing_price?(event)
+
+      attempted_at = price_backfill_attempted_at(event)
+      attempted_at.nil? || attempted_at <= now - PRICE_BACKFILL_RETRY_INTERVAL
+    end
+
+    def trade_detail_missing_price?(event)
       return false unless requires_trade_detail?(event)
       return false unless Provider::TradeRepublicTimelineEvent.importable?(event)
       return false unless trade_detail_complete?(event)
 
       detail = (event["detail"] || event[:detail]).stringify_keys
       detail["price"].to_s.strip.blank?
+    end
+
+    def price_backfill_attempted_at(event)
+      detail = (event["detail"] || event[:detail])
+      value = detail.stringify_keys[PRICE_BACKFILL_ATTEMPTED_AT_KEY] if detail.is_a?(Hash)
+      Time.iso8601(value.to_s) if value.present?
+    rescue ArgumentError
+      nil
     end
   end
 
@@ -1128,18 +1147,25 @@ class Provider::TradeRepublicClient
         next unless Provider::TradeRepublicTimelineEvent.importable?(item)
 
         details_fetched += 1
+        fetched = nil
         begin
           detail = normalize_event_detail(
             subscribe(websocket, type: "timelineDetailV2", id: item["id"]),
             item: item
           )
-          enriched_by_id[item["id"].to_s] = build_normalized_event(item, category: category, detail: detail)
-          detail_backfill_count += 1 if kind == :backfill
+          fetched = build_normalized_event(item, category: category, detail: detail)
         rescue TransientProviderError, Timeout, RateLimited
           raise
         rescue Error
           warnings << "detail fetch failed for event #{item["id"]}"
         end
+
+        if kind == :backfill
+          result = fetched ? prefer_richer_event(item, fetched) : item
+          detail_backfill_count += 1 if detail_backfill_improved?(item, result)
+          fetched = with_price_backfill_attempt(result) if self.class.trade_detail_missing_price?(result)
+        end
+        enriched_by_id[item["id"].to_s] = fetched if fetched
       end
 
       merged_events = events.map do |event|
@@ -1151,6 +1177,18 @@ class Provider::TradeRepublicClient
       merged_events = merge_enriched_events(merged_events, enriched_by_id.values)
 
       [ merged_events, warnings, detail_backfill_count ]
+    end
+
+    def detail_backfill_improved?(before, after)
+      return self.class.trade_detail_complete?(after) if self.class.incomplete_trade_detail_event?(before)
+
+      self.class.trade_detail_missing_price?(before) && !self.class.trade_detail_missing_price?(after)
+    end
+
+    def with_price_backfill_attempt(event)
+      event = event.stringify_keys
+      detail = (event["detail"] || {}).stringify_keys
+      event.merge("detail" => detail.merge(PRICE_BACKFILL_ATTEMPTED_AT_KEY => Time.current.iso8601))
     end
 
     # Test/helper wrapper: enrich a raw timeline page without touching the list cursor.

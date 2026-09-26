@@ -618,6 +618,57 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     )
   end
 
+  test "price backfill retries an unfixable trade at most once per day" do
+    event = {
+      "id" => "trade-1",
+      "timestamp" => "2025-01-02T10:00:00Z",
+      "category" => "orderExecution",
+      "eventType" => "TRADING_TRADE_EXECUTED",
+      "detail" => { "isin" => "IE00B5BMR087", "quantity" => "2" }
+    }
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      { "sections" => [] }
+    end
+
+    events, _warnings, backfill_count = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ event ])
+
+    assert_equal [ "trade-1" ], requested
+    assert_equal 0, backfill_count
+    stored = events.find { |candidate| candidate["id"] == "trade-1" }
+    assert stored.dig("detail", Provider::TradeRepublicClient::PRICE_BACKFILL_ATTEMPTED_AT_KEY).present?
+    refute Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(stored)
+    refute Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(stored, 23.hours.from_now)
+    assert Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(stored, 25.hours.from_now)
+  end
+
+  test "price backfill counts only trades whose price was recovered" do
+    event = {
+      "id" => "trade-1",
+      "category" => "orderExecution",
+      "eventType" => "TRADING_TRADE_EXECUTED",
+      "detail" => { "isin" => "IE00B5BMR087", "quantity" => "2" }
+    }
+    @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
+      {
+        "sections" => [
+          { "title" => "Overview", "data" => [
+            { "title" => "Shares", "detail" => { "text" => "2" } },
+            { "title" => "Share price", "detail" => { "text" => "€511.96" } }
+          ] },
+          { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "IE00B5BMR087" } } } } ] }
+        ]
+      }
+    end
+
+    events, _warnings, backfill_count = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ event ])
+
+    assert_equal 1, backfill_count
+    assert_equal "511.96", events.first.dig("detail", "price")
+    assert_nil events.first.dig("detail", Provider::TradeRepublicClient::PRICE_BACKFILL_ATTEMPTED_AT_KEY)
+  end
+
   test "backfilled stored events do not move the list cursor" do
     @client.define_singleton_method(:collect_timeline_topic) do |_websocket, **_|
       [ [], nil, [], true ]
