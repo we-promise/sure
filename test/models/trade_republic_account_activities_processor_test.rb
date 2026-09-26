@@ -1045,6 +1045,23 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "EXECUTED", log.metadata["status"]
   end
 
+  test "unknown events are logged once across split portfolio and cash accounts" do
+    cash_account, = create_linked_cash_account!
+    event = {
+      id: "evt_split_gap",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "BRAND_NEW_MAPPING_GAP",
+      title: "Mystery payout"
+    }
+    @tr_account.update!(raw_timeline_payload: [ event ])
+    cash_account.update!(raw_timeline_payload: [ event ])
+
+    assert_difference -> { DebugLogEntry.where("message LIKE ?", "%unsupported timeline event%").count }, 1 do
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+  end
+
   test "price backfill attempt marker stays out of the transaction provider detail" do
     cash_account, cash_sure = create_linked_cash_account!
     cash_account.update!(raw_timeline_payload: [ deposit_event.deep_merge(

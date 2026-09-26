@@ -20,17 +20,16 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       event = event.with_indifferent_access
       classification = classify_timeline_event(event)
+      next if classification == :ignored
+      next if lifecycle_blocks_import?(event)
+      # After routing, so split portfolio/cash connections log an unknown
+      # event once (from the cash side) instead of twice.
+      next unless processable_event?(event)
 
-      case classification
-      when :ignored
-        next
-      when :unknown
+      if classification == :unknown
         record_unknown_event(event)
         next
       end
-
-      next if lifecycle_blocks_import?(event)
-      next unless processable_event?(event)
 
       case process_event(event)
       when :trade then trade_count += 1
@@ -114,9 +113,6 @@ class TradeRepublicAccount::ActivitiesProcessor
         import_cash_movement(event, detail, external_id, date, label: t("interest"), sign: -1) ? :transaction : nil
       when CATEGORY_DIVIDEND
         import_cash_movement(event, detail, external_id, date, label: t("dividend"), sign: -1) ? :transaction : nil
-      else
-        record_unknown_event(event)
-        nil
       end
     rescue => e
       DebugLogEntry.capture(
