@@ -108,8 +108,10 @@ class Account::CurrentBalanceManager
         if current_anchor_valuation
           changes_made = update_current_anchor(balance)
         else
-          create_current_anchor(balance)
-          changes_made = true
+          # One valuation per date. If we already pinned today as a
+          # reconciliation (CSV backfill, a previous failed sync), reuse it
+          # as the current_anchor instead of inserting a second row.
+          changes_made = promote_today_valuation_or_create_anchor(balance)
         end
       end
 
@@ -137,6 +139,23 @@ class Account::CurrentBalanceManager
       # The chained scope (.current_anchor.first) always issues a fresh SQL query,
       # so we don't need to reload the full association.
       @current_anchor_valuation = nil
+    end
+
+    def promote_today_valuation_or_create_anchor(balance)
+      today_entry = account.entries.valuations.find_by(date: Date.current)
+
+      if today_entry
+        today_entry.entryable.update!(kind: "current_anchor")
+        today_entry.update!(
+          amount: balance,
+          name: Valuation.build_current_anchor_name(account.accountable_type)
+        )
+        @current_anchor_valuation = nil
+        true
+      else
+        create_current_anchor(balance)
+        true
+      end
     end
 
     def create_current_anchor(balance)

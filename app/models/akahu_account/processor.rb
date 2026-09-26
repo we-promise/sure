@@ -16,6 +16,7 @@ class AkahuAccount::Processor
     end
 
     process_account!
+    process_holdings
     process_transactions
   rescue StandardError => e
     Rails.logger.error "AkahuAccount::Processor - Failed to process account akahu_account_id=#{akahu_account.id} error_class=#{e.class.name}"
@@ -33,11 +34,16 @@ class AkahuAccount::Processor
       cash_balance = account.accountable_type == "Investment" ? 0 : balance
       currency = parse_currency(akahu_account.currency) || account.currency || "NZD"
 
-      account.update!(
-        balance: balance,
-        cash_balance: cash_balance,
-        currency: currency
-      )
+      account.update!(cash_balance: cash_balance, currency: currency)
+
+      # Use set_current_balance so a current_anchor valuation entry is created
+      # (and rotated into a reconciliation waypoint on subsequent days). This
+      # lets Balance::ReverseCalculator preserve each day's bank-reported balance
+      # as a historical waypoint, giving investment accounts that report no
+      # transactions (e.g. Kernel) a real balance curve instead of a flat line
+      # bridged by a single cash adjustment.
+      result = account.set_current_balance(balance)
+      raise StandardError, "Failed to set current balance for Akahu account" unless result.success?
     end
 
     def process_transactions
@@ -46,6 +52,16 @@ class AkahuAccount::Processor
       report_exception(e, "transactions")
       Rails.logger.error "AkahuAccount::Processor - Failed to process transactions akahu_account_id=#{akahu_account.id} error_class=#{e.class.name}"
       { success: false, failed: 1, errors: [ { error: I18n.t("akahu_item.errors.account_processing_failed") } ] }
+    end
+
+    # Holdings are best-effort: a malformed portfolio entry must not fail the
+    # account sync, which would also drop the balance update and transactions.
+    def process_holdings
+      AkahuAccount::HoldingsProcessor.new(akahu_account).process
+    rescue => e
+      report_exception(e, "holdings")
+      Rails.logger.error "AkahuAccount::Processor - Failed to process holdings akahu_account_id=#{akahu_account.id} error_class=#{e.class.name}"
+      nil
     end
 
     def report_exception(error, context)

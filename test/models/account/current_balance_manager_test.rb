@@ -244,6 +244,34 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     assert_equal 2000, @linked_account.balance
   end
 
+  test "reuses today's reconciliation as current_anchor when rotating a stale one" do
+    manager = Account::CurrentBalanceManager.new(@linked_account)
+    result = manager.set_current_balance(1000)
+    assert result.success?
+
+    travel_to Date.current + 1.day do
+      # A prior backfill or failed sync already wrote today's valuation.
+      @linked_account.entries.create!(
+        date: Date.current,
+        name: Valuation.build_reconciliation_name(@linked_account.accountable_type),
+        amount: 1000,
+        currency: @linked_account.currency,
+        entryable: Valuation.new(kind: "reconciliation")
+      )
+
+      assert_no_difference -> { @linked_account.entries.valuations.count } do
+        result = manager.set_current_balance(1100)
+        assert result.success?, result.error
+        assert result.changes_made?
+      end
+
+      today = @linked_account.entries.valuations.find_by(date: Date.current)
+      assert_equal "current_anchor", today.entryable.kind
+      assert_equal 1100, today.amount
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+    end
+  end
+
   test "does not preserve same-day anchor as reconciliation" do
     manager = Account::CurrentBalanceManager.new(@linked_account)
 
