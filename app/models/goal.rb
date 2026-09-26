@@ -27,6 +27,8 @@ class Goal < ApplicationRecord
   has_many :goal_accounts, dependent: :destroy, autosave: true
   has_many :linked_accounts, through: :goal_accounts, source: :account
   has_many :goal_pledges, dependent: :destroy
+  before_destroy :clear_consumption_stamps
+
   has_many :open_pledges,
            -> { where(status: "open").where("expires_at >= ?", Time.current) },
            class_name: "GoalPledge"
@@ -616,7 +618,21 @@ class Goal < ApplicationRecord
         # Same refusal a fixed earmark gives, for the same reason: the link
         # cannot have supplied money it never backed. `still_needed` cannot go
         # negative — the target check above has already refused that.
-        raise ConsumptionRefused.new(:exceeds_earmark) if amount > backed
+        #
+        # Not when a transaction says so, though. `backed` reads the account's
+        # balance NOW, and a recorded outflow has already been taken out of it:
+        # spend 4,000 of a 5,000 account and `backed` is 1,000, so attributing
+        # the very transaction the app itself surfaced was refused — and refused
+        # by an earmark the user never set. The target check above is the real
+        # ceiling, and it still holds.
+        raise ConsumptionRefused.new(:exceeds_earmark) if transaction.nil? && amount > backed
+
+        # The bypass above only holds if `amount` is what the transaction
+        # actually moved — trusted from callers otherwise, a mismatched pair
+        # would silently over-attribute past what the account backs, with no
+        # defense left once `transaction` is non-nil. Enforced here rather
+        # than trusted, matching this file's fat-model conventions.
+        raise ConsumptionRefused.new(:exceeds_earmark) if transaction && amount != transaction.entry.amount.to_d
 
         still_needed = target_amount.to_d - consumed_amount.to_d - amount
         link.update!(allocated_amount: [ backed, still_needed ].min)
@@ -660,6 +676,27 @@ class Goal < ApplicationRecord
   # Only a goal that has actually recorded a spend says anything about it: the
   # overwhelming majority never do, and a permanent "0 used" line would be
   # noise on every card.
+  private
+    # Mirrors GoalPledge#clear_matched_transaction_extra, but a goal can stamp
+    # many transactions where a pledge stamps at most one, so this sweeps every
+    # match rather than looking up a single id.
+    #
+    # Not scoped to `linked_accounts`: an account can be unlinked from the goal
+    # after a consumption stamped a transaction on it (`sync_linked_accounts!`
+    # destroys the `GoalAccount` join, not the stamp), so a transaction marked
+    # by this goal is not guaranteed to live on an account still linked to it.
+    # `consumed_goal_id` is a UUID, unique enough that a family-wide sweep
+    # cannot cross into another goal's stamps.
+    def clear_consumption_stamps
+      Transaction.where("extra @> ?", { goal: { consumed_goal_id: id } }.to_json).find_each do |txn|
+        new_extra = txn.extra.deep_dup
+        new_extra["goal"]&.delete("consumed_goal_id")
+        new_extra.delete("goal") if new_extra["goal"]&.empty?
+        txn.update!(extra: new_extra)
+      end
+    end
+  public
+
   def any_consumption?
     consumed_amount.to_d.positive?
   end
@@ -1189,7 +1226,14 @@ class Goal < ApplicationRecord
       # is picking the same goal back up rather than restarting it — wiping
       # what it had recorded as spent would delete history nothing replaced,
       # and drop its progress for no reason the user can see.
-      attrs[:consumed_amount] = 0 if completed_amount.present?
+      if completed_amount.present?
+        attrs[:consumed_amount] = 0
+        # The counter resets; the stamps on the transactions that built it do
+        # not, on their own. Left alone, those transactions could never be
+        # attributed again anyway — `stamp_consumption!` refuses the SAME goal
+        # reclaiming one it already holds, not only a different one.
+        clear_consumption_stamps
+      end
 
       update_columns(**attrs)
     end
