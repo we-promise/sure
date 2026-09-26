@@ -20,6 +20,7 @@ class AccountStatement < ApplicationRecord
   PreparedUpload = Data.define(:content, :filename, :content_type, :byte_size, :checksum, :content_sha256, :large_pdf_override)
 
   MAX_FILE_SIZE = 25.megabytes
+  MAX_LARGE_PDF_SIZE = 200.megabytes
   READ_CHUNK_SIZE = 1.megabyte
   ALLOWED_EXTENSION_CONTENT_TYPES = {
     ".pdf" => %w[application/pdf],
@@ -206,16 +207,17 @@ class AccountStatement < ApplicationRecord
     end
 
     def read_upload_content!(file, allow_large_pdf: false)
+      limit = allow_large_pdf ? MAX_LARGE_PDF_SIZE : MAX_FILE_SIZE
       declared_size = declared_upload_size(file)
-      raise InvalidUploadError if declared_size.present? && declared_size > MAX_FILE_SIZE && !allow_large_pdf
+      raise InvalidUploadError if declared_size.present? && declared_size > limit
 
       content = +"".b
       loop do
         chunk = file.read(READ_CHUNK_SIZE)
         break if chunk.nil? || chunk.empty?
+        raise InvalidUploadError if content.bytesize + chunk.bytesize > limit
 
         content << chunk
-        raise InvalidUploadError if content.bytesize > MAX_FILE_SIZE && !allow_large_pdf
       end
 
       file.rewind if file.respond_to?(:rewind)
@@ -464,7 +466,9 @@ class AccountStatement < ApplicationRecord
     def original_file_constraints
       if original_file.byte_size.zero?
         errors.add(:original_file, :blank)
-      elsif original_file.byte_size > MAX_FILE_SIZE && !large_pdf_override
+      elsif original_file.byte_size > MAX_FILE_SIZE &&
+          !(large_pdf_override && original_file.content_type == "application/pdf" &&
+            original_file.byte_size <= MAX_LARGE_PDF_SIZE)
         errors.add(:original_file, :too_large, max_mb: MAX_FILE_SIZE / 1.megabyte)
       end
 
@@ -479,7 +483,7 @@ class AccountStatement < ApplicationRecord
 
     def file_size_within_limit
       return if byte_size.blank? || byte_size <= MAX_FILE_SIZE
-      return if content_type == "application/pdf" && large_pdf_override
+      return if content_type == "application/pdf" && large_pdf_override && byte_size <= MAX_LARGE_PDF_SIZE
 
       errors.add(:byte_size, :less_than_or_equal_to, count: MAX_FILE_SIZE)
     end

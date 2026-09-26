@@ -495,6 +495,7 @@ class PdfImport < Import
     def destroy_orphaned_import_owned_statement
       statement = AccountStatement.find_by(id: account_statement_id)
       return unless statement&.pdf_import_owned?
+      return if statement.account_id.present?
       return if statement.pdf_imports.exists?
 
       statement.destroy!

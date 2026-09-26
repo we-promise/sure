@@ -21,6 +21,7 @@ class AllowLargePdfAccountStatements < ActiveRecord::Migration[8.1]
     remove_column :account_statements, :pdf_import_owned
     add_check_constraint :account_statements,
       "byte_size <= 26214400",
-      name: "chk_account_statements_byte_size_max"
+      name: "chk_account_statements_byte_size_max",
+      validate: false
   end
 end
