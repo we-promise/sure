@@ -1,0 +1,228 @@
+# ISO 3166-1 alpha-2 country codes mapped to a portfolio region and a
+# development classification.
+#
+# Format:
+#   COUNTRY_CODE:
+#     region: one of the five region names below
+#     development: developed | emerging
+#
+# The five regions are the split most portfolio trackers report against, and
+# they are deliberately coarse: a region is only useful in an allocation chart
+# if it has enough holdings in it to be a slice rather than a sliver.
+#
+#   north_america, europe, asia_pacific, latin_america, middle_east_africa
+#
+# Stored as snake_case keys rather than display text, matching ASSET_CLASSES
+# and ASSET_SUB_CLASSES. The label a user sees is a translation of the key,
+# so renaming "Middle East & Africa" to "EMEA" is a locale edit and not a
+# data migration, and a non-English UI is not stuck with English regions.
+#
+# `development` follows the broad developed/emerging split the major index
+# families agree on. Where they disagree -- South Korea is developed to MSCI's
+# competitors and emerging to MSCI, and Poland and Greece have each moved --
+# this file takes one position and records it here rather than in code, so
+# changing it is a data edit and not a deploy of new logic.
+#
+# A country absent from this file leaves `region` nil. That is on purpose:
+# an unclassified holding is honest, and 3.4 gives it an explicit
+# "Unclassified" bucket. Guessing a region from an unknown code would put a
+# holding in a slice no one can justify.
+
+# ---------------------------------------------------------------- North America
+US:
+  region: north_america
+  development: developed
+CA:
+  region: north_america
+  development: developed
+MX:
+  region: latin_america
+  development: emerging
+
+# ----------------------------------------------------------------------- Europe
+GB:
+  region: europe
+  development: developed
+IE:
+  region: europe
+  development: developed
+FR:
+  region: europe
+  development: developed
+DE:
+  region: europe
+  development: developed
+NL:
+  region: europe
+  development: developed
+BE:
+  region: europe
+  development: developed
+LU:
+  region: europe
+  development: developed
+CH:
+  region: europe
+  development: developed
+AT:
+  region: europe
+  development: developed
+IT:
+  region: europe
+  development: developed
+ES:
+  region: europe
+  development: developed
+PT:
+  region: europe
+  development: developed
+SE:
+  region: europe
+  development: developed
+# Quoted, and it has to be. `NO` is a YAML 1.1 boolean literal, so an unquoted
+# key here loads as the boolean `false` rather than the string "NO" -- which
+# silently left every Norwegian-listed security with no region, because the
+# lookup is by string. The test "every country code is a two-letter string"
+# catches this and any other literal that YAML would rather read as a value
+# (ON, OFF, YES, Y, N, TRUE, FALSE).
+"NO":
+  region: europe
+  development: developed
+DK:
+  region: europe
+  development: developed
+FI:
+  region: europe
+  development: developed
+IS:
+  region: europe
+  development: developed
+PL:
+  region: europe
+  development: emerging
+CZ:
+  region: europe
+  development: emerging
+HU:
+  region: europe
+  development: emerging
+GR:
+  region: europe
+  development: emerging
+RO:
+  region: europe
+  development: emerging
+RU:
+  region: europe
+  development: emerging
+
+# ----------------------------------------------------------------- Asia-Pacific
+JP:
+  region: asia_pacific
+  development: developed
+AU:
+  region: asia_pacific
+  development: developed
+NZ:
+  region: asia_pacific
+  development: developed
+SG:
+  region: asia_pacific
+  development: developed
+HK:
+  region: asia_pacific
+  development: developed
+KR:
+  region: asia_pacific
+  development: developed
+TW:
+  region: asia_pacific
+  development: emerging
+CN:
+  region: asia_pacific
+  development: emerging
+IN:
+  region: asia_pacific
+  development: emerging
+ID:
+  region: asia_pacific
+  development: emerging
+MY:
+  region: asia_pacific
+  development: emerging
+TH:
+  region: asia_pacific
+  development: emerging
+PH:
+  region: asia_pacific
+  development: emerging
+VN:
+  region: asia_pacific
+  development: emerging
+PK:
+  region: asia_pacific
+  development: emerging
+BD:
+  region: asia_pacific
+  development: emerging
+
+# ---------------------------------------------------------------- Latin America
+BR:
+  region: latin_america
+  development: emerging
+AR:
+  region: latin_america
+  development: emerging
+CL:
+  region: latin_america
+  development: emerging
+CO:
+  region: latin_america
+  development: emerging
+PE:
+  region: latin_america
+  development: emerging
+UY:
+  region: latin_america
+  development: emerging
+
+# -------------------------------------------------------- Middle East & Africa
+IL:
+  region: middle_east_africa
+  development: developed
+AE:
+  region: middle_east_africa
+  development: emerging
+SA:
+  region: middle_east_africa
+  development: emerging
+QA:
+  region: middle_east_africa
+  development: emerging
+KW:
+  region: middle_east_africa
+  development: emerging
+BH:
+  region: middle_east_africa
+  development: emerging
+OM:
+  region: middle_east_africa
+  development: emerging
+TR:
+  region: middle_east_africa
+  development: emerging
+EG:
+  region: middle_east_africa
+  development: emerging
+ZA:
+  region: middle_east_africa
+  development: emerging
+NG:
+  region: middle_east_africa
+  development: emerging
+KE:
+  region: middle_east_africa
+  development: emerging
+MA:
+  region: middle_east_africa
+  development: emerging

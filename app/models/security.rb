@@ -47,8 +47,9 @@ class Security < ApplicationRecord
   # chk_securities_asset_sub_class, chk_securities_classification_source);
   # adding a value means changing both, deliberately.
   #
-  # Schema only for now: nothing writes these columns yet, so every security
-  # is unclassified (NULL) until a later drop populates them.
+  # `apply_classification_defaults` fills the two kinds a provider cannot
+  # answer (cash, crypto) and the region; everything else stays unclassified
+  # (NULL) until a provider, the user or an approved proposal answers it.
   #
   # The migration repeats these lists rather than reading them from here, so
   # that it produces the same schema whenever it runs. Changing a list is
@@ -64,10 +65,10 @@ class Security < ApplicationRecord
   # wrong. No provider supplies a region -- they supply a country, and the
   # region is derived from it against a list this application owns -- so its
   # vocabulary is closed and a model-level `inclusion` validation is the right
-  # enforcement once something writes it. It is unconstrained today only
-  # because nothing does. It is left unconstrained in the DATABASE for a
-  # different reason: the list belongs in configuration, where widening it
-  # should not need a migration. The migration header says the same.
+  # enforcement; REGION_KEYS below is that list. It is left unconstrained in
+  # the DATABASE for a different reason: the list belongs in configuration,
+  # where widening it should not need a migration. The migration header says
+  # the same.
   ASSET_CLASSES = %w[
     alternative_investment commodity equity fixed_income liquidity real_estate
   ].freeze
@@ -82,7 +83,28 @@ class Security < ApplicationRecord
   # is the user's veto over every source.
   CLASSIFICATION_SOURCES = %w[provider manual ai default].freeze
 
+  # Country code -> portfolio region and developed/emerging. Data in
+  # config/regions.yml, which carries the reasoning for the five-region split
+  # and for the developed/emerging calls the index families disagree on.
+  #
+  # `region` has no check constraint -- unlike asset class and sub-class -- so
+  # the vocabulary is held here rather than in the database. REGION_KEYS is
+  # what keeps it a vocabulary at all: a test asserts the config uses those
+  # five and nothing else, so a typo in a new country's entry fails rather
+  # than quietly creating a sixth region that an allocation chart would show
+  # as its own slice.
+  REGIONS = YAML.safe_load_file(Rails.root.join("config", "regions.yml")).freeze
+
+  # Snake_case keys, like ASSET_CLASSES and ASSET_SUB_CLASSES, so the label a
+  # user sees is a translation rather than the stored value.
+  REGION_KEYS = %w[
+    north_america europe asia_pacific latin_america middle_east_africa
+  ].freeze
+
   before_validation :upcase_symbols
+  # Declared after :upcase_symbols deliberately -- `crypto?` compares against a
+  # canonical MIC, and that callback is what canonicalises it.
+  before_validation :apply_classification_defaults
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
   before_save :reset_first_provider_price_on_if_provider_changed
 
@@ -96,6 +118,10 @@ class Security < ApplicationRecord
   validates :asset_class, inclusion: { in: ASSET_CLASSES }, allow_nil: true
   validates :asset_sub_class, inclusion: { in: ASSET_SUB_CLASSES }, allow_nil: true
   validates :classification_source, inclusion: { in: CLASSIFICATION_SOURCES }, allow_nil: true
+  # `region` has no check constraint, so this is the only thing keeping it a
+  # vocabulary rather than free text. Nil is allowed: a country the config does
+  # not name leaves the region unanswered rather than guessed.
+  validates :region, inclusion: { in: REGION_KEYS }, allow_nil: true
 
   scope :online, -> { where(offline: false) }
   scope :standard, -> { where(kind: "standard") }
@@ -123,6 +149,15 @@ class Security < ApplicationRecord
 
   def cash?
     kind == "cash"
+  end
+
+  # Derived rather than stored: developed/emerging is a property of the country,
+  # so there is no column for it and nothing to keep in sync. Nil for a country
+  # the config does not name.
+  def development_status
+    return nil if offline?
+
+    REGIONS.dig(country_code.to_s.upcase, "development")
   end
 
   # True when this security represents a crypto asset. Today the only signal
@@ -281,6 +316,60 @@ class Security < ApplicationRecord
       host.sub(/\Awww\./, "")
     rescue URI::InvalidURIError
       nil
+    end
+
+    # The weakest writer in the precedence order (default -> provider -> ai ->
+    # manual), so it fills only what is still empty and never touches a
+    # security whose classification the user has locked. That is what makes it
+    # safe on every save, which is also how an existing security picks these
+    # up: as it is next written to, with no backfill job.
+    def apply_classification_defaults
+      return if classification_locked?
+
+      apply_default_asset_class
+      apply_default_region
+    end
+
+    # Only the two kinds a provider cannot answer. An ordinary listed
+    # instrument is left alone on purpose: "listed in the US" says nothing
+    # about whether it is a stock, an ETF or a bond, and guessing would mark
+    # it `default` and make the provider's later answer look like an
+    # overwrite rather than the first real classification.
+    def apply_default_asset_class
+      return if asset_class.present? && asset_sub_class.present?
+
+      defaults =
+        if cash?
+          [ "liquidity", "cash" ]
+        elsif crypto?
+          [ "alternative_investment", "cryptocurrency" ]
+        end
+      return if defaults.nil?
+
+      # Each field is filled on its own. Guarding on "either is set" left a
+      # half-classified security half-classified for good -- an asset class
+      # with no sub-class is not a state anything downstream can group by.
+      self.asset_class = defaults.first if asset_class.blank?
+      self.asset_sub_class = defaults.last if asset_sub_class.blank?
+      # Claimed only when this actually classified the instrument. Filling a
+      # region does not make the classification ours.
+      self.classification_source ||= "default"
+    end
+
+    def apply_default_region
+      return if region.present?
+      # An offline security's `country_code` is not the instrument's listing
+      # country. `Security::Resolver#offline_security` persists whatever the
+      # caller passed, and the resolver's own ranking calls that value
+      # `user_country` -- it is a search hint about the person, not a fact
+      # about the instrument. Securities are global rather than family-scoped,
+      # so deriving a region from it would publish one family's guess to
+      # everyone holding that security. Provider-matched securities take
+      # `match.country_code`, which is the listing country, and those do
+      # classify.
+      return if offline?
+
+      self.region = REGIONS.dig(country_code.to_s.upcase, "region")
     end
 
     def upcase_symbols
