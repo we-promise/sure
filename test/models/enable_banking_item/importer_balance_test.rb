@@ -97,6 +97,74 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal BigDecimal("75.00"), @enable_banking_account.reload.current_balance
   end
 
+  test "fetch_and_update_balance prefers a materially newer expected balance over a stale opening booked balance" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "OPBD",
+          reference_date: "2026-09-01",
+          balance_amount: { amount: "50.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "XPCD",
+          reference_date: "2026-09-25",
+          balance_amount: { amount: "75.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("75.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance keeps the period-boundary balance when reference_date is missing" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "OPBD",
+          balance_amount: { amount: "50.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "XPCD",
+          reference_date: "2026-09-25",
+          balance_amount: { amount: "75.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("50.00"), @enable_banking_account.reload.current_balance
+  end
+
+  test "fetch_and_update_balance keeps the period-boundary balance when it is not older than other balances" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "OPBD",
+          reference_date: "2026-09-25",
+          balance_amount: { amount: "50.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "XPCD",
+          reference_date: "2026-09-01",
+          balance_amount: { amount: "75.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("50.00"), @enable_banking_account.reload.current_balance
+  end
+
   test "fetch_and_update_balance falls back to the first balance when only unprioritized types are present" do
     @mock_provider.stubs(:get_account_balances).returns(
       balances: [
