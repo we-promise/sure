@@ -456,6 +456,19 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal "Shared ISIN", shared.name
   end
 
+  test "ISIN rematch runs once per processor and skips accounts without ISIN rows" do
+    Security.stubs(:search_provider).returns([])
+    Security.create!(ticker: "DE000BASF111", name: "BASF ISIN", offline: true)
+    @tr_account.update!(raw_positions_payload: [
+      position_payload(isin: "DE000BASF111", quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR"),
+      position_payload(isin: "DE000BASF111", quantity: "5", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+    ])
+
+    processor = TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload)
+    processor.expects(:rematch_holdings_from_isin!).never
+    processor.process
+  end
+
   test "maps a Trade Republic Tradegate symbol to the Tradegate MIC" do
     Security.stubs(:search_provider).returns([])
 

@@ -278,9 +278,14 @@ module TradeRepublicAccount::DataHelpers
     def rematch_account_from_isin!(isin, to_security)
       return unless account.present? && to_security.present?
 
+      @rematched_isins ||= Set.new
+      return unless @rematched_isins.add?([ isin.to_s, to_security.id ])
+
       from_security = Security.find_by(ticker: isin)
       return unless from_security
       return if from_security.id == to_security.id
+      return unless account.holdings.where(security_id: from_security.id).exists? ||
+        account.trades.where(security_id: from_security.id).exists?
 
       rematch_holdings_from_isin!(from_security, to_security)
       account.trades.where(security_id: from_security.id).update_all(
