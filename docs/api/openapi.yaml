@@ -3349,6 +3349,7 @@ components:
       - currency
       - period
       - sankey
+      - investment_contributions
       properties:
         as_of:
           type: string
@@ -3361,6 +3362,11 @@ components:
           "$ref": "#/components/schemas/FinancialPeriod"
         sankey:
           "$ref": "#/components/schemas/CashFlowSankey"
+        investment_contributions:
+          type: string
+          description: 'Cash moved into investment/crypto accounts this period. Excluded
+            from the sankey spending figure: it reallocates net worth rather than
+            consuming it.'
     CashFlow:
       type: object
       required:
@@ -3374,6 +3380,7 @@ components:
       - net_savings
       - savings_rate
       - spending_comparison
+      - investment_contributions
       properties:
         month:
           type: string
@@ -3400,6 +3407,11 @@ components:
           nullable: true
           description: Percentage points; null when income is nonpositive. May be
             negative.
+        investment_contributions:
+          type: string
+          description: 'Cash moved into investment/crypto accounts this period. Excluded
+            from spending and savings_rate: it reallocates net worth rather than consuming
+            it.'
         spending_comparison:
           type: object
           required:

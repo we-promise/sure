@@ -469,6 +469,33 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "auto-matched transfer to a tracked crypto account does not inflate spending or tank savings rate" do
+    # Regression for a real user: a large transfer to a *tracked* Kraken
+    # (crypto) account was correctly detected as a transfer (kind:
+    # investment_contribution) but the income statement still counted the
+    # full amount as "expense", driving net_income and savings_rate deeply
+    # negative even though the money never left the user's net worth.
+    kraken = accounts(:crypto)
+    create_transaction(date: Date.current, account: @depository, amount: -30_000) # this period's income
+    outflow_entry = create_transaction(date: Date.current, account: @depository, amount: 60_000)
+    create_transaction(date: Date.current, account: kraken, amount: -60_000)
+
+    @family.auto_match_transfers!
+
+    outflow_entry.reload
+    assert_equal "investment_contribution", outflow_entry.entryable.kind
+
+    # Scoped to today and to just these two accounts so fixture noise from
+    # other dylan_family transactions (on other days/accounts) can't leak in.
+    income_statement = IncomeStatement.new(@family)
+    totals = income_statement.totals_for(Period.custom(start_date: Date.current, end_date: Date.current),
+                                          account_ids: [ @depository.id, kraken.id ])
+
+    assert_equal Money.new(30_000, @family.currency), totals.income_money
+    assert_equal Money.new(0, @family.currency), totals.expense_money
+    assert_equal Money.new(60_000, @family.currency), totals.investment_contribution_money
+  end
+
   test "does not match multi-currency transfer with missing exchange rate" do
     create_transaction(date: Date.current, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "GBP")

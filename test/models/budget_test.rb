@@ -191,6 +191,33 @@ class BudgetTest < ActiveSupport::TestCase
     )
   end
 
+  test "actual_spending still counts investment contributions (budget allocation, not consumption)" do
+    # Dashboard/report "spending" figures correctly exclude investment
+    # contributions from consumption (see Transaction::NON_OPERATING_KINDS),
+    # but Budget accounting is a different question: if a category was
+    # allocated money and the user contributed it, the category must show as
+    # spent or Budget::RolloverCalculator carries the allocation forward as
+    # unused surplus every month even though it was already used (see PR
+    # #3609 review). Budget#expense_totals/net_totals pass
+    # include_non_operating: true for exactly this reason.
+    family = families(:empty)
+    account = family.accounts.create!(name: "Checking", currency: "USD", balance: 5000, accountable: Depository.new)
+    groceries = family.categories.create!(name: "Groceries", color: "#e74c3c")
+    investment_category = family.investment_contributions_category # created before bootstrap, so the budget picks it up
+
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+
+    Entry.create!(account: account, entryable: Transaction.create!(category: groceries),
+                  date: Date.current, name: "Groceries", amount: 200, currency: "USD")
+    Entry.create!(account: account, entryable: Transaction.create!(category: investment_category, kind: "investment_contribution"),
+                  date: Date.current, name: "Kraken transfer", amount: 60_000, currency: "USD")
+
+    assert_equal 60_200, budget.actual_spending
+
+    investment_budget_category = budget.budget_categories.find_by!(category: investment_category)
+    assert_equal 60_000, budget.budget_category_actual_spending(investment_budget_category)
+  end
+
   test "budget_category_actual_spending does not go below zero" do
     family = families(:dylan_family)
     budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)

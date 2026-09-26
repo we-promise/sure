@@ -55,4 +55,19 @@ class Insight::Generators::SpendingAnomalyGeneratorTest < ActiveSupport::TestCas
       assert_equal "high", insights.first.priority
     end
   end
+
+  # A large, one-off transfer into an investment/crypto account (kind:
+  # investment_contribution) is a real cash outflow but not consumption, so
+  # it must never read as a "spending explosion" here -- it isn't part of
+  # expense_totals at all (see IncomeStatement::ScopedTransactionsQuery#classification_sql).
+  test "does not flag a large investment contribution as a spending anomaly" do
+    investment_category = @family.investment_contributions_category
+
+    travel_to anchor do
+      3.times { |i| create_transaction(category: investment_category, amount: 500, kind: "investment_contribution", date: month_start(i + 1).change(day: 3), name: "contribution") }
+      create_transaction(category: investment_category, amount: 60_000, kind: "investment_contribution", date: anchor.beginning_of_month.change(day: 3), name: "kraken transfer")
+
+      assert_empty generate
+    end
+  end
 end

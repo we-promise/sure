@@ -34,10 +34,12 @@
       # Separate income and expenses
       income_groups = transactions.select { |g| g[:type] == "income" }
       expense_groups = transactions.select { |g| g[:type] == "expense" }
+      investment_contribution_groups = transactions.select { |g| g[:type] == "investment_contribution" }
 
       # Calculate totals
       income_total = income_groups.sum { |g| g[:total] }
       expense_total = expense_groups.sum { |g| g[:total] }
+      investment_contribution_total = investment_contribution_groups.sum { |g| g[:total] }
 
       # Determine sort direction for Amount column
       current_sort_by = params[:sort_by]
@@ -70,6 +72,21 @@
               groups: expense_groups,
               total: expense_total,
               type: :expense,
+              amount_sort_params: amount_sort_params,
+              current_sort_by: current_sort_by,
+              current_sort_direction: current_sort_direction,
+              start_date: start_date,
+              end_date: end_date %>
+      <% end %>
+
+      <%# Investment Contributions Section: real cash outflow, but not
+          consumption, so it's broken out from Expenses (see
+          Transaction::NON_OPERATING_KINDS) %>
+      <% if investment_contribution_groups.any? %>
+        <%= render "reports/breakdown_table",
+              groups: investment_contribution_groups,
+              total: investment_contribution_total,
+              type: :investment_contribution,
               amount_sort_params: amount_sort_params,
               current_sort_by: current_sort_by,
               current_sort_direction: current_sort_direction,

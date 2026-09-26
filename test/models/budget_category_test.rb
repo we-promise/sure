@@ -599,6 +599,28 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
     assert_equal 100, budget_category_for(second).available_to_spend
   end
 
+  # Regression for PR #3609: IncomeStatement stopped counting a transfer to
+  # an investment/crypto account as "expense" (it's not consumption), but
+  # Budget#budget_category_actual_spending still needs to see it as spent --
+  # otherwise a category the user allocated to and fully contributed reads
+  # as having its whole allocation still available, and that unused-looking
+  # surplus rolls into next month even though the money already moved.
+  test "a fully-contributed investment allocation does not roll forward as surplus" do
+    investment_category = @family.investment_contributions_category
+
+    first = initialized_budget(2.months.ago)
+    first.budget_categories.find_by!(category: investment_category).update!(budgeted_spending: 500, rollover_enabled: true)
+    create_transaction(account: @account, date: first.start_date, amount: 500, category: investment_category, kind: "investment_contribution")
+
+    second = initialized_budget(1.month.ago)
+    second.budget_categories.find_by!(category: investment_category).update!(budgeted_spending: 500, rollover_enabled: true)
+
+    recompute!
+
+    rolled_over = BudgetCategory.find_by!(budget_id: second.id, category: investment_category)[:rolled_over_amount]
+    assert_equal 0, rolled_over, "a fully-contributed allocation must not roll forward as unused surplus"
+  end
+
   test "a category without the toggle never accumulates a rollover" do
     first = initialized_budget(2.months.ago)
     allocate(first, 100)

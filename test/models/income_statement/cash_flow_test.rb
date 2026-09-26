@@ -33,6 +33,22 @@ class IncomeStatement::CashFlowTest < ActiveSupport::TestCase
     assert_equal "96.7655", result[:savings_rate]
   end
 
+  test "reports investment contributions separately from spending" do
+    create_transaction(account: @account, amount: -2500, date: @month) # income
+    create_transaction(account: @account, amount: 1000, date: @month) # consumer spending
+    create_transaction(account: @account, amount: 500, date: @month, kind: "investment_contribution")
+
+    result = summary
+
+    assert_equal "2500.0", result[:income]
+    assert_equal "1000.0", result[:spending]
+    assert_equal "500.0", result[:investment_contributions]
+    assert_equal "1500.0", result[:net_savings]
+    # (2500 - 1000) / 2500 -- the contribution doesn't move the rate at all,
+    # positively or negatively, since it's neither income nor consumption.
+    assert_equal "60.0", result[:savings_rate]
+  end
+
   test "fills every day and compares current month to the same elapsed day" do
     create_transaction(account: @account, amount: 10, date: Date.new(2024, 1, 10))
     create_transaction(account: @account, amount: 90, date: Date.new(2024, 1, 31))

@@ -150,6 +150,7 @@ fr:
         category: Catégorie
         expenses: Dépenses
         income: Revenus
+        investment_contributions: Contributions aux investissements
         more_categories: "+ %{count} autres catégories"
         percent: "%"
         title: Dépenses par catégorie
@@ -175,6 +176,8 @@ fr:
     summary:
       budget_performance: Performance budgétaire
       income_minus_expenses: Revenus moins dépenses
+      investment_contributions: Contributions aux investissements
+      investment_contributions_description: Toujours à vous, pas une dépense
       net_savings: Épargne nette
       no_budget_data: Aucune donnée budgétaire pour cette période
       of_budget_used: du budget utilisé
@@ -221,6 +224,7 @@ fr:
           other: "%{count} entrées"
         expense: Dépenses
         income: Revenus
+        investment_contribution: Contributions aux investissements
         percentage: "% du total"
         type: Type
         uncategorized: Non catégorisé
