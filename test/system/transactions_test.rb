@@ -157,6 +157,19 @@ class TransactionsTest < ApplicationSystemTestCase
     assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
   end
 
+  test "keyboard focus stays on a tag option after toggling it" do
+    summary_id = dom_id(@transaction.entryable, :tag_summary)
+    option_id = "#{dom_id(@transaction, :tag_option)}_#{tags(:two).id}"
+
+    find("##{summary_id}").click
+    button = find("##{option_id} button")
+    button.send_keys(:enter)
+
+    assert_selector "##{option_id}[aria-selected='true']"
+    assert page.evaluate_script("document.activeElement.closest('##{option_id}') !== null"),
+      "focus should remain on the toggled option"
+  end
+
   test "can select and deselect entire page of transactions" do
     all_transactions_checkbox.check
     assert_selection_count(number_of_transactions_on_page)

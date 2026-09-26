@@ -8,7 +8,7 @@
 <span id="<%= dom_id(transaction, :tag_summary) %>" class="inline-flex min-w-0 max-w-full">
   <% if tags.empty? && !editable %>
   <% elsif tags.empty? %>
-    <span class="invisible group-hover:visible inline-flex items-center justify-center w-7 h-7 rounded-full text-secondary hover:bg-container-inset-hover"
+    <span class="invisible group-hover:visible in-focus-visible:visible inline-flex items-center justify-center w-7 h-7 rounded-full text-secondary hover:bg-container-inset-hover"
           title="<%= t(".add") %>">
       <%= icon("tag", size: "sm", color: "current") %>
       <span class="sr-only"><%= t(".add") %></span>
@@ -16,28 +16,33 @@
   <% else %>
     <%= render DS::Tooltip.new(placement: "top", variant: :surface, html_class: "min-w-0 max-w-full") do |tooltip| %>
       <% tooltip.with_trigger do %>
-        <% if tags.one? %>
-          <%# Empty title: the tooltip below replaces the pill's native one. %>
-          <%= render DS::Pill.new(
-                label: tags.first.name,
-                custom_color: tags.first.color,
-                marker: false,
-                size: :md,
-                truncate: true,
-                title: "") %>
-        <% else %>
-          <% shown = tags.size > 3 ? tags.first(2) : tags %>
-          <span class="inline-flex shrink-0 items-center gap-1 rounded-full border border-secondary bg-container-inset p-0.5 pr-2 text-sm leading-none">
-            <span class="inline-flex items-center -space-x-1">
-              <% shown.each do |tag| %>
-                <span class="inline-flex rounded-full ring-2 ring-container-inset"><%= render "tags/initial", tag: tag %></span>
+        <%# Editable summaries sit inside the picker button, which takes focus.
+            Read-only ones need their own tab stop so keyboard users can open
+            the tooltip with the full names. %>
+        <%= tag.span class: ["inline-flex min-w-0", { "rounded-full focus-ring": !editable }], tabindex: (editable ? nil : 0) do %>
+          <% if tags.one? %>
+            <%# Empty title: the tooltip below replaces the pill's native one. %>
+            <%= render DS::Pill.new(
+                  label: tags.first.name,
+                  custom_color: tags.first.color,
+                  marker: false,
+                  size: :md,
+                  truncate: true,
+                  title: "") %>
+          <% else %>
+            <% shown = tags.size > 3 ? tags.first(2) : tags %>
+            <%= tag.span class: ["inline-flex shrink-0 items-center gap-1 rounded-full border border-secondary bg-container-inset p-0.5 text-sm leading-none", { "pr-2": tags.size > shown.size }] do %>
+              <span class="inline-flex items-center -space-x-1">
+                <% shown.each do |tag| %>
+                  <span class="inline-flex rounded-full ring-2 ring-container-inset"><%= render "tags/initial", tag: tag %></span>
+                <% end %>
+              </span>
+              <% if tags.size > shown.size %>
+                <span class="text-xs font-medium text-secondary" aria-hidden="true">+<%= tags.size - shown.size %></span>
               <% end %>
-            </span>
-            <% if tags.size > shown.size %>
-              <span class="text-xs font-medium text-secondary" aria-hidden="true">+<%= tags.size - shown.size %></span>
+              <span class="sr-only"><%= t(".title", names: names) %></span>
             <% end %>
-            <span class="sr-only"><%= t(".title", names: names) %></span>
-          </span>
+          <% end %>
         <% end %>
       <% end %>
       <ul class="flex flex-col items-start gap-1 py-0.5" data-tag-summary-tooltip>

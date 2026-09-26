@@ -1,4 +1,4 @@
-<%# locals: (tag:, entry:, selected:) %>
+<%# locals: (tag:, entry:, selected:, autofocus: false) %>
 
 <%= content_tag :div,
       id: "#{dom_id(entry, :tag_option)}_#{tag.id}",
@@ -10,6 +10,7 @@
   <%= button_to tags_transaction_path(entry),
         method: :patch,
         params: { toggle_tag_id: tag.id },
+        autofocus: autofocus,
         class: "flex w-full items-center gap-1.5 cursor-pointer" do %>
     <span class="flex items-center justify-center w-5 h-5 shrink-0">
       <% if selected %><%= icon("check") %><% end %>

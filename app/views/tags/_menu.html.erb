@@ -1,8 +1,9 @@
 <%# locals: (entry:, transaction:) %>
 
 <div class="min-w-0 max-w-full">
-  <% if transaction.transfer? %>
-    <%# Transfer tags must stay in sync across both legs; edit them from the drawer. %>
+  <% if transaction.transfer? || !can_annotate_account?(entry.account) %>
+    <%# Read-only: transfer tags must stay in sync across both legs (edit them
+        from the drawer), and read-only shares can't change tags at all. %>
     <%= render "tags/summary", transaction: transaction, editable: false %>
   <% else %>
     <%= render DS::Popover.new(variant: "button", aria_label: t(".label")) do |popover| %>
