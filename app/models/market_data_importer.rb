@@ -81,16 +81,22 @@ class MarketDataImporter
       # 2. ACCOUNT-BASED PAIRS – use the account's oldest entry date.
       # The earliest entry date per account is resolved in SQL to avoid loading a
       # potentially large Hash of all account IDs into Ruby memory.
+      # The target is the family's normalized primary currency (USD when the column
+      # is blank or NULL), the same currency transfer matching converts through.
+      # IS DISTINCT FROM keeps NULL-currency families; the exact check happens in Ruby.
       Account.joins(:family)
              .joins("LEFT JOIN (SELECT account_id, MIN(date) AS first_entry_date FROM entries GROUP BY account_id) AS entry_mins ON entry_mins.account_id = accounts.id")
-             .where.not("families.currency = accounts.currency")
-             .select("accounts.id, accounts.currency AS source, families.currency AS target, entry_mins.first_entry_date")
+             .where("families.currency IS DISTINCT FROM accounts.currency")
+             .select("accounts.id, accounts.currency AS source, families.currency AS family_currency, entry_mins.first_entry_date")
              .find_each do |account|
+        target = Family.normalize_currency_code(account.family_currency) || "USD"
+        next if target == account.source
+
         earliest_entry_date = account.first_entry_date
 
         chosen_date = [ earliest_entry_date, default_start_date ].compact.min
 
-        key = [ account.source, account.target ]
+        key = [ account.source, target ]
         pair_dates[key] = [ pair_dates[key], chosen_date ].compact.min
       end
 
