@@ -80,6 +80,8 @@ en:
       activity_date:
         balance_tooltip: "The end of day balance, after all transactions and adjustments"
         no_balance_data: "No balance data available for this date"
+        projected: "Projected"
+        projected_balance_tooltip: "An estimate: current balance plus scheduled entries through this date"
   ds:
     alert:
       variants:

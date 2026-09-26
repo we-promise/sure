@@ -46,7 +46,7 @@
     </div>
   </header>
 
-  <%= render "summary", totals: @search.totals %>
+  <%= render "summary", totals: @search.totals, transactions_count: @pagy.count %>
   <% if Current.family.recurring_transactions_disabled? %>
     <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: params[:q], pagy: @pagy %>
   <% else %>

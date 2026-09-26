@@ -410,6 +410,24 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     # Only finds 1 transaction that matches filter
     assert_dom "#" + dom_id(searchable_transaction), count: 1
     assert_dom "#total-transactions", count: 1, text: "1"
+    assert_dom "#scheduled-transactions-count", count: 0
+  end
+
+  test "transaction count includes scheduled entries shown in the list" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    create_transaction(account: account)
+    scheduled = create_transaction(account: account, date: 1.day.from_now.to_date, name: "Scheduled bill")
+
+    get transactions_url
+
+    # The scheduled entry is excluded from totals.count (see Transaction::Search#totals)
+    # but still rendered in the list below -- the headline must match the list, not the totals.
+    assert_dom "#" + dom_id(scheduled), count: 1
+    assert_dom "#total-transactions", count: 1, text: "2"
+    assert_dom "#scheduled-transactions-count", count: 1, text: "including 1 scheduled"
   end
 
   test "can update notes on split child transaction" do
@@ -668,6 +686,7 @@ end
     search = Transaction::Search.new(family)
     totals = OpenStruct.new(
       count: 1,
+      excluded_scheduled_count: 0,
       expense_money: Money.new(10000, "USD"),
       income_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(0, "USD"),
@@ -692,6 +711,7 @@ end
     search = Transaction::Search.new(family, filters: { "categories" => [ "Food" ], "types" => [ "expense" ] })
     totals = OpenStruct.new(
       count: 1,
+      excluded_scheduled_count: 0,
       expense_money: Money.new(10000, "USD"),
       income_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(0, "USD"),
@@ -715,6 +735,7 @@ end
     search = Transaction::Search.new(family, filters: { "types" => [ "transfer" ] })
     totals = OpenStruct.new(
       count: 2,
+      excluded_scheduled_count: 0,
       expense_money: Money.new(0, "USD"),
       income_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(5000, "USD"),

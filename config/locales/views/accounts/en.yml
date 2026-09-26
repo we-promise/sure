@@ -6,6 +6,11 @@ en:
         success: "Entry deleted successfully."
   accounts:
     not_authorized: "You don't have permission to manage this account"
+    scheduled_balance_tooltip:
+      description: Your balance once all scheduled transactions have posted
+      current: Current balance
+      scheduled: Scheduled
+      projected: Projected balance
     account:
       complete_setup: Complete setup
       edit: Edit

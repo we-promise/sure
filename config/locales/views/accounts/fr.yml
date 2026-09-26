@@ -5,6 +5,11 @@ fr:
       destroy:
         success: Entrée supprimée avec succès.
   accounts:
+    scheduled_balance_tooltip:
+      description: Votre solde une fois toutes les transactions planifiées validées
+      current: Solde actuel
+      scheduled: Planifié
+      projected: Solde prévisionnel
     account:
       change_simplefin_account: Changer le compte SimpleFIN
       complete_setup: Configuration complète
