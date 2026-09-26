@@ -400,14 +400,14 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
   test "maps Google Pay inbound payments to deposits" do
     assert_equal "PAYMENT_RECEIVED",
       Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES["PAYMENT_INBOUND_GOOGLE_PAY"]
-    assert_equal :financial, TradeRepublicAccount::DataHelpers.classify_timeline_event(
+    assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify(
       "eventType" => "PAYMENT_INBOUND_GOOGLE_PAY",
       "title" => "Cash in"
     )
   end
 
   test "ignores Legal documents timeline rows without an event type" do
-    assert_equal :ignored, TradeRepublicAccount::DataHelpers.classify_timeline_event(
+    assert_equal :ignored, Provider::TradeRepublicTimelineEvent.classify(
       "title" => "Legal documents",
       "subtitle" => "Accepted"
     )

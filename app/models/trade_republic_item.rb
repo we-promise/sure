@@ -169,7 +169,7 @@ class TradeRepublicItem < ApplicationRecord
     unique_events = TradeRepublicAccount::DataHelpers.unique_timeline_events(portfolio_events, cash_events)
     hash_positions = positions.select { |position| position.is_a?(Hash) }
     unknown_events = unique_events.count do |event|
-      TradeRepublicAccount::DataHelpers.classify_timeline_event(event) == :unknown
+      Provider::TradeRepublicTimelineEvent.classify(event) == :unknown
     end
     pending_trade_details = unique_events.count do |event|
       Provider::TradeRepublicClient.incomplete_trade_detail_event?(event)

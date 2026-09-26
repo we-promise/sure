@@ -204,7 +204,7 @@ class TradeRepublicItem::Importer
       Array(portfolio.raw_timeline_payload).filter_map do |event|
         next unless event.is_a?(Hash)
         next unless Provider::TradeRepublicClient.requires_trade_detail?(event)
-        next unless TradeRepublicAccount::DataHelpers.importable_timeline_event?(event)
+        next unless Provider::TradeRepublicTimelineEvent.importable?(event)
 
         detail = (event["detail"] || event[:detail])
         next unless detail.is_a?(Hash)
@@ -308,7 +308,7 @@ class TradeRepublicItem::Importer
       merged[:category] = incoming[:category].presence || previous[:category]
       merged[:eventType] = incoming[:eventType].presence || previous[:eventType]
       merged[:detail] = prefer_richer_timeline_detail(previous[:detail], incoming[:detail])
-      TradeRepublicAccount::DataHelpers.merge_lifecycle_fields!(merged, previous, incoming)
+      Provider::TradeRepublicTimelineEvent.merge_lifecycle_fields!(merged, previous, incoming)
       # compact drops nil only; boolean false for deleted/hidden must survive.
       merged.compact
     end

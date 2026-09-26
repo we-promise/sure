@@ -1,10 +1,6 @@
 class TradeRepublicAccount::ActivitiesProcessor
   include TradeRepublicAccount::DataHelpers
 
-  # Timeline event categories that carry trade payloads once their detail has
-  # been resolved by the Trade Republic client boundary.
-  CATEGORY_ORDER_EXECUTION = "orderExecution"
-
   SAVEBACK_EVENT_TYPE = "SAVEBACK_AGGREGATE"
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
 
@@ -454,7 +450,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     def reconcile_non_importable_entries!
       blocked_ids = Array(@trade_republic_account.raw_timeline_payload).filter_map do |event|
         next unless event.is_a?(Hash)
-        next unless TradeRepublicAccount::DataHelpers.lifecycle_blocks_import?(event)
+        next unless lifecycle_blocks_import?(event)
 
         event["id"].presence || event[:id].presence
       end

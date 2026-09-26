@@ -1,131 +1,16 @@
 module TradeRepublicAccount::DataHelpers
   extend ActiveSupport::Concern
 
-  # Timeline event categories Trade Republic emits. Only explicitly mapped
-  # categories are imported; anything unknown is skipped and recorded rather
-  # than guessed into a transaction.
-  CATEGORY_DEPOSIT = "PAYMENT_RECEIVED"
-  CATEGORY_WITHDRAWAL = "POC_CREATED"
-  CATEGORY_INTEREST = "INTEREST_PAYOUT_CREATED"
-  CATEGORY_DIVIDEND = "DIVIDEND"
-  KNOWN_ACTIVITY_CATEGORIES = [ CATEGORY_DEPOSIT, CATEGORY_WITHDRAWAL, CATEGORY_INTEREST, CATEGORY_DIVIDEND, "orderExecution" ].freeze
+  # Timeline event classification lives in Provider::TradeRepublicTimelineEvent;
+  # including it exposes the CATEGORY_* constants to the processors.
+  include Provider::TradeRepublicTimelineEvent
 
   TRANSFER_EVENT_TYPES = %w[
     PAYMENT_INBOUND PAYMENT_OUTBOUND INCOMING_TRANSFER OUTGOING_TRANSFER
     INCOMING_TRANSFER_DELEGATION OUTGOING_TRANSFER_DELEGATION
   ].freeze
 
-  # Administrative / non-financial timelineActivityLog rows. These stay in the
-  # stored payload for audit but must not import, warn, or inflate unknown counts.
-  IGNORED_EVENT_TYPES = %w[
-    ADDRESS_CHANGED
-    PIN_CHANGED
-    EMAIL_VALIDATED
-    DEVICE_RESET
-    CUSTOMER_CREATED
-    SECURITIES_ACCOUNT_CREATED
-    REFERENCE_ACCOUNT_CHANGED
-    PUK_CREATED
-    DOCUMENTS_ACCEPTED
-    DOCUMENTS_CREATED
-    EX_POST_COST_REPORT_CREATED
-    TAX_YEAR_END_REPORT_CREATED
-    QUARTERLY_REPORT
-    QUARTERLY_NET_WORTH_STATEMENT_CREATED
-    CARD_VERIFICATION
-    ORDER_CANCELED
-    ORDER_REJECTED
-    TRADING_ORDER_CREATED
-    TRADING_ORDER_CANCELLED
-    TRADING_ORDER_REJECTED
-    SSP_CORPORATE_ACTION_INFORMATIVE
-    SSP_CORPORATE_ACTION_ACTIVITY
-    SSP_CORPORATE_ACTION_INSTRUCTION
-    SSP_CORPORATE_ACTION_UPCOMING
-    CSX_CHAT_ACTIVITY
-    GENERAL_MEETING
-    STOCK_PERK_REFUNDED
-    PRIVATE_MARKETS_SUITABILITY_QUIZ_COMPLETED
-    TRADING_SAVINGSPLAN_EXECUTION_FAILED
-  ].freeze
-
-  # Timeline rows that omit eventType/category but are clearly administrative.
-  # Titles are compared case-insensitively after strip.
-  IGNORED_TITLES = [
-    "legal documents"
-  ].freeze
-
-  NON_IMPORTABLE_STATUSES = %w[
-    DECLINED
-    REJECTED
-    CANCELLED
-    CANCELED
-    FAILED
-    ERROR
-  ].freeze
-
-  DECLINED_SUBTITLE_PATTERN = /declin|failed|reject|cancel/i
-  LIFECYCLE_KEYS = %w[status deleted hidden badge].freeze
-
   class << self
-    # Returns :financial, :ignored, or :unknown.
-    def classify_timeline_event(event)
-      return :unknown unless event.is_a?(Hash)
-
-      event = event.with_indifferent_access
-      event_type = event[:eventType].to_s
-      return :ignored if IGNORED_EVENT_TYPES.include?(event_type)
-      return :ignored if ignored_title?(event)
-
-      category = resolved_category(event)
-      return :financial if KNOWN_ACTIVITY_CATEGORIES.include?(category)
-
-      :unknown
-    end
-
-    def ignored_title?(event)
-      title = event[:title].to_s.strip.downcase
-      title.present? && IGNORED_TITLES.include?(title)
-    end
-
-    def importable_timeline_event?(event)
-      return false unless event.is_a?(Hash)
-      return false unless classify_timeline_event(event) == :financial
-      return false if lifecycle_blocks_import?(event)
-
-      true
-    end
-
-    def lifecycle_blocks_import?(event)
-      return false unless event.is_a?(Hash)
-
-      event = event.with_indifferent_access
-      return true if truthy_flag?(event[:deleted])
-      return true if truthy_flag?(event[:hidden])
-
-      status = event[:status].to_s.upcase
-      return true if NON_IMPORTABLE_STATUSES.include?(status)
-      return true if status.blank? && declined_subtitle?(event)
-
-      false
-    end
-
-    def non_importable_reason(event)
-      return nil unless event.is_a?(Hash)
-
-      event = event.with_indifferent_access
-      return "deleted" if truthy_flag?(event[:deleted])
-      return "hidden" if truthy_flag?(event[:hidden])
-
-      status = event[:status].to_s.upcase
-      return "status:#{status.downcase}" if NON_IMPORTABLE_STATUSES.include?(status)
-      return "subtitle" if status.blank? && declined_subtitle?(event)
-      return "ignored" if classify_timeline_event(event) == :ignored
-      return "unknown" if classify_timeline_event(event) == :unknown
-
-      nil
-    end
-
     # Portfolio is the full timeline; cash is a filtered subset. Prefer portfolio
     # rows, then append cash-only events, deduped by event id.
     def unique_timeline_events(portfolio_events, cash_events = [])
@@ -145,66 +30,30 @@ module TradeRepublicAccount::DataHelpers
       result
     end
 
-    def resolved_category(event)
-      event = event.with_indifferent_access
-      event[:category].to_s.presence ||
-        Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES[event[:eventType].to_s]
-    end
-
-    def truthy_flag?(value)
-      ActiveModel::Type::Boolean.new.cast(value)
-    end
-
-    def declined_subtitle?(event)
-      event = event.with_indifferent_access
-      # Only subtitle/badge — never title. Titles are often security or merchant
-      # names and can contain substrings like "cancel" without meaning the
-      # event itself failed; treating those as non-importable would delete
-      # legitimate entries on reconcile.
-      [ event[:subtitle], event[:badge] ].compact.any? do |value|
-        value.to_s.match?(DECLINED_SUBTITLE_PATTERN)
-      end
-    end
-
     def timeline_event_key(event)
       event = event.with_indifferent_access
       return event[:id].to_s if event[:id].present?
 
       [ event[:timestamp], event[:eventType], event[:title], event[:subtitle] ].map(&:to_s).join("|")
     end
-
-    def merge_lifecycle_fields!(merged, previous, incoming)
-      previous = previous.stringify_keys
-      incoming = incoming.stringify_keys
-
-      LIFECYCLE_KEYS.each do |key|
-        if incoming.key?(key)
-          merged[key] = incoming[key]
-        elsif previous.key?(key)
-          merged[key] = previous[key]
-        end
-      end
-
-      merged
-    end
   end
 
   private
 
     def classify_timeline_event(event)
-      TradeRepublicAccount::DataHelpers.classify_timeline_event(event)
+      Provider::TradeRepublicTimelineEvent.classify(event)
     end
 
     def importable_timeline_event?(event)
-      TradeRepublicAccount::DataHelpers.importable_timeline_event?(event)
+      Provider::TradeRepublicTimelineEvent.importable?(event)
     end
 
     def lifecycle_blocks_import?(event)
-      TradeRepublicAccount::DataHelpers.lifecycle_blocks_import?(event)
+      Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(event)
     end
 
     def non_importable_reason(event)
-      TradeRepublicAccount::DataHelpers.non_importable_reason(event)
+      Provider::TradeRepublicTimelineEvent.non_importable_reason(event)
     end
 
     def parse_decimal(value)

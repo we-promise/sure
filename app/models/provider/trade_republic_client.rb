@@ -43,55 +43,7 @@ class Provider::TradeRepublicClient
     SAVEBACK_AGGREGATE
     SPARE_CHANGE_AGGREGATE
   ].freeze
-  EVENT_TYPE_CATEGORIES = {
-    "TRADING_TRADE_EXECUTED" => "orderExecution",
-    "TRADE_INVOICE" => "orderExecution",
-    "ORDER_EXECUTED" => "orderExecution",
-    "CRYPTO_INVOICE" => "orderExecution",
-    "SAVINGS_PLAN_EXECUTED" => "orderExecution",
-    "TRADING_SAVINGSPLAN_EXECUTED" => "orderExecution",
-    # Older savings-plan executions arrive as invoices rather than the newer
-    # TRADING_SAVINGSPLAN_EXECUTED activity. Treat them as order executions so
-    # timelineDetailV2 is fetched and the portfolio can import a trade.
-    "SAVINGS_PLAN_INVOICE_CREATED" => "orderExecution",
-    "PRIVATE_MARKET_FUND_TRADE_EXECUTED" => "orderExecution",
-    "IPO_TRADE_EXECUTED" => "orderExecution",
-    "BANK_TRANSACTION_INCOMING" => "PAYMENT_RECEIVED",
-    "INCOMING_TRANSFER" => "PAYMENT_RECEIVED",
-    "INCOMING_TRANSFER_DELEGATION" => "PAYMENT_RECEIVED",
-    "PAYMENT_INBOUND" => "PAYMENT_RECEIVED",
-    "PAYMENT_INBOUND_SEPA_DIRECT_DEBIT" => "PAYMENT_RECEIVED",
-    "PAYMENT_INBOUND_APPLE_PAY" => "PAYMENT_RECEIVED",
-    "PAYMENT_INBOUND_GOOGLE_PAY" => "PAYMENT_RECEIVED",
-    "BANK_TRANSACTION_OUTGOING" => "POC_CREATED",
-    "BANK_TRANSACTION_OUTGOING_DIRECT_DEBIT" => "POC_CREATED",
-    "OUTGOING_TRANSFER" => "POC_CREATED",
-    "OUTGOING_TRANSFER_DELEGATION" => "POC_CREATED",
-    "PAYMENT_OUTBOUND" => "POC_CREATED",
-    "CARD_TRANSACTION" => "POC_CREATED",
-    "card_successful_transaction" => "POC_CREATED",
-    # Trade Republic currently uses CARD_CASH_BACK for some card purchases
-    # (for example, Marktkauf), not only for actual cashback credits. The
-    # signed provider amount confirms these are cash outflows.
-    "CARD_CASH_BACK" => "POC_CREATED",
-    "card_refund" => "PAYMENT_RECEIVED",
-    "CARD_REFUND" => "PAYMENT_RECEIVED",
-    "SPARE_CHANGE_AGGREGATE" => "POC_CREATED",
-    "SAVEBACK_AGGREGATE" => "POC_CREATED",
-    "BANK_TRANSACTION_OUTGOING_SCHEDULED" => "POC_CREATED",
-    "CARD_ATM_WITHDRAWAL" => "POC_CREATED",
-    "SSP_CORPORATE_ACTION_CASH" => "DIVIDEND",
-    "ssp_corporate_action_invoice_cash" => "DIVIDEND",
-    "SSP_CORPORATE_ACTION_CASH_NON_DIVIDEND" => "PAYMENT_RECEIVED",
-    "DIVIDEND" => "DIVIDEND",
-    "CREDIT" => "DIVIDEND",
-    "INTEREST_PAYOUT" => "INTEREST_PAYOUT_CREATED",
-    "INTEREST_PAYOUT_CREATED" => "INTEREST_PAYOUT_CREATED",
-    "TAX_REFUND" => "PAYMENT_RECEIVED",
-    "ssp_tax_correction_invoice" => "PAYMENT_RECEIVED",
-    "SSP_TAX_CORRECTION" => "PAYMENT_RECEIVED",
-    "CARD_ORDER_FEE" => "POC_CREATED"
-  }.freeze
+  EVENT_TYPE_CATEGORIES = Provider::TradeRepublicTimelineEvent::EVENT_TYPE_CATEGORIES
   PORTFOLIO_CATEGORIES = {
     "stocksAndETFs" => "brokerage",
     "privateMarkets" => "private_markets",
@@ -451,7 +403,7 @@ class Provider::TradeRepublicClient
 
     def incomplete_trade_detail_event?(event)
       return false unless requires_trade_detail?(event)
-      return false unless TradeRepublicAccount::DataHelpers.importable_timeline_event?(event)
+      return false unless Provider::TradeRepublicTimelineEvent.importable?(event)
 
       !trade_detail_complete?(event)
     end
@@ -460,7 +412,7 @@ class Provider::TradeRepublicClient
     # stored before we parsed execution price / fees from timeline details.
     def trade_detail_needs_price_backfill?(event)
       return false unless requires_trade_detail?(event)
-      return false unless TradeRepublicAccount::DataHelpers.importable_timeline_event?(event)
+      return false unless Provider::TradeRepublicTimelineEvent.importable?(event)
       return false unless trade_detail_complete?(event)
 
       detail = (event["detail"] || event[:detail]).stringify_keys
@@ -900,7 +852,7 @@ class Provider::TradeRepublicClient
       Array(events).each do |event|
         next unless event.is_a?(Hash)
         next unless self.class.requires_trade_detail?(event)
-        next unless TradeRepublicAccount::DataHelpers.importable_timeline_event?(event)
+        next unless Provider::TradeRepublicTimelineEvent.importable?(event)
 
         detail = event["detail"] || event[:detail]
         next unless detail.is_a?(Hash)
@@ -1117,7 +1069,7 @@ class Provider::TradeRepublicClient
       classified = item.merge("category" => category)
       if warnings &&
           item["eventType"].present? &&
-          TradeRepublicAccount::DataHelpers.classify_timeline_event(classified) == :unknown
+          Provider::TradeRepublicTimelineEvent.classify(classified) == :unknown
         warnings << "unsupported timeline event type #{item["eventType"]}"
       end
       build_normalized_event(item, category: category, detail: nil)
@@ -1171,7 +1123,7 @@ class Provider::TradeRepublicClient
         item = event.stringify_keys
         category = item["category"].presence || EVENT_TYPE_CATEGORIES[item["eventType"].to_s]
         next if item["id"].blank? || category.blank?
-        next unless TradeRepublicAccount::DataHelpers.importable_timeline_event?(item)
+        next unless Provider::TradeRepublicTimelineEvent.importable?(item)
 
         details_fetched += 1
         begin
@@ -1237,7 +1189,7 @@ class Provider::TradeRepublicClient
       merged = previous.merge(incoming)
       merged["category"] = incoming["category"].presence || previous["category"]
       merged["detail"] = prefer_richer_detail(previous["detail"], incoming["detail"])
-      TradeRepublicAccount::DataHelpers.merge_lifecycle_fields!(merged, previous, incoming)
+      Provider::TradeRepublicTimelineEvent.merge_lifecycle_fields!(merged, previous, incoming)
       # compact drops nil only; boolean false for deleted/hidden must survive.
       merged.compact
     end
@@ -1264,7 +1216,7 @@ class Provider::TradeRepublicClient
       event = item.slice("id", "timestamp", "title", "subtitle", "eventType")
         .merge("category" => category, "detail" => detail.presence)
 
-      TradeRepublicAccount::DataHelpers::LIFECYCLE_KEYS.each do |key|
+      Provider::TradeRepublicTimelineEvent::LIFECYCLE_KEYS.each do |key|
         next unless item.key?(key)
         next if key == "badge" && item[key].blank?
 
