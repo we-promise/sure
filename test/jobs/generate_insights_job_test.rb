@@ -75,6 +75,43 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     end
   end
 
+  test "end-to-end: a real balance gap on a linked account produces an active balance_discrepancy insight, which expires once the gap is fixed" do
+    account = accounts(:connected)
+    account.update!(currency: "EUR") # deliberately different from @family.currency (USD)
+    waypoint = ->(date, balance, kind = "reconciliation") do
+      account.entries.create!(
+        name: "Valuation", date: date, amount: balance, currency: account.currency,
+        entryable: Valuation.new(kind: kind)
+      )
+    end
+
+    waypoint.call(10.days.ago.to_date, 1000, "opening_anchor")
+    waypoint.call(5.days.ago.to_date, 1050)
+    waypoint.call(4.days.ago.to_date, 1050)
+    waypoint.call(3.days.ago.to_date, 1050)
+    waypoint.call(2.days.ago.to_date, 1050)
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "balance_discrepancy:#{account.id}:#{5.days.ago.to_date}")
+    assert insight, "expected a balance_discrepancy insight to be generated"
+    assert insight.active?
+    assert_equal "balance_discrepancy", insight.insight_type
+    assert_equal "EUR", insight.currency, "persisted currency must be the account's, not the family's"
+
+    # User finds and enters the missing transaction; the books catch up to
+    # what the bank has been reporting all along.
+    account.entries.create!(
+      name: "Missing deposit", date: 1.day.ago.to_date, amount: -50, currency: account.currency,
+      entryable: Transaction.new
+    )
+    waypoint.call(Date.current, 1050)
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert insight.reload.expired?
+  end
+
   test "creates an active insight with a body from a generated insight" do
     stub_generated([ generated_insight ])
 
@@ -152,6 +189,27 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal "$5040", insight.facts["balance"]
     assert_equal original_body, insight.body
     assert insight.read?
+  end
+
+  # An account's currency can be edited by the user without its balance
+  # crossing a bucket boundary, so metadata alone would miss it — and the
+  # stored body's formatted amount is denominated in the now-stale currency.
+  test "a currency change resurfaces and rewrites the insight even when metadata is unchanged" do
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    insight.mark_read!
+
+    Insight::BodyWriter.any_instance.expects(:write).returns("rewritten body")
+    stub_generated([ generated_insight(currency: "EUR") ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert_equal "EUR", insight.currency
+    assert_equal "rewritten body", insight.body
+    assert insight.active?
+    assert_not insight.read?
   end
 
   # The title is built from I18n and the generator's own data, not written by
@@ -290,7 +348,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     # display_balance changes only the formatted facts, leaving metadata (the
     # material-change signal) untouched — mirrors a balance drifting slightly
     # between runs without crossing a bucket boundary.
-    def generated_insight(balance: 5000.0, display_balance: nil, priority: "low", title: "Idle cash in Test Checking")
+    def generated_insight(balance: 5000.0, display_balance: nil, priority: "low", title: "Idle cash in Test Checking", currency: "USD")
       Insight::Generator::GeneratedInsight.new(
         insight_type: "idle_cash",
         priority: priority,
@@ -298,7 +356,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
         template_key: "idle_cash",
         facts: { account: "Test Checking", balance: "$#{(display_balance || balance).to_i}", idle_days: 60 },
         metadata: { account_id: "test-account", balance: balance },
-        currency: "USD",
+        currency: currency,
         period_start: nil,
         period_end: nil,
         dedup_key: "idle_cash:test-account:2026-07"
