@@ -79,6 +79,7 @@ class TradeRepublicItem::Importer
         positions: Array(data["positions"]),
         events: data["events"],
         instrument_symbols: data["instrument_symbols"],
+        unresolved_symbol_isins: data["unresolved_symbol_isins"],
         warnings: position_warnings(data),
         domain_statuses: domain_statuses
       )
@@ -100,7 +101,7 @@ class TradeRepublicItem::Importer
       )
     end
 
-    def upsert_kind(kind:, external_id:, name:, currency:, current_balance:, cash_balance:, positions:, events:, instrument_symbols:, warnings:, domain_statuses:)
+    def upsert_kind(kind:, external_id:, name:, currency:, current_balance:, cash_balance:, positions:, events:, instrument_symbols:, warnings:, domain_statuses:, unresolved_symbol_isins: [])
       tr_account = trade_republic_item.trade_republic_accounts.find_by(trade_republic_account_id: external_id) ||
                     trade_republic_item.trade_republic_accounts.find_or_initialize_by(kind: kind)
       portfolio_status = domain_statuses["portfolio"]
@@ -129,6 +130,7 @@ class TradeRepublicItem::Importer
       if timeline_status != "failed"
         merged = merge_timeline_events(tr_account.raw_timeline_payload, events)
         apply_instrument_symbols!(merged, instrument_symbols)
+        stamp_symbol_lookup_attempts!(merged, unresolved_symbol_isins)
         # Drop order executions before the size cap so they never crowd out
         # cash events on the cash account.
         merged = merged.reject { |event| event_category(event) == "orderExecution" } if kind == "cash"
@@ -220,6 +222,7 @@ class TradeRepublicItem::Importer
         exchange_slug = detail["exchange_slug"].to_s.strip.presence
         usable = symbol.present? && !symbol.casecmp?(isin) && exchange_slug.present?
         next if usable
+        next unless Provider::TradeRepublicClient.symbol_lookup_due?(event)
 
         isin
       end.uniq.first(Provider::TradeRepublicClient::MAX_INSTRUMENT_LOOKUPS)
@@ -305,6 +308,28 @@ class TradeRepublicItem::Importer
         if event.respond_to?(:[]=)
           event[:detail] = detail
         end
+      end
+
+      events
+    end
+
+    def stamp_symbol_lookup_attempts!(events, unresolved_isins)
+      isins = Array(unresolved_isins).map(&:to_s).to_set
+      return events if isins.empty?
+
+      now = Time.current.iso8601
+      Array(events).each do |event|
+        next unless event.is_a?(Hash)
+
+        detail = event[:detail] || event["detail"]
+        next unless detail.is_a?(Hash)
+
+        detail = detail.with_indifferent_access
+        next unless isins.include?(detail[:isin].to_s)
+
+        detail[Provider::TradeRepublicClient::SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY] ||= now
+        detail[Provider::TradeRepublicClient::SYMBOL_LOOKUP_ATTEMPTED_AT_KEY] = now
+        event[:detail] = detail
       end
 
       events

@@ -868,6 +868,52 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal "XETR", stored.dig("detail", "exchange_slug") || stored.dig("detail", :exchange_slug)
   end
 
+  test "unresolved symbol lookups are stamped and not retried within a day" do
+    portfolio = @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-UNRESOLVED",
+      currency: "EUR",
+      raw_timeline_payload: [
+        {
+          "id" => "historical-sell",
+          "timestamp" => "2025-01-01T10:00:00Z",
+          "category" => "orderExecution",
+          "eventType" => "TRADING_TRADE_EXECUTED",
+          "detail" => { "isin" => "CA60255C8850", "quantity" => "-10", "amount" => "150.00", "currency" => "EUR" }
+        }
+      ]
+    )
+    sync_result = client_result(
+      "status" => "ok",
+      "session_txt" => "# cookies",
+      "account" => { "brokerage_account_id" => "DE-UNRESOLVED", "currency" => "EUR" },
+      "cash" => { "amount" => "100.00", "currency" => "EUR" },
+      "positions" => [],
+      "events" => [],
+      "instrument_symbols" => {},
+      "unresolved_symbol_isins" => [ "CA60255C8850" ],
+      "newest_event_id" => "historical-sell",
+      "timeline_pagination_complete" => true,
+      "warnings" => []
+    )
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).with(has_entries(symbol_lookup_isins: [ "CA60255C8850" ])).returns(sync_result)
+    provider.expects(:sync).with(has_entries(symbol_lookup_isins: [])).returns(sync_result)
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+    detail = portfolio.reload.raw_timeline_payload.first["detail"]
+    first_attempt = detail[Provider::TradeRepublicClient::SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY]
+    assert first_attempt.present?
+    assert detail[Provider::TradeRepublicClient::SYMBOL_LOOKUP_ATTEMPTED_AT_KEY].present?
+
+    travel 1.hour do
+      TradeRepublicItem::Importer.new(@item.reload, provider: provider).import
+    end
+    assert_equal first_attempt,
+      portfolio.reload.raw_timeline_payload.first.dig("detail", Provider::TradeRepublicClient::SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY)
+  end
+
   test "isins_needing_symbol_lookup skips trades that already have a ticker" do
     @item.trade_republic_accounts.create!(
       kind: "portfolio",

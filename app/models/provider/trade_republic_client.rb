@@ -87,8 +87,17 @@ class Provider::TradeRepublicClient
   # sync. The remainder drains the oldest stored incomplete events; leftover
   # budget returns to additional new events.
   MAX_TIMELINE_DETAILS_DELTA_RESERVED = 50
-  PRICE_BACKFILL_RETRY_INTERVAL = 1.day
+  # Unsuccessful price backfills and symbol lookups are retried at most once
+  # per RETRY_INTERVAL, and stop once RETRY_WINDOW has passed (since the trade
+  # for prices, since the first failed attempt for symbols).
+  RETRY_INTERVAL = 1.day
+  RETRY_WINDOW = 30.days
   PRICE_BACKFILL_ATTEMPTED_AT_KEY = "price_backfill_attempted_at"
+  SYMBOL_LOOKUP_ATTEMPTED_AT_KEY = "symbol_lookup_attempted_at"
+  SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY = "symbol_lookup_first_attempted_at"
+  RETRY_MARKER_KEYS = [
+    PRICE_BACKFILL_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY
+  ].freeze
   # Cap instrument lookups for sold / historical trade ISINs that are absent
   # from the current portfolio snapshot.
   MAX_INSTRUMENT_LOOKUPS = 100
@@ -336,6 +345,7 @@ class Provider::TradeRepublicClient
 
       known_symbols = self.class.instrument_symbols_from_positions(positions)
       instrument_symbols = known_symbols.dup
+      unresolved_symbol_isins = []
 
       events = []
       newest_event_id = nil
@@ -353,7 +363,8 @@ class Provider::TradeRepublicClient
           websocket,
           events,
           known_symbols: known_symbols,
-          extra_isins: symbol_lookup_isins
+          extra_isins: symbol_lookup_isins,
+          unresolved: unresolved_symbol_isins
         )
         warnings.concat(timeline_warnings)
         # Timeline domain reflects list pagination only. Detail backlog drains
@@ -377,6 +388,7 @@ class Provider::TradeRepublicClient
         "positions" => positions,
         "events" => events,
         "instrument_symbols" => instrument_symbols,
+        "unresolved_symbol_isins" => unresolved_symbol_isins,
         "newest_event_id" => newest_event_id,
         "timeline_pagination_complete" => timeline_complete,
         "detail_backfill_count" => detail_backfill_count,
@@ -435,12 +447,30 @@ class Provider::TradeRepublicClient
     # Complete trades (isin + quantity) that still lack a share price — usually
     # stored before we parsed execution price / fees from timeline details.
     # Trade Republic sometimes publishes the price late, so an unsuccessful
-    # attempt is retried at most once per PRICE_BACKFILL_RETRY_INTERVAL.
+    # attempt is retried at most once per RETRY_INTERVAL until the trade is
+    # RETRY_WINDOW old.
     def trade_detail_needs_price_backfill?(event, now = Time.current)
       return false unless trade_detail_missing_price?(event)
 
-      attempted_at = price_backfill_attempted_at(event)
-      attempted_at.nil? || attempted_at <= now - PRICE_BACKFILL_RETRY_INTERVAL
+      attempted_at = detail_time(event, PRICE_BACKFILL_ATTEMPTED_AT_KEY)
+      return true if attempted_at.nil?
+
+      traded_at = parse_time((event["timestamp"] || event[:timestamp]))
+      return false if traded_at && traded_at <= now - RETRY_WINDOW
+
+      attempted_at <= now - RETRY_INTERVAL
+    end
+
+    # Stored trades whose ISIN found no usable exchange symbol are retried at
+    # most once per RETRY_INTERVAL, for RETRY_WINDOW after the first attempt.
+    def symbol_lookup_due?(event, now = Time.current)
+      attempted_at = detail_time(event, SYMBOL_LOOKUP_ATTEMPTED_AT_KEY)
+      return true if attempted_at.nil?
+
+      first_attempted_at = detail_time(event, SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY) || attempted_at
+      return false if first_attempted_at <= now - RETRY_WINDOW
+
+      attempted_at <= now - RETRY_INTERVAL
     end
 
     def trade_detail_missing_price?(event)
@@ -467,10 +497,13 @@ class Provider::TradeRepublicClient
       end
     end
 
-    def price_backfill_attempted_at(event)
+    def detail_time(event, key)
       detail = (event["detail"] || event[:detail])
-      value = detail.stringify_keys[PRICE_BACKFILL_ATTEMPTED_AT_KEY] if detail.is_a?(Hash)
-      Time.iso8601(value.to_s) if value.present?
+      parse_time(detail.stringify_keys[key]) if detail.is_a?(Hash)
+    end
+
+    def parse_time(value)
+      Time.zone.parse(value.to_s) if value.present?
     rescue ArgumentError
       nil
     end
@@ -864,7 +897,8 @@ class Provider::TradeRepublicClient
     # present in the current portfolio snapshot — e.g. fully sold holdings.
     # `extra_isins` covers stored timeline trades that incremental syncs no
     # longer re-fetch after the newest-event cursor advances.
-    def enrich_trade_instrument_symbols(websocket, events, known_symbols: {}, extra_isins: [])
+    # ISINs looked up without a usable symbol are appended to `unresolved`.
+    def enrich_trade_instrument_symbols(websocket, events, known_symbols: {}, extra_isins: [], unresolved: [])
       symbols = stringify_instrument_symbols(known_symbols)
       missing_isins = (
         trade_isins_missing_symbols(events, symbols) +
@@ -878,12 +912,12 @@ class Provider::TradeRepublicClient
 
         looked_up += 1
         instrument = instrument_exchange_symbol(websocket, isin)
-        next unless instrument.is_a?(Hash)
-
-        symbol = instrument[:symbol].to_s.strip.presence
-        exchange_slug = instrument[:exchange_slug].to_s.strip.upcase.presence
-        next if symbol.blank? || exchange_slug.blank?
-        next if symbol.casecmp?(isin)
+        symbol = instrument[:symbol].to_s.strip.presence if instrument.is_a?(Hash)
+        exchange_slug = instrument[:exchange_slug].to_s.strip.upcase.presence if instrument.is_a?(Hash)
+        if symbol.blank? || exchange_slug.blank? || symbol.casecmp?(isin)
+          unresolved << isin
+          next
+        end
 
         symbols[isin] = { "symbol" => symbol, "exchange_slug" => exchange_slug }
       end

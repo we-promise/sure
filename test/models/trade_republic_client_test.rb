@@ -677,7 +677,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
   test "price backfill retries an unfixable trade at most once per day" do
     event = {
       "id" => "trade-1",
-      "timestamp" => "2025-01-02T10:00:00Z",
+      "timestamp" => 2.days.ago.iso8601,
       "category" => "orderExecution",
       "eventType" => "TRADING_TRADE_EXECUTED",
       "detail" => { "isin" => "IE00B5BMR087", "quantity" => "2" }
@@ -697,6 +697,50 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     refute Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(stored)
     refute Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(stored, 23.hours.from_now)
     assert Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(stored, 25.hours.from_now)
+  end
+
+  test "price backfill stops retrying once the trade is older than the retry window" do
+    trade = {
+      "category" => "orderExecution",
+      "eventType" => "TRADING_TRADE_EXECUTED",
+      "timestamp" => 40.days.ago.iso8601,
+      "detail" => { "isin" => "IE00B5BMR087", "quantity" => "2" }
+    }
+    attempted = trade.merge("detail" => trade["detail"].merge(
+      Provider::TradeRepublicClient::PRICE_BACKFILL_ATTEMPTED_AT_KEY => 2.days.ago.iso8601
+    ))
+
+    assert Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(trade)
+    refute Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(attempted)
+    assert Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(
+      attempted.merge("timestamp" => 29.days.ago.iso8601)
+    )
+  end
+
+  test "symbol lookups retry daily until the window after the first attempt" do
+    key = Provider::TradeRepublicClient::SYMBOL_LOOKUP_ATTEMPTED_AT_KEY
+    first_key = Provider::TradeRepublicClient::SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY
+    event = ->(last, first) { { "detail" => { "isin" => "CA60255C8850", key => last&.iso8601, first_key => first&.iso8601 }.compact } }
+
+    assert Provider::TradeRepublicClient.symbol_lookup_due?(event.call(nil, nil))
+    refute Provider::TradeRepublicClient.symbol_lookup_due?(event.call(2.hours.ago, 5.days.ago))
+    assert Provider::TradeRepublicClient.symbol_lookup_due?(event.call(25.hours.ago, 5.days.ago))
+    refute Provider::TradeRepublicClient.symbol_lookup_due?(event.call(25.hours.ago, 31.days.ago))
+  end
+
+  test "enrich_trade_instrument_symbols reports ISINs without a usable symbol" do
+    @client.define_singleton_method(:instrument_exchange_symbol) do |_websocket, isin|
+      isin == "DE000BASF111" ? { symbol: "BAS", exchange_slug: "XETR" } : { symbol: isin, exchange_slug: "TIB" }
+    end
+    unresolved = []
+
+    symbols = @client.send(
+      :enrich_trade_instrument_symbols, Object.new, [],
+      extra_isins: %w[DE000BASF111 CA60255C8850], unresolved: unresolved
+    )
+
+    assert_equal({ "symbol" => "BAS", "exchange_slug" => "XETR" }, symbols["DE000BASF111"])
+    assert_equal [ "CA60255C8850" ], unresolved
   end
 
   test "price backfill counts only trades whose price was recovered" do
