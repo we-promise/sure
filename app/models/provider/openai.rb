@@ -669,9 +669,9 @@ class Provider::Openai < Provider
       if function_results.any?
         # Build assistant message with tool_calls
         tool_calls = function_results.map do |fn_result|
-          # Convert arguments to JSON string if it's not already a string
-          arguments = fn_result[:arguments]
-          arguments_str = arguments.is_a?(String) ? arguments : arguments.to_json
+          # Shared with ToolCall::Function.serialize_arguments so history and
+          # follow-up payloads stay in sync for strict OpenAI-compatible endpoints.
+          arguments_str = ToolCall::Function.serialize_arguments(fn_result[:arguments])
 
           {
             id: fn_result[:call_id],
@@ -703,10 +703,11 @@ class Provider::Openai < Provider
             output.to_json
           end
 
+          # The tool message `name` field is deprecated in the OpenAI API and
+          # rejected with a 400 by several OpenAI-compatible endpoints.
           payload << {
             role: "tool",
             tool_call_id: fn_result[:call_id],
-            name: fn_result[:name],
             content: content
           }
         end
