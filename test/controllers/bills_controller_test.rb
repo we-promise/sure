@@ -1438,6 +1438,29 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Hidden brokerage sub", response.body
   end
 
+  test "income suggestions stay out of the bills review strip" do
+    create_suggested(name: "Gym sub", account: accounts(:depository))
+    create_suggested(name: "ACME PAYROLL", account: accounts(:depository), amount: -2500, bill_type: "income")
+
+    get bills_url
+
+    assert_response :success
+    assert_match "Gym sub", response.body
+    assert_no_match "ACME PAYROLL", response.body
+  end
+
+  test "detect counts only bills, not income it found" do
+    3.times do |i|
+      create_transaction_entry(name: "GYM MEMBERSHIP", amount: 40, date: Date.current - i.months)
+      create_transaction_entry(name: "ACME PAYROLL", amount: -2500, date: Date.current - i.months)
+    end
+
+    post detect_bills_url
+
+    assert @family.recurring_transactions.suggested.exists?(name: "ACME PAYROLL", bill_type: "income")
+    assert_equal I18n.t("bills.detect.found", count: 1), flash[:notice]
+  end
+
   # The matcher no longer suggests income, but a suggestion written before
   # that rule can still sit on the row. The queue must not render it; the
   # same pending state on a bill must.
@@ -1601,13 +1624,13 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       )
     end
 
-    def create_suggested(name:, account:)
+    def create_suggested(name:, account:, amount: 15, bill_type: "bill")
       @family.recurring_transactions.create!(
-        name: name, account: account, amount: 15, currency: "USD",
+        name: name, account: account, amount: amount, currency: "USD",
         dedup_scope: name, expected_day_of_month: 5,
         last_occurrence_date: 1.month.ago.to_date,
         next_expected_date: Date.current,
-        status: "suggested", manual: false
+        status: "suggested", manual: false, bill_type: bill_type
       )
     end
 

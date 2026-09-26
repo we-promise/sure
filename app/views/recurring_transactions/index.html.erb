@@ -50,8 +50,11 @@
       </ul>
     <% end %>
 
-      <% if @suggested.any? %>
-        <%= render "recurring_transactions/suggested_series", suggested: @suggested %>
+      <% if @suggested_bills.any? %>
+        <%= render "recurring_transactions/suggested_series", suggested: @suggested_bills %>
+      <% end %>
+      <% if @suggested_income.any? %>
+        <%= render "recurring_transactions/suggested_series", suggested: @suggested_income, income: true %>
       <% end %>
 
       <%# The Bills workspace is preview-gated, so the card that leads into it
