@@ -1,6 +1,24 @@
 require "test_helper"
 
 class ImportTest < ActiveSupport::TestCase
+  test "direct deletion is blocked while committed data is importing or reverting" do
+    import = imports(:transaction)
+    Import.any_instance.stubs(:data_committed?).returns(true)
+
+    %w[importing reverting].each do |status|
+      import.update_columns(status: status)
+      assert_not import.directly_deletable?, "#{status} import must not be deletable"
+    end
+  end
+
+  test "direct deletion allows an import with no committed data in a terminal status" do
+    import = imports(:transaction)
+    import.update_columns(status: "complete")
+    Import.any_instance.stubs(:data_committed?).returns(false)
+
+    assert import.directly_deletable?
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")
@@ -21,6 +39,20 @@ class ImportTest < ActiveSupport::TestCase
     import.publish
 
     assert_equal "reverting", import.reload.status
+  end
+
+  test "directly_deletable? allows terminal imports without committed data" do
+    import = imports(:pdf_processed)
+
+    assert import.directly_deletable?
+  end
+
+  test "directly_deletable? protects terminal imports with committed data" do
+    import = imports(:transaction)
+    import.update!(status: :complete)
+    entries(:transaction).update!(import: import)
+
+    assert_not import.directly_deletable?
   end
 
   test "clean fails stuck imports but leaves PdfImports to their own reclaim" do

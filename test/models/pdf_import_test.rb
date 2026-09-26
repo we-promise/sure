@@ -23,6 +23,18 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal statement.filename, import.pdf_filename
   end
 
+  test "reconciled statement imports count as committed data" do
+    account = accounts(:depository)
+    import = PdfImport.create_from_statement!(statement: create_pdf_statement(account: account))
+    entries(:transaction).update!(
+      account: account,
+      reconciled_by_statement: import.account_statement,
+      reconciled_at: Time.current
+    )
+
+    assert import.data_committed?
+  end
+
   test "ai_processed? returns false when no summary present" do
     assert_not @import.ai_processed?
   end
@@ -268,6 +280,14 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal account, import.reload.account
     assert_equal account, statement.reload.account
     assert statement.linked?
+  end
+
+  test "reconciled existing transactions do not prevent account reassignment" do
+    import = PdfImport.new(family: @import.family, status: :complete)
+    import.stubs(:entries).returns(Entry.none)
+    import.stubs(:data_committed?).returns(true)
+
+    assert import.reassignable?
   end
 
   test "statement backed import requires pdf statement" do

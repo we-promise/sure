@@ -130,8 +130,32 @@
 
             <% if (params[:type].nil? || params[:type].in?(%w[DocumentImport PdfImport])) && @document_upload_extensions.any? %>
               <li>
-                <%= styled_form_with url: imports_path, scope: :import, multipart: true, class: "w-full", data: { turbo: false } do |form| %>
+                <%= styled_form_with url: imports_path, scope: :import, multipart: true,
+                                                  class: "w-full",
+                                                  data: {
+                                                    turbo: false,
+                                                    controller: "batch-upload-warning",
+                                                    batch_upload_warning_file_threshold_value: Import::UPLOAD_WARNING_SIZE,
+                                                    batch_upload_warning_file_message_value: t(
+                                                      "imports.create.file_size_warning",
+                                                      size: Import::UPLOAD_WARNING_SIZE / 1.megabyte
+                                                    ),
+                                                    batch_upload_warning_total_threshold_value: Import::UPLOAD_WARNING_SIZE,
+                                                    batch_upload_warning_total_message_value: t(
+                                                      "imports.create.batch_upload_warning",
+                                                      size: Import::UPLOAD_WARNING_SIZE / 1.megabyte
+                                                    ),
+                                                    batch_upload_warning_max_total_size_value: Import::MAX_BATCH_UPLOAD_SIZE,
+                                                    batch_upload_warning_max_total_size_message_value: t(
+                                                      "imports.create.files_total_exceeds_max_size",
+                                                      max_size: Import::MAX_BATCH_UPLOAD_SIZE / 1.megabyte
+                                                    ),
+                                                    batch_upload_warning_duplicate_check_url_value: check_pdf_duplicate_imports_path,
+                                                    batch_upload_warning_duplicate_message_value: t("imports.create.duplicate_pdf_confirmation")
+                                                  } do |form| %>
                   <%= form.hidden_field :type, value: "DocumentImport" %>
+                  <%= form.hidden_field :allow_large_upload, value: "false", data: { batch_upload_warning_target: "allowLargeUpload" } %>
+                  <%= form.hidden_field :allow_duplicate_upload, value: "false", data: { batch_upload_warning_target: "allowDuplicateUpload" } %>
                   <label class="flex items-center justify-between p-4 group cursor-pointer w-full">
                     <div class="flex items-center gap-2">
                       <div class="bg-red-500/5 rounded-md w-8 h-8 flex items-center justify-center">
@@ -149,7 +173,7 @@
                       </div>
                     </div>
                     <%= icon("chevron-right") %>
-                    <%= form.file_field :import_file, accept: @document_upload_extensions.join(","), class: "hidden", onchange: "this.form.submit()" %>
+                    <%= form.file_field :import_file, accept: @document_upload_extensions.join(","), multiple: true, class: "hidden", data: { action: "change->batch-upload-warning#upload" } %>
                   </label>
                 <% end %>
 
