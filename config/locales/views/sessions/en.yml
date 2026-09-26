@@ -12,6 +12,7 @@ en:
     openid_connect:
       account_linked: "Account successfully linked to %{provider}"
       failed: Could not authenticate via OpenID Connect.
+      legacy_issuer_relink_required: This older OIDC connection needs to be verified again. Enter your Sure password to reconnect it; if you do not have a local password, contact an administrator.
     failure:
       failed: Could not authenticate.
       sso_provider_unavailable: "The SSO provider is currently unavailable. Please try again later or contact an administrator."

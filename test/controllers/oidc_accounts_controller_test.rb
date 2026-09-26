@@ -3,6 +3,9 @@ require "test_helper"
 class OidcAccountsControllerTest < ActionController::TestCase
   setup do
     @user = users(:family_admin)
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", issuer: "https://test.example.com" }
+    ])
   end
 
   def pending_auth
@@ -12,7 +15,8 @@ class OidcAccountsControllerTest < ActionController::TestCase
       "email" => @user.email,
       "name" => "Bob Dylan",
       "first_name" => "Bob",
-      "last_name" => "Dylan"
+      "last_name" => "Dylan",
+      "issuer" => "https://test.example.com"
     }
   end
 
@@ -40,10 +44,52 @@ class OidcAccountsControllerTest < ActionController::TestCase
     end
 
     assert_redirected_to root_path
-    assert_not_nil @user.oidc_identities.find_by(
+    identity = @user.oidc_identities.find_by(
       provider: pending_auth["provider"],
       uid: pending_auth["uid"]
     )
+    assert_not_nil identity
+    assert_equal pending_auth["issuer"], identity.issuer
+  end
+
+  test "rejects create_link when provider is disabled after authentication" do
+    session[:pending_oidc_auth] = pending_auth
+    AuthConfig.stubs(:sso_providers).returns([])
+    @user.sessions.destroy_all
+
+    assert_no_difference [ "OidcIdentity.count", "Session.count", "SsoAuditLog.count" ] do
+      post :create_link,
+        params: {
+          email: @user.email,
+          password: user_password_test
+        }
+    end
+
+    assert_redirected_to new_session_path
+    assert_nil session[:pending_oidc_auth]
+  end
+
+  test "rebinds a legacy issuerless identity after verifying its local account" do
+    identity = oidc_identities(:bob_google)
+    identity.update!(issuer: nil)
+    session[:pending_oidc_auth] = pending_auth.merge("uid" => identity.uid)
+    session[:pending_oidc_legacy_relink] = true
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: identity.provider, strategy: "openid_connect", issuer: pending_auth["issuer"] }
+    ])
+    @user.sessions.destroy_all
+
+    assert_no_difference "OidcIdentity.count" do
+      post :create_link,
+        params: {
+          email: @user.email,
+          password: user_password_test
+        }
+    end
+
+    assert_redirected_to root_path
+    assert_equal pending_auth["issuer"], identity.reload.issuer
+    assert Session.exists?(user_id: @user.id)
   end
 
   test "rolls back identity linking when session creation fails" do
@@ -155,7 +201,8 @@ class OidcAccountsControllerTest < ActionController::TestCase
       "email" => "newuser@example.com",
       "name" => "New User",
       "first_name" => "New",
-      "last_name" => "User"
+      "last_name" => "User",
+      "issuer" => "https://test.example.com"
     }
   end
 
@@ -224,6 +271,18 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal "SSO account creation is disabled. Please contact an administrator.", flash[:alert]
   end
 
+  test "rejects create_user when provider is disabled after authentication" do
+    session[:pending_oidc_auth] = new_user_auth
+    AuthConfig.stubs(:sso_providers).returns([])
+
+    assert_no_difference [ "User.count", "OidcIdentity.count", "Family.count", "Session.count" ] do
+      post :create_user
+    end
+
+    assert_redirected_to new_session_path
+    assert_nil session[:pending_oidc_auth]
+  end
+
   test "should create new user account via OIDC" do
     session[:pending_oidc_auth] = new_user_auth
 
@@ -246,12 +305,13 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_not_nil oidc_identity
     assert_equal new_user_auth["provider"], oidc_identity.provider
     assert_equal new_user_auth["uid"], oidc_identity.uid
+    assert_equal new_user_auth["issuer"], oidc_identity.issuer
   end
 
   test "create_user makes new family creator admin even when provider default role is member" do
     session[:pending_oidc_auth] = new_user_auth
-    Rails.configuration.x.auth.stubs(:sso_providers).returns([
-      { name: new_user_auth["provider"], settings: { default_role: "member" } }
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: new_user_auth["provider"], strategy: "openid_connect", issuer: new_user_auth["issuer"], settings: { default_role: "member" } }
     ])
 
     assert_difference [ "User.count", "OidcIdentity.count", "Family.count" ], 1 do
@@ -265,8 +325,8 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
   test "create_user preserves super admin provider default for new family creator" do
     session[:pending_oidc_auth] = new_user_auth
-    Rails.configuration.x.auth.stubs(:sso_providers).returns([
-      { name: new_user_auth["provider"], settings: { default_role: "super_admin" } }
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: new_user_auth["provider"], strategy: "openid_connect", issuer: new_user_auth["issuer"], settings: { default_role: "super_admin" } }
     ])
 
     assert_difference [ "User.count", "OidcIdentity.count", "Family.count" ], 1 do
@@ -385,7 +445,8 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     session[:pending_oidc_auth] = {
       "provider" => "openid_connect", "uid" => "invite-uid-1",
-      "email" => "invitee@example.com", "first_name" => "In", "last_name" => "Vitee"
+      "email" => "invitee@example.com", "first_name" => "In", "last_name" => "Vitee",
+      "issuer" => "https://test.example.com"
     }
 
     post :create_user
@@ -405,7 +466,8 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     session[:pending_oidc_auth] = {
       "provider" => "openid_connect", "uid" => "invite-uid-2",
-      "email" => "invitee2@example.com", "first_name" => "In", "last_name" => "Vitee"
+      "email" => "invitee2@example.com", "first_name" => "In", "last_name" => "Vitee",
+      "issuer" => "https://test.example.com"
     }
 
     post :create_user

@@ -4,6 +4,10 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
   setup do
     # Clean up any existing invite codes
     InviteCode.destroy_all
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", issuer: "https://test.example.com" },
+      { name: "google_oauth2", strategy: "google_oauth2" }
+    ])
     @device_info = {
       device_id: "test-device-123",
       device_name: "Test iPhone",
@@ -918,8 +922,8 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "sso_create_account makes new family creator admin even when provider default role is member" do
-    Rails.configuration.x.auth.stubs(:sso_providers).returns([
-      { name: "google_oauth2", settings: { default_role: "member" } }
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: "google_oauth2", strategy: "google_oauth2", settings: { default_role: "member" } }
     ])
     linking_code = SecureRandom.urlsafe_base64(32)
     Rails.cache.write("mobile_sso_link:#{linking_code}", {
@@ -948,8 +952,8 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "sso_create_account preserves super admin provider default for new family creator" do
-    Rails.configuration.x.auth.stubs(:sso_providers).returns([
-      { name: "google_oauth2", settings: { default_role: "super_admin" } }
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: "google_oauth2", strategy: "google_oauth2", settings: { default_role: "super_admin" } }
     ])
     linking_code = SecureRandom.urlsafe_base64(32)
     Rails.cache.write("mobile_sso_link:#{linking_code}", {
@@ -1148,6 +1152,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     Rails.cache.write("mobile_sso_link:#{linking_code}", {
       provider: "openid_connect",
       uid: "mobile-invite-uid-1",
+      issuer: "https://test.example.com",
       email: invitation.email,
       first_name: "Mobile",
       last_name: "Invitee",
@@ -1168,6 +1173,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     invitee = User.find_by(email: invitation.email)
     assert_not_nil invitee
     assert_equal family.id, invitee.family_id
+    assert_equal "https://test.example.com", invitee.oidc_identities.sole.issuer
     assert_equal family.accounts.pluck(:id).sort,
       AccountShare.where(user: invitee).pluck(:account_id).sort
   end
@@ -1196,6 +1202,56 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
   end
 
+  test "mobile SSO cannot link an account after its provider is disabled" do
+    user = users(:family_admin)
+    user.sessions.destroy_all
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "openid_connect",
+      uid: "disabled-provider-link-uid",
+      email: user.email,
+      issuer: "https://test.example.com",
+      device_info: @device_info.stringify_keys
+    }, expires_in: 10.minutes)
+    AuthConfig.stubs(:sso_providers).returns([])
+
+    assert_no_difference [
+      "OidcIdentity.count",
+      "MobileDevice.count",
+      "Doorkeeper::AccessToken.count",
+      'SsoAuditLog.by_event("login").count'
+    ] do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: user.email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :forbidden
+    assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
+  end
+
+  test "mobile SSO cannot create an account after its provider is disabled" do
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "openid_connect",
+      uid: "disabled-provider-create-uid",
+      email: "disabled-provider@example.com",
+      issuer: "https://test.example.com",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+    AuthConfig.stubs(:sso_providers).returns([])
+
+    assert_no_difference [ "User.count", "Family.count", "OidcIdentity.count", "MobileDevice.count", "Doorkeeper::AccessToken.count" ] do
+      post "/api/v1/auth/sso_create_account", params: { linking_code: linking_code }
+    end
+
+    assert_response :forbidden
+    assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
+  end
+
   test "mobile SSO onboarding via invitation shares nothing when family sharing is private" do
     family = families(:dylan_family)
     family.update!(default_account_sharing: "private")
@@ -1207,6 +1263,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     Rails.cache.write("mobile_sso_link:#{linking_code}", {
       provider: "openid_connect",
       uid: "mobile-private-uid-1",
+      issuer: "https://test.example.com",
       email: invitation.email,
       first_name: "Mobile",
       last_name: "Private",
