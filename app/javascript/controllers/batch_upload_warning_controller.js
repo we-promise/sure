@@ -1,36 +1,42 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["allowLargePdf"];
+  static targets = ["allowLargeUpload"];
 
   static values = {
-    threshold: Number,
-    message: String,
-    pdfThreshold: Number,
-    pdfMessage: String,
+    totalThreshold: Number,
+    totalMessage: String,
+    fileThreshold: Number,
+    fileMessage: String,
+    maxTotalSize: Number,
+    maxTotalSizeMessage: String,
   };
 
   upload(event) {
     const input = event.currentTarget;
     const files = Array.from(input.files || []);
     const totalSize = files.reduce((total, file) => total + file.size, 0);
-    const hasLargePdf = files.some(
-      (file) =>
-        (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) &&
-        file.size > this.pdfThresholdValue,
-    );
+    const hasLargeFile = files.some((file) => file.size > this.fileThresholdValue);
+    const exceedsMaxTotalSize = totalSize > this.maxTotalSizeValue;
     const warnings = [];
 
-    if (hasLargePdf) warnings.push(this.pdfMessageValue);
-    if (totalSize > this.thresholdValue) warnings.push(this.messageValue);
-
-    if (warnings.length > 0 && !window.confirm(warnings.join("\n\n"))) {
-      this.allowLargePdfTarget.value = "false";
+    if (exceedsMaxTotalSize) {
+      window.alert(this.maxTotalSizeMessageValue);
+      this.allowLargeUploadTarget.value = "false";
       input.value = "";
       return;
     }
 
-    this.allowLargePdfTarget.value = hasLargePdf ? "true" : "false";
+    if (hasLargeFile) warnings.push(this.fileMessageValue);
+    if (totalSize > this.totalThresholdValue) warnings.push(this.totalMessageValue);
+
+    if (warnings.length > 0 && !window.confirm(warnings.join("\n\n"))) {
+      this.allowLargeUploadTarget.value = "false";
+      input.value = "";
+      return;
+    }
+
+    this.allowLargeUploadTarget.value = hasLargeFile ? "true" : "false";
     this.element.requestSubmit();
   }
 }

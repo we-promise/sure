@@ -135,19 +135,24 @@
                                                   data: {
                                                     turbo: false,
                                                     controller: "batch-upload-warning",
-                                                    batch_upload_warning_pdf_threshold_value: Import::MAX_PDF_SIZE,
-                                                    batch_upload_warning_pdf_message_value: t(
-                                                      "imports.create.pdf_too_large_warning",
-                                                      size: Import::MAX_PDF_SIZE / 1.megabyte
+                                                    batch_upload_warning_file_threshold_value: Import::UPLOAD_WARNING_SIZE,
+                                                    batch_upload_warning_file_message_value: t(
+                                                      "imports.create.file_size_warning",
+                                                      size: Import::UPLOAD_WARNING_SIZE / 1.megabyte
                                                     ),
-                                                    batch_upload_warning_threshold_value: Import::BATCH_UPLOAD_WARNING_SIZE,
-                                                    batch_upload_warning_message_value: t(
+                                                    batch_upload_warning_total_threshold_value: Import::UPLOAD_WARNING_SIZE,
+                                                    batch_upload_warning_total_message_value: t(
                                                       "imports.create.batch_upload_warning",
-                                                      size: Import::BATCH_UPLOAD_WARNING_SIZE / 1.megabyte
+                                                      size: Import::UPLOAD_WARNING_SIZE / 1.megabyte
+                                                    ),
+                                                    batch_upload_warning_max_total_size_value: Import::MAX_BATCH_UPLOAD_SIZE,
+                                                    batch_upload_warning_max_total_size_message_value: t(
+                                                      "imports.create.files_total_exceeds_max_size",
+                                                      max_size: Import::MAX_BATCH_UPLOAD_SIZE / 1.megabyte
                                                     )
                                                   } do |form| %>
                   <%= form.hidden_field :type, value: "DocumentImport" %>
-                  <%= form.hidden_field :allow_large_pdf, value: "false", data: { batch_upload_warning_target: "allowLargePdf" } %>
+                  <%= form.hidden_field :allow_large_upload, value: "false", data: { batch_upload_warning_target: "allowLargeUpload" } %>
                   <label class="flex items-center justify-between p-4 group cursor-pointer w-full">
                     <div class="flex items-center gap-2">
                       <div class="bg-red-500/5 rounded-md w-8 h-8 flex items-center justify-center">

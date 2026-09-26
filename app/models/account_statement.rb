@@ -20,7 +20,7 @@ class AccountStatement < ApplicationRecord
   PreparedUpload = Data.define(:content, :filename, :content_type, :byte_size, :checksum, :content_sha256, :large_pdf_override)
 
   MAX_FILE_SIZE = 25.megabytes
-  MAX_LARGE_PDF_SIZE = 200.megabytes
+  MAX_LARGE_PDF_SIZE = 100.megabytes
   READ_CHUNK_SIZE = 1.megabyte
   ALLOWED_EXTENSION_CONTENT_TYPES = {
     ".pdf" => %w[application/pdf],
@@ -467,8 +467,7 @@ class AccountStatement < ApplicationRecord
       if original_file.byte_size.zero?
         errors.add(:original_file, :blank)
       elsif original_file.byte_size > MAX_FILE_SIZE &&
-          !(large_pdf_override && original_file.content_type == "application/pdf" &&
-            original_file.byte_size <= MAX_LARGE_PDF_SIZE)
+          !large_pdf_override_valid?(file_size: original_file.byte_size, file_content_type: original_file.content_type)
         errors.add(:original_file, :too_large, max_mb: MAX_FILE_SIZE / 1.megabyte)
       end
 
@@ -483,8 +482,15 @@ class AccountStatement < ApplicationRecord
 
     def file_size_within_limit
       return if byte_size.blank? || byte_size <= MAX_FILE_SIZE
-      return if content_type == "application/pdf" && large_pdf_override && byte_size <= MAX_LARGE_PDF_SIZE
+      return if large_pdf_override_valid?(file_size: byte_size, file_content_type: content_type)
 
       errors.add(:byte_size, :less_than_or_equal_to, count: MAX_FILE_SIZE)
+    end
+
+    def large_pdf_override_valid?(file_size:, file_content_type:)
+      return false unless file_content_type == "application/pdf" && file_size <= MAX_LARGE_PDF_SIZE
+      return true if large_pdf_override
+
+      persisted? && pdf_import_owned?
     end
 end
