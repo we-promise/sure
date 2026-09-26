@@ -771,7 +771,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     client = provider.instance_variable_get(:@client)
     captured_params = nil
     client.expects(:chat).with do |params|
-      captured_params = params
+      captured_params = params.fetch(:parameters)
       true
     end.returns(
       {
@@ -813,5 +813,22 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_equal 1, tool_messages.size
     assert_equal "call_1", tool_messages.first[:tool_call_id]
     assert_not tool_messages.first.key?(:name), "tool messages must not carry the deprecated `name` field"
+  end
+
+  test "generic chat builder normalizes blank arguments to an empty JSON object" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://example.com/v1",
+      model: "test-model"
+    )
+
+    messages = provider.send(
+      :build_generic_messages,
+      prompt: "hi",
+      function_results: [ { call_id: "call_1", name: "get_net_worth", arguments: "", output: { "amount" => 10000 } } ]
+    )
+
+    tool_call = messages.find { |m| m[:role] == "assistant" }[:tool_calls].first
+    assert_equal "{}", tool_call.dig(:function, :arguments)
   end
 end
