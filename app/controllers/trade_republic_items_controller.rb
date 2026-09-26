@@ -559,6 +559,10 @@ class TradeRepublicItemsController < ApplicationController
     end
 
     def render_qr_login_error(error, status: :unprocessable_entity, retryable: false)
+      if error.respond_to?(:pending_login_b64) && error.pending_login_b64.present?
+        @trade_republic_item.update!(pending_login_state: error.pending_login_b64)
+      end
+
       render json: { error: error.message, retryable: retryable }, status: status
     end
 end
