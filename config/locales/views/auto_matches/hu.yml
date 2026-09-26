@@ -1,0 +1,31 @@
+---
+hu:
+  auto_matches:
+    title: Automatikus egyeztetés
+    settings:
+      enable_label: Automatikus egyeztetés engedélyezése
+      enable_description: Minden szinkronizáláskor automatikusan felismeri és javasolja az átutalások egyeztetését a számlák között. A javaslatok csak akkor lépnek életbe, ha alább megerősíted őket.
+    update_settings:
+      settings_updated: Az automatikus egyeztetés beállításai frissültek
+    bulk_update:
+      invalid_selection: Válassz ki legalább egy javaslatot a megerősítéshez vagy elutasításhoz
+      bulk_confirmed:
+        one: 1 átutalás megerősítve
+        other: "%{count} átutalás megerősítve"
+      bulk_rejected:
+        one: 1 átutalás elutasítva
+        other: "%{count} átutalás elutasítva"
+    empty:
+      title: Nincs függőben lévő automatikus egyeztetési javaslat
+      description: Ha egy szinkronizálás valószínű átutalást észlel két számlád között, itt jelenik meg ellenőrzésre.
+    table:
+      from: Honnan
+      to: Hová
+      date: Dátum
+      actions: Műveletek
+      separator: "·"
+    bulk_actions:
+      selected_label: kiválasztva
+      confirm_selected: Kiválasztottak megerősítése
+      reject_selected: Kiválasztottak elutasítása
+      select_all: Összes kiválasztása

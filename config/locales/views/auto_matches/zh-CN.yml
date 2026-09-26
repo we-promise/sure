@@ -1,0 +1,27 @@
+---
+zh-CN:
+  auto_matches:
+    title: 自动匹配
+    settings:
+      enable_label: 启用自动匹配
+      enable_description: 每次同步时自动检测并建议账户之间的转账匹配。建议在您于下方确认之前不会被应用。
+    update_settings:
+      settings_updated: 自动匹配设置已更新
+    bulk_update:
+      invalid_selection: 请至少选择一项建议以确认或拒绝
+      bulk_confirmed: 已确认 %{count} 笔转账
+      bulk_rejected: 已拒绝 %{count} 笔转账
+    empty:
+      title: 暂无待处理的自动匹配建议
+      description: 当同步检测到您的两个账户之间可能存在转账时，它将显示在此处供您审核。
+    table:
+      from: 从
+      to: 到
+      date: 日期
+      actions: 操作
+      separator: "·"
+    bulk_actions:
+      selected_label: 项已选择
+      confirm_selected: 确认所选
+      reject_selected: 拒绝所选
+      select_all: 全选

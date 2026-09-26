@@ -280,6 +280,34 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal category, transfer.outflow_transaction.category
   end
 
+  test "set_as_transfer_or_payment skips a transaction already matched by a pending auto-match" do
+    investment = accounts(:investment)
+    other_account = @family.accounts.create!(name: "Other", balance: 1000, currency: "USD", accountable: Depository.new)
+    inflow_txn = create_transaction(date: Date.current, account: other_account, amount: -100).transaction
+
+    # Simulates Family::AutoTransferMatchable#auto_match_transfers!: creates the
+    # pending Transfer without ever touching kind, so txn1.transfer? (kind-based)
+    # stays false even though it's already the outflow leg of a real transfer.
+    Transfer.create!(inflow_transaction: inflow_txn, outflow_transaction: @txn1)
+    assert_not @txn1.reload.transfer?
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_as_transfer_or_payment",
+      value: investment.id
+    )
+
+    # Without also checking the transfer association, this raises
+    # ActiveRecord::RecordInvalid (inflow/outflow_transaction_id uniqueness)
+    # trying to build a second Transfer against an already-matched transaction.
+    assert_nothing_raised do
+      action.apply(Transaction.where(id: @txn1.id))
+    end
+
+    assert_equal "standard", @txn1.reload.kind
+    assert_equal 1, Transfer.where(outflow_transaction_id: @txn1.id).count
+  end
+
   test "set_investment_activity_label ignores invalid values" do
     action = Rule::Action.new(
       rule: @transaction_rule,

@@ -1,0 +1,33 @@
+---
+ro:
+  auto_matches:
+    title: Potriviri automate
+    settings:
+      enable_label: Activează potrivirea automată
+      enable_description: Detectează și sugerează automat potriviri de transferuri între conturi la fiecare sincronizare. Sugestiile nu sunt aplicate până când nu le confirmi mai jos.
+    update_settings:
+      settings_updated: Setările de potrivire automată au fost actualizate
+    bulk_update:
+      invalid_selection: Selectează cel puțin o sugestie de confirmat sau respins
+      bulk_confirmed:
+        one: 1 transfer confirmat
+        few: "%{count} transferuri confirmate"
+        other: "%{count} de transferuri confirmate"
+      bulk_rejected:
+        one: 1 transfer respins
+        few: "%{count} transferuri respinse"
+        other: "%{count} de transferuri respinse"
+    empty:
+      title: Nicio sugestie de potrivire automată în așteptare
+      description: Când o sincronizare detectează un transfer probabil între două dintre conturile tale, acesta va apărea aici pentru revizuire.
+    table:
+      from: De la
+      to: Către
+      date: Data
+      actions: Acțiuni
+      separator: "·"
+    bulk_actions:
+      selected_label: selectate
+      confirm_selected: Confirmă selecția
+      reject_selected: Respinge selecția
+      select_all: Selectează tot

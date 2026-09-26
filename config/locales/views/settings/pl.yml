@@ -839,6 +839,7 @@ pl:
       accounts_label: Konta
       advanced_section_title: Zaawansowane
       ai_prompts_label: Prompty AI
+      auto_matches_label: Automatyczne dopasowywanie
       api_key_label: Klucz API
       api_keys_label: Klucz API
       appearance_label: Wygląd

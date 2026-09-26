@@ -489,6 +489,28 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
   end
 
+  test "a transfer-kind transaction with no Transfer row stays categorizable and selectable" do
+    # Mirrors Account::ProviderImportAdapter assigning a transfer kind to a
+    # standalone imported transaction with no Transfer behind it (e.g. an Up
+    # internal transfer or round-up): transfer? (kind-based) is true, but
+    # transfer (the association) is nil. It should render like any other
+    # transaction, not like a real confirmed transfer.
+    entry = create_transaction(account: accounts(:depository), amount: 100, kind: "funds_movement")
+
+    get transactions_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css("turbo-frame##{ActionView::RecordIdentifier.dom_id(entry)}")
+
+    checkbox = row.at_css("input[type='checkbox'][data-entry-type='Transaction']")
+    assert_not_nil checkbox
+    assert_nil checkbox["disabled"]
+
+    assert_not_nil row.at_css("[data-controller='DS--popover']"),
+      "expected the category menu (not the static transfer badge) to render"
+  end
+
   test "split parent rows mark amount as privacy-sensitive" do
     entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
 

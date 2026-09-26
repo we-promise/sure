@@ -607,6 +607,38 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/\$100\.00/, other_investments_rows.first.text)
   end
 
+  test "index excludes both legs of a still-pending auto-matched transfer from activity breakdown" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+
+    checking = @family.accounts.find_by(accountable_type: "Depository") ||
+      @family.accounts.create!(owner: @user, name: "Reports Checking", balance: 0, currency: "USD", accountable: Depository.new)
+    savings = @family.accounts.create!(owner: @user, name: "Reports Savings", balance: 0, currency: "USD", accountable: Depository.new)
+
+    outflow_entry = create_transaction(account: checking, name: "Pending match outflow", amount: 190)
+    inflow_entry = create_transaction(account: savings, name: "Pending match inflow", amount: -190)
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    real_category = @family.categories.create!(name: "Reports Real Expense", color: "#333333")
+    create_transaction(account: checking, name: "Real expense", amount: 50, category: real_category)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "tr[data-category='category-#{real_category.id}']", text: /Reports Real Expense/
+
+    # If the pending transfer's legs leaked through, expense would read $240
+    # (the real $50 expense plus the $190 outflow leg) and an "Income:"
+    # section would appear for the $190 inflow leg.
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    breakdown = doc.at_css("#transactions_breakdown, [data-testid='transactions_breakdown']") || doc
+    section_headers = breakdown.css("div.text-large").map { |el| el.text.gsub(/\s+/, " ").strip }
+
+    assert section_headers.any? { |text| text.start_with?("#{I18n.t('reports.transactions_breakdown.table.expense')}:") && text.end_with?("$50.00") },
+      "expected an expense header of exactly $50.00, got: #{section_headers.inspect}"
+    assert section_headers.none? { |text| text.start_with?("#{I18n.t('reports.transactions_breakdown.table.income')}:") },
+      "expected no income section, got: #{section_headers.inspect}"
+  end
+
   test "monthly period navigation shows previous month link" do
     get reports_path(period_type: :monthly)
     assert_response :ok

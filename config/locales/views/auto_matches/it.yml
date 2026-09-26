@@ -1,0 +1,31 @@
+---
+it:
+  auto_matches:
+    title: Corrispondenze automatiche
+    settings:
+      enable_label: Attiva corrispondenza automatica
+      enable_description: Rileva e suggerisce automaticamente le corrispondenze dei trasferimenti tra conti a ogni sincronizzazione. I suggerimenti non vengono applicati finché non li confermi qui sotto.
+    update_settings:
+      settings_updated: Impostazioni di corrispondenza automatica aggiornate
+    bulk_update:
+      invalid_selection: Seleziona almeno un suggerimento da confermare o rifiutare
+      bulk_confirmed:
+        one: 1 trasferimento confermato
+        other: "%{count} trasferimenti confermati"
+      bulk_rejected:
+        one: 1 trasferimento rifiutato
+        other: "%{count} trasferimenti rifiutati"
+    empty:
+      title: Nessun suggerimento di corrispondenza automatica in sospeso
+      description: Quando una sincronizzazione rileva un probabile trasferimento tra due dei tuoi conti, apparirà qui per la revisione.
+    table:
+      from: Da
+      to: A
+      date: Data
+      actions: Azioni
+      separator: "·"
+    bulk_actions:
+      selected_label: selezionati
+      confirm_selected: Conferma selezionati
+      reject_selected: Rifiuta selezionati
+      select_all: Seleziona tutto

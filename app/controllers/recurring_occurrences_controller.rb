@@ -117,7 +117,11 @@ class RecurringOccurrencesController < ApplicationController
 
       return scope if series.transfer?
 
+      # A pending auto-matched leg keeps kind == "standard" until confirmed
+      # (Transfer#confirm!), so the kind check alone misses it.
       scope.where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+        .where.not(transactions: { id: Transfer.pending.select(:inflow_transaction_id) })
+        .where.not(transactions: { id: Transfer.pending.select(:outflow_transaction_id) })
     end
 
     # Shared by both lists so they cannot disagree about which dates exist.

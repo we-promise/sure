@@ -45,3 +45,4 @@ ca:
       uncategorized: Sense categoria
     update:
       success: Transferència actualitzada
+      already_resolved: Aquesta transferència ja s'ha confirmat o rebutjat.

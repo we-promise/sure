@@ -43,3 +43,4 @@ vi:
       transfer_amount: '[Transfer amount]'
     update:
       success: Chuyển khoản đã được cập nhật
+      already_resolved: Giao dịch chuyển khoản này đã được xác nhận hoặc từ chối.

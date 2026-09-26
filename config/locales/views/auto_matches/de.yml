@@ -1,0 +1,31 @@
+---
+de:
+  auto_matches:
+    title: Automatischer Abgleich
+    settings:
+      enable_label: Automatischen Abgleich aktivieren
+      enable_description: Erkennt und schlägt bei jeder Synchronisierung automatisch Überweisungsabgleiche zwischen Konten vor. Vorschläge werden erst angewendet, nachdem du sie unten bestätigt hast.
+    update_settings:
+      settings_updated: Einstellungen für den automatischen Abgleich aktualisiert
+    bulk_update:
+      invalid_selection: Wähle mindestens einen Vorschlag zum Bestätigen oder Ablehnen aus
+      bulk_confirmed:
+        one: 1 Überweisung bestätigt
+        other: "%{count} Überweisungen bestätigt"
+      bulk_rejected:
+        one: 1 Überweisung abgelehnt
+        other: "%{count} Überweisungen abgelehnt"
+    empty:
+      title: Keine ausstehenden Vorschläge für den automatischen Abgleich
+      description: Wenn eine Synchronisierung eine wahrscheinliche Überweisung zwischen zwei deiner Konten erkennt, erscheint sie hier zur Überprüfung.
+    table:
+      from: Von
+      to: An
+      date: Datum
+      actions: Aktionen
+      separator: "·"
+    bulk_actions:
+      selected_label: ausgewählt
+      confirm_selected: Auswahl bestätigen
+      reject_selected: Auswahl ablehnen
+      select_all: Alle auswählen

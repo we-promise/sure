@@ -1,0 +1,31 @@
+---
+ca:
+  auto_matches:
+    title: Coincidències automàtiques
+    settings:
+      enable_label: Activa la coincidència automàtica
+      enable_description: Detecta i suggereix automàticament coincidències de transferències entre comptes a cada sincronització. Els suggeriments no s'apliquen fins que els confirmis a continuació.
+    update_settings:
+      settings_updated: S'ha actualitzat la configuració de coincidència automàtica
+    bulk_update:
+      invalid_selection: Selecciona almenys un suggeriment per confirmar o rebutjar
+      bulk_confirmed:
+        one: S'ha confirmat 1 transferència
+        other: "S'han confirmat %{count} transferències"
+      bulk_rejected:
+        one: S'ha rebutjat 1 transferència
+        other: "S'han rebutjat %{count} transferències"
+    empty:
+      title: No hi ha suggeriments de coincidència automàtica pendents
+      description: Quan una sincronització detecti una possible transferència entre dos dels teus comptes, apareixerà aquí per revisar-la.
+    table:
+      from: Des de
+      to: A
+      date: Data
+      actions: Accions
+      separator: "·"
+    bulk_actions:
+      selected_label: seleccionats
+      confirm_selected: Confirma la selecció
+      reject_selected: Rebutja la selecció
+      select_all: Selecciona-ho tot

@@ -28,3 +28,4 @@ ro:
       settings: Setări
     update:
       success: Transfer actualizat
+      already_resolved: Acest transfer a fost deja confirmat sau respins.

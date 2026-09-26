@@ -56,6 +56,7 @@ class IncomeStatement::DailyExpenseTotals
             AND a.exclude_from_reports = false
             #{exclude_tax_advantaged_sql}
             #{include_finance_accounts_sql}
+            #{exclude_pending_transfers_sql("at")}
           GROUP BY ae.date, #{classification_sql("at")}
         ) daily
         WHERE classification = 'expense'

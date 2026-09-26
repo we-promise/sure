@@ -1,0 +1,27 @@
+---
+zh-TW:
+  auto_matches:
+    title: 自動配對
+    settings:
+      enable_label: 啟用自動配對
+      enable_description: 每次同步時自動偵測並建議帳戶之間的轉帳配對。建議在您於下方確認之前不會套用。
+    update_settings:
+      settings_updated: 自動配對設定已更新
+    bulk_update:
+      invalid_selection: 請至少選擇一項建議以確認或拒絕
+      bulk_confirmed: 已確認 %{count} 筆轉帳
+      bulk_rejected: 已拒絕 %{count} 筆轉帳
+    empty:
+      title: 目前沒有待處理的自動配對建議
+      description: 當同步偵測到您的兩個帳戶之間可能存在轉帳時，會顯示在此處供您審核。
+    table:
+      from: 從
+      to: 到
+      date: 日期
+      actions: 操作
+      separator: "·"
+    bulk_actions:
+      selected_label: 項已選取
+      confirm_selected: 確認所選
+      reject_selected: 拒絕所選
+      select_all: 全選

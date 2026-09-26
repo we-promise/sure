@@ -620,6 +620,13 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :auto_matches, only: %i[index] do
+    collection do
+      patch :update_settings
+      patch :bulk_update
+    end
+  end
+
   resources :insights, only: %i[index] do
     collection do
       post :refresh

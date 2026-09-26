@@ -193,6 +193,7 @@ hu:
       accounts_label: Számlák
       advanced_section_title: Speciális
       ai_prompts_label: MI promptok
+      auto_matches_label: Automatikus egyeztetés
       api_key_label: API-kulcs
       payment_label: Fizetés
       categories_label: Kategóriák

@@ -121,6 +121,7 @@ nl:
       accounts_label: Accounts
       advanced_section_title: Geavanceerd
       ai_prompts_label: AI Prompts
+      auto_matches_label: Automatische matching
       api_key_label: API Key
       payment_label: Betaling
       categories_label: Categorieën

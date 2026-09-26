@@ -64,22 +64,42 @@ class Transaction::Search
         tax_advantaged_ids = family.tax_advantaged_account_ids
         scope = scope.where.not(accounts: { id: tax_advantaged_ids }) if tax_advantaged_ids.present?
 
+        # A pending auto-matched transfer leg keeps kind == "standard" until
+        # confirmed (Transfer#confirm!), so `kind NOT IN (...)` alone isn't
+        # enough here either -- see IncomeStatement::ScopedTransactionsQuery
+        # #exclude_pending_transfers_sql for the same exclusion applied to
+        # the dashboard/report totals.
+        pending_transfer_exists_sql = <<~SQL.chomp
+          EXISTS (
+            SELECT 1 FROM transfers pending_transfers
+            WHERE pending_transfers.status = 'pending'
+              AND (pending_transfers.inflow_transaction_id = transactions.id OR pending_transfers.outflow_transaction_id = transactions.id)
+          )
+        SQL
+        pending_transfer_exclusion_sql = "AND NOT #{pending_transfer_exists_sql}"
+
         result = scope
                   .select(
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
+                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) #{pending_transfer_exclusion_sql} THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as expense_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
+                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind NOT IN (?) #{pending_transfer_exclusion_sql} THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as income_total",
+                      Transaction::TRANSFER_KINDS
+                    ]),
+                    # A pending auto-matched leg's kind stays "standard" (see
+                    # note above), so `kind IN (...)` alone also misses it
+                    # here -- without the OR, the leg is subtracted from
+                    # income/expense above but never added to either transfer
+                    # total, so it vanishes from all four totals while still
+                    # counting toward transactions_count.
+                    ActiveRecord::Base.sanitize_sql_array([
+                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND (transactions.kind IN (?) OR #{pending_transfer_exists_sql}) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as transfer_inflow_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount < 0 AND transactions.kind IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as transfer_inflow_total",
-                      Transaction::TRANSFER_KINDS
-                    ]),
-                    ActiveRecord::Base.sanitize_sql_array([
-                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND transactions.kind IN (?) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as transfer_outflow_total",
+                      "COALESCE(SUM(CASE WHEN entries.amount >= 0 AND (transactions.kind IN (?) OR #{pending_transfer_exists_sql}) THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as transfer_outflow_total",
                       Transaction::TRANSFER_KINDS
                     ]),
                     "COUNT(entries.id) as transactions_count"
@@ -179,17 +199,31 @@ class Transaction::Search
 
       case types.sort
       when [ "transfer" ]
+        # Matches Rule::ConditionFilter::TransactionType#apply for
+        # consistency -- a pending auto-matched leg keeps kind == "standard"
+        # until confirmed (Transfer#confirm!), so `kind IN (...)` alone
+        # misses it here too.
         query.where(kind: Transaction::TRANSFER_KINDS)
+             .or(query.where(id: Transfer.pending.select(:inflow_transaction_id)))
+             .or(query.where(id: Transfer.pending.select(:outflow_transaction_id)))
       when [ "expense" ]
-        query.where("entries.amount >= 0").where.not(kind: Transaction::TRANSFER_KINDS)
+        query.where("entries.amount >= 0")
+             .where.not(kind: Transaction::TRANSFER_KINDS)
+             .where.not(id: Transfer.pending.select(:inflow_transaction_id))
+             .where.not(id: Transfer.pending.select(:outflow_transaction_id))
       when [ "income" ]
-        query.where("entries.amount < 0").where.not(kind: Transaction::TRANSFER_KINDS)
+        query.where("entries.amount < 0")
+             .where.not(kind: Transaction::TRANSFER_KINDS)
+             .where.not(id: Transfer.pending.select(:inflow_transaction_id))
+             .where.not(id: Transfer.pending.select(:outflow_transaction_id))
       when [ "expense", "transfer" ]
         query.where("entries.amount >= 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
       when [ "income", "transfer" ]
         query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
       when [ "expense", "income" ]
         query.where.not(kind: Transaction::TRANSFER_KINDS)
+             .where.not(id: Transfer.pending.select(:inflow_transaction_id))
+             .where.not(id: Transfer.pending.select(:outflow_transaction_id))
       else
         query
       end
