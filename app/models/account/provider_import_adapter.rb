@@ -272,7 +272,9 @@ class Account::ProviderImportAdapter
           entry.transaction.assign_attributes(investment_activity_label: detected_label)
         end
 
-        if auto_kind.present?
+        # Once transfer matching has paired this entry, the Transfer owns both legs'
+        # kinds; re-applying an import-time guess on every sync would undo it (#3063).
+        if auto_kind.present? && entry.transaction.transfer.nil?
           entry.transaction.assign_attributes(kind: auto_kind)
         end
 
