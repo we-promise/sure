@@ -427,6 +427,10 @@ Rails.application.routes.draw do
     delete :destroy_all, on: :collection
   end
 
+  namespace :tag do
+    resource :dropdown, only: :show
+  end
+
   namespace :category do
     resource :dropdown, only: :show
   end

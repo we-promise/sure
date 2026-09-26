@@ -24,7 +24,7 @@
     <div class="grow overflow-y-auto">
       <% if @transactions.any? %>
         <div class="grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4 grid">
-          <div class="pl-0.5 col-span-8 flex items-center gap-4">
+          <div class="pl-0.5 col-span-5 flex items-center gap-4">
             <%= check_box_tag "selection_entry",
                 class: "checkbox checkbox--light hidden lg:block",
                 data: {
@@ -34,7 +34,8 @@
             <p><%= t(".transaction") %></p>
           </div>
 
-          <p class="col-span-2 md:block hidden"><%= t("transactions.form.category_label") %></p>
+          <p class="col-span-3 md:block hidden"><%= t("transactions.form.category_label") %></p>
+          <p class="col-span-2 md:block hidden"><%= t("transactions.form.tags_label") %></p>
           <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block"><%= t("transactions.show.amount") %></p>
         </div>
       <% end %>

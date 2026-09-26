@@ -119,7 +119,7 @@ class AccountsController < ApplicationController
     if transactions.any?
       ActiveRecord::Associations::Preloader.new(
         records: transactions,
-        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, :merchant ]
+        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, :merchant, :tags ]
       ).call
     end
 
