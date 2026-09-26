@@ -114,6 +114,15 @@ class Assistant::Function::GetTransactionsTest < ActiveSupport::TestCase
   end
 
   test "filters by type" do
+    Entry.create!(
+      account: accounts(:credit_card),
+      name: "Refund",
+      date: Date.current,
+      amount: -50,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
     result = @function.call("types" => [ "income" ])
 
     assert result[:transactions].any?
