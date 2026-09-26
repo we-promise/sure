@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
   static targets = ["input", "form", "overlay"]
+  static values = { invalidFileMessage: String }
 
   dragDepth = 0
 
@@ -26,6 +27,7 @@ export default class extends Controller {
   }
 
   dragEnter(event) {
+    if (!this.isActive()) return
     event.preventDefault()
     this.dragDepth++
     if (this.dragDepth === 1) {
@@ -34,10 +36,12 @@ export default class extends Controller {
   }
 
   dragOver(event) {
+    if (!this.isActive()) return
     event.preventDefault()
   }
 
   dragLeave(event) {
+    if (!this.isActive()) return
     event.preventDefault()
     this.dragDepth--
     if (this.dragDepth <= 0) {
@@ -47,19 +51,34 @@ export default class extends Controller {
   }
 
   drop(event) {
+    if (!this.isActive()) return
     event.preventDefault()
     this.dragDepth = 0
     this.overlayTarget.classList.add("hidden")
 
     if (event.dataTransfer.files.length > 0) {
-      const file = event.dataTransfer.files[0]
-      // Simple validation
-      if (file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv")) {
+      const files = Array.from(event.dataTransfer.files)
+      const acceptedTypes = this.inputTarget.accept.split(",").map((type) => type.trim().toLowerCase()).filter(Boolean)
+      const allAccepted = acceptedTypes.length === 0 || files.every((file) => this.matchesAcceptedType(file, acceptedTypes))
+      if (allAccepted) {
         this.inputTarget.files = event.dataTransfer.files
-        this.formTarget.requestSubmit()
+        this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
       } else {
-        alert("Please upload a valid CSV file.")
+        alert(this.invalidFileMessageValue || "Please upload files in the selected format.")
       }
     }
+  }
+
+  isActive() {
+    return this.hasInputTarget && this.hasFormTarget && !this.inputTarget.disabled &&
+      !this.element.closest("[hidden]")
+  }
+
+  matchesAcceptedType(file, acceptedTypes) {
+    return acceptedTypes.some((type) => {
+      if (type.startsWith(".")) return file.name.toLowerCase().endsWith(type)
+      if (type.endsWith("/*")) return file.type.toLowerCase().startsWith(type.slice(0, -1))
+      return file.type.toLowerCase() === type
+    })
   }
 }

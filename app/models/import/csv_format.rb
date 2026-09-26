@@ -9,12 +9,12 @@ class Import::CsvFormat
   }.freeze
 
   def self.options
-    [ [ "auto", "auto" ], *TRANSACTION_TYPES.keys.map { |key| [ key, key ] } ]
+    TRANSACTION_TYPES.keys.map { |key| [ key, key ] }
   end
 
   def self.import_type(selection:, content:, col_sep: ",")
     return TRANSACTION_TYPES.fetch(selection) if TRANSACTION_TYPES.key?(selection)
-    return "TransactionImport" unless selection == "auto"
+    return "TransactionImport" unless selection.blank? || selection == "auto"
 
     detect(content, col_sep: col_sep) || "TransactionImport"
   end

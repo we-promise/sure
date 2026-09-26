@@ -501,6 +501,8 @@ Rails.application.routes.draw do
   end
 
   resources :imports, only: %i[index new show create update destroy] do
+    get :check_pdf_duplicate, on: :collection
+    delete :destroy_all, on: :collection
     member do
       post :publish
       put :revert

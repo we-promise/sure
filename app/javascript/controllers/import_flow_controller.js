@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["format", "panel", "csvOptions", "kind", "transactionFormat", "account", "csvSource", "fileInput"];
+  static targets = ["format", "panel", "csvOptions", "kind", "transactionFormat", "account", "documentAccount", "csvSource", "fileInput"];
 
   connect() {
     this.update();
@@ -26,13 +26,13 @@ export default class extends Controller {
     });
     this.csvOptionsTarget.hidden = format !== "csv";
 
-    const importKind = this.kindTargets.find((kind) => kind.tagName === "SELECT")?.value;
+    const importKind = this.kindTargets[0]?.value;
     this.transactionFormatTarget.hidden = importKind !== "TransactionImport";
     if (this.hasAccountTarget) {
       this.accountTarget.hidden = !["TransactionImport", "TradeImport"].includes(importKind);
     }
 
-    const csvSource = this.csvSourceTargets.find((source) => source.tagName === "SELECT")?.value;
+    const csvSource = this.csvSourceTargets[0]?.value;
     if (importKind) {
       this.kindTargets.forEach((kind) => {
         kind.value = importKind;
@@ -49,11 +49,26 @@ export default class extends Controller {
       input.required = !input.disabled;
     });
 
+    if (this.hasDocumentAccountTarget) {
+      const documentInput = this.fileInputTargets.find((input) => input.dataset.importFlowFileFormat === "document");
+      const hasPdf = Array.from(documentInput?.files || []).some((file) => file.name.toLowerCase().endsWith(".pdf"));
+      this.documentAccountTarget.disabled = !hasPdf;
+      if (!hasPdf) this.documentAccountTarget.value = "";
+    }
+
     const url = new URL(window.location.href);
     url.searchParams.set("file_format", format);
     if (importKind) url.searchParams.set("import_kind", importKind);
-    if (csvSource) url.searchParams.set("csv_format", csvSource);
+    if (csvSource) {
+      url.searchParams.set("csv_format", csvSource);
+    } else {
+      url.searchParams.delete("csv_format");
+    }
     window.history.replaceState({}, "", url);
+  }
+
+  preventSubmit(event) {
+    event.preventDefault();
   }
 
   uploadSure(event) {

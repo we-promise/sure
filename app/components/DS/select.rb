@@ -1,6 +1,6 @@
 module DS
   class Select < ViewComponent::Base
-    attr_reader :form, :method, :items, :selected_value, :placeholder, :variant, :searchable, :menu_placement, :options
+    attr_reader :form, :method, :items, :selected_value, :placeholder, :variant, :searchable, :show_selected_checkmark, :highlight_selected_item, :menu_placement, :options
 
     VARIANTS = %i[simple logo badge].freeze
     MENU_PLACEMENTS = %w[auto down up].freeze
@@ -8,12 +8,14 @@ module DS
     RGB_COLOR_REGEX = /\Argb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)\z/
     DEFAULT_COLOR = "#737373"
 
-    def initialize(form:, method:, items:, selected: nil, placeholder: I18n.t("helpers.select.default_label"), variant: :simple, include_blank: nil, searchable: false, menu_placement: :auto, **options)
+    def initialize(form:, method:, items:, selected: nil, placeholder: I18n.t("helpers.select.default_label"), variant: :simple, include_blank: nil, searchable: false, show_selected_checkmark: true, highlight_selected_item: true, menu_placement: :auto, **options)
       @form = form
       @method = method
       @placeholder = placeholder
       @variant = variant
       @searchable = searchable
+      @show_selected_checkmark = show_selected_checkmark
+      @highlight_selected_item = highlight_selected_item
       @menu_placement = normalize_menu_placement(menu_placement)
       @options = options
 
@@ -83,7 +85,8 @@ module DS
             {
               value: item[:value],
               label: item[:label],
-              object: item[:object]
+              object: item[:object],
+              disabled: item[:disabled] == true
             }
           else
             {
