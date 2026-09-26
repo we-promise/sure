@@ -33,12 +33,66 @@ class Account::CryptoExchangeCreationTest < ActiveSupport::TestCase
     assert_equal 2_500, account.balance
   end
 
+  # Kraken reports every balance in USD regardless of what the user trades in,
+  # but the processors denominate the account's entries and holdings in the
+  # family currency. Inheriting the exchange's currency labelled the account
+  # USD and then filled it with EUR figures.
+  test "an exchange account is created in the family currency, with the balance converted" do
+    @family.update!(currency: "EUR")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    account = Account.create_from_kraken_account(kraken_account(current_balance: 1_000, currency: "USD"))
+
+    assert_equal "EUR", account.currency
+    assert_equal 900, account.balance
+  end
+
+  test "a Binance exchange account is created in the family currency" do
+    @family.update!(currency: "EUR")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    account = Account.create_from_binance_account(binance_account(current_balance: 2_000, currency: "USD"))
+
+    assert_equal "EUR", account.currency
+    assert_equal 1_800, account.balance
+  end
+
+  test "a CoinSpot exchange account is created in the family currency" do
+    @family.update!(currency: "USD")
+    ExchangeRate.create!(from_currency: "AUD", to_currency: "USD", date: Date.current, rate: 0.65)
+
+    account = Account.create_from_coinspot_account(coinspot_account(current_balance: 1_000, currency: "AUD"))
+
+    assert_equal "USD", account.currency
+    assert_equal 650, account.balance
+  end
+
+  test "an exchange account keeps its balance when no rate is available" do
+    @family.update!(currency: "EUR")
+
+    account = Account.create_from_kraken_account(kraken_account(current_balance: 1_000, currency: "USD"))
+
+    assert_equal "EUR", account.currency
+    assert_equal 1_000, account.balance
+  end
+
   private
 
     def kraken_account(current_balance:, currency: "USD")
       item = KrakenItem.create!(family: @family, name: "Kraken", api_key: "k", api_secret: "s")
       item.kraken_accounts.create!(
         name: "Kraken",
+        account_id: "combined",
+        account_type: "combined",
+        currency: currency,
+        current_balance: current_balance
+      )
+    end
+
+    def coinspot_account(current_balance:, currency: "AUD")
+      item = CoinspotItem.create!(family: @family, name: "CoinSpot", api_key: "c", api_secret: "s")
+      item.coinspot_accounts.create!(
+        name: "CoinSpot",
         account_id: "combined",
         account_type: "combined",
         currency: currency,

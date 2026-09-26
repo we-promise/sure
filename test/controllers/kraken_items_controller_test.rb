@@ -252,6 +252,25 @@ class KrakenItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, %(value="#{@second_item.id}")
   end
 
+  # The figure on the setup screen is what the user checks the import against,
+  # so it has to be in the currency the account will be created in -- the family
+  # currency -- not the one Kraken happens to report in.
+  test "setup accounts shows the balance in the family currency" do
+    ensure_tailwind_build
+    @family.update!(currency: "EUR")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+    @second_item.kraken_accounts.create!(
+      name: "Kraken", account_id: "combined", account_type: "combined",
+      currency: "USD", current_balance: 1_000
+    )
+
+    get setup_accounts_kraken_item_url(@second_item)
+
+    assert_response :success
+    assert_includes @response.body, "€900.00"
+    assert_includes @response.body, "EUR"
+  end
+
   test "cannot access another family's kraken item" do
     other_item = KrakenItem.create!(
       family: families(:empty),
