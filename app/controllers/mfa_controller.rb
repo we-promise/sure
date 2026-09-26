@@ -10,13 +10,27 @@ class MfaController < ApplicationController
   end
 
   def create
+    # Only reachable as a setup-rollback (wrong code while enrolling): if MFA
+    # is already enabled, this must not fall through to the wrong-code branch
+    # below, which calls disable_mfa! unconditionally and with no audit trail
+    # — otherwise a hijacked session could strip a victim's second factor by
+    # POSTing any wrong code, with nothing left to show it happened.
+    if Current.user.otp_required?
+      redirect_to root_path and return
+    end
+
     if Current.user.verify_otp?(params[:code])
-      @backup_codes = Current.user.enable_mfa!
+      ActiveRecord::Base.transaction do
+        @backup_codes = Current.user.enable_mfa!
+        SecurityAuditLog.log_mfa_enabled!(user: Current.user, request: request, actor: Current.true_user)
+      end
       render :backup_codes
     else
       Current.user.disable_mfa!
       redirect_to new_mfa_path, alert: t(".invalid_code")
     end
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::ActiveRecordError
+    redirect_to new_mfa_path, alert: t(".setup_failed")
   end
 
   def verify
@@ -114,7 +128,20 @@ class MfaController < ApplicationController
 
   def disable
     Current.user.disable_mfa!
+
+    # Log-and-continue, not transactional: a security control the user is
+    # actively trying to turn off (e.g. because they believe it's
+    # compromised) shouldn't stay on just because the audit write failed.
+    # Mirrors Settings::ApiKeysController#destroy.
+    begin
+      SecurityAuditLog.log_mfa_disabled!(user: Current.user, request: request, actor: Current.true_user)
+    rescue ActiveRecord::ActiveRecordError => e
+      Rails.logger.error("[Mfa] Failed to write audit log for disabled MFA (user #{Current.user.id}): #{e.message}")
+    end
+
     redirect_to settings_security_path, notice: t(".success")
+  rescue ActiveRecord::RecordInvalid
+    redirect_to settings_security_path, alert: t(".failure")
   end
 
   private

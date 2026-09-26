@@ -10,7 +10,9 @@ nl:
       title: Bewaar uw back-upcodes
     create:
       invalid_code: Ongeldige verificatiecode. Probeer het opnieuw.
+      setup_failed: Er is iets misgegaan bij het inschakelen van twee-factor authenticatie. Probeer het opnieuw.
     disable:
+      failure: Er is iets misgegaan bij het uitschakelen van twee-factor authenticatie. Probeer het opnieuw.
       success: Twee-factor authenticatie is uitgeschakeld
     new:
       code_label: Verificatiecode

@@ -10,7 +10,9 @@ de:
       title: Backup-Codes speichern
     create:
       invalid_code: Ungültiger Bestätigungscode Bitte versuche es erneut
+      setup_failed: Beim Aktivieren der Zwei-Faktor-Authentifizierung ist ein Fehler aufgetreten. Bitte versuche es erneut.
     disable:
+      failure: Beim Deaktivieren der Zwei-Faktor-Authentifizierung ist ein Fehler aufgetreten. Bitte versuche es erneut.
       success: Zwei-Faktor-Authentifizierung wurde deaktiviert
     new:
       code_label: Bestätigungscode

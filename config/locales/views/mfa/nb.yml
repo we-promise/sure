@@ -10,7 +10,9 @@ nb:
       title: Lagre dine sikkerhetskoder
     create:
       invalid_code: Ugyldig verifiseringskode. Prøv igjen.
+      setup_failed: Noe gikk galt under aktivering av to-faktor autentisering. Prøv igjen.
     disable:
+      failure: Noe gikk galt under deaktivering av to-faktor autentisering. Prøv igjen.
       success: To-faktor autentisering er deaktivert
     new:
       code_label: Verifiseringskode

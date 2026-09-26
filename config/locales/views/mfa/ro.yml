@@ -10,7 +10,9 @@ ro:
       title: Salvați codurile dumneavoastră de rezervă
     create:
       invalid_code: Cod de verificare invalid. Vă rugăm să încercați din nou.
+      setup_failed: Ceva nu a mers bine la activarea autentificării cu doi factori. Vă rugăm să încercați din nou.
     disable:
+      failure: Ceva nu a mers bine la dezactivarea autentificării cu doi factori. Vă rugăm să încercați din nou.
       success: Autentificarea cu doi factori a fost dezactivată
     new:
       code_label: Cod de verificare

@@ -12,7 +12,9 @@ ca:
       title: Desa els teus codis de recuperació
     create:
       invalid_code: Codi de verificació invàlid. Torna-ho a provar.
+      setup_failed: S'ha produït un error en activar l'autenticació de dos factors. Torna-ho a provar.
     disable:
+      failure: S'ha produït un error en desactivar l'autenticació de dos factors. Torna-ho a provar.
       success: L'autenticació de dos factors s'ha desactivat
     new:
       code_label: Codi de verificació

@@ -48,16 +48,46 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_equal 8, rendered_codes.length
     assert rendered_codes.all? { |code| code.match?(/\A[0-9a-f]{16}\z/) }
     assert_empty rendered_codes & @user.otp_backup_codes
+
+    assert SecurityAuditLog.exists?(user: @user, event_type: "mfa_enabled")
+  end
+
+  test "does not enable MFA when the audit log write fails" do
+    @user.setup_mfa!
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    SecurityAuditLog.stubs(:log_mfa_enabled!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    post mfa_path, params: { code: totp.now }
+
+    assert_redirected_to new_mfa_path
+    assert_not @user.reload.otp_required?
+    assert_empty @user.otp_backup_codes
   end
 
   test "does not enable MFA with invalid code" do
     @user.setup_mfa!
 
-    post mfa_path, params: { code: "invalid" }
+    assert_no_difference "SecurityAuditLog.count" do
+      post mfa_path, params: { code: "invalid" }
+    end
 
     assert_redirected_to new_mfa_path
     assert_not @user.reload.otp_required?
     assert_empty @user.otp_backup_codes
+  end
+
+  test "create refuses to touch an already-enabled MFA even with a wrong code" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    assert @user.otp_required?
+
+    assert_no_difference "SecurityAuditLog.count" do
+      post mfa_path, params: { code: "invalid" }
+    end
+
+    assert_redirected_to root_path
+    assert @user.reload.otp_required?
+    assert @user.otp_secret.present?
   end
 
   test "verify shows MFA verification page" do
@@ -304,6 +334,47 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_nil @user.otp_secret
     assert_empty @user.otp_backup_codes
     assert_empty @user.webauthn_credentials
+
+    assert SecurityAuditLog.exists?(user: @user, event_type: "mfa_disabled")
+  end
+
+  test "disable while impersonating attributes the audit entry to the impersonator, not the victim" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    impersonator = users(:sure_support_staff)
+    sign_in impersonator
+    post join_impersonation_sessions_path, params: { impersonation_session_id: impersonation_sessions(:in_progress).id }
+    assert_response :redirect
+
+    delete disable_mfa_path
+
+    log = SecurityAuditLog.find_by(user: @user, event_type: "mfa_disabled")
+    assert_not_nil log
+    assert_equal impersonator.id, log.metadata["actor_user_id"]
+  end
+
+  test "still disables MFA when the audit log write fails" do
+    # Log-and-continue, not transactional: a failed audit write must not
+    # block turning off a security control the user is actively trying to
+    # disable (e.g. because they believe it's compromised).
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.webauthn_credentials.create!(
+      nickname: "YubiKey",
+      credential_id: "disable-mfa-audit-fail-credential",
+      public_key: "public-key"
+    )
+    SecurityAuditLog.stubs(:log_mfa_disabled!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    delete disable_mfa_path
+
+    assert_redirected_to settings_security_path
+    assert_not @user.reload.otp_required?
+    assert_nil @user.otp_secret
+    assert_empty @user.webauthn_credentials
+    assert_not SecurityAuditLog.exists?(user: @user, event_type: "mfa_disabled")
   end
 
   private

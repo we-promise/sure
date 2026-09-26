@@ -12,7 +12,9 @@ es:
       title: Guarda Tus Códigos de Respaldo
     create:
       invalid_code: Código de verificación inválido. Por favor, inténtalo de nuevo.
+      setup_failed: Ocurrió un error al activar la autenticación de dos factores. Por favor, inténtalo de nuevo.
     disable:
+      failure: Ocurrió un error al desactivar la autenticación de dos factores. Por favor, inténtalo de nuevo.
       success: La autenticación de dos factores ha sido desactivada
     new:
       code_label: Código de Verificación

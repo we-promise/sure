@@ -12,7 +12,9 @@ tr:
       title: Yedek Kodlarınızı Kaydedin
     create:
       invalid_code: Geçersiz doğrulama kodu. Lütfen tekrar deneyin.
+      setup_failed: İki faktörlü kimlik doğrulamayı etkinleştirirken bir sorun oluştu. Lütfen tekrar deneyin.
     disable:
+      failure: İki faktörlü kimlik doğrulamayı devre dışı bırakırken bir sorun oluştu. Lütfen tekrar deneyin.
       success: İki faktörlü kimlik doğrulama devre dışı bırakıldı
     new:
       code_label: Doğrulama Kodu

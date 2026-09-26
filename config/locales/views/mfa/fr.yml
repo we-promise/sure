@@ -12,7 +12,9 @@ fr:
       title: Enregistrer vos Codes de Sauvegarde
     create:
       invalid_code: Code de vérification invalide. Veuillez essayer à nouveau.
+      setup_failed: Une erreur s'est produite lors de l'activation de l'authentification à deux facteurs. Veuillez réessayer.
     disable:
+      failure: Une erreur s'est produite lors de la désactivation de l'authentification à deux facteurs. Veuillez réessayer.
       success: L'authentification à deux facteurs a été désactivée.
     new:
       code_label: Code de vérification

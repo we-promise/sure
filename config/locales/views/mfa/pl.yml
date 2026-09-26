@@ -11,7 +11,9 @@ pl:
       title: Zapisz swoje kody zapasowe
     create:
       invalid_code: Nieprawidłowy kod weryfikacyjny. Spróbuj ponownie.
+      setup_failed: Coś poszło nie tak podczas włączania uwierzytelniania dwuskładnikowego. Spróbuj ponownie.
     disable:
+      failure: Coś poszło nie tak podczas wyłączania uwierzytelniania dwuskładnikowego. Spróbuj ponownie.
       success: Uwierzytelnianie dwuskładnikowe zostało wyłączone
     new:
       code_label: Kod weryfikacyjny
