@@ -100,11 +100,16 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
         plaid_item: {
           public_token: public_token,
           region: "us",
-          metadata: { institution: { name: "Plaid Item Name" } }
+          metadata: { institution: { name: "Plaid Item Name", institution_id: "ins_mock" } }
         }
       }
     end
 
+    # Link's onSuccess metadata nests the institution, unlike the flat onEvent
+    # metadata the Stimulus controller reads. Persisting the id here closes the
+    # window where a just-linked connection is invisible to the duplicate check,
+    # which would otherwise last until the first sync completes.
+    assert_equal "ins_mock", PlaidItem.order(:created_at).last.institution_id
     assert_equal "Account linked successfully.  Please wait for accounts to sync.", flash[:notice]
     assert_redirected_to accounts_path
   end
@@ -322,4 +327,329 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_path(account)
     assert_equal "No available Plaid accounts to link. Please connect a new Plaid account first.", flash[:alert]
   end
+
+  # --- Duplicate-connection warning -------------------------------------------
+  #
+  # The SELECT_INSTITUTION interception itself lives in plaid_controller.js and has
+  # no automated coverage: the repo has no Stimulus test harness, and driving Plaid's
+  # own iframe is out of reach for a system test. Everything the JavaScript *decides
+  # on* is computed here, which is why these tests carry the weight.
+
+  test "new exposes the institutions this family already has connected" do
+    stub_link_token
+    create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+
+    get new_plaid_item_url(region: "us")
+
+    assert_includes connected_institution_ids, "ins_example"
+  end
+
+  test "new omits connections scheduled for deletion" do
+    stub_link_token
+    item = create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+    item.update!(scheduled_for_deletion: true)
+
+    get new_plaid_item_url(region: "us")
+
+    assert_empty connected_institution_ids
+  end
+
+  test "new omits connections from the other region" do
+    stub_link_token
+    create_plaid_item(name: "EU Bank", institution_id: "ins_eu", region: :eu, owner: users(:family_admin))
+
+    get new_plaid_item_url(region: "us")
+
+    assert_empty connected_institution_ids
+  end
+
+  # Without a normalized region the query would run against a nil plaid_region and
+  # match nothing, silently disabling the warning on the most common entry path --
+  # the provider links omit `region` only when the caller does, but `new` itself has
+  # always defaulted to :us, and the partial must agree with it.
+  test "new defaults to the us region when none is given" do
+    stub_link_token
+    create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+
+    get new_plaid_item_url
+
+    assert_includes connected_institution_ids, "ins_example"
+  end
+
+  test "new omits the institution the user chose to connect again" do
+    stub_link_token
+    create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+
+    get new_plaid_item_url(region: "us", allow_institution: "ins_example")
+
+    assert_empty connected_institution_ids
+  end
+
+  # Signed in as a family with no Plaid items at all -- dylan_family carries the
+  # `plaid_items(:one)` fixture, which has no institution_id and so legitimately shows
+  # up in the name-fallback list.
+  test "new exposes an empty list when the family has no connections" do
+    stub_link_token
+    sign_in users(:empty)
+
+    get new_plaid_item_url(region: "us")
+
+    assert_empty connected_institution_ids
+    assert_empty connected_institution_names
+  end
+
+  # An item whose first sync never landed has no institution_id, and a broken
+  # connection is exactly what a user tries to re-link. Fall back to the stored name.
+  test "new falls back to the institution name when no institution_id was stored" do
+    stub_link_token
+    create_plaid_item(name: "Chase", institution_id: nil, owner: users(:family_admin))
+
+    get new_plaid_item_url(region: "us")
+
+    assert_empty connected_institution_ids
+    assert_includes connected_institution_names, "chase"
+  end
+
+  test "new hides another member's connection from a member" do
+    stub_link_token
+    create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+    sign_in users(:family_member)
+
+    get new_plaid_item_url(region: "us")
+
+    assert_empty connected_institution_ids
+  end
+
+  # Admins keep family-wide oversight, and the harm is family-wide too: the family
+  # shares one Plaid client and one Item allowance, so a member's existing connection
+  # really does mean an admin's new one spends a second slot.
+  test "new shows a member's connection to an admin" do
+    stub_link_token
+    create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_member))
+
+    get new_plaid_item_url(region: "us")
+
+    assert_includes connected_institution_ids, "ins_example"
+  end
+
+  test "duplicate_warning lists the existing connection with its accounts and masks" do
+    create_plaid_item(
+      name: "Example Bank",
+      institution_id: "ins_example",
+      owner: users(:family_admin),
+      accounts: [
+        { name: "Example Checking", mask: "4321" },
+        { name: "Example Savings", mask: "8765" }
+      ]
+    )
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_example")
+
+    assert_response :success
+    assert_match "Example Checking", response.body
+    assert_match "4321", response.body
+    assert_match "Example Savings", response.body
+    assert_match "8765", response.body
+  end
+
+  # A family that already hit this bug holds several connections for one institution,
+  # and is exactly who the warning matters most to. Every match is listed, and the
+  # title counts them rather than reading as though there were one.
+  test "duplicate_warning lists every connection for the institution" do
+    first = create_plaid_item(name: "Example Bank", institution_id: "ins_example",
+                              owner: users(:family_admin), accounts: [ { name: "First Checking", mask: "4321" } ])
+    second = create_plaid_item(name: "Example Bank (2nd login)", institution_id: "ins_example",
+                               owner: users(:family_admin), accounts: [ { name: "Second Checking", mask: "5150" } ])
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_example")
+
+    assert_response :success
+    assert_match "First Checking", response.body
+    assert_match "Second Checking", response.body
+    assert_select "a[href=?]", edit_plaid_item_path(first, add_accounts: true)
+    assert_select "a[href=?]", edit_plaid_item_path(second, add_accounts: true)
+    assert_select "h2", text: I18n.t("plaid_items.duplicate_warning.title", count: 2)
+  end
+
+  # The warning has to argue both sides. A second login covering different accounts
+  # duplicates nothing, so the dialog says so rather than presenting every match as a
+  # mistake -- a warning that is false for the people the override exists to serve
+  # costs more than one that is merely unnecessary.
+  test "duplicate_warning states when a new connection is legitimate" do
+    create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_example")
+
+    assert_response :success
+    assert_select "p", text: /different login with different accounts/
+  end
+
+  # owner_id is nullable and `owned_by?` is false for a null owner, so the attribution
+  # line would otherwise render for connections predating per-user ownership (#3613).
+  # An admin sees every family connection, so this is reachable rather than theoretical.
+  test "duplicate_warning omits attribution for a connection with no owner" do
+    item = create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+    item.update_column(:owner_id, nil)
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_example")
+
+    assert_response :success
+    # assert_no_match on the body rather than assert_select: the selector strips the
+    # element's text, so a pattern ending in the interpolation's leading space silently
+    # matches nothing and the test passes whether or not the line renders.
+    assert_no_match(/Connected by/, response.body)
+  end
+
+  test "duplicate_warning titles a single match in the singular" do
+    create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_example")
+
+    assert_select "h2", text: I18n.t("plaid_items.duplicate_warning.title", count: 1)
+  end
+
+  test "duplicate_warning offers the add-accounts route for a us connection" do
+    item = create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_example")
+
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true)
+  end
+
+  # Update mode only accepts account selection for US items, so the link would be
+  # inert for an EU connection.
+  test "duplicate_warning omits the add-accounts route for an eu connection" do
+    item = create_plaid_item(name: "EU Bank", institution_id: "ins_eu", region: :eu, owner: users(:family_admin))
+
+    get duplicate_warning_plaid_items_url(region: "eu", institution_id: "ins_eu")
+
+    assert_response :success
+    assert_select "a[href=?]", edit_plaid_item_path(item, add_accounts: true), count: 0
+    # assert_select rather than assert_match: the copy contains an apostrophe, which
+    # is HTML-escaped in the body but decoded by the selector's text matcher.
+    assert_select "p", text: /support adding accounts to an existing/
+  end
+
+  # The "or" separator implies a choice. When nothing above it is actionable it
+  # dangles over a lone button, so it renders only alongside a connection action.
+  test "duplicate_warning omits the or separator when no connection is actionable" do
+    create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+    PlaidItem.any_instance.stubs(:manageable_by?).returns(false)
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_example")
+
+    assert_response :success
+    assert_select "p", text: I18n.t("plaid_items.duplicate_warning.or"), count: 0
+    assert_select "a[href=?]", new_plaid_item_path(region: "us", allow_institution: "ins_example")
+  end
+
+  test "duplicate_warning always offers a way to connect anyway" do
+    create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_example", accountable_type: "Depository")
+
+    assert_select "a[href=?]", new_plaid_item_path(
+      region: "us", accountable_type: "Depository", allow_institution: "ins_example"
+    )
+  end
+
+  test "duplicate_warning matches on name when the connection has no institution_id" do
+    create_plaid_item(name: "Chase", institution_id: nil, owner: users(:family_admin))
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_name: "chase")
+
+    assert_response :success
+    assert_match "Chase", response.body
+  end
+
+  # A confirmed institution_id mismatch plus a shared display name is a false
+  # positive, not a match -- the fallback is only for rows with no id at all.
+  test "duplicate_warning does not match on name when the connection has an institution_id" do
+    create_plaid_item(name: "Chase", institution_id: "ins_chase", owner: users(:family_admin))
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_other", institution_name: "chase")
+
+    assert_redirected_to new_plaid_item_path(region: :us, allow_institution: "ins_other", allow_institution_name: "chase")
+  end
+
+  # Link is already closed by the time this renders, so an empty dialog would strand
+  # the user with no way forward. Start a fresh Link session instead.
+  test "duplicate_warning redirects into a fresh link session when nothing matches" do
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_unknown")
+
+    assert_redirected_to new_plaid_item_path(region: :us, allow_institution: "ins_unknown")
+  end
+
+  test "duplicate_warning does not match another family's connection" do
+    create_plaid_item(family: families(:empty), name: "Example Bank", institution_id: "ins_example", owner: users(:empty))
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_example")
+
+    assert_redirected_to new_plaid_item_path(region: :us, allow_institution: "ins_example")
+  end
+
+  test "duplicate_warning hides another member's connection from a member" do
+    create_plaid_item(name: "Example Bank", institution_id: "ins_example", owner: users(:family_admin))
+    sign_in users(:family_member)
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_example")
+
+    assert_redirected_to new_plaid_item_path(region: :us, allow_institution: "ins_example")
+  end
+
+  test "duplicate_warning denies a guest" do
+    sign_in users(:intro_user)
+
+    get duplicate_warning_plaid_items_url(region: "us", institution_id: "ins_example")
+
+    assert_redirected_to accounts_path
+  end
+
+  private
+    def stub_link_token(region: :us)
+      provider = mock
+      Provider::Registry.stubs(:plaid_provider_for_region).with(region).returns(provider)
+      provider.stubs(:get_link_token).returns(OpenStruct.new(link_token: "test-link-token"))
+      provider
+    end
+
+    # Built inline rather than as fixtures so the surrounding suites keep the Plaid
+    # item counts they were written against.
+    def create_plaid_item(family: families(:dylan_family), name:, institution_id: nil, region: :us, owner: nil, accounts: [])
+      item = family.plaid_items.create!(
+        name: name,
+        plaid_id: "item_#{SecureRandom.hex(6)}",
+        access_token: "access-#{SecureRandom.hex(6)}",
+        plaid_region: region,
+        institution_id: institution_id,
+        owner: owner
+      )
+
+      accounts.each do |attrs|
+        item.plaid_accounts.create!(
+          {
+            plaid_id: "acct_#{SecureRandom.hex(6)}",
+            currency: "USD",
+            plaid_type: "depository",
+            plaid_subtype: "checking",
+            current_balance: 100,
+            available_balance: 100
+          }.merge(attrs)
+        )
+      end
+
+      item
+    end
+
+    def plaid_link_element
+      css_select("[data-controller='plaid']").first
+    end
+
+    def connected_institution_ids
+      JSON.parse(plaid_link_element["data-plaid-connected-institution-ids-value"])
+    end
+
+    def connected_institution_names
+      JSON.parse(plaid_link_element["data-plaid-connected-institution-names-value"])
+    end
 end

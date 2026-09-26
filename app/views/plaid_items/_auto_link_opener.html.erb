@@ -1,9 +1,15 @@
-<%# locals: (link_token:, region:, item_id:, is_update: false) %>
+<%# locals: (link_token:, region:, item_id:, is_update: false, accountable_type: nil, connected_institution_ids: [], connected_institution_names: []) %>
 
+<%# The duplicate-connection locals default so `edit` (update mode) can render this
+    partial unchanged. plaid_controller.js also skips the check outright when
+    is_update is set -- that guard is the real protection, not these defaults. %>
 <%= tag.div data: {
               controller: "plaid",
               plaid_link_token_value: link_token,
               plaid_region_value: region,
               plaid_item_id_value: item_id,
-              plaid_is_update_value: is_update
+              plaid_is_update_value: is_update,
+              plaid_accountable_type_value: accountable_type,
+              plaid_connected_institution_ids_value: connected_institution_ids.to_json,
+              plaid_connected_institution_names_value: connected_institution_names.to_json
             } %>

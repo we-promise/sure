@@ -820,6 +820,7 @@ Rails.application.routes.draw do
 
   resources :plaid_items, only: %i[new edit create destroy] do
     collection do
+      get :duplicate_warning
       get :select_existing_account
       post :link_existing_account
     end
