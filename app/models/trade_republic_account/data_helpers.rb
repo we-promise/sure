@@ -88,6 +88,7 @@ module TradeRepublicAccount::DataHelpers
       "TDG" => "TGAT",
       "LSX" => "XHAM"
     }.freeze
+    OFFLINE_ISIN_REASON = "trade_republic_isin"
 
     # Resolve (or create) a Security from a Trade Republic position/trade.
     # Prefer an exact exchange ticker when the client supplied one; otherwise
@@ -247,15 +248,19 @@ module TradeRepublicAccount::DataHelpers
       security.update!(attrs) if attrs.any?
     end
 
+    # Securities are shared across families, so an existing ISIN row is reused
+    # as-is: its offline state belongs to whichever flow set it.
     def resolve_offline_isin_security(isin, name)
-      Security.transaction(requires_new: true) do
-        security = Security.find_by(ticker: isin) ||
-          Security.new(ticker: isin)
+      existing = Security.find_by(ticker: isin)
+      return existing if existing
 
-        security.name = name.presence || security.name || isin
-        security.offline = true
-        security.save!
-        security
+      Security.transaction(requires_new: true) do
+        Security.new(
+          ticker: isin,
+          name: name.presence || isin,
+          offline: true,
+          offline_reason: OFFLINE_ISIN_REASON
+        ).tap(&:save!)
       end
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
       Security.find_by(ticker: isin)

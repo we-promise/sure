@@ -435,6 +435,27 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert winner.reload.offline?
   end
 
+  test "new offline ISIN securities record why they are offline" do
+    Security.stubs(:search_provider).returns([])
+
+    import_position(isin: "LU3176111881", quantity: "3", price: "10")
+
+    security = Security.find_by!(ticker: "LU3176111881")
+    assert security.offline?
+    assert_equal "trade_republic_isin", security.offline_reason
+  end
+
+  test "an existing online ISIN security is reused without being taken offline" do
+    Security.stubs(:search_provider).returns([])
+    shared = Security.create!(ticker: "LU3176111881", name: "Shared ISIN", offline: false)
+
+    import_position(isin: "LU3176111881", quantity: "3", price: "10")
+
+    assert_equal shared.id, @account.holdings.first.security_id
+    assert_not shared.reload.offline?
+    assert_equal "Shared ISIN", shared.name
+  end
+
   test "maps a Trade Republic Tradegate symbol to the Tradegate MIC" do
     Security.stubs(:search_provider).returns([])
 
