@@ -442,6 +442,61 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
+  # dust sweep
+  # ---------------------------------------------------------------------------
+
+  # "Convert small balances" emits a spend and a receive. Neither type was
+  # listed as supported or as skipped, so both fell through the guard and were
+  # dropped without a trace -- a swept position stayed on the books at its
+  # pre-sweep quantity forever.
+  test "imports both halves of a dust sweep" do
+    set_ledgers(
+      "LSWP01" => ledger_entry(type: "spend",   asset: "XXBT", amount: "-0.00010000", fee: "0.00", time: 1_700_000_000),
+      "LSWP02" => ledger_entry(type: "receive", asset: "XXBT", amount: "0.00004000",  fee: "0.00", time: 1_700_000_000)
+    )
+
+    assert_difference "@account.entries.count", 2 do
+      process
+    end
+
+    spent = @account.entries.find_by(external_id: "kraken_ledger_LSWP01", source: "kraken")
+    assert_in_delta(-0.0001, spent.entryable.qty.to_f, 1e-9)
+    assert_match(/Converted/, spent.name)
+
+    received = @account.entries.find_by(external_id: "kraken_ledger_LSWP02", source: "kraken")
+    assert_in_delta 0.00004, received.entryable.qty.to_f, 1e-9
+    assert_match(/Received/, received.name)
+  end
+
+  # Both halves stay inside the exchange, so neither invents a cost basis.
+  test "a dust sweep is an internal movement on both sides" do
+    set_ledgers(
+      "LSWP03" => ledger_entry(type: "spend",   asset: "XXBT", amount: "-0.00010000", fee: "0.00", time: 1_700_000_000),
+      "LSWP04" => ledger_entry(type: "receive", asset: "XXBT", amount: "0.00004000",  fee: "0.00", time: 1_700_000_000)
+    )
+
+    process
+
+    %w[LSWP03 LSWP04].each do |id|
+      trade = @account.entries.find_by(external_id: "kraken_ledger_#{id}", source: "kraken").entryable
+      assert trade.internal_movement?, "#{id} must not create or relieve a cost basis"
+    end
+  end
+
+  # Kraken sweeps into crypto today, but a fiat half must not read as income.
+  test "a fiat half of a sweep is labelled as the internal movement it is" do
+    set_ledgers(
+      "LSWP05" => ledger_entry(type: "receive", asset: "ZUSD", amount: "3.00", fee: "0.00", time: 1_700_000_000)
+    )
+
+    process
+
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LSWP05", source: "kraken")
+    assert_equal "Transaction", entry.entryable_type
+    assert_equal "Sweep In", entry.entryable.investment_activity_label
+  end
+
+  # ---------------------------------------------------------------------------
   # skipped types
   # ---------------------------------------------------------------------------
 
