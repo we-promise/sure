@@ -13,6 +13,15 @@ class ToolCall::Function < ToolCall
         function_result: result
       )
     end
+
+    # Serializes tool-call arguments to the JSON-encoded string OpenAI requires.
+    # Blank strings (and nil) become "{}" so zero-argument calls don't send an
+    # empty string that strict OpenAI-compatible endpoints reject with a 400.
+    def serialize_arguments(args)
+      return "{}" if args.nil? || (args.is_a?(String) && args.blank?)
+
+      args.is_a?(String) ? args : args.to_json
+    end
   end
 
   def to_result
@@ -27,7 +36,7 @@ class ToolCall::Function < ToolCall
   def to_tool_call
     # OpenAI requires `function.arguments` to be a JSON-encoded string. Some
     # OpenAI-compatible endpoints reject an object payload with a 400.
-    arguments = function_arguments.is_a?(String) ? function_arguments : function_arguments.to_json
+    arguments = self.class.serialize_arguments(function_arguments)
 
     {
       id: provider_call_id,

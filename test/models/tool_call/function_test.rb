@@ -28,6 +28,20 @@ class ToolCall::FunctionTest < ActiveSupport::TestCase
     assert_equal '{"currency":"USD"}', tool_call.to_tool_call.dig(:function, :arguments)
   end
 
+  test "to_tool_call normalizes blank arguments to an empty JSON object" do
+    [ "", "   ", nil ].each do |blank_args|
+      tool_call = ToolCall::Function.new(
+        provider_id: "resp_1",
+        provider_call_id: "call_1",
+        function_name: "get_net_worth",
+        function_arguments: blank_args,
+        function_result: { "amount" => 10000 }
+      )
+
+      assert_equal "{}", tool_call.to_tool_call.dig(:function, :arguments), "expected #{blank_args.inspect} to serialize as \"{}\""
+    end
+  end
+
   test "to_result keeps arguments as stored (object or string)" do
     tool_call = ToolCall::Function.new(
       provider_id: "resp_1",
