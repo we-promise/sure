@@ -1579,6 +1579,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
 
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "day_count_convention", default: "thirty_360", null: false
     t.decimal "initial_balance", precision: 19, scale: 4
     t.decimal "interest_rate", precision: 10, scale: 3
     t.jsonb "locked_attributes", default: {}
@@ -1588,6 +1589,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
     t.integer "term_months"
     t.datetime "updated_at", null: false
     t.jsonb "variable_rate_schedule", default: {}, null: false
+    t.check_constraint "day_count_convention::text = ANY (ARRAY['thirty_360'::character varying, 'actual_365'::character varying, 'actual_actual'::character varying]::text[])", name: "chk_loans_day_count_convention"
   end
 
   create_table "lunchflow_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

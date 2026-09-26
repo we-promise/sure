@@ -13,4 +13,16 @@ module LoansHelper
 
     options << [ loan.rate_type.titleize, loan.rate_type ]
   end
+
+  # Built from the model constant rather than listed here, so a convention the
+  # engine gains cannot be offered without a label. `raise: true` is what makes
+  # that true: `config.i18n.raise_on_missing_translations` is not enabled in
+  # development or test, and `config.i18n.fallbacks` is, so without it a
+  # missing key would quietly render the English label -- or the literal
+  # "translation missing" string -- instead of failing.
+  def loan_day_count_convention_options
+    Loan::DAY_COUNT_CONVENTIONS.map do |convention|
+      [ t("loans.form.day_count_convention_#{convention}", raise: true), convention ]
+    end
+  end
 end
