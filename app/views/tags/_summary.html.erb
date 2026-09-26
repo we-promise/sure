@@ -7,11 +7,14 @@
 <span id="<%= dom_id(transaction, "tag_summary_#{variant}") %>" class="inline-flex min-w-0 max-w-full">
   <% if tags.empty? %>
     <% if editable && variant.to_sym == :desktop %>
-      <span class="invisible group-hover:visible in-focus-visible:visible inline-flex items-center justify-center w-7 h-7 rounded-full text-secondary hover:bg-container-inset-hover"
-            title="<%= t(".add") %>">
-        <%= icon("tag", size: "sm", color: "current") %>
-        <span class="sr-only"><%= t(".add") %></span>
-      </span>
+      <%= render DS::Tooltip.new(text: t(".add")) do |tooltip| %>
+        <% tooltip.with_trigger do %>
+          <span class="invisible group-hover:visible in-focus-visible:visible inline-flex items-center justify-center w-7 h-7 rounded-full text-secondary hover:bg-container-inset-hover">
+            <%= icon("tag", size: "sm", color: "current") %>
+            <span class="sr-only"><%= t(".add") %></span>
+          </span>
+        <% end %>
+      <% end %>
     <% end %>
   <% elsif tags.one? %>
     <%= render "tags/summary_tooltip", tags: tags, editable: editable %>
