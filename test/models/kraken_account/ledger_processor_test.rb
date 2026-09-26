@@ -285,10 +285,13 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # BTC deposit (crypto → family currency conversion)
+  # crypto moves units, not cash
   # ---------------------------------------------------------------------------
 
-  test "creates a deposit entry for BTC using stored price" do
+  # A coin deposit is a position change with no cash leg. Recorded as a
+  # Transaction the quantity is lost, so the holdings calculator has nothing to
+  # reverse and the cash balance moves by an amount that never existed.
+  test "a BTC deposit becomes a trade carrying the quantity, not a cash entry" do
     set_ledgers(
       "LBTC01" => ledger_entry(type: "deposit", asset: "XXBT", amount: "0.10000000", fee: "0.00000000", time: 1_700_000_000)
     )
@@ -297,17 +300,67 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by(external_id: "kraken_ledger_LBTC01", source: "kraken")
     assert entry
-    assert entry.amount.negative?, "BTC deposit is an inflow — must be negative"
-    # 0.1 BTC × $50,000/BTC = $5,000 (family currency = USD, no conversion needed)
-    assert_in_delta(-5000.0, entry.amount.to_f, 1.0)
+    assert_equal "Trade", entry.entryable_type
+    assert_equal 0, entry.amount, "a coin movement has no cash leg"
+    assert_in_delta 0.1, entry.entryable.qty.to_f, 1e-8
+    assert_equal "CRYPTO:BTC", entry.entryable.security.ticker
+    # A coin arriving from outside has a cost nothing here knows.
+    assert_equal Trade::TRANSFER_LABEL, entry.entryable.investment_activity_label
     assert_match(/Deposit.*BTC/, entry.name)
+  end
+
+  # The price is the one on the day the units moved, read from the prices
+  # already in the database; the provider is asked once per asset for the
+  # whole span, not once per entry.
+  test "a crypto trade is priced from the stored price on its date" do
+    security = Security.create!(ticker: "CRYPTO:BTC", name: "BTC")
+    Security::Price.create!(security: security, date: Time.zone.at(1_700_000_000).to_date, price: 40_000, currency: "USD")
+    Security.any_instance.expects(:find_or_fetch_price).never
+
+    set_ledgers(
+      "LBTC03" => ledger_entry(type: "staking", asset: "XXBT", amount: "0.00100000", fee: "0.00", time: 1_700_000_000)
+    )
+
+    process
+
+    trade = @account.entries.find_by(external_id: "kraken_ledger_LBTC03", source: "kraken").entryable
+    assert_in_delta 40_000.0, trade.price.to_f, 0.01
+    assert_not trade.extra.dig("kraken", "price_missing")
+  end
+
+  test "a BTC withdrawal becomes a trade that gives up units" do
+    set_ledgers(
+      "LBTC02" => ledger_entry(type: "withdrawal", asset: "XXBT", amount: "-0.20000000", fee: "0.00000000", time: 1_700_000_000)
+    )
+
+    process
+
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LBTC02", source: "kraken")
+    assert_equal "Trade", entry.entryable_type
+    assert_equal 0, entry.amount
+    assert_in_delta(-0.2, entry.entryable.qty.to_f, 1e-8)
+  end
+
+  # A fiat deposit still has a cash leg and stays a Transaction.
+  test "a fiat deposit is still a cash entry" do
+    set_ledgers(
+      "LUSD01" => ledger_entry(type: "deposit", asset: "ZUSD", amount: "250.00", fee: "0.00", time: 1_700_000_000)
+    )
+
+    process
+
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LUSD01", source: "kraken")
+    assert_equal "Transaction", entry.entryable_type
+    assert_in_delta(-250.0, entry.amount.to_f, 0.01)
   end
 
   # ---------------------------------------------------------------------------
   # staking
   # ---------------------------------------------------------------------------
 
-  test "creates a staking reward entry (negative = inflow)" do
+  # A staking reward pays coins, not euros. It is acquired at the market price
+  # on the day, which is both its basis and the income it represents.
+  test "a crypto staking reward becomes a trade that adds units" do
     set_ledgers(
       "LSTK01" => ledger_entry(type: "staking", asset: "XXBT", amount: "0.00050000", fee: "0.00", time: 1_700_000_000)
     )
@@ -318,10 +371,24 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by(external_id: "kraken_ledger_LSTK01", source: "kraken")
     assert entry
-    assert entry.amount.negative?, "staking reward is an inflow — must be negative"
+    assert_equal "Trade", entry.entryable_type
+    assert_equal 0, entry.amount
+    assert_in_delta 0.0005, entry.entryable.qty.to_f, 1e-9
     assert_match(/Staking reward.*BTC/, entry.name)
     assert_equal "Dividend", entry.entryable.investment_activity_label
-    assert_equal "standard",  entry.entryable.kind
+  end
+
+  test "a fiat staking reward is still a cash entry" do
+    set_ledgers(
+      "LSTK03" => ledger_entry(type: "staking", asset: "ZUSD", amount: "4.00", fee: "0.00", time: 1_700_000_000)
+    )
+
+    process
+
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LSTK03", source: "kraken")
+    assert_equal "Transaction", entry.entryable_type
+    assert_in_delta(-4.0, entry.amount.to_f, 0.01)
+    assert_equal "standard", entry.entryable.kind
   end
 
   # ---------------------------------------------------------------------------
