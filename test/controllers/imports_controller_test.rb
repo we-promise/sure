@@ -206,6 +206,74 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("imports.create.pdf_processing"), flash[:notice]
   end
 
+  test "recognizes a PDF by extension with an unrecognized MIME type in a batch" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.pdf])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+    source = file_fixture("imports/sample_bank_statement.pdf").binread
+    files = ["first.pdf", "second.pdf"].each_with_index.map do |filename, index|
+      uploaded_file(filename: filename, content_type: "application/octet-stream", content: source + "\n% copy #{index}")
+    end
+
+    assert_difference "Import.where(type: 'PdfImport').count", 2 do
+      assert_enqueued_jobs 2, only: ProcessPdfJob do
+        post imports_url, params: { import: { type: "DocumentImport", import_file: files } }
+      end
+    end
+  end
+
+  test "reports batch PDFs whose processing jobs could not be scheduled" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.pdf])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+    PdfImport.any_instance.stubs(:process_with_ai_later).returns(false)
+    source = file_fixture("imports/sample_bank_statement.pdf").binread
+    files = ["first.pdf", "second.pdf"].each_with_index.map do |filename, index|
+      uploaded_file(filename: filename, content_type: "application/pdf", content: source + "\n% copy #{index}")
+    end
+
+    assert_difference "Import.where(type: 'PdfImport').count", 2 do
+      assert_no_enqueued_jobs only: ProcessPdfJob do
+        post imports_url, params: { import: { type: "DocumentImport", import_file: files } }
+      end
+    end
+    assert_equal %w[pending pending], PdfImport.order(:created_at).last(2).map(&:status)
+    assert_includes flash[:alert], "first.pdf"
+    assert_includes flash[:alert], "second.pdf"
+  end
+
+  test "reports filename when a vector-store upload returns nil" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.txt])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+    Family.any_instance.expects(:upload_document).twice.returns(nil)
+
+    post imports_url, params: { import: { type: "DocumentImport", import_file: [
+      uploaded_file(filename: "first.txt", content_type: "text/plain", content: "first"),
+      uploaded_file(filename: "second.txt", content_type: "text/plain", content: "second")
+    ] } }
+
+    assert_includes flash[:alert], "first.txt"
+    assert_includes flash[:alert], "second.txt"
+  end
+
+  test "rejects document batches above the configured upload limit" do
+    files = (1..(Import::MAX_BATCH_UPLOAD_FILES + 1)).map do |index|
+      uploaded_file(filename: "notes-#{index}.txt", content_type: "text/plain", content: "notes")
+    end
+
+    post imports_url, params: { import: { type: "DocumentImport", import_file: files } }
+
+    assert_equal I18n.t("imports.create.batch_upload_limit", count: Import::MAX_BATCH_UPLOAD_FILES, size: Import::MAX_BATCH_UPLOAD_SIZE / 1.megabyte), flash[:alert]
+  end
+
+  test "bulk deletion rejects requests above the operation limit" do
+    delete destroy_all_imports_url, params: { bulk_delete: { import_ids: Array.new(Import::MAX_BATCH_DELETE_IMPORTS + 1) { imports(:transaction).id } } }
+
+    assert_equal I18n.t("imports.destroy_all.limit", count: Import::MAX_BATCH_DELETE_IMPORTS), flash[:alert]
+    assert imports(:transaction).persisted?
+  end
+
   test "uploads pdf import through account statement" do
     assert_difference "AccountStatement.count", 1 do
       assert_difference "Import.where(type: 'PdfImport').count", 1 do

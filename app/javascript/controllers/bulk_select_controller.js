@@ -35,6 +35,7 @@ export default class extends Controller {
     } ${this._pluralizedResourceName()}`;
   }
 
+  /** Submit selected row IDs using the action's configured parameter scope. */
   submitBulkRequest(e) {
     const form = e.target.closest("form");
     const scope = e.params.scope;
@@ -67,6 +68,7 @@ export default class extends Controller {
     });
   }
 
+  /** Toggle a row unless the user interacted with an embedded control. */
   toggleRowSelection(e) {
     const checkbox = e.currentTarget.matches("input[type='checkbox']")
       ? e.currentTarget

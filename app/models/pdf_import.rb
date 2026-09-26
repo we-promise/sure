@@ -189,7 +189,7 @@ class PdfImport < Import
   # but committed nothing of its own, and the user may well have picked the
   # wrong account.
   def reassignable?
-    !data_committed? && !importing? && !reverting?
+    !entries.exists? && !importing? && !reverting?
   end
 
   def pdf_uploaded?

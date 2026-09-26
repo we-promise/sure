@@ -72,9 +72,22 @@ class ImportsController < ApplicationController
     @document_upload_extensions = document_upload_supported_extensions
   end
 
+  # Create one import or independently process a bounded batch of uploaded files.
   def create
-    files = Array(import_params[:import_file]).compact
+    files = Array(import_params[:import_file]).reject(&:blank?).filter_map do |upload|
+      upload if upload.respond_to?(:original_filename) && upload.respond_to?(:content_type)
+    end
     file = files.first
+
+    if files.size > 1 && document_upload_request? &&
+        (files.size > Import::MAX_BATCH_UPLOAD_FILES || files.sum(&:size) > Import::MAX_BATCH_UPLOAD_SIZE)
+      redirect_to new_import_path, alert: t(
+        "imports.create.batch_upload_limit",
+        count: Import::MAX_BATCH_UPLOAD_FILES,
+        size: Import::MAX_BATCH_UPLOAD_SIZE / 1.megabyte
+      )
+      return
+    end
 
     if files.size > 1 && document_upload_request?
       create_multiple_document_imports(files)
@@ -92,7 +105,7 @@ class ImportsController < ApplicationController
     end
 
     # Handle PDF file uploads - process with AI
-    if file.present? && Import::ALLOWED_PDF_MIME_TYPES.include?(file.content_type)
+    if file.present? && (Import::ALLOWED_PDF_MIME_TYPES.include?(file.content_type) || File.extname(file.original_filename.to_s).casecmp?(".pdf"))
       unless valid_pdf_file?(file)
         redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
         return
@@ -162,19 +175,24 @@ class ImportsController < ApplicationController
     end
   end
 
+  # Destroy an import only if its current locked state still permits deletion.
   def destroy
-    unless @import.directly_deletable?
+    unless @import.destroy_if_directly_deletable!
       redirect_to imports_path, alert: t("imports.destroy.not_deletable")
       return
     end
 
-    @import.destroy
-
     redirect_to imports_path, notice: t(".deleted")
   end
 
+  # Delete selected imports independently and summarize deleted and skipped records.
   def destroy_all
     import_ids = Array(params.dig(:bulk_delete, :import_ids)).filter_map { |id| id.to_s.presence }
+    if import_ids.size > Import::MAX_BATCH_DELETE_IMPORTS
+      redirect_to imports_path, alert: t("imports.destroy_all.limit", count: Import::MAX_BATCH_DELETE_IMPORTS)
+      return
+    end
+
     imports = Current.family.imports.where(id: import_ids).includes(:account_statement)
     deleted_count = 0
     skipped_count = 0
@@ -182,12 +200,14 @@ class ImportsController < ApplicationController
     imports.each do |import|
       can_manage_statement = import.account_statement.blank? || import.account_statement.manageable_by?(Current.user)
 
-      if can_manage_statement && import.directly_deletable?
-        import.destroy!
+      if can_manage_statement && import.destroy_if_directly_deletable!
         deleted_count += 1
       else
         skipped_count += 1
       end
+    rescue StandardError => error
+      skipped_count += 1
+      Rails.logger.warn("Bulk import deletion skipped #{import.type} #{import.id}: #{error.class}: #{error.message}")
     end
 
     notices = []
@@ -221,6 +241,7 @@ class ImportsController < ApplicationController
       return redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte) if file.size > Import::MAX_PDF_SIZE
 
       pdf_import = create_pdf_import_record(file)
+      pdf_import.process_with_ai_later
       redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
     rescue AccountStatement::DuplicateUploadError
       redirect_to new_import_path, alert: t("imports.create.duplicate_pdf_unavailable")
@@ -228,6 +249,7 @@ class ImportsController < ApplicationController
       redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
     end
 
+    # Upload supported documents independently while preserving per-file errors.
     def create_multiple_document_imports(files)
       adapter = VectorStore.adapter
       unless adapter
@@ -243,7 +265,8 @@ class ImportsController < ApplicationController
       files.each do |file|
         filename = file.original_filename.to_s
 
-        if file.content_type.in?(Import::ALLOWED_PDF_MIME_TYPES)
+        is_pdf = file.content_type.in?(Import::ALLOWED_PDF_MIME_TYPES) || File.extname(filename).casecmp?(".pdf")
+        if is_pdf
           unless valid_pdf_file?(file)
             errors << "#{filename}: #{t('imports.create.invalid_pdf')}"
             next
@@ -260,7 +283,11 @@ class ImportsController < ApplicationController
           end
 
           pdf_import = create_pdf_import_record(file)
-          processed_count += 1 if pdf_import.importing?
+          if pdf_import.process_with_ai_later
+            processed_count += 1
+          else
+            errors << "#{filename}: #{t('imports.create.pdf_processing_failed')}"
+          end
         else
           ext = File.extname(filename).downcase
 
@@ -274,7 +301,12 @@ class ImportsController < ApplicationController
             next
           end
 
-          uploaded_count += 1 if Current.family.upload_document(file_content: file.read, filename: filename)
+          document = Current.family.upload_document(file_content: file.read, filename: filename)
+          if document
+            uploaded_count += 1
+          else
+            errors << "#{filename}: #{t('imports.create.document_upload_failed')}"
+          end
         end
       rescue AccountStatement::DuplicateUploadError
         errors << "#{filename}: #{t('imports.create.duplicate_pdf_unavailable')}"
@@ -296,9 +328,7 @@ class ImportsController < ApplicationController
     end
 
     def create_pdf_import_record(file)
-      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
-      pdf_import.process_with_ai_later
-      pdf_import
+      PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
     end
 
     def create_document_import(file)

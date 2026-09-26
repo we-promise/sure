@@ -4,10 +4,11 @@
           class="inline-flex items-center justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 rounded-lg text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors focus-ring"
           data-action="click->privacy-mode#toggle"
           data-privacy-mode-target="toggle"
-          title="<%= t("layouts.application.privacy_mode") %>"
           aria-label="<%= t("layouts.application.privacy_mode") %>"
           aria-pressed="false">
-    <%= icon("eye-off", size: "sm", data: { privacy_mode_target: "iconOff" }) %>
+    <span data-privacy-mode-target="iconOff">
+      <%= render DS::Tooltip.new(text: t("layouts.application.privacy_mode"), icon: "eye-off", as: :span) %>
+    </span>
     <%= icon("eye", size: "sm", class: "hidden", data: { privacy_mode_target: "iconOn" }) %>
   </button>
 <% end %>

@@ -436,6 +436,7 @@ en:
         one: 1 import could not be deleted. Revert completed imports with committed data first.
         other: "%{count} imports could not be deleted. Revert completed imports with committed data first."
       none_selected: No deletable imports were selected.
+      limit: Select no more than %{count} imports for deletion at once.
     new:
       description: Import from a financial tool or upload raw data files.
       tab_financial_tools: Financial Tools & Files
@@ -460,11 +461,13 @@ en:
       title: New Import
     create:
       file_too_large: File is too large. Maximum size is %{max_size}MB.
+      batch_upload_limit: Select no more than %{count} files totaling %{size}MB per upload.
       invalid_file_type: Invalid file type. Please upload a CSV file.
       csv_uploaded: CSV uploaded successfully.
       ndjson_uploaded: NDJSON file uploaded successfully.
       pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
       pdf_processing: Your PDF is being processed. You will receive an email when analysis is complete.
+      pdf_processing_failed: PDF processing could not be started.
       pdf_processing_many:
         one: 1 PDF is being processed. You will receive an email when analysis is complete.
         other: "%{count} PDFs are being processed. You will receive an email when analysis is complete."
