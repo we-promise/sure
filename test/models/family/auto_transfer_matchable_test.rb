@@ -8,6 +8,8 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     @depository = accounts(:depository)
     @credit_card = accounts(:credit_card)
     @loan = accounts(:loan)
+    # A manual account with no fixture transfers to or from @depository
+    @other_asset = accounts(:other_asset)
   end
 
   test "auto-matches transfers" do
@@ -168,6 +170,45 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "auto-matches cross-currency transfers between manual accounts with a confirmed transfer in the same direction" do
+    load_family_currency_rates
+    confirm_transfer!(from: @depository, to: @other_asset)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    inflow = create_transaction(date: Date.current, account: @other_asset, amount: -680, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+
+    transfer = Transfer.find_by!(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+    assert_equal "pending", transfer.status
+  end
+
+  test "a confirmed transfer in the opposite direction does not enable cross-currency auto-matching for manual accounts" do
+    load_family_currency_rates
+    confirm_transfer!(from: @other_asset, to: @depository)
+
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    create_transaction(date: Date.current, account: @other_asset, amount: -680, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "a pending transfer between manual accounts does not enable cross-currency auto-matching" do
+    load_family_currency_rates
+    confirm_transfer!(from: @depository, to: @other_asset).update!(status: "pending")
+
+    create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    create_transaction(date: Date.current, account: @other_asset, amount: -680, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
   test "transfer_match_candidates does not restrict cross-currency matches to linked accounts by default" do
     load_exchange_prices
     # Neither account is linked. auto_match_transfers! would exclude this pair
@@ -179,11 +220,105 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
     inflow = create_transaction(date: Date.current, account: @credit_card, amount: -1400, currency: "CAD")
 
-    candidate_pairs = @family.transfer_match_candidates.map do |candidate|
-      [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
-    end
+    assert_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
+  test "suggests cross-currency pairs through family currency rates when no direct rate exists" do
+    load_family_currency_rates
+
+    # 400 GBP = 500 USD ~= 694.44 CAD; the provider paid out 680 CAD (-2%)
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -680, currency: "CAD")
 
     assert_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
+  test "auto-matches linked cross-currency transfers through family currency rates" do
+    load_family_currency_rates
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -680, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "derives family currency cross rates through the primary currency when the family currency is blank" do
+    @family.update_column(:currency, nil)
+    load_family_currency_rates
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -680, currency: "CAD")
+
+    assert_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
+  test "does not auto-match family currency cross rates when either account is manual" do
+    load_family_currency_rates
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -680, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    link_account!(@depository)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    link_account!(@credit_card)
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "a zero direct rate does not mask a usable family currency cross rate" do
+    load_family_currency_rates
+    ExchangeRate.create!(from_currency: "GBP", to_currency: "CAD", date: 1.day.ago.to_date, rate: 0)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -680, currency: "CAD")
+
+    assert_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
+  end
+
+  test "an exact same-currency match is not displaced by a closer cross-currency candidate" do
+    load_family_currency_rates
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    # The real counterpart arrives a day later with the exact amount...
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+    # ...while an unrelated CAD credit on the same day falls inside the FX tolerance band.
+    coincidental_inflow = create_transaction(date: 1.day.ago.to_date, account: @credit_card, amount: -680, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+
+    assert Transfer.exists?(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+    assert_not Transfer.exists?(inflow_transaction_id: coincidental_inflow.entryable_id)
+  end
+
+  test "does not suggest a family currency cross rate outside the exchange rate tolerance" do
+    load_family_currency_rates
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -600, currency: "CAD")
+
+    assert_not_includes candidate_pairs, [ inflow.entryable_id, outflow.entryable_id ]
   end
 
   test "the manual match dialog can still find a cross-currency counterpart on a manual account" do
@@ -524,7 +659,8 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, "outflow_candidates.excluded = FALSE"
     assert_includes sql, ":account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id"
     assert_includes sql, "outflow_candidates.amount = -inflow_candidates.amount"
-    assert_includes sql, "JOIN exchange_rates"
+    assert_includes sql, "LEFT JOIN exchange_rates direct_rates"
+    assert_includes sql, "to_currency = :family_currency"
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = inflow_accounts.id)"
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)"
     assert_includes sql, ":restrict_cross_currency_to_linked_accounts = FALSE"
@@ -593,6 +729,24 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
         current_balance: 0
       )
       AccountProvider.create!(account: account, provider: plaid_account)
+    end
+
+    def candidate_pairs
+      @family.transfer_match_candidates.map do |candidate|
+        [ candidate.inflow_transaction_id, candidate.outflow_transaction_id ]
+      end
+    end
+
+    def confirm_transfer!(from:, to:)
+      outflow = create_transaction(date: 20.days.ago.to_date, account: from, amount: 100)
+      inflow = create_transaction(date: 20.days.ago.to_date, account: to, amount: -100)
+      Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: outflow.transaction, status: "confirmed")
+    end
+
+    # Only rates to the family currency (USD) are synced; there is no direct GBP -> CAD rate
+    def load_family_currency_rates
+      ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: 1.day.ago.to_date, rate: 1.25)
+      ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: 0.72)
     end
 
     def load_exchange_prices

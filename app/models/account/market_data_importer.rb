@@ -15,20 +15,27 @@ class Account::MarketDataImporter
     return unless ExchangeRate.provider
 
     pair_dates = {}
+    family_currency = account.family.primary_currency_code
 
-    # 1. ENTRY-BASED PAIRS – currencies that differ from the account currency
+    # 1. ENTRY-BASED PAIRS – currencies that differ from the account currency.
+    # Each is also fetched against the family currency: transfer matching derives
+    # cross rates through it and does not chain entry -> account -> family rates.
     account.entries
            .where.not(currency: account.currency)
            .group(:currency)
            .minimum(:date)
            .each do |source_currency, date|
-      key = [ source_currency, account.currency ]
-      pair_dates[key] = [ pair_dates[key], date ].compact.min
+      [ account.currency, family_currency ].uniq.each do |target_currency|
+        next if target_currency == source_currency
+
+        key = [ source_currency, target_currency ]
+        pair_dates[key] = [ pair_dates[key], date ].compact.min
+      end
     end
 
     # 2. ACCOUNT-BASED PAIR – convert the account currency to the family currency (if different)
     if foreign_account?
-      key = [ account.currency, account.family.currency ]
+      key = [ account.currency, family_currency ]
       pair_dates[key] = [ pair_dates[key], account.start_date ].compact.min
     end
 
@@ -122,6 +129,6 @@ class Account::MarketDataImporter
 
     def foreign_account?
       return false if account.family.nil?
-      account.currency != account.family.currency
+      account.currency != account.family.primary_currency_code
     end
 end

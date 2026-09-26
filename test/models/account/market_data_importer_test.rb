@@ -62,6 +62,44 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
            "Inverse rates should be computed automatically"
   end
 
+  test "imports account exchange rates into the primary currency when the family currency is blank" do
+    family = Family.create!(name: "Smith", currency: "")
+
+    account = family.accounts.create!(
+      name: "Chequing",
+      currency: "CAD",
+      balance: 100,
+      accountable: Depository.new
+    )
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "CAD", to: "USD", start_date: anything, end_date: anything)
+             .returns(provider_success_response([]))
+
+    Account::MarketDataImporter.new(account).import_all
+  end
+
+  test "fetches foreign entry currencies against the family currency as well as the account currency" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "Chequing",
+      currency: "CAD",
+      balance: 100,
+      accountable: Depository.new
+    )
+    account.entries.create!(date: 10.days.ago.to_date, amount: 10, currency: "GBP", name: "Card payment", entryable: Transaction.new)
+
+    [ %w[GBP CAD], %w[GBP USD], %w[CAD USD] ].each do |from, to|
+      @provider.expects(:fetch_exchange_rates)
+               .with(from: from, to: to, start_date: anything, end_date: anything)
+               .once
+               .returns(provider_success_response([]))
+    end
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
   test "syncs security prices for securities traded by the account" do
     family = Family.create!(name: "Smith", currency: "USD")
 
