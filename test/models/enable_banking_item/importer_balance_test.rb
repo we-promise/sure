@@ -29,6 +29,13 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: @mock_provider)
   end
 
+  test "FRESHNESS_BALANCE_TYPES only lists normalized spellings that BALANCE_TYPE_PRIORITY itself accepts" do
+    normalized_priority_types = EnableBankingItem::Importer::BALANCE_TYPE_PRIORITY.map { |type| type.delete("_-").downcase }
+
+    assert_empty EnableBankingItem::Importer::FRESHNESS_BALANCE_TYPES - normalized_priority_types,
+      "FRESHNESS_BALANCE_TYPES drifted from BALANCE_TYPE_PRIORITY - every accepted spelling here must also be recognized there"
+  end
+
   test "fetch_and_update_balance prefers booked balance before available balance" do
     @mock_provider.stubs(:get_account_balances).returns(
       balances: [
