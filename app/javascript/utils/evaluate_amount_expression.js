@@ -189,9 +189,12 @@ export function formatAmountForDisplay(amount, precision, raw) {
 }
 
 // Derives a decimal-places count from an <input step="..."> attribute (e.g.
-// "0.01" -> 2, "1" -> 0). BTC's step arrives as "1.0e-08", so this works
-// numerically rather than by counting characters after a dot. Returns null
-// for step="any" (or any other non-positive/non-finite step), matching the
+// "0.01" -> 2, "1" -> 0, "0.25" -> 2). BTC's step arrives as "1.0e-08", so
+// this reads the step's own decimal representation (via toString, including
+// its exponent) rather than deriving a power-of-ten count from -log10 —
+// log10(0.25) isn't a whole number, so that approach rounded a 0.25 step
+// down to 1 decimal place and truncated "1.25" to "1.3". Returns null for
+// step="any" (or any other non-positive/non-finite step), matching the
 // step="any" fields (trade amount, price, fee) that want an unrounded value
 // rather than being truncated to a default that would drop a sub-cent
 // crypto price to "0.00". Shared by money_field_controller (its own
@@ -200,5 +203,8 @@ export function formatAmountForDisplay(amount, precision, raw) {
 export function precisionFromStep(step) {
   const parsed = Number(step)
   if (!Number.isFinite(parsed) || parsed <= 0) return null
-  return Math.max(0, Math.ceil(-Math.log10(parsed)))
+
+  const [coefficient, exponentText = "0"] = parsed.toString().split("e")
+  const [, fraction = ""] = coefficient.split(".")
+  return Math.max(0, fraction.length - Number(exponentText))
 }
