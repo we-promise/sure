@@ -18,11 +18,19 @@ module RecurringTransactionsHelper
       [ t("recurring_transactions.frequency_presets.#{preset}"), preset ]
     end
 
+    # The two custom options sit together after the named presets: "keep this
+    # schedule" only when the picker cannot express it, then "set my own".
     if RecurringTransaction::FrequencyPreset.detect(recurring_transaction).key == RecurringTransaction::FrequencyPreset::CUSTOM
-      options.unshift([ t("recurring_transactions.frequency_presets.custom"), RecurringTransaction::FrequencyPreset::CUSTOM ])
+      options << [ t("recurring_transactions.frequency_presets.custom"), RecurringTransaction::FrequencyPreset::CUSTOM ]
     end
 
-    options
+    options << [ t("recurring_transactions.frequency_presets.interval"), RecurringTransaction::FrequencyPreset::INTERVAL ]
+  end
+
+  def frequency_interval_unit_options
+    RecurringTransaction::FrequencyPreset::INTERVAL_UNITS.map do |unit|
+      [ t("recurring_transactions.frequency_interval_units.#{unit}"), unit ]
+    end
   end
 
   def frequency_day_options

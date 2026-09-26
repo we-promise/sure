@@ -19,6 +19,11 @@ en:
       semiannual: Every 6 months
       annual: Yearly
       custom: Custom schedule
+      interval: Custom interval
+    frequency_interval_units:
+      weekly: weeks
+      monthly: months
+      yearly: years
     frequency:
       monthly: "Monthly on the %{day}"
       weekly: "Weekly on %{weekday}"
@@ -27,6 +32,9 @@ en:
       quarterly: "Quarterly on the %{day}"
       semiannual: "Every 6 months on the %{day}"
       annual: "Yearly on %{month} %{day}"
+      every_n_weeks: "Every %{interval} weeks on %{weekday}"
+      every_n_months: "Every %{interval} months on the %{day}"
+      every_n_years: "Every %{interval} years on %{month} %{day}"
       custom: Custom schedule
       last_day: last day
     identify_patterns: Identify Patterns
@@ -126,6 +134,8 @@ en:
       frequency_label: How often
       frequency_hint: How often this bill comes due. Pick the day details to match your statement.
       frequency_day_label: On day
+      frequency_interval_label: Repeats every
+      frequency_interval_unit_label: Unit
       frequency_second_day_label: And day
       frequency_weekday_label: "On"
       frequency_month_label: "In"

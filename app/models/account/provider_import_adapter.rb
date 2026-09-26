@@ -11,6 +11,7 @@ class Account::ProviderImportAdapter
 
   attr_reader :account, :skipped_entries
 
+  # @param account [Account] the account every import through this adapter lands on
   def initialize(account)
     @account = account
     @skipped_entries = []
@@ -36,8 +37,14 @@ class Account::ProviderImportAdapter
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
   # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
   # @param allow_heuristic_matching [Boolean] Claim likely duplicates using amount/date matching
+  # @param replace_extra_namespaces [Array<String>] Top-level `extra` keys the provider owns
+  #   outright. Those branches are replaced rather than deep-merged, so a nested value the
+  #   provider stops sending is actually removed instead of lingering.
+  # @param name_extra_keys [Hash{String=>Array<String>}] Keys, per namespace, that `name`
+  #   was built from. When a protected entry keeps its name, these keep their stored values
+  #   too, so the name and the data it came from cannot drift apart.
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true)
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {})
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -79,12 +86,38 @@ class Account::ProviderImportAdapter
           # through the auto-claim path. Without this, a user who categorised a pending entry
           # (setting user_modified=true) would see the pending badge stuck forever.
           # Excluded and import_locked entries are intentionally left untouched.
+          #
+          # Load-bearing even though the namespace refresh below usually rewrites the
+          # same branch: an entry that is both user_modified and import_locked reaches
+          # here (determine_skip_reason reports user_modified first) but is excluded
+          # from that refresh, so this is the only thing that clears its pending flag.
           if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
             entry_is_pending = Transaction::PENDING_PROVIDERS.any? { |p| entry.transaction.extra&.dig(p, "pending") }
             if entry_is_pending
               entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
             end
           end
+          # Refresh the provider's own namespaces on a protected entry. Without this
+          # a user-modified entry keeps whatever payload it was created with, and a
+          # field the provider has since dropped shows in the drawer forever.
+          #
+          # Only the declared namespaces, never the whole payload. `extra` is not
+          # uniformly provider-owned: Transaction#exchange_rate reads and writes
+          # extra["exchange_rate"] at the top level, it is user-editable through the
+          # transaction form, and WiseEntry::Processor supplies one too — so merging
+          # the whole hash here would overwrite a rate the user typed and silently
+          # change how their balance converts. replace_extra_namespaces defaults to
+          # empty, so a provider that has not opted in changes nothing on this path.
+          #
+          # determine_skip_reason reports "user_modified" before it checks
+          # import_locked?, so an entry carrying both flags arrives here. Import
+          # ownership is the stronger claim, so those are left alone.
+          if skip_reason == "user_modified" && !entry.import_locked?
+            owned = extra.is_a?(Hash) ? extra.deep_stringify_keys.slice(*replace_extra_namespaces.map(&:to_s)) : nil
+            owned = keep_name_sources(entry, owned, name_extra_keys)
+            apply_provider_extra(entry, owned, replace_extra_namespaces)
+          end
+
           record_skip(entry, skip_reason)
           return entry
         end
@@ -206,12 +239,7 @@ class Account::ProviderImportAdapter
       end
 
       # Persist extra provider metadata on the transaction (non-enriched; always merged)
-      if extra.present? && entry.entryable.is_a?(Transaction)
-        existing = entry.transaction.extra || {}
-        incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
-        entry.transaction.extra = existing.deep_merge(incoming)
-        entry.transaction.save!
-      end
+      apply_provider_extra(entry, extra, replace_extra_namespaces)
 
       # Auto-detect investment activity labels for investment accounts
       detected_label = investment_activity_label
@@ -1035,6 +1063,66 @@ class Account::ProviderImportAdapter
       @account_linked_to_any_goal = account.goal_accounts.exists?
     end
 
+    # Writes provider-owned metadata onto the transaction.
+    #
+    # Namespaces named in replace_extra_namespaces are snapshots, not
+    # accumulations: the whole branch is dropped before merging, so a nested key
+    # the provider stopped sending disappears with it. deep_merge alone recurses
+    # into nested hashes, so a removed payment_meta.payee would otherwise survive
+    # forever and the drawer would keep showing it. Only namespaces the incoming
+    # payload actually carries are replaced.
+    #
+    # @param entry [Entry] the entry being imported
+    # @param extra [Hash, nil] provider metadata to apply
+    # @param replace_extra_namespaces [Array<String>] branches to replace wholesale
+    # @return [void]
+    def apply_provider_extra(entry, extra, replace_extra_namespaces)
+      return unless extra.present? && entry.entryable.is_a?(Transaction)
+
+      existing = entry.transaction.extra || {}
+      incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
+      replaced = replace_extra_namespaces.map(&:to_s).select { |ns| incoming.key?(ns) }
+
+      entry.transaction.extra = existing.except(*replaced).deep_merge(incoming)
+      entry.transaction.save!
+    end
+
+    # A protected entry keeps its name, so the values that name was built from have
+    # to stay as well. Rule::ConditionFilter::TransactionName rebuilds a Plaid name
+    # from the stored original_description; refreshing that value while the name
+    # stays put would make the rebuilt name disagree with the real one, and flip
+    # `=` and `!=` rules on the entry. The drawer shows the kept value too, so it
+    # agrees with the name the user sees.
+    #
+    # A key with nothing stored yet takes the incoming value: a row imported before
+    # the key existed was never combined, so there is nothing to keep in step.
+    #
+    # @param entry [Entry] the protected entry
+    # @param owned [Hash, nil] the incoming namespaces the provider owns
+    # @param name_extra_keys [Hash{String=>Array<String>}] keys the name was built from
+    # @return [Hash, nil] owned, with those keys carried over from what is stored
+    def keep_name_sources(entry, owned, name_extra_keys)
+      return owned if owned.blank? || name_extra_keys.blank?
+
+      stored = entry.transaction.extra || {}
+      name_extra_keys.each do |namespace, keys|
+        ns = namespace.to_s
+        next unless owned[ns].is_a?(Hash) && stored[ns].is_a?(Hash)
+
+        Array(keys).map(&:to_s).each do |key|
+          owned[ns][key] = stored[ns][key] if stored[ns].key?(key)
+        end
+      end
+
+      owned
+    end
+
+    # Removes the pending flag every provider writes under its own namespace,
+    # dropping a namespace that held nothing else. Used when a booked version of
+    # a transaction arrives and the stale flag would otherwise stick forever.
+    #
+    # @param extra [Hash, nil] the transaction's current extra
+    # @return [Hash] a copy with the pending flags removed
     def clear_pending_flags_from_extra(extra)
       ex = (extra || {}).deep_dup
       ex = {} unless ex.is_a?(Hash)
