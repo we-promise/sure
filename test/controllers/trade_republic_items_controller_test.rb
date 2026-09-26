@@ -147,7 +147,8 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
       item.trade_republic_accounts.create!(name: "Trade Republic", trade_republic_account_id: SecureRandom.hex(6),
                                            currency: "EUR", current_balance: 1000)
     },
-    provider_param: :trade_republic_account_id
+    provider_param: :trade_republic_account_id,
+    setup_url: ->(record) { setup_accounts_trade_republic_item_url(record.trade_republic_item) }
   )
 
   test "successful QR polling can complete without a phone number" do

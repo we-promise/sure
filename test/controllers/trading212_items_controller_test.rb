@@ -169,6 +169,7 @@ class Trading212ItemsControllerTest < ActionDispatch::IntegrationTest
       @item.trading212_accounts.create!(name: "Trading 212", trading212_account_id: SecureRandom.hex(6),
                                         currency: "USD", current_balance: 1000)
     },
-    provider_param: :trading212_account_id
+    provider_param: :trading212_account_id,
+    setup_url: ->(record) { setup_accounts_trading212_item_url(record.trading212_item) }
   )
 end
