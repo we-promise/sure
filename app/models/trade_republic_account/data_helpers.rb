@@ -52,6 +52,10 @@ module TradeRepublicAccount::DataHelpers
       Provider::TradeRepublicTimelineEvent.lifecycle_blocks_import?(event)
     end
 
+    def explicit_lifecycle_block?(event)
+      Provider::TradeRepublicTimelineEvent.explicit_lifecycle_block?(event)
+    end
+
     def non_importable_reason(event)
       Provider::TradeRepublicTimelineEvent.non_importable_reason(event)
     end

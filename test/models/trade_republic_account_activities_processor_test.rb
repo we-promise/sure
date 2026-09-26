@@ -855,7 +855,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_title_cancel_ok")
   end
 
-  test "blank status declined subtitle reconciles unprotected prior imports" do
+  test "blank status declined subtitle keeps prior imports" do
     cash_account, cash_sure = create_linked_cash_account!
     Account::ProviderImportAdapter.new(cash_sure).import_transaction(
       external_id: "trade_republic_event_evt_later_declined",
@@ -877,9 +877,38 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
       detail: { amount: "12.00", currency: "EUR" }
     } ])
 
+    assert_difference -> { DebugLogEntry.where("message LIKE ?", "%flagged only by its subtitle%").count }, 1 do
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+
+    assert Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_later_declined")
+  end
+
+  test "hidden events remove unprotected prior imports" do
+    cash_account, cash_sure = create_linked_cash_account!
+    Account::ProviderImportAdapter.new(cash_sure).import_transaction(
+      external_id: "trade_republic_event_evt_card_hidden",
+      amount: BigDecimal("12.00"),
+      currency: "EUR",
+      date: Date.parse("2026-08-01"),
+      name: "Hidden card",
+      source: "trade_republic",
+      investment_activity_label: "Card payment"
+    )
+
+    cash_account.update!(raw_timeline_payload: [ {
+      id: "evt_card_hidden",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "CARD_TRANSACTION",
+      category: "POC_CREATED",
+      title: "Coffee",
+      hidden: true,
+      detail: { amount: "12.00", currency: "EUR" }
+    } ])
+
     TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
 
-    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_later_declined")
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_card_hidden")
   end
 
   test "deleted financial events are skipped and unprotected prior imports are removed" do

@@ -448,27 +448,49 @@ class TradeRepublicAccount::ActivitiesProcessor
         .exists?
     end
 
-    # Remove previously imported entries whose upstream events are now deleted
-    # or in a terminal non-importable status, unless the user protected them.
+    # Remove previously imported entries whose upstream events are now deleted,
+    # hidden or in a terminal non-importable status, unless the user protected
+    # them. Events blocked only by the free-text subtitle heuristic are skipped
+    # on import but never delete existing entries.
     def reconcile_non_importable_entries!
-      blocked_ids = Array(@trade_republic_account.raw_timeline_payload).filter_map do |event|
+      explicit_ids = []
+      heuristic_ids = []
+      Array(@trade_republic_account.raw_timeline_payload).each do |event|
         next unless event.is_a?(Hash)
         next unless lifecycle_blocks_import?(event)
 
-        event["id"].presence || event[:id].presence
-      end
-      return if blocked_ids.empty?
+        event_id = event["id"].presence || event[:id].presence
+        next if event_id.blank?
 
-      external_ids = blocked_ids.map { |event_id| "trade_republic_event_#{event_id}" }
+        (explicit_lifecycle_block?(event) ? explicit_ids : heuristic_ids) << "trade_republic_event_#{event_id}"
+      end
+      return if explicit_ids.empty? && heuristic_ids.empty?
+
       candidates = account.entries
         .where(source: "trade_republic")
-        .where(external_id: external_ids)
+        .where(external_id: explicit_ids + heuristic_ids)
         .includes(:entryable)
 
       removed_count = 0
       skipped_count = 0
+      heuristic_ids = heuristic_ids.to_set
 
       candidates.find_each do |entry|
+        if heuristic_ids.include?(entry.external_id)
+          skipped_count += 1
+          DebugLogEntry.capture(
+            category: "sync",
+            level: "info",
+            message: "Kept Trade Republic entry #{entry.external_id} flagged only by its subtitle",
+            source: "trade_republic",
+            family: @trade_republic_account.trade_republic_item.family,
+            provider_key: "trade_republic",
+            account: account,
+            metadata: { trade_republic_account_id: @trade_republic_account.id, external_id: entry.external_id }
+          )
+          next
+        end
+
         if entry.protected_from_sync? || entry.split_parent? || entry.split_child?
           skipped_count += 1
           DebugLogEntry.capture(

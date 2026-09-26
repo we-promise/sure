@@ -137,18 +137,25 @@ module Provider::TradeRepublicTimelineEvent
       true
     end
 
+    # Explicit signals plus the free-text subtitle heuristic. Blocks import
+    # only; destructive reconciliation must use `explicit_lifecycle_block?`.
     def lifecycle_blocks_import?(event)
+      return false unless event.is_a?(Hash)
+      return true if explicit_lifecycle_block?(event)
+
+      event = event.with_indifferent_access
+      event[:status].to_s.blank? && declined_subtitle?(event)
+    end
+
+    # Deleted, hidden, or a terminal non-importable status from Trade Republic.
+    def explicit_lifecycle_block?(event)
       return false unless event.is_a?(Hash)
 
       event = event.with_indifferent_access
       return true if truthy_flag?(event[:deleted])
       return true if truthy_flag?(event[:hidden])
 
-      status = event[:status].to_s.upcase
-      return true if NON_IMPORTABLE_STATUSES.include?(status)
-      return true if status.blank? && declined_subtitle?(event)
-
-      false
+      NON_IMPORTABLE_STATUSES.include?(event[:status].to_s.upcase)
     end
 
     def non_importable_reason(event)
