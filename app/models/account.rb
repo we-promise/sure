@@ -448,6 +448,10 @@ class Account < ApplicationRecord
       )
     end
 
+    def create_from_bitstamp_account(bitstamp_account)
+      create_from_crypto_exchange_account(bitstamp_account, family: bitstamp_account.bitstamp_item.family)
+    end
+
     private
 
       def create_from_crypto_exchange_account(provider_account, family:)
