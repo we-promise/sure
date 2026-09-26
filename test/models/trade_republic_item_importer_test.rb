@@ -354,6 +354,38 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert cash.raw_timeline_payload.none? { |event| event["category"] == "orderExecution" }
   end
 
+  test "cash timeline cap counts only cash events" do
+    events = 3.times.map do |index|
+      { "id" => "trade-#{index}", "timestamp" => "2026-09-0#{index + 4}", "category" => "orderExecution" }
+    end + 2.times.map do |index|
+      { "id" => "card-#{index}", "timestamp" => "2026-09-0#{index + 1}", "category" => "POC_CREATED" }
+    end
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "session_txt" => "# refreshed cookies",
+      "account" => { "brokerage_account_id" => "DE-CAP", "currency" => "EUR" },
+      "cash" => { "amount" => "10.00", "currency" => "EUR" },
+      "positions" => [],
+      "events" => events,
+      "newest_event_id" => "trade-2",
+      "warnings" => []
+    ))
+
+    original = TradeRepublicItem::Importer::MAX_TIMELINE_EVENTS
+    TradeRepublicItem::Importer.send(:remove_const, :MAX_TIMELINE_EVENTS)
+    TradeRepublicItem::Importer.const_set(:MAX_TIMELINE_EVENTS, 2)
+    begin
+      TradeRepublicItem::Importer.new(@item, provider: provider).import
+    ensure
+      TradeRepublicItem::Importer.send(:remove_const, :MAX_TIMELINE_EVENTS)
+      TradeRepublicItem::Importer.const_set(:MAX_TIMELINE_EVENTS, original)
+    end
+
+    cash = @item.trade_republic_accounts.find_by!(kind: "cash")
+    assert_equal %w[card-0 card-1], cash.raw_timeline_payload.map { |event| event["id"] }
+  end
+
   test "passes stored exchange symbols so the client can skip instrument lookups" do
     @item.trade_republic_accounts.create!(
       kind: "portfolio",

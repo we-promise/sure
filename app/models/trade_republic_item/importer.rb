@@ -129,8 +129,10 @@ class TradeRepublicItem::Importer
       if timeline_status != "failed"
         merged = merge_timeline_events(tr_account.raw_timeline_payload, events)
         apply_instrument_symbols!(merged, instrument_symbols)
+        # Drop order executions before the size cap so they never crowd out
+        # cash events on the cash account.
         merged = merged.reject { |event| event_category(event) == "orderExecution" } if kind == "cash"
-        attrs[:raw_timeline_payload] = merged
+        attrs[:raw_timeline_payload] = merged.last(MAX_TIMELINE_EVENTS)
       end
 
       tr_account.assign_attributes(attrs)
@@ -261,7 +263,7 @@ class TradeRepublicItem::Importer
         key = event[:id].presence || event
         events_by_id[key] = prefer_richer_timeline_event(events_by_id[key], event)
       end
-      events_by_id.values.sort_by { |event| event[:timestamp].to_s }.last(MAX_TIMELINE_EVENTS)
+      events_by_id.values.sort_by { |event| event[:timestamp].to_s }
     end
 
     # Stamp exchange tickers onto timeline details for ISINs that were resolved
