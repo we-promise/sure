@@ -30,8 +30,11 @@ class EnableBankingItem::Importer
   # Only these types may outrank OPBD/PRCD on freshness (see fresher_balance) —
   # the same accounting-semantics exclusion as BALANCE_TYPE_PRIORITY itself, so a
   # forward-looking FWAV or an informational INFO/OTHR can't override a legitimate
-  # booked figure just by carrying a later reference_date.
-  FRESHNESS_BALANCE_TYPES = %w[xpcd clav itav].freeze
+  # booked figure just by carrying a later reference_date. Compared against an
+  # already-normalized balance_type (see normalize_balance_type), so both ISO
+  # codes and Enable Banking's descriptive spellings are listed here pre-normalized,
+  # mirroring BALANCE_TYPE_PRIORITY's own XPCD/CLAV/ITAV entries above.
+  FRESHNESS_BALANCE_TYPES = %w[xpcd expected clav closingavailable itav interimavailable].freeze
 
   NETWORK_ERRORS = [
     ::SocketError,
