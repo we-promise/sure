@@ -260,10 +260,13 @@ class TransactionsController < ApplicationController
       format.json { render json: { tag_ids: @entry.transaction.tag_ids } }
       format.turbo_stream do
         transaction = @entry.transaction
-        streams = [
-          turbo_stream.replace(dom_id(transaction, :tag_summary), partial: "tags/summary", locals: { transaction: transaction }),
-          turbo_stream.replace(dom_id(transaction, :tag_names_mobile), partial: "tags/names_mobile", locals: { transaction: transaction })
-        ]
+        streams = %i[desktop mobile].map do |variant|
+          turbo_stream.replace(
+            dom_id(transaction, "tag_summary_#{variant}"),
+            partial: "tags/summary",
+            locals: { transaction: transaction, variant: variant }
+          )
+        end
         if @toggled_tag
           # autofocus hands keyboard focus back to the re-rendered option,
           # which Turbo focuses after the stream renders.

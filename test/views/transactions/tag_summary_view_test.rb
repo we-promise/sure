@@ -55,6 +55,17 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
     assert_equal tags.map(&:name), tooltip.css("[data-tag-summary-tooltip] li span.truncate").map { |node| node.text.strip }
   end
 
+  test "several tags render full pills and the compact summary for the fit controller" do
+    tags = create_tags(3)
+    @transaction.update!(tag_ids: tags.map(&:id))
+
+    fit = render_summary.at_css("[data-controller=tag-fit]")
+
+    assert_equal tags.map(&:name), fit.css("[data-tag-fit-target=full] > span > span").map { |node| node.text.strip }
+    assert fit.at_css("[data-tag-fit-target=full]").key?("hidden"), "full pills start hidden until measured"
+    assert_not fit.at_css("[data-tag-fit-target=compact]").key?("hidden")
+  end
+
   test "more than three tags render two letter badges and an overflow count" do
     tags = create_tags(5)
     @transaction.update!(tag_ids: tags.map(&:id))
@@ -66,14 +77,25 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
     assert_equal 5, summary.css("[data-tag-summary-tooltip] li").size
   end
 
-  test "mobile line lists tag names comma separated" do
+  test "mobile shows tappable tag pills after the title" do
     tags = create_tags(2)
     @transaction.update!(tag_ids: tags.map(&:id))
 
     html = Nokogiri::HTML.fragment(render_row)
-    mobile = html.at_css("##{dom_id(@transaction, :tag_names_mobile)}")
+    line = html.at_css("[data-tag-fit-bounds='0.5']")
+    mobile = line.at_css("##{dom_id(@transaction, "tag_summary_mobile")}")
 
-    assert_includes mobile.text, tags.map(&:name).join(", ")
+    assert mobile, "mobile tags sit on the title line"
+    assert mobile.ancestors("button").any?, "mobile tags open the tag picker"
+    assert_equal tags.map(&:name), mobile.css("[data-tag-fit-target=full] > span > span").map { |node| node.text.strip }
+  end
+
+  test "untagged rows render no mobile tag element" do
+    @transaction.update!(tag_ids: [])
+
+    html = Nokogiri::HTML.fragment(render_row)
+
+    assert_nil html.at_css("##{dom_id(@transaction, "tag_summary_mobile")}")
   end
 
   test "read-only shares get a focusable summary instead of the picker" do
@@ -82,7 +104,7 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
     entry.transaction.update!(tag_ids: [ tags(:one).id, tags(:two).id ])
 
     html = Nokogiri::HTML.fragment(render(partial: "transactions/transaction", locals: { entry: entry.reload, balance_trend: nil, view_ctx: "global" }))
-    summary = html.at_css("##{dom_id(entry.transaction, :tag_summary)}")
+    summary = html.at_css("##{dom_id(entry.transaction, "tag_summary_desktop")}")
 
     assert_nil html.at_css("turbo-frame#tag_dropdown")
     assert summary.at_css("[aria-describedby] [tabindex='0']"), "read-only trigger should be keyboard focusable"
@@ -95,10 +117,10 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
     html = Nokogiri::HTML.fragment(render_row)
 
     assert html.at_css("turbo-frame#tag_dropdown")
-    assert_nil html.at_css("##{dom_id(@transaction, :tag_summary)} [tabindex='0']")
+    assert_nil html.at_css("##{dom_id(@transaction, "tag_summary_desktop")} [tabindex='0']")
   end
 
-  test "transfer rows show tag names on mobile" do
+  test "transfer rows show read-only tag pills on mobile" do
     outflow_tx = Transaction.create!(kind: "funds_movement")
     outflow_entry = Entry.create!(
       account: accounts(:depository), entryable: outflow_tx,
@@ -108,8 +130,10 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
     outflow_tx.update!(tag_ids: tags.map(&:id))
 
     html = Nokogiri::HTML.fragment(render(partial: "transactions/transaction", locals: { entry: outflow_entry.reload, balance_trend: nil, view_ctx: "global" }))
+    mobile = html.at_css("##{dom_id(outflow_tx, "tag_summary_mobile")}")
 
-    assert_includes html.at_css("##{dom_id(outflow_tx, :tag_names_mobile)}").text, tags.map(&:name).join(", ")
+    assert_equal tags.map(&:name), mobile.css("[data-tag-fit-target=full] > span > span").map { |node| node.text.strip }
+    assert_empty mobile.ancestors("button")
   end
 
   test "transfer rows render tags read-only" do
@@ -127,9 +151,9 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
 
     html = Nokogiri::HTML.fragment(render(partial: "transactions/transaction", locals: { entry: outflow_entry, balance_trend: nil, view_ctx: "global" }))
 
-    assert html.at_css("##{dom_id(outflow_tx, :tag_summary)}")
+    assert html.at_css("##{dom_id(outflow_tx, "tag_summary_desktop")}")
     assert_nil html.at_css("turbo-frame#tag_dropdown")
-    assert_empty html.at_css("##{dom_id(outflow_tx, :tag_summary)}").text.strip
+    assert_empty html.at_css("##{dom_id(outflow_tx, "tag_summary_desktop")}").text.strip
   end
 
   private
@@ -144,7 +168,7 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
     end
 
     def render_summary
-      Nokogiri::HTML.fragment(render_row).at_css("##{dom_id(@transaction, :tag_summary)}")
+      Nokogiri::HTML.fragment(render_row).at_css("##{dom_id(@transaction, "tag_summary_desktop")}")
     end
 
     def create_tags(count)

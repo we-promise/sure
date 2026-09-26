@@ -142,7 +142,7 @@ class TransactionsTest < ApplicationSystemTestCase
 
   test "can toggle tags from the transaction row" do
     transaction = @transaction.entryable
-    summary_id = dom_id(transaction, :tag_summary)
+    summary_id = dom_id(transaction, "tag_summary_desktop")
     option_id = "#{dom_id(@transaction, :tag_option)}_#{tags(:two).id}"
 
     within "##{summary_id}" do
@@ -153,12 +153,33 @@ class TransactionsTest < ApplicationSystemTestCase
     find("##{option_id} button").click
 
     assert_selector "##{option_id}[aria-selected='true']"
-    assert_selector "##{summary_id} [aria-describedby] [data-tag-initial]", count: 2
+    assert_selector "##{summary_id} [data-tag-fit-target=compact] [data-tag-initial]", count: 2, visible: :all
     assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
   end
 
+  test "tags show as full pills when they fit and collapse when the column shrinks" do
+    transaction = @transaction.entryable
+    short_tags = %w[Ab Cd].map { |name| @user.family.tags.create!(name: name, color: Tag::COLORS.first) }
+    transaction.update!(tag_ids: short_tags.map(&:id))
+    visit transactions_url(per_page: @page_size)
+
+    summary = "##{dom_id(transaction, "tag_summary_desktop")}"
+    cell = "document.querySelector('#{summary}').closest('[data-tag-fit-bounds]')"
+
+    page.execute_script("#{cell}.style.width = '400px'")
+    assert_selector "#{summary} [data-tag-fit-target=full]", text: "Ab"
+    assert_no_selector "#{summary} [data-tag-fit-target=compact]"
+
+    page.execute_script("#{cell}.style.width = '48px'")
+    assert_selector "#{summary} [data-tag-fit-target=compact] [data-tag-initial]", count: 2
+    assert_no_selector "#{summary} [data-tag-fit-target=full]"
+
+    page.execute_script("#{cell}.style.width = '400px'")
+    assert_selector "#{summary} [data-tag-fit-target=full]", text: "Cd"
+  end
+
   test "keyboard focus stays on a tag option after toggling it" do
-    summary_id = dom_id(@transaction.entryable, :tag_summary)
+    summary_id = dom_id(@transaction.entryable, "tag_summary_desktop")
     option_id = "#{dom_id(@transaction, :tag_option)}_#{tags(:two).id}"
 
     find("##{summary_id}").click

@@ -1,6 +1,0 @@
-<%# locals: (transaction:) %>
-<% names = transaction.tags.map(&:name).sort_by(&:downcase) %>
-
-<span id="<%= dom_id(transaction, :tag_names_mobile) %>" class="md:hidden min-w-0 truncate">
-  <% if names.any? %>• <%= names.join(", ") %><% end %>
-</span>
