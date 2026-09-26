@@ -97,6 +97,27 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     assert_equal BigDecimal("75.00"), @enable_banking_account.reload.current_balance
   end
 
+  test "fetch_and_update_balance falls back to the first balance when only unprioritized types are present" do
+    @mock_provider.stubs(:get_account_balances).returns(
+      balances: [
+        {
+          balance_type: "FWAV",
+          balance_amount: { amount: "10.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        },
+        {
+          balance_type: "OTHR",
+          balance_amount: { amount: "999.00", currency: "EUR" },
+          credit_debit_indicator: "CRDT"
+        }
+      ]
+    )
+
+    assert @importer.send(:fetch_and_update_balance, @enable_banking_account)
+
+    assert_equal BigDecimal("10.00"), @enable_banking_account.reload.current_balance
+  end
+
   test "fetch_and_update_balance handles descriptive booked balance types" do
     @mock_provider.stubs(:get_account_balances).returns(
       balances: [
