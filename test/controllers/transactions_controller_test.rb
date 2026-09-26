@@ -2,6 +2,7 @@ require "test_helper"
 
 class TransactionsControllerTest < ActionDispatch::IntegrationTest
   include EntryableResourceInterfaceTest, EntriesTestHelper
+  include ActionView::RecordIdentifier
 
   setup do
     sign_in @user = users(:family_admin)
@@ -487,6 +488,54 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "application/json", response.media_type
     assert_equal I18n.t("accounts.not_authorized"), JSON.parse(response.body)["error"]
     assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint toggles a single tag and streams the row's tag UI" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ], locked_attributes: {})
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:two).id }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.reload.entryable.tag_ids.sort
+    assert @entry.entryable.locked?(:tag_ids)
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(@entry.entryable, :tag_summary)
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(@entry.entryable, :tag_names_mobile)
+    assert_select "turbo-stream[action=replace][target=?]", "#{dom_id(@entry, :tag_option)}_#{tags(:two).id}"
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:one).id }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal [ tags(:two).id ], @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint does not toggle tags from another family" do
+    other_tag = users(:empty).family.tags.create!(name: "Other family")
+    original_tag_ids = @entry.entryable.tag_ids
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: other_tag.id }, as: :turbo_stream
+
+    assert_response :not_found
+    assert_equal original_tag_ids, @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint does not toggle tags for read-only users" do
+    sign_in users(:family_member)
+    read_only_entry = entries(:transfer_in)
+    original_tag_ids = read_only_entry.entryable.tag_ids
+
+    patch tags_transaction_url(read_only_entry), params: { toggle_tag_id: tags(:one).id }, as: :turbo_stream
+
+    assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
+  end
+
+  test "transaction rows show tags" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ])
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(@entry.entryable, :tag_summary)}", text: /#{tags(:one).name}/
+    assert_select "##{dom_id(@entry.entryable, :tag_names_mobile)}", text: /#{tags(:one).name}/
   end
 
   test "split parent rows mark amount as privacy-sensitive" do

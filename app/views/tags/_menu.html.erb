@@ -1,0 +1,22 @@
+<%# locals: (entry:, transaction:) %>
+
+<div class="min-w-0 max-w-full">
+  <% if transaction.transfer? %>
+    <%# Transfer tags must stay in sync across both legs; edit them from the drawer. %>
+    <%= render "tags/summary", transaction: transaction, editable: false %>
+  <% else %>
+    <%= render DS::Popover.new(variant: "button", aria_label: t(".label")) do |popover| %>
+      <% popover.with_button(class: "flex w-full min-w-0 items-center") do %>
+        <%= render "tags/summary", transaction: transaction %>
+      <% end %>
+
+      <% popover.with_custom_content do %>
+        <%= turbo_frame_tag "tag_dropdown", src: tag_dropdown_path(entry_id: entry.id), loading: :lazy do %>
+          <div class="p-6 flex items-center justify-center">
+            <p class="text-sm text-secondary animate-pulse"><%= t(".loading") %></p>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

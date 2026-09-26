@@ -140,6 +140,23 @@ class TransactionsTest < ApplicationSystemTestCase
     assert_text @transaction.name
   end
 
+  test "can toggle tags from the transaction row" do
+    transaction = @transaction.entryable
+    summary_id = dom_id(transaction, :tag_summary)
+    option_id = "#{dom_id(@transaction, :tag_option)}_#{tags(:two).id}"
+
+    within "##{summary_id}" do
+      assert_text tags(:one).name
+    end
+
+    find("##{summary_id}").click
+    find("##{option_id} button").click
+
+    assert_selector "##{option_id}[aria-selected='true']"
+    assert_selector "##{summary_id} [aria-describedby] [data-tag-initial]", count: 2
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
+  end
+
   test "can select and deselect entire page of transactions" do
     all_transactions_checkbox.check
     assert_selection_count(number_of_transactions_on_page)
