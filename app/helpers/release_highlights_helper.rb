@@ -9,4 +9,14 @@ module ReleaseHighlightsHelper
     @pending_release_tag = ReleaseHighlights.pending_tag_for(Current.user)
     @pending_release_tag
   end
+
+  # Anchored feature highlight (e.g. Bills) pending for this account, or
+  # nil. Rendered on the dashboard only; purely local state, so safe to run
+  # on every dashboard render.
+  def pending_feature_highlight
+    return @pending_feature_highlight if defined?(@pending_feature_highlight)
+
+    @pending_feature_highlight = FeatureHighlights.pending_for(Current.user)
+    @pending_feature_highlight
+  end
 end
