@@ -17,8 +17,11 @@ class KrakenAccount::SecurityResolver
   EXCHANGE_MIC = "XKRA"
 
   # Kraken suffixes a staked or bonded balance onto the asset code -- XBT.M,
-  # ETH2.S, DOT28.S -- and those are the same asset in a different wallet.
-  STAKING_SUFFIX = /(\d+)?\.[A-Z]+\z/
+  # ETH2.S, DOT28.S -- and those are the same asset in a different wallet. The
+  # suffix can repeat: a balance payload reports bonded DOT as DOT28.S.S, so the
+  # group is matched one-or-more times rather than once, or DOT28.S.S resolves to
+  # a different security than the DOT28.S the ledger reports.
+  STAKING_SUFFIX = /(?:\d*\.[A-Z]+)+\z/
 
   # Kraken's own legacy codes for the same asset: XBT and XXBT are BTC, XETH is
   # ETH, ZEUR is EUR. Shared with AssetNormalizer so a symbol canonicalised here
