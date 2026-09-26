@@ -29,8 +29,8 @@
       [ t("imports.new.csv_formats.actual"), "ActualImport" ],
       [ t("imports.new.csv_formats.ynab"), "YnabImport" ]
     ] %>
-    <% selected_import_kind = params[:import_kind].presence_in(%w[TransactionImport TradeImport AccountImport CategoryImport MerchantImport RuleImport MintImport ActualImport YnabImport]) || (@import.type.in?(%w[TransactionImport TradeImport AccountImport CategoryImport MerchantImport RuleImport MintImport ActualImport YnabImport]) ? @import.type : "TransactionImport") %>
-    <% selected_csv_format = params[:csv_format].presence || Import::CsvFormat::TRANSACTION_TYPES.key(selected_import_kind) || "auto" %>
+    <% selected_import_kind = (params.dig(:import, :import_kind).presence || params[:import_kind]).presence_in(%w[TransactionImport TradeImport AccountImport CategoryImport MerchantImport RuleImport MintImport ActualImport YnabImport]) || (@import.type.in?(%w[TransactionImport TradeImport AccountImport CategoryImport MerchantImport RuleImport MintImport ActualImport YnabImport]) ? @import.type : "TransactionImport") %>
+    <% selected_csv_format = params.dig(:import, :csv_format).presence || params[:csv_format].presence || Import::CsvFormat::TRANSACTION_TYPES.key(selected_import_kind) || "auto" %>
     <%= label_tag :import_file_format, t("imports.new.format_label"), class: "text-sm font-medium text-primary" %>
     <%= select_tag :file_format,
           options_for_select(file_format_options, @file_format),
