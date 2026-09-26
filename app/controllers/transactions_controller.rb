@@ -28,7 +28,7 @@ class TransactionsController < ApplicationController
                        .reverse_chronological
                        .includes(
                          { entry: :account },
-                         :category, :merchant, :tags,
+                         :category, :merchant, :tags, :auto_category_enrichments,
                          # Union of #2643 counterpart UI + Skylight category-menu N+1:
                          # - outflow rows need inflow_transaction (to_account) for both
                          #   counterpart display and Transfer#categorizable?/#payment?
@@ -59,7 +59,7 @@ class TransactionsController < ApplicationController
       split_parent_ids = @transactions.filter_map { |t| t.entry.parent_entry_id }.uniq
       if split_parent_ids.any?
         Entry.where(id: split_parent_ids)
-             .includes(:account, entryable: [ :category, :merchant ])
+             .includes(:account, entryable: [ :category, :merchant, :auto_category_enrichments ])
              .index_by(&:id)
       else
         {}
@@ -224,6 +224,11 @@ class TransactionsController < ApplicationController
               partial: "transactions/mark_recurring",
               locals: { entry: @entry }
             ) if can_edit_entry? && !@entry.split_child?),
+            turbo_stream.replace(
+              dom_id(@entry, :category_provenance),
+              partial: "transactions/category_provenance",
+              locals: { entry: @entry }
+            ),
             turbo_stream.replace(
               dom_id(@entry),
               partial: "entries/entry",

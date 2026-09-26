@@ -103,6 +103,17 @@
                       ) %>
                     <% end %>
 
+                    <%# Auto-categorization provenance %>
+                    <% if (provenance = transaction.category_provenance) %>
+                      <%= render DS::Pill.new(
+                        label: t("transactions.transaction.category_provenance.#{provenance.status}"),
+                        tone: :neutral,
+                        marker: false,
+                        icon: provenance.current? ? "sparkles" : "history",
+                        title: t("transactions.transaction.category_provenance.#{provenance.status}_tooltip", source: t("transactions.category_provenance.sources.#{provenance.source}"))
+                      ) %>
+                    <% end %>
+
                     <%# Potential duplicate indicator - different styling for low vs medium confidence %>
                     <% if transaction.has_potential_duplicate? %>
                       <% if transaction.low_confidence_duplicate? %>
