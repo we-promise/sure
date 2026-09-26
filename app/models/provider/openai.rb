@@ -65,7 +65,9 @@ class Provider::Openai < Provider
   # @param uri_base [String, nil] custom endpoint base URL (OpenAI when nil)
   # @param model [String, nil] default model; required when uri_base is set
   # @return [void]
-  def initialize(access_token, uri_base: nil, model: nil)
+  def initialize(access_token, uri_base: nil, model: nil, eval_temperature: nil, on_model_response: nil)
+    @eval_temperature = eval_temperature
+    @on_model_response = on_model_response
     client_options = { access_token: access_token }
     llm_uri_base = uri_base.presence
     llm_model = model.presence
@@ -82,6 +84,10 @@ class Provider::Openai < Provider
       raise Error, "Model is required when using a custom OpenAI‑compatible provider"
     end
     @default_model = llm_model.presence || self.class.effective_model
+  end
+
+  def self.temperature_supported?(model)
+    model.to_s !~ /\A(?:o[1-9]|gpt-5)(?:\b|[-.])/i
   end
 
   def supports_model?(model)
@@ -206,7 +212,9 @@ class Provider::Openai < Provider
           custom_provider: custom_provider?,
           langfuse_trace: trace,
           family: family,
-          json_mode: json_mode
+          json_mode: json_mode,
+          eval_temperature: @eval_temperature,
+          on_model_response: @on_model_response
         ).auto_categorize
       end
 
@@ -261,7 +269,9 @@ class Provider::Openai < Provider
           custom_provider: custom_provider?,
           langfuse_trace: trace,
           family: family,
-          json_mode: json_mode
+          json_mode: json_mode,
+          eval_temperature: @eval_temperature,
+          on_model_response: @on_model_response
         ).auto_detect_merchants
       end
 
@@ -503,9 +513,15 @@ class Provider::Openai < Provider
             stream: stream_proxy
           }
           request_params[:tool_choice] = "none" if tool_choice == :none && chat_config.tools.present?
+          # Per-eval override only. Reasoning models (o-series and GPT-5) reject
+          # temperature. Production providers leave this nil and use API defaults.
+          if !@eval_temperature.nil? && self.class.temperature_supported?(model)
+            request_params[:temperature] = @eval_temperature
+          end
           request_params[:max_output_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
 
           raw_response = session_client.responses.create(parameters: request_params)
+          @on_model_response&.call(raw_response["model"]) if raw_response && stream_proxy.nil?
 
           # If streaming, Ruby OpenAI does not return anything, so to normalize this method's API, we search
           # for the "response chunk" in the stream and return it (it is already parsed)
@@ -521,6 +537,7 @@ class Provider::Openai < Provider
             end
 
             response = response_chunk.data
+            @on_model_response&.call(response.model)
             usage = response_chunk.usage
             Rails.logger.debug("Stream response usage: #{usage.inspect}")
             log_langfuse_generation(
@@ -597,9 +614,11 @@ class Provider::Openai < Provider
         params[:tools] = tools if tools.present?
         params[:tool_choice] = "none" if tool_choice == :none && tools.present?
         params[:max_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
+        params[:temperature] = @eval_temperature if !@eval_temperature.nil? && self.class.temperature_supported?(model)
 
         begin
           raw_response = session_client.chat(parameters: params)
+          @on_model_response&.call(raw_response["model"])
 
           parsed = GenericChatParser.new(raw_response).parsed
 

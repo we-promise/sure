@@ -16,7 +16,7 @@ class Provider::Openai::AutoMerchantDetector
 
   attr_reader :client, :model, :transactions, :user_merchants, :custom_provider, :langfuse_trace, :family, :json_mode
 
-  def initialize(client, model: "", transactions:, user_merchants:, custom_provider: false, langfuse_trace: nil, family: nil, json_mode: nil)
+  def initialize(client, model: "", transactions:, user_merchants:, custom_provider: false, langfuse_trace: nil, family: nil, json_mode: nil, eval_temperature: nil, on_model_response: nil)
     @client = client
     @model = model
     @transactions = transactions
@@ -25,6 +25,8 @@ class Provider::Openai::AutoMerchantDetector
     @langfuse_trace = langfuse_trace
     @family = family
     @json_mode = json_mode || default_json_mode
+    @eval_temperature = eval_temperature
+    @on_model_response = on_model_response
   end
 
   VALID_JSON_MODES = [ JSON_MODE_STRICT, JSON_MODE_OBJECT, JSON_MODE_NONE, JSON_MODE_AUTO ].freeze
@@ -136,7 +138,7 @@ class Provider::Openai::AutoMerchantDetector
         user_merchants: user_merchants
       })
 
-      response = client.responses.create(parameters: {
+      params = {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         input: [ { role: "developer", content: developer_message } ],
         text: {
@@ -148,7 +150,10 @@ class Provider::Openai::AutoMerchantDetector
           }
         },
         instructions: instructions
-      })
+      }
+      params[:temperature] = @eval_temperature if !@eval_temperature.nil? && Provider::Openai.temperature_supported?(model)
+      response = client.responses.create(parameters: params)
+      @on_model_response&.call(response["model"])
 
       Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage", "total_tokens")}")
 
@@ -243,7 +248,9 @@ class Provider::Openai::AutoMerchantDetector
         # JSON_MODE_NONE: no response_format constraint
       end
 
+      params[:temperature] = @eval_temperature if !@eval_temperature.nil? && Provider::Openai.temperature_supported?(model)
       response = client.chat(parameters: params)
+      @on_model_response&.call(response["model"])
 
       Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage", "total_tokens")} (json_mode: #{mode})")
 

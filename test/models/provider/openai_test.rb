@@ -8,6 +8,40 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject_model = "gpt-4.1"
   end
 
+  test "eval sampling controls only reach compatible Responses requests" do
+    [ [ "gpt-4.1", true ], [ "gpt-4o", true ], [ "gpt-5", false ],
+      [ "gpt-5-mini", false ], [ "o1", false ], [ "o3-mini", false ] ].each do |model, supported|
+      subject = Provider::Openai.new("test-token", eval_temperature: 0.0)
+      responses = mock
+      client = mock
+      client.stubs(:responses).returns(responses)
+      subject.stubs(:client).returns(client)
+      responses.expects(:create).with do |args|
+        params = args.fetch(:parameters)
+        assert_equal model, params[:model]
+        assert_equal supported, params.key?(:temperature)
+        assert_equal 0.0, params[:temperature] if supported
+        refute params.key?(:seed), "Responses API does not support seed"
+        true
+      end.returns({ "id" => "resp_1", "model" => "#{model}-snapshot", "output" => [], "usage" => {} })
+      assert subject.chat_response("hello", model: model).success?
+    end
+  end
+
+  test "normal chat does not receive eval sampling controls" do
+    responses = mock
+    client = mock
+    client.stubs(:responses).returns(responses)
+    @subject.stubs(:client).returns(client)
+    responses.expects(:create).with do |args|
+      params = args.fetch(:parameters)
+      refute params.key?(:temperature)
+      refute params.key?(:seed)
+      true
+    end.returns({ "id" => "resp_1", "model" => "gpt-4.1", "output" => [], "usage" => {} })
+    assert @subject.chat_response("hello", model: "gpt-4.1").success?
+  end
+
   test "effective_model uses Setting when ENV is unset" do
     Setting.stubs(:openai_model).returns("llama3")
     with_env_overrides("OPENAI_MODEL" => nil) do

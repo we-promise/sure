@@ -14,14 +14,15 @@ class Eval::ProviderFactory
 
   # config arrives as jsonb (string keys) from Eval::Run and as a plain hash
   # from ExperimentRunner, so it is normalized rather than trusted either way.
-  def self.build(provider:, model:, config: {})
-    new(provider: provider, model: model, config: config).build
+  def self.build(provider:, model:, config: {}, on_model_response: nil)
+    new(provider: provider, model: model, config: config, on_model_response: on_model_response).build
   end
 
-  def initialize(provider:, model:, config: {})
+  def initialize(provider:, model:, config: {}, on_model_response: nil)
     @provider = provider.to_s
     @model = model
     @config = (config || {}).with_indifferent_access
+    @on_model_response = on_model_response
   end
 
   def build
@@ -46,7 +47,14 @@ class Eval::ProviderFactory
                  ENV["OPENAI_URI_BASE"].presence ||
                  Setting.openai_uri_base
 
-      Provider::Openai.new(access_token, uri_base: uri_base, model: model)
+      options = { uri_base: uri_base, model: model }
+      if config.key?(:temperature)
+        temperature = Float(config[:temperature])
+        raise Error, "Eval temperature must be between 0 and 2" unless (0..2).cover?(temperature)
+        options[:eval_temperature] = temperature
+      end
+      options[:on_model_response] = @on_model_response if @on_model_response
+      Provider::Openai.new(access_token, **options)
     end
 
     def build_jev

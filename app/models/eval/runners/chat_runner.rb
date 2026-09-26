@@ -35,6 +35,7 @@ class Eval::Runners::ChatRunner < Eval::Runners::Base
         latency_ms = ((Time.current - start_time) * 1000).to_i
 
         if response.success?
+          eval_run.record_resolved_model!(response.data.model) if response.data.respond_to?(:model)
           record_chat_result(sample, response.data, latency_ms)
         else
           record_error_result(sample, response.error, latency_ms)
@@ -234,7 +235,7 @@ class Eval::Runners::ChatRunner < Eval::Runners::Base
         #{Assistant::Configurable::STATIC_INSTRUCTIONS}
         ## Session context
 
-        - Today's date: #{Date.current}. For functions that require dates, use it as your reference point.
+        - Today's date: #{reference_date}. For functions that require dates, use it as your reference point.
         - Date format: %m-%d-%Y
         - Preferred currency: USD (symbol $, precision 2, format %u%n, separator ".", delimiter ",")
       PROMPT
@@ -245,6 +246,11 @@ class Eval::Runners::ChatRunner < Eval::Runners::Base
     # scoped enums, so definitions build against a reference user; a class
     # whose schema cannot build without one is skipped with a log line rather
     # than silently faked.
+    def reference_date
+      configured = eval_run.provider_config["reference_date"].presence
+      configured ? Date.iso8601(configured) : Date.current
+    end
+
     def build_function_definitions
       user = reference_user
 

@@ -94,7 +94,7 @@ namespace :evals do
       model: model,
       name: run_name,
       status: "pending",
-      provider_config: split_config
+      provider_config: split_config.merge(eval_config)
     )
 
     runner = runner_class_for(dataset, provider).new(eval_run)
@@ -856,6 +856,22 @@ namespace :evals do
       end
 
       runs
+    end
+
+    def eval_config
+      config = {}
+      if ENV["EVAL_TEMPERATURE"].present?
+        temperature = Float(ENV.fetch("EVAL_TEMPERATURE"))
+        raise ArgumentError, "EVAL_TEMPERATURE must be between 0 and 2" unless (0..2).cover?(temperature)
+        config["temperature"] = temperature
+      end
+      # Responses API currently does not support seed. Store requested value
+      # for auditability; never send an unsupported parameter to the API.
+      config["requested_seed"] = Integer(ENV.fetch("EVAL_SEED")) if ENV["EVAL_SEED"].present?
+      if ENV["EVAL_REFERENCE_DATE"].present?
+        config["reference_date"] = Date.iso8601(ENV.fetch("EVAL_REFERENCE_DATE")).iso8601
+      end
+      config
     end
 
     def split_config
