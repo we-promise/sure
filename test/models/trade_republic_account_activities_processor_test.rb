@@ -1227,6 +1227,6 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     end
 
     def find_trade(external_id)
-      Entry.find_by(external_id: external_id)
+      @account.entries.find_by(external_id: external_id)
     end
 end
