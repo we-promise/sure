@@ -32,6 +32,10 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
     # Least privilege by default: a client that never asked for read_write
     # does not silently get it.
     assert_equal "read", app.scopes.to_s
+    # RFC 7591 §3.2.1: the server substituted a value (no scope requested ->
+    # "read"), so it must say so in the response rather than leave the
+    # client to infer it later from missing tools.
+    assert_equal "read", json["scope"]
   end
 
   test "registers a client with the explicitly requested read scope" do
@@ -44,8 +48,10 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
       headers: { "Content-Type" => "application/json" }
 
     assert_response :created
-    app = Doorkeeper::Application.find_by(uid: JSON.parse(response.body)["client_id"])
+    json = JSON.parse(response.body)
+    app = Doorkeeper::Application.find_by(uid: json["client_id"])
     assert_equal "read", app.scopes.to_s
+    assert_equal "read", json["scope"]
   end
 
   test "registers a client with the explicitly requested read_write scope" do
@@ -58,11 +64,13 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
       headers: { "Content-Type" => "application/json" }
 
     assert_response :created
-    app = Doorkeeper::Application.find_by(uid: JSON.parse(response.body)["client_id"])
+    json = JSON.parse(response.body)
+    app = Doorkeeper::Application.find_by(uid: json["client_id"])
     assert_equal "read_write", app.scopes.to_s
+    assert_equal "read_write", json["scope"]
   end
 
-  test "registers a client requesting both scopes as read_write" do
+  test "registers a client requesting both scopes preserves both, not just read_write" do
     post "/register",
       params: {
         client_name: "Claude",
@@ -73,7 +81,11 @@ class OauthRegistrationControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :created
     app = Doorkeeper::Application.find_by(uid: JSON.parse(response.body)["client_id"])
-    assert_equal "read_write", app.scopes.to_s
+    # Collapsing to "read_write" alone would foreclose this same client ever
+    # requesting just "read" later: Doorkeeper validates /oauth/authorize
+    # scope against the app's own registered scopes in preference to the
+    # server defaults.
+    assert_equal %w[read read_write], app.scopes.to_a.sort
   end
 
   test "rejects an unknown requested scope" do

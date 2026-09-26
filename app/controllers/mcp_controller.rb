@@ -37,11 +37,21 @@ class McpController < ApplicationController
 
     request_id = body["id"]
 
-    # JSON-RPC notifications omit the id field — server must not send a body.
-    # MCP Streamable HTTP answers a notification with 202 Accepted (204 is for
-    # "processed, nothing to say"; 202 is "accepted, no reply is coming").
+    # JSON-RPC notifications omit the id field entirely — server must not
+    # send a body. MCP Streamable HTTP answers a notification with 202
+    # Accepted (204 is for "processed, nothing to say"; 202 is "accepted, no
+    # reply is coming"). An explicit "id": null is a different thing: the key
+    # IS present, so this is a real request, not a notification — but null is
+    # not a usable id either, so it is rejected before dispatch rather than
+    # executed and answered with an "id": null response.
     unless body.key?("id")
+      @mcp_protocol_version = notification_protocol_version(body["params"])
       return head(:accepted)
+    end
+
+    if request_id.nil?
+      render_jsonrpc_error(nil, -32600, "Invalid Request")
+      return
     end
 
     result = dispatch_jsonrpc(request_id, body["method"], body["params"])
@@ -97,6 +107,13 @@ class McpController < ApplicationController
         expires_in: MCP_SESSION_TTL
       )
 
+      # A client that negotiates 2026-07-28 here still gets a sessionId back —
+      # the dialect's own handshake is removed, so nothing calls initialize
+      # under it in practice, but nothing forbids one either. That id is a
+      # promise this server does not keep: modern_mcp_request? (below) skips
+      # all session handling entirely for that dialect, so the id is never
+      # read back. Not a bug to "fix" by wiring the session path back in for
+      # a case the dialect itself does not use.
       {
         protocolVersion: @mcp_protocol_version,
         capabilities: { tools: {} },
@@ -288,7 +305,16 @@ class McpController < ApplicationController
         return false
       end
 
-      @mcp_protocol_version = header_version || meta_version || PROTOCOL_VERSION
+      # A legacy dialect never sends Mcp-Method (2026-07-28 only) — its
+      # presence with no explicit version anywhere is still an unambiguous
+      # signal, not a case to leave defaulting to legacy. Without this, a
+      # modern client that forgets MCP-Protocol-Version got a legacy-shaped
+      # response body (no resultType, no _meta.serverInfo) it can't parse,
+      # instead of the loud, correct rejection modern_routing_headers_valid?
+      # gives once @mcp_protocol_version actually reflects that dialect.
+      implied_modern_version = MODERN_PROTOCOL_VERSION if mcp_request_header("Mcp-Method").present?
+
+      @mcp_protocol_version = header_version || meta_version || implied_modern_version || PROTOCOL_VERSION
 
       unless SUPPORTED_PROTOCOL_VERSIONS.include?(@mcp_protocol_version)
         render_jsonrpc_error(
@@ -389,6 +415,22 @@ class McpController < ApplicationController
       PROTOCOL_VERSION
     end
 
+    # A notification never reaches prepare_mcp_request_context — there is no
+    # request id to attach a rejection to, and the response body is empty
+    # either way — so without this, its Mcp-Protocol-Version response header
+    # always fell back to the legacy default even when the notification
+    # itself was 2026-07-28, which a protocol-aware gateway could route on.
+    # Ambiguous input degrades to the legacy default rather than erroring,
+    # since there is no channel to report an error through.
+    def notification_protocol_version(params)
+      params = {} unless params.is_a?(Hash)
+      header_version = mcp_request_header("Mcp-Protocol-Version").presence
+      meta_version = params.dig("_meta", "io.modelcontextprotocol/protocolVersion").presence
+      version = header_version || meta_version || PROTOCOL_VERSION
+
+      SUPPORTED_PROTOCOL_VERSIONS.include?(version) ? version : PROTOCOL_VERSION
+    end
+
     def mcp_session_cache_key(session_id)
       "mcp:session:#{session_id}"
     end
@@ -432,7 +474,13 @@ class McpController < ApplicationController
     def render_mcp_unauthorized
       response.set_header(
         "WWW-Authenticate",
-        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource\", scope=\"read\""
+        # The resource-scoped metadata document, not the root one: its
+        # "resource" field is "<base>/mcp", matching the identifier a client
+        # constructs this exact URL from (RFC 9728 §3.3) — pointing at the
+        # root path here would advertise a document whose "resource" doesn't
+        # match, which spec-strict clients (e.g. the official TypeScript SDK)
+        # reject outright.
+        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource/mcp\", scope=\"read\""
       )
       render json: { error: "unauthorized" }, status: :unauthorized
     end

@@ -11,9 +11,10 @@ class OauthMetadataControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
     assert_equal "application/json", response.content_type.split(";").first
     json = JSON.parse(response.body)
-    # /mcp, not the app origin, is the actual protected resource — it is the
-    # one endpoint behind Bearer auth.
-    assert_equal "#{@base}/mcp", json["resource"]
+    # RFC 9728 §3.3: a client fetching the root well-known path constructs it
+    # from the bare-origin resource identifier, so that must be what this
+    # document reports — not "/mcp" (that's the scoped endpoint's job below).
+    assert_equal @base, json["resource"]
     assert_equal [ @base ], json["authorization_servers"]
     assert_equal [ "read", "read_write" ], json["scopes_supported"]
   end
@@ -23,6 +24,9 @@ class OauthMetadataControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     json = JSON.parse(response.body)
+    # This path is constructed from the "<base>/mcp" resource identifier, so
+    # its own "resource" must match — the root document above intentionally
+    # reports a different value.
     assert_equal "#{@base}/mcp", json["resource"]
     assert_equal [ @base ], json["authorization_servers"]
     assert_equal [ "read", "read_write" ], json["scopes_supported"]
@@ -43,7 +47,7 @@ class OauthMetadataControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "read", "read_write" ], json["scopes_supported"]
   end
 
-  test "unauthorized MCP requests point WWW-Authenticate at a working resource_metadata URL" do
+  test "unauthorized MCP requests point WWW-Authenticate at a working, consistent resource_metadata URL" do
     post "/mcp", params: { jsonrpc: "2.0", id: 1, method: "initialize" }.to_json,
          headers: { "Content-Type" => "application/json" }
 
@@ -51,10 +55,16 @@ class OauthMetadataControllerTest < ActionDispatch::IntegrationTest
     challenge = response.headers["WWW-Authenticate"]
     url = challenge[/resource_metadata="([^"]+)"/, 1]
     assert url.present?, "WWW-Authenticate must carry a resource_metadata URL"
+    # RFC 9728 §3.3: the challenge must point at the resource-SCOPED path,
+    # not the root one — the root document's "resource" is the bare origin,
+    # which would mismatch the "<base>/mcp" a client constructs from this
+    # exact URL and reject the document outright.
+    assert_equal "#{@base}/.well-known/oauth-protected-resource/mcp", url
 
     get url
 
     assert_response :ok, "resource_metadata must point at a live, valid endpoint"
-    assert_equal "#{@base}/mcp", JSON.parse(response.body)["resource"]
+    assert_equal "#{@base}/mcp", JSON.parse(response.body)["resource"],
+      "the resource_metadata URL's own document must report the resource identifier that URL implies"
   end
 end
