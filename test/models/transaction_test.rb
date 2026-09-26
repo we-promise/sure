@@ -143,6 +143,83 @@ class TransactionTest < ActiveSupport::TestCase
     end
   end
 
+  test "category_editable? is true for non-transfer kinds" do
+    assert Transaction.new(kind: "standard").category_editable?
+    assert Transaction.new(kind: "one_time").category_editable?
+  end
+
+  test "category_editable? without a Transfer record stays editable regardless of kind" do
+    # An unmatched provider-imported leg has no counterpart to defer to and
+    # no other way for the user to fix a provider mislabel, so it stays
+    # editable just like a regular transaction.
+    assert Transaction.new(kind: "loan_payment").category_editable?
+    assert Transaction.new(kind: "investment_contribution").category_editable?
+    assert Transaction.new(kind: "funds_movement").category_editable?
+    assert Transaction.new(kind: "cc_payment").category_editable?
+  end
+
+  test "category_editable? defers both legs to Transfer#categorizable? when a Transfer record exists" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    # Transfer#categorizable? is destination-account based, not leg based, so
+    # the inflow leg (whose stored kind is always "funds_movement" per
+    # Transfer::Creator) agrees with the outflow leg instead of being
+    # unconditionally locked.
+    assert outflow_entry.transaction.reload.category_editable?
+    assert inflow_entry.transaction.reload.category_editable?
+
+    fm_outflow = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "funds_movement")
+    fm_inflow = create_transaction(date: Date.current, account: accounts(:connected), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: fm_inflow.transaction, outflow_transaction: fm_outflow.transaction)
+
+    assert_not fm_outflow.transaction.reload.category_editable?
+    assert_not fm_inflow.transaction.reload.category_editable?
+  end
+
+  test "category_editable? stays true for the outflow leg even if a later sync leaves a stale funds_movement kind" do
+    # Account::ProviderImportAdapter can reassign an already-matched
+    # transaction's kind on a later sync without touching its Transfer.
+    # Transfer#categorizable? is destination-account based (stable), so
+    # delegating to it -- rather than reading this transaction's own kind
+    # directly -- keeps category_editable? correct despite the stale kind.
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    outflow_entry.transaction.update_column(:kind, "funds_movement")
+
+    assert outflow_entry.transaction.reload.category_editable?
+  end
+
+  test "payment? is true for cc_payment kind without a Transfer record" do
+    assert Transaction.new(kind: "cc_payment").payment?
+    assert_not Transaction.new(kind: "funds_movement").payment?
+  end
+
+  test "payment? defers to Transfer#payment? when a Transfer record exists" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "cc_payment")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500, kind: "cc_payment")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    assert outflow_entry.transaction.reload.payment?
+    assert inflow_entry.transaction.reload.payment?
+  end
+
+  test "payment? stays false for a non-payment transfer even if a later sync leaves a stale cc_payment kind" do
+    # Account::ProviderImportAdapter can reassign an already-matched
+    # transaction's kind on a later sync without touching its Transfer
+    # record. Simulate that here: a regular funds_movement transfer (to a
+    # non-liability account) whose outflow transaction's kind was later
+    # (incorrectly) left as "cc_payment".
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:connected), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+    outflow_entry.transaction.update_column(:kind, "cc_payment")
+
+    assert_not outflow_entry.transaction.reload.payment?
+  end
+
   test "all transaction kinds are valid" do
     valid_kinds = %w[standard funds_movement cc_payment loan_payment one_time investment_contribution]
 

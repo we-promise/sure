@@ -1,6 +1,6 @@
 class Transfer < ApplicationRecord
-  belongs_to :inflow_transaction, class_name: "Transaction"
-  belongs_to :outflow_transaction, class_name: "Transaction"
+  belongs_to :inflow_transaction, class_name: "Transaction", inverse_of: :transfer_as_inflow
+  belongs_to :outflow_transaction, class_name: "Transaction", inverse_of: :transfer_as_outflow
 
   has_many :fee_transactions, class_name: "Transaction", dependent: :destroy
 
@@ -17,13 +17,21 @@ class Transfer < ApplicationRecord
   validate :transfer_has_same_family
 
   class << self
-    def kind_for_account(account)
+    # from_account mirrors the guard Transfer::Creator and Family::DataImporter
+    # apply to their own copies of this rule: an investment/crypto destination
+    # only counts as a contribution when the source isn't itself an
+    # investment/crypto account, otherwise it's a plain funds movement.
+    def kind_for_account(account, from_account: nil)
       if account.loan?
         "loan_payment"
       elsif account.credit_card?
         "cc_payment"
       elsif account.investment? || account.crypto?
-        "investment_contribution"
+        if from_account && (from_account.investment? || from_account.crypto?)
+          "funds_movement"
+        else
+          "investment_contribution"
+        end
       elsif account.liability?
         "cc_payment"
       else
@@ -91,8 +99,15 @@ class Transfer < ApplicationRecord
     "transfer"
   end
 
+  # Based on the destination account rather than outflow_transaction.kind:
+  # Account::ProviderImportAdapter can overwrite an already-matched leg's
+  # kind on a later sync without touching this Transfer, and to_account is
+  # stable across that (see Transaction#payment?, which has the same
+  # to_account-based reasoning for the same class of staleness).
   def categorizable?
-    to_account&.accountable_type == "Loan"
+    return false unless to_account
+
+    !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(Transfer.kind_for_account(to_account, from_account: from_account))
   end
 
   def reject!
