@@ -17,7 +17,13 @@
 # @attr [JSONB] raw_transactions_payload Raw transaction data from Sophtron API
 # @attr [DateTime] last_updated When Sophtron last updated this account
 class SophtronAccount < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+  end
 
   belongs_to :sophtron_item
 
