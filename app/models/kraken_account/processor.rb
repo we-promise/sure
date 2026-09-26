@@ -67,7 +67,12 @@ class KrakenAccount::Processor
       base_symbol, quote_symbol = infer_pair_symbols(pair, trade)
       return if base_symbol.blank?
 
-      qty = trade["vol"].to_d
+      # `vol` is gross. When the fee is taken in the base asset -- an order-level
+      # choice Kraken makes per fill -- the units that actually moved are fewer,
+      # and TradesHistory gives no way to tell: it reports every fee converted to
+      # the quote currency, with no fee-currency field. The ledger is where the
+      # truth is, so prefer it and fall back to `vol`.
+      qty = ledger_qty_for(txid, base_symbol) || trade["vol"].to_d
       return if qty.zero?
 
       price = trade["price"].to_d
@@ -106,6 +111,31 @@ class KrakenAccount::Processor
       )
     rescue StandardError => e
       Rails.logger.error "KrakenAccount::Processor - failed to process trade #{txid}: #{e.message}"
+    end
+
+    # A trade's ledger rows carry its txid in `refid`, one row per asset moved.
+    # The row for the base asset holds what was really received or given up:
+    # Kraken applies `balance = previous + amount - fee`, so a fee charged in the
+    # base asset is already netted out there and nowhere else.
+    def ledger_qty_for(txid, base_symbol)
+      rows = ledgers_by_refid[txid.to_s]
+      return nil if rows.blank?
+
+      wanted = KrakenAccount::SecurityResolver.canonical_asset(base_symbol)
+      row = rows.find do |ledger|
+        KrakenAccount::SecurityResolver.canonical_asset(ledger["asset"]) == wanted
+      end
+      return nil if row.nil?
+
+      net = (row["amount"].to_d - row["fee"].to_d).abs
+      net.zero? ? nil : net
+    end
+
+    def ledgers_by_refid
+      @ledgers_by_refid ||= begin
+        ledgers = kraken_account.raw_transactions_payload&.dig("ledgers") || {}
+        ledgers.values.group_by { |ledger| ledger["refid"].to_s }
+      end
     end
 
     def infer_pair_symbols(pair, trade)
