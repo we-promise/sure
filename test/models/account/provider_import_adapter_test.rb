@@ -1334,6 +1334,102 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_nil result
   end
 
+  test "all pending reconciliation finders use transaction semantics for malformed flags" do
+    exact = @adapter.import_transaction(
+      external_id: "simplefin_unparseable_exact",
+      amount: 49_231.17,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Exact Pending",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => "maybe" } }
+    )
+    fuzzy = @adapter.import_transaction(
+      external_id: "simplefin_unparseable_fuzzy",
+      amount: 77.00,
+      currency: "USD",
+      date: Date.today - 2.days,
+      name: "Fuzzy Pending",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => "maybe" } }
+    )
+    merchant = ProviderMerchant.create!(
+      provider_merchant_id: "pending-low-confidence",
+      name: "Low Confidence Merchant",
+      source: "simplefin"
+    )
+    low_confidence = @adapter.import_transaction(
+      external_id: "simplefin_unparseable_low_confidence",
+      amount: 50.00,
+      currency: "USD",
+      date: Date.today - 3.days,
+      name: "Low Confidence Pending",
+      source: "simplefin",
+      merchant: merchant,
+      extra: { "simplefin" => { "pending" => "maybe" } }
+    )
+
+    [ exact, fuzzy, low_confidence ].each { |entry| assert entry.transaction.pending? }
+    assert_equal exact.id, @adapter.find_pending_transaction(
+      date: Date.today, amount: 49_231.17, currency: "USD", source: "simplefin"
+    ).id
+    assert_equal fuzzy.id, @adapter.find_pending_transaction_fuzzy(
+      date: Date.today, amount: 100, currency: "USD", source: "simplefin", name: "Fuzzy Pending"
+    ).id
+    assert_equal low_confidence.id, @adapter.find_pending_transaction_low_confidence(
+      date: Date.today, amount: 100, currency: "USD", source: "simplefin",
+      merchant_id: merchant.id, name: "Low Confidence Pending"
+    ).id
+  end
+
+  test "all pending reconciliation finders exclude explicit false flags" do
+    exact = @adapter.import_transaction(
+      external_id: "simplefin_false_exact",
+      amount: 49_232.17,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Exact Posted",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => "false" } }
+    )
+    fuzzy = @adapter.import_transaction(
+      external_id: "simplefin_false_fuzzy",
+      amount: 77.00,
+      currency: "USD",
+      date: Date.today - 2.days,
+      name: "Fuzzy Posted",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => "false" } }
+    )
+    merchant = ProviderMerchant.create!(
+      provider_merchant_id: "pending-false-low-confidence",
+      name: "False Low Confidence Merchant",
+      source: "simplefin"
+    )
+    low_confidence = @adapter.import_transaction(
+      external_id: "simplefin_false_low_confidence",
+      amount: 50.00,
+      currency: "USD",
+      date: Date.today - 3.days,
+      name: "Low Confidence Posted",
+      source: "simplefin",
+      merchant: merchant,
+      extra: { "simplefin" => { "pending" => "false" } }
+    )
+
+    [ exact, fuzzy, low_confidence ].each { |entry| assert_not entry.transaction.pending? }
+    assert_nil @adapter.find_pending_transaction(
+      date: Date.today, amount: 49_232.17, currency: "USD", source: "simplefin"
+    )
+    assert_nil @adapter.find_pending_transaction_fuzzy(
+      date: Date.today, amount: 100, currency: "USD", source: "simplefin", name: "Fuzzy Posted"
+    )
+    assert_nil @adapter.find_pending_transaction_low_confidence(
+      date: Date.today, amount: 100, currency: "USD", source: "simplefin",
+      merchant_id: merchant.id, name: "Low Confidence Posted"
+    )
+  end
+
   # ============================================================================
   # Critical Direction Fix Tests (CITGO Bug Prevention)
   # ============================================================================
@@ -1609,6 +1705,119 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_not booked_entry.transaction.pending?,
         "pending flag must be cleared even for user-modified entries"
     end
+  end
+
+  # A provider key holding anything but an object says nothing about that
+  # provider, and Transaction.pending_extra? skips it the way pending_sql does.
+  # Hash#dig raised TypeError on such a value instead, and these reads sit
+  # inside Account.transaction with no rescue between them and the caller, so a
+  # single malformed namespace aborted the whole import. simplefin is first in
+  # PENDING_PROVIDERS, so the malformed key is always reached.
+  test "a scalar provider value in an incoming payload does not abort the import" do
+    entry = nil
+
+    assert_difference "@account.entries.count", 1 do
+      entry = @adapter.import_transaction(
+        external_id: "scalar_incoming_flag",
+        amount: 12.0,
+        currency: "EUR",
+        date: Date.today,
+        name: "Scalar Provider",
+        source: "enable_banking",
+        extra: { "simplefin" => "oops", "akahu" => { "pending" => true } }
+      )
+    end
+
+    assert entry.transaction.pending?,
+      "the well-formed provider flag still decides when another namespace is malformed"
+  end
+
+  test "a scalar provider value in a stored flag does not abort clearing it" do
+    pending_entry = @adapter.import_transaction(
+      external_id: "eb_scalar_stored",
+      amount: 30.0,
+      currency: "EUR",
+      date: Date.today - 2.days,
+      name: "Scalar Stored",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+    pending_entry.transaction.update!(extra: { "simplefin" => "oops", "enable_banking" => { "pending" => true } })
+    assert pending_entry.transaction.reload.pending?, "entry should start as pending"
+
+    assert_no_difference "@account.entries.count" do
+      booked_entry = @adapter.import_transaction(
+        external_id: "eb_scalar_stored",
+        amount: 30.0,
+        currency: "EUR",
+        date: Date.today,
+        name: "Scalar Stored",
+        source: "enable_banking",
+        extra: nil
+      )
+
+      assert_not booked_entry.transaction.reload.pending?,
+        "the stale flag is cleared past the malformed namespace"
+    end
+  end
+
+  test "a scalar provider value in a stored flag does not abort the user-modified path" do
+    pending_entry = @adapter.import_transaction(
+      external_id: "eb_scalar_user_mod",
+      amount: 50.0,
+      currency: "EUR",
+      date: Date.today - 3.days,
+      name: "Scalar User Modified",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+    pending_entry.transaction.update!(extra: { "simplefin" => "oops", "enable_banking" => { "pending" => true } })
+    pending_entry.mark_user_modified!
+
+    assert_no_difference "@account.entries.count" do
+      booked_entry = @adapter.import_transaction(
+        external_id: "eb_scalar_user_mod",
+        amount: 50.0,
+        currency: "EUR",
+        date: Date.today,
+        name: "Scalar User Modified",
+        source: "enable_banking",
+        extra: nil
+      )
+
+      assert_not booked_entry.transaction.reload.pending?,
+        "the stale flag is cleared for a user-modified entry past the malformed namespace"
+    end
+  end
+
+  # The stored flag is cast the way #pending? casts it. Read for truthiness
+  # instead, the string "false" counted as pending and the booked sync deleted
+  # a flag that was never set.
+  test "a stored pending flag of \"false\" is left alone when the booked version arrives" do
+    pending_entry = @adapter.import_transaction(
+      external_id: "eb_false_flag",
+      amount: 18.0,
+      currency: "EUR",
+      date: Date.today - 1.day,
+      name: "False Flag",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+    pending_entry.transaction.update!(extra: { "enable_banking" => { "pending" => "false" } })
+    assert_not pending_entry.transaction.reload.pending?, "\"false\" does not mark a transaction pending"
+
+    @adapter.import_transaction(
+      external_id: "eb_false_flag",
+      amount: 18.0,
+      currency: "EUR",
+      date: Date.today,
+      name: "False Flag",
+      source: "enable_banking",
+      extra: nil
+    )
+
+    assert_equal "false", pending_entry.transaction.reload.extra.dig("enable_banking", "pending"),
+      "a flag that does not mark the transaction pending is not cleared"
   end
 
   # Provider metadata is not user-editable, so a user edit elsewhere on the entry
