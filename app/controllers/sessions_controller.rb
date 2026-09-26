@@ -136,7 +136,7 @@ class SessionsController < ApplicationController
 
   def mobile_sso_start
     provider = params[:provider].to_s
-    configured_providers = Rails.configuration.x.auth.sso_providers.map { |p| p[:name].to_s }
+    configured_providers = AuthConfig.sso_providers.map { |p| p[:name].to_s }
 
     unless configured_providers.include?(provider)
       mobile_sso_redirect(error: "invalid_provider", message: "SSO provider not configured")
@@ -167,7 +167,7 @@ class SessionsController < ApplicationController
   # like the mobile flow (reusing its auto-submitting form).
   def desktop_sso_start
     provider = params[:provider].to_s
-    configured_providers = Rails.configuration.x.auth.sso_providers.map { |p| p[:name].to_s }
+    configured_providers = AuthConfig.sso_providers.map { |p| p[:name].to_s }
 
     unless configured_providers.include?(provider)
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
@@ -250,7 +250,20 @@ class SessionsController < ApplicationController
     end
 
     if SsoIdentityBlock.blocked?(provider: auth.provider, uid: auth.uid)
-      reject_removed_sso_identity(auth.provider)
+      reject_sso_login(auth.provider, reason: "removed_identity")
+      return
+    end
+
+    provider_config = OidcIdentity.provider_config_for(auth.provider)
+    unless provider_config
+      reject_sso_login(auth.provider, reason: "provider_not_configured")
+      return
+    end
+
+    begin
+      verified_issuer = OidcIdentity.verified_issuer_for!(auth, provider_config)
+    rescue OidcIdentity::IssuerMismatch
+      reject_sso_login(auth.provider, reason: "issuer_mismatch")
       return
     end
 
@@ -258,6 +271,16 @@ class SessionsController < ApplicationController
     oidc_identity = OidcIdentity.find_by(provider: auth.provider, uid: auth.uid)
 
     if oidc_identity
+      if OidcIdentity.oidc_provider_config?(provider_config, auth.provider) && oidc_identity.issuer.blank?
+        require_legacy_oidc_relink(auth, verified_issuer)
+        return
+      end
+
+      unless oidc_identity.issuer_matches_config?(provider_config)
+        reject_sso_login(auth.provider, reason: "issuer_mismatch")
+        return
+      end
+
       # Existing OIDC identity found - authenticate the user
       user = oidc_identity.user
 
@@ -325,7 +348,7 @@ class SessionsController < ApplicationController
       # Mobile SSO with no linked identity - cache pending auth and redirect
       # back to the app with a linking code so the user can link or create an account
       if session[:mobile_sso].present?
-        handle_mobile_sso_onboarding(auth)
+        handle_mobile_sso_onboarding(auth, issuer: verified_issuer)
         return
       end
 
@@ -338,16 +361,9 @@ class SessionsController < ApplicationController
         return
       end
 
-      # No existing OIDC identity - need to link to account
-      # Store auth data in session and redirect to linking page
-      session[:pending_oidc_auth] = {
-        provider: auth.provider,
-        uid: auth.uid,
-        email: auth.info&.email,
-        name: auth.info&.name,
-        first_name: auth.info&.first_name,
-        last_name: auth.info&.last_name
-      }
+      # No existing OIDC identity - need to link to account.
+      # Preserve the verified issuer across the local-password step.
+      session[:pending_oidc_auth] = pending_oidc_auth(auth, verified_issuer)
       redirect_to link_oidc_account_path
     end
   end
@@ -392,11 +408,44 @@ class SessionsController < ApplicationController
   end
 
   private
-    def reject_removed_sso_identity(provider)
+    def pending_oidc_auth(auth, issuer)
+      {
+        "provider" => auth.provider,
+        "uid" => auth.uid,
+        "email" => auth.info&.email,
+        "name" => auth.info&.name,
+        "first_name" => auth.info&.first_name,
+        "last_name" => auth.info&.last_name,
+        "issuer" => issuer
+      }
+    end
+
+    def require_legacy_oidc_relink(auth, issuer)
+      SsoAuditLog.log_login_failed!(
+        provider: auth.provider,
+        request: request,
+        reason: "issuer_unverified"
+      )
+
+      if session.delete(:mobile_sso).present?
+        mobile_sso_redirect(
+          error: "issuer_relink_required",
+          message: t("sessions.openid_connect.legacy_issuer_relink_required")
+        )
+      elsif session.delete(:desktop_sso).present?
+        redirect_to "sure://sso/callback?error=issuer_relink_required", allow_other_host: true
+      else
+        session[:pending_oidc_auth] = pending_oidc_auth(auth, issuer)
+        session[:pending_oidc_legacy_relink] = true
+        redirect_to link_oidc_account_path, alert: t("sessions.openid_connect.legacy_issuer_relink_required")
+      end
+    end
+
+    def reject_sso_login(provider, reason:)
       SsoAuditLog.log_login_failed!(
         provider: provider,
         request: request,
-        reason: "removed_identity"
+        reason: reason
       )
 
       if session.delete(:mobile_sso).present?
@@ -484,7 +533,7 @@ class SessionsController < ApplicationController
       redirect_to "sure://sso/callback?code=#{code}", allow_other_host: true
     end
 
-    def handle_mobile_sso_onboarding(auth)
+    def handle_mobile_sso_onboarding(auth, issuer:)
       device_info = session.delete(:mobile_sso)
       email = auth.info&.email
 
@@ -501,7 +550,7 @@ class SessionsController < ApplicationController
           first_name: auth.info&.first_name,
           last_name: auth.info&.last_name,
           name: auth.info&.name,
-          issuer: auth.extra&.raw_info&.iss || auth.extra&.raw_info&.[]("iss"),
+          issuer: issuer,
           device_info: device_info,
           allow_account_creation: allow_creation
         },

@@ -2,6 +2,8 @@ class OidcAccountsController < ApplicationController
   skip_authentication only: [ :link, :create_link, :new_user, :create_user ]
   before_action :reject_removed_identity, only: [ :link, :create_link, :new_user, :create_user ]
   rescue_from SsoIdentityBlock::BlockedIdentity, with: :reject_removed_identity_after_lock
+  rescue_from OidcIdentity::ProviderNotConfigured, OidcIdentity::IssuerMismatch, OidcIdentity::LegacyIdentityRebindRejected,
+    with: :reject_invalid_pending_auth
   layout "auth"
 
   def link
@@ -14,7 +16,8 @@ class OidcAccountsController < ApplicationController
     end
 
     @email = @pending_auth["email"]
-    @user_exists = User.exists?(email: @email) if @email.present?
+    @legacy_oidc_relink = session[:pending_oidc_legacy_relink].present?
+    @user_exists = @legacy_oidc_relink || (@email.present? && User.exists?(email: @email))
 
     # Check for a pending invitation for this email
     @pending_invitation = Invitation.pending.find_by(email: @email) if @email.present?
@@ -37,10 +40,12 @@ class OidcAccountsController < ApplicationController
 
     if user&.active?
       linked = user.transaction do
-        OidcIdentity.create_from_omniauth(
-          build_auth_hash(@pending_auth),
-          user
-        )
+        auth = build_auth_hash(@pending_auth)
+        if session[:pending_oidc_legacy_relink]
+          OidcIdentity.rebind_legacy_issuer_from_omniauth!(auth, user)
+        else
+          OidcIdentity.create_from_omniauth(auth, user)
+        end
 
         SsoAuditLog.log_link!(
           user: user,
@@ -63,6 +68,7 @@ class OidcAccountsController < ApplicationController
 
       # Clear pending auth from session
       session.delete(:pending_oidc_auth)
+      session.delete(:pending_oidc_legacy_relink)
 
       if user.otp_required?
         session[:mfa_user_id] = user.id
@@ -77,7 +83,8 @@ class OidcAccountsController < ApplicationController
       end
     else
       @email = params[:email]
-      @user_exists = User.exists?(email: @email) if @email.present?
+      @legacy_oidc_relink = session[:pending_oidc_legacy_relink].present?
+      @user_exists = @legacy_oidc_relink || (@email.present? && User.exists?(email: @email))
       flash.now[:alert] = "Invalid email or password"
       render :link, status: :unprocessable_entity
     end
@@ -89,6 +96,11 @@ class OidcAccountsController < ApplicationController
 
     if @pending_auth.nil?
       redirect_to new_session_path, alert: t(".no_pending_oidc")
+      return
+    end
+
+    if session[:pending_oidc_legacy_relink]
+      redirect_to link_oidc_account_path
       return
     end
 
@@ -105,6 +117,11 @@ class OidcAccountsController < ApplicationController
 
     if @pending_auth.nil?
       redirect_to new_session_path, alert: t(".no_pending_oidc")
+      return
+    end
+
+    if session[:pending_oidc_legacy_relink]
+      redirect_to link_oidc_account_path
       return
     end
 
@@ -145,7 +162,7 @@ class OidcAccountsController < ApplicationController
       # New family creators must be able to administer their own family.
       # Lower provider defaults are promoted to admin by role_for_new_family_creator,
       # while intentional super_admin defaults remain supported.
-      provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == @pending_auth["provider"] }
+      provider_config = AuthConfig.sso_providers&.find { |p| p[:name] == @pending_auth["provider"] }
       provider_default_role = provider_config&.dig(:settings, :default_role)
     end
 
@@ -219,15 +236,32 @@ class OidcAccountsController < ApplicationController
 
     def reject_removed_identity_after_lock
       session.delete(:pending_oidc_auth)
+      session.delete(:pending_oidc_legacy_relink)
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
     end
 
     def reject_removed_identity
       pending_auth = session[:pending_oidc_auth]
       return unless pending_auth.present?
-      return unless SsoIdentityBlock.blocked?(provider: pending_auth["provider"], uid: pending_auth["uid"])
 
+      if SsoIdentityBlock.blocked?(provider: pending_auth["provider"], uid: pending_auth["uid"])
+        session.delete(:pending_oidc_auth)
+        session.delete(:pending_oidc_legacy_relink)
+        redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+        return
+      end
+
+      config = OidcIdentity.provider_config_for(pending_auth["provider"])
+      unless config
+        session.delete(:pending_oidc_auth)
+        session.delete(:pending_oidc_legacy_relink)
+        redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
+      end
+    end
+
+    def reject_invalid_pending_auth
       session.delete(:pending_oidc_auth)
+      session.delete(:pending_oidc_legacy_relink)
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
     end
 
@@ -236,7 +270,8 @@ class OidcAccountsController < ApplicationController
       OpenStruct.new(
         provider: pending_auth["provider"],
         uid: pending_auth["uid"],
-        info: OpenStruct.new(pending_auth.slice("email", "name", "first_name", "last_name"))
+        info: OpenStruct.new(pending_auth.slice("email", "name", "first_name", "last_name")),
+        extra: OpenStruct.new(raw_info: OpenStruct.new(iss: pending_auth["issuer"]))
       )
     end
 end

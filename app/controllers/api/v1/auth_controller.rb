@@ -11,6 +11,8 @@ module Api
       before_action :check_api_key_rate_limit, only: :enable_ai
       before_action :log_api_access, only: :enable_ai
       rescue_from SsoIdentityBlock::BlockedIdentity, with: :render_removed_identity
+      rescue_from OidcIdentity::ProviderNotConfigured, OidcIdentity::IssuerMismatch,
+        with: :render_invalid_sso_linking_code
 
       def signup
         # Check if invite code is required
@@ -265,7 +267,7 @@ module Api
           # New family creators must be able to administer their own family.
           # Lower provider defaults are promoted to admin by role_for_new_family_creator,
           # while intentional super_admin defaults remain supported.
-          provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == cached[:provider] }
+          provider_config = AuthConfig.sso_providers&.find { |p| p[:name] == cached[:provider] }
           provider_default_role = provider_config&.dig(:settings, :default_role)
         end
 
@@ -468,6 +470,14 @@ module Api
           )
         end
 
+        def render_invalid_sso_linking_code
+          if params[:linking_code].present?
+            Rails.cache.delete("mobile_sso_link:#{params[:linking_code]}")
+          end
+
+          render json: { error: "SSO authentication is no longer valid" }, status: :forbidden
+        end
+
         def validate_linking_code(linking_code)
           if linking_code.blank?
             render json: { error: "Linking code is required" }, status: :bad_request
@@ -487,6 +497,10 @@ module Api
             render json: { error: "SSO identity was removed by an administrator" }, status: :forbidden
             return nil
           end
+
+          provider_config = OidcIdentity.provider_config_for(cached[:provider])
+          raise OidcIdentity::ProviderNotConfigured if provider_config.blank?
+          OidcIdentity.verified_issuer_for!(build_omniauth_hash(cached), provider_config)
 
           cached
         end
