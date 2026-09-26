@@ -3,6 +3,8 @@ class TradeRepublicAccount::ActivitiesProcessor
 
   SAVEBACK_EVENT_TYPE = "SAVEBACK_AGGREGATE"
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
+  SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
+  SAVINGS_PLAN_EXECUTION_EVENT_TYPES = %w[TRADING_SAVINGSPLAN_EXECUTED SAVINGS_PLAN_EXECUTED].freeze
 
   def initialize(trade_republic_account, exchange_securities: {})
     @trade_republic_account = trade_republic_account
@@ -104,6 +106,8 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       case event_category(event)
       when CATEGORY_ORDER_EXECUTION
+        return nil if duplicate_savings_plan_invoice?(event, detail, date)
+
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       when CATEGORY_DEPOSIT
         import_cash_movement(event, detail, external_id, date, label: cash_label(event, default: t("contribution")), sign: -1) ? :transaction : nil
@@ -139,6 +143,44 @@ class TradeRepublicAccount::ActivitiesProcessor
       else
         import_cash_movement(event, detail, external_id, date, label: t("round_up"), sign: 1) ? :transaction : nil
       end
+    end
+
+    # Trade Republic switched savings-plan executions from invoices to
+    # TRADING_SAVINGSPLAN_EXECUTED. Should an execution ever arrive in both
+    # shapes, import only the execution.
+    def duplicate_savings_plan_invoice?(event, detail, date)
+      return false unless event[:eventType].to_s == SAVINGS_PLAN_INVOICE_EVENT_TYPE
+
+      key = savings_plan_key(detail, date)
+      return false unless savings_plan_execution_keys.include?(key)
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Skipped Trade Republic savings-plan invoice duplicated by an execution event",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: { event_id: event[:id], isin: key[0], date: key[1], quantity: key[2]&.to_s("F") }
+      )
+      true
+    end
+
+    def savings_plan_execution_keys
+      @savings_plan_execution_keys ||= Array(@trade_republic_account.raw_timeline_payload).each_with_object(Set.new) do |event, keys|
+        next unless event.is_a?(Hash)
+
+        event = event.with_indifferent_access
+        next unless SAVINGS_PLAN_EXECUTION_EVENT_TYPES.include?(event[:eventType].to_s)
+        next unless importable_timeline_event?(event)
+
+        keys << savings_plan_key(event[:detail] || {}, parse_date(event[:timestamp]))
+      end
+    end
+
+    def savings_plan_key(detail, date)
+      [ detail[:isin].to_s, date, parse_decimal(detail[:quantity])&.abs ]
     end
 
     def saveback_event?(event_type)

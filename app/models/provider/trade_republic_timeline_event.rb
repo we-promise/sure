@@ -19,9 +19,10 @@ module Provider::TradeRepublicTimelineEvent
     "CRYPTO_INVOICE" => "orderExecution",
     "SAVINGS_PLAN_EXECUTED" => "orderExecution",
     "TRADING_SAVINGSPLAN_EXECUTED" => "orderExecution",
-    # Older savings-plan executions arrive as invoices rather than the newer
-    # TRADING_SAVINGSPLAN_EXECUTED activity. Treat them as order executions so
-    # timelineDetailV2 is fetched and the portfolio can import a trade.
+    # Savings-plan executions between mid-2024 and early 2025 arrive only as
+    # invoices; Trade Republic switched to TRADING_SAVINGSPLAN_EXECUTED later.
+    # Treat them as order executions so timelineDetailV2 is fetched and the
+    # portfolio can import a trade.
     "SAVINGS_PLAN_INVOICE_CREATED" => "orderExecution",
     "PRIVATE_MARKET_FUND_TRADE_EXECUTED" => "orderExecution",
     "IPO_TRADE_EXECUTED" => "orderExecution",

@@ -758,6 +758,21 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 0, cash_sure.entries.where(source: "trade_republic").count
   end
 
+  test "savings-plan invoice duplicated by an execution event imports once" do
+    invoice = savings_plan_invoice_event
+    execution = savings_plan_invoice_event.merge(
+      id: "evt_savings_execution",
+      timestamp: "2026-06-17T10:00:05Z",
+      eventType: "TRADING_SAVINGSPLAN_EXECUTED"
+    )
+
+    @tr_account.update!(raw_timeline_payload: [ invoice, execution ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+
+    assert_nil find_trade("trade_republic_event_evt_savings_plan")
+    assert_not_nil find_trade("trade_republic_event_evt_savings_execution")
+  end
+
   test "failed savings-plan executions remain ignored" do
     cash_account, = create_linked_cash_account!
     failed = {
