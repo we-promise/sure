@@ -491,6 +491,6 @@ class AccountStatement < ApplicationRecord
       return false unless file_content_type == "application/pdf" && file_size <= MAX_LARGE_PDF_SIZE
       return true if large_pdf_override
 
-      persisted? && pdf_import_owned?
+      persisted? && !will_save_change_to_byte_size?
     end
 end

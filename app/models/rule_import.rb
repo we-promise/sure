@@ -18,7 +18,7 @@ class RuleImport < Import
     return false unless super
     return true unless complete?
 
-    rows.pluck(:name).all? { |name| name.to_s.strip.present? }
+    !rows.where("name IS NULL OR name ~ '^[[:space:]]*$'").exists?
   end
 
   def column_keys

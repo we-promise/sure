@@ -102,10 +102,6 @@ class PdfImport < Import
         raise DuplicateUploadError, error.statement
       end
 
-      if error.statement.account_id.blank? && !error.statement.pdf_imports.exists?
-        error.statement.update!(pdf_import_owned: true)
-      end
-
       create_from_statement!(statement: error.statement)
     end
 
@@ -267,6 +263,11 @@ class PdfImport < Import
 
   def data_committed?
     super || reconciled_entries.exists?
+  end
+
+  # Reconciliations made during review are derived state; only created entries block deletion.
+  def directly_deletable?
+    !entries.exists? && !importing? && !reverting?
   end
 
   def file_name
