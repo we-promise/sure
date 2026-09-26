@@ -1204,17 +1204,6 @@ class Provider::TradeRepublicClient
       [ enriched, newest_event_id, warnings.concat(detail_warnings) ]
     end
 
-    def enrich_event_details(websocket, events, max: MAX_TIMELINE_DETAILS)
-      warnings = []
-      candidates = Array(events).select { |event| event.is_a?(Hash) && event.stringify_keys["id"].presence }
-      if candidates.size > max
-        warnings << "detail enrichment truncated to #{max} of #{candidates.size} events"
-        candidates = candidates.first(max)
-      end
-      enriched, enrich_warnings, = enrich_timeline_details(websocket, [], enrich_events: candidates)
-      [ enriched, warnings + enrich_warnings ]
-    end
-
     def merge_enriched_events(events, enriched_events)
       by_id = {}
       (Array(events) + Array(enriched_events)).each do |event|

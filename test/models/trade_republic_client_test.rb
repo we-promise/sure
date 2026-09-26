@@ -1036,9 +1036,10 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
 
     enriched, warnings = @client.send(
-      :enrich_event_details,
+      :enrich_timeline_details,
       Object.new,
-      [ {
+      [],
+      enrich_events: [ {
         "id" => "savings-1",
         "timestamp" => "2026-06-17T10:00:00Z",
         "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
@@ -1069,7 +1070,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       }
     end
 
-    max = 5
+    max = Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS
     events = (max + 3).times.map do |index|
       {
         "id" => "savings-#{index}",
@@ -1078,7 +1079,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       }
     end
 
-    enriched, warnings = @client.send(:enrich_event_details, Object.new, events, max: max)
+    enriched, warnings = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: events)
 
     assert_equal max, enriched.size
     assert_equal max, requested_ids.size
@@ -1096,9 +1097,10 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
 
     enriched, warnings = @client.send(
-      :enrich_event_details,
+      :enrich_timeline_details,
       Object.new,
-      [ { "id" => "fail-soft", "eventType" => "SAVINGS_PLAN_INVOICE_CREATED" } ]
+      [],
+      enrich_events: [ { "id" => "fail-soft", "eventType" => "SAVINGS_PLAN_INVOICE_CREATED" } ]
     )
 
     assert_empty enriched
@@ -1106,9 +1108,10 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     assert_raises(Provider::TradeRepublicClient::Timeout) do
       @client.send(
-        :enrich_event_details,
+        :enrich_timeline_details,
         Object.new,
-        [ { "id" => "fail-hard", "eventType" => "SAVINGS_PLAN_INVOICE_CREATED" } ]
+        [],
+        enrich_events: [ { "id" => "fail-hard", "eventType" => "SAVINGS_PLAN_INVOICE_CREATED" } ]
       )
     end
   end
