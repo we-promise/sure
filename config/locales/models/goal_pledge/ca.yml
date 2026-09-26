@@ -1,0 +1,20 @@
+---
+ca:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: Import
+        currency: Moneda
+        account: Compte
+        kind: Tipus
+        status: Estat
+        expires_at: Caduca el
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Tria un dels comptes enllaçats a l'objectiu.
+            currency:
+              must_match_goal: La moneda de l'aportació ha de coincidir amb la de l'objectiu.
+          duplicate_open_pledge: Ja tens una aportació oberta per a aquest import en aquest compte. Cancel·la o prorroga l'existent abans de registrar-ne una altra.

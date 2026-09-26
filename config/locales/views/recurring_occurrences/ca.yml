@@ -1,0 +1,53 @@
+---
+ca:
+  recurring_occurrences:
+    history_status:
+      paid: Pagada
+      skipped: Omesa
+      missed: No pagada
+      scheduled: Pendent
+    show:
+      due_on: 'Venciment: %{date}'
+      paid_of: '%{paid} de %{expected} pagats'
+      paid_headline: '%{amount} pagats'
+      remaining: Falten %{amount}
+      settled: Pagada íntegrament
+      overpaid: més del previst
+      skipped: Omesa
+      missed: Marcada com a no pagada
+      payments: Pagaments
+      manual_payment: Pagament manual
+      unlink: Desenllaça
+      review_heading: Revisa el pagament
+      find_heading: Cerca un pagament
+      add_heading: Afegeix un altre pagament
+      other_matches: Altres coincidències probables
+      no_ranked_candidates: Encara no hi ha res que sembli un pagament d'aquesta factura.
+      search_all: Cerca a totes les transaccions
+      search_placeholder: Cerca transaccions
+      no_candidates: No hi ha transaccions properes per enllaçar.
+      no_search_results: No hi ha res que coincideixi amb %{query}.
+      link_payment: Enllaça el pagament
+      not_this_one: No és aquesta
+      cant_find: No trobes la transacció?
+      manual_explainer: Registra un pagament que saps que s'ha fet quan cap transacció d'aquí no hi coincideix.
+      manual_amount_label: Import
+      manual_date_label: Data
+      record_payment: Registra el pagament
+      mark_paid: Marca com a pagada
+      mark_paid_hint: Liquida la resta sense registrar cap transacció.
+      skip: Omet
+      snooze_week: Ajorna una setmana
+      reopen: Reobre
+      view_bill: Mostra la factura completa
+    mark_paid:
+      success: Factura marcada com a pagada
+    skip:
+      success: Factura omesa
+    reopen:
+      success: Factura reoberta
+    snooze:
+      success: Ajornada fins al %{date}
+      invalid_date: No s'ha pogut interpretar aquesta data
+    override_amount:
+      success: Import previst actualitzat

@@ -1,0 +1,313 @@
+---
+ca:
+  bills:
+    row_overdue: Vençuda
+    row_today: Avui
+    detect:
+      found:
+        one: S'ha trobat %{count} possible factura. Revisa-la a continuació.
+        other: S'han trobat %{count} possibles factures. Revisa-les a continuació.
+      none_found: No s'han trobat patrons recurrents nous. Pots afegir factures manualment.
+      already_running: La detecció ja s'està executant. Torna-hi d'aquí a un moment.
+    feed:
+      calendar_name: Factures de Sure
+    ai_prompts:
+      due_before_paycheck: Què venç abans del meu proper cobrament?
+      subscriptions_up: Quines subscripcions han pujat de preu aquest any?
+      monthly_subscriptions: Quant pago cada mes en subscripcions?
+      safe_to_spend: Quant puc gastar amb tranquil·litat aquest període?
+    smart_configurations:
+      show:
+        trigger: Deixa que la IA ho configuri
+        title: Suggeriments de la IA per a %{name}
+        intro: Marca els canvis que vols aplicar. Els que no marquis es quedaran exactament com estan.
+        no_changes: Aquesta factura ja coincideix amb el seu historial de pagaments. No cal canviar res.
+        failed: Ara mateix no s'ha pogut analitzar aquesta factura. La seva configuració no s'ha modificat.
+        field_name: Nom
+        field_amount: Import
+        field_schedule: Periodicitat
+        field_category: Categoria
+        field_kind: Tipus
+        field_autopay: Domiciliació
+        uncategorized: Sense categoria
+        autopay_off: Desactivada
+        autopay_on: Activada
+        apply: Aplica els seleccionats
+    detail:
+      current: Actual
+      next_payment: Proper pagament
+      around: cap al %{date}
+      rules: Com s'identifica aquesta factura
+      rule_named: '%{name}'
+      rule_amount_range: de %{min} a %{max}
+      rule_aliases: També coincideix amb %{names}
+      rule_learned_tolerance: Els imports dins d'un %{percent} de l'import habitual s'associen a aquesta factura
+      history_title: Últims 12 mesos
+      history_aria: Pagaments dels últims dotze mesos
+      key_metrics: Per any
+      year: Any
+      spent_per_year: Gastat
+      avg_payment: Pagament mitjà
+      average: Mitjana pagada
+      range: '%{min} a %{max}'
+      annualized: A l'any
+      ytd: Pagat aquest any
+      last_account: Últim compte utilitzat
+      upcoming: Properament
+      recent_payments: Pagaments recents
+      manual_payment: Pagament manual
+      history: Historial
+      payment_count:
+        one: '%{count} pagament'
+        other: '%{count} pagaments'
+      notes: Notes
+      trial_chip: La prova acaba el %{date}
+      renews_chip: Es renova el %{date}
+      cancelled_chip: Cancel·lada el %{date}
+      price_changes: Canvis de preu
+      price_change_line: '%{from} → %{to}'
+    month_pulse:
+      bill_count:
+        one: '%{count} factura'
+        other: '%{count} factures'
+      left_to_pay: per pagar
+      pulse_paid: pagat
+      pulse_overdue: vençut
+      pulse_next_seven: pròxims 7 dies
+      pulse_bar_aria: '%{percent}% de les factures d''aquest mes pagades'
+      next_up: A continuació
+      view_upcoming: Mostra les properes
+      date_today: Avui
+      date_tomorrow: Demà
+      unconvertible:
+        one: '%{count} factura no s''inclou perquè no hi ha tipus de canvi disponible'
+        other: '%{count} factures no s''inclouen perquè no hi ha tipus de canvi disponible'
+    summary:
+      remaining: '%{amount} pendents'
+      paid_headline: '%{amount} pagats'
+      cost_line: Una mitjana de %{average} per pagament, uns %{annualized} l'any
+    pane:
+      close: Amaga els detalls
+    add_bill: Afegeix una factura
+    manage: Gestiona
+    find_payment: Cerca el pagament
+    add_payment: Afegeix un pagament
+    review_match: Revisa la coincidència
+    resolve: Resol
+    manage_payments: Gestiona els pagaments
+    view_full_bill: Mostra la factura completa
+    match:
+      same_merchant: Mateix comerç
+      name_matches: El nom coincideix
+      exact_amount: Import exacte
+      amount_off: '%{amount} de diferència'
+      due_date: Pagada el dia del venciment
+      days_before:
+        one: '%{count} dia abans del venciment'
+        other: '%{count} dies abans del venciment'
+      days_after:
+        one: '%{count} dia després del venciment'
+        other: '%{count} dies després del venciment'
+    attention:
+      needs_review: Cal revisar la coincidència
+      partial: Parcial · %{amount} pendents
+      amount_changed: L'import ha canviat
+      overdue:
+        one: Vençuda fa %{count} dia
+        other: Vençuda fa %{count} dies
+    paid_label: Pagada
+    paid_over_short: Pagada, de més
+    installment_progress: Termini %{done_plus_one} de %{total}
+    partial_progress: '%{paid} de %{expected} pagats'
+    cancelled_still_scheduled: La vas marcar com a cancel·lada el %{date}, però encara està programada, així que continuaran apareixent factures futures.
+    paid_over: Pagats %{paid}, més del previst
+    remaining_label: pendent
+    debt_payment: · pagament de deute
+    paid_from: des de %{account}
+    amount_range: entre %{min} i %{max}
+    possible_duplicate: Possible duplicat
+    due_label:
+      overdue:
+        one: Vençuda fa %{count} dia, vencia el %{date}
+        other: Vençuda fa %{count} dies, vencia el %{date}
+      today: Venç avui
+      settled: Vencia el %{date}
+      due_since: Venç el %{date}
+      snoozed: Ajornada fins al %{date}
+      upcoming:
+        one: Venç demà, %{date}
+        other: Venç d'aquí a %{count} dies, %{date}
+    views:
+      aria_label: Vistes de factures
+      overview: Resum
+      calendar: Calendari
+      paycheck: Pla d'ingressos
+      all: Totes les factures
+    pay_period:
+      paycheck_on: Cobrament el %{date}
+      before_next_paycheck: Abans del teu proper cobrament
+      due_before_date: '%{amount} vencen abans del %{date}'
+    paycheck:
+      unconvertible:
+        one: '%{count} obligació de pagament no s''inclou perquè no hi ha tipus de canvi disponible'
+        other: '%{count} obligacions de pagament no s''inclouen perquè no hi ha tipus de canvi disponible'
+      income_section_title: Calendari d'ingressos
+      manage: Gestiona
+      add_income: Afegeix un ingrés
+      income_paused: En pausa, no planificat
+      income_detected: Detectat automàticament, no defineix dies de cobrament
+      income_next_payday: 'proper: %{date}'
+      income_source_count:
+        one: '%{count} font d''ingressos'
+        other: '%{count} fonts d''ingressos'
+      next_on: 'Proper: %{date}'
+      no_upcoming_income: No hi ha ingressos programats a partir d'ara.
+      empty:
+        title: Indica el teu calendari d'ingressos
+        description: 'Afegeix els teus ingressos per veure què ha de cobrir cada dia de cobrament. Els ingressos detectats mai no defineixen per si sols els teus dies de cobrament: ho fas tu.'
+        action: Afegeix ingressos
+      all_clear:
+        title: No hi ha res a cobrir
+        description: No venç cap factura d'ara fins al %{date}, així que no hi ha res compromès en aquest període.
+      safe_after_bills: Disponible després de factures
+      short_after_bills: Falta després de factures
+      period_source: ' · %{source}'
+      period_source_multiple: ' · %{count} fonts d''ingressos'
+      before_next_paycheck: Abans del %{date}
+      no_income_arriving: No entra cap ingrés
+      income_amount: '%{amount} d''ingressos'
+      due_this_period: Venç aquest període
+      reserved_ahead: Reservat per endavant
+      safe_short: Disponible
+      short_short: Falta
+      reserved_footer:
+        one: Reservat per endavant per a %{count} factura posterior
+        other: Reservat per endavant per a %{count} factures posteriors
+      bills_this_period:
+        one: Factures d'aquest període · %{count}
+        other: Factures d'aquest període · %{count}
+      bills_before_payday:
+        one: Factures abans del teu proper cobrament · %{count}
+        other: Factures abans del teu proper cobrament · %{count}
+      of_total: de %{amount}
+      bridge_label: Abans del teu proper cobrament
+      bridge_amount: · %{amount} per pagar
+      bridge_split: Venç abans del %{date} i queda cobert pels %{cash} dels teus comptes.
+      shortfall_label: Falta abans del teu proper cobrament
+      shortfall_amount: · %{amount}
+      shortfall_split: '%{obligations} vencen abans del %{date} i els teus comptes tenen %{cash}.'
+      shortfall_largest: 'Obligació de pagament més gran propera:'
+      review_plan: Revisa el pla
+      allocation_aria: Dels %{income} d'ingressos, %{due} vencen ara, %{reserved} es reserven per a més endavant i %{safe} es poden gastar amb tranquil·litat.
+      allocation_aria_short: '%{income} d''ingressos van a allò que ja està compromès aquí, i en falten %{short} més.'
+    reset_feed_token:
+      done: S'ha restablert l'enllaç del calendari. Les apps de calendari que facin servir l'enllaç antic deixaran d'actualitzar-se; torna-t'hi a subscriure amb el nou.
+      confirm: Vols restablir l'enllaç de subscripció al calendari? Tots els enllaços compartits anteriorment deixaran de funcionar.
+    calendar:
+      subscribe_ical: Subscriu-t'hi (iCal)
+      reset_feed: Restableix l'enllaç
+      previous_month: Mes anterior
+      next_month: Mes següent
+      today: Avui
+      month_totals: '%{expected} previstos · %{paid} pagats'
+      empty_month: Aquest mes no venç cap factura.
+    all:
+      search_placeholder: Cerca factures
+      any_status: Qualsevol estat
+      status_filters:
+        overdue: Vençudes
+        due: Vencen aviat
+        partial: Pagades parcialment
+        paid: Pagades
+        paused: En pausa
+        ended: Descartades
+      subscription_monthly: Al mes
+      subscription_annual: A l'any
+      subscription_active: Actives
+      subscription_price_changes: Canvis de preu aquest any
+      subscription_price_change_line: '%{from} → %{to} (%{percent}%)'
+      any_type: Qualsevol tipus
+      sort_due: Per proper venciment
+      sort_name: Per nom
+      sort_amount: Per import
+      no_matches_title: Cap resultat
+      no_matches_description: Prova de treure un filtre o la cerca.
+      col_name: Nom
+      col_type: Tipus
+      col_frequency: Freqüència
+      col_amount: Import
+      col_next: Proper venciment
+      next_short: 'proper: %{date}'
+      col_status: Estat
+      col_actions: Accions
+      monthly_equivalent: '%{amount}/mes'
+      types:
+        bill: Factura
+        subscription: Subscripció
+        installment: Pagament a terminis
+        income: Ingrés
+        transfer: Transferència
+        other: Altres
+    show:
+      edit: Edita la factura
+    index:
+      left_to_pay: per pagar
+      paid_so_far: Pagat fins ara
+      hero_past_due: '%{amount} vençuts'
+      hero_next_seven: '%{amount} vencen en els pròxims 7 dies'
+      add_bill: Afegeix una factura
+      add_income: Afegeix un ingrés
+      review_with_ai: Revisa amb IA
+      detected_review:
+        one: Hem trobat %{count} pagament recurrent a les teves transaccions. Revisa'l perquè els totals d'aquí coincideixin amb el que pagues realment.
+        other: Hem trobat %{count} pagaments recurrents a les teves transaccions. Revisa'ls perquè els totals d'aquí coincideixin amb el que pagues realment.
+      detected_review_action: Revisa'ls
+      needs_review: Cal revisar
+      notice_trial: La prova de %{name} acaba el %{date}
+      notice_renewal: '%{name} es renova el %{date}'
+      notice_price: '%{name} ha canviat de preu: %{from} → %{to} (%{percent})'
+      notices_routine:
+        one: '%{count} canvi menor'
+        other: '%{count} canvis menors'
+      suggestion_line: '%{entry} sembla un pagament de %{bill}'
+      suggestion_unknown_entry: Una transacció
+      confidence: '%{percent}% de coincidència'
+      accept: Aplica
+      reject: No és aquesta factura
+      title: Factures
+      summary_label: Vencen aquest mes
+      summary_count:
+        one: '%{count} factura per pagar'
+        other: '%{count} factures per pagar'
+      summary_needs_action:
+        one: '%{count} requereix la teva atenció'
+        other: '%{count} requereixen la teva atenció'
+      all_automatic: totes domiciliades
+      recurring_label: Despesa recurrent
+      recurring_monthly: '%{amount} al mes'
+      recurring_annual: '%{amount} l''any'
+      unconvertible:
+        one: '%{count} factura no s''inclou perquè no hi ha tipus de canvi disponible'
+        other: '%{count} factures no s''inclouen perquè no hi ha tipus de canvi disponible'
+      overdue: Vençudes
+      needs_attention: Requereixen atenció
+      attention_overdue_total: '%{amount} vençuts'
+      this_month: Aquest mes
+      later: Després d'aquest mes
+      paid_this_month: Pagades aquest mes
+      dormant: Inactives
+      kpi_remaining: Pendent aquest mes
+      kpi_paid: Pagat aquest mes
+      kpi_next_seven: Venç en 7 dies
+      kpi_past_due: Vençut
+      paid_count:
+        one: '%{count} factura liquidada'
+        other: '%{count} factures liquidades'
+      needs_action_count:
+        one: '%{count} requereix la teva atenció'
+        other: '%{count} requereixen la teva atenció'
+      empty:
+        title: Encara no hi ha factures
+        description: Les factures són les teves despeses recurrents. Sure les troba automàticament a partir del teu historial de transaccions, i pots afegir un enllaç de pagament a cadascuna per pagar-la directament des d'aquí.
+        action: Cerca transaccions recurrents
+        no_history_description: Encara no hi ha transaccions. Connecta un compte o importa l'historial i Sure trobarà les teves factures automàticament, o afegeix-ne una manualment.

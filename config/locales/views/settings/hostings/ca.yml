@@ -29,7 +29,7 @@ ca:
           body: Això eliminarà l'URL desat, el token i l'ID de l'agent, i canviarà
             a l'assistent integrat. Pots reconnectar més tard introduint credencials
             noves.
-          title: Desconnectar l'assistent extern?
+          title: Vols desconnectar l'assistent extern?
         description: Tria com respon l'assistent del xat. Integrat utilitza el teu
           proveïdor d'LLM configurat directament. Extern delega en un agent d'IA remot
           que pot retrucar a les eines financeres de Sure via MCP.
@@ -115,7 +115,7 @@ ca:
           closed: Tancat
           invite_only: Només per invitació
           open: Obert
-        title: Inici de sessió
+        title: Registre
       not_authorized: No estàs autoritzat/da a fer aquesta acció
       openai_settings:
         access_token_label: Token d'accés
@@ -151,6 +151,14 @@ ca:
         title: OpenAI
         uri_base_label: URL base de l'API (opcional)
         uri_base_placeholder: https://api.openai.com/v1 (per defecte)
+        model_function_calling_help: L'assistent d'IA llegeix les teves dades mitjançant crides a funcions, així que tria un model que el teu proveïdor documenti com a compatible amb eines/crides a funcions. Els models que no ho admeten fan fallar el xat amb un error poc clar del proveïdor.
+        model_function_calling_link: Comprova el model configurat
+        timeout_heading: Temps d'espera
+        timeout_description: Controla quant de temps poden durar les crides a models compatibles amb OpenAI abans que Sure les abandoni. Augmenta aquests valors si executes un model local en maquinari lent.
+        openai_request_timeout_label: Temps d'espera de la sol·licitud en segons (opcional)
+        openai_request_timeout_help: 'Per defecte: 60. S''aplica a cada sol·licitud HTTP compatible amb OpenAI, incloses l''autocategorització, la detecció de comerços, el xat, el processament de PDF i les crides al magatzem de vectors. OPENAI_REQUEST_TIMEOUT té prioritat sobre aquest camp.'
+        ai_response_timeout_label: Temps d'espera de la resposta en segons (opcional)
+        ai_response_timeout_help: 'Per defecte: 90. Només s''aplica al vigilant de tot el torn del xat, així que calcula''l com una suma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × temps d''espera de la sol·licitud, més el temps d''execució de les eines i de cua. AI_RESPONSE_TIMEOUT té prioritat sobre aquest camp.'
       provider_selection:
         binance_public_hint: gratuït, sense clau API — només cripto (BTC, ETH, etc.)
         moex_public_hint: gratuït, sense clau API — accions, fons i bons russos (MOEX), inclou canvi RUB
@@ -172,6 +180,9 @@ ca:
           tiingo: Tiingo
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
+          tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
+          mansa: Mansa
         requires_api_key: requereix clau API
         requires_api_key_alpha_vantage: requereix clau API, límit de 25 crides/dia
         requires_api_key_eodhd: requereix clau API, límit de 20 crides/dia
@@ -181,6 +192,8 @@ ca:
         securities_title: Proveïdors de valors
         twelve_data_hint: requereix clau API, 800 crèdits/dia
         yahoo_finance_hint: gratuït, no cal clau API
+        tinkoff_invest_hint: requereix un token de només lectura -- preus d'accions, fons i bons russos + logotips de marques
+        requires_api_key_mansa: requereix clau API, nivell gratuït de 100 crides/dia -- només NGX (Nigerian Exchange)
       show:
         ai_assistant: Assistent d'IA
         clear_cache: Neteja la memòria cau de dades
@@ -191,13 +204,14 @@ ca:
           body: Segur que vols netejar la memòria cau de dades? Això eliminarà tots
             els tipus de canvi, preus de valors, saldos de comptes i altres dades.
             Aquesta acció no es pot desfer.
-          title: Netejar la memòria cau de dades?
+          title: Vols netejar la memòria cau de dades?
         danger_zone: Zona perillosa
         financial_data_providers: Proveïdors de dades financeres
         general: Configuració general
         invites: Codis d'invitació
         sync_settings: Configuració de sincronització
         title: Self hosting
+        property_valuation_providers: Proveïdors de valoració d'immobles
       sync_auto_sync_scheduler!:
         scheduler_sync_failed: La configuració s'ha desat, però no s'ha pogut actualitzar
           la planificació de sincronització. Torna-ho a provar o revisa els registres
@@ -213,7 +227,7 @@ ca:
           d'entorn del proveïdor (SIMPLEFIN_INCLUDE_PENDING o PLAID_INCLUDE_PENDING)
           està establerta. Elimina-la per activar aquesta opció.
         include_pending_description: Quan està activat, les transaccions pendents
-          (no liquidades) s'importaran i es reconciliaran automàticament quan es publiquin.
+          (no liquidades) s'importaran i es conciliaran automàticament quan es comptabilitzin.
           Desactiva-ho si el teu banc proporciona dades pendents poc fiables.
         include_pending_label: Inclou transaccions pendents
       tiingo_settings:
@@ -254,13 +268,15 @@ ca:
       update:
         failure: Valor de configuració invàlid
         invalid_llm_budget: "%{field} ha de ser un nombre enter ≥ %{minimum}."
-        invalid_onboarding_state: Estat d'inici de sessió invàlid
+        invalid_onboarding_state: Estat de registre no vàlid
         invalid_sync_time: Format d'hora de sincronització invàlid. Utilitza el format
           HH:MM (p. ex., 02:30).
         scheduler_sync_failed: La configuració s'ha desat, però no s'ha pogut actualitzar
           la planificació de sincronització. Torna-ho a provar o revisa els registres
           del servidor.
         success: Configuració actualitzada
+        invalid_anthropic_base_url: L'URL base d'Anthropic ha de ser un URL http(s).
+        anthropic_model_required_for_base_url: Cal indicar el model d'Anthropic quan s'estableix un URL base personalitzat.
       yahoo_finance_settings:
         connection_failed: No s'ha pogut connectar amb Yahoo Finance
         description: Yahoo Finance ofereix accés gratuït a preus d'accions, tipus
@@ -270,3 +286,68 @@ ca:
         title: Yahoo Finance
         troubleshooting: Comprova la connexió a Internet i la configuració del tallafoc.
           És possible que Yahoo Finance estigui temporalment no disponible.
+        status_healthy: Yahoo Finance està actiu i funciona.
+        status_rate_limited: Yahoo Finance està limitant temporalment les sol·licituds.
+        rate_limited_title: S'ha arribat al límit de sol·licituds de Yahoo Finance.
+        rate_limited_message: No cal fer res. Sure evitarà comprovacions d'estat addicionals durant 30 minuts. Les operacions de preus i tipus de canvi continuen de manera independent.
+        status_unavailable: Yahoo Finance no està disponible en aquest moment.
+        unavailable_title: No s'ha pogut verificar Yahoo Finance.
+        unavailable_message: No s'ha pogut accedir a Yahoo Finance o ha retornat una resposta inesperada. Comprova la connexió a Internet i torna-ho a provar més tard.
+        status_unknown: S'està comprovant l'estat de Yahoo Finance.
+      llm_provider_selector:
+        title: Proveïdor d'IA
+        description: Tria quin LLM impulsa el xat d'IA. Les operacions per lots (categorització de transaccions, detecció de comerços i processament de PDF) ara com ara sempre utilitzen OpenAI.
+        env_configured_message: Configurat correctament mitjançant la variable d'entorn LLM_PROVIDER.
+        provider_label: Proveïdor d'LLM actiu
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
+        provider_help: El canvi de proveïdor s'aplica al xat següent. Configura a continuació les credencials del proveïdor actiu.
+        not_configured_hint: Afegeix una clau API de %{provider} a continuació per activar-lo.
+        data_retention_heading: Tractament de les dades
+        data_retention: Per defecte, les dades enviades a l'API no s'utilitzen per entrenar models; les API allotjades pels proveïdors conserven les dades uns 30 dies per a la supervisió d'abusos i seguretat. Els endpoints personalitzats o autoallotjats segueixen la teva pròpia política.
+      anthropic_settings:
+        title: Anthropic (Claude)
+        description: Introdueix la teva clau API d'Anthropic. Opcionalment, apunta l'URL base a AWS Bedrock o GCP Vertex.
+        env_configured_message: Configurat correctament mitjançant variables d'entorn.
+        access_token_label: Clau API
+        access_token_placeholder: Introdueix la teva clau API d'Anthropic
+        base_url_label: URL base (opcional)
+        base_url_placeholder: https://api.anthropic.com (per defecte)
+        model_label: Model per defecte (opcional)
+        model_placeholder: claude-sonnet-4-6 (per defecte)
+        model_help: S'utilitza per al xat i el processament de PDF. Les operacions per lots (categorització, detecció de comerços) utilitzen Haiku per defecte per reduir costos.
+      rentcast_settings:
+        title: RentCast
+        description: Introdueix la teva clau API de RentCast per consultar dades i estimacions de valor d'immobles dels EUA en afegir un immoble. El nivell gratuït està limitat a 50 sol·licituds d'API al mes, compartides entre les consultes d'immobles i les actualitzacions diàries de la valoració. Amb un pla de pagament, augmenta el límit amb la variable d'entorn RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurat correctament mitjançant la variable d'entorn RENTCAST_API_KEY.
+        label: Clau API
+        placeholder: Introdueix aquí la teva clau API de RentCast
+        usage: '%{used} de %{limit} sol·licituds mensuals utilitzades'
+      realie_settings:
+        title: Realie
+        description: Introdueix la teva clau API de Realie per consultar dades i estimacions de valor d'immobles dels EUA en afegir un immoble. El nivell gratuït està limitat a 25 sol·licituds d'API al mes, compartides entre les consultes d'immobles i les actualitzacions diàries de la valoració. Amb un pla de pagament, augmenta el límit amb la variable d'entorn REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurat correctament mitjançant la variable d'entorn REALIE_API_KEY.
+        label: Clau API
+        placeholder: Introdueix aquí la teva clau API de Realie
+        usage: '%{used} de %{limit} sol·licituds mensuals utilitzades'
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: Introdueix un token d'API de T-Invest de només lectura. S'utilitza per obtenir logotips de marques per als valors (inclosos fons i bons, fins i tot quan MOEX en proporciona els preus) i, si està activat a dalt, preus d'instruments russos.
+        moex_only_notice: 'No està activat per a preus a dalt: T-Invest s''utilitza per obtenir logotips de marques per a tots els teus valors sempre que hi hagi un token configurat, independentment de la casella de dalt.'
+        env_configured_message: Configurat correctament mitjançant la variable d'entorn TINKOFF_INVEST_API_KEY.
+        label: Token d'API
+        placeholder: Introdueix aquí el teu token d'API de T-Invest
+        show_details: (mostra detalls)
+        step_1: Obre les inversions de T-Bank i ves a Configuració i després a Tokens d'API (cal tenir un compte de valors obert a T-Bank).
+        step_2: Crea un token amb accés de només lectura.
+        step_3: Copia el token i enganxa'l a sota.
+      mansa_settings:
+        title: Mansa
+        description: Introdueix la clau API de Mansa API. Admet NGX (Nigerian Exchange), que no cobreix cap altre proveïdor d'aquí. Mansa també cobreix altres borses africanes, però només NGX s'ha verificat amb aquesta integració.
+        env_configured_message: Configurat correctament mitjançant la variable d'entorn MANSA_API_KEY.
+        label: Clau API
+        placeholder: Introdueix aquí la teva clau API de Mansa
+        show_details: (mostra detalls)
+        step_1_html: Visita <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> i obtén la teva clau API gratuïta -- no cal targeta.
+        step_2: Copia la clau API i enganxa-la a sota.
+        rate_limit_warning: El nivell gratuït de Mansa està limitat a 100 crides d'API al dia i només ofereix cotitzacions actuals -- els preus històrics requereixen un pla de pagament. Només NGX (Nigerian Exchange) s'ha verificat amb aquesta integració; les altres borses africanes que cobreix Mansa encara no s'admeten aquí.

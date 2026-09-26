@@ -20,17 +20,35 @@ ca:
         title: Balanç patrimonial
         value: Valor
         weight: Pes
+        expand_all: Desplega-ho tot
+        collapse_all: Plega-ho tot
       cashflow_preview:
         node_labels:
           cash_flow: "Flux de caixa"
           surplus: "Superàvit"
           deficit: "Dèficit"
+        title: Nou diagrama de Sankey
+        preview: Experimental
+        preview_tooltip: Aquest diagrama substituirà la visualització de dalt, ja que utilitza una nova API compartida amb el client mòbil en Swift.
+        feedback_prompt: Compara aquest diagrama amb l'original de dalt i digues-nos si es veu diferent, a part de l'ordenació.
+        positive: Sembla correcte
+        negative: Hi ha alguna cosa malament
+        feedback_title: Comentaris sobre el diagrama de flux de caixa
+        feedback_loading: Carregant el formulari de comentaris…
+        feedback_unavailable: Ara mateix no es poden enviar comentaris. Torna-ho a provar més tard.
+        feedback_thanks: Gràcies per ajudar-nos a millorar el diagrama!
+        feedback_privacy: La teva resposta s'envia a PostHog. Descriu el problema sense números de compte, saldos ni altres dades financeres privades.
+        feedback_submit: Envia els comentaris
       cashflow_sankey:
         add_transaction: Afegeix una transacció
         no_data_description: Afegeix transaccions per mostrar dades de flux de caixa
           o amplia el període de temps
         no_data_title: No hi ha dades de flux de caixa per a aquest període de temps
         title: Flux de caixa
+        loading: Carregant el flux de caixa…
+        load_error: No s'ha pogut carregar el flux de caixa. Torna-ho a provar.
+        retry: Torna-ho a provar
+        zoom_out: Torna al flux de caixa complet
       drag_to_reorder: Arrossega per reordenar la secció
       investment_summary:
         add_investment: Afegeix un compte d'inversió per seguir la teva cartera
@@ -68,6 +86,40 @@ ca:
       subtitle: Això és el que està passant amb les teves finances
       toggle_section: Commuta la visibilitat de la secció
       welcome: Benvingut/da de nou, %{name}
+      sections_aria_label: Seccions del tauler
+      widget_size:
+        label: Ajusta la mida
+        width_label: Amplada
+        half: Meitat
+        full: Completa
+        height_label: Alçada
+        compact: Compacta
+        auto: Automàtica
+        tall: Alta
+      insights_feed:
+        title: Observacions
+      money_flow:
+        title: Entrades / Sortides
+        date_range: Del %{start_date} al %{end_date}
+        month_picker_aria_label: Selecciona el mes
+        filter_accounts: Filtra comptes (%{count})
+        filter_accounts_all: Tots els comptes
+        period_scope_hint: Mostra els mesos que triïs aquí, independentment del període del tauler de la part superior.
+        search_accounts: Cerca comptes
+        apply: Aplica
+        balance: Saldo de transaccions
+        chart_span: Últims %{count} mesos
+        income: Ingressos
+        expenses: Despeses
+      spending_trend:
+        title: Despesa
+        date_range: Del %{start_date} al %{end_date}
+        date_range_short: '%{start_date} - %{end_day}, %{year}'
+        date_range_short_single: '%{date}, %{year}'
+        month_picker_aria_label: Selecciona el mes
+        period_scope_hint: Mostra el mes que triïs aquí, independentment del període del tauler de la part superior.
+        no_data: No hi ha dades de despesa per a aquest mes
+        previous_comparison_days: (1-%{end_day})
     feedback:
       bug_report: Informa d'un error
       description: Fes-nos saber si tens cap comentari específic. No dubtis a incloure
@@ -108,3 +160,6 @@ ca:
       heading: Condicions del servei
       placeholder: El contingut de les condicions del servei es mostrarà aquí.
       title: Condicions del servei
+    release_notes_unavailable:
+      name: Notes de la versió no disponibles
+      body_html: <p>Ara mateix no es poden obtenir les notes de la versió més recents. Torna-ho a comprovar més tard o visita directament la nostra <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>pàgina de versions a GitHub</a>.</p>

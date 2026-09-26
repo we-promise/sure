@@ -10,6 +10,8 @@ ca:
       monthly_average: "%{amount}/mes (mitjana)"
       shared_placeholder: Compartit
       shared_title: Deixa-ho buit per compartir el pressupost de la categoria pare
+      rollover_label: Traspàs del romanent
+      rollover_title: Conserva els diners no gastats d'aquesta categoria d'un mes al següent
     confirm_button:
       confirm: Confirma
     index:
@@ -35,6 +37,31 @@ ca:
       spending: Despesa de %{date}
       status: Estat
       view_all_transactions: Veure totes les transaccions de la categoria
+      rolled_over: Traspassat
+    bills_reserved: '%{amount} reservats per a factures'
+    bills_reserved_unconvertible:
+      one: '%{count} factura no està reservada, no hi ha tipus de canvi disponible'
+      other: '%{count} factures no estan reservades, no hi ha tipus de canvi disponible'
+    budget_category:
+      rolled_over: +%{amount} traspassat
+    move:
+      button_title: Mou diners des d'aquesta categoria
+      cancel: Cancel·la
+      dialog_title: Mou diners
+      no_destination: 'Ara mateix aquest és l''únic sobre entre el qual es poden moure diners: una categoria no pot enviar-ne a la seva categoria pare ni a les seves subcategories.'
+      submit: Mou
+      amount_label: Import
+      available: '%{amount} disponibles'
+      from_label: Des de
+      to_label: A
+      success: Diners moguts.
+      errors:
+        different_budgets: Les dues categories han de pertànyer al mateix pressupost.
+        insufficient_funds: És més del que té assignat aquesta categoria.
+        non_positive_amount: Introdueix un import superior a zero.
+        parent_child: No es poden moure diners entre una categoria i una de les seves subcategories; ajusta directament la subcategoria.
+        same_category: Tria una altra categoria a la qual moure els diners.
+        uncategorized: «Sense categoria» no és un sobre real, així que no s'hi poden moure diners ni treure'n.
   budgets:
     actuals_summary:
       expenses: Despeses
@@ -91,6 +118,7 @@ ca:
         all: Totes
         on_track: Sota control
         over_budget: Pressupost superat
+        aria_label: Filtra les categories del pressupost
       on_track_categories:
         short_title: Sota control
         title: Sota control
@@ -100,3 +128,13 @@ ca:
       tabs:
         actual: Real
         budgeted: Pressupostat
+    switcher:
+      aria_label: Canvia de pressupost
+      household: Llar
+    available_cash:
+      heading: Efectiu disponible
+      subtitle: Al costat del pla de dalt, però no en forma part.
+      available: Disponible en efectiu
+      earmarked: Ja reservat per a objectius
+      free: Realment lliure
+      goals_link: Veure objectius

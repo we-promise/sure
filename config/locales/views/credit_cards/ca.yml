@@ -13,5 +13,12 @@ ca:
       expiration_date: Data de caducitat
       minimum_payment: Pagament mínim
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automàtic
+      simplefin_balance_sign_credit: Crèdit (el banc et deu diners)
+      simplefin_balance_sign_debt: Deute (deus diners al banc)
+      simplefin_balance_sign_description: Força el signe només quan SimpleFIN informi d'un signe ambigu. L'opció automàtica continua fent servir l'historial de transaccions i el saldo del proveïdor.
+      simplefin_balance_sign_label: Significat del saldo de SimpleFIN
+      treat_balance_as_available_credit_description: Activa-ho si el teu banc informa del saldo d'aquesta targeta com el crèdit disponible restant en lloc de l'import degut. Aleshores el deute es calcula a partir del límit de crèdit que informa el teu banc o, si el banc no el proporciona, del camp Crèdit disponible.
+      treat_balance_as_available_credit_label: El saldo és el crèdit disponible
     new:
       title: Introdueix les dades de la targeta de crèdit

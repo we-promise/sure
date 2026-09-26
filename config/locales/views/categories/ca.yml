@@ -32,6 +32,7 @@ ca:
       delete_all: Elimina-les totes
       empty: No s'han trobat categories
       new: Nova categoria
+      merge: Fusiona categories
     menu:
       loading: Carregant...
     new:
@@ -42,6 +43,22 @@ ca:
       payment: Pagament
       trade: Operació
       transfer: Transferència
+    merge:
+      title: Fusiona categories
+      description: Selecciona una categoria de destinació i les categories que s'hi fusionaran. Les transaccions i les línies de pressupost corresponents es mouran a la destinació.
+      target_label: Fusiona a (destinació)
+      select_target: Selecciona la categoria de destinació...
+      sources_label: Categories a fusionar
+      sources_hint: Les categories seleccionades s'eliminaran després que les seves transaccions i línies de pressupost es moguin a la destinació. No seleccionis la destinació com a origen.
+      submit: Fusiona les seleccionades
+    perform_merge:
+      success:
+        one: S'ha fusionat %{count} categoria correctament
+        other: S'han fusionat %{count} categories correctament
+      no_categories_selected: No s'ha seleccionat cap categoria per fusionar
+      target_not_found: No s'ha trobat la categoria de destinació
+      invalid_categories: S'han seleccionat categories no vàlides
+      target_selected_as_source: Tria categories diferents per a la destinació i els orígens.
   category:
     dropdowns:
       show:

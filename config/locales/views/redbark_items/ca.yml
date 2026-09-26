@@ -1,0 +1,189 @@
+---
+ca:
+  redbark_items:
+    default_name: Connexió de Redbark
+    sync_status:
+      no_accounts: No s'han trobat comptes
+      synced:
+        one: '%{count} compte sincronitzat'
+        other: '%{count} comptes sincronitzats'
+      synced_with_setup: '%{linked} sincronitzats, %{unlinked} pendents de configurar'
+    institution_summary:
+      none: No hi ha entitats connectades
+      count:
+        one: '%{count} entitat'
+        other: '%{count} entitats'
+    errors:
+      provider_not_configured: El proveïdor Redbark no està configurat
+    sync:
+      status:
+        importing: Important comptes des de Redbark...
+        processing: Processant les transaccions...
+        calculating: Calculant els saldos...
+        importing_data: Important les dades dels comptes...
+        checking_setup: Comprovant la configuració dels comptes...
+        needs_setup: '%{count} comptes necessiten configuració...'
+      success: Sincronització iniciada
+    panel:
+      setup_instructions: 'Instruccions de configuració:'
+      step_1: Crea una clau API a app.redbark.com, a l'apartat Settings
+      step_2: Introdueix la teva clau API a continuació i fes clic al botó Desa
+      step_3: Un cop connectat correctament, ves a la pestanya Comptes per configurar els comptes nous
+      field_descriptions: 'Descripció dels camps:'
+      optional: (Opcional)
+      required: (obligatori)
+      optional_with_default: (opcional, per defecte %{default_value})
+      save_button: Desa la configuració
+      update_button: Actualitza la configuració
+      status_configured_html: Configurat i a punt per utilitzar. Ves a la pestanya <a href="%{accounts_path}" class="link">Comptes</a> per gestionar i configurar els comptes.
+      status_not_configured: No configurat
+      fields:
+        api_key:
+          label: Clau API
+          description: La teva clau API de Redbark (comença per rbk_live_)
+          placeholder_new: rbk_live_...
+          placeholder_update: Introdueix una clau API nova per actualitzar-la
+    create:
+      success: Connexió de Redbark creada correctament
+    update:
+      success: Connexió de Redbark actualitzada
+    destroy:
+      success: Connexió de Redbark eliminada
+      unlink_failed:
+        one: No s'ha pogut desenllaçar %{count} compte. Torna-ho a provar.
+        other: No s'han pogut desenllaçar %{count} comptes. Torna-ho a provar.
+    index:
+      title: Connexions de Redbark
+    loading:
+      loading_message: Carregant els comptes de Redbark...
+      loading_title: Carregant
+    redbark_item:
+      accounts_need_setup: Els comptes necessiten configuració
+      delete: Elimina la connexió
+      deletion_in_progress: eliminació en curs...
+      error: Error
+      more_accounts_available:
+        one: '%{count} compte més disponible'
+        other: '%{count} comptes més disponibles'
+      no_accounts_description: Aquesta connexió encara no té cap compte enllaçat.
+      no_accounts_title: Sense comptes
+      provider_name: Redbark
+      requires_update: La connexió necessita actualització
+      setup_action: Configura els comptes nous
+      setup_description: '%{linked} de %{total} comptes enllaçats. Tria els tipus de compte per als comptes de Redbark que acabes d''importar.'
+      setup_needed: Comptes nous a punt per configurar
+      status: Sincronitzat fa %{timestamp}
+      status_never: Mai sincronitzat
+      status_with_summary: Darrera sincronització fa %{timestamp} - %{summary}
+      syncing: Sincronitzant...
+      total: Total
+      unlinked: Sense enllaçar
+      update_credentials: Actualitza les credencials
+    select_accounts:
+      accounts_selected: comptes seleccionats
+      api_error: 'Error de l''API: %{message}'
+      cancel: Cancel·la
+      configure_name_in_provider: 'No es pot importar: configura el nom del compte a Redbark'
+      description: Selecciona els comptes que vols enllaçar al teu compte de %{product_name}.
+      link_accounts: Enllaça els comptes seleccionats
+      no_accounts_found: No s'han trobat comptes. Comprova la configuració de la clau API.
+      no_api_key: La clau API de Redbark no està configurada. Configura-la a Configuració.
+      no_credentials_configured: Configura primer les credencials de Redbark a la configuració de proveïdors.
+      no_name_placeholder: (Sense nom)
+      title: Selecciona comptes de Redbark
+    select_existing_account:
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor
+      all_accounts_already_linked: Tots els comptes de Redbark ja estan enllaçats
+      api_error: 'Error de l''API: %{message}'
+      balance_label: 'Saldo:'
+      cancel: Cancel·la
+      cancel_button: Cancel·la
+      configure_name_in_provider: 'No es pot importar: configura el nom del compte a Redbark'
+      connect_hint: Connecta un compte de Redbark per activar la sincronització automàtica.
+      description: Selecciona un compte de Redbark per enllaçar-lo amb aquest compte. Les transaccions se sincronitzaran i es desduplicaran automàticament.
+      header: Enllaça amb Redbark
+      link_account: Enllaça el compte
+      link_button: Enllaça aquest compte
+      linking_to: 'S''enllaçarà amb:'
+      no_account_specified: No s'ha especificat cap compte
+      no_accounts: No s'han trobat comptes de Redbark sense enllaçar.
+      no_accounts_found: No s'han trobat comptes de Redbark. Comprova la configuració de la clau API.
+      no_api_key: La clau API de Redbark no està configurada. Configura-la a Configuració.
+      no_credentials_configured: Configura primer les credencials de Redbark a la configuració de proveïdors.
+      no_name_placeholder: (Sense nom)
+      settings_link: Ves a la configuració de proveïdors
+      subtitle: Tria un compte de Redbark
+      title: Enllaça %{account_name} amb Redbark
+    link_existing_account:
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor
+      api_error: 'Error de l''API: %{message}'
+      invalid_account_name: No es pot enllaçar un compte sense nom
+      provider_account_already_linked: Aquest compte de Redbark ja està enllaçat a un altre compte
+      provider_account_not_found: No s'ha trobat el compte de Redbark
+      missing_parameters: Falten paràmetres obligatoris
+      no_api_key: No s'ha trobat la clau API de Redbark. Configura-la a la configuració de proveïdors.
+      success: '%{account_name} s''ha enllaçat correctament amb Redbark'
+    setup_accounts:
+      account_type_label: 'Tipus de compte:'
+      accounts_count:
+        one: '%{count} compte disponible'
+        other: '%{count} comptes disponibles'
+      all_accounts_linked: Tots els teus comptes de Redbark ja estan configurats.
+      api_error: 'Error de l''API: %{message}'
+      creating: Creant comptes...
+      fetch_failed: No s'han pogut obtenir els comptes
+      import_selected: Importa els comptes seleccionats
+      instructions: Selecciona els comptes que vols importar de Redbark. Pots triar-ne diversos.
+      no_accounts: No s'han trobat comptes sense enllaçar en aquesta connexió de Redbark.
+      no_accounts_to_setup: No hi ha comptes per configurar
+      no_api_key: La clau API de Redbark no està configurada. Comprova la configuració de la connexió.
+      select_all: Selecciona-ho tot
+      account_types:
+        skip: Omet aquest compte
+        depository: Compte corrent o d'estalvis
+        credit_card: Targeta de crèdit
+        loan: Préstec o hipoteca
+        other_asset: Altre actiu
+      subtype_labels:
+        depository: 'Subtipus de compte:'
+        credit_card: ''
+        loan: 'Tipus de préstec:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Les targetes de crèdit es configuraran automàticament com a comptes de targeta de crèdit.
+        other_asset: No calen opcions addicionals per a altres actius.
+      subtypes:
+        depository:
+          checking: Corrent
+          savings: Estalvis
+          hsa: Compte d'estalvi per a salut
+          cd: Dipòsit a termini
+          money_market: Mercat monetari
+        loan:
+          mortgage: Hipoteca
+          student: Préstec d'estudis
+          auto: Préstec per a vehicle
+          other: Altre préstec
+      balance: Saldo
+      cancel: Cancel·la
+      done: Fet
+      choose_account_type: 'Tria el tipus de compte correcte per a cada compte de Redbark:'
+      create_accounts: Crea els comptes
+      creating_accounts: Creant comptes...
+      historical_data_range: 'Període de dades històriques:'
+      subtitle: Tria els tipus de compte correctes per als comptes importats
+      sync_start_date_help: Selecciona fins a quina data vols sincronitzar l'historial de transaccions.
+      sync_start_date_label: 'Sincronitza les transaccions des del:'
+      title: Configura els teus comptes de Redbark
+    setup_required:
+      title: Connecta primer Redbark
+      not_configured_title: Redbark encara no està connectat
+      not_configured_description: Afegeix la teva clau API de Redbark a la configuració de proveïdors i torna aquí per enllaçar comptes.
+      go_to_provider_settings: Ves a la configuració de proveïdors
+    complete_account_setup:
+      all_skipped: S'han omès tots els comptes. No s'ha creat cap compte.
+      creation_failed: 'No s''han pogut crear els comptes: %{error}'
+      creation_failed_generic: No s'han pogut crear els comptes.
+      setup_failed: 'No s''han pogut crear %{count} compte(s). No s''ha canviat res més: soluciona el problema i torna-ho a provar.'
+      no_accounts: No hi ha comptes per configurar.
+      success: S'han creat correctament %{count} compte(s).

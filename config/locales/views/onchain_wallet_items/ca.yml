@@ -1,0 +1,111 @@
+---
+ca:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: S'ha trobat activitat
+      explanation: Aquest format d'adreça l'utilitza més d'una xarxa, i els saldos de cadascuna són diferents. Tria la que vols seguir.
+      no_activity_found: No s'ha trobat res
+      subtitle: '%{address}'
+      title: Quina xarxa?
+    destroy:
+      success: La connexió de cartera autocustodiada s'ha programat per eliminar-la.
+    disconnect_asset:
+      success: S'ha deixat de seguir %{symbol}. Se n'han conservat el compte i l'historial.
+    disconnect_wallet:
+      success:
+        one: S'ha deixat de seguir %{count} actiu d'aquesta adreça.
+        other: S'ha deixat de seguir %{count} actius d'aquesta adreça.
+    enable_crypto_prices:
+      not_self_hosted: En aquesta instal·lació, els proveïdors de dades de mercat els configura l'operador de la instància.
+      success: S'han activat els preus de criptomonedes. Els valors de les carteres apareixeran després de la propera sincronització.
+    errors:
+      address_required: Introdueix una adreça de cartera.
+      already_linked: Aquesta adreça ja se segueix en aquesta xarxa. Fes servir «Revisa els tokens» per canviar quins actius se segueixen.
+      chain_unreachable: No s'ha pogut accedir a l'explorador públic d'aquesta xarxa. Torna-ho a provar d'aquí a un moment.
+      rate_limited: L'explorador públic està limitant les sol·licituds en aquest moment. Torna-ho a provar d'aquí a uns minuts.
+      unexpected: S'ha produït un error en llegir aquesta cartera. Els detalls s'han registrat per al servei d'assistència.
+      unrecognized_address: No sembla una adreça de cap de les xarxes compatibles.
+      wallet_not_found: Aquesta connexió no segueix aquesta cartera.
+    link_wallet:
+      errors:
+        none_tracked: 'No s''ha seguit res: no s''ha pogut afegir %{assets}. Torna-ho a provar d''aquí a un moment.'
+        nothing_selected: Tria almenys un actiu per seguir.
+        some_failed: No s'ha pogut seguir %{assets} i s'ha deixat fora.
+      success:
+        one: Se segueix %{count} actiu d'aquesta cartera.
+        other: Se segueixen %{count} actius d'aquesta cartera.
+    manage:
+      assets_truncated: Aquesta adreça conté més tokens dels que es poden obtenir en una sola lectura, així que només es mostren els %{count} més fiables. Tot el que ja se segueix continua sincronitzant-se.
+      disconnect_asset: Deixa de seguir
+      disconnect_asset_confirm: Vols deixar de seguir %{symbol}? Se'n conserven el compte i l'historial, però deixen d'actualitzar-se.
+      disconnect_wallet: Desconnecta la cartera
+      disconnect_wallet_confirm: Vols deixar de seguir tots els actius d'aquesta adreça?
+      history_note: En desconnectar, es conserven els comptes i el seu historial; simplement deixen d'actualitzar-se.
+      history_truncated: 'No s''han pogut llegir totes les transferències d''aquesta adreça: hi ha més historial del que cobreix una sincronització, o l''explorador l''ha rebutjat. Els saldos són complets, però falten algunes transferències.'
+      native: Nativa
+      no_wallets: Encara no se segueix cap cartera.
+      review_tokens: Revisa els tokens
+      subtitle: Totes les adreces que llegeix aquesta connexió i què se segueix a cadascuna.
+      title: Gestiona les carteres autocustodiades
+    new_wallet:
+      address_label: Adreça de la cartera
+      address_placeholder: bc1..., 0x... o una adreça de Solana
+      bitcoin_single_address_note: Bitcoin se segueix adreça per adreça. No s'admeten les claus esteses (xpub/ypub/zpub), de manera que una cartera que reparteix els fons entre adreces derivades només mostrarà el saldo de l'adreça que introdueixis.
+      chain_auto_detect: Detecta automàticament
+      chain_label: Xarxa
+      continue: Continua
+      read_only_note: Només es llegeixen dades públiques de la cadena. No introdueixis mai una frase de recuperació ni una clau privada.
+      subtitle: Segueix una cartera de la qual tens les claus a partir de la seva adreça pública.
+      title: Afegeix una cartera autocustodiada
+    onchain_wallet_item:
+      assets_tracked:
+        one: '%{count} actiu seguit'
+        other: '%{count} actius seguits'
+      sync: Sincronitza ara
+      syncing: Sincronitzant...
+    wallet_card:
+      addresses_tracked:
+        one: '%{count} adreça seguida'
+        other: '%{count} adreces seguides'
+      deletion_in_progress: Eliminant...
+      delete: Elimina la connexió
+      needs_attention: Requereix atenció
+      no_wallets_message: Enllaça una adreça des de la configuració del proveïdor per veure-la aquí.
+      no_wallets_title: Encara no hi ha cap cartera enllaçada
+      status: Sincronitzat fa %{timestamp}
+      sync: Sincronitza ara
+      status_never: Encara no s'ha sincronitzat
+      syncing: Sincronitzant...
+    price_provider_warning:
+      body: Cap proveïdor de dades de mercat activat pot obtenir preus de criptomonedes, de manera que aquestes carteres segueixen les quantitats però mostren un valor de zero.
+      enable: Activa els preus de criptomonedes
+      exchange_rate_body: Les criptomonedes es valoren en USD i no hi ha cap proveïdor de tipus de canvi configurat per convertir-les a %{currency}, de manera que aquestes carteres segueixen les quantitats però mostren un valor de zero. Defineix EXCHANGE_RATE_PROVIDER; Frankfurter no necessita clau d'API.
+      exchange_rate_title: No hi ha cap proveïdor de tipus de canvi configurat
+      link: Obre la configuració de dades de mercat
+      title: Els preus de criptomonedes no estan configurats
+    provider_connection:
+      description: Segueix una cartera de la qual tens les claus a partir de la seva adreça pública.
+      name: Cartera autocustodiada
+    review_tokens:
+      save: Desa els actius seguits
+      subtitle: '%{chain} · %{address}'
+      title: Revisa els actius seguits
+    token_review:
+      import_selected: Segueix els actius seleccionats
+      subtitle: '%{chain} · %{address}'
+      title: Tria què vols seguir
+    token_review_form:
+      assets_truncated: Aquesta adreça conté més tokens dels que es poden obtenir en una sola lectura, així que només es mostren els %{count} més fiables.
+      cancel: Cancel·la
+      explanation: 'Els actius amb un preu conegut estan marcats. La resta es deixen sense marcar: les carteres reben airdrops brossa, i seguir-ne un no aporta cap valor.'
+      native: Nativa
+      no_price: No hi ha preu disponible; només se segueix la quantitat
+      nothing_found: No veiem res en aquesta adreça en aquesta xarxa.
+    update:
+      success: S'ha actualitzat la connexió de cartera autocustodiada.
+    update_tokens:
+      errors:
+        no_changes: No ha canviat res; continuen marcats els mateixos actius.
+        none_tracked: 'No ha canviat res: no s''ha pogut afegir %{assets}. Torna-ho a provar d''aquí a un moment.'
+        some_failed: No s'ha pogut seguir %{assets} i s'ha deixat fora.
+      success: S'han actualitzat els actius seguits (%{created} afegits, %{removed} eliminats).

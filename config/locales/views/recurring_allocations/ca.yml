@@ -1,0 +1,15 @@
+---
+ca:
+  recurring_allocations:
+    over_allocation: Això assignaria més que l'import de la transacció
+    missing_rate: No hi ha cap tipus de canvi disponible; introdueix l'import explícitament
+    already_allocated: Aquesta transacció ja està aplicada a aquesta factura
+    invalid: No s'ha pogut registrar el pagament
+    create:
+      success: Pagament aplicat
+    destroy:
+      success: Pagament desenllaçat
+    confirm:
+      success: Pagament aplicat a la factura
+    reject:
+      success: Descartat. Aquesta transacció no es tornarà a suggerir per a aquesta factura.
