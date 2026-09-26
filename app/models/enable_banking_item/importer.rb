@@ -27,6 +27,12 @@ class EnableBankingItem::Importer
 
   PERIOD_BOUNDARY_TYPES = %w[opbd prcd].freeze
 
+  # Only these types may outrank OPBD/PRCD on freshness (see fresher_balance) —
+  # the same accounting-semantics exclusion as BALANCE_TYPE_PRIORITY itself, so a
+  # forward-looking FWAV or an informational INFO/OTHR can't override a legitimate
+  # booked figure just by carrying a later reference_date.
+  FRESHNESS_BALANCE_TYPES = %w[xpcd clav itav].freeze
+
   NETWORK_ERRORS = [
     ::SocketError,
     ::Errno::ECONNREFUSED,
@@ -293,7 +299,7 @@ class EnableBankingItem::Importer
       return nil unless reference_date
 
       balances
-        .reject { |balance| balance.equal?(period_boundary_balance) }
+        .select { |balance| FRESHNESS_BALANCE_TYPES.include?(normalize_balance_type(balance[:balance_type])) }
         .filter_map { |balance| [ balance, parse_reference_date(balance[:reference_date]) ] }
         .select { |_, date| date && date > reference_date }
         .max_by { |_, date| date }
