@@ -320,7 +320,7 @@ en:
       no_template_found: "No template found, please manually configure your import."
     destroy:
       deleted: "Your import has been deleted."
-      not_deletable: "This import contains committed data. Revert it before deleting."
+      not_deletable: "This import can't be deleted while it is importing or reverting. Wait for processing to finish. If it contains committed data, revert it before deleting."
     failure:
       title: Import failed
       description: Please check that your file format, for any errors and that all required fields are filled, then come back and try again.
@@ -482,7 +482,12 @@ en:
         other: "%{count} PDFs are being processed. You will receive an email when analysis is complete."
       invalid_pdf: The uploaded file is not a valid PDF.
       duplicate_pdf_unavailable: This PDF is already stored as a statement you cannot access.
-      duplicate_pdf: This PDF is a duplicate of a file already stored for your family.
+      duplicate_pdf_confirmation: This PDF is already stored in your family's shared imports and may have been added by another family member. Continue using the existing import?
+      duplicate_pdf_reused: This PDF was already stored for your family. Opening its existing import.
+      duplicate_pdf_reused_many:
+        one: 1 selected PDF was already stored for your family and was skipped.
+        other: "%{count} selected PDFs were already stored for your family and were skipped."
+      duplicate_pdf_unconfirmed: This PDF is already stored in your family's shared imports. Select it again and confirm the duplicate warning to continue.
       document_too_large: Document file is too large. Maximum size is %{max_size}MB.
       invalid_document_file_type: Invalid document file type for the active vector store.
       document_uploaded: Document uploaded successfully.

@@ -72,6 +72,14 @@ class ImportsController < ApplicationController
     @document_upload_extensions = document_upload_supported_extensions
   end
 
+  def check_pdf_duplicate
+    content_sha256 = params[:content_sha256].to_s
+    return render json: { duplicate: false }, status: :unprocessable_entity unless content_sha256.match?(/\A[0-9a-f]{64}\z/)
+
+    duplicate = Current.family.account_statements.exists?(content_sha256: content_sha256)
+    render json: { duplicate: duplicate }
+  end
+
   # Create one import or independently process the selected upload batch.
   def create
     files = Array(import_params[:import_file]).reject(&:blank?).filter_map do |upload|
@@ -80,6 +88,7 @@ class ImportsController < ApplicationController
     file = files.first
 
     allow_large_upload = import_params[:allow_large_upload] == "true"
+    allow_duplicate_upload = import_params[:allow_duplicate_upload] == "true"
 
     if document_upload_request? && files.sum(&:size) > Import::MAX_BATCH_UPLOAD_SIZE
       redirect_to new_import_path,
@@ -88,12 +97,12 @@ class ImportsController < ApplicationController
     end
 
     if files.size > 1 && document_upload_request?
-      create_multiple_document_imports(files, allow_large_upload: allow_large_upload)
+      create_multiple_document_imports(files, allow_large_upload: allow_large_upload, allow_duplicate_upload: allow_duplicate_upload)
       return
     end
 
     if file.present? && document_upload_request?
-      create_document_import(file, allow_large_upload: allow_large_upload)
+      create_document_import(file, allow_large_upload: allow_large_upload, allow_duplicate_upload: allow_duplicate_upload)
       return
     end
 
@@ -108,7 +117,7 @@ class ImportsController < ApplicationController
         redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
         return
       end
-      create_pdf_import(file, allow_large_upload: allow_large_upload)
+      create_pdf_import(file, allow_large_upload: allow_large_upload, allow_duplicate_upload: allow_duplicate_upload)
       return
     end
 
@@ -231,7 +240,7 @@ class ImportsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(:import_file, :allow_large_upload, import_file: [])
+      params.require(:import).permit(:import_file, :allow_large_upload, :allow_duplicate_upload, import_file: [])
     end
 
     def require_statement_import_permission!
@@ -241,7 +250,7 @@ class ImportsController < ApplicationController
       redirect_back_or_to redirect_target, alert: t("accounts.not_authorized")
     end
 
-    def create_pdf_import(file, allow_large_upload: false)
+    def create_pdf_import(file, allow_large_upload: false, allow_duplicate_upload: false)
       return redirect_to new_import_path, alert: t("accounts.not_authorized") unless AccountStatement.statement_manager?(Current.user)
       if file.size > AccountStatement::MAX_LARGE_PDF_SIZE
         redirect_to new_import_path, alert: t("imports.create.file_exceeds_max_size", max_size: AccountStatement::MAX_LARGE_PDF_SIZE / 1.megabyte)
@@ -252,17 +261,24 @@ class ImportsController < ApplicationController
         return
       end
 
-      pdf_import = create_pdf_import_record(file, allow_large_pdf: allow_large_upload)
-      pdf_import.process_with_ai_later
-      redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
-    rescue PdfImport::DuplicateUploadError
-      redirect_to new_import_path, alert: t("imports.create.duplicate_pdf")
+      pdf_import = create_pdf_import_record(file, allow_large_pdf: allow_large_upload, allow_duplicate_upload: allow_duplicate_upload)
+      processing_started = pdf_import.process_with_ai_later
+      unless processing_started || pdf_import.importing? || pdf_import.complete?
+        redirect_to new_import_path, alert: t("imports.create.pdf_processing_failed")
+        return
+      end
+
+      notice = processing_started ? t("imports.create.pdf_processing") : t("imports.create.duplicate_pdf_reused")
+      redirect_to import_path(pdf_import), notice: notice
+    rescue PdfImport::DuplicateUploadError => error
+      message = error.statement && !error.statement.manageable_by?(Current.user) ? "duplicate_pdf_unavailable" : "duplicate_pdf_unconfirmed"
+      redirect_to new_import_path, alert: t("imports.create.#{message}")
     rescue AccountStatement::InvalidUploadError
       redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
     end
 
     # Upload supported documents independently while preserving per-file errors.
-    def create_multiple_document_imports(files, allow_large_upload: false)
+    def create_multiple_document_imports(files, allow_large_upload: false, allow_duplicate_upload: false)
       adapter = VectorStore.adapter
       unless adapter
         redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
@@ -272,6 +288,7 @@ class ImportsController < ApplicationController
       supported_extensions = adapter.supported_extensions.map(&:downcase)
       processed_count = 0
       uploaded_count = 0
+      reused_count = 0
       errors = []
       handled_pdf_import_ids = {}
 
@@ -295,15 +312,16 @@ class ImportsController < ApplicationController
             next
           end
 
-          pdf_import = create_pdf_import_record(file, allow_large_pdf: allow_large_upload)
+          pdf_import = create_pdf_import_record(file, allow_large_pdf: allow_large_upload, allow_duplicate_upload: allow_duplicate_upload)
           if handled_pdf_import_ids[pdf_import.id]
-            errors << "#{filename}: #{t('imports.create.duplicate_pdf')}"
             next
           end
 
           handled_pdf_import_ids[pdf_import.id] = true
           if pdf_import.process_with_ai_later
             processed_count += 1
+          elsif pdf_import.importing? || pdf_import.complete?
+            reused_count += 1
           else
             errors << "#{filename}: #{t('imports.create.pdf_processing_failed')}"
           end
@@ -322,8 +340,9 @@ class ImportsController < ApplicationController
             errors << "#{filename}: #{t('imports.create.document_upload_failed')}"
           end
         end
-      rescue PdfImport::DuplicateUploadError
-        errors << "#{filename}: #{t('imports.create.duplicate_pdf')}"
+      rescue PdfImport::DuplicateUploadError => error
+        message = error.statement && !error.statement.manageable_by?(Current.user) ? "duplicate_pdf_unavailable" : "duplicate_pdf_unconfirmed"
+        errors << "#{filename}: #{t("imports.create.#{message}")}"
       rescue AccountStatement::InvalidUploadError
         errors << "#{filename}: #{t('imports.create.invalid_pdf')}"
       rescue StandardError => e
@@ -334,18 +353,21 @@ class ImportsController < ApplicationController
       if processed_count.positive? || uploaded_count.positive?
         notices = []
         notices << t("imports.create.pdf_processing_many", count: processed_count) if processed_count.positive?
+        notices << t("imports.create.duplicate_pdf_reused_many", count: reused_count) if reused_count.positive?
         notices << t("imports.create.document_uploaded_many", count: uploaded_count) if uploaded_count.positive?
         redirect_to imports_path, notice: notices.join(" "), alert: errors.presence&.join("\n")
+      elsif reused_count.positive?
+        redirect_to imports_path, notice: t("imports.create.duplicate_pdf_reused_many", count: reused_count), alert: errors.presence&.join("\n")
       else
         redirect_to new_import_path, alert: errors.presence&.join("\n") || t("imports.create.document_upload_failed")
       end
     end
 
-    def create_pdf_import_record(file, allow_large_pdf: false)
-      PdfImport.create_from_upload!(family: Current.family, file: file, allow_large_pdf: allow_large_pdf)
+    def create_pdf_import_record(file, allow_large_pdf: false, allow_duplicate_upload: false)
+      PdfImport.create_from_upload!(family: Current.family, file: file, allow_large_pdf: allow_large_pdf, allow_duplicate_upload: allow_duplicate_upload)
     end
 
-    def create_document_import(file, allow_large_upload: false)
+    def create_document_import(file, allow_large_upload: false, allow_duplicate_upload: false)
       adapter = VectorStore.adapter
       unless adapter
         redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
@@ -367,7 +389,7 @@ class ImportsController < ApplicationController
           return
         end
 
-        create_pdf_import(file, allow_large_upload: allow_large_upload)
+        create_pdf_import(file, allow_large_upload: allow_large_upload, allow_duplicate_upload: allow_duplicate_upload)
         return
       end
 

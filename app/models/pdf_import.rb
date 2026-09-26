@@ -1,5 +1,12 @@
 class PdfImport < Import
-  DuplicateUploadError = Class.new(StandardError)
+  DuplicateUploadError = Class.new(StandardError) do
+    attr_reader :statement
+
+    def initialize(statement = nil)
+      @statement = statement
+      super("PDF has already been uploaded")
+    end
+  end
 
   has_one_attached :pdf_file, dependent: :purge_later
 
@@ -63,9 +70,20 @@ class PdfImport < Import
       family.sync_later if needs_sync
     end
 
-    def create_from_upload!(family:, file:, allow_large_pdf: false)
+    def create_from_upload!(family:, file:, allow_large_pdf: false, allow_duplicate_upload: false)
       prepared_upload = AccountStatement.prepare_upload!(file, allow_large_pdf: allow_large_pdf)
-      raise DuplicateUploadError if duplicate_upload?(family, prepared_upload)
+      if duplicate_upload?(family, prepared_upload)
+        duplicate_statement = AccountStatement.duplicate_for(family, prepared_upload)
+        if duplicate_statement
+          if allow_duplicate_upload && duplicate_statement.manageable_by?(Current.user)
+            return create_from_statement!(statement: duplicate_statement)
+          end
+
+          raise DuplicateUploadError, duplicate_statement
+        end
+
+        raise DuplicateUploadError
+      end
 
       statement = AccountStatement.create_from_prepared_upload!(
         family: family,
@@ -76,7 +94,13 @@ class PdfImport < Import
 
       create_from_statement!(statement: statement)
     rescue AccountStatement::DuplicateUploadError => error
-      raise DuplicateUploadError if duplicate_upload?(family, prepared_upload)
+      if duplicate_upload?(family, prepared_upload)
+        if allow_duplicate_upload && error.statement.manageable_by?(Current.user)
+          return create_from_statement!(statement: error.statement)
+        end
+
+        raise DuplicateUploadError, error.statement
+      end
 
       if error.statement.account_id.blank? && !error.statement.pdf_imports.exists?
         error.statement.update!(pdf_import_owned: true)
