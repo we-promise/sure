@@ -469,6 +469,28 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     processor.process
   end
 
+  test "provider security lookups run before the account processor transaction" do
+    baseline = ActiveRecord::Base.connection.open_transactions
+    lookup_depths = []
+    Security.stubs(:search_provider).with do |*|
+      lookup_depths << ActiveRecord::Base.connection.open_transactions
+      true
+    end.returns([])
+    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
+    Security.stubs(:provider_for).returns(Object.new)
+    @tr_account.update!(
+      current_balance: 425,
+      raw_positions_payload: [
+        position_payload(isin: "DE000BASF111", quantity: "10", price: "42.50", symbol: "BAS", exchange_slug: "XETR")
+      ]
+    )
+
+    TradeRepublicAccount::Processor.new(@tr_account.reload).process
+
+    assert_equal [ baseline ], lookup_depths
+    assert_equal "BAS", @account.holdings.first.security.ticker
+  end
+
   test "maps a Trade Republic Tradegate symbol to the Tradegate MIC" do
     Security.stubs(:search_provider).returns([])
 

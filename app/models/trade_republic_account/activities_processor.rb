@@ -4,8 +4,9 @@ class TradeRepublicAccount::ActivitiesProcessor
   SAVEBACK_EVENT_TYPE = "SAVEBACK_AGGREGATE"
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
 
-  def initialize(trade_republic_account)
+  def initialize(trade_republic_account, exchange_securities: {})
     @trade_republic_account = trade_republic_account
+    @exchange_securities = exchange_securities
   end
 
   def process

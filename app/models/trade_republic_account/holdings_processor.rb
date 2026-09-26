@@ -1,8 +1,9 @@
 class TradeRepublicAccount::HoldingsProcessor
   include TradeRepublicAccount::DataHelpers
 
-  def initialize(trade_republic_account)
+  def initialize(trade_republic_account, exchange_securities: {})
     @trade_republic_account = trade_republic_account
+    @exchange_securities = exchange_securities
   end
 
   def process

@@ -97,19 +97,40 @@ module TradeRepublicAccount::DataHelpers
     def resolve_security(isin, name, symbol: nil, exchange_slug: nil)
       return nil if isin.blank?
 
+      usable_symbol, mic = exchange_listing_for(isin, symbol: symbol, exchange_slug: exchange_slug)
+      if usable_symbol
+        security = cached_exchange_security(usable_symbol, mic, name)
+        rematch_account_from_isin!(isin, security) if security
+        return security if security
+      end
+
+      resolve_offline_isin_security(isin, name)
+    end
+
+    # [symbol, mic] when Trade Republic supplied a usable exchange ticker.
+    def exchange_listing_for(isin, symbol: nil, exchange_slug: nil)
       position = position_metadata_for(isin)
       symbol = symbol.to_s.presence || position&.dig(:symbol)
       exchange_slug = exchange_slug.to_s.presence || position&.dig(:exchange_slug)
       mic = mic_for_exchange_slug(exchange_slug)
       usable_symbol = usable_exchange_symbol(symbol, isin)
 
-      if usable_symbol.present? && mic.present?
-        security = resolve_exchange_security(usable_symbol, mic, name)
-        rematch_account_from_isin!(isin, security) if security
-        return security if security
-      end
+      [ usable_symbol, mic ] if usable_symbol.present? && mic.present?
+    end
 
-      resolve_offline_isin_security(isin, name)
+    # Pre-resolved by TradeRepublicAccount::SecurityPrefetcher so the provider
+    # search runs before Processor opens its transaction.
+    def exchange_securities
+      @exchange_securities ||= {}
+    end
+
+    def cached_exchange_security(symbol, mic, name)
+      key = [ symbol, mic ]
+      return exchange_securities[key] if exchange_securities[key]
+
+      security = resolve_exchange_security(symbol, mic, name)
+      exchange_securities[key] = security if security
+      security
     end
 
     # Timeline trade details contain an ISIN but no exchange symbol. Reuse the
