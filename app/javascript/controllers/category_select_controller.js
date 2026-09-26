@@ -134,6 +134,12 @@ export default class extends Controller {
       this.selectionContainerTarget.textContent =
         option.dataset.categoryDisplayLabel;
     }
+
+    // Dispatched after the display text above is updated, not before --
+    // listeners (e.g. the transaction name preview) read the selection
+    // text synchronously off this event, so firing early would hand them
+    // the previous selection's label.
+    this.hiddenInputTarget.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   async createCategory() {

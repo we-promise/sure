@@ -39,6 +39,7 @@
          name="<%= field_name %>"
          value="<%= selected_id %>"
          data-merchant-select-target="hiddenInput"
+         data-action="change->transaction-name-preview#update"
          <%= "disabled" if disabled %>>
 
   <% unless disabled %>

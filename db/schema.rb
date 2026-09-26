@@ -839,6 +839,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
   create_table "families", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.jsonb "ai_prompt_overrides", default: {}, null: false
     t.string "assistant_type", default: "builtin", null: false
+    t.boolean "auto_generate_transaction_names", default: false, null: false
     t.boolean "auto_sync_on_login", default: true, null: false
     t.string "bills_feed_token"
     t.decimal "categorization_confidence_threshold", precision: 3, scale: 2, default: "0.7", null: false
