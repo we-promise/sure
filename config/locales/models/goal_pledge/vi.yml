@@ -1,0 +1,20 @@
+---
+vi:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: Số tiền
+        currency: Tiền tệ
+        account: Tài khoản
+        kind: Loại
+        status: Trạng thái
+        expires_at: Hết hạn lúc
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Hãy chọn một trong các tài khoản liên kết với mục tiêu.
+            currency:
+              must_match_goal: Tiền tệ của khoản góp phải trùng với tiền tệ của mục tiêu.
+          duplicate_open_pledge: Bạn đã có một khoản góp đang chờ với số tiền này trên tài khoản này. Hãy hủy hoặc gia hạn khoản hiện có trước khi ghi nhận khoản khác.

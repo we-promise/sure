@@ -1,0 +1,6 @@
+---
+vi:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: Danh tính SSO này có thể đăng nhập hoặc tạo tài khoản trở lại.

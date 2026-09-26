@@ -1,0 +1,102 @@
+---
+hu:
+  insights:
+    notification:
+      title: Új pénzügyi elemzés
+      body: Nyisd meg a Sure-t, és nézd meg a legújabb AI-elemzésedet.
+    index:
+      title: Elemzések
+      subtitle: Mi történik a pénzügyeidben – minden éjjel frissül.
+      refresh: Új elemzések keresése
+      empty:
+        title: Még nincsenek elemzések
+        description: Az elemzések akkor jelennek meg itt, ha elég aktivitás van a számláidon. Minden éjjel automatikusan frissülnek.
+    refresh:
+      queued: Friss elemzéseket készítünk. Nézz vissza egy perc múlva.
+      checking: Ellenőrzés…
+    card:
+      acknowledged: Elemzés elrejtve
+      acknowledge: Értem
+      acknowledge_title: Elrejtés, amíg a számok nem változnak
+      new: Új
+    feed:
+      view_all: Összes elemzés megtekintése
+      header: Legfrissebb
+      header_new: Új
+      acknowledge_aria: 'Értem: %{title}'
+    types:
+      spending_anomaly: Kiadások
+      cash_flow_warning: Pénzforgalom
+      net_worth_milestone: Nettó vagyon
+      subscription_audit: Előfizetések
+      savings_rate_change: Megtakarítási ráta
+      idle_cash: Kihasználatlan pénz
+      budget_at_risk: Költségvetés
+      budget_on_track: Költségvetés
+      maintained_goal_depleted: Tartalék
+    meta:
+      next_n_days:
+        one: Következő %{count} nap
+        other: Következő %{count} nap
+      last_n_days:
+        one: Elmúlt %{count} nap
+        other: Elmúlt %{count} nap
+      date_range: '%{from} – %{to}'
+    figures:
+      vs_previous: az előző hónaphoz képest
+      today: ma
+      on_pace: a jelenlegi ütemben
+      of_budget: a költségvetésből
+      need_attention: figyelmet igényel
+      days_overdue:
+        one: '%{count} napja lejárt'
+        other: '%{count} napja lejárt'
+      idle_days:
+        one: '%{count} napja nincs mozgás'
+        other: '%{count} napja nincs mozgás'
+    actions:
+      spending_anomaly: '%{category} tranzakciók megtekintése'
+      cash_flow_warning: Ismétlődő tranzakciók áttekintése
+      net_worth_milestone: Nettóvagyon-jelentés megtekintése
+      subscription_audit: Ismétlődő tranzakciók áttekintése
+      savings_rate_change: Az adott hónap tranzakcióinak megtekintése
+      idle_cash: Ugrás a számlához
+      budget: Költségvetés megtekintése
+      maintained_goal_depleted: Tartalék megtekintése
+    titles:
+      spending_anomaly:
+        above: 'Emelkednek a kiadások: %{category}'
+        below: 'Csökkennek a kiadások: %{category}'
+      cash_flow_warning:
+        low: Alacsonyra csökkenhet a készpénzegyenleged
+        negative: Negatívba fordulhat a készpénzegyenleged
+      net_worth_milestone: 'Nettó vagyon mérföldkő: %{milestone}'
+      maintained_goal_depleted: A(z) %{goal} a kívánt szint alá csökkent
+      subscription_audit: Aktív még a(z) %{name}?
+      savings_rate_change:
+        up: Javult a megtakarítási rátád (%{month})
+        down: Csökkent a megtakarítási rátád (%{month})
+      idle_cash: 'Kihasználatlan pénz: %{account}'
+      budget_at_risk:
+        one: '%{count} kategória figyelmet igényel a költségvetésedben'
+        other: '%{count} kategória figyelmet igényel a költségvetésedben'
+      budget_on_track: Tartod a költségvetésedet
+    templates:
+      spending_anomaly:
+        above: A jelenlegi ütemben ebben a hónapban %{projected_spend} lesz a(z) %{category} kiadásod, ami körülbelül %{deviation_pct}%-kal több, mint az utóbbi időszak %{baseline_spend} havi átlaga.
+        below: A jelenlegi ütemben ebben a hónapban %{projected_spend} lesz a(z) %{category} kiadásod, ami körülbelül %{deviation_pct}%-kal kevesebb, mint az utóbbi időszak %{baseline_spend} havi átlaga.
+      cash_flow_warning:
+        low: A közelgő ismétlődő tranzakcióid és a szokásos kiadásaid alapján a készpénzegyenleged %{projected_low_date} körül %{projected_low} összegre csökkenhet.
+        negative: A közelgő ismétlődő tranzakcióid és a szokásos kiadásaid alapján a készpénzegyenleged %{projected_low_date} körül %{projected_low} összegre eshet.
+      net_worth_milestone: A nettó vagyonod átlépte a(z) %{milestone} összeget, és most %{net_worth}.
+      maintained_goal_depleted: A(z) %{goal} egyenlege %{saved}, a megtartandó %{target} helyett. %{missing} hiányzik.
+      subscription_audit: A(z) %{name} (%{amount}) nem jelent meg a várt %{expected_on} időpont óta. Lehet, hogy lemondták, vagy máskor vonják le.
+      savings_rate_change:
+        up: A(z) %{month} hónapban a jövedelmed %{current_rate}%-át tetted félre, ez %{change_pp} százalékponttal több az előző havi %{previous_rate}%-nál.
+        down: A(z) %{month} hónapban a jövedelmed %{current_rate}%-át tetted félre, ez %{change_pp} százalékponttal kevesebb az előző havi %{previous_rate}%-nál.
+        down_negative: 'A(z) %{month} hónapban többet költöttél, mint amennyit kerestél: a megtakarítási rátád az előző havi %{previous_rate}%-ról %{current_rate}%-ra esett.'
+      idle_cash: A(z) %{account} számlán %{balance} van, és az elmúlt %{idle_days} napban nem volt rajta mozgás.
+      budget_at_risk:
+        over: 'Keretet túllépő kategóriák ebben a hónapban: %{categories}. Eddig a teljes költségvetésed %{budget_spent_pct}%-át használtad fel.'
+        near: 'Kerethez közeli kategóriák ebben a hónapban: %{categories}. Eddig a teljes költségvetésed %{budget_spent_pct}%-át használtad fel.'
+      budget_on_track: A(z) %{budgeted} költségvetésedből %{spent} összeget költöttél el (%{budget_spent_pct}%), és minden a kereten belül van.

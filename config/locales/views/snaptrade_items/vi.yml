@@ -7,7 +7,7 @@ vi:
       decryption_failed: "Không thể đọc thông tin xác thực SnapTrade. Vui lòng xóa và tạo lại kết nối này."
       connection_failed: "Kết nối SnapTrade thất bại: %{message}"
     callback:
-      success: "Đã kết nối brokerage! Vui lòng chọn tài khoản muốn liên kết."
+      success: "Đã kết nối công ty chứng khoán! Vui lòng chọn tài khoản muốn liên kết."
       no_item: "Không tìm thấy cấu hình SnapTrade."
     complete_account_setup:
       success:
@@ -28,7 +28,7 @@ vi:
       header: "Liên kết tài khoản hiện có"
       subtitle: "Chọn tài khoản SnapTrade để liên kết"
       no_accounts: "Không có tài khoản SnapTrade chưa liên kết."
-      connect_hint: "Bạn có thể cần kết nối brokerage trước."
+      connect_hint: "Bạn có thể cần kết nối công ty chứng khoán trước."
       settings_link: "Đi đến Cài đặt nhà cung cấp"
       linking_to: "Đang liên kết với tài khoản:"
       balance_label: "Số dư:"
@@ -39,16 +39,16 @@ vi:
       failed: "Liên kết tài khoản thất bại: %{message}"
       not_found: "Không tìm thấy tài khoản."
     connections:
-      unknown_brokerage: "Brokerage không xác định"
+      unknown_brokerage: "Công ty chứng khoán không xác định"
     delete_connection:
-      success: "Đã xóa kết nối thành công. Một slot đã được giải phóng."
+      success: "Đã xóa kết nối thành công. Đã giải phóng một suất kết nối."
       failed: "Xóa kết nối thất bại: %{message}"
       missing_authorization_id: "Thiếu ID ủy quyền"
       api_deletion_failed: "Không thể xóa kết nối khỏi SnapTrade - thiếu thông tin xác thực. Kết nối có thể vẫn tồn tại trong tài khoản SnapTrade của bạn."
     setup_accounts:
       title: "Thiết lập tài khoản SnapTrade"
       header: "Thiết lập tài khoản SnapTrade của bạn"
-      subtitle: "Chọn tài khoản brokerage muốn liên kết"
+      subtitle: "Chọn tài khoản chứng khoán muốn liên kết"
       syncing: "Đang lấy tài khoản của bạn..."
       loading: "Đang tải tài khoản từ SnapTrade..."
       loading_hint: "Nhấn Làm mới để kiểm tra tài khoản."
@@ -58,10 +58,10 @@ vi:
       info_cost_basis: "Cơ sở chi phí theo vị thế (nếu có)"
       info_activities: "Lịch sử giao dịch với nhãn hoạt động (Mua, Bán, Cổ tức, v.v.)"
       info_history: "Lịch sử giao dịch tối đa 3 năm"
-      free_tier_note: "Gói miễn phí SnapTrade cho phép 5 kết nối brokerage. Kiểm tra bảng điều khiển SnapTrade để xem mức sử dụng hiện tại."
+      free_tier_note: "Gói miễn phí SnapTrade cho phép 5 kết nối công ty chứng khoán. Kiểm tra bảng điều khiển SnapTrade để xem mức sử dụng hiện tại."
       no_accounts_title: "Không tìm thấy tài khoản"
-      no_accounts_message: "Không tìm thấy tài khoản brokerage nào. Điều này có thể xảy ra nếu bạn đã hủy kết nối hoặc brokerage không được hỗ trợ."
-      try_again: "Kết nối Brokerage"
+      no_accounts_message: "Không tìm thấy tài khoản chứng khoán nào. Điều này có thể xảy ra nếu bạn đã hủy kết nối hoặc công ty chứng khoán không được hỗ trợ."
+      try_again: "Kết nối công ty chứng khoán"
       back_to_settings: "Quay lại Cài đặt"
       available_accounts: "Tài khoản có sẵn"
       balance_label: "Số dư:"
@@ -77,6 +77,14 @@ vi:
       link_button: "Liên kết"
       linked_accounts: "Đã liên kết"
       linked_to: "Liên kết với:"
+      account_type_label: Loại tài khoản
+      account_types:
+        depository: Tài khoản thanh toán hoặc tiết kiệm
+        credit_card: Thẻ tín dụng
+        investment: Tài khoản đầu tư
+        crypto: Tài khoản tiền mã hóa
+        loan: Khoản vay hoặc hạn mức tín dụng
+        other_asset: Tài sản khác
     snaptrade_item:
       accounts_need_setup:
         one: "%{count} tài khoản cần thiết lập"
@@ -88,8 +96,8 @@ vi:
       status: "Đồng bộ lần cuối %{timestamp} trước - %{summary}"
       status_never: "Chưa bao giờ đồng bộ"
       reconnect: "Kết nối lại"
-      connect_brokerage: "Kết nối Brokerage"
-      add_another_brokerage: "Kết nối thêm brokerage"
+      connect_brokerage: "Kết nối công ty chứng khoán"
+      add_another_brokerage: "Kết nối thêm công ty chứng khoán"
       delete: "Xóa"
       setup_needed: "Tài khoản cần thiết lập"
       setup_description: "Một số tài khoản từ SnapTrade cần được liên kết với tài khoản Sure."
@@ -100,23 +108,49 @@ vi:
         one: "%{count} tài khoản khác có sẵn để thiết lập"
         other: "%{count} tài khoản khác có sẵn để thiết lập"
       no_accounts_title: "Chưa phát hiện tài khoản nào"
-      no_accounts_description: "Kết nối brokerage để nhập tài khoản đầu tư của bạn."
+      no_accounts_description: "Kết nối công ty chứng khoán để nhập tài khoản đầu tư của bạn."
+    oauth_authorize:
+      not_configured: Ủy quyền SnapTrade qua trình duyệt cần cả SNAPTRADE_OAUTH_CLIENT_SECRET lẫn SNAPTRADE_OAUTH_CLIENT_ID. Hãy đặt biến này rồi khởi động lại, hoặc ủy quyền bằng mã thiết bị.
+    oauth_callback:
+      success: Đã hoàn tất ủy quyền SnapTrade.
+      access_denied: Đã hủy ủy quyền SnapTrade.
+      state_mismatch: Ủy quyền SnapTrade không vượt qua bước kiểm tra bảo mật. Vui lòng thử lại.
+      failed: Không thể hoàn tất ủy quyền SnapTrade. Vui lòng thử lại.
+    oauth_device_flow:
+      title: Kết nối SnapTrade
+      subtitle: Ủy quyền cho Sure truy cập SnapTrade bằng mã thiết bị.
+      instructions: Mở SnapTrade, xác nhận mã thiết bị này, rồi quay lại đây để hoàn tất.
+      code_label: Mã thiết bị
+      open_snaptrade: Mở SnapTrade
+      start_button: Bắt đầu ủy quyền
+      complete_button: Tôi đã ủy quyền SnapTrade
+      cancel_button: Hủy
+      missing_client_id: SnapTrade OAuth chưa được cấu hình. Thêm SNAPTRADE_OAUTH_CLIENT_ID vào .env.local, khởi động lại ứng dụng, rồi thử lại.
+    start_oauth_device_flow:
+      failed: Không thể bắt đầu ủy quyền thiết bị SnapTrade. Vui lòng thử lại.
+    complete_oauth_device_flow:
+      success: Đã hoàn tất ủy quyền SnapTrade.
+      device_code_required: Không có phiên ủy quyền thiết bị SnapTrade nào đang diễn ra cho kết nối này. Hãy bắt đầu lại để nhận mã mới.
+      authorization_pending: SnapTrade chưa nhận được xác nhận của bạn. Hãy phê duyệt mã trong SnapTrade rồi thử lại.
+      expired: Mã thiết bị này đã hết hạn. Hãy bắt đầu ủy quyền lại.
+      access_denied: Yêu cầu ủy quyền SnapTrade đã bị từ chối.
+      failed: Không thể hoàn tất ủy quyền thiết bị SnapTrade. Vui lòng thử lại.
 
   providers:
     snaptrade:
       name: "SnapTrade"
-      connection_description: "Kết nối với brokerage qua SnapTrade (hỗ trợ 25+ sàn)"
-      description: "SnapTrade kết nối với 25+ brokerage lớn (Fidelity, Vanguard, Schwab, Robinhood, v.v.) và cung cấp lịch sử giao dịch đầy đủ với nhãn hoạt động và cơ sở chi phí."
-      free_tier_warning: "Gói miễn phí SnapTrade hỗ trợ 5 kết nối brokerage. Nâng cấp trên SnapTrade để có thêm."
+      connection_description: "Kết nối với công ty chứng khoán qua SnapTrade (hỗ trợ 25+ sàn)"
+      description: "SnapTrade kết nối với 25+ công ty chứng khoán lớn (Fidelity, Vanguard, Schwab, Robinhood, v.v.) và cung cấp lịch sử giao dịch đầy đủ với nhãn hoạt động và cơ sở chi phí."
+      free_tier_warning: "Gói miễn phí SnapTrade hỗ trợ 5 kết nối công ty chứng khoán. Nâng cấp trên SnapTrade để có thêm."
       status_connected:
         one: "%{count} tài khoản từ SnapTrade"
         other: "%{count} tài khoản từ SnapTrade"
       needs_setup:
         one: "%{count} cần thiết lập"
         other: "%{count} cần thiết lập"
-      status_ready: "Sẵn sàng kết nối brokerage"
+      status_ready: "Sẵn sàng kết nối công ty chứng khoán"
       setup_accounts_button: "Thiết lập tài khoản"
-      connect_button: "Kết nối Brokerage"
+      connect_button: "Kết nối công ty chứng khoán"
       connected_brokerages: "Đã kết nối:"
       manage_connections: "Quản lý kết nối"
       loading_connections: "Đang tải kết nối..."
@@ -126,11 +160,22 @@ vi:
         other: "%{count} tài khoản"
       orphaned_connection: "Kết nối mồ côi (không đồng bộ cục bộ)"
       needs_linking: "cần liên kết"
-      no_connections: "Không tìm thấy kết nối brokerage nào."
+      no_connections: "Không tìm thấy kết nối công ty chứng khoán nào."
       delete_connection: "Xóa"
-      delete_connection_title: "Xóa kết nối Brokerage?"
-      delete_connection_body: "Thao tác này sẽ xóa vĩnh viễn kết nối %{brokerage} khỏi SnapTrade. Tất cả tài khoản từ brokerage này sẽ bị hủy liên kết. Bạn cần kết nối lại để đồng bộ các tài khoản này."
+      delete_connection_title: "Xóa kết nối công ty chứng khoán?"
+      delete_connection_body: "Thao tác này sẽ xóa vĩnh viễn kết nối %{brokerage} khỏi SnapTrade. Tất cả tài khoản từ công ty chứng khoán này sẽ bị hủy liên kết. Bạn cần kết nối lại để đồng bộ các tài khoản này."
       delete_connection_confirm: "Xóa kết nối"
+      oauth_setup_step_1_html: Đăng ký ứng dụng OAuth tại <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: 'Chỉ dành cho luồng trình duyệt: thêm URL callback của ứng dụng này (<code>%{callback_url}</code>) làm redirect URI đã đăng ký'
+      oauth_setup_step_3: Đặt SNAPTRADE_OAUTH_CLIENT_ID trong biến môi trường và khởi động lại. Chỉ vậy là đủ để bật luồng mã thiết bị; thêm SNAPTRADE_OAUTH_CLIENT_SECRET nếu muốn dùng cả luồng trình duyệt
+      oauth_title: SnapTrade OAuth
+      oauth_status_ready: Ủy quyền cho Sure đọc dữ liệu tài khoản SnapTrade của bạn.
+      oauth_status_ready_device: Ủy quyền cho Sure bằng mã thiết bị để đọc dữ liệu tài khoản SnapTrade của bạn.
+      oauth_status_authorized: Đã ủy quyền với SnapTrade.
+      oauth_connect_button: Kết nối với SnapTrade
+      oauth_device_button: Dùng mã thiết bị
+      oauth_reauthorize_button: Ủy quyền lại
+      manage_at_snaptrade: Quản lý kết nối trên SnapTrade
 
   snaptrade_item:
     sync_status:
@@ -145,10 +190,10 @@ vi:
         one: "%{count} tổ chức"
         other: "%{count} tổ chức"
     brokerage_summary:
-      none: "Chưa kết nối brokerage nào"
+      none: "Chưa kết nối công ty chứng khoán nào"
       count:
-        one: "%{count} brokerage"
-        other: "%{count} brokerage"
+        one: "%{count} công ty chứng khoán"
+        other: "%{count} công ty chứng khoán"
     syncer:
       discovering: "Đang phát hiện tài khoản..."
       importing: "Đang nhập tài khoản từ SnapTrade..."
@@ -156,4 +201,4 @@ vi:
       calculating: "Đang tính toán số dư..."
       checking_config: "Đang kiểm tra cấu hình tài khoản..."
       needs_setup: "%{count} tài khoản cần thiết lập..."
-      activities_fetching_async: "Các hoạt động đang được lấy trong nền. Quá trình này có thể mất đến một phút đối với kết nối brokerage mới."
+      activities_fetching_async: "Các hoạt động đang được lấy trong nền. Quá trình này có thể mất đến một phút đối với kết nối công ty chứng khoán mới."

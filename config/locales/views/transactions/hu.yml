@@ -46,6 +46,12 @@ hu:
       tag_search_placeholder: Címke keresése vagy létrehozása
       tags_label: Címkék
       transfer: Átutalás
+      category_search_placeholder: Kategóriák keresése
+      create_category: „%{name}” létrehozása
+      create_category_error: Nem sikerült létrehozni a kategóriát
+      create_merchant: Létrehozás
+      create_merchant_error: Nem sikerült létrehozni a kereskedőt
+      merchant_search_placeholder: Kereskedő keresése vagy létrehozása
     create:
       created: Tranzakció létrehozva
     update:
@@ -81,7 +87,7 @@ hu:
       convert_to_trade_description: Konvertáld ezt a tranzakciót Vétel vagy Eladás ügyletté értékpapír-részletekkel a portfólió követéséhez.
       convert_to_trade_button: Konvertálás ügyletre
       transfer_matcher_description: Kösd össze ezt a tranzakciót a megfelelőjével egy másik számlán.
-      pending_duplicate_merger_title: Közzétett tranzakció duplikátuma?
+      pending_duplicate_merger_title: Könyvelt tranzakció duplikátuma?
       pending_duplicate_merger_description: Egyesítsd manuálisan ezt a függőben lévő tranzakciót a közzétett verziójával.
       pending_duplicate_merger_button: Összevonó megnyitása
       merchant_label: Kereskedő
@@ -102,13 +108,17 @@ hu:
       memo: "Megjegyzés"
       provider_extras: "Szolgáltatói kiegészítők"
       transfer_or_debt_payment: "Átutalás vagy adósságtörlesztés?"
-      open_matcher: "Összevonó megnyitása"
+      open_matcher: "Párosító megnyitása"
       convert: "Konvertálás"
+      create_bill: Fizetnivaló létrehozása
+      applied_to_title: Ezzel kiegyenlített fizetnivalók
+      applied_to_detail: '%{amount} a(z) %{date} napon esedékes fizetnivalóra'
+      applied_to_unreviewed: Ellenőrzésre vár
     activity_labels:
       buy: Vétel
       sell: Eladás
-      sweep_in: Beáramlás
-      sweep_out: Kiáramlás
+      sweep_in: Automatikus átvezetés (be)
+      sweep_out: Automatikus átvezetés (ki)
       dividend: Osztalék
       reinvestment: Újrabefektetés
       interest: Kamat
@@ -176,17 +186,17 @@ hu:
       edit_imports: "Importok szerkesztése"
       new_transaction: "Új tranzakció"
       categorize_button:
-        one: "Kategorizálás (1)"
+        one: "Kategorizálás (%{count})"
         other: "Kategorizálás (%{count})"
     categorizes:
       show:
         exit: "Kilépés"
         skip: "Kihagyás"
         remaining:
-          one: "1 kategorizálatlan tranzakció maradt"
+          one: "%{count} kategorizálatlan tranzakció maradt"
           other: "%{count} kategorizálatlan tranzakció maradt"
         transaction_count:
-          one: "1 tranzakció"
+          one: "%{count} tranzakció"
           other: "%{count} tranzakció"
         transactions_hint: "Jelöld ki a kizáráshoz, vagy rendelj hozzá közvetlenül a sorban eltérő kategóriát."
         assign_category: "Kategória hozzárendelése"
@@ -205,7 +215,7 @@ hu:
         all_done: "Minden tranzakció kategorizálva van"
       create:
         categorized:
-          one: "1 tranzakció kategorizálva"
+          one: "%{count} tranzakció kategorizálva"
           other: "%{count} tranzakció kategorizálva"
         rule_creation_failed: "Tranzakciók kategorizálva, de a szabály nem hozható létre (lehet, hogy már létezik)."
       entry_row:
@@ -294,6 +304,14 @@ hu:
         status_filter:
           confirmed: Megerősítve
           pending: Függőben
+        account_filter:
+          filter_accounts: Számlák szűrése
+        category_filter:
+          filter_category: Kategória szűrése
+        merchant_filter:
+          filter_merchants: Kereskedők szűrése
+        tag_filter:
+          filter_tags: Címkék szűrése
       menu:
         account_filter: Számla
         amount_filter: Összeg
@@ -328,7 +346,14 @@ hu:
       no_attachments: "Még nincsenek mellékletek"
       select_up_to: "Legfeljebb %{count} fájl kijelölése (képek vagy PDF-ek, max. %{size} MB darabonként) • %{used} / %{count} felhasználva"
       files:
-        one: "Fájl (1)"
+        one: "Fájl (%{count})"
         other: "Fájlok (%{count})"
       browse_to_add: "Fájlok hozzáadásához böngéssz"
       max_reached: "Elérted a maximális fájlkorlátot (%{count}/%{max}). Töröl egy meglévő fájlt, hogy másikat tölthess fel."
+    transfer_match:
+      auto_matched: Automatikusan párosítva
+      auto_matched_short: AP
+      confirm_match: Párosítás megerősítése
+      payment_confirmed: A befizetés megerősítve
+      reject_match: Párosítás elutasítása
+      transfer_confirmed: Az átutalás megerősítve

@@ -1,0 +1,116 @@
+---
+hu:
+  providers:
+    up:
+      name: Up
+      description: Ausztrál Up bankszámlák csatlakoztatása személyes hozzáférési tokennel
+  family:
+    up:
+      create_up_item:
+        default_name: Up-kapcsolat
+  up_account:
+    fallback: Up-számla
+  up_item:
+    errors:
+      account_processing_failed: Nem sikerült szinkronizálni az Up-számlát
+      account_sync_schedule_failed: Nem sikerült ütemezni az Up-számla szinkronizálását
+      transactions_failed: Nem sikerült lekérni az Up-tranzakciókat
+      sync_failed: Nem sikerült szinkronizálni az Up-kapcsolatot
+    sync_status:
+      no_accounts: Nem található számla
+      all_synced:
+        one: '%{count} számla szinkronizálva'
+        other: '%{count} számla szinkronizálva'
+      partial: '%{linked} szinkronizálva, %{unlinked} beállításra vár'
+    institution_summary:
+      none: Nincs csatlakoztatott pénzintézet
+      one: 1 pénzintézet
+      count:
+        one: '%{count} pénzintézet'
+        other: '%{count} pénzintézet'
+  up_items:
+    provider_panel:
+      default_connection_name: Up-kapcsolat
+      add_connection: Up-kapcsolat hozzáadása
+      update_connection: Kapcsolat frissítése
+      connection_name_label: Kapcsolat neve
+      connection_name_placeholder: Fő Up
+      access_token_label: Személyes hozzáférési token
+      access_token_placeholder: Illeszd be az Up személyes hozzáférési tokenedet
+      keep_access_token_placeholder: Hagyd üresen a meglévő token megtartásához
+      setup_accounts: Számlák beállítása
+      syncing: Szinkronizálás...
+      sync: Szinkronizálás
+      disconnect: Leválasztás
+      disconnect_confirm: 'Biztosan leválasztod ezt: %{name}?'
+    create:
+      success: Up-kapcsolat mentve.
+    update:
+      success: Up-kapcsolat frissítve.
+    destroy:
+      success: Az Up-kapcsolat törlése ütemezve.
+      unlink_failed: Nem sikerült leválasztani az Up-kapcsolatot
+    select_accounts:
+      title: Up-számlák összekapcsolása
+      description: Válaszd ki a hozzáadandó Up-számlákat.
+      no_accounts_found: Nem található össze nem kapcsolt Up-számla.
+      no_credentials_configured: Először állítsd be az Up-ot a szolgáltatói beállításokban.
+      cancel: Mégse
+      link_accounts: Számlák összekapcsolása
+    link_accounts:
+      success:
+        one: '%{count} Up-számla összekapcsolva.'
+        other: '%{count} Up-számla összekapcsolva.'
+      no_accounts_selected: Válassz ki legalább egy számlát.
+      no_credentials_configured: Először állítsd be az Up-ot a szolgáltatói beállításokban.
+      unsupported_account_type: Az Up nem támogatja ezt a számlatípust.
+      link_failed: Egyetlen számla sem lett összekapcsolva.
+    select_existing_account:
+      title: 'Up-számla összekapcsolása ezzel: %{account_name}'
+      description: Válassz egy össze nem kapcsolt Up-számlát, amelyet ehhez a számlához kapcsolsz.
+      no_accounts_found: Nem található össze nem kapcsolt Up-számla.
+      no_credentials_configured: Először állítsd be az Up-ot a szolgáltatói beállításokban.
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval.
+      cancel: Mégse
+      link_account: Számla összekapcsolása
+    link_existing_account:
+      success: 'Up-számla összekapcsolva ezzel: %{account_name}.'
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval.
+      up_account_already_linked: Ez az Up-számla már össze van kapcsolva.
+      no_account_selected: Válassz ki egy összekapcsolandó Up-számlát.
+    setup_accounts:
+      title: Up-számlák összekapcsolása
+      subtitle: Válaszd ki, hogyan jelenjenek meg az egyes Up-számlák a Sure-ben.
+      no_credentials: Először állítsd be az Up hitelesítő adatait.
+      api_error: Nem sikerült lekérni az Up-számlákat.
+      fetch_failed: Nem sikerült lekérni a számlákat
+      no_accounts_to_setup: Nincs beállítandó számla
+      all_accounts_linked: Minden Up-számla már össze van kapcsolva.
+      choose_account_type: Válassz számlatípust
+      choose_account_type_description: Hagyd ki azokat a számlákat, amelyeket nem szeretnél követni.
+      account_type_label: Számlatípus
+      account_types:
+        skip: Kihagyás
+        depository: Készpénz
+        loan: Hitel
+      create_accounts: Számlák létrehozása
+      cancel: Mégse
+    complete_account_setup:
+      success:
+        one: '%{count} Up-számla létrehozva.'
+        other: '%{count} Up-számla létrehozva.'
+      all_skipped: Nem jött létre Up-számla.
+      no_accounts: Nem lett Up-számla kiválasztva.
+      creation_failed: Nem sikerült létrehozni az Up-számlákat.
+    up_item:
+      deletion_in_progress: Törlés folyamatban
+      syncing: Szinkronizálás
+      error: Hiba
+      status_with_summary: Szinkronizálva %{timestamp} ezelőtt · %{summary}
+      status_never: Még nem volt szinkronizálva
+      delete: Törlés
+      setup_needed: Számlák beállítása szükséges
+      setup_description: '%{total} számlából %{linked} összekapcsolva.'
+      setup_action: Számlák beállítása
+      no_accounts_title: Még nincs importált számla
+      no_accounts_description: Kérd le az Up-számlákat, és válaszd ki, melyeket szeretnéd összekapcsolni.

@@ -21,7 +21,7 @@ hu:
       unavailable: Az offline értékpapíroknál a piaci adatok szinkronizálása nem elérhető.
       provider_error: Nem sikerült lekérni a legújabb árakat. Próbáld meg újra néhány perc múlva.
     errors:
-      security_collision: "Nem lehet átrendeli: már van egy pozíciód a(z) %{ticker} részvényből %{date} dátummal."
+      security_collision: "Nem lehet átrendelni: már van egy pozíciód a(z) %{ticker} részvényből %{date} dátummal."
     cost_basis_sources:
       manual: Felhasználó által megadott
       calculated: Ügyletekből számított
@@ -35,7 +35,7 @@ hu:
       per_share: részvényenként
       cancel: Mégse
       save: Mentés
-      overwrite_confirm_title: Felülírja a bekerülési értéket?
+      overwrite_confirm_title: Felülírod a bekerülési értéket?
       overwrite_confirm_body: "Ez felváltja a jelenlegi %{current} bekerülési értéket."
     holding:
       per_share: részvényenként
@@ -80,10 +80,10 @@ hu:
       switch_provider_description: "A(z) %{provider} le van tiltva. Keress rá erre az értékpapírra egy másik engedélyezett szolgáltatónál."
       switch_provider_button: Váltás
       no_security_provider: Az értékpapír-szolgáltató nincs beállítva. Nem lehet értékpapírt keresni.
-      security_remapped_label: Értékpapír átrendeli
+      security_remapped_label: Értékpapír átrendelve
       provider_sent: "Szolgáltató által küldött: %{ticker}"
       reset_to_provider: Visszaállítás a szolgáltató értékére
-      reset_confirm_title: Visszaállítja az értékpapírt a szolgáltató értékére?
+      reset_confirm_title: Visszaállítod az értékpapírt a szolgáltató értékére?
       reset_confirm_body: "Ez megváltoztatja az értékpapírt %{current} helyett %{original} értékre, és áthelyezi az összes kapcsolódó ügyletet."
       ticker_label: Tőzsdei szimbólum
       trade_history_entry: "%{qty} részvény %{security} értékpapírból, %{price} áron"
@@ -92,7 +92,7 @@ hu:
       cost_basis_locked_label: A bekerülési érték zárolva van
       cost_basis_locked_description: A kézzel megadott bekerülési értéket a szinkronizálások nem módosítják.
       unlock_cost_basis: Feloldás
-      unlock_confirm_title: Feloldja a bekerülési értéket?
+      unlock_confirm_title: Feloldod a bekerülési értéket?
       unlock_confirm_body: Ez lehetővé teszi, hogy a bekerülési értéket a szolgáltatói szinkronizálások vagy az ügyleti számítások frissítsék.
       shares_label: Részvények
       book_value_label: Könyv szerinti érték

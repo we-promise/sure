@@ -21,6 +21,7 @@ hu:
       color: Szín
       icon: Ikon
       poor_contrast: "Gyenge kontraszt, válassz sötétebb színt vagy"
+      auto_adjust: automatikus igazítás.
     destroy_all:
       success: Összes kategória törölve
     index:
@@ -31,6 +32,7 @@ hu:
       delete_all: Összes törlése
       empty: Nem található kategória
       new: Új kategória
+      merge: Kategóriák összevonása
     menu:
       loading: Betöltés...
     new:
@@ -39,14 +41,30 @@ hu:
       success: Kategória sikeresen frissítve
     virtual:
       transfer: Átutalás
-      payment: Fizetés
+      payment: Törlesztés
       trade: Ügylet
+    merge:
+      title: Kategóriák összevonása
+      description: Válassz egy célkategóriát, és azokat a kategóriákat, amelyeket bele szeretnél vonni. Az érintett tranzakciók és költségvetési sorok átkerülnek a célkategóriába.
+      target_label: Összevonás ebbe (célkategória)
+      select_target: Válassz célkategóriát...
+      sources_label: Összevonandó kategóriák
+      sources_hint: A kijelölt kategóriák törlődnek, miután tranzakcióik és költségvetési soraik átkerültek a célkategóriába. A célkategóriát ne jelöld ki forrásként.
+      submit: Kijelöltek összevonása
+    perform_merge:
+      success:
+        one: '%{count} kategória sikeresen összevonva'
+        other: '%{count} kategória sikeresen összevonva'
+      no_categories_selected: Nincs kijelölve összevonandó kategória
+      target_not_found: A célkategória nem található
+      invalid_categories: Érvénytelen kategóriák vannak kijelölve
+      target_selected_as_source: A célkategória és a forráskategóriák legyenek különbözőek.
   category:
     dropdowns:
       show:
         bootstrap: Alapértelmezett kategóriák létrehozása
         empty: Nem található kategória
-        match_transfer: "Átutalás/fizetés párosítása"
+        match_transfer: "Átutalás/törlesztés párosítása"
         one_time: "Egyszeri %{type}"
         income: "bevétel"
         expense: "kiadás"

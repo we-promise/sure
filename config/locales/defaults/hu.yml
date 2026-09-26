@@ -3,7 +3,10 @@ hu:
   activerecord:
     errors:
       messages:
-        record_invalid: Sikertelen validálás %{errors}
+        record_invalid: "Sikertelen validálás: %{errors}"
+        restrict_dependent_destroy:
+          has_many: A rekord nem törölhető, mert vannak hozzá kapcsolódó %{record}
+          has_one: A rekord nem törölhető, mert van hozzá kapcsolódó %{record}
   date:
     abbr_day_names:
     - v.
@@ -39,6 +42,9 @@ hu:
       default: "%Y.%m.%d."
       long: "%Y. %B %e."
       short: "%b %e."
+      month_year: '%Y. %B'
+      short_month_year: '%Y. %b'
+      short_with_year: '%Y. %b %d.'
     month_names:
     -
     - január
@@ -60,39 +66,42 @@ hu:
   datetime:
     distance_in_words:
       about_x_hours:
-        one: kb. %{count} órája
-        other: kb. %{count} órája
+        one: kb. %{count} óra
+        other: kb. %{count} óra
       about_x_months:
-        one: kb. %{count} hónapja
-        other: kb. %{count} hónapja
+        one: kb. %{count} hónap
+        other: kb. %{count} hónap
       about_x_years:
-        one: kb. %{count} éve
-        other: kb. %{count} éve
+        one: kb. %{count} év
+        other: kb. %{count} év
       almost_x_years:
-        one: majdnem %{count} éve
-        other: majdnem %{count} éve
-      half_a_minute: fél perce
+        one: majdnem %{count} év
+        other: majdnem %{count} év
+      half_a_minute: fél perc
       less_than_x_minutes:
-        one: kevesebb, mint %{count} perce
-        other: kevesebb, mint %{count} perce
+        one: kevesebb, mint %{count} perc
+        other: kevesebb, mint %{count} perc
       less_than_x_seconds:
-        one: kevesebb, mint %{count} másodperce
-        other: kevesebb, mint %{count} másodperce
+        one: kevesebb, mint %{count} másodperc
+        other: kevesebb, mint %{count} másodperc
       over_x_years:
-        one: több, mint %{count} éve
-        other: több, mint %{count} éve
+        one: több, mint %{count} év
+        other: több, mint %{count} év
       x_days:
-        one: "%{count} napja"
-        other: "%{count} napja"
+        one: "%{count} nap"
+        other: "%{count} nap"
       x_minutes:
-        one: "%{count} perce"
-        other: "%{count} perce"
+        one: "%{count} perc"
+        other: "%{count} perc"
       x_months:
-        one: "%{count} hónapja"
-        other: "%{count} hónapja"
+        one: "%{count} hónap"
+        other: "%{count} hónap"
       x_seconds:
-        one: "%{count} másodperce"
-        other: "%{count} másodperce"
+        one: "%{count} másodperc"
+        other: "%{count} másodperc"
+      x_years:
+        one: '%{count} év'
+        other: '%{count} év'
     prompts:
       day: Nap
       hour: Óra
@@ -105,7 +114,7 @@ hu:
     messages:
       accepted: nincs elfogadva
       blank: nincs megadva
-      confirmation: nem egyezik
+      confirmation: "nem egyezik ezzel: %{attribute}"
       empty: nincs megadva
       equal_to: pontosan %{count} kell legyen
       even: páros kell legyen
@@ -123,6 +132,11 @@ hu:
       too_long: túl hosszú (nem lehet több %{count} karakternél)
       too_short: túl rövid (legalább %{count} karakter kell legyen)
       wrong_length: nem megfelelő hosszúságú (%{count} karakter szükséges)
+      in: '%{count} tartományban kell lennie'
+      model_invalid: 'Sikertelen validálás: %{errors}'
+      other_than: nem lehet %{count}
+      present: üresnek kell lennie
+      required: kötelező
     template:
       body: 'Problémás mezők:'
       header:
@@ -130,7 +144,9 @@ hu:
         other: "%{count} hiba miatt nem menthető a következő: %{model}"
   helpers:
     select:
-      prompt: Válasszon
+      prompt: Válassz
+      search_placeholder: Keresés
+      default_label: Válassz...
     submit:
       create: Új %{model}
       submit: "%{model} mentése"
@@ -142,12 +158,15 @@ hu:
         format: "%n %u"
         precision: 2
         separator: ","
+        significant: false
+        strip_insignificant_zeros: false
     format:
       delimiter: " "
       precision: 2
       separator: ","
       significant: true
       strip_insignificant_zeros: true
+      round_mode: default
     human:
       decimal_units:
         format: "%n %u"
@@ -173,9 +192,12 @@ hu:
           kb: KB
           mb: MB
           tb: TB
+          eb: EB
+          pb: PB
     percentage:
       format:
         delimiter: ''
+        format: '%n%'
     precision:
       format:
         delimiter: ''
@@ -191,3 +213,17 @@ hu:
       long: "%Y. %B %e., %A, %H:%M"
       short: "%b %e., %H:%M"
     pm: du.
+  defaults:
+    brand_name: '%{brand_name}'
+    product_name: '%{product_name}'
+    common:
+      close: Bezárás
+  global:
+    expand: Kibontás
+  mcp:
+    errors:
+      invalid_session_id: Érvénytelen MCP-munkamenet-azonosító
+      unsupported_protocol_version: 'Nem támogatott MCP-protokollverzió: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: A redirect_uris értékeinek https-t, loopback http-t vagy natív alkalmazás URI-sémát kell használniuk

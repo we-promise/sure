@@ -11,7 +11,7 @@ vi:
         currency: Tiền tệ
         filename: Tên tệp
         institution_name_hint: Gợi ý tổ chức
-        opening_balance: Số dư mở kỳ
+        opening_balance: Số dư đầu kỳ
         original_file: Tệp sao kê
         period_end_on: Ngày kết thúc kỳ
         period_start_on: Ngày bắt đầu kỳ

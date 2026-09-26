@@ -1,0 +1,36 @@
+---
+hu:
+  plans:
+    show:
+      title: Terv
+      subtitle: Döntsd el, hová megy a pénzed – mennyit költesz, és mennyit teszel félre.
+    budget_card:
+      title: Ez a hónap
+      edit_budget: Költségvetés szerkesztése
+      of_total: / %{total}
+      days_left:
+        one: '%{count} nap van hátra'
+        other: '%{count} nap van hátra'
+      percent_used: '%{percent}% felhasználva'
+      top_categories: Fő kategóriák
+      view_budget: Teljes költségvetés megtekintése
+      empty_body: Állíts be havi kiadási célt és kategóriánkénti kereteket, hogy lásd, hogyan alakul ez a hónap.
+      set_up: E havi költségvetés beállítása
+    goals_card:
+      title: Céljaid
+      new_goal: Új cél
+      active_count:
+        one: '%{count} aktív'
+        other: '%{count} aktív'
+      of_targets: / %{total} (összes cél)
+      behind_count:
+        one: '%{count} le van maradva'
+        other: '%{count} le van maradva'
+      pending_count:
+        one: '%{count} függőben lévő bejelentett befizetés'
+        other: '%{count} függőben lévő bejelentett befizetés'
+      all_on_pace: Minden cél ütemben halad
+      active_goals: Aktív célok
+      pending_marker: függőben
+      runway: '%{months} hónapra elég · %{pace}/hó'
+      all_goals: Összes cél

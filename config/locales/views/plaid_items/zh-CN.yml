@@ -22,6 +22,8 @@ zh-CN:
       syncing: 同步中...
       update: 更新
       deletion_in_progress: "（正在删除...）"
+      add_accounts: 添加账户
+      provider_name: Plaid
     select_existing_account:
       cancel: 取消
       description: 选择一个 Plaid 账户与您的现有账户关联

@@ -1,0 +1,15 @@
+---
+zh-CN:
+  recurring_allocations:
+    over_allocation: 分配金额将超过该交易的金额
+    missing_rate: 没有可用的汇率，请直接输入金额
+    already_allocated: 该交易已用于支付此账单
+    invalid: 无法记录此付款
+    create:
+      success: 付款已记入
+    destroy:
+      success: 已取消关联该付款
+    confirm:
+      success: 付款已记入账单
+    reject:
+      success: 已忽略。该交易将不会再被推荐给此账单。

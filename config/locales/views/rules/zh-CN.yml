@@ -9,11 +9,11 @@ zh-CN:
       delete: 删除
       then: 然后
       and_more_conditions:
-        one: 以及 1 个条件
-        other: 以及 %{count} 个条件
+        one: 以及另外 %{count} 个条件
+        other: 以及另外 %{count} 个条件
       and_more_actions:
-        one: 以及 1 个操作
-        other: 以及 %{count} 个操作
+        one: 以及另外 %{count} 个操作
+        other: 以及另外 %{count} 个操作
       action_label_to: 将 %{label} 设置为 %{value}
       all_past_and_future: 所有过去和未来的 %{resource}
       on_or_after: "%{resource} 在 %{date} 当日或之后"
@@ -52,6 +52,7 @@ zh-CN:
       confirm_changes: 确认更改
     actions:
       value_placeholder: 输入值
+      to_label: 为
     update:
       success: 规则已更新
     destroy:
@@ -104,6 +105,18 @@ zh-CN:
         expense: 支出
         transfer: 转账
         equal_to: 等于
+      operators:
+        contains: 包含
+        does_not_contain: 不包含
+        equal_to: 等于
+        is_equal_to: 等于
+        not_equal_to: 不等于
+        is_empty: 为空
+        is_not_empty: 不为空
+        greater_than: 大于
+        greater_or_equal_to: 大于或等于
+        less_than: 小于
+        less_than_or_equal_to: 小于或等于
   rule:
     conditions:
       condition_group:
@@ -113,3 +126,5 @@ zh-CN:
         any: 任一
         of_the_following_conditions: 以下条件
         add_condition: 添加条件
+      condition:
+        value_placeholder: 输入值

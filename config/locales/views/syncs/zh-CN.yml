@@ -1,0 +1,6 @@
+---
+zh-CN:
+  syncs:
+    cancel:
+      cancelled: 同步已取消。已同步的数据会保留；排队中的任务已停止。
+      not_cancellable: 此同步已完成。

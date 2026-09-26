@@ -1,0 +1,111 @@
+---
+hu:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Van aktivitás
+      explanation: Ezt a címformátumot több hálózat is használja, és az egyenlegek hálózatonként eltérnek. Válaszd ki, melyiket szeretnéd követni.
+      no_activity_found: Nincs aktivitás
+      subtitle: '%{address}'
+      title: Melyik hálózat?
+    destroy:
+      success: A saját kezelésű tárca kapcsolat törlése ütemezve.
+    disconnect_asset:
+      success: A(z) %{symbol} követése leállítva. A számla és az előzmények megmaradtak.
+    disconnect_wallet:
+      success:
+        one: '%{count} eszköz követése leállítva ezen a címen.'
+        other: '%{count} eszköz követése leállítva ezen a címen.'
+    enable_crypto_prices:
+      not_self_hosted: Ezen a telepítésen a piaci adatszolgáltatókat a példány üzemeltetője állítja be.
+      success: A kriptoárfolyamok engedélyezve. A tárcák értéke a következő szinkronizálás után jelenik meg.
+    errors:
+      address_required: Add meg a tárca címét.
+      already_linked: Ezt a címet ezen a hálózaton már követed. A követett eszközök módosításához használd a Tokenek áttekintése gombot.
+      chain_unreachable: A hálózat nyilvános blokkböngészője nem érhető el. Próbáld újra egy kis idő múlva.
+      rate_limited: A nyilvános blokkböngésző jelenleg korlátozza a kéréseket. Próbáld újra néhány perc múlva.
+      unexpected: Hiba történt a tárca beolvasásakor. A részleteket rögzítettük a támogatás számára.
+      unrecognized_address: Ez egyik támogatott hálózaton sem tűnik érvényes címnek.
+      wallet_not_found: Ezt a tárcát nem követi ez a kapcsolat.
+    link_wallet:
+      errors:
+        none_tracked: 'Semmi sem került követésre: %{assets} nem adható hozzá. Próbáld újra egy kis idő múlva.'
+        nothing_selected: Válassz legalább egy követendő eszközt.
+        some_failed: 'Nem sikerült követni, ezért kimaradt: %{assets}.'
+      success:
+        one: '%{count} eszköz követése ebből a tárcából.'
+        other: '%{count} eszköz követése ebből a tárcából.'
+    manage:
+      assets_truncated: Ezen a címen több token van, mint amennyit egy lekérdezés visszaad, ezért csak a %{count} leghitelesebb látható. A már követett eszközök szinkronizálása folytatódik.
+      disconnect_asset: Követés leállítása
+      disconnect_asset_confirm: Leállítod a(z) %{symbol} követését? A számla és az előzmények megmaradnak, de nem frissülnek tovább.
+      disconnect_wallet: Tárca leválasztása
+      disconnect_wallet_confirm: Leállítod az összes eszköz követését ezen a címen?
+      history_note: A leválasztás megtartja a számlákat és az előzményeiket; csak nem frissülnek tovább.
+      history_truncated: Nem minden átutalás olvasható be ehhez a címhez – több előzmény van, mint amennyit egy szinkronizálás lefed, vagy a blokkböngésző elutasította a kérést. Az egyenlegek teljesek, de néhány átutalás hiányzik.
+      native: Natív
+      no_wallets: Még nincs követett tárca.
+      review_tokens: Tokenek áttekintése
+      subtitle: A kapcsolat által olvasott összes cím, és hogy melyiknél mit követ.
+      title: Saját kezelésű tárcák kezelése
+    new_wallet:
+      address_label: Tárca címe
+      address_placeholder: bc1..., 0x... vagy egy Solana-cím
+      bitcoin_single_address_note: A Bitcoin címenként követhető. A kiterjesztett kulcsok (xpub/ypub/zpub) nem támogatottak, ezért ha egy tárca több származtatott címen tárolja a pénzt, csak a megadott cím egyenlege jelenik meg.
+      chain_auto_detect: Automatikus felismerés
+      chain_label: Hálózat
+      continue: Tovább
+      read_only_note: Csak a nyilvános blokklánc-adatokat olvassuk. Soha ne add meg a seed phrase-t (helyreállító kifejezést) vagy a privát kulcsot.
+      subtitle: Kövess egy tárcát, amelynek kulcsai nálad vannak, a nyilvános címe alapján.
+      title: Saját kezelésű tárca hozzáadása
+    onchain_wallet_item:
+      assets_tracked:
+        one: '%{count} követett eszköz'
+        other: '%{count} követett eszköz'
+      sync: Szinkronizálás most
+      syncing: Szinkronizálás...
+    wallet_card:
+      addresses_tracked:
+        one: '%{count} követett cím'
+        other: '%{count} követett cím'
+      deletion_in_progress: Eltávolítás...
+      delete: Kapcsolat eltávolítása
+      needs_attention: Figyelmet igényel
+      no_wallets_message: Kapcsolj össze egy címet a szolgáltatói beállításokban, hogy itt megjelenjen.
+      no_wallets_title: Még nincs összekapcsolt tárca
+      status: Szinkronizálva %{timestamp} ezelőtt
+      sync: Szinkronizálás most
+      status_never: Még nem szinkronizált
+      syncing: Szinkronizálás...
+    price_provider_warning:
+      body: Egyik engedélyezett piaci adatszolgáltató sem tud kriptoárfolyamot adni, ezért ezek a tárcák a mennyiségeket követik, de nulla értéket mutatnak.
+      enable: Kriptoárfolyamok engedélyezése
+      exchange_rate_body: A kriptovaluták árazása USD-ben történik, és nincs beállítva árfolyam-szolgáltató a(z) %{currency} devizára váltáshoz, ezért ezek a tárcák a mennyiségeket követik, de nulla értéket mutatnak. Állítsd be az EXCHANGE_RATE_PROVIDER változót – a Frankfurterhez nem kell API-kulcs.
+      exchange_rate_title: Nincs beállítva árfolyam-szolgáltató
+      link: Piaci adatok beállításainak megnyitása
+      title: A kriptoárfolyamok nincsenek beállítva
+    provider_connection:
+      description: Kövess egy tárcát, amelynek kulcsai nálad vannak, a nyilvános címe alapján.
+      name: Saját kezelésű tárca
+    review_tokens:
+      save: Követett eszközök mentése
+      subtitle: '%{chain} · %{address}'
+      title: Követett eszközök áttekintése
+    token_review:
+      import_selected: Kiválasztott eszközök követése
+      subtitle: '%{chain} · %{address}'
+      title: Válaszd ki, mit követsz
+    token_review_form:
+      assets_truncated: Ezen a címen több token van, mint amennyit egy lekérdezés visszaad, ezért csak a %{count} leghitelesebb látható.
+      cancel: Mégse
+      explanation: Az ismert árfolyamú eszközök be vannak jelölve. A többi nincs bejelölve – a tárcákba gyakran érkeznek kéretlen airdrop tokenek, és ezek követésének nincs értéke.
+      native: Natív
+      no_price: Nincs elérhető árfolyam; csak a mennyiség követhető
+      nothing_found: Ezen a címen nem látunk semmit ezen a hálózaton.
+    update:
+      success: A saját kezelésű tárca kapcsolat frissítve.
+    update_tokens:
+      errors:
+        no_changes: Nem változott semmi; ugyanazok az eszközök vannak bejelölve.
+        none_tracked: 'Nem változott semmi: %{assets} nem adható hozzá. Próbáld újra egy kis idő múlva.'
+        some_failed: 'Nem sikerült követni, ezért kimaradt: %{assets}.'
+      success: Követett eszközök frissítve (%{created} hozzáadva, %{removed} eltávolítva).

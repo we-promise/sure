@@ -1,0 +1,6 @@
+---
+hu:
+  syncs:
+    cancel:
+      cancelled: A szinkronizálás megszakítva. A már szinkronizált adatok megmaradnak; a sorban álló feladatok leálltak.
+      not_cancellable: Ez a szinkronizálás már befejeződött.

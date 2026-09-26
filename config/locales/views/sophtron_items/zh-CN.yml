@@ -105,7 +105,7 @@ zh-CN:
       no_accounts_title: 无账户
       manual_sync: 手动同步
       manual_sync_action: 需要手动同步
-      manual_sync_action_for: "为 %{institution} 需要手动同步"
+      manual_sync_action_for: 对 %{institution} 改为手动同步
       automatic_sync_for: "为 %{institution} 使用自动同步"
       setup_action: 设置新账户
       setup_description: 已关联 %{linked} / %{total} 个账户。请选择新导入的 Sophtron 账户类型。
@@ -131,8 +131,8 @@ zh-CN:
       unexpected_error: "发生意外错误"
       cancel: 取消
       configure_name_in_sophtron: 无法导入 - 请先在 Sophtron 中配置账户名称
-      description: 选择您想链接到 %{product_name} 账户的账户。
-      link_accounts: 链接所选账户
+      description: 选择您想关联到 %{product_name} 账户的账户。
+      link_accounts: 关联所选账户
       no_accounts_found: 未找到账户。请检查您的 Access Key 配置。
       no_access_key: Sophtron Access Key 未配置。请在设置中配置。
       no_user_id: Sophtron User ID 未配置。请在设置中配置。
@@ -230,12 +230,12 @@ zh-CN:
         要完成 Sophtron 连接设置，请前往提供商设置页面，并按照说明授权和配置您的 Sophtron 连接。
       go_to_provider_settings: 前往提供商设置
       heading: "未配置 User ID 和 Access Key"
-      description: "在链接 Sophtron 账户之前，您需要先配置 Sophtron User ID 和 Access Key。"
+      description: "在关联 Sophtron 账户之前，您需要先配置 Sophtron User ID 和 Access Key。"
       setup_steps_title: "设置步骤："
       step_1_html: "前往 <strong>设置 → 银行同步提供商</strong>"
       step_2_html: "找到 <strong>Sophtron</strong> 区块"
       step_3_html: "输入您的 Sophtron User ID 和 Access Key"
-      step_4: "返回这里链接您的账户"
+      step_4: "返回这里关联您的账户"
     api_error:
       title: "Sophtron 连接错误"
       unable_to_connect: "无法连接到 Sophtron"

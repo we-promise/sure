@@ -1,0 +1,107 @@
+---
+vi:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Có hoạt động
+      explanation: Định dạng địa chỉ này được dùng trên nhiều mạng, và số dư trên mỗi mạng là khác nhau. Hãy chọn mạng bạn muốn theo dõi.
+      no_activity_found: Không có gì
+      subtitle: '%{address}'
+      title: Mạng nào?
+    destroy:
+      success: Đã lên lịch xóa kết nối ví tự lưu ký.
+    disconnect_asset:
+      success: Đã ngừng theo dõi %{symbol}. Tài khoản và lịch sử của tài sản này vẫn được giữ lại.
+    disconnect_wallet:
+      success:
+        other: Đã ngừng theo dõi %{count} tài sản tại địa chỉ đó.
+    enable_crypto_prices:
+      not_self_hosted: Trên bản triển khai này, nhà cung cấp dữ liệu thị trường do người vận hành máy chủ cấu hình.
+      success: Đã bật giá tiền mã hóa. Giá trị ví sẽ hiển thị sau lần đồng bộ tiếp theo.
+    errors:
+      address_required: Vui lòng nhập địa chỉ ví.
+      already_linked: Địa chỉ này đã được theo dõi trên mạng này. Dùng Xem lại token để thay đổi các tài sản được theo dõi.
+      chain_unreachable: Không thể truy cập trình khám phá khối công khai của mạng này. Vui lòng thử lại sau giây lát.
+      rate_limited: Trình khám phá khối công khai đang giới hạn tần suất yêu cầu. Vui lòng thử lại sau vài phút.
+      unexpected: Đã xảy ra lỗi khi đọc ví này. Chi tiết đã được ghi lại để bộ phận hỗ trợ xem xét.
+      unrecognized_address: Đây có vẻ không phải là địa chỉ trên bất kỳ mạng nào được hỗ trợ.
+      wallet_not_found: Ví đó không được theo dõi bởi kết nối này.
+    link_wallet:
+      errors:
+        none_tracked: 'Không có gì được theo dõi: không thể thêm %{assets}. Vui lòng thử lại sau giây lát.'
+        nothing_selected: Vui lòng chọn ít nhất một tài sản để theo dõi.
+        some_failed: Không thể theo dõi %{assets} nên đã bỏ qua.
+      success:
+        other: Đang theo dõi %{count} tài sản từ ví này.
+    manage:
+      assets_truncated: Địa chỉ này nắm giữ nhiều token hơn số lượng hiển thị được trong một lần đọc, nên chỉ %{count} token đáng tin cậy nhất được liệt kê. Những tài sản đã được theo dõi vẫn tiếp tục đồng bộ.
+      disconnect_asset: Ngừng theo dõi
+      disconnect_asset_confirm: Ngừng theo dõi %{symbol}? Tài khoản và lịch sử vẫn được giữ lại nhưng sẽ ngừng cập nhật.
+      disconnect_wallet: Ngắt kết nối ví
+      disconnect_wallet_confirm: Ngừng theo dõi tất cả tài sản tại địa chỉ này?
+      history_note: Ngắt kết nối vẫn giữ lại các tài khoản và lịch sử của chúng; chúng chỉ ngừng cập nhật.
+      history_truncated: Không thể đọc hết các giao dịch chuyển của địa chỉ này — lịch sử nhiều hơn phạm vi một lần đồng bộ, hoặc trình khám phá khối đã từ chối yêu cầu. Số dư đầy đủ; một số giao dịch chuyển bị thiếu.
+      native: Coin gốc
+      no_wallets: Chưa theo dõi ví nào.
+      review_tokens: Xem lại token
+      subtitle: Mọi địa chỉ mà kết nối này đọc, và những gì được theo dõi tại mỗi địa chỉ.
+      title: Quản lý ví tự lưu ký
+    new_wallet:
+      address_label: Địa chỉ ví
+      address_placeholder: bc1..., 0x..., hoặc địa chỉ Solana
+      bitcoin_single_address_note: Bitcoin được theo dõi theo từng địa chỉ. Khóa mở rộng (xpub/ypub/zpub) không được hỗ trợ, nên ví phân bổ tiền qua nhiều địa chỉ phái sinh sẽ chỉ hiển thị số dư của địa chỉ bạn nhập.
+      chain_auto_detect: Tự động phát hiện
+      chain_label: Mạng
+      continue: Tiếp tục
+      read_only_note: Chỉ đọc dữ liệu công khai trên chuỗi. Tuyệt đối không nhập cụm từ khôi phục (seed phrase) hoặc khóa riêng tư.
+      subtitle: Theo dõi ví mà bạn giữ khóa, thông qua địa chỉ công khai của ví.
+      title: Thêm ví tự lưu ký
+    onchain_wallet_item:
+      assets_tracked:
+        other: Đang theo dõi %{count} tài sản
+      sync: Đồng bộ ngay
+      syncing: Đang đồng bộ...
+    wallet_card:
+      addresses_tracked:
+        other: Đang theo dõi %{count} địa chỉ
+      deletion_in_progress: Đang xóa...
+      delete: Xóa kết nối
+      needs_attention: Cần chú ý
+      no_wallets_message: Liên kết một địa chỉ từ cài đặt nhà cung cấp để xem tại đây.
+      no_wallets_title: Chưa liên kết ví nào
+      status: Đã đồng bộ %{timestamp} trước
+      sync: Đồng bộ ngay
+      status_never: Chưa đồng bộ
+      syncing: Đang đồng bộ...
+    price_provider_warning:
+      body: Không có nhà cung cấp dữ liệu thị trường nào đang bật có thể định giá tiền mã hóa, nên các ví này chỉ theo dõi số lượng và hiển thị giá trị bằng 0.
+      enable: Bật giá tiền mã hóa
+      exchange_rate_body: Tiền mã hóa được định giá bằng USD và chưa cấu hình nhà cung cấp tỷ giá hối đoái nào để quy đổi sang %{currency}, nên các ví này chỉ theo dõi số lượng và hiển thị giá trị bằng 0. Hãy đặt EXCHANGE_RATE_PROVIDER — Frankfurter không cần API key.
+      exchange_rate_title: Chưa cấu hình nhà cung cấp tỷ giá hối đoái
+      link: Mở cài đặt dữ liệu thị trường
+      title: Chưa cấu hình giá tiền mã hóa
+    provider_connection:
+      description: Theo dõi ví mà bạn giữ khóa, thông qua địa chỉ công khai của ví.
+      name: Ví tự lưu ký
+    review_tokens:
+      save: Lưu tài sản được theo dõi
+      subtitle: '%{chain} · %{address}'
+      title: Xem lại tài sản được theo dõi
+    token_review:
+      import_selected: Theo dõi tài sản đã chọn
+      subtitle: '%{chain} · %{address}'
+      title: Chọn tài sản cần theo dõi
+    token_review_form:
+      assets_truncated: Địa chỉ này nắm giữ nhiều token hơn số lượng hiển thị được trong một lần đọc, nên chỉ %{count} token đáng tin cậy nhất được liệt kê.
+      cancel: Hủy
+      explanation: Các tài sản có giá đã biết được đánh dấu chọn sẵn. Những tài sản khác để trống — ví thường nhận token airdrop rác, và theo dõi chúng không mang lại giá trị gì.
+      native: Coin gốc
+      no_price: Không có giá; chỉ theo dõi theo số lượng
+      nothing_found: Không thấy tài sản nào của địa chỉ này trên mạng này.
+    update:
+      success: Đã cập nhật kết nối ví tự lưu ký.
+    update_tokens:
+      errors:
+        no_changes: Không có thay đổi; các tài sản được chọn vẫn như cũ.
+        none_tracked: 'Không có thay đổi: không thể thêm %{assets}. Vui lòng thử lại sau giây lát.'
+        some_failed: Không thể theo dõi %{assets} nên đã bỏ qua.
+      success: Đã cập nhật tài sản được theo dõi (thêm %{created}, xóa %{removed}).

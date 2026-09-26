@@ -32,12 +32,21 @@ hu:
           session_count: "Munkamenetek száma"
           never: "Soha"
           role: "Szerepkör"
+          family: Család / Csoport
+          keep_current_family: Jelenlegi család/csoport megtartása
+          create_new_family_option: + Új család/csoport létrehozása
+          new_family_name: Új család/csoport neve
+          new_family_name_placeholder: Adj meg egy nevet új család/csoport létrehozásához
+          new_family_moniker: Új család/csoport típusa
+          set_password: Új jelszó beállítása
+          password_placeholder: Hagyd üresen a jelenlegi megtartásához
+          actions: Műveletek
         role_descriptions_title: "Szerepkörök leírása"
         roles:
           guest: "Vendég"
           member: "Tag"
           admin: "Admin"
-          super_admin: "Super Admin"
+          super_admin: "Szuperadmin"
         role_descriptions:
           guest: "Asszisztens-első élmény, szándékosan korlátozott jogosultságokkal az alapszintű munkafolyamatokhoz."
           member: "Alap felhasználói hozzáférés. Kezelheti saját fiókjait, tranzakcióit és beállításait."
@@ -48,6 +57,64 @@ hu:
           expires: "Lejár: %{date}"
           delete: "Törlés"
           delete_all: "Összes törlése"
+        family_monikers:
+          family: Család
+          group: Csoport
+        actions:
+          manage_user: Felhasználó kezelése
+          update: Felhasználó frissítése
+          delete_user: Felhasználó törlése
+          self_edit_warning: A saját szerepköröd módosítása megváltoztatja az adminisztrátori jogosultságaidat.
+          self_update_confirm: Biztosan módosítod a saját fiókod szerepkörét vagy családját?
+          last_super_admin_role_locked: A szerepkör nem módosítható, mert te vagy az utolsó szuperadmin a rendszerben.
+        delete_confirm: Biztosan törlöd ezt a felhasználót? Ez a művelet nem vonható vissza.
+        delete_confirm_last_user: Biztosan törlöd ezt a felhasználót? Ő az utolsó felhasználó a családjában/csoportjában, így a törlésével a teljes család/csoport és az összes hozzá tartozó adat is törlődik. Ez a művelet nem vonható vissza.
+        remove: Felhasználó törlése
+        removed_sso_identities:
+          title: Eltávolított SSO-identitások
+          description: Ezek az identitások nem hozhatnak létre fiókot és nem csatlakozhatnak újra. Csak akkor engedélyezz újra egy identitást, ha az eltávolítás véletlen volt.
+          allow_again: Újraengedélyezés
+          confirm: Engedélyezed, hogy %{email} ismét bejelentkezzen vagy fiókot hozzon létre SSO-val?
+        auth_types:
+          sso: SSO
+          local: Helyi
+          local_and_sso: Helyi + SSO
+          sso_provider_tooltip: 'SSO-szolgáltató: %{providers}'
+        unused_families:
+          title: Nem használt családok / csoportok
+          family_id: 'Család azonosítója: %{id}'
+          delete: Nem használt család törlése
+          delete_confirm: Biztosan törlöd ezt a nem használt családot/csoportot? Ez a művelet nem vonható vissza.
+          empty: Nem található nem használt család/csoport.
       update:
         success: "A felhasználói szerepkör sikeresen frissítve."
         failure: "Nem sikerült frissíteni a felhasználói szerepkört."
+        success_role: A felhasználó szerepköre sikeresen frissítve.
+        success_password: A felhasználó jelszava sikeresen frissítve.
+        success_role_and_password: A felhasználó szerepköre és jelszava sikeresen frissítve.
+        success_family: A felhasználó család-/csoporttagsága sikeresen frissítve.
+        family_required: Válassz egy meglévő családot/csoportot, vagy adj meg nevet egy újhoz.
+        password_and_family_conflict: A jelszó és a család-/csoporttagság nem módosítható egyszerre.
+        password_too_short: A jelszónak legalább 8 karakter hosszúnak kell lennie.
+        password_missing_case: A jelszónak kis- és nagybetűt is tartalmaznia kell.
+        password_missing_number: A jelszónak legalább egy számjegyet kell tartalmaznia.
+        password_missing_special: A jelszónak legalább egy speciális karaktert kell tartalmaznia.
+        last_super_admin_error: A rendszer utolsó szuperadminja nem fokozható le.
+      destroy:
+        success: A felhasználó hozzáférése visszavonva, a végleges törlés ütemezve.
+        failure: Nem sikerült eltávolítani a felhasználót.
+        cannot_remove_self: Innen nem távolíthatod el a saját fiókodat.
+        cannot_remove_last_super_admin: Az utolsó aktív szuperadmin nem távolítható el.
+        confirmation_mismatch: Az e-mail-cím nem egyezett. A felhasználó nem lett eltávolítva.
+      deletion:
+        title: Felhasználó végleges eltávolítása
+        warning: Ez azonnal visszavonja a hozzáférést, és ütemezi a felhasználó és adatai végleges törlését. Ez nem vonható vissza.
+        instruction: 'A megerősítéshez írd be ezt: %{email}'
+        email_label: Felhasználó e-mail-címe
+        cancel: Mégse
+        submit: Felhasználó végleges eltávolítása
+    families:
+      destroy:
+        family_has_active_subscription: A család/csoport aktív előfizetéssel rendelkezik, ezért nem törölhető, amíg az előfizetést le nem mondják.
+        family_has_users: A családhoz/csoporthoz még tartoznak felhasználók, ezért nem törölhető.
+        success: A család/csoport sikeresen törölve.

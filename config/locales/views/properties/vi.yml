@@ -3,6 +3,7 @@ vi:
   properties:
     edit:
       edit: Chỉnh sửa %{account}
+      title: Nhập bất động sản thủ công
     form:
       address_line1: Địa chỉ đường phố
       address_line1_placeholder: 123 Main St
@@ -24,6 +25,16 @@ vi:
     new:
       title: Nhập bất động sản thủ công
       next: "Tiếp theo"
+      avm_option: Thêm qua %{provider}
+      avm_title: Thêm bất động sản qua %{provider}
+      avm_description: Nhập tên và địa chỉ của bất động sản. %{provider} sẽ tra cứu thông tin chi tiết và giá trị thị trường ước tính cho bạn.
+      avm_us_only: '%{provider} chỉ hỗ trợ bất động sản tại Hoa Kỳ.'
+      avm_submit: Tra cứu bất động sản
+      avm_preview_title: Xác nhận thông tin bất động sản
+      avm_preview_description: Đây là những gì %{provider} tìm thấy. Hãy xem lại thông tin trước khi thêm bất động sản — chưa có gì được tạo.
+      avm_preview_no_record: '%{provider} không tìm thấy hồ sơ bất động sản tại địa chỉ này, nên giá trị hiển thị là ước tính dựa trên khu vực xung quanh. Hãy kiểm tra lại địa chỉ trước khi tiếp tục.'
+      avm_preview_back: Quay lại
+      avm_preview_confirm: Thêm bất động sản
     address:
       title: "Nhập bất động sản thủ công"
       address_line1_label: "Địa chỉ dòng 1"
@@ -87,3 +98,10 @@ vi:
       agri_land:
         short: Đất nông nghiệp
         long: Đất nông nghiệp
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    form_tabs:
+      address: Địa chỉ
+      overview: Tổng quan
+      value: Giá trị

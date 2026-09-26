@@ -13,5 +13,12 @@ hu:
       expiration_date: Lejárati dátum
       minimum_payment: Minimális törlesztőrészlet
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automatikus
+      simplefin_balance_sign_credit: Követelés (a bank tartozik neked)
+      simplefin_balance_sign_debt: Tartozás (te tartozol a banknak)
+      simplefin_balance_sign_description: Csak akkor bíráld felül, ha a SimpleFIN kétértelmű előjelet jelent. Az Automatikus beállítás továbbra is a tranzakcióelőzmények és a szolgáltatói egyenleg alapján dönt.
+      simplefin_balance_sign_label: A SimpleFIN egyenleg jelentése
+      treat_balance_as_available_credit_description: Kapcsold be, ha a bankod a kártya egyenlegeként a még rendelkezésre álló hitelkeretet jelenti a tartozás összege helyett. Ilyenkor a tartozást a bankod által jelentett hitelkeretből számítjuk ki, vagy ha a bank nem ad meg ilyet, a Rendelkezésre álló hitelkeret mezőből.
+      treat_balance_as_available_credit_label: Az egyenleg a rendelkezésre álló hitelkeret
     new:
       title: Add meg a hitelkártya adatait

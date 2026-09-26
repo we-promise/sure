@@ -28,9 +28,11 @@ zh-CN:
         actions:
           delete: 删除
           download: 下载
+          mark_failed: 标记为失败
+          confirm_mark_failed: 此导出已闲置一段时间，其后台任务很可能已中断。要将其标记为失败吗？您可以立即创建新的导出。
       empty: 暂无导出记录
     new:
-      dialog_title: 导出你的数据
+      dialog_title: 导出您的数据
       dialog_subtitle: 下载此家庭的财务数据副本。
       whats_included: 包含内容：
       accounts_and_balances: 所有账户和余额
@@ -38,6 +40,9 @@ zh-CN:
       investment_trades: 投资交易
       categories_tags_rules: 分类、标签和规则
       note_label: 说明
-      note_description: 导出文件可能包含敏感财务信息，请妥善保管。
+      note_description: 此导出包含您的所有数据，但只有部分数据可以通过 CSV 导入功能重新导入。我们支持导入账户、交易（含分类和标签）和证券交易。其他账户数据无法导入，仅供您留存。
       cancel: 取消
       export_data: 导出数据
+    cancel:
+      cancelled: 导出已标记为失败。您可以立即创建新的导出。
+      not_cancellable: 目前无法将此导出标记为失败——其任务可能仍在运行。请在其闲置一小时后重试。

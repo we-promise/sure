@@ -1,0 +1,20 @@
+---
+vi:
+  goal_pledges:
+    new:
+      helper_transfer: Sure sẽ tìm khoản tiền nạp tương ứng trong tài khoản đã liên kết của bạn. Khoản góp ở trạng thái chờ trong 7 ngày, rồi tự động được xác nhận khi Sure phát hiện khoản tiền đó.
+      helper_manual: Sure sẽ ghi nhận khoản này vào lần bạn cập nhật số dư thủ công tiếp theo và xác nhận khoản góp.
+      amount_label: Số tiền
+      account_label: Vào tài khoản
+      submit: Ghi nhận khoản góp
+      preview_zero: Hiện đã tiết kiệm {current} trên {target}.
+      preview_nonzero: Đạt {percent}%, {newTotal} trên {target}.
+      preview_reached: Đạt mức mục tiêu {target}. Đã hoàn thành mục tiêu.
+    create:
+      success: Đã ghi nhận khoản góp. Sure sẽ xác nhận ở lần đồng bộ tiếp theo.
+    renew:
+      success: Đã gia hạn thời gian chờ của khoản góp thêm 7 ngày.
+      not_open: Chỉ có thể gia hạn khoản góp đang chờ.
+    destroy:
+      success: Đã hủy khoản góp.
+      not_open: Chỉ có thể hủy khoản góp đang chờ.

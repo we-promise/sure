@@ -7,3 +7,6 @@ vi:
           min_actions: "phải có ít nhất một hành động"
           duplicate_actions: "Quy tắc không được có các hành động trùng lặp %{types}"
           nested_conditions: "Điều kiện phức hợp không thể lồng nhau"
+  rule:
+    conditions:
+      unsupported_label: Không được hỗ trợ (%{type})

@@ -14,6 +14,7 @@ vi:
       service_down_label: Dịch vụ gián đoạn
       service_down_desc: API Lunchflow có thể tạm thời không khả dụng
       check_provider_settings: Kiểm tra Cài đặt nhà cung cấp
+      unexpected_error: Đã xảy ra lỗi không mong muốn. Vui lòng thử lại sau.
     setup_required:
       title: Cần thiết lập Lunchflow
       api_key_not_configured: Khóa API chưa được cấu hình
@@ -64,6 +65,12 @@ vi:
       syncing: Đang đồng bộ...
       total: Tổng cộng
       unlinked: Chưa liên kết
+      sync_status:
+        no_accounts: Không tìm thấy tài khoản
+        synced:
+          other: Đã đồng bộ %{count} tài khoản
+        partial_setup:
+          other: '%{linked} đã đồng bộ, %{unlinked} cần thiết lập'
     select_accounts:
       accounts_selected: tài khoản đã chọn
       api_error: "Lỗi API: %{message}"
@@ -108,7 +115,7 @@ vi:
         depository: Tài khoản thanh toán hoặc tiết kiệm
         credit_card: Thẻ tín dụng
         investment: Tài khoản đầu tư
-        loan: Vay hoặc thế chấp
+        loan: Khoản vay hoặc vay thế chấp
         other_asset: Tài sản khác
       subtype_labels:
         depository: "Loại phụ tài khoản:"
@@ -127,7 +134,7 @@ vi:
           cd: Chứng chỉ tiền gửi
           money_market: Thị trường tiền tệ
         investment:
-          brokerage: Brokerage
+          brokerage: Tài khoản môi giới
           pension: Lương hưu
           retirement: Hưu trí
           "401k": "401(k)"
@@ -141,7 +148,7 @@ vi:
           roth_ira: Roth IRA
           angel: Angel
         loan:
-          mortgage: Thế chấp
+          mortgage: Vay thế chấp
           student: Vay sinh viên
           auto: Vay mua xe
           other: Vay khác
@@ -155,12 +162,18 @@ vi:
       sync_start_date_help: Chọn khoảng thời gian lịch sử giao dịch bạn muốn đồng bộ. Tối đa 3 năm lịch sử có sẵn.
       sync_start_date_label: "Bắt đầu đồng bộ giao dịch từ:"
       title: Thiết lập tài khoản Lunchflow của bạn
+      page_title: Thiết lập tài khoản Lunch Flow
     complete_account_setup:
       all_skipped: "Tất cả tài khoản đã bị bỏ qua. Không có tài khoản nào được tạo."
       creation_failed: "Tạo tài khoản thất bại: %{error}"
       no_accounts: "Không có tài khoản nào để thiết lập."
       success: "Đã tạo thành công %{count} tài khoản."
+      unexpected_error: Đã xảy ra lỗi không mong muốn
     sync:
       success: Đã bắt đầu đồng bộ
     update:
       success: Kết nối Lunchflow đã được cập nhật
+    subtype_select:
+      placeholder:
+        subtype: Chọn loại phụ
+        type: Chọn loại

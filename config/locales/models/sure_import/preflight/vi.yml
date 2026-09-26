@@ -1,0 +1,6 @@
+---
+vi:
+  sure_import:
+    preflight:
+      missing_reference: 'Dòng %{line}: %{type} tham chiếu đến %{field} %{value} không tồn tại.'
+      skipped_missing_reference: 'Dòng %{line}: %{type} tham chiếu đến %{field} %{value} không tồn tại. Mục này sẽ bị bỏ qua khi nhập.'

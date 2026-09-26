@@ -3,6 +3,9 @@ hu:
   transfers:
     create:
       success: Átutalás létrehozva
+      exchange_rate_unavailable: A kiválasztott devizákhoz és dátumhoz nem érhető el árfolyam
+      date_invalid: érvénytelen
+      stale_form: Ezt az űrlapot már elküldték más adatokkal. Frissítsd az oldalt, és próbáld újra.
     destroy:
       success: Átutalás eltávolítva
     form:
@@ -19,12 +22,15 @@ hu:
       submit: Átutalás létrehozása
       to: Hova
       transfer: Átutalás
+      bank_charges: Banki költségek
+      outgoing_fee: Kimenő átutalás díja
+      incoming_fee: Bejövő átutalás díja
     new:
       title: Új átutalás
     show:
       delete: Átutalás eltávolítása
       delete_subtitle: Ez eltávolítja az átutalást. Az alapul szolgáló tranzakciókat nem törli.
-      delete_title: Eltávolítja az átutalást?
+      delete_title: Eltávolítod az átutalást?
       details: Részletek
       mark_recurring: Ismétlődőként jelölés
       mark_recurring_subtitle: Kövesd ezt az átutalást ismétlődő mintaként a közelgő eseménylistában és az ismétlődők oldalon.
@@ -39,7 +45,10 @@ hu:
       amount: Összeg
       category: Kategória
       uncategorized: Kategorizálatlan
-      total: '[Total]'
-      transfer_amount: '[Transfer amount]'
+      total: Összesen
+      transfer_amount: Átutalt összeg
+      bank_charges: Banki költségek
+      source_fee: Küldő oldali díj
+      destination_fee: Fogadó oldali díj
     update:
       success: Átutalás frissítve

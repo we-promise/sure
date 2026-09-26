@@ -50,6 +50,7 @@ vi:
         all: Tất cả
         on_track: Đúng kế hoạch
         over_budget: Vượt ngân sách
+        aria_label: Lọc danh mục ngân sách
       tabs:
         actual: Thực tế
         budgeted: Ngân sách
@@ -62,6 +63,16 @@ vi:
       success: "Đã sao chép ngân sách từ %{source_name}"
       no_source: "Không tìm thấy ngân sách trước để sao chép"
       already_initialized: "Ngân sách này đã được thiết lập"
+    switcher:
+      aria_label: Chuyển ngân sách
+      household: Hộ gia đình
+    available_cash:
+      heading: Tiền mặt hiện có
+      subtitle: Nằm bên cạnh kế hoạch ở trên, không thuộc kế hoạch đó.
+      available: Tiền mặt khả dụng
+      earmarked: Đã dành riêng cho mục tiêu
+      free: Thực sự khả dụng
+      goals_link: Xem mục tiêu
   budget_categories:
     allocation_progress:
       budget_exceeded_html: 'Vượt ngân sách <span class="text-red-500 privacy-sensitive">%{amount}</span>'
@@ -70,8 +81,10 @@ vi:
       percent_set: "%{percent} đã đặt"
     budget_category_form:
       monthly_average: "%{amount}/tháng tb"
-      shared_placeholder: Chia sẻ
+      shared_placeholder: Dùng chung
       shared_title: Để trống để dùng chung ngân sách của danh mục cha
+      rollover_label: Chuyển sang tháng sau
+      rollover_title: Giữ số tiền chưa chi của danh mục này và chuyển sang tháng tiếp theo
     confirm_button:
       confirm: "Xác nhận"
     no_categories:
@@ -95,3 +108,27 @@ vi:
       recent_transactions: "Giao dịch gần đây"
       view_all_transactions: "Xem tất cả giao dịch trong danh mục"
       no_transactions: "Không tìm thấy giao dịch trong kỳ ngân sách này."
+      rolled_over: Chuyển từ tháng trước
+    bills_reserved: '%{amount} đã dành cho hóa đơn'
+    bills_reserved_unconvertible:
+      other: '%{count} hóa đơn chưa được dành tiền do không có tỷ giá hối đoái'
+    budget_category:
+      rolled_over: +%{amount} chuyển từ tháng trước
+    move:
+      button_title: Chuyển tiền khỏi danh mục này
+      cancel: Hủy
+      dialog_title: Chuyển tiền
+      no_destination: Hiện chưa có danh mục nào khác để chuyển tiền đến — một danh mục không thể chuyển tiền sang danh mục cha hoặc danh mục con của chính nó.
+      submit: Chuyển
+      amount_label: Số tiền
+      available: Còn %{amount} khả dụng
+      from_label: Từ
+      to_label: Đến
+      success: Đã chuyển tiền.
+      errors:
+        different_budgets: Cả hai danh mục phải thuộc cùng một ngân sách.
+        insufficient_funds: Số tiền này vượt quá mức đã phân bổ cho danh mục.
+        non_positive_amount: Nhập số tiền lớn hơn 0.
+        parent_child: Không thể chuyển tiền giữa một danh mục và danh mục con của nó — hãy điều chỉnh trực tiếp danh mục con.
+        same_category: Chọn một danh mục khác để chuyển tiền đến.
+        uncategorized: Chưa phân loại không phải là một danh mục ngân sách thực, nên không thể chuyển tiền vào hoặc ra khỏi đó.

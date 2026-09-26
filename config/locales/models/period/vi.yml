@@ -52,3 +52,5 @@ vi:
     custom:
       label_short: "Tùy chỉnh"
       label: "Khoảng thời gian tùy chỉnh"
+      comparison_label: '%{start_date} đến %{end_date}'
+    range: '%{start_date} – %{end_date}'

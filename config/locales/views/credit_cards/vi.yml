@@ -13,5 +13,12 @@ vi:
       expiration_date: Ngày hết hạn
       minimum_payment: Thanh toán tối thiểu
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Tự động
+      simplefin_balance_sign_credit: Dư có (ngân hàng nợ bạn)
+      simplefin_balance_sign_debt: Dư nợ (bạn nợ ngân hàng)
+      simplefin_balance_sign_description: Chỉ ghi đè khi SimpleFIN báo dấu số dư không rõ ràng. Chế độ Tự động tiếp tục dựa vào lịch sử giao dịch và số dư từ nhà cung cấp.
+      simplefin_balance_sign_label: Ý nghĩa số dư SimpleFIN
+      treat_balance_as_available_credit_description: Bật nếu ngân hàng của bạn báo số dư của thẻ này là hạn mức tín dụng còn lại thay vì số tiền nợ. Khi đó, khoản nợ sẽ được tính từ hạn mức tín dụng do ngân hàng cung cấp, hoặc từ trường Hạn mức tín dụng còn lại nếu ngân hàng không cung cấp hạn mức.
+      treat_balance_as_available_credit_label: Số dư là hạn mức tín dụng còn lại
     new:
       title: Nhập thông tin thẻ tín dụng

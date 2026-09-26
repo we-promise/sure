@@ -62,7 +62,7 @@ hu:
         balance: "Egyenleg"
       activity:
         recent:
-          one: "1 tranzakció • legújabb: %{when}"
+          one: "%{count} tranzakció • legújabb: %{when}"
           other: "%{count} tranzakció • legújabb: %{when}"
         dormant: "%{days} napja nincs aktivitás"
         empty: "Még nem lett tranzakció importálva"
@@ -70,7 +70,7 @@ hu:
         today: "ma"
         yesterday: "tegnap"
         days_ago:
-          one: "1 napja"
+          one: "%{count} napja"
           other: "%{count} napja"
       stale_accounts:
         title: "A SimpleFIN-ből eltűnt számlák"
@@ -78,7 +78,7 @@ hu:
         action_prompt: "Mit szeretnél tenni?"
         action_delete: "Számla és az összes tranzakció törlése"
         action_move: "Tranzakciók áthelyezése ide:"
-        action_skip: "Kihagyás most"
+        action_skip: "Kihagyás egyelőre"
         transaction_count:
           one: "%{count} tranzakció"
           other: "%{count} tranzakció"
@@ -97,7 +97,7 @@ hu:
       confirm_accept: Kapcsolat törlése
       confirm_body: Ez véglegesen törli az összes számlát ebben a csoportban és az összes kapcsolódó adatot.
       confirm_title: Töröljük a SimpleFIN kapcsolatot?
-      delete: Töröl
+      delete: Törlés
       deletion_in_progress: "(törlés folyamatban...)"
       error: Hiba történt az adatok szinkronizálása közben
       no_accounts_description: Ennek a kapcsolatnak még nincsenek szinkronizált számlái.
@@ -112,8 +112,8 @@ hu:
         other: "%{count} további számla áll rendelkezésre a beállításhoz"
       accounts_skipped_tooltip: "Néhány számla ki lett hagyva a szinkronizálás közbeni hibák miatt"
       accounts_skipped_label: "Kihagyva: %{count}"
-      rate_limited_ago: "Rátakorlátozott (%{time} ezelőtt)"
-      rate_limited_recently: "Nemrég rátakorlátozás lépett fel"
+      rate_limited_ago: "Kéréskorlát elérve (%{time} ezelőtt)"
+      rate_limited_recently: "Nemrég elérted a kéréskorlátot"
       status: Utolsó szinkronizálás %{timestamp} ezelőtt
       status_never: Még nem volt szinkronizálva
       status_with_summary: "Utolsó szinkronizálás %{timestamp} ezelőtt • %{summary}"
@@ -130,9 +130,10 @@ hu:
       link_account: Számla összekapcsolása
       no_accounts_found: "Nem található SimpleFIN-számla ehhez: %{moniker}."
       wait_for_sync: Ha most csatlakoztál vagy szinkronizáltál, próbáld újra, miután a szinkronizálás befejeződött.
-      unlink_to_move: A kapcsolat áthelyezéséhez először szüntess meg a jelenlegi kapcsolatot a számla műveletek menüjéből.
+      unlink_to_move: A kapcsolat áthelyezéséhez először szüntesd meg a jelenlegi kapcsolatot a számla műveletek menüjéből.
       all_accounts_already_linked: Úgy tűnik, az összes SimpleFIN-számla már össze van kapcsolva.
       currently_linked_to: "Jelenleg összekapcsolva: %{account_name}"
+      check_provider_health: Ellenőrizd a Beállítások → Szolgáltatók részen, hogy a SimpleFIN kapcsolatod rendben működik-e.
     link_existing_account:
       success: A számla sikeresen össze lett kapcsolva a SimpleFIN-nel
       errors:
@@ -156,3 +157,21 @@ hu:
       message:
         one: "%{count} függőben lévő tranzakció %{days} napnál régebbi"
         other: "%{count} függőben lévő tranzakció %{days} napnál régebbi"
+    sync_status:
+      no_accounts: Nem található számla
+      synced:
+        one: '%{count} számla szinkronizálva'
+        other: '%{count} számla szinkronizálva'
+      partial_setup:
+        one: '%{linked} szinkronizálva, %{unlinked} beállításra vár'
+        other: '%{linked} szinkronizálva, %{unlinked} beállításra vár'
+    institution_summary:
+      none: Nincs csatlakoztatott pénzintézet
+      count:
+        one: '%{count} pénzintézet'
+        other: '%{count} pénzintézet'
+    rate_limited:
+      daily_refresh: Elérted a SimpleFIN napi frissítési korlátját. Próbáld újra, miután a Bridge frissült (legfeljebb 24 óra).
+    stale_sync:
+      last_successful: Az utolsó sikeres szinkronizálás %{count} napja volt. Lehet, hogy a SimpleFIN kapcsolatod figyelmet igényel.
+      no_transactions: '%{count} napja nincs új tranzakció. Ellenőrizd a SimpleFIN irányítópultodon, hogy a banki kapcsolataid aktívak-e.'

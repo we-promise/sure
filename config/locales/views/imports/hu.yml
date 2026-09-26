@@ -9,17 +9,17 @@ hu:
         description: "Ellenőrizd az automatikusan felismert dátumformátumot, majd válaszd ki, mely kategóriákat és címkéket szeretnéd beimportálni a QIF fájlodból a %{product_name} alkalmazásba."
         categories_heading: Kategóriák
         categories_found:
-          one: "1 kategória található"
+          one: "%{count} kategória található"
           other: "%{count} kategória található"
         category_name_col: Kategória neve
         transactions_col: Tranzakciók
         tags_heading: Címkék
         tags_found:
-          one: "1 címke található"
+          one: "%{count} címke található"
           other: "%{count} címke található"
         tag_name_col: Címke neve
         txn_count:
-          one: "1 tranzakció"
+          one: "%{count} tranzakció"
           other: "%{count} tranzakció"
         split_warning_title: Felosztott tranzakciók észlelve
         split_warning_description: "Ez a QIF fájl felosztott tranzakciókat tartalmaz. A felosztott tranzakciókat még nem támogatjuk, ezért minden ilyen tranzakció teljes összegével, kategória nélkül kerül importálásra. Az egyes felosztási részletek nem őrződnek meg."
@@ -109,6 +109,20 @@ hu:
         instructions: Kattints a Folytatás gombra a CSV feldolgozásához és a megtisztítási lépéshez való továbblépéshez.
       mint_import:
         date_format_label: Dátumformátum
+        account_optional: Számla (nem kötelező)
+        amount: Összeg
+        apply_configuration: Konfiguráció alkalmazása
+        category_optional: Kategória (nem kötelező)
+        currency: Pénznem
+        date: Dátum
+        format: Formátum
+        incomes_negative: A bevételek negatívak
+        incomes_positive: A bevételek pozitívak
+        intro: Előre beállítottuk neked a Mint importálást. Folytasd a következő lépéssel.
+        leave_empty: Hagyd üresen
+        name_optional: Név (nem kötelező)
+        select_format: Formátum kiválasztása
+        tags_optional: Címkék (nem kötelező)
       rule_import:
         description: Konfiguráld a szabályimportálást. A szabályok a CSV adatok alapján lesznek létrehozva vagy frissítve.
         process_button: Szabályok feldolgozása
@@ -116,6 +130,40 @@ hu:
       show:
         description: Válaszd ki, melyik oszlopok felelnek meg a CSV egyes mezőinek.
         title: Importálás konfigurálása
+        template_found: Sablonkonfiguráció található
+        template_description: Találtunk egy konfigurációt ennek a számlának egy korábbi importálásából. Szeretnéd alkalmazni erre az importálásra?
+        manually_configure: Kézi konfigurálás
+        apply_template: Sablon alkalmazása
+        sample_caption: Mintaadatok a feltöltött CSV-ből
+      merchant_import:
+        button_label: Folytatás
+        description: Tölts fel egy CSV fájlt a kereskedőiddel. Az oszlopokat automatikusan leképezzük neked.
+        instructions: Kattints a Folytatás gombra a CSV feldolgozásához és a megtisztítási lépéshez való továbblépéshez.
+      actual_import:
+        preconfigured_notice: Előre beállítottuk neked az Actual Budget importálást. Folytasd a következő lépéssel.
+        leave_empty: Hagyd üresen
+        date_label: Dátum
+        date_format_label: Dátumformátum
+        amount_label: Összeg
+        signage_convention_label: Előjel-konvenció
+        incomes_are_negative: A bevételek negatívak
+        incomes_are_positive: A bevételek pozitívak
+        account_label: Számla (nem kötelező)
+        name_label: Kedvezményezett (nem kötelező)
+        category_label: Kategória (nem kötelező)
+        notes_label: Megjegyzések (nem kötelező)
+        apply_configuration: Konfiguráció alkalmazása
+      ynab_import:
+        preconfigured_notice: Előre beállítottuk neked a YNAB importálást. Folytasd a következő lépéssel.
+        amount_notice: Az összegeket automatikusan felismerjük az Outflow és Inflow oszlopokból.
+        leave_empty: Hagyd üresen
+        date_label: Dátum
+        date_format_label: Dátumformátum
+        account_label: Számla (nem kötelező)
+        name_label: Kedvezményezett (nem kötelező)
+        category_label: Kategória (nem kötelező)
+        notes_label: Memo (nem kötelező)
+        apply_configuration: Konfiguráció alkalmazása
     confirms:
       sure_import:
         title: Importálás megerősítése
@@ -183,6 +231,9 @@ hu:
         upload_button: NDJSON feltöltése
         hint_html: Töltsd fel az <strong>all.ndjson</strong> fájlt az adatexport ZIP archívumból
         ndjson_invalid: Érvényes NDJSON szükséges, legalább egy rekorddal
+      handle_qif_upload:
+        qif_uploaded: QIF fájl sikeresen feltöltve.
+        qif_account_required: Válassz számlát a QIF importáláshoz
   imports:
     mapping_labels:
       account_type: "Számlatípus"
@@ -206,9 +257,12 @@ hu:
       category_parent: "Szülőkategória"
       category_color: "Szín"
       category_icon: "Lucide ikon"
+      merchant_color: Szín
+      merchant_website: Webhely URL-je
     update:
       account_saved: "Számla mentve."
       invalid_account: "Számla nem található."
+      account_locked: Ez az importálás már közzé lett téve, ezért a számlája nem módosítható. Ha máshová szeretnéd importálni, előbb vond vissza.
     publish:
       started: "Az importálás a háttérben elindult."
       max_rows_exceeded: "Az importálás meghaladja a maximális %{max} soros korlátot."
@@ -227,6 +281,16 @@ hu:
       title: Importálás sikeres
       description: Az importált adatok sikeresen hozzáadásra kerültek az alkalmazáshoz, és most már használhatók.
       back_to_dashboard: Vissza az irányítópultra
+      verification:
+        title: Visszaolvasásos ellenőrzés
+        checked: Ellenőrizve
+        mismatches: Eltérések
+        status:
+          not_verified: Nincs ellenőrizve
+          matched: Egyezik
+          mismatch: Eltérés
+          failed: Sikertelen
+          reverted: Visszavonva
     importing:
       title: Importálás folyamatban
       description: "Az importálás folyamatban van. Az állapotfrissítéseket az importálások menüben ellenőrizheted, vagy kattints az 'Állapot ellenőrzése' gombra az oldal frissítéséhez. Nyugodtan folytasd az alkalmazás használatát."
@@ -253,14 +317,18 @@ hu:
       pdf_import: "PDF importálás"
       document_import: "Dokumentumimportálás"
       sure_import: "Sure importálás"
+      actual_import: Actual importálás
+      ynab_import: YNAB importálás
+      merchant_import: Kereskedőimportálás
     steps:
       upload: Feltöltés
       configure: Konfigurálás
       clean: Megtisztítás
-      map: Leképezés
+      map: Hozzárendelés
       confirm: Megerősítés
       select: Kiválasztás
       progress: "%{step}. lépés / %{total}"
+      label: '%{step}. lépés'
     empty:
       message: Nem található importálás.
     index:
@@ -285,6 +353,9 @@ hu:
           pdf_import: "PDF"
           document_import: "Dokumentum"
           sure_import: "Sure"
+          actual_import: Actual
+          ynab_import: YNAB
+          merchant_import: Kereskedő
         status:
           in_progress: Folyamatban
           uploading: Sorok feldolgozása
@@ -297,6 +368,8 @@ hu:
           confirm_revert: Ez törli az importált tranzakciókat, de bármikor megtekintheted és újra importálhatod az adataidat.
           delete: Törlés
           view: Megtekintés
+          mark_failed: Megjelölés sikertelenként
+          confirm_mark_failed: Ez az importálás már egy ideje inaktív, és a háttérfeladata valószínűleg megszakadt. Megjelölöd sikertelenként, hogy újra megpróbálhasd? Az importált adatok nem maradnak meg.
       empty: Még nincs importálás.
     new:
       description: Importálás pénzügyi eszközből vagy nyers adatfájlok feltöltése.
@@ -318,6 +391,8 @@ hu:
       resume: "%{type} folytatása"
       sources: Források
       title: Új importálás
+      import_merchants: Kereskedők importálása
+      import_actual: Importálás Actual Budgetből
     create:
       file_too_large: A fájl túl nagy. A maximális méret %{max_size} MB.
       invalid_file_type: Érvénytelen fájltípus. Kérjük, tölts fel CSV fájlt.
@@ -332,6 +407,7 @@ hu:
       document_upload_failed: Nem sikerült feltölteni a dokumentumot a vektortárba. Kérjük, próbáld újra.
       invalid_ndjson_file_type: Érvénytelen fájltípus vagy formátum. Kérjük, tölts fel érvényes .ndjson vagy .json exportfájlt.
       document_provider_not_configured: Nincs vektortár konfigurálva dokumentumfeltöltéshez.
+      duplicate_pdf_unavailable: Ez a PDF már el van tárolva egy olyan kimutatásként, amelyhez nincs hozzáférésed.
     show:
       finalize_upload: Kérjük, fejezd be a fájlfeltöltést.
       finalize_mappings: Kérjük, véglegesítsd a leképezéseket a továbblépés előtt.
@@ -345,6 +421,8 @@ hu:
       back_to_imports: Vissza az importálásokhoz
     errors:
       custom_column_requires_inflow: "Az egyéni oszlopos importáláshoz be kell jelölni egy beérkező összeg oszlopot"
+      interrupted: A háttérfolyamat megszakadt, mielőtt ez befejeződött volna. Az importált adatokat visszavontuk – nyugodtan próbáld újra.
+      presumed_lost: Sikertelennek jelölve, mert a háttérfeladat feltehetően elveszett. Az importált adatokat visszavontuk – nyugodtan próbáld újra.
     document_types:
       bank_statement: Bankszámlakivonat
       credit_card_statement: Hitelkártyakivonat
@@ -373,7 +451,7 @@ hu:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Feldolgozási hiba: %{error}"
       ready_for_review_title: Felülvizsgálatra kész
-      ready_for_review_description: "%{count} tranzakciót vontunk ki a kimutatásodból. Ellenőrizd és tedd közzé, hogy hozzáadódjon a számládhoz."
+      ready_for_review_description: "A kimutatásodból %{count} tranzakció még nincs ebben a számlában. Ellenőrizd, majd tedd közzé a hozzáadáshoz."
       transactions_extracted: Kinyert tranzakciók
       transactions_extracted_count:
         one: "%{count} tranzakció"
@@ -390,3 +468,47 @@ hu:
       review_transactions: Tranzakciók áttekintése
       select_account_to_continue: A folytatáshoz kérjük, válassz fentebb számlát.
       unknown_document_type: Ismeretlen
+      source_statement: Forráskimutatás
+      errors:
+        provider_not_configured: Nincs AI-szolgáltató konfigurálva
+        provider_no_pdf_support: Az AI-szolgáltató nem támogatja a PDF-feldolgozást
+      view_summary: Importálás összegzésének megtekintése
+      already_recorded_note:
+        one: '%{count} már szerepelt ezen a számlán, és párosítva lett a kimutatással.'
+        other: '%{count} már szerepelt ezen a számlán, és párosítva lett a kimutatással.'
+      complete_fully_reconciled:
+        one: A kimutatás minden tranzakciója már szerepelt a számládon. %{count} tranzakció párosítva és egyeztetettként megjelölve – nem kellett semmit importálni.
+        other: A kimutatás minden tranzakciója már szerepelt a számládon. Mind a(z) %{count} tranzakció párosítva és egyeztetettként megjelölve – nem kellett semmit importálni.
+    dry_run_resources:
+      transactions: Tranzakciók
+      balances: Egyenlegek
+      accounts: Számlák
+      categories: Kategóriák
+      tags: Címkék
+      rules: Szabályok
+      merchants: Kereskedők
+      recurring_transactions: Ismétlődő tranzakciók
+      transfers: Átutalások
+      rejected_transfers: Elutasított átutalások
+      trades: Ügyletek
+      holdings: Pozíciók
+      valuations: Értékelések
+      budgets: Költségvetések
+      budget_categories: Költségvetési kategóriák
+    summary:
+      title: Importálás összegzése
+      subtitle: Mi történt a kimutatás egyes tranzakcióival a(z) %{account} számlán.
+      subtitle_no_account: Mi történt a kimutatás egyes tranzakcióival.
+      extracted: A kimutatásban talált
+      already_recorded: Már rögzítve
+      already_recorded_hint: Párosítva a számlán már meglévő tranzakcióval, és egyeztetettként megjelölve.
+      imported: Újként importálva
+      awaiting_review: Importálásra vár
+      fully_reconciled:
+        one: Nem kellett semmit importálni – a kimutatás egyetlen tranzakciója már rögzítve volt.
+        other: Nem kellett semmit importálni – mind a(z) %{count} tranzakció már rögzítve volt.
+      statement_evidence_html: 'Egyeztetve a következővel: %{statement}.'
+      close: Bezárás
+    cancel:
+      cancelled: Az importálás sikertelennek jelölve. Az importálás oldalán újra megpróbálhatod.
+      not_cancellable: Ez az importálás most nem jelölhető sikertelennek – lehet, hogy a feladata még fut. Próbáld újra, ha már egy órája inaktív.

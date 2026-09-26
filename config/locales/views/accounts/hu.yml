@@ -12,7 +12,7 @@ hu:
       link_lunchflow: Összekapcsolás a Lunch Flow-val
       link_provider: Összekapcsolás szolgáltatóval
       unlink_provider: Leválasztás a szolgáltatóról
-      change_simplefin_account: SimpleFIN fiók módosítása
+      change_simplefin_account: SimpleFIN-számla módosítása
       troubleshoot: Hibakeresés
       enable: Számla engedélyezése
       disable: Számla letiltása
@@ -21,6 +21,9 @@ hu:
       default_label: Alapértelmezett
       delete: Számla törlése
       sharing: Megosztás
+      exclude_from_reports: Kizárás minden jelentésből
+      include_in_reports: Belefoglalás a jelentésekbe
+      excluded_from_reports_indicator: Kizárva a jelentésekből
     chart:
       data_not_available: A kiválasztott időszakra nem állnak rendelkezésre adatok
     create:
@@ -32,9 +35,9 @@ hu:
       cannot_delete_linked: "Összekapcsolt számla nem törölhető. Először válaszd le a szolgáltatóról."
       failed: "Az erőforrás törlése sikertelen. Próbáld meg később."
     empty:
-      empty_message: Állítson be számlát szinkronizálással, importálással vagy manuális rögzítéssel.
+      empty_message: Adj hozzá számlát összekapcsolással, importálással vagy manuális rögzítéssel.
       new_account: Új számla
-      no_accounts: Még nincsenek számlái
+      no_accounts: Még nincsenek számláid
     form:
       balance: "Egyenleg a dátumon:"
       opening_balance_date_label: Nyitóegyenleg dátuma
@@ -47,12 +50,16 @@ hu:
       institution_domain_placeholder: pl. otpbank.hu
       notes_label: Megjegyzések
       notes_placeholder: További információk tárolása, pl. számlaszám, IBAN, routing szám stb.
+      exclude_from_reports: Kizárás minden jelentésből
+      enable_category_matcher_label: Kategóriapárosítás engedélyezése
+      enable_category_matcher_hint: Ha engedélyezed, a szolgáltató által javasolt kategória kerül az importált tranzakciókra. Kapcsold ki, ha az új tranzakciókat kategória nélkül szeretnéd hagyni.
     index:
       accounts: Számlák
       manual_accounts:
         other_accounts: Egyéb számlák
       new_account: Új számla
       sync: Összes szinkronizálása
+      cancel_sync: Szinkronizálás megszakítása
     sync_all:
       syncing: "Számlák szinkronizálása..."
     new:
@@ -61,6 +68,8 @@ hu:
         select: Kiválasztás
         navigate: Navigálás
         close: Bezárás
+        next: Tovább
+        previous: Vissza
       method_selector:
         connected_entry: Számla összekapcsolása
         connected_entry_eu: EU-s számla összekapcsolása
@@ -73,9 +82,10 @@ hu:
       limited_fx_history_warning: "Az árfolyam-előzmények csak %{date} dátumtól érhetők el. Az ezt megelőző tranzakciókhoz közelítő árfolyamok kerülnek alkalmazásra – ez akkor fordulhat elő, ha a devizaárfolyam-szolgáltató csak korlátozott előzményadatokat kínál."
       tabs:
         activity: Tevékenység
-        holdings: Portfólió
+        holdings: Pozíciók
         overview: Áttekintés
         statements: Kimutatások
+        schedule: Ütemezés
       activity:
         amount: Összeg
         balance: Egyenleg
@@ -104,7 +114,7 @@ hu:
         complete_setup: Beállítás befejezése
       menu:
         confirm_accept: '"%{name}" törlése'
-        confirm_body_html: "<p>A számla törlésével törlöd az értéktörténetét is, ami hatással van az összesített fiókodra. Ez közvetlenül befolyásolja a nettó vagyonszámítást és a számlagrafikonokat.</p><br /> <p>A törlés után a számla adatait nem lehet visszaállítani – ha szükséges, új számlaként kell hozzáadni.</p>"
+        confirm_body_html: "<p>A számla törlésével törlöd az értéktörténetét is, ami hatással van a pénzügyeid összképére. Ez közvetlenül befolyásolja a nettó vagyonszámítást és a számlagrafikonokat.</p><br /> <p>A törlés után a számla adatait nem lehet visszaállítani – ha szükséges, új számlaként kell hozzáadni.</p>"
         confirm_title: Törlöd a számlát?
         delete_account: Számla törlése
         edit: Szerkesztés
@@ -114,6 +124,8 @@ hu:
         manage: Számlák kezelése
         sharing: Megosztás
         statements: Kimutatások
+        exclude_from_reports: Kizárás minden jelentésből
+        include_in_reports: Belefoglalás a jelentésekbe
     update:
       success: "%{type} számla frissítve"
     sidebar:
@@ -128,6 +140,8 @@ hu:
       new_debt: Új kötelezettség
       new_account: Új számla
       new_account_group: "Új %{account_group}"
+      expand_all: Összes kibontása
+      collapse_all: Összes összecsukása
     types:
       depository: Készpénz
       investment: Befektetés

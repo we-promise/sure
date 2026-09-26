@@ -1,0 +1,12 @@
+---
+hu:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: SCA privát kulcs
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: nem tárolható, mert az Active Record titkosítás nincs beállítva ezen a telepítésen

@@ -63,6 +63,7 @@ hu:
           regenerate_key: "Új kulcs létrehozása"
           revoke_key: "Kulcs visszavonása"
           revoke_confirmation: "Biztosan vissza szeretnéd vonni ezt az API-kulcsot? Ez a művelet nem vonható vissza, és azonnal letiltja az összes ezt a kulcsot használó alkalmazást."
+          back_to_keys: Vissza az API-kulcsokhoz
       new:
         title: "API-kulcs létrehozása"
         create_new_api_key: "Új API-kulcs létrehozása"
@@ -113,3 +114,20 @@ hu:
         usage_instructions: "Használd az API-kulcsodat az X-Api-Key fejlécbe illesztve:"
         copy_key: "API-kulcs másolása"
         continue: "Tovább az API-kulcs beállításaihoz"
+      shared:
+        active: Aktív
+        created_ago: Létrehozva %{time} ezelőtt
+        last_used_ago: Utoljára használva %{time} ezelőtt
+        never_used: Még nem használt
+        scope_read_only: Csak olvasható
+        scope_read_write: Olvasás/Írás
+      index:
+        title: API-kulcsok
+        subtitle: API-kulcsok kezelése az adataid programozott eléréséhez.
+        new_key: Új API-kulcs
+        empty_heading: Még nincsenek API-kulcsok
+        empty_description: Hozz létre egy API-kulcsot, hogy programozottan elérd az adataidat.
+        revoke_key: Visszavonás
+        revoke_confirmation: Biztosan visszavonod a(z) „%{name}” kulcsot? Ez azonnal letilt minden alkalmazást, amely ezt a kulcsot használja.
+      key_reveal:
+        copied: Másolva!

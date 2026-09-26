@@ -59,7 +59,7 @@ hu:
     sync_status:
       no_accounts: Még nem találhatók IBKR-számlák
       all_linked:
-        one: 1 számla összekapcsolva
+        one: "%{count} számla összekapcsolva"
         other: "%{count} számla összekapcsolva"
       partial: "%{linked} összekapcsolt, %{unlinked} beállítást igényel"
     select_existing_account:

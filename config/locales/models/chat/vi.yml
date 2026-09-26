@@ -6,3 +6,4 @@ vi:
       temporarily_unavailable: "Nhà cung cấp AI tạm thời không khả dụng. Vui lòng thử lại sau vài phút."
       misconfigured: "Nhà cung cấp AI chưa được cấu hình đúng. Vui lòng liên hệ quản trị viên."
       default: "Không thể tạo phản hồi. Vui lòng thử lại."
+      no_response: Trợ lý không phản hồi. Tiến trình chạy nền có thể đang ngừng hoạt động hoặc AI chưa được cấu hình đầy đủ. Vui lòng thử lại.

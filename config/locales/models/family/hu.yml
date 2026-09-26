@@ -1,0 +1,10 @@
+---
+hu:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_chat_system: Csevegés rendszerpromptja
+        ai_prompt_categorizer_openai: Tranzakció-kategorizáló prompt (OpenAI)
+        ai_prompt_categorizer_anthropic: Tranzakció-kategorizáló prompt (Anthropic)
+        ai_prompt_merchant_openai: Kereskedő-felismerő prompt (OpenAI)
+        ai_prompt_merchant_anthropic: Kereskedő-felismerő prompt (Anthropic)

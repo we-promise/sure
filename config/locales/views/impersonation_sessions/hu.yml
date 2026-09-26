@@ -14,7 +14,7 @@ hu:
     reject:
       success: Kérés elutasítva
     super_admin_bar:
-      super_admin: Super Admin
+      super_admin: Szuperadmin
       jobs: Feladatok
       impersonating: Megszemélyesítés
       leave: Kilépés

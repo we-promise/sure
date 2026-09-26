@@ -8,8 +8,8 @@ vi:
         category_prompt: Chọn danh mục
         date_label: Ngày
         header_title: Chỉnh sửa giao dịch
-        merchant_label: Nhà cung cấp
-        merchant_prompt: Chọn nhà cung cấp
+        merchant_label: Người bán
+        merchant_prompt: Chọn người bán
         name_label: Tên
         name_placeholder: Nhập tên sẽ được áp dụng cho các giao dịch đã chọn
         none: "(không có)"
@@ -21,7 +21,7 @@ vi:
         transactions_section: Giao dịch
     unknown_name: Giao dịch không xác định
     selection_bar:
-      duplicate: Nhân đôi
+      duplicate: Tạo bản sao
       edit: Chỉnh sửa
       selected: đã chọn
     form:
@@ -37,13 +37,21 @@ vi:
       description_placeholder: Mô tả giao dịch
       expense: Chi tiêu
       income: Thu nhập
-      merchant_label: Nhà cung cấp
+      merchant_label: Người bán
       none: (không có)
       note_label: Ghi chú
       note_placeholder: Nhập ghi chú
       submit: Thêm giao dịch
       tags_label: Nhãn
       transfer: Chuyển khoản
+      category_search_placeholder: Tìm kiếm danh mục
+      create_category: Tạo "%{name}"
+      create_category_error: Không thể tạo danh mục
+      create_tag: Tạo
+      create_merchant: Tạo
+      create_merchant_error: Không thể tạo người bán
+      merchant_search_placeholder: Tìm kiếm hoặc tạo người bán
+      tag_search_placeholder: Tìm kiếm hoặc tạo nhãn
     create:
       created: Đã tạo giao dịch
     update:
@@ -57,8 +65,8 @@ vi:
       mark_recurring_subtitle: Theo dõi giao dịch định kỳ này. Mức biến động được tự động tính từ 6 tháng giao dịch tương tự.
       mark_recurring_title: Giao dịch định kỳ
       merge_duplicate: Có, gộp lại
-      potential_duplicate_description: Giao dịch đang chờ này có thể giống với giao dịch đã đăng bên dưới. Nếu vậy, hãy gộp lại để tránh tính hai lần.
-      potential_duplicate_title: Phát hiện trùng lặp có thể
+      potential_duplicate_description: Giao dịch đang chờ này có thể giống với giao dịch đã ghi sổ bên dưới. Nếu vậy, hãy gộp lại để tránh tính hai lần.
+      potential_duplicate_title: Phát hiện giao dịch có thể trùng lặp
       transfer: Chuyển khoản
       account_label: Tài khoản
       amount: Số tiền
@@ -70,7 +78,7 @@ vi:
       details: Chi tiết
       attachments: Tệp đính kèm
       exclude: Loại trừ
-      exclude_description: Giao dịch bị loại trừ sẽ bị xóa khỏi tính toán ngân sách và báo cáo.
+      exclude_description: Giao dịch bị loại trừ sẽ không được tính vào ngân sách và báo cáo.
       activity_type: Loại hoạt động
       activity_type_description: Loại hoạt động đầu tư (Mua, Bán, Cổ tức, v.v.). Tự động phát hiện hoặc đặt thủ công.
       one_time_title: "%{type} một lần"
@@ -79,10 +87,10 @@ vi:
       convert_to_trade_description: Chuyển giao dịch này thành giao dịch Mua hoặc Bán với thông tin chứng khoán để theo dõi danh mục.
       convert_to_trade_button: Chuyển đổi thành giao dịch
       transfer_matcher_description: Kết nối giao dịch này với giao dịch đối ứng trong tài khoản khác.
-      pending_duplicate_merger_title: Trùng lặp với giao dịch đã đăng?
-      pending_duplicate_merger_description: Gộp thủ công giao dịch đang chờ này với phiên bản đã đăng.
+      pending_duplicate_merger_title: Trùng lặp với giao dịch đã ghi sổ?
+      pending_duplicate_merger_description: Gộp thủ công giao dịch đang chờ này với phiên bản đã ghi sổ.
       pending_duplicate_merger_button: Mở công cụ gộp
-      merchant_label: Nhà cung cấp
+      merchant_label: Người bán
       name_label: Tên
       nature: Loại
       none: "(không có)"
@@ -97,11 +105,15 @@ vi:
       additional_details: "Thông tin bổ sung"
       payee: "Người nhận"
       description: "Mô tả"
-      memo: "Ghi nhớ"
+      memo: "Diễn giải"
       provider_extras: "Thông tin nhà cung cấp"
       transfer_or_debt_payment: "Chuyển khoản hay Thanh toán nợ?"
       open_matcher: "Mở công cụ khớp"
       convert: "Chuyển đổi"
+      create_bill: Tạo hóa đơn định kỳ
+      applied_to_title: Hóa đơn đã thanh toán
+      applied_to_detail: '%{amount} cho hóa đơn đến hạn ngày %{date}'
+      applied_to_unreviewed: Cần xem xét
     activity_labels:
       buy: Mua
       sell: Bán
@@ -119,22 +131,22 @@ vi:
     mark_recurring: Đánh dấu là định kỳ
     mark_recurring_subtitle: Theo dõi giao dịch định kỳ này. Mức biến động được tự động tính từ 6 tháng giao dịch tương tự.
     mark_recurring_title: Giao dịch định kỳ
-    potential_duplicate_title: Phát hiện trùng lặp có thể
-    potential_duplicate_description: Giao dịch đang chờ này có thể giống với giao dịch đã đăng bên dưới. Nếu vậy, hãy gộp lại để tránh tính hai lần.
+    potential_duplicate_title: Phát hiện giao dịch có thể trùng lặp
+    potential_duplicate_description: Giao dịch đang chờ này có thể giống với giao dịch đã ghi sổ bên dưới. Nếu vậy, hãy gộp lại để tránh tính hai lần.
     merge_duplicate_button: Có, gộp lại
     keep_both: Không, giữ cả hai
     split_parent_row:
       split_label: "Phân chia"
     transfer_match:
       auto_matched: Tự động khớp
-      auto_matched_short: T/K
+      auto_matched_short: TĐK
       confirm_match: Xác nhận khớp
       payment_confirmed: Thanh toán đã được xác nhận
       reject_match: Từ chối khớp
       transfer_confirmed: Chuyển khoản đã được xác nhận
     transaction:
       pending: Đang chờ
-      pending_tooltip: Giao dịch đang chờ — có thể thay đổi khi được đăng
+      pending_tooltip: Giao dịch đang chờ — có thể thay đổi khi được ghi sổ
       linked_with_provider: Liên kết với %{provider}
       activity_type_tooltip: Loại hoạt động đầu tư
       possible_duplicate: Trùng lặp?
@@ -155,7 +167,7 @@ vi:
       possible_duplicate_short: Trùng?
       review_recommended: Xem xét
       review_recommended_short: Xem
-      confirm_title: "Gộp với giao dịch đã đăng (%{posted_amount})"
+      confirm_title: "Gộp với giao dịch đã ghi sổ (%{posted_amount})"
       reject_title: Giữ nguyên là các giao dịch riêng biệt
     summary:
       total_transactions: Tổng giao dịch
@@ -166,7 +178,7 @@ vi:
     header:
       edit_categories: Chỉnh sửa danh mục
       edit_imports: Chỉnh sửa nhập dữ liệu
-      edit_merchants: Chỉnh sửa nhà cung cấp
+      edit_merchants: Chỉnh sửa người bán
       edit_tags: Chỉnh sửa nhãn
       import: Nhập
     index:
@@ -178,7 +190,7 @@ vi:
       edit_rules: "Chỉnh sửa quy tắc"
       edit_categories: "Chỉnh sửa danh mục"
       edit_tags: "Chỉnh sửa nhãn"
-      edit_merchants: "Chỉnh sửa nhà cung cấp"
+      edit_merchants: "Chỉnh sửa người bán"
       edit_imports: "Chỉnh sửa nhập dữ liệu"
       new_transaction: "Giao dịch mới"
       categorize_button:
@@ -232,7 +244,7 @@ vi:
         amount: Số tiền
         category: Danh mục
         tag: Nhãn
-        merchant: Nhà cung cấp
+        merchant: Người bán
     convert_to_trade:
       title: Chuyển đổi thành giao dịch chứng khoán
       description: Chuyển giao dịch này thành giao dịch với thông tin chứng khoán
@@ -300,6 +312,14 @@ vi:
         status_filter:
           confirmed: Đã xác nhận
           pending: Đang chờ
+        account_filter:
+          filter_accounts: Lọc tài khoản
+        category_filter:
+          filter_category: Lọc danh mục
+        merchant_filter:
+          filter_merchants: Lọc người bán
+        tag_filter:
+          filter_tags: Lọc nhãn
       menu:
         account_filter: Tài khoản
         amount_filter: Số tiền
@@ -308,7 +328,7 @@ vi:
         category_filter: Danh mục
         clear_filters: Xóa bộ lọc
         date_filter: Ngày
-        merchant_filter: Nhà cung cấp
+        merchant_filter: Người bán
         status_filter: Trạng thái
         tag_filter: Nhãn
         type_filter: Loại

@@ -25,8 +25,8 @@ hu:
       default_title: "Biztosan?"
       default_body: "Ez a művelet nem vonható vissza."
       default_btn_text: "Megerősítés"
-      resource_deletion_title: "Törli a következőt: %{resource}?"
-      resource_deletion_body: "Biztosan törli a következőt: %{resource}? Ez a művelet nem vonható vissza."
+      resource_deletion_title: "Törlöd a következőt: %{resource}?"
+      resource_deletion_body: "Biztosan törlöd a következőt: %{resource}? Ez a művelet nem vonható vissza."
       resource_deletion_btn_text: "%{resource} törlése"
     family_moniker:
       group_plural: Csoportok
@@ -40,3 +40,17 @@ hu:
       expense: Kiadás
       income: Bevétel
       transfer: Átutalás
+    preview: Előzetes
+    sync_toast:
+      message: Új adatok érhetők el
+      refresh: Frissítés
+    require_connector_owner: Csak az általad hozzáadott kapcsolatokat kezelheted
+    sidekiq_health_banner:
+      title: Egyes adatok elavultak lehetnek
+      body: A háttérfeladatok feldolgozása nem fut, ezért az egyenlegek, a nettó vagyon és a számlák szinkronizálása elavult lehet vagy hiányozhat.
+      cta: Rendszerállapot megtekintése
+      reasons:
+        redis_unreachable: Az alkalmazás nem éri el a Redist. Ellenőrizd a REDIS_URL értékét, és hogy a Redis fut-e.
+        no_worker_processes: Nem csatlakozik Sidekiq worker folyamat. Indítsd el a worker konténert vagy systemd egységet.
+        stale_heartbeat: A Sidekiq worker egy ideje nem küldött életjelet. Lehet, hogy elakadt vagy összeomlott.
+        queue_backed_up: A legrégebbi sorba állított feladat a megengedett késleltetésnél régebben várakozik. A worker fut, de lemaradásban van.

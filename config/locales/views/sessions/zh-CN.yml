@@ -4,12 +4,13 @@ zh-CN:
     create:
       invalid_credentials: 邮箱或密码无效。
       local_login_disabled: 本地密码登录已禁用。请使用单点登录。
+      account_deactivated: 此账户已被停用。请联系管理员。
     destroy:
       logout_successful: 您已成功退出登录。
     post_logout:
       logout_successful: 您已成功退出登录。
     openid_connect:
-      account_linked: 已成功将账户链接到 %{provider}
+      account_linked: 已成功将账户关联到 %{provider}
       failed: 无法通过 OpenID Connect 进行认证。
     failure:
       failed: 认证失败。
@@ -33,3 +34,5 @@ zh-CN:
       no_auth_methods_enabled: 当前没有启用任何认证方式。请联系管理员。
       demo_banner_title: 演示模式已启用
       demo_banner_message: 这是一个演示环境。为方便起见，登录凭据已预先填好。请不要输入真实或敏感信息。
+      passkey_button: 使用通行密钥登录
+      passkey_unsupported: 此浏览器不支持通行密钥。

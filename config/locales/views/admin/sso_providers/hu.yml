@@ -37,9 +37,11 @@ hu:
       new:
         title: "SSO-szolgáltató hozzáadása"
         description: "Új egyszeri bejelentkezési hitelesítési szolgáltató konfigurálása"
+        provider_configuration: Szolgáltató beállításai
       edit:
         title: "SSO-szolgáltató szerkesztése"
         description: "Konfiguráció frissítése: %{label}"
+        provider_configuration: Szolgáltató beállításai
       create:
         success: "Az SSO-szolgáltató sikeresen létrehozva."
       update:
@@ -100,10 +102,10 @@ hu:
         role_guest: "Vendég"
         role_member: "Tag"
         role_admin: "Admin"
-        role_super_admin: "Super Admin"
+        role_super_admin: "Szuperadmin"
         role_mapping_title: "Csoport–szerepkör leképezés (nem kötelező)"
         role_mapping_help: "IdP-csoportok/jogigények leképezése alkalmazásszerepkörökre. A felhasználók a legjobban egyező szerepkört kapják. Hagyd üresen az alapértelmezett szerepkör használatához."
-        super_admin_groups: "Super Admin csoportok"
+        super_admin_groups: "Szuperadmin-csoportok"
         admin_groups: "Admin csoportok"
         guest_groups: "Vendég csoportok"
         member_groups: "Tag csoportok"

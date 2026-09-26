@@ -7,13 +7,13 @@ zh-CN:
         label: Client ID
         placeholder: 在此输入您的 Client ID
         title: Brandfetch 设置
-        env_configured_message: 已通过环境变量配置 Brandfetch。
+        env_configured_message: 您已通过 BRAND_FETCH_CLIENT_ID 环境变量成功配置 Brandfetch Client ID。
         show_details: "（显示详情）"
-        setup_step_1_html: 前往 Brandfetch 并创建 API Key。
-        setup_step_2_html: 复制 API Key。
-        setup_step_3: 将 API Key 粘贴到下方。
+        setup_step_1_html: '访问 <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> 并创建免费的 Brandfetch Developer 账户。'
+        setup_step_2_html: '前往 <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> 页面。'
+        setup_step_3: 点击“Your Client ID”部分下方的眼睛图标以显示您的 Client ID，然后将其粘贴到下方。
         high_res_label: 高清 Logo
-        high_res_description: 启用后优先获取更高分辨率的品牌资源。
+        high_res_description: 启用后，将以 120x120 而非 40x40 的分辨率获取徽标，在高 DPI 显示屏上图像更清晰。
       clear_cache:
         cache_cleared: 数据缓存已清除，此操作可能需要一些时间完成。
       invite_code_settings:
@@ -48,13 +48,21 @@ zh-CN:
         uri_base_label: API 基础 URL（可选）
         uri_base_placeholder: https://api.openai.com/v1（默认）
         budget_heading: Token 预算
-        budget_description: 控制每次 AI 请求可使用的 Token 上限。
+        budget_description: 适用于兼容 OpenAI 的调用（聊天、自动分类、商户识别和 PDF 处理）。默认值较为保守，适合小上下文的本地模型；对于上下文窗口更大的云端模型，可适当调高。
         context_window_label: 上下文窗口（可选）
-        context_window_help: 留空时使用模型默认上下文窗口。
+        context_window_help: 模型可接受的 Token 总数。默认：2048——对于云端 OpenAI 或大上下文本地模型，请调高至 8192 以上。
         max_response_tokens_label: 最大响应 Token（可选）
-        max_response_tokens_help: 限制模型单次回答可生成的 Token 数。
+        max_response_tokens_help: 为模型回复预留的 Token 数。默认：512。调低可为更长的历史记录腾出空间。
         max_items_per_call_label: 每次调用最大项目数
-        max_items_per_call_help: 限制单次请求传给模型的数据项数量。
+        max_items_per_call_help: 自动分类/商户识别批处理的上限。默认：25。更大的批次会自动切分以适应上下文窗口。
+        model_function_calling_help: AI 助手通过函数调用读取您的数据，因此请选择提供商文档中注明支持工具/函数调用的模型。不支持该功能的模型会导致聊天失败，并返回难以理解的提供商错误。
+        model_function_calling_link: 检查已配置的模型
+        timeout_heading: 超时
+        timeout_description: 控制 OpenAI 兼容模型调用在 Sure 放弃之前最多可运行多长时间。如果您在较慢的硬件上运行本地模型，请调高这些值。
+        openai_request_timeout_label: 请求超时时间（秒，可选）
+        openai_request_timeout_help: 默认：60。适用于每个 OpenAI 兼容的 HTTP 请求，包括自动分类、商户识别、聊天、PDF 处理和向量存储调用。OPENAI_REQUEST_TIMEOUT 会覆盖此字段。
+        ai_response_timeout_label: 响应超时时间（秒，可选）
+        ai_response_timeout_help: 默认：90。仅适用于聊天的整轮看门狗，因此应按总和设置：(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × 请求超时时间，再加上工具执行和排队时间。AI_RESPONSE_TIMEOUT 会覆盖此字段。
       provider_selection:
         description: 选择用于获取汇率和证券价格的服务。Yahoo Finance 免费且无需 API 密钥。Twelve Data 需要免费的
           API 密钥，但可能提供更全面的数据覆盖。
@@ -69,12 +77,15 @@ zh-CN:
           mfapi: MFAPI.in
           binance_public: Binance
           moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
+          mansa: Mansa
         securities_provider_label: 证券（股票价格）数据提供商
         title: 数据提供商选择
         exchange_rate_title: 汇率提供商
-        exchange_rate_description: 选择用于同步汇率数据的提供商。
+        exchange_rate_description: 选择一个用于获取货币汇率的提供商。
         securities_title: 证券价格提供商
-        securities_description: 选择用于同步证券和投资价格的提供商。
+        securities_description: 启用一个或多个提供商以获取股票、ETF 和共同基金价格。搜索时会查询所有已启用的提供商并合并结果。
         twelve_data_hint: Twelve Data 支持股票、ETF 和部分基金价格。
         yahoo_finance_hint: Yahoo Finance 可作为免密钥价格来源。
         requires_api_key: 需要 API Key
@@ -83,6 +94,8 @@ zh-CN:
         mfapi_hint: MFAPI.in 可用于部分印度基金数据。
         binance_public_hint: Binance 公共接口可用于加密资产行情。
         moex_public_hint: 免费，无需 API 密钥 -- 俄罗斯股票、基金和债券（MOEX），包括 RUB 外汇
+        tinkoff_invest_hint: 需要只读令牌 -- 俄罗斯股票/基金/债券价格及品牌 Logo
+        requires_api_key_mansa: 需要 API 密钥，免费套餐每天 100 次调用 -- 仅限 NGX（尼日利亚交易所）
       show:
         clear_cache: 清除数据缓存
         clear_cache_warning: 清除数据缓存将移除所有汇率、证券价格、账户余额及其他数据。这不会删除账户、交易记录、分类或其他用户自有数据。
@@ -96,6 +109,7 @@ zh-CN:
         title: 自托管配置
         ai_assistant: AI 助手
         sync_settings: 同步设置
+        property_valuation_providers: 房产估值提供商
       twelve_data_settings:
         api_calls_used: 已使用 %{used} / %{limit} 次每日 API 调用（%{percentage}）
         description: 请输入 Twelve Data 提供的 API 密钥
@@ -105,18 +119,18 @@ zh-CN:
         plan: "%{plan} 套餐"
         title: Twelve Data 设置
         show_details: "（显示详情）"
-        step_1_html: 注册或登录 Twelve Data。
+        step_1_html: '访问 <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> 并创建免费的 Twelve Data Developer 账户。'
         step_2_html: 前往 <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a> 页面。
         step_3: 显示 API 密钥并粘贴到下方。
-        plan_upgrade_warning_title: 部分代码需要付费计划
+        plan_upgrade_warning_title: 部分代码需要付费套餐
         plan_upgrade_warning_description: 当前 Twelve Data 计划无法同步下列持仓价格。
-        requires_plan: 需要 %{plan} 计划
+        requires_plan: 需要 %{plan} 套餐
         view_pricing: 查看 Twelve Data 价格
       update:
         failure: 设置值无效
         invalid_onboarding_state: 无效的新用户注册状态
         success: 设置已更新
-        invalid_sync_time: 同步时间无效。
+        invalid_sync_time: 同步时间格式无效。请使用 HH:MM 格式（例如 02:30）。
         invalid_llm_budget: "%{field} 必须是大于等于 %{minimum} 的整数。"
         invalid_anthropic_base_url: Anthropic Base URL 无效。
         anthropic_model_required_for_base_url: 设置 Anthropic Base URL 时必须填写模型。
@@ -128,43 +142,51 @@ zh-CN:
         status_inactive: Yahoo Finance 连接失败
         title: Yahoo Finance 设置
         troubleshooting: 请检查您的互联网连接和防火墙设置。Yahoo Finance 可能暂时不可用。
+        status_healthy: Yahoo Finance 已激活并正常工作。
+        status_rate_limited: Yahoo Finance 暂时限制了请求频率。
+        rate_limited_title: 已达到 Yahoo Finance 调用频率上限。
+        rate_limited_message: 无需任何操作。Sure 将在 30 分钟内暂停额外的健康检查。价格和汇率操作不受影响，照常进行。
+        status_unavailable: Yahoo Finance 当前不可用。
+        unavailable_title: 无法验证 Yahoo Finance。
+        unavailable_message: 无法连接 Yahoo Finance，或其返回了意外的响应。请检查您的互联网连接，稍后再试。
+        status_unknown: 正在检查 Yahoo Finance 状态。
       assistant_settings:
         title: AI 助手
-        description: 配置 Sure 使用的 AI 助手模式。
+        description: 选择聊天助手的响应方式。内置模式直接使用您配置的 LLM 提供商；外部模式会将请求交给远程 AI 代理，该代理可通过 MCP 回调 Sure 的财务工具。
         type_label: 助手类型
         type_builtin: 内置（直接调用 LLM）
         type_external: 外部（远程代理）
         external_status: 外部助手端点
         external_configured: 已配置
-        external_not_configured: 外部助手尚未配置。
-        env_notice: 已通过环境变量配置 %{type}。
-        env_configured_external: 外部助手已通过环境变量配置。
+        external_not_configured: 尚未配置。请在下方输入 URL 和令牌，或设置 EXTERNAL_ASSISTANT_URL 和 EXTERNAL_ASSISTANT_TOKEN 环境变量。
+        env_notice: 助手类型已通过 ASSISTANT_TYPE 环境变量锁定为“%{type}”。
+        env_configured_external: 已通过环境变量成功配置。
         url_label: 端点 URL
         url_placeholder: 输入外部助手端点 URL
-        url_help: 外部助手服务的完整访问地址。
+        url_help: 您的代理 API 端点的完整 URL，由您的代理提供商提供。
         token_label: API 令牌
-        token_placeholder: 输入 API 令牌
-        token_help: 用于验证外部助手请求的令牌。
+        token_placeholder: 输入代理提供商提供的令牌
+        token_help: 由您的外部代理提供的认证令牌，每次请求都会作为 Bearer 令牌发送。
         agent_id_label: Agent ID（可选）
         agent_id_placeholder: main（默认）
-        agent_id_help: 留空时使用默认代理。
+        agent_id_help: 当提供商托管多个代理时，用于路由到特定代理。留空则使用默认代理。
         disconnect_title: 外部连接
-        disconnect_description: 断开当前外部助手连接。
+        disconnect_description: 移除外部助手连接并切换回内置助手。
         disconnect_button: 断开连接
         confirm_disconnect:
           title: 断开外部助手？
-          body: 断开后将无法继续使用此远程助手。
+          body: 这将移除已保存的 URL、令牌和代理 ID，并切换到内置助手。之后您可以输入新的凭据重新连接。
       llm_provider_selector:
         title: AI 提供商
-        description: 选择 Sure 调用的 LLM 提供商。
-        env_configured_message: 已通过环境变量配置 LLM 提供商。
+        description: 选择为 AI 聊天提供支持的 LLM。批量操作（交易分类、商户识别和 PDF 处理）目前始终使用 OpenAI。
+        env_configured_message: 已通过 LLM_PROVIDER 环境变量成功配置。
         provider_label: 当前 LLM 提供商
         provider_openai: OpenAI
         provider_anthropic: Anthropic (Claude)
-        provider_help: 更改后会影响新的 AI 请求。
-        not_configured_hint: "%{provider} 尚未配置。"
+        provider_help: 切换提供商将在下一次聊天时生效。请在下方配置当前提供商的凭据。
+        not_configured_hint: 在下方添加 %{provider} API 密钥即可启用。
         data_retention_heading: 数据处理
-        data_retention: 发送给 AI 提供商的数据可能包含财务上下文，请按你的部署策略配置。
+        data_retention: 默认情况下，API 输入不会被用于训练模型；提供商托管的 API 会出于信任与安全目的保留数据约 30 天。自定义或自托管端点遵循您自己的策略。
       anthropic_settings:
         title: Anthropic (Claude)
         description: 使用 Anthropic Claude 作为 AI 提供商。
@@ -175,39 +197,39 @@ zh-CN:
         base_url_placeholder: 自定义 Anthropic Base URL
         model_label: 默认模型（可选）
         model_placeholder: claude-sonnet-4-6（默认）
-        model_help: 留空时使用系统默认模型。
+        model_help: 用于聊天和 PDF 处理。为节省成本，批量操作（分类、商户识别）默认使用 Haiku。
       tiingo_settings:
         title: Tiingo
-        description: 使用 Tiingo 同步证券价格。
-        env_configured_message: 已通过环境变量配置 Tiingo。
+        description: 输入 Tiingo 提供的 API 令牌。免费套餐每小时支持 50 个不同代码，并提供 30 年以上的历史数据。
+        env_configured_message: 已通过 TIINGO_API_KEY 环境变量成功配置。
         label: API 令牌
         placeholder: 粘贴 Tiingo API Token
         show_details: "（显示详情）"
-        step_1_html: 注册或登录 Tiingo。
+        step_1_html: '访问 <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> 并创建免费账户。'
         step_2_html: 前往 <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a> 页面。
         step_3: 复制 API Token 并粘贴到下方。
       eodhd_settings:
         title: EODHD
-        description: 使用 EODHD 同步证券价格。
-        env_configured_message: 已通过环境变量配置 EODHD。
+        description: 输入 EODHD 提供的 API 令牌。支持 LSE、XETRA 及其他国际交易所上市的欧盟 ETF。
+        env_configured_message: 已通过 EODHD_API_KEY 环境变量成功配置。
         label: API 令牌
         placeholder: 粘贴 EODHD API Token
         show_details: "（显示详情）"
-        step_1_html: 注册或登录 EODHD。
-        step_2_html: 打开 API Token 页面。
+        step_1_html: '访问 <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> 并创建免费账户。'
+        step_2_html: '前往您的 <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> 查找您的 API 令牌。'
         step_3: 复制 API Token 并粘贴到下方。
-        rate_limit_warning: 免费或低阶计划可能有调用频率限制。
+        rate_limit_warning: EODHD 免费套餐每天限 20 次 API 调用，最适合作为补充提供商，用于获取其他提供商没有的欧盟 ETF。
       alpha_vantage_settings:
         title: Alpha Vantage
-        description: 使用 Alpha Vantage 同步证券价格。
+        description: 输入 Alpha Vantage 提供的 API 密钥。支持伦敦证券交易所、XETRA 及其他交易所上市的欧盟 ETF。
         env_configured_message: 已通过环境变量配置 Alpha Vantage。
         label: API 密钥
         placeholder: 粘贴 Alpha Vantage API Key
         show_details: "（显示详情）"
-        step_1_html: 注册或登录 Alpha Vantage。
+        step_1_html: '访问 <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> 并领取免费 API 密钥。'
         step_2: 前往 API Key 页面并复制密钥。
-        rate_limit_warning: 免费计划可能有调用频率限制。
-        no_health_check_note: 此提供商暂无健康检查。
+        rate_limit_warning: Alpha Vantage 免费套餐每天限 25 次 API 调用，最适合作为补充提供商，用于获取其他提供商没有的欧盟 ETF。
+        no_health_check_note: 由于调用频率限制严格，此提供商无法进行连接健康检查。
       disconnect_external_assistant:
         external_assistant_disconnected: 外部助手已断开连接。
       ensure_admin:
@@ -215,12 +237,47 @@ zh-CN:
       ensure_super_admin_for_onboarding:
         not_authorized: 只有超级管理员可以访问此设置。
       sync_auto_sync_scheduler!:
-        scheduler_sync_failed: 自动同步计划更新失败。
+        scheduler_sync_failed: 设置已保存，但同步计划更新失败。请重试或检查服务器日志。
       sync_settings:
         auto_sync_label: 启用自动同步
-        auto_sync_description: 按计划自动同步已连接账户。
+        auto_sync_description: 启用后，所有账户将在每天指定时间自动同步。
         auto_sync_time_label: 同步时间（HH:MM）
         auto_sync_time_description: 每天触发自动同步的时间。
         include_pending_label: 包含待处理交易
-        include_pending_description: 同步时同时拉取提供商返回的待处理交易。
-        env_configured_message: 已通过环境变量配置同步设置。
+        include_pending_description: 启用后，将导入待处理（未结算）的交易，并在其入账时自动对账。如果您的银行提供的待处理数据不可靠，请禁用此项。
+        env_configured_message: 此设置已禁用，因为设置了提供商环境变量（SIMPLEFIN_INCLUDE_PENDING 或 PLAID_INCLUDE_PENDING）。移除该变量即可启用此设置。
+      rentcast_settings:
+        title: RentCast
+        description: 输入您的 RentCast API 密钥，以便在添加房产时查询美国房产详情和估值。免费套餐每月限 50 次 API 请求，由房产查询和每日估值刷新共用。使用付费套餐时，可通过 RENTCAST_MAX_REQUESTS_PER_MONTH 环境变量提高上限。
+        env_configured_message: 已通过 RENTCAST_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 RentCast API 密钥
+        usage: 本月已使用 %{used} / %{limit} 次请求
+      realie_settings:
+        title: Realie
+        description: 输入您的 Realie API 密钥，以便在添加房产时查询美国房产详情和估值。免费套餐每月限 25 次 API 请求，由房产查询和每日估值刷新共用。使用付费套餐时，可通过 REALIE_MAX_REQUESTS_PER_MONTH 环境变量提高上限。
+        env_configured_message: 已通过 REALIE_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 Realie API 密钥
+        usage: 本月已使用 %{used} / %{limit} 次请求
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: 输入只读的 T-Invest API 令牌。用于获取证券的品牌 Logo（包括基金和债券，即使其价格来自 MOEX），并在上方启用时获取俄罗斯金融工具的价格。
+        moex_only_notice: 上方未启用价格获取——只要配置了令牌，T-Invest 就会为您的所有证券获取品牌 Logo，与上方复选框无关。
+        env_configured_message: 已通过 TINKOFF_INVEST_API_KEY 环境变量成功配置。
+        label: API 令牌
+        placeholder: 在此输入您的 T-Invest API 令牌
+        show_details: （显示详情）
+        step_1: 打开 T-Bank 投资，依次进入“设置”→“API 令牌”（需要已开立 T-Bank 证券账户）。
+        step_2: 创建一个只读权限的令牌。
+        step_3: 复制令牌并粘贴到下方。
+      mansa_settings:
+        title: Mansa
+        description: 输入 Mansa API 提供的 API 密钥。支持 NGX（尼日利亚交易所），这里的其他提供商均不覆盖该交易所。Mansa 也覆盖其他非洲交易所，但此集成仅针对 NGX 进行了验证。
+        env_configured_message: 已通过 MANSA_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 Mansa API 密钥
+        show_details: （显示详情）
+        step_1_html: 访问 <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> 并领取免费 API 密钥 -- 无需银行卡。
+        step_2: 复制您的 API 密钥并粘贴到下方。
+        rate_limit_warning: Mansa 免费套餐每天限 100 次 API 调用，且仅提供当前报价 -- 历史价格需要付费套餐。此集成仅针对 NGX（尼日利亚交易所）进行了验证；Mansa 覆盖的其他非洲交易所暂不支持。

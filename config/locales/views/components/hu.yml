@@ -6,9 +6,80 @@ hu:
         toggle_selection_checkboxes: Kijelölés be-/kikapcsolása
       chart:
         no_data_available: "Nincs elérhető adat"
+        title:
+          balance: Egyenleg
+          cash_value: Készpénz értéke
+          debt_balance: Fennálló tartozás
+          estimated_property_value: Ingatlan becsült értéke
+          estimated_vehicle_value: Jármű becsült értéke
+          holdings_value: Pozíciók értéke
+          remaining_principal_balance: Fennmaradó tőketartozás
+          total_account_value: Számla teljes értéke
+          total_gains: Teljes nyereség
+        views:
+          cash: Készpénz
+          gains: Nyereség / ROI
+          holdings: Pozíciók
+          total_value: Teljes érték
+        vs_available_history: a rendelkezésre álló előzményekhez képest
       activity_date:
         balance_tooltip: "A nap végi egyenleg, az összes tranzakció és korrekció után"
         no_balance_data: "Erre a dátumra nincs elérhető egyenlegadat"
+      balance_reconciliation:
+        labels:
+          adjustments: Korrekciók
+          buys: Vételek
+          change_in_brokerage_cash: Brókeri készpénz változása
+          change_in_holdings_market: Pozíciók változása (piaci ármozgás)
+          change_in_holdings_trades: Pozíciók változása (vételek/eladások)
+          charges: Terhelések
+          end_balance: Számított egyenleg
+          end_principal: Számított tőketartozás
+          end_value: Számított érték
+          final_balance: Záróegyenleg
+          final_principal: Záró tőketartozás
+          final_value: Záróérték
+          market_changes: Piaci változások
+          net_cash_flow: Nettó pénzforgalom
+          net_principal_change: Tőketartozás nettó változása
+          net_value_change: Nettó értékváltozás
+          payments: Befizetések
+          sells: Eladások
+          start_balance: Nyitóegyenleg
+          start_principal: Nyitó tőketartozás
+          start_value: Nyitóérték
+        tooltips:
+          adjustments: Manuális egyeztetések vagy egyéb korrekciók
+          adjustments_asset: Manuális értékkorrekciók vagy értékbecslések
+          buys: A nap folyamán vásárolt kriptoeszközök
+          change_in_brokerage_cash: A készpénz nettó változása befizetésekből, pénzkivételekből és ügyletekből
+          change_in_holdings_market: A pozíciók értékének változása a piaci árak mozgása miatt
+          change_in_holdings_trades: Az értékpapír-vételek és -eladások hatása a pozíciókra
+          charges: A nap folyamán a kártyára terhelt új vásárlások
+          end_balance: Az összes tranzakció után számított egyenleg
+          end_balance_investment: Az összes tevékenység után számított egyenleg
+          end_principal: Az összes tranzakció után számított tőketartozás
+          end_value: Az összes változás után számított érték
+          final_balance: A számla napi záróegyenlege
+          final_balance_credit: A nap végén fennálló tartozás
+          final_balance_crypto: A kriptoeszközök napi záróértéke
+          final_balance_investment: A portfólió napi záróértéke
+          final_principal: A napi záró tőketartozás
+          final_value: Az eszköz napi záróértéke
+          market_changes: A piaci ármozgásokból eredő értékváltozások
+          net_cash_flow: Az egyenleg nettó változása a nap összes tranzakciójából
+          net_principal_change: Tőketörlesztések és új hitelfelvétel a nap folyamán
+          net_value_change: Minden értékváltozás, beleértve a felújításokat és az értékcsökkenést
+          payments: A nap folyamán a kártyára teljesített befizetések
+          sells: A nap folyamán eladott kriptoeszközök
+          start_balance: A számla egyenlege a nap elején
+          start_balance_credit: A fennálló tartozás a nap elején
+          start_balance_crypto: A kriptoeszközök értéke a nap elején
+          start_balance_investment: A portfólió teljes értéke a nap elején
+          start_principal: A tőketartozás a nap elején
+          start_value: Az eszköz értéke a nap elején
+    period_picker:
+      aria_label: 'Időszak: %{period}'
   ds:
     alert:
       variants:
@@ -19,6 +90,18 @@ hu:
         destructive: Hiba
     dialog:
       close: Bezárás
+    pill:
+      aria_label: '%{label}'
+      default_label: Előzetes
+    popover:
+      avatar_default_label: Menü megnyitása
+    tooltip:
+      trigger_label: További információ
+    link:
+      opens_in_new_tab: (új lapon nyílik meg)
+    icon_picker:
+      no_matching_icons: Nincs egyező ikon
+      search_placeholder: Ikonok keresése...
   provider_sync_summary:
     title: Szinkronizálás összegzése
     last_sync: "Utolsó szinkronizálás: %{time_ago} ezelőtt"
@@ -36,16 +119,16 @@ hu:
       skipped: "Kihagyva: %{count}"
       fetching: "Lekérés a brókertől..."
       protected:
-        one: "%{count} bejegyzés védett (nem lett felülírva)"
-        other: "%{count} bejegyzés védett (nem lett felülírva)"
-      view_protected: Védett bejegyzések megtekintése
+        one: "%{count} tétel védett (nem lett felülírva)"
+        other: "%{count} tétel védett (nem lett felülírva)"
+      view_protected: Védett tételek megtekintése
     skip_reasons:
       excluded: Kizárva
       user_modified: Felhasználó módosította
       import_locked: CSV importálás
       protected: Védett
     holdings:
-      title: Portfólió
+      title: Pozíciók
       found: "Megtalálva: %{count}"
       processed: "Feldolgozva: %{count}"
     trades:

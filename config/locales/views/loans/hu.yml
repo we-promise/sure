@@ -13,6 +13,18 @@ hu:
       none: Nincs
       subtype_prompt: Válassz hiteltípust
       subtype_none: Nincs
+      rate_type_adjustable: Kamatperiódusos
+      rate_type_fixed: Fix
+      rate_type_variable: Változó
+      rate_changes: Kamatváltozások
+      rate_changes_hint: Minden sor azt a kamatot adja meg, amely a hatálybalépés napjától a következő sorig érvényes. Ha egy dátumot újra megadsz, az a meglévő sort cseréli le, nem vesz fel újat.
+      rate_changes_empty: Nincs rögzített kamatváltozás. A hitel a fenti kamatlábbal fut.
+      rate_change_effective_date: Hatálybalépés dátuma
+      rate_change_rate: Kamatláb
+      rate_change_add: Kamatváltozás hozzáadása
+      rate_change_remove: Eltávolítás
+      start_date: Folyósítás dátuma
+      start_date_hint: A hitel folyósításának napja. Hagyd üresen, ha a számla nyitónapját szeretnéd használni.
     new:
       title: Add meg a hitel adatait
     overview:
@@ -24,6 +36,7 @@ hu:
       term: Futamidő
       type: Típus
       unknown: Ismeretlen
+      original_payoff_date: Eredeti lejárat dátuma
     tabs:
       overview:
         interest_rate: Kamatláb
@@ -35,3 +48,17 @@ hu:
         type: Típus
         unknown: Ismeretlen
         edit_loan_details: "Hitel adatainak szerkesztése"
+        original_payoff_date: Eredeti lejárat dátuma
+      schedule:
+        date: Dátum
+        description: Az eredeti egyenleg, kamatláb és futamidő alapján számított terv, %{start_date} kezdettel. Az előtörlesztések nem szerepelnek benne.
+        variable_rate_notice: 'A hitel kamata idővel változik. A törlesztési terv minden rögzített kamatváltozásnál újraszámolódik: az eredeti lejárat marad, a törlesztőrészlet összege változik. Egy még nem rögzített változás módosítani fogja ezeket a számokat.'
+        opening_payment: Kezdő törlesztőrészlet
+        interest: Kamat
+        monthly_payment: Havi törlesztőrészlet
+        number: '#'
+        payment: Törlesztőrészlet
+        principal: Tőketörlesztés
+        remaining_balance: Fennmaradó tartozás
+        total_cost: Teljes visszafizetés
+        total_interest: Összes kamat

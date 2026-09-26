@@ -1,0 +1,35 @@
+---
+hu:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        frequency: Gyakoriság
+        interval: Időköz
+        day_of_month: A hónap napja
+        weekday: A hét napja
+        weekday_ordinal: A hónap hete
+        month_of_year: Hónap
+      recurring_transaction/recurrence_rules:
+        base: 'Ismétlődési szabály:'
+        frequency: Gyakoriság
+        interval: Időköz
+        day_of_month: A hónap napja
+        weekday: A hét napja
+        weekday_ordinal: A hónap hete
+        month_of_year: Hónap
+    errors:
+      models:
+        recurrence_rule:
+          day_spec_required: Pontosan egyet válassz a hónap napja és a hét napja közül
+          attributes:
+            weekday:
+              required_for_weekly: kötelező heti szabálynál
+            weekday_ordinal:
+              not_allowed_for_weekly: heti szabálynál nem alkalmazható
+              required_with_weekday: kötelező, ha a hét napja meg van adva
+              not_allowed_without_weekday: csak akkor alkalmazható, ha a hét napja meg van adva
+            day_of_month:
+              not_allowed_for_weekly: heti szabálynál nem alkalmazható
+            month_of_year:
+              required_for_yearly: kötelező éves szabálynál
+              not_allowed: csak éves szabálynál alkalmazható

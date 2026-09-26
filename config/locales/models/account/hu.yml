@@ -19,3 +19,16 @@ hu:
       account/other_liability: Egyéb kötelezettség
       account/property: Ingatlan
       account/vehicle: Jármű
+  account_order:
+    balance_asc:
+      label: Egyenleg (növekvő)
+      label_short: Egyenleg ↑
+    balance_desc:
+      label: Egyenleg (csökkenő)
+      label_short: Egyenleg ↓
+    name_asc:
+      label: Név (A–Z)
+      label_short: Név ↑
+    name_desc:
+      label: Név (Z–A)
+      label_short: Név ↓

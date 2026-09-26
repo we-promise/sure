@@ -5,7 +5,7 @@ zh-CN:
     demo_banner_message: 您正在通过 Cloudflare Workers AI 提供的额度使用 LLM。结果可能会有所不同，因为代码库是在 `gpt-4.1` 上测试的，而您的 token 不会被用于其他训练！🤖
     thinking: 思考中……
     ai_greeting:
-      greeting: "%{name}，你好！我是一个 AI/大语言模型，可以帮您处理财务问题。我可以访问网络和您的账户数据。"
+      greeting: "%{name}，您好！我是一个 AI/大语言模型，可以帮您处理财务问题。我可以访问网络和您的账户数据。"
       there: 朋友
       commands_hint_html: 您可以使用 <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> 来访问命令
       questions_intro: 这里有几个您可以提的问题：
@@ -35,6 +35,9 @@ zh-CN:
       unavailable_description_html: 要使用 AI 助手，您需要设置 <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> 环境变量，或在您的实例的自托管设置中进行配置。
       enable_button: 启用 AI 聊天
       disable_note: 可随时关闭。发送给我们的 LLM 提供商的所有数据都会被匿名化。
+    worker_unhealthy_warning: AI 回复目前可能无法送达——后台 worker 似乎已停止或积压。请检查您的 Sidekiq worker 是否正在运行。
+    new:
+      default_title: 新聊天 %{timestamp}
   assistant_messages:
     assistant_message:
       assistant_reasoning: 助手推理

@@ -37,9 +37,11 @@ vi:
       new:
         title: "Thêm nhà cung cấp SSO"
         description: "Cấu hình nhà cung cấp xác thực đăng nhập một lần mới"
+        provider_configuration: Cấu hình nhà cung cấp
       edit:
         title: "Chỉnh sửa nhà cung cấp SSO"
         description: "Cập nhật cấu hình cho %{label}"
+        provider_configuration: Cấu hình nhà cung cấp
       create:
         success: "Nhà cung cấp SSO đã được tạo thành công."
       update:

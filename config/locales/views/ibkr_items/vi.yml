@@ -25,7 +25,7 @@ vi:
     setup_accounts:
       page_title: Thiết lập tài khoản Interactive Brokers
       dialog_title: Thiết lập tài khoản Interactive Brokers của bạn
-      subtitle: Chọn tài khoản brokerage IBKR để liên kết.
+      subtitle: Chọn tài khoản môi giới IBKR để liên kết.
       info_box:
         title: Nhập Flex Query IBKR
         items:

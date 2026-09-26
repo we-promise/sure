@@ -1,0 +1,127 @@
+---
+hu:
+  providers:
+    akahu:
+      name: Akahu
+      description: Új-zélandi bankszámlák összekapcsolása az Akahu segítségével
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Akahu-kapcsolat
+  akahu_account:
+    fallback: Akahu-számla
+  akahu_entry:
+    notes:
+      reference: Közlemény
+      particulars: Részletek
+      code: Kód
+      other_account: Partnerszámla
+  akahu_item:
+    errors:
+      account_processing_failed: Nem sikerült szinkronizálni az Akahu-számlát
+      account_sync_schedule_failed: Nem sikerült ütemezni az Akahu-számla szinkronizálását
+      pending_transactions_failed: Nem sikerült lekérni az Akahu függőben lévő tranzakcióit
+      transactions_failed: Nem sikerült lekérni az Akahu-tranzakciókat
+      sync_failed: Nem sikerült szinkronizálni az Akahu-kapcsolatot
+    sync_status:
+      no_accounts: Nem található számla
+      all_synced:
+        one: '%{count} számla szinkronizálva'
+        other: '%{count} számla szinkronizálva'
+      partial: '%{linked} szinkronizálva, %{unlinked} beállításra vár'
+    institution_summary:
+      none: Nincs összekapcsolt pénzintézet
+      one: 1 pénzintézet
+      count:
+        one: '%{count} pénzintézet'
+        other: '%{count} pénzintézet'
+  akahu_items:
+    provider_panel:
+      default_connection_name: Akahu-kapcsolat
+      add_connection: Akahu-kapcsolat hozzáadása
+      update_connection: Kapcsolat frissítése
+      connection_name_label: Kapcsolat neve
+      connection_name_placeholder: Fő Akahu
+      app_token_label: App Token
+      app_token_placeholder: Illeszd be az Akahu App Tokenedet
+      keep_app_token_placeholder: Hagyd üresen a meglévő App Token megtartásához
+      user_token_label: User Token
+      user_token_placeholder: Illeszd be az Akahu User Tokenedet
+      keep_user_token_placeholder: Hagyd üresen a meglévő User Token megtartásához
+      setup_accounts: Számlák beállítása
+      syncing: Szinkronizálás...
+      sync: Szinkronizálás
+      disconnect: Leválasztás
+      disconnect_confirm: 'Biztosan leválasztod ezt: %{name}?'
+    create:
+      success: Akahu-kapcsolat mentve.
+    update:
+      success: Akahu-kapcsolat frissítve.
+    destroy:
+      success: Az Akahu-kapcsolat törlésre ütemezve.
+      unlink_failed: Nem sikerült leválasztani az Akahu-kapcsolatot
+    select_accounts:
+      title: Akahu-számlák összekapcsolása
+      description: Válaszd ki a hozzáadandó Akahu-számlákat.
+      no_accounts_found: Nem található összekapcsolatlan Akahu-számla.
+      no_credentials_configured: Előbb állítsd be az Akahut a szolgáltatói beállításokban.
+      cancel: Mégse
+      link_accounts: Számlák összekapcsolása
+    link_accounts:
+      success:
+        one: '%{count} Akahu-számla összekapcsolva.'
+        other: '%{count} Akahu-számla összekapcsolva.'
+      no_accounts_selected: Válassz legalább egy számlát.
+      no_credentials_configured: Előbb állítsd be az Akahut a szolgáltatói beállításokban.
+      unsupported_account_type: Az Akahu nem támogatja ezt a számlatípust.
+      link_failed: Egy számla sem lett összekapcsolva.
+    select_existing_account:
+      title: 'Akahu-számla összekapcsolása ezzel: %{account_name}'
+      description: Válassz egy összekapcsolatlan Akahu-számlát, amelyet ehhez a számlához kapcsolsz.
+      no_accounts_found: Nem található összekapcsolatlan Akahu-számla.
+      no_credentials_configured: Előbb állítsd be az Akahut a szolgáltatói beállításokban.
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval.
+      cancel: Mégse
+      link_account: Számla összekapcsolása
+    link_existing_account:
+      success: 'Akahu-számla összekapcsolva ezzel: %{account_name}.'
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval.
+      akahu_account_already_linked: Ez az Akahu-számla már össze van kapcsolva.
+    setup_accounts:
+      title: Akahu-számlák beállítása
+      subtitle: Válaszd ki, hogyan jelenjen meg az egyes Akahu-számlák a Sure-ben.
+      no_credentials: Előbb állítsd be az Akahu hitelesítő adatait.
+      api_error: Nem sikerült lekérni az Akahu-számlákat.
+      fetch_failed: Nem sikerült lekérni a számlákat
+      no_accounts_to_setup: Nincs beállítandó számla
+      all_accounts_linked: Minden Akahu-számla össze van már kapcsolva.
+      choose_account_type: Válassz számlatípust
+      choose_account_type_description: Hagyd ki azokat a számlákat, amelyeket nem szeretnél követni.
+      account_type_label: Számlatípus
+      account_types:
+        skip: Kihagyás
+        depository: Készpénz
+        credit_card: Hitelkártya
+        investment: Befektetés
+        loan: Hitel
+      create_accounts: Számlák létrehozása
+      cancel: Mégse
+    complete_account_setup:
+      success:
+        one: '%{count} Akahu-számla létrehozva.'
+        other: '%{count} Akahu-számla létrehozva.'
+      all_skipped: Egy Akahu-számla sem lett létrehozva.
+      no_accounts: Nincs kiválasztott Akahu-számla.
+      creation_failed: Nem sikerült létrehozni az Akahu-számlákat.
+    akahu_item:
+      deletion_in_progress: Törlés folyamatban
+      syncing: Szinkronizálás
+      error: Hiba
+      status_with_summary: Szinkronizálva %{timestamp} ezelőtt · %{summary}
+      status_never: Még nem volt szinkronizálva
+      delete: Törlés
+      setup_needed: Számlák beállítása szükséges
+      setup_description: '%{total} számlából %{linked} összekapcsolva.'
+      setup_action: Számlák beállítása
+      no_accounts_title: Még nincs importált számla
+      no_accounts_description: Kérd le az Akahu-számlákat, és válaszd ki, melyeket szeretnéd összekapcsolni.

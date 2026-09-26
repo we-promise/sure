@@ -27,7 +27,7 @@ hu:
       title: Kriptó összekapcsolása CoinStats-szal
       blockchain_fetch_error: Nem sikerült betölteni a blokkláncokat. Kérjük, próbáld újra később.
       link_wallet_title: Pénztárca cím összekapcsolása
-      link_wallet_description: Kövess egy önőrzésű pénztárcát vagy egyetlen on-chain címet a CoinStats segítségével.
+      link_wallet_description: Kövess egy saját kezelésű tárcát vagy egyetlen on-chain címet a CoinStats segítségével.
       address_label: Cím
       address_placeholder: Kötelező
       blockchain_label: Blokklánc

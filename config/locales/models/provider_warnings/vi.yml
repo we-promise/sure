@@ -2,3 +2,8 @@
 vi:
   provider_warnings:
     limited_investment_data: "Dữ liệu đầu tư từ nhà cung cấp này còn hạn chế. Nhãn hoạt động (Mua, Bán, Cổ tức) không khả dụng, có thể ảnh hưởng đến độ chính xác của ngân sách. Hãy cân nhắc tạo quy tắc để loại trừ hoặc phân loại các giao dịch đầu tư."
+    lunchflow_accounts_failed:
+      other: 'Nhập từ Lunchflow: %{count} tài khoản cập nhật thất bại'
+    lunchflow_transactions_failed:
+      other: 'Nhập từ Lunchflow: không lấy được giao dịch cho %{count} tài khoản'
+    lunchflow_import_error: 'Nhập từ Lunchflow: %{error}'

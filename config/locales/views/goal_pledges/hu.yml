@@ -1,0 +1,20 @@
+---
+hu:
+  goal_pledges:
+    new:
+      helper_transfer: A Sure egyező befizetést keres az összekapcsolt számládon. A bejelentés 7 napig függőben marad, és automatikusan megerősítésre kerül, amint a Sure észleli a befizetést.
+      helper_manual: A Sure a következő manuális egyenlegmódosításodkor rögzíti ezt, és megerősíti a befizetést.
+      amount_label: Összeg
+      account_label: Erre a számlára
+      submit: Befizetés rögzítése
+      preview_zero: Jelenleg {current} / {target} megtakarítva.
+      preview_nonzero: 'Így {percent}%-on áll: {newTotal} / {target}.'
+      preview_reached: Eléri a(z) {target} célösszeget. Cél teljesítve.
+    create:
+      success: Befizetés rögzítve. A Sure a következő szinkronizáláskor megerősíti.
+    renew:
+      success: "A bejelentés időablaka 7 nappal meghosszabbítva."
+      not_open: Csak függőben lévő bejelentések hosszabbíthatók meg.
+    destroy:
+      success: Bejelentés visszavonva.
+      not_open: Csak függőben lévő bejelentések vonhatók vissza.

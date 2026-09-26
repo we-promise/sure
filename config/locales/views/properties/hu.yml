@@ -3,6 +3,7 @@ hu:
   properties:
     edit:
       edit: '%{account} szerkesztése'
+      title: Ingatlan megadása kézzel
     form:
       address_line1: Utca, házszám
       address_line1_placeholder: Kossuth utca 1.
@@ -24,6 +25,16 @@ hu:
     new:
       title: Add meg az ingatlan adatait
       next: "Tovább"
+      avm_option: 'Hozzáadás ezzel: %{provider}'
+      avm_title: 'Ingatlan hozzáadása ezzel: %{provider}'
+      avm_description: Add meg az ingatlan nevét és címét. A(z) %{provider} megkeresi az ingatlan adatait és becsült piaci értékét.
+      avm_us_only: A(z) %{provider} csak az Egyesült Államokban található ingatlanokat támogatja.
+      avm_submit: Ingatlan keresése
+      avm_preview_title: Ingatlan adatainak megerősítése
+      avm_preview_description: Ezt találta a(z) %{provider}. Ellenőrizd az adatokat, mielőtt hozzáadod az ingatlant – még semmi sem jött létre.
+      avm_preview_no_record: A(z) %{provider} nem talált ingatlan-nyilvántartási adatot ezen a címen, ezért a megjelenített érték a környék alapján becsült. Folytatás előtt ellenőrizd a címet.
+      avm_preview_back: Vissza
+      avm_preview_confirm: Ingatlan hozzáadása
     address:
       title: "Add meg az ingatlan adatait"
       address_line1_label: "Utca, házszám"
@@ -87,3 +98,10 @@ hu:
       agri_land:
         short: Mezőgazdasági
         long: Mezőgazdasági föld
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    form_tabs:
+      address: Cím
+      overview: Áttekintés
+      value: Érték

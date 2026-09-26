@@ -1,0 +1,8 @@
+---
+vi:
+  activerecord:
+    errors:
+      models:
+        merchant_import:
+          missing_columns: 'Thiếu các cột bắt buộc: %{columns}'
+          duplicate_columns: 'Tên cột bị trùng sau khi chuẩn hóa: %{columns}'

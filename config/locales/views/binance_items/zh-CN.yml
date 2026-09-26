@@ -27,6 +27,7 @@ zh-CN:
         other: 已导入 %{count} 个账户
       none_selected: 未选择账户
       no_accounts: 没有可导入的账户
+      invalid_sync_start_date: 同步开始日期必须是过去的有效日期。
     binance_item:
       provider_name: Binance
       syncing: 正在同步...

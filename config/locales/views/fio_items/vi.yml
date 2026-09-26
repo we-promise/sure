@@ -1,0 +1,139 @@
+---
+vi:
+  providers:
+    fio:
+      name: Fio banka
+      description: Đồng bộ tài khoản Fio banka bằng API token chỉ đọc
+  family:
+    fio:
+      create_fio_item:
+        default_name: Kết nối Fio banka
+  fio_item:
+    errors:
+      account_processing_failed: Không thể đồng bộ tài khoản Fio
+      account_mismatch: Token này thuộc về một tài khoản Fio khác với tài khoản mà kết nối này đang đồng bộ. Hãy thêm nó thành một kết nối riêng.
+      account_sync_schedule_failed: Không thể lên lịch đồng bộ tài khoản Fio
+      statement_too_large: Sao kê có nhiều giao dịch hơn mức Fio trả về trong một yêu cầu. Hãy dời ngày bắt đầu đồng bộ về sau rồi đồng bộ lại.
+      statement_fetch_failed: Không thể tải sao kê từ Fio
+      history_locked: Fio đã từ chối kỳ sao kê này. Hãy mở khóa toàn bộ lịch sử tài khoản trong Internet Banking tại Settings → API, sau đó đồng bộ lại trong vòng 10 phút.
+      sync_failed: Không thể đồng bộ kết nối Fio
+    sync:
+      status:
+        importing: Đang nhập sao kê từ Fio...
+        checking_setup: Đang kiểm tra cấu hình tài khoản...
+        needs_setup:
+          other: '%{count} tài khoản cần thiết lập...'
+        processing: Đang xử lý giao dịch...
+        calculating: Đang tính toán số dư...
+    sync_status:
+      no_accounts: Chưa tìm thấy tài khoản
+      all_synced:
+        other: '%{count} tài khoản đã đồng bộ'
+      partial: '%{linked} đã đồng bộ, %{unlinked} cần thiết lập'
+  fio_items:
+    account_types:
+      depository: Tài khoản thanh toán hoặc tiết kiệm
+      loan: Khoản vay, vay thế chấp hoặc thấu chi
+    provider_panel:
+      default_connection_name: Kết nối Fio banka
+      add_connection: Thêm kết nối Fio banka
+      update_connection: Cập nhật kết nối
+      connection_name_label: Tên kết nối
+      connection_name_placeholder: Tài khoản Fio của tôi
+      token_label: API token (chỉ đọc)
+      token_placeholder: Dán token dài 64 ký tự
+      keep_token_placeholder: Để trống để giữ token hiện tại
+      sync_start_date_label: Nhập giao dịch từ ngày
+      sync_start_date_hint: Fio cung cấp dữ liệu 90 ngày gần nhất mà không cần xác thực thêm. Với dữ liệu cũ hơn, hãy mở khóa toàn bộ lịch sử tài khoản trong Internet Banking tại Settings → API (biểu tượng ổ khóa) — thao tác này mở một khoảng thời gian 10 phút — và đồng bộ trong khoảng thời gian đó.
+      one_account_notice: Mỗi token chỉ truy cập được một tài khoản Fio, vì vậy hãy thêm một kết nối cho mỗi tài khoản bạn muốn theo dõi. Mỗi token chỉ được dùng một lần mỗi 30 giây; lần đồng bộ đến sớm hơn sẽ được gộp vào lần tiếp theo.
+      connected_account: Tài khoản đã kết nối
+      no_account_yet: Chưa có tài khoản — lần đồng bộ đầu tiên sẽ tìm tài khoản mà token này truy cập được.
+      account_needs_setup: Chưa được liên kết với tài khoản Sure.
+      requires_update: Cần token mới
+      requires_update_notice: Fio đã từ chối token này. Token có hiệu lực tối đa 180 ngày trừ khi được tự động gia hạn mỗi lần đăng nhập ngân hàng, vì vậy hãy tạo token chỉ đọc mới tại Settings → API và dán vào bên dưới.
+      last_synced: Đã đồng bộ %{timestamp} trước
+      never_synced: Chưa bao giờ đồng bộ
+      syncing: Đang đồng bộ...
+      sync: Đồng bộ
+      setup_accounts: Thiết lập tài khoản
+      disconnect: Ngắt kết nối
+      disconnect_confirm: Bạn có chắc muốn ngắt kết nối %{name}?
+    create:
+      success: Đã lưu kết nối Fio banka.
+      token_required: Dán API token từ Internet Banking của Fio.
+    update:
+      success: Đã cập nhật kết nối Fio banka.
+    destroy:
+      success: Đã lên lịch xóa kết nối Fio banka.
+      unlink_failed: Không thể ngắt kết nối Fio banka
+    select_accounts:
+      title: Liên kết tài khoản Fio của bạn
+      description: Token này truy cập một tài khoản. Chọn cách theo dõi tài khoản đó trong Sure.
+      account_type_label: Loại tài khoản
+      awaiting_first_sync: Fio chưa trả về tài khoản cho token này. Hãy chạy đồng bộ rồi quay lại.
+      already_linked: Tài khoản của kết nối này đã được liên kết với một tài khoản Sure.
+      sync_now: Đồng bộ ngay
+      no_credentials_configured: Hãy cấu hình Fio banka trong cài đặt nhà cung cấp trước.
+      cancel: Hủy
+      link_account: Liên kết tài khoản
+    link_accounts:
+      success: Đã liên kết tài khoản Fio của bạn với %{account_name}.
+      no_account_found: Không tìm thấy tài khoản Fio chưa liên kết nào cho kết nối này.
+      no_credentials_configured: Hãy cấu hình Fio banka trong cài đặt nhà cung cấp trước.
+      unsupported_account_type: Fio không hỗ trợ loại tài khoản này.
+      link_failed: Không thể liên kết tài khoản.
+    select_existing_account:
+      title: Liên kết tài khoản Fio với %{account_name}
+      description: Kết nối tài khoản mà token này truy cập với tài khoản bạn đã chọn.
+      awaiting_first_sync: Fio chưa trả về tài khoản cho token này. Hãy chạy đồng bộ rồi quay lại.
+      already_linked: Tài khoản của kết nối này đã được liên kết với một tài khoản Sure.
+      sync_now: Đồng bộ ngay
+      no_credentials_configured: Hãy cấu hình Fio banka trong cài đặt nhà cung cấp trước.
+      account_already_linked: Tài khoản này đã được liên kết với một nhà cung cấp.
+      cancel: Hủy
+      link_account: Liên kết tài khoản
+    link_existing_account:
+      success: Đã liên kết tài khoản Fio của bạn với %{account_name}.
+      account_already_linked: Tài khoản này đã được liên kết với một nhà cung cấp.
+      fio_account_already_linked: Tài khoản Fio này đã được liên kết.
+      no_account_selected: Không có tài khoản Fio nào để liên kết.
+      unsupported_account_type: Fio chỉ có thể đồng bộ tài khoản tiền mặt và tài khoản vay.
+    setup_accounts:
+      title: Liên kết tài khoản Fio của bạn
+      subtitle: Chọn cách hiển thị tài khoản mà token này truy cập trong Sure.
+      choose_account_type: Chọn loại tài khoản
+      choose_account_type_description: Bỏ qua nếu bạn không muốn theo dõi tài khoản này.
+      account_type_label: Loại tài khoản
+      account_types:
+        skip: Bỏ qua
+      create_account: Tạo tài khoản
+      awaiting_first_sync: Chưa tìm thấy tài khoản
+      awaiting_first_sync_description: Fio chỉ trả về tài khoản trong sao kê, vì vậy tài khoản sẽ xuất hiện sau lần đồng bộ thành công đầu tiên.
+      sync_now: Đồng bộ ngay
+      nothing_to_setup: Không có gì cần thiết lập
+      account_already_handled: Tài khoản của kết nối này đã được liên kết hoặc bỏ qua.
+      close: Đóng
+      cancel: Hủy
+    complete_account_setup:
+      success: Đã tạo %{account_name}.
+      skipped: Đã bỏ qua tài khoản Fio.
+      no_account: Không có tài khoản Fio nào cần thiết lập.
+      unsupported_account_type: Fio không hỗ trợ loại tài khoản này.
+      creation_failed: Không thể tạo tài khoản Sure.
+    fio_item:
+      deletion_in_progress: Đang xóa
+      syncing: Đang đồng bộ
+      requires_update: Cần token mới
+      error: Lỗi
+      status_with_summary: Đã đồng bộ %{timestamp} trước · %{summary}
+      status_never: Chưa bao giờ đồng bộ
+      delete: Xóa
+      requires_update_title: Cần token mới
+      requires_update_description: Fio đã từ chối token của kết nối này. Hãy tạo token chỉ đọc mới tại Settings → API trong Internet Banking.
+      update_token: Cập nhật token
+      setup_needed: Cần thiết lập tài khoản
+      setup_description: Tài khoản mà token này truy cập chưa được liên kết với tài khoản Sure.
+      setup_action: Thiết lập tài khoản
+      no_accounts_title: Chưa nhập tài khoản nào
+      no_accounts_description: Fio chỉ trả về tài khoản trong sao kê, vì vậy tài khoản sẽ xuất hiện sau lần đồng bộ thành công đầu tiên.
+      sync_now: Đồng bộ ngay

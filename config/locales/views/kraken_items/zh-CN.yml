@@ -3,9 +3,9 @@ zh-CN:
   kraken_items:
     provider_connection:
       default_name: Kraken
-      default_description: 连接到 Kraken 交易所账户
+      default_description: 关联到 Kraken 交易所账户
       name: "Kraken - %{name}"
-      description: "连接到 %{name}"
+      description: "关联到 %{name}"
     create:
       default_name: Kraken
       success: 已成功连接到 Kraken。您的交易所账户正在同步。

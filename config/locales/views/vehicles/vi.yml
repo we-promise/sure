@@ -6,19 +6,21 @@ vi:
     form:
       make: Hãng xe
       make_placeholder: Toyota
-      mileage: Số dặm
+      mileage: Quãng đường đã đi
       mileage_placeholder: '15000'
       mileage_unit: Đơn vị
       model: Mẫu xe
       model_placeholder: Camry
       year: Năm sản xuất
       year_placeholder: '2023'
+      mileage_unit_kilometers: Kilômét
+      mileage_unit_miles: Dặm
     new:
       title: Nhập thông tin xe
     overview:
       current_price: Giá hiện tại
       make_model: Hãng & Mẫu xe
-      mileage: Số dặm
+      mileage: Quãng đường đã đi
       purchase_price: Giá mua
       trend: Xu hướng
       unknown: Không xác định
@@ -27,7 +29,7 @@ vi:
       overview:
         current_price: Giá hiện tại
         make_model: Hãng & Mẫu xe
-        mileage: Số dặm
+        mileage: Quãng đường đã đi
         purchase_price: Giá mua
         trend: Xu hướng
         unknown: Không xác định

@@ -3,6 +3,9 @@ zh-CN:
   transfers:
     create:
       success: 转账已创建
+      exchange_rate_unavailable: 所选货币和日期没有可用的汇率
+      date_invalid: 无效
+      stale_form: 此表单已使用不同的信息提交过。请刷新页面后重试。
     destroy:
       success: 转账已移除
     form:
@@ -19,6 +22,9 @@ zh-CN:
       destination_amount_display: 目标金额：%{amount}
       exchange_rate_display: 汇率：%{rate}
       source_amount: 来源金额
+      bank_charges: 银行手续费
+      outgoing_fee: 转出手续费
+      incoming_fee: 转入手续费
     new:
       title: 新建转账
     show:
@@ -41,5 +47,8 @@ zh-CN:
       uncategorized: 未分类
       total: 总计
       transfer_amount: 转账金额
+      bank_charges: 银行手续费
+      source_fee: 转出方手续费
+      destination_fee: 转入方手续费
     update:
       success: 转账已更新

@@ -11,7 +11,7 @@ vi:
         default_family_none: Không có (tạo gia đình mới)
         generate_tokens: Tạo mã mới
         generated_tokens: Mã đã tạo
-        title: Giới thiệu
+        title: Đăng ký người dùng mới
         states:
           open: Mở
           closed: Đóng
@@ -29,6 +29,7 @@ vi:
         confirm_clear_cache:
           title: Xóa bộ nhớ đệm dữ liệu?
           body: Bạn có chắc chắn muốn xóa bộ nhớ đệm dữ liệu? Thao tác này sẽ xóa tất cả tỷ giá hối đoái, giá chứng khoán, số dư tài khoản và dữ liệu khác. Hành động này không thể hoàn tác.
+        property_valuation_providers: Nhà cung cấp định giá bất động sản
       provider_selection:
         exchange_rate_title: Nhà cung cấp tỷ giá hối đoái
         exchange_rate_description: Chọn một nhà cung cấp để lấy tỷ giá hối đoái tiền tệ.
@@ -36,7 +37,7 @@ vi:
         securities_title: Nhà cung cấp chứng khoán
         securities_description: Bật một hoặc nhiều nhà cung cấp để lấy giá cổ phiếu, ETF và quỹ tương hỗ. Khi tìm kiếm, tất cả nhà cung cấp được bật đều được truy vấn và kết quả được hợp nhất.
         env_configured_message: Lựa chọn nhà cung cấp bị tắt vì các biến môi trường đã được đặt. Để bật lựa chọn tại đây, hãy xóa các biến môi trường này khỏi cấu hình của bạn.
-        twelve_data_hint: yêu cầu khóa API, 800 tín dụng/ngày
+        twelve_data_hint: yêu cầu khóa API, 800 lượt gọi/ngày
         yahoo_finance_hint: miễn phí, không cần khóa API
         requires_api_key: yêu cầu khóa API
         requires_api_key_eodhd: yêu cầu khóa API, giới hạn 20 lần gọi/ngày
@@ -53,6 +54,11 @@ vi:
           mfapi: MFAPI.in
           binance_public: Binance
           moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
+          mansa: Mansa
+        tinkoff_invest_hint: yêu cầu token chỉ đọc -- giá cổ phiếu/quỹ/trái phiếu Nga + logo thương hiệu
+        requires_api_key_mansa: yêu cầu khóa API, gói miễn phí 100 lần gọi/ngày -- chỉ NGX (Sở giao dịch Nigeria)
       assistant_settings:
         title: Trợ lý AI
         description: Chọn cách trợ lý trò chuyện phản hồi. Tích hợp sẵn sử dụng nhà cung cấp LLM đã cấu hình trực tiếp. Bên ngoài ủy thác cho tác nhân AI từ xa có thể gọi lại các công cụ tài chính của Sure qua MCP.
@@ -106,15 +112,23 @@ vi:
         json_mode_none: Không (tốt nhất cho mô hình tiêu chuẩn)
         json_mode_json_object: Đối tượng JSON
         json_mode_help: "Chế độ nghiêm ngặt hoạt động tốt nhất với mô hình suy nghĩ (qwen-thinking, deepseek-reasoner). Chế độ không hoạt động tốt nhất với mô hình tiêu chuẩn (llama, mistral, gpt-oss)."
-        budget_heading: Ngân sách token
-        budget_description: Áp dụng cho mọi lần gọi LLM — lịch sử trò chuyện, phân loại tự động, phát hiện nhà cung cấp và xử lý PDF. Mặc định được đặt thận trọng cho các mô hình cục bộ ngữ cảnh nhỏ. Tăng lên cho các mô hình đám mây với cửa sổ ngữ cảnh lớn hơn.
+        budget_heading: Giới hạn token
+        budget_description: Áp dụng cho mọi lần gọi LLM — lịch sử trò chuyện, phân loại tự động, phát hiện người bán và xử lý PDF. Mặc định được đặt thận trọng cho các mô hình cục bộ ngữ cảnh nhỏ. Tăng lên cho các mô hình đám mây với cửa sổ ngữ cảnh lớn hơn.
         context_window_label: Cửa sổ ngữ cảnh (Tùy chọn)
         context_window_help: "Tổng số token mô hình sẽ chấp nhận. Mặc định: 2048 — tăng lên 8192+ cho OpenAI đám mây hoặc mô hình cục bộ ngữ cảnh lớn."
         max_response_tokens_label: Số token phản hồi tối đa (Tùy chọn)
         max_response_tokens_help: "Token dành cho phản hồi của mô hình. Mặc định: 512. Giảm để dành chỗ cho lịch sử dài hơn."
         max_items_per_call_label: Số mục tối đa mỗi lô (Tùy chọn)
-        max_items_per_call_help: "Giới hạn trên cho lô phân loại tự động / phát hiện nhà cung cấp. Mặc định: 25. Lô lớn hơn được tự động cắt để phù hợp với cửa sổ ngữ cảnh."
+        max_items_per_call_help: "Giới hạn trên cho lô phân loại tự động / phát hiện người bán. Mặc định: 25. Lô lớn hơn được tự động cắt để phù hợp với cửa sổ ngữ cảnh."
         title: OpenAI
+        model_function_calling_help: Trợ lý AI đọc dữ liệu của bạn qua lệnh gọi hàm, vì vậy hãy chọn mô hình mà nhà cung cấp ghi rõ là hỗ trợ tools/function calling. Mô hình không hỗ trợ sẽ khiến trò chuyện thất bại với lỗi khó hiểu từ nhà cung cấp.
+        model_function_calling_link: Kiểm tra mô hình đã cấu hình
+        timeout_heading: Thời gian chờ
+        timeout_description: Kiểm soát thời gian tối đa cho các lệnh gọi mô hình tương thích OpenAI trước khi Sure dừng lại. Hãy tăng các giá trị này nếu bạn chạy mô hình cục bộ trên phần cứng chậm.
+        openai_request_timeout_label: Thời gian chờ yêu cầu tính bằng giây (Tùy chọn)
+        openai_request_timeout_help: 'Mặc định: 60. Áp dụng cho mỗi yêu cầu HTTP tương thích OpenAI, bao gồm phân loại tự động, phát hiện người bán, trò chuyện, xử lý PDF và lệnh gọi kho vector. OPENAI_REQUEST_TIMEOUT sẽ ghi đè trường này.'
+        ai_response_timeout_label: Thời gian chờ phản hồi tính bằng giây (Tùy chọn)
+        ai_response_timeout_help: 'Mặc định: 90. Chỉ áp dụng cho bộ giám sát thời gian của toàn bộ lượt trò chuyện, nên hãy đặt giá trị theo tổng: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × thời gian chờ yêu cầu, cộng thời gian thực thi công cụ và thời gian chờ hàng đợi. AI_RESPONSE_TIMEOUT sẽ ghi đè trường này.'
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance cung cấp quyền truy cập miễn phí vào giá cổ phiếu, tỷ giá hối đoái và dữ liệu tài chính mà không cần khóa API.
@@ -122,6 +136,14 @@ vi:
         status_inactive: Kết nối Yahoo Finance thất bại
         connection_failed: Không thể kết nối với Yahoo Finance
         troubleshooting: Kiểm tra kết nối internet và cài đặt tường lửa của bạn. Yahoo Finance có thể tạm thời không khả dụng.
+        status_healthy: Yahoo Finance đang hoạt động bình thường.
+        status_rate_limited: Yahoo Finance đang tạm thời giới hạn tốc độ yêu cầu.
+        rate_limited_title: Đã đạt giới hạn tốc độ của Yahoo Finance.
+        rate_limited_message: Bạn không cần làm gì. Sure sẽ tạm ngừng kiểm tra kết nối thêm trong 30 phút. Các thao tác lấy giá và tỷ giá hối đoái vẫn tiếp tục độc lập.
+        status_unavailable: Yahoo Finance hiện không khả dụng.
+        unavailable_title: Không thể xác minh Yahoo Finance.
+        unavailable_message: Không thể kết nối tới Yahoo Finance hoặc nhận được phản hồi không mong muốn. Hãy kiểm tra kết nối internet và thử lại sau.
+        status_unknown: Đang kiểm tra trạng thái Yahoo Finance.
       tiingo_settings:
         title: Tiingo
         description: Nhập token API do Tiingo cung cấp. Gói miễn phí hỗ trợ 50 ký hiệu duy nhất mỗi giờ với hơn 30 năm dữ liệu lịch sử.
@@ -173,10 +195,12 @@ vi:
       update:
         failure: Giá trị cài đặt không hợp lệ
         success: Cài đặt đã được cập nhật
-        invalid_onboarding_state: Trạng thái giới thiệu không hợp lệ
+        invalid_onboarding_state: Trạng thái đăng ký không hợp lệ
         invalid_sync_time: "Định dạng thời gian đồng bộ không hợp lệ. Vui lòng sử dụng định dạng HH:MM (ví dụ: 02:30)."
         invalid_llm_budget: "%{field} phải là số nguyên ≥ %{minimum}."
         scheduler_sync_failed: Đã lưu cài đặt, nhưng cập nhật lịch đồng bộ thất bại. Vui lòng thử lại hoặc kiểm tra nhật ký máy chủ.
+        invalid_anthropic_base_url: URL cơ sở Anthropic phải là URL http(s).
+        anthropic_model_required_for_base_url: Cần chỉ định mô hình Anthropic khi đặt URL cơ sở tùy chỉnh.
       disconnect_external_assistant:
         external_assistant_disconnected: Trợ lý bên ngoài đã bị ngắt kết nối
       clear_cache:
@@ -194,3 +218,62 @@ vi:
         include_pending_label: Bao gồm giao dịch đang chờ
         include_pending_description: Khi bật, các giao dịch đang chờ (chưa được ghi nhận) sẽ được nhập và tự động đối soát khi được đăng. Tắt nếu ngân hàng của bạn cung cấp dữ liệu đang chờ không đáng tin cậy.
         env_configured_message: Cài đặt này bị tắt vì biến môi trường nhà cung cấp (SIMPLEFIN_INCLUDE_PENDING hoặc PLAID_INCLUDE_PENDING) đã được đặt. Xóa nó để bật cài đặt này.
+      llm_provider_selector:
+        title: Nhà cung cấp AI
+        description: Chọn LLM vận hành tính năng trò chuyện AI. Các thao tác hàng loạt (phân loại giao dịch, phát hiện người bán và xử lý PDF) hiện luôn dùng OpenAI.
+        env_configured_message: Đã cấu hình thành công qua biến môi trường LLM_PROVIDER.
+        provider_label: Nhà cung cấp LLM đang dùng
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Việc đổi nhà cung cấp có hiệu lực từ cuộc trò chuyện tiếp theo. Cấu hình thông tin xác thực của nhà cung cấp đang dùng ở bên dưới.
+        not_configured_hint: Thêm khóa API %{provider} bên dưới để kích hoạt.
+        data_retention_heading: Xử lý dữ liệu
+        data_retention: Theo mặc định, dữ liệu đầu vào API không được dùng để huấn luyện mô hình; API do nhà cung cấp lưu trữ giữ dữ liệu khoảng 30 ngày cho mục đích an toàn và chống lạm dụng. Các endpoint tùy chỉnh hoặc tự lưu trữ tuân theo chính sách của riêng bạn.
+      anthropic_settings:
+        title: Anthropic (Claude)
+        description: Nhập khóa API Anthropic của bạn. Có thể trỏ URL cơ sở tới AWS Bedrock hoặc GCP Vertex nếu muốn.
+        env_configured_message: Đã cấu hình thành công qua biến môi trường.
+        access_token_label: Khóa API
+        access_token_placeholder: Nhập khóa API Anthropic của bạn
+        base_url_label: URL cơ sở (Tùy chọn)
+        base_url_placeholder: https://api.anthropic.com (mặc định)
+        model_label: Mô hình mặc định (Tùy chọn)
+        model_placeholder: claude-sonnet-4-6 (mặc định)
+        model_help: Dùng cho trò chuyện và xử lý PDF. Các thao tác hàng loạt (phân loại, phát hiện người bán) mặc định dùng Haiku để tiết kiệm chi phí.
+      rentcast_settings:
+        title: RentCast
+        description: Nhập khóa API RentCast để tra cứu thông tin và giá trị ước tính của bất động sản tại Mỹ khi thêm bất động sản. Gói miễn phí giới hạn 50 yêu cầu API mỗi tháng, dùng chung cho tra cứu bất động sản và cập nhật định giá hằng ngày. Với gói trả phí, hãy nâng giới hạn bằng biến môi trường RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Đã cấu hình thành công qua biến môi trường RENTCAST_API_KEY.
+        label: Khóa API
+        placeholder: Nhập khóa API RentCast của bạn vào đây
+        usage: Đã dùng %{used}/%{limit} yêu cầu trong tháng
+      realie_settings:
+        title: Realie
+        description: Nhập khóa API Realie để tra cứu thông tin và giá trị ước tính của bất động sản tại Mỹ khi thêm bất động sản. Gói miễn phí giới hạn 25 yêu cầu API mỗi tháng, dùng chung cho tra cứu bất động sản và cập nhật định giá hằng ngày. Với gói trả phí, hãy nâng giới hạn bằng biến môi trường REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Đã cấu hình thành công qua biến môi trường REALIE_API_KEY.
+        label: Khóa API
+        placeholder: Nhập khóa API Realie của bạn vào đây
+        usage: Đã dùng %{used}/%{limit} yêu cầu trong tháng
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: Nhập token API T-Invest chỉ đọc. Dùng để lấy logo thương hiệu cho chứng khoán (kể cả quỹ và trái phiếu, ngay cả khi giá lấy từ MOEX) và, khi được bật ở trên, giá cho các công cụ tài chính Nga.
+        moex_only_notice: Chưa bật lấy giá ở trên — T-Invest vẫn được dùng để lấy logo thương hiệu cho mọi chứng khoán của bạn khi đã cấu hình token, bất kể ô đánh dấu ở trên.
+        env_configured_message: Đã cấu hình thành công qua biến môi trường TINKOFF_INVEST_API_KEY.
+        label: Token API
+        placeholder: Nhập token API T-Invest của bạn vào đây
+        show_details: (hiển thị chi tiết)
+        step_1: Mở mục đầu tư của T-Bank, vào Cài đặt, rồi Token API (cần có tài khoản môi giới T-Bank đang mở).
+        step_2: Tạo token với quyền chỉ đọc.
+        step_3: Sao chép token và dán vào bên dưới.
+      mansa_settings:
+        title: Mansa
+        description: Nhập khóa API từ Mansa API. Hỗ trợ NGX (Sở giao dịch Nigeria), sàn mà các nhà cung cấp khác ở đây chưa hỗ trợ. Mansa cũng hỗ trợ các sàn châu Phi khác, nhưng chỉ NGX đã được kiểm chứng với tích hợp này.
+        env_configured_message: Đã cấu hình thành công qua biến môi trường MANSA_API_KEY.
+        label: Khóa API
+        placeholder: Nhập khóa API Mansa của bạn vào đây
+        show_details: (hiển thị chi tiết)
+        step_1_html: Truy cập <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> và nhận khóa API miễn phí -- không cần thẻ.
+        step_2: Sao chép khóa API và dán vào bên dưới.
+        rate_limit_warning: Gói miễn phí của Mansa giới hạn 100 lần gọi API mỗi ngày và chỉ cung cấp giá hiện tại -- giá lịch sử yêu cầu gói trả phí. Chỉ NGX (Sở giao dịch Nigeria) đã được kiểm chứng với tích hợp này; các sàn châu Phi khác mà Mansa hỗ trợ chưa được hỗ trợ ở đây.
+      ensure_admin:
+        not_authorized: Bạn không có quyền thực hiện hành động này

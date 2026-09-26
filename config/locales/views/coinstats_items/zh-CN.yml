@@ -13,10 +13,10 @@ zh-CN:
     destroy:
       success: CoinStats 提供商连接已安排删除。
     link_wallet:
-      success: "%{count} 个加密钱包链接成功。"
+      success: "%{count} 个加密钱包关联成功。"
       missing_params: "缺少必需参数：address 和 blockchain。"
-      failed: 加密钱包链接失败。
-      error: "加密钱包链接失败：%{message}。"
+      failed: 加密钱包关联失败。
+      error: "加密钱包关联失败：%{message}。"
     link_exchange:
       success: "%{name} 交易所已关联。"
       missing_params: 需要交易所和凭据。
@@ -24,7 +24,7 @@ zh-CN:
       failed: 关联交易所失败。
       error: "关联交易所失败：%{message}。"
     new:
-      title: 使用 CoinStats 连接加密资产
+      title: 使用 CoinStats 关联加密资产
       blockchain_fetch_error: 获取区块链列表失败，请稍后再试。
       link_wallet_title: 关联钱包地址
       link_wallet_description: 通过 CoinStats 跟踪自托管钱包或单个链上地址。

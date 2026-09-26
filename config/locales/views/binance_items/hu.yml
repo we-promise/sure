@@ -26,6 +26,7 @@ hu:
         other: "%{count} számla importálva"
       none_selected: Nincs kijelölt számla
       no_accounts: Nincs importálható számla
+      invalid_sync_start_date: A szinkronizálás kezdő dátumának érvényes, múltbeli dátumnak kell lennie.
     binance_item:
       provider_name: Binance
       syncing: Szinkronizálás...
@@ -41,7 +42,7 @@ hu:
       status_with_summary: "Utolsó szinkronizálás: %{timestamp} ezelőtt – %{summary}"
       status_never: Még nem volt szinkronizálva
       update_credentials: Hitelesítő adatok frissítése
-      delete: Töröl
+      delete: Törlés
       no_accounts_title: Nem találhatók számlák
       no_accounts_message: A Binance portfóliód szinkronizálás után fog megjelenni itt.
       setup_needed: Számla importálásra kész

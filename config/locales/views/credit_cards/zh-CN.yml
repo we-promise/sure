@@ -13,5 +13,12 @@ zh-CN:
       expiration_date: 到期日期
       minimum_payment: 最低还款额
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: 自动
+      simplefin_balance_sign_credit: 贷方（银行欠您）
+      simplefin_balance_sign_debt: 欠款（您欠银行）
+      simplefin_balance_sign_description: 仅当 SimpleFIN 报告的余额正负号含义不明确时才手动指定。“自动”会继续根据交易历史和提供商余额判断。
+      simplefin_balance_sign_label: SimpleFIN 余额含义
+      treat_balance_as_available_credit_description: 如果您的银行将此卡的余额报告为剩余可用额度而非欠款金额，请启用此项。欠款将根据银行报告的信用额度计算；如果银行未提供，则根据“可用额度”字段计算。
+      treat_balance_as_available_credit_label: 余额为可用额度
     new:
       title: 请输入信用卡详细信息

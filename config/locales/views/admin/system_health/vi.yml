@@ -1,0 +1,256 @@
+---
+vi:
+  admin:
+    system_health:
+      push_notifications:
+        send_test: Gửi thông báo đẩy thử nghiệm
+        queueing: Đang đưa vào hàng đợi…
+        title: Thông báo đẩy
+        requested_at: Yêu cầu thử nghiệm gần nhất lúc %{time}
+        result_help: Việc APNs chấp nhận không xác nhận thông báo đã đến thiết bị của bạn. Làm mới để xem kết quả từ worker. Kết quả được lưu trong 24 giờ.
+        device: Thiết bị %{number}
+        pending: Đang chờ
+        refresh: Làm mới kết quả
+        columns:
+          device: Thiết bị
+          environment: Môi trường APNs
+          status: Kết quả
+          checked_at: Cập nhật gần nhất
+        environments:
+          sandbox: Sandbox
+          production: Production
+        messages:
+          enqueue_failed: Không thể đưa bài thử nghiệm vào hàng đợi. Hãy kiểm tra Sidekiq và làm mới kết quả bên dưới.
+          ready: Gửi thông báo thử nghiệm đến các thiết bị iOS đã bật và đăng ký với tài khoản của bạn.
+          queued: Đã đưa thông báo thử nghiệm vào hàng đợi. Làm mới kết quả bên dưới để kiểm tra trạng thái.
+          hosted_only: Thông báo đẩy chỉ khả dụng ở chế độ được lưu trữ (hosted).
+          ineligible: Chỉ quản trị viên cấp cao đang hoạt động mới có thể gửi thông báo thử nghiệm.
+          no_devices: Hãy bật thông báo đẩy trong ứng dụng Sure trên iOS cho tài khoản này để gửi thử nghiệm.
+          disabled: Người vận hành đã tắt tính năng gửi thông báo đẩy.
+          not_configured: Thông tin xác thực APNs chưa được cấu hình.
+          cooldown: Vui lòng đợi 30 giây trước khi gửi thử nghiệm khác.
+          storage_unavailable: Không thể lưu yêu cầu thử nghiệm. Hãy kiểm tra cấu hình bộ nhớ đệm dùng chung.
+        statuses:
+          queued: Đã vào hàng đợi
+          accepted: APNs đã chấp nhận
+          skipped: 'Đã bỏ qua: không còn đủ điều kiện'
+          rejected: APNs đã từ chối; hãy kiểm tra nhật ký gỡ lỗi push
+          unregistered: Đăng ký thiết bị không còn hợp lệ
+          retrying: Đang thử lại sau lỗi tạm thời
+          failed: Thất bại; hãy kiểm tra nhật ký gỡ lỗi push
+          enqueue_failed: Không thể đưa vào hàng đợi; hãy kiểm tra Sidekiq
+          expired: Đã hết hạn mà không có kết quả cuối cùng
+      push_notification:
+        title: Thông báo thử nghiệm từ Sure
+        body: Đây là thông báo đẩy thử nghiệm cho tài khoản Sure của bạn.
+      verify_worker_ai:
+        queued: Đã đưa bài kiểm tra worker vào hàng đợi. Kết quả sẽ xuất hiện bên dưới khi một tiến trình worker nhận xử lý, thường chỉ trong vài giây.
+      show:
+        title: Tình trạng hệ thống
+        tabs:
+          background_jobs: Tác vụ nền
+          ai: Trạng thái AI
+        alert:
+          title: Tác vụ nền không chạy
+        status_section_title: Trạng thái Sidekiq
+        status_section_description: Trạng thái hiện tại của worker chạy nền, phụ trách đồng bộ, tính số dư và tài sản ròng.
+        counters_section_title: Bộ đếm tác vụ
+        counters_section_description: Tổng hợp các bộ đếm Sidekiq trên tất cả hàng đợi.
+        queues_section_title: Hàng đợi
+        queues_section_description: Độ dài từng hàng đợi và tuổi của tác vụ cũ nhất. Độ trễ là số giây mà tác vụ cũ nhất đã phải chờ.
+        labels:
+          status: Trạng thái
+          processes: Tiến trình worker
+          last_heartbeat: Tín hiệu hoạt động gần nhất
+          max_queue_latency: Tuổi tác vụ cũ nhất
+          enqueued: Đang chờ trong hàng đợi
+          retries: Chờ thử lại
+          failed: Thất bại
+          processed_total: Tổng đã xử lý
+          queue: Hàng đợi
+          size: Kích thước
+          latency: Độ trễ
+        values:
+          healthy: Ổn định
+          unhealthy: Suy giảm
+          time_ago: '%{time_ago} trước'
+          never: Chưa bao giờ
+          seconds: '%{seconds} giây'
+          no_queues: Chưa có hàng đợi nào được đăng ký. Có thể worker không chạy.
+        ai:
+          run_checks: Chạy lại kiểm tra
+          last_checked: Kiểm tra trực tiếp hoàn tất %{time_ago} trước. Kết quả được lưu đệm trong thời gian ngắn.
+          not_checked_help: Mở trực tiếp URL trạng thái AI hoặc chạy kiểm tra để xác minh dịch vụ đang hoạt động.
+          alerts:
+            custom_openai:
+              title: Kiểm tra kho vector được lưu trữ đã thất bại tại endpoint tùy chỉnh này
+              message: Endpoint đã cấu hình không vượt qua kiểm tra hoạt động /v1/vector_stores. Hầu hết endpoint cục bộ và endpoint tương thích OpenAI không triển khai API đó. Trò chuyện và xử lý PDF có thể vẫn hoạt động; với cách thiết lập cục bộ thông thường, hãy dùng pgvector cùng một endpoint embedding riêng. Lỗi đã được ghi vào Cài đặt → Nhật ký gỡ lỗi và Rails.logger.
+            function_calling_unsupported:
+              title: Mô hình không hỗ trợ gọi hàm (function calling)
+              message: Endpoint xử lý được yêu cầu trò chuyện thông thường nhưng từ chối cùng yêu cầu đó khi có tham số tools. Trợ lý AI đọc tài khoản, giao dịch và danh mục nắm giữ thông qua gọi hàm, nên trò chuyện sẽ tiếp tục lỗi — thường là lỗi 404 khó hiểu — cho đến khi bạn dùng mô hình hỗ trợ tools. Hãy chọn mô hình mà nhà cung cấp có ghi rõ hỗ trợ gọi hàm. Lỗi đã được ghi vào Cài đặt → Nhật ký gỡ lỗi và Rails.logger.
+            function_calling_not_used:
+              title: Mô hình đã trả lời mà không gọi công cụ được yêu cầu
+              message: Endpoint chấp nhận tham số tools nhưng mô hình trả lời bằng văn bản thay vì gọi công cụ kiểm tra tình trạng. Trợ lý AI không thể đọc dữ liệu tài chính nếu không gọi công cụ, nên trò chuyện có thể không trả lời gì hoặc đưa ra số liệu bịa đặt. Nên chọn mô hình mà nhà cung cấp có ghi rõ hỗ trợ gọi hàm.
+            llm_probe_failed:
+              title: Kiểm tra trực tiếp LLM thất bại
+              message: Sure không thể xác minh được cả endpoint và mô hình đã cấu hình. Lỗi đã được ghi vào Cài đặt → Nhật ký gỡ lỗi và Rails.logger.
+            llm_model_not_available:
+              title: Mô hình AI đã cấu hình không khả dụng
+              message: Endpoint có phản hồi nhưng không liệt kê hoặc không phục vụ mô hình đã cấu hình. Hãy chọn một mô hình đang hoạt động của nhà cung cấp đã chọn rồi chạy lại kiểm tra. Với Gemini qua lớp chuyển đổi tương thích OpenAI, hãy dùng mô hình hiện được hỗ trợ như gemini-2.5-flash.
+            pdf_text_extraction_failed:
+              title: Kiểm tra trích xuất văn bản PDF tổng hợp thất bại
+              message: Sure không thể hoàn tất luồng ưu tiên văn bản, vốn trích xuất văn bản nhúng trong PDF tại chỗ rồi gửi cho mô hình đã cấu hình. Không có dữ liệu khách hàng nào được gửi đi. Lỗi đã được ghi vào Cài đặt → Nhật ký gỡ lỗi và Rails.logger.
+            pdf_vision_processing_failed:
+              title: Kiểm tra PDF tổng hợp bằng thị giác/tài liệu gốc thất bại
+              message: Sure không thể hoàn tất luồng xử lý PDF dạng hình ảnh hoặc tài liệu gốc qua mô hình đã cấu hình. Không có dữ liệu khách hàng nào được gửi đi. Lỗi đã được ghi vào Cài đặt → Nhật ký gỡ lỗi và Rails.logger.
+            vector_probe_failed:
+              title: Kiểm tra trực tiếp tìm kiếm tài liệu thất bại
+              message: Sure không thể xác minh kho vector đã chọn và mọi dịch vụ embedding cần thiết. Lỗi đã được ghi vào Cài đặt → Nhật ký gỡ lỗi và Rails.logger.
+            pgvector_extension_not_enabled:
+              title: Tiện ích mở rộng vector của PostgreSQL chưa được bật
+              message: Adapter pgvector đã được chọn nhưng PostgreSQL chưa bật tiện ích mở rộng vector cho cơ sở dữ liệu này. Hãy dùng image PostgreSQL có sẵn pgvector, sau đó bật tiện ích mở rộng với quyền chủ sở hữu cơ sở dữ liệu hoặc superuser và chạy lại migration với VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: Thiếu bảng vector_store_chunks
+              message: Tiện ích mở rộng pgvector đã được bật nhưng không tìm thấy bảng chunks. Hãy kiểm tra trạng thái migration, sau đó chạy lại migration kho vector với VECTOR_STORE_PROVIDER=pgvector để Sure có thể tạo vector_store_chunks.
+            pgvector_probe_failed:
+              title: Kiểm tra lưu trữ pgvector thất bại
+              message: Sure không thể truy vấn bảng chunks của pgvector. Hãy kiểm tra quyền PostgreSQL, tiện ích mở rộng vector và migration vector_store_chunks. Lỗi đã được ghi vào Cài đặt → Nhật ký gỡ lỗi và Rails.logger.
+            embedding_dimensions_mismatch:
+              title: Số chiều embedding không khớp
+              message: Endpoint embedding trả về vector có độ dài không khớp với EMBEDDING_DIMENSIONS. Hãy đặt EMBEDDING_MODEL và EMBEDDING_DIMENSIONS theo kích thước vector được ghi trong tài liệu của mô hình, khởi động lại Sure để biến môi trường có hiệu lực, sau đó sửa hoặc tạo lại cột/bảng embedding của pgvector và embedding lại tài liệu nếu dữ liệu hiện có dùng kích thước khác.
+            embedding_probe_timeout:
+              title: Kiểm tra trực tiếp embedding đã hết thời gian chờ
+              message: Endpoint embedding không phản hồi trước AI_HEALTH_PROBE_TIMEOUT. Hãy tăng thời gian chờ kiểm tra tình trạng này nếu nhà cung cấp chậm, sau đó khởi động lại Sure để biến môi trường có hiệu lực trong mọi tiến trình. Nếu các lệnh gọi trò chuyện AI thông thường cũng hết thời gian chờ, hãy tăng riêng OPENAI_REQUEST_TIMEOUT.
+            embedding_probe_failed:
+              title: Kiểm tra trực tiếp embedding thất bại
+              message: Sure không thể tạo một embedding thử nghiệm ngắn qua endpoint và mô hình đã cấu hình. Hãy kiểm tra EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN và nhật ký của nhà cung cấp embedding. Lỗi đã được ghi vào Cài đặt → Nhật ký gỡ lỗi và Rails.logger.
+            qdrant:
+              title: Chưa hỗ trợ Qdrant
+              message: Adapter Qdrant mới chỉ có khung sườn, các thao tác tải lên và tìm kiếm tài liệu hiện đều thất bại. Hãy chọn OpenAI hoặc pgvector cho tìm kiếm tài liệu.
+            missing_vector_store:
+              title: Chưa cấu hình kho vector
+              message: Tài liệu đã tải lên không thể được lập chỉ mục hoặc tìm kiếm cho đến khi một adapter kho vector và các yêu cầu của nó được cấu hình.
+            unavailable_vector_store:
+              title: Kho vector đã chọn không khả dụng
+              message: Hãy kiểm tra các yêu cầu của adapter bên dưới. Với pgvector, cơ sở dữ liệu phải có tiện ích mở rộng vector hoặc có sẵn bảng vector_store_chunks.
+          llm:
+            title: LLM và xử lý PDF
+            description: Các kiểm tra trực tiếp xác minh mô hình đã cấu hình, yêu cầu mô hình thực hiện một lệnh gọi hàm đơn giản giống như trợ lý, rồi kiểm tra riêng việc trích xuất văn bản và xử lý thị giác/tài liệu gốc bằng một PDF tổng hợp một trang không chứa dữ liệu khách hàng. Giá trị thông tin xác thực không bao giờ được hiển thị.
+          vector_store:
+            title: Kho vector và tìm kiếm tài liệu
+            description: Kiểm tra trực tiếp sẽ truy vấn API kho vector được lưu trữ, hoặc kiểm tra bảng pgvector và tạo một embedding ngắn mà không lưu lại.
+          labels:
+            selected_provider: Nhà cung cấp đã chọn
+            effective_provider: Nhà cung cấp đang dùng
+            model: Mô hình
+            endpoint: Endpoint
+            function_calling: Gọi hàm (tools)
+            pdf_text_extraction: Luồng trích xuất văn bản PDF
+            pdf_vision_processing: Luồng PDF thị giác/tài liệu gốc
+            llm_request_timeout: Thời gian chờ yêu cầu LLM
+            probe_request_timeout: Thời gian chờ kiểm tra tình trạng
+            openai_credentials: Thông tin xác thực OpenAI
+            openai_compatible_credentials: Thông tin xác thực API tương thích OpenAI
+            anthropic_credentials: Thông tin xác thực Anthropic
+            adapter: Adapter
+            adapter_available: Adapter khả dụng
+            pgvector_extension: Tiện ích mở rộng vector của PostgreSQL
+            pgvector_table: Bảng chunks vector
+            embedding_model: Mô hình embedding
+            embedding_endpoint: Endpoint embedding
+            embedding_dimensions: Số chiều embedding
+            function_calling_failure_reason: Lý do lỗi gọi hàm
+            pdf_text_extraction_failure_reason: Lý do lỗi trích xuất văn bản
+            pdf_vision_processing_failure_reason: Lý do lỗi thị giác/tài liệu gốc
+            storage_probe: Kiểm tra lưu trữ pgvector
+            embedding_probe: Kiểm tra endpoint embedding
+            failure_reason: Lý do lỗi
+          providers:
+            openai: OpenAI
+            openai_compatible: Tương thích OpenAI
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Endpoint tùy chỉnh
+          adapters:
+            openai: Kho vector được lưu trữ của OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Đã cấu hình
+            not_configured: Chưa cấu hình
+            fallback: (dự phòng)
+            not_set: Chưa đặt
+            "yes": Có
+            "no": Không
+            enabled: Đã bật
+            available_not_enabled: Khả dụng, chưa bật
+            not_available: Không khả dụng
+            available: Khả dụng
+            not_found: Không tìm thấy
+          function_calling_statuses:
+            supported: Gọi công cụ trực tiếp thành công
+            unsupported: Nhà cung cấp/mô hình đang dùng không hỗ trợ
+            not_used: Đã chấp nhận tools nhưng mô hình không gọi công cụ nào
+            failing: Kiểm tra trực tiếp thất bại
+            not_checked: Chưa kiểm tra
+            unavailable: Không khả dụng cho đến khi cấu hình nhà cung cấp LLM
+          pdf_statuses:
+            supported: Kiểm tra PDF tổng hợp đạt
+            failing: Kiểm tra PDF tổng hợp thất bại
+            unsupported: Đã tắt hoặc nhà cung cấp/mô hình đang dùng không hỗ trợ
+            not_checked: Chưa kiểm tra
+            unavailable: Không khả dụng cho đến khi cấu hình nhà cung cấp LLM
+          probe_statuses:
+            passing: Kiểm tra trực tiếp đạt
+            failing: Kiểm tra trực tiếp thất bại
+            not_checked: Chưa kiểm tra
+            not_configured: Chưa cấu hình
+          vector_statuses:
+            passing: Các kiểm tra trực tiếp đều đạt
+            failing: Kiểm tra trực tiếp thất bại
+            not_checked: Chưa kiểm tra
+            not_configured: Chưa cấu hình
+            scaffolded: Mới có khung sườn
+            missing: Chưa cấu hình
+          failure_codes:
+            model_not_available: Nhà cung cấp không trả về mô hình đã cấu hình
+            no_tool_call: Mô hình trả lời mà không gọi công cụ kiểm tra tình trạng
+            tools_refused: Dịch vụ xử lý được yêu cầu khi không có tools nhưng từ chối khi có tools
+            invalid_response: Dịch vụ trả về phản hồi không mong đợi
+            dimensions_mismatch: Số chiều của vector embedding không khớp với số chiều đã cấu hình
+            extension_not_enabled: Tiện ích mở rộng vector của PostgreSQL chưa được bật
+            table_not_found: Không tìm thấy bảng vector_store_chunks
+            render_missing_binary: Trình kết xuất pdftoppm (poppler-utils) không có trong container này
+            timeout: Dịch vụ không phản hồi trước khi hết thời gian chờ kiểm tra
+            request_failed: Yêu cầu đến dịch vụ thất bại
+            unsupported_provider: Nhà cung cấp không hỗ trợ kiểm tra này
+          worker:
+            title: Xác minh worker
+            description: Các kiểm tra ở trên chạy từ tiến trình web này. Phần lớn công việc AI -- phản hồi của trợ lý, xử lý PDF, embedding, tự động phân loại và nhận diện người bán -- thực ra chạy trong tiến trình worker Sidekiq, vốn có thể khác về truy cập mạng, DNS, quy tắc proxy, thậm chí cả thông tin xác thực được nạp. Hãy đưa một bài kiểm tra vào hàng đợi để xác minh cấu hình và kết nối của chính worker.
+            verify_button: Xác minh cấu hình worker
+            coverage_notice: Mỗi lần kiểm tra chỉ xác minh đúng một tiến trình worker -- tiến trình nào lấy nó ra khỏi hàng đợi. Nếu có nhiều bản sao worker, một kết quả đạt không có nghĩa là mọi worker đều ổn; hãy đưa kiểm tra vào hàng đợi lần nữa để lấy mẫu worker khác.
+            empty:
+              title: Chưa có worker nào báo cáo
+              description: Nhấn “Xác minh cấu hình worker” để đưa một bài kiểm tra bất đồng bộ vào hàng đợi. Kết quả sẽ xuất hiện ở đây khi một tiến trình worker nhận xử lý.
+            labels:
+              process: Tiến trình worker
+              checked_at: Đã kiểm tra
+              configuration: Cấu hình
+            configuration_statuses:
+              match: Khớp với web
+              mismatch: Khác với web
+            statuses:
+              passing: Đạt
+              failing: Thất bại
+              stale: Đã cũ
+            settings_origin:
+              title: Những cài đặt nào cần khởi động lại?
+              database_backed: Các cài đặt nhà cung cấp, mô hình và khóa API được thay đổi trong Cài đặt → Tự lưu trữ được lưu trong cơ sở dữ liệu. rails-settings-cached sẽ làm mất hiệu lực bộ nhớ đệm dùng chung khi ghi, nên cả web và worker đều nhận giá trị mới cho yêu cầu hoặc tác vụ tiếp theo -- không cần khởi động lại.
+              env_backed: Cấu hình embedding và mọi giá trị chỉ được đặt qua biến môi trường sẽ cố định khi từng container khởi động. Rails không thể thay đổi môi trường của container khác, nên muốn thay đổi các giá trị này phải khởi động lại hoặc tạo lại cả dịch vụ web và worker -- công cụ triển khai nào chỉ khởi động lại một trong hai (triển khai từng phần, Secret được cập nhật mà không khởi động lại pod) sẽ không nhận thay đổi.
+          local_setup:
+            title: Cách thiết lập cục bộ được khuyến nghị
+            description: Chạy LLM qua endpoint cục bộ tương thích OpenAI, lưu vector tài liệu trong pgvector và trỏ cài đặt embedding đến một endpoint embedding tương thích OpenAI. Image PostgreSQL phải có tiện ích mở rộng vector, và số chiều embedding phải khớp với mô hình đã chọn.

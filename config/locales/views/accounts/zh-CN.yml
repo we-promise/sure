@@ -9,9 +9,9 @@ zh-CN:
     account:
       complete_setup: 完成设置
       edit: 编辑
-      link_lunchflow: 连接 Lunch Flow
-      link_provider: 连接提供商
-      unlink_provider: 取消与提供商的连接
+      link_lunchflow: 关联 Lunch Flow
+      link_provider: 关联提供商
+      unlink_provider: 取消与提供商的关联
       change_simplefin_account: 更改 SimpleFIN 账户
       troubleshoot: 排查问题
       enable: 启用账户
@@ -21,6 +21,9 @@ zh-CN:
       default_label: 默认
       delete: 删除账户
       sharing: 共享
+      exclude_from_reports: 从所有报表中排除
+      include_in_reports: 计入报表
+      excluded_from_reports_indicator: 已从报表中排除
     chart:
       data_not_available: 所选时间段内无可用数据
     create:
@@ -29,7 +32,7 @@ zh-CN:
       depository_only: 只有现金和信用卡账户才能设为默认。
     destroy:
       success: "%{type} 账户已安排删除"
-      cannot_delete_linked: 无法删除已连接的账户，请先取消连接。
+      cannot_delete_linked: 无法删除已关联的账户，请先取消关联。
       failed: 资源删除失败，请稍后再试。
     empty:
       empty_message: 您可以通过连接、导入或手动录入的方式添加账户。
@@ -47,12 +50,16 @@ zh-CN:
       institution_domain_placeholder: 例如：chase.com
       notes_label: 备注
       notes_placeholder: 存储其他信息，例如账号、排序码、IBAN、路由号码等。
+      exclude_from_reports: 从所有报表中排除
+      enable_category_matcher_label: 启用分类匹配
+      enable_category_matcher_hint: 启用后，提供商建议的分类将应用于导入的交易。停用则新交易保持未分类。
     index:
       accounts: 账户
       manual_accounts:
         other_accounts: 其他账户
       new_account: 新建账户
       sync: 全部同步
+      cancel_sync: 取消同步
     sync_all:
       syncing: 正在同步账户……
     new:
@@ -61,11 +68,13 @@ zh-CN:
         select: 选择
         navigate: 浏览
         close: 关闭
+        next: 下一项
+        previous: 上一项
       method_selector:
-        connected_entry: 连接账户
-        connected_entry_eu: 连接欧盟账户
-        link_with_provider: 连接 %{provider}
-        lunchflow_entry: 连接 Lunch Flow 账户
+        connected_entry: 关联账户
+        connected_entry_eu: 关联欧盟账户
+        link_with_provider: 关联 %{provider}
+        lunchflow_entry: 关联 Lunch Flow 账户
         manual_entry: 手动输入账户余额
         title: 您希望如何添加？
       title: 您想添加什么？
@@ -76,6 +85,7 @@ zh-CN:
         holdings: 持仓
         overview: 概览
         statements: 对账单
+        schedule: 还款计划
       activity:
         amount: 金额
         balance: 余额
@@ -87,7 +97,7 @@ zh-CN:
         new: 新建
         new_activity: 新活动
         new_balance: 新余额
-        new_trade: 新交易
+        new_trade: 新证券交易
         new_transaction: 新交易记录
         new_transfer: 新转账
         no_entries: 未找到记录
@@ -109,11 +119,13 @@ zh-CN:
         delete_account: 删除账户
         edit: 编辑
         import: 导入交易
-        import_trades: 导入交易
+        import_trades: 导入证券交易
         import_transactions: 导入交易记录
         manage: 管理账户
         sharing: 共享
         statements: 对账单
+        exclude_from_reports: 从所有报表中排除
+        include_in_reports: 计入报表
     update:
       success: 已更新 %{type} 账户
     sidebar:
@@ -128,6 +140,8 @@ zh-CN:
       new_debt: 新增负债
       new_account: 新建账户
       new_account_group: 新建%{account_group}
+      expand_all: 全部展开
+      collapse_all: 全部收起
     types:
       depository: 现金
       investment: 投资
@@ -155,8 +169,8 @@ zh-CN:
       tax_advantaged: 税收优惠
     tax_treatment_descriptions:
       taxable: 实现收益时征税
-      tax_deferred: 供款可抵扣，提取时征税
-      tax_exempt: 供款后税，收益不征税
+      tax_deferred: 投入可税前扣除，提取时征税
+      tax_exempt: 以税后资金投入，收益免税
       tax_advantaged: 有条件的特殊税收优惠
     subtype_regions:
       us: 美国
@@ -167,23 +181,23 @@ zh-CN:
       in: 印度
       generic: 通用
     confirm_unlink:
-      title: 取消与提供商的连接？
-      description_html: 您即将把 <strong>%{account_name}</strong> 与 <strong>%{provider_name}</strong> 取消连接。这将把它转换为手动账户。
+      title: 取消与提供商的关联？
+      description_html: 您即将把 <strong>%{account_name}</strong> 与 <strong>%{provider_name}</strong> 取消关联。这将把它转换为手动账户。
       warning_title: 这意味着什么
       warning_no_sync: 该账户将不再自动与您的提供商同步
       warning_manual_updates: 您需要手动添加交易并更新余额
       warning_transactions_kept: 所有现有交易和余额都将保留
-      warning_can_delete: 取消连接后，如有需要您可以删除该账户
-      confirm_button: 确认并取消连接
+      warning_can_delete: 取消关联后，如有需要您可以删除该账户
+      confirm_button: 确认并取消关联
     unlink:
-      success: 账户已成功取消连接，现已成为手动账户。
-      not_linked: 该账户未连接到任何提供商
-      error: 取消连接账户失败：%{error}
+      success: 账户已成功取消关联，现已成为手动账户。
+      not_linked: 该账户未关联到任何提供商
+      error: 取消关联账户失败：%{error}
       generic_error: 发生意外错误，请稍后再试。
     select_provider:
-      title: 选择要连接的提供商
-      description: 请选择您要用来连接 %{account_name} 的提供商
-      already_linked: 该账户已连接到提供商
+      title: 选择要关联的提供商
+      description: 请选择您要用来关联 %{account_name} 的提供商
+      already_linked: 该账户已关联到提供商
       no_providers: 当前没有可用的提供商
   email_confirmations:
     new:

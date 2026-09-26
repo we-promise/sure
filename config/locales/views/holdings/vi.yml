@@ -4,8 +4,8 @@ vi:
     cash:
       brokerage_cash: Tiền mặt môi giới
     destroy:
-      success: Đã xóa danh mục nắm giữ
-      cannot_delete: Bạn không thể xóa danh mục nắm giữ này
+      success: Đã xóa tài sản nắm giữ
+      cannot_delete: Bạn không thể xóa tài sản nắm giữ này
     update:
       success: Đã lưu giá vốn.
       error: Giá trị giá vốn không hợp lệ.
@@ -21,7 +21,7 @@ vi:
       unavailable: Đồng bộ dữ liệu thị trường không khả dụng cho chứng khoán ngoại tuyến.
       provider_error: Không thể tải giá mới nhất. Vui lòng thử lại sau vài phút.
     errors:
-      security_collision: "Không thể ánh xạ lại: bạn đã có danh mục nắm giữ cho %{ticker} vào ngày %{date}."
+      security_collision: "Không thể ánh xạ lại: bạn đã có vị thế cho %{ticker} vào ngày %{date}."
     cost_basis_sources:
       manual: Người dùng đặt
       calculated: Từ giao dịch
@@ -60,11 +60,11 @@ vi:
       avg_cost_label: Giá trung bình
       current_market_price_label: Giá thị trường hiện tại
       delete: Xóa
-      delete_subtitle: Thao tác này sẽ xóa danh mục nắm giữ và tất cả giao dịch liên quan trong tài khoản này. Không thể hoàn tác.
-      delete_title: Xóa danh mục nắm giữ
+      delete_subtitle: Thao tác này sẽ xóa tài sản nắm giữ này và tất cả giao dịch liên quan trong tài khoản này. Không thể hoàn tác.
+      delete_title: Xóa tài sản nắm giữ
       edit_security: Chỉnh sửa chứng khoán
       history: Lịch sử
-      no_trade_history: Không có lịch sử giao dịch cho danh mục nắm giữ này.
+      no_trade_history: Không có lịch sử giao dịch cho tài sản nắm giữ này.
       overview: Tổng quan
       portfolio_weight_label: Tỷ trọng danh mục
       settings: Cài đặt

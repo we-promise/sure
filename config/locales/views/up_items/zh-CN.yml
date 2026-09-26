@@ -1,0 +1,112 @@
+---
+zh-CN:
+  providers:
+    up:
+      name: Up
+      description: 通过个人访问令牌连接澳大利亚 Up 银行账户
+  family:
+    up:
+      create_up_item:
+        default_name: Up 连接
+  up_account:
+    fallback: Up 账户
+  up_item:
+    errors:
+      account_processing_failed: 无法同步 Up 账户
+      account_sync_schedule_failed: 无法安排 Up 账户同步
+      transactions_failed: 无法获取 Up 交易
+      sync_failed: 无法同步 Up 连接
+    sync_status:
+      no_accounts: 未找到账户
+      all_synced:
+        other: 已同步 %{count} 个账户
+      partial: 已同步 %{linked} 个，%{unlinked} 个需要设置
+    institution_summary:
+      none: 未连接任何机构
+      one: 1 个机构
+      count:
+        other: '%{count} 个机构'
+  up_items:
+    provider_panel:
+      default_connection_name: Up 连接
+      add_connection: 添加 Up 连接
+      update_connection: 更新连接
+      connection_name_label: 连接名称
+      connection_name_placeholder: 主 Up 账户
+      access_token_label: 个人访问令牌
+      access_token_placeholder: 粘贴您的 Up 个人访问令牌
+      keep_access_token_placeholder: 留空以保留现有令牌
+      setup_accounts: 设置账户
+      syncing: 正在同步...
+      sync: 同步
+      disconnect: 断开连接
+      disconnect_confirm: 确定要断开 %{name} 吗？
+    create:
+      success: Up 连接已保存。
+    update:
+      success: Up 连接已更新。
+    destroy:
+      success: 已安排删除 Up 连接。
+      unlink_failed: 无法断开 Up 连接
+    select_accounts:
+      title: 关联 Up 账户
+      description: 选择要添加的 Up 账户。
+      no_accounts_found: 未找到未关联的 Up 账户。
+      no_credentials_configured: 请先在提供商设置中配置 Up。
+      cancel: 取消
+      link_accounts: 关联账户
+    link_accounts:
+      success:
+        other: 已关联 %{count} 个 Up 账户。
+      no_accounts_selected: 请至少选择一个账户。
+      no_credentials_configured: 请先在提供商设置中配置 Up。
+      unsupported_account_type: Up 不支持该账户类型。
+      link_failed: 未关联任何账户。
+    select_existing_account:
+      title: 将 Up 账户关联到 %{account_name}
+      description: 选择一个未关联的 Up 账户以连接到此账户。
+      no_accounts_found: 未找到未关联的 Up 账户。
+      no_credentials_configured: 请先在提供商设置中配置 Up。
+      account_already_linked: 此账户已关联到某个提供商。
+      cancel: 取消
+      link_account: 关联账户
+    link_existing_account:
+      success: 已将 Up 账户关联到 %{account_name}。
+      account_already_linked: 此账户已关联到某个提供商。
+      up_account_already_linked: 此 Up 账户已关联。
+      no_account_selected: 请选择要关联的 Up 账户。
+    setup_accounts:
+      title: 关联 Up 账户
+      subtitle: 选择每个 Up 账户在 Sure 中的显示方式。
+      no_credentials: 请先配置 Up 凭据。
+      api_error: 无法获取 Up 账户。
+      fetch_failed: 无法获取账户
+      no_accounts_to_setup: 没有需要设置的账户
+      all_accounts_linked: 所有 Up 账户均已关联。
+      choose_account_type: 选择账户类型
+      choose_account_type_description: 跳过您不想跟踪的账户。
+      account_type_label: 账户类型
+      account_types:
+        skip: 跳过
+        depository: 现金
+        loan: 贷款
+      create_accounts: 创建账户
+      cancel: 取消
+    complete_account_setup:
+      success:
+        other: 已创建 %{count} 个 Up 账户。
+      all_skipped: 未创建任何 Up 账户。
+      no_accounts: 未选择任何 Up 账户。
+      creation_failed: 无法创建 Up 账户。
+    up_item:
+      deletion_in_progress: 正在删除
+      syncing: 正在同步
+      error: 错误
+      status_with_summary: '%{timestamp}前同步 · %{summary}'
+      status_never: 从未同步
+      delete: 删除
+      setup_needed: 需要设置账户
+      setup_description: 已关联 %{linked} / %{total} 个账户。
+      setup_action: 设置账户
+      no_accounts_title: 尚未导入账户
+      no_accounts_description: 获取 Up 账户并选择要关联的账户。

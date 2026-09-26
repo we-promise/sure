@@ -12,8 +12,8 @@ hu:
       chart_title: Teljes értéke
     subtypes:
       brokerage:
-        short: Brókerzámla
-        long: Brókerzámla
+        short: Brókerszámla
+        long: Brókerszámla
       401k:
         short: 401(k)
         long: 401(k)
@@ -182,8 +182,11 @@ hu:
       other:
         short: Egyéb
         long: Egyéb befektetés
+      cash_management:
+        short: CMA
+        long: Pénzkezelési számla
     value_tooltip:
       cash: Készpénz
-      holdings: Portfólió
+      holdings: Pozíciók
       total: Portfólió egyenlege
-      total_value_tooltip: A teljes portfólió egyenlege a brókerzámlán lévő készpénz (kereskedésre rendelkezésre álló) és a portfólió aktuális piaci értékének összege.
+      total_value_tooltip: A teljes portfólió egyenlege a brókerszámlán lévő készpénz (kereskedésre rendelkezésre álló) és a portfólió aktuális piaci értékének összege.

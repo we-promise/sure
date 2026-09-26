@@ -16,5 +16,7 @@ zh-CN:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: 存在其他用户时无法删除管理员账户，请先删除所有家庭成员。
+              provider_item_has_other_accounts: 该用户拥有的账户关联到一个提供商连接，而该连接下还有其他用户拥有的账户。请先移动这些账户或取消其连接，再更改家庭/组成员身份。
+              cannot_remove_last_super_admin: 无法移除最后一位活跃的超级管理员。请先将另一位用户设为超级管理员。
             profile_image:
               invalid_file_size: 文件大小必须小于 %{max_megabytes}MB

@@ -8,3 +8,19 @@ hu:
       subtype_prompt: Válassz számlatípust
     new:
       title: Add meg a számlaegyenleget
+    subtypes:
+      cd:
+        long: Lekötött betét
+        short: Lekötött
+      checking:
+        long: Folyószámla
+        short: Folyószámla
+      hsa:
+        long: Egészségügyi megtakarítási számla
+        short: HSA
+      money_market:
+        long: Pénzpiaci számla
+        short: Pénzpiaci
+      savings:
+        long: Megtakarítási számla
+        short: Megtakarítás

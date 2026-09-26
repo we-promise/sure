@@ -1,0 +1,6 @@
+---
+hu:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: Az SSO-identitás ismét bejelentkezhet vagy fiókot hozhat létre.

@@ -1,0 +1,141 @@
+---
+hu:
+  providers:
+    fio:
+      name: Fio banka
+      description: Fio banka számla szinkronizálása csak olvasási jogú API-tokennel
+  family:
+    fio:
+      create_fio_item:
+        default_name: Fio banka kapcsolat
+  fio_item:
+    errors:
+      account_processing_failed: Nem sikerült szinkronizálni a Fio számlát
+      account_mismatch: Ez a token egy másik Fio számlához tartozik, mint amelyet ez a kapcsolat már szinkronizál. Add hozzá külön kapcsolatként.
+      account_sync_schedule_failed: Nem sikerült ütemezni a Fio számla szinkronizálását
+      statement_too_large: A kimutatás több tranzakciót tartalmaz, mint amennyit a Fio egy kérésben kiszolgál. Állíts be későbbi szinkronizálási kezdő dátumot, majd szinkronizálj újra.
+      statement_fetch_failed: Nem sikerült lekérni a kimutatást a Fio-tól
+      history_locked: A Fio elutasította ezt a kimutatási időszakot. Oldd fel a számla teljes előzményeit az internetbankban a Beállítások → API menüpontban, majd 10 percen belül szinkronizálj újra.
+      sync_failed: Nem sikerült szinkronizálni a Fio-kapcsolatot
+    sync:
+      status:
+        importing: Kimutatás importálása a Fio-tól...
+        checking_setup: Számlakonfiguráció ellenőrzése...
+        needs_setup:
+          one: '%{count} számla beállítást igényel...'
+          other: '%{count} számla beállítást igényel...'
+        processing: Tranzakciók feldolgozása...
+        calculating: Egyenlegek kiszámítása...
+    sync_status:
+      no_accounts: Még nem található számla
+      all_synced:
+        one: '%{count} számla szinkronizálva'
+        other: '%{count} számla szinkronizálva'
+      partial: '%{linked} szinkronizálva, %{unlinked} beállítást igényel'
+  fio_items:
+    account_types:
+      depository: Folyó- vagy megtakarítási számla
+      loan: Hitel, jelzálog vagy folyószámlahitel
+    provider_panel:
+      default_connection_name: Fio banka kapcsolat
+      add_connection: Fio banka kapcsolat hozzáadása
+      update_connection: Kapcsolat frissítése
+      connection_name_label: Kapcsolat neve
+      connection_name_placeholder: Saját Fio számlám
+      token_label: API-token (csak olvasási jogú)
+      token_placeholder: Illeszd be a 64 karakteres tokent
+      keep_token_placeholder: Hagyd üresen a meglévő token megtartásához
+      sync_start_date_label: Tranzakciók importálása ettől a dátumtól
+      sync_start_date_hint: A Fio további engedélyezés nélkül az utolsó 90 nap adatait adja ki. Régebbi adatokhoz oldd fel a számla teljes előzményeit az internetbankban a Beállítások → API menüpontban (lakat ikon) – ez egy 10 perces időablakot nyit –, és ezalatt szinkronizálj.
+      one_account_notice: Egy token egyetlen Fio számlához fér hozzá, ezért minden követni kívánt számlához adj hozzá külön kapcsolatot. Egy token 30 másodpercenként egyszer használható; az ennél hamarabb érkező szinkronizálást a következő szinkronizálás pótolja.
+      connected_account: Csatlakoztatott számla
+      no_account_yet: Még nincs számla – az első szinkronizálás deríti ki, melyik számlához fér hozzá ez a token.
+      account_needs_setup: Még nincs Sure számlához kapcsolva.
+      requires_update: Új token szükséges
+      requires_update_notice: A Fio elutasította ezt a tokent. A tokenek legfeljebb 180 napig érvényesek, hacsak nem hosszabbodnak meg automatikusan minden internetbanki bejelentkezéskor, ezért hozz létre új, csak olvasási jogú tokent a Beállítások → API menüpontban, és illeszd be alább.
+      last_synced: Szinkronizálva %{timestamp} ezelőtt
+      never_synced: Még nem volt szinkronizálva
+      syncing: Szinkronizálás...
+      sync: Szinkronizálás
+      setup_accounts: Számla beállítása
+      disconnect: Kapcsolat bontása
+      disconnect_confirm: Biztosan bontod a(z) %{name} kapcsolatot?
+    create:
+      success: Fio banka kapcsolat mentve.
+      token_required: Illeszd be a Fio internetbankban létrehozott API-tokent.
+    update:
+      success: Fio banka kapcsolat frissítve.
+    destroy:
+      success: A Fio banka kapcsolat törlése ütemezve.
+      unlink_failed: Nem sikerült bontani a Fio banka kapcsolatot
+    select_accounts:
+      title: Fio számla összekapcsolása
+      description: Ez a token egyetlen számlához fér hozzá. Válaszd ki, hogyan kövesse a Sure.
+      account_type_label: Számlatípus
+      awaiting_first_sync: A Fio még nem jelentette a tokenhez tartozó számlát. Futtass egy szinkronizálást, majd térj vissza.
+      already_linked: Ennek a kapcsolatnak a számlája már össze van kapcsolva egy Sure számlával.
+      sync_now: Szinkronizálás most
+      no_credentials_configured: Előbb konfiguráld a Fio banka szolgáltatót a szolgáltatói beállításokban.
+      cancel: Mégse
+      link_account: Számla összekapcsolása
+    link_accounts:
+      success: 'A Fio számlád összekapcsolva ezzel: %{account_name}.'
+      no_account_found: Ehhez a kapcsolathoz nem található össze nem kapcsolt Fio számla.
+      no_credentials_configured: Előbb konfiguráld a Fio banka szolgáltatót a szolgáltatói beállításokban.
+      unsupported_account_type: A Fio nem támogatja ezt a számlatípust.
+      link_failed: A számlát nem sikerült összekapcsolni.
+    select_existing_account:
+      title: 'Fio számla összekapcsolása ezzel: %{account_name}'
+      description: Kapcsold össze a token által elérhető számlát a kiválasztott számlával.
+      awaiting_first_sync: A Fio még nem jelentette a tokenhez tartozó számlát. Futtass egy szinkronizálást, majd térj vissza.
+      already_linked: Ennek a kapcsolatnak a számlája már össze van kapcsolva egy Sure számlával.
+      sync_now: Szinkronizálás most
+      no_credentials_configured: Előbb konfiguráld a Fio banka szolgáltatót a szolgáltatói beállításokban.
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval.
+      cancel: Mégse
+      link_account: Számla összekapcsolása
+    link_existing_account:
+      success: 'A Fio számlád összekapcsolva ezzel: %{account_name}.'
+      account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval.
+      fio_account_already_linked: Ez a Fio számla már össze van kapcsolva.
+      no_account_selected: Nem volt összekapcsolható Fio számla.
+      unsupported_account_type: A Fio csak készpénz- és hitelszámlákat tud szinkronizálni.
+    setup_accounts:
+      title: Fio számla összekapcsolása
+      subtitle: Válaszd ki, hogyan jelenjen meg a Sure-ban a token által elérhető számla.
+      choose_account_type: Válassz számlatípust
+      choose_account_type_description: Hagyd ki, ha nem szeretnéd követni ezt a számlát.
+      account_type_label: Számlatípus
+      account_types:
+        skip: Kihagyás
+      create_account: Számla létrehozása
+      awaiting_first_sync: Még nem található számla
+      awaiting_first_sync_description: A Fio a számlát csak kimutatásban jelenti, ezért az első sikeres szinkronizálás után jelenik meg.
+      sync_now: Szinkronizálás most
+      nothing_to_setup: Nincs mit beállítani
+      account_already_handled: Ennek a kapcsolatnak a számlája már össze van kapcsolva vagy ki van hagyva.
+      close: Bezárás
+      cancel: Mégse
+    complete_account_setup:
+      success: '%{account_name} létrehozva.'
+      skipped: A Fio számla kihagyva.
+      no_account: Nem volt beállítandó Fio számla.
+      unsupported_account_type: A Fio nem támogatja ezt a számlatípust.
+      creation_failed: Nem sikerült létrehozni a Sure számlát.
+    fio_item:
+      deletion_in_progress: Törlés folyamatban
+      syncing: Szinkronizálás
+      requires_update: Új token szükséges
+      error: Hiba
+      status_with_summary: Szinkronizálva %{timestamp} ezelőtt · %{summary}
+      status_never: Még nem volt szinkronizálva
+      delete: Törlés
+      requires_update_title: Új token szükséges
+      requires_update_description: A Fio elutasította ennek a kapcsolatnak a tokenjét. Hozz létre új, csak olvasási jogú tokent az internetbankban a Beállítások → API menüpontban.
+      update_token: Token frissítése
+      setup_needed: Számlabeállítás szükséges
+      setup_description: A token által elérhető számla még nincs Sure számlához kapcsolva.
+      setup_action: Számla beállítása
+      no_accounts_title: Még nincs importált számla
+      no_accounts_description: A Fio a számlát csak kimutatásban jelenti, ezért az első sikeres szinkronizálás után jelenik meg.
+      sync_now: Szinkronizálás most

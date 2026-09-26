@@ -129,8 +129,8 @@ zh-CN:
       api_error: "API 错误：%{message}"
       cancel: 取消
       configure_name_in_brex: 无法导入 - 请先在 Brex 中配置账户名称
-      description: 选择您想链接到 %{product_name} 账户的账户。
-      link_accounts: 链接所选账户
+      description: 选择您想关联到 %{product_name} 账户的账户。
+      link_accounts: 关联所选账户
       no_accounts_found: 未找到账户。请检查您的 API token 配置。
       no_api_token: 未找到 Brex API token。请在提供商设置中配置。
       no_credentials_configured: 请先在提供商设置中配置您的 Brex API token。
@@ -155,7 +155,7 @@ zh-CN:
       title: 将 %{account_name} 与 Brex 关联
       unexpected_error: 发生意外错误。请稍后再试。
     setup_required:
-      description: 在链接 Brex 账户之前，您需要先配置 Brex API token。
+      description: 在关联 Brex 账户之前，您需要先配置 Brex API token。
       heading: 未配置 API Token
       settings_link: 前往提供商设置
       setup_steps: "设置步骤："
@@ -163,7 +163,7 @@ zh-CN:
         enter_token: 输入您的 Brex API token
         find_section_html: 找到 <strong>Brex</strong> 区块
         open_settings_html: 前往 <strong>设置 > 提供商</strong>
-        return_to_link: 返回这里链接您的账户
+        return_to_link: 返回这里关联您的账户
       title: 需要设置 Brex
     subtype_select:
       placeholder:

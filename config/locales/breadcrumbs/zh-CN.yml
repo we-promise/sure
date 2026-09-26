@@ -2,7 +2,7 @@
 zh-CN:
   breadcrumbs:
     account_sharings: 账户共享
-    account_statements: 对账单库
+    account_statements: 对账单
     accounts: 账户
     ai_prompts: AI 提示词
     api_key: API 密钥
@@ -66,8 +66,8 @@ zh-CN:
     registrations: 注册
     reports: 报表
     rules: 规则
-    securities: 证券
-    security: 证券
+    securities: 安全
+    security: 安全
     self_hosting: 自托管
     sessions: 登录
     simplefin_items: SimpleFIN
@@ -78,10 +78,17 @@ zh-CN:
     sso_providers: SSO 提供商
     subscriptions: 订阅
     tags: 标签
-    trades: 交易
+    trades: 证券交易
     transactions: 交易
     transfer_matches: 转账匹配
     transfers: 转账
     users: 用户
     valuations: 估值
     vehicles: 车辆
+    changelog: 更新内容
+    feedback: 反馈
+    mcp: MCP 服务器
+    monobank_items: Monobank
+    plan: 规划
+    redbark_items: Redbark
+    system_health: 系统健康

@@ -5,3 +5,28 @@ hu:
       models:
         recurring_transaction:
           merchant_or_name_required: "Kereskedőt vagy nevet kötelező megadni"
+          attributes:
+            payment_url:
+              invalid_scheme: érvényes http:// vagy https:// címnek kell lennie
+            anchor_date:
+              required_for_intervals: kötelező, ha a szabály 2 vagy több időszakonként ismétlődik
+            bill_type:
+              transfer_shape_mismatch: csak akkor lehet átutalás, ha meg van adva célszámla
+            expected_amount_min:
+              greater_than_max: nem lehet nagyobb a várható maximális összegnél
+            account:
+              required_for_transfer: megadása kötelező ismétlődő átutalásnál
+              wrong_family: ehhez a háztartáshoz kell tartoznia
+            destination_account:
+              same_as_source: nem egyezhet meg a forrásszámlával
+              family_mismatch: ugyanahhoz a háztartáshoz kell tartoznia, mint a forrásszámlának
+              wrong_family: ehhez a háztartáshoz kell tartoznia
+    attributes:
+      recurring_transaction:
+        payment_url: Fizetési link
+  recurring_transactions:
+    allocator:
+      missing_rate: nincs árfolyam %{from} és %{to} között; add meg kézzel az összeget
+      unmeasurable: 'ehhez a tranzakcióhoz olyan hozzárendelés tartozik, amely nem váltható át %{currency} pénznemre, így a fennmaradó része nem határozható meg. Adj meg árfolyamot erre a napra: %{date}, vagy előbb távolítsd el a meglévő befizetést'
+      over_allocated: '%{amount} hozzárendelése meghaladja a tranzakció fennmaradó %{capacity} %{currency} összegét'
+      exceeds_remaining: '%{amount} meghaladja az ebben a ciklusban még fennmaradó %{remaining} összeget'

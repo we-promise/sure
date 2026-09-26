@@ -1,0 +1,129 @@
+---
+vi:
+  providers:
+    monobank:
+      name: Monobank
+      description: Kết nối thẻ và hũ tiết kiệm Monobank (Ukraina) bằng token API cá nhân
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Kết nối Monobank
+  monobank_account:
+    jar_fallback: Hũ tiết kiệm Monobank
+    card_types:
+      black: Thẻ Black
+      white: Thẻ White
+      platinum: Thẻ Platinum
+      iron: Thẻ Iron
+      yellow: Thẻ Yellow
+      eaid: Thẻ eAid
+      fop: Tài khoản kinh doanh
+      jar: Hũ tiết kiệm
+      unknown: Thẻ Monobank
+  monobank_item:
+    errors:
+      account_processing_failed: Không thể đồng bộ tài khoản Monobank
+      account_sync_schedule_failed: Không thể lên lịch đồng bộ tài khoản Monobank
+      transactions_failed: Không thể tải sao kê Monobank
+      sync_failed: Không thể đồng bộ kết nối Monobank
+    sync:
+      status:
+        importing: Đang nhập tài khoản từ Monobank...
+        checking_setup: Đang kiểm tra cấu hình tài khoản...
+        needs_setup:
+          other: '%{count} tài khoản cần thiết lập...'
+        processing: Đang xử lý giao dịch...
+        calculating: Đang tính số dư...
+    sync_status:
+      no_accounts: Không tìm thấy tài khoản
+      all_synced:
+        other: Đã đồng bộ %{count} tài khoản
+      partial: '%{linked} đã đồng bộ, %{unlinked} cần thiết lập'
+    institution_summary:
+      none: Chưa kết nối tổ chức nào
+      one: 1 tổ chức
+      count:
+        other: '%{count} tổ chức'
+  monobank_items:
+    provider_panel:
+      default_connection_name: Kết nối Monobank
+      add_connection: Thêm kết nối Monobank
+      update_connection: Cập nhật kết nối
+      connection_name_label: Tên kết nối
+      connection_name_placeholder: Monobank của tôi
+      access_token_label: Token API cá nhân
+      access_token_placeholder: Dán token cá nhân Monobank của bạn
+      keep_access_token_placeholder: Để trống để giữ token hiện tại
+      setup_accounts: Thiết lập tài khoản
+      syncing: Đang đồng bộ...
+      sync: Đồng bộ
+      disconnect: Ngắt kết nối
+      disconnect_confirm: Bạn có chắc muốn ngắt kết nối %{name} không?
+      rate_limit_notice: Monobank chỉ cho phép một yêu cầu mỗi phút, nên mỗi lần đồng bộ chỉ tải một vài tài khoản và lịch sử cũ hơn sẽ được tải dần qua nhiều lần đồng bộ.
+    create:
+      success: Đã lưu kết nối Monobank.
+    update:
+      success: Đã cập nhật kết nối Monobank.
+    destroy:
+      success: Đã lên lịch xóa kết nối Monobank.
+      unlink_failed: Không thể ngắt kết nối Monobank
+    select_accounts:
+      title: Liên kết tài khoản Monobank
+      description: Chọn thẻ hoặc hũ tiết kiệm Monobank để thêm.
+      no_accounts_found: Không tìm thấy tài khoản Monobank nào chưa liên kết.
+      no_credentials_configured: Vui lòng cấu hình Monobank trong cài đặt nhà cung cấp trước.
+      cancel: Hủy
+      link_accounts: Liên kết tài khoản
+    link_accounts:
+      success:
+        other: Đã liên kết %{count} tài khoản Monobank.
+      no_accounts_selected: Vui lòng chọn ít nhất một tài khoản.
+      no_credentials_configured: Vui lòng cấu hình Monobank trong cài đặt nhà cung cấp trước.
+      unsupported_account_type: Monobank không hỗ trợ loại tài khoản này.
+      link_failed: Không có tài khoản nào được liên kết.
+    select_existing_account:
+      title: Liên kết tài khoản Monobank với %{account_name}
+      description: Chọn một tài khoản Monobank chưa liên kết để kết nối với tài khoản này.
+      no_accounts_found: Không tìm thấy tài khoản Monobank nào chưa liên kết.
+      no_credentials_configured: Vui lòng cấu hình Monobank trong cài đặt nhà cung cấp trước.
+      account_already_linked: Tài khoản này đã được liên kết với một nhà cung cấp.
+      cancel: Hủy
+      link_account: Liên kết tài khoản
+    link_existing_account:
+      success: Đã liên kết tài khoản Monobank với %{account_name}.
+      account_already_linked: Tài khoản này đã được liên kết với một nhà cung cấp.
+      monobank_account_already_linked: Tài khoản Monobank này đã được liên kết.
+      no_account_selected: Vui lòng chọn một tài khoản Monobank để liên kết.
+    setup_accounts:
+      title: Liên kết tài khoản Monobank
+      subtitle: Chọn cách hiển thị từng thẻ hoặc hũ tiết kiệm Monobank trong Sure.
+      no_credentials: Vui lòng cấu hình thông tin xác thực Monobank trước.
+      api_error: Không thể làm mới tài khoản từ Monobank, nên đang hiển thị các tài khoản đã lưu từ lần đồng bộ gần nhất.
+      no_accounts_to_setup: Không có tài khoản nào để thiết lập
+      all_accounts_linked: Tất cả tài khoản Monobank đã được liên kết.
+      choose_account_type: Chọn loại tài khoản
+      choose_account_type_description: Bỏ qua các tài khoản bạn không muốn theo dõi.
+      account_type_label: Loại tài khoản
+      account_types:
+        skip: Bỏ qua
+        depository: Tiền mặt
+      create_accounts: Tạo tài khoản
+      cancel: Hủy
+    complete_account_setup:
+      success:
+        other: Đã tạo %{count} tài khoản Monobank.
+      all_skipped: Không có tài khoản Monobank nào được tạo.
+      no_accounts: Chưa chọn tài khoản Monobank nào.
+      creation_failed: Không thể tạo tài khoản Monobank.
+    monobank_item:
+      deletion_in_progress: Đang xóa
+      syncing: Đang đồng bộ
+      error: Lỗi
+      status_with_summary: Đã đồng bộ %{timestamp} trước · %{summary}
+      status_never: Chưa bao giờ đồng bộ
+      delete: Xóa
+      setup_needed: Cần thiết lập tài khoản
+      setup_description: Đã liên kết %{linked}/%{total} tài khoản.
+      setup_action: Thiết lập tài khoản
+      no_accounts_title: Chưa nhập tài khoản nào
+      no_accounts_description: Tải tài khoản Monobank về và chọn tài khoản cần liên kết.

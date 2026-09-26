@@ -12,7 +12,7 @@ vi:
         monthly: Hàng tháng
         quarterly: Hàng quý
         ytd: Từ đầu năm
-        last_6_months: 6 Tháng Qua
+        last_6_months: 6 tháng qua
         custom: Khoảng tùy chỉnh
       date_range:
         from: Từ
@@ -22,12 +22,12 @@ vi:
       next_period: "Kỳ tiếp"
       today: "Hôm nay"
       period_label:
-        quarterly: "Q%{quarter} %{year}"
+        quarterly: "Quý %{quarter} %{year}"
         ytd: "Từ đầu năm %{year}"
         past_year: "%{year}"
         last_6_months: "%{start} – %{end}"
       period_picker:
-        quarter: "Q%{quarter} %{year}"
+        quarter: "Quý %{quarter} %{year}"
         ytd: "Từ đầu năm %{year}"
       previous_year: "Năm trước"
       next_year: "Năm tiếp"
@@ -49,7 +49,7 @@ vi:
       budgeted: Ngân sách
       remaining: Còn lại
       over_by: Vượt
-      shared: chia sẻ
+      shared: dùng chung
       suggested_daily: "%{amount} đề xuất mỗi ngày cho %{days} ngày còn lại"
       no_budgets: Chưa thiết lập danh mục ngân sách tháng này
       status:
@@ -145,7 +145,7 @@ vi:
       contributions: Đóng góp trong kỳ
       withdrawals: Rút tiền trong kỳ
       top_holdings: Danh mục nắm giữ hàng đầu
-      holding: Nắm giữ
+      holding: Tài sản nắm giữ
       weight: Tỷ trọng
       value: Giá trị
       return: Lợi nhuận
@@ -158,14 +158,15 @@ vi:
       no_data: "-"
       view_details: Xem chi tiết
       holdings_count:
-        one: "%{count} nắm giữ"
-        other: "%{count} nắm giữ"
+        one: "%{count} tài sản nắm giữ"
+        other: "%{count} tài sản nắm giữ"
       sells_count:
         one: "%{count} lần bán"
         other: "%{count} lần bán"
       holdings: Danh mục nắm giữ
       sell_trades: Giao dịch bán
       and_more: "+%{count} khác"
+      period_return: Lợi nhuận trong kỳ
     investment_flows:
       title: Dòng tiền đầu tư
       description: Theo dõi tiền chảy vào và ra khỏi tài khoản đầu tư qua đóng góp và rút tiền.
@@ -228,10 +229,11 @@ vi:
         withdrawals: Rút tiền
         this_period: kỳ này
         top_holdings: Danh mục nắm giữ hàng đầu
-        holding: Nắm giữ
+        holding: Tài sản nắm giữ
         weight: Tỷ trọng
         value: Giá trị
         return: Lợi nhuận
+        period_return: Lợi nhuận trong kỳ
       spending:
         title: Chi tiêu theo danh mục
         income: Thu nhập

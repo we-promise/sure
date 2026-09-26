@@ -9,9 +9,9 @@ vi:
           adjustments: Điều chỉnh
           buys: Mua vào
           change_in_brokerage_cash: Thay đổi tiền mặt môi giới
-          change_in_holdings_market: Thay đổi danh mục (giá thị trường)
-          change_in_holdings_trades: Thay đổi danh mục (mua/bán)
-          charges: Phí phát sinh
+          change_in_holdings_market: Thay đổi danh mục nắm giữ (giá thị trường)
+          change_in_holdings_trades: Thay đổi danh mục nắm giữ (mua/bán)
+          charges: Chi tiêu thẻ
           end_balance: Số dư cuối
           end_principal: Gốc cuối
           end_value: Giá trị cuối
@@ -32,9 +32,9 @@ vi:
           adjustments_asset: Điều chỉnh giá trị thủ công hoặc thẩm định
           buys: Mua tiền mã hóa trong ngày
           change_in_brokerage_cash: Thay đổi tiền mặt thuần từ nạp/rút và giao dịch
-          change_in_holdings_market: Thay đổi giá trị danh mục do biến động giá thị trường
-          change_in_holdings_trades: Tác động đến danh mục từ mua bán chứng khoán
-          charges: Phí phát sinh mới trong ngày
+          change_in_holdings_market: Thay đổi giá trị danh mục nắm giữ do biến động giá thị trường
+          change_in_holdings_trades: Tác động đến danh mục nắm giữ từ mua bán chứng khoán
+          charges: Chi tiêu mới bằng thẻ trong ngày
           end_balance: Số dư tính toán sau tất cả giao dịch
           end_balance_investment: Số dư tính toán sau tất cả hoạt động
           end_principal: Gốc tính toán sau tất cả giao dịch
@@ -65,17 +65,21 @@ vi:
           debt_balance: Số dư nợ
           estimated_property_value: Giá trị bất động sản ước tính
           estimated_vehicle_value: Giá trị phương tiện ước tính
-          holdings_value: Giá trị danh mục
+          holdings_value: Giá trị danh mục nắm giữ
           remaining_principal_balance: Số dư gốc còn lại
           total_account_value: Tổng giá trị tài khoản
+          total_gains: Tổng lãi
         views:
           cash: Tiền mặt
-          holdings: Danh mục
+          holdings: Danh mục nắm giữ
           total_value: Tổng giá trị
+          gains: Lãi / ROI
         vs_available_history: so với lịch sử hiện có
       activity_date:
         balance_tooltip: "Số dư cuối ngày, sau tất cả giao dịch và điều chỉnh"
         no_balance_data: "Không có dữ liệu số dư cho ngày này"
+    period_picker:
+      aria_label: 'Khoảng thời gian: %{period}'
   ds:
     alert:
       variants:
@@ -86,7 +90,7 @@ vi:
         destructive: Lỗi
     pill:
       aria_label: "%{label}"
-      default_label: Xem trước
+      default_label: Bản xem trước
     dialog:
       close: Đóng
     popover:
@@ -95,6 +99,9 @@ vi:
       trigger_label: Thêm thông tin
     link:
       opens_in_new_tab: (mở trong tab mới)
+    icon_picker:
+      no_matching_icons: Không có biểu tượng phù hợp
+      search_placeholder: Tìm biểu tượng...
   provider_sync_summary:
     title: Tóm tắt đồng bộ
     last_sync: "Đồng bộ lần cuối: %{time_ago} trước"
@@ -110,7 +117,7 @@ vi:
       imported: "Đã nhập: %{count}"
       updated: "Đã cập nhật: %{count}"
       skipped: "Đã bỏ qua: %{count}"
-      fetching: "Đang tải từ sàn giao dịch..."
+      fetching: "Đang tải từ công ty môi giới..."
       protected:
         one: "%{count} mục được bảo vệ (không ghi đè)"
         other: "%{count} mục được bảo vệ (không ghi đè)"
@@ -128,7 +135,7 @@ vi:
       title: Giao dịch chứng khoán
       imported: "Đã nhập: %{count}"
       skipped: "Đã bỏ qua: %{count}"
-      fetching: "Đang tải hoạt động từ sàn giao dịch..."
+      fetching: "Đang tải hoạt động từ công ty môi giới..."
     health:
       title: Tình trạng
       view_error_details: Xem chi tiết lỗi

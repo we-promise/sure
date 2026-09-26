@@ -5,6 +5,10 @@ hu:
       import:
         currency: Pénznem
         number_format: Számformátum
+        col_sep: Oszlopelválasztó
+        col_seps:
+          comma: Vessző (,)
+          semicolon: Pontosvessző (;)
     errors:
       models:
         import:

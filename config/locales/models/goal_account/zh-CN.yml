@@ -1,0 +1,9 @@
+---
+zh-CN:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: 此账户已全部预留给“%{goal_name}”。请输入金额以拆分使用。

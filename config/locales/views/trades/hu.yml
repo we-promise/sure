@@ -20,6 +20,7 @@ hu:
       type_dividend: Osztalék
       type_interest: Kamat
       dividend_requires_security: Osztalékhoz értékpapír szükséges
+      trade_requires_security: Vételi és eladási ügylethez értékpapír (tőzsdei szimbólum) szükséges
     header:
       buy: Vétel
       sell: Eladás
@@ -31,6 +32,15 @@ hu:
       purchase_qty_label: Vásárolt mennyiség
       symbol_label: Szimbólum
       total_return_label: Nem realizált nyereség/veszteség
+      contribution: Befizetés
+      exchange: Csere
+      fee: Díj
+      other: Egyéb
+      reinvestment: Újrabefektetés
+      sweep_in: Automatikus átvezetés (be)
+      sweep_out: Automatikus átvezetés (ki)
+      transfer: Átutalás
+      withdrawal: Kifizetés
     new:
       title: Új tranzakció
     show:
@@ -55,3 +65,8 @@ hu:
       sell: Eladás
       settings: Beállítások
       type_label: Típus
+    api_errors:
+      activity_label_must_match_type: az investment_activity_label értéke %{label} kell legyen, ha a type értéke %{type}
+      invalid_activity_label: Érvénytelen befektetési tevékenységcímke
+      invalid_type: Érvénytelen típus
+      supported_types: 'a type értéke a következők egyike lehet: %{types}'

@@ -6,7 +6,7 @@ hu:
     thinking: "Gondolkodás..."
     ai_greeting:
       greeting: "Szia, %{name}! Egy AI/nagy nyelvi modell vagyok, aki segíthet pénzügyeid kezelésében. Hozzáférhetek az internethez és a fiókadataidhoz."
-      there: "ott"
+      there: "barátom"
       commands_hint_html: "Használd a <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> jelet a parancsok eléréséhez"
       questions_intro: "Íme néhány kérdés, amit feltehetsz:"
       evaluate_portfolio: "Befektetési portfólió értékelése"
@@ -35,6 +35,9 @@ hu:
       unavailable_description_html: "Az AI-asszisztens használatához be kell állítanod az <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> környezeti változót, vagy konfigurálnod kell az önálló üzemeltetési beállításokban."
       enable_button: "AI-csevegések engedélyezése"
       disable_note: "Bármikor letiltható. Az LLM-szolgáltatóknak küldött összes adat anonimizált."
+    worker_unhealthy_warning: Előfordulhat, hogy az AI-válaszok most nem érkeznek meg – úgy tűnik, a háttérfolyamat leállt vagy túlterhelt. Ellenőrizd, hogy fut-e a Sidekiq worker.
+    new:
+      default_title: Új csevegés – %{timestamp}
   assistant_messages:
     assistant_message:
       assistant_reasoning: "Asszisztens gondolkodása"

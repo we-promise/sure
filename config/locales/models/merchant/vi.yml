@@ -1,0 +1,5 @@
+---
+vi:
+  models:
+    merchant:
+      no_merchant: Không có người bán

@@ -2,22 +2,22 @@
 hu:
   entries:
     create:
-      success: Bejegyzés létrehozva
+      success: Tétel létrehozva
     destroy:
-      success: Bejegyzés törölve
+      success: Tétel törölve
     empty:
-      description: Próbálj meg bejegyzést hozzáadni, szűrőket módosítani vagy finomítani a kereséseden
-      title: Nem található bejegyzés
+      description: Próbálj meg tételt hozzáadni, szűrőket módosítani vagy finomítani a kereséseden
+      title: Nem található tétel
     loading:
-      loading: Bejegyzések betöltése...
+      loading: Tételek betöltése...
     update:
-      success: Bejegyzés frissítve
+      success: Tétel frissítve
     unlock:
-      success: Bejegyzés feloldva. A következő szinkronizálásnál frissülhet.
+      success: Tétel feloldva. A következő szinkronizálásnál frissülhet.
     protection:
       tooltip: Szinkronizálástól védve
       title: Szinkronizálástól védve
-      description: A bejegyzésen végzett módosításaidat nem írja felül a szolgáltató szinkronizálása.
+      description: A tételen végzett módosításaidat nem írja felül a szolgáltató szinkronizálása.
       locked_fields_label: "Zárolt mezők:"
       unlock_button: Szinkronizálás engedélyezése a frissítéshez
-      unlock_confirm: Engedélyezed a szinkronizálásnak, hogy frissítse ezt a bejegyzést? A módosításaid felülíródhatnak a következő szinkronizáláskor.
+      unlock_confirm: Engedélyezed a szinkronizálásnak, hogy frissítse ezt a tételt? A módosításaid felülíródhatnak a következő szinkronizáláskor.
