@@ -418,6 +418,60 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "does not auto-match accounts no single member can write to" do
+    # family_admin owns the credit card but has no access to the loan;
+    # family_member owns the loan but only has read_only on the card.
+    @loan.update!(owner: users(:family_member))
+
+    outflow = create_transaction(date: Date.current, account: @loan, amount: 500)
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    # Manual matching still sees the pair; the controller scopes it per user.
+    candidates = @family.transfer_match_candidates(inflow_transaction_id: inflow.entryable_id)
+    assert_equal [ outflow.entryable_id ], candidates.map(&:outflow_transaction_id)
+  end
+
+  test "auto-matches across owners when a member can write to both accounts" do
+    # family_member owns the loan and has full_control on the depository
+    @loan.update!(owner: users(:family_member))
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    assert_difference -> { Transfer.count }, 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "auto-matches an owner-less account against one a member can write to" do
+    # owner_id is nullified when the owner is removed; update! would reassign one
+    @loan.update_column(:owner_id, nil)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    assert_difference -> { Transfer.count }, 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "does not auto-match two owner-less accounts nobody can write to" do
+    @loan.update_column(:owner_id, nil)
+    @credit_card.update_column(:owner_id, nil)
+    AccountShare.where(account: [ @loan, @credit_card ], permission: "full_control").delete_all
+
+    create_transaction(date: Date.current, account: @credit_card, amount: 500)
+    create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
   test "does not match transactions outside the 4-day window" do
     create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -500)
@@ -528,6 +582,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = inflow_accounts.id)"
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)"
     assert_includes sql, ":restrict_cross_currency_to_linked_accounts = FALSE"
+    assert_equal 2, sql.scan(":require_common_writer = FALSE").size
   end
 
   # Regression tests for loan transfer kind assignment bug
