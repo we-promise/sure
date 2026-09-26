@@ -10,6 +10,9 @@ permissions:
 
 env:
   EVAL_MODELS: gpt-4.1
+  EVAL_TEMPERATURE: '0'
+  EVAL_SEED: '42' # recorded only; Responses API does not accept seed
+  EVAL_REFERENCE_DATE: '2026-09-26'
   RAILS_ENV: test
   DATABASE_URL: postgres://postgres:postgres@localhost:5432 # pipelock:ignore
   REDIS_URL: redis://localhost:6379
@@ -304,6 +307,9 @@ jobs:
             abort("No eval run found for dataset #{dataset.name} and model #{ENV.fetch("MODEL")}") if run.nil?
             payload = {
               dataset: dataset.name,
+              dataset_version: run.dataset_version,
+              resolved_model_snapshot: run.resolved_model_snapshot,
+              provider_config: run.provider_config.slice("temperature", "requested_seed", "reference_date"),
               dataset_metadata: dataset.metadata,
               model: ENV.fetch("MODEL"),
               run_id: run.id,

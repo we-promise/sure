@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_26_152000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -780,6 +780,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
   create_table "eval_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "completed_at"
     t.datetime "created_at", null: false
+    t.string "dataset_version"
     t.text "error_message"
     t.uuid "eval_dataset_id", null: false
     t.jsonb "metrics", default: {}
@@ -787,6 +788,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
     t.string "name"
     t.string "provider", null: false
     t.jsonb "provider_config", default: {}
+    t.string "resolved_model_snapshot"
     t.datetime "started_at"
     t.string "status", default: "pending", null: false
     t.integer "total_completion_tokens", default: 0

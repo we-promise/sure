@@ -10,6 +10,7 @@ class Eval::Runners::Base
 
     begin
       process_samples
+      eval_run.verify_model_snapshot!
       metrics = calculate_metrics
       eval_run.complete!(metrics)
     rescue => e
@@ -67,7 +68,8 @@ class Eval::Runners::Base
       Eval::ProviderFactory.build(
         provider: eval_run.provider,
         model: model,
-        config: eval_run.provider_config
+        config: eval_run.provider_config,
+        on_model_response: ->(resolved) { eval_run.record_resolved_model!(resolved) }
       )
     end
 

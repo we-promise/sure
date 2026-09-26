@@ -4,6 +4,8 @@ class Eval::Run < ApplicationRecord
   belongs_to :dataset, class_name: "Eval::Dataset", foreign_key: :eval_dataset_id
   has_many :results, class_name: "Eval::Result", foreign_key: :eval_run_id, dependent: :destroy
 
+  before_validation :snapshot_dataset_version, on: :create
+
   validates :provider, :model, :status, presence: true
   validates :status, inclusion: { in: %w[pending running completed failed] }
 
@@ -23,6 +25,23 @@ class Eval::Run < ApplicationRecord
   # Get accuracy from metrics or calculate
   def accuracy
     metrics.dig("accuracy") || calculate_accuracy
+  end
+
+  # Keep the actual API-returned model, not merely the requested alias. If a
+  # run spans multiple snapshots, fail visibly instead of mislabeling its score.
+  def record_resolved_model!(returned_model)
+    return if returned_model.blank?
+
+    if resolved_model_snapshot.present? && resolved_model_snapshot != returned_model
+      @model_snapshot_mismatch = "Eval run used multiple model snapshots: #{resolved_model_snapshot} and #{returned_model}"
+      return
+    end
+
+    update!(resolved_model_snapshot: returned_model) if resolved_model_snapshot.blank?
+  end
+
+  def verify_model_snapshot!
+    raise @model_snapshot_mismatch if @model_snapshot_mismatch
   end
 
   # Start the evaluation run
@@ -61,6 +80,8 @@ class Eval::Run < ApplicationRecord
       id: id,
       name: name,
       dataset: dataset.name,
+      dataset_version: dataset_version,
+      resolved_model_snapshot: resolved_model_snapshot,
       model: model,
       provider: provider,
       status: status,
@@ -84,6 +105,10 @@ class Eval::Run < ApplicationRecord
   end
 
   private
+
+    def snapshot_dataset_version
+      self.dataset_version ||= dataset&.version
+    end
 
     def calculate_accuracy
       return 0.0 if results.empty?
