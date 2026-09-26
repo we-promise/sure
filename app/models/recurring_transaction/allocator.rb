@@ -271,17 +271,28 @@ class RecurringTransaction
         end
       end
 
-      # True once any allocation on this entry lacks a source amount, which
-      # makes every capacity sum over it meaningless.
+      # True once any allocation on this entry — excluding those from ended
+      # series — lacks a source amount, which makes every capacity sum over
+      # it meaningless. Allocations from ended series are excluded so a
+      # deleted bill's cross-currency allocation with no rate does not
+      # permanently block re-use of the same entry on a new bill.
       def unmeasurable_entry?(entry)
-        RecurringAllocation.where(entry: entry, source_amount: nil).exists?
+        RecurringAllocation
+          .where(entry: entry, source_amount: nil)
+          .joins(recurring_occurrence: :recurring_transaction)
+          .where.not(recurring_transactions: { status: "ended" })
+          .exists?
       end
 
       # How much of the entry is not yet spoken for, in the entry's currency.
+      # Allocations from ended series are excluded so a deleted bill's settled
+      # occurrence does not permanently consume the entry's capacity.
       def entry_capacity(entry, entry_total)
-        already = RecurringAllocation.where(entry: entry).sum(
-          "COALESCE(source_amount, allocated_amount)"
-        )
+        already = RecurringAllocation
+          .where(entry: entry)
+          .joins(recurring_occurrence: :recurring_transaction)
+          .where.not(recurring_transactions: { status: "ended" })
+          .sum("COALESCE(recurring_allocations.source_amount, recurring_allocations.allocated_amount)")
 
         [ entry_total - already, 0 ].max
       end
@@ -340,10 +351,15 @@ class RecurringTransaction
       # The first such allocation is a judgement the user made about a
       # transaction they can see. A second one is a transaction silently paying
       # an unbounded number of bills, so an unmeasurable entry takes no more
-      # than one.
+      # than one. Allocations from ended series are excluded throughout so a
+      # deleted bill never blocks re-use of the same entry on a replacement.
       def guard_entry_capacity!(entry, source_amount)
         if source_amount.nil? || unmeasurable_entry?(entry)
-          return if RecurringAllocation.where(entry: entry).none?
+          active_allocations = RecurringAllocation
+            .where(entry: entry)
+            .joins(recurring_occurrence: :recurring_transaction)
+            .where.not(recurring_transactions: { status: "ended" })
+          return if active_allocations.none?
 
           raise OverAllocationError, I18n.t("recurring_transactions.allocator.unmeasurable",
                                             currency: entry.currency, date: entry.date)
