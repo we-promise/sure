@@ -7,11 +7,11 @@ tr:
       manual: Manuel
     cleaned_up: "%{count} eski yinelenen işlem temizlendi"
     cleanup_stale: Eskileri Temizle
-    confirm_delete: Bu yinelenen işlemi silmek istediğinizden emin misiniz?
+    confirm_delete: "%{name} faturalarınızdan kaldırılsın mı? İşlemleriniz olduğu gibi kalır. Bu yalnızca faturayı ve ödeme planını kaldırır."
     creation_failed: Yinelenen işlem oluşturulamadı. Lütfen işlem bilgilerini kontrol
       edip tekrar deneyin.
     day_of_month: Ayın %{day}. günü
-    deleted: Yinelenen işlem silindi
+    deleted: Fatura kaldırıldı. İşlemlerinize dokunulmadı.
     empty:
       description: İşlem geçmişinizden yinelenen işlemleri otomatik olarak tespit
         etmek için "Desenleri Tespit Et"e tıklayın.
@@ -32,10 +32,10 @@ tr:
           vb.)
         - Herhangi bir sağlayıcı senkronizasyonu tamamlandığında (Plaid, SimpleFIN
           vb.)
-    marked_active: Yinelenen işlem etkin olarak işaretlendi
+    marked_active: Sürdürüldü.
     marked_as_recurring: İşlem yinelenen olarak işaretlendi
-    marked_inactive: Yinelenen işlem etkin değil olarak işaretlendi
-    projected: Projeksiyon
+    marked_inactive: Duraklatıldı. Siz sürdürene kadar tekrar görünmeyecek.
+    projected: Öngörülen
     recurring: Yinelenen
     settings:
       enable_description: Yinelenen işlem desenlerini otomatik olarak tespit edin
@@ -44,7 +44,10 @@ tr:
     settings_updated: Yinelenen işlem ayarları güncellendi
     status:
       active: Etkin
-      inactive: Etkin değil
+      inactive: Duraklatıldı
+      suggested: Olası fatura
+      paused: Duraklatıldı
+      ended: Yok sayıldı
     table:
       actions: Eylemler
       amount: Tutar
@@ -53,6 +56,7 @@ tr:
       merchant: Ad
       next_date: Sonraki Tarih
       status: Durum
+      frequency: Sıklık
     title: Yinelenen İşlemler
     transfer_already_exists: Bu hesap çifti için zaten yinelenen bir transfer var
     transfer_creation_failed: Yinelenen transfer oluşturulamadı. Lütfen transfer bilgilerini
@@ -61,3 +65,142 @@ tr:
     transfer_marked_as_recurring: Transfer yinelenen olarak işaretlendi
     unexpected_error: Yinelenen işlem oluşturulurken beklenmeyen bir hata oluştu
     upcoming: Yaklaşan Yinelenen İşlemler
+    frequency_presets:
+      monthly: Aylık
+      weekly: Haftalık
+      biweekly: İki haftada bir
+      semimonthly: Ayda iki kez
+      quarterly: Üç ayda bir
+      semiannual: Altı ayda bir
+      annual: Yıllık
+      custom: Özel zamanlama
+    frequency:
+      monthly: Aylık, %{day}
+      weekly: Her hafta %{weekday}
+      biweekly: İki haftada bir %{weekday}
+      semimonthly: Ayda iki kez, %{first} ve %{second}
+      quarterly: Üç ayda bir, %{day}
+      semiannual: Altı ayda bir, %{day}
+      annual: Yıllık, %{month}, %{day}
+      custom: Özel zamanlama
+      last_day: ayın son günü
+    actions:
+      edit_payment_link: Ödeme bağlantısını düzenle
+      pause: Duraklat
+      resume: Sürdür
+      delete: Kaldır
+    pay_action:
+      pay: Öde
+      pay_aria: 'Öde: %{name} (yeni sekmede açılır)'
+      add_link: Bağlantı ekle
+      add_link_aria: '%{name} için bir ödeme bağlantısı ekle'
+      autopay: Otomatik ödeme
+      autopay_aria: '%{name} otomatik olarak ödeniyor, portalını yeni sekmede açın'
+      open_site: Fatura sitesini aç
+    new:
+      title: Fatura ekle
+      income_title: Gelir ekle
+      start_from_title: Tespit ettiğimiz yinelenen bir harcamadan başlayın
+      start_from_income_title: Tespit ettiğimiz yinelenen bir para girişinden başlayın
+      start_from_hint: İsteğe bağlı. Birini seçmek yalnızca formu doldurur; yine de her şeyi değiştirebilirsiniz.
+      candidate_meta: '%{count}× · son %{date}'
+      search_all_prompt: Aradığınızı göremiyor musunuz?
+      search_all_cta: Tüm işlemlerinizde arayın
+      pick_different: Farklı bir işlemden başla
+      smart_fill: Yapay zeka ile akıllı doldur
+      smart_fill_applied: Yapay zeka bu değerleri harcama geçmişine göre önerdi. Kaydetmeden önce gözden geçirin.
+    smart_fills:
+      create:
+        failed: Harcama geçmişi şu anda analiz edilemedi. Form, işlemin kendi değerlerini korudu.
+    pick_entry:
+      title: Başlangıç için bir işlem bulun
+      income_title: Başlangıç için bir para girişi bulun
+      hint: Birini seçmek yalnızca formu doldurur; yine de her şeyi değiştirebilirsiniz.
+      search_placeholder: Ad, not veya satıcıya göre ara
+      back: Forma dön
+      showing_recent: En son %{count} işleminiz gösteriliyor. Daraltmak için arama yapın.
+      no_results: “%{query}” ile eşleşen sonuç yok. Daha az kelime deneyin veya geri dönüp formu kendiniz doldurun.
+    picker_row:
+      claimed: '%{name} faturasına ait'
+    create:
+      success: Fatura eklendi
+      success_income: Gelir eklendi
+      due_date_required: Faturanın bir sonraki son ödeme tarihini girin
+      amount_invalid: Tutarı düz bir sayı olarak girin
+      account_invalid: Fatura ekleyebileceğiniz bir hesap seçin veya boş bırakın
+      already_exists: Bu fatura zaten mevcut
+    edit:
+      trigger_label: Faturayı düzenle
+      title: 'Düzenle: %{name}'
+      income_title: Geliri düzenle · %{name}
+    form:
+      payment_url_label: Ödeme bağlantısı
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: Bu faturayı ödemek için gittiğiniz yer. Yinelenen ve yaklaşan listelerinizden yeni sekmede açılır.
+      autopay_label: Otomatik ödeniyor
+      autopay_hint: Fatura listenizde kalsın, ancak yapılacak bir iş olarak görülmesin.
+      more_options: Diğer seçenekler
+      notes_label: Notlar
+      notes_placeholder: Hesap 4821, Amex kartından çekiliyor
+      notes_hint: Ödeme yaparken önünüzde olmasını istediğiniz her şey. Faturada gösterilir.
+      apply_to_siblings:
+        one: Bu bağlantıyı diğer %{name} faturası için de kullan
+        other: Bu bağlantıyı diğer %{count} %{name} faturası için de kullan
+      submit: Faturayı kaydet
+      submit_income: Geliri kaydet
+      income_name_label: Kaynak
+      income_name_placeholder: İşveren, müşteri, ek iş
+      income_amount_label: Maaş başına tutar
+      income_due_on_label: Sonraki maaş günü
+      income_account_label: Yatırıldığı hesap
+      income_frequency_hint: Ne sıklıkla ödeme aldığınız. Gün ayrıntılarını maaş gününüze göre seçin.
+      income_frequency_label: Ödeme sıklığı
+      income_frequency_new_hint: Maaş günü ayrıntıları yukarıdaki tarihten alınır. Kaydettikten sonra zamanlamayı ayrıntılandırabilirsiniz.
+      income_notes_placeholder: Maaş yatırma, iki hesaba bölünüyor
+      income_notes_hint: Bu gelirle ilgili hatırlamaya değer her şey.
+      name_label: Ad
+      name_placeholder: Kira, elektrik, Netflix
+      amount_label: Tutar
+      first_due_on_label: Sonraki son ödeme tarihi
+      account_label: Ödendiği hesap
+      account_blank: Herhangi bir hesap
+      bill_type_label: Tür
+      installment_count_label: Taksit sayısı
+      installment_count_hint: Plan bu kadar ödemeden sonra sona erer ve o zamana kadar ilerlemesini gösterir.
+      renews_on_label: Yenilenme
+      trial_ends_on_label: Deneme bitişi
+      amount_edit_hint: Bundan sonra vadesi gelecek faturalara uygulanır. Vadesi gelmiş olanlar mevcut tutarlarını korur.
+      income_amount_edit_hint: Bundan sonraki maaş günlerine uygulanır. Vadesi gelmiş olanlar mevcut tutarlarını korur.
+      cancelled_on_label: İptal tarihi
+      cancelled_on_hint: Tarihi kaydetmek yalnızca kendi bilginiz içindir. Gelecektekilerin görünmemesi için faturayı duraklatın.
+      category_label: Kategori
+      category_blank: Kategori yok
+      frequency_new_hint: Gün ayrıntıları yukarıdaki son ödeme tarihinden alınır. Kaydettikten sonra zamanlamayı ayrıntılandırabilirsiniz.
+      frequency_label: Sıklık
+      frequency_hint: Bu faturanın ne sıklıkla ödeneceği. Gün ayrıntılarını hesap ekstrenize göre seçin.
+      frequency_day_label: Gün
+      frequency_second_day_label: İkinci gün
+      frequency_weekday_label: Gün
+      frequency_month_label: Ay
+    update:
+      success: Fatura güncellendi
+      success_with_siblings:
+        one: Fatura güncellendi ve ödeme bağlantısı %{count} diğer faturaya kopyalandı
+        other: Fatura güncellendi ve ödeme bağlantısı %{count} diğer faturaya kopyalandı
+    manage:
+      title: Faturalarınız Faturalar sayfasında
+      description: Her şeyi oradan tanımlayın, düzenleyin, duraklatın ve ödeyin. Bu sayfa tespit ayarlarını yönetir.
+      cta: Tüm faturaları görüntüle
+    identify_already_running: Tespit zaten çalışıyor. Birazdan tekrar kontrol edin.
+    deleted_income: Gelir kaldırıldı. İşlemlerinize dokunulmadı.
+    confirm_delete_income: '%{name} gelir olarak kaldırılsın mı? İşlemleriniz olduğu gibi kalır. Bu yalnızca geliri ve zamanlamasını kaldırır.'
+    suggested:
+      title: Olası yeni faturalar
+      seen_count:
+        one: bir kez görüldü
+        other: '%{count} kez görüldü'
+      collapsed_hint: İncelemek için dokunun
+      confirm: Fatura ekle
+      dismiss: Fatura değil
+    confirmed: Fatura yinelenen işlemlerinize eklendi
+    dismissed: Yok sayıldı. Bu desen bir daha önerilmeyecek.

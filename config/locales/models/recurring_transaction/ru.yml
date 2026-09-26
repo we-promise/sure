@@ -5,3 +5,28 @@ ru:
       models:
         recurring_transaction:
           merchant_or_name_required: Необходимо указать либо продавца, либо название
+          attributes:
+            payment_url:
+              invalid_scheme: должна быть действительным адресом http:// или https://
+            anchor_date:
+              required_for_intervals: обязательна, если правило повторяется раз в 2 или более периодов
+            bill_type:
+              transfer_shape_mismatch: может быть переводом, только если указан счёт зачисления
+            expected_amount_min:
+              greater_than_max: не может быть больше ожидаемой максимальной суммы
+            account:
+              required_for_transfer: обязателен для регулярного перевода
+              wrong_family: должен принадлежать этой семье/группе
+            destination_account:
+              same_as_source: не может совпадать со счётом списания
+              family_mismatch: должен принадлежать той же семье/группе, что и счёт списания
+              wrong_family: должен принадлежать этой семье/группе
+    attributes:
+      recurring_transaction:
+        payment_url: Ссылка для оплаты
+  recurring_transactions:
+    allocator:
+      missing_rate: нет обменного курса %{from} к %{to}; укажите сумму вручную
+      unmeasurable: часть этой операции уже распределена в сумме, которую нельзя конвертировать в %{currency}, поэтому её остаток невозможно рассчитать. Добавьте обменный курс на %{date} или сначала удалите существующую оплату
+      over_allocated: 'распределение %{amount} превышает остаток операции: %{capacity} %{currency}'
+      exceeds_remaining: '%{amount} превышает остаток %{remaining} за этот период'

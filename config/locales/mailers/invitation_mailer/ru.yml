@@ -2,4 +2,4 @@
 ru:
   invitation_mailer:
     invite_email:
-      subject: "%{inviter} пригласил вас присоединиться к их домохозяйству в %{product_name}!"
+      subject: "%{inviter} приглашает вас присоединиться к своему домохозяйству в %{product_name}!"

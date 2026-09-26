@@ -413,6 +413,23 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal due, bill.anchor_date
   end
 
+  test "create with a custom interval takes its day from the due date" do
+    due = Date.current + 4
+
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Haircut", amount: "16", account_id: accounts(:depository).id,
+        first_due_on: due.iso8601, frequency_preset: "interval",
+        frequency_interval: "3", frequency_interval_unit: "weekly"
+      }
+    }
+
+    bill = @family.recurring_transactions.order(:created_at).last
+    rule = bill.recurrence_rules.sole
+    assert_equal [ "weekly", 3, due.wday ], [ rule.frequency, rule.interval, rule.weekday ]
+    assert_equal due, bill.anchor_date
+  end
+
   test "create without a due date re-renders with an error" do
     assert_no_difference "@family.recurring_transactions.count" do
       post recurring_transactions_url, params: {
@@ -519,6 +536,41 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_empty @recurring_transaction.reload.recurrence_rules
+  end
+
+  test "update applies a custom interval as one rule every N units" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: {
+            frequency_preset: "interval", frequency_interval: "3", frequency_interval_unit: "weekly", frequency_weekday: "5"
+          } }
+
+    assert_redirected_to recurring_transactions_url
+    rule = @recurring_transaction.reload.recurrence_rules.sole
+    assert_equal [ "weekly", 3, 5 ], [ rule.frequency, rule.interval, rule.weekday ]
+    assert @recurring_transaction.schedule_pinned?
+  end
+
+  test "update with an out-of-range interval re-renders without touching the rules" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: {
+            frequency_preset: "interval", frequency_interval: "0", frequency_interval_unit: "monthly"
+          } },
+          headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :unprocessable_entity
+    assert_empty @recurring_transaction.reload.recurrence_rules
+  end
+
+  test "edit pre-fills a custom interval" do
+    @recurring_transaction.update!(anchor_date: Date.current)
+    @recurring_transaction.recurrence_rules.create!(frequency: "monthly", interval: 2, day_of_month: 12)
+
+    get edit_recurring_transaction_url(@recurring_transaction)
+
+    assert_response :success
+    assert_select "select[name='recurring_transaction[frequency_preset]'] option[selected][value='interval']"
+    assert_select "input[name='recurring_transaction[frequency_interval]'][value='2']"
+    assert_select "select[name='recurring_transaction[frequency_interval_unit]'] option[selected][value='monthly']"
   end
 
   test "update rejects a non-http scheme instead of storing it" do

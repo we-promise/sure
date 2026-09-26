@@ -25,9 +25,9 @@ ru:
       password_label: Пароль
       password_placeholder: Введите ваш пароль
       submit_accept_invitation: Принять приглашение
-      submit_create: Создать счёт
+      submit_create: Создать аккаунт
       submit_link: Привязать аккаунт
-      title_create: Создать счёт
+      title_create: Создать аккаунт
       title_link: Привязать OIDC аккаунт
       verify_description_html: Чтобы привязать ваш аккаунт %{provider}%{email_suffix},
         пожалуйста, подтвердите вашу личность, введя пароль.
@@ -45,5 +45,5 @@ ru:
       last_name_label: Фамилия
       last_name_placeholder: Введите вашу фамилию
       no_pending_oidc: Не найдено ожидающей аутентификации OIDC
-      submit: Создать счёт
+      submit: Создать аккаунт
       title: Завершите создание аккаунта

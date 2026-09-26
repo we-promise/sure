@@ -7,18 +7,20 @@ uk:
       default_name: Транзакція Wise
       fee_name: Комісія Wise
     activities:
-      jar_deposit: Переказ у банку
-      jar_withdrawal: Переказ з банки
+      jar_deposit: Переказ у Jar
+      jar_withdrawal: Переказ із Jar
       transfer_to_jar: "Переказ у %{jar}"
       transfer_from_jar: "Переказ з %{jar}"
       interest: Відсотки Wise
       asset_fee: Комісія Wise Assets
-      default_name: Діяльність Wise
+      default_name: Операція Wise
     sync_status:
       no_accounts: Рахунки не знайдено
       all_synced:
         one: "%{count} рахунок синхронізовано"
         other: "%{count} рахунків синхронізовано"
+        few: '%{count} рахунки синхронізовано'
+        many: '%{count} рахунків синхронізовано'
       partial_setup: "%{synced} синхронізовано, %{pending} потребує налаштування"
     create:
       no_profiles_found: Профілі Wise не знайдено. Перевірте свій токен API.
@@ -36,6 +38,8 @@ uk:
       accounts_need_setup:
         one: "%{count} рахунок потребує налаштування..."
         other: "%{count} рахунків потребують налаштування..."
+        few: '%{count} рахунки потребують налаштування...'
+        many: '%{count} рахунків потребують налаштування...'
       processing_transactions: Обробка транзакцій...
       calculating_balances: Розрахунок балансів...
       credentials_invalid: Недійсний токен API Wise або недостатньо прав
@@ -44,15 +48,23 @@ uk:
       accounts_failed:
         one: "%{count} баланс не вдалося імпортувати."
         other: "%{count} балансів не вдалося імпортувати."
+        few: '%{count} баланси не вдалося імпортувати.'
+        many: '%{count} балансів не вдалося імпортувати.'
       transactions_failed:
         one: "%{count} баланс мав помилки імпорту транзакцій."
         other: "%{count} балансів мали помилки імпорту транзакцій."
+        few: '%{count} баланси мали помилки імпорту транзакцій.'
+        many: '%{count} балансів мали помилки імпорту транзакцій.'
       account_processing_failed:
         one: "%{count} рахунок Wise не вдалося обробити."
         other: "%{count} рахунків Wise не вдалося обробити."
+        few: '%{count} рахунки Wise не вдалося обробити.'
+        many: '%{count} рахунків Wise не вдалося обробити.'
       account_sync_failed:
         one: "Синхронізацію %{count} рахунку Wise не вдалося запланувати."
         other: "Синхронізацію %{count} рахунків Wise не вдалося запланувати."
+        few: Синхронізацію %{count} рахунків Wise не вдалося запланувати.
+        many: Синхронізацію %{count} рахунків Wise не вдалося запланувати.
     provider_panel:
       setup_title: "Інструкції з налаштування:"
       add_connection: Додати з'єднання Wise
@@ -80,6 +92,20 @@ uk:
         open_tokens: "Перейдіть до Налаштування → Токени API"
         create_token: "Створіть новий особистий токен API з доступом лише для читання"
         copy_token_html: "Скопіюйте токен і вставте його нижче. Sure використовує його лише для синхронізації ваших балансів і транзакцій."
+      sync_start_date_label: Імпортувати транзакції з
+      sync_start_date_help: Виписки Wise імпортуються починаючи з цієї дати. Залиште значення за замовчуванням, щоб отримати історію до одного року.
+      import_all_history_label: Імпортувати всю історію транзакцій
+      import_all_history_help: Отримати всі історичні виписки Wise, а не лише за останній рік.
+      sca:
+        title: Строга автентифікація клієнта (SCA)
+        description: Щоб читати повні виписки за транзакціями, зокрема вхідні платежі, Wise вимагає підписаний одноразовий токен-запит. Згенеруйте тут пару ключів і зареєструйте відкритий ключ у Wise, щоб увімкнути цю функцію.
+        public_key_label: Відкритий ключ (PEM)
+        registered_help_html: 'Зареєструйте цей ключ у Wise: Settings → Connect and manage apps → Developer tools → Public keys → Add public key.'
+        copy: Копіювати
+        copied: Скопійовано!
+        generate: Згенерувати пару ключів
+        regenerate: Перегенерувати пару ключів
+        regenerate_confirm: Буде згенеровано нову пару ключів. Wise і далі прийматиме попередній відкритий ключ, доки ви самі не видалите його у своєму обліковому записі Wise — Sure не може відкликати його віддалено. Перш ніж виписки знову синхронізуватимуться, потрібно зареєструвати новий відкритий ключ у Wise. Продовжити?
     provider_connection:
       default_name: Wise
       default_description: Підключіть свій мультивалютний рахунок Wise
@@ -92,6 +118,8 @@ uk:
       success:
         one: "Успішно підключено %{count} профіль Wise"
         other: "Успішно підключено %{count} профілів Wise"
+        few: Успішно підключено %{count} профілі Wise
+        many: Успішно підключено %{count} профілів Wise
     select_profiles:
       session_expired: Сеанс закінчився. Спробуйте підключитися ще раз.
       title: Виберіть профілі Wise
@@ -126,7 +154,7 @@ uk:
       title: Виберіть баланс Wise
       description: Виберіть валютний баланс Wise, який ви хочете пов'язати зі своїм рахунком %{product_name}.
       no_accounts_found: Усі баланси Wise вже пов'язано з рахунками Sure.
-      no_connection: З'єднання Wise не знайдено. Спочатку підключіть Wise у налаштуваннях провайдера.
+      no_connection: З'єднання Wise не знайдено. Спочатку підключіть Wise у налаштуваннях постачальника.
       link_account: Пов'язати баланс
       cancel: Скасувати
     select_existing_account:
@@ -147,3 +175,6 @@ uk:
       not_found: Баланс Wise не знайдено.
       success: Рахунок створено та успішно пов'язано.
       failed: Не вдалося створити рахунок. Спробуйте ще раз.
+    generate_sca_keypair:
+      success: Нову пару ключів SCA згенеровано. Зареєструйте відкритий ключ у Wise, щоб завершити налаштування.
+      failed: Не вдалося згенерувати нову пару ключів SCA. Спробуйте ще раз.

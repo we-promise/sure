@@ -13,7 +13,7 @@
               <div class="min-w-0">
                 <p class="text-sm text-primary truncate"><%= candidate[:name] %></p>
                 <p class="text-xs text-secondary">
-                  <%= t(".candidate_meta", count: candidate[:count], date: l(candidate[:last_date], format: :short)) %>
+                  <%= t(".candidate_meta", count: candidate[:count], date: l(candidate[:last_date], format: :short_with_year)) %>
                 </p>
               </div>
               <p class="text-sm text-primary privacy-sensitive shrink-0">
