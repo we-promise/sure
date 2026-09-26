@@ -13,7 +13,8 @@
 #     prepare: -> { stub provider API calls },        # optional, runs before each request
 #     select_renders: true,                           # optional: writable select renders 200
 #     relinks: false,                                 # link moves an existing link
-#     dialog_names_linked: false                      # select lists linked accounts by name
+#     dialog_names_linked: false,                     # select lists linked accounts by name
+#     setup_url: ->(provider_record) { url }          # optional: setup form offering existing accounts
 #   )
 #
 # ProviderLinkAuthorizationCoverageTest fails for any link route whose
@@ -31,7 +32,7 @@ module ProviderLinkAuthorizationTests
   class_methods do
     def provider_link_authorization_tests(select_url:, link_url:, target:, provider_account:, provider_param:,
                                           params: -> { {} }, prepare: -> { }, select_renders: true,
-                                          relinks: false, dialog_names_linked: false)
+                                          relinks: false, dialog_names_linked: false, setup_url: nil)
       config = { select_url:, link_url:, target:, provider_account:, provider_param:, params:, prepare: }
       define_method(:provider_link_config) { config }
 
@@ -99,6 +100,25 @@ module ProviderLinkAuthorizationTests
           post provider_link_url(:link_url), params: provider_link_link_params(account, provider_record)
         end
         assert_equal account, provider_record.reload.account_provider.account
+      end
+
+      # The setup form's "link to an existing account" dropdown submits to
+      # link_existing_account, so it offers only accounts that action accepts.
+      if setup_url
+        test "setup_accounts offers only accounts the admin can write as link targets" do
+          provider_record = provider_link_new_provider_account
+          refused = REFUSED_SHARES.values.map { |permission| provider_link_member_account(permission) }
+          writable = [ provider_link_member_account("full_control"), provider_link_admin_account ]
+
+          instance_exec(&provider_link_config[:prepare])
+          get instance_exec(provider_record, &setup_url)
+
+          # One dropdown per unlinked provider account, so a writable account
+          # may appear in several; a refused one must appear in none.
+          assert_response :success
+          writable.each { |account| assert_select %(option[value="#{account.id}"]), minimum: 1 }
+          refused.each { |account| assert_select %(option[value="#{account.id}"]), count: 0 }
+        end
       end
 
       return unless relinks
