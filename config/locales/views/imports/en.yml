@@ -432,9 +432,15 @@ en:
       deleted:
         one: 1 import deleted.
         other: "%{count} imports deleted."
-      skipped:
-        one: 1 import could not be deleted. Revert completed imports with committed data first.
-        other: "%{count} imports could not be deleted. Revert completed imports with committed data first."
+      unauthorized:
+        one: 1 import could not be deleted because you do not have permission to manage its statement.
+        other: "%{count} imports could not be deleted because you do not have permission to manage their statements."
+      not_deletable:
+        one: 1 import could not be deleted because it is still processing or has committed data. Wait for processing to finish or revert completed imports with committed data first.
+        other: "%{count} imports could not be deleted because they are still processing or have committed data. Wait for processing to finish or revert completed imports with committed data first."
+      failed:
+        one: 1 import could not be deleted because an unexpected error occurred.
+        other: "%{count} imports could not be deleted because unexpected errors occurred."
       none_selected: No deletable imports were selected.
       limit: Select no more than %{count} imports for deletion at once.
     new:
@@ -461,11 +467,12 @@ en:
       title: New Import
     create:
       file_too_large: File is too large. Maximum size is %{max_size}MB.
-      batch_upload_limit: Select no more than %{count} files totaling %{size}MB per upload.
+      batch_upload_warning: These files total more than %{size} MB. Please double-check your selection. Continue with the upload?
       invalid_file_type: Invalid file type. Please upload a CSV file.
       csv_uploaded: CSV uploaded successfully.
       ndjson_uploaded: NDJSON file uploaded successfully.
-      pdf_too_large: PDF file is too large. Maximum size is %{max_size}MB.
+      pdf_too_large: PDF file is larger than the %{max_size}MB guideline. Confirm the size warning to continue.
+      pdf_too_large_warning: One or more PDFs exceed the %{size}MB per-file guideline. Continue with these files?
       pdf_processing: Your PDF is being processed. You will receive an email when analysis is complete.
       pdf_processing_failed: PDF processing could not be started.
       pdf_processing_many:
@@ -473,6 +480,7 @@ en:
         other: "%{count} PDFs are being processed. You will receive an email when analysis is complete."
       invalid_pdf: The uploaded file is not a valid PDF.
       duplicate_pdf_unavailable: This PDF is already stored as a statement you cannot access.
+      duplicate_pdf: This PDF is a duplicate of a file already stored for your family.
       document_too_large: Document file is too large. Maximum size is %{max_size}MB.
       invalid_document_file_type: Invalid document file type for the active vector store.
       document_uploaded: Document uploaded successfully.

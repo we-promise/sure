@@ -1,8 +1,11 @@
 class PdfImport < Import
+  DuplicateUploadError = Class.new(StandardError)
+
   has_one_attached :pdf_file, dependent: :purge_later
 
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
   validate :account_statement_matches_import
+  after_destroy_commit :destroy_orphaned_import_owned_statement
 
   class << self
     # PdfImport's importing status doubles as a processing claim: the AI
@@ -60,18 +63,44 @@ class PdfImport < Import
       family.sync_later if needs_sync
     end
 
-    def create_from_upload!(family:, file:, user:)
+    def create_from_upload!(family:, file:, allow_large_pdf: false)
+      prepared_upload = AccountStatement.prepare_upload!(file, allow_large_pdf: allow_large_pdf)
+      raise DuplicateUploadError if duplicate_upload?(family, prepared_upload)
+
       statement = AccountStatement.create_from_prepared_upload!(
         family: family,
         account: nil,
-        prepared_upload: AccountStatement.prepare_upload!(file)
+        prepared_upload: prepared_upload,
+        pdf_import_owned: true
       )
 
       create_from_statement!(statement: statement)
-    rescue AccountStatement::DuplicateUploadError => e
-      raise unless e.statement.manageable_by?(user)
+    rescue AccountStatement::DuplicateUploadError => error
+      raise DuplicateUploadError if duplicate_upload?(family, prepared_upload)
 
-      create_from_statement!(statement: e.statement)
+      if error.statement.account_id.blank? && !error.statement.pdf_imports.exists?
+        error.statement.update!(pdf_import_owned: true)
+      end
+
+      create_from_statement!(statement: error.statement)
+    end
+
+    def duplicate_upload?(family, prepared_upload)
+      existing_statement_import = where(family_id: family.id)
+        .joins(:account_statement)
+        .exists?(account_statements: { content_sha256: prepared_upload.content_sha256 })
+      return true if existing_statement_import
+
+      legacy_blob_ids = joins(pdf_file_attachment: :blob)
+        .where(family_id: family.id, active_storage_blobs: { checksum: prepared_upload.checksum })
+        .pluck("active_storage_blobs.id")
+      legacy_statement_blob_ids = joins(account_statement: { original_file_attachment: :blob })
+        .where(family_id: family.id, account_statements: { content_sha256: nil, checksum: prepared_upload.checksum })
+        .pluck("active_storage_blobs.id")
+
+      (legacy_blob_ids + legacy_statement_blob_ids).uniq.any? do |blob_id|
+        Digest::SHA256.hexdigest(ActiveStorage::Blob.find(blob_id).download) == prepared_upload.content_sha256
+      end
     end
 
     def create_from_statement!(statement:)
@@ -462,6 +491,16 @@ class PdfImport < Import
   end
 
   private
+
+    def destroy_orphaned_import_owned_statement
+      statement = AccountStatement.find_by(id: account_statement_id)
+      return unless statement&.pdf_import_owned?
+      return if statement.pdf_imports.exists?
+
+      statement.destroy!
+    rescue StandardError => error
+      Rails.logger.warn("Could not clean up source statement for PDF import #{id}: #{error.class}: #{error.message}")
+    end
 
     # A statement's posting date routinely differs by a day or two from the date
     # a provider recorded for the same transaction, so matching allows a small

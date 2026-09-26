@@ -17,6 +17,8 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller='bulk-select']"
     assert_select "[data-bulk-select-target='selectionBar']"
     assert_select "form#bulk-delete-form"
+    assert_select "input[data-bulk-select-target='row'][form='bulk-delete-form']", count: @user.family.imports.where(type: Import::TYPES).count
+    assert_select "#bulk-delete-form button[type='submit']"
     assert_select "input[data-bulk-select-target='row']", count: @user.family.imports.where(type: Import::TYPES).count
 
     @user.family.imports.ordered.each do |import|
@@ -38,12 +40,17 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(import)} span.privacy-sensitive", text: "checking-january.pdf"
   end
 
-  test "gets new" do
+  test "gets new with an aggregate upload size warning" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+
     get new_import_url
 
     assert_response :success
-
     assert_select "turbo-frame#modal"
+    assert_select "form[data-controller='batch-upload-warning']"
+    assert_select "input[type='file'][data-action='change->batch-upload-warning#upload']"
   end
 
   test "cancel marks a lost import as failed" do
@@ -257,14 +264,20 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_includes flash[:alert], "second.txt"
   end
 
-  test "rejects document batches above the configured upload limit" do
-    files = (1..(Import::MAX_BATCH_UPLOAD_FILES + 1)).map do |index|
+  test "accepts document batches above the aggregate size warning" do
+    files = (1..11).map do |index|
       uploaded_file(filename: "notes-#{index}.txt", content_type: "text/plain", content: "notes")
     end
+    ActionDispatch::Http::UploadedFile.any_instance.stubs(:size).returns(10.megabytes)
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.txt])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+    Family.any_instance.expects(:upload_document).times(files.size).returns("uploaded")
 
     post imports_url, params: { import: { type: "DocumentImport", import_file: files } }
 
-    assert_equal I18n.t("imports.create.batch_upload_limit", count: Import::MAX_BATCH_UPLOAD_FILES, size: Import::MAX_BATCH_UPLOAD_SIZE / 1.megabyte), flash[:alert]
+    assert_equal I18n.t("imports.create.document_uploaded_many", count: files.size), flash[:notice]
+    assert_nil flash[:alert]
   end
 
   test "bulk deletion rejects requests above the operation limit" do
@@ -581,7 +594,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to imports_path
-    assert_equal "1 import could not be deleted. Revert completed imports with committed data first.", flash[:alert]
+    assert_equal I18n.t("imports.destroy_all.not_deletable", count: 1), flash[:alert]
   end
 
   test "bulk deletion is scoped to the current family" do

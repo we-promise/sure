@@ -64,6 +64,7 @@
                 <%= check_box_tag "bulk_delete[import_ids][]", import.id, false,
                                   class: "checkbox checkbox--light align-middle",
                                   disabled: !import.directly_deletable?,
+                                  form: "bulk-delete-form",
                                   aria: { label: t("imports.table.select_import", type: import.type.titleize) },
                                   data: {
                                     id: import.id,
@@ -196,14 +197,10 @@
         <%= render DS::Button.new(
           variant: :destructive,
           size: :sm,
+          type: :submit,
           text: t("imports.table.delete_selected"),
           icon: "trash-2",
-          aria_label: t("imports.table.delete_selected"),
-          data: {
-            bulk_select_scope_param: "bulk_delete",
-            bulk_select_param: "import_ids",
-            action: "bulk-select#submitBulkRequest"
-          }
+          aria_label: t("imports.table.delete_selected")
         ) %>
       <% end %>
     </div>

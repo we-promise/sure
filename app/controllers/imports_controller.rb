@@ -72,30 +72,22 @@ class ImportsController < ApplicationController
     @document_upload_extensions = document_upload_supported_extensions
   end
 
-  # Create one import or independently process a bounded batch of uploaded files.
+  # Create one import or independently process the selected upload batch.
   def create
     files = Array(import_params[:import_file]).reject(&:blank?).filter_map do |upload|
       upload if upload.respond_to?(:original_filename) && upload.respond_to?(:content_type)
     end
     file = files.first
 
-    if files.size > 1 && document_upload_request? &&
-        (files.size > Import::MAX_BATCH_UPLOAD_FILES || files.sum(&:size) > Import::MAX_BATCH_UPLOAD_SIZE)
-      redirect_to new_import_path, alert: t(
-        "imports.create.batch_upload_limit",
-        count: Import::MAX_BATCH_UPLOAD_FILES,
-        size: Import::MAX_BATCH_UPLOAD_SIZE / 1.megabyte
-      )
-      return
-    end
+    allow_large_pdf = import_params[:allow_large_pdf] == "true"
 
     if files.size > 1 && document_upload_request?
-      create_multiple_document_imports(files)
+      create_multiple_document_imports(files, allow_large_pdf: allow_large_pdf)
       return
     end
 
     if file.present? && document_upload_request?
-      create_document_import(file)
+      create_document_import(file, allow_large_pdf: allow_large_pdf)
       return
     end
 
@@ -110,7 +102,7 @@ class ImportsController < ApplicationController
         redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
         return
       end
-      create_pdf_import(file)
+      create_pdf_import(file, allow_large_pdf: allow_large_pdf)
       return
     end
 
@@ -195,26 +187,33 @@ class ImportsController < ApplicationController
 
     imports = Current.family.imports.where(id: import_ids).includes(:account_statement)
     deleted_count = 0
-    skipped_count = 0
+    unauthorized_count = 0
+    not_deletable_count = 0
+    error_count = 0
 
     imports.each do |import|
       can_manage_statement = import.account_statement.blank? || import.account_statement.manageable_by?(Current.user)
 
-      if can_manage_statement && import.destroy_if_directly_deletable!
+      if !can_manage_statement
+        unauthorized_count += 1
+      elsif import.destroy_if_directly_deletable!
         deleted_count += 1
       else
-        skipped_count += 1
+        not_deletable_count += 1
       end
     rescue StandardError => error
-      skipped_count += 1
+      error_count += 1
       Rails.logger.warn("Bulk import deletion skipped #{import.type} #{import.id}: #{error.class}: #{error.message}")
     end
 
     notices = []
     notices << t("imports.destroy_all.deleted", count: deleted_count) if deleted_count.positive?
     alerts = []
-    alerts << t("imports.destroy_all.skipped", count: skipped_count) if skipped_count.positive?
-    alerts << t("imports.destroy_all.none_selected") if deleted_count.zero? && skipped_count.zero?
+    alerts << t("imports.destroy_all.unauthorized", count: unauthorized_count) if unauthorized_count.positive?
+    alerts << t("imports.destroy_all.not_deletable", count: not_deletable_count) if not_deletable_count.positive?
+    alerts << t("imports.destroy_all.failed", count: error_count) if error_count.positive?
+    no_matching_imports = deleted_count.zero? && unauthorized_count.zero? && not_deletable_count.zero? && error_count.zero?
+    alerts << t("imports.destroy_all.none_selected") if no_matching_imports
 
     redirect_to imports_path, notice: notices.presence&.join(" "), alert: alerts.presence&.join(" ")
   end
@@ -226,7 +225,7 @@ class ImportsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(:import_file, import_file: [])
+      params.require(:import).permit(:import_file, :allow_large_pdf, import_file: [])
     end
 
     def require_statement_import_permission!
@@ -236,21 +235,24 @@ class ImportsController < ApplicationController
       redirect_back_or_to redirect_target, alert: t("accounts.not_authorized")
     end
 
-    def create_pdf_import(file)
+    def create_pdf_import(file, allow_large_pdf: false)
       return redirect_to new_import_path, alert: t("accounts.not_authorized") unless AccountStatement.statement_manager?(Current.user)
-      return redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte) if file.size > Import::MAX_PDF_SIZE
+      if file.size > Import::MAX_PDF_SIZE && !allow_large_pdf
+        redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte)
+        return
+      end
 
-      pdf_import = create_pdf_import_record(file)
+      pdf_import = create_pdf_import_record(file, allow_large_pdf: allow_large_pdf)
       pdf_import.process_with_ai_later
       redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
-    rescue AccountStatement::DuplicateUploadError
-      redirect_to new_import_path, alert: t("imports.create.duplicate_pdf_unavailable")
+    rescue PdfImport::DuplicateUploadError
+      redirect_to new_import_path, alert: t("imports.create.duplicate_pdf")
     rescue AccountStatement::InvalidUploadError
       redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
     end
 
     # Upload supported documents independently while preserving per-file errors.
-    def create_multiple_document_imports(files)
+    def create_multiple_document_imports(files, allow_large_pdf: false)
       adapter = VectorStore.adapter
       unless adapter
         redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
@@ -261,6 +263,7 @@ class ImportsController < ApplicationController
       processed_count = 0
       uploaded_count = 0
       errors = []
+      handled_pdf_import_ids = {}
 
       files.each do |file|
         filename = file.original_filename.to_s
@@ -277,12 +280,18 @@ class ImportsController < ApplicationController
             next
           end
 
-          if file.size > Import::MAX_PDF_SIZE
+          if file.size > Import::MAX_PDF_SIZE && !allow_large_pdf
             errors << "#{filename}: #{t('imports.create.pdf_too_large', max_size: Import::MAX_PDF_SIZE / 1.megabyte)}"
             next
           end
 
-          pdf_import = create_pdf_import_record(file)
+          pdf_import = create_pdf_import_record(file, allow_large_pdf: allow_large_pdf)
+          if handled_pdf_import_ids[pdf_import.id]
+            errors << "#{filename}: #{t('imports.create.duplicate_pdf')}"
+            next
+          end
+
+          handled_pdf_import_ids[pdf_import.id] = true
           if pdf_import.process_with_ai_later
             processed_count += 1
           else
@@ -308,8 +317,8 @@ class ImportsController < ApplicationController
             errors << "#{filename}: #{t('imports.create.document_upload_failed')}"
           end
         end
-      rescue AccountStatement::DuplicateUploadError
-        errors << "#{filename}: #{t('imports.create.duplicate_pdf_unavailable')}"
+      rescue PdfImport::DuplicateUploadError
+        errors << "#{filename}: #{t('imports.create.duplicate_pdf')}"
       rescue AccountStatement::InvalidUploadError
         errors << "#{filename}: #{t('imports.create.invalid_pdf')}"
       rescue StandardError => e
@@ -327,19 +336,14 @@ class ImportsController < ApplicationController
       end
     end
 
-    def create_pdf_import_record(file)
-      PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
+    def create_pdf_import_record(file, allow_large_pdf: false)
+      PdfImport.create_from_upload!(family: Current.family, file: file, allow_large_pdf: allow_large_pdf)
     end
 
-    def create_document_import(file)
+    def create_document_import(file, allow_large_pdf: false)
       adapter = VectorStore.adapter
       unless adapter
         redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
-        return
-      end
-
-      if file.size > Import::MAX_PDF_SIZE
-        redirect_to new_import_path, alert: t("imports.create.document_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte)
         return
       end
 
@@ -358,7 +362,12 @@ class ImportsController < ApplicationController
           return
         end
 
-        create_pdf_import(file)
+        create_pdf_import(file, allow_large_pdf: allow_large_pdf)
+        return
+      end
+
+      if file.size > Import::MAX_PDF_SIZE
+        redirect_to new_import_path, alert: t("imports.create.document_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte)
         return
       end
 

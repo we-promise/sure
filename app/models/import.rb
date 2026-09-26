@@ -34,8 +34,7 @@ class Import < ApplicationRecord
   # Shared CSV upload/content limit for web and API imports, including preflight.
   MAX_CSV_SIZE = 10.megabytes
   MAX_PDF_SIZE = 25.megabytes
-  MAX_BATCH_UPLOAD_FILES = 10
-  MAX_BATCH_UPLOAD_SIZE = 100.megabytes
+  BATCH_UPLOAD_WARNING_SIZE = 100.megabytes
   MAX_BATCH_DELETE_IMPORTS = 100
   ALLOWED_CSV_MIME_TYPES = %w[text/csv text/plain application/vnd.ms-excel application/csv].freeze
   ALLOWED_PDF_MIME_TYPES = %w[application/pdf].freeze

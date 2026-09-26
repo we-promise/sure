@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_24_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_26_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -64,6 +64,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_140000) do
     t.decimal "parser_confidence", precision: 5, scale: 4
     t.date "period_end_on"
     t.date "period_start_on"
+    t.boolean "pdf_import_owned", default: false, null: false
     t.string "review_status", default: "unmatched", null: false
     t.jsonb "sanitized_parser_output", default: {}, null: false
     t.string "source", default: "manual_upload", null: false
@@ -80,7 +81,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_24_140000) do
     t.index ["suggested_account_id"], name: "index_account_statements_on_suggested_account_id"
     t.check_constraint "account_last4_hint IS NULL OR char_length(account_last4_hint::text) <= 4", name: "chk_account_statements_account_last4_hint_length"
     t.check_constraint "account_name_hint IS NULL OR char_length(account_name_hint::text) <= 200", name: "chk_account_statements_account_name_hint_length"
-    t.check_constraint "byte_size <= 26214400", name: "chk_account_statements_byte_size_max"
     t.check_constraint "byte_size > 0", name: "chk_account_statements_byte_size_positive"
     t.check_constraint "char_length(checksum::text) <= 64", name: "chk_account_statements_checksum_length"
     t.check_constraint "char_length(content_type::text) <= 100", name: "chk_account_statements_content_type_length"
