@@ -37,6 +37,9 @@ zh-CN:
         unknown:
           one: "%{count} 条未知活动"
           other: "%{count} 条未知活动"
+        pending_trade_details:
+          one: "%{count} 项投资活动等待详情"
+          other: "%{count} 项投资活动等待详情"
         expenses:
           one: "过去 30 天 %{count} 笔支出（%{amount}）"
           other: "过去 30 天 %{count} 笔支出（%{amount}）"
@@ -102,5 +105,4 @@ zh-CN:
         card_fee: 卡费
         card_refund: 卡退款
         tax_refund: 退税
-        buy: 买入
-        sell: 卖出
+        round_up: Round up

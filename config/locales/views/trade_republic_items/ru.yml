@@ -45,6 +45,11 @@ ru:
           few: '%{count} неизвестные операции'
           many: '%{count} неизвестных операций'
           other: '%{count} неизвестные операции'
+        pending_trade_details:
+          one: '%{count} инвестиционная операция ожидает деталей'
+          few: '%{count} инвестиционные операции ожидают деталей'
+          many: '%{count} инвестиционных операций ожидают деталей'
+          other: '%{count} инвестиционной операции ожидают деталей'
         expenses:
           one: '%{count} трата за последние 30 дней (%{amount})'
           few: '%{count} траты за последние 30 дней (%{amount})'
@@ -160,8 +165,7 @@ ru:
         card_fee: Комиссия по карте
         card_refund: Возврат на карту
         tax_refund: Налоговый возврат
-        buy: Покупка
-        sell: Продажа
+        round_up: Round up
     defaults:
       name: Trade Republic
     sync_status:

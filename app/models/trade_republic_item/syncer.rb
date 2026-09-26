@@ -21,8 +21,8 @@ class TradeRepublicItem::Syncer
     end
 
     sync.update!(status_text: I18n.t("trade_republic_items.sync.status.importing_account")) if sync.respond_to?(:status_text)
-    trade_republic_item.import_latest_data
-    collect_trade_republic_quality_stats(sync)
+    import_result = trade_republic_item.import_latest_data
+    collect_trade_republic_quality_stats(sync, import_result: import_result)
 
     sync.update!(status_text: I18n.t("trade_republic_items.sync.status.checking_configuration")) if sync.respond_to?(:status_text)
     collect_setup_stats(sync, provider_accounts: trade_republic_item.trade_republic_accounts.to_a)
@@ -91,13 +91,15 @@ class TradeRepublicItem::Syncer
       trade_republic_item.trade_republic_accounts.sum { |acct| Array(acct.raw_positions_payload).size }
     end
 
-    def collect_trade_republic_quality_stats(sync)
+    def collect_trade_republic_quality_stats(sync, import_result: nil)
       stats = trade_republic_item.data_quality_summary
       merge_sync_stats(sync, {
         "tr_positions" => stats[:positions],
         "tr_unpriced_positions" => stats[:unpriced_positions],
         "tr_events" => stats[:events],
-        "tr_unknown_events" => stats[:unknown_events]
+        "tr_unknown_events" => stats[:unknown_events],
+        "tr_pending_trade_details" => stats[:pending_trade_details],
+        "tr_detail_backfills" => import_result.is_a?(Hash) ? import_result[:detail_backfill_count].to_i : 0
       })
     end
 

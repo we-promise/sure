@@ -37,6 +37,9 @@ ca:
         unknown:
           one: "%{count} activitat desconeguda"
           other: "%{count} activitats desconegudes"
+        pending_trade_details:
+          one: "%{count} activitat d'inversió pendent de detalls"
+          other: "%{count} activitats d'inversió pendents de detalls"
         expenses:
           one: "%{count} despesa durant els darrers 30 dies (%{amount})"
           other: "%{count} despeses durant els darrers 30 dies (%{amount})"
@@ -102,5 +105,4 @@ ca:
         card_fee: Comissió de targeta
         card_refund: Reemborsament de targeta
         tax_refund: Devolució d'impostos
-        buy: Compra
-        sell: Venda
+        round_up: Round up
