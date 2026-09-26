@@ -161,6 +161,17 @@ class Transaction < ApplicationRecord
     update!(category: category)
   end
 
+  # Adds or removes one tag while holding the row lock. Assigning tag_ids
+  # replaces the whole set, so two quick toggles computed from the same
+  # snapshot would drop one of them; per-tagging writes under the lock can't.
+  def toggle_tag!(tag)
+    with_lock do
+      existing = taggings.where(tag: tag)
+      existing.exists? ? existing.destroy_all : taggings.create!(tag: tag)
+    end
+    tags.reset
+  end
+
   # Marks a category as recently used. Called explicitly from the manual
   # category-assignment controllers (picker, edit form, categorization
   # wizard, create-and-assign) after a successful save — not wired to a

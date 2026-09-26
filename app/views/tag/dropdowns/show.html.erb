@@ -1,0 +1,45 @@
+<%= turbo_frame_tag "tag_dropdown" do %>
+  <div class="flex flex-col relative" data-controller="list-filter">
+    <div class="grow p-1.5">
+      <div class="relative flex items-center bg-container border border-secondary rounded-lg">
+        <input
+          placeholder="<%= t(".search_placeholder") %>"
+          autocomplete="nope"
+          type="search"
+          role="combobox"
+          aria-label="<%= t(".search_placeholder") %>"
+          aria-expanded="false"
+          aria-autocomplete="list"
+          class="bg-container placeholder:text-sm placeholder:text-secondary font-normal h-10 relative pl-10 w-full border-none rounded-lg focus:outline-hidden focus:ring-0"
+          data-list-filter-target="input"
+          data-action="list-filter#filter keydown->list-filter#handleKeydown">
+        <%= icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
+      </div>
+    </div>
+
+    <div data-list-filter-target="list" role="listbox" aria-multiselectable="true" class="flex flex-col gap-0.5 p-1.5 mt-0.5 mr-2 max-h-64 overflow-y-scroll scrollbar">
+      <div class="pb-2 pl-4 mr-2 text-secondary hidden" data-list-filter-target="emptyMessage">
+        <%= t(".no_tags") %>
+      </div>
+
+      <% if @tags.any? %>
+        <% @tags.each do |tag| %>
+          <%= render "tag/dropdowns/row", tag: tag, entry: @entry, selected: @selected_tag_ids.include?(tag.id) %>
+        <% end %>
+      <% else %>
+        <p class="py-6 text-center text-sm text-secondary"><%= t(".empty") %></p>
+      <% end %>
+    </div>
+
+    <%= render "shared/ruler", classes: "my-2" %>
+
+    <div class="relative p-1.5 w-full">
+      <%= link_to tags_path,
+            data: { turbo_frame: "_top" },
+            class: "flex text-sm font-medium items-center gap-2 text-secondary w-full rounded-lg p-2 hover:bg-container-inset-hover" do %>
+        <%= icon("settings-2") %>
+        <p><%= t(".manage") %></p>
+      <% end %>
+    </div>
+  </div>
+<% end %>

@@ -17,8 +17,14 @@ en:
       new: New tag
       tags: Tags
       delete_all: Delete all
+    menu:
+      label: Edit tags
+      loading: Loading tags...
     new:
       new: New tag
+    summary:
+      add: Add tags
+      title: 'Tags: %{names}'
     tag:
       delete: Delete
       edit: Edit

@@ -307,4 +307,27 @@ class TransactionTest < ActiveSupport::TestCase
 
     assert_nil category.reload.last_used_at
   end
+
+  test "toggle_tag! adds a missing tag and removes a present one" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+
+    transaction.toggle_tag!(tags(:two))
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.tag_ids.sort
+
+    transaction.toggle_tag!(tags(:one))
+    assert_equal [ tags(:two).id ], transaction.reload.tag_ids
+  end
+
+  test "toggle_tag! keeps a tag added by a concurrent toggle" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [])
+    stale_copy = Transaction.find(transaction.id)
+    stale_copy.tag_ids # load the pre-toggle snapshot
+
+    transaction.toggle_tag!(tags(:one))
+    stale_copy.toggle_tag!(tags(:two))
+
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
+  end
 end

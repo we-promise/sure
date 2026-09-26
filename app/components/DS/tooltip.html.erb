@@ -1,5 +1,9 @@
 <span data-controller="DS--tooltip" data-DS--tooltip-placement-value="<%= placement %>" data-DS--tooltip-offset-value="<%= offset %>" data-DS--tooltip-cross-axis-value="<%= cross_axis %>" class="<%= class_names("inline-flex", html_class) %>">
-  <% if as == :button %>
+  <% if trigger? %>
+    <span class="inline-flex min-w-0 items-center" aria-describedby="<%= tooltip_id %>">
+      <%= trigger %>
+    </span>
+  <% elsif as == :button %>
     <%# Wrap the trigger icon in a focusable `<button>` so AT users (and
         keyboard-only users) can land on the tooltip anchor. The Lucide
         icon itself carries `aria-hidden`, so the button's accessible
@@ -30,10 +34,10 @@
   <div role="tooltip"
        id="<%= tooltip_id %>"
        data-DS--tooltip-target="tooltip"
-       class="hidden absolute z-50 bg-inverse text-sm px-1.5 py-1 rounded-md">
+       class="<%= class_names("hidden absolute z-50", panel_classes) %>">
     <%# `max-w-[20rem]` scales with the root font-size so AT users with
         a larger base font don't see the tooltip clipped. %>
-    <div class="text-inverse font-normal max-w-[20rem]">
+    <div class="<%= content_classes %>">
       <%= tooltip_content %>
     </div>
   </div>
