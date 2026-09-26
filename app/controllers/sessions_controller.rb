@@ -258,7 +258,13 @@ class SessionsController < ApplicationController
     oidc_identity = OidcIdentity.find_by(provider: auth.provider, uid: auth.uid)
 
     if oidc_identity
-      unless oidc_identity.issuer_matches_config?
+      provider_config = oidc_identity.provider_config
+      unless provider_config
+        reject_sso_login(auth.provider, reason: "provider_not_configured")
+        return
+      end
+
+      unless oidc_identity.issuer_matches_config?(provider_config)
         reject_sso_login(auth.provider, reason: "issuer_mismatch")
         return
       end
