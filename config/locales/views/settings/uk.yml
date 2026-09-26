@@ -707,15 +707,15 @@ uk:
           title: Шифрування не налаштовано
           message: Облікові дані та дані сеансу Trade Republic не можна безпечно зберігати, доки не налаштовано шифрування Active Record.
         steps:
-          step_1: Введіть номер телефону та PIN-код, які ви використовуєте в застосунку Trade Republic, потім збережіть.
+          step_1: Введіть номер телефону та PIN-код або пароль, які ви використовуєте в застосунку Trade Republic, потім збережіть.
           step_2: Коли з'явиться запит, введіть код із застосунку-автентифікатора.
           step_3: Коли з'явиться запит, підтвердьте вхід у застосунку Trade Republic.
         phone_number_label: Номер телефону
         phone_number_placeholder_new: +49 170 1234567
         phone_number_placeholder_existing: Залиште порожнім, щоб зберегти поточний номер телефону
-        pin_label: PIN-код
-        pin_placeholder_new: PIN-код вашого застосунку Trade Republic
-        pin_placeholder_existing: Залиште порожнім, щоб зберегти поточний PIN-код
+        pin_label: PIN-код або пароль
+        pin_placeholder_new: PIN-код або пароль вашого застосунку Trade Republic
+        pin_placeholder_existing: Залиште порожнім, щоб зберегти поточний PIN-код або пароль
         currency_label: Валюта рахунку
         connect: Увійти
         confirm_login: Перевірити вхід
@@ -737,7 +737,7 @@ uk:
           close: Готово
         qr_login: Увійти за QR-кодом
         qr_cancel: Скасувати вхід за QR-кодом
-        qr_back_to_credentials: Назад до номера телефону та PIN-коду
+        qr_back_to_credentials: Назад до номера телефону та PIN-коду або пароля
         qr_loading: Підготовка QR-коду…
         qr_instruction: Відскануйте QR-код у застосунку Trade Republic і підтвердьте вхід.
         qr_success: Вхід підтверджено. Sure оновлює сторінку постачальника.

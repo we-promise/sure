@@ -110,7 +110,7 @@ tr:
     initiate_login:
       verification_required: "Giriş başlatıldı. %{method} ile onaylayın, ardından Girişi onayla düğmesine basın."
       not_configured: Trade Republic yapılandırılmamış.
-      pin_required: Yeni bir giriş başlatmak için Trade Republic PIN'inizi girin.
+      pin_required: Yeni bir giriş başlatmak için Trade Republic PIN'inizi veya şifrenizi girin.
     complete_login:
       approval_pending: "Henüz onaylanmadı. Trade Republic uygulamasında girişi onaylayıp tekrar deneyin."
       success: "Trade Republic başarıyla bağlandı."
@@ -158,7 +158,7 @@ tr:
       success: Trade Republic kaydedildi. Bağlantıyı tamamlamak için Trade Republic uygulamasında girişi onaylayın.
     update:
       success: Trade Republic yapılandırması başarıyla güncellendi.
-      pin_required: Yeniden kimlik doğrulamak için Trade Republic PIN'inizi girin.
+      pin_required: Yeniden kimlik doğrulamak için Trade Republic PIN'inizi veya şifrenizi girin.
     destroy:
       success: Trade Republic bağlantısı silinmek üzere planlandı.
       unlink_failed: Trade Republic bağlantısı tamamen kesilemedi. Güvenle yeniden denenebilmesi için bağlantı korundu.

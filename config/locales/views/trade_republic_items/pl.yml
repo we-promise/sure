@@ -57,7 +57,7 @@ pl:
         zachowane, aby można je było bezpiecznie ponowić.
     initiate_login:
       not_configured: Trade Republic nie jest skonfigurowane.
-      pin_required: Podaj swój PIN Trade Republic, aby rozpocząć nowe logowanie.
+      pin_required: Podaj swój PIN lub hasło Trade Republic, aby rozpocząć nowe logowanie.
       verification_required: Logowanie rozpoczęte. Potwierdź je przez %{method}, a
         następnie kliknij Potwierdź logowanie.
     initiate_qr_login:
@@ -208,5 +208,5 @@ pl:
       synced: Zsynchronizowano %{time} temu. %{summary}.
       syncing: Synchronizowanie
     update:
-      pin_required: Podaj swój PIN Trade Republic, aby ponownie się uwierzytelnić.
+      pin_required: Podaj swój PIN lub hasło Trade Republic, aby ponownie się uwierzytelnić.
       success: Pomyślnie zaktualizowano konfigurację Trade Republic.

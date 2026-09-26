@@ -132,7 +132,7 @@ fr:
       wait_for_sync: Attendez la fin de la synchronisation de découverte des comptes.
     initiate_login:
       not_configured: Trade Republic n'est pas configuré.
-      pin_required: Saisissez votre code PIN Trade Republic pour lancer une nouvelle connexion.
+      pin_required: Saisissez votre code PIN ou mot de passe Trade Republic pour lancer une nouvelle connexion.
       verification_required: "Connexion démarrée. Confirmez-la via %{method}, puis cliquez sur Confirmer la connexion."
     complete_login:
       approval_pending: "Pas encore confirmé. Approuvez la connexion dans l’application Trade Republic, puis réessayez."
@@ -170,5 +170,5 @@ fr:
         buy: Achat
         sell: Vente
     update:
-      pin_required: Saisissez votre code PIN Trade Republic pour vous réauthentifier.
+      pin_required: Saisissez votre code PIN ou mot de passe Trade Republic pour vous réauthentifier.
       success: Configuration Trade Republic mise à jour avec succès.
