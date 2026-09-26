@@ -49,6 +49,53 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     refute_includes at_rest, "tx-1"
   end
 
+  # Regression test: SsoProvider#client_secret was encrypted (app/models/sso_provider.rb)
+  # but never added to this task, so pre-existing plaintext secrets stayed
+  # unencrypted and raised ActiveRecord::Encryption::Errors::Decryption the
+  # next time any validation read client_secret (e.g. the admin toggle action).
+  test "backfill encrypts plaintext sso_provider client_secret" do
+    provider = SsoProvider.new(
+      name: "backfill_test_provider", label: "Backfill Test", strategy: "github")
+    provider.save!(validate: false)
+
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE sso_providers SET client_secret = ? WHERE id = ?",
+      "plaintext-secret", provider.id ]))
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    provider.reload
+    assert_equal "plaintext-secret", provider.client_secret
+
+    at_rest = provider.read_attribute_before_type_cast(:client_secret).to_s
+    refute_includes at_rest, "plaintext-secret"
+  end
+
+  # Regression test: client_secret uses non-deterministic encryption, so
+  # re-encrypting an already-encrypted value produces different ciphertext
+  # every run. The task must filter sso_providers to plaintext rows only,
+  # or repeated runs churn the column without changing the decrypted value.
+  test "backfill does not re-encrypt an already-encrypted sso_provider client_secret" do
+    provider = SsoProvider.new(
+      name: "backfill_idempotent_provider", label: "Backfill Idempotent", strategy: "github")
+    provider.save!(validate: false)
+
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE sso_providers SET client_secret = ? WHERE id = ?",
+      "plaintext-secret", provider.id ]))
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+    first_pass_ciphertext = provider.reload.read_attribute_before_type_cast(:client_secret).to_s
+
+    Rake::Task["security:backfill_encryption"].reenable
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+    second_pass_ciphertext = provider.reload.read_attribute_before_type_cast(:client_secret).to_s
+
+    assert_equal first_pass_ciphertext, second_pass_ciphertext,
+      "an already-encrypted client_secret must not be rewritten on a later run"
+    assert_equal "plaintext-secret", provider.client_secret
+  end
+
   # Several payload columns default to {} — Rails presence checks treat empty
   # Hash/Array as absent, so the backfill must gate on nil-ness or empty
   # payloads stay plaintext and raise on every read once keys are live.
