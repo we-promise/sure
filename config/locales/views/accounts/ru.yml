@@ -62,17 +62,22 @@ ru:
       notes_placeholder: Сохраните дополнительную информацию, такую как номера счетов,
         коды сортировки, IBAN, маршрутизационные номера и т.д.
       opening_balance_date_label: Дата начального баланса
+      enable_category_matcher_label: Включить подбор категорий
+      enable_category_matcher_hint: Если включено, к импортированным операциям применяется категория, предложенная провайдером. Отключите, чтобы оставлять новые операции без категории.
     index:
       accounts: Счета
       manual_accounts:
         other_accounts: Другие счета
       new_account: Новый счёт
       sync: Синхронизировать все
+      cancel_sync: Отменить синхронизацию
     new:
       container:
         close: Закрыть
         navigate: Перейти
         select: Выбрать
+        next: Далее
+        previous: Назад
       import_accounts: Импортировать счета
       method_selector:
         connected_entry: Связать счёт
@@ -89,8 +94,8 @@ ru:
       no_providers: В настоящее время провайдеры не настроены
       title: Выберите провайдера для связи
     set_default:
-      depository_only: Только наличные и кредитные счета могут быть установлены по
-        умолчанию.
+      depository_only: По умолчанию можно установить только денежные счета и счета
+        кредитных карт.
     show:
       activity:
         amount: Сумма
@@ -125,7 +130,7 @@ ru:
         confirm_accept: Удалить "%{name}"
         confirm_body_html: "<p>Удаляя этот счёт, вы стираете его историю значений,
           что повлияет на различные аспекты вашего общего счёта. Это действие напрямую
-          повлияет на расчёты вашего собственного капитала и графики счёта.</p><br
+          повлияет на расчёты вашей чистой стоимости и графики счёта.</p><br
           /> <p>После удаления вы не сможете восстановить информацию о счёте, так
           как вам нужно будет добавить его как новый счёт.</p>"
         confirm_title: Удалить счёт?
@@ -144,6 +149,7 @@ ru:
         holdings: Активы
         overview: Обзор
         statements: Выписки
+        schedule: График платежей
     sidebar:
       configure_providers: Настройте ваших провайдеров здесь.
       missing_data: Отсутствуют исторические данные
@@ -158,6 +164,8 @@ ru:
         all: Все
         assets: Активы
         debts: Долги
+      expand_all: Развернуть все
+      collapse_all: Свернуть все
     subtype_regions:
       au: Австралия
       ca: Канада
@@ -181,7 +189,7 @@ ru:
     types:
       credit_card: Кредитная карта
       crypto: Крипто
-      depository: Наличность
+      depository: Денежный счёт
       investment: Инвестиция
       loan: Кредит
       other_asset: Другой актив
@@ -191,7 +199,7 @@ ru:
     types_plural:
       credit_card: Кредитные карты
       crypto: Крипто
-      depository: Наличные
+      depository: Денежные счета
       investment: Инвестиции
       loan: Кредиты
       other_asset: Другие активы

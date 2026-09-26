@@ -22,6 +22,22 @@ class Assistant::Function::GetBillsTest < ActiveSupport::TestCase
     assert_not_includes names, "Paused bill"
   end
 
+  # The tools' frequency enum is FrequencyPreset::PRESETS, which has no
+  # interval. update_bill would pass an "interval" it read here straight back
+  # to FrequencyPreset.apply without a count or unit, and report success on an
+  # unchanged schedule.
+  test "an every-N cadence is reported as custom, never as a value outside the enum" do
+    series = create_series(name: "Water", amount: 60, anchor_date: Date.current)
+    RecurringTransaction::FrequencyPreset.apply(series, preset: "interval", interval: 2, interval_unit: "monthly",
+                                                         day_of_month: Date.current.day)
+    series.save!
+
+    row = call_tool[:bills].find { |bill| bill[:name] == "Water" }
+
+    assert_equal "interval", RecurringTransaction::FrequencyPreset.detect(series).key
+    assert_equal "custom", row[:frequency]
+  end
+
   test "the paused filter speaks the UI vocabulary over the stored value" do
     create_series(name: "Paused bill", amount: 30, status: "inactive")
 

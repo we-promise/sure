@@ -52,3 +52,5 @@ uk:
     custom:
       label_short: "Користувацький"
       label: "Користувацький період"
+      comparison_label: з %{start_date} по %{end_date}
+    range: '%{start_date} – %{end_date}'

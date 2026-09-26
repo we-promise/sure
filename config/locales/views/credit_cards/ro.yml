@@ -22,12 +22,3 @@ ro:
       treat_balance_as_available_credit_label: Soldul reprezintă creditul disponibil
     new:
       title: Introdu detaliile cardului de credit
-    overview:
-      amount_owed: Suma datorată
-      annual_fee: Taxă anuală
-      apr: APR
-      available_credit: Credit disponibil
-      expiration_date: Data expirării
-      minimum_payment: Plată minimă
-      unknown: Necunoscut
-      edit_account_details: Editează detaliile contului

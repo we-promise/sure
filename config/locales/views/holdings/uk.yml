@@ -2,7 +2,7 @@
 uk:
   holdings:
     cash:
-      brokerage_cash: "Брокерська готівка"
+      brokerage_cash: "Вільні кошти на брокерському рахунку"
     destroy:
       success: "Актив видалено"
       cannot_delete: "Ви не можете видалити цей актив"
@@ -46,12 +46,14 @@ uk:
       positions:
         one: "%{count} позиція"
         other: "%{count} позицій"
+        few: '%{count} позиції'
+        many: '%{count} позицій'
       average_cost: "Середня вартість"
       holdings: "Активи"
       name: "Назва"
       new_holding: "Нова активність"
       no_holdings: "Немає активів для відображення."
-      return: "Загальний дохід"
+      return: "Загальна дохідність"
       weight: "Вага"
     missing_price_tooltip:
       description: "Ця інвестиція має відсутні значення, і ми не змогли розрахувати її дохідність або вартість."
@@ -71,7 +73,7 @@ uk:
       security_label: "Цінний папір"
       originally: "був %{ticker}"
       search_security: "Шукати цінний папір"
-      search_security_placeholder: "Шукати за тікером або назвою"
+      search_security_placeholder: "Шукати за тикером або назвою"
       cancel: "Скасувати"
       remap_security: "Зберегти"
       provider_disabled_warning: "Оновлення цін призупинено — постачальник %{provider} вимкнено. Переключіться на іншого постачальника нижче або знову увімкніть його в налаштуваннях."
@@ -85,9 +87,9 @@ uk:
       reset_to_provider: "Скинути до постачальника"
       reset_confirm_title: "Скинути цінний папір до постачальника?"
       reset_confirm_body: "Це змінить цінний папір з %{current} назад на %{original} і перемістить усі пов'язані угоди."
-      ticker_label: "Тікер"
+      ticker_label: "Тикер"
       trade_history_entry: "%{qty} акцій %{security} за %{price}"
-      total_return_label: "Загальний дохід"
+      total_return_label: "Загальна дохідність"
       unknown: "Невідомо"
       cost_basis_locked_label: "Базова вартість заблокована"
       cost_basis_locked_description: "Ваша вручну встановлена базова вартість не буде змінена під час синхронізації."
