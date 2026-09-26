@@ -22,7 +22,11 @@
 
         <div class="space-y-3">
           <% @wise_accounts.each do |wise_account| %>
-            <div class="border border-primary rounded-lg p-4 flex items-center justify-between gap-4">
+            <%= form_with url: complete_account_setup_wise_item_path(@wise_item),
+                          method: :post,
+                          data: { turbo_frame: "_top" },
+                          class: "border border-primary rounded-lg p-4 flex items-center justify-between gap-4" do %>
+              <%= hidden_field_tag :wise_account_id, wise_account.id %>
               <div>
                 <p class="font-medium text-primary text-sm"><%= wise_account.name %></p>
                 <p class="text-xs text-secondary mt-0.5">
@@ -30,18 +34,25 @@
                   &nbsp;·&nbsp;
                   <%= wise_account.currency %>
                 </p>
+                <div class="mt-3 flex items-center gap-2 text-xs text-secondary">
+                  <%= render DS::Toggle.new(
+                    id: "wise_usage_type_#{wise_account.id}",
+                    name: "usage_type",
+                    checked: @wise_item.business?,
+                    checked_value: "business",
+                    unchecked_value: "personal"
+                  ) %>
+                  <span><%= t("accounts.form.business_usage_label") %></span>
+                </div>
               </div>
               <%= render DS::Button.new(
                 text: t(".create_account"),
                 icon: "plus",
                 variant: :outline,
                 size: :sm,
-                href: complete_account_setup_wise_item_path(@wise_item),
-                method: :post,
-                params: { wise_account_id: wise_account.id },
-                frame: "_top"
+                type: :submit
               ) %>
-            </div>
+            <% end %>
           <% end %>
         </div>
 

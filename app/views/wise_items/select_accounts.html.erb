@@ -27,7 +27,6 @@
             <%= hidden_field_tag :wise_item_id, @wise_item.id %>
             <%= hidden_field_tag :accountable_type, @accountable_type %>
             <%= hidden_field_tag :return_to, @return_to %>
-
             <div class="space-y-2">
               <% @available_accounts.each do |wise_account| %>
                 <label class="flex items-start gap-3 p-3 border border-primary rounded-lg hover:bg-subtle cursor-pointer transition-colors">
@@ -42,6 +41,17 @@
                   </div>
                 </label>
               <% end %>
+            </div>
+
+            <div class="flex items-center gap-2 text-sm text-primary">
+              <%= render DS::Toggle.new(
+                id: "wise_usage_type",
+                name: "usage_type",
+                checked: @wise_item.business?,
+                checked_value: "business",
+                unchecked_value: "personal"
+              ) %>
+              <span><%= t("accounts.form.business_usage_label") %></span>
             </div>
 
             <div class="flex gap-2 justify-end pt-4">

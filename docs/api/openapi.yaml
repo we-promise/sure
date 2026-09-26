@@ -447,6 +447,7 @@ components:
       - cash_balance_cents
       - currency
       - classification
+      - usage_type
       - account_type
       - status
       - created_at
@@ -471,6 +472,12 @@ components:
           type: string
         classification:
           type: string
+        usage_type:
+          type: string
+          enum:
+          - personal
+          - business
+          nullable: true
         account_type:
           type: string
           nullable: true
