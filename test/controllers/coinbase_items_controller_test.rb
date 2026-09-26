@@ -175,4 +175,21 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
       }
     end
   end
+
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_coinbase_items_url,
+    link_url: :link_existing_account_coinbase_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Crypto", balance: 0, currency: "USD",
+                               accountable: Crypto.create!(subtype: "exchange"))
+    },
+    provider_account: -> {
+      @coinbase_item.coinbase_accounts.create!(name: "BTC Wallet", account_id: SecureRandom.hex(6),
+                                               currency: "BTC", current_balance: 0.5)
+    },
+    provider_param: :coinbase_account_id,
+    relinks: true,
+    dialog_names_linked: true
+  )
 end

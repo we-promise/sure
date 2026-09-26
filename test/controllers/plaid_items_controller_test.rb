@@ -167,6 +167,22 @@ class PlaidItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Account successfully linked to Plaid", flash[:notice]
   end
 
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_plaid_items_url,
+    link_url: :link_existing_account_plaid_items_url,
+    target: ->(owner) {
+      families(:dylan_family).accounts.create!(owner: owner, name: "Manual Checking", balance: 0, currency: "USD",
+                                               accountable: Depository.create!)
+    },
+    provider_account: -> {
+      PlaidAccount.create!(plaid_item: plaid_items(:one), name: "Plaid Checking", plaid_id: SecureRandom.hex(6),
+                           plaid_type: "depository", plaid_subtype: "checking", currency: "USD",
+                           current_balance: 1000, available_balance: 1000)
+    },
+    provider_param: :plaid_account_id
+  )
+
   # --- member-owned connections (issue #3579) ------------------------------
   #
   # Plaid declares `credential_scope :per_connection`, so a household member

@@ -97,4 +97,20 @@ class IbkrItemsControllerTest < ActionDispatch::IntegrationTest
     ibkr_account.reload
     assert_equal original_account, ibkr_account.current_account
   end
+
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_ibkr_items_url,
+    link_url: :link_existing_account_ibkr_items_url,
+    target: ->(owner) {
+      @user.family.accounts.create!(owner: owner, name: "Manual Brokerage", balance: 0, currency: "USD",
+                                    accountable: Investment.create!(subtype: "brokerage"))
+    },
+    provider_account: -> {
+      @ibkr_item.ibkr_accounts.create!(name: "IBKR", ibkr_account_id: "U#{SecureRandom.hex(4)}",
+                                       currency: "USD", current_balance: 1000)
+    },
+    provider_param: :ibkr_account_id,
+    setup_url: ->(record) { setup_accounts_ibkr_item_url(record.ibkr_item) }
+  )
 end

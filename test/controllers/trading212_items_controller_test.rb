@@ -156,4 +156,20 @@ class Trading212ItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, trading212_accounts(:main_account).name
   end
+
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_trading212_items_url,
+    link_url: :link_existing_account_trading212_items_url,
+    target: ->(owner) {
+      @user.family.accounts.create!(owner: owner, name: "Manual Investment", balance: 0, currency: "USD",
+                                    accountable: Investment.create!)
+    },
+    provider_account: -> {
+      @item.trading212_accounts.create!(name: "Trading 212", trading212_account_id: SecureRandom.hex(6),
+                                        currency: "USD", current_balance: 1000)
+    },
+    provider_param: :trading212_account_id,
+    setup_url: ->(record) { setup_accounts_trading212_item_url(record.trading212_item) }
+  )
 end
