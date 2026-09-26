@@ -46,6 +46,7 @@ module Family::AutoTransferMatchable
       {
         date_window:,
         family_id: id,
+        family_currency: primary_currency_code,
         inflow_transaction_id:,
         outflow_transaction_id:,
         account_id:,
@@ -193,6 +194,21 @@ module Family::AutoTransferMatchable
     # off so a user can still find and confirm a real cross-currency transfer that happens to
     # involve a manual account, rather than being forced into creating a duplicate.
     #
+    # The cross-currency branch prefers the direct pair rate. Exchange rates are only
+    # synced from each account currency to the family currency, so a transfer between
+    # two non-family currencies (e.g. RUB -> THB in a USD family) has no direct rate;
+    # the cross rate is then derived through the family currency
+    # (RUB -> USD / THB -> USD). The rates are plain LEFT JOINs on the unique
+    # (from, to, date) index, so each joins at most one row and the planner can hash
+    # them; a missing rate leaves the tolerance check NULL, which drops the pair.
+    # A zero direct rate is treated as missing so it cannot mask a usable derived rate.
+    #
+    # Candidates are ordered by match_rank before date_diff: exact same-currency matches
+    # (rank 0) come before FX-tolerance guesses (rank 1). auto_match_transfers! consumes
+    # candidates greedily, so without the rank a coincidental cross-currency candidate
+    # one day closer would claim a transaction whose real exact-amount counterpart
+    # appears one day later.
+    #
     # NOTE: this is passed through `.squish`, which collapses all whitespace (including
     # newlines) into single spaces -- a `--` SQL line comment anywhere in this heredoc would
     # swallow the remainder of the query. Put explanatory comments here in Ruby instead.
@@ -204,6 +220,7 @@ module Family::AutoTransferMatchable
             inflow_candidates.entryable_id AS inflow_transaction_id,
             outflow_candidates.entryable_id AS outflow_transaction_id,
             ABS(inflow_candidates.date - outflow_candidates.date) AS date_diff,
+            0 AS match_rank,
             rejected_transfers.id AS rejected_transfer_id
           FROM entries inflow_candidates
           JOIN accounts inflow_accounts ON inflow_accounts.id = inflow_candidates.account_id
@@ -243,6 +260,7 @@ module Family::AutoTransferMatchable
             inflow_candidates.entryable_id AS inflow_transaction_id,
             outflow_candidates.entryable_id AS outflow_transaction_id,
             ABS(inflow_candidates.date - outflow_candidates.date) AS date_diff,
+            1 AS match_rank,
             rejected_transfers.id AS rejected_transfer_id
           FROM entries inflow_candidates
           JOIN accounts inflow_accounts ON inflow_accounts.id = inflow_candidates.account_id
@@ -255,10 +273,20 @@ module Family::AutoTransferMatchable
             outflow_candidates.currency <> inflow_candidates.currency
           )
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
-          JOIN exchange_rates ON (
-            exchange_rates.date = outflow_candidates.date AND
-            exchange_rates.from_currency = outflow_candidates.currency AND
-            exchange_rates.to_currency = inflow_candidates.currency
+          LEFT JOIN exchange_rates direct_rates ON (
+            direct_rates.date = outflow_candidates.date AND
+            direct_rates.from_currency = outflow_candidates.currency AND
+            direct_rates.to_currency = inflow_candidates.currency
+          )
+          LEFT JOIN exchange_rates outflow_family_rates ON (
+            outflow_family_rates.date = outflow_candidates.date AND
+            outflow_family_rates.from_currency = outflow_candidates.currency AND
+            outflow_family_rates.to_currency = :family_currency
+          )
+          LEFT JOIN exchange_rates inflow_family_rates ON (
+            inflow_family_rates.date = outflow_candidates.date AND
+            inflow_family_rates.from_currency = inflow_candidates.currency AND
+            inflow_family_rates.to_currency = :family_currency
           )
           LEFT JOIN transfers existing_transfers ON (
             existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
@@ -278,7 +306,11 @@ module Family::AutoTransferMatchable
             outflow_accounts.status IN ('draft', 'active') AND
             existing_transfers.id IS NULL AND
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
-            ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * exchange_rates.rate, 0))
+            ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * COALESCE(
+              NULLIF(direct_rates.rate, 0),
+              (CASE WHEN outflow_candidates.currency = :family_currency THEN 1 ELSE outflow_family_rates.rate END) /
+                NULLIF(CASE WHEN inflow_candidates.currency = :family_currency THEN 1 ELSE inflow_family_rates.rate END, 0)
+            ), 0))
               BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
@@ -288,7 +320,7 @@ module Family::AutoTransferMatchable
               (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")})
             )
         ) transfer_match_candidates
-        ORDER BY transfer_match_candidates.date_diff ASC
+        ORDER BY transfer_match_candidates.match_rank ASC, transfer_match_candidates.date_diff ASC
       SQL
     end
 
