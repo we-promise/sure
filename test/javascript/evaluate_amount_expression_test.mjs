@@ -460,6 +460,10 @@ describe("precisionFromStep", () => {
     assert.equal(precisionFromStep("1.0e-08"), 8)
   })
 
+  it("derives 2 decimal places from a non-power-of-ten 0.25 step", () => {
+    assert.equal(precisionFromStep("0.25"), 2)
+  })
+
   it("returns null for step=\"any\"", () => {
     assert.equal(precisionFromStep("any"), null)
   })
