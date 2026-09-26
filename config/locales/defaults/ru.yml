@@ -44,6 +44,7 @@ ru:
       month_year: "%B %Y"
       short: "%-d %b"
       short_month_year: "%b %Y"
+      short_with_year: '%-d %b %Y'
     month_names:
     -
     - января
@@ -275,3 +276,10 @@ ru:
       long: "%d %B %Y, %H:%M"
       short: "%d %b, %H:%M"
     pm: вечера
+  mcp:
+    errors:
+      invalid_session_id: Недействительный идентификатор сеанса MCP
+      unsupported_protocol_version: 'Неподдерживаемая версия протокола MCP: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris должны использовать https, loopback http или URI-схему нативного приложения

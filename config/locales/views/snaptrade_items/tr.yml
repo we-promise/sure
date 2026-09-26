@@ -18,7 +18,7 @@ tr:
       consumer_key_update_placeholder: Güncellemek için yeni Tüketici Anahtarı girin
       delete_connection: Sil
       delete_connection_body: Bu işlem %{brokerage} bağlantısını SnapTrade'den kalıcı
-        olarak kaldırır. Bu aracıdaki tüm hesapların bağı koparılır. Bu hesapları
+        olarak kaldırır. Bu aracıdaki tüm hesapların bağlantısı kesilir. Bu hesapları
         tekrar senkronize etmek için yeniden bağlamanız gerekir.
       delete_connection_confirm: Bağlantıyı Sil
       delete_connection_title: Aracı Bağlantısı Silinsin mi?
@@ -28,7 +28,7 @@ tr:
       delete_orphaned_user_confirm: Kaydı Sil
       delete_orphaned_user_title: Yetim Kayıt Silinsin mi?
       description: SnapTrade, 25+ büyük aracıya (Fidelity, Vanguard, Schwab, Robinhood
-        vb.) bağlanır ve etiketli işlem etiketleri ve maliyet temeli içeren tam işlem
+        vb.) bağlanır ve etkinlik etiketleri ve maliyet bazı içeren tam işlem
         geçmişi sağlar.
       free_tier_warning: SnapTrade'ın ücretsiz katmanı 20 aracı bağlantısını kapsar.
       legacy_credentials_description: SnapTrade hesabınız OAuth'u etkinleştirmediyse
@@ -45,8 +45,7 @@ tr:
       oauth_connect_button: SnapTrade ile bağlan
       oauth_reauthorize_button: Yeniden yetkilendir
       oauth_status_authorized: SnapTrade ile yetkilendirildi.
-      oauth_status_ready: Sure'i SnapTrade için yetkilendirmek üzere bir cihaz kodu
-        kullanın.
+      oauth_status_ready: SnapTrade hesap verilerinizi okuması için Sure'u yetkilendirin.
       oauth_title: SnapTrade OAuth
       orphaned_connection: Yetim bağlantı (yerel olarak senkronize edilmedi)
       orphaned_user: Yetim Kayıt
@@ -72,6 +71,12 @@ tr:
       step_4: Hesaplar sayfasına gidin ve yatırım hesaplarınızı bağlamak için 'Başka
         bir aracı bağla'yı kullanın
       update_button: Yapılandırmayı Güncelle
+      oauth_setup_step_1_html: <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a> adresinde bir OAuth uygulaması kaydedin
+      oauth_setup_step_2_html: 'Yalnızca tarayıcı akışı için: bu uygulamanın geri çağırma URL''sini (<code>%{callback_url}</code>) kayıtlı bir yönlendirme URI''si olarak ekleyin'
+      oauth_setup_step_3: Ortamınızda SNAPTRADE_OAUTH_CLIENT_ID değerini ayarlayıp yeniden başlatın. Cihaz kodu akışı için bu yeterlidir; tarayıcı akışı için SNAPTRADE_OAUTH_CLIENT_SECRET de ekleyin
+      oauth_status_ready_device: SnapTrade hesap verilerinizi okuması için Sure'u bir cihaz koduyla yetkilendirin.
+      oauth_device_button: Cihaz kodu kullan
+      manage_at_snaptrade: Bağlantıları SnapTrade'de yönet
   snaptrade_item:
     brokerage_summary:
       count:
@@ -116,6 +121,10 @@ tr:
       setup_incomplete: SnapTrade yetkilendirmesi tamamlandı, ancak hesaplar senkronize
         edilemeden önce API kimlik bilgileri gereklidir.
       success: SnapTrade yetkilendirmesi tamamlandı.
+      device_code_required: Bu bağlantı için devam eden bir SnapTrade cihaz yetkilendirmesi yok. Yeni bir kod almak için yeniden başlatın.
+      authorization_pending: SnapTrade onayınızı henüz almadı. Kodu SnapTrade'de onaylayın, ardından tekrar deneyin.
+      expired: Bu cihaz kodunun süresi doldu. Yetkilendirmeyi yeniden başlatın.
+      access_denied: SnapTrade yetkilendirmesi reddedildi.
     connect:
       connection_failed: 'SnapTrade''e bağlanılamadı: %{message}'
       decryption_failed: SnapTrade kimlik bilgileri okunamıyor. Lütfen bu bağlantıyı
@@ -126,11 +135,11 @@ tr:
       success: SnapTrade başarıyla yapılandırıldı.
     default_name: SnapTrade Bağlantısı
     delete_connection:
-      api_deletion_failed: SnapTrade'den bağlantı silinemedi - kimlik bilgileri eksik.
+      api_deletion_failed: SnapTrade'den bağlantı silinemedi - bu öğe yetkilendirilmemiş.
         Bağlantı SnapTrade hesabınızda hâlâ var olabilir.
       failed: 'Bağlantı silinemedi: %{message}'
       missing_authorization_id: Yetkilendirme kimliği eksik
-      success: Bağlantı başarıyla silindi. Bir yuval boşaltıldı.
+      success: Bağlantı başarıyla silindi. Bir bağlantı yuvası boşaltıldı.
     delete_orphaned_user:
       failed: Yetim kayıt silinemedi.
       success: Yetim kayıt başarıyla silindi.
@@ -153,7 +162,7 @@ tr:
         tekrar deneyin.
       open_snaptrade: SnapTrade'i aç
       start_button: Yetkilendirmeyi başlat
-      subtitle: Sure'i SnapTrade için yetkilendir
+      subtitle: Sure'u SnapTrade için bir cihaz koduyla yetkilendirin.
       title: SnapTrade'e Bağlan
     preload_accounts:
       not_configured: SnapTrade yapılandırılmamış.
@@ -183,7 +192,7 @@ tr:
       free_tier_note: SnapTrade ücretsiz katmanı 20 aracı bağlantısına izin verir.
       header: SnapTrade Hesaplarınızı Kurun
       info_activities: İşlem etiketleriyle işlem geçmişi (Al, Sat, Temettü vb.)
-      info_cost_basis: Pozisyon başına maliyet temeli (mevcut olduğunda)
+      info_cost_basis: Pozisyon başına maliyet bazı (mevcut olduğunda)
       info_history: 3 yıla kadar işlem geçmişi
       info_holdings: Güncel fiyat ve miktarlarla varlıklar
       info_title: SnapTrade Yatırım Verileri
@@ -204,6 +213,14 @@ tr:
       syncing: Hesaplarınız getiriliyor...
       title: SnapTrade Hesaplarını Kur
       try_again: Aracı Bağla
+      account_type_label: Hesap türü
+      account_types:
+        depository: Vadesiz veya Tasarruf Hesabı
+        credit_card: Kredi Kartı
+        investment: Yatırım Hesabı
+        crypto: Kripto Hesabı
+        loan: Kredi veya Rotatif Kredi
+        other_asset: Diğer Varlık
     snaptrade_item:
       accounts_need_setup:
         one: "%{count} hesabın kurulması gerekiyor"
@@ -233,3 +250,10 @@ tr:
       failed: SnapTrade OAuth cihaz yetkilendirmesi başlatılamadı. Lütfen tekrar deneyin.
     update:
       success: SnapTrade yapılandırması başarıyla güncellendi.
+    oauth_authorize:
+      not_configured: SnapTrade tarayıcı yetkilendirmesi SNAPTRADE_OAUTH_CLIENT_ID'nin yanı sıra SNAPTRADE_OAUTH_CLIENT_SECRET de gerektirir. Bunu ayarlayıp yeniden başlatın veya bunun yerine bir cihaz koduyla yetkilendirin.
+    oauth_callback:
+      success: SnapTrade yetkilendirmesi tamamlandı.
+      access_denied: SnapTrade yetkilendirmesi iptal edildi.
+      state_mismatch: SnapTrade yetkilendirmesi bir güvenlik kontrolünden geçemedi. Lütfen tekrar deneyin.
+      failed: SnapTrade yetkilendirmesi tamamlanamadı. Lütfen tekrar deneyin.

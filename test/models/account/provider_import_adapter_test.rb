@@ -1819,4 +1819,108 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "false", pending_entry.transaction.reload.extra.dig("enable_banking", "pending"),
       "a flag that does not mark the transaction pending is not cleared"
   end
+
+  # Provider metadata is not user-editable, so a user edit elsewhere on the entry
+  # must not freeze it: the drawer has to reflect what the provider last sent,
+  # including dropping fields it no longer sends.
+  test "refreshes provider metadata on a user-modified entry" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_extra",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "online", "payment_meta" => { "payee" => "Amazon" } } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    entry.transaction.lock_attr!(:category_id)
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_extra",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "in store" } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    plaid_extra = entry.reload.transaction.extra.fetch("plaid")
+    assert_equal "in store", plaid_extra["payment_channel"]
+    assert_nil plaid_extra["payment_meta"], "a dropped field must not survive on a user-modified entry"
+  end
+
+  # determine_skip_reason reports "user_modified" before it checks import_locked?,
+  # so an entry with both flags reaches that branch. Import ownership wins.
+  test "leaves metadata alone on an entry that is also import-locked" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_import_locked",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "online" } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    entry.update!(import_locked: true)
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_import_locked",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "in store" } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    assert_equal "online", entry.reload.transaction.extra.dig("plaid", "payment_channel")
+  end
+
+  # extra is not uniformly provider-owned. Transaction#exchange_rate lives at
+  # extra["exchange_rate"], is editable through the transaction form, and drives
+  # balance conversion — so refreshing a protected entry must touch only the
+  # namespaces the provider declared, not the whole payload.
+  test "refreshing a protected entry leaves user-owned extra keys alone" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_exchange_rate",
+      amount: 12.0,
+      currency: "EUR",
+      date: Date.today,
+      name: "Wise transfer",
+      source: "wise",
+      extra: { "exchange_rate" => "1.05", "wise" => { "status" => "pending" } },
+      replace_extra_namespaces: [ "wise" ]
+    )
+
+    # The user corrects the rate by hand, which protects the entry.
+    entry.transaction.update!(exchange_rate: "1.23")
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_exchange_rate",
+      amount: 12.0,
+      currency: "EUR",
+      date: Date.today,
+      name: "Wise transfer",
+      source: "wise",
+      extra: { "exchange_rate" => "1.05", "wise" => { "status" => "outgoing_payment_sent" } },
+      replace_extra_namespaces: [ "wise" ]
+    )
+
+    refreshed = entry.reload.transaction
+
+    assert_equal "1.23", refreshed.extra["exchange_rate"].to_s,
+      "the provider must not overwrite a rate the user typed"
+    assert_equal "outgoing_payment_sent", refreshed.extra.dig("wise", "status"),
+      "the provider's own namespace should still refresh"
+  end
 end

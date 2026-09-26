@@ -35,7 +35,7 @@
         <%= "~" if series.has_amount_variance? %><%= format_money(Money.new(series.amount.abs, series.currency)) %>
       </p>
       <p class="text-xs text-secondary">
-        <%= series.next_expected_date.present? ? t("bills.detail.around", date: l(series.next_expected_date, format: :short)) : t("bills.detail.next_payment") %>
+        <%= series.next_expected_date.present? ? t("bills.detail.around", date: bills_upcoming_date(series.next_expected_date)) : t("bills.detail.next_payment") %>
       </p>
     </div>
   <% end %>
@@ -60,7 +60,7 @@
             <div class="min-w-0">
               <p class="text-sm text-primary truncate"><%= allocation.entry&.name.presence || t("bills.detail.manual_payment") %></p>
               <% if allocation.paid_on %>
-                <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short) %></p>
+                <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short_with_year) %></p>
               <% end %>
             </div>
             <p class="text-sm text-primary privacy-sensitive shrink-0"><%= format_money(allocation.allocated_amount_money) %></p>

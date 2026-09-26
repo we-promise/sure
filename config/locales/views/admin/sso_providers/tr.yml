@@ -11,6 +11,7 @@ tr:
       edit:
         description: "%{label} için yapılandırmayı güncelle"
         title: SSO Sağlayıcısını Düzenle
+        provider_configuration: Sağlayıcı Yapılandırması
       form:
         admin_groups: Yönetici Grupları
         advanced_title: Gelişmiş OIDC Ayarları
@@ -152,6 +153,7 @@ tr:
       new:
         description: Yeni bir tek oturum açma kimlik doğrulama sağlayıcısı yapılandırın
         title: SSO Sağlayıcısı Ekle
+        provider_configuration: Sağlayıcı Yapılandırması
       toggle:
         confirm_disable: Bu sağlayıcıyı devre dışı bırakmak istediğinizden emin misiniz?
         confirm_enable: Bu sağlayıcıyı etkinleştirmek istediğinizden emin misiniz?

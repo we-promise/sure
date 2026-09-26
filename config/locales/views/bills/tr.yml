@@ -1,0 +1,313 @@
+---
+tr:
+  bills:
+    row_overdue: Gecikmiş
+    row_today: Bugün
+    detect:
+      found:
+        one: '%{count} olası fatura bulundu. Aşağıda inceleyin.'
+        other: '%{count} olası fatura bulundu. Aşağıda inceleyin.'
+      none_found: Yeni yinelenen ödeme bulunamadı. Faturaları elle ekleyebilirsiniz.
+      already_running: Tespit zaten çalışıyor. Birazdan tekrar kontrol edin.
+    feed:
+      calendar_name: Sure Faturaları
+    ai_prompts:
+      due_before_paycheck: Bir sonraki maaşımdan önce hangi ödemeler var?
+      subscriptions_up: Bu yıl hangi aboneliklerin fiyatı arttı?
+      monthly_subscriptions: Aboneliklere aylık ne kadar ödüyorum?
+      safe_to_spend: Bu dönemde gönül rahatlığıyla ne kadar harcayabilirim?
+    smart_configurations:
+      show:
+        trigger: AI yapılandırsın
+        title: '%{name} için AI önerileri'
+        intro: Uygulanacak değişiklikleri işaretleyin. İşaretlenmeyenler olduğu gibi bırakılır.
+        no_changes: Bu fatura zaten ödeme geçmişiyle uyumlu. Değiştirilecek bir şey yok.
+        failed: Bu fatura şu anda analiz edilemedi. Yapılandırması değiştirilmedi.
+        field_name: Ad
+        field_amount: Tutar
+        field_schedule: Zamanlama
+        field_category: Kategori
+        field_kind: Tür
+        field_autopay: Otomatik ödeme
+        uncategorized: Kategorisiz
+        autopay_off: Kapalı
+        autopay_on: Açık
+        apply: Seçilenleri uygula
+    detail:
+      current: Güncel
+      next_payment: Sonraki ödeme
+      around: '%{date} civarı'
+      rules: Bu fatura nasıl eşleştirilir
+      rule_named: '%{name}'
+      rule_amount_range: '%{min} ile %{max} arası'
+      rule_aliases: Ayrıca %{names} ile eşleşir
+      rule_learned_tolerance: Olağan tutardan en fazla %{percent} sapan tutarlar bu faturayla eşleşir
+      history_title: Son 12 ay
+      history_aria: Son on iki aydaki ödemeler
+      key_metrics: Yıllık döküm
+      year: Yıl
+      spent_per_year: Harcanan
+      avg_payment: Ort. ödeme
+      average: Ortalama ödenen
+      range: '%{min} – %{max}'
+      annualized: Yıllık
+      ytd: Bu yıl ödenen
+      last_account: Son kullanılan hesap
+      upcoming: Yaklaşanlar
+      recent_payments: Son ödemeler
+      manual_payment: Manuel ödeme
+      history: Geçmiş
+      payment_count:
+        one: '%{count} ödeme'
+        other: '%{count} ödeme'
+      notes: Notlar
+      trial_chip: Deneme %{date} tarihinde bitiyor
+      renews_chip: '%{date} tarihinde yenilenir'
+      cancelled_chip: '%{date} tarihinde iptal edildi'
+      price_changes: Fiyat değişiklikleri
+      price_change_line: '%{from} → %{to}'
+    month_pulse:
+      bill_count:
+        one: '%{count} fatura'
+        other: '%{count} fatura'
+      left_to_pay: ödenecek
+      pulse_paid: ödendi
+      pulse_overdue: gecikmiş
+      pulse_next_seven: önümüzdeki 7 gün
+      pulse_bar_aria: Bu ayın faturalarının yüzde %{percent} kadarı ödendi
+      next_up: Sıradaki
+      view_upcoming: Yaklaşanları görüntüle
+      date_today: Bugün
+      date_tomorrow: Yarın
+      unconvertible:
+        one: '%{count} fatura dahil edilmedi, döviz kuru mevcut değil'
+        other: '%{count} fatura dahil edilmedi, döviz kuru mevcut değil'
+    summary:
+      remaining: '%{amount} kaldı'
+      paid_headline: '%{amount} ödendi'
+      cost_line: Ödeme başına ortalama %{average}, yılda yaklaşık %{annualized}
+    pane:
+      close: Ayrıntıları daralt
+    add_bill: Fatura ekle
+    manage: Yönet
+    find_payment: Ödeme bul
+    add_payment: Ödeme ekle
+    review_match: Eşleşmeyi incele
+    resolve: Düzelt
+    manage_payments: Ödemeleri yönet
+    view_full_bill: Faturanın tamamını görüntüle
+    match:
+      same_merchant: Aynı satıcı
+      name_matches: Ad eşleşiyor
+      exact_amount: Tutar birebir aynı
+      amount_off: '%{amount} fark'
+      due_date: Son ödeme tarihiyle uyumlu
+      days_before:
+        one: Son ödeme tarihinden %{count} gün önce
+        other: Son ödeme tarihinden %{count} gün önce
+      days_after:
+        one: Son ödeme tarihinden %{count} gün sonra
+        other: Son ödeme tarihinden %{count} gün sonra
+    attention:
+      needs_review: Eşleşme incelenmeli
+      partial: Kısmi · %{amount} kaldı
+      amount_changed: Tutar değişti
+      overdue:
+        one: '%{count} gün gecikmiş'
+        other: '%{count} gün gecikmiş'
+    paid_label: Ödendi
+    paid_over_short: Fazla ödendi
+    installment_progress: Ödeme %{done_plus_one}/%{total}
+    partial_progress: '%{expected} tutarın %{paid} kadarı ödendi'
+    cancelled_still_scheduled: Bunu %{date} tarihinde iptal edildi olarak işaretlediniz, ancak hâlâ planlı olduğu için gelecekteki faturalar görünmeye devam edecek.
+    paid_over: '%{paid} ödendi, beklenenden fazla'
+    remaining_label: kalan
+    debt_payment: ' · borç ödemesi'
+    paid_from: '%{account} hesabından'
+    amount_range: '%{min} ile %{max} arasında değişir'
+    possible_duplicate: Olası mükerrer
+    due_label:
+      overdue:
+        one: '%{count} gün gecikmiş, son ödeme tarihi %{date} idi'
+        other: '%{count} gün gecikmiş, son ödeme tarihi %{date} idi'
+      today: Son ödeme bugün
+      settled: Son ödeme tarihi %{date} idi
+      due_since: Son ödeme %{date}
+      snoozed: '%{date} tarihine kadar ertelendi'
+      upcoming:
+        one: Son ödeme yarın, %{date}
+        other: Son ödemeye %{count} gün var, %{date}
+    views:
+      aria_label: Fatura görünümleri
+      overview: Genel Bakış
+      calendar: Takvim
+      paycheck: Gelir planı
+      all: Tüm faturalar
+    pay_period:
+      paycheck_on: Maaş %{date}
+      before_next_paycheck: Bir sonraki maaşınızdan önce
+      due_before_date: '%{date} tarihinden önce ödenecek %{amount}'
+    paycheck:
+      unconvertible:
+        one: '%{count} yükümlülük dahil edilmedi, döviz kuru mevcut değil'
+        other: '%{count} yükümlülük dahil edilmedi, döviz kuru mevcut değil'
+      income_section_title: Gelir takvimi
+      manage: Yönet
+      add_income: Gelir ekle
+      income_paused: Duraklatıldı, planlanmadı
+      income_detected: Otomatik tespit edildi, maaş günlerini belirlemez
+      income_next_payday: sonraki %{date}
+      income_source_count:
+        one: '%{count} gelir kaynağı'
+        other: '%{count} gelir kaynağı'
+      next_on: Sonraki %{date}
+      no_upcoming_income: Bundan sonrası için planlanmış gelir yok.
+      empty:
+        title: Gelir takviminizi belirtin
+        description: Her maaş gününün neyi karşılaması gerektiğini görmek için gelirinizi ekleyin. Tespit edilen para girişleri maaş günlerinizi kendi kendine belirlemez -- bunu siz yaparsınız.
+        action: Gelir ekle
+      all_clear:
+        title: Karşılanacak bir şey yok
+        description: Şu andan %{date} tarihine kadar vadesi gelen fatura yok, bu yüzden bu dönemde ayrılmış bir tutar yok.
+      safe_after_bills: Faturalardan sonra harcanabilir
+      short_after_bills: Faturalardan sonra eksik
+      period_source: ' · %{source}'
+      period_source_multiple: ' · %{count} gelir kaynağı'
+      before_next_paycheck: '%{date} öncesi'
+      no_income_arriving: Gelir girişi yok
+      income_amount: '%{amount} gelir'
+      due_this_period: Bu dönem ödenecek
+      reserved_ahead: Önceden ayrılan
+      safe_short: Serbest
+      short_short: Eksik
+      reserved_footer:
+        one: Sonraki %{count} fatura için önceden ayrıldı
+        other: Sonraki %{count} fatura için önceden ayrıldı
+      bills_this_period:
+        one: Bu dönemin faturaları · %{count}
+        other: Bu dönemin faturaları · %{count}
+      bills_before_payday:
+        one: Bir sonraki maaş gününüzden önceki faturalar · %{count}
+        other: Bir sonraki maaş gününüzden önceki faturalar · %{count}
+      of_total: / %{amount}
+      bridge_label: Bir sonraki maaşınızdan önce
+      bridge_amount: · %{amount} ödenecek
+      bridge_split: '%{date} tarihinden önce ödenecek; hesaplarınızdaki %{cash} ile karşılanıyor.'
+      shortfall_label: Bir sonraki maaş gününüzden önce eksik
+      shortfall_amount: · %{amount}
+      shortfall_split: '%{date} tarihinden önce %{obligations} ödenecek ve hesaplarınızda %{cash} var.'
+      shortfall_largest: 'Yaklaşan en büyük yükümlülük:'
+      review_plan: Planı incele
+      allocation_aria: '%{income} gelirin %{due} kadarı şimdi ödenecek, %{reserved} kadarı sonrası için ayrıldı ve %{safe} kadarı gönül rahatlığıyla harcanabilir.'
+      allocation_aria_short: '%{income} gelir buradaki yükümlülüklere gidiyor ve %{short} daha gerekiyor.'
+    reset_feed_token:
+      done: Takvim bağlantısı sıfırlandı. Eski bağlantıyı kullanan takvim uygulamaları güncellenmeyi durduracak; yeni bağlantıyla yeniden abone olun.
+      confirm: Takvim akışı bağlantısı sıfırlansın mı? Daha önce paylaşılan tüm bağlantılar çalışmayı durdurur.
+    calendar:
+      subscribe_ical: Abone ol (iCal)
+      reset_feed: Bağlantıyı sıfırla
+      previous_month: Önceki ay
+      next_month: Sonraki ay
+      today: Bugün
+      month_totals: '%{expected} beklenen · %{paid} ödenen'
+      empty_month: Bu ay vadesi gelen fatura yok.
+    all:
+      search_placeholder: Faturalarda ara
+      any_status: Tüm durumlar
+      status_filters:
+        overdue: Gecikmiş
+        due: Vadesi yaklaşan
+        partial: Kısmen ödendi
+        paid: Ödendi
+        paused: Duraklatıldı
+        ended: Yok sayıldı
+      subscription_monthly: Aylık
+      subscription_annual: Yıllık
+      subscription_active: Aktif
+      subscription_price_changes: Bu yılki fiyat değişiklikleri
+      subscription_price_change_line: '%{from} → %{to} (%{percent}%)'
+      any_type: Tüm türler
+      sort_due: Son ödeme tarihine göre
+      sort_name: Ada göre
+      sort_amount: Tutara göre
+      no_matches_title: Sonuç yok
+      no_matches_description: Bir filtreyi veya aramayı temizlemeyi deneyin.
+      col_name: Ad
+      col_type: Tür
+      col_frequency: Sıklık
+      col_amount: Tutar
+      col_next: Sonraki son ödeme
+      next_short: sonraki %{date}
+      col_status: Durum
+      col_actions: Eylemler
+      monthly_equivalent: '%{amount}/ay'
+      types:
+        bill: Fatura
+        subscription: Abonelik
+        installment: Taksit planı
+        income: Gelir
+        transfer: Transfer
+        other: Diğer
+    show:
+      edit: Faturayı düzenle
+    index:
+      left_to_pay: ödenecek
+      paid_so_far: Şu ana kadar ödenen
+      hero_past_due: '%{amount} gecikmiş'
+      hero_next_seven: Önümüzdeki 7 günde ödenecek %{amount}
+      add_bill: Fatura ekle
+      add_income: Gelir ekle
+      review_with_ai: AI ile incele
+      detected_review:
+        one: İşlemlerinizde %{count} yinelenen ödeme bulduk. Buradaki toplamların gerçekte ödediğinizle eşleşmesi için gözden geçirin.
+        other: İşlemlerinizde %{count} yinelenen ödeme bulduk. Buradaki toplamların gerçekte ödediğinizle eşleşmesi için gözden geçirin.
+      detected_review_action: Gözden geçir
+      needs_review: İnceleme gerekiyor
+      notice_trial: '%{name} deneme süresi %{date} tarihinde bitiyor'
+      notice_renewal: '%{name} %{date} tarihinde yenileniyor'
+      notice_price: '%{name} fiyatı değişti: %{from} → %{to} (%{percent})'
+      notices_routine:
+        one: '%{count} küçük değişiklik'
+        other: '%{count} küçük değişiklik'
+      suggestion_line: '%{entry}, %{bill} ödemesi gibi görünüyor'
+      suggestion_unknown_entry: Bir işlem
+      confidence: '%{percent}% eşleşme'
+      accept: Uygula
+      reject: Bu fatura değil
+      title: Faturalar
+      summary_label: Bu ay ödenecek
+      summary_count:
+        one: '%{count} fatura ödenecek'
+        other: '%{count} fatura ödenecek'
+      summary_needs_action:
+        one: '%{count} tanesi sizi bekliyor'
+        other: '%{count} tanesi sizi bekliyor'
+      all_automatic: tümü otomatik ödemede
+      recurring_label: Düzenli ödeme yükü
+      recurring_monthly: Ayda %{amount}
+      recurring_annual: Yılda %{amount}
+      unconvertible:
+        one: '%{count} fatura dahil edilmedi, döviz kuru mevcut değil'
+        other: '%{count} fatura dahil edilmedi, döviz kuru mevcut değil'
+      overdue: Gecikmiş
+      needs_attention: İlgilenilmesi gerekenler
+      attention_overdue_total: '%{amount} gecikmiş'
+      this_month: Bu ay
+      later: Bu aydan sonra
+      paid_this_month: Bu ay ödenenler
+      dormant: Pasif
+      kpi_remaining: Bu ay kalan
+      kpi_paid: Bu ay ödenen
+      kpi_next_seven: Önümüzdeki 7 günde ödenecek
+      kpi_past_due: Gecikmiş
+      paid_count:
+        one: '%{count} fatura kapandı'
+        other: '%{count} fatura kapandı'
+      needs_action_count:
+        one: '%{count} tanesi sizi bekliyor'
+        other: '%{count} tanesi sizi bekliyor'
+      empty:
+        title: Henüz fatura yok
+        description: Faturalar yinelenen giderlerinizdir. Sure bunları işlem geçmişinizden otomatik olarak bulur; her birine bir ödeme bağlantısı ekleyerek doğrudan buradan ödeyebilirsiniz.
+        action: Yinelenen işlemleri bul
+        no_history_description: Henüz işlem yok. Bir hesap bağlayın veya geçmişi içe aktarın, Sure faturalarınızı otomatik olarak bulsun ya da elle bir fatura ekleyin.

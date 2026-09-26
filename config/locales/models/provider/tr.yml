@@ -1,0 +1,17 @@
+---
+tr:
+  providers:
+    property_valuation:
+      not_configured: Bu mülk verisi sağlayıcısı yapılandırılmamış.
+      missing_fields: Lütfen bir ad ve eksiksiz bir ABD adresi (sokak, şehir, eyalet ve ZIP kodu) girin.
+      preview_expired: Bu mülk önizlemesinin süresi doldu — lütfen adresi yeniden arayın.
+    rentcast:
+      errors:
+        no_valuation: RentCast bu adres için bir değer tahmini döndürmedi.
+        not_found: RentCast bu adresle eşleşen bir mülk bulamadı.
+    realie:
+      errors:
+        no_property: Realie bu adres için bir mülk döndürmedi.
+        no_valuation: Realie bu mülk için bir değerleme döndürmedi.
+        not_found: Realie bu adresle eşleşen bir mülk bulamadı.
+        location_mismatch: Realie farklı bir şehirde veya ZIP kodunda bir mülk eşleştirdi. Lütfen adresi tekrar kontrol edin.
