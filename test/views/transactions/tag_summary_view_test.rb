@@ -18,7 +18,8 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
 
     summary = render_summary
 
-    assert_select summary, "[title=?]", I18n.t("tags.summary.add")
+    assert_equal I18n.t("tags.summary.add"), summary.at_css("[role=tooltip]").text.strip
+    assert_empty summary.css("[title]")
     assert_select summary, "[data-tag-initial]", count: 0
   end
 
