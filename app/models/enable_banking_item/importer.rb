@@ -9,6 +9,8 @@ class EnableBankingItem::Importer
   BALANCE_TYPE_PRIORITY = %w[
     CLBD closingBooked
     ITBD interimBooked
+    OPBD openingBooked
+    PRCD previouslyClosedBooked
     XPCD expected
     CLAV closingAvailable
     ITAV interimAvailable
