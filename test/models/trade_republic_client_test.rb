@@ -294,7 +294,6 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     assert_empty warnings
     assert_equal "100.0", positions.first["price"]
-    assert_equal "cost_basis", positions.first["price_source"]
     assert_equal "private_markets", positions.first["category"]
   end
 
@@ -366,7 +365,6 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     assert_empty warnings
     assert_equal "108.50", positions.first["price"]
-    assert_equal "private_markets", positions.first["price_source"]
   end
 
   test "tolerates a rejected privateMarketsPositions subscription" do
@@ -394,7 +392,6 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     assert_empty warnings
     assert_equal "100.0", positions.first["price"]
-    assert_equal "cost_basis", positions.first["price_source"]
   end
 
   test "maps Google Pay inbound payments to deposits" do
@@ -518,6 +515,23 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "US0378331005", positions.first["isin"]
     assert_equal "99.50", positions.first["price"]
     assert_nil positions.first["symbol"]
+  end
+
+  test "does not value listed positions at cost basis when no quote is available" do
+    @client.define_singleton_method(:subscribe) do |_websocket, *_args, **_kwargs|
+      raise Provider::TradeRepublicClient::ProviderUnavailable
+    end
+
+    positions, warnings = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "stocksAndETFs", "positions" => [
+          { "instrumentId" => "US0378331005", "name" => "Apple", "netSize" => "1", "averageBuyIn" => "150.0" }
+        ] }
+      ]
+    })
+
+    assert_nil positions.first["price"]
+    assert_equal [ "price unavailable for US0378331005; position kept without valuation" ], warnings
   end
 
   test "resolves event type and preserves the signed timeline amount" do

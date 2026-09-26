@@ -658,7 +658,6 @@ class Provider::TradeRepublicClient
         end
       end
       prices = {}
-      price_sources = {}
       instruments = {}
       private_market_quotes = private_markets_unit_prices(websocket, sec_acc_no) if valid_positions.any? { |p|
         p["categoryType"].to_s == "privateMarkets"
@@ -668,27 +667,18 @@ class Provider::TradeRepublicClient
         isin = position["instrumentId"].presence || position["isin"]
         next if prices.key?(isin)
 
+        private_market = position["categoryType"].to_s == "privateMarkets"
         price = position_price(websocket, isin, position["categoryType"])
-        price_source = nil
-
-        if price.blank? && private_market_quotes.present?
-          price = private_market_quotes[isin]
-          price_source = "private_markets" if price.present?
-        end
-
-        if price.blank?
-          cost = decimal_string(position["averageBuyIn"] || position["avgCost"])
-          if cost.present?
-            price = cost
-            price_source = "cost_basis"
-          else
-            warnings << "price unavailable for #{isin}; position kept without valuation"
-          end
-        end
+        price = private_market_quotes[isin] if price.blank? && private_market_quotes.present?
+        # Private-market funds have no exchange quote. Without a
+        # privateMarketsPositions unit price, value them at the average buy-in
+        # rather than zero. Other categories keep the unpriced warning.
+        price = decimal_string(position["averageBuyIn"] || position["avgCost"]) if price.blank? && private_market
 
         if price.present?
           prices[isin] = price
-          price_sources[isin] = price_source if price_source.present?
+        else
+          warnings << "price unavailable for #{isin}; position kept without valuation"
         end
       end
       valid_positions.each do |position|
@@ -710,7 +700,6 @@ class Provider::TradeRepublicClient
           "quantity" => decimal_string(quantity),
           "average_cost" => decimal_string(position["averageBuyIn"] || position["avgCost"]),
           "price" => prices[isin],
-          "price_source" => price_sources[isin],
           "symbol" => instrument[:symbol],
           "exchange_slug" => instrument[:exchange_slug]
         }.compact
