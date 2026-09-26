@@ -31,7 +31,7 @@ class Provider::Anthropic::PdfProcessor
             "PDF is too large (#{pdf_content.bytesize} bytes); base64-encoded it would exceed Anthropic's 32 MB request limit"
     end
 
-    span = langfuse_trace&.span(name: "process_pdf_api_call", input: {
+    span = langfuse_trace&.generation(name: "process_pdf_api_call", model: model, input: {
       model: model,
       pdf_size: pdf_content&.bytesize
     })
@@ -174,14 +174,5 @@ class Provider::Anthropic::PdfProcessor
 
     def block_input(block)
       block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
-    end
-
-    def usage_hash(raw_usage)
-      return {} unless raw_usage
-      {
-        "input_tokens" => raw_usage.input_tokens.to_i,
-        "output_tokens" => raw_usage.output_tokens.to_i,
-        "total_tokens" => raw_usage.input_tokens.to_i + raw_usage.output_tokens.to_i
-      }
     end
 end

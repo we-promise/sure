@@ -3,6 +3,18 @@ module Provider::Anthropic::Concerns::UsageRecorder
 
   private
 
+    def usage_hash(raw_usage)
+      return {} unless raw_usage
+
+      {
+        "input_tokens" => raw_usage.input_tokens.to_i,
+        "output_tokens" => raw_usage.output_tokens.to_i,
+        "total_tokens" => raw_usage.input_tokens.to_i + raw_usage.output_tokens.to_i,
+        "cache_creation_input_tokens" => raw_usage.respond_to?(:cache_creation_input_tokens) ? raw_usage.cache_creation_input_tokens.to_i : 0,
+        "cache_read_input_tokens" => raw_usage.respond_to?(:cache_read_input_tokens) ? raw_usage.cache_read_input_tokens.to_i : 0
+      }
+    end
+
     # Persists an LlmUsage row from an Anthropic Message#usage object.
     # Returns nil if no family is attached (e.g., system-initiated calls).
     def record_usage(model_name, raw_usage, operation:, metadata: {})

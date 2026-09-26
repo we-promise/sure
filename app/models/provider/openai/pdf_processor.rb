@@ -17,14 +17,14 @@ class Provider::Openai::PdfProcessor
   end
 
   def process
-    span = langfuse_trace&.span(name: "process_pdf_api_call", input: {
+    span = langfuse_trace&.generation(name: "process_pdf_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
       model: model.presence || Provider::Openai::DEFAULT_MODEL,
       pdf_size: pdf_content&.bytesize
     })
 
     # Try text extraction first (works with all models)
     # Fall back to vision API with images if text extraction fails (for scanned PDFs)
-    response = case processing_mode
+    response, usage = case processing_mode
     when :text
       process_with_text_extraction
     when :vision
@@ -40,7 +40,7 @@ class Provider::Openai::PdfProcessor
       raise ArgumentError, "Unknown PDF processing mode: #{processing_mode.inspect}"
     end
 
-    span&.end(output: response.to_h)
+    span&.end(output: response.to_h, usage: usage)
     response
   rescue => e
     span&.end(output: { error: e.message, error_detail: safe_error_detail(e) }, level: "ERROR")
@@ -251,7 +251,7 @@ class Provider::Openai::PdfProcessor
       raw = response.dig("choices", 0, "message", "content")
       parsed = parse_json_flexibly(raw)
 
-      build_result(parsed)
+      [ build_result(parsed), response["usage"] ]
     end
 
     def build_result(parsed)
