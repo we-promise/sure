@@ -376,6 +376,32 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "issuer_mismatch", SsoAuditLog.by_event("login_failed").order(:created_at).last.metadata.fetch("reason")
   end
 
+  test "rejects existing OIDC identity when provider is no longer configured" do
+    oidc_identity = oidc_identities(:bob_google)
+    oidc_identity.update!(issuer: nil)
+    # The callback strategy was registered at boot, but the live provider list
+    # no longer includes it after an administrator disables the DB provider.
+    AuthConfig.stubs(:sso_providers).returns([])
+    @user.sessions.destroy_all
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Disabled provider login"
+    )
+
+    assert_difference -> { SsoAuditLog.by_event("login_failed").count }, 1 do
+      assert_no_difference -> { SsoAuditLog.by_event("login").count } do
+        get "/auth/openid_connect/callback"
+      end
+    end
+
+    assert_redirected_to new_session_path
+    assert_not Session.exists?(user_id: @user.id)
+    assert_equal "provider_not_configured", SsoAuditLog.by_event("login_failed").order(:created_at).last.metadata.fetch("reason")
+  end
+
   test "rejects an SSO identity that an administrator permanently removed" do
     oidc_identity = oidc_identities(:bob_google)
     SsoIdentityBlock.block_all!(OidcIdentity.where(id: oidc_identity.id), identity_label: @user.email)

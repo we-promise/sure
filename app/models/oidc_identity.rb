@@ -111,14 +111,15 @@ class OidcIdentity < ApplicationRecord
     end
   end
 
-  # Validate that the stored issuer matches the configured provider's issuer
-  # Returns true if valid, false if mismatch (security concern)
-  def issuer_matches_config?
-    return true if issuer.blank? # Backward compatibility for old records
+  # Validate that this identity still belongs to an enabled provider and that
+  # its stored issuer matches the provider's current issuer.
+  # Legacy blank issuers remain valid only while the provider is configured.
+  def issuer_matches_config?(config = provider_config)
+    return false if config.blank?
+    return true if issuer.blank?
 
-    config = provider_config
     config_issuer = config&.dig(:issuer) || config&.dig("issuer")
-    return true if config_issuer.blank? # No config to validate against
+    return true if config_issuer.blank?
 
     issuer == config_issuer
   end
