@@ -26,12 +26,3 @@ pt-PT:
       simplefin_balance_sign_label: Significado do saldo SimpleFIN
     new:
       title: Introduza os detalhes do cartão de crédito
-    overview:
-      amount_owed: Montante em dívida
-      annual_fee: Taxa Anual
-      apr: TAE
-      available_credit: Crédito Disponível
-      edit_account_details: Editar os detalhes da conta
-      expiration_date: Data de Validade
-      minimum_payment: Pagamento Mínimo
-      unknown: Desconhecido

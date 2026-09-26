@@ -8,6 +8,7 @@ tr:
           subtitle: Yapay zeka asistanının tüm sohbet konuşmalarında nasıl davrandığını
             tanımlayan temel talimatlar
           title: Ana Sistem İstemi
+          label: Sohbet sistem istemi
         merchant_detector:
           subtitle: Yapay zeka, işlem verilerini satıcı bilgileriyle tanımlar ve zenginleştirir
           title: Satıcı Algılayıcı
@@ -18,6 +19,27 @@ tr:
           subtitle: Yapay zeka, tanımladığınız kategorilere göre işlemlerinizi otomatik
             olarak kategorilendirir
           title: İşlem Kategorileyici
+        save: İstemleri kaydet
+        save_confirm:
+          title: Özel yapay zeka istemleri kaydedilsin mi?
+          body: Özel istemler, aileniz için yerleşik sistem talimatlarının ve güvenlik önlemlerinin (finansal tavsiye kısıtlamaları gibi) yerini alır.
+          dont_show_again: Bu uyarıyı bir daha gösterme
+          cancel: İptal
+          confirm: Onayla
+      prompt_field:
+        provider_label: Sağlayıcı
+        prompt_label: İstem
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Varsayılana sıfırla
+        reset_confirm_title: Varsayılan isteme sıfırlansın mı?
+        reset_confirm_body: Bu işlem özel isteminizi silecek ve yerleşik varsayılan talimatları geri yükleyecektir.
+        status_custom: Özel isteminiz kullanılıyor
+        status_default: Yerleşik varsayılan kullanılıyor
+        format_risk: '%{provider} isteminizden {"%{key}": ...} örneği çıkarılmış. Her istek yine bu biçimi istediği için ayrıştırma genellikle çalışır, ancak farklı bir çıktı biçimi isteyen bir özelleştirme bunu bozar.'
+      update:
+        success: Yapay zeka istemleri güncellendi
+        multiple_errors: Birden fazla istem çok uzun (en fazla %{count} karakter)
     appearances:
       show:
         dashboard_subtitle: Panelin nasıl görüntüleneceğini özelleştirin
@@ -43,6 +65,8 @@ tr:
         theme_title: Tema
         transactions_subtitle: İşlemlerin nasıl görüntüleneceğini özelleştirin
         transactions_title: İşlemler
+        dashboard_account_groups_title: Varsayılan olarak genişletilmiş başlat
+        dashboard_account_groups_description: Bu hesap bölümleri panelde ve hesap kenar çubuğunda genişletilmiş olarak açılır. İstediğiniz zaman bunları elle daraltabilirsiniz.
     debugs:
       show:
         context:
@@ -89,13 +113,13 @@ tr:
         col_date: Tarih
         col_model: Model
         col_operation: İşlem
-        col_tokens: Jeton
+        col_tokens: Token
         completion: tamamlama
         cost_by_model: Modele Göre Maliyet
         cost_by_operation: İşleme Göre Maliyet
         cost_estimates_description: Maliyetler, Temmuz 2026 itibarıyla OpenAI fiyatlandırması
           dahil olmak üzere yayınlanan sağlayıcı fiyatlarına göre tahmin edilir. Gerçek
-          maliyetler farklılık gösterebilir. Fiyatlandırma 1 milyon jeton başınadır
+          maliyetler farklılık gösterebilir. Fiyatlandırma 1 milyon token başınadır
           ve modele göre değişir. Özel veya kendi sunucunuzda barındırılan modeller
           "Yok" olarak gösterilir ve maliyet toplamlarına dahil edilmez.
         cost_estimates_title: Maliyet Tahminleri Hakkında
@@ -110,7 +134,7 @@ tr:
         subtitle: Yapay zeka kullanımınızı ve tahmini maliyetlerinizi takip edin
         total_cost: Toplam Maliyet
         total_requests: Toplam İstek
-        total_tokens: Toplam Jeton
+        total_tokens: Toplam Token
     mcp:
       revoke:
         revoked: Bağlantı iptal edildi.
@@ -206,6 +230,20 @@ tr:
         timezone: Zaman dilimi
         translations_notice: Lütfen unutmayın, çeşitli diller için çeviriler üzerinde
           hala çalışıyoruz.
+        budget_title: Bütçe
+        budget_subtitle: Bütçelerinizin nasıl çalışacağını yapılandırın
+        personal_budgets: Kişisel bütçeler
+        personal_budgets_hint: Her aile üyesi için ayrı bütçeleri etkinleştirin.
+        household_budget_enabled: Hane bütçesi
+        household_budget_enabled_hint: Kişisel bütçelerin yanında ortak bir hane bütçesi tutun. Yalnızca kişisel bütçeleri kullanmak için kapatın.
+        budget_sharing_title: Bütçe paylaşımı
+        budget_sharing_subtitle: Diğer üyelerin kişisel bütçenizi görüntülemesine veya düzenlemesine izin verin
+        budget_sharing_no_members: '%{moniker} içinde paylaşım yapılacak başka üye yok'
+        budget_sharing_permission_label: '%{name} erişimi'
+        budget_sharing_permissions:
+          none: Erişim yok
+          read_only: Yalnızca görüntüleme
+          read_write: Düzenleyebilir
     profiles:
       destroy:
         cannot_remove_self: Kendinizi hesaptan çıkaramazsınız.
@@ -274,8 +312,8 @@ tr:
     providers:
       akahu_panel:
         step_1_html: "%{link} adresine gidin ve kişisel bir uygulama oluşturun."
-        step_2: Uygulama jetonunuzu ve kullanıcı jetonunuzu kopyalayın.
-        step_3: Jetonları aşağıya yapıştırın, kaydedin, ardından senkronize hesaplarınızı
+        step_2: Uygulama token'ınızı ve kullanıcı token'ınızı kopyalayın.
+        step_3: Token'ları aşağıya yapıştırın, kaydedin, ardından senkronize hesaplarınızı
           bağlayın.
       bank_sync:
         lede: İşlemlerin, bakiyelerin ve varlıkların otomatik olarak Sure'a akması
@@ -465,7 +503,7 @@ tr:
         read_only_body: İşlem yapma, iptal etme, çekme, dışa aktarma, defter, Earn,
           stake etme veya transfer izinleri vermeyin. Sure yalnızca bakiyeleri, varlıkları
           ve spot işlem gerçekleşmelerini içe aktarır.
-        read_only_title: Yalnızca salt okunur borsa senkronizasyonu
+        read_only_title: Salt okunur borsa senkronizasyonu
         setup_accounts: Hesabı kur
         step1_html: <a href="https://pro.kraken.com/app/settings/api" target="_blank"
           rel="noopener noreferrer" class="underline">Kraken API ayarları</a> sayfasına
@@ -494,7 +532,7 @@ tr:
         last_synced: "%{time} önce senkronize edildi"
         no_recent_sync: Senkronizasyon gecikti
         reconsent_needed:
-          one: 1 gün içinde yeniden onay gerekiyor
+          one: "%{count} gün içinde yeniden onay gerekiyor"
           other: "%{count} gün içinde yeniden onay gerekiyor"
         reconsent_required: Yeniden onay gerekiyor
         registration_needed: Kayıt gerekiyor
@@ -526,14 +564,14 @@ tr:
         need_help: Yardıma mı ihtiyacınız var?
       simplefin_panel:
         save_and_connect: Kaydet ve bağlan
-        setup_token_label: Kurulum Jetonu
-        setup_token_placeholder: SimpleFIN kurulum jetonunu yapıştırın
-        step_1_html: Tek seferlik kurulum jetonu için %{link} adresine gidin.
-        step_2: Jetonu aşağıya yapıştırın ve bağlanın.
+        setup_token_label: Kurulum Anahtarı
+        setup_token_placeholder: SimpleFIN kurulum anahtarını yapıştırın
+        step_1_html: Tek seferlik kurulum anahtarı için %{link} adresine gidin.
+        step_2: Anahtarı aşağıya yapıştırın ve bağlanın.
         step_3: Ardından senkronize hesaplarınızı bağlamak için Hesaplar'a gidin.
       status:
         err: Hata
-        off: Yapılandırılmadı
+        "off": Yapılandırılmadı
         ok: Bağlandı
         warn: İşlem gerekiyor
       sync_all: Tümünü senkronize et
@@ -572,14 +610,150 @@ tr:
         sophtron: ABD ve Kanada bankalarını ve kurumlarını bağlayın.
         wise: Wise çoklu para birimi bakiyelerinizi ve uluslararası transferlerinizi
           otomatik olarak senkronize edin.
+        redbark: Avustralya banka hesaplarını Redbark açık bankacılık ile senkronize edin.
+        monobank: Ukrayna Monobank kartlarını ve kumbaralarını kişisel bir API token ile senkronize edin.
+        fio: Bir Fio banka hesabını salt okunur bir API token ile senkronize edin.
+        coinspot: CoinSpot bakiyelerini, AUD değerlerini, transferleri, para yatırma, para çekme ve emir geçmişini salt okunur bir API anahtarıyla senkronize edin.
+        onchain_wallet: Gözetimsiz Bitcoin, EVM ve Solana cüzdanlarını herkese açık adresleri üzerinden takip edin.
+        trading212: Trading 212 yatırım portföyünüzü salt okunur bir API anahtarıyla senkronize edin.
+        trade_republic: Trade Republic yatırım hesabınızı güvenli, salt okunur web girişiyle senkronize edin.
       up_panel:
-        step_1_html: "%{link} adresine gidin ve kişisel bir erişim jetonu oluşturun."
-        step_2: Kişisel erişim jetonunuzu kopyalayın.
-        step_3: Jetonu aşağıya yapıştırın, kaydedin, ardından senkronize hesaplarınızı
+        step_1_html: "%{link} adresine gidin ve kişisel bir erişim token'ı oluşturun."
+        step_2: Kişisel erişim token'ınızı kopyalayın.
+        step_3: Token'ı aşağıya yapıştırın, kaydedin, ardından senkronize hesaplarınızı
           bağlayın.
       update:
         no_changes: Herhangi bir değişiklik yapılmadı
         updated_successfully: Sağlayıcı ayarları başarıyla güncellendi
+      drawer_trust_statement_encryption_unconfigured: Salt okunur erişim. Sure asla para transferi yapamaz. Üretim ortamında sağlayıcı kimlik bilgilerini saklamadan önce açık şifreleme anahtarlarını yapılandırın.
+      provider_setup_encryption_warning:
+        title: Şifreleme anahtarları eksik
+        message: Bu kendi sunucunuzda barındırılan kurulumda açık Active Record şifreleme anahtarları yapılandırılmamış. Üretim ortamında sağlayıcı kimlik bilgilerini kaydetmeden önce primary_key, deterministic_key ve key_derivation_salt değerlerini yapılandırın.
+      coinspot_panel:
+        step1_html: <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot API ayarlarına</a> gidin
+        step2: Bakiyelere ve geçmişe salt okunur erişimi olan bir API anahtarı oluşturun.
+        step3: API anahtarını ve gizli anahtarı aşağıya yapıştırın.
+        read_only_title: Salt okunur borsa senkronizasyonu
+        read_only_body: Gönderme, para çekme, alım satım veya transfer izinleri vermeyin. Sure yalnızca bakiyeleri, AUD değerlerini, transferleri, para yatırma, para çekme ve tamamlanmış emir geçmişini içe aktarır.
+        default_connection_name: CoinSpot
+        add_connection: CoinSpot bağlantısı ekle
+        update_connection: Bağlantıyı güncelle
+        connection_name_label: Bağlantı adı
+        connection_name_placeholder: Ana CoinSpot
+        api_key_label: API Anahtarı
+        api_key_placeholder: CoinSpot API anahtarınızı yapıştırın
+        keep_api_key_placeholder: Mevcut API anahtarını korumak için boş bırakın
+        api_secret_label: API Gizli Anahtarı
+        api_secret_placeholder: CoinSpot API gizli anahtarınızı yapıştırın
+        keep_api_secret_placeholder: Mevcut API gizli anahtarını korumak için boş bırakın
+        setup_accounts: Hesabı kur
+        syncing: Senkronize ediliyor...
+        sync: Senkronize et
+        disconnect: Bağlantıyı kes
+        disconnect_confirm: '%{name} bağlantısını kesmek istediğinizden emin misiniz?'
+      onchain_wallet_panel:
+        add_wallet: Cüzdan ekle
+        advanced: Gelişmiş
+        disconnect_all: Tüm cüzdanların bağlantısını kes
+        disconnect_all_confirm: Bu işlem takip edilen tüm adresleri ve bunlara ait hesapları kaldırır. Devam edilsin mi?
+        etherscan_api_key_label: Etherscan API anahtarı (isteğe bağlı)
+        etherscan_api_key_placeholder: Bir Etherscan API anahtarı yapıştırın
+        etherscan_hint: Ethereum verileri anahtar olmadan da okunabilir. Etherscan anahtarı eklemek yalnızca Ethereum için hız sınırını yükseltir.
+        keep_etherscan_api_key: Mevcut anahtarı korumak için boş bırakın
+        manage_wallets: Cüzdanları yönet
+        keyless_body: Sure yalnızca herkese açık zincir verilerini okur. Hiçbir anahtar, kurtarma ifadesi veya imza kullanılmaz ve hiçbir şey harcanamaz.
+        keyless_title: Salt okunur, anahtar gerekmez
+        save: Kaydet
+        sync_start_date_hint: Bu tarihten önceki transferler yok sayılır. Blok gezgininin bildirdiği her şeyi içe aktarmak için boş bırakın.
+        sync_start_date_label: Şu tarihten önceki transferleri yok say
+      monobank_panel:
+        step_1_html: '%{link} adresine gidin, Monobank uygulamasıyla giriş yapın ve kişisel bir token oluşturun.'
+        step_2: Token'ı kopyalayın — yalnızca bir kez gösterilir.
+        step_3: Token'ı aşağıya yapıştırıp kaydedin, ardından takip etmek istediğiniz kartları ve kumbaraları bağlayın.
+      fio_panel:
+        step_1_html: '%{link} internet bankacılığına giriş yapın ve Settings → API bölümünü açın.'
+        step_2: Salt okunur erişimli bir token oluşturun ("Sledování účtu"). Bu işlem güçlü kimlik doğrulama gerektirir ve token en fazla 180 gün geçerlidir.
+        step_3: Token'ı aşağıya yapıştırıp kaydedin. Bir token yalnızca bir hesaba erişir; bu nedenle her Fio hesabı için ayrı bir bağlantı ekleyin.
+      trade_republic_panel:
+        encryption_warning:
+          title: Şifreleme yapılandırılmamış
+          message: Active Record Encryption yapılandırılana kadar Trade Republic kimlik bilgileri ve oturum verileri güvenli şekilde saklanamaz.
+        steps:
+          step_1: Trade Republic uygulamasında kullandığınız telefon numarasını ve PIN'i girip kaydedin.
+          step_2: İstendiğinde doğrulama uygulamanızdaki kodu girin.
+          step_3: İstendiğinde girişi Trade Republic uygulamanızda onaylayın.
+        phone_number_label: Telefon numarası
+        phone_number_placeholder_new: +49 170 1234567
+        phone_number_placeholder_existing: Mevcut telefon numarasını korumak için boş bırakın
+        pin_label: PIN
+        pin_placeholder_new: Trade Republic uygulama PIN'iniz
+        pin_placeholder_existing: Mevcut PIN'i korumak için boş bırakın
+        currency_label: Hesap para birimi
+        connect: Giriş yap
+        confirm_login: Girişi kontrol et
+        complete_login: Devam et
+        authenticator_code_label: Doğrulama kodu (istenirse)
+        authenticator_code_placeholder: 6 haneli kod
+        push_login_notice: Girişi şimdi Trade Republic uygulamanızda onaylayın. Sure arka planda otomatik olarak kontrol eder. Durumu kendiniz de kontrol edebilirsiniz.
+        check_login_status: Durumu şimdi kontrol et
+        authenticator_code_notice: Doğrulama uygulamanızdaki kodu girin.
+        approval_pending: Giriş başlatıldı. Trade Republic uygulamasında onaylayın; Sure otomatik olarak kontrol ediyor.
+        awaiting_confirmation: Trade Republic uygulamasında onay bekleniyor.
+        awaiting_authenticator_code: Doğrulama kodu gerekli.
+        login_expired: Onay isteğinin süresi doldu.
+        restart_login: Girişi yeniden başlat
+        connection_success:
+          title: Trade Republic başarıyla bağlandı
+          message: Trade Republic bağlantınız hazır.
+          description: Sure, Trade Republic verilerinizi arka planda senkronize ediyor.
+          close: Bitti
+        qr_login: QR kodla giriş yap
+        qr_cancel: QR girişini iptal et
+        qr_back_to_credentials: Telefon numarası ve PIN'e dön
+        qr_loading: QR kod hazırlanıyor …
+        qr_instruction: QR kodu Trade Republic uygulamanızla tarayın ve girişi onaylayın.
+        qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
+        qr_error: QR girişi başlatılamadı. Lütfen tekrar deneyin.
+        save_configuration: Kaydet ve Girişi Başlat
+        update_configuration: Yapılandırmayı Güncelle
+        sync: Senkronize et
+        disconnect: Trade Republic bağlantısını kes
+        disconnect_confirm: Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir.
+        status_configured_prefix: Bağlandı. Keşfedilen hesapları yönetmek için
+        accounts_tab: Hesaplar
+        setup_accounts: Hesapları kur
+        accounts_discovered:
+          one: '%{count} Trade Republic hesabı keşfedildi.'
+          other: '%{count} Trade Republic hesabı keşfedildi.'
+        status_configured_suffix: sekmesine gidin.
+        not_configured: Yapılandırılmadı.
+      trading212_panel:
+        steps:
+          step_1: Trading 212 → Settings → API bölümüne gidin (web veya mobil uygulama).
+          step_2: Yeni bir API anahtarı oluşturun — Trading 212 size bir API ID ve bir Secret Key gösterecektir.
+          step_3: İkisini de aşağıya yapıştırın, ortamınızı ve hesap para biriminizi seçin, ardından kaydedin.
+        api_key_label: API ID
+        api_key_placeholder_new: Trading 212 API ID'nizi yapıştırın
+        api_key_placeholder_existing: Mevcut API ID'yi korumak için boş bırakın
+        api_secret_label: Gizli Anahtar
+        api_secret_placeholder_new: Trading 212 Gizli Anahtarınızı yapıştırın
+        api_secret_placeholder_existing: Mevcut Gizli Anahtarı korumak için boş bırakın
+        environment_label: Ortam
+        environment_live: Gerçek hesap
+        environment_demo: Demo hesap
+        currency_label: Hesap para birimi
+        save_configuration: Yapılandırmayı Kaydet
+        update_configuration: Yapılandırmayı Güncelle
+        sync: Senkronize et
+        syncing: Senkronize ediliyor...
+        disconnect: Trading 212 hesabının bağlantısını kes
+        disconnect_confirm: Trading 212 bağlantısı kesilsin mi?
+        default_account_name: Trading 212 Hesabı
+        add_account: Başka bir hesap ekle
+        status_configured_prefix: Yapılandırıldı. Keşfedilen hesapları yönetmek için
+        accounts_tab: Hesaplar
+        status_configured_suffix: sekmesine gidin.
+        not_configured: Yapılandırılmadı.
     securities:
       show:
         disable_mfa: 2FA'yı devre dışı bırak
@@ -588,7 +762,7 @@ tr:
         enable_mfa: 2FA'yı etkinleştir
         encryption_warning:
           generate: 'Şununla bir set oluşturun: bin/rails db:encryption:init'
-          intro: 'Hassas veriler (API anahtarları, sağlayıcı jetonları, MFA gizli
+          intro: 'Hassas veriler (API anahtarları, sağlayıcı token''ları, MFA gizli
             anahtarları ve kişisel veriler) şu anda şifrelenmeden depolanıyor. Şifrelemeyi
             etkinleştirmek için ortam değişkenlerinizde veya Rails kimlik bilgilerinizde
             aşağıdaki anahtarları ayarlayın:'
@@ -651,6 +825,8 @@ tr:
       transactions_section_title: İşlemler
       users_label: Kullanıcılar
       whats_new_label: Yenilikler
+      background_jobs_label: Arka plan işleri
+      system_health_label: Sistem durumu
     settings_nav_link_large:
       next: Sonraki
       previous: Geri
@@ -659,6 +835,52 @@ tr:
       change: Fotoğrafı değiştir
       choose: Fotoğraf yükle
       choose_label: "(isteğe bağlı)"
+    background_jobs:
+      show:
+        page_title: Arka plan işleri
+        title: Çalışan durumu
+        subtitle: 'Canlı Sidekiq çalışma durumu: çalışan süreçleri, kuyruk derinlikleri ve yeniden deneme/başarısız kümeleri.'
+        redis_unreachable: Sidekiq durumu kullanılamıyor (Redis'e ulaşılamıyor). İşlerin canlılığı bilinmediği için eylemler devre dışı.
+        operations_title: Devam eden işlemler
+        operations_subtitle: Tüm ailelerde henüz son duruma ulaşmamış senkronizasyonlar, içe aktarmalar ve dışa aktarmalar. Görünür bir işi olmadan 30 dakikadan uzun süre boşta kalan işlemlerin kaybolduğu varsayılır ve bu şekilde işaretlenebilir.
+        empty: Devam eden işlem yok.
+        missing_value: '-'
+        stats:
+          workers: Çalışanlar
+          busy: Meşgul
+          enqueued: Kuyrukta
+          retries: Yeniden denenecek
+          scheduled: Zamanlanmış
+          dead: Başarısız
+          queue_label: '%{name}: %{size} · %{latency}s gecikme'
+        table:
+          type: İşlem
+          family: Aile
+          status: Durum
+          last_activity: Son etkinlik
+          liveness: Canlılık
+          action: Eylem
+      operation:
+        ago: '%{time} önce'
+        sync_label: Senkronizasyon · %{type}
+        running: Çalışıyor
+        queued: Kuyrukta
+        recent: Yakın zamanda etkin
+        unknown: Bilinmiyor
+        stuck: Takıldı — kaybolduğu varsayılıyor
+        confirm: Bu işlem kayıp olarak işaretlensin mi? Kayıt, yeniden denenebilmesi için son bir duruma taşınır. Asıl verilere dokunulmaz.
+        missing_value: '-'
+        actions:
+          mark_stale: Eskimiş olarak işaretle
+          mark_failed: Başarısız olarak işaretle
+          release_claim: Kilidi serbest bırak
+      cancel:
+        cancelled: '%{type} kayıp olarak işaretlendi.'
+        not_cancellable: Bu işlem şu anda değiştirilemez — işi hâlâ kuyrukta veya çalışıyor olabilir. 30 dakika boşta kaldıktan sonra tekrar deneyin.
+        cancelled_error: Bir yönetici tarafından başarısız olarak işaretlendi — arka plan işinin kaybolduğu varsayıldı.
+    budget_shares:
+      update:
+        success: Bütçe paylaşım ayarları güncellendi
   views:
     settings:
       payments:

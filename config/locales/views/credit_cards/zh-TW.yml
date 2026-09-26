@@ -17,12 +17,3 @@ zh-TW:
       treat_balance_as_available_credit_label: 餘額為可用額度
     new:
       title: 請輸入信用卡詳細資訊
-    overview:
-      amount_owed: 欠款總額
-      annual_fee: 年費
-      apr: 年利率
-      available_credit: 可用額度
-      edit_account_details: 編輯帳戶詳細資料
-      expiration_date: 到期日期
-      minimum_payment: 最低還款額
-      unknown: 未知

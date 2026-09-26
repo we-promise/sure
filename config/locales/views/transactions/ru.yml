@@ -3,7 +3,7 @@ ru:
   transactions:
     activity_labels:
       buy: Покупка
-      contribution: Вклад
+      contribution: Пополнение
       dividend: Дивиденды
       exchange: Обмен
       fee: Комиссия
@@ -11,13 +11,13 @@ ru:
       other: Другое
       reinvestment: Реинвестирование
       sell: Продажа
-      sweep_in: Ввод
-      sweep_out: Вывод
+      sweep_in: Автоперевод (зачисление)
+      sweep_out: Автоперевод (списание)
       transfer: Перевод
       withdrawal: Снятие
     attachments:
       attachment_deleted: Вложение успешно удалено
-      browse_to_add: Просмотреть для добавления файлов
+      browse_to_add: Выберите файлы для добавления
       cannot_exceed: Не может превышать %{count} вложений на операцию
       delete_failed: Не удалось удалить вложение. Пожалуйста, попробуйте снова или
         свяжитесь с поддержкой.
@@ -62,7 +62,7 @@ ru:
         categorized:
           few: "%{count} операции категоризированы"
           many: "%{count} операций категоризировано"
-          one: 1 операция категоризирована
+          one: '%{count} операция категоризирована'
           other: "%{count} операции категоризированы"
         rule_creation_failed: Операции категоризированы, но правило не удалось создать
           (возможно, оно уже существует).
@@ -92,7 +92,7 @@ ru:
         transaction_count:
           few: "%{count} операции"
           many: "%{count} операций"
-          one: 1 операция
+          one: '%{count} операция'
           other: "%{count} операции"
         transactions_hint: Снимите галочку, чтобы исключить операцию, или назначьте
           ей другую категорию прямо в её строке.
@@ -104,7 +104,7 @@ ru:
       cancel: Отмена
       conversion_note: 'Преобразовано из операции: %{original_name} (%{original_date})'
       date_label: 'Дата:'
-      description: Преобразуйте эту операцию в торговлю с деталями безопасности
+      description: Преобразуйте эту операцию в сделку с ценной бумагой
       errors:
         already_converted: Эта операция уже была преобразована или исключена
         conversion_failed: 'Не удалось преобразовать операцию: %{error}'
@@ -132,7 +132,7 @@ ru:
       price_placeholder: например, 52.15
       qty_or_price_hint: Введите хотя бы количество ИЛИ цену. Остальное будет рассчитано
         из суммы операции (%{amount}).
-      quantity_hint: Количество проданных акций
+      quantity_hint: Количество акций в сделке
       quantity_label: Количество (Акции)
       quantity_placeholder: например, 20
       security_custom: "+ Введите пользовательский тикер"
@@ -140,14 +140,14 @@ ru:
       security_not_listed_hint: Не видите свою ценную бумагу? Выберите "Введите пользовательский
         тикер" внизу списка.
       security_prompt: Выберите ценную бумагу...
-      submit: Преобразовать в торговлю
-      success: Операция преобразована в торговлю
+      submit: Преобразовать в сделку
+      success: Операция преобразована в сделку
       ticker_hint: Введите символ тикера акции/ETF (например, AAPL, MSFT)
       ticker_placeholder: AAPL
       ticker_search_hint: Поиск по символу тикера или названию компании, или введите
         пользовательский тикер
       ticker_search_placeholder: Поиск тикера...
-      title: Преобразовать в торговлю ценными бумагами
+      title: Преобразовать в сделку с ценными бумагами
       trade_type_hint: Покупка или продажа акций ценной бумаги
       trade_type_label: Тип сделки
     create:
@@ -177,6 +177,12 @@ ru:
       tag_search_placeholder: Найти или создать тег
       tags_label: Теги
       transfer: Перевод
+      category_search_placeholder: Поиск категорий
+      create_category: Создать «%{name}»
+      create_category_error: Не удалось создать категорию
+      create_merchant: Создать
+      create_merchant_error: Не удалось создать продавца
+      merchant_search_placeholder: Найдите или создайте продавца
     header:
       edit_categories: Редактировать категории
       edit_imports: Редактировать импорты
@@ -206,11 +212,9 @@ ru:
       drag_drop_title: Перетащите CSV для импорта
       transaction: операция
       transactions: операции
-    mark_recurring: Отметить как повторяющуюся
-    mark_recurring_subtitle: Отслеживайте это как повторяющуюся операцию. Разница
-      в сумме автоматически рассчитывается на основе последних 6 месяцев аналогичных
-      операций.
-    mark_recurring_title: Повторяющаяся операция
+    mark_recurring: Отметить как регулярную
+    mark_recurring_subtitle: Отслеживайте это как регулярную операцию. Разница в сумме автоматически рассчитывается на основе последних 6 месяцев аналогичных операций.
+    mark_recurring_title: Регулярная операция
     merge_duplicate:
       failure: Не удалось объединить операции
       success: Операции успешно объединены
@@ -303,10 +307,9 @@ ru:
       attachments: Вложения
       category_label: Категория
       convert: Преобразовать
-      convert_to_trade_button: Преобразовать в торговлю
-      convert_to_trade_description: Преобразуйте эту операцию в покупку или продажу
-        с деталями безопасности для отслеживания портфеля.
-      convert_to_trade_title: Преобразовать в торговлю ценными бумагами
+      convert_to_trade_button: Преобразовать в сделку
+      convert_to_trade_description: Преобразуйте эту операцию в покупку или продажу ценной бумаги для отслеживания портфеля.
+      convert_to_trade_title: Преобразовать в сделку с ценными бумагами
       date_label: Дата
       delete: Удалить
       delete_subtitle: Это навсегда удалит операцию, повлияет на ваши исторические
@@ -315,15 +318,13 @@ ru:
       description: Описание
       details: Детали
       exclude: Исключить
-      exclude_description: Исключенные операции будут удалены из расчетов бюджета
-        и отчетов.
+      exclude_description: Исключённые операции не будут учитываться в расчётах бюджета
+        и отчётах.
       keep_both: Нет, оставить обе
       loan_payment: Платеж по кредиту
-      mark_recurring: Отметить как повторяющуюся
-      mark_recurring_subtitle: Отслеживайте это как повторяющуюся операцию. Разница
-        в сумме автоматически рассчитывается на основе последних 6 месяцев аналогичных
-        операций.
-      mark_recurring_title: Повторяющаяся операция
+      mark_recurring: Отметить как регулярную
+      mark_recurring_subtitle: Отслеживайте это как регулярную операцию. Разница в сумме автоматически рассчитывается на основе последних 6 месяцев аналогичных операций.
+      mark_recurring_title: Регулярная операция
       memo: Заметка
       merchant_label: Продавец
       merge_duplicate: Да, объединить их
@@ -355,15 +356,19 @@ ru:
       transfer_matcher_description: Свяжите эту операцию с ее аналогом на другом счете.
       transfer_or_debt_payment: Перевод или платеж по долгу?
       uncategorized: "(без категории)"
+      create_bill: Создать регулярный платёж
+      applied_to_title: Платежи, оплаченные этой операцией
+      applied_to_detail: '%{amount} в счёт платежа со сроком %{date}'
+      applied_to_unreviewed: Требует проверки
     split_parent_row:
-      split_label: Разделить
+      split_label: Разделена
     summary:
       expenses: Расходы
       income: Доход
       inflow: Поступления
       outflow: Отток
       total_transactions: Всего операций
-    toggle_recurring_section: Переключить предстоящие повторяющиеся операции
+    toggle_recurring_section: Переключить предстоящие регулярные операции
     transaction:
       activity_type_tooltip: Тип инвестиционной активности
       linked_with_provider: Связано с %{provider}
@@ -374,7 +379,7 @@ ru:
       review_recommended: Рекомендуется проверка
       review_recommended_tooltip: Большая разница в сумме — рекомендуется проверить,
         не является ли это дубликатом
-      split: Разделить
+      split: Разделена
       split_child_tooltip: Часть разделенной операции
       split_tooltip: Эта операция была разделена на несколько записей
     transfer_match:
