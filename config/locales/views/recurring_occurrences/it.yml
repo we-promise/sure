@@ -1,0 +1,53 @@
+---
+it:
+  recurring_occurrences:
+    history_status:
+      paid: Pagata
+      skipped: Saltata
+      missed: Non pagata
+      scheduled: Da pagare
+    show:
+      due_on: Scadenza %{date}
+      paid_of: '%{paid} di %{expected} pagati'
+      paid_headline: '%{amount} pagati'
+      remaining: '%{amount} rimanenti'
+      settled: Pagata per intero
+      overpaid: più del previsto
+      skipped: Saltata
+      missed: Segnata come non pagata
+      payments: Pagamenti
+      manual_payment: Pagamento manuale
+      unlink: Scollega
+      review_heading: Verifica pagamento
+      find_heading: Trova un pagamento
+      add_heading: Aggiungi un altro pagamento
+      other_matches: Altre possibili corrispondenze
+      no_ranked_candidates: Nessuna transazione sembra ancora un pagamento per questa bolletta.
+      search_all: Cerca in tutte le transazioni
+      search_placeholder: Cerca transazioni
+      no_candidates: Nessuna transazione vicina da collegare.
+      no_search_results: Nessun risultato per %{query}.
+      link_payment: Collega pagamento
+      not_this_one: Non è questa
+      cant_find: Non trovi la transazione?
+      manual_explainer: Registra un pagamento che sai essere avvenuto quando nessuna transazione qui corrisponde.
+      manual_amount_label: Importo
+      manual_date_label: Data
+      record_payment: Registra pagamento
+      mark_paid: Segna come pagata
+      mark_paid_hint: Salda l'importo rimanente senza registrare una transazione.
+      skip: Salta
+      snooze_week: Rimanda di una settimana
+      reopen: Riapri
+      view_bill: Visualizza bolletta completa
+    mark_paid:
+      success: Bolletta segnata come pagata
+    skip:
+      success: Bolletta saltata
+    reopen:
+      success: Bolletta riaperta
+    snooze:
+      success: Rimandata al %{date}
+      invalid_date: Impossibile leggere questa data
+    override_amount:
+      success: Importo previsto aggiornato

@@ -13,6 +13,18 @@ it:
       none: Nessuno
       subtype_prompt: Seleziona tipo di prestito
       subtype_none: Nessuno
+      rate_type_adjustable: Rivedibile
+      rate_type_fixed: Fisso
+      rate_type_variable: Variabile
+      rate_changes: Variazioni del tasso
+      rate_changes_hint: Ogni riga imposta il tasso applicato dalla sua data di decorrenza fino alla successiva. Reinserire una data sostituisce quella riga invece di aggiungerne una seconda.
+      rate_changes_empty: Nessuna variazione del tasso registrata. Il prestito segue il tasso di interesse indicato sopra.
+      rate_change_effective_date: Data di decorrenza
+      rate_change_rate: Tasso
+      rate_change_add: Aggiungi variazione del tasso
+      rate_change_remove: Rimuovi
+      start_date: Data di erogazione
+      start_date_hint: Quando il prestito è stato erogato. Lascia vuoto per usare la data di apertura del conto.
     new:
       title: Inserisci i dettagli del prestito
     overview:
@@ -24,6 +36,7 @@ it:
       term: Durata
       type: Tipo
       unknown: Sconosciuto
+      original_payoff_date: Data di estinzione originale
     tabs:
       overview:
         interest_rate: Tasso di Interesse
@@ -35,3 +48,17 @@ it:
         type: Tipo
         unknown: Sconosciuto
         edit_loan_details: "Modifica dettagli prestito"
+        original_payoff_date: Data di estinzione originale
+      schedule:
+        date: Data
+        description: Proiezione basata su capitale originale, tasso e durata, a partire dal %{start_date}. I pagamenti extra non sono considerati.
+        variable_rate_notice: Il tasso di questo prestito cambia nel tempo. Il piano viene riammortizzato a ogni variazione registrata, mantenendo la data di estinzione originale e ricalcolando la rata; una variazione non ancora registrata modificherà questi valori.
+        opening_payment: Rata iniziale
+        interest: Interessi
+        monthly_payment: Rata mensile
+        number: N.
+        payment: Rata
+        principal: Capitale
+        remaining_balance: Debito residuo
+        total_cost: Costo totale
+        total_interest: Interessi totali

@@ -2,46 +2,46 @@
 it:
   splits:
     new:
-      title: Dividi transazione
-      description: Dividi questa transazione in più voci con categorie e importi diversi.
-      submit: Dividi transazione
+      title: Suddividi transazione
+      description: Suddividi questa transazione in più voci con categorie e importi diversi.
+      submit: Suddividi transazione
       cancel: Annulla
-      add_row: Aggiungi divisione
+      add_row: Aggiungi suddivisione
       remove_row: Rimuovi
       remaining: Rimanente
-      amounts_must_match: Gli importi delle divisioni devono essere uguali all'importo della transazione originale.
+      amounts_must_match: Gli importi delle suddivisioni devono essere uguali all'importo della transazione originale.
       name_label: Nome
-      name_placeholder: Nome divisione
+      name_placeholder: Nome suddivisione
       amount_label: Importo
       category_label: Categoria
       uncategorized: "(non categorizzata)"
       original_name: "Nome:"
       original_date: "Data:"
       original_amount: "Importo"
-      split_number: "Divisione n.%{number}"
+      split_number: "Suddivisione n.%{number}"
     create:
-      success: Transazione divisa con successo
-      not_splittable: Questa transazione non può essere divisa.
+      success: Transazione suddivisa con successo
+      not_splittable: Questa transazione non può essere suddivisa.
     destroy:
-      success: Divisione transazione annullata con successo
+      success: Suddivisione transazione annullata con successo
     show:
-      title: Voci divise
-      description: Questa transazione è stata divisa nelle seguenti voci.
-      button_title: Dividi transazione
-      button_description: Dividi questa transazione in più voci con categorie e importi diversi.
-      button: Dividi
-      unsplit_title: Annulla divisione
-      unsplit_button: Annulla divisione
-      unsplit_confirm: Questo rimuoverà tutte le voci divise e ripristinerà la transazione originale.
+      title: Voci suddivise
+      description: Questa transazione è stata suddivisa nelle seguenti voci.
+      button_title: Suddividi transazione
+      button_description: Suddividi questa transazione in più voci con categorie e importi diversi.
+      button: Suddividi
+      unsplit_title: Annulla suddivisione
+      unsplit_button: Annulla suddivisione
+      unsplit_confirm: Questo rimuoverà tutte le voci suddivise e ripristinerà la transazione originale.
     edit:
-      title: Modifica divisione
-      description: Modifica le voci divise per questa transazione.
-      submit: Aggiorna divisione
-      not_split: Questa transazione non è divisa.
+      title: Modifica suddivisione
+      description: Modifica le voci suddivise per questa transazione.
+      submit: Aggiorna suddivisione
+      not_split: Questa transazione non è suddivisa.
     update:
-      success: Divisione aggiornata con successo
+      success: Suddivisione aggiornata con successo
     child:
-      title: Parte di una divisione
-      description: Questa voce fa parte di una transazione divisa.
-      edit_split: Modifica divisione
-      unsplit: Annulla divisione
+      title: Parte di una suddivisione
+      description: Questa voce fa parte di una transazione suddivisa.
+      edit_split: Modifica suddivisione
+      unsplit: Annulla suddivisione

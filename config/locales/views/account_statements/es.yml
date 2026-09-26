@@ -21,12 +21,12 @@ es:
         not_expected: No esperado
     create:
       duplicates:
-        one: Se omitió 1 extracto duplicado.
+        one: 'Se omitió %{count} extracto duplicado.'
         other: "Se omitieron %{count} extractos duplicados."
       invalid_file_type: Sube un extracto en PDF, CSV o XLSX que no supere el límite de tamaño.
       no_files: Selecciona al menos un archivo de extracto.
       success:
-        one: 1 extracto subido.
+        one: "%{count} extracto subido."
         other: "%{count} extractos subidos."
     destroy:
       failure: No se pudo eliminar el extracto.
@@ -45,7 +45,7 @@ es:
       linked_title: Extractos vinculados
       no_suggestion: Sin sugerencia
       storage_used: Almacenamiento usado
-      title: Bóveda de extractos
+      title: 'Archivo de extractos'
       unmatched_title: Bandeja de entrada sin asignar
       upload_description: Sube extractos a la bandeja de entrada o elige una cuenta para vincularlos de inmediato.
       upload_title: Subir extractos

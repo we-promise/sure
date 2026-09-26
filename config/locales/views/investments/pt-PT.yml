@@ -189,6 +189,9 @@ pt-PT:
       other:
         short: Outro
         long: Outro Investimento
+      cash_management:
+        short: CMA
+        long: Conta de Gestão de Liquidez (CMA)
     value_tooltip:
       cash: Dinheiro
       holdings: Posições

@@ -7,7 +7,7 @@ it:
       member: Membro
       permission: Permesso
       shared: Condiviso
-      no_members: Nessun altro membro nel tuo %{moniker} con cui condividere
+      no_members: Nessun altro membro nel tuo account %{moniker} con cui condividere
       permissions:
         full_control: Controllo completo
         full_control_description: Può visualizzare, modificare e gestire le transazioni

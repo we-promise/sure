@@ -19,14 +19,14 @@ pt-PT:
     sync_status:
       no_accounts: Não foram encontradas contas
       all_synced:
-        one: 1 conta sincronizada
+        one: "%{count} conta sincronizada"
         other: "%{count} contas sincronizadas"
       partial: "%{linked} sincronizadas, %{unlinked} precisam de configuração"
     institution_summary:
       none: Não existem instituições ligadas
       one: 1 instituição
       count:
-        one: 1 instituição
+        one: "%{count} instituição"
         other: "%{count} instituições"
   up_items:
     provider_panel:
@@ -59,7 +59,7 @@ pt-PT:
       link_accounts: Associar contas
     link_accounts:
       success:
-        one: Associada 1 conta Up.
+        one: "Associada %{count} conta Up."
         other: "Associadas %{count} contas Up."
       no_accounts_selected: Selecione pelo menos uma conta.
       no_credentials_configured: Configure a Up nas definições do serviço primeiro.
@@ -80,7 +80,7 @@ pt-PT:
       no_account_selected: Selecione uma conta Up para associar.
     setup_accounts:
       title: Associar contas Up
-      subtitle: Escolha a forma como cada conta Up deve aparecer na Sure.
+      subtitle: Escolha a forma como cada conta Up deve aparecer no Sure.
       no_credentials: Configure primeiro as credenciais Up.
       api_error: Não foi possível obter as contas Up.
       fetch_failed: Não foi possível obter as contas
@@ -97,7 +97,7 @@ pt-PT:
       cancel: Cancelar
     complete_account_setup:
       success:
-        one: Criada 1 conta Up.
+        one: "Criada %{count} conta Up."
         other: "Criadas %{count} contas Up."
       all_skipped: Não foi criada nenhuma conta Up.
       no_accounts: Nenhuma conta Up foi selecionada.

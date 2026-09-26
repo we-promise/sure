@@ -17,13 +17,13 @@ pt-PT:
         notes_placeholder: Introduza uma nota a ser aplicada às transações selecionadas.
         overview: Visão geral
         save: Guardar
-        tags_label: Tags
+        tags_label: Etiquetas
         transactions_section: Transações
     unknown_name: Transação desconhecida
     selection_bar:
       duplicate: Duplicar
       edit: Editar
-      selected: selecionado
+      selected: selecionada(s)
     form:
       details: Detalhes
       account: Conta
@@ -49,8 +49,8 @@ pt-PT:
       create_merchant_error: Não foi possível criar o comerciante
       merchant_search_placeholder: Procurar ou criar comerciante
       submit: Adicionar transação
-      tag_search_placeholder: Procurar ou criar tag
-      tags_label: Tags
+      tag_search_placeholder: Procurar ou criar etiqueta
+      tags_label: Etiquetas
       transfer: Transferência
     create:
       created: Transação criada
@@ -59,7 +59,7 @@ pt-PT:
     new:
       new_transaction: Nova transação
     show:
-      keep_both: Não, manter ambos
+      keep_both: Não, manter ambas
       loan_payment: Pagamento de Empréstimo
       mark_recurring: Marcar como Recorrente
       mark_recurring_subtitle: Acompanhe isto como uma transação recorrente. A variação de montante é calculada automaticamente com base nos últimos 6 meses de transações semelhantes.
@@ -99,9 +99,9 @@ pt-PT:
       note_placeholder: Introduza uma nota
       overview: Visão geral
       settings: Definições
-      tags_label: Tags
+      tags_label: Etiquetas
       tab_transactions: Transações
-      tab_upcoming: Próximo
+      tab_upcoming: Próximas
       uncategorized: "(sem categoria)"
       additional_details: "Detalhes adicionais"
       payee: "Beneficiário"
@@ -109,8 +109,12 @@ pt-PT:
       memo: "Memorando"
       provider_extras: "Extras do serviço"
       transfer_or_debt_payment: "Transferência ou Pagamento de Dívida?"
-      open_matcher: "Abrir correspondente"
+      open_matcher: "Abrir correspondência"
       convert: "Converter"
+      create_bill: Criar uma fatura
+      applied_to_title: Faturas pagas por esta transação
+      applied_to_detail: '%{amount} para a fatura com vencimento a %{date}'
+      applied_to_unreviewed: Precisa de revisão
     activity_labels:
       buy: Compra
       sell: Venda
@@ -130,9 +134,9 @@ pt-PT:
     mark_recurring_title: Transação Recorrente
     potential_duplicate_title: Possível duplicado detetado
     potential_duplicate_description: Esta transação pendente pode ser a mesma que a transação efetuada abaixo. Nesse caso, funda-as para evitar dupla contagem.
-    keep_both: Não, manter ambos
+    keep_both: Não, manter ambas
     split_parent_row:
-      split_label: "Dividir"
+      split_label: "Dividida"
     transfer_match:
       auto_matched: Correspondência automática
       auto_matched_short: A/M
@@ -146,10 +150,10 @@ pt-PT:
       linked_with_provider: Ligada a %{provider}
       activity_type_tooltip: Tipo de atividade de investimento
       possible_duplicate: Duplicado?
-      potential_duplicate_tooltip: Esta pode ser um duplicado de outra transação
+      potential_duplicate_tooltip: Isto pode ser um duplicado de outra transação
       review_recommended: Rever
-      review_recommended_tooltip: Grande diferença de montante — recomenda-se rever para verificar se esta é um duplicado
-      split: Dividir
+      review_recommended_tooltip: Grande diferença de montante — recomenda-se rever para verificar se se trata de um duplicado
+      split: Dividida
       split_tooltip: Esta transação foi dividida em múltiplas entradas
       split_child_tooltip: Parte de uma transação dividida
     merge_duplicate:
@@ -175,7 +179,7 @@ pt-PT:
       edit_categories: Editar categorias
       edit_imports: Editar importações
       edit_merchants: Editar comerciantes
-      edit_tags: Editar tags
+      edit_tags: Editar etiquetas
       import: Importar
     index:
       title: "Transações"
@@ -185,22 +189,22 @@ pt-PT:
       new_rule: "Nova regra"
       edit_rules: "Editar regras"
       edit_categories: "Editar categorias"
-      edit_tags: "Editar tags"
+      edit_tags: "Editar etiquetas"
       edit_merchants: "Editar comerciantes"
       edit_imports: "Editar importações"
       new_transaction: "Nova transação"
       categorize_button:
-        one: "Categorizar (1)"
+        one: "Categorizar (%{count})"
         other: "Categorizar (%{count})"
     categorizes:
       show:
         exit: "Sair"
         skip: "Saltar"
         remaining:
-          one: "1 transação sem categoria restante"
+          one: "%{count} transação sem categoria restante"
           other: "%{count} transações sem categoria restantes"
         transaction_count:
-          one: "1 transação"
+          one: "%{count} transação"
           other: "%{count} transações"
         transactions_hint: "Desmarque para excluir uma transação, ou atribua-lhe uma categoria diferente diretamente na sua linha."
         assign_category: "Atribuir uma categoria"
@@ -219,7 +223,7 @@ pt-PT:
         all_done: "Todas as transações estão categorizadas"
       create:
         categorized:
-          one: "1 transação categorizada"
+          one: "%{count} transação categorizada"
           other: "%{count} transações categorizadas"
         rule_creation_failed: "Transações categorizadas, mas a regra não pôde ser criada (pode já existir)."
       entry_row:
@@ -335,7 +339,7 @@ pt-PT:
       form:
         toggle_selection_checkboxes: Alternar todas as caixas de seleção
         search_placeholder: "Procurar transações ..."
-        filter: "Filtro"
+        filter: "Filtrar"
     attachments:
       cannot_exceed: "Não pode exceder %{count} anexos por transação"
       uploaded_one: "Anexo carregado com sucesso"
@@ -350,7 +354,7 @@ pt-PT:
       no_attachments: "Sem anexos ainda"
       select_up_to: "Selecione até %{count} ficheiros (imagens ou PDFs, máx. %{size}MB cada) • %{used} de %{count} utilizados"
       files:
-        one: "Ficheiro (1)"
+        one: "Ficheiro (%{count})"
         other: "Ficheiros (%{count})"
       browse_to_add: "Procure para adicionar ficheiros"
       max_reached: "Limite máximo de ficheiros atingido (%{count}/%{max}). Elimine um ficheiro existente para carregar outro."

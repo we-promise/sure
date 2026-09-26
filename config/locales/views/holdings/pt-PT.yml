@@ -7,10 +7,10 @@ pt-PT:
       success: Posição eliminada
       cannot_delete: Não é possível eliminar esta posição
     update:
-      success: Base de custo guardada.
-      error: Valor de base de custo inválido.
+      success: Custo de aquisição guardado.
+      error: Valor de custo de aquisição inválido.
     unlock_cost_basis:
-      success: Base de custo desbloqueada. Poderá ser atualizada na próxima sincronização.
+      success: Custo de aquisição desbloqueado. Poderá ser atualizado na próxima sincronização.
     remap_security:
       success: Título atualizado com sucesso.
       security_not_found: Não foi possível encontrar o título selecionado.
@@ -29,19 +29,19 @@ pt-PT:
     cost_basis_cell:
       unknown: "--"
       set: Definir
-      set_cost_basis_header: "Definir base de custo para %{ticker} (%{qty} ações)"
-      total_cost_basis_label: Base de custo total
+      set_cost_basis_header: "Definir custo de aquisição para %{ticker} (%{qty} ações)"
+      total_cost_basis_label: Custo de aquisição total
       or_per_share_label: "Ou introduzir por ação:"
       per_share: por ação
       cancel: Cancelar
       save: Guardar
-      overwrite_confirm_title: Substituir base de custo?
-      overwrite_confirm_body: "Isto irá substituir a base de custo atual de %{current}."
+      overwrite_confirm_title: Substituir custo de aquisição?
+      overwrite_confirm_body: "Isto irá substituir o custo de aquisição atual de %{current}."
     holding:
       per_share: por ação
       shares: "%{qty} ações"
       unknown: "--"
-      no_cost_basis: Sem base de custo
+      no_cost_basis: Sem custo de aquisição
     index:
       average_cost: Custo médio
       holdings: Posições
@@ -50,6 +50,9 @@ pt-PT:
       no_holdings: Nenhuma posição para mostrar.
       return: Retorno total
       weight: Peso
+      positions:
+        one: '%{count} posição'
+        other: '%{count} posições'
     missing_price_tooltip:
       description: Este investimento tem valores em falta e não conseguimos calcular
         os seus retornos ou valor.
@@ -88,11 +91,11 @@ pt-PT:
       trade_history_entry: "%{qty} ações de %{security} a %{price}"
       total_return_label: Retorno Total
       unknown: Desconhecido
-      cost_basis_locked_label: A base de custo está bloqueada
-      cost_basis_locked_description: A sua base de custo definida manualmente não será alterada pelas sincronizações.
+      cost_basis_locked_label: O custo de aquisição está bloqueado
+      cost_basis_locked_description: O seu custo de aquisição definido manualmente não será alterado pelas sincronizações.
       unlock_cost_basis: Desbloquear
-      unlock_confirm_title: Desbloquear base de custo?
-      unlock_confirm_body: Isto permitirá que a base de custo seja atualizada pelas sincronizações do serviço ou pelos cálculos das negociações.
+      unlock_confirm_title: Desbloquear custo de aquisição?
+      unlock_confirm_body: Isto permitirá que o custo de aquisição seja atualizado pelas sincronizações do serviço ou pelos cálculos das negociações.
       shares_label: Ações
       book_value_label: Valor Contabilístico
       market_value_label: Valor de Mercado

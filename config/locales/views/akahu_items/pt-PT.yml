@@ -26,14 +26,14 @@ pt-PT:
     sync_status:
       no_accounts: Não foram encontradas contas
       all_synced:
-        one: 1 conta sincronizada
+        one: "%{count} conta sincronizada"
         other: "%{count} contas sincronizadas"
       partial: "%{linked} sincronizadas, %{unlinked} precisam de configuração"
     institution_summary:
       none: Não existem instituições ligadas
       one: 1 instituição
       count:
-        one: 1 instituição
+        one: "%{count} instituição"
         other: "%{count} instituições"
   akahu_items:
     provider_panel:
@@ -69,7 +69,7 @@ pt-PT:
       link_accounts: Associar contas
     link_accounts:
       success:
-        one: Associada 1 conta Akahu.
+        one: "Associada %{count} conta Akahu."
         other: "Associadas %{count} contas Akahu."
       no_accounts_selected: Selecione pelo menos uma conta.
       no_credentials_configured: Configure a Akahu nas definições do serviço primeiro.
@@ -89,7 +89,7 @@ pt-PT:
       akahu_account_already_linked: Esta conta Akahu já está associada.
     setup_accounts:
       title: Configurar contas Akahu
-      subtitle: Escolha a forma como cada conta Akahu deve aparecer na Sure.
+      subtitle: Escolha a forma como cada conta Akahu deve aparecer no Sure.
       no_credentials: Configure primeiro as credenciais Akahu.
       api_error: Não foi possível obter as contas Akahu.
       fetch_failed: Não foi possível obter as contas
@@ -108,7 +108,7 @@ pt-PT:
       cancel: Cancelar
     complete_account_setup:
       success:
-        one: Criada 1 conta Akahu.
+        one: "Criada %{count} conta Akahu."
         other: "Criadas %{count} contas Akahu."
       all_skipped: Não foi criada nenhuma conta Akahu.
       no_accounts: Nenhuma conta Akahu foi selecionada.

@@ -1,0 +1,15 @@
+---
+es:
+  recurring_allocations:
+    over_allocation: Se asignaría más que el importe de la transacción
+    missing_rate: No hay tipo de cambio disponible; introduce el importe manualmente
+    already_allocated: Esa transacción ya está aplicada a este recibo
+    invalid: No se ha podido registrar el pago
+    create:
+      success: Pago aplicado
+    destroy:
+      success: Pago desvinculado
+    confirm:
+      success: Pago aplicado al recibo
+    reject:
+      success: Descartada. Esa transacción no se volverá a sugerir para este recibo.

@@ -4,6 +4,7 @@ pt-PT:
     create:
       invalid_credentials: E-mail ou palavra-passe inválidos.
       local_login_disabled: O início de sessão com palavra-passe local está desativado. Utilize o início de sessão único.
+      account_deactivated: Esta conta foi desativada. Contacte um administrador.
     destroy:
       logout_successful: Terminou a sessão com sucesso.
     post_logout:

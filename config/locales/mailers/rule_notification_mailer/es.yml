@@ -3,10 +3,10 @@ es:
   rule_notification_mailer:
     digest:
       subject:
-        one: "1 transacción nueva coincidió con tu regla en %{product_name}"
+        one: '%{count} transacción nueva coincidió con tu regla en %{product_name}'
         other: "%{count} transacciones nuevas coincidieron con tu regla en %{product_name}"
       heading:
-        one: "1 transacción nueva coincidió con tu regla"
+        one: '%{count} transacción nueva coincidió con tu regla'
         other: "%{count} transacciones nuevas coincidieron con tu regla"
       intro: 'Estas transacciones coincidieron con la regla "%{rule}":'
       date: "Fecha"

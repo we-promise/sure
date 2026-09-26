@@ -51,6 +51,7 @@ es:
       short: '%-d de %b'
       month_year: '%B de %Y'
       short_month_year: '%b %Y'
+      short_with_year: '%-d de %b de %Y'
     month_names:
     -
     - enero
@@ -147,7 +148,7 @@ es:
         one: es demasiado corto (%{count} carácter mínimo)
         other: es demasiado corto (%{count} caracteres mínimo)
       wrong_length:
-        one: no tiene la longitud correcta (%{count} carácter exactos)
+        one: no tiene la longitud correcta (%{count} carácter exacto)
         other: no tiene la longitud correcta (%{count} caracteres exactos)
     template:
       body: 'Se encontraron problemas con los siguientes campos:'
@@ -230,3 +231,10 @@ es:
       long: '%-d de %B de %Y %H:%M'
       short: '%-d de %b %H:%M'
     pm: pm
+  mcp:
+    errors:
+      invalid_session_id: ID de sesión MCP no válido
+      unsupported_protocol_version: 'Versión del protocolo MCP no compatible: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris debe usar https, http de loopback o un esquema de URI de aplicación nativa

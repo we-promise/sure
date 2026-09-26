@@ -38,17 +38,19 @@ pt-PT:
       label: "Últimos 365 dias"
       comparison_label: "vs. há 1 ano"
     last_5_years:
-      label_short: "5Y"
+      label_short: "5A"
       label: "Últimos 5 anos"
       comparison_label: "vs. há 5 anos"
     last_10_years:
-      label_short: "10Y"
+      label_short: "10A"
       label: "Últimos 10 anos"
       comparison_label: "vs. há 10 anos"
     all_time:
-      label_short: "All"
+      label_short: "Tudo"
       label: "Todo o período"
       comparison_label: "vs. início"
     custom:
-      label_short: "Custom"
+      label_short: "Personalizado"
       label: "Período personalizado"
+      comparison_label: '%{start_date} a %{end_date}'
+    range: '%{start_date} – %{end_date}'

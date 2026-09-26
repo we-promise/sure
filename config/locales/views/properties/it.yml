@@ -3,6 +3,7 @@ it:
   properties:
     edit:
       edit: Modifica %{account}
+      title: Inserisci la proprietà manualmente
     form:
       address_line1: Indirizzo
       address_line1_placeholder: Via Roma, 1
@@ -24,6 +25,16 @@ it:
     new:
       title: Inserisci la proprietà manualmente
       next: "Avanti"
+      avm_option: Aggiungi tramite %{provider}
+      avm_title: Aggiungi proprietà tramite %{provider}
+      avm_description: Inserisci un nome per la proprietà e il suo indirizzo. %{provider} cercherà per te i dettagli dell'immobile e il valore di mercato stimato.
+      avm_us_only: '%{provider} supporta solo immobili situati negli Stati Uniti.'
+      avm_submit: Cerca proprietà
+      avm_preview_title: Conferma i dettagli della proprietà
+      avm_preview_description: 'Ecco cosa ha trovato %{provider}. Controlla i dettagli prima di aggiungere la proprietà: non è stato ancora creato nulla.'
+      avm_preview_no_record: '%{provider} non ha trovato alcun registro immobiliare a questo indirizzo, quindi il valore mostrato è una stima basata sulla zona circostante. Verifica l''indirizzo prima di continuare.'
+      avm_preview_back: Indietro
+      avm_preview_confirm: Aggiungi proprietà
     address:
       title: "Inserisci la proprietà manualmente"
       address_line1_label: "Indirizzo"
@@ -87,3 +98,10 @@ it:
       agri_land:
         short: Terreno Agric.
         long: Terreno Agricolo
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    form_tabs:
+      address: Indirizzo
+      overview: Panoramica
+      value: Valore

@@ -49,6 +49,17 @@ es:
           description: Tu servidor de API de Questrade
           placeholder_new: Pega aquí el servidor de API
           placeholder_update: Introduce un nuevo servidor de API para actualizarlo
+      eyebrow: Configuración · solo en ordenador
+      help_text: Documentación de la API de Questrade
+      disconnect: Desconectar
+      disconnect_confirm: ¿Desconectar Questrade? Se eliminará la conexión y se desvincularán sus cuentas sincronizadas.
+      steps:
+        s1_html: Inicia sesión en el <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">portal de Questrade</a> desde un navegador de ordenador. Los ajustes de la API no están disponibles en la app móvil.
+        s2: Abre Settings y, en General settings, edita los IQ API settings.
+        s3_html: En la ventana de acceso a la API, haz clic en <strong>Manage</strong> en <strong>My applications</strong>.
+        s4: Registra una app personal con un nombre y una descripción y guárdala.
+        s5: Añade un nuevo dispositivo y genera un token.
+        s6: Pega abajo el token generado y guarda.
     create:
       success: Conexión Questrade creada correctamente
     update:
@@ -132,8 +143,15 @@ es:
       no_credentials_configured: Configura primero tus credenciales de Questrade en los ajustes de proveedores.
       no_name_placeholder: (Sin nombre)
       settings_link: Ir a los ajustes de proveedores
-      subtitle: Elige una cuenta de Questrade
+      subtitle: 'Conecta esta cuenta a una de tus cuentas de Questrade'
       title: Vincular %{account_name} con Questrade
+      page_title: Vincular una cuenta de Questrade
+      dialog_title: Vincular con una cuenta de Questrade
+      linking_label: Vinculando
+      none_available: No hay cuentas de Questrade sin vincular disponibles.
+      buttons:
+        cancel: Cancelar
+        link: Vincular
     link_existing_account:
       account_already_linked: Esta cuenta ya está vinculada a un proveedor
       api_error: 'Error de la API: %{message}'
@@ -213,6 +231,18 @@ es:
       sync_start_date_help: Selecciona desde cuándo quieres sincronizar el historial de transacciones.
       sync_start_date_label: 'Empezar a sincronizar transacciones desde:'
       title: Configura tus cuentas de Questrade
+      page_title: Configurar cuentas de Questrade
+      dialog_title: Configura tus cuentas de Questrade
+      all_linked: Todas las cuentas de Questrade ya están vinculadas.
+      import_as: Importar como
+      buttons:
+        cancel: Cancelar
+        create: Crear cuentas
+        done: Listo
+      types:
+        investment: Inversión
+        depository: Efectivo / Depósito
+        skip: Omitir esta cuenta
     setup_required:
       title: Conecta Questrade primero
       not_configured_title: Questrade todavía no está conectado

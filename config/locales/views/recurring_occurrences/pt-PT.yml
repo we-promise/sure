@@ -1,0 +1,53 @@
+---
+pt-PT:
+  recurring_occurrences:
+    history_status:
+      paid: Paga
+      skipped: Ignorada
+      missed: Falhada
+      scheduled: Em aberto
+    show:
+      due_on: Vence a %{date}
+      paid_of: '%{paid} de %{expected} pagos'
+      paid_headline: '%{amount} pagos'
+      remaining: '%{amount} em falta'
+      settled: Paga na totalidade
+      overpaid: mais do que o previsto
+      skipped: Ignorada
+      missed: Marcada como falhada
+      payments: Pagamentos
+      manual_payment: Pagamento manual
+      unlink: Desassociar
+      review_heading: Rever pagamento
+      find_heading: Encontrar um pagamento
+      add_heading: Adicionar outro pagamento
+      other_matches: Outras correspondências prováveis
+      no_ranked_candidates: Ainda não há nada aqui que pareça um pagamento desta fatura.
+      search_all: Pesquisar todas as transações
+      search_placeholder: Pesquisar transações
+      no_candidates: Não há transações próximas para associar.
+      no_search_results: Nada corresponde a %{query}.
+      link_payment: Associar pagamento
+      not_this_one: Não é esta
+      cant_find: Não encontra a transação?
+      manual_explainer: Registe um pagamento que sabe que foi feito quando nenhuma transação aqui lhe corresponde.
+      manual_amount_label: Montante
+      manual_date_label: Data
+      record_payment: Registar pagamento
+      mark_paid: Marcar como paga
+      mark_paid_hint: Liquida o restante sem registar uma transação.
+      skip: Ignorar
+      snooze_week: Adiar uma semana
+      reopen: Reabrir
+      view_bill: Ver fatura completa
+    mark_paid:
+      success: Fatura marcada como paga
+    skip:
+      success: Fatura ignorada
+    reopen:
+      success: Fatura reaberta
+    snooze:
+      success: Adiada até %{date}
+      invalid_date: Não foi possível ler essa data
+    override_amount:
+      success: Montante previsto atualizado

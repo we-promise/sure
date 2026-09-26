@@ -1,0 +1,313 @@
+---
+pt-PT:
+  bills:
+    row_overdue: Em atraso
+    row_today: Hoje
+    detect:
+      found:
+        one: Encontrada %{count} possível fatura. Reveja-a abaixo.
+        other: Encontradas %{count} possíveis faturas. Reveja-as abaixo.
+      none_found: Não foram encontrados novos padrões recorrentes. Pode adicionar faturas manualmente.
+      already_running: A deteção está em curso. Verifique novamente dentro de alguns momentos.
+    feed:
+      calendar_name: Faturas Sure
+    ai_prompts:
+      due_before_paycheck: O que tenho a pagar antes do próximo salário?
+      subscriptions_up: Que subscrições aumentaram de preço este ano?
+      monthly_subscriptions: Quanto pago por mês em subscrições?
+      safe_to_spend: Quanto posso gastar neste período sem comprometer o meu orçamento?
+    smart_configurations:
+      show:
+        trigger: Deixar a IA configurar
+        title: Sugestões da IA para %{name}
+        intro: Selecione as alterações a aplicar. As restantes permanecem inalteradas.
+        no_changes: Esta fatura já corresponde ao seu histórico de pagamentos. Não há nada a alterar.
+        failed: Não foi possível analisar esta fatura neste momento. A configuração não foi alterada.
+        field_name: Nome
+        field_amount: Montante
+        field_schedule: Periodicidade
+        field_category: Categoria
+        field_kind: Tipo
+        field_autopay: Débito direto
+        uncategorized: Sem categoria
+        autopay_off: Desativado
+        autopay_on: Ativado
+        apply: Aplicar selecionadas
+    detail:
+      current: Atual
+      next_payment: Próximo pagamento
+      around: por volta de %{date}
+      rules: Como esta fatura é identificada
+      rule_named: '%{name}'
+      rule_amount_range: de %{min} a %{max}
+      rule_aliases: Também corresponde a %{names}
+      rule_learned_tolerance: Montantes até %{percent} de diferença do valor habitual correspondem a esta fatura
+      history_title: Últimos 12 meses
+      history_aria: Pagamentos nos últimos doze meses
+      key_metrics: Por ano
+      year: Ano
+      spent_per_year: Gasto
+      avg_payment: Pagamento médio
+      average: Média paga
+      range: '%{min} a %{max}'
+      annualized: Por ano
+      ytd: Pago este ano
+      last_account: Última conta utilizada
+      upcoming: Próximos
+      recent_payments: Pagamentos recentes
+      manual_payment: Pagamento manual
+      history: Histórico
+      payment_count:
+        one: '%{count} pagamento'
+        other: '%{count} pagamentos'
+      notes: Notas
+      trial_chip: Período experimental termina a %{date}
+      renews_chip: Renova a %{date}
+      cancelled_chip: Cancelada a %{date}
+      price_changes: Alterações de preço
+      price_change_line: '%{from} → %{to}'
+    month_pulse:
+      bill_count:
+        one: '%{count} fatura'
+        other: '%{count} faturas'
+      left_to_pay: por pagar
+      pulse_paid: pagos
+      pulse_overdue: em atraso
+      pulse_next_seven: nos próximos 7 dias
+      pulse_bar_aria: '%{percent}% das faturas deste mês pagas'
+      next_up: A seguir
+      view_upcoming: Ver próximas
+      date_today: Hoje
+      date_tomorrow: Amanhã
+      unconvertible:
+        one: '%{count} fatura não está incluída, sem taxa de câmbio disponível'
+        other: '%{count} faturas não estão incluídas, sem taxa de câmbio disponível'
+    summary:
+      remaining: '%{amount} por pagar'
+      paid_headline: '%{amount} pagos'
+      cost_line: Em média %{average} por pagamento, cerca de %{annualized} por ano
+    pane:
+      close: Recolher detalhes
+    add_bill: Adicionar fatura
+    manage: Gerir
+    find_payment: Procurar pagamento
+    add_payment: Adicionar pagamento
+    review_match: Rever correspondência
+    resolve: Resolver
+    manage_payments: Gerir pagamentos
+    view_full_bill: Ver fatura completa
+    match:
+      same_merchant: Mesmo comerciante
+      name_matches: O nome corresponde
+      exact_amount: Montante exato
+      amount_off: '%{amount} de diferença'
+      due_date: Pago na data de vencimento
+      days_before:
+        one: '%{count} dia antes do vencimento'
+        other: '%{count} dias antes do vencimento'
+      days_after:
+        one: '%{count} dia após o vencimento'
+        other: '%{count} dias após o vencimento'
+    attention:
+      needs_review: Correspondência por rever
+      partial: Parcial · %{amount} por pagar
+      amount_changed: Montante alterado
+      overdue:
+        one: '%{count} dia em atraso'
+        other: '%{count} dias em atraso'
+    paid_label: Pago
+    paid_over_short: Pago a mais
+    installment_progress: Pagamento %{done_plus_one} de %{total}
+    partial_progress: '%{paid} de %{expected} pagos'
+    cancelled_still_scheduled: Marcou esta subscrição como cancelada a %{date}, mas continua agendada, pelo que as próximas faturas continuarão a aparecer.
+    paid_over: Pago %{paid}, mais do que o esperado
+    remaining_label: por pagar
+    debt_payment: ' · pagamento de dívida'
+    paid_from: de %{account}
+    amount_range: varia entre %{min} e %{max}
+    possible_duplicate: Possível duplicado
+    due_label:
+      overdue:
+        one: Em atraso há %{count} dia, venceu a %{date}
+        other: Em atraso há %{count} dias, venceu a %{date}
+      today: Vence hoje
+      settled: Venceu a %{date}
+      due_since: Vence a %{date}
+      snoozed: Adiado até %{date}
+      upcoming:
+        one: Vence amanhã, %{date}
+        other: Vence dentro de %{count} dias, %{date}
+    views:
+      aria_label: Visualização de faturas
+      overview: Visão geral
+      calendar: Calendário
+      paycheck: Plano de rendimentos
+      all: Todas as faturas
+    pay_period:
+      paycheck_on: Salário a %{date}
+      before_next_paycheck: Antes do próximo salário
+      due_before_date: '%{amount} a pagar antes de %{date}'
+    paycheck:
+      unconvertible:
+        one: '%{count} obrigação não está incluída, sem taxa de câmbio disponível'
+        other: '%{count} obrigações não estão incluídas, sem taxa de câmbio disponível'
+      income_section_title: Calendário de rendimentos
+      manage: Gerir
+      add_income: Adicionar rendimento
+      income_paused: Em pausa, não planeado
+      income_detected: Detetado automaticamente, não define dias de pagamento
+      income_next_payday: próximo a %{date}
+      income_source_count:
+        one: '%{count} fonte de rendimento'
+        other: '%{count} fontes de rendimento'
+      next_on: Próximo a %{date}
+      no_upcoming_income: Não há rendimentos agendados a partir daqui.
+      empty:
+        title: Declare o seu calendário de rendimentos
+        description: Adicione os seus rendimentos para ver o que cada dia de pagamento tem de cobrir. As entradas detetadas nunca definem os seus dias de pagamento por si só -- é o utilizador que o faz.
+        action: Adicionar rendimento
+      all_clear:
+        title: Nada a cobrir
+        description: Não há faturas a vencer entre hoje e %{date}, pelo que nada nesse período está comprometido.
+      safe_after_bills: Livre após faturas
+      short_after_bills: Em falta após faturas
+      period_source: ' · %{source}'
+      period_source_multiple: ' · %{count} fontes de rendimento'
+      before_next_paycheck: Antes de %{date}
+      no_income_arriving: Sem rendimentos previstos
+      income_amount: '%{amount} de rendimento'
+      due_this_period: A pagar neste período
+      reserved_ahead: Reservado antecipadamente
+      safe_short: Livre
+      short_short: Em falta
+      reserved_footer:
+        one: Reservado antecipadamente para %{count} fatura posterior
+        other: Reservado antecipadamente para %{count} faturas posteriores
+      bills_this_period:
+        one: Faturas neste período · %{count}
+        other: Faturas neste período · %{count}
+      bills_before_payday:
+        one: Faturas antes do próximo dia de pagamento · %{count}
+        other: Faturas antes do próximo dia de pagamento · %{count}
+      of_total: de %{amount}
+      bridge_label: Antes do próximo salário
+      bridge_amount: · %{amount} a pagar
+      bridge_split: A pagar antes de %{date}, coberto pelos %{cash} nas suas contas.
+      shortfall_label: Em falta antes do próximo dia de pagamento
+      shortfall_amount: · %{amount}
+      shortfall_split: '%{obligations} vence antes de %{date} e as suas contas têm %{cash}.'
+      shortfall_largest: 'Maior obrigação a vencer:'
+      review_plan: Rever plano
+      allocation_aria: De %{income} de rendimento, %{due} vence agora, %{reserved} está reservado para mais tarde e %{safe} está livre para gastar.
+      allocation_aria_short: '%{income} de rendimento vai para o que está comprometido aqui, e são necessários mais %{short}.'
+    reset_feed_token:
+      done: Link do feed reposto. As aplicações de calendário que usam o link antigo deixarão de ser atualizadas; volte a subscrever com o novo.
+      confirm: Repor o link do feed do calendário? Todos os links partilhados anteriormente deixarão de funcionar.
+    calendar:
+      subscribe_ical: Subscrever (iCal)
+      reset_feed: Repor link
+      previous_month: Mês anterior
+      next_month: Mês seguinte
+      today: Hoje
+      month_totals: '%{expected} previstos · %{paid} pagos'
+      empty_month: Não há faturas a vencer este mês.
+    all:
+      search_placeholder: Pesquisar faturas
+      any_status: Qualquer estado
+      status_filters:
+        overdue: Em atraso
+        due: A vencer em breve
+        partial: Parcialmente pagas
+        paid: Pagas
+        paused: Em pausa
+        ended: Dispensadas
+      subscription_monthly: Por mês
+      subscription_annual: Por ano
+      subscription_active: Ativas
+      subscription_price_changes: Alterações de preço este ano
+      subscription_price_change_line: '%{from} → %{to} (%{percent}%)'
+      any_type: Qualquer tipo
+      sort_due: Por próximo vencimento
+      sort_name: Por nome
+      sort_amount: Por montante
+      no_matches_title: Sem resultados
+      no_matches_description: Experimente limpar um filtro ou a pesquisa.
+      col_name: Nome
+      col_type: Tipo
+      col_frequency: Frequência
+      col_amount: Montante
+      col_next: Próximo vencimento
+      next_short: próximo a %{date}
+      col_status: Estado
+      col_actions: Ações
+      monthly_equivalent: '%{amount}/mês'
+      types:
+        bill: Fatura
+        subscription: Subscrição
+        installment: Plano de prestações
+        income: Rendimento
+        transfer: Transferência
+        other: Outro
+    show:
+      edit: Editar fatura
+    index:
+      left_to_pay: por pagar
+      paid_so_far: Pago até agora
+      hero_past_due: '%{amount} em atraso'
+      hero_next_seven: '%{amount} a vencer nos próximos 7 dias'
+      add_bill: Adicionar fatura
+      add_income: Adicionar rendimento
+      review_with_ai: Rever com IA
+      detected_review:
+        one: Encontrámos %{count} pagamento recorrente. Confirme-o para garantir que os totais refletem o que realmente paga.
+        other: Encontrámos %{count} pagamentos recorrentes. Confirme-os para garantir que os totais refletem o que realmente paga.
+      detected_review_action: Rever
+      needs_review: Por rever
+      notice_trial: O período experimental de %{name} termina a %{date}
+      notice_renewal: '%{name} renova a %{date}'
+      notice_price: '%{name} alterou o preço: %{from} → %{to} (%{percent})'
+      notices_routine:
+        one: '%{count} alteração menor'
+        other: '%{count} alterações menores'
+      suggestion_line: '%{entry} parece ser um pagamento de %{bill}'
+      suggestion_unknown_entry: Uma transação
+      confidence: '%{percent}% de correspondência'
+      accept: Aplicar
+      reject: Não é esta fatura
+      title: Faturas
+      summary_label: A vencer este mês
+      summary_count:
+        one: '%{count} fatura a vencer'
+        other: '%{count} faturas a vencer'
+      summary_needs_action:
+        one: '%{count} requer a sua ação'
+        other: '%{count} requerem a sua ação'
+      all_automatic: todas por débito direto
+      recurring_label: Compromisso recorrente
+      recurring_monthly: '%{amount} por mês'
+      recurring_annual: '%{amount} por ano'
+      unconvertible:
+        one: '%{count} fatura não está incluída, sem taxa de câmbio disponível'
+        other: '%{count} faturas não estão incluídas, sem taxa de câmbio disponível'
+      overdue: Em atraso
+      needs_attention: Requerem atenção
+      attention_overdue_total: '%{amount} em atraso'
+      this_month: Este mês
+      later: Depois deste mês
+      paid_this_month: Pagas este mês
+      dormant: Inativas
+      kpi_remaining: Por pagar este mês
+      kpi_paid: Pago este mês
+      kpi_next_seven: A vencer nos próximos 7 dias
+      kpi_past_due: Em atraso
+      paid_count:
+        one: '%{count} fatura liquidada'
+        other: '%{count} faturas liquidadas'
+      needs_action_count:
+        one: '%{count} requer a sua ação'
+        other: '%{count} requerem a sua ação'
+      empty:
+        title: Ainda sem faturas
+        description: As faturas são as suas despesas recorrentes. O Sure encontra-as automaticamente a partir do seu histórico de transações, e pode adicionar um link de pagamento a cada uma para pagar diretamente a partir daqui.
+        action: Procurar transações recorrentes
+        no_history_description: Ainda sem transações. Ligue uma conta ou importe o histórico e o Sure encontrará as suas faturas automaticamente, ou adicione uma manualmente.

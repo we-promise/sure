@@ -62,14 +62,14 @@ es:
         importing_account: Importando cuenta de Trading 212...
         checking_configuration: Comprobando configuración de la cuenta...
         accounts_need_setup:
-          one: 1 cuenta de Trading 212 necesita configuración...
+          one: '%{count} cuenta de Trading 212 necesita configuración...'
           other: "%{count} cuentas de Trading 212 necesitan configuración..."
         processing_activity: Procesando posiciones y actividad...
         calculating_balances: Calculando saldos...
     sync_status:
       no_accounts: Aún no se ha detectado ninguna cuenta de Trading 212
       all_linked:
-        one: 1 cuenta vinculada
+        one: '%{count} cuenta vinculada'
         other: "%{count} cuentas vinculadas"
       partial: "Con vínculo: %{linked}; necesitan configuración: %{unlinked}"
     select_existing_account:

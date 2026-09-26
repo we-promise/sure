@@ -46,10 +46,10 @@ es:
       toggle_section: Alternar visibilidad de la sección
       widget_size:
         label: Ajustar tamaño
-        width_label: Ancho
+        width_label: 'Anchura'
         half: Media
         full: Completa
-        height_label: Alto
+        height_label: 'Altura'
         compact: Compacto
         auto: Automático
         tall: Alto
@@ -74,17 +74,34 @@ es:
         classifications:
           asset: Activos
           liability: Pasivos
+        expand_all: Expandir todo
+        collapse_all: Contraer todo
       cashflow_preview:
         node_labels:
           cash_flow: "Flujo de caja"
           surplus: "Superávit"
           deficit: "Déficit"
+        title: Nuevo diagrama de Sankey
+        preview: Vista previa
+        preview_tooltip: Sustituirá a la visualización de arriba, ya que usa una nueva API compartida con el cliente móvil en Swift.
+        feedback_prompt: Compara este gráfico con el original de arriba y dinos si se ve distinto, aparte del orden.
+        positive: Se ve bien
+        negative: Algo no cuadra
+        feedback_title: Comentarios sobre el gráfico de flujo de caja
+        feedback_loading: Cargando el formulario de comentarios…
+        feedback_unavailable: Los comentarios no están disponibles en este momento. Inténtalo de nuevo más tarde.
+        feedback_thanks: ¡Gracias por ayudarnos a mejorar el gráfico!
+        feedback_privacy: Tu respuesta se envía a PostHog. Describe el problema sin números de cuenta, saldos ni otros datos financieros privados.
+        feedback_submit: Enviar comentarios
       cashflow_sankey:
         title: Flujo de caja
         zoom_out: Volver al flujo de caja completo
         no_data_title: No hay datos de flujo de caja para este período
         no_data_description: Añade transacciones para mostrar datos de flujo de caja o amplía el período de tiempo
         add_transaction: Añadir transacción
+        loading: Cargando flujo de caja…
+        load_error: No se ha podido cargar el flujo de caja. Inténtalo de nuevo.
+        retry: Reintentar
       no_accounts:
         title: Aún no hay cuentas
         description: Añade cuentas para mostrar datos de patrimonio neto
@@ -108,3 +125,27 @@ es:
         trades: Operaciones
         no_investments: No hay cuentas de inversión
         add_investment: Añade una cuenta de inversión para realizar el seguimiento de tu cartera
+      insights_feed:
+        title: Insights
+      money_flow:
+        title: Entradas / salidas
+        date_range: '%{start_date} a %{end_date}'
+        month_picker_aria_label: Seleccionar mes
+        filter_accounts: Filtrar cuentas (%{count})
+        filter_accounts_all: Todas las cuentas
+        period_scope_hint: Muestra los meses que elijas aquí, con independencia del periodo del panel seleccionado arriba.
+        search_accounts: Buscar cuentas
+        apply: Aplicar
+        balance: Balance de transacciones
+        chart_span: Últimos %{count} meses
+        income: Ingresos
+        expenses: Gastos
+      spending_trend:
+        title: Gasto
+        date_range: '%{start_date} a %{end_date}'
+        date_range_short: '%{start_date} - %{end_day}, %{year}'
+        date_range_short_single: '%{date} de %{year}'
+        month_picker_aria_label: Seleccionar mes
+        period_scope_hint: Muestra el mes que elijas aquí, con independencia del periodo del panel seleccionado arriba.
+        no_data: No hay datos de gasto para este mes
+        previous_comparison_days: (1-%{end_day})

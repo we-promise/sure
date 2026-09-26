@@ -40,4 +40,9 @@ es:
         actions:
           delete: Eliminar
           download: Descargar
+          mark_failed: Marcar como fallida
+          confirm_mark_failed: Esta exportación lleva un tiempo inactiva y probablemente su tarea en segundo plano se interrumpió. ¿Marcarla como fallida? Podrás crear una nueva exportación de inmediato.
       empty: Aún no hay exportaciones.
+    cancel:
+      cancelled: Exportación marcada como fallida. Ya puedes crear una nueva exportación.
+      not_cancellable: Esta exportación no se puede marcar como fallida ahora mismo; puede que su tarea siga en ejecución. Vuelve a intentarlo cuando lleve una hora inactiva.

@@ -18,9 +18,9 @@ it:
     destroy:
       success: La connessione SimpleFIN verrà rimossa
     update:
-      success: Connessione SimpleFIN aggiornata con successo! I tuoi conti vengono riconnessi.
+      success: Connessione SimpleFIN aggiornata.
       errors:
-        blank_token: Inserisci un token di configurazione SimpleFIN.
+        blank_token: Token di accesso SimpleFIN mancante. Inserisci un token o usa "Collega conti esistenti" per procedere.
         invalid_token: Token di configurazione non valido. Verifica di aver copiato il token completo da SimpleFIN Bridge.
         token_compromised: Il token di configurazione potrebbe essere compromesso, scaduto o già utilizzato. Creane uno nuovo.
         update_failed: "Aggiornamento connessione fallito: %{message}"
@@ -128,11 +128,12 @@ it:
       description: Seleziona un conto SimpleFIN da collegare al tuo conto esistente
       cancel: Annulla
       link_account: Collega conto
-      no_accounts_found: "Nessun conto SimpleFIN trovato per questo %{moniker}."
+      no_accounts_found: "Nessun conto SimpleFIN trovato per questo account %{moniker}."
       wait_for_sync: Se hai appena connesso o sincronizzato, riprova dopo il completamento della sincronizzazione.
       unlink_to_move: Per spostare un collegamento, prima scollegalo dal menu azioni del conto.
       all_accounts_already_linked: Tutti i conti SimpleFIN sembrano già collegati.
       currently_linked_to: "Attualmente collegato a: %{account_name}"
+      check_provider_health: Verifica che la tua connessione SimpleFIN funzioni correttamente in Impostazioni → Provider.
     link_existing_account:
       success: Conto collegato con successo a SimpleFIN
       errors:
@@ -150,9 +151,27 @@ it:
       dismiss_aria: Ignora suggerimento di sostituzione
     reconciled_status:
       message:
-        one: "%{count} transazione in sospeso duplicata riconciliata"
-        other: "%{count} transazioni in sospeso duplicate riconciliate"
+        one: "%{count} transazione in attesa duplicata riconciliata"
+        other: "%{count} transazioni in attesa duplicate riconciliate"
     stale_pending_status:
       message:
-        one: "%{count} transazione in sospeso più vecchia di %{days} giorni"
-        other: "%{count} transazioni in sospeso più vecchie di %{days} giorni"
+        one: "%{count} transazione in attesa più vecchia di %{days} giorni"
+        other: "%{count} transazioni in attesa più vecchie di %{days} giorni"
+    sync_status:
+      no_accounts: Nessun conto trovato
+      synced:
+        one: '%{count} conto sincronizzato'
+        other: '%{count} conti sincronizzati'
+      partial_setup:
+        one: '%{linked} sincronizzati, %{unlinked} da configurare'
+        other: '%{linked} sincronizzati, %{unlinked} da configurare'
+    institution_summary:
+      none: Nessuna istituzione connessa
+      count:
+        one: '%{count} istituzione'
+        other: '%{count} istituzioni'
+    rate_limited:
+      daily_refresh: Hai raggiunto il limite giornaliero di aggiornamenti di SimpleFIN. Riprova dopo l'aggiornamento del bridge (fino a 24 ore).
+    stale_sync:
+      last_successful: L'ultima sincronizzazione riuscita risale a %{count} giorni fa. La tua connessione SimpleFIN potrebbe richiedere attenzione.
+      no_transactions: Nessuna nuova transazione negli ultimi %{count} giorni. Controlla la dashboard di SimpleFIN per verificare che le connessioni alle tue banche siano attive.

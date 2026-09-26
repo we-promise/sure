@@ -14,6 +14,7 @@ it:
       service_down_label: Servizio non disponibile
       service_down_desc: L'API di Lunch Flow potrebbe essere temporaneamente non disponibile
       check_provider_settings: Controlla Impostazioni provider
+      unexpected_error: Si è verificato un errore imprevisto. Riprova più tardi.
     setup_required:
       title: Configurazione Lunch Flow richiesta
       api_key_not_configured: Chiave API non configurata
@@ -64,6 +65,14 @@ it:
       syncing: Sincronizzazione in corso...
       total: Totale
       unlinked: Non collegati
+      sync_status:
+        no_accounts: Nessun conto trovato
+        synced:
+          one: '%{count} conto sincronizzato'
+          other: '%{count} conti sincronizzati'
+        partial_setup:
+          one: '%{linked} sincronizzati, %{unlinked} da configurare'
+          other: '%{linked} sincronizzati, %{unlinked} da configurare'
     select_accounts:
       accounts_selected: conti selezionati
       api_error: "Errore API: %{message}"
@@ -122,20 +131,20 @@ it:
       subtypes:
         depository:
           checking: Conto corrente
-          savings: Conto risparmio
-          hsa: Conto risparmio sanitario
+          savings: Conto di risparmio
+          hsa: Conto di risparmio sanitario
           cd: Certificato di deposito
           money_market: Mercato monetario
         investment:
-          brokerage: Brokerage
+          brokerage: Conto titoli
           pension: Pensione
-          retirement: Pensionamento
+          retirement: Previdenza
           "401k": "401(k)"
           roth_401k: "Roth 401(k)"
           "403b": "403(b)"
-          tsp: Piano di risparmio thrift
+          tsp: Piano di risparmio previdenziale
           "529_plan": "Piano 529"
-          hsa: Conto risparmio sanitario
+          hsa: Conto di risparmio sanitario
           mutual_fund: Fondo comune
           ira: IRA tradizionale
           roth_ira: Roth IRA
@@ -155,12 +164,18 @@ it:
       sync_start_date_help: Seleziona quanto indietro vuoi sincronizzare la cronologia delle transazioni. Massimo 3 anni di cronologia disponibile.
       sync_start_date_label: "Inizia la sincronizzazione delle transazioni dal:"
       title: Configura i tuoi conti Lunch Flow
+      page_title: Configura conti Lunch Flow
     complete_account_setup:
       all_skipped: "Tutti i conti sono stati saltati. Nessun conto è stato creato."
       creation_failed: "Creazione conti fallita: %{error}"
       no_accounts: "Nessun conto da configurare."
       success: "Creati con successo %{count} conto/i."
+      unexpected_error: Si è verificato un errore imprevisto
     sync:
       success: Sincronizzazione avviata
     update:
       success: Connessione Lunch Flow aggiornata
+    subtype_select:
+      placeholder:
+        subtype: Seleziona sottotipo
+        type: Seleziona tipo

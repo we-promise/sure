@@ -37,9 +37,11 @@ es:
       new:
         title: Añadir proveedor de SSO
         description: Configura un nuevo proveedor de autenticación de inicio de sesión único
+        provider_configuration: Configuración del proveedor
       edit:
         title: Editar proveedor de SSO
         description: Actualizar configuración para %{label}
+        provider_configuration: Configuración del proveedor
       create:
         success: El proveedor de SSO se ha creado correctamente.
       update:
@@ -73,7 +75,7 @@ es:
         enabled_label: Activar este proveedor
         enabled_help: Los usuarios pueden iniciar sesión con este proveedor cuando está activado
         issuer_label: Emisor (Issuer)
-        issuer_placeholder: https://accounts.google.com
+        issuer_placeholder: 'https://your-idp.example.com/realms/your-realm'
         issuer_help: URL del emisor OIDC (validará el punto de conexión .well-known/openid-configuration)
         client_id_label: ID de cliente (Client ID)
         client_id_placeholder: tu-id-de-cliente
@@ -82,7 +84,7 @@ es:
         client_secret_placeholder_new: tu-secreto-de-cliente
         client_secret_placeholder_existing: ••••••••••••••••
         client_secret_help: Secreto de cliente OAuth (encriptado en la base de datos)
-        client_secret_help_existing: ' - dejar en blanco para mantener el actual'
+        client_secret_help_existing: 'Déjalo en blanco para conservar el secreto actual'
         redirect_uri_label: URI de redirección
         redirect_uri_placeholder: https://tudominio.com/auth/openid_connect/callback
         redirect_uri_help: URL de retorno para configurar en tu proveedor de identidad
@@ -103,9 +105,9 @@ es:
         role_member: Miembro
         role_admin: Administrador
         role_super_admin: Superadministrador
-        role_mapping_title: Mapeo de Grupos a Roles (Opcional)
+        role_mapping_title: 'Asignación de grupos a roles (opcional)'
         role_mapping_help: Mapea grupos/notificaciones del IdP a roles de la aplicación. A los usuarios se les asigna el rol más alto coincidente. Deja en blanco para usar el rol predeterminado de arriba.
-        super_admin_groups: Grupos de Superadministrador
+        super_admin_groups: 'Grupos de superadministradores'
         admin_groups: Grupos de Administrador
         guest_groups: Grupos de Invitado
         member_groups: Grupos de Miembro

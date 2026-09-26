@@ -1,4 +1,11 @@
 ---
 es:
   provider_warnings:
-    limited_investment_data: "Los datos de inversión de este proveedor son limitados. Las etiquetas de actividad (Compra, Venta, Dividendo) no están disponibles, lo que puede afectar la precisión del presupuesto. Considere crear reglas para excluir o categorizar las transacciones de inversión."
+    limited_investment_data: "Los datos de inversión de este proveedor son limitados. Las etiquetas de actividad (Compra, Venta, Dividendo) no están disponibles, lo que puede afectar la precisión del presupuesto. Considera crear reglas para excluir o categorizar las transacciones de inversión."
+    lunchflow_accounts_failed:
+      one: 'Importación de Lunchflow: no se pudo actualizar %{count} cuenta'
+      other: 'Importación de Lunchflow: no se pudieron actualizar %{count} cuentas'
+    lunchflow_transactions_failed:
+      one: 'Importación de Lunchflow: no se pudieron obtener las transacciones de %{count} cuenta'
+      other: 'Importación de Lunchflow: no se pudieron obtener las transacciones de %{count} cuentas'
+    lunchflow_import_error: 'Importación de Lunchflow: %{error}'

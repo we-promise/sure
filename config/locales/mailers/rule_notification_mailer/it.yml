@@ -1,0 +1,16 @@
+---
+it:
+  rule_notification_mailer:
+    digest:
+      subject:
+        one: '%{count} nuova transazione corrisponde alla tua regola su %{product_name}'
+        other: '%{count} nuove transazioni corrispondono alla tua regola su %{product_name}'
+      heading:
+        one: '%{count} nuova transazione corrisponde alla tua regola'
+        other: '%{count} nuove transazioni corrispondono alla tua regola'
+      intro: 'Queste transazioni corrispondono alla regola "%{rule}":'
+      date: Data
+      name: Nome
+      account: Conto
+      amount: Importo
+      cta: Visualizza transazioni

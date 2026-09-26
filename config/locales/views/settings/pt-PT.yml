@@ -9,7 +9,7 @@ pt-PT:
     background_jobs:
       show:
         page_title: "Tarefas em segundo plano"
-        title: "Estado dos worker"
+        title: "Estado dos workers"
         subtitle: "Estado de execução do Sidekiq em tempo real: processos de worker, profundidades de fila e conjuntos de repetir/mortas."
         redis_unreachable: "O estado do Sidekiq não está disponível (Redis inacessível). A atividade é desconhecida, pelo que as ações estão desativadas."
         operations_title: "Operações em curso"
@@ -44,7 +44,7 @@ pt-PT:
         actions:
           mark_stale: "Marcar como obsoleta"
           mark_failed: "Marcar como falhada"
-          release_claim: "Libertar reivindicação"
+          release_claim: "Remover bloqueio"
       cancel:
         cancelled: "%{type} marcada como perdida."
         not_cancellable: "Esta operação não pode ser modificada neste momento — a respetiva tarefa pode ainda estar em fila ou em execução. Tente novamente depois de ter estado inativa durante 30 minutos."
@@ -94,8 +94,8 @@ pt-PT:
         filter: "Filtrar"
         total_requests: "Total de Pedidos"
         total_tokens: "Total de Tokens"
-        prompt: "pré-preenchimento"
-        completion: "conclusão"
+        prompt: "entrada"
+        completion: "saída"
         total_cost: "Custo Total"
         avg_cost_per_request: "Custo Médio/Pedido"
         based_on_requests: "Com base em %{with_cost} de %{total} pedidos com dados de custo"
@@ -120,12 +120,34 @@ pt-PT:
         main_system_prompt:
           title: Prompt de Sistema Principal
           subtitle: Instruções centrais que definem como o assistente de IA se comporta em todas as conversas de chat
+          label: Prompt de sistema do chat
         transaction_categorizer:
           title: Categorizador de Transações
           subtitle: A IA categoriza automaticamente as suas transações com base nas suas categorias definidas
         merchant_detector:
           title: Detetor de Comerciantes
           subtitle: A IA identifica e enriquece os dados das transações com informação sobre o comerciante
+        save: Guardar prompts
+        save_confirm:
+          title: Guardar prompts de IA personalizados?
+          body: Os prompts personalizados substituem as instruções de sistema incorporadas e as salvaguardas de segurança (como as restrições de aconselhamento financeiro) para a sua família.
+          dont_show_again: Não voltar a mostrar este aviso
+          cancel: Cancelar
+          confirm: Confirmar
+      prompt_field:
+        provider_label: Serviço
+        prompt_label: Prompt
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Repor predefinição
+        reset_confirm_title: Repor o prompt predefinido?
+        reset_confirm_body: Isto descarta o seu prompt personalizado e restaura as instruções predefinidas incorporadas.
+        status_custom: A utilizar o seu prompt personalizado
+        status_default: A utilizar a predefinição incorporada
+        format_risk: 'O seu prompt de %{provider} deixou de incluir o exemplo {"%{key}": ...}. Cada pedido continua a pedir esse formato, pelo que a análise normalmente funciona, mas uma substituição que peça um formato de saída diferente vai quebrá-la.'
+      update:
+        success: Prompts de IA atualizados
+        multiple_errors: Vários prompts são demasiado longos (o máximo é %{count} caracteres)
     payments:
       show:
         page_title: Pagamentos
@@ -162,6 +184,8 @@ pt-PT:
         dashboard_two_column_description: Apresenta os widgets da visão geral em duas colunas em ecrãs grandes, com controlos de largura e altura por widget no cabeçalho de cada widget. Quando desativado, os widgets são empilhados numa única coluna.
         split_grouped_title: Agrupar transações divididas
         split_grouped_description: Apresenta as transações divididas agrupadas pela transação principal. Quando desativado, cada transação dividida é apresentada individualmente.
+        dashboard_account_groups_title: Expandidas por predefinição
+        dashboard_account_groups_description: Estas secções de contas começam expandidas na visão geral e na barra lateral de contas. Pode recolhê-las manualmente a qualquer momento.
     preferences:
       show:
         country: País
@@ -187,14 +211,14 @@ pt-PT:
         household_budget_enabled_hint: Mantenha um orçamento partilhado do agregado familiar juntamente com os orçamentos pessoais. Desative para utilizar apenas orçamentos pessoais.
         budget_sharing_title: Partilha de orçamentos
         budget_sharing_subtitle: Permita que outros membros vejam ou editem o seu orçamento pessoal
-        budget_sharing_no_members: Sem outros membros no seu %{moniker} com quem partilhar
+        budget_sharing_no_members: Sem outros membros com quem partilhar (%{moniker})
         budget_sharing_permission_label: "Acesso de %{name}"
         budget_sharing_permissions:
           none: Sem acesso
           read_only: Apenas ver
           read_write: Pode editar
         currencies_title: "%{moniker} - Moedas"
-        currencies_subtitle: Escolha quais as moedas que aparecem nos campos de dinheiro da sua %{moniker}
+        currencies_subtitle: Escolha quais as moedas que aparecem nos campos de dinheiro (%{moniker})
         base_currency_label: Moeda base
         base_currency_badge: Moeda base
         additional_currencies_label: Moedas adicionais
@@ -211,13 +235,13 @@ pt-PT:
           other: "%{count} selecionadas"
         save_currencies: Guardar moedas
         sharing_title: "%{moniker} - Partilha"
-        sharing_subtitle: "Controle a forma como as contas são partilhadas dentro da sua %{moniker}"
+        sharing_subtitle: "Controle a forma como as contas são partilhadas (%{moniker})"
         sharing_default_label: Partilha predefinida para novas contas
         sharing_shared: Partilhar com todos os membros
         sharing_private: Manter privado por predefinição
         preview:
-          title: Ativar funcionalidades de pré-visualização
-          description: Adira a funcionalidades em desenvolvimento identificadas como pré-visualização ou canary.
+          title: Ativar funcionalidades em antevisão
+          description: Adira a funcionalidades em desenvolvimento identificadas como antevisão (preview) ou canary.
     budget_shares:
       update:
         success: Definições de partilha de orçamento atualizadas
@@ -291,7 +315,7 @@ pt-PT:
         disable_mfa: Desativar 2FA
         disable_mfa_confirm: Tem a certeza de que pretende desativar a autenticação de dois fatores?
         sso_title: Contas associadas
-        sso_subtitle: Ligações às suas contas SSO
+        sso_subtitle: Gira as ligações às suas contas de início de sessão único
         sso_disconnect: Desligar
         sso_last_used: Última utilização
         sso_never: Nunca
@@ -334,7 +358,7 @@ pt-PT:
       general_section_title: Geral
       imports_label: Importações
       exports_label: Exportações
-      llm_usage_label: Utilização de AI
+      llm_usage_label: Utilização de IA
       logout: Terminar sessão
       merchants_label: Comerciantes
       providers_label: Serviços
@@ -405,7 +429,7 @@ pt-PT:
         no_recent_sync: Sincronização em atraso
         reconsent_required: Necessário novo consentimento
         reconsent_needed:
-          one: Necessário novo consentimento em 1 dia
+          one: "Necessário novo consentimento em %{count} dia"
           other: Necessário novo consentimento em %{count} dias
         last_synced: Sincronizado há %{time}
       sync_all: Sincronizar tudo
@@ -436,6 +460,10 @@ pt-PT:
         sophtron: Ligue bancos e utilities dos EUA e do Canadá.
         plaid: Ligue milhares de instituições financeiras dos EUA via Plaid.
         plaid_eu: Ligue instituições financeiras europeias via Plaid (PSD2 / Open Banking).
+        monobank: Sincronize cartões e mealheiros Monobank ucranianos com um token de API pessoal.
+        fio: Sincronize uma conta Fio banka com um token de API apenas de leitura.
+        coinspot: Sincronize saldos CoinSpot, valores em AUD, transferências, depósitos, levantamentos e histórico de ordens utilizando uma chave de API apenas de leitura.
+        trade_republic: Sincronize a sua conta de investimento Trade Republic através de um início de sessão web seguro, apenas de leitura.
       search_filters:
         aria_label: Pesquisar serviços
         placeholder: Pesquisar serviços
@@ -653,7 +681,7 @@ pt-PT:
         api_secret_placeholder_new: Cole o seu Trading 212 Secret Key
         api_secret_placeholder_existing: Deixe em branco para manter o Secret Key atual
         environment_label: Ambiente
-        environment_live: Conta ao vivo
+        environment_live: Conta real
         environment_demo: Conta de demonstração
         currency_label: Moeda da conta
         save_configuration: Guardar Configuração
@@ -662,5 +690,92 @@ pt-PT:
         disconnect_confirm: Desligar Trading 212?
         status_configured_prefix: "Configurado. Visite o"
         accounts_tab: Contas
+        status_configured_suffix: separador para gerir as contas descobertas.
+        not_configured: Não configurado.
+        syncing: A sincronizar...
+        disconnect: Desligar conta Trading 212
+        default_account_name: Conta Trading 212
+        add_account: Adicionar outra conta
+      coinspot_panel:
+        step1_html: Aceda às <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">Definições de API CoinSpot</a>
+        step2: Crie uma chave de API com acesso apenas de leitura a saldos e histórico.
+        step3: Cole abaixo a chave de API e o segredo.
+        read_only_title: Apenas sincronização de exchange de leitura
+        read_only_body: Não conceda permissões de envio, levantamento, negociação ou transferência. O Sure importa apenas saldos, valores em AUD, transferências, depósitos, levantamentos e o histórico de ordens concluídas.
+        default_connection_name: CoinSpot
+        add_connection: Adicionar ligação CoinSpot
+        update_connection: Atualizar ligação
+        connection_name_label: Nome da ligação
+        connection_name_placeholder: CoinSpot Principal
+        api_key_label: Chave de API
+        api_key_placeholder: Cole a sua chave de API CoinSpot
+        keep_api_key_placeholder: Deixe em branco para manter a chave de API existente
+        api_secret_label: Segredo de API
+        api_secret_placeholder: Cole o seu segredo de API CoinSpot
+        keep_api_secret_placeholder: Deixe em branco para manter o segredo de API existente
+        setup_accounts: Configurar conta
+        syncing: A sincronizar...
+        sync: Sincronizar
+        disconnect: Desligar
+        disconnect_confirm: Tem a certeza de que pretende desligar %{name}?
+      monobank_panel:
+        step_1_html: Aceda a %{link}, inicie sessão com a aplicação Monobank e gere um token pessoal.
+        step_2: Copie o token — só é mostrado uma vez.
+        step_3: Cole abaixo o token, guarde e depois ligue os cartões e mealheiros que pretende acompanhar.
+      fio_panel:
+        step_1_html: Inicie sessão no homebanking %{link} e abra Definições → API.
+        step_2: Crie um token com acesso apenas de leitura ("Sledování účtu"). Requer autenticação forte e é válido por até 180 dias.
+        step_3: Cole abaixo o token e guarde. Cada token dá acesso a uma única conta, por isso adicione uma ligação por cada conta Fio.
+      trade_republic_panel:
+        encryption_warning:
+          title: A encriptação não está configurada
+          message: As credenciais e os dados de sessão da Trade Republic não podem ser armazenados de forma segura enquanto a encriptação do Active Record não estiver configurada.
+        steps:
+          step_1: Introduza o número de telemóvel e o PIN que utiliza na aplicação Trade Republic e guarde.
+          step_2: Introduza o código da sua aplicação de autenticação quando lhe for pedido.
+          step_3: Aprove o início de sessão na sua aplicação Trade Republic quando lhe for pedido.
+        phone_number_label: Número de telemóvel
+        phone_number_placeholder_new: +49 170 1234567
+        phone_number_placeholder_existing: Deixe em branco para manter o número de telemóvel atual
+        pin_label: PIN
+        pin_placeholder_new: O PIN da sua aplicação Trade Republic
+        pin_placeholder_existing: Deixe em branco para manter o PIN atual
+        currency_label: Moeda da conta
+        connect: Iniciar sessão
+        confirm_login: Verificar início de sessão
+        complete_login: Continuar
+        authenticator_code_label: Código de autenticação (se pedido)
+        authenticator_code_placeholder: Código de 6 dígitos
+        push_login_notice: Aprove agora o início de sessão na sua aplicação Trade Republic. O Sure verifica automaticamente em segundo plano. Também pode verificar o estado manualmente.
+        check_login_status: Verificar estado agora
+        authenticator_code_notice: Introduza o código da sua aplicação de autenticação.
+        approval_pending: Início de sessão iniciado. Aprove-o na aplicação Trade Republic; o Sure está a verificar automaticamente.
+        awaiting_confirmation: A aprovação na aplicação Trade Republic está pendente.
+        awaiting_authenticator_code: É necessário o código de autenticação.
+        login_expired: O pedido de aprovação expirou.
+        restart_login: Reiniciar o início de sessão
+        connection_success:
+          title: Trade Republic ligada com sucesso
+          message: A sua ligação Trade Republic está pronta.
+          description: O Sure está agora a sincronizar os seus dados Trade Republic em segundo plano.
+          close: Concluído
+        qr_login: Iniciar sessão com código QR
+        qr_cancel: Cancelar início de sessão por QR
+        qr_back_to_credentials: Voltar ao número de telemóvel e PIN
+        qr_loading: A preparar o código QR…
+        qr_instruction: Leia o código QR com a sua aplicação Trade Republic e aprove o início de sessão.
+        qr_success: Início de sessão aprovado. O Sure está a atualizar a página do serviço.
+        qr_error: Não foi possível iniciar o início de sessão por QR. Tente novamente.
+        save_configuration: Guardar e iniciar sessão
+        update_configuration: Atualizar configuração
+        sync: Sincronizar
+        disconnect: Desligar Trade Republic
+        disconnect_confirm: Desligar a Trade Republic? As suas contas sincronizadas tornar-se-ão contas manuais.
+        status_configured_prefix: Ligado. Visite o
+        accounts_tab: Contas
+        setup_accounts: Configurar contas
+        accounts_discovered:
+          one: '%{count} conta Trade Republic descoberta.'
+          other: '%{count} contas Trade Republic descobertas.'
         status_configured_suffix: separador para gerir as contas descobertas.
         not_configured: Não configurado.

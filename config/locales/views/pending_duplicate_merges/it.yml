@@ -4,15 +4,15 @@ it:
     create:
       no_posted_selected: Seleziona una transazione registrata con cui unire
       invalid_transaction: Transazione selezionata per l'unione non valida
-      merge_success: Transazione in sospeso unita con la transazione registrata
+      merge_success: Transazione in attesa unita con la transazione registrata
       merge_failed: Impossibile unire le transazioni
     set_transaction:
-      pending_only: Questa funzione è disponibile solo per le transazioni in sospeso
+      pending_only: Questa funzione è disponibile solo per le transazioni in attesa
     new:
       title: Unisci con transazione registrata
       warning_title: Unione duplicati manuale
-      warning_description: Usa questa funzione per unire manualmente una transazione in sospeso con la sua versione registrata. Questo eliminerà la transazione in sospeso e manterrà solo quella registrata.
-      pending_transaction: Transazione in sospeso
+      warning_description: Usa questa funzione per unire manualmente una transazione in attesa con la sua versione registrata. Questo eliminerà la transazione in attesa e manterrà solo quella registrata.
+      pending_transaction: Transazione in attesa
       select_posted: Seleziona la transazione registrata con cui unire
       showing_range: "Visualizzando %{start} - %{end}"
       previous: "← Precedenti 10"

@@ -62,7 +62,7 @@ pt-PT:
         balance: "Saldo"
       activity:
         recent:
-          one: "1 transação • mais recente %{when}"
+          one: "%{count} transação • mais recente %{when}"
           other: "%{count} transações • mais recente %{when}"
         dormant: "Sem atividade em %{days} dias"
         empty: "Nenhuma transação importada ainda"
@@ -70,7 +70,7 @@ pt-PT:
         today: "hoje"
         yesterday: "ontem"
         days_ago:
-          one: "há 1 dia"
+          one: "há %{count} dia"
           other: "há %{count} dias"
       stale_accounts:
         title: "Contas Já Não No SimpleFIN"
@@ -128,7 +128,7 @@ pt-PT:
       description: Selecione uma conta SimpleFIN para ligar à sua conta existente
       cancel: Cancelar
       link_account: Ligar conta
-      no_accounts_found: "Nenhuma conta SimpleFIN encontrada para este %{moniker}."
+      no_accounts_found: "Nenhuma conta SimpleFIN encontrada (%{moniker})."
       wait_for_sync: Se acabou de ligar ou sincronizar, tente novamente após a conclusão da sincronização.
       check_provider_health: Verifique se a sua ligação SimpleFIN está saudável em Definições → Serviços.
       unlink_to_move: Para mover uma ligação, desligue-a primeiro no menu de ações da conta.
@@ -158,3 +158,21 @@ pt-PT:
       message:
         one: "%{count} transação pendente com mais de %{days} dias"
         other: "%{count} transações pendentes com mais de %{days} dias"
+    sync_status:
+      no_accounts: Nenhuma conta encontrada
+      synced:
+        one: '%{count} conta sincronizada'
+        other: '%{count} contas sincronizadas'
+      partial_setup:
+        one: '%{linked} sincronizadas, %{unlinked} precisa de configuração'
+        other: '%{linked} sincronizadas, %{unlinked} precisam de configuração'
+    institution_summary:
+      none: Nenhuma instituição ligada
+      count:
+        one: '%{count} instituição'
+        other: '%{count} instituições'
+    rate_limited:
+      daily_refresh: Atingiu o limite diário de atualizações do SimpleFIN. Tente novamente depois de o SimpleFIN Bridge atualizar os dados (até 24 horas).
+    stale_sync:
+      last_successful: A última sincronização bem-sucedida foi há %{count} dias. A sua ligação SimpleFIN pode precisar de atenção.
+      no_transactions: Sem novas transações há %{count} dias. Verifique o seu painel do SimpleFIN para garantir que as ligações aos seus bancos estão ativas.

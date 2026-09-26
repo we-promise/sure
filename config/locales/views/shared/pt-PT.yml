@@ -53,3 +53,4 @@ pt-PT:
         no_worker_processes: "Nenhum processo de worker Sidekiq está ligado. Inicie o contentor do worker ou a unidade systemd."
         stale_heartbeat: "O worker Sidekiq não reportou um heartbeat recentemente. Pode estar bloqueado ou ter falhado."
         queue_backed_up: "O trabalho mais antigo enfileirado está à espera para além do orçamento de latência. O worker está ativo, mas está a ficar para trás."
+    require_connector_owner: Só pode gerir as ligações que adicionou

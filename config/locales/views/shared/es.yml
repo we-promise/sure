@@ -20,7 +20,7 @@ es:
       calculate_rate_tab: Calcular tasa
       convert_tab: Convertir con tasa
       destination_amount: Importe de destino
-      exchange_rate: Tasa de cambio
+      exchange_rate: Tipo de cambio
       exchange_rate_help: Elige cómo introducir el importe.
     syncing_notice:
       syncing: Sincronizando datos de cuentas...
@@ -44,3 +44,13 @@ es:
       expense: Gasto
       income: Ingreso
       transfer: Transferencia
+    require_connector_owner: Solo puedes gestionar las conexiones que has añadido tú
+    sidekiq_health_banner:
+      title: Algunos datos pueden estar desactualizados
+      body: Los trabajos en segundo plano no se están procesando, así que los saldos, el patrimonio neto y las sincronizaciones de cuentas pueden estar desactualizados o faltar.
+      cta: Ver estado del sistema
+      reasons:
+        redis_unreachable: La aplicación no puede conectar con Redis. Comprueba tu REDIS_URL y que Redis esté en ejecución.
+        no_worker_processes: No hay ningún proceso worker de Sidekiq conectado. Inicia el contenedor del worker o la unidad de systemd.
+        stale_heartbeat: El worker de Sidekiq no ha enviado ninguna señal de actividad (heartbeat) recientemente. Puede que esté bloqueado o se haya caído.
+        queue_backed_up: El trabajo más antiguo en cola lleva esperando más de la latencia máxima admitida. El worker está activo pero se está quedando atrás.

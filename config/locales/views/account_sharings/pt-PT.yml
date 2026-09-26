@@ -7,7 +7,7 @@ pt-PT:
       member: Membro
       permission: Permissão
       shared: Partilhada
-      no_members: Não há outros membros na sua %{moniker} com quem partilhar
+      no_members: Não há outros membros com quem partilhar (%{moniker})
       permissions:
         full_control: Controlo total
         full_control_description: Pode ver, editar e gerir transações
@@ -18,7 +18,7 @@ pt-PT:
       save: Guardar definições de partilha
       owner_label: "Proprietário: %{name}"
       shared_with_count:
-        one: Partilhado com 1 membro
+        one: "Partilhado com %{count} membro"
         other: "Partilhado com %{count} membros"
       include_in_finances: Incluir nos meus orçamentos e relatórios
       exclude_from_finances: Excluir dos meus orçamentos e relatórios

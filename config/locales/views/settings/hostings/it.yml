@@ -29,6 +29,7 @@ it:
         confirm_clear_cache:
           title: Svuotare la cache dei dati?
           body: Sei sicuro di voler svuotare la cache dei dati? Questo rimuoverà tutti i tassi di cambio, i prezzi dei titoli, i saldi dei conti e altri dati. Questa azione non può essere annullata.
+        property_valuation_providers: Provider di valutazione immobiliare
       provider_selection:
         exchange_rate_title: Provider tasso di cambio
         exchange_rate_description: Seleziona un singolo provider per recuperare i tassi di cambio.
@@ -55,6 +56,9 @@ it:
           binance_public: Binance
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
+          mansa: Mansa
+        requires_api_key_mansa: richiede chiave API, piano gratuito da 100 chiamate/giorno -- solo NGX (Nigerian Exchange)
       assistant_settings:
         title: Assistente IA
         description: Scegli come risponde l'assistente chat. Integrato usa il tuo provider LLM configurato direttamente. Esterno delega a un agente IA remoto che può richiamare gli strumenti finanziari di Sure tramite MCP.
@@ -95,7 +99,7 @@ it:
         high_res_description: Se abilitato, i loghi verranno recuperati alla risoluzione 120x120 invece di 40x40. Questo fornisce immagini più nitide su display ad alta densità.
       llm_provider_selector:
         title: Provider IA
-        description: Scegli quale LLM alimenta la chat IA. Le operazioni batch (categorizzazione transazioni, rilevamento commercianti e elaborazione PDF) usano sempre OpenAI.
+        description: Scegli quale LLM alimenta la chat IA. Le operazioni batch (categorizzazione transazioni, rilevamento esercenti ed elaborazione PDF) usano sempre OpenAI.
         env_configured_message: Configurato con successo tramite la variabile d'ambiente LLM_PROVIDER.
         provider_label: Provider LLM attivo
         provider_openai: OpenAI
@@ -114,7 +118,7 @@ it:
         base_url_placeholder: "https://api.anthropic.com (predefinito)"
         model_label: Modello predefinito (facoltativo)
         model_placeholder: "claude-sonnet-4-6 (predefinito)"
-        model_help: Usato per chat ed elaborazione PDF. Le operazioni batch (categorizza, rilevamento commercianti) usano Haiku per il costo.
+        model_help: Usato per chat ed elaborazione PDF. Le operazioni batch (categorizza, rilevamento esercenti) usano Haiku per il costo.
       openai_settings:
         description: Inserisci il token di accesso e opzionalmente configura un provider compatibile con OpenAI personalizzato
         env_configured_message: Configurato con successo tramite variabili d'ambiente.
@@ -131,14 +135,22 @@ it:
         json_mode_json_object: Oggetto JSON
         json_mode_help: "La modalità Strict funziona meglio con i modelli thinking (qwen-thinking, deepseek-reasoner). La modalità None funziona meglio con i modelli standard (llama, mistral, gpt-oss)."
         budget_heading: Budget token
-        budget_description: Si applica alle chiamate compatibili con OpenAI (chat, auto-categorizzazione, rilevamento commercianti ed elaborazione PDF). I valori predefiniti sono conservativi per i modelli locali a contesto ridotto. Aumenta per i modelli cloud con finestre di contesto più grandi.
+        budget_description: Si applica alle chiamate compatibili con OpenAI (chat, auto-categorizzazione, rilevamento esercenti ed elaborazione PDF). I valori predefiniti sono conservativi per i modelli locali a contesto ridotto. Aumenta per i modelli cloud con finestre di contesto più grandi.
         context_window_label: Finestra di contesto (facoltativo)
         context_window_help: "Token totali che il modello accetterà. Predefinito: 2048 — aumenta a 8192+ per OpenAI cloud o modelli locali a contesto ampio."
         max_response_tokens_label: Token risposta massimi (facoltativo)
         max_response_tokens_help: "Token riservati per la risposta del modello. Predefinito: 512. Diminuisci per liberare spazio per cronologie più lunghe."
         max_items_per_call_label: Elementi massimi per batch (facoltativo)
-        max_items_per_call_help: "Limite superiore per batch di auto-categorizzazione/rilevamento commercianti. Predefinito: 25. I batch più grandi vengono suddivisi automaticamente per adattarsi alla finestra di contesto."
+        max_items_per_call_help: "Limite superiore per batch di auto-categorizzazione/rilevamento esercenti. Predefinito: 25. I batch più grandi vengono suddivisi automaticamente per adattarsi alla finestra di contesto."
         title: OpenAI
+        model_function_calling_help: L'assistente AI legge i tuoi dati tramite chiamate di funzione, quindi scegli un modello che il tuo provider indica come compatibile con tools/function calling. I modelli senza questo supporto fanno fallire la chat con un errore del provider poco chiaro.
+        model_function_calling_link: Verifica il modello configurato
+        timeout_heading: Timeout
+        timeout_description: Controlla per quanto tempo possono durare le chiamate ai modelli compatibili con OpenAI prima che Sure rinunci. Aumenta questi valori se esegui un modello locale su hardware lento.
+        openai_request_timeout_label: Timeout richiesta in secondi (facoltativo)
+        openai_request_timeout_help: 'Predefinito: 60. Si applica a ogni richiesta HTTP compatibile con OpenAI, incluse auto-categorizzazione, rilevamento esercenti, chat, elaborazione PDF e chiamate al vector store. OPENAI_REQUEST_TIMEOUT sovrascrive questo campo.'
+        ai_response_timeout_label: Timeout risposta in secondi (facoltativo)
+        ai_response_timeout_help: 'Predefinito: 90. Si applica solo al watchdog dell''intero turno di chat, quindi dimensionalo come una somma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × timeout richiesta, più il tempo di esecuzione degli strumenti e di attesa in coda. AI_RESPONSE_TIMEOUT sovrascrive questo campo.'
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance fornisce accesso gratuito a prezzi azionari, tassi di cambio e dati finanziari senza richiedere una chiave API.
@@ -146,6 +158,14 @@ it:
         status_inactive: Connessione Yahoo Finance fallita
         connection_failed: Impossibile connettersi a Yahoo Finance
         troubleshooting: Controlla la connessione internet e le impostazioni del firewall. Yahoo Finance potrebbe essere temporaneamente non disponibile.
+        status_healthy: Yahoo Finance è attivo e funzionante.
+        status_rate_limited: Yahoo Finance sta temporaneamente limitando le richieste.
+        rate_limited_title: Limite di richieste di Yahoo Finance raggiunto.
+        rate_limited_message: Non è richiesta alcuna azione. Sure eviterà ulteriori controlli di stato per 30 minuti. Le operazioni su prezzi e tassi di cambio proseguono in modo indipendente.
+        status_unavailable: Yahoo Finance non è al momento disponibile.
+        unavailable_title: Impossibile verificare Yahoo Finance.
+        unavailable_message: Yahoo Finance non è raggiungibile o ha restituito una risposta imprevista. Controlla la connessione internet e riprova più tardi.
+        status_unknown: Verifica dello stato di Yahoo Finance in corso.
       tiingo_settings:
         title: Tiingo
         description: Inserisci il token API fornito da Tiingo. Il piano gratuito supporta 50 simboli unici all'ora con oltre 30 anni di dati storici.
@@ -166,6 +186,7 @@ it:
         step_1: Apri T-Bank investments, poi Impostazioni, poi Token API (richiede un conto di intermediazione T-Bank aperto).
         step_2: Crea un token con accesso in sola lettura.
         step_3: Copia il token e incollalo qui sotto.
+        moex_only_notice: 'Non abilitato per i prezzi sopra: T-Invest viene usato per recuperare i loghi dei brand di tutti i tuoi titoli ogni volta che è configurato un token, indipendentemente dalla casella di controllo sopra.'
       eodhd_settings:
         title: EODHD
         description: Inserisci il token API fornito da EODHD. Supporta ETF europei su LSE, XETRA e altre borse internazionali.
@@ -229,6 +250,30 @@ it:
         auto_sync_description: Quando abilitata, tutti i conti verranno sincronizzati automaticamente ogni giorno all'orario specificato.
         auto_sync_time_label: Orario sincronizzazione (HH:MM)
         auto_sync_time_description: Specifica l'ora del giorno in cui deve avvenire la sincronizzazione automatica.
-        include_pending_label: Includi transazioni in sospeso
-        include_pending_description: Quando abilitato, le transazioni in sospeso (non confermate) verranno importate e riconciliate automaticamente quando vengono registrate. Disabilita se la tua banca fornisce dati in sospeso inaffidabili.
+        include_pending_label: Includi transazioni in attesa
+        include_pending_description: Quando abilitato, le transazioni in attesa (non confermate) verranno importate e riconciliate automaticamente quando vengono registrate. Disabilita se la tua banca fornisce dati inaffidabili sulle transazioni in attesa.
         env_configured_message: Questa impostazione è disabilitata perché è impostata una variabile d'ambiente del provider (SIMPLEFIN_INCLUDE_PENDING o PLAID_INCLUDE_PENDING). Rimuovila per abilitare questa impostazione.
+      rentcast_settings:
+        title: RentCast
+        description: Inserisci la tua chiave API RentCast per cercare dettagli e stime di valore degli immobili negli USA quando aggiungi un immobile. Il piano gratuito è limitato a 50 richieste API al mese, condivise tra ricerche di immobili e aggiornamenti giornalieri delle valutazioni. Con un piano a pagamento, aumenta il limite con la variabile d'ambiente RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente RENTCAST_API_KEY.
+        label: Chiave API
+        placeholder: Inserisci qui la tua chiave API RentCast
+        usage: '%{used} di %{limit} richieste mensili utilizzate'
+      realie_settings:
+        title: Realie
+        description: Inserisci la tua chiave API Realie per cercare dettagli e stime di valore degli immobili negli USA quando aggiungi un immobile. Il piano gratuito è limitato a 25 richieste API al mese, condivise tra ricerche di immobili e aggiornamenti giornalieri delle valutazioni. Con un piano a pagamento, aumenta il limite con la variabile d'ambiente REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente REALIE_API_KEY.
+        label: Chiave API
+        placeholder: Inserisci qui la tua chiave API Realie
+        usage: '%{used} di %{limit} richieste mensili utilizzate'
+      mansa_settings:
+        title: Mansa
+        description: Inserisci la chiave API di Mansa API. Supporta NGX (Nigerian Exchange), non coperta da nessun altro provider qui. Mansa copre anche altre borse africane, ma solo NGX è verificata con questa integrazione.
+        env_configured_message: Configurato con successo tramite la variabile d'ambiente MANSA_API_KEY.
+        label: Chiave API
+        placeholder: Inserisci qui la tua chiave API Mansa
+        show_details: (mostra dettagli)
+        step_1_html: Visita <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> e richiedi la tua chiave API gratuita -- nessuna carta richiesta.
+        step_2: Copia la tua chiave API e incollala qui sotto.
+        rate_limit_warning: Il piano gratuito di Mansa è limitato a 100 chiamate API al giorno e fornisce solo quotazioni correnti -- i prezzi storici richiedono un piano a pagamento. Solo NGX (Nigerian Exchange) è verificata con questa integrazione; le altre borse africane coperte da Mansa non sono ancora supportate qui.

@@ -151,7 +151,7 @@ es:
         long: Valores del Estado (G-Secs)
       sdl:
         short: SDL
-        long: Préstamos de desarrollo estatal (SDL)
+        long: Bonos de desarrollo estatal (SDL)
       corporate_bond:
         short: Bono corporativo
         long: Bono corporativo
@@ -182,8 +182,11 @@ es:
       other:
         short: Otra
         long: Otra inversión
+      cash_management:
+        short: CMA
+        long: Cuenta de gestión de efectivo (Cash Management Account)
     value_tooltip:
       cash: Efectivo
-      holdings: Inversiones
+      holdings: Posiciones
       total: Saldo de la cartera
-      total_value_tooltip: El saldo total de la cartera es la suma del efectivo de corretaje (disponible para operar) y el valor de mercado actual de tus inversiones.
+      total_value_tooltip: El saldo total de la cartera es la suma del efectivo de corretaje (disponible para operar) y el valor de mercado actual de tus posiciones.

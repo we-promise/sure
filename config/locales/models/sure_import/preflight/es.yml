@@ -1,0 +1,6 @@
+---
+es:
+  sure_import:
+    preflight:
+      missing_reference: 'Línea %{line}: %{type} hace referencia a %{field} %{value}, que no existe.'
+      skipped_missing_reference: 'Línea %{line}: %{type} hace referencia a %{field} %{value}, que no existe. Se omitirá durante la importación.'
