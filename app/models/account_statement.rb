@@ -36,6 +36,25 @@ class AccountStatement < ApplicationRecord
   has_many :pdf_imports, -> { where(type: "PdfImport").ordered }, class_name: "PdfImport", dependent: :restrict_with_error
   has_one_attached :original_file, dependent: :purge_later
 
+  # The Statement Vault and the searchable Document Store were two entirely
+  # disjoint write paths: nothing in create_from_prepared_upload! ever reached
+  # the vector store, so a statement uploaded through the web Vault or through
+  # the MCP tool was structurally unfindable by search_family_files, which
+  # answered "no documents have been uploaded" while the file sat in the
+  # database. Only /imports (PdfImport -> ProcessPdfJob) bridged the two.
+  #
+  # This closes the gap at the one point all three producers share.
+  after_create_commit :index_in_vector_store_later
+  # Keyed on the attribute, not on the two methods that happen to change it.
+  # AccountStatementsController#update links a statement too, out of band of
+  # strong params, and it left the indexed copy at its old account. Any future
+  # writer is covered by construction.
+  after_save :note_account_link_change
+  after_commit :sync_vector_store_document_account!, if: :account_link_changed?
+  # The indexed copy is a separate row AND a provider-side file. Destroying the
+  # statement without it left the text searchable after the user deleted it.
+  after_destroy_commit :remove_vector_store_document
+
   enum :source, { manual_upload: "manual_upload" }, validate: true, default: "manual_upload"
   enum :upload_status, { stored: "stored", failed: "failed" }, validate: true, default: "stored"
   enum :review_status, { unmatched: "unmatched", linked: "linked", rejected: "rejected" }, validate: true, default: "unmatched", scopes: false
@@ -349,6 +368,40 @@ class AccountStatement < ApplicationRecord
     currency.presence || account&.currency || family.currency
   end
 
+  # Idempotency key rather than a column: the link lives in the document's own
+  # metadata, so a re-run, or the /imports path having already indexed this
+  # file, cannot produce a duplicate.
+  def vector_store_document
+    family.family_documents.where("metadata->>'account_statement_id' = ?", id).first
+  end
+
+  def indexed_in_vector_store?
+    vector_store_document.present?
+  end
+
+  # Returns false rather than raising when no vector store is configured: an
+  # install with no embeddings endpoint must still be able to accept uploads.
+  def index_in_vector_store!
+    return false unless original_file.attached?
+
+    # Row lock, not just the existence check: ProcessPdfJob runs the same check
+    # on another queue with no ordering between them, so two workers reading
+    # "not indexed" would both upload and leave two documents for one statement.
+    with_lock do
+      next false if indexed_in_vector_store?
+
+      family.upload_document(
+        file_content: original_file.download,
+        filename: filename,
+        metadata: {
+          "type" => "account_statement",
+          "account_statement_id" => id,
+          "account_id" => account_id
+        }.compact
+      ).present?
+    end
+  end
+
   def pdf?
     content_type.in?(ALLOWED_EXTENSION_CONTENT_TYPES[".pdf"])
   end
@@ -366,6 +419,21 @@ class AccountStatement < ApplicationRecord
   end
 
   private
+
+    # `FamilyDocument#readable_by` filters on the document's own account_id, so
+    # a statement that changes hands has to take its indexed copy with it.
+    # Left alone, a document indexed while the statement was still unmatched
+    # stays readable by every member after linking, and one indexed under an
+    # account stays owned by that account after unlinking.
+    def sync_vector_store_document_account!
+      document = vector_store_document
+      return if document.nil?
+
+      document.update!(
+        account_id: account_id,
+        metadata: (document.metadata || {}).merge("account_id" => account_id).compact
+      )
+    end
 
     def reconciliation_check(key:, statement_amount:, ledger_amount:)
       difference = statement_amount.to_d - ledger_amount.to_d
@@ -401,6 +469,55 @@ class AccountStatement < ApplicationRecord
 
       self.review_status = "linked" if account.present? && !linked?
       self.review_status = "unmatched" if account.blank? && linked?
+    end
+
+    # `saved_change_to_account_id?` reads the LAST save, and unlink! saves twice
+    # inside one transaction, so testing it at commit time missed the change and
+    # left the document owned by the account the statement just left. The flag
+    # survives every save in the transaction and is consumed once.
+    def note_account_link_change
+      @account_link_changed ||= saved_change_to_account_id?
+    end
+
+    def account_link_changed?
+      changed = @account_link_changed
+      @account_link_changed = false
+      changed.present?
+    end
+
+    def index_in_vector_store_later
+      IndexAccountStatementJob.perform_later(id)
+    end
+
+    # Best effort, and never allowed to raise: the statement is already gone
+    # and re-raising here would only surface as a failed request for a delete
+    # that succeeded. An orphaned provider file is a support problem, not a
+    # user-facing one, so it is recorded where support can see it.
+    def remove_vector_store_document
+      document = vector_store_document
+      return if document.nil?
+      return if family.remove_document(document)
+
+      # It reports failure by returning false, not by raising, and on false the
+      # row is left in place: the deleted statement's text stays searchable,
+      # which is the outcome this callback exists to prevent.
+      DebugLogEntry.capture(
+        category: "documents",
+        level: "warn",
+        message: "Indexed copy of a deleted statement could not be removed and is still searchable",
+        source: "AccountStatement#remove_vector_store_document",
+        family: family,
+        metadata: { account_statement_id: id, family_document_id: document.id }
+      )
+    rescue StandardError => e
+      DebugLogEntry.capture(
+        category: "documents",
+        level: "warn",
+        message: "Could not remove the indexed copy of a deleted statement: #{e.class}: #{e.message}",
+        source: "AccountStatement#remove_vector_store_document",
+        family: family,
+        metadata: { account_statement_id: id }
+      )
     end
 
     def account_belongs_to_family
