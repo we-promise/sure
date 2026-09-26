@@ -378,7 +378,7 @@ class PdfImport < Import
   # a history, not a queue. Memoized mostly for data_committed?, which is two
   # more EXISTS queries every time it is asked.
   def awaiting_review_count
-    @awaiting_review_count ||= data_committed? ? 0 : rows_count
+    @awaiting_review_count ||= entries.exists? ? 0 : rows_count
   end
 
   # No query: extracted_data is already in memory.
@@ -542,7 +542,7 @@ class PdfImport < Import
     # fully-matched import sits at pending with no rows, which renders as the
     # processing screen forever and cannot be restarted.
     def refresh_status_after_regeneration!
-      return if data_committed?
+      return if entries.exists?
       return unless pending? || complete?
 
       target = statement_with_transactions? && rows_count > 0 ? "pending" : "complete"
