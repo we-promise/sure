@@ -2,6 +2,8 @@ class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
   MappingError = Class.new(StandardError)
 
+  attr_accessor :csv_format
+
   # A hard-killed worker (OOM, SIGKILL during deploy) loses its in-flight job
   # permanently, wedging the record in importing/reverting with no UI recourse.
   # After this idle window the job is presumed lost and the user may force the

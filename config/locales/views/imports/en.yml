@@ -209,6 +209,8 @@ en:
       update:
         qif_uploaded: "QIF file uploaded successfully."
       show:
+        title: Upload a file
+        description: Choose a file format and upload your data.
         csv_invalid: "Must be valid CSV with headers and at least one row of data"
         drop_csv_title: Drop CSV to upload
         drop_csv_subtitle: Your file will be uploaded automatically
@@ -419,23 +421,39 @@ en:
           confirm_mark_failed: This import has been inactive for a while and its background job was likely interrupted. Mark it as failed so you can try again? No imported data is kept.
       empty: No imports yet.
     new:
-      description: Import from a financial tool or upload raw data files.
-      tab_financial_tools: Financial Tools & Files
-      tab_raw_data: Raw Data
-      import_ynab: Import from YNAB
-      import_accounts: Import accounts
-      import_categories: Import categories
-      import_merchants: Import merchants
-      import_mint: Import from Mint
-      import_actual: Import from Actual Budget
-      import_portfolio: Import investments
-      import_rules: Import rules
-      import_transactions: Import transactions
-      import_qif: Import from Quicken (QIF)
-      import_sure: Import from Sure
-      import_sure_description: Full-export .ndjson file
-      import_file: Import document
-      import_file_description: AI-powered analysis for PDFs and searchable file upload
+      description: Choose what you're importing, then upload a file in the format you have.
+      format_label: File format
+      format_csv: CSV
+      format_document: Document (AI)
+      format_qif: Quicken (QIF)
+      format_sure: Sure export
+      csv_import_kind_label: What does this CSV contain?
+      csv_format_label: CSV source format
+      csv_format_description: Choose Auto-detect to recognize supported transaction exports from their headers, or select a format to use it directly.
+      csv_formats:
+        auto: Auto-detect
+        generic: Standard CSV
+        mint: Mint
+        actual: Actual Budget
+        ynab: YNAB
+      continue_to_upload: Continue to upload
+      document_description: Upload a PDF or searchable document for AI-powered analysis.
+      document_account_label: Account (optional)
+      document_account_placeholder: Select an account...
+      browse_document: Browse
+      document_file_prompt: to add your document here
+      choose_document: Choose document
+      upload_document: Upload document
+      qif_description: Upload a Quicken Interchange Format file. You can select an account during upload.
+      sure_description: Import a full-export file from Sure in NDJSON or JSON format.
+      choose_sure_export: Choose Sure export
+      upload_sure_export: Upload export
+      import_accounts: Accounts
+      import_categories: Categories
+      import_merchants: Merchants
+      import_portfolio: Investments
+      import_rules: Rules
+      import_transactions: Transactions
       requires_account: Import accounts first to unlock this option.
       resume: Resume %{type}
       sources: Sources

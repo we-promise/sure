@@ -136,7 +136,7 @@
 
   <%= link_to new_import_path,
               class: "bg-container-inset inline-flex items-center justify-center gap-2 hover:bg-container-inset-hover rounded-lg px-4 py-2 w-full font-medium text-primary text-sm text-center",
-              data: { turbo_frame: :modal } do %>
+              data: { turbo_frame: :_top } do %>
     <%= icon("plus") %>
     <%= t("imports.index.new") %>
   <% end %>

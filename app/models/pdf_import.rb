@@ -60,10 +60,10 @@ class PdfImport < Import
       family.sync_later if needs_sync
     end
 
-    def create_from_upload!(family:, file:, user:)
+    def create_from_upload!(family:, file:, user:, account: nil)
       statement = AccountStatement.create_from_prepared_upload!(
         family: family,
-        account: nil,
+        account: account,
         prepared_upload: AccountStatement.prepare_upload!(file)
       )
 

@@ -14,24 +14,52 @@ class Import::UploadsController < ApplicationController
   end
 
   def update
-    if @import.is_a?(QifImport)
+    case file_format_selection
+    when "qif"
+      switch_import_type!("QifImport")
       handle_qif_upload
-    elsif @import.is_a?(SureImport)
+    when "sure"
+      switch_import_type!("SureImport")
       update_sure_import_upload
-    elsif csv_valid?(csv_str)
-      @import.account = import_account_id.present? ? accessible_accounts.find(import_account_id) : nil
-      @import.assign_attributes(raw_file_str: csv_str, col_sep: upload_params[:col_sep])
-      @import.save!(validate: false)
-
-      redirect_to import_configuration_path(@import, template_hint: true), notice: t("imports.create.csv_uploaded")
+    when "csv"
+      update_csv_upload
     else
-      flash.now[:alert] = t("import.uploads.show.csv_invalid", default: "Must be valid CSV with headers and at least one row of data")
-
-      render :show, status: :unprocessable_entity
+      redirect_to import_upload_path(@import), alert: t("imports.create.invalid_file_type")
     end
   end
 
   private
+
+    def update_csv_upload
+      requested_type = upload_params[:import_kind].presence
+      requested_type = "TransactionImport" unless requested_type.in?(csv_import_types)
+      switch_import_type!(requested_type)
+
+      unless csv_valid?(csv_str)
+        flash.now[:alert] = t("import.uploads.show.csv_invalid", default: "Must be valid CSV with headers and at least one row of data")
+        render :show, status: :unprocessable_entity
+        return
+      end
+
+      detected_type = requested_type
+      if requested_type == "TransactionImport"
+        detected_type = Import::CsvFormat.import_type(
+          selection: csv_format_selection,
+          content: csv_str,
+          col_sep: upload_params[:col_sep].presence || ","
+        )
+      end
+      switch_import_type!(detected_type)
+
+      @import.account = import_account_id.present? ? accessible_accounts.find(import_account_id) : nil
+      attributes = { raw_file_str: csv_str, col_sep: upload_params[:col_sep] }
+
+      attributes.merge!(Import::CsvFormat.default_column_mappings(detected_type)) if detected_type != requested_type
+      @import.assign_attributes(attributes)
+      @import.save!(validate: false)
+
+      redirect_to import_configuration_path(@import, template_hint: true), notice: t("imports.create.csv_uploaded")
+    end
 
     def update_sure_import_upload
       uploaded = upload_params[:ndjson_file]
@@ -64,6 +92,44 @@ class Import::UploadsController < ApplicationController
 
     def set_import
       @import = Current.family.imports.find(params[:import_id])
+      @import.csv_format = csv_format_selection
+      @file_format = file_format_selection
+      @document_upload_extensions = document_upload_supported_extensions
+    end
+
+    def file_format_selection
+      allowed_formats = %w[csv qif sure]
+      allowed_formats << "document" if document_upload_supported_extensions.any?
+      (params.dig(:import, :file_format).presence || params[:file_format]).presence_in(allowed_formats) || format_for_import(@import)
+    end
+
+    def format_for_import(import)
+      case import.type
+      when "QifImport" then "qif"
+      when "SureImport" then "sure"
+      else "csv"
+      end
+    end
+
+    def document_upload_supported_extensions
+      adapter = VectorStore.adapter
+      adapter ? adapter.supported_extensions.map(&:downcase).uniq.sort : []
+    end
+
+    def csv_import_types
+      %w[TransactionImport TradeImport AccountImport CategoryImport MerchantImport RuleImport]
+    end
+
+    def switch_import_type!(type)
+      return if @import.type == type
+
+      previous_import = @import
+      @import = Current.family.imports.create!(
+        type: type,
+        account: previous_import.account,
+        date_format: previous_import.date_format || Current.family.date_format
+      )
+      previous_import.destroy! if previous_import.pending? && previous_import.raw_file_str.blank? && previous_import.rows.none?
     end
 
     def handle_qif_upload
@@ -121,7 +187,12 @@ class Import::UploadsController < ApplicationController
     end
 
     def upload_params
-      params.require(:import).permit(:raw_file_str, :import_file, :ndjson_file, :col_sep)
+      params.require(:import).permit(:raw_file_str, :import_file, :ndjson_file, :col_sep, :csv_format, :file_format, :import_kind)
+    end
+
+    def csv_format_selection
+      selections = Import::CsvFormat.options.map(&:last)
+      (params.dig(:import, :csv_format).presence || params[:csv_format]).presence_in(selections) || "auto"
     end
 
     def import_account_id

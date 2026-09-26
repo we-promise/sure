@@ -68,8 +68,13 @@ class ImportsController < ApplicationController
   end
 
   def new
-    @pending_import = Current.family.imports.ordered.pending.first
-    @document_upload_extensions = document_upload_supported_extensions
+    type = params[:type].presence_in(csv_import_types)
+    type ||= accessible_accounts.any? ? "TransactionImport" : "AccountImport"
+    type = "AccountImport" if type.in?(%w[TransactionImport TradeImport]) && accessible_accounts.none?
+    import = Current.family.imports.pending.where(type: type, raw_file_str: nil).ordered.first
+    import ||= Current.family.imports.create!(type: type, date_format: Current.family.date_format)
+
+    redirect_to import_upload_path(import, file_format: import_file_format(import)), status: :see_other
   end
 
   def create
@@ -95,7 +100,7 @@ class ImportsController < ApplicationController
       return
     end
 
-    type = params.dig(:import, :type).to_s
+    type = requested_import_type.to_s
     type = "TransactionImport" unless Import::TYPES.include?(type)
 
     account = accessible_accounts.find_by(id: params.dig(:import, :account_id))
@@ -124,7 +129,8 @@ class ImportsController < ApplicationController
 
       redirect_to import_configuration_path(import), notice: t("imports.create.csv_uploaded")
     else
-      redirect_to import_upload_path(import)
+      csv_format = params.dig(:import, :csv_format) if import.is_a?(TransactionImport)
+      redirect_to import_upload_path(import, csv_format: csv_format)
     end
   end
 
@@ -169,7 +175,7 @@ class ImportsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(:import_file)
+      params.require(:import).permit(:import_file, :account_id)
     end
 
     def require_statement_import_permission!
@@ -179,11 +185,16 @@ class ImportsController < ApplicationController
       redirect_back_or_to redirect_target, alert: t("accounts.not_authorized")
     end
 
-    def create_pdf_import(file)
+    def create_pdf_import(file, account: nil)
       return redirect_to new_import_path, alert: t("accounts.not_authorized") unless AccountStatement.statement_manager?(Current.user)
       return redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte) if file.size > Import::MAX_PDF_SIZE
+      return unless account.blank? || require_account_permission!(account)
 
-      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
+      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user, account: account)
+      if account.present? && pdf_import.account_id != account.id && !pdf_import.assign_account!(account)
+        redirect_to import_path(pdf_import), alert: t("imports.update.account_locked")
+        return
+      end
       pdf_import.process_with_ai_later
       redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
     rescue AccountStatement::DuplicateUploadError
@@ -219,7 +230,13 @@ class ImportsController < ApplicationController
           return
         end
 
-        create_pdf_import(file)
+        account = accessible_accounts.find_by(id: import_params[:account_id]) if import_params[:account_id].present?
+        unless import_params[:account_id].blank? || account
+          redirect_to new_import_path, alert: t("imports.update.invalid_account", default: "Account not found.")
+          return
+        end
+
+        create_pdf_import(file, account: account)
         return
       end
 
@@ -243,11 +260,38 @@ class ImportsController < ApplicationController
     end
 
     def document_upload_request?
-      params.dig(:import, :type) == "DocumentImport"
+      requested_import_type == "DocumentImport"
     end
 
     def sure_import_request?
-      params.dig(:import, :type) == "SureImport"
+      requested_import_type == "SureImport"
+    end
+
+    def requested_import_type
+      case params.dig(:import, :file_format)
+      when "csv"
+        params.dig(:import, :import_kind).presence || "TransactionImport"
+      when "document"
+        "DocumentImport"
+      when "qif"
+        "QifImport"
+      when "sure"
+        "SureImport"
+      else
+        params.dig(:import, :type)
+      end
+    end
+
+    def csv_import_types
+      %w[TransactionImport TradeImport AccountImport CategoryImport MerchantImport RuleImport MintImport ActualImport YnabImport]
+    end
+
+    def import_file_format(import)
+      case import.type
+      when "QifImport" then "qif"
+      when "SureImport" then "sure"
+      else "csv"
+      end
     end
 
     def create_sure_import(file)
