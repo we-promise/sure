@@ -173,30 +173,42 @@ class SnaptradeAccount::ActivitiesProcessor
     end
 
     def process_trade(data, activity_type, external_id)
-      # Extract and normalize symbol data
-      # SnapTrade activities have DIFFERENT structure than holdings:
-      #   activity.symbol.symbol = "MSTR" (ticker string directly)
-      #   activity.symbol.description = name
-      # Holdings have deeper nesting: symbol.symbol.symbol = ticker
-      raw_symbol_wrapper = data["symbol"] || data[:symbol] || {}
-      symbol_wrapper = raw_symbol_wrapper.is_a?(Hash) ? raw_symbol_wrapper.with_indifferent_access : {}
+      # Check `option_symbol` first: if present, this is an option contract trade.
+      # Prioritizing `option_symbol` prevents brokerages like Robinhood (which populate
+      # plain `symbol` with the underlying equity) from importing options as common stock.
+      raw_option_symbol = data["option_symbol"] || data[:option_symbol]
+      if raw_option_symbol.present? && raw_option_symbol.is_a?(Hash)
+        option_symbol_data = raw_option_symbol.with_indifferent_access
+        ticker = option_symbol_data["ticker"] || option_symbol_data[:ticker]
+        symbol_data = option_symbol_data if ticker.present?
+      end
 
-      # Get the symbol field - could be a string (ticker) or nested object
-      raw_symbol_data = symbol_wrapper["symbol"] || symbol_wrapper[:symbol]
+      if ticker.blank?
+        # Extract and normalize symbol data
+        # SnapTrade activities have DIFFERENT structure than holdings:
+        #   activity.symbol.symbol = "MSTR" (ticker string directly)
+        #   activity.symbol.description = name
+        # Holdings have deeper nesting: symbol.symbol.symbol = ticker
+        raw_symbol_wrapper = data["symbol"] || data[:symbol] || {}
+        symbol_wrapper = raw_symbol_wrapper.is_a?(Hash) ? raw_symbol_wrapper.with_indifferent_access : {}
 
-      # Determine ticker based on data type
-      if raw_symbol_data.is_a?(String)
-        # Activities: symbol.symbol is the ticker string directly
-        ticker = raw_symbol_data
-        symbol_data = symbol_wrapper # Use the wrapper for description, etc.
-      elsif raw_symbol_data.is_a?(Hash)
-        # Holdings structure: symbol.symbol is an object with symbol inside
-        symbol_data = raw_symbol_data.with_indifferent_access
-        ticker = symbol_data["symbol"] || symbol_data[:symbol]
-        ticker = symbol_data["raw_symbol"] if ticker.is_a?(Hash)
-      else
-        ticker = nil
-        symbol_data = {}
+        # Get the symbol field - could be a string (ticker) or nested object
+        raw_symbol_data = symbol_wrapper["symbol"] || symbol_wrapper[:symbol]
+
+        # Determine ticker based on data type
+        if raw_symbol_data.is_a?(String)
+          # Activities: symbol.symbol is the ticker string directly
+          ticker = raw_symbol_data
+          symbol_data = symbol_wrapper # Use the wrapper for description, etc.
+        elsif raw_symbol_data.is_a?(Hash)
+          # Holdings structure: symbol.symbol is an object with symbol inside
+          symbol_data = raw_symbol_data.with_indifferent_access
+          ticker = symbol_data["symbol"] || symbol_data[:symbol]
+          ticker = symbol_data["raw_symbol"] if ticker.is_a?(Hash)
+        else
+          ticker = nil
+          symbol_data = {}
+        end
       end
 
       # Must have a symbol for trades
@@ -333,6 +345,10 @@ class SnaptradeAccount::ActivitiesProcessor
       raw_symbol_data = data[:symbol] || data["symbol"] || {}
       symbol_data = raw_symbol_data.is_a?(Hash) ? raw_symbol_data.with_indifferent_access : {}
       symbol = symbol_data[:symbol] || symbol_data["symbol"] || symbol_data[:ticker]
+      if symbol.blank? && (raw_opt = data[:option_symbol] || data["option_symbol"]).present?
+        opt_data = raw_opt.is_a?(Hash) ? raw_opt.with_indifferent_access : {}
+        symbol = opt_data[:ticker]
+      end
       description = data[:description] || data["description"] || build_description(activity_type, symbol)
 
       # Normalize amount sign for certain activity types

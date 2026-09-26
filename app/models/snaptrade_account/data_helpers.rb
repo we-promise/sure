@@ -89,12 +89,27 @@ module SnaptradeAccount::DataHelpers
     end
 
     def extract_security_name(symbol_data, fallback_ticker)
+      # Options contract with underlying symbol details
+      if (opt_type = symbol_data[:option_type] || symbol_data["option_type"]).present?
+        underlying = symbol_data.dig(:underlying_symbol, :symbol) ||
+                     symbol_data.dig("underlying_symbol", "symbol") ||
+                     symbol_data.dig(:underlying_symbol, :raw_symbol) ||
+                     symbol_data.dig("underlying_symbol", "raw_symbol")
+        strike = symbol_data[:strike_price] || symbol_data["strike_price"]
+        exp_date = symbol_data[:expiration_date] || symbol_data["expiration_date"]
+
+        if underlying.present? && strike.present?
+          formatted_strike = (strike.to_f % 1).zero? ? "$#{strike.to_i}" : "$#{strike}"
+          return "#{underlying} #{formatted_strike} #{opt_type.to_s.upcase}#{exp_date.present? ? " (#{exp_date})" : ""}"
+        end
+      end
+
       # Try various paths where the name might be
       name = symbol_data[:description] || symbol_data["description"]
 
-      # If description is missing or looks like a type description, use ticker
+      # If description is missing or looks like a type description, use ticker directly without titleize
       if name.blank? || name.is_a?(Hash) || name =~ /^(COMMON STOCK|CRYPTOCURRENCY|ETF|MUTUAL FUND)$/i
-        name = fallback_ticker
+        return fallback_ticker
       end
 
       # Titleize for readability if it's all caps
@@ -104,7 +119,9 @@ module SnaptradeAccount::DataHelpers
     end
 
     def extract_exchange(symbol_data)
-      exchange = symbol_data[:exchange] || symbol_data["exchange"]
+      exchange = symbol_data[:exchange] || symbol_data["exchange"] ||
+                 symbol_data.dig(:underlying_symbol, :exchange) ||
+                 symbol_data.dig("underlying_symbol", "exchange")
       return exchange.presence if exchange.is_a?(String)
       return nil unless exchange.is_a?(Hash)
 
@@ -113,8 +130,10 @@ module SnaptradeAccount::DataHelpers
 
     def extract_country_code(symbol_data)
       # Try to extract country from currency or exchange
-      currency = symbol_data[:currency]
-      currency = currency.dig(:code) if currency.is_a?(Hash)
+      currency = symbol_data[:currency] || symbol_data["currency"] ||
+                 symbol_data.dig(:underlying_symbol, :currency) ||
+                 symbol_data.dig("underlying_symbol", "currency")
+      currency = currency.dig(:code) || currency.dig("code") if currency.is_a?(Hash)
 
       case currency
       when "USD"
