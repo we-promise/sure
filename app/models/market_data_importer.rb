@@ -68,14 +68,23 @@ class MarketDataImporter
     def required_exchange_rate_pairs
       pair_dates = {} # { [source, target] => earliest_date }
 
-      # 1. ENTRY-BASED PAIRS – we need rates from the first entry date
-      Entry.joins(:account)
+      # 1. ENTRY-BASED PAIRS – we need rates from the first entry date.
+      # Each entry currency is also fetched against the normalized family currency:
+      # transfer matching derives cross rates through it and does not chain
+      # entry -> account -> family rates.
+      Entry.joins(account: :family)
            .where.not("entries.currency = accounts.currency")
-           .group("entries.currency", "accounts.currency")
+           .group("entries.currency", "accounts.currency", "families.currency")
            .minimum("entries.date")
-           .each do |(source, target), date|
-        key = [ source, target ]
-        pair_dates[key] = [ pair_dates[key], date ].compact.min
+           .each do |(source, account_currency, family_currency), date|
+        family_target = Family.normalize_currency_code(family_currency) || "USD"
+
+        [ account_currency, family_target ].uniq.each do |target|
+          next if target == source
+
+          key = [ source, target ]
+          pair_dates[key] = [ pair_dates[key], date ].compact.min
+        end
       end
 
       # 2. ACCOUNT-BASED PAIRS – use the account's oldest entry date.

@@ -80,6 +80,21 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     MarketDataImporter.new(mode: :snapshot).import_exchange_rates
   end
 
+  test "syncs foreign entry currencies against the family currency as well as the account currency" do
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(name: "Chequing", currency: "CAD", balance: 100, accountable: Depository.new)
+    account.entries.create!(date: 10.days.ago.to_date, amount: 10, currency: "GBP", name: "Card payment", entryable: Transaction.new)
+
+    [ %w[GBP CAD], %w[GBP USD], %w[CAD USD] ].each do |from, to|
+      @provider.expects(:fetch_exchange_rates)
+               .with(from: from, to: to, start_date: anything, end_date: anything)
+               .once
+               .returns(provider_success_response([]))
+    end
+
+    MarketDataImporter.new(mode: :snapshot).import_exchange_rates
+  end
+
   test "syncs security prices" do
     security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
 
