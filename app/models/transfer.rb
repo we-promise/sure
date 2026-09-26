@@ -17,13 +17,21 @@ class Transfer < ApplicationRecord
   validate :transfer_has_same_family
 
   class << self
-    def kind_for_account(account)
+    # from_account mirrors the guard Transfer::Creator and Family::DataImporter
+    # apply to their own copies of this rule: an investment/crypto destination
+    # only counts as a contribution when the source isn't itself an
+    # investment/crypto account, otherwise it's a plain funds movement.
+    def kind_for_account(account, from_account: nil)
       if account.loan?
         "loan_payment"
       elsif account.credit_card?
         "cc_payment"
       elsif account.investment? || account.crypto?
-        "investment_contribution"
+        if from_account && (from_account.investment? || from_account.crypto?)
+          "funds_movement"
+        else
+          "investment_contribution"
+        end
       elsif account.liability?
         "cc_payment"
       else
@@ -97,9 +105,9 @@ class Transfer < ApplicationRecord
   # stable across that (see Transaction#payment?, which has the same
   # to_account-based reasoning for the same class of staleness).
   def categorizable?
-    return true unless to_account
+    return false unless to_account
 
-    !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(Transfer.kind_for_account(to_account))
+    !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(Transfer.kind_for_account(to_account, from_account: from_account))
   end
 
   def reject!

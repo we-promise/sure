@@ -113,8 +113,6 @@
                 ),
                 { label: t(".account_label") },
                 { disabled: true } %>
-          <% end %>
-          <% if @entry.transaction.category_editable? %>
             <%= f.fields_for :entryable do |ef| %>
               <%= render DS::MerchantSelect.new(
                     form: ef,
