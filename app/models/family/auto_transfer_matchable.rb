@@ -201,6 +201,13 @@ module Family::AutoTransferMatchable
     # (RUB -> USD / THB -> USD). The rates are plain LEFT JOINs on the unique
     # (from, to, date) index, so each joins at most one row and the planner can hash
     # them; a missing rate leaves the tolerance check NULL, which drops the pair.
+    # A zero direct rate is treated as missing so it cannot mask a usable derived rate.
+    #
+    # Candidates are ordered by match_rank before date_diff: exact same-currency matches
+    # (rank 0) come before FX-tolerance guesses (rank 1). auto_match_transfers! consumes
+    # candidates greedily, so without the rank a coincidental cross-currency candidate
+    # one day closer would claim a transaction whose real exact-amount counterpart
+    # appears one day later.
     #
     # NOTE: this is passed through `.squish`, which collapses all whitespace (including
     # newlines) into single spaces -- a `--` SQL line comment anywhere in this heredoc would
@@ -213,6 +220,7 @@ module Family::AutoTransferMatchable
             inflow_candidates.entryable_id AS inflow_transaction_id,
             outflow_candidates.entryable_id AS outflow_transaction_id,
             ABS(inflow_candidates.date - outflow_candidates.date) AS date_diff,
+            0 AS match_rank,
             rejected_transfers.id AS rejected_transfer_id
           FROM entries inflow_candidates
           JOIN accounts inflow_accounts ON inflow_accounts.id = inflow_candidates.account_id
@@ -252,6 +260,7 @@ module Family::AutoTransferMatchable
             inflow_candidates.entryable_id AS inflow_transaction_id,
             outflow_candidates.entryable_id AS outflow_transaction_id,
             ABS(inflow_candidates.date - outflow_candidates.date) AS date_diff,
+            1 AS match_rank,
             rejected_transfers.id AS rejected_transfer_id
           FROM entries inflow_candidates
           JOIN accounts inflow_accounts ON inflow_accounts.id = inflow_candidates.account_id
@@ -298,7 +307,7 @@ module Family::AutoTransferMatchable
             existing_transfers.id IS NULL AND
             (:account_id IS NULL OR inflow_candidates.account_id = :account_id OR outflow_candidates.account_id = :account_id) AND
             ABS(inflow_candidates.amount / NULLIF(outflow_candidates.amount * COALESCE(
-              direct_rates.rate,
+              NULLIF(direct_rates.rate, 0),
               (CASE WHEN outflow_candidates.currency = :family_currency THEN 1 ELSE outflow_family_rates.rate END) /
                 NULLIF(CASE WHEN inflow_candidates.currency = :family_currency THEN 1 ELSE inflow_family_rates.rate END, 0)
             ), 0))
@@ -311,7 +320,7 @@ module Family::AutoTransferMatchable
               (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")})
             )
         ) transfer_match_candidates
-        ORDER BY transfer_match_candidates.date_diff ASC
+        ORDER BY transfer_match_candidates.match_rank ASC, transfer_match_candidates.date_diff ASC
       SQL
     end
 
