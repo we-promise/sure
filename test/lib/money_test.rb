@@ -108,6 +108,7 @@ class MoneyTest < ActiveSupport::TestCase
 
   test "formats correctly for Spanish locale" do
     assert_equal "1.000,12 €", Money.new(1000.12, :eur).format(locale: :es)
+    assert_equal "100.12 MX$", Money.new(100.12, :mxn).format(locale: :es)
   end
 
   test "formats correctly for Italian locale" do
