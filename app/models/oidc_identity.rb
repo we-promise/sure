@@ -1,9 +1,54 @@
 class OidcIdentity < ApplicationRecord
+  class ProviderNotConfigured < StandardError; end
+  class IssuerMismatch < StandardError; end
+  class LegacyIdentityRebindRejected < StandardError; end
+
   belongs_to :user
 
   validates :provider, presence: true
   validates :uid, presence: true, uniqueness: { scope: :provider }
   validates :user_id, presence: true
+
+  def self.provider_config_for(provider_name)
+    config = AuthConfig.sso_providers&.find do |raw_config|
+      normalized = raw_config.deep_symbolize_keys
+      normalized[:name].to_s == provider_name.to_s || normalized[:id].to_s == provider_name.to_s
+    end&.deep_symbolize_keys
+    return unless config
+
+    if oidc_provider_config?(config, provider_name) && config[:issuer].blank?
+      options = Oidc::ProviderOptionsBuilder.call(config)
+      config = config.merge(issuer: options[:issuer]) if options&.dig(:issuer).present?
+    end
+
+    config
+  end
+
+  def self.oidc_provider_config?(config, provider_name = nil)
+    return false if config.blank?
+
+    strategy = config.deep_symbolize_keys[:strategy].to_s
+    strategy == "openid_connect" || (strategy.blank? && provider_name.to_s == "openid_connect")
+  end
+
+  # The OIDC strategy merges verified ID-token claims into raw_info. Keep the
+  # issuer from that response and require it to match the active provider.
+  def self.verified_issuer_for!(auth, config)
+    issuer = raw_issuer(auth)
+    return issuer unless oidc_provider_config?(config, auth.provider)
+
+    expected_issuer = config.deep_symbolize_keys[:issuer]
+    raise IssuerMismatch if issuer.blank? || expected_issuer.blank? || issuer != expected_issuer
+
+    issuer
+  end
+
+  def self.raw_issuer(auth)
+    raw_info = auth.extra&.raw_info
+    return unless raw_info
+
+    raw_info[:iss] || raw_info["iss"] || (raw_info.iss if raw_info.respond_to?(:iss))
+  end
 
   # Update the last authenticated timestamp
   def record_authentication!
@@ -83,8 +128,10 @@ class OidcIdentity < ApplicationRecord
         raise SsoIdentityBlock::BlockedIdentity
       end
 
-      # Extract issuer from OIDC auth response if available
-      issuer = auth.extra&.raw_info&.iss || auth.extra&.raw_info&.[]("iss")
+      config = provider_config_for(auth.provider)
+      raise ProviderNotConfigured if config.blank?
+
+      issuer = verified_issuer_for!(auth, config)
 
       create!(
         user: user,
@@ -102,24 +149,48 @@ class OidcIdentity < ApplicationRecord
     end
   end
 
-  # Find the configured provider for this identity
-  def provider_config
-    AuthConfig.sso_providers&.find do |p|
-      p_name = p[:name] || p["name"]
-      p_id = p[:id] || p["id"]
-      p_name == provider || p_id == provider
+  # Rebind a legacy OIDC identity only after the user proves ownership of the
+  # Sure account that already owns the provider/uid pair.
+  def self.rebind_legacy_issuer_from_omniauth!(auth, user)
+    SsoIdentityBlock.with_identity_lock(provider: auth.provider, uid: auth.uid) do
+      if SsoIdentityBlock.blocked?(provider: auth.provider, uid: auth.uid)
+        raise SsoIdentityBlock::BlockedIdentity
+      end
+
+      config = provider_config_for(auth.provider)
+      raise ProviderNotConfigured if config.blank?
+      raise LegacyIdentityRebindRejected unless oidc_provider_config?(config, auth.provider)
+
+      issuer = verified_issuer_for!(auth, config)
+      identity = find_by(provider: auth.provider, uid: auth.uid)
+      unless identity&.user_id == user.id && identity.issuer.blank?
+        raise LegacyIdentityRebindRejected
+      end
+
+      identity.update!(issuer: issuer, last_authenticated_at: Time.current)
+      identity.sync_user_attributes!(auth)
+      identity
     end
   end
 
-  # Validate that this identity still belongs to an enabled provider and that
-  # its stored issuer matches the provider's current issuer.
-  # Legacy blank issuers remain valid only while the provider is configured.
+  # Find the configured provider for this identity
+  def provider_config
+    self.class.provider_config_for(provider)
+  end
+
+  # Validate that this identity still belongs to its active provider. OIDC
+  # identities require a stored issuer because provider + uid alone cannot
+  # establish issuer continuity after an in-place provider change.
   def issuer_matches_config?(config = provider_config)
     return false if config.blank?
-    return true if issuer.blank?
 
-    config_issuer = config&.dig(:issuer) || config&.dig("issuer")
-    return true if config_issuer.blank?
+    config = config.deep_symbolize_keys
+    config_issuer = config[:issuer]
+    if self.class.oidc_provider_config?(config, provider)
+      return false if issuer.blank? || config_issuer.blank?
+    else
+      return true if issuer.blank? || config_issuer.blank?
+    end
 
     issuer == config_issuer
   end

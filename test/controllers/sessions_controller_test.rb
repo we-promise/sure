@@ -42,7 +42,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil)
+  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil, issuer: "https://test.example.com")
     OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
       provider: provider,
       uid: uid,
@@ -51,7 +51,8 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
         name: name,
         first_name: first_name,
         last_name: last_name
-      }.compact
+      }.compact,
+      extra: { raw_info: { iss: issuer } }
     })
   end
 
@@ -270,7 +271,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     AuthConfig.stubs(:local_login_form_visible?).returns(true)
     AuthConfig.stubs(:password_features_enabled?).returns(true)
     AuthConfig.stubs(:sso_providers).returns([
-      { id: "oidc", strategy: "openid_connect", name: "openid_connect", label: "Sign in with Keycloak", icon: "key" },
+      { id: "oidc", strategy: "openid_connect", name: "openid_connect", label: "Sign in with Keycloak", icon: "key", issuer: "https://test.example.com" },
       { id: "google", strategy: "google_oauth2", name: "google_oauth2", label: "Sign in with Google", icon: "google" }
     ])
 
@@ -358,7 +359,8 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
       provider: oidc_identity.provider,
       uid: oidc_identity.uid,
       email: @user.email,
-      name: "Changed by the new issuer"
+      name: "Changed by the new issuer",
+      issuer: "https://new-idp.example"
     )
     last_authenticated_at = oidc_identity.last_authenticated_at
     identity_info = oidc_identity.info
@@ -400,6 +402,54 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
     assert_not Session.exists?(user_id: @user.id)
     assert_equal "provider_not_configured", SsoAuditLog.by_event("login_failed").order(:created_at).last.metadata.fetch("reason")
+  end
+
+  test "rejects new OIDC authentication when provider is no longer configured" do
+    AuthConfig.stubs(:sso_providers).returns([])
+    @user.sessions.destroy_all
+
+    setup_omniauth_mock(
+      provider: "openid_connect",
+      uid: "unconfigured-uid",
+      email: @user.email,
+      name: "Unconfigured provider"
+    )
+
+    assert_difference -> { SsoAuditLog.by_event("login_failed").count }, 1 do
+      assert_no_difference [ "OidcIdentity.count", "Session.count" ] do
+        get "/auth/openid_connect/callback"
+      end
+    end
+
+    assert_redirected_to new_session_path
+    assert_nil session[:pending_oidc_auth]
+    assert_equal "provider_not_configured", SsoAuditLog.by_event("login_failed").order(:created_at).last.metadata.fetch("reason")
+  end
+
+  test "routes a legacy OIDC identity without issuer through password verification" do
+    oidc_identity = oidc_identities(:bob_google)
+    oidc_identity.update!(issuer: nil)
+    AuthConfig.stubs(:sso_providers).returns([
+      { name: oidc_identity.provider, strategy: "openid_connect", issuer: "https://test.example.com" }
+    ])
+    @user.sessions.destroy_all
+
+    setup_omniauth_mock(
+      provider: oidc_identity.provider,
+      uid: oidc_identity.uid,
+      email: @user.email,
+      name: "Bob Dylan"
+    )
+
+    assert_no_difference "Session.count" do
+      assert_no_difference -> { SsoAuditLog.by_event("login").count } do
+        get "/auth/openid_connect/callback"
+      end
+    end
+
+    assert_redirected_to link_oidc_account_path
+    assert session[:pending_oidc_legacy_relink]
+    assert_equal "https://test.example.com", session[:pending_oidc_auth].fetch("issuer")
   end
 
   test "rejects an SSO identity that an administrator permanently removed" do
@@ -477,6 +527,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     get "/auth/openid_connect/callback"
 
     assert_redirected_to link_oidc_account_path
+    assert_equal "https://test.example.com", session[:pending_oidc_auth].fetch("issuer")
 
     # Follow redirect to verify session data is accessible
     follow_redirect!
@@ -959,6 +1010,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
       assert_equal "unlinked-uid-99999", cached[:uid]
       assert_equal user_without_oidc.email, cached[:email]
       assert_equal "New User", cached[:name]
+      assert_equal "https://test.example.com", cached[:issuer]
       assert cached.key?(:device_info), "Expected device_info in cached payload"
       assert cached.key?(:allow_account_creation), "Expected allow_account_creation in cached payload"
     ensure
