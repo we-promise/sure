@@ -165,6 +165,7 @@
                         <%= entry.account.name %>
                       <% end %>
                     </span>
+                    <%= render "tags/names_mobile", transaction: transaction %>
                   <% else %>
                     <% if transaction.merchant&.present? %>
                       <span class="hidden lg:inline truncate"><%= transaction.merchant.name %> • </span>

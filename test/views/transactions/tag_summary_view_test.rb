@@ -76,6 +76,42 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
     assert_includes mobile.text, tags.map(&:name).join(", ")
   end
 
+  test "read-only shares get a focusable summary instead of the picker" do
+    sign_in_as_family_member
+    entry = entries(:transfer_in) # credit card, shared read-only
+    entry.transaction.update!(tag_ids: [ tags(:one).id, tags(:two).id ])
+
+    html = Nokogiri::HTML.fragment(render(partial: "transactions/transaction", locals: { entry: entry.reload, balance_trend: nil, view_ctx: "global" }))
+    summary = html.at_css("##{dom_id(entry.transaction, :tag_summary)}")
+
+    assert_nil html.at_css("turbo-frame#tag_dropdown")
+    assert summary.at_css("[aria-describedby] [tabindex='0']"), "read-only trigger should be keyboard focusable"
+  end
+
+  test "editable rows keep the picker and add no extra tab stop" do
+    tags = create_tags(2)
+    @transaction.update!(tag_ids: tags.map(&:id))
+
+    html = Nokogiri::HTML.fragment(render_row)
+
+    assert html.at_css("turbo-frame#tag_dropdown")
+    assert_nil html.at_css("##{dom_id(@transaction, :tag_summary)} [tabindex='0']")
+  end
+
+  test "transfer rows show tag names on mobile" do
+    outflow_tx = Transaction.create!(kind: "funds_movement")
+    outflow_entry = Entry.create!(
+      account: accounts(:depository), entryable: outflow_tx,
+      name: "Transfer out", amount: 100, currency: "USD", date: Date.today
+    )
+    tags = create_tags(2)
+    outflow_tx.update!(tag_ids: tags.map(&:id))
+
+    html = Nokogiri::HTML.fragment(render(partial: "transactions/transaction", locals: { entry: outflow_entry.reload, balance_trend: nil, view_ctx: "global" }))
+
+    assert_includes html.at_css("##{dom_id(outflow_tx, :tag_names_mobile)}").text, tags.map(&:name).join(", ")
+  end
+
   test "transfer rows render tags read-only" do
     outflow_tx = Transaction.create!(kind: "funds_movement")
     outflow_entry = Entry.create!(
@@ -97,6 +133,12 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
   end
 
   private
+    def sign_in_as_family_member
+      @user = users(:family_member)
+      Current.session = Session.create!(user: @user)
+      @accessible_account_ids = @user.accessible_accounts.pluck(:id).to_set
+    end
+
     def render_row
       render(partial: "transactions/transaction", locals: { entry: @entry.reload, balance_trend: nil, view_ctx: "global" })
     end
