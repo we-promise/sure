@@ -182,26 +182,34 @@ module Family::AutoTransferMatchable
       tolerance
     end
 
-    # Mirrors Account.writable_by: a family member who owns, or has a
-    # full_control share on, both the inflow and the outflow account.
+    # A family member who can write to (Account.writable_by) at least one side
+    # and to every side that has an owner, so someone can always unlink the
+    # match. An owner-less account (owner_id is nullified when its owner is
+    # removed from the family) does not block pairing: nobody can write to it,
+    # but the member on the other side can still reject the match. When the
+    # owner-less side is the outflow, the match can be rejected but not
+    # confirmed or edited, as before this condition existed.
     def common_writer_condition_sql
       <<~SQL.squish
         (:require_common_writer = FALSE OR EXISTS (
           SELECT 1 FROM users writers
           WHERE
             writers.family_id = :family_id AND
-            (writers.id = inflow_accounts.owner_id OR EXISTS (
-              SELECT 1 FROM account_shares inflow_shares
-              WHERE inflow_shares.account_id = inflow_accounts.id AND
-                inflow_shares.user_id = writers.id AND
-                inflow_shares.permission = 'full_control'
-            )) AND
-            (writers.id = outflow_accounts.owner_id OR EXISTS (
-              SELECT 1 FROM account_shares outflow_shares
-              WHERE outflow_shares.account_id = outflow_accounts.id AND
-                outflow_shares.user_id = writers.id AND
-                outflow_shares.permission = 'full_control'
-            ))
+            (inflow_accounts.owner_id IS NULL OR #{writer_can_write_sql("inflow_accounts")}) AND
+            (outflow_accounts.owner_id IS NULL OR #{writer_can_write_sql("outflow_accounts")}) AND
+            (#{writer_can_write_sql("inflow_accounts")} OR #{writer_can_write_sql("outflow_accounts")})
+        ))
+      SQL
+    end
+
+    # Mirrors Account.writable_by for the `writers` row: owner or full_control share.
+    def writer_can_write_sql(accounts_alias)
+      <<~SQL.squish
+        (writers.id = #{accounts_alias}.owner_id OR EXISTS (
+          SELECT 1 FROM account_shares writer_shares
+          WHERE writer_shares.account_id = #{accounts_alias}.id AND
+            writer_shares.user_id = writers.id AND
+            writer_shares.permission = 'full_control'
         ))
       SQL
     end

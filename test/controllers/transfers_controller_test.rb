@@ -699,6 +699,30 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "cannot unlink a match from one side when a fee sits in the other account" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+    fee = attach_fee(transfer, account: member_loan)
+
+    assert_no_difference -> { Transfer.count } do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+      delete transfer_url(transfer)
+    end
+
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert Transaction.exists?(fee.id)
+  end
+
+  test "can reject a match from one side when its fees sit in a writable account" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+    fee = attach_fee(transfer, account: accounts(:depository))
+
+    assert_difference -> { Transfer.count } => -1, -> { RejectedTransfer.count } => 1 do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+
+    assert_not Transaction.exists?(fee.id)
+  end
+
   test "cannot edit a match without write access to the outflow account" do
     transfer = cross_owner_transfer(outflow_account: member_loan, inflow_account: accounts(:depository))
 
@@ -776,5 +800,11 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       inflow = create_transaction(account: inflow_account, amount: -250, kind: "funds_movement")
 
       Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+    end
+
+    def attach_fee(transfer, account:)
+      create_transaction(account: account, amount: 5, name: "Transfer fee").transaction.tap do |fee|
+        fee.update!(transfer: transfer)
+      end
     end
 end

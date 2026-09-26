@@ -43,12 +43,15 @@ class TransferMatchesController < ApplicationController
     # Family-wide candidates, limited to counterparts in accounts the user can
     # write to (create would reject the others anyway).
     def writable_transfer_match_candidates
-      writable_account_ids = @accounts.map(&:id).to_set
+      candidates = @entry.transaction.transfer_match_candidates
+      counterpart_id = ->(candidate) { @entry.amount.negative? ? candidate.outflow_transaction_id : candidate.inflow_transaction_id }
 
-      @entry.transaction.transfer_match_candidates.select do |candidate|
-        counterpart = @entry.amount.negative? ? candidate.outflow_transaction : candidate.inflow_transaction
-        writable_account_ids.include?(counterpart.entry.account_id)
-      end
+      writable_counterpart_ids = Entry
+        .where(entryable_type: "Transaction", entryable_id: candidates.map(&counterpart_id), account_id: @accounts.map(&:id))
+        .pluck(:entryable_id)
+        .to_set
+
+      candidates.select { |candidate| writable_counterpart_ids.include?(counterpart_id.call(candidate)) }
     end
 
     def transfer_match_params

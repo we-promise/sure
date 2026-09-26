@@ -447,6 +447,31 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "auto-matches an owner-less account against one a member can write to" do
+    # owner_id is nullified when the owner is removed; update! would reassign one
+    @loan.update_column(:owner_id, nil)
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    assert_difference -> { Transfer.count }, 1 do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "does not auto-match two owner-less accounts nobody can write to" do
+    @loan.update_column(:owner_id, nil)
+    @credit_card.update_column(:owner_id, nil)
+    AccountShare.where(account: [ @loan, @credit_card ], permission: "full_control").delete_all
+
+    create_transaction(date: Date.current, account: @credit_card, amount: 500)
+    create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
   test "does not match transactions outside the 4-day window" do
     create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
     create_transaction(date: Date.current, account: @credit_card, amount: -500)

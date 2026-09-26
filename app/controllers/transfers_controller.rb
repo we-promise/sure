@@ -124,7 +124,7 @@ class TransfersController < ApplicationController
   end
 
   def destroy
-    return unless require_account_permission!(unlinkable_endpoint, redirect_path: transactions_url)
+    return unless require_account_permission!(unlink_permission_account, redirect_path: transactions_url)
 
     @transfer.destroy!
     redirect_back_or_to transactions_url, notice: t(".success")
@@ -207,7 +207,7 @@ class TransfersController < ApplicationController
     end
 
     def reject_transfer
-      return unless require_account_permission!(unlinkable_endpoint, redirect_path: transactions_url)
+      return unless require_account_permission!(unlink_permission_account, redirect_path: transactions_url)
 
       @transfer.reject!
 
@@ -217,11 +217,21 @@ class TransfersController < ApplicationController
       end
     end
 
-    # The first endpoint the user can write to, falling back to the outflow
-    # account so the permission check fails with the usual redirect.
-    def unlinkable_endpoint
+    # Unlinking (reject/destroy) needs write access to one endpoint, plus every
+    # account holding a fee transaction, since destroying the transfer deletes
+    # those fees. Returns the account to run the permission check against: the
+    # first one the user cannot write to, or a writable endpoint.
+    def unlink_permission_account
       endpoints = [ @transfer.from_account, @transfer.to_account ].compact
-      endpoints.find { |account| account.permission_for(Current.user).in?([ :owner, :full_control ]) } || endpoints.first
+      fee_accounts = Account.where(id: @transfer.fee_transactions.joins(:entry).select("entries.account_id")).to_a
+      writable_ids = Current.family.accounts.writable_by(Current.user)
+                       .where(id: (endpoints + fee_accounts).map(&:id))
+                       .pluck(:id).to_set
+
+      writable_endpoint = endpoints.find { |account| writable_ids.include?(account.id) }
+      return endpoints.first unless writable_endpoint
+
+      fee_accounts.find { |account| !writable_ids.include?(account.id) } || writable_endpoint
     end
 
     def transfer_params
