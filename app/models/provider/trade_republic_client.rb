@@ -170,30 +170,37 @@ class Provider::TradeRepublicClient
   def poll_qr_login(pending_login_b64:)
     pending = decode_qr_pending(pending_login_b64)
     session = new_session(session_blob: pending.fetch("session_blob"))
-    challenge_response = session.get(
-      "/api/v2/auth/web/login/qr-challenges/#{escape_path(pending.fetch("challenge_id"))}",
-      headers: session.login_headers
-    )
-    raise_http_error(challenge_response, login: true)
-    challenge = parse_json(challenge_response)
-    process_id = challenge["processId"].presence
-
-    if process_id.blank? && login_process_completed?(challenge)
-      return authenticated_session_result(session)
-    end
+    # A scanned challenge is single-use: once it yields a processId, polling
+    # the challenge again answers ALREADY_PROCESSED, so follow the process.
+    process_id = pending["process_id"].presence
 
     unless process_id
-      qr_code_payload = challenge["qrCodePayload"].presence || pending["qr_code_payload"]
-      next_pending = pending.merge(
-        "qr_code_payload" => qr_code_payload,
-        "qr_code_token_expires_at" => challenge["qrCodeTokenExpiresAt"].presence || pending["qr_code_token_expires_at"]
+      challenge_response = session.get(
+        "/api/v2/auth/web/login/qr-challenges/#{escape_path(pending.fetch("challenge_id"))}",
+        headers: session.login_headers
       )
-      return Result.new(data: {
-        "status" => "pending",
-        "qr_code_payload" => qr_code_payload,
-        "qr_code_token_expires_at" => next_pending["qr_code_token_expires_at"],
-        "pending_login_b64" => encode_pending(next_pending)
-      }.compact)
+      raise_http_error(challenge_response, login: true)
+      challenge = parse_json(challenge_response)
+      process_id = challenge["processId"].presence
+
+      if process_id.blank? && login_process_completed?(challenge)
+        return authenticated_session_result(session)
+      end
+
+      unless process_id
+        qr_code_payload = challenge["qrCodePayload"].presence || pending["qr_code_payload"]
+        next_pending = pending.merge(
+          "session_blob" => session.cookies_blob,
+          "qr_code_payload" => qr_code_payload,
+          "qr_code_token_expires_at" => challenge["qrCodeTokenExpiresAt"].presence || pending["qr_code_token_expires_at"]
+        )
+        return Result.new(data: {
+          "status" => "pending",
+          "qr_code_payload" => qr_code_payload,
+          "qr_code_token_expires_at" => next_pending["qr_code_token_expires_at"],
+          "pending_login_b64" => encode_pending(next_pending)
+        }.compact)
+      end
     end
 
     process_response = session.get(
@@ -206,7 +213,7 @@ class Provider::TradeRepublicClient
       return Result.new(data: {
         "status" => "pending",
         "process_id" => process_id,
-        "pending_login_b64" => encode_pending(pending.merge("process_id" => process_id))
+        "pending_login_b64" => encode_pending(pending.merge("process_id" => process_id, "session_blob" => session.cookies_blob))
       })
     end
 

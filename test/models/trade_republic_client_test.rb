@@ -131,6 +131,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
     session = mock
     session.stubs(:login_headers).returns({})
+    session.stubs(:cookies_blob).returns('{"JSESSIONID":"rotated"}')
     session.expects(:get).with(regexp_matches(%r{/qr-challenges/}), headers: {}).returns(
       response_class.new("200", {
         "status" => "PENDING",
@@ -154,6 +155,39 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "https://trade-republic.example/rotated-token", result.data["qr_code_payload"]
     assert_equal next_pending["qr_code_token_expires_at"], result.data["qr_code_token_expires_at"]
     assert_equal "https://trade-republic.example/rotated-token", next_pending["qr_code_payload"]
+    assert_equal '{"JSESSIONID":"rotated"}', next_pending["session_blob"]
+  end
+
+  test "follows the login process instead of the scanned QR challenge" do
+    response_class = Struct.new(:code, :body) do
+      def is_a?(klass)
+        return true if klass == Net::HTTPSuccess
+
+        super
+      end
+    end
+    session = mock
+    session.stubs(:login_headers).returns({})
+    session.stubs(:cookies_blob).returns('{"JSESSIONID":"after-scan"}')
+    session.expects(:get).with(regexp_matches(%r{/qr-challenges/}), headers: {}).never
+    session.expects(:get).with("/api/v2/auth/web/login/processes/process-1", headers: {}).returns(
+      response_class.new("200", { "status" => "PENDING" }.to_json)
+    )
+    @client.define_singleton_method(:new_session) { |session_blob:| session }
+
+    pending = {
+      "challenge_id" => "challenge-1",
+      "process_id" => "process-1",
+      "session_blob" => "session=1",
+      "expires_at" => 1.minute.from_now.iso8601
+    }
+
+    result = @client.poll_qr_login(pending_login_b64: Base64.strict_encode64(JSON.generate(pending)))
+    next_pending = JSON.parse(Base64.strict_decode64(result.data.fetch("pending_login_b64")))
+
+    assert_equal "pending", result.data["status"]
+    assert_equal "process-1", next_pending["process_id"]
+    assert_equal '{"JSESSIONID":"after-scan"}', next_pending["session_blob"]
   end
 
   test "recognizes Trade Republic approval states from state or status" do
