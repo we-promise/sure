@@ -304,7 +304,7 @@ class Demo::Generator
           start_date: mortgage_start, initial_balance: 320_000,
           # A deposit and a level-term policy, so the demo mortgage shows the
           # leverage and insurance cards rather than hiding both.
-          down_payment: 80_000, insurance_rate: 0.36, insurance_rate_type: "level_term",
+          down_payment: 70_000, insurance_rate: 0.36, insurance_rate_type: "level_term",
           rate_changes: [
             { effective_date: (mortgage_start >> 24).iso8601, rate: "5.5" },
             { effective_date: (mortgage_start >> 48).iso8601, rate: "6.75" }
