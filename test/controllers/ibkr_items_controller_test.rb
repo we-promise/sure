@@ -110,6 +110,7 @@ class IbkrItemsControllerTest < ActionDispatch::IntegrationTest
       @ibkr_item.ibkr_accounts.create!(name: "IBKR", ibkr_account_id: "U#{SecureRandom.hex(4)}",
                                        currency: "USD", current_balance: 1000)
     },
-    provider_param: :ibkr_account_id
+    provider_param: :ibkr_account_id,
+    setup_url: ->(record) { setup_accounts_ibkr_item_url(record.ibkr_item) }
   )
 end

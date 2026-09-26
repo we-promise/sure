@@ -387,6 +387,7 @@ class TradeRepublicItemsController < ApplicationController
     end
 
     @linkable_accounts = Current.family.accounts
+      .writable_by(Current.user)
       .visible
       .where(accountable_type: %w[Investment Depository])
       .left_joins(:account_providers)

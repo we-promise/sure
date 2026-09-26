@@ -701,7 +701,8 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     },
     provider_param: :snaptrade_account_id,
     params: -> { { snaptrade_item_id: @snaptrade_item.id } },
-    relinks: true
+    relinks: true,
+    setup_url: ->(record) { setup_accounts_snaptrade_item_url(record.snaptrade_item) }
   )
 
   # --- setup_accounts throttle-sync fix ---
