@@ -17,6 +17,7 @@ class Provider::KrakenTest < ActiveSupport::TestCase
 
   setup do
     @provider = Provider::Kraken.new(api_key: "test_key", api_secret: official_sample_secret, nonce_generator: -> { "1616492376594" })
+    @provider.stubs(:throttle_request)
   end
 
   test "sign matches official Kraken Spot REST sample" do
@@ -178,7 +179,42 @@ class Provider::KrakenTest < ActiveSupport::TestCase
     end
   end
 
+  # ================================
+  # Rate limiting
+  # ================================
+
+  test "throttle_request spaces consecutive requests by the minimum interval" do
+    provider = unthrottled_provider
+    slept = []
+    provider.define_singleton_method(:sleep) { |duration| slept << duration }
+
+    provider.send(:throttle_request)   # first call has nothing to wait for
+    provider.send(:throttle_request)
+
+    assert_equal 1, slept.size
+    assert_operator slept.first, :>, 0
+    assert_operator slept.first, :<=, Provider::Kraken::MIN_REQUEST_INTERVAL
+  end
+
+  test "throttle_request honours the KRAKEN_MIN_REQUEST_INTERVAL override" do
+    provider = unthrottled_provider
+    slept = []
+    provider.define_singleton_method(:sleep) { |duration| slept << duration }
+
+    with_env_overrides("KRAKEN_MIN_REQUEST_INTERVAL" => "6") do
+      provider.send(:throttle_request)
+      provider.send(:throttle_request)
+    end
+
+    assert_operator slept.first, :>, Provider::Kraken::MIN_REQUEST_INTERVAL
+    assert_operator slept.first, :<=, 6.0
+  end
+
   private
+
+    def unthrottled_provider
+      Provider::Kraken.new(api_key: "test_key", api_secret: official_sample_secret, nonce_generator: -> { "1616492376594" })
+    end
 
     def official_sample_secret
       Base64.strict_encode64(OFFICIAL_SAMPLE_SECRET_BYTES.pack("C*"))
