@@ -14,6 +14,13 @@ class RuleImport < Import
     committed_by_named_records?(family.rules)
   end
 
+  def directly_deletable?
+    return false unless super
+    return true unless complete?
+
+    !rows.where("name IS NULL OR name ~ '^[[:space:]]*$'").exists?
+  end
+
   def column_keys
     %i[name resource_type active effective_date conditions actions]
   end

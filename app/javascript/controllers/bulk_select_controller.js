@@ -35,12 +35,14 @@ export default class extends Controller {
     } ${this._pluralizedResourceName()}`;
   }
 
+  /** Submit selected row IDs using the action's configured parameter scope. */
   submitBulkRequest(e) {
     const form = e.target.closest("form");
     const scope = e.params.scope;
+    const param = e.params.param || "entry_ids";
     this._addHiddenFormInputsForSelectedIds(
       form,
-      `${scope}[entry_ids][]`,
+      `${scope}[${param}][]`,
       this.selectedIdsValue,
     );
     form.requestSubmit();
@@ -66,11 +68,28 @@ export default class extends Controller {
     });
   }
 
+  /** Toggle a row unless the user interacted with an embedded control. */
   toggleRowSelection(e) {
-    if (e.target.checked) {
-      this._addToSelection(e.target.dataset.id);
+    const checkbox = e.currentTarget.matches("input[type='checkbox']")
+      ? e.currentTarget
+      : e.currentTarget.querySelector("input[type='checkbox']");
+
+    if (!checkbox || checkbox.disabled) return;
+
+    if (e.currentTarget !== checkbox) {
+      if (e.target.matches("input[type='checkbox']")) {
+        // The browser has already toggled the checkbox.
+      } else if (e.target.closest("a, button, input, select, textarea, label")) {
+        return;
+      } else {
+        checkbox.checked = !checkbox.checked;
+      }
+    }
+
+    if (checkbox.checked) {
+      this._addToSelection(checkbox.dataset.id);
     } else {
-      this._removeFromSelection(e.target.dataset.id);
+      this._removeFromSelection(checkbox.dataset.id);
     }
   }
 
@@ -93,12 +112,15 @@ export default class extends Controller {
       input.type = "hidden";
       input.name = paramName;
       input.value = id;
+      input.dataset.bulkSelectGenerated = "true";
       form.appendChild(input);
     });
   }
 
   _resetFormInputs(form, paramName) {
-    const existingInputs = form.querySelectorAll(`input[name='${paramName}']`);
+    const existingInputs = form.querySelectorAll(
+      `input[data-bulk-select-generated='true'][name='${paramName}']`,
+    );
     existingInputs.forEach((input) => input.remove());
   }
 
@@ -187,7 +209,12 @@ export default class extends Controller {
 
   _updateRows() {
     this.rowTargets.forEach((row) => {
-      row.checked = this.selectedIdsValue.includes(row.dataset.id);
+      const selected = this.selectedIdsValue.includes(row.dataset.id);
+      row.checked = selected;
+
+      const rowElement = row.closest("tr");
+      rowElement?.classList.toggle("bg-surface-hover", selected);
+      rowElement?.setAttribute("aria-selected", selected.toString());
     });
   }
 }

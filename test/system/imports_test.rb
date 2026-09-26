@@ -13,8 +13,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "transaction import" do
     visit new_import_path
 
-    click_on "Raw Data"
-    click_on "Import transactions"
+    select "Transactions", from: "What does this CSV contain?"
 
     within_testid("import-tabs") do
       click_on "Copy & Paste"
@@ -62,8 +61,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "trade import" do
     visit new_import_path
 
-    click_on "Raw Data"
-    click_on "Import investments"
+    select "Investments", from: "What does this CSV contain?"
 
     within_testid("import-tabs") do
       click_on "Copy & Paste"
@@ -103,8 +101,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "account import" do
     visit new_import_path
 
-    click_on "Raw Data"
-    click_on "Import accounts"
+    select "Accounts", from: "What does this CSV contain?"
 
     within_testid("import-tabs") do
       click_on "Copy & Paste"
@@ -150,9 +147,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "mint import" do
     visit new_import_path
 
-    # Pending CSV-style imports default the dialog to the Raw Data tab; Mint lives under Financial Tools.
-    click_on "Financial Tools"
-    click_on "Import from Mint"
+    select "Auto-detect", from: "CSV source format"
 
     within_testid("import-tabs") do
       click_on "Copy & Paste"
@@ -191,9 +186,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "actual import" do
     visit new_import_path
 
-    # Pending CSV-style imports default the dialog to the Raw Data tab; Actual lives under Financial Tools.
-    click_on "Financial Tools"
-    click_on "Import from Actual Budget"
+    select "Auto-detect", from: "CSV source format"
 
     within_testid("import-tabs") do
       click_on "Copy & Paste"
@@ -229,9 +222,7 @@ class ImportsTest < ApplicationSystemTestCase
   test "ynab import" do
     visit new_import_path
 
-    # Pending CSV-style imports default the dialog to the Raw Data tab; YNAB lives under Financial Tools.
-    click_on "Financial Tools"
-    click_on "Import from YNAB"
+    select "Auto-detect", from: "CSV source format"
 
     within_testid("import-tabs") do
       click_on "Copy & Paste"

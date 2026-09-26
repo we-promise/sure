@@ -1,8 +1,18 @@
 class PdfImport < Import
+  DuplicateUploadError = Class.new(StandardError) do
+    attr_reader :statement
+
+    def initialize(statement = nil)
+      @statement = statement
+      super("PDF has already been uploaded")
+    end
+  end
+
   has_one_attached :pdf_file, dependent: :purge_later
 
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
   validate :account_statement_matches_import
+  after_destroy_commit :destroy_orphaned_import_owned_statement
 
   class << self
     # PdfImport's importing status doubles as a processing claim: the AI
@@ -60,18 +70,73 @@ class PdfImport < Import
       family.sync_later if needs_sync
     end
 
-    def create_from_upload!(family:, file:, user:)
+    def create_from_upload!(family:, file:, user: Current.user, account: nil, allow_large_pdf: false, allow_duplicate_upload: false)
+      prepared_upload = AccountStatement.prepare_upload!(file, allow_large_pdf: allow_large_pdf)
+      if duplicate_upload?(family, prepared_upload)
+        duplicate_statement = AccountStatement.duplicate_for(family, prepared_upload)
+        if duplicate_statement
+          if allow_duplicate_upload && duplicate_statement.manageable_by?(user)
+            return create_from_statement!(statement: duplicate_statement)
+          end
+
+          raise DuplicateUploadError, duplicate_statement
+        end
+
+        raise DuplicateUploadError unless allow_duplicate_upload
+      end
+
       statement = AccountStatement.create_from_prepared_upload!(
         family: family,
-        account: nil,
-        prepared_upload: AccountStatement.prepare_upload!(file)
+        account: account,
+        prepared_upload: prepared_upload,
+        pdf_import_owned: account.blank?
       )
 
       create_from_statement!(statement: statement)
-    rescue AccountStatement::DuplicateUploadError => e
-      raise unless e.statement.manageable_by?(user)
+    rescue AccountStatement::DuplicateUploadError => error
+      if duplicate_upload?(family, prepared_upload)
+        if allow_duplicate_upload && error.statement.manageable_by?(user)
+          return create_from_statement!(statement: error.statement)
+        end
 
-      create_from_statement!(statement: e.statement)
+        raise DuplicateUploadError, error.statement
+      end
+
+      create_from_statement!(statement: error.statement)
+    end
+
+    def duplicate_upload?(family, prepared_upload)
+      existing_statement_import = where(family_id: family.id)
+        .joins(:account_statement)
+        .exists?(account_statements: { content_sha256: prepared_upload.content_sha256 })
+      return true if existing_statement_import
+
+      legacy_blob_ids = joins(pdf_file_attachment: :blob)
+        .where(family_id: family.id, active_storage_blobs: { checksum: prepared_upload.checksum })
+        .pluck("active_storage_blobs.id")
+      legacy_statement_blob_ids = joins(account_statement: { original_file_attachment: :blob })
+        .where(family_id: family.id, account_statements: { content_sha256: nil, checksum: prepared_upload.checksum })
+        .pluck("active_storage_blobs.id")
+
+      (legacy_blob_ids + legacy_statement_blob_ids).uniq.any? do |blob_id|
+        Digest::SHA256.hexdigest(ActiveStorage::Blob.find(blob_id).download) == prepared_upload.content_sha256
+      end
+    end
+
+    def duplicate_content?(family:, content_sha256:, byte_size:)
+      return true if family.account_statements.exists?(content_sha256: content_sha256)
+
+      legacy_pdf_blob_ids = joins(pdf_file_attachment: :blob)
+        .where(family_id: family.id, active_storage_blobs: { byte_size: byte_size })
+        .pluck("active_storage_blobs.id")
+      legacy_statement_blob_ids = family.account_statements
+        .where(content_sha256: nil, byte_size: byte_size)
+        .joins(original_file_attachment: :blob)
+        .pluck("active_storage_blobs.id")
+
+      (legacy_pdf_blob_ids + legacy_statement_blob_ids).uniq.any? do |blob_id|
+        Digest::SHA256.hexdigest(ActiveStorage::Blob.find(blob_id).download) == content_sha256
+      end
     end
 
     def create_from_statement!(statement:)
@@ -189,11 +254,24 @@ class PdfImport < Import
   # but committed nothing of its own, and the user may well have picked the
   # wrong account.
   def reassignable?
-    !data_committed? && !importing? && !reverting?
+    !entries.exists? && !importing? && !reverting?
   end
 
   def pdf_uploaded?
     statement_backed? || pdf_file.attached?
+  end
+
+  def data_committed?
+    super || reconciled_entries.exists?
+  end
+
+  # Reconciliations made during review are derived state; only created entries block deletion.
+  def directly_deletable?
+    !entries.exists? && !importing? && !reverting?
+  end
+
+  def file_name
+    pdf_filename
   end
 
   def ai_processed?
@@ -370,7 +448,7 @@ class PdfImport < Import
   # a history, not a queue. Memoized mostly for data_committed?, which is two
   # more EXISTS queries every time it is asked.
   def awaiting_review_count
-    @awaiting_review_count ||= data_committed? ? 0 : rows_count
+    @awaiting_review_count ||= entries.exists? ? 0 : rows_count
   end
 
   # No query: extracted_data is already in memory.
@@ -455,6 +533,17 @@ class PdfImport < Import
 
   private
 
+    def destroy_orphaned_import_owned_statement
+      statement = AccountStatement.find_by(id: account_statement_id)
+      return unless statement&.pdf_import_owned?
+      return if statement.account_id.present?
+      return if statement.pdf_imports.exists?
+
+      statement.destroy!
+    rescue StandardError => error
+      Rails.logger.warn("Could not clean up source statement for PDF import #{id}: #{error.class}: #{error.message}")
+    end
+
     # A statement's posting date routinely differs by a day or two from the date
     # a provider recorded for the same transaction, so matching allows a small
     # window rather than demanding an exact date.
@@ -534,7 +623,7 @@ class PdfImport < Import
     # fully-matched import sits at pending with no rows, which renders as the
     # processing screen forever and cannot be restarted.
     def refresh_status_after_regeneration!
-      return if data_committed?
+      return if entries.exists?
       return unless pending? || complete?
 
       target = statement_with_transactions? && rows_count > 0 ? "pending" : "complete"

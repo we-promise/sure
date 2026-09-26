@@ -14,6 +14,7 @@ export default class extends Controller {
   static targets = ["button", "menu", "input", "content", "option"]
   static values = {
     menuPlacement: { type: String, default: "auto" },
+    highlightSelectedItem: { type: Boolean, default: true },
     offset: { type: Number, default: 6 }
   }
 
@@ -130,10 +131,11 @@ export default class extends Controller {
 
   select(event) {
     const selectedElement = event.currentTarget
+    if (selectedElement.getAttribute("aria-disabled") === "true") return
     const value = selectedElement.dataset.value
     const label = selectedElement.dataset.filterName || selectedElement.textContent.trim()
 
-    this.buttonTarget.textContent = label
+    this.buttonTarget.textContent = label || this.buttonTarget.dataset.placeholder || ""
     if (this.hasInputTarget) {
       this.inputTarget.value = value
       this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
@@ -148,7 +150,7 @@ export default class extends Controller {
     }
 
     selectedElement.setAttribute("aria-selected", "true")
-    selectedElement.classList.add("bg-container-inset")
+    if (this.highlightSelectedItemValue) selectedElement.classList.add("bg-container-inset")
     const selectedIcon = selectedElement.querySelector(".check-icon")
     if (selectedIcon) selectedIcon.classList.remove("hidden")
 
@@ -174,7 +176,7 @@ export default class extends Controller {
   }
 
   scrollToSelected() {
-    const selected = this.menuTarget.querySelector(".bg-container-inset")
+    const selected = this.menuTarget.querySelector("[aria-selected='true']")
     if (!selected) return
 
     const container = this.hasContentTarget ? this.contentTarget : this.menuTarget
@@ -238,7 +240,7 @@ export default class extends Controller {
       this.close()
       return
     }
-    if (event.key === "Enter" && event.target.dataset.value) { event.preventDefault(); event.target.click(); return }
+    if (event.key === "Enter" && event.target.hasAttribute("data-value")) { event.preventDefault(); event.target.click(); return }
 
     // WAI-ARIA APG listbox keyboard pattern: ArrowUp/Down moves focus
     // between options, Home/End jump to first/last. Options stay at
@@ -301,7 +303,7 @@ export default class extends Controller {
   // by setting `style.display = "none"`. Inline check keeps it cheap.
   visibleOptions() {
     const options = this.hasOptionTarget ? this.optionTargets : []
-    return options.filter(opt => opt.style.display !== "none")
+    return options.filter(opt => opt.style.display !== "none" && opt.getAttribute("aria-disabled") !== "true")
   }
 
   // After list-filter#filter runs, a keyboard-focused option may be hidden.
