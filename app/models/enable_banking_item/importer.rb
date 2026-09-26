@@ -11,7 +11,10 @@ class EnableBankingItem::Importer
   # the current period / closing of the previous one) rather than "instant" values:
   # this mirrors CLBD outranking ITBD above, a reconciled booked figure is trusted
   # over one that includes unconfirmed pending activity, even if it's up to a day
-  # older.
+  # older. That trade-off assumes the staleness is bounded to about a day, so
+  # select_current_balance below guards it with the optional `reference_date` field
+  # (see PERIOD_BOUNDARY_TYPES): if the same response also carries a materially
+  # newer XPCD/CLAV/ITAV, the fresher one wins instead.
   BALANCE_TYPE_PRIORITY = %w[
     CLBD closingBooked
     ITBD interimBooked
@@ -21,6 +24,8 @@ class EnableBankingItem::Importer
     CLAV closingAvailable
     ITAV interimAvailable
   ].freeze
+
+  PERIOD_BOUNDARY_TYPES = %w[opbd prcd].freeze
 
   NETWORK_ERRORS = [
     ::SocketError,
@@ -264,11 +269,42 @@ class EnableBankingItem::Importer
       by_type = balances.index_by { |balance| normalize_balance_type(balance[:balance_type]) }
 
       BALANCE_TYPE_PRIORITY.each do |type|
-        balance = by_type[normalize_balance_type(type)]
-        return balance if balance.present?
+        normalized_type = normalize_balance_type(type)
+        balance = by_type[normalized_type]
+        next unless balance.present?
+
+        if PERIOD_BOUNDARY_TYPES.include?(normalized_type)
+          fresher = fresher_balance(balance, balances)
+          return fresher if fresher
+        end
+
+        return balance
       end
 
       balances.first
+    end
+
+    # Guards the OPBD/PRCD priority (see BALANCE_TYPE_PRIORITY) against picking a
+    # stale period-boundary snapshot when the same response also carries a balance
+    # with a strictly newer `reference_date` — an optional Enable Banking field, so
+    # absence on either side just skips the check rather than treating it as older.
+    def fresher_balance(period_boundary_balance, balances)
+      reference_date = parse_reference_date(period_boundary_balance[:reference_date])
+      return nil unless reference_date
+
+      balances
+        .reject { |balance| balance.equal?(period_boundary_balance) }
+        .filter_map { |balance| [ balance, parse_reference_date(balance[:reference_date]) ] }
+        .select { |_, date| date && date > reference_date }
+        .max_by { |_, date| date }
+        &.first
+    end
+
+    def parse_reference_date(value)
+      return nil if value.blank?
+      Date.parse(value.to_s)
+    rescue ArgumentError, TypeError
+      nil
     end
 
     def normalize_balance_type(type)
