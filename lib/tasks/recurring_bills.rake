@@ -33,7 +33,7 @@ namespace :recurring do
         classification = RecurringTransaction::Classifier.classify(
           name: series.display_name, entries: entries, account: series.account
         )
-        next if classification.bill_type == "bill" && classification.category_id.nil?
+        next if classification.bill_type == "bill" && classification.category_id.nil? && !classification.autopay
 
         series.update!(
           bill_type: classification.bill_type,
@@ -41,7 +41,7 @@ namespace :recurring do
           autopay: series.autopay || classification.autopay
         )
         reclassified += 1
-        puts "  #{series.display_name}: #{classification.bill_type}#{classification.category_id ? ' +category' : ''}"
+        puts "  #{series.display_name}: #{classification.bill_type}#{classification.category_id ? ' +category' : ''}#{classification.autopay ? ' +autopay' : ''}"
       end
 
       puts "#{family.id}: #{reclassified} series classified"
