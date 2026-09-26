@@ -498,8 +498,8 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.reload.entryable.tag_ids.sort
     assert @entry.entryable.locked?(:tag_ids)
-    assert_select "turbo-stream[action=replace][target=?]", dom_id(@entry.entryable, :tag_summary)
-    assert_select "turbo-stream[action=replace][target=?]", dom_id(@entry.entryable, :tag_names_mobile)
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(@entry.entryable, "tag_summary_desktop")
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(@entry.entryable, "tag_summary_mobile")
     assert_select "turbo-stream[action=replace][target=?]", "#{dom_id(@entry, :tag_option)}_#{tags(:two).id}"
 
     patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:one).id }, as: :turbo_stream
@@ -534,8 +534,8 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     get transactions_url
 
     assert_response :success
-    assert_select "##{dom_id(@entry.entryable, :tag_summary)}", text: /#{tags(:one).name}/
-    assert_select "##{dom_id(@entry.entryable, :tag_names_mobile)}", text: /#{tags(:one).name}/
+    assert_select "##{dom_id(@entry.entryable, "tag_summary_desktop")}", text: /#{tags(:one).name}/
+    assert_select "##{dom_id(@entry.entryable, "tag_summary_mobile")}", text: /#{tags(:one).name}/
   end
 
   test "split parent rows mark amount as privacy-sensitive" do
