@@ -1,0 +1,21 @@
+en:
+  weekly_cleanup:
+    chat_title: "Weekly cleanup — week of %{date}"
+    intro: "Here's your weekly cleanup report. I found %{count} area(s) worth a look — everything below is read-only; nothing has been changed."
+    clean: "Nothing to clean up this week — books look tidy."
+    outro: "Reply here if you want to dig into any of these — I can help you categorize, merge merchants, or review the duplicates."
+    detectors:
+      uncategorized_transactions:
+        heading: "Uncategorized transactions (past 7 days)"
+      stale_imports:
+        heading: "Stale or failed imports"
+      provider_data_gaps:
+        heading: "Provider sync problems (past 7 days)"
+      missing_merchant_info:
+        heading: "Transactions missing merchant info (past 7 days)"
+      duplicate_imported_entries:
+        heading: "Possible duplicate imported entries (past 30 days)"
+      missing_context:
+        heading: "Larger expenses without notes or receipts (past 7 days)"
+      merchant_duplicates:
+        heading: "Merchant de-duplication — %{total} merchants, %{clusters} duplicate clusters (%{coverage}% clustered)"
