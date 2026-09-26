@@ -267,8 +267,9 @@ Rails.application.routes.draw do
   end
   get ".well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
   # RFC 9728 resource-scoped path, matching the "resource" identifier
-  # (".../mcp") the metadata itself reports. Same content as the root path above.
-  get ".well-known/oauth-protected-resource/mcp", to: "oauth_metadata#protected_resource"
+  # (".../mcp") this endpoint reports — distinct from the root path's
+  # metadata, whose "resource" is the bare origin. See protected_resource_for_mcp.
+  get ".well-known/oauth-protected-resource/mcp", to: "oauth_metadata#protected_resource_for_mcp"
   get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
   post "register", to: "oauth_registration#create"
   use_doorkeeper do |mapping|

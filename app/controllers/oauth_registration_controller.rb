@@ -73,6 +73,12 @@ class OauthRegistrationController < ApplicationController
         client_name: app.name,
         redirect_uris: app.redirect_uri.split("\n"),
         grant_types: [ "authorization_code" ],
+        # RFC 7591 §3.2.1: when the server substitutes a metadata value —
+        # here, the requested scope defaulted, narrowed, or reordered — it
+        # MUST return the value actually registered, so a client can tell
+        # "no scope sent, got read" from "sent read_write, got read_write"
+        # instead of finding out later as missing tools.
+        scope: app.scopes.to_s,
         token_endpoint_auth_method: "none"
       }, status: :created
     else
@@ -96,6 +102,14 @@ class OauthRegistrationController < ApplicationController
     # rather than dropped, so a typo cannot silently register a narrower (or
     # wider) client than the caller asked for. Renders and returns nil on
     # rejection; the caller checks `performed?`.
+    #
+    # Preserves exactly what was requested (deduped) rather than collapsing
+    # to "read_write" whenever it's present: Doorkeeper's ScopeChecker
+    # validates a later /oauth/authorize?scope=... request against the
+    # app's OWN registered scopes in preference to the server defaults, so a
+    # client that registered with only "read_write" stored can never
+    # subsequently request just "read" for that app. Keeping "read" in the
+    # stored set when the client asked for it avoids foreclosing that.
     def resolve_requested_scope(raw)
       return DEFAULT_SCOPE if raw.blank?
 
@@ -110,7 +124,7 @@ class OauthRegistrationController < ApplicationController
         return nil
       end
 
-      requested.include?("read_write") ? "read_write" : "read"
+      requested.join(" ")
     end
 
     # Returns true for https, loopback http, and RFC 8252 private-use schemes

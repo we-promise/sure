@@ -147,7 +147,7 @@ access. `search_family_files` — non-mutating, but it can surface
 uploaded-document contents outside the structured financial data the other
 read tools expose, a larger data surface than this mode is meant to grant an
 external assistant. Every other excluded tool (`create_goal`, `create_tag`, `update_tag`, `create_category`,
-`update_category`, `update_transaction`, `update_budget`,
+`update_category`, `create_transaction`, `update_transaction`, `delete_transaction`, `update_budget`,
 `import_bank_statement`, `upload_account_statement`, `record_valuation`,
 `create_bill`, `update_bill`, `record_bill_payment`) performs a real mutation.
 
@@ -293,6 +293,8 @@ At the time of writing, `tools/list` includes:
 | `create_tag` / `update_tag` | Manage tags |
 | `create_category` / `update_category` | Manage categories |
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
+| `create_transaction` | Create a new transaction on one of the user's accounts |
+| `delete_transaction` | Permanently delete a transaction from the ledger (destructive, irreversible) |
 | `update_budget` | Update budget allocations for a month |
 | `import_bank_statement` | Import bank statement data |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
@@ -608,9 +610,21 @@ Check that:
 absent, or `tools/call` on one returns "Unknown tool"
 
 **Fix:** This is expected for a token scoped `read` — see [Read-only
-mode](#read-only-mode). Register a new client requesting `read_write`, or
-re-authorize an existing one with that scope, if you actually want MCP to
-make changes.
+mode](#read-only-mode). Re-authorizing an existing connection with a wider
+scope does **not** work: Doorkeeper validates a `/oauth/authorize` scope
+request against the client application's own registered scopes, and a
+client registered with only `read` stored can never be granted `read_write`
+that way. Two options actually grant it:
+
+1. **Re-register the client** with `"scope": "read_write"` in the `POST
+   /register` body — for Claude or ChatGPT, remove and re-add the connector.
+   This only helps if the client actually sends a `scope` field; check its
+   own settings for a scope or permissions option.
+2. **Edit the application's scopes directly**, for a client that doesn't
+   expose a scope option: a `super_admin` can open
+   `/oauth/applications/:id/edit` (Doorkeeper's admin UI, mounted and gated
+   on `super_admin?` — see `config/initializers/doorkeeper.rb`), set scopes
+   to `read_write`, then have the user re-authorize.
 
 ### Pipelock connection refused
 

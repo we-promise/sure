@@ -627,6 +627,29 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an explicit null id is rejected rather than executed" do
+    with_mcp_env do
+      transaction = transactions(:one)
+      original_category_id = transaction.category_id
+
+      # "id" is present (so this is not a notification) but null (not a
+      # usable request id either) -- must not dispatch update_transaction.
+      post "/mcp", params: {
+        jsonrpc: "2.0", id: nil, method: "tools/call",
+        params: { name: "update_transaction", arguments: { id: transaction.id, notes: "should never be written" } }
+      }.to_json, headers: mcp_headers(@token)
+
+      assert_response :ok
+      body = JSON.parse(response.body)
+      assert_nil body["id"]
+      assert_equal(-32600, body["error"]["code"])
+
+      transaction.reload
+      assert_equal original_category_id, transaction.category_id
+      assert_not_equal "should never be written", transaction.entry.notes
+    end
+  end
+
   test "returns method not found for unknown method with request id preserved" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("unknown/method", {}, id: 77).to_json,
@@ -849,6 +872,36 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_equal 64, body["id"]
       assert_equal(-32020, body["error"]["code"])
       assert_includes body["error"]["message"], "Mcp-Name"
+    end
+  end
+
+  test "Mcp-Method alone (no MCP-Protocol-Version) is treated as an implicit 2026-07-28 signal" do
+    with_mcp_env do
+      # A conformant modern client always sends both, but if it only sends
+      # Mcp-Method, defaulting to the legacy envelope would hand it a shape
+      # it can't parse (no resultType, no _meta.serverInfo). Mcp-Method never
+      # appears on a legacy request, so its bare presence is unambiguous.
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token).merge("Mcp-Method" => "tools/list")
+
+      assert_response :ok
+      assert_equal MODERN_PROTOCOL_VERSION, response.headers["Mcp-Protocol-Version"]
+      result = JSON.parse(response.body)["result"]
+      assert_equal "complete", result["resultType"]
+    end
+  end
+
+  test "a 2026-07-28 notification stamps the modern protocol version on its response header" do
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_notification("notifications/initialized").to_json,
+           headers: mcp_headers(@token).merge(
+             "Mcp-Protocol-Version" => MODERN_PROTOCOL_VERSION,
+             "Mcp-Method" => "notifications/initialized"
+           )
+
+      assert_response :accepted
+      assert response.body.blank?
+      assert_equal MODERN_PROTOCOL_VERSION, response.headers["Mcp-Protocol-Version"]
     end
   end
 
