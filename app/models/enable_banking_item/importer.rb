@@ -6,13 +6,35 @@ class EnableBankingItem::Importer
   # Prefer booked ledger balances for net worth/current_balance. Available balances
   # can include an arranged overdraft facility for some ASPSPs (for example CGD PT),
   # so they are only a last-resort fallback.
+  #
+  # OPBD/PRCD rank above XPCD despite being period-boundary snapshots (opening of
+  # the current period / closing of the previous one) rather than "instant" values:
+  # this mirrors CLBD outranking ITBD above, a reconciled booked figure is trusted
+  # over one that includes unconfirmed pending activity, even if it's up to a day
+  # older. That trade-off assumes the staleness is bounded to about a day, so
+  # select_current_balance below guards it with the optional `reference_date` field
+  # (see PERIOD_BOUNDARY_TYPES): if the same response also carries a materially
+  # newer XPCD/CLAV/ITAV, the fresher one wins instead.
   BALANCE_TYPE_PRIORITY = %w[
     CLBD closingBooked
     ITBD interimBooked
+    OPBD openingBooked
+    PRCD previouslyClosedBooked
     XPCD expected
     CLAV closingAvailable
     ITAV interimAvailable
   ].freeze
+
+  PERIOD_BOUNDARY_TYPES = %w[opbd prcd].freeze
+
+  # Only these types may outrank OPBD/PRCD on freshness (see fresher_balance) —
+  # the same accounting-semantics exclusion as BALANCE_TYPE_PRIORITY itself, so a
+  # forward-looking FWAV or an informational INFO/OTHR can't override a legitimate
+  # booked figure just by carrying a later reference_date. Compared against an
+  # already-normalized balance_type (see normalize_balance_type), so both ISO
+  # codes and Enable Banking's descriptive spellings are listed here pre-normalized,
+  # mirroring BALANCE_TYPE_PRIORITY's own XPCD/CLAV/ITAV entries above.
+  FRESHNESS_BALANCE_TYPES = %w[xpcd expected clav closingavailable itav interimavailable].freeze
 
   NETWORK_ERRORS = [
     ::SocketError,
@@ -256,11 +278,42 @@ class EnableBankingItem::Importer
       by_type = balances.index_by { |balance| normalize_balance_type(balance[:balance_type]) }
 
       BALANCE_TYPE_PRIORITY.each do |type|
-        balance = by_type[normalize_balance_type(type)]
-        return balance if balance.present?
+        normalized_type = normalize_balance_type(type)
+        balance = by_type[normalized_type]
+        next unless balance.present?
+
+        if PERIOD_BOUNDARY_TYPES.include?(normalized_type)
+          fresher = fresher_balance(balance, balances)
+          return fresher if fresher
+        end
+
+        return balance
       end
 
       balances.first
+    end
+
+    # Guards the OPBD/PRCD priority (see BALANCE_TYPE_PRIORITY) against picking a
+    # stale period-boundary snapshot when the same response also carries a balance
+    # with a strictly newer `reference_date` — an optional Enable Banking field, so
+    # absence on either side just skips the check rather than treating it as older.
+    def fresher_balance(period_boundary_balance, balances)
+      reference_date = parse_reference_date(period_boundary_balance[:reference_date])
+      return nil unless reference_date
+
+      balances
+        .select { |balance| FRESHNESS_BALANCE_TYPES.include?(normalize_balance_type(balance[:balance_type])) }
+        .filter_map { |balance| [ balance, parse_reference_date(balance[:reference_date]) ] }
+        .select { |_, date| date && date > reference_date }
+        .max_by { |_, date| date }
+        &.first
+    end
+
+    def parse_reference_date(value)
+      return nil if value.blank?
+      Date.parse(value.to_s)
+    rescue ArgumentError, TypeError
+      nil
     end
 
     def normalize_balance_type(type)
