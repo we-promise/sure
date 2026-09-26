@@ -1,0 +1,35 @@
+<div class="space-y-4">
+  <p class="text-sm text-secondary"><%= t("settings.providers.financekit.description") %></p>
+
+  <% @financekit_connections.each do |connection| %>
+    <% item = connection[:item] %>
+    <section class="space-y-3" aria-label="<%= t("settings.providers.financekit.summary") %>">
+      <%= render DS::Pill.new(label: t("settings.providers.financekit.status.#{item.status}"),
+            tone: item.status == "active" ? :success : :warning, marker: false, show_dot: true, size: :sm) %>
+
+      <dl class="divide-y divide-primary text-sm">
+        <% { last_accepted_at: item.last_accepted_at, last_imported_at: item.last_imported_at }.each do |key, timestamp| %>
+          <div class="flex flex-wrap justify-between gap-2 py-2">
+            <dt class="text-primary"><%= t("settings.providers.financekit.#{key}") %></dt>
+            <dd class="text-secondary">
+              <% if timestamp %>
+                <%= tag.time l(timestamp, format: :long), datetime: timestamp.iso8601 %>
+              <% else %>
+                <%= t("settings.providers.financekit.not_yet") %>
+              <% end %>
+            </dd>
+          </div>
+        <% end %>
+      </dl>
+
+      <ul class="space-y-2" aria-label="<%= t("settings.providers.financekit.accounts") %>">
+        <% connection[:accounts].each do |account| %>
+          <li class="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <%= link_to account.name, account_path(account), class: "text-primary underline", data: { turbo_frame: "_top" } %>
+            <span class="text-secondary"><%= format_money(account.balance_money) %></span>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+</div>

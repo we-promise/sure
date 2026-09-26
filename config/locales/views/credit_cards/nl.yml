@@ -22,12 +22,3 @@ nl:
       treat_balance_as_available_credit_label: Saldo is beschikbaar krediet
     new:
       title: Creditcardgegevens invoeren
-    overview:
-      amount_owed: Schuldig bedrag
-      annual_fee: Jaarlijkse kosten
-      apr: Rentepercentage
-      available_credit: Beschikbaar krediet
-      expiration_date: Vervaldatum
-      minimum_payment: Minimumbetaling
-      unknown: Onbekend
-      edit_account_details: Accountgegevens bewerken

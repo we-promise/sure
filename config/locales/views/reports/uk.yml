@@ -121,16 +121,20 @@ uk:
         entries:
           one: "%{count} запис"
           other: "%{count} записів"
+          few: '%{count} записи'
+          many: '%{count} записів'
         percentage: "% від загальної суми"
       pagination:
         showing:
           one: Показано %{count} запис
           other: Показано %{count} записів
+          few: Показано %{count} записи
+          many: Показано %{count} записів
         previous: Попередній
         next: Наступний
     net_worth:
-      title: Чиста вартість
-      current_net_worth: Поточна чиста вартість
+      title: Чистий капітал
+      current_net_worth: Поточний чистий капітал
       period_change: Зміна за період
       assets_vs_liabilities: Активи проти зобов'язань
       total_assets: Активи
@@ -140,15 +144,15 @@ uk:
     investment_performance:
       title: Ефективність інвестицій
       portfolio_value: Вартість портфеля
-      total_return: Загальний дохід
-      period_return: Дохід за період
+      total_return: Загальна дохідність
+      period_return: Дохідність за період
       contributions: Внески за період
       withdrawals: Зняття за період
       top_holdings: Основні активи
       holding: Актив
       weight: Вага
       value: Вартість
-      return: Дохід
+      return: Дохідність
       accounts: Інвестиційні рахунки
       gains_by_tax_treatment: Прибуток за податковим режимом
       unrealized_gains: Нереалізований прибуток
@@ -160,9 +164,13 @@ uk:
       holdings_count:
         one: "%{count} актив"
         other: "%{count} активів"
+        few: '%{count} активи'
+        many: '%{count} активів'
       sells_count:
         one: "%{count} продаж"
         other: "%{count} продажів"
+        few: '%{count} продажі'
+        many: '%{count} продажів'
       holdings: Активи
       sell_trades: Продажі
       and_more: "+%{count} ще"
@@ -207,7 +215,7 @@ uk:
         used: використано
       # Net Worth section
       net_worth:
-        title: Чиста вартість
+        title: Чистий капітал
         current_balance: Поточний баланс
         this_period: за цей період
         assets: Активи
@@ -227,8 +235,8 @@ uk:
       investments:
         title: Інвестиції
         portfolio_value: Вартість портфеля
-        total_return: Загальний дохід
-        period_return: Дохід за період
+        total_return: Загальна дохідність
+        period_return: Дохідність за період
         contributions: Внески
         withdrawals: Зняття
         this_period: за цей період
@@ -236,7 +244,7 @@ uk:
         holding: Актив
         weight: Вага
         value: Вартість
-        return: Дохід
+        return: Дохідність
       # Spending by Category section
       spending:
         title: Витрати за категоріями

@@ -22,12 +22,3 @@ pt-BR:
       treat_balance_as_available_credit_label: O saldo é o crédito disponível
     new:
       title: Inserir detalhes do cartão de crédito
-    overview:
-      amount_owed: Valor Devido
-      annual_fee: Taxa Anual
-      apr: Taxa de juros anual
-      available_credit: Crédito Disponível
-      expiration_date: Data de Validade
-      minimum_payment: Pagamento Mínimo
-      unknown: Desconhecido
-      edit_account_details: Editar dados da conta

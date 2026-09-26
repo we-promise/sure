@@ -13,14 +13,12 @@ tr:
       expiration_date: Son kullanma tarihi
       minimum_payment: Asgari ödeme
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Otomatik
+      simplefin_balance_sign_credit: Alacak (banka size borçlu)
+      simplefin_balance_sign_debt: Borç (bankaya borçlusunuz)
+      simplefin_balance_sign_description: Geçersiz kılmayı yalnızca SimpleFIN belirsiz bir işaret bildirdiğinde kullanın. Otomatik seçeneği işlem geçmişini ve sağlayıcı bakiyesini kullanmaya devam eder.
+      simplefin_balance_sign_label: SimpleFIN bakiyesinin anlamı
+      treat_balance_as_available_credit_description: Bankanız bu kartın bakiyesini borç tutarı yerine kalan kullanılabilir kredi olarak bildiriyorsa etkinleştirin. Bu durumda borç, bankanızın bildirdiği kredi limitinden veya bankanız limit bildirmiyorsa Kullanılabilir kredi alanından hesaplanır.
+      treat_balance_as_available_credit_label: Bakiye kullanılabilir kredidir
     new:
       title: Kredi kartı bilgilerini girin
-    overview:
-      amount_owed: Borç Tutarı
-      annual_fee: Yıllık Ücret
-      apr: Yıllık Faiz Oranı (APR)
-      available_credit: Kullanılabilir Kredi
-      edit_account_details: Hesap ayrıntılarını düzenle
-      expiration_date: Son Kullanma Tarihi
-      minimum_payment: Asgari Ödeme
-      unknown: Bilinmiyor

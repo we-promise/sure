@@ -3,6 +3,9 @@ tr:
   transfers:
     create:
       success: Transfer başarıyla oluşturuldu
+      exchange_rate_unavailable: Seçilen para birimleri ve tarih için döviz kuru bulunamadı
+      date_invalid: geçersiz
+      stale_form: Bu form farklı bilgilerle zaten gönderildi. Lütfen sayfayı yenileyip tekrar deneyin.
     destroy:
       success: Transfer kaldırıldı
     form:

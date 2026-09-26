@@ -1,0 +1,53 @@
+---
+tr:
+  recurring_occurrences:
+    history_status:
+      paid: Ödendi
+      skipped: Atlandı
+      missed: Ödenmedi
+      scheduled: Ödenecek
+    show:
+      due_on: 'Son ödeme: %{date}'
+      paid_of: '%{paid} / %{expected} ödendi'
+      paid_headline: '%{amount} ödendi'
+      remaining: '%{amount} kaldı'
+      settled: Tamamı ödendi
+      overpaid: beklenenden fazla
+      skipped: Atlandı
+      missed: Ödenmedi olarak işaretlendi
+      payments: Ödemeler
+      manual_payment: Manuel ödeme
+      unlink: Bağlantıyı kaldır
+      review_heading: Ödemeyi incele
+      find_heading: Ödeme bul
+      add_heading: Başka bir ödeme ekle
+      other_matches: Diğer olası eşleşmeler
+      no_ranked_candidates: Burada henüz bu faturanın ödemesine benzeyen bir işlem yok.
+      search_all: Tüm işlemlerde ara
+      search_placeholder: İşlemlerde ara
+      no_candidates: Bağlanabilecek yakın tarihli işlem yok.
+      no_search_results: '%{query} ile eşleşen sonuç yok.'
+      link_payment: Ödemeyi bağla
+      not_this_one: Bu değil
+      cant_find: İşlemi bulamıyor musunuz?
+      manual_explainer: Burada eşleşen bir işlem olmadığında, yapıldığını bildiğiniz bir ödemeyi kaydedin.
+      manual_amount_label: Tutar
+      manual_date_label: Tarih
+      record_payment: Ödemeyi kaydet
+      mark_paid: Ödendi olarak işaretle
+      mark_paid_hint: Kalan tutarı bir işlem kaydetmeden kapatır.
+      skip: Atla
+      snooze_week: Bir hafta ertele
+      reopen: Yeniden aç
+      view_bill: Faturanın tamamını görüntüle
+    mark_paid:
+      success: Fatura ödendi olarak işaretlendi
+    skip:
+      success: Fatura atlandı
+    reopen:
+      success: Fatura yeniden açıldı
+    snooze:
+      success: '%{date} tarihine ertelendi'
+      invalid_date: Bu tarih okunamadı
+    override_amount:
+      success: Beklenen tutar güncellendi

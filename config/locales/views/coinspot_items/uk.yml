@@ -1,0 +1,104 @@
+---
+uk:
+  coinspot_items:
+    provider_connection:
+      default_name: CoinSpot
+      default_description: Під'єднати рахунок біржі CoinSpot
+      name: CoinSpot - %{name}
+      description: Під'єднати %{name}
+    create:
+      default_name: CoinSpot
+      success: Успішно під'єднано до CoinSpot. Ваш рахунок біржі синхронізується.
+    update:
+      success: З'єднання CoinSpot успішно оновлено.
+    destroy:
+      success: Заплановано видалення з'єднання CoinSpot.
+      unlink_failed: Не вдалося від'єднати з'єднання CoinSpot
+    select_accounts:
+      select_connection: Виберіть з'єднання CoinSpot у налаштуваннях постачальника.
+      no_credentials_configured: Додайте облікові дані API CoinSpot перед налаштуванням рахунків.
+    link_accounts:
+      select_connection: Виберіть з'єднання CoinSpot перед пов'язуванням рахунків.
+    select_existing_account:
+      title: Пов'язати рахунок CoinSpot
+      no_accounts_found: Рахунків CoinSpot не знайдено.
+      wait_for_sync: Зачекайте, поки CoinSpot завершить синхронізацію.
+      check_provider_health: Перевірте, чи дійсні ваші облікові дані API CoinSpot.
+      link: Пов'язати
+      cancel: Скасувати
+    link_existing_account:
+      success: Успішно пов'язано з рахунком CoinSpot
+      select_connection: Виберіть з'єднання CoinSpot перед пов'язуванням рахунків.
+      errors:
+        only_manual: З CoinSpot можна пов'язати лише ручні рахунки криптобіржі, які ще не пов'язані з жодним постачальником
+        invalid_coinspot_account: Недійсний рахунок CoinSpot
+        coinspot_account_already_linked: Цей рахунок CoinSpot уже пов'язано
+    setup_accounts:
+      title: Імпортувати рахунок CoinSpot
+      subtitle: Виберіть рахунок біржі для відстеження
+      instructions: Для цього з'єднання CoinSpot імпортує один об'єднаний рахунок криптобіржі з балансами, вартістю в AUD, переказами, поповненнями, виведеннями та історією ордерів.
+      no_accounts: Усі рахунки CoinSpot імпортовано.
+      accounts_count:
+        one: Доступний %{count} рахунок
+        few: Доступні %{count} рахунки
+        many: Доступно %{count} рахунків
+        other: Доступно %{count} рахунків
+      select_all: Вибрати все
+      import_selected: Імпортувати вибране
+      cancel: Скасувати
+      creating: Імпорт...
+    complete_account_setup:
+      success:
+        one: Імпортовано %{count} рахунок
+        few: Імпортовано %{count} рахунки
+        many: Імпортовано %{count} рахунків
+        other: Імпортовано %{count} рахунків
+      none_selected: Не вибрано жодного рахунку
+      no_accounts: Немає рахунків для імпорту
+      setup_failed:
+        one: Не вдалося імпортувати %{count} рахунок
+        few: Не вдалося імпортувати %{count} рахунки
+        many: Не вдалося імпортувати %{count} рахунків
+        other: Не вдалося імпортувати %{count} рахунків
+    coinspot_item:
+      provider_name: CoinSpot
+      syncing: Синхронізація...
+      reconnect: Облікові дані потребують оновлення
+      deletion_in_progress: Видалення...
+      sync_status:
+        no_accounts: Рахунків не знайдено
+        all_synced:
+          one: '%{count} рахунок синхронізовано'
+          few: '%{count} рахунки синхронізовано'
+          many: '%{count} рахунків синхронізовано'
+          other: '%{count} рахунків синхронізовано'
+        partial_sync: 'Синхронізовано: %{linked_count}, потребують налаштування: %{unlinked_count}'
+      status: Остання синхронізація %{timestamp} тому
+      status_with_summary: Остання синхронізація %{timestamp} тому - %{summary}
+      status_never: Ще не синхронізовано
+      delete: Видалити
+      no_accounts_title: Рахунків не знайдено
+      no_accounts_message: Ваш рахунок біржі CoinSpot з'явиться тут після синхронізації.
+      setup_needed: Рахунок готовий до імпорту
+      setup_description: Імпортуйте це з'єднання CoinSpot як рахунок криптобіржі.
+      setup_action: Імпортувати рахунок
+      import_accounts_menu: Імпортувати рахунок
+      stale_rate_warning: Баланс приблизний, оскільки точний обмінний курс на %{date} був недоступний. Він оновиться під час наступної синхронізації.
+  coinspot_item:
+    syncer:
+      checking_credentials: Перевірка облікових даних...
+      credentials_invalid: Недійсні облікові дані API CoinSpot. Перевірте ключ API та секрет.
+      importing_accounts: Імпорт рахунків з CoinSpot...
+      checking_configuration: Перевірка конфігурації рахунку...
+      accounts_need_setup:
+        one: '%{count} рахунок потребує налаштування'
+        few: '%{count} рахунки потребують налаштування'
+        many: '%{count} рахунків потребують налаштування'
+        other: '%{count} рахунків потребують налаштування'
+      processing_accounts: Обробка даних рахунку...
+      processing_failed:
+        one: Не вдалося обробити %{count} рахунок CoinSpot
+        few: Не вдалося обробити %{count} рахунки CoinSpot
+        many: Не вдалося обробити %{count} рахунків CoinSpot
+        other: Не вдалося обробити %{count} рахунків CoinSpot
+      calculating_balances: Розрахунок балансів...

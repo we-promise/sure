@@ -20,12 +20,3 @@ pl:
       treat_balance_as_available_credit_label: Saldo to dostępny limit kredytowy
     new:
       title: Wprowadź dane karty kredytowej
-    overview:
-      amount_owed: Kwota zadłużenia
-      annual_fee: Opłata roczna
-      apr: RRSO
-      available_credit: Dostępny limit kredytowy
-      edit_account_details: Edytuj dane konta
-      expiration_date: Data ważności
-      minimum_payment: Minimalna spłata
-      unknown: Nieznane

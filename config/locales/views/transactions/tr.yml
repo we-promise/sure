@@ -24,7 +24,7 @@ tr:
       failed_delete: 'Ek silinemedi: %{error}'
       failed_upload: 'Ek yüklenemedi: %{error}'
       files:
-        one: Dosya (1)
+        one: "Dosya (%{count})"
         other: Dosyalar (%{count})
       max_reached: Maksimum dosya sınırına ulaşıldı (%{count}/%{max}). Başka bir dosya
         yüklemek için mevcut bir dosyayı silin.
@@ -58,7 +58,7 @@ tr:
     categorizes:
       create:
         categorized:
-          one: 1 işlem kategorilendirildi
+          one: "%{count} işlem kategorilendirildi"
           other: "%{count} işlem kategorilendirildi"
         rule_creation_failed: İşlemler kategorilendirildi, ancak kural oluşturulamadı
           (zaten var olabilir).
@@ -78,13 +78,13 @@ tr:
         filter_placeholder: Kategori ara...
         no_categories: Eşleşen kategori yok
         remaining:
-          one: 1 kategorilendirilmemiş işlem kaldı
+          one: "%{count} kategorilendirilmemiş işlem kaldı"
           other: "%{count} kategorilendirilmemiş işlem kaldı"
         rule_description_prefix: İsminde şunu içeren gelecekteki %{type} işlemleri
         rule_description_suffix: bu kategoriyi de almalı.
         skip: Atla
         transaction_count:
-          one: 1 işlem
+          one: "%{count} işlem"
           other: "%{count} işlem"
         transactions_hint: Bir işlemi hariç tutmak için işareti kaldırın veya satırında
           doğrudan farklı bir kategori atayın.
@@ -169,6 +169,12 @@ tr:
       tag_search_placeholder: Etiket ara veya oluştur
       tags_label: Etiketler
       transfer: Transfer
+      category_search_placeholder: Kategori ara
+      create_category: '"%{name}" oluştur'
+      create_category_error: Kategori oluşturulamadı
+      create_merchant: Oluştur
+      create_merchant_error: Satıcı oluşturulamadı
+      merchant_search_placeholder: Satıcı ara veya oluştur
     header:
       edit_categories: Kategorileri düzenle
       edit_imports: İçe aktarımları düzenle
@@ -177,7 +183,7 @@ tr:
       import: İçe aktar
     index:
       categorize_button:
-        one: Kategorilendir (1)
+        one: "Kategorilendir (%{count})"
         other: Kategorilendir (%{count})
       edit_categories: Kategorileri düzenle
       edit_imports: İçe aktarımları düzenle
@@ -342,6 +348,10 @@ tr:
       transfer_matcher_description: Bu işlemi başka bir hesaptaki karşılığına bağlayın.
       transfer_or_debt_payment: Transfer mi yoksa Borç Ödemesi mi?
       uncategorized: "(kategorilendirilmemiş)"
+      create_bill: Fatura oluştur
+      applied_to_title: Bu ödemeyle kapatılan faturalar
+      applied_to_detail: Son ödeme tarihi %{date} olan faturaya %{amount}
+      applied_to_unreviewed: İnceleme gerekiyor
     split_parent_row:
       split_label: Bölünmüş
     summary:

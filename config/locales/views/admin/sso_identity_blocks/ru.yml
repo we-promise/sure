@@ -1,0 +1,6 @@
+---
+ru:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: Эта SSO-идентичность снова может входить в систему и создавать аккаунт.

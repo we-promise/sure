@@ -1,0 +1,6 @@
+<%= tag.div class: container_classes, **container_opts do %>
+  <%= tag.dt label, class: label_classes %>
+  <%= tag.dd class: value_classes do %>
+    <%= value? ? value : plain_value %>
+  <% end %>
+<% end %>

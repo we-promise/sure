@@ -83,7 +83,7 @@
                     <%= allocation.entry&.name.presence || t(".manual_payment") %>
                   </p>
                   <% if allocation.paid_on %>
-                    <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short) %></p>
+                    <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short_with_year) %></p>
                   <% end %>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
@@ -115,7 +115,7 @@
                   <%= @pending_suggestion.entry&.name.presence || t(".manual_payment") %>
                 </p>
                 <% if @pending_suggestion.paid_on %>
-                  <p class="text-xs text-secondary"><%= l(@pending_suggestion.paid_on, format: :short) %></p>
+                  <p class="text-xs text-secondary"><%= l(@pending_suggestion.paid_on, format: :short_with_year) %></p>
                 <% end %>
               </div>
               <p class="text-sm font-medium text-primary privacy-sensitive shrink-0">

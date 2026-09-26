@@ -10,6 +10,8 @@ ru:
       monthly_average: "%{amount}/мес среднее"
       shared_placeholder: Общий
       shared_title: Оставьте пустым, чтобы использовать бюджет родителя
+      rollover_label: Перенос остатка
+      rollover_title: Переносить неизрасходованные деньги этой категории на следующий месяц
     confirm_button:
       confirm: Подтвердить
     index:
@@ -35,6 +37,33 @@ ru:
       spending: Расходы за %{date}
       status: Статус
       view_all_transactions: Просмотреть все операции по категории
+      rolled_over: Перенесено
+    bills_reserved: '%{amount} зарезервировано под платежи'
+    bills_reserved_unconvertible:
+      one: '%{count} платёж не зарезервирован: нет обменного курса'
+      few: '%{count} платежа не зарезервированы: нет обменного курса'
+      many: '%{count} платежей не зарезервированы: нет обменного курса'
+      other: '%{count} платежа не зарезервированы: нет обменного курса'
+    budget_category:
+      rolled_over: +%{amount} перенесено
+    move:
+      button_title: Перенести деньги из этой категории
+      cancel: Отмена
+      dialog_title: Перенос денег
+      no_destination: 'Сейчас деньги некуда перенести: других подходящих конвертов нет — категория не может переводить деньги своей родительской или дочерней категории.'
+      submit: Перенести
+      amount_label: Сумма
+      available: Доступно %{amount}
+      from_label: Откуда
+      to_label: Куда
+      success: Деньги перенесены.
+      errors:
+        different_budgets: Обе категории должны относиться к одному бюджету.
+        insufficient_funds: Это больше, чем распределено в этой категории.
+        non_positive_amount: Введите сумму больше нуля.
+        parent_child: Нельзя переносить деньги между категорией и её подкатегорией — измените бюджет подкатегории напрямую.
+        same_category: Выберите другую категорию, в которую нужно перенести деньги.
+        uncategorized: «Без категории» — не настоящий конверт, поэтому в него и из него нельзя переносить деньги.
   budgets:
     actuals_summary:
       expenses: Расходы
@@ -102,3 +131,13 @@ ru:
       tabs:
         actual: Фактический
         budgeted: Запланированный
+    switcher:
+      aria_label: Переключить бюджет
+      household: Общий
+    available_cash:
+      heading: Свободные деньги
+      subtitle: Рядом с планом выше, но не входит в него.
+      available: Доступно на денежных счетах
+      earmarked: Уже зарезервировано для целей
+      free: Действительно свободно
+      goals_link: Посмотреть цели
