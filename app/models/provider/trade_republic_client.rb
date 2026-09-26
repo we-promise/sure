@@ -259,7 +259,7 @@ class Provider::TradeRepublicClient
     end
   end
 
-  def sync(session_txt:, known_newest_event_id: nil, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [], symbol_lookup_isins: [])
+  def sync(session_txt:, known_newest_event_id: nil, timeline_max_pages: MAX_TIMELINE_PAGES, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {})
     raise ConfigurationError, "session_txt is required" if session_txt.blank?
 
     with_retry do
@@ -268,12 +268,13 @@ class Provider::TradeRepublicClient
         known_newest_event_id: known_newest_event_id,
         timeline_max_pages: timeline_max_pages,
         enrich_events: enrich_events,
-        symbol_lookup_isins: symbol_lookup_isins
+        symbol_lookup_isins: symbol_lookup_isins,
+        known_instrument_symbols: known_instrument_symbols
       )
     end
   end
 
-  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, enrich_events: [], symbol_lookup_isins: [])
+  def sync_once(session_txt:, known_newest_event_id:, timeline_max_pages:, enrich_events: [], symbol_lookup_isins: [], known_instrument_symbols: {})
     session = new_session(session_blob: session_txt)
     account_response = session.get("/api/v2/auth/account")
     return Result.new(data: { "status" => "session_expired" }) if [ 401, 403 ].include?(account_response.code.to_i)
@@ -314,7 +315,8 @@ class Provider::TradeRepublicClient
         positions, position_warnings = normalize_positions(
           websocket,
           portfolio,
-          sec_acc_no: account["securitiesAccountNumber"]
+          sec_acc_no: account["securitiesAccountNumber"],
+          known_instrument_symbols: known_instrument_symbols
         )
         warnings.concat(position_warnings)
         domain_statuses["portfolio"] = "success"
@@ -324,7 +326,7 @@ class Provider::TradeRepublicClient
         warnings << "portfolio fetch failed: #{e.message}"
       end
 
-      known_symbols = instrument_symbols_from_positions(positions)
+      known_symbols = self.class.instrument_symbols_from_positions(positions)
       instrument_symbols = known_symbols.dup
 
       events = []
@@ -428,6 +430,21 @@ class Provider::TradeRepublicClient
 
       detail = (event["detail"] || event[:detail]).stringify_keys
       detail["price"].to_s.strip.blank?
+    end
+
+    def instrument_symbols_from_positions(positions)
+      Array(positions).each_with_object({}) do |position, map|
+        next unless position.is_a?(Hash)
+
+        position = position.stringify_keys
+        isin = position["isin"].to_s.presence
+        symbol = position["symbol"].to_s.strip.presence
+        exchange_slug = position["exchange_slug"].to_s.strip.upcase.presence
+        next if isin.blank? || symbol.blank? || exchange_slug.blank?
+        next if symbol.casecmp?(isin)
+
+        map[isin] = { "symbol" => symbol, "exchange_slug" => exchange_slug }
+      end
     end
 
     def price_backfill_attempted_at(event)
@@ -592,7 +609,7 @@ class Provider::TradeRepublicClient
 
     def optional_subscribe(websocket, payload)
       subscribe(websocket, payload)
-    rescue TransientProviderError
+    rescue TransientProviderError, RateLimited
       raise
     rescue Error
       nil
@@ -642,7 +659,9 @@ class Provider::TradeRepublicClient
       end.join
     end
 
-    def normalize_positions(websocket, portfolio, sec_acc_no: nil)
+    # `known_instrument_symbols` are exchange tickers stored by earlier syncs;
+    # those ISINs skip the instrument subscription.
+    def normalize_positions(websocket, portfolio, sec_acc_no: nil, known_instrument_symbols: {})
       raw_positions = Array(portfolio["categories"]).flat_map do |category|
         Array(category["positions"]).map { |position| position.merge("categoryType" => category["categoryType"]) }
       end
@@ -659,6 +678,7 @@ class Provider::TradeRepublicClient
       end
       prices = {}
       instruments = {}
+      known_symbols = stringify_instrument_symbols(known_instrument_symbols)
       private_market_quotes = private_markets_unit_prices(websocket, sec_acc_no) if valid_positions.any? { |p|
         p["categoryType"].to_s == "privateMarkets"
       }
@@ -686,7 +706,12 @@ class Provider::TradeRepublicClient
         next if instruments.key?(isin)
         next unless INSTRUMENT_SYMBOL_CATEGORIES.include?(position["categoryType"].to_s)
 
-        instruments[isin] = instrument_exchange_symbol(websocket, isin)
+        known = known_symbols[isin]
+        instruments[isin] = if known
+          { symbol: known["symbol"], exchange_slug: known["exchange_slug"] }
+        else
+          instrument_exchange_symbol(websocket, isin)
+        end
       end
 
       positions = valid_positions.map do |position|
@@ -730,6 +755,8 @@ class Provider::TradeRepublicClient
       return nil unless home.is_a?(Hash)
 
       (home["exchangeId"].presence || home["id"].presence || home["slug"].presence).to_s.strip.upcase.presence
+    rescue TransientProviderError, RateLimited
+      raise
     rescue Error
       nil
     end
@@ -765,6 +792,8 @@ class Provider::TradeRepublicClient
         unit_price = private_markets_unit_price(position)
         prices[isin] = unit_price if unit_price.present?
       end
+    rescue TransientProviderError, RateLimited
+      raise
     rescue Error
       {}
     end
@@ -805,22 +834,10 @@ class Provider::TradeRepublicClient
       return nil unless payload.is_a?(Hash)
 
       pick_instrument_exchange_symbol(payload, isin)
+    rescue TransientProviderError, RateLimited
+      raise
     rescue Error
       nil
-    end
-
-    def instrument_symbols_from_positions(positions)
-      Array(positions).each_with_object({}) do |position, map|
-        next unless position.is_a?(Hash)
-
-        isin = position["isin"].to_s.presence
-        symbol = position["symbol"].to_s.strip.presence
-        exchange_slug = position["exchange_slug"].to_s.strip.upcase.presence
-        next if isin.blank? || symbol.blank? || exchange_slug.blank?
-        next if symbol.casecmp?(isin)
-
-        map[isin] = { "symbol" => symbol, "exchange_slug" => exchange_slug }
-      end
     end
 
     # Look up exchange tickers for trade ISINs that are no longer (or never)

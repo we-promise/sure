@@ -354,6 +354,27 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert cash.raw_timeline_payload.none? { |event| event["category"] == "orderExecution" }
   end
 
+  test "passes stored exchange symbols so the client can skip instrument lookups" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      name: "Portfolio",
+      trade_republic_account_id: "DE-KNOWN",
+      currency: "EUR",
+      raw_positions_payload: [
+        { "isin" => "DE000BASF111", "quantity" => "1", "symbol" => "BAS", "exchange_slug" => "XETR" },
+        { "isin" => "LU3176111881", "quantity" => "1", "symbol" => "LU3176111881", "exchange_slug" => "TIB" }
+      ]
+    )
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).with(
+      has_entries(known_instrument_symbols: { "DE000BASF111" => { "symbol" => "BAS", "exchange_slug" => "XETR" } })
+    ).returns(client_result("status" => "session_expired"))
+
+    assert_raises(Provider::TradeRepublicClient::AuthenticationRequired) do
+      TradeRepublicItem::Importer.new(@item, provider: provider).import
+    end
+  end
+
   test "passes oldest incomplete trade-detail events for targeted enrichment" do
     incomplete_trade = {
       "id" => "trade-old",

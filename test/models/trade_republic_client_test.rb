@@ -497,7 +497,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
       payload = (args.first || kwargs).with_indifferent_access
       if payload[:type] == "instrument"
-        raise Provider::TradeRepublicClient::TransientProviderError, "instrument temporarily unavailable"
+        raise Provider::TradeRepublicClient::ProviderUnavailable, "instrument unavailable"
       end
 
       { "last" => { "price" => "99.50" } }
@@ -515,6 +515,48 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "US0378331005", positions.first["isin"]
     assert_equal "99.50", positions.first["price"]
     assert_nil positions.first["symbol"]
+  end
+
+  test "rate limits and transient errors from instrument lookups propagate" do
+    [ Provider::TradeRepublicClient::RateLimited, Provider::TradeRepublicClient::TransientProviderError ].each do |error_class|
+      @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+        payload = (args.first || kwargs).with_indifferent_access
+        raise error_class, "slow down" if payload[:type] == "instrument"
+
+        { "last" => { "price" => "99.50" } }
+      end
+
+      assert_raises(error_class) do
+        @client.send(:normalize_positions, Object.new, {
+          "categories" => [
+            { "categoryType" => "stocksAndETFs", "positions" => [
+              { "instrumentId" => "US0378331005", "name" => "Apple", "netSize" => "1" }
+            ] }
+          ]
+        })
+      end
+    end
+  end
+
+  test "reuses stored exchange symbols instead of re-subscribing to the instrument" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, *args, **kwargs|
+      payload = (args.first || kwargs).with_indifferent_access
+      requested << payload[:type]
+      payload[:type] == "ticker" ? { "last" => { "price" => "45.12" } } : {}
+    end
+
+    positions, = @client.send(:normalize_positions, Object.new, {
+      "categories" => [
+        { "categoryType" => "stocksAndETFs", "positions" => [
+          { "instrumentId" => "DE000BASF111", "name" => "BASF", "netSize" => "10" }
+        ] }
+      ]
+    }, known_instrument_symbols: { "DE000BASF111" => { "symbol" => "BAS", "exchange_slug" => "XETR" } })
+
+    assert_not_includes requested, "instrument"
+    assert_equal "BAS", positions.first["symbol"]
+    assert_equal "XETR", positions.first["exchange_slug"]
   end
 
   test "does not value listed positions at cost basis when no quote is available" do

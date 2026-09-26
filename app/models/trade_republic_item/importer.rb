@@ -20,7 +20,8 @@ class TradeRepublicItem::Importer
       session_txt: trade_republic_item.session_blob,
       known_newest_event_id: known_newest_event_id,
       enrich_events: events_needing_detail_enrichment,
-      symbol_lookup_isins: isins_needing_symbol_lookup
+      symbol_lookup_isins: isins_needing_symbol_lookup,
+      known_instrument_symbols: stored_instrument_symbols
     )
 
     data = result.data
@@ -220,6 +221,15 @@ class TradeRepublicItem::Importer
 
         isin
       end.uniq.first(Provider::TradeRepublicClient::MAX_INSTRUMENT_LOOKUPS)
+    end
+
+    # Exchange tickers stored by earlier syncs; the client skips the
+    # instrument subscription for these positions.
+    def stored_instrument_symbols
+      portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      return {} unless portfolio
+
+      Provider::TradeRepublicClient.instrument_symbols_from_positions(portfolio.raw_positions_payload)
     end
 
     def event_timestamp(event)
