@@ -4,22 +4,127 @@ nb:
     no_action: Ingen handling
     no_condition: Ingen betingelse
     recent_runs:
-      title: Siste Kjøringer
+      title: Siste kjøringer
       description: Se kjøringsloggen for reglene dine inkludert suksess/feil-status og transaksjonsantall.
-      unnamed_rule: Navnløs Regel
+      unnamed_rule: Regel uten navn
       columns:
         date_time: Dato/Tid
         execution_type: Type
         status: Status
         rule_name: Regelnavn
         transactions_counts:
-          queued: I Kø
+          queued: I kø
           processed: Behandlet
           modified: Endret
+          blocked: Blokkert
       execution_types:
         manual: Manuell
-        scheduled: Planlagt
+        scheduled: Automatisk
       statuses:
         pending: Ventende
         success: Vellykket
         failed: Mislyktes
+    rule:
+      edit: Rediger
+      re_apply_rule: Bruk regelen på nytt
+      delete: Slett
+      then: SÅ
+      and_more_conditions:
+        one: og %{count} betingelse til
+        other: og %{count} betingelser til
+      and_more_actions:
+        one: og %{count} handling til
+        other: og %{count} handlinger til
+      action_label_to: '%{label} til %{value}'
+      all_past_and_future: Alle tidligere og fremtidige %{resource}
+      on_or_after: '%{resource} fra og med %{date}'
+    form:
+      rule_name_label: Regelnavn (valgfritt)
+      rule_name_placeholder: Skriv inn et navn på regelen
+      add_condition: Legg til betingelse
+      add_condition_group: Legg til betingelsesgruppe
+      add_action: Legg til handling
+      all_past_and_future: Alle tidligere og fremtidige %{resource}
+      starting_from: Fra og med
+      then: SÅ
+    index:
+      page_title: Regler
+      delete_all_rules: Slett alle regler
+      new_rule: Ny regel
+      ai_cost_warning: Regelhandlinger som bruker AI, koster penger. Filtrer så snevert som mulig for å unngå unødvendige kostnader.
+      rules_heading: Regler
+      sort_by: 'Sorter etter:'
+      sort_name: Navn
+      sort_updated_at: Sist oppdatert
+      toggle_sort_direction: Bytt sorteringsretning
+      no_rules_title: Ingen regler ennå
+      no_rules_description: Sett opp regler som utfører handlinger på transaksjonene og andre data hver gang kontoene synkroniseres.
+    confirm:
+      title: Bekreft endringer
+      title_with_name: Bekreft endringer i «%{name}»
+      apply_notice_html: Du er i ferd med å bruke denne regelen på <span class="text-primary font-medium">%{count} %{resource}</span> som oppfyller regelens kriterier. Bekreft at du vil gjennomføre denne endringen.
+      ai_cost_title: Estimert AI-kostnad
+      ai_cost_with_estimate_html: 'Dette bruker AI til å kategorisere %{count} transaksjon(er). Estimert kostnad: <span class="font-semibold">~$%{cost}</span>'
+      ai_cost_no_estimate_html: Dette bruker AI til å kategorisere %{count} transaksjon(er).
+      cost_unavailable_model: Kostnadsestimat er ikke tilgjengelig for modellen «%{model}».
+      cost_unavailable_no_provider: Kostnadsestimat er ikke tilgjengelig (ingen LLM-leverandør er konfigurert).
+      cost_warning: Dette kan medføre kostnader. Sjekk de oppdaterte prisene hos modelleverandøren.
+      view_usage_history: Vis brukshistorikk
+      confirm_changes: Bekreft endringer
+    actions:
+      to_label: til
+      value_placeholder: Skriv inn en verdi
+    update:
+      success: Regelen ble oppdatert
+    destroy:
+      success: Regelen ble slettet
+    destroy_all:
+      success: Alle regler ble slettet
+    apply_all:
+      button: Bruk alle
+      confirm_title: Bruk alle regler
+      confirm_message: Du er i ferd med å bruke %{count} regler som påvirker %{transactions} unike transaksjoner. Bekreft at du vil fortsette.
+      confirm_button: Bekreft og bruk alle
+      success: Alle regler er satt i kø for kjøring
+      ai_cost_title: Estimert AI-kostnad
+      ai_cost_message: Dette bruker AI til å kategorisere opptil %{transactions} transaksjoner.
+      estimated_cost: 'Estimert kostnad: ~$%{cost}'
+      cost_unavailable_model: Kostnadsestimat er ikke tilgjengelig for modellen «%{model}».
+      cost_unavailable_no_provider: Kostnadsestimat er ikke tilgjengelig (ingen LLM-leverandør er konfigurert).
+      cost_warning: Dette kan medføre kostnader. Sjekk de oppdaterte prisene hos modelleverandøren.
+      view_usage: Vis brukshistorikk
+    clear_ai_cache:
+      button: Tilbakestill AI-hurtigbuffer
+      confirm_title: Tilbakestille AI-hurtigbufferen?
+      confirm_body: Er du sikker på at du vil tilbakestille AI-hurtigbufferen? Da kan AI-regler behandle alle transaksjoner på nytt. Dette kan gi ekstra API-kostnader.
+      confirm_button: Tilbakestill hurtigbuffer
+      success: AI-hurtigbufferen tømmes. Dette kan ta litt tid.
+    condition_filters:
+      transaction_type:
+        income: Inntekt
+        expense: Utgift
+        transfer: Overføring
+        equal_to: Er lik
+      operators:
+        contains: Inneholder
+        does_not_contain: Inneholder ikke
+        equal_to: Er lik
+        is_equal_to: Er lik
+        not_equal_to: Er ikke lik
+        is_empty: Er tom
+        is_not_empty: Er ikke tom
+        greater_than: Større enn
+        greater_or_equal_to: Større enn eller lik
+        less_than: Mindre enn
+        less_than_or_equal_to: Mindre enn eller lik
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: og
+        match: oppfyll
+        all: alle
+        any: minst én
+        of_the_following_conditions: av følgende betingelser
+        add_condition: Legg til betingelse
+      condition:
+        value_placeholder: Skriv inn en verdi

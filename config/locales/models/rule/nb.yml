@@ -1,0 +1,12 @@
+---
+nb:
+  activerecord:
+    errors:
+      models:
+        rule:
+          min_actions: må ha minst én handling
+          duplicate_actions: Regelen kan ikke ha dupliserte handlinger %{types}
+          nested_conditions: Sammensatte betingelser kan ikke nøstes
+  rule:
+    conditions:
+      unsupported_label: Støttes ikke (%{type})

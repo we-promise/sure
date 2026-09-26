@@ -1,0 +1,5 @@
+---
+ro:
+  coinbase:
+    processor:
+      paid_via: Plătit prin %{method}

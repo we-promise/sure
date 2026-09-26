@@ -1,0 +1,141 @@
+---
+ro:
+  admin:
+    unauthorized: Nu ai permisiunea de a accesa această zonă.
+    sso_providers:
+      index:
+        page_title: Furnizori SSO
+        title: Furnizori SSO
+        description: Gestionează furnizorii de autentificare unică (SSO) pentru instanța ta.
+        restart_required: Modificările necesită o repornire a serverului pentru a intra în vigoare.
+        configured_providers: Furnizori configurați
+        add_provider: Adaugă furnizor
+        no_providers_title: Niciun furnizor SSO
+        no_providers_message: Încă nu este configurat niciun furnizor SSO.
+        note: Modificările furnizorilor SSO necesită o repornire a serverului pentru a intra în vigoare. Alternativ, activează opțiunea AUTH_PROVIDERS_SOURCE=db pentru a încărca dinamic furnizorii din baza de date.
+        enabled: Activat
+        disabled: Dezactivat
+        edit: Editează
+        enable: Activează
+        disable: Dezactivează
+        delete: Șterge
+        configuration_mode: Mod de configurare
+        db_backed_providers: Furnizori stocați în baza de date
+        db_backed_providers_description: Încarcă furnizorii din baza de date în loc de configurația YAML
+        db_backed_providers_help_html: Setează <code class="bg-surface px-1 py-0.5 rounded text-xs">AUTH_PROVIDERS_SOURCE=db</code> pentru a activa furnizorii stocați în baza de date. Astfel, modificările nu mai necesită repornirea serverului.
+        table:
+          name: Nume
+          strategy: Strategie
+          status: Stare
+          issuer: Emitent
+          actions: Acțiuni
+          enabled: Activat
+          disabled: Dezactivat
+        legacy_providers_title: Furnizori configurați prin mediu
+        legacy_providers_notice: Acești furnizori sunt configurați prin variabile de mediu sau YAML și nu pot fi gestionați din această interfață. Pentru a-i gestiona aici, migrează-i la furnizori stocați în baza de date activând AUTH_PROVIDERS_SOURCE=db și recreându-i în interfață.
+        env_configured: Env/YAML
+      new:
+        title: Adaugă furnizor SSO
+        description: Configurează un nou furnizor de autentificare unică (SSO)
+        provider_configuration: Configurare furnizor
+      edit:
+        title: Editează furnizorul SSO
+        description: Actualizează configurația pentru %{label}
+        provider_configuration: Configurare furnizor
+      create:
+        success: Furnizorul SSO a fost creat.
+      update:
+        success: Furnizorul SSO a fost actualizat.
+      destroy:
+        success: Furnizorul SSO a fost șters.
+        confirm: Sigur vrei să ștergi acest furnizor? Această acțiune este ireversibilă.
+      toggle:
+        success_enabled: Furnizorul SSO a fost activat.
+        success_disabled: Furnizorul SSO a fost dezactivat.
+        confirm_enable: Sigur vrei să activezi acest furnizor?
+        confirm_disable: Sigur vrei să dezactivezi acest furnizor?
+      form:
+        basic_information: Informații de bază
+        oauth_configuration: Configurare OAuth/OIDC
+        strategy_label: Strategie
+        strategy_help: Strategia de autentificare folosită
+        strategy_openid_connect: OpenID Connect
+        strategy_saml: SAML 2.0
+        strategy_google_oauth2: Google OAuth2
+        strategy_github: GitHub
+        name_label: Nume
+        name_placeholder: ex. keycloak, authentik
+        name_help: Identificator unic (doar litere mici, cifre și caractere de subliniere)
+        label_label: Text buton
+        label_placeholder: ex. Autentificare cu Keycloak
+        label_help: Textul butonului afișat utilizatorilor
+        icon_label: Pictogramă (opțional)
+        icon_placeholder: ex. key, shield
+        icon_help: Numele pictogramei Lucide pentru butonul de autentificare
+        enabled_label: Activează acest furnizor
+        enabled_help: Când este activat, utilizatorii se pot autentifica prin acest furnizor
+        issuer_label: URL emitent
+        issuer_placeholder: https://your-idp.example.com/realms/your-realm
+        issuer_help: URL-ul emitentului OIDC (validează .well-known/openid-configuration)
+        client_id_label: Client ID
+        client_id_placeholder: your-client-id
+        client_id_help: Client ID OAuth de la furnizorul tău de identitate
+        client_secret_label: Client Secret
+        client_secret_placeholder_new: your-client-secret
+        client_secret_placeholder_existing: ••••••••
+        client_secret_help: Client secret OAuth (criptat în baza de date)
+        client_secret_help_existing: Lasă gol pentru a păstra secretul existent
+        redirect_uri_label: URL de callback
+        redirect_uri_placeholder: https://yourdomain.com/auth/openid_connect/callback
+        redirect_uri_help: Configurează acest URL în furnizorul tău de identitate
+        saml_sp_callback_url_label: URL de callback SP (ACS URL)
+        saml_sp_callback_url_help: Configurează acest URL ca Assertion Consumer Service URL în IdP-ul tău
+        copy_button: Copiază
+        cancel: Anulează
+        submit: Salvează furnizorul
+        create_provider: Creează furnizor
+        update_provider: Actualizează furnizorul
+        errors_title:
+          one: 'O eroare a împiedicat salvarea acestui furnizor:'
+          few: '%{count} erori au împiedicat salvarea acestui furnizor:'
+          other: '%{count} de erori au împiedicat salvarea acestui furnizor:'
+        provisioning_title: Provizionare utilizatori
+        default_role_label: Rol implicit pentru utilizatorii noi
+        default_role_help: Rolul atribuit utilizatorilor creați prin provizionarea just-in-time (JIT) a conturilor SSO. Implicit este Membru.
+        role_guest: Invitat
+        role_member: Membru
+        role_admin: Administrator
+        role_super_admin: Super administrator
+        role_mapping_title: Asociere grupuri la roluri (opțional)
+        role_mapping_help: Asociază grupurile/claims IdP cu rolurile din aplicație. Utilizatorilor li se atribuie cel mai înalt rol care corespunde. Lasă gol pentru a folosi rolul implicit de mai sus.
+        super_admin_groups: Grupuri super administrator
+        admin_groups: Grupuri administrator
+        guest_groups: Grupuri invitați
+        member_groups: Grupuri membri
+        groups_help: Listă de nume de grupuri IdP separate prin virgulă. Folosește * pentru a include toate grupurile.
+        advanced_title: Setări OIDC avansate
+        scopes_label: Scopes personalizate
+        scopes_help: Listă de scopes OIDC separate prin spațiu. Lasă gol pentru valorile implicite (openid email profile). Adaugă 'groups' pentru a obține claims de grup.
+        prompt_label: Prompt de autentificare
+        prompt_default: Implicit (decide IdP-ul)
+        prompt_login: Forțează autentificarea (reautentificare)
+        prompt_consent: Forțează consimțământul (reautorizare)
+        prompt_select_account: Selectare cont (alege contul)
+        prompt_none: Fără prompt (autentificare silențioasă)
+        prompt_help: Controlează modul în care IdP-ul solicită utilizatorului informații în timpul autentificării.
+        test_connection: Testează conexiunea
+        saml_configuration: Configurare SAML
+        idp_metadata_url: IdP Metadata URL
+        idp_metadata_url_help: URL-ul metadatelor SAML ale IdP-ului tău. Dacă este furnizat, celelalte setări SAML vor fi configurate automat.
+        manual_saml_config: Configurare manuală (dacă nu folosești URL-ul de metadate)
+        manual_saml_help: Folosește aceste setări doar dacă IdP-ul tău nu oferă un URL de metadate.
+        idp_sso_url: IdP SSO URL
+        idp_slo_url: IdP SLO URL (opțional)
+        idp_certificate: Certificat IdP
+        idp_certificate_help: Certificat X.509 în format PEM. Obligatoriu dacă nu folosești URL-ul de metadate.
+        idp_cert_fingerprint: Amprenta certificatului (alternativă)
+        name_id_format: Format NameID
+        name_id_email: Adresă de e-mail (implicit)
+        name_id_persistent: Persistent
+        name_id_transient: Tranzitoriu
+        name_id_unspecified: Nespecificat

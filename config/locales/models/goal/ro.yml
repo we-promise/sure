@@ -1,0 +1,36 @@
+---
+ro:
+  activerecord:
+    attributes:
+      goal:
+        name: Nume
+        target_amount: Sumă țintă
+        currency: Monedă
+        target_date: Dată țintă
+        color: Culoare
+        notes: Note
+        state: Stare
+        linked_accounts: Conturi asociate
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Alege cel puțin un cont care să finanțeze acest obiectiv.
+              whole_account_conflict_on_restore: 'Acest obiectiv nu poate fi restaurat: „%{account_name}” este acum rezervat integral pentru „%{goal_name}”. Introdu mai întâi o sumă pentru unul dintre ele.'
+            target_mode:
+              months_requires_maintained: Doar o rezervă pe care o menții poate avea ținta stabilită în luni de cheltuieli.
+            target_months:
+              blank: Precizează câte luni de cheltuieli ar trebui să acopere această rezervă.
+              only_with_months_mode: Lunile de cheltuieli se aplică doar când ținta este stabilită astfel.
+            linked_accounts:
+              must_be_fundable: Toate conturile asociate trebuie să fie conturi de numerar sau de investiții.
+              currency_mismatch: Toate conturile asociate trebuie să aibă aceeași monedă.
+              must_belong_to_family: Conturile asociate trebuie să aparțină aceleiași familii ca obiectivul.
+            kind:
+              locked_while_released: Redeschide acest obiectiv înainte de a-l transforma într-o rezervă.
+              locked_once_consumed: Acest obiectiv a înregistrat deja bani ca fiind cheltuiți, deci nu mai poate deveni o rezervă.
+            target_amount:
+              below_consumed: Ținta nu poate fi mai mică decât suma deja înregistrată ca cheltuită pentru acest obiectiv.
+            currency:
+              locked_after_linked: Moneda nu poate fi schimbată după ce obiectivul a fost asociat cu conturi.

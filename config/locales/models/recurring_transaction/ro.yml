@@ -1,0 +1,32 @@
+---
+ro:
+  recurring_transactions:
+    allocator:
+      missing_rate: nu există un curs de schimb din %{from} în %{to}; introdu explicit o sumă
+      unmeasurable: această tranzacție are o alocare care nu poate fi convertită în %{currency}, așa că suma rămasă nu poate fi calculată. Adaugă un curs de schimb pentru %{date} sau elimină mai întâi plata existentă
+      over_allocated: alocarea a %{amount} depășește suma rămasă a tranzacției de %{capacity} %{currency}
+      exceeds_remaining: '%{amount} depășește suma de %{remaining} rămasă pentru acest ciclu'
+  activerecord:
+    attributes:
+      recurring_transaction:
+        payment_url: Link de plată
+    errors:
+      models:
+        recurring_transaction:
+          merchant_or_name_required: Trebuie completat fie comerciantul, fie numele
+          attributes:
+            payment_url:
+              invalid_scheme: trebuie să fie o adresă http:// sau https:// validă
+            anchor_date:
+              required_for_intervals: este obligatorie când regula se repetă la fiecare 2 sau mai multe perioade
+            bill_type:
+              transfer_shape_mismatch: poate fi transfer doar când este setat un cont de destinație
+            expected_amount_min:
+              greater_than_max: nu poate fi mai mare decât suma maximă estimată
+            account:
+              required_for_transfer: este obligatoriu pentru un transfer recurent
+              wrong_family: trebuie să aparțină acestei familii
+            destination_account:
+              same_as_source: nu poate fi același cu contul sursă
+              family_mismatch: trebuie să aparțină aceleiași familii ca contul sursă
+              wrong_family: trebuie să aparțină acestei familii

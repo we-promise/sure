@@ -3,6 +3,9 @@ nb:
   transfers:
     create:
       success: Overføring opprettet
+      exchange_rate_unavailable: Valutakurs er ikke tilgjengelig for de valgte valutaene og datoen
+      date_invalid: er ugyldig
+      stale_form: Dette skjemaet er allerede sendt inn med andre opplysninger. Last inn siden på nytt og prøv igjen.
     destroy:
       success: Overføring fjernet
     form:
@@ -15,6 +18,13 @@ nb:
       submit: Opprett overføring
       to: Til
       transfer: Overføring
+      bank_charges: Bankgebyrer
+      outgoing_fee: Gebyr for utgående overføring
+      incoming_fee: Gebyr for innkommende overføring
+      destination_amount: Mottatt beløp
+      destination_amount_display: 'Mottatt beløp: %{amount}'
+      exchange_rate_display: 'Valutakurs: %{rate}'
+      source_amount: Sendt beløp
     new:
       title: Ny overføring
     show:
@@ -27,5 +37,18 @@ nb:
       note_placeholder: Legg til et notat til denne overføringen
       overview: Oversikt
       settings: Innstillinger
+      mark_recurring: Merk som gjentakende
+      mark_recurring_subtitle: Følg denne overføringen som et gjentakende mønster i oversikten over kommende transaksjoner og på siden for gjentakende transaksjoner.
+      mark_recurring_title: Merk overføringen som gjentakende
+      from: Fra
+      to: Til
+      date: Dato
+      transfer_amount: Overført beløp
+      total: Totalt
+      bank_charges: Bankgebyrer
+      source_fee: Gebyr på avsenderkonto
+      destination_fee: Gebyr på mottakerkonto
+      category: Kategori
+      uncategorized: Ukategorisert
     update:
       success: Overføring oppdatert

@@ -1,0 +1,355 @@
+---
+ro:
+  goals:
+    color_picker:
+      trigger_label: Alege culoarea și pictograma
+      color_heading: Culoare
+      icon_heading: Pictogramă
+      poor_contrast: Contrast slab, alege o culoare mai închisă sau
+      auto_adjust: ajustează automat.
+    index:
+      title: Obiective
+      subtitle: Economisește pentru ce contează.
+      new_goal: Obiectiv nou
+      empty_filtered: Niciun obiectiv nu corespunde.
+      pending_pledges_callout: Ai angajamente în așteptare. Sure le va confirma la următoarea sincronizare.
+      kpi:
+        contributed_label: Contribuit · ultimele 30 z
+        velocity_delta_up: ↑ %{percent}%% față de cele 30 z anterioare
+        velocity_delta_down: ↓ %{percent}%% față de cele 30 z anterioare
+        velocity_delta_flat: față de cele 30 z anterioare
+        velocity_delta_zero_base: Primele 30 z de activitate
+        needs_this_month_label: Necesar luna aceasta
+        needs_this_month_sub:
+          one: '%{count} obiectiv sub ritm'
+          few: '%{count} obiective sub ritm'
+          other: '%{count} de obiective sub ritm'
+        needs_this_month_zero_sub: Niciun obiectiv sub ritm
+        on_track_label: Obiective pe drumul cel bun
+        on_track_value: '%{on_track} din %{total}'
+        on_track_sub_parts:
+          reached:
+            one: '%{count} atins'
+            few: '%{count} atinse'
+            other: '%{count} atinse'
+          behind:
+            one: '%{count} în urmă'
+            few: '%{count} în urmă'
+            other: '%{count} în urmă'
+          no_date:
+            one: '%{count} fără termen'
+            few: '%{count} fără termen'
+            other: '%{count} fără termen'
+          paused:
+            one: '%{count} întrerupt'
+            few: '%{count} întrerupte'
+            other: '%{count} întrerupte'
+        on_track_sub_all_good: Toate obiectivele active sunt în ritm
+        on_track_all_caught_up: Totul la zi
+      goals_section:
+        heading: Obiective
+        subtitle: Economisește pentru ce contează.
+      ongoing_section:
+        heading: Obiective
+      archived_section:
+        heading: Arhivate
+      search:
+        placeholder: Caută obiective…
+        aria_label: Caută obiective
+        empty: Niciun obiectiv nu corespunde.
+        empty_with_query: Niciun obiectiv nu corespunde căutării „%{query}”.
+        empty_with_filter: Niciun obiectiv nu corespunde acestui filtru.
+        empty_with_both: Niciun obiectiv nu corespunde căutării „%{query}” cu acest filtru.
+        clear_search: Șterge căutarea
+        show_all: Afișează tot
+      chips_aria: Filtrează obiectivele după stare
+      chips:
+        all: Toate
+        on_track: Pe drumul cel bun
+        behind: În urmă
+        no_target_date: Fără termen
+        paused: Întrerupte
+        completed: Finalizate
+    new:
+      heading: Obiectiv nou
+      subtitle: Economisește pentru ceva anume.
+    edit:
+      heading: Editează obiectivul
+      save: Salvează modificările
+    create:
+      success: Obiectiv creat.
+    update:
+      success: Obiectiv actualizat.
+    destroy:
+      success: Obiectiv șters.
+    pause:
+      success: Obiectiv întrerupt.
+      invalid_transition: Obiectivul nu poate fi întrerupt din starea curentă.
+    resume:
+      success: Obiectiv reluat.
+      invalid_transition: Obiectivul nu poate fi reluat din starea curentă.
+    complete:
+      success: Obiectiv marcat ca finalizat.
+      invalid_transition: Obiectivul nu poate fi finalizat din starea curentă.
+    archive:
+      success: Obiectiv arhivat.
+      invalid_transition: Obiectivul nu poate fi arhivat din starea curentă.
+    unarchive:
+      success: Obiectiv restaurat.
+      invalid_transition: Obiectivul nu poate fi restaurat din starea curentă.
+    reopen:
+      success: Obiectiv redeschis.
+      invalid_transition: Obiectivul nu poate fi redeschis din starea curentă.
+    consume:
+      title: Înregistrează o cheltuială
+      subtitle: '%{goal}'
+      amount_label: Cât ai folosit?
+      amount_hint: În prezent, %{saved} susține acest obiectiv.
+      account_label: Din ce cont?
+      earmark_note: Suma înregistrată nu mai este rezervată pentru acest obiectiv, așa că celelalte obiective din acel cont își recuperează partea.
+      cancel: Anulează
+      submit: Înregistrează
+      success: '%{amount} înregistrat ca folosit.'
+      errors:
+        non_positive: Introdu o sumă mai mare decât zero.
+        maintained: O rezervă se consumă și se reface, nu se cheltuiește — deficitul ei apare deja la obiectiv.
+        exceeds_target: Suma depășește tot ce și-a propus acest obiectiv să economisească.
+        account_required: Acest obiectiv este finanțat din mai multe conturi — precizează din care au ieșit banii.
+        account_not_linked: Acel cont nu finanțează acest obiectiv.
+        not_active: Acest obiectiv nu mai este activ, așa că nu se mai poate înregistra nimic pentru el.
+        exceeds_earmark: Suma depășește cât a alocat obiectivul din acest cont.
+        transaction_already_claimed: Această ieșire de bani a fost deja atribuită.
+        transaction_not_found: Această ieșire de bani nu mai este disponibilă pentru atribuire.
+        no_linked_account: Acestui obiectiv nu i-a mai rămas niciun cont de finanțare.
+    unattributed_outflows:
+      heading: Bani ieșiți din aceste conturi
+      body: Dacă o parte din acești bani a fost cheltuită pentru %{goal}, indică acest lucru și suma nu va mai fi scăzută din țintă.
+      attribute: Aceasta a fost
+    show:
+      edit: Editează
+      consume: Am folosit o parte din acești bani
+      pause: Întrerupe
+      resume: Reia
+      complete: Marchează ca finalizat
+      archive: Arhivează
+      unarchive: Restaurează
+      reopen: Redeschide obiectivul
+      delete: Șterge
+      reserve_shortfall:
+        heading: Rezervă sub soldul țintă
+        body: Ai %{saved} din %{target}. Adaugă %{missing} pentru a o readuce la soldul țintă.
+      record_pledge_cta: Înregistrează angajamentul
+      pledge_just_transferred: Înregistrează un transfer făcut
+      pledge_just_saved: Înregistrează bani puși deoparte
+      funding_accounts_heading: Conturi de finanțare
+      funding_accounts:
+        earmarked_of: '%{earmarked} alocat din %{balance}'
+        empty:
+          heading: Niciun cont de finanțare conectat încă
+          body: Editează obiectivul pentru a conecta conturile de numerar în care economisești.
+      notes: Note
+      funding_last_30d: ultimele 30 z
+      funding_last_90d: ultimele 90 z
+      status_callout:
+        depleted: '%{amount} sub soldul țintă — completează suma pentru a reface rezerva'
+        behind: economisește încă %{amount}/lună pentru a recupera
+        behind_covered: angajamentele în așteptare acoperă diferența
+        on_track: atinge obiectivul în jurul datei de %{date}
+        no_target_date: setează o dată țintă pentru a estima finalizarea
+      pending_pledge:
+        title:
+          zero: 'În așteptare: %{amount} în %{account} · expiră azi'
+          one: 'În așteptare: %{amount} în %{account} · %{count} zi rămasă'
+          few: 'În așteptare: %{amount} în %{account} · %{count} zile rămase'
+          other: 'În așteptare: %{amount} în %{account} · %{count} de zile rămase'
+        body_transfer: Se confirmă automat când Sure identifică o depunere corespunzătoare la următoarea sincronizare.
+        body_manual: Se confirmă la următoarea editare manuală a soldului.
+        pledged_at: Angajament făcut acum %{time_ago}
+        extend: Prelungește cu 7 zile
+        cancel: Anulează
+        confirm_cancel_title: Anulezi acest angajament?
+        confirm_cancel_body: Angajamentul de %{amount} va fi eliminat. Poți înregistra oricând unul nou.
+        confirm_cancel_cta: Anulează angajamentul
+      header:
+        target: Țintă %{amount}
+        target_by: Țintă %{amount} până la %{date}
+        target_by_past: Țintă %{amount} · termen depășit %{date}
+      ring:
+        including_used: Inclusiv %{amount} deja folosit
+        saved: Economisit
+        of: din %{target}
+        to_go: Mai rămân %{amount}
+        of_target: din țintă
+        market_value: Valoare de piață %{amount}
+        aria_label: Obiectiv realizat în proporție de %{percent}%. %{amount} din %{target} economisit.
+        aria_label_with_used: Obiectiv realizat în proporție de %{percent}%. %{amount} din %{target}, inclusiv %{used} deja folosit.
+      projection:
+        heading: Proiecție
+        legend_saved: Economisit
+        legend_projection: Proiecție
+        legend_required: Necesar
+        reserve: O rezervă menține un sold țintă, așa că nu există o dată de finalizare de estimat.
+        reached: Ai atins ținta. Nu este nevoie de proiecție.
+        no_target_date: Nicio dată țintă setată. Setează una pentru a estima finalizarea.
+        no_pace: Nicio depunere încă. Adaugă bani într-un cont conectat pentru a începe o proiecție.
+        behind: În ritmul actual, nu vei atinge ținta.
+        on_track_html: În ritmul actual, vei atinge acest obiectiv în jurul datei de <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        aria_label: Grafic de proiecție pentru %{name}
+        today_marker: Azi
+        tooltip_projected: 'Estimat: %{amount}'
+        tooltip_saved: 'Economisit: %{amount}'
+        tooltip_target_relation: '%{percent}% din ținta de %{target}'
+      catch_up:
+        title: Economisește încă %{amount}/lună pentru a recupera
+        body: Ritm actual %{avg}/lună · necesar %{required}/lună pentru a atinge ținta.
+        adjust_target_cta: Ajustează ținta în schimb
+      confirm_complete_title: Marchezi acest obiectiv ca finalizat?
+      confirm_complete_body: Banii alocați pentru el sunt eliberați pentru celelalte obiective din același cont. Obiectivul iese din lista celor în curs și îl poți arhiva sau restaura mai târziu.
+      confirm_complete_body_short: Ești la %{progress}%, %{saved} din %{target}. Marcarea ca finalizat înregistrează această sumă ca realizare în locul țintei inițiale. Continui sau închizi și ajustezi ținta?
+      confirm_complete_cta: Marchează ca finalizat
+      confirm_archive_title: Arhivezi acest obiectiv?
+      confirm_archive_body: Obiectivele arhivate dispar din lista principală. Le poți restaura mai târziu. Arhivarea nu înregistrează ce ai atins — marchează mai întâi obiectivul ca finalizat dacă vrei să păstrezi asta.
+      confirm_archive_cta: Arhivează
+      confirm_delete_title: Ștergi acest obiectiv?
+      confirm_delete_body: '%{name} și istoricul angajamentelor sale vor fi eliminate definitiv. Conturile conectate, soldurile și tranzacțiile nu sunt afectate. Pentru a-l păstra ca evidență, arhivează-l.'
+      confirm_delete_cta: Șterge obiectivul
+      paused_banner:
+        title: Acest obiectiv este întrerupt
+        body: Reia-l pentru a continua să-ți urmărești progresul.
+        resume_cta: Reia obiectivul
+      archived_banner:
+        title: Acest obiectiv este arhivat
+        body: Restaurează-l pentru a continua să contribui sau păstrează-l ca evidență.
+        restore_cta: Restaurează obiectivul
+      celebration:
+        heading_reserve: Rezervă completă
+        body_reserve: Rezerva ta este la soldul țintă, %{saved} din %{target}. Nu trebuie să faci nimic — banii rămân alocați.
+        heading: Obiectiv atins. Bravo!
+        body_reached: Ai atins ținta, cu %{saved} din %{target}. Obiectivul nu este încă închis — banii sunt în continuare alocați pentru el.
+        close_cta: Închide acest obiectiv
+        close_hint: Închiderea eliberează banii alocați pentru celelalte obiective din același cont. Fă asta după ce i-ai cheltuit efectiv.
+        frozen: Atins pe %{date} · %{amount}
+        body: Obiectiv închis la %{saved} din %{target}. Păstrează-l ca evidență sau arhivează-l acum.
+        archive_cta: Arhivează obiectivul
+      inactive:
+        heading_paused: Acest obiectiv este întrerupt
+        heading_archived: Acest obiectiv este arhivat
+        body: '%{saved} din %{target} economisit până acum.'
+      no_target_date:
+        heading: Adaugă o dată țintă
+        body: Setează un termen pentru a estima finalizarea și a urmări ritmul necesar.
+        cta: Setează data țintă
+      empty:
+        heading: Nicio depunere încă
+        body: Fă un transfer în contul conectat. Sure îl va detecta la următoarea sincronizare. Sau actualizează soldul contului manual.
+    errors:
+      not_found: Acest obiectiv nu a fost găsit. Este posibil să fi fost șters.
+    states:
+      active: Activ
+      paused: Întrerupt
+      completed: Finalizat
+      archived: Arhivat
+    status:
+      funded: Rezervă completă
+      depleted: Necesită completare
+      on_track: Pe drumul cel bun
+      behind: În urmă
+      reached: Atins
+      completed: Finalizat
+      no_target_date: Fără termen
+      paused: Întrerupt
+      archived: Arhivat
+    empty_state:
+      heading: Niciun obiectiv încă
+      body: Setează o țintă, conectează conturile în care economisești și urmărește cum crește progresul.
+      subtitle: Setează o țintă și începe să economisești pentru ea.
+      new_goal: Creează primul obiectiv
+      no_depository_accounts: Ai nevoie de cel puțin un cont de numerar (curent, de economii, HSA, depozit la termen, piață monetară) înainte de a crea un obiectiv.
+      add_account: Adaugă un cont
+    goal_card:
+      including_used: Inclusiv %{amount} deja folosit
+      no_accounts: Niciun cont conectat
+      n_accounts: '%{first} +%{count}'
+      left: rămas
+      aria_progress: '%{percent}% din %{target}'
+      accounts:
+        one: '%{count} cont'
+        few: '%{count} conturi'
+        other: '%{count} de conturi'
+      no_target_date: Fără termen
+      completed: Finalizat
+      past_due: Termen depășit
+      days_left:
+        one: '%{count} zi rămasă'
+        few: '%{count} zile rămase'
+        other: '%{count} de zile rămase'
+      pace_with_target: '%{avg}/lună · țintă %{target}/lună'
+      pace_no_target: '%{avg}/lună în medie'
+      footer_paused: Întrerupt
+      footer_archived: Arhivat
+      footer_reserve_intact: Rezervă completă
+      footer_reserve_short: '%{amount} de completat'
+      footer_reached: Obiectiv atins
+      footer_catch_up: Economisește %{amount}/lună pentru a recupera
+      footer_no_deadline: Fără termen
+      pending_pledge: Angajament în așteptare
+      pending_count:
+        one: '%{count} în așteptare'
+        few: '%{count} în așteptare'
+        other: '%{count} în așteptare'
+      footer_no_pledges: Niciun angajament confirmat încă
+      footer_last_today: Ultimul angajament confirmat azi
+      footer_last_days:
+        one: Ultimul angajament confirmat acum %{count} zi
+        few: Ultimul angajament confirmat acum %{count} zile
+        other: Ultimul angajament confirmat acum %{count} de zile
+    form:
+      target_modes:
+        fixed: O sumă fixă
+        months_of_expenses: Un număr de luni de cheltuieli
+      kinds:
+        one_off:
+          hint: Economisește pentru ceva, apoi închide obiectivul când cheltuiești banii.
+          label: Obiectiv unic
+        maintained:
+          hint: Un sold de menținut, cum ar fi un fond de urgență. Nu se închide niciodată.
+          label: Rezervă de menținut
+      create: Creează obiectivul
+      save: Salvează modificările
+      suggested_with_date: Economisește {monthly}/lună din {accounts} pentru a-l atinge la timp.
+      suggested_no_date: Setează o dată țintă pentru a estima finalizarea.
+      errors:
+        name_required: Dă un nume obiectivului.
+        amount_required: Setează o țintă mai mare decât zero.
+        accounts_required: Alege cel puțin un cont de finanțare.
+      earmark:
+        headroom: '{left} rămas de alocat din acest cont.'
+        prorata: Obiectivele tale din acest cont însumează {total} la un sold de {balance} — vor progresa proporțional.
+        whole_balance: Acest cont va finanța ce rămâne după celelalte alocări.
+        whole_balance_alone: Acest obiectiv va folosi întregul sold al acestui cont.
+      fields:
+        target_mode: Cum se stabilește soldul țintă
+        target_months: Luni de cheltuieli
+        target_months_hint: Recalculat pe 1 ale fiecărei luni pe baza cheltuielilor tale lunare mediane.
+        name: Nume
+        name_placeholder: Fond de urgență, avans pentru casă…
+        target_amount: Suma țintă
+        target_balance: Sold țintă
+        target_balance_pending: Calculat la salvare
+        target_balance_hint: Pe baza cheltuielilor tale lunare mediane din lunile de mai sus. Actualizat în fiecare lună.
+        target_date: Data țintă
+        color: Culoare
+        notes: Note (opțional)
+        notes_placeholder: Un memento pentru tine în viitor…
+        funding_accounts: Conturi de finanțare
+        funding_accounts_hint: Soldul acestui obiectiv este soldul (sau partea alocată) al acestor conturi.
+        whole_balance: Întregul sold
+        earmark_for: Suma alocată din %{account}
+        earmark_hint: Lasă o sumă necompletată pentru a dedica întregul sold al acelui cont.
+      subtypes:
+        checking: Cont curent
+        savings: Economii
+        hsa: HSA
+        cd: Depozit la termen
+        money_market: Piață monetară
+        other: Altele

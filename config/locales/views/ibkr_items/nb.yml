@@ -1,0 +1,92 @@
+---
+nb:
+  providers:
+    ibkr:
+      name: Interactive Brokers
+      connection_description: Koble til en Interactive Brokers Flex Web Service-rapport
+      institution_name: Interactive Brokers
+  ibkr_items:
+    defaults:
+      name: Interactive Brokers
+    ibkr_item:
+      deletion_in_progress: Sletting pågår
+      flex_web_service: Flex Web Service
+      syncing: Synkroniserer
+      requires_update: Påloggingsinformasjonen må sjekkes
+      error: Feil
+      synced: Synkronisert for %{time} siden. %{summary}.
+      never_synced: Aldri synkronisert.
+      setup_accounts: Konfigurer kontoer
+      delete: Slett
+      accounts_need_setup: Kontoer må konfigureres
+      accounts_need_setup_description: Noen kontoer fra IBKR må kobles til Sure-kontoer.
+      no_accounts_discovered: Ingen IBKR-kontoer funnet ennå.
+      no_accounts_discovered_description: Kjør en synkronisering etter at du har konfigurert Flex Query for å finne kontoer.
+    setup_accounts:
+      page_title: Konfigurer Interactive Brokers-kontoer
+      dialog_title: Konfigurer Interactive Brokers-kontoene dine
+      subtitle: Velg hvilke IBKR-investeringskontoer som skal kobles.
+      info_box:
+        title: IBKR Flex Query-import
+        items:
+          item_1: Beholdninger med gjeldende kurser og antall
+          item_2: Anskaffelseskost per posisjon
+          item_3: Handler, utbytte, kurtasje og kontantinnskudd eller -uttak
+        warning: Historisk aktivitet er begrenset til rapportperioden i Flex Query
+      status:
+        fetching_accounts: Henter kontoer fra Interactive Brokers...
+        no_accounts_found_title: Fant ingen kontoer.
+        no_accounts_found_description: Sure fant ingen IBKR-kontoer i den nyeste Flex-rapporten.
+      available_accounts:
+        title: Tilgjengelige kontoer
+        account_type_investment: Investering
+        account_summary: '%{account_type} • Saldo: %{balance}'
+        account_id: 'Konto-ID: %{account_id}'
+      link_existing:
+        description: Eller koble en funnet IBKR-konto til en eksisterende manuell investeringskonto.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Velg en konto...
+      linked_accounts:
+        title: Allerede koblet
+        linked_to_html: 'Koblet til: %{account}'
+      buttons:
+        refresh: Oppdater
+        cancel: Avbryt
+        back_to_settings: Tilbake til innstillinger
+        create_selected_accounts: Opprett valgte kontoer
+        link: Koble
+        done: Ferdig
+    sync_status:
+      no_accounts: Ingen IBKR-kontoer funnet ennå
+      all_linked:
+        one: '%{count} konto koblet'
+        other: '%{count} kontoer koblet'
+      partial: '%{linked} koblet, %{unlinked} må konfigureres'
+    select_existing_account:
+      title: Koble Interactive Brokers-konto
+      no_accounts_available: Ingen ukoblede Interactive Brokers-kontoer er tilgjengelige ennå.
+      run_sync_hint: Kjør en synkronisering fra Innstillinger > Leverandører etter at du har oppdatert Flex Query.
+      wait_for_sync: Vent til synkroniseringen som finner kontoer, er ferdig.
+      balance: Saldo
+      link: Koble
+      cancel: Avbryt
+    create:
+      success: Interactive Brokers er konfigurert.
+    update:
+      success: Interactive Brokers-konfigurasjonen er oppdatert.
+    destroy:
+      success: Interactive Brokers-tilkoblingen er planlagt for sletting.
+    select_accounts:
+      not_configured: Interactive Brokers er ikke konfigurert.
+    link_existing_account:
+      not_found: Fant ikke kontoen eller Interactive Brokers-konfigurasjonen.
+      only_manual_investment: Bare manuelle investeringskontoer kan kobles til Interactive Brokers.
+      already_linked: Denne Interactive Brokers-kontoen er allerede koblet.
+      success: Koblet til Interactive Brokers-kontoen.
+      failed: Kunne ikke koble Interactive Brokers-kontoen.
+    complete_account_setup:
+      success:
+        one: '%{count} Interactive Brokers-konto er opprettet.'
+        other: '%{count} Interactive Brokers-kontoer er opprettet.'
+      none_selected: Ingen kontoer ble valgt.
+      none_created: Ingen kontoer ble opprettet.

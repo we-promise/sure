@@ -1,0 +1,9 @@
+---
+ro:
+  messages:
+    create:
+      chat_not_found: Această conversație nu mai este disponibilă.
+    chat_form:
+      placeholder: Întreabă orice ...
+      disclaimer: Răspunsurile AI au doar caracter informativ. Nu reprezintă consultanță financiară!
+      coming_soon: În curând

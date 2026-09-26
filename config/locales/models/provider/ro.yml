@@ -1,0 +1,17 @@
+---
+ro:
+  providers:
+    property_valuation:
+      not_configured: Acest furnizor de date imobiliare nu este configurat.
+      missing_fields: Introdu un nume și o adresă completă din SUA (stradă, oraș, stat și cod ZIP).
+      preview_expired: Previzualizarea acestei proprietăți a expirat — caută din nou adresa.
+    rentcast:
+      errors:
+        no_valuation: RentCast nu a returnat o estimare a valorii pentru această adresă.
+        not_found: RentCast nu a găsit nicio proprietate care să corespundă acestei adrese.
+    realie:
+      errors:
+        no_property: Realie nu a returnat nicio proprietate pentru această adresă.
+        no_valuation: Realie nu a returnat o evaluare pentru această proprietate.
+        not_found: Realie nu a găsit nicio proprietate care să corespundă acestei adrese.
+        location_mismatch: Realie a găsit o proprietate într-un alt oraș sau cod ZIP. Verifică din nou adresa.

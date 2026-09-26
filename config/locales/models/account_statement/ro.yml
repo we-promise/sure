@@ -1,0 +1,30 @@
+---
+ro:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Cont
+        account_last4_hint: Ultimele patru cifre ale contului
+        account_name_hint: Indiciu nume cont
+        closing_balance: Sold final
+        content_sha256: Amprentă conținut
+        currency: Monedă
+        filename: Nume fișier
+        institution_name_hint: Indiciu instituție
+        opening_balance: Sold inițial
+        original_file: Fișier extras
+        period_end_on: Sfârșitul perioadei
+        period_start_on: Începutul perioadei
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: a fost deja încărcat pentru această familie
+            content_sha256:
+              duplicate_statement_file: a fost deja încărcat pentru această familie
+            original_file:
+              invalid_format: trebuie să fie un fișier PDF, CSV sau XLSX
+              too_large: este prea mare. Dimensiunea maximă este %{max_mb}MB
+            period_end_on:
+              on_or_after_start: trebuie să fie la sau după începutul perioadei

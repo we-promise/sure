@@ -1,0 +1,176 @@
+---
+ro:
+  UI:
+    period_picker:
+      aria_label: 'Perioadă: %{period}'
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Comută selecția
+      balance_reconciliation:
+        labels:
+          adjustments: Ajustări
+          buys: Cumpărări
+          change_in_brokerage_cash: Variația numerarului din contul de brokeraj
+          change_in_holdings_market: Variația deținerilor (evoluția prețurilor de piață)
+          change_in_holdings_trades: Variația deținerilor (cumpărări/vânzări)
+          charges: Cheltuieli cu cardul
+          end_balance: Sold calculat
+          end_principal: Principal calculat
+          end_value: Valoare calculată
+          final_balance: Sold final
+          final_principal: Principal final
+          final_value: Valoare finală
+          market_changes: Variații de piață
+          net_cash_flow: Flux de numerar net
+          net_principal_change: Variația netă a principalului
+          net_value_change: Variația netă a valorii
+          payments: Plăți
+          sells: Vânzări
+          start_balance: Sold inițial
+          start_principal: Principal inițial
+          start_value: Valoare inițială
+        tooltips:
+          adjustments: Reconcilieri manuale sau alte ajustări
+          adjustments_asset: Ajustări manuale ale valorii sau evaluări
+          buys: Achiziții de crypto în cursul zilei
+          change_in_brokerage_cash: Variația netă a numerarului din depuneri, retrageri și tranzacții bursiere
+          change_in_holdings_market: Variația valorii deținerilor din cauza evoluției prețurilor de piață
+          change_in_holdings_trades: Impactul cumpărării și vânzării de titluri de valoare asupra deținerilor
+          charges: Cheltuieli noi cu cardul efectuate în cursul zilei
+          end_balance: Soldul calculat după toate tranzacțiile
+          end_balance_investment: Soldul calculat după toată activitatea
+          end_principal: Principalul calculat după toate tranzacțiile
+          end_value: Valoarea calculată după toate modificările
+          final_balance: Soldul final al contului pentru ziua respectivă
+          final_balance_credit: Soldul final datorat pentru ziua respectivă
+          final_balance_crypto: Valoarea finală a deținerilor crypto pentru ziua respectivă
+          final_balance_investment: Valoarea finală a portofoliului pentru ziua respectivă
+          final_principal: Soldul final al principalului pentru ziua respectivă
+          final_value: Valoarea finală a activului pentru ziua respectivă
+          market_changes: Variații ale valorii din cauza evoluției prețurilor de piață
+          net_cash_flow: Variația netă a soldului din toate tranzacțiile din cursul zilei
+          net_principal_change: Rambursări de principal și împrumuturi noi în cursul zilei
+          net_value_change: Toate variațiile valorii, inclusiv îmbunătățirile și deprecierea
+          payments: Plăți efectuate către card în cursul zilei
+          sells: Vânzări de crypto în cursul zilei
+          start_balance: Soldul contului la începutul acestei zile
+          start_balance_credit: Soldul datorat la începutul acestei zile
+          start_balance_crypto: Valoarea deținerilor crypto la începutul acestei zile
+          start_balance_investment: Valoarea totală a portofoliului la începutul acestei zile
+          start_principal: Soldul principalului la începutul acestei zile
+          start_value: Valoarea activului la începutul acestei zile
+      chart:
+        no_data_available: Nu există date disponibile
+        title:
+          balance: Sold
+          cash_value: Valoare numerar
+          debt_balance: Sold datorat
+          estimated_property_value: Valoarea estimată a proprietății
+          estimated_vehicle_value: Valoarea estimată a vehiculului
+          holdings_value: Valoarea deținerilor
+          remaining_principal_balance: Principal rămas de rambursat
+          total_account_value: Valoarea totală a contului
+          total_gains: Câștiguri totale
+        views:
+          cash: Numerar
+          gains: Câștiguri / ROI
+          holdings: Dețineri
+          total_value: Valoare totală
+        vs_available_history: față de istoricul disponibil
+      activity_date:
+        balance_tooltip: Soldul de la sfârșitul zilei, după toate tranzacțiile și ajustările
+        no_balance_data: Nu există date despre sold pentru această dată
+  ds:
+    alert:
+      variants:
+        info: Informație
+        success: Succes
+        warning: Avertisment
+        error: Eroare
+        destructive: Eroare
+    pill:
+      aria_label: '%{label}'
+      default_label: Previzualizare
+    dialog:
+      close: Închide
+    popover:
+      avatar_default_label: Deschide meniul
+    tooltip:
+      trigger_label: Mai multe informații
+    link:
+      opens_in_new_tab: (se deschide într-o filă nouă)
+    icon_picker:
+      no_matching_icons: Nicio pictogramă găsită
+      search_placeholder: Caută pictograme...
+  provider_sync_summary:
+    title: Rezumatul sincronizării
+    last_sync: 'Ultima sincronizare: acum %{time_ago}'
+    accounts:
+      title: Conturi
+      total: 'Total: %{count}'
+      linked: 'Conectate: %{count}'
+      unlinked: 'Neconectate: %{count}'
+      institutions: 'Instituții: %{count}'
+    transactions:
+      title: Tranzacții
+      seen: 'Primite: %{count}'
+      imported: 'Importate: %{count}'
+      updated: 'Actualizate: %{count}'
+      skipped: 'Omise: %{count}'
+      fetching: Se preiau datele de la broker...
+      protected:
+        one: '%{count} înregistrare protejată (nu a fost suprascrisă)'
+        few: '%{count} înregistrări protejate (nu au fost suprascrise)'
+        other: '%{count} de înregistrări protejate (nu au fost suprascrise)'
+      view_protected: Vezi înregistrările protejate
+    skip_reasons:
+      excluded: Exclus
+      user_modified: Modificat de utilizator
+      import_locked: Import CSV
+      protected: Protejat
+    holdings:
+      title: Dețineri
+      found: 'Găsite: %{count}'
+      processed: 'Procesate: %{count}'
+    trades:
+      title: Tranzacții bursiere
+      imported: 'Importate: %{count}'
+      skipped: 'Omise: %{count}'
+      fetching: Se preiau activitățile de la broker...
+    health:
+      title: Stare
+      view_error_details: Vezi detaliile erorii
+      rate_limited: Limită de cereri atinsă (acum %{time_ago})
+      recently: recent
+      errors: 'Erori: %{count}'
+      pending_reconciled:
+        one: '%{count} tranzacție în așteptare duplicată a fost reconciliată'
+        few: '%{count} tranzacții în așteptare duplicate au fost reconciliate'
+        other: '%{count} de tranzacții în așteptare duplicate au fost reconciliate'
+      view_reconciled: Vezi tranzacțiile reconciliate
+      duplicate_suggestions:
+        one: '%{count} posibil duplicat necesită verificare'
+        few: '%{count} posibile duplicate necesită verificare'
+        other: '%{count} de posibile duplicate necesită verificare'
+      view_duplicate_suggestions: Vezi duplicatele sugerate
+      stale_pending:
+        one: '%{count} tranzacție rămasă prea mult în așteptare (exclusă din bugete)'
+        few: '%{count} tranzacții rămase prea mult în așteptare (excluse din bugete)'
+        other: '%{count} de tranzacții rămase prea mult în așteptare (excluse din bugete)'
+      view_stale_pending: Vezi conturile afectate
+      stale_pending_count:
+        one: '%{count} tranzacție'
+        few: '%{count} tranzacții'
+        other: '%{count} de tranzacții'
+      stale_unmatched:
+        one: '%{count} tranzacție în așteptare necesită verificare manuală'
+        few: '%{count} tranzacții în așteptare necesită verificare manuală'
+        other: '%{count} de tranzacții în așteptare necesită verificare manuală'
+      view_stale_unmatched: Vezi tranzacțiile care necesită verificare
+      stale_unmatched_count:
+        one: '%{count} tranzacție'
+        few: '%{count} tranzacții'
+        other: '%{count} de tranzacții'
+      data_warnings: 'Avertismente privind datele: %{count}'
+      notices: 'Notificări: %{count}'
+      view_data_quality: Vezi detaliile privind calitatea datelor

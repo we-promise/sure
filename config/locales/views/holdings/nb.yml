@@ -2,12 +2,15 @@
 nb:
   holdings:
     cash:
-      brokerage_cash: Meglerkontanter
+      brokerage_cash: Kontantbeholdning
     destroy:
       success: Beholdning slettet
+      cannot_delete: Du kan ikke slette denne beholdningen
     holding:
       per_share: per aksje
       shares: "%{qty} aksjer"
+      unknown: --
+      no_cost_basis: Ingen anskaffelseskost
     index:
       positions:
         one: "%{count} posisjon"
@@ -15,10 +18,10 @@ nb:
       average_cost: Gjennomsnittlig kostnad
       holdings: Beholdninger
       name: Navn
-      new_holding: Ny transaksjon
+      new_holding: Ny aktivitet
       no_holdings: Ingen beholdninger å vise.
       return: Total avkastning
-      weight: Vekt
+      weight: Andel
     missing_price_tooltip:
       description: Denne investeringen har manglende verdier og vi kunne ikke beregne
         dens avkastning eller verdi.
@@ -32,9 +35,72 @@ nb:
       delete_title: Slett beholdning
       history: Historikk
       overview: Oversikt
-      portfolio_weight_label: Porteføljevekt
+      portfolio_weight_label: Porteføljeandel
       settings: Innstillinger
       ticker_label: Ticker
       trade_history_entry: "%{qty} aksjer av %{security} til %{price}"
       total_return_label: Total avkastning
       unknown: Ukjent
+      edit_security: Rediger verdipapir
+      no_trade_history: Ingen handelshistorikk tilgjengelig for denne beholdningen.
+      security_label: Verdipapir
+      originally: tidligere %{ticker}
+      search_security: Søk etter verdipapir
+      search_security_placeholder: Søk etter ticker eller navn
+      cancel: Avbryt
+      remap_security: Lagre
+      provider_disabled_warning: Kursoppdateringer er satt på pause – leverandøren %{provider} er deaktivert. Bytt til en annen leverandør nedenfor, eller aktiver den igjen i Innstillinger.
+      truncated_history_warning: Kurshistorikk er bare tilgjengelig fra og med %{date}. Den valgte leverandøren har ingen data for tidligere datoer – dette kan skje når verdipapiret ble børsnotert etter handelsdatoen din, eller når leverandøren bare tilbyr et begrenset historisk tidsrom i det nåværende abonnementet.
+      switch_provider_label: Bytt leverandør
+      switch_provider_description: '%{provider} er deaktivert. Søk etter dette verdipapiret hos en annen aktivert leverandør.'
+      switch_provider_button: Bytt
+      no_security_provider: Ingen leverandør av verdipapirdata er konfigurert. Kan ikke søke etter verdipapirer.
+      security_remapped_label: Verdipapir byttet
+      provider_sent: 'Leverandøren sendte: %{ticker}'
+      reset_to_provider: Tilbakestill til leverandør
+      reset_confirm_title: Vil du tilbakestille verdipapiret til leverandørens?
+      reset_confirm_body: Dette endrer verdipapiret fra %{current} tilbake til %{original} og flytter alle tilknyttede handler.
+      cost_basis_locked_label: Anskaffelseskosten er låst
+      cost_basis_locked_description: Anskaffelseskosten du har angitt manuelt, blir ikke endret av synkroniseringer.
+      unlock_cost_basis: Lås opp
+      unlock_confirm_title: Vil du låse opp anskaffelseskosten?
+      unlock_confirm_body: Dette lar anskaffelseskosten bli oppdatert av synkroniseringer fra leverandøren eller beregninger fra handler.
+      shares_label: Aksjer
+      book_value_label: Bokført verdi
+      market_value_label: Markedsverdi
+      market_data_label: Markedsdata
+      market_data_sync_button: Oppdater
+      last_price_update: Siste kursoppdatering
+      syncing: Synkroniserer...
+      never: Aldri
+    update:
+      success: Anskaffelseskost lagret.
+      error: Ugyldig verdi for anskaffelseskost.
+    unlock_cost_basis:
+      success: Anskaffelseskosten er låst opp. Den kan bli oppdatert ved neste synkronisering.
+    remap_security:
+      success: Verdipapiret er oppdatert.
+      security_not_found: Fant ikke det valgte verdipapiret.
+    reset_security:
+      success: Verdipapiret er tilbakestilt til verdien fra leverandøren.
+    sync_prices:
+      success: Markedsdata er synkronisert.
+      unavailable: Synkronisering av markedsdata er ikke tilgjengelig for verdipapirer uten markedsdatakilde.
+      provider_error: Kunne ikke hente de nyeste kursene. Prøv igjen om noen minutter.
+    errors:
+      security_collision: 'Kan ikke bytte verdipapir: du har allerede en beholdning av %{ticker} per %{date}.'
+    cost_basis_sources:
+      manual: Angitt av bruker
+      calculated: Fra handler
+      provider: Fra leverandør
+    cost_basis_cell:
+      unknown: --
+      set: Angi
+      set_cost_basis_header: Angi anskaffelseskost for %{ticker} (%{qty} aksjer)
+      total_cost_basis_label: Total anskaffelseskost
+      or_per_share_label: 'Eller angi per aksje:'
+      per_share: per aksje
+      cancel: Avbryt
+      save: Lagre
+      overwrite_confirm_title: Vil du overskrive anskaffelseskosten?
+      overwrite_confirm_body: Dette erstatter den nåværende anskaffelseskosten på %{current}.

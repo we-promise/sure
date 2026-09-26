@@ -1,0 +1,75 @@
+---
+nb:
+  coinstats_items:
+    create:
+      success: Leverandørtilkoblingen til CoinStats er konfigurert.
+      default_name: CoinStats-tilkobling
+      errors:
+        validation_failed: 'Validering mislyktes: %{message}.'
+    update:
+      success: Leverandørtilkoblingen til CoinStats er oppdatert.
+      errors:
+        validation_failed: 'Validering mislyktes: %{message}.'
+    destroy:
+      success: Leverandørtilkoblingen til CoinStats er satt opp for sletting.
+    link_wallet:
+      success: '%{count} kryptolommebok(er) er koblet til.'
+      missing_params: 'Mangler påkrevde parametere: adresse og blokkjede.'
+      failed: Kunne ikke koble til kryptolommeboken.
+      error: 'Kunne ikke koble til kryptolommeboken: %{message}.'
+    link_exchange:
+      success: Børsen %{name} er koblet til.
+      missing_params: Børs og legitimasjon er påkrevd.
+      invalid_exchange: Den valgte børsen støttes ikke lenger.
+      failed: Kunne ikke koble til børsen.
+      error: 'Kunne ikke koble til børsen: %{message}.'
+    new:
+      title: Koble til krypto med CoinStats
+      blockchain_fetch_error: Kunne ikke laste inn blokkjeder. Prøv igjen senere.
+      link_wallet_title: Koble til lommebokadresse
+      link_wallet_description: Følg en lommebok med selvforvaring eller en enkelt on-chain-adresse via CoinStats.
+      address_label: Adresse
+      address_placeholder: Påkrevd
+      blockchain_label: Blokkjede
+      blockchain_placeholder: Påkrevd
+      blockchain_select_blank: Velg en blokkjede
+      link_wallet_submit: Koble til kryptolommebok
+      link_exchange_title: Koble til børs-API
+      link_exchange_description: Bruk en skrivebeskyttet API-nøkkel fra børsen slik at CoinStats kan synkronisere saldoer og transaksjoner fra Bitvavo, Binance og andre støttede børser.
+      link_exchange_note: Hvis børsen krever aktivering av API-nøkkelen eller bekreftelse på e-post, må du fullføre det før du kobler til her.
+      exchange_select_blank: Velg en børs
+      exchange_label: Børs
+      link_exchange_submit: Koble til børs
+      not_configured_title: Leverandørtilkoblingen til CoinStats er ikke konfigurert
+      not_configured_message: For å koble til en kryptolommebok eller børs må du først konfigurere leverandørtilkoblingen til CoinStats.
+      not_configured_step1_html: Gå til <strong>Innstillinger → Leverandører</strong>
+      not_configured_step2_html: Finn leverandøren <strong>CoinStats</strong>
+      not_configured_step3_html: Følg <strong>oppsettsinstruksjonene</strong> for å fullføre konfigurasjonen av leverandøren
+      go_to_settings: Gå til leverandørinnstillinger
+      setup_instructions: 'Oppsettsinstruksjoner:'
+      step1_html: Gå til <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> for å få en API-nøkkel.
+      step2: Skriv inn API-nøkkelen nedenfor og klikk på Konfigurer.
+      step3_html: Når tilkoblingen er opprettet, går du til fanen <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Kontoer</a> for å sette opp kryptokontoene dine.
+      api_key_label: API-nøkkel
+      api_key_placeholder: Påkrevd
+      configure: Konfigurer
+      update_configuration: Konfigurer på nytt
+      default_name: CoinStats-tilkobling
+    coinstats_item:
+      deletion_in_progress: Data for kryptolommeboken slettes …
+      provider_name: CoinStats
+      syncing: Synkroniserer …
+      sync_status:
+        no_accounts: Fant ingen kryptolommebøker
+        all_synced:
+          one: '%{count} kryptolommebok synkronisert'
+          other: '%{count} kryptolommebøker synkronisert'
+        partial_sync: '%{linked_count} kryptolommebøker synkronisert, %{unlinked_count} må settes opp'
+      reconnect: Koble til på nytt
+      status: Sist synkronisert for %{timestamp} siden
+      status_never: Aldri synkronisert
+      status_with_summary: Sist synkronisert for %{timestamp} siden • %{summary}
+      update_api_key: Oppdater API-nøkkel
+      delete: Slett
+      no_wallets_title: Ingen kryptolommebøker tilkoblet
+      no_wallets_message: Ingen kryptolommebøker er koblet til CoinStats for øyeblikket.

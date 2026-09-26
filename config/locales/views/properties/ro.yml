@@ -3,6 +3,7 @@ ro:
   properties:
     edit:
       edit: Editează %{account}
+      title: Introdu manual proprietatea
     form:
       address_line1: Adresă stradală
       address_line1_placeholder: Strada Principală 123
@@ -23,6 +24,17 @@ ro:
       year_built_placeholder: '2000'
     new:
       title: Introdu detalii proprietate
+      next: Înainte
+      avm_option: Adaugă prin %{provider}
+      avm_title: Adaugă proprietatea prin %{provider}
+      avm_description: Introdu un nume pentru proprietate și adresa acesteia. %{provider} va căuta pentru tine detaliile proprietății și valoarea de piață estimată.
+      avm_us_only: '%{provider} acceptă doar proprietăți situate în Statele Unite.'
+      avm_submit: Caută proprietatea
+      avm_preview_title: Confirmă detaliile proprietății
+      avm_preview_description: Iată ce a găsit %{provider}. Verifică detaliile înainte de a adăuga proprietatea — încă nu a fost creat nimic.
+      avm_preview_no_record: '%{provider} nu a găsit nicio înregistrare de proprietate la această adresă, așa că valoarea afișată este o estimare bazată pe zona înconjurătoare. Verifică din nou adresa înainte de a continua.'
+      avm_preview_back: Înapoi
+      avm_preview_confirm: Adaugă proprietatea
     overview:
       living_area: Suprafață locuibilă
       market_value: Valoare de piață
@@ -30,3 +42,66 @@ ro:
       trend: Tendință
       unknown: Necunoscut
       year_built: Anul construcției
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    address:
+      title: Introdu manual proprietatea
+      address_line1_label: Adresă (rândul 1)
+      address_line1_placeholder: Strada Principală 123
+      city_label: Oraș
+      city_placeholder: București
+      state_region_label: Județ/Regiune
+      state_region_placeholder: B
+      postal_code_label: Cod poștal
+      postal_code_placeholder: '010011'
+      country_label: Țară
+      country_placeholder: România
+      save: Salvează
+    balances:
+      title: Introdu manual proprietatea
+      market_value_label: Valoare de piață estimată
+      market_value_tooltip: Valoarea de piață estimată a proprietății tale. Această valoare poate fi găsită adesea pe site-uri precum Zillow sau Redfin și nu este niciodată exactă.
+      save: Salvează
+      next: Înainte
+    overview_fields:
+      name_label: Nume
+      name_placeholder: Casă de vacanță
+      subtype_prompt: Selectează tipul
+      property_type_label: Tipul proprietății
+      year_built_label: Anul construcției (opțional)
+      year_built_placeholder: '1990'
+      area_label: Suprafață (opțional)
+      area_placeholder: '1200'
+      square_feet: Picioare pătrate
+      square_meters: Metri pătrați
+      area_unit_label: Unitate de suprafață
+    tabs:
+      overview:
+        living_area: Suprafață locuibilă
+        market_value: Valoare de piață
+        purchase_price: Preț de achiziție
+        trend: Tendință
+        unknown: Necunoscut
+        year_built: Anul construcției
+        edit_account_details: Editează detaliile contului
+    subtypes:
+      apartment:
+        short: Apartament
+        long: Apartament
+      plot:
+        short: Teren
+        long: Teren / Lot
+      commercial:
+        short: Comercial
+        long: Proprietate comercială
+      rented:
+        short: Închiriată
+        long: Proprietate dată în chirie
+      agri_land:
+        short: Teren agricol
+        long: Teren agricol
+    form_tabs:
+      address: Adresă
+      overview: Prezentare generală
+      value: Valoare

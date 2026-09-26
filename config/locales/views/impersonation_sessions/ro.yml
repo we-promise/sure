@@ -13,3 +13,13 @@ ro:
       success: Sesiune părăsită
     reject:
       success: Solicitare respinsă
+    super_admin_bar:
+      super_admin: Super admin
+      jobs: Joburi
+      impersonating: Acționezi ca
+      leave: Ieși
+      terminate: Încheie
+      join_a_session: Alătură-te unei sesiuni
+      join: Alătură-te
+      uuid_placeholder: UUID
+      request_impersonation: Solicită acces ca utilizator

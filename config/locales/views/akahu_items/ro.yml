@@ -1,0 +1,131 @@
+---
+ro:
+  providers:
+    akahu:
+      name: Akahu
+      description: Conectează conturi bancare din Noua Zeelandă prin Akahu
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: Conexiune Akahu
+  akahu_account:
+    fallback: Cont Akahu
+  akahu_entry:
+    notes:
+      reference: Referință
+      particulars: Detalii
+      code: Cod
+      other_account: Cont contrapartidă
+  akahu_item:
+    errors:
+      account_processing_failed: Contul Akahu nu a putut fi sincronizat
+      account_sync_schedule_failed: Sincronizarea contului Akahu nu a putut fi programată
+      pending_transactions_failed: Tranzacțiile Akahu în așteptare nu au putut fi preluate
+      transactions_failed: Tranzacțiile Akahu nu au putut fi preluate
+      sync_failed: Conexiunea Akahu nu a putut fi sincronizată
+    sync_status:
+      no_accounts: Nu s-au găsit conturi
+      all_synced:
+        one: '%{count} cont sincronizat'
+        few: '%{count} conturi sincronizate'
+        other: '%{count} de conturi sincronizate'
+      partial: '%{linked} sincronizate, %{unlinked} necesită configurare'
+    institution_summary:
+      none: Nicio instituție conectată
+      one: 1 instituție
+      count:
+        one: '%{count} instituție'
+        few: '%{count} instituții'
+        other: '%{count} de instituții'
+  akahu_items:
+    provider_panel:
+      default_connection_name: Conexiune Akahu
+      add_connection: Adaugă conexiune Akahu
+      update_connection: Actualizează conexiunea
+      connection_name_label: Numele conexiunii
+      connection_name_placeholder: Akahu principal
+      app_token_label: Token de aplicație
+      app_token_placeholder: Lipește tokenul de aplicație Akahu
+      keep_app_token_placeholder: Lasă gol pentru a păstra tokenul de aplicație existent
+      user_token_label: Token de utilizator
+      user_token_placeholder: Lipește tokenul de utilizator Akahu
+      keep_user_token_placeholder: Lasă gol pentru a păstra tokenul de utilizator existent
+      setup_accounts: Configurează conturile
+      syncing: Se sincronizează...
+      sync: Sincronizează
+      disconnect: Deconectează
+      disconnect_confirm: Sigur vrei să deconectezi %{name}?
+    create:
+      success: Conexiunea Akahu a fost salvată.
+    update:
+      success: Conexiunea Akahu a fost actualizată.
+    destroy:
+      success: Conexiunea Akahu a fost programată pentru ștergere.
+      unlink_failed: Conexiunea Akahu nu a putut fi deconectată
+    select_accounts:
+      title: Conectează conturi Akahu
+      description: Alege conturile Akahu pe care vrei să le adaugi.
+      no_accounts_found: Nu s-au găsit conturi Akahu neconectate.
+      no_credentials_configured: Configurează mai întâi Akahu în setările furnizorului.
+      cancel: Anulează
+      link_accounts: Conectează conturile
+    link_accounts:
+      success:
+        one: S-a conectat %{count} cont Akahu.
+        few: S-au conectat %{count} conturi Akahu.
+        other: S-au conectat %{count} de conturi Akahu.
+      no_accounts_selected: Selectează cel puțin un cont.
+      no_credentials_configured: Configurează mai întâi Akahu în setările furnizorului.
+      unsupported_account_type: Akahu nu acceptă acest tip de cont.
+      link_failed: Niciun cont nu a fost conectat.
+    select_existing_account:
+      title: Conectează un cont Akahu la %{account_name}
+      description: Alege un cont Akahu neconectat pe care să-l asociezi cu acest cont.
+      no_accounts_found: Nu s-au găsit conturi Akahu neconectate.
+      no_credentials_configured: Configurează mai întâi Akahu în setările furnizorului.
+      account_already_linked: Acest cont este deja conectat la un furnizor.
+      cancel: Anulează
+      link_account: Conectează contul
+    link_existing_account:
+      success: Contul Akahu a fost conectat la %{account_name}.
+      account_already_linked: Acest cont este deja conectat la un furnizor.
+      akahu_account_already_linked: Acest cont Akahu este deja conectat.
+    setup_accounts:
+      title: Configurează conturile Akahu
+      subtitle: Alege cum ar trebui să apară fiecare cont Akahu în Sure.
+      no_credentials: Configurează mai întâi datele de autentificare Akahu.
+      api_error: Conturile Akahu nu au putut fi preluate.
+      fetch_failed: Conturile nu au putut fi preluate
+      no_accounts_to_setup: Niciun cont de configurat
+      all_accounts_linked: Toate conturile Akahu sunt deja conectate.
+      choose_account_type: Alege un tip de cont
+      choose_account_type_description: Omite conturile pe care nu vrei să le urmărești.
+      account_type_label: Tip de cont
+      account_types:
+        skip: Omite
+        depository: Numerar
+        credit_card: Card de credit
+        investment: Investiții
+        loan: Împrumut
+      create_accounts: Creează conturile
+      cancel: Anulează
+    complete_account_setup:
+      success:
+        one: S-a creat %{count} cont Akahu.
+        few: S-au creat %{count} conturi Akahu.
+        other: S-au creat %{count} de conturi Akahu.
+      all_skipped: Nu a fost creat niciun cont Akahu.
+      no_accounts: Nu a fost selectat niciun cont Akahu.
+      creation_failed: Conturile Akahu nu au putut fi create.
+    akahu_item:
+      deletion_in_progress: Ștergere în curs
+      syncing: Se sincronizează
+      error: Eroare
+      status_with_summary: Sincronizat acum %{timestamp} · %{summary}
+      status_never: Niciodată sincronizat
+      delete: Șterge
+      setup_needed: Conturile necesită configurare
+      setup_description: '%{linked} din %{total} conturi conectate.'
+      setup_action: Configurează conturile
+      no_accounts_title: Niciun cont importat încă
+      no_accounts_description: Preia conturile Akahu și alege pe care să le conectezi.

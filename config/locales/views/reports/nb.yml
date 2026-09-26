@@ -1,0 +1,244 @@
+---
+nb:
+  reports:
+    index:
+      title: Rapporter
+      subtitle: Grundig innsikt i den økonomiske helsen din
+      export: Eksporter CSV
+      print_report: Skriv ut rapport
+      drag_to_reorder: Dra for å endre rekkefølgen på seksjonen
+      toggle_section: Vis/skjul seksjonen
+      periods:
+        monthly: Månedlig
+        quarterly: Kvartalsvis
+        ytd: Hittil i år
+        last_6_months: Siste 6 måneder
+        custom: Egendefinert periode
+      date_range:
+        from: Fra
+        to: Til
+      showing_period: Viser data fra %{start} til %{end}
+      previous_period: Forrige periode
+      next_period: Neste periode
+      today: I dag
+      period_label:
+        quarterly: '%{quarter}. kv. %{year}'
+        ytd: Hittil i %{year}
+        past_year: '%{year}'
+        last_6_months: '%{start} – %{end}'
+      period_picker:
+        quarter: '%{quarter}. kv. %{year}'
+        ytd: Hittil i %{year}
+      previous_year: Forrige år
+      next_year: Neste år
+      previous_decade: Forrige tiår
+      next_decade: Neste tiår
+    invalid_date_range: Sluttdatoen kan ikke være før startdatoen. Datoene er byttet om.
+    summary:
+      total_income: Totale inntekter
+      total_expenses: Totale utgifter
+      net_savings: Nettosparing
+      budget_performance: Budsjettoppfølging
+      vs_previous: mot forrige periode
+      income_minus_expenses: Inntekter minus utgifter
+      of_budget_used: av budsjettet brukt
+      no_budget_data: Ingen budsjettdata for denne perioden
+    budget_performance:
+      title: Budsjettoppfølging
+      spent: Brukt
+      budgeted: Budsjettert
+      remaining: Gjenstår
+      over_by: Overskredet med
+      shared: delt
+      suggested_daily: '%{amount} foreslått per dag de gjenværende %{days} dagene'
+      no_budgets: Ingen budsjettkategorier er satt opp for denne måneden
+      status:
+        good: I rute
+        warning: Nær grensen
+        over: Over budsjett
+    trends:
+      title: Trender og innsikt
+      monthly_breakdown: Månedlig fordeling
+      month: Måned
+      income: Inntekter
+      expenses: Utgifter
+      net: Netto
+      savings_rate: Sparerate
+      current: inneværende
+      avg_monthly_income: Snitt månedlig inntekt
+      avg_monthly_expenses: Snitt månedlige utgifter
+      avg_monthly_savings: Snitt månedlig sparing
+      no_data: Ingen trenddata tilgjengelig
+      spending_patterns: Forbruksmønstre
+      weekday_spending: Forbruk på hverdager
+      weekend_spending: Forbruk i helger
+      total: Totalt
+      avg_per_transaction: Snitt per transaksjon
+      transactions: Transaksjoner
+      insight_title: Innsikt
+      insight_higher_weekend: Du bruker %{percent} % mer per transaksjon i helgene enn på hverdager
+      insight_higher_weekday: Du bruker %{percent} % mer per transaksjon på hverdager enn i helgene
+      insight_similar: Forbruket ditt per transaksjon er omtrent det samme på hverdager og i helger
+      no_spending_data: Ingen forbruksdata tilgjengelig for denne perioden
+    empty_state:
+      title: Ingen data tilgjengelig
+      description: Kom i gang med å følge økonomien din ved å legge til transaksjoner eller koble til kontoene dine, så får du grundige rapporter
+      add_transaction: Legg til transaksjon
+      add_account: Legg til konto
+    transactions_breakdown:
+      title: Aktivitetsfordeling
+      no_transactions: Fant ingen aktivitet for valgt periode og filtre
+      filters:
+        title: Filtre
+        category: Kategori
+        account: Konto
+        tag: Tagg
+        amount_min: Minstebeløp
+        amount_max: Maksbeløp
+        date_range: Datoperiode
+        all_categories: Alle kategorier
+        all_accounts: Alle kontoer
+        all_tags: Alle tagger
+        apply: Bruk filtre
+        clear: Fjern filtre
+      sort:
+        label: Sorter etter
+        date_desc: Dato (nyeste)
+        amount_desc: Beløp (høyest til lavest)
+        amount_asc: Beløp (lavest til høyest)
+      export:
+        label: Eksporter
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Åpne i Google Sheets
+      table:
+        category: Kategori
+        amount: Beløp
+        type: Type
+        expense: Utgifter
+        income: Inntekter
+        uncategorized: Ukategorisert
+        entries:
+          one: '%{count} oppføring'
+          other: '%{count} oppføringer'
+        percentage: '% av totalt'
+      pagination:
+        showing:
+          one: Viser %{count} oppføring
+          other: Viser %{count} oppføringer
+        previous: Forrige
+        next: Neste
+    net_worth:
+      title: Nettoformue
+      current_net_worth: Nåværende nettoformue
+      period_change: Endring i perioden
+      assets_vs_liabilities: Eiendeler mot gjeld
+      total_assets: Eiendeler
+      total_liabilities: Gjeld
+      no_assets: Ingen eiendeler
+      no_liabilities: Ingen gjeld
+    investment_performance:
+      title: Investeringsavkastning
+      portfolio_value: Porteføljeverdi
+      total_return: Total avkastning
+      period_return: Avkastning i perioden
+      contributions: Innskudd i perioden
+      withdrawals: Uttak i perioden
+      top_holdings: Største beholdninger
+      holding: Beholdning
+      weight: Andel
+      value: Verdi
+      return: Avkastning
+      accounts: Investeringskontoer
+      gains_by_tax_treatment: Gevinster etter skattebehandling
+      unrealized_gains: Urealiserte gevinster
+      realized_gains: Realiserte gevinster
+      total_gains: Totale gevinster
+      taxable_realized_note: Disse gevinstene kan være skattepliktige
+      no_data: '-'
+      view_details: Vis detaljer
+      holdings_count:
+        one: '%{count} beholdning'
+        other: '%{count} beholdninger'
+      sells_count:
+        one: '%{count} salg'
+        other: '%{count} salg'
+      holdings: Beholdninger
+      sell_trades: Salg av verdipapirer
+      and_more: +%{count} til
+    investment_flows:
+      title: Investeringsflyt
+      description: Følg pengene som går inn og ut av investeringskontoene dine gjennom innskudd og uttak.
+      contributions: Innskudd
+      contributions_description: Penger satt inn i investeringer
+      withdrawals: Uttak
+      withdrawals_description: Penger tatt ut av investeringer
+      net_flow: Netto flyt
+      net_flow_description: Total nettoendring
+    google_sheets_instructions:
+      title_with_key: ✅ Kopier URL for Google Sheets
+      title_no_key: ⚠️ API-nøkkel kreves
+      ready: CSV-URL-en din (med API-nøkkel) er klar.
+      steps: "Slik importerer du til Google Sheets:\n1. Opprett et nytt Google-regneark\n2. Skriv inn formelen nedenfor i celle A1\n3. Trykk Enter"
+      security_warning: Denne URL-en inneholder API-nøkkelen din. Hold den hemmelig!
+      need_key: Du trenger en API-nøkkel for å importere data til Google Sheets.
+      step1: Gå til Innstillinger → API-nøkler
+      step2: Opprett en ny API-nøkkel med tilgangen «Kun lesing»
+      step3: Kopier API-nøkkelen
+      step4: 'Legg den til i denne URL-en slik: ?api_key=DIN_NØKKEL' # pipelock:ignore
+      example: Eksempel
+      then_use: Bruk deretter hele URL-en med =IMPORTDATA() i Google Sheets.
+      open_sheets: Åpne Google Sheets
+      go_to_api_keys: Gå til API-nøkler
+      close: Skjønner
+    print:
+      document_title: Økonomirapport
+      title: Økonomirapport
+      generated_on: Generert %{date}
+      summary:
+        title: Sammendrag
+        income: Inntekter
+        expenses: Utgifter
+        net_savings: Nettosparing
+        budget: Budsjett
+        vs_prior: '%{percent} % mot forrige'
+        of_income: '%{percent} % av inntektene'
+        used: brukt
+      net_worth:
+        title: Nettoformue
+        current_balance: Nåværende nettoformue
+        this_period: denne perioden
+        assets: Eiendeler
+        liabilities: Gjeld
+        no_liabilities: Ingen gjeld
+      trends:
+        title: Månedlige trender
+        month: Måned
+        income: Inntekter
+        expenses: Utgifter
+        net: Netto
+        savings_rate: Sparerate
+        average: Gjennomsnitt
+        current_month_note: '* Inneværende måned (ufullstendige data)'
+      investments:
+        title: Investeringer
+        portfolio_value: Porteføljeverdi
+        total_return: Total avkastning
+        period_return: Avkastning i perioden
+        contributions: Innskudd
+        withdrawals: Uttak
+        this_period: denne perioden
+        top_holdings: Største beholdninger
+        holding: Beholdning
+        weight: Andel
+        value: Verdi
+        return: Avkastning
+      spending:
+        title: Forbruk per kategori
+        income: Inntekter
+        expenses: Utgifter
+        category: Kategori
+        amount: Beløp
+        percent: '%'
+        more_categories: + %{count} kategorier til

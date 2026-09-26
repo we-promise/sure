@@ -2,33 +2,40 @@
 ro:
   mfa:
     backup_codes:
-      backup_codes_description: Fiecare cod poate fi utilizat o singură dată. Păstrați aceste coduri în siguranță.
-      backup_codes_title: Codurile dumneavoastră de rezervă
+      backup_codes_description: Fiecare cod poate fi utilizat o singură dată. Păstrează aceste coduri în siguranță.
+      backup_codes_title: Codurile tale de rezervă
       continue: Continuă la Setări de securitate
-      description: Păstrați aceste coduri de rezervă într-un loc sigur - veți avea nevoie de ele dacă pierdeți accesul la aplicația de autentificare
+      description: Păstrează aceste coduri de rezervă într-un loc sigur - vei avea nevoie de ele dacă pierzi accesul la aplicația de autentificare
       page_title: Coduri de rezervă
-      title: Salvați codurile dumneavoastră de rezervă
+      title: Salvează codurile tale de rezervă
     create:
-      invalid_code: Cod de verificare invalid. Vă rugăm să încercați din nou.
+      invalid_code: Cod de verificare invalid. Te rugăm să încerci din nou.
     disable:
       success: Autentificarea cu doi factori a fost dezactivată
     new:
       code_label: Cod de verificare
-      code_placeholder: Introduceți codul din 6 cifre
-      description: Îmbunătățiți securitatea contului dumneavoastră prin configurarea autentificării cu doi factori
+      code_placeholder: Introdu codul din 6 cifre
+      description: Îmbunătățește securitatea contului tău prin configurarea autentificării cu doi factori
       page_title: Configurare autentificare cu doi factori
-      scan_description: Utilizați o aplicație de autentificare precum Google Authenticator sau 1Password pentru a scana acest cod QR
-      scan_title: 1. Scanați codul QR
-      secret_description: Dacă nu puteți scana codul QR, introduceți manual această cheie secretă în aplicația dumneavoastră de autentificare
+      scan_description: Folosește o aplicație de autentificare precum Google Authenticator sau 1Password pentru a scana acest cod QR
+      scan_title: 1. Scanează codul QR
+      secret_description: Dacă nu poți scana codul QR, introdu manual această cheie secretă în aplicația ta de autentificare
       secret_title: Cod de introducere manuală
-      title: Configurați autentificarea cu doi factori
+      title: Configurează autentificarea cu doi factori
       verify_button: Verifică și activează 2FA
-      verify_description: Introduceți codul din 6 cifre din aplicația dumneavoastră de autentificare
-      verify_title: 2. Introduceți codul de verificare
+      verify_description: Introdu codul din 6 cifre din aplicația ta de autentificare
+      verify_title: 2. Introdu codul de verificare
     verify:
-      description: Introduceți codul din aplicația de autentificare pentru a continua
+      description: Introdu codul din aplicația de autentificare pentru a continua
       page_title: Verifică autentificarea cu doi factori
       title: Autentificare cu doi factori
       verify_button: Verifică
+      or: sau
+      webauthn_button: Folosește o cheie de acces sau o cheie de securitate
+      webauthn_unsupported: Acest browser nu acceptă chei de acces sau chei de securitate.
     verify_code:
-      invalid_code: Cod de autentificare invalid. Vă rugăm să încercați din nou.
+      invalid_code: Cod de autentificare invalid. Te rugăm să încerci din nou.
+    verify_webauthn:
+      invalid_credential: Cheia de acces sau cheia de securitate nu a putut fi verificată. Te rugăm să încerci din nou.
+    webauthn_options:
+      unavailable: Nu există chei de acces sau chei de securitate disponibile pentru acest cont.

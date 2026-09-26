@@ -1,0 +1,107 @@
+---
+ro:
+  insights:
+    notification:
+      title: Informație financiară nouă
+      body: Deschide Sure pentru a vedea cea mai recentă observație generată de AI.
+    index:
+      title: Observații
+      subtitle: Ce se întâmplă în finanțele tale, actualizat în fiecare noapte.
+      refresh: Caută observații noi
+      empty:
+        title: Încă nu există observații
+        description: Observațiile apar aici după ce există suficientă activitate în conturile tale. Se actualizează automat în fiecare noapte.
+    refresh:
+      queued: Generăm observații noi. Revino peste un minut.
+      checking: Se verifică…
+    card:
+      acknowledged: Observația a fost ascunsă
+      acknowledge: Am înțeles
+      acknowledge_title: Ascunde până când se schimbă cifrele
+      new: Nou
+    feed:
+      view_all: Vezi toate observațiile
+      header: Cele mai recente
+      header_new: Noi
+      acknowledge_aria: 'Am înțeles: %{title}'
+    types:
+      spending_anomaly: Cheltuieli
+      cash_flow_warning: Flux de numerar
+      net_worth_milestone: Avere netă
+      subscription_audit: Abonamente
+      savings_rate_change: Rata de economisire
+      idle_cash: Bani neutilizați
+      budget_at_risk: Buget
+      budget_on_track: Buget
+      maintained_goal_depleted: Fond de rezervă
+    meta:
+      next_n_days:
+        one: Următoarea zi
+        few: Următoarele %{count} zile
+        other: Următoarele %{count} de zile
+      last_n_days:
+        one: Ultima zi
+        few: Ultimele %{count} zile
+        other: Ultimele %{count} de zile
+      date_range: '%{from} – %{to}'
+    figures:
+      vs_previous: față de luna anterioară
+      today: astăzi
+      on_pace: la ritmul actual
+      of_budget: din buget
+      need_attention: necesită atenție
+      days_overdue:
+        one: '%{count} zi de întârziere'
+        few: '%{count} zile de întârziere'
+        other: '%{count} de zile de întârziere'
+      idle_days:
+        one: inactiv de %{count} zi
+        few: inactiv de %{count} zile
+        other: inactiv de %{count} de zile
+    actions:
+      spending_anomaly: Vezi tranzacțiile din %{category}
+      cash_flow_warning: Verifică tranzacțiile recurente
+      net_worth_milestone: Vezi raportul averii nete
+      subscription_audit: Verifică tranzacțiile recurente
+      savings_rate_change: Vezi tranzacțiile din luna respectivă
+      idle_cash: Mergi la cont
+      budget: Vezi bugetul
+      maintained_goal_depleted: Vezi fondul de rezervă
+    titles:
+      spending_anomaly:
+        above: Cheltuielile pentru %{category} sunt în creștere
+        below: Cheltuielile pentru %{category} sunt în scădere
+      cash_flow_warning:
+        low: Soldul disponibil ar putea scădea mult
+        negative: Soldul disponibil ar putea deveni negativ
+      net_worth_milestone: 'Prag atins pentru averea netă: %{milestone}'
+      maintained_goal_depleted: '%{goal} a scăzut sub nivelul stabilit'
+      subscription_audit: Mai este activ %{name}?
+      savings_rate_change:
+        up: Rata de economisire a crescut în %{month}
+        down: Rata de economisire a scăzut în %{month}
+      idle_cash: Bani neutilizați în %{account}
+      budget_at_risk:
+        one: O categorie din buget necesită atenție
+        few: '%{count} categorii din buget necesită atenție'
+        other: '%{count} de categorii din buget necesită atenție'
+      budget_on_track: Bugetul tău este pe drumul cel bun
+    templates:
+      spending_anomaly:
+        above: În ritmul actual, vei cheltui luna aceasta %{projected_spend} pentru %{category}, cu aproximativ %{deviation_pct}% mai mult decât media lunară recentă de %{baseline_spend}.
+        below: În ritmul actual, vei cheltui luna aceasta %{projected_spend} pentru %{category}, cu aproximativ %{deviation_pct}% mai puțin decât media lunară recentă de %{baseline_spend}.
+      cash_flow_warning:
+        low: Pe baza tranzacțiilor recurente viitoare și a cheltuielilor obișnuite, soldul disponibil ar putea scădea la %{projected_low} în jurul datei de %{projected_low_date}.
+        negative: Pe baza tranzacțiilor recurente viitoare și a cheltuielilor obișnuite, soldul disponibil ar putea coborî la %{projected_low} în jurul datei de %{projected_low_date}.
+      net_worth_milestone: Averea ta netă a depășit %{milestone} și ajunge acum la %{net_worth}.
+      maintained_goal_depleted: '%{goal} conține %{saved} din suma de %{target} pe care ar trebui să o păstreze. Mai lipsesc %{missing}.'
+      subscription_audit: Nu a mai apărut nicio plată pentru %{name} (%{amount}) de la data așteptată, %{expected_on}. Este posibil ca abonamentul să fi fost anulat sau ca data plății să se fi schimbat.
+      savings_rate_change:
+        up: Ai economisit %{current_rate}% din venituri în %{month}, cu %{change_pp} puncte procentuale mai mult față de %{previous_rate}% în luna anterioară.
+        down: Ai economisit %{current_rate}% din venituri în %{month}, cu %{change_pp} puncte procentuale mai puțin față de %{previous_rate}% în luna anterioară.
+        down_negative: 'În %{month} ai cheltuit mai mult decât ai câștigat: rata de economisire a scăzut la %{current_rate}%, de la %{previous_rate}% în luna anterioară.'
+      idle_cash: '%{account} are un sold de %{balance} fără nicio activitate în ultimele %{idle_days} zile.'
+      budget_at_risk:
+        over: '%{categories}: bugetul a fost depășit luna aceasta. Până acum ai folosit %{budget_spent_pct}% din bugetul total.'
+        near: '%{categories}: aproape de limită luna aceasta. Până acum ai folosit %{budget_spent_pct}% din bugetul total.'
+      budget_on_track: Ai cheltuit %{spent} din bugetul de %{budgeted} (%{budget_spent_pct}%) și toate categoriile se încadrează în limite.

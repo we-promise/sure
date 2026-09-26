@@ -4,8 +4,8 @@ ro:
       account:
         balance: Sold
         currency: Monedă
-        family: Familie
-        family_id: Familie
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         name: Nume
         subtype: Subtip
     models:
@@ -18,3 +18,16 @@ ro:
       account/other_liability: Altă datorie
       account/property: Imobiliare
       account/vehicle: Vehicul
+  account_order:
+    balance_asc:
+      label: Sold (crescător)
+      label_short: Sold ↑
+    balance_desc:
+      label: Sold (descrescător)
+      label_short: Sold ↓
+    name_asc:
+      label: Nume (A-Z)
+      label_short: Nume ↑
+    name_desc:
+      label: Nume (Z-A)
+      label_short: Nume ↓

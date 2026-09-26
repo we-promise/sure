@@ -1,0 +1,102 @@
+---
+nb:
+  insights:
+    notification:
+      title: Ny økonomisk innsikt
+      body: Åpne Sure for å se den nyeste AI-innsikten din.
+    index:
+      title: Innsikt
+      subtitle: Hva som skjer i økonomien din, oppdatert hver natt.
+      refresh: Se etter ny innsikt
+      empty:
+        title: Ingen innsikt ennå
+        description: Innsikt vises her når det er nok aktivitet på kontoene dine. Den oppdateres automatisk hver natt.
+    refresh:
+      queued: Vi lager ny innsikt. Kom tilbake om et minutt.
+      checking: Sjekker …
+    card:
+      acknowledged: Innsikten er skjult
+      acknowledge: Skjønner
+      acknowledge_title: Skjul denne til tallene endrer seg
+      new: Ny
+    feed:
+      view_all: Vis all innsikt
+      header: Siste
+      header_new: Nye
+      acknowledge_aria: 'Skjønner: %{title}'
+    types:
+      spending_anomaly: Forbruk
+      cash_flow_warning: Kontantstrøm
+      net_worth_milestone: Nettoformue
+      subscription_audit: Abonnementer
+      savings_rate_change: Sparerate
+      idle_cash: Ubrukte midler
+      budget_at_risk: Budsjett
+      budget_on_track: Budsjett
+      maintained_goal_depleted: Buffer
+    meta:
+      next_n_days:
+        one: Neste dag
+        other: Neste %{count} dager
+      last_n_days:
+        one: Siste dag
+        other: Siste %{count} dager
+      date_range: '%{from}–%{to}'
+    figures:
+      vs_previous: mot forrige måned
+      today: i dag
+      on_pace: med nåværende tempo
+      of_budget: av budsjettet
+      need_attention: trenger oppfølging
+      days_overdue:
+        one: '%{count} dag over forfall'
+        other: '%{count} dager over forfall'
+      idle_days:
+        one: ingen aktivitet på %{count} dag
+        other: ingen aktivitet på %{count} dager
+    actions:
+      spending_anomaly: Vis transaksjoner i %{category}
+      cash_flow_warning: Se gjennom faste transaksjoner
+      net_worth_milestone: Vis rapport for nettoformue
+      subscription_audit: Se gjennom faste transaksjoner
+      savings_rate_change: Vis transaksjonene for den måneden
+      idle_cash: Gå til konto
+      budget: Vis budsjett
+      maintained_goal_depleted: Vis buffer
+    titles:
+      spending_anomaly:
+        above: Forbruket på %{category} øker
+        below: Forbruket på %{category} synker
+      cash_flow_warning:
+        low: Kontantsaldoen din kan bli lav
+        negative: Kontantsaldoen din kan bli negativ
+      net_worth_milestone: 'Milepæl for nettoformue: %{milestone}'
+      maintained_goal_depleted: '%{goal} er under ønsket nivå'
+      subscription_audit: Er %{name} fortsatt aktiv?
+      savings_rate_change:
+        up: Spareraten din økte i %{month}
+        down: Spareraten din falt i %{month}
+      idle_cash: Ubrukte midler på %{account}
+      budget_at_risk:
+        one: Én kategori i budsjettet ditt trenger oppfølging
+        other: '%{count} kategorier i budsjettet ditt trenger oppfølging'
+      budget_on_track: Budsjettet ditt er i rute
+    templates:
+      spending_anomaly:
+        above: Med nåværende tempo bruker du %{projected_spend} på %{category} denne måneden, omtrent %{deviation_pct} % mer enn det nylige månedlige snittet ditt på %{baseline_spend}.
+        below: Med nåværende tempo bruker du %{projected_spend} på %{category} denne måneden, omtrent %{deviation_pct} % mindre enn det nylige månedlige snittet ditt på %{baseline_spend}.
+      cash_flow_warning:
+        low: Basert på kommende faste betalinger og vanlig forbruk kan kontantsaldoen din synke til %{projected_low} rundt %{projected_low_date}.
+        negative: Basert på kommende faste betalinger og vanlig forbruk kan kontantsaldoen din falle til %{projected_low} rundt %{projected_low_date}.
+      net_worth_milestone: Nettoformuen din har passert %{milestone} og er nå på %{net_worth}.
+      maintained_goal_depleted: '%{goal} inneholder %{saved} av målet på %{target}. Det mangler %{missing}.'
+      subscription_audit: '%{name} (%{amount}) har ikke dukket opp siden den var ventet %{expected_on}. Den kan ha blitt sagt opp, eller trekket kan ha flyttet seg til en annen dato.'
+      savings_rate_change:
+        up: Du sparte %{current_rate} % av inntekten din i %{month}, en økning på %{change_pp} prosentpoeng fra %{previous_rate} % måneden før.
+        down: Du sparte %{current_rate} % av inntekten din i %{month}, en nedgang på %{change_pp} prosentpoeng fra %{previous_rate} % måneden før.
+        down_negative: 'Du brukte mer enn du tjente i %{month}: spareraten din falt til %{current_rate} %, fra %{previous_rate} % måneden før.'
+      idle_cash: '%{account} har %{balance} uten aktivitet de siste %{idle_days} dagene.'
+      budget_at_risk:
+        over: '%{categories} gikk over budsjettet denne måneden. Du har brukt %{budget_spent_pct} % av det totale budsjettet så langt.'
+        near: '%{categories} nærmer seg grensene sine denne måneden. Du har brukt %{budget_spent_pct} % av det totale budsjettet så langt.'
+      budget_on_track: Du har brukt %{spent} av budsjettet på %{budgeted} (%{budget_spent_pct} %), og alt er innenfor grensene.

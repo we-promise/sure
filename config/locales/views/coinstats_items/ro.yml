@@ -1,0 +1,76 @@
+---
+ro:
+  coinstats_items:
+    create:
+      success: Conexiunea cu furnizorul CoinStats a fost configurată cu succes.
+      default_name: Conexiune CoinStats
+      errors:
+        validation_failed: 'Validarea a eșuat: %{message}.'
+    update:
+      success: Conexiunea cu furnizorul CoinStats a fost actualizată cu succes.
+      errors:
+        validation_failed: 'Validarea a eșuat: %{message}.'
+    destroy:
+      success: Conexiunea cu furnizorul CoinStats a fost programată pentru ștergere.
+    link_wallet:
+      success: 'Portofele crypto conectate cu succes: %{count}.'
+      missing_params: 'Lipsesc parametrii obligatorii: adresa și blockchainul.'
+      failed: Conectarea portofelului crypto a eșuat.
+      error: 'Conectarea portofelului crypto a eșuat: %{message}.'
+    link_exchange:
+      success: Exchange-ul %{name} a fost conectat.
+      missing_params: Exchange-ul și datele de autentificare sunt obligatorii.
+      invalid_exchange: Exchange-ul selectat nu mai este acceptat.
+      failed: Conectarea exchange-ului a eșuat.
+      error: 'Conectarea exchange-ului a eșuat: %{message}.'
+    new:
+      title: Conectează crypto cu CoinStats
+      blockchain_fetch_error: Blockchainurile nu au putut fi încărcate. Te rugăm să încerci din nou mai târziu.
+      link_wallet_title: Conectează adresa portofelului
+      link_wallet_description: Urmărește un portofel în custodie proprie sau o singură adresă on-chain prin CoinStats.
+      address_label: Adresă
+      address_placeholder: Obligatoriu
+      blockchain_label: Blockchain
+      blockchain_placeholder: Obligatoriu
+      blockchain_select_blank: Selectează un blockchain
+      link_wallet_submit: Conectează portofelul crypto
+      link_exchange_title: Conectează API-ul unui exchange
+      link_exchange_description: Folosește o cheie API de exchange doar pentru citire, astfel încât CoinStats să poată sincroniza soldurile și tranzacțiile din Bitvavo, Binance și alte exchange-uri acceptate.
+      link_exchange_note: Dacă exchange-ul tău necesită activarea cheii API sau confirmare prin e-mail, finalizează acel pas înainte de a conecta aici.
+      exchange_select_blank: Selectează un exchange
+      exchange_label: Exchange
+      link_exchange_submit: Conectează exchange-ul
+      not_configured_title: Conexiunea cu furnizorul CoinStats nu este configurată
+      not_configured_message: Pentru a conecta un portofel sau un exchange crypto, trebuie mai întâi să configurezi conexiunea cu furnizorul CoinStats.
+      not_configured_step1_html: Mergi la <strong>Setări → Furnizori</strong>
+      not_configured_step2_html: Găsește furnizorul <strong>CoinStats</strong>
+      not_configured_step3_html: Urmează <strong>instrucțiunile de configurare</strong> furnizate pentru a finaliza configurarea furnizorului
+      go_to_settings: Mergi la Setările furnizorilor
+      setup_instructions: 'Instrucțiuni de configurare:'
+      step1_html: Accesează <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">CoinStats Public API Dashboard</a> pentru a obține o cheie API.
+      step2: Introdu cheia API mai jos și apasă Configurează.
+      step3_html: După o conectare reușită, accesează fila <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Conturi</a> pentru a-ți configura conturile crypto.
+      api_key_label: Cheie API
+      api_key_placeholder: Obligatoriu
+      configure: Configurează
+      update_configuration: Reconfigurează
+      default_name: Conexiune CoinStats
+    coinstats_item:
+      deletion_in_progress: Datele portofelelor crypto se șterg…
+      provider_name: CoinStats
+      syncing: Se sincronizează…
+      sync_status:
+        no_accounts: Nu s-au găsit portofele crypto
+        all_synced:
+          one: '%{count} portofel crypto sincronizat'
+          few: '%{count} portofele crypto sincronizate'
+          other: '%{count} de portofele crypto sincronizate'
+        partial_sync: '%{linked_count} portofele crypto sincronizate, %{unlinked_count} necesită configurare'
+      reconnect: Reconectează
+      status: Ultima sincronizare acum %{timestamp}
+      status_never: Niciodată sincronizat
+      status_with_summary: Ultima sincronizare acum %{timestamp} • %{summary}
+      update_api_key: Actualizează cheia API
+      delete: Șterge
+      no_wallets_title: Niciun portofel crypto conectat
+      no_wallets_message: Momentan nu există portofele crypto conectate la CoinStats.

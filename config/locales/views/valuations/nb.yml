@@ -10,7 +10,7 @@ nb:
       change: endring
       date: dato
       new_entry: Ny oppføring
-      no_valuations: Ingen verdivurderinger for denne kontoen ennå
+      no_valuations: Ingen saldooppdateringer for denne kontoen ennå
       valuations: Verdi
       value: verdi
     new:
@@ -29,3 +29,40 @@ nb:
       overview: Oversikt
       settings: Innstillinger
       opening_balance: Startsaldo
+      amount_label: Kontoverdi på datoen
+      update_value: Oppdater verdi
+    confirmation_contents:
+      this_will: Dette vil %{action_verb} kontoverdien per
+      to_colon: 'til:'
+      total_account_value: Total kontoverdi
+      holdings_value: Verdi av beholdninger
+      brokerage_cash: Kontantbeholdning
+      account_balance: kontosaldo
+      credit_card_balance: kredittkortsaldo
+      loan_balance: lånesaldo
+      property_value: eiendomsverdi
+      vehicle_value: kjøretøyverdi
+      crypto_balance: kryptosaldo
+      asset_value: eiendelsverdi
+      liability_balance: gjeldssaldo
+      balance: saldo
+      "on": per
+      to: til
+      recalculate_notice: Alle fremtidige transaksjoner og saldoer beregnes på nytt basert på denne %{change_or_update}.
+      change: endringen
+      update: oppdateringen
+      action_set: sette
+      action_update: oppdatere
+    create:
+      account_updated: Konto oppdatert
+    update:
+      account_updated: Konto oppdatert
+      entry_updated: Oppføring oppdatert
+    errors:
+      amount_required: Beløp er påkrevd
+    confirm_create:
+      confirm: Bekreft
+      title: Bekreft ny saldo
+    confirm_update:
+      title: Oppdater saldo
+      update: Oppdater

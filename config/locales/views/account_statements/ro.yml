@@ -1,0 +1,119 @@
+---
+ro:
+  account_statements:
+    account_tab:
+      coverage_title: Acoperire extrase
+      coverage_description: Lunile istorice acoperite de extrase încărcate și verificări de sold.
+      coverage_range: '%{start} - %{end}'
+      empty: Niciun extras asociat încă acestui cont.
+      open_inbox: Căsuță de intrare
+      statements_title: Extrase
+      year_label: Anul acoperirii
+    balance:
+      unknown: Necunoscut
+    coverage:
+      status:
+        ambiguous: Ambiguu
+        covered: Acoperit
+        duplicate: Duplicat
+        mismatched: Neconcordant
+        missing: Lipsă
+        not_expected: Nu e necesar
+    create:
+      duplicates:
+        one: '%{count} extras duplicat a fost omis.'
+        few: '%{count} extrase duplicate au fost omise.'
+        other: '%{count} de extrase duplicate au fost omise.'
+      invalid_file_type: Încarcă un extras PDF, CSV sau XLSX care nu depășește limita de dimensiune.
+      no_files: Selectează cel puțin un fișier de extras.
+      success:
+        one: '%{count} extras încărcat.'
+        few: '%{count} extrase încărcate.'
+        other: '%{count} de extrase încărcate.'
+    destroy:
+      failure: Extrasul nu a putut fi șters.
+      success: Extras șters.
+    form:
+      account_upload: Încarcă extras
+      files_hint: PDF, CSV sau XLSX. Maximum %{max_size}MB per fișier.
+      files_label: Fișiere de extras
+      inbox_upload: Încarcă
+    index:
+      account_label: Cont
+      confidence: Potrivire %{confidence}
+      empty_linked: Niciun extras asociat încă.
+      empty_unmatched: Căsuța de extrase nepotrivite este goală.
+      leave_unmatched: Lasă neasociat
+      linked_title: Extrase asociate
+      no_suggestion: Nicio sugestie
+      storage_used: Spațiu utilizat
+      title: Arhiva de extrase
+      unmatched_title: Extrase nepotrivite
+      upload_description: Încarcă extrase în căsuța de intrare sau alege un cont pentru a le asocia imediat.
+      upload_title: Încarcă extrase
+    link:
+      no_account: Alege un cont înainte de a asocia acest extras.
+      success: Extras asociat contului %{account}.
+    period:
+      unknown: Perioadă necunoscută
+    reconciliation:
+      checks:
+        closing_balance: Sold final
+        opening_balance: Sold inițial
+        period_movement: Rulajul perioadei
+        unknown_check: Verificare necunoscută
+      matched: Concordant
+      mismatched: Neconcordant
+      unavailable: Neverificat
+    reject:
+      success: Potrivirea extrasului a fost respinsă.
+    show:
+      account_label: Cont
+      account_last4_hint: Ultimele patru cifre ale contului
+      account_name_hint: Indiciu nume cont
+      closing_balance: Sold final
+      currency: Monedă
+      delete: Șterge
+      difference: Diferență
+      download: Descarcă
+      institution_name_hint: Indiciu instituție
+      ledger_amount: Registrul Sure
+      linked_to: Asociat contului %{account}.
+      linking_title: Asociere cont
+      link_suggestion: Sugestie de asociere
+      metadata_title: Metadate extras
+      no_suggestion: Încă nicio sugestie de cont.
+      opening_balance: Sold inițial
+      period_end_on: Sfârșitul perioadei
+      period_start_on: Începutul perioadei
+      reconciliation_title: Reconciliere
+      reconciliation_unavailable: Adaugă perioada extrasului și soldul inițial sau final, apoi asigură-te că Sure are istoricul soldurilor pentru acele date.
+      reject: Respinge
+      save: Salvează extrasul
+      statement_amount: Extras
+      suggested_account: Contul sugerat este %{account} (încredere %{confidence}).
+      title: Extras de cont
+      unlink: Disociază
+      unmatched_account: Extrase nepotrivite
+      unknown_value: Necunoscut
+    status:
+      linked: Asociat
+      rejected: Respins
+      unmatched: Nepotrivit
+    table:
+      account: Cont
+      actions: Acțiuni
+      download: Descarcă
+      edit: Editează
+      file: Fișier
+      link_suggestion: Sugestie de asociere
+      period: Perioadă
+      reconciliation: Reconciliere
+      reject: Respinge sugestia
+      suggestion: Sugestie
+      unlink: Disociază
+      view: Vezi
+    unlink:
+      success: Extrasul a fost mutat înapoi în lista de extrase nepotrivite.
+    update:
+      success: Extras actualizat.

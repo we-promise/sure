@@ -1,0 +1,9 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Acest cont este deja rezervat integral pentru „%{goal_name}”. Introdu o sumă pentru a-l împărți.

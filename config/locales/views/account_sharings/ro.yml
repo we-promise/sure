@@ -1,0 +1,30 @@
+---
+ro:
+  account_sharings:
+    show:
+      title: Partajare cont
+      subtitle: Controlează cine poate vedea și folosi acest cont
+      member: Membru
+      permission: Permisiune
+      shared: Partajat
+      no_members: Nu există alți membri în %{moniker} cu care să partajezi
+      permissions:
+        full_control: Control total
+        full_control_description: Poate vedea, edita și gestiona tranzacții
+        read_write: Poate adnota
+        read_write_description: Poate categoriza, eticheta și adăuga note
+        read_only: Doar vizualizare
+        read_only_description: Poate doar vizualiza datele contului
+      save: Salvează setările de partajare
+      owner_label: 'Proprietar: %{name}'
+      shared_with_count:
+        one: Partajat cu %{count} membru
+        few: Partajat cu %{count} membri
+        other: Partajat cu %{count} de membri
+      include_in_finances: Include în bugetele și rapoartele mele
+      exclude_from_finances: Exclude din bugetele și rapoartele mele
+      finance_toggle_description: Include acest cont în averea netă, bugetele și rapoartele tale
+    update:
+      success: Setările de partajare au fost actualizate
+      not_owner: Doar proprietarul contului poate gestiona partajarea
+      finance_toggle_success: Preferința de includere în finanțe a fost actualizată

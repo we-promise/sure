@@ -1,0 +1,89 @@
+---
+ro:
+  kraken_items:
+    provider_connection:
+      default_name: Kraken
+      default_description: Conectează un cont de exchange Kraken
+      name: Kraken - %{name}
+      description: Conectează la %{name}
+    create:
+      default_name: Kraken
+      success: Conectat cu succes la Kraken. Contul tău de exchange se sincronizează.
+    update:
+      success: Conexiunea Kraken a fost actualizată cu succes.
+    destroy:
+      success: Conexiunea Kraken a fost programată pentru ștergere.
+    select_accounts:
+      select_connection: Alege o conexiune Kraken în Setările furnizorilor.
+      no_credentials_configured: Adaugă datele de autentificare API Kraken înainte de a configura conturile.
+    link_accounts:
+      select_connection: Alege o conexiune Kraken înainte de a conecta conturile.
+    select_existing_account:
+      title: Conectează contul Kraken
+      no_accounts_found: Nu s-au găsit conturi Kraken.
+      wait_for_sync: Așteaptă ca Kraken să termine sincronizarea.
+      check_provider_health: Verifică dacă datele de autentificare API Kraken sunt valide.
+      link: Conectează
+      cancel: Anulează
+    link_existing_account:
+      success: Conectat cu succes la contul Kraken
+      select_connection: Alege o conexiune Kraken înainte de a conecta conturile.
+      errors:
+        only_manual: Doar conturile manuale de tip exchange crypto, fără o conexiune existentă la un furnizor, pot fi conectate la Kraken
+        invalid_kraken_account: Cont Kraken invalid
+        kraken_account_already_linked: Acest cont Kraken este deja conectat
+    setup_accounts:
+      title: Importă contul Kraken
+      subtitle: Selectează contul de exchange pe care vrei să-l urmărești
+      instructions: Kraken importă un singur cont de exchange crypto combinat pentru această conexiune, doar cu deținerile și tranzacțiile spot executate.
+      no_accounts: Toate conturile Kraken au fost importate.
+      accounts_count:
+        one: '%{count} cont disponibil'
+        few: '%{count} conturi disponibile'
+        other: '%{count} de conturi disponibile'
+      select_all: Selectează tot
+      import_selected: Importă selecția
+      cancel: Anulează
+      creating: Se importă...
+    complete_account_setup:
+      success:
+        one: A fost importat %{count} cont
+        few: Au fost importate %{count} conturi
+        other: Au fost importate %{count} de conturi
+      none_selected: Niciun cont selectat
+      no_accounts: Niciun cont de importat
+    kraken_item:
+      provider_name: Kraken
+      syncing: Se sincronizează...
+      reconnect: Datele de autentificare trebuie actualizate
+      deletion_in_progress: Se șterge...
+      sync_status:
+        no_accounts: Nu s-au găsit conturi
+        all_synced:
+          one: '%{count} cont sincronizat'
+          few: '%{count} conturi sincronizate'
+          other: '%{count} de conturi sincronizate'
+        partial_sync: '%{linked_count} sincronizate, %{unlinked_count} necesită configurare'
+      status: Ultima sincronizare acum %{timestamp}
+      status_with_summary: Ultima sincronizare acum %{timestamp} - %{summary}
+      status_never: Niciodată sincronizat
+      delete: Șterge
+      no_accounts_title: Nu s-au găsit conturi
+      no_accounts_message: Contul tău de exchange Kraken va apărea aici după sincronizare.
+      setup_needed: Cont gata de import
+      setup_description: Importă această conexiune Kraken ca un cont de exchange crypto.
+      setup_action: Importă contul
+      import_accounts_menu: Importă contul
+      stale_rate_warning: Soldul este aproximativ, deoarece cursul de schimb exact pentru %{date} nu a fost disponibil. Se va actualiza la următoarea sincronizare.
+  kraken_item:
+    syncer:
+      checking_credentials: Se verifică datele de autentificare...
+      credentials_invalid: Date de autentificare API Kraken invalide. Verifică cheia API și secretul.
+      importing_accounts: Se importă conturile din Kraken...
+      checking_configuration: Se verifică configurația conturilor...
+      accounts_need_setup:
+        one: '%{count} cont necesită configurare'
+        few: '%{count} conturi necesită configurare'
+        other: '%{count} de conturi necesită configurare'
+      processing_accounts: Se procesează datele conturilor...
+      calculating_balances: Se calculează soldurile...

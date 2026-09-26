@@ -1,0 +1,8 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        merchant_import:
+          missing_columns: 'Lipsesc coloanele obligatorii: %{columns}'
+          duplicate_columns: 'Nume de coloane duplicate după normalizare: %{columns}'

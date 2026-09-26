@@ -3,60 +3,203 @@ nb:
   accounts:
     account:
       troubleshoot: Feilsøk
+      complete_setup: Fullfør oppsett
+      edit: Rediger
+      link_lunchflow: Koble til Lunch Flow
+      link_provider: Koble til leverandør
+      unlink_provider: Koble fra leverandør
+      change_simplefin_account: Bytt SimpleFIN-konto
+      enable: Aktiver konto
+      disable: Deaktiver konto
+      exclude_from_reports: Utelat fra alle rapporter
+      include_in_reports: Ta med i rapporter
+      excluded_from_reports_indicator: Utelatt fra rapporter
+      set_default: Angi som standard
+      remove_default: Fjern som standard
+      default_label: Standard
+      delete: Slett konto
+      sharing: Deling
     chart:
       data_not_available: Data ikke tilgjengelig for den valgte perioden
     create:
       success: "%{type} konto opprettet"
     destroy:
       success: "%{type} konto planlagt for sletting"
+      cannot_delete_linked: Kan ikke slette en tilkoblet konto. Koble den fra først.
+      failed: Sletting mislyktes. Prøv igjen senere.
     empty:
       empty_message: Legg til en konto enten via tilkobling, importering eller manuell inntasting.
       new_account: Ny konto
-      no_accounts: Ingen kontoer enda
+      no_accounts: Ingen kontoer ennå
     form:
-      balance: Nåværende balanse
+      balance: "Saldo per dato:"
       name_label: Kontonavn
       name_placeholder: Eksempel på kontonavn
+      opening_balance_date_label: Dato for startsaldo
+      additional_details: Flere detaljer
+      institution_name_label: Navn på bank
+      institution_name_placeholder: f.eks. DNB
+      institution_domain_label: Bankens domene
+      institution_domain_placeholder: f.eks. dnb.no
+      notes_label: Notater
+      notes_placeholder: Lagre tilleggsinformasjon som kontonumre, IBAN, BIC, clearingnumre osv.
+      exclude_from_reports: Utelat fra alle rapporter
+      enable_category_matcher_label: Aktiver automatisk kategorisering
+      enable_category_matcher_hint: Når dette er aktivert, brukes leverandørens foreslåtte kategori på importerte transaksjoner. Deaktiver for å la nye transaksjoner være ukategoriserte.
     index:
       accounts: Kontoer
       manual_accounts:
         other_accounts: Andre kontoer
       new_account: Ny konto
       sync: Synkroniser alle
+      cancel_sync: Avbryt synkronisering
     new:
       import_accounts: Importer kontoer
       method_selector:
         connected_entry: Koble til konto
         connected_entry_eu: Koble til EU-konto
         link_with_provider: "Koble til %{provider}"
-        manual_entry: Angi kontobalanse
+        manual_entry: Angi kontosaldo
         title: Hvordan vil du legge den til?
+        lunchflow_entry: Koble til Lunch Flow-konto
       title: Hva vil du legge til?
+      container:
+        select: Velg
+        navigate: Naviger
+        close: Lukk
+        next: Neste
+        previous: Forrige
     show:
       activity:
         amount: Beløp
-        balance: Balanse
+        balance: Saldo
         date: Dato
         entries: oppføringer
         entry: oppføring
         new: Ny
-        new_balance: Ny balanse
+        new_balance: Ny saldo
         new_transaction: Ny transaksjon
         no_entries: Ingen oppføringer funnet
         title: Aktivitet
+        confirmed: Bokført
+        filter: Filtrer
+        new_activity: Ny aktivitet
+        new_trade: Ny handel
+        new_transfer: Ny overføring
+        pending: Reservert
+        search:
+          placeholder: Søk i oppføringer etter navn
+        search_placeholder: Søk i oppføringer etter navn
+        status: Status
       chart:
-        balance: Balanse
-        owed: Beløp skyldig
+        balance: Saldo
+        owed: Skyldig beløp
       menu:
         confirm_accept: Slett "%{name}"
-        confirm_body_html: "<p>Ved å slette denne kontoen, vil du slette dens verdihistorikk, som påvirker ulike aspekter av din samlede konto. Denne handlingen vil ha en direkte innvirkning på dine nettoverdi-beregninger og kontoens grafer.</p><br /> <p>Etter sletting er det ingen måte å gjenopprette kontoinformasjonen på, fordi du må legge den til som en ny konto.</p>"
+        confirm_body_html: "<p>Ved å slette denne kontoen, vil du slette dens verdihistorikk, som påvirker ulike aspekter av din samlede konto. Denne handlingen vil ha en direkte innvirkning på dine nettoformueberegninger og kontoens grafer.</p><br /> <p>Etter sletting er det ingen måte å gjenopprette kontoinformasjonen på, fordi du må legge den til som en ny konto.</p>"
         confirm_title: Slette konto?
         edit: Rediger
         import: Importer transaksjoner
         manage: Administrer kontoer
+        delete_account: Slett konto
+        import_trades: Importer handler
+        import_transactions: Importer transaksjoner
+        sharing: Deling
+        statements: Kontoutskrifter
+        exclude_from_reports: Utelat fra alle rapporter
+        include_in_reports: Ta med i rapporter
+      limited_fx_history_warning: Historikk for valutakurser er bare tilgjengelig fra og med %{date}. Transaksjoner før denne datoen bruker omtrentlige valutaomregninger – dette kan skje når valutakursleverandøren bare tilbyr et begrenset historisk tidsrom.
+      tabs:
+        activity: Aktivitet
+        holdings: Beholdninger
+        overview: Oversikt
+        schedule: Nedbetalingsplan
+        statements: Kontoutskrifter
+      header:
+        complete_setup: Fullfør oppsett
     update:
       success: "%{type} konto oppdatert"
+    not_authorized: Du har ikke tilgang til å administrere denne kontoen
+    set_default:
+      depository_only: Bare bankkontoer og kredittkort kan angis som standard.
+    sync_all:
+      syncing: Synkroniserer kontoer ...
+    sidebar:
+      missing_data: Manglende historiske data
+      missing_data_description: '%{product} bruker tredjepartsleverandører til å hente historiske valutakurser, verdipapirkurser og mer. Disse dataene trengs for å beregne nøyaktige historiske kontosaldoer.'
+      configure_providers: Konfigurer leverandørene dine her.
+      tabs:
+        all: Alle
+        assets: Eiendeler
+        debts: Gjeld
+      new_asset: Ny eiendel
+      new_debt: Ny gjeld
+      new_account: Ny konto
+      new_account_group: Legg til %{account_group}
+      expand_all: Utvid alle
+      collapse_all: Skjul alle
+    types:
+      depository: Bankkonto
+      investment: Investering
+      crypto: Krypto
+      property: Eiendom
+      vehicle: Kjøretøy
+      other_asset: Annen eiendel
+      credit_card: Kredittkort
+      loan: Lån
+      other_liability: Annen gjeld
+    types_plural:
+      depository: Bankkontoer
+      investment: Investeringer
+      crypto: Krypto
+      property: Eiendommer
+      vehicle: Kjøretøy
+      other_asset: Andre eiendeler
+      credit_card: Kredittkort
+      loan: Lån
+      other_liability: Annen gjeld
+    tax_treatments:
+      taxable: Skattepliktig
+      tax_deferred: Utsatt skatt
+      tax_exempt: Skattefri
+      tax_advantaged: Skattefordelaktig
+    tax_treatment_descriptions:
+      taxable: Gevinster skattlegges ved realisasjon
+      tax_deferred: Innskudd er fradragsberettiget, skattlegges ved uttak
+      tax_exempt: Innskudd etter skatt, gevinster skattlegges ikke
+      tax_advantaged: Særlige skattefordeler med vilkår
+    subtype_regions:
+      us: USA
+      uk: Storbritannia
+      ca: Canada
+      au: Australia
+      eu: Europa
+      in: India
+      generic: Generelt
+    confirm_unlink:
+      title: Koble kontoen fra leverandøren?
+      description_html: Du er i ferd med å koble <strong>%{account_name}</strong> fra <strong>%{provider_name}</strong>. Kontoen blir da gjort om til en manuell konto.
+      warning_title: Hva dette betyr
+      warning_no_sync: Kontoen synkroniseres ikke lenger automatisk med leverandøren din
+      warning_manual_updates: Du må legge til transaksjoner og oppdatere saldoer manuelt
+      warning_transactions_kept: Alle eksisterende transaksjoner og saldoer beholdes
+      warning_can_delete: Etter frakoblingen kan du slette kontoen om nødvendig
+      confirm_button: Bekreft og koble fra
+    unlink:
+      success: Kontoen er koblet fra. Den er nå en manuell konto.
+      not_linked: Kontoen er ikke koblet til en leverandør
+      error: 'Kunne ikke koble fra kontoen: %{error}'
+      generic_error: Det oppstod en uventet feil. Prøv igjen.
+    select_provider:
+      title: Velg en leverandør å koble til
+      description: Velg hvilken leverandør du vil bruke for å koble til %{account_name}
+      already_linked: Kontoen er allerede koblet til en leverandør
+      no_providers: Ingen leverandører er konfigurert ennå
   email_confirmations:
     new:
       invalid_token: Ugyldig eller utløpt bekreftelseslenke.
       success_login: E-posten din er bekreftet. Vennligst logg inn med din nye e-postadresse.
+  account:
+    entries:
+      destroy:
+        success: Oppføringen er slettet.

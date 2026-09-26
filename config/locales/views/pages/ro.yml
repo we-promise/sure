@@ -9,7 +9,19 @@ ro:
           cash_flow: "Flux de numerar"
           surplus: "Excedent"
           deficit: "Deficit"
-      welcome: "Bun venit, %{name}"
+        title: Diagramă Sankey nouă
+        preview: Previzualizare
+        preview_tooltip: Aceasta va înlocui vizualizarea de mai sus, deoarece folosește un nou API comun cu clientul mobil Swift.
+        feedback_prompt: Compară această diagramă cu cea originală de mai sus și spune-ne dacă arată diferit, în afară de ordonare.
+        positive: Arată corect
+        negative: Ceva nu arată bine
+        feedback_title: Feedback despre diagrama fluxului de numerar
+        feedback_loading: Se încarcă formularul de feedback…
+        feedback_unavailable: Feedbackul nu este disponibil momentan. Încearcă din nou mai târziu.
+        feedback_thanks: Mulțumim că ne ajuți să îmbunătățim diagrama!
+        feedback_privacy: Răspunsul tău este trimis către PostHog. Descrie problema fără numere de cont, solduri sau alte detalii financiare private.
+        feedback_submit: Trimite feedback
+      welcome: "Bine ai revenit, %{name}"
       subtitle: "Iată ce se întâmplă cu finanțele tale"
       new: "Nou"
       net_worth_chart:
@@ -22,11 +34,28 @@ ro:
       balance_sheet:
         no_items: "Niciun %{name} încă"
         add_accounts: "Adaugă conturile tale de %{name} pentru a vedea o defalcare completă"
+        title: Bilanț
+        no_asset: Niciun activ încă
+        no_liability: Nicio datorie încă
+        add_asset_accounts: Adaugă conturile de active pentru a vedea o defalcare completă
+        add_liability_accounts: Adaugă conturile de datorii pentru a vedea o defalcare completă
+        name: Nume
+        weight: Pondere
+        value: Valoare
+        expand_all: Extinde tot
+        collapse_all: Restrânge tot
+        classifications:
+          asset: Active
+          liability: Datorii
       cashflow_sankey:
         title: "Flux de numerar"
         no_data_title: "Nu există date despre fluxul de numerar pentru această perioadă"
         no_data_description: "Adaugă tranzacții pentru a afișa datele despre fluxul de numerar sau extinde perioada de timp"
         add_transaction: "Adaugă tranzacție"
+        loading: Se încarcă fluxul de numerar…
+        load_error: Fluxul de numerar nu a putut fi încărcat. Încearcă din nou.
+        retry: Încearcă din nou
+        zoom_out: Înapoi la fluxul de numerar complet
       no_accounts:
         title: "Niciun cont încă"
         description: "Adaugă conturi pentru a afișa datele despre averea netă"
@@ -34,3 +63,89 @@ ro:
       outflows_donut:
         title: "Ieșiri"
         total_outflows: "Total ieșiri"
+        categories: Categorii
+        value: Valoare
+        weight: Pondere
+      sections_aria_label: Secțiunile tabloului de bord
+      drag_to_reorder: Trage pentru a reordona secțiunea
+      toggle_section: Afișează/ascunde secțiunea
+      widget_size:
+        label: Ajustează dimensiunea
+        width_label: Lățime
+        half: Jumătate
+        full: Completă
+        height_label: Înălțime
+        compact: Compactă
+        auto: Automată
+        tall: Înaltă
+      insights_feed:
+        title: Observații
+      investment_summary:
+        title: Investiții
+        total_return: Randament total
+        holding: Deținere
+        weight: Pondere
+        value: Valoare
+        return: Randament
+        period_activity: 'Activitate: %{period}'
+        contributions: Depuneri
+        withdrawals: Retrageri
+        trades: Tranzacții bursiere
+        no_investments: Niciun cont de investiții
+        add_investment: Adaugă un cont de investiții pentru a-ți urmări portofoliul
+      money_flow:
+        title: Intrări / Ieșiri
+        date_range: '%{start_date} – %{end_date}'
+        month_picker_aria_label: Selectează luna
+        filter_accounts: Filtrează conturile (%{count})
+        filter_accounts_all: Toate conturile
+        period_scope_hint: Afișează lunile alese aici — independent de perioada selectată în partea de sus a tabloului de bord.
+        search_accounts: Caută conturi
+        apply: Aplică
+        balance: Sold tranzacții
+        chart_span: Ultimele %{count} luni
+        income: Venituri
+        expenses: Cheltuieli
+      spending_trend:
+        title: Cheltuieli
+        date_range: '%{start_date} – %{end_date}'
+        date_range_short: '%{start_date} - %{end_day}, %{year}'
+        date_range_short_single: '%{date} %{year}'
+        month_picker_aria_label: Selectează luna
+        period_scope_hint: Afișează luna aleasă aici — independent de perioada selectată în partea de sus a tabloului de bord.
+        no_data: Nu există date despre cheltuieli pentru această lună
+        previous_comparison_days: (1-%{end_day})
+    feedback:
+      title: Feedback
+      heading: Lasă feedback
+      description: Spune-ne dacă ai un feedback anume. Poți include linkuri către videoclipuri sau capturi de ecran.
+      feature_request: Propune o funcționalitate
+      bug_report: Raportează o eroare
+      discuss: Discută despre %{product} cu alții
+    intro:
+      not_authorized: Introducerea este disponibilă doar pentru utilizatorii invitați.
+      welcome: Bun venit!
+      coming_soon: Experiența de introducere va fi disponibilă în curând
+      description: Construim un parcurs de introducere mai complet, pentru a afla despre obiectivele, reperele și nevoile tale de zi cu zi. Deocamdată, deschide bara laterală de chat pentru a începe o conversație cu Sure și spune-ne în ce punct al parcursului tău financiar te afli.
+      start_chatting: Începe conversația
+    redis_configuration_error:
+      page_title: Configurare Redis necesară - Sure
+      heading: Configurare Redis necesară
+      subheading: Instalarea ta Sure găzduită pe propriul server necesită configurarea corectă a Redis.
+      why_required_title: De ce este necesar Redis?
+      why_required_body: Sure folosește Redis pentru a rula jobi Sidekiq în fundal, pentru sarcini precum sincronizarea datelor conturilor, procesarea importurilor și alte operațiuni în fundal care îți mențin datele financiare actualizate.
+      view_setup_guide: Vezi ghidul de configurare
+      setup_guide_hint: Urmează ghidul nostru complet de configurare Docker pentru a configura Redis
+      refresh_hint: După ce ai configurat Redis, reîmprospătează această pagină pentru a continua.
+      refresh_page: Reîmprospătează pagina
+    release_notes_unavailable:
+      name: Note de lansare indisponibile
+      body_html: <p>Momentan nu se pot prelua cele mai recente note de lansare. Revino mai târziu sau accesează direct <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>pagina de lansări GitHub</a>.</p>
+    privacy:
+      title: Politica de confidențialitate
+      heading: Politica de confidențialitate
+      placeholder: Conținutul politicii de confidențialitate va fi afișat aici.
+    terms:
+      title: Termeni și condiții
+      heading: Termeni și condiții
+      placeholder: Conținutul termenilor și condițiilor va fi afișat aici.

@@ -1,0 +1,9 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        recurring_allocation:
+          attributes:
+            currency:
+              must_match_occurrence: trebuie să fie aceeași cu moneda scadenței

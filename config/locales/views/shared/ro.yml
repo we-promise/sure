@@ -10,10 +10,10 @@ ro:
     money_field:
       label: Sumă
     exchange_rate_tabs:
-      calculate_rate_tab: Calculați rata FX
-      convert_tab: Convertire cu rata FX
+      calculate_rate_tab: Calculează cursul de schimb
+      convert_tab: Convertește cu cursul de schimb
       destination_amount: Suma de destinație
-      exchange_rate: Rata de schimb
+      exchange_rate: Curs de schimb
       exchange_rate_help: Alege cum dorești să introduci suma.
     syncing_notice:
       syncing: Se sincronizează datele conturilor...
@@ -24,3 +24,33 @@ ro:
       singular: Familie
     trend_change:
       no_change: "fără schimbare"
+    preview: Previzualizare
+    sync_toast:
+      message: Date noi disponibile
+      refresh: Reîmprospătează
+    require_admin: Doar administratorii pot efectua această acțiune
+    require_connector_owner: Poți gestiona doar conexiunile adăugate de tine
+    custom_confirm:
+      default_title: Ești sigur?
+      default_body: Această acțiune este ireversibilă.
+      default_btn_text: Confirmă
+      resource_deletion_title: 'Ștergi: %{resource}?'
+      resource_deletion_body: 'Sigur vrei să ștergi: %{resource}? Această acțiune este ireversibilă.'
+      resource_deletion_btn_text: 'Șterge: %{resource}'
+    cancel: Anulează
+    transaction_tabs:
+      expense: Cheltuială
+      income: Venit
+      transfer: Transfer
+    sidekiq_health_banner:
+      title: Unele date ar putea fi neactualizate
+      body: Joburile din fundal nu sunt procesate, așa că soldurile, averea netă și sincronizările conturilor ar putea fi învechite sau lipsă.
+      cta: Vezi starea sistemului
+      reasons:
+        redis_unreachable: Aplicația nu poate accesa Redis. Verifică REDIS_URL și dacă Redis rulează.
+        no_worker_processes: Niciun proces worker Sidekiq nu este conectat. Pornește containerul worker sau unitatea systemd.
+        stale_heartbeat: Workerul Sidekiq nu a mai trimis recent semnale de activitate. Este posibil să fie blocat sau să se fi oprit.
+        queue_backed_up: Cel mai vechi job din coadă așteaptă de mai mult decât latența maximă admisă. Workerul funcționează, dar rămâne în urmă.
+  concerns:
+    self_hostable:
+      redis_configured: Redis este acum configurat corect! Acum poți configura aplicația Sure.

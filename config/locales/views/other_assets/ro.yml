@@ -3,5 +3,7 @@ ro:
   other_assets:
     edit:
       edit: Editează %{account}
+      balance_tracking_info: Alte active sunt urmărite prin evaluări manuale folosind „Sold nou”, nu prin tranzacții. Fluxul de numerar nu va afecta soldul contului.
     new:
       title: Introdu detaliile activului
+      balance_tracking_info: Alte active sunt urmărite prin evaluări manuale folosind „Sold nou”, nu prin tranzacții. Fluxul de numerar nu va afecta soldul contului.

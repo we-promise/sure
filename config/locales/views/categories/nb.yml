@@ -2,18 +2,26 @@
 nb:
   categories:
     bootstrap:
-      success: Standardkategorier opprettet vellykket
+      success: Standardkategorier er opprettet
     category:
       delete: Slett kategori
       edit: Rediger kategori
     create:
-      success: Kategori opprettet vellykket
+      success: Kategorien er opprettet
     destroy:
-      success: Kategori slettet vellykket
+      success: Kategorien er slettet
     edit:
       edit: Rediger kategori
     form:
       placeholder: Kategorinavn
+      name_label: Navn
+      unassigned: (ingen)
+      parent_category_label: Overordnet kategori (valgfritt)
+      trigger_label: Velg farge og ikon
+      color: Farge
+      icon: Ikon
+      auto_adjust: juster automatisk.
+      poor_contrast: Dårlig kontrast. Velg en mørkere farge eller
     index:
       bootstrap: Bruk standarder (anbefalt)
       categories: Kategorier
@@ -21,14 +29,42 @@ nb:
       categories_incomes: Inntektskategorier
       empty: Ingen kategorier funnet
       new: Ny kategori
+      delete_all: Slett alle
+      merge: Slå sammen kategorier
     menu:
       loading: Laster...
     new:
       new_category: Ny kategori
     update:
-      success: Kategori oppdatert vellykket
+      success: Kategorien er oppdatert
+    destroy_all:
+      success: Alle kategorier er slettet
+    merge:
+      title: Slå sammen kategorier
+      description: Velg en målkategori og kategoriene som skal slås sammen med den. Tilhørende transaksjoner og budsjettlinjer flyttes til målkategorien.
+      target_label: Slå sammen til (mål)
+      select_target: Velg målkategori...
+      sources_label: Kategorier som skal slås sammen
+      sources_hint: Valgte kategorier slettes etter at transaksjonene og budsjettlinjene deres er flyttet til målkategorien. Ikke velg målkategorien som kilde.
+      submit: Slå sammen valgte
+    perform_merge:
+      success:
+        one: Slo sammen %{count} kategori
+        other: Slo sammen %{count} kategorier
+      no_categories_selected: Ingen kategorier er valgt for sammenslåing
+      target_not_found: Fant ikke målkategorien
+      invalid_categories: Ugyldige kategorier er valgt
+      target_selected_as_source: Velg forskjellige kategorier som mål og kilder.
+    virtual:
+      transfer: Overføring
+      payment: Innbetaling
+      trade: Handel
   category:
     dropdowns:
       show:
         bootstrap: Generer standardkategorier
         empty: Ingen kategorier funnet
+        match_transfer: Koble som overføring/innbetaling
+        one_time: Engangs%{type}
+        income: inntekt
+        expense: utgift

@@ -1,0 +1,11 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        transaction:
+          attributes:
+            attachments:
+              too_many: nu pot depăși %{max} fișiere per tranzacție
+              too_large: fișierul %{index} este prea mare (maximum %{max_mb}MB)
+              invalid_format: fișierul %{index} are un format neacceptat (%{file_format})

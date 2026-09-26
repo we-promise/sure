@@ -1,0 +1,213 @@
+---
+ro:
+  snaptrade_items:
+    default_name: Conexiune SnapTrade
+    destroy:
+      success: Conexiunea SnapTrade a fost programată pentru ștergere.
+    connect:
+      decryption_failed: Datele de autentificare SnapTrade nu pot fi citite. Șterge și creează din nou această conexiune.
+      connection_failed: 'Conectarea la SnapTrade a eșuat: %{message}'
+    callback:
+      success: Brokerul a fost conectat! Selectează conturile pe care vrei să le conectezi.
+      no_item: Configurația SnapTrade nu a fost găsită.
+    complete_account_setup:
+      success:
+        one: '%{count} cont a fost conectat cu succes.'
+        few: '%{count} conturi au fost conectate cu succes.'
+        other: '%{count} de conturi au fost conectate cu succes.'
+      partial_success:
+        one: 'Conturi conectate: %{count}. Conectări eșuate: %{failed_count}.'
+        few: 'Conturi conectate: %{count}. Conectări eșuate: %{failed_count}.'
+        other: 'Conturi conectate: %{count}. Conectări eșuate: %{failed_count}.'
+      link_failed: 'Conectarea conturilor a eșuat: %{errors}'
+      no_accounts: Nu a fost selectat niciun cont pentru conectare.
+    preload_accounts:
+      not_configured: SnapTrade nu este configurat.
+    select_accounts:
+      not_configured: SnapTrade nu este configurat.
+    oauth_authorize:
+      not_configured: Autorizarea SnapTrade prin browser necesită SNAPTRADE_OAUTH_CLIENT_SECRET pe lângă SNAPTRADE_OAUTH_CLIENT_ID. Setează-l și repornește aplicația sau autorizează folosind un cod de dispozitiv.
+    oauth_callback:
+      success: Autorizarea SnapTrade a fost finalizată.
+      access_denied: Autorizarea SnapTrade a fost anulată.
+      state_mismatch: Autorizarea SnapTrade nu a trecut o verificare de securitate. Încearcă din nou.
+      failed: Autorizarea SnapTrade nu a putut fi finalizată. Încearcă din nou.
+    oauth_device_flow:
+      title: Conectează SnapTrade
+      subtitle: Autorizează Sure pentru SnapTrade cu un cod de dispozitiv.
+      instructions: Deschide SnapTrade, confirmă acest cod de dispozitiv, apoi revino aici pentru a finaliza.
+      code_label: Cod de dispozitiv
+      open_snaptrade: Deschide SnapTrade
+      start_button: Începe autorizarea
+      complete_button: Am autorizat SnapTrade
+      cancel_button: Anulează
+      missing_client_id: OAuth pentru SnapTrade nu este configurat. Adaugă SNAPTRADE_OAUTH_CLIENT_ID în .env.local, repornește aplicația, apoi încearcă din nou.
+    start_oauth_device_flow:
+      failed: Autorizarea SnapTrade cu cod de dispozitiv nu a putut fi pornită. Încearcă din nou.
+    complete_oauth_device_flow:
+      success: Autorizarea SnapTrade a fost finalizată.
+      device_code_required: Nu există nicio autorizare SnapTrade cu cod de dispozitiv în curs pentru această conexiune. Pornește-o din nou pentru a obține un cod nou.
+      authorization_pending: SnapTrade nu a primit încă confirmarea ta. Aprobă codul în SnapTrade, apoi încearcă din nou.
+      expired: Acest cod de dispozitiv a expirat. Pornește din nou autorizarea.
+      access_denied: Autorizarea SnapTrade a fost refuzată.
+      failed: Autorizarea SnapTrade cu cod de dispozitiv nu a putut fi finalizată. Încearcă din nou.
+    select_existing_account:
+      not_found: Contul sau configurația SnapTrade nu a fost găsită.
+      title: Conectează la un cont SnapTrade
+      header: Conectează un cont existent
+      subtitle: Selectează contul SnapTrade la care să conectezi
+      no_accounts: Nu există conturi SnapTrade neconectate.
+      connect_hint: Poate fi necesar să conectezi mai întâi un broker.
+      settings_link: Mergi la setările furnizorilor
+      linking_to: 'Se conectează la contul:'
+      balance_label: 'Sold:'
+      link_button: Conectează
+      cancel_button: Anulează
+    link_existing_account:
+      success: Conectat cu succes la contul SnapTrade.
+      failed: 'Conectarea contului a eșuat: %{message}'
+      not_found: Contul nu a fost găsit.
+    connections:
+      unknown_brokerage: Broker necunoscut
+    delete_connection:
+      success: Conexiunea a fost ștearsă cu succes. S-a eliberat un loc.
+      failed: 'Ștergerea conexiunii a eșuat: %{message}'
+      missing_authorization_id: Lipsește ID-ul de autorizare
+      api_deletion_failed: Conexiunea nu a putut fi ștearsă din SnapTrade - acest element nu este autorizat. Conexiunea ar putea exista în continuare în contul tău SnapTrade.
+    setup_accounts:
+      title: Configurează conturile SnapTrade
+      header: Configurează conturile tale SnapTrade
+      subtitle: Selectează conturile de brokeraj pe care vrei să le conectezi
+      syncing: Se preiau conturile tale...
+      loading: Se preiau conturile din SnapTrade...
+      loading_hint: Apasă Reîmprospătează pentru a verifica dacă există conturi.
+      refresh: Reîmprospătează
+      info_title: Date de investiții SnapTrade
+      info_holdings: Dețineri cu prețurile și cantitățile curente
+      info_cost_basis: Costul de achiziție pentru fiecare poziție (când este disponibil)
+      info_activities: Istoricul tranzacțiilor cu etichete de activitate (Cumpărare, Vânzare, Dividend etc.)
+      info_history: Până la 3 ani de istoric al tranzacțiilor
+      free_tier_note: Nivelul gratuit SnapTrade permite 20 de conexiuni cu brokeri.
+      no_accounts_title: Nu s-au găsit conturi
+      no_accounts_message: Nu s-au găsit conturi de brokeraj. Acest lucru se poate întâmpla dacă ai anulat conexiunea sau dacă brokerul tău nu este acceptat.
+      try_again: Conectează un broker
+      back_to_settings: Înapoi la setări
+      available_accounts: Conturi disponibile
+      balance_label: 'Sold:'
+      account_number: 'Cont:'
+      account_type_label: Tip de cont
+      account_types:
+        depository: Cont curent sau de economii
+        credit_card: Card de credit
+        investment: Cont de investiții
+        crypto: Cont cripto
+        loan: Împrumut sau linie de credit
+        other_asset: Alt activ
+      sync_start_date_label: 'Importă tranzacțiile începând cu:'
+      sync_start_date_help: Lasă gol pentru tot istoricul disponibil
+      create_button: Creează conturile selectate
+      cancel_button: Anulează
+      creating: Se creează conturile...
+      done_button: Gata
+      or_link_existing: 'Sau conectează la un cont existent în loc să creezi unul nou:'
+      select_account: Selectează un cont...
+      link_button: Conectează
+      linked_accounts: Deja conectate
+      linked_to: 'Conectat la:'
+    snaptrade_item:
+      accounts_need_setup:
+        one: '%{count} cont necesită configurare'
+        few: '%{count} conturi necesită configurare'
+        other: '%{count} de conturi necesită configurare'
+      deletion_in_progress: Ștergere în curs...
+      syncing: Se sincronizează...
+      requires_update: Conexiunea trebuie actualizată
+      error: Eroare de sincronizare
+      status: Ultima sincronizare acum %{timestamp} - %{summary}
+      status_never: Niciodată sincronizat
+      reconnect: Reconectează
+      connect_brokerage: Conectează un broker
+      add_another_brokerage: Conectează alt broker
+      delete: Șterge
+      setup_needed: Conturile necesită configurare
+      setup_description: Unele conturi din SnapTrade trebuie conectate la conturi Sure.
+      setup_action: Configurează conturile
+      setup_accounts_menu: Configurează conturile
+      manage_connections: Gestionează conexiunile
+      more_accounts_available:
+        one: Încă %{count} cont disponibil pentru configurare
+        few: Încă %{count} conturi disponibile pentru configurare
+        other: Încă %{count} de conturi disponibile pentru configurare
+      no_accounts_title: Nu s-au descoperit conturi
+      no_accounts_description: Conectează un broker pentru a-ți importa conturile de investiții.
+  providers:
+    snaptrade:
+      name: SnapTrade
+      connection_description: Conectează-te la brokerul tău prin SnapTrade (peste 25 de brokeri acceptați)
+      description: SnapTrade se conectează la peste 25 de brokeri importanți (Fidelity, Vanguard, Schwab, Robinhood etc.) și oferă istoricul complet al tranzacțiilor, cu etichete de activitate și costul de achiziție.
+      oauth_setup_step_1_html: Înregistrează o aplicație OAuth pe <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: 'Doar pentru fluxul prin browser: adaugă URL-ul de callback al acestei aplicații (<code>%{callback_url}</code>) ca redirect URI înregistrat'
+      oauth_setup_step_3: Setează SNAPTRADE_OAUTH_CLIENT_ID în mediul tău și repornește aplicația. Doar atât activează fluxul cu cod de dispozitiv; adaugă și SNAPTRADE_OAUTH_CLIENT_SECRET pentru fluxul prin browser
+      free_tier_warning: Nivelul gratuit SnapTrade include 20 de conexiuni cu brokeri.
+      oauth_title: SnapTrade OAuth
+      oauth_status_ready: Autorizează Sure să citească datele contului tău SnapTrade.
+      oauth_status_ready_device: Autorizează Sure cu un cod de dispozitiv să citească datele contului tău SnapTrade.
+      oauth_status_authorized: Autorizat cu SnapTrade.
+      oauth_connect_button: Conectează-te cu SnapTrade
+      oauth_device_button: Folosește un cod de dispozitiv
+      oauth_reauthorize_button: Autorizează din nou
+      status_connected:
+        one: '%{count} cont din SnapTrade'
+        few: '%{count} conturi din SnapTrade'
+        other: '%{count} de conturi din SnapTrade'
+      needs_setup:
+        one: '%{count} necesită configurare'
+        few: '%{count} necesită configurare'
+        other: '%{count} necesită configurare'
+      status_ready: Gata de conectarea brokerilor
+      setup_accounts_button: Configurează conturile
+      connect_button: Conectează un broker
+      connected_brokerages: 'Conectați:'
+      manage_connections: Gestionează conexiunile
+      loading_connections: Se încarcă conexiunile...
+      connections_error: 'Încărcarea conexiunilor a eșuat: %{message}'
+      accounts_count:
+        one: '%{count} cont'
+        few: '%{count} conturi'
+        other: '%{count} de conturi'
+      orphaned_connection: Conexiune orfană (nesincronizată local)
+      needs_linking: trebuie conectat
+      no_connections: Nu s-au găsit conexiuni cu brokeri.
+      delete_connection: Șterge
+      delete_connection_title: Ștergi conexiunea cu brokerul?
+      delete_connection_body: Conexiunea %{brokerage} va fi eliminată definitiv din SnapTrade. Toate conturile de la acest broker vor fi deconectate. Va trebui să te reconectezi pentru a sincroniza din nou aceste conturi.
+      delete_connection_confirm: Șterge conexiunea
+      manage_at_snaptrade: Gestionează conexiunile pe site-ul SnapTrade
+  snaptrade_item:
+    sync_status:
+      no_accounts: Nu s-au găsit conturi
+      synced:
+        one: '%{count} cont sincronizat'
+        few: '%{count} conturi sincronizate'
+        other: '%{count} de conturi sincronizate'
+      synced_with_setup: '%{linked} sincronizate, %{unlinked} necesită configurare'
+    institution_summary:
+      none: Nicio instituție conectată
+      count:
+        one: '%{count} instituție'
+        few: '%{count} instituții'
+        other: '%{count} de instituții'
+    brokerage_summary:
+      none: Niciun broker conectat
+      count:
+        one: '%{count} broker'
+        few: '%{count} brokeri'
+        other: '%{count} de brokeri'
+    syncer:
+      discovering: Se descoperă conturile...
+      importing: Se importă conturile din SnapTrade...
+      processing: Se procesează deținerile și activitățile...
+      calculating: Se calculează soldurile...
+      checking_config: Se verifică configurația conturilor...
+      needs_setup: 'Conturi care necesită configurare: %{count}...'
+      activities_fetching_async: Activitățile sunt preluate în fundal. Pentru conexiunile noi cu brokeri, poate dura până la un minut.

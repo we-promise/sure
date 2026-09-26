@@ -66,12 +66,15 @@ nb:
         deny: 'Avslå'
       error:
         title: 'En feil har oppstått'
+        go_back: Gå tilbake
       new:
         title: 'Autorisasjon kreves'
         prompt: 'Autoriser %{client_name} til å bruke kontoen din?'
         able_to: 'Denne applikasjonen vil kunne'
       show:
         title: 'Autorisasjonskode'
+        authorization_code_label: 'Autorisasjonskode:'
+        copy_instructions: Kopier denne koden og lim den inn i applikasjonen.
       form_post:
         title: 'Send inn dette skjemaet'
 
@@ -79,7 +82,7 @@ nb:
       confirmations:
         revoke: 'Er du sikker?'
       buttons:
-        revoke: 'Opphev'
+        revoke: 'Tilbakekall'
       index:
         title: 'Dine autoriserte applikasjoner'
         application: 'Applikasjon'
@@ -142,7 +145,7 @@ nb:
           notice: 'Applikasjon oppdatert.'
       authorized_applications:
         destroy:
-          notice: 'Applikasjon opphevet.'
+          notice: 'Tilgangen for applikasjonen er tilbakekalt.'
 
     layouts:
       admin:

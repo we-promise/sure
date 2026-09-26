@@ -1,0 +1,47 @@
+---
+ro:
+  chats:
+    demo_banner_title: Mod demo activ
+    demo_banner_message: Folosești LLM-uri prin credite oferite de Cloudflare Workers AI. Rezultatele pot varia, deoarece codul a fost testat pe `gpt-4.1`, dar tokenii tăi nu ajung nicăieri altundeva pentru antrenare! 🤖
+    thinking: Se gândește ...
+    worker_unhealthy_warning: Este posibil ca răspunsurile AI să nu fie livrate acum — procesul de fundal (worker) pare să fie oprit sau suprasolicitat. Verifică dacă workerul Sidekiq rulează.
+    ai_greeting:
+      greeting: Salut, %{name}! Sunt un asistent AI (model lingvistic mare) care te poate ajuta cu finanțele tale. Am acces la web și la datele contului tău.
+      there: bine ai venit
+      commands_hint_html: Poți folosi <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> pentru a accesa comenzile
+      questions_intro: 'Iată câteva întrebări pe care mi le poți pune:'
+      evaluate_portfolio: Evaluează-mi portofoliul de investiții
+      spending_insights: Arată-mi o analiză a cheltuielilor
+      unusual_patterns: Găsește tipare neobișnuite
+    chat:
+      edit_chat_title: Editează titlul conversației
+      delete_chat: Șterge conversația
+    chat_nav:
+      all_chats: Toate conversațiile
+      start_new_chat: Începe o conversație nouă
+      edit_chat_title: Editează titlul conversației
+      delete_chat: Șterge conversația
+    error:
+      retry: Reîncearcă
+    destroy:
+      notice: Conversația a fost ștearsă cu succes
+    index:
+      chats: Conversații
+      new_chat: Conversație nouă
+    new:
+      default_title: Conversație nouă %{timestamp}
+    update:
+      success: Conversația a fost actualizată
+    ai_consent:
+      title: Activează conversațiile AI
+      available_description: Chatul AI poate răspunde la întrebări financiare și poate oferi analize pe baza datelor tale. Pentru a folosi această funcție, trebuie să o activezi explicit.
+      unavailable_description_html: Pentru a folosi asistentul AI, trebuie să setezi variabila de mediu <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> sau să o configurezi în setările de auto-găzduire (Self-Hosting) ale instanței tale.
+      enable_button: Activează conversațiile AI
+      disable_note: Poți dezactiva oricând. Toate datele trimise furnizorilor noștri de LLM sunt anonimizate.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Raționamentul asistentului
+    tool_calls:
+      tool_calls: Apeluri de instrumente
+      function: 'Funcție:'
+      arguments: 'Argumente:'

@@ -1,0 +1,7 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        sophtron_account:
+          no_balance: Contul Sophtron trebuie să aibă fie sold curent, fie sold disponibil

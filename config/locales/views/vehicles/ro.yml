@@ -13,13 +13,25 @@ ro:
       model_placeholder: Camry
       year: An
       year_placeholder: '2023'
+      mileage_unit_kilometers: Kilometri
+      mileage_unit_miles: Mile
     new:
       title: Introdu detalii vehicul
     overview:
       current_price: Preț curent
-      make_model: Marcă & Model
+      make_model: Marcă și model
       mileage: Kilometraj
       purchase_price: Preț de achiziție
       trend: Tendință
       unknown: Necunoscut
       year: An
+    tabs:
+      overview:
+        current_price: Preț curent
+        make_model: Marcă și model
+        mileage: Kilometraj
+        purchase_price: Preț de achiziție
+        trend: Tendință
+        unknown: Necunoscut
+        year: An
+        edit_account_details: Editează detaliile contului

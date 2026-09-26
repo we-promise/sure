@@ -3,11 +3,13 @@ nb:
   invitations:
     create:
       failure: Kunne ikke sende invitasjon
-      success: Invitasjon sendt vellykket
+      success: Invitasjonen er sendt
+      existing_user_added: Brukeren er lagt til i husholdningen din.
+      existing_user_has_family_data: Denne brukeren eier allerede en husholdning med kontoer. Vedkommende må fjerne eller overføre disse kontoene før de kan bli med i din.
     destroy:
       failure: Det oppsto et problem med å fjerne invitasjonen.
       not_authorized: Du er ikke autorisert til å administrere invitasjoner.
-      success: Invitasjonen ble fjernet vellykket.
+      success: Invitasjonen ble fjernet.
     new:
       email_label: E-postadresse
       email_placeholder: Angi e-postadresse
@@ -15,5 +17,12 @@ nb:
       role_label: Rolle
       role_member: Medlem
       submit: Send invitasjon
-      subtitle: Send en invitasjon for å bli med i din familiekonto på %{product_name}
+      subtitle: Send en invitasjon til å bli med i din %{moniker} på %{product_name}
       title: Inviter noen
+      role_guest: Gjest
+    accept_choice:
+      create_account: Opprett ny konto
+      joined_household: Du er nå med i husholdningen.
+      message: '%{inviter} har invitert deg til å bli med som %{role}.'
+      sign_in_existing: Jeg har allerede en konto
+      title: Bli med i %{family}
