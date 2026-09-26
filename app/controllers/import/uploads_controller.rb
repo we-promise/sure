@@ -33,8 +33,6 @@ class Import::UploadsController < ApplicationController
     def update_csv_upload
       requested_type = upload_params[:import_kind].presence
       requested_type = "TransactionImport" unless requested_type.in?(csv_import_types)
-      switch_import_type!(requested_type)
-
       unless csv_valid?(csv_str)
         flash.now[:alert] = t("import.uploads.show.csv_invalid", default: "Must be valid CSV with headers and at least one row of data")
         render :show, status: :unprocessable_entity
@@ -117,7 +115,7 @@ class Import::UploadsController < ApplicationController
     end
 
     def csv_import_types
-      %w[TransactionImport TradeImport AccountImport CategoryImport MerchantImport RuleImport]
+      %w[TransactionImport TradeImport AccountImport CategoryImport MerchantImport RuleImport MintImport ActualImport YnabImport]
     end
 
     def switch_import_type!(type)
@@ -129,7 +127,7 @@ class Import::UploadsController < ApplicationController
         account: previous_import.account,
         date_format: previous_import.date_format || Current.family.date_format
       )
-      previous_import.destroy! if previous_import.pending? && previous_import.raw_file_str.blank? && previous_import.rows.none?
+      previous_import.destroy! if previous_import.pending? && !previous_import.data_committed?
     end
 
     def handle_qif_upload

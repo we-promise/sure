@@ -66,6 +66,8 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
     get new_import_url
 
+    assert_response :see_other
+    follow_redirect!
     assert_response :success
     assert_select "select[name='import_kind'] option[value='AccountImport'][selected]"
     assert_select "select[name='import_kind'] option[value='TransactionImport'][disabled]"

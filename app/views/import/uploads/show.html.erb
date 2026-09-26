@@ -24,10 +24,13 @@
       [ t("imports.new.import_accounts"), "AccountImport" ],
       [ t("imports.new.import_categories"), "CategoryImport" ],
       [ t("imports.new.import_merchants"), "MerchantImport" ],
-      [ t("imports.new.import_rules"), "RuleImport" ]
+      [ t("imports.new.import_rules"), "RuleImport" ],
+      [ t("imports.new.csv_formats.mint"), "MintImport" ],
+      [ t("imports.new.csv_formats.actual"), "ActualImport" ],
+      [ t("imports.new.csv_formats.ynab"), "YnabImport" ]
     ] %>
-    <% selected_import_kind = params[:import_kind].presence_in(%w[TransactionImport TradeImport AccountImport CategoryImport MerchantImport RuleImport]) || (@import.type.in?(%w[TransactionImport TradeImport AccountImport CategoryImport MerchantImport RuleImport]) ? @import.type : "TransactionImport") %>
-    <% selected_csv_format = @import.csv_format || params[:csv_format] || "auto" %>
+    <% selected_import_kind = params[:import_kind].presence_in(%w[TransactionImport TradeImport AccountImport CategoryImport MerchantImport RuleImport MintImport ActualImport YnabImport]) || (@import.type.in?(%w[TransactionImport TradeImport AccountImport CategoryImport MerchantImport RuleImport MintImport ActualImport YnabImport]) ? @import.type : "TransactionImport") %>
+    <% selected_csv_format = params[:csv_format].presence || Import::CsvFormat::TRANSACTION_TYPES.key(selected_import_kind) || "auto" %>
     <%= label_tag :import_file_format, t("imports.new.format_label"), class: "text-sm font-medium text-primary" %>
     <%= select_tag :file_format,
           options_for_select(file_format_options, @file_format),
@@ -74,9 +77,9 @@
 
                 <%= form.select :col_sep, Import.separator_options, label: true %>
 
-                <% if @import.type.in?(%w[TransactionImport TradeImport]) %>
+                <div data-import-flow-target="account" <%= "hidden" unless selected_import_kind.in?(%w[TransactionImport TradeImport]) %>>
                   <%= form.select :account_id, Current.user.accessible_accounts.visible.alphabetically.pluck(:name, :id), { label: t("import.uploads.show.account_optional_label"), include_blank: t("import.uploads.show.multi_account_import"), selected: @import.account_id } %>
-                <% end %>
+                </div>
 
                 <% if tab == "csv-upload" %>
                   <label for="import_import_file_csv" class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-file-upload-target="uploadArea">

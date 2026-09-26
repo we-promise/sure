@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus";
 
 export default class extends Controller {
-  static targets = ["format", "panel", "csvOptions", "kind", "transactionFormat", "csvSource", "fileInput"];
+  static targets = ["format", "panel", "csvOptions", "kind", "transactionFormat", "account", "csvSource", "fileInput"];
 
   connect() {
     this.update();
@@ -28,6 +28,9 @@ export default class extends Controller {
 
     const importKind = this.kindTargets.find((kind) => kind.tagName === "SELECT")?.value;
     this.transactionFormatTarget.hidden = importKind !== "TransactionImport";
+    if (this.hasAccountTarget) {
+      this.accountTarget.hidden = !["TransactionImport", "TradeImport"].includes(importKind);
+    }
 
     const csvSource = this.csvSourceTargets.find((source) => source.tagName === "SELECT")?.value;
     if (importKind) {
