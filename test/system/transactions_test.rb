@@ -178,6 +178,22 @@ class TransactionsTest < ApplicationSystemTestCase
     assert_selector "#{summary} [data-tag-fit-target=full]", text: "Cd"
   end
 
+  test "a first tag added on desktop also shows on the mobile row" do
+    transaction = @uncategorized_transaction.entryable
+    assert_empty transaction.tags
+    option_id = "#{dom_id(@uncategorized_transaction, :tag_option)}_#{tags(:one).id}"
+
+    find("##{dom_id(@uncategorized_transaction)}").hover
+    find("##{dom_id(transaction, "tag_summary_desktop")}").click
+    find("##{option_id} button").click
+    assert_selector "##{option_id}[aria-selected='true']"
+
+    page.current_window.resize_to(390, 900)
+    assert_selector "##{dom_id(transaction, "tag_summary_mobile")}", text: tags(:one).name
+  ensure
+    page.current_window.resize_to(1400, 1400)
+  end
+
   test "keyboard focus stays on a tag option after toggling it" do
     summary_id = dom_id(@transaction.entryable, "tag_summary_desktop")
     option_id = "#{dom_id(@transaction, :tag_option)}_#{tags(:two).id}"
