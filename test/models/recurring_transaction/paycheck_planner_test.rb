@@ -396,11 +396,28 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_not bridge.short?, "an unknown balance is not evidence of a shortfall"
   end
 
+  test "physical cash counts toward cash on hand alongside depository accounts" do
+    set_cash(500)
+    accounts(:physical_cash).update!(family: @family, balance: 120)
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 5, preset: "weekly", income: true)
+
+    bridge = Planner.new(@family, user: @user).plan(periods_limit: 3).first
+
+    assert_equal 620, bridge.cash_on_hand, "set_cash(500) parks 500 on one account; physical_cash adds its own 120 on top"
+  end
+
   private
     # The family fixture carries more than one deposit account, and the plan
     # sums all of them, so a test that means to pin the cash has to set them all.
+    # Zeroes every cash account and parks the full amount on just one, rather
+    # than dividing across N accounts: an uneven split (e.g. 40 / 3 accounts)
+    # produces a repeating decimal whose rounded sum drifts a hair from the
+    # pinned total, which was enough to fail exact-equality assertions once
+    # a third cash account (physical_cash) joined the fixture set.
     def set_cash(amount)
-      @family.accounts.where(accountable_type: %q(Depository)).update_all(balance: amount / @family.accounts.where(accountable_type: %q(Depository)).count.to_d)
+      cash_accounts = @family.accounts.where(accountable_type: %w[Depository PhysicalCash])
+      cash_accounts.update_all(balance: 0)
+      cash_accounts.where(accountable_type: "Depository").first.update!(balance: amount)
     end
 
     def create_series(name:, amount:, due:, preset: "monthly", income: false)

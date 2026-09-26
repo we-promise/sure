@@ -711,6 +711,14 @@ class AccountTest < ActiveSupport::TestCase
     assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
   end
 
+  test "physical cash accounts share the same balance_type as depository accounts" do
+    physical_cash = accounts(:physical_cash)
+
+    assert_equal :cash, physical_cash.balance_type
+    assert_equal accounts(:depository).balance_type, physical_cash.balance_type
+    assert_not_equal :non_cash, physical_cash.balance_type
+  end
+
   test "history_start_date resolves to the earliest of opening anchor, entries, and balances" do
     account = @family.accounts.create!(
       owner: @admin,
