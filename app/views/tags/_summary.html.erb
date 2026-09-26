@@ -4,7 +4,7 @@
 <%# Several tags render both as full pills and as the compact summary;
     the tag-fit controller shows the pills whenever they all fit the
     available width and falls back to the summary otherwise. %>
-<span id="<%= dom_id(transaction, "tag_summary_#{variant}") %>" class="inline-flex min-w-0 max-w-full">
+<span id="<%= dom_id(transaction, "tag_summary_#{variant}") %>" class="inline-flex min-w-0 max-w-full" <%= "data-tag-empty" if tags.empty? %>>
   <% if tags.empty? %>
     <% if editable && variant.to_sym == :desktop %>
       <%= render DS::Tooltip.new(text: t(".add")) do |tooltip| %>

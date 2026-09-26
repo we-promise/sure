@@ -91,12 +91,16 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
     assert_equal tags.map(&:name), mobile.css("[data-tag-fit-target=full] > span > span").map { |node| node.text.strip }
   end
 
-  test "untagged rows render no mobile tag element" do
+  test "untagged rows keep a hidden, empty mobile target for the first tag" do
     @transaction.update!(tag_ids: [])
 
     html = Nokogiri::HTML.fragment(render_row)
+    mobile = html.at_css("##{dom_id(@transaction, "tag_summary_mobile")}")
 
-    assert_nil html.at_css("##{dom_id(@transaction, "tag_summary_mobile")}")
+    assert mobile, "the toggle stream needs a mobile target to replace"
+    assert mobile.key?("data-tag-empty")
+    assert_nil mobile.at_css("[role=tooltip]"), "no add affordance on touch"
+    assert_includes mobile.ancestors("div").map { |node| node["class"].to_s }.join(" "), "has-[[data-tag-empty]]:hidden"
   end
 
   test "read-only shares get a focusable summary instead of the picker" do
