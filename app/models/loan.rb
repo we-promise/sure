@@ -40,6 +40,11 @@ class Loan < ApplicationRecord
   validates :down_payment, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
   validates :insurance_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  # The form's "None" option submits an empty string, which means no type
+  # recorded (read as decreasing). Stored as NULL: the column's check
+  # constraint admits NULL but not '', so allowing blank here would only move
+  # the rejection from a validation error to a database error.
+  normalizes :insurance_rate_type, with: ->(value) { value.presence }
   validates :insurance_rate_type, inclusion: { in: Loan::Insurance::RATE_TYPES }, allow_nil: true
 
   # How much was borrowed for every unit the borrower put in. Nil without a
@@ -336,7 +341,15 @@ class Loan < ApplicationRecord
     schedule = amortization_schedule
     return nil if schedule.nil?
 
-    payment_number ||= months_elapsed + 1
+    if payment_number.nil?
+      # A finished loan is on no instalment; the clamp below would otherwise
+      # answer with the final, already-paid one as though it were current.
+      elapsed = months_elapsed
+      return nil if elapsed >= term_months
+
+      payment_number = elapsed + 1
+    end
+
     payment = schedule.payments[payment_number.clamp(1, schedule.payments.size) - 1]
     return nil if payment.nil?
 

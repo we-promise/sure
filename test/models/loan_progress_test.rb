@@ -85,6 +85,21 @@ class LoanProgressTest < ActiveSupport::TestCase
     end
   end
 
+  # A finished loan is on no instalment. Defaulting to months_elapsed + 1 asks
+  # for payment 13 of 12, and the clamp below would answer with the final
+  # payment, presenting a paid instalment as the one the borrower is on.
+  test "a finished loan has no current instalment to break down" do
+    travel_to Date.new(2027, 2, 15) do
+      assert @loan.finished?, "precondition: past the twelfth payment"
+      assert_nil @loan.payment_breakdown
+    end
+
+    travel_to Date.new(2026, 12, 20) do
+      assert_not @loan.finished?, "the month before, the loan is still running"
+      assert_equal 12, @loan.payment_breakdown[:number], "and is on its last payment"
+    end
+  end
+
   test "a payment number past the end clamps to the last instalment" do
     assert_equal 12, @loan.payment_breakdown(payment_number: 99)[:number]
   end

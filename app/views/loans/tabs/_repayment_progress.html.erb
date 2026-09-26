@@ -27,7 +27,7 @@
               <p class="text-3xl font-medium text-primary privacy-sensitive">
                 <%= number_to_percentage(loan.balance_paid_ratio * 100, precision: 0) %>
               </p>
-              <p class="text-sm text-secondary"><%= t(".of_original", amount: format_money(loan.original_balance)) %></p>
+              <p class="text-sm text-secondary privacy-sensitive"><%= t(".of_original", amount: format_money(loan.original_balance)) %></p>
             </div>
           </div>
         </div>

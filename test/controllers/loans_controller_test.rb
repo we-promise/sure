@@ -16,7 +16,10 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     get account_path(@account)
     assert_response :success
     assert_no_match(/Leverage/, response.body, "nothing to compute a ratio from yet")
-    assert_no_match(/Insurance/, response.body, "and no premium recorded")
+    # The summary card's own title, not the word: the repayment breakdown below
+    # the cards has an "Insurance" row of its own, which would satisfy a match
+    # on the page body with the card deleted.
+    assert_select "h4", text: "Insurance", count: 0, message: "and no premium recorded"
 
     @account.loan.update!(
       down_payment: 100_000, interest_rate: 5, term_months: 120, rate_type: "fixed",
@@ -29,9 +32,55 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Leverage/, response.body)
     assert_match(/5\.0x/, response.body, "500,000 borrowed against 100,000 put in")
     assert_match(/Moderate/, response.body, "and the band that ratio sits in")
-    assert_match(/Insurance/, response.body)
+    assert_select "h4", text: "Insurance", count: 1, message: "the insurance summary card"
     assert_match(/Total Cost/, response.body)
     assert_select "[data-controller='donut-chart']", count: 1, message: "the repayment ring"
+    # The amount borrowed is money like the ratio beside it, so Privacy Mode
+    # must blur it too.
+    assert_select "[data-controller='donut-chart'] p.privacy-sensitive", text: /of \$500,000/, count: 1
+  end
+
+  # The form renders these fields, so a save must keep them. Measured against
+  # the loan's own state before the request: all three start blank.
+  test "updates the down payment and insurance terms from the form" do
+    loan = @account.loan
+    assert_nil loan.down_payment
+    assert_nil loan.insurance_rate
+    assert_nil loan.insurance_rate_type
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_type: "Loan",
+        accountable_attributes: {
+          id: @account.accountable_id,
+          down_payment: "100000", insurance_rate: "0.36", insurance_rate_type: "level_term"
+        }
+      }
+    }
+
+    assert_redirected_to @account
+    loan.reload
+    assert_equal BigDecimal("100000"), loan.down_payment
+    assert_equal BigDecimal("0.36"), loan.insurance_rate
+    assert_equal "level_term", loan.insurance_rate_type
+  end
+
+  # The type select's blank option is the form's "None": no type recorded, read
+  # as decreasing. It submits an empty string, which must clear the type rather
+  # than fail validation (and the column's check constraint, which admits NULL
+  # but not '').
+  test "the insurance type's blank option clears a recorded type" do
+    @account.loan.update!(insurance_rate: 0.36, insurance_rate_type: "level_term")
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_type: "Loan",
+        accountable_attributes: { id: @account.accountable_id, insurance_rate_type: "" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil @account.loan.reload.insurance_rate_type
   end
 
   test "creates with loan details" do
