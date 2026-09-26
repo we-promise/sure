@@ -6,6 +6,11 @@ class Account::Syncer
   end
 
   def perform_sync(sync)
+    # Preload account_providers once so repeated calls to linked?, provider, providers,
+    # linked_to?, etc. throughout the sync use the in-memory collection and don't
+    # each fire a separate SELECT against account_providers (N+1).
+    account.account_providers.load
+
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
     import_market_data
     materialize_balances(window_start_date: sync.window_start_date)
