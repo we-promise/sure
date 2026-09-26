@@ -135,6 +135,7 @@ class IbkrItemsController < ApplicationController
     end
 
     @linkable_accounts = Current.family.accounts
+      .writable_by(Current.user)
       .visible
       .where(accountable_type: "Investment")
       .left_joins(:account_providers)

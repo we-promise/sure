@@ -101,6 +101,7 @@ class SnaptradeItemsController < ApplicationController
 
     # Existing unlinked, visible investment/crypto accounts that could be linked instead of creating duplicates
     @linkable_accounts = Current.family.accounts
+      .writable_by(Current.user)
       .visible
       .where(accountable_type: %w[Investment Crypto])
       .left_joins(:account_providers)
