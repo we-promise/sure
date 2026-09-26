@@ -179,6 +179,26 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "qr-pending", item.reload.pending_login_state
   end
 
+  test "QR polling persists pending state from retryable provider failure" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic QR Connection",
+      currency: "EUR",
+      status: :requires_update
+    )
+    item.update!(pending_login_state: "qr-pending")
+    provider = mock
+    error = Provider::TradeRepublicClient::TransientProviderError.new("Trade Republic login failed")
+    error.define_singleton_method(:pending_login_b64) { "qr-pending-with-process" }
+    provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").raises(error)
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :service_unavailable
+    assert_equal true, JSON.parse(response.body).fetch("retryable")
+    assert_equal "qr-pending-with-process", item.reload.pending_login_state
+  end
+
   test "successful web login renders a dialog button that closes the modal" do
     item = trade_republic_items(:requires_update_item)
     item.update!(pending_login_state: "pending-login")
