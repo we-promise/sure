@@ -46,16 +46,16 @@ uk:
           many: "%{count} невідомих операцій"
           other: "%{count} невідомі операції"
         pending_trade_details:
-          one: "%{count} інвестиційна операція очікує деталей"
-          few: "%{count} інвестиційні операції очікують деталей"
-          many: "%{count} інвестиційних операцій очікують деталей"
-          other: "%{count} інвестиційної операції очікують деталей"
+          one: '%{count} інвестиційна операція очікує деталей'
+          few: '%{count} інвестиційні операції очікують деталей'
+          many: '%{count} інвестиційних операцій очікують деталей'
+          other: '%{count} інвестиційної операції очікують деталей'
         expenses:
           one: "%{count} витрата за останні 30 днів (%{amount})"
           few: "%{count} витрати за останні 30 днів (%{amount})"
           many: "%{count} витрат за останні 30 днів (%{amount})"
           other: "%{count} витрати за останні 30 днів (%{amount})"
-        reconciliation: "%{matched}/%{total} балансів рахунків узгоджено"
+        reconciliation: "%{matched}/%{total} балансів рахунків звірено"
         sync_history: Останні синхронізації
         sync_status:
           completed: Завершено
@@ -63,17 +63,42 @@ uk:
           pending: Очікує
           syncing: Синхронізується
           stale: Застаріло
+      deletion_in_progress: Триває видалення
+      never_synced: Ще не синхронізовано.
     setup_accounts:
       page_title: "Налаштувати рахунок Trade Republic"
       subtitle: "Пов’яжіть інвестиційний рахунок Trade Republic."
       available_accounts:
         account_type_investment: "Інвестиційний портфель"
         account_type_cash: "Грошовий рахунок"
+        title: Доступний рахунок
+        account_summary: '%{account_type} • Баланс: %{balance}'
+        account_id: 'ID рахунку: %{account_id}'
       buttons:
         refresh: "Оновити"
         cancel: "Скасувати"
         link: "Пов’язати"
         done: "Готово"
+        back_to_settings: Назад до налаштувань
+        create_selected_accounts: Створити вибрані рахунки
+      dialog_title: Налаштуйте свій рахунок Trade Republic
+      info_box:
+        title: Імпорт із Trade Republic
+        items:
+          item_1: Поточні позиції з цінами та кількістю
+          item_2: Виконані угоди (купівлі та продажі)
+          item_3: Поповнення, виведення коштів і виплати відсотків
+      status:
+        fetching_accounts: Отримання рахунку з Trade Republic...
+        no_accounts_found_title: Рахунок не знайдено.
+        no_accounts_found_description: Sure не вдалося знайти рахунок Trade Republic. Перевірте, чи ваш сеанс ще дійсний.
+      link_existing:
+        description: Або пов’яжіть знайдений рахунок Trade Republic з наявним ручним інвестиційним рахунком.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Виберіть рахунок...
+      linked_accounts:
+        title: Уже пов’язано
+        linked_to_html: 'Пов’язано з: %{account}'
     sync:
       errors:
         phone_number_missing: "Відсутній номер телефону Trade Republic."
@@ -83,21 +108,39 @@ uk:
         importing_account: "Імпорт рахунку Trade Republic..."
         processing_activity: "Обробка позицій і операцій..."
         calculating_balances: "Обчислення балансів..."
+        checking_configuration: Перевірка конфігурації рахунку...
+        accounts_need_setup:
+          one: '%{count} рахунок Trade Republic потребує налаштування...'
+          few: '%{count} рахунки Trade Republic потребують налаштування...'
+          many: '%{count} рахунків Trade Republic потребують налаштування...'
+          other: '%{count} рахунку Trade Republic потребують налаштування...'
     repair:
       scheduled: "Відновлення даних Trade Republic заплановано."
     select_existing_account:
       title: "Пов’язати рахунок Trade Republic"
       link: "Пов’язати"
       cancel: "Скасувати"
+      no_accounts_available: Непов’язаних рахунків Trade Republic ще немає.
+      run_sync_hint: Завершіть вхід і запустіть синхронізацію в Налаштування > Постачальники.
+      wait_for_sync: Дочекайтеся завершення синхронізації, яка шукає рахунки.
+      balance: Баланс
     initiate_login:
       verification_required: "Вхід розпочато. Підтвердьте через %{method}, потім натисніть Підтвердити вхід."
+      not_configured: Trade Republic не налаштовано.
+      pin_required: Введіть PIN-код Trade Republic, щоб розпочати новий вхід.
     complete_login:
       approval_pending: "Ще не підтверджено. Схваліть вхід у застосунку Trade Republic і спробуйте ще раз."
       success: "Trade Republic успішно підключено."
       login_expired: "Запит на вхід завершився. Почніть знову."
+      no_pending_login: Немає незавершеного входу. Спочатку розпочніть новий вхід.
+      still_pending: Ще не підтверджено. Схваліть вхід у застосунку Trade Republic і спробуйте ще раз.
     link_existing_account:
       not_found: "Рахунок або конфігурацію Trade Republic не знайдено."
       success: "Рахунок успішно пов’язано з Trade Republic."
+      only_manual_investment: З Trade Republic можна пов’язати лише ручні інвестиційні рахунки.
+      already_linked: Цей рахунок Trade Republic уже пов’язано.
+      processing_failed: Рахунок пов’язано, але не вдалося виконати початкову обробку його даних. Синхронізацію заплановано; якщо дані залишаться неповними, перевірте журнал налагодження.
+      failed: Не вдалося пов’язати рахунок Trade Republic.
     complete_account_setup:
       success:
         one: "Успішно створено %{count} рахунок Trade Republic."
@@ -110,6 +153,7 @@ uk:
         few: "Не вдалося повністю налаштувати %{count} вибрані рахунки Trade Republic. Перевірте журнал налагодження та повторіть спробу."
         many: "Не вдалося повністю налаштувати %{count} вибраних рахунків Trade Republic. Перевірте журнал налагодження та повторіть спробу."
         other: "Не вдалося повністю налаштувати %{count} вибраного рахунку Trade Republic. Перевірте журнал налагодження та повторіть спробу."
+      none_selected: Не вибрано жодного рахунку.
     activities:
       labels:
         contribution: Поповнення
@@ -122,3 +166,31 @@ uk:
         card_refund: Повернення на картку
         tax_refund: Повернення податку
         round_up: Round up
+    defaults:
+      name: Trade Republic
+    sync_status:
+      no_accounts: Рахунок Trade Republic ще не знайдено
+      all_linked:
+        one: '%{count} рахунок пов’язано'
+        few: '%{count} рахунки пов’язано'
+        many: '%{count} рахунків пов’язано'
+        other: '%{count} рахунку пов’язано'
+      partial: '%{linked} пов’язано, %{unlinked} потребує налаштування'
+    create:
+      success: Trade Republic збережено. Підтвердьте вхід у застосунку Trade Republic, щоб завершити підключення.
+    update:
+      success: Конфігурацію Trade Republic успішно оновлено.
+      pin_required: Введіть PIN-код Trade Republic для повторної автентифікації.
+    destroy:
+      success: Заплановано видалення з’єднання Trade Republic.
+      unlink_failed: Не вдалося повністю відключити Trade Republic. З’єднання збережено, щоб можна було безпечно повторити спробу.
+    select_accounts:
+      not_configured: Trade Republic не налаштовано.
+    initiate_qr_login:
+      not_configured: Trade Republic не налаштовано.
+    poll_login:
+      no_pending_login: Немає незавершеного входу. Спочатку розпочніть новий вхід.
+      login_expired: Термін дії запиту на вхід минув. Почніть знову.
+    poll_qr_login:
+      no_pending_login: Немає незавершеного входу за QR-кодом.
+      success: Trade Republic успішно підключено.

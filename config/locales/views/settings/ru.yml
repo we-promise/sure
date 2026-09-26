@@ -8,16 +8,38 @@ ru:
           subtitle: Основные инструкции, определяющие поведение AI ассистента во всех
             чатах
           title: Основной системный запрос
+          label: Системный запрос чата
         merchant_detector:
           subtitle: AI идентифицирует и обогащает данные операций информацией о продавцах
           title: Определитель продавцов
         openai_label: OpenAI
-        page_title: AI Запросы
+        page_title: Запросы ИИ
         prompt_instructions: Инструкции по запросу
         transaction_categorizer:
           subtitle: AI автоматически категоризирует ваши операции на основе заданных
             категорий
           title: Категоризатор операций
+        save: Сохранить запросы
+        save_confirm:
+          title: Сохранить собственные запросы ИИ?
+          body: Собственные запросы заменяют встроенные системные инструкции и защитные ограничения (например, запрет на финансовые консультации) для вашей семьи.
+          dont_show_again: Больше не показывать это предупреждение
+          cancel: Отмена
+          confirm: Подтвердить
+      prompt_field:
+        provider_label: Провайдер
+        prompt_label: Запрос
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Сбросить к стандартному
+        reset_confirm_title: Вернуть стандартный запрос?
+        reset_confirm_body: Ваш собственный запрос будет удалён, а встроенные инструкции по умолчанию — восстановлены.
+        status_custom: Используется ваш собственный запрос
+        status_default: Используется встроенный запрос по умолчанию
+        format_risk: 'В вашем запросе для %{provider} нет примера {"%{key}": ...}. Каждое обращение к модели по-прежнему требует этот формат, поэтому разбор обычно работает, но если ваш запрос требует другой формат вывода, разбор сломается.'
+      update:
+        success: Запросы ИИ обновлены
+        multiple_errors: Несколько запросов слишком длинные (максимум %{count} символов)
     appearances:
       show:
         dashboard_subtitle: Настройте отображение панели
@@ -42,6 +64,8 @@ ru:
         theme_title: Тема
         transactions_subtitle: Настройте отображение операций
         transactions_title: Операции
+        dashboard_account_groups_title: Развёрнуты по умолчанию
+        dashboard_account_groups_description: Эти разделы счетов будут изначально развёрнуты на панели и в боковой панели счетов. Вы по-прежнему можете свернуть их вручную в любой момент.
     debugs:
       show:
         context:
@@ -92,7 +116,7 @@ ru:
         col_model: Модель
         col_operation: Операция
         col_tokens: Токены
-        completion: завершение
+        completion: ответ
         cost_by_model: Стоимость по моделям
         cost_by_operation: Стоимость по операциям
         cost_estimates_description: 'Стоимость оценивается на основе опубликованных цен поставщиков, включая цены OpenAI на июль 2026 года. Фактические затраты могут отличаться. Цены указаны за 1 миллион токенов и варьируются в зависимости от модели. Пользовательские или самохостинг-модели будут отображаться как "N/A" и не включаются в общую стоимость.'
@@ -141,7 +165,7 @@ ru:
         manage: Управлять
         not_contributing_emphasis: не вносите вклад
         not_contributing_prefix: В настоящее время вы
-        page_title: Платежи
+        page_title: Оплата
         payment_via_stripe: Оплата через Stripe
         subscription_subtitle: Обновите данные вашей кредитной карты
         subscription_title: Управление взносами
@@ -158,9 +182,8 @@ ru:
         base_currency_label: Базовая валюта
         country: Страна
         currencies_more: "+%{count} ещё"
-        currencies_subtitle: Выберите, какие валюты будут отображаться в денежных
-          полях для вашего %{moniker}
-        currencies_title: "%{moniker} Валюты"
+        currencies_subtitle: Выберите, какие валюты будут отображаться в денежных полях (%{moniker})
+        currencies_title: '%{moniker}: валюты'
         currency: Валюта
         currency_search_placeholder: Поиск валют
         date_format: Формат даты
@@ -196,16 +219,30 @@ ru:
         sharing_default_label: Совместное использование по умолчанию для новых счетов
         sharing_private: Оставить приватным по умолчанию
         sharing_shared: Делитесь со всеми участниками
-        sharing_subtitle: Контролируйте, как счета делятся в вашем %{moniker}
-        sharing_title: "%{moniker} Совместное использование"
+        sharing_subtitle: Управляйте тем, как счета доступны участникам (%{moniker})
+        sharing_title: '%{moniker}: совместный доступ'
         timezone: Часовой пояс
         translations_notice: Обратите внимание, что мы всё ещё работаем над переводами
           на различные языки.
+        budget_title: Бюджет
+        budget_subtitle: Настройте работу ваших бюджетов
+        personal_budgets: Личные бюджеты
+        personal_budgets_hint: Включить отдельные бюджеты для каждого участника семьи.
+        household_budget_enabled: Общий бюджет
+        household_budget_enabled_hint: Вести общий бюджет домохозяйства наряду с личными. Отключите, чтобы использовать только личные бюджеты.
+        budget_sharing_title: Общий доступ к бюджету
+        budget_sharing_subtitle: Разрешите другим участникам просматривать или изменять ваш личный бюджет
+        budget_sharing_no_members: 'Нет других участников, с которыми можно поделиться: %{moniker} состоит только из вас'
+        budget_sharing_permission_label: Доступ для %{name}
+        budget_sharing_permissions:
+          none: Нет доступа
+          read_only: Только просмотр
+          read_write: Может изменять
     profiles:
       destroy:
         cannot_remove_self: Вы не можете удалить себя из аккаунта.
-        member_owns_other_family_data: This member still owns accounts in another
-          household and cannot be removed. Transfer or remove those accounts first.
+        member_owns_other_family_data: Этот участник всё ещё владеет счетами в другом
+          домохозяйстве и не может быть удалён. Сначала передайте или удалите эти счета.
         member_removal_failed: Произошла ошибка при удалении участника.
         member_removed: Участник успешно удалён.
         not_authorized: У вас нет прав для удаления участников.
@@ -241,8 +278,7 @@ ru:
         group_title: Участники группы
         household_form_input_placeholder: Введите название домохозяйства
         household_form_label: Название домохозяйства
-        household_subtitle: Приглашённые могут войти в ваш аккаунт %{moniker} и получить
-          доступ к общим ресурсам.
+        household_subtitle: Приглашённые могут войти в общий аккаунт (%{moniker}) и получить доступ к общим ресурсам.
         household_title: Домохозяйство
         invitation_link: Ссылка на приглашение
         invite_member: Добавить участника
@@ -273,9 +309,9 @@ ru:
       bank_sync:
         lede: Подключите внешние счета, чтобы операции, балансы и активы автоматически
           поступали в Sure.
-        page_title: Синхронизация банка
+        page_title: Синхронизация с банком
       binance_panel:
-        api_key_label: API Ключ
+        api_key_label: API-ключ
         api_key_placeholder: Вставьте ваш API-ключ Binance
         api_secret_label: Секретный ключ API
         api_secret_placeholder: Вставьте ваш секретный ключ API Binance
@@ -304,7 +340,7 @@ ru:
         syncing: Синхронизация...
       clear_filter: Очистить фильтры
       coinbase_panel:
-        api_key_label: API Ключ
+        api_key_label: API-ключ
         api_key_placeholder: Введите ваш API-ключ Coinbase
         api_secret_label: Секретный ключ API
         api_secret_placeholder: Введите ваш секретный ключ API Coinbase
@@ -323,7 +359,7 @@ ru:
       connect: Подключить
       drawer_trust_statement: Доступ только для чтения. Sure никогда не может перемещать
         деньги, а ваши учетные данные хранятся в зашифрованном виде.
-      empty_filter: Поставщики, соответствующие вашему фильтру, не найдены.
+      empty_filter: Провайдеры, соответствующие фильтру, не найдены.
       enable_banking_panel:
         add_connection: Добавить подключение
         application_id_label: ID приложения
@@ -444,7 +480,7 @@ ru:
         update_configuration: Обновить конфигурацию
       kraken_panel:
         add_connection: Добавить подключение Kraken
-        api_key_label: API Ключ
+        api_key_label: API-ключ
         api_key_placeholder: Вставьте ваш API-ключ Kraken
         api_secret_label: Приватный ключ
         api_secret_placeholder: Вставьте ваш приватный ключ Kraken
@@ -464,14 +500,14 @@ ru:
         step1_html: Перейдите на <a href="https://pro.kraken.com/app/settings/api"
           target="_blank" rel="noopener noreferrer" class="underline">настройки API
           Kraken</a>
-        step2: Создайте API-ключ с разрешениями только для запроса средств и закрытых
-          ордеров и торгов.
+        step2: Создайте API-ключ только с разрешениями Query Funds и Query Closed Orders
+          & Trades.
         step3: Вставьте API-ключ и приватный ключ ниже.
         sync: Синхронизировать
         syncing: Синхронизация...
         update_connection: Обновить подключение
       lunchflow_panel:
-        api_key_label: API Ключ
+        api_key_label: API-ключ
         api_key_placeholder_new: Вставьте API-ключ здесь
         api_key_placeholder_update: Введите новый API-ключ для обновления
         base_url_label: Базовый URL (необязательно)
@@ -495,25 +531,25 @@ ru:
         reconsent_required: Требуется повторное согласие
         sync_error: Ошибка синхронизации
       not_authorized: Не авторизован
-      not_found: Поставщик не найден.
+      not_found: Провайдер не найден.
       plaid_eu_panel:
         step_1_html: Откройте %{link} и скопируйте ваш EU Client ID и секретный ключ.
       plaid_panel:
         step_1_html: Откройте %{link} и скопируйте ваш Client ID и секретный ключ.
-        step_2: Выберите среду. Используйте песочницу для тестирования и производство
+        step_2: Выберите среду. Используйте sandbox для тестирования и production
           для реальных счетов.
         step_3: Вставьте ваши учётные данные ниже и подключитесь.
       provider_form:
         save_and_connect: Сохранить и подключить
       recently_synced: Недавно синхронизировано. Попробуйте снова через мгновение.
       search_filters:
-        aria_label: Поиск поставщиков
+        aria_label: Поиск провайдеров
         chips:
           all: Все
           bank: Банки
           crypto: Крипто
           investment: Инвестиции
-        placeholder: Поиск поставщиков
+        placeholder: Поиск провайдеров
       setup_steps:
         eyebrow: Настройка
         need_help: Нужна помощь?
@@ -526,11 +562,11 @@ ru:
         step_3: Затем перейдите в Счета, чтобы связать ваши синхронизированные счета.
       status:
         err: Ошибка
-        'false': Не настроено
+        "off": Не настроено
         ok: Подключено
         warn: Требуется действие
       sync_all: Синхронизировать все
-      sync_all_in_progress: Синхронизация всех подключённых поставщиков…
+      sync_all_in_progress: Синхронизация всех подключённых провайдеров…
       sync_all_recently: Синхронизация уже в процессе. Попробуйте снова через мгновение.
       sync_provider: Синхронизировать сейчас
       sync_provider_in_progress: Синхронизация начата.
@@ -539,12 +575,12 @@ ru:
         akahu: Синхронизация финансовых учреждений Новой Зеландии через Akahu.
         binance: Синхронизируйте ваши спотовые балансы Binance с использованием API-ключа
           только для чтения.
-        brex: Синхронизируйте активность наличных и корпоративных карт Brex с доступом
+        brex: Синхронизируйте операции по счетам Brex Cash и корпоративным картам Brex с доступом
           только для чтения.
-        coinbase: Импортируйте ваши криптоактивы Coinbase и отслеживайте производительность.
+        coinbase: Импортируйте ваши криптоактивы Coinbase и отслеживайте доходность.
         coinstats: Отслеживайте весь ваш криптопортфель через кошельки и биржи.
-        enable_banking: Синхронизируйте европейские банковские счета через PSD2 открытое
-          банковское дело.
+        enable_banking: Синхронизируйте европейские банковские счета через открытый
+          банкинг PSD2.
         ibkr: Синхронизируйте инвестиционные счета Interactive Brokers через Flex
           Query импорт.
         indexa_capital: Отслеживайте ваш автоматизированный инвестиционный портфель
@@ -560,6 +596,15 @@ ru:
         simplefin: Подключите банковские счета США через открытый протокол SimpleFIN.
         snaptrade: Подключите брокерские счета через сеть агрегации SnapTrade.
         sophtron: Подключите банки и коммунальные услуги США и Канады.
+        redbark: Синхронизируйте австралийские банковские счета через открытый банкинг Redbark.
+        monobank: Синхронизируйте карты и «банки» Monobank из Украины с помощью персонального API-токена.
+        fio: Синхронизируйте счёт Fio banka с помощью API-токена только для чтения.
+        wise: Автоматически синхронизируйте мультивалютные балансы Wise и международные переводы.
+        coinspot: Синхронизируйте балансы CoinSpot, стоимость в AUD, переводы, пополнения, выводы и историю ордеров с помощью API-ключа только для чтения.
+        onchain_wallet: Отслеживайте некастодиальные кошельки Bitcoin, EVM и Solana по их публичным адресам.
+        trading212: Синхронизируйте инвестиционный портфель Trading 212 с помощью API-ключа только для чтения.
+        trade_republic: Синхронизируйте инвестиционный счёт Trade Republic через защищённый веб-вход только для чтения.
+        questrade: Синхронизируйте инвестиционные счета Questrade напрямую через Questrade API.
       up_panel:
         step_1_html: Перейдите по ссылке %{link} и создайте персональный токен доступа.
         step_2: Скопируйте персональный токен доступа.
@@ -567,6 +612,137 @@ ru:
       update:
         no_changes: Изменений не было
         updated_successfully: Настройки поставщика успешно обновлены
+      drawer_trust_statement_encryption_unconfigured: Доступ только для чтения. Sure никогда не может перемещать деньги. Настройте явные ключи шифрования, прежде чем хранить учётные данные провайдеров в продакшене.
+      provider_setup_encryption_warning:
+        title: Отсутствуют ключи шифрования
+        message: В этой самостоятельно размещённой установке не заданы явные ключи шифрования Active Record. Настройте primary_key, deterministic_key и key_derivation_salt, прежде чем сохранять учётные данные провайдеров в продакшене.
+      coinspot_panel:
+        step1_html: Перейдите в <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">настройки API CoinSpot</a>
+        step2: Создайте API-ключ с доступом только для чтения к балансам и истории.
+        step3: Вставьте API-ключ и секретный ключ ниже.
+        read_only_title: Только синхронизация биржи для чтения
+        read_only_body: Не предоставляйте разрешения на отправку, вывод средств, торговлю или переводы. Sure импортирует только балансы, стоимость в AUD, переводы, пополнения, выводы и историю исполненных ордеров.
+        default_connection_name: CoinSpot
+        add_connection: Добавить подключение CoinSpot
+        update_connection: Обновить подключение
+        connection_name_label: Название подключения
+        connection_name_placeholder: Основной CoinSpot
+        api_key_label: API-ключ
+        api_key_placeholder: Вставьте ваш API-ключ CoinSpot
+        keep_api_key_placeholder: Оставьте пустым, чтобы сохранить текущий API-ключ
+        api_secret_label: Секретный ключ API
+        api_secret_placeholder: Вставьте ваш секретный ключ API CoinSpot
+        keep_api_secret_placeholder: Оставьте пустым, чтобы сохранить текущий секретный ключ API
+        setup_accounts: Настроить счёт
+        syncing: Синхронизация...
+        sync: Синхронизировать
+        disconnect: Отключить
+        disconnect_confirm: Вы уверены, что хотите отключить %{name}?
+      onchain_wallet_panel:
+        add_wallet: Добавить кошелёк
+        advanced: Дополнительно
+        disconnect_all: Отключить все кошельки
+        disconnect_all_confirm: Все отслеживаемые адреса и их счета будут удалены. Продолжить?
+        etherscan_api_key_label: API-ключ Etherscan (необязательно)
+        etherscan_api_key_placeholder: Вставьте API-ключ Etherscan
+        etherscan_hint: Данные Ethereum читаются и без ключа. Ключ Etherscan лишь повышает лимит запросов для Ethereum.
+        keep_etherscan_api_key: Оставьте пустым, чтобы сохранить текущий ключ
+        manage_wallets: Управление кошельками
+        keyless_body: Sure только читает публичные данные блокчейна. Ключи, сид-фразы и подписи не используются, и ничего не может быть потрачено.
+        keyless_title: Только чтение, ключи не нужны
+        save: Сохранить
+        sync_start_date_hint: Переводы до этой даты игнорируются. Оставьте пустым, чтобы импортировать всё, что показывает обозреватель блокчейна.
+        sync_start_date_label: Игнорировать переводы до
+      monobank_panel:
+        step_1_html: Перейдите на %{link}, войдите через приложение Monobank и создайте персональный токен.
+        step_2: Скопируйте токен — он показывается только один раз.
+        step_3: Вставьте токен ниже, сохраните и привяжите карты и «банки», которые хотите отслеживать.
+      fio_panel:
+        step_1_html: Войдите в интернет-банк %{link} и откройте Настройки → API.
+        step_2: Создайте токен с доступом только для чтения («Sledování účtu»). Для этого требуется строгая авторизация; токен действует до 180 дней.
+        step_3: Вставьте токен ниже и сохраните. Один токен даёт доступ к одному счёту, поэтому добавьте отдельное подключение для каждого счёта Fio.
+      trade_republic_panel:
+        encryption_warning:
+          title: Шифрование не настроено
+          message: Учётные данные и данные сессии Trade Republic нельзя хранить безопасно, пока не настроено шифрование Active Record.
+        steps:
+          step_1: Введите номер телефона и PIN-код, которые вы используете в приложении Trade Republic, затем сохраните.
+          step_2: Введите код из приложения-аутентификатора, когда он будет запрошен.
+          step_3: Подтвердите вход в приложении Trade Republic, когда появится запрос.
+        phone_number_label: Номер телефона
+        phone_number_placeholder_new: +49 170 1234567
+        phone_number_placeholder_existing: Оставьте пустым, чтобы сохранить текущий номер телефона
+        pin_label: PIN-код
+        pin_placeholder_new: PIN-код приложения Trade Republic
+        pin_placeholder_existing: Оставьте пустым, чтобы сохранить текущий PIN-код
+        currency_label: Валюта счёта
+        connect: Войти
+        confirm_login: Проверить вход
+        complete_login: Продолжить
+        authenticator_code_label: Код аутентификатора (если запрошен)
+        authenticator_code_placeholder: 6-значный код
+        push_login_notice: Подтвердите вход в приложении Trade Republic. Sure проверяет статус автоматически в фоновом режиме. Вы также можете проверить его сами.
+        check_login_status: Проверить статус сейчас
+        authenticator_code_notice: Введите код из приложения-аутентификатора.
+        approval_pending: Вход начат. Подтвердите его в приложении Trade Republic; Sure проверяет статус автоматически.
+        awaiting_confirmation: Ожидается подтверждение в приложении Trade Republic.
+        awaiting_authenticator_code: Требуется код аутентификатора.
+        login_expired: Срок действия запроса на подтверждение истёк.
+        restart_login: Начать вход заново
+        connection_success:
+          title: Trade Republic успешно подключён
+          message: Подключение Trade Republic готово.
+          description: Sure синхронизирует ваши данные Trade Republic в фоновом режиме.
+          close: Готово
+        qr_login: Войти по QR-коду
+        qr_cancel: Отменить вход по QR-коду
+        qr_back_to_credentials: Вернуться к номеру телефона и PIN-коду
+        qr_loading: Подготовка QR-кода…
+        qr_instruction: Отсканируйте QR-код в приложении Trade Republic и подтвердите вход.
+        qr_success: Вход подтверждён. Sure обновляет страницу провайдера.
+        qr_error: Не удалось начать вход по QR-коду. Пожалуйста, попробуйте снова.
+        save_configuration: Сохранить и войти
+        update_configuration: Обновить конфигурацию
+        sync: Синхронизировать
+        disconnect: Отключить Trade Republic
+        disconnect_confirm: Отключить Trade Republic? Ваши синхронизированные счета станут ручными.
+        status_configured_prefix: Подключено. Перейдите на
+        accounts_tab: Счета
+        setup_accounts: Настроить счета
+        accounts_discovered:
+          one: Обнаружен %{count} счёт Trade Republic.
+          few: Обнаружено %{count} счёта Trade Republic.
+          many: Обнаружено %{count} счетов Trade Republic.
+          other: Обнаружено %{count} счёта Trade Republic.
+        status_configured_suffix: вкладку, чтобы управлять обнаруженными счетами.
+        not_configured: Не настроено.
+      trading212_panel:
+        steps:
+          step_1: Откройте Trading 212 → Settings → API (в веб-версии или мобильном приложении).
+          step_2: Сгенерируйте новый API-ключ — Trading 212 покажет API ID и Secret Key.
+          step_3: Вставьте оба значения ниже, выберите среду и валюту счёта, затем сохраните.
+        api_key_label: API ID
+        api_key_placeholder_new: Вставьте ваш API ID Trading 212
+        api_key_placeholder_existing: Оставьте пустым, чтобы сохранить текущий API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Вставьте ваш Secret Key Trading 212
+        api_secret_placeholder_existing: Оставьте пустым, чтобы сохранить текущий Secret Key
+        environment_label: Среда
+        environment_live: Реальный счёт
+        environment_demo: Демо-счёт
+        currency_label: Валюта счёта
+        save_configuration: Сохранить конфигурацию
+        update_configuration: Обновить конфигурацию
+        sync: Синхронизировать
+        syncing: Синхронизация...
+        disconnect: Отключить счёт Trading 212
+        disconnect_confirm: Отключить Trading 212?
+        default_account_name: Счёт Trading 212
+        add_account: Добавить ещё один счёт
+        status_configured_prefix: Настроено. Перейдите на
+        accounts_tab: Счета
+        status_configured_suffix: вкладку, чтобы управлять обнаруженными счетами.
+        not_configured: Не настроено.
     securities:
       show:
         encryption_warning:
@@ -599,11 +775,11 @@ ru:
     settings_nav:
       accounts_label: Счета
       advanced_section_title: Расширенные
-      ai_prompts_label: AI Запросы
-      api_key_label: API Ключ
-      api_keys_label: API Ключ
+      ai_prompts_label: Запросы ИИ
+      api_key_label: API-ключи
+      api_keys_label: API-ключи
       appearance_label: Внешний вид
-      bank_sync_label: Синхронизация банка
+      bank_sync_label: Синхронизация с банком
       categories_label: Категории
       debug_label: Отладка
       exports_label: Экспорт
@@ -616,10 +792,10 @@ ru:
       mcp_label: MCP
       merchants_label: Продавцы
       other_section_title: Ещё
-      payment_label: Платеж
+      payment_label: Оплата
       preferences_label: Предпочтения
       profile_label: Информация о профиле
-      providers_label: Поставщики
+      providers_label: Провайдеры
       recurring_transactions_label: Регулярные
       rules_label: Правила
       security_label: Безопасность
@@ -630,6 +806,8 @@ ru:
       transactions_section_title: Операции
       users_label: Пользователи
       whats_new_label: Что нового
+      background_jobs_label: Фоновые задачи
+      system_health_label: Состояние системы
     settings_nav_link_large:
       next: Далее
       previous: Назад
@@ -638,6 +816,52 @@ ru:
       change: Изменить фото
       choose: Загрузить фото
       choose_label: "(необязательно)"
+    background_jobs:
+      show:
+        page_title: Фоновые задачи
+        title: Состояние обработчиков
+        subtitle: 'Текущее состояние Sidekiq: процессы-обработчики, длина очередей и наборы retry/dead.'
+        redis_unreachable: Состояние Sidekiq недоступно (Redis не отвечает). Активность задач неизвестна, поэтому действия отключены.
+        operations_title: Выполняющиеся операции
+        operations_subtitle: Синхронизации, импорты и экспорты всех семей, ещё не достигшие конечного статуса. Операции, простаивающие более 30 минут без видимой задачи, считаются потерянными и могут быть отмечены как таковые.
+        empty: Нет выполняющихся операций.
+        missing_value: '-'
+        stats:
+          workers: Обработчики
+          busy: Заняты
+          enqueued: В очереди
+          retries: Повторы
+          scheduled: Запланированы
+          dead: Сбойные
+          queue_label: '%{name}: %{size} · задержка %{latency} с'
+        table:
+          type: Операция
+          family: Семья
+          status: Статус
+          last_activity: Последняя активность
+          liveness: Состояние задачи
+          action: Действие
+      operation:
+        ago: '%{time} назад'
+        sync_label: Синхронизация · %{type}
+        running: Выполняется
+        queued: В очереди
+        recent: Недавно активна
+        unknown: Неизвестно
+        stuck: Зависла — вероятно, потеряна
+        confirm: Отметить эту операцию как потерянную? Запись будет переведена в конечный статус, чтобы её можно было повторить. Сами данные не затрагиваются.
+        missing_value: '-'
+        actions:
+          mark_stale: Отметить устаревшей
+          mark_failed: Отметить неудачной
+          release_claim: Снять блокировку
+      cancel:
+        cancelled: '%{type}: отмечено как потерянное.'
+        not_cancellable: Эту операцию сейчас нельзя изменить — её задача может ещё стоять в очереди или выполняться. Повторите попытку, когда она будет простаивать 30 минут.
+        cancelled_error: Отмечено администратором как неудачное — фоновая задача считается потерянной.
+    budget_shares:
+      update:
+        success: Настройки общего доступа к бюджету обновлены
   views:
     settings:
       payments:

@@ -18,12 +18,12 @@ uk:
     setup_required:
       title: Потрібне налаштування Mercury
       api_token_not_configured: Токен API не налаштовано
-      api_token_description: Перш ніж ви зможете пов'язати облікові записи Mercury, вам потрібно налаштувати свій токен API Mercury.
+      api_token_description: Перш ніж ви зможете пов'язати рахунки Mercury, вам потрібно налаштувати свій токен API Mercury.
       setup_steps_title: "Кроки налаштування:"
       setup_step_1_html: "Перейдіть до <strong>Налаштування > Постачальники</strong>"
       setup_step_2_html: "Знайдіть розділ <strong>Mercury</strong>"
       setup_step_3: Введіть свій токен API Mercury
-      setup_step_4: Поверніться сюди, щоб пов'язати свої облікові записи
+      setup_step_4: Поверніться сюди, щоб пов'язати свої рахунки
       go_to_provider_settings: Перейти до налаштувань постачальника
     create:
       success: З'єднання Mercury успішно створено
@@ -32,35 +32,41 @@ uk:
     index:
       title: З'єднання Mercury
     loading:
-      loading_message: Завантаження облікових записів Mercury...
+      loading_message: Завантаження рахунків Mercury...
       loading_title: Завантаження
     link_accounts:
       all_already_linked:
-        one: "Вибраний обліковий запис (%{names}) вже пов'язано"
-        other: "Усі %{count} вибраних облікових записів вже пов'язано: %{names}"
+        one: "Вибраний рахунок (%{names}) вже пов'язано"
+        other: "Усі %{count} вибраних рахунків вже пов'язано: %{names}"
+        few: 'Усі %{count} вибрані рахунки вже пов''язано: %{names}'
+        many: 'Усі %{count} вибраних рахунків вже пов''язано: %{names}'
       api_error: "Помилка API: %{message}"
       invalid_account_names:
-        one: "Неможливо пов'язати обліковий запис з порожньою назвою"
-        other: "Неможливо пов'язати %{count} облікових записів з порожніми назвами"
-      link_failed: Не вдалося пов'язати облікові записи
-      no_accounts_selected: Будь ласка, виберіть принаймні один обліковий запис
+        one: "Неможливо пов'язати рахунок з порожньою назвою"
+        other: "Неможливо пов'язати %{count} рахунків з порожніми назвами"
+        few: Неможливо пов'язати %{count} рахунки з порожніми назвами
+        many: Неможливо пов'язати %{count} рахунків з порожніми назвами
+      link_failed: Не вдалося пов'язати рахунки
+      no_accounts_selected: Будь ласка, виберіть принаймні один рахунок
       no_api_token: Токен API Mercury не знайдено. Будь ласка, налаштуйте його в налаштуваннях постачальника.
-      partial_invalid: "Успішно пов'язано %{created_count} обліковий(і) запис(и), %{already_linked_count} вже було пов'язано, %{invalid_count} обліковий(і) запис(и) мав(ли) недійсні назви"
-      partial_success: "Успішно пов'язано %{created_count} обліковий(і) запис(и). %{already_linked_count} обліковий(і) запис(и) вже було пов'язано: %{already_linked_names}"
-      select_connection: Виберіть з'єднання Mercury перед пов'язуванням облікових записів.
+      partial_invalid: "Прив'язано рахунків: %{created_count}; уже були прив'язані: %{already_linked_count}; з недійсними назвами: %{invalid_count}"
+      partial_success: "Прив'язано рахунків: %{created_count}. Уже були прив'язані (%{already_linked_count}): %{already_linked_names}"
+      select_connection: Виберіть з'єднання Mercury перед пов'язуванням рахунків.
       success:
-        one: "Успішно пов'язано %{count} обліковий запис"
-        other: "Успішно пов'язано %{count} облікових записів"
+        one: "Успішно пов'язано %{count} рахунок"
+        other: "Успішно пов'язано %{count} рахунків"
+        few: Успішно пов'язано %{count} рахунки
+        many: Успішно пов'язано %{count} рахунків
     mercury_item:
-      accounts_need_setup: Облікові записи потребують налаштування
+      accounts_need_setup: Рахунки потребують налаштування
       delete: Видалити з'єднання
       deletion_in_progress: видалення триває...
       error: Помилка
-      no_accounts_description: Це з'єднання ще не має пов'язаних облікових записів.
-      no_accounts_title: Немає облікових записів
-      setup_action: Налаштувати нові облікові записи
-      setup_description: "%{linked} з %{total} облікових записів пов'язано. Виберіть типи облікових записів для ваших щойно імпортованих облікових записів Mercury."
-      setup_needed: Нові облікові записи готові до налаштування
+      no_accounts_description: Це з'єднання ще не має пов'язаних рахунків.
+      no_accounts_title: Немає рахунків
+      setup_action: Налаштувати нові рахунки
+      setup_description: "%{linked} з %{total} рахунків пов'язано. Виберіть типи рахунків для ваших щойно імпортованих рахунків Mercury."
+      setup_needed: Нові рахунки готові до налаштування
       status: "Синхронізовано %{timestamp} тому"
       status_never: Ніколи не синхронізовано
       status_with_summary: "Остання синхронізація %{timestamp} тому - %{summary}"
@@ -83,7 +89,7 @@ uk:
         whitelist_ip_html: "<strong>Важливо:</strong> Додайте IP-адресу вашого сервера до білого списку токена"
       keep_token_placeholder: Залиште порожнім, щоб зберегти поточний токен
       sandbox_note_html: "Використовуйте окреме іменоване з'єднання для кожного логіна/токена API Mercury, який ви хочете синхронізувати. Для тестування в пісочниці використовуйте <code>https://api-sandbox.mercury.com/api/v1</code> як базову URL-адресу. Mercury вимагає білого списку IP - переконайтеся, що ви додали свій IP в панелі керування Mercury."
-      setup_accounts: Налаштувати облікові записи
+      setup_accounts: Налаштувати рахунки
       setup_title: "Інструкції з налаштування:"
       sync: Синхронізувати
       token_label: Токен
@@ -95,53 +101,53 @@ uk:
       description: "Підключитися за допомогою %{name}"
       name: "Mercury - %{name}"
     select_accounts:
-      accounts_selected: вибрано облікових записів
+      accounts_selected: вибрано рахунків
       api_error: "Помилка API: %{message}"
       cancel: Скасувати
-      configure_name_in_mercury: Неможливо імпортувати - будь ласка, налаштуйте назву облікового запису в Mercury
-      description: Виберіть облікові записи, які ви хочете пов'язати зі своїм обліковим записом %{product_name}.
-      link_accounts: Пов'язати вибрані облікові записи
-      no_accounts_found: Облікових записів не знайдено. Перевірте конфігурацію вашого токена API.
+      configure_name_in_mercury: Неможливо імпортувати - будь ласка, налаштуйте назву рахунку в Mercury
+      description: Виберіть рахунки, які ви хочете пов'язати зі своїм обліковим записом %{product_name}.
+      link_accounts: Пов'язати вибрані рахунки
+      no_accounts_found: Рахунків не знайдено. Перевірте конфігурацію вашого токена API.
       no_api_token: Токен API Mercury не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
       no_credentials_configured: Будь ласка, спочатку налаштуйте свій токен API Mercury в налаштуваннях постачальника.
       no_name_placeholder: "(Без назви)"
       select_connection: Виберіть з'єднання Mercury в налаштуваннях постачальника.
-      title: Виберіть облікові записи Mercury
+      title: Виберіть рахунки Mercury
     select_existing_account:
-      account_already_linked: Цей обліковий запис вже пов'язано з постачальником
-      all_accounts_already_linked: Усі облікові записи Mercury вже пов'язано
+      account_already_linked: Цей рахунок вже пов'язано з постачальником
+      all_accounts_already_linked: Усі рахунки Mercury вже пов'язано
       api_error: "Помилка API: %{message}"
       cancel: Скасувати
-      configure_name_in_mercury: Неможливо імпортувати - будь ласка, налаштуйте назву облікового запису в Mercury
-      description: Виберіть обліковий запис Mercury для пов'язування з цим обліковим записом. Транзакції будуть синхронізуватися та дедуплікуватися автоматично.
-      link_account: Пов'язати обліковий запис
-      no_account_specified: Обліковий запис не вказано
-      no_accounts_found: Облікових записів Mercury не знайдено. Перевірте конфігурацію вашого токена API.
+      configure_name_in_mercury: Неможливо імпортувати - будь ласка, налаштуйте назву рахунку в Mercury
+      description: Виберіть рахунок Mercury для пов'язування з цим рахунком. Транзакції будуть синхронізуватися та дедуплікуватися автоматично.
+      link_account: Пов'язати рахунок
+      no_account_specified: Рахунок не вказано
+      no_accounts_found: Рахунків Mercury не знайдено. Перевірте конфігурацію вашого токена API.
       no_api_token: Токен API Mercury не налаштовано. Будь ласка, налаштуйте його в налаштуваннях.
       no_credentials_configured: Будь ласка, спочатку налаштуйте свій токен API Mercury в налаштуваннях постачальника.
       no_name_placeholder: "(Без назви)"
       select_connection: Виберіть з'єднання Mercury в налаштуваннях постачальника.
       title: "Пов'язати %{account_name} з Mercury"
     link_existing_account:
-      account_already_linked: Цей обліковий запис вже пов'язано з постачальником
+      account_already_linked: Цей рахунок вже пов'язано з постачальником
       api_error: "Помилка API: %{message}"
-      invalid_account_name: Неможливо пов'язати обліковий запис з порожньою назвою
-      mercury_account_already_linked: Цей обліковий запис Mercury вже пов'язано з іншим обліковим записом
-      mercury_account_not_found: Обліковий запис Mercury не знайдено
+      invalid_account_name: Неможливо пов'язати рахунок з порожньою назвою
+      mercury_account_already_linked: Цей рахунок Mercury вже пов'язано з іншим рахунком
+      mercury_account_not_found: Рахунок Mercury не знайдено
       missing_parameters: Відсутні обов'язкові параметри
       no_api_token: Токен API Mercury не знайдено. Будь ласка, налаштуйте його в налаштуваннях постачальника.
-      select_connection: Виберіть з'єднання Mercury перед пов'язуванням облікових записів.
+      select_connection: Виберіть з'єднання Mercury перед пов'язуванням рахунків.
       success: "Успішно пов'язано %{account_name} з Mercury"
     setup_accounts:
       account_type_label: "Тип рахунку:"
-      all_accounts_linked: "Усі ваші облікові записи Mercury вже налаштовано."
+      all_accounts_linked: "Усі ваші рахунки Mercury вже налаштовано."
       api_error: "Помилка API: %{message}"
-      fetch_failed: "Не вдалося завантажити облікові записи"
-      no_accounts_to_setup: "Немає облікових записів для налаштування"
+      fetch_failed: "Не вдалося завантажити рахунки"
+      no_accounts_to_setup: "Немає рахунків для налаштування"
       no_api_token: "Токен API Mercury не налаштовано. Перевірте налаштування з'єднання."
       account_types:
-        skip: Пропустити цей обліковий запис
-        depository: Розрахунковий або ощадний рахунок
+        skip: Пропустити цей рахунок
+        depository: Поточний або ощадний рахунок
         credit_card: Кредитна картка
         investment: Інвестиційний рахунок
         loan: Позика або іпотека
@@ -157,11 +163,11 @@ uk:
         other_asset: "Для інших активів не потрібні додаткові опції."
       subtypes:
         depository:
-          checking: Розрахунковий
+          checking: Поточний
           savings: Ощадний
           hsa: Рахунок для заощаджень на здоров'я
-          cd: Депозитний сертифікат
-          money_market: Грошовий ринок
+          cd: Строковий депозит
+          money_market: Рахунок грошового ринку
         investment:
           brokerage: Брокерський
           pension: Пенсійний
@@ -183,25 +189,29 @@ uk:
           other: Інша позика
       balance: Баланс
       cancel: Скасувати
-      choose_account_type: "Виберіть правильний тип рахунку для кожного облікового запису Mercury:"
-      create_accounts: Створити облікові записи
-      creating_accounts: Створення облікових записів...
+      choose_account_type: "Виберіть правильний тип рахунку для кожного рахунку Mercury:"
+      create_accounts: Створити рахунки
+      creating_accounts: Створення рахунків...
       historical_data_range: "Діапазон історичних даних:"
-      subtitle: Виберіть правильні типи облікових записів для ваших імпортованих облікових записів
+      subtitle: Виберіть правильні типи рахунків для ваших імпортованих рахунків
       sync_start_date_help: Виберіть, наскільки далеко назад ви хочете синхронізувати історію транзакцій. Доступна історія максимум за 3 роки.
       sync_start_date_label: "Почати синхронізацію транзакцій з:"
-      title: Налаштуйте свої облікові записи Mercury
+      title: Налаштуйте свої рахунки Mercury
     complete_account_setup:
-      all_skipped: "Усі облікові записи було пропущено. Жоден обліковий запис не було створено."
-      creation_failed: "Не вдалося створити облікові записи: %{error}"
-      no_accounts: "Немає облікових записів для налаштування."
-      success: "Успішно створено %{count} обліковий(і) запис(и)."
+      all_skipped: "Усі рахунки було пропущено. Жоден рахунок не було створено."
+      creation_failed: "Не вдалося створити рахунки: %{error}"
+      no_accounts: "Немає рахунків для налаштування."
+      success:
+        one: "Успішно створено %{count} рахунок."
+        few: "Успішно створено %{count} рахунки."
+        many: "Успішно створено %{count} рахунків."
+        other: "Успішно створено %{count} рахунку."
     sync:
       success: Синхронізацію розпочато
     update:
       success: З'єднання Mercury оновлено
     mercury_item_selection_error_payload:
-      select_connection: Виберіть з'єднання Mercury перед завантаженням облікових записів.
+      select_connection: Виберіть з'єднання Mercury перед завантаженням рахунків.
     render_mercury_item_selection_failure:
       select_connection: Виберіть з'єднання Mercury в налаштуваннях постачальника.
       no_credentials_configured: Будь ласка, спочатку налаштуйте свій токен API Mercury в налаштуваннях постачальника.

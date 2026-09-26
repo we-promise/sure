@@ -16,7 +16,7 @@ tr:
       requires_update: "Yeniden kimlik doğrulama gerekli"
       error: "Hata"
       synced: "%{time} önce senkronize edildi. %{summary}."
-      setup_accounts: "Hesapları ayarla"
+      setup_accounts: "Hesapları kur"
       delete: "Sil"
       accounts_need_setup: "Hesap kurulumu gerekli"
       accounts_need_setup_description: "Trade Republic hesabınız bir Sure hesabına bağlanmalıdır."
@@ -38,8 +38,8 @@ tr:
           one: "%{count} bilinmeyen işlem"
           other: "%{count} bilinmeyen işlem"
         pending_trade_details:
-          one: "%{count} yatırım işlemi ayrıntı bekliyor"
-          other: "%{count} yatırım işlemi ayrıntı bekliyor"
+          one: '%{count} yatırım işlemi ayrıntı bekliyor'
+          other: '%{count} yatırım işlemi ayrıntı bekliyor'
         expenses:
           one: "Son 30 günde %{count} gider (%{amount})"
           other: "Son 30 günde %{count} gider (%{amount})"
@@ -51,17 +51,42 @@ tr:
           pending: Beklemede
           syncing: Senkronize ediliyor
           stale: Güncel değil
+      deletion_in_progress: Siliniyor
+      never_synced: Hiç senkronize edilmedi.
     setup_accounts:
       page_title: "Trade Republic hesabını ayarla"
       subtitle: "Trade Republic yatırım hesabınızı bağlayın."
       available_accounts:
         account_type_investment: "Yatırım portföyü"
         account_type_cash: "Nakit hesabı"
+        title: Kullanılabilir hesap
+        account_summary: '%{account_type} • Bakiye: %{balance}'
+        account_id: 'Hesap ID: %{account_id}'
       buttons:
         refresh: "Yenile"
         cancel: "İptal"
         link: "Bağla"
         done: "Bitti"
+        back_to_settings: Ayarlara Dön
+        create_selected_accounts: Seçili hesapları oluştur
+      dialog_title: Trade Republic Hesabınızı Ayarlayın
+      info_box:
+        title: Trade Republic İçe Aktarma
+        items:
+          item_1: Fiyat ve adetleriyle mevcut pozisyonlar
+          item_2: Gerçekleşen alım satım işlemleri (alışlar ve satışlar)
+          item_3: Para yatırma, para çekme ve faiz ödemeleri
+      status:
+        fetching_accounts: Hesap Trade Republic'ten alınıyor...
+        no_accounts_found_title: Hesap bulunamadı.
+        no_accounts_found_description: Sure bir Trade Republic hesabı bulamadı. Oturumunuzun hâlâ geçerli olduğunu kontrol edin.
+      link_existing:
+        description: Veya keşfedilen Trade Republic hesabını mevcut bir manuel yatırım hesabına bağlayın.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Bir hesap seçin...
+      linked_accounts:
+        title: Zaten bağlı
+        linked_to_html: 'Bağlı olduğu hesap: %{account}'
     sync:
       errors:
         phone_number_missing: "Trade Republic telefon numarası eksik."
@@ -71,21 +96,37 @@ tr:
         importing_account: "Trade Republic hesabı içe aktarılıyor..."
         processing_activity: "Pozisyonlar ve işlemler işleniyor..."
         calculating_balances: "Bakiyeler hesaplanıyor..."
+        checking_configuration: Hesap yapılandırması kontrol ediliyor...
+        accounts_need_setup:
+          one: '%{count} Trade Republic hesabı kurulum gerektiriyor...'
+          other: '%{count} Trade Republic hesabı kurulum gerektiriyor...'
     repair:
       scheduled: "Trade Republic veri onarımı planlandı."
     select_existing_account:
       title: "Trade Republic hesabını bağla"
       link: "Bağla"
       cancel: "İptal"
+      no_accounts_available: Henüz bağlanmamış Trade Republic hesabı yok.
+      run_sync_hint: Girişi tamamlayın ve Ayarlar > Sağlayıcılar bölümünden bir senkronizasyon çalıştırın.
+      wait_for_sync: Hesap keşif senkronizasyonunun bitmesini bekleyin.
+      balance: Bakiye
     initiate_login:
       verification_required: "Giriş başlatıldı. %{method} ile onaylayın, ardından Girişi onayla düğmesine basın."
+      not_configured: Trade Republic yapılandırılmamış.
+      pin_required: Yeni bir giriş başlatmak için Trade Republic PIN'inizi girin.
     complete_login:
       approval_pending: "Henüz onaylanmadı. Trade Republic uygulamasında girişi onaylayıp tekrar deneyin."
       success: "Trade Republic başarıyla bağlandı."
       login_expired: "Giriş isteğinin süresi doldu. Yeniden başlatın."
+      no_pending_login: Şu anda bekleyen bir giriş yok. Önce yeni bir giriş başlatın.
+      still_pending: Henüz onaylanmadı. Trade Republic uygulamasında girişi onaylayıp tekrar deneyin.
     link_existing_account:
       not_found: "Hesap veya Trade Republic yapılandırması bulunamadı."
       success: "Hesap Trade Republic'e başarıyla bağlandı."
+      only_manual_investment: Trade Republic'e yalnızca manuel yatırım hesapları bağlanabilir.
+      already_linked: Bu Trade Republic hesabı zaten bağlı.
+      processing_failed: Hesap bağlandı, ancak ilk veri işleme başarısız oldu. Bir senkronizasyon planlandı; eksik kalırsa hata ayıklama günlüğünü kontrol edin.
+      failed: Trade Republic hesabı bağlanamadı.
     complete_account_setup:
       success:
         one: "%{count} Trade Republic hesabı başarıyla oluşturuldu."
@@ -94,6 +135,7 @@ tr:
       partial_failure:
         one: "Seçilen %{count} Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
         other: "Seçilen %{count} Trade Republic hesabı tamamlanamadı. Hata ayıklama günlüğünü kontrol edip tekrar deneyin."
+      none_selected: Hiçbir hesap seçilmedi.
     activities:
       labels:
         contribution: Para yatırma
@@ -106,3 +148,29 @@ tr:
         card_refund: Kart iadesi
         tax_refund: Vergi iadesi
         round_up: Round up
+    defaults:
+      name: Trade Republic
+    sync_status:
+      no_accounts: Henüz Trade Republic hesabı keşfedilmedi
+      all_linked:
+        one: '%{count} hesap bağlandı'
+        other: '%{count} hesap bağlandı'
+      partial: '%{linked} bağlandı, %{unlinked} kurulum gerektiriyor'
+    create:
+      success: Trade Republic kaydedildi. Bağlantıyı tamamlamak için Trade Republic uygulamasında girişi onaylayın.
+    update:
+      success: Trade Republic yapılandırması başarıyla güncellendi.
+      pin_required: Yeniden kimlik doğrulamak için Trade Republic PIN'inizi girin.
+    destroy:
+      success: Trade Republic bağlantısı silinmek üzere planlandı.
+      unlink_failed: Trade Republic bağlantısı tamamen kesilemedi. Güvenle yeniden denenebilmesi için bağlantı korundu.
+    select_accounts:
+      not_configured: Trade Republic yapılandırılmamış.
+    initiate_qr_login:
+      not_configured: Trade Republic yapılandırılmamış.
+    poll_login:
+      no_pending_login: Şu anda bekleyen bir giriş yok. Önce yeni bir giriş başlatın.
+      login_expired: Giriş isteğinin süresi doldu. Lütfen yeniden başlatın.
+    poll_qr_login:
+      no_pending_login: Bekleyen bir QR girişi yok.
+      success: Trade Republic başarıyla bağlandı.

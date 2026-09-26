@@ -1,0 +1,9 @@
+---
+uk:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Цей рахунок уже повністю виділено для цілі «%{goal_name}». Вкажіть суму, щоб розділити його.

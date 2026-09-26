@@ -25,11 +25,46 @@ ru:
       data_quality:
         title: "Качество данных и сведения о синхронизации"
         repair: "Исправить импортированные данные"
+        positions:
+          one: '%{count} позиция'
+          few: '%{count} позиции'
+          many: '%{count} позиций'
+          other: '%{count} позиции'
+        unpriced:
+          one: '%{count} без текущей цены'
+          few: '%{count} без текущей цены'
+          many: '%{count} без текущей цены'
+          other: '%{count} без текущей цены'
+        events:
+          one: '%{count} операция'
+          few: '%{count} операции'
+          many: '%{count} операций'
+          other: '%{count} операции'
+        unknown:
+          one: '%{count} неизвестная операция'
+          few: '%{count} неизвестные операции'
+          many: '%{count} неизвестных операций'
+          other: '%{count} неизвестные операции'
         pending_trade_details:
-          one: "%{count} инвестиционная операция ожидает деталей"
-          few: "%{count} инвестиционные операции ожидают деталей"
-          many: "%{count} инвестиционных операций ожидают деталей"
-          other: "%{count} инвестиционной операции ожидают деталей"
+          one: '%{count} инвестиционная операция ожидает деталей'
+          few: '%{count} инвестиционные операции ожидают деталей'
+          many: '%{count} инвестиционных операций ожидают деталей'
+          other: '%{count} инвестиционной операции ожидают деталей'
+        expenses:
+          one: '%{count} трата за последние 30 дней (%{amount})'
+          few: '%{count} траты за последние 30 дней (%{amount})'
+          many: '%{count} трат за последние 30 дней (%{amount})'
+          other: '%{count} траты за последние 30 дней (%{amount})'
+        reconciliation: 'Сверено балансов счетов: %{matched}/%{total}'
+        sync_history: Последние синхронизации
+        sync_status:
+          completed: Завершена
+          failed: Не удалась
+          pending: В ожидании
+          syncing: Синхронизация
+          stale: Устарела
+      deletion_in_progress: Удаление в процессе
+      never_synced: Синхронизация ещё не выполнялась.
     setup_accounts:
       page_title: "Настроить счёт Trade Republic"
       subtitle: "Свяжите инвестиционный счёт Trade Republic."
@@ -38,6 +73,32 @@ ru:
         cancel: "Отмена"
         link: "Связать"
         done: "Готово"
+        back_to_settings: Назад к настройкам
+        create_selected_accounts: Создать выбранные счета
+      dialog_title: Настройте ваш счёт Trade Republic
+      info_box:
+        title: Импорт из Trade Republic
+        items:
+          item_1: Текущие позиции с ценами и количеством
+          item_2: Исполненные сделки (покупки и продажи)
+          item_3: Пополнения, выводы средств и выплаты процентов
+      status:
+        fetching_accounts: Получение счёта из Trade Republic...
+        no_accounts_found_title: Счёт не найден.
+        no_accounts_found_description: Sure не удалось найти счёт Trade Republic. Проверьте, что ваш сеанс всё ещё действителен.
+      available_accounts:
+        title: Доступный счёт
+        account_type_investment: Инвестиционный портфель
+        account_type_cash: Денежный счёт
+        account_summary: '%{account_type} • Баланс: %{balance}'
+        account_id: 'ID счёта: %{account_id}'
+      link_existing:
+        description: Или свяжите найденный счёт Trade Republic с существующим ручным инвестиционным счётом.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Выберите счёт...
+      linked_accounts:
+        title: Уже связан
+        linked_to_html: 'Связан с: %{account}'
     sync:
       errors:
         phone_number_missing: "Не указан номер телефона Trade Republic."
@@ -47,29 +108,52 @@ ru:
         importing_account: "Импорт счёта Trade Republic..."
         processing_activity: "Обработка позиций и операций..."
         calculating_balances: "Расчёт балансов..."
+        checking_configuration: Проверка конфигурации счёта...
+        accounts_need_setup:
+          one: '%{count} счёт Trade Republic требует настройки...'
+          few: '%{count} счёта Trade Republic требуют настройки...'
+          many: '%{count} счетов Trade Republic требуют настройки...'
+          other: '%{count} счёта Trade Republic требуют настройки...'
     repair:
       scheduled: "Исправление данных Trade Republic запланировано."
     select_existing_account:
       title: "Связать счёт Trade Republic"
       link: "Связать"
       cancel: "Отмена"
+      no_accounts_available: Пока нет несвязанных счетов Trade Republic.
+      run_sync_hint: Завершите вход и запустите синхронизацию в разделе Настройки > Провайдеры.
+      wait_for_sync: Дождитесь завершения синхронизации для поиска счетов.
+      balance: Баланс
     initiate_login:
       verification_required: "Вход начат. Подтвердите его через %{method}, затем нажмите «Подтвердить вход»."
+      not_configured: Trade Republic не настроен.
+      pin_required: Введите PIN-код Trade Republic, чтобы начать новый вход.
     complete_login:
       approval_pending: "Ещё не подтверждено. Одобрите вход в приложении Trade Republic и повторите попытку."
       success: "Trade Republic успешно подключён."
       login_expired: "Запрос на вход истёк. Начните заново."
+      no_pending_login: Нет ожидающего входа. Сначала начните новый вход.
+      still_pending: Ещё не подтверждено. Одобрите вход в приложении Trade Republic и повторите попытку.
     link_existing_account:
       not_found: "Счёт или конфигурация Trade Republic не найдены."
       success: "Счёт успешно связан с Trade Republic."
+      only_manual_investment: С Trade Republic можно связать только ручные инвестиционные счета.
+      already_linked: Этот счёт Trade Republic уже связан.
+      processing_failed: Счёт связан, но первичная обработка данных не удалась. Синхронизация запланирована; если данные останутся неполными, проверьте журнал отладки.
+      failed: Не удалось связать счёт Trade Republic.
     complete_account_setup:
       success:
         one: "Успешно создан %{count} счёт Trade Republic."
         other: "Успешно создано %{count} счетов Trade Republic."
+        few: Успешно созданы %{count} счёта Trade Republic.
+        many: Успешно создано %{count} счетов Trade Republic.
       none_created: "Счета не созданы."
       partial_failure:
-        one: "Не удалось полностью настроить один выбранный счёт Trade Republic. Проверьте журнал отладки и повторите попытку."
+        one: "Не удалось полностью настроить %{count} выбранный счёт Trade Republic. Проверьте журнал отладки и повторите попытку."
         other: "Не удалось полностью настроить %{count} выбранных счетов Trade Republic. Проверьте журнал отладки и повторите попытку."
+        few: Не удалось полностью настроить %{count} выбранных счёта Trade Republic. Проверьте журнал отладки и повторите попытку.
+        many: Не удалось полностью настроить %{count} выбранных счетов Trade Republic. Проверьте журнал отладки и повторите попытку.
+      none_selected: Счета не выбраны.
     activities:
       labels:
         contribution: Пополнение
@@ -82,3 +166,31 @@ ru:
         card_refund: Возврат на карту
         tax_refund: Налоговый возврат
         round_up: Round up
+    defaults:
+      name: Trade Republic
+    sync_status:
+      no_accounts: Счёт Trade Republic ещё не найден
+      all_linked:
+        one: '%{count} счёт связан'
+        few: '%{count} счёта связаны'
+        many: '%{count} счетов связано'
+        other: '%{count} счёта связаны'
+      partial: '%{linked} связано, %{unlinked} требуют настройки'
+    create:
+      success: Trade Republic сохранён. Подтвердите вход в приложении Trade Republic, чтобы завершить подключение.
+    update:
+      success: Конфигурация Trade Republic успешно обновлена.
+      pin_required: Введите PIN-код Trade Republic для повторной аутентификации.
+    destroy:
+      success: Подключение Trade Republic запланировано на удаление.
+      unlink_failed: Не удалось полностью отключить Trade Republic. Подключение сохранено, чтобы можно было безопасно повторить попытку.
+    select_accounts:
+      not_configured: Trade Republic не настроен.
+    initiate_qr_login:
+      not_configured: Trade Republic не настроен.
+    poll_login:
+      no_pending_login: Нет ожидающего входа. Сначала начните новый вход.
+      login_expired: Запрос на вход истёк. Начните заново.
+    poll_qr_login:
+      no_pending_login: Нет ожидающего входа по QR-коду.
+      success: Trade Republic успешно подключён.
