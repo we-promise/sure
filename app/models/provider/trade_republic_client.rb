@@ -36,13 +36,18 @@ class Provider::TradeRepublicClient
     504 => TransientProviderError
   }.freeze
   # Categories/event types that need timelineDetailV2 for ISIN and quantity.
-  # Ordinary cash movements (card payments, transfers, interest, dividends) use
-  # the timeline list amount only and must not consume the detail budget.
+  # Ordinary cash movements (card payments, transfers, interest) use the
+  # timeline list amount only and must not consume the detail budget.
   TRADE_DETAIL_CATEGORY = "orderExecution"
   TRADE_DETAIL_EVENT_TYPES = %w[
     SAVEBACK_AGGREGATE
     SPARE_CHANGE_AGGREGATE
   ].freeze
+  # New dividends also fetch timelineDetailV2 so provider_detail keeps the
+  # ISIN, share count and withholding tax. The imported cash amount still
+  # comes from the timeline list.
+  DIVIDEND_DETAIL_CATEGORY = Provider::TradeRepublicTimelineEvent::CATEGORY_DIVIDEND
+  DIVIDEND_DETAIL_KEYS = %w[isin name quantity taxes].freeze
   EVENT_TYPE_CATEGORIES = Provider::TradeRepublicTimelineEvent::EVENT_TYPE_CATEGORIES
   PORTFOLIO_CATEGORIES = {
     "stocksAndETFs" => "brokerage",
@@ -61,7 +66,10 @@ class Provider::TradeRepublicClient
   FEE_TITLES = [
     "gebühr", "fee", "fees", "kosten", "costs", "cost", "commission", "kommission"
   ].freeze
-  TAX_TITLES = [ "steuer", "steuern", "tax", "taxes", "belasting" ].freeze
+  TAX_TITLES = [
+    "steuer", "steuern", "tax", "taxes", "belasting",
+    "quellensteuer", "withholding tax", "bronbelasting"
+  ].freeze
   SHARE_TITLES = [
     "aktien", "anteile", "shares", "aandelen",
     "aktien hinzugefügt", "shares added", "aktien erhalten", "shares received",
@@ -410,6 +418,18 @@ class Provider::TradeRepublicClient
       return false unless Provider::TradeRepublicTimelineEvent.importable?(event)
 
       !trade_detail_complete?(event)
+    end
+
+    def dividend_detail_missing?(event)
+      return false unless event.is_a?(Hash)
+
+      item = event.stringify_keys
+      category = item["category"].presence || EVENT_TYPE_CATEGORIES[item["eventType"].to_s]
+      return false unless category.to_s == DIVIDEND_DETAIL_CATEGORY
+      return false unless Provider::TradeRepublicTimelineEvent.importable?(item)
+
+      detail = item["detail"]
+      !(detail.is_a?(Hash) && detail.stringify_keys["isin"].present?)
     end
 
     # Complete trades (isin + quantity) that still lack a share price — usually
@@ -1102,15 +1122,18 @@ class Provider::TradeRepublicClient
       build_normalized_event(item, category: category, detail: nil)
     end
 
-    # Shared detail budget: reserve capacity for newly discovered trade events,
-    # drain oldest stored incomplete / price-backfill events next, then spend
-    # any leftover on additional new events. Failed attempts still consume
-    # budget so a bad event cannot starve the rest of the queue forever within
-    # one sync.
+    # Shared detail budget: reserve capacity for newly discovered trade and
+    # dividend events, drain oldest stored incomplete / price-backfill trades
+    # next, then spend any leftover on additional new events. Failed attempts
+    # still consume budget so a bad event cannot starve the rest of the queue
+    # forever within one sync. Stored dividends are not backfilled.
     def enrich_timeline_details(websocket, events, enrich_events: [])
       warnings = []
       events = Array(events)
-      new_candidates = events.select { |event| self.class.incomplete_trade_detail_event?(event) && event["id"].present? }
+      new_candidates = events.select do |event|
+        event["id"].present? &&
+          (self.class.incomplete_trade_detail_event?(event) || self.class.dividend_detail_missing?(event))
+      end
       new_ids = new_candidates.to_set { |event| event["id"].to_s }
       backlog_candidates = Array(enrich_events).select do |event|
         next false unless event.is_a?(Hash)
@@ -1159,6 +1182,7 @@ class Provider::TradeRepublicClient
             subscribe(websocket, type: "timelineDetailV2", id: item["id"]),
             item: item
           )
+          detail = detail&.slice(*DIVIDEND_DETAIL_KEYS) if category.to_s == DIVIDEND_DETAIL_CATEGORY
           fetched = build_normalized_event(item, category: category, detail: detail)
         rescue TransientProviderError, Timeout, RateLimited
           raise

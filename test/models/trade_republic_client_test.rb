@@ -788,6 +788,60 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal(-12.5, events.first.dig("detail", "signed_amount"))
   end
 
+  test "new dividends fetch details without changing the timeline amount" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      {
+        "sections" => [
+          { "title" => "Transaction", "data" => [
+            { "title" => "Shares", "detail" => { "text" => "10" } },
+            { "title" => "Withholding tax", "detail" => { "text" => "€0.75" } },
+            { "title" => "Total", "detail" => { "text" => "€4.25" } }
+          ] },
+          { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } } ] }
+        ]
+      }
+    end
+
+    events, = @client.send(:resolve_details, Object.new, [
+      {
+        "id" => "dividend-1",
+        "timestamp" => "2026-08-01T10:00:00Z",
+        "title" => "Apple",
+        "eventType" => "CREDIT",
+        "category" => "DIVIDEND",
+        "amount" => { "value" => 4.3, "currency" => "EUR" }
+      }
+    ], nil, [])
+
+    detail = events.first["detail"]
+    assert_equal [ "dividend-1" ], requested
+    assert_equal "US0378331005", detail["isin"]
+    assert_equal "10.0", detail["quantity"]
+    assert_equal "0.75", detail["taxes"]
+    assert_equal 4.3, detail["amount"]
+    assert_nil detail["price"]
+  end
+
+  test "dividends that already have details are not fetched again" do
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      { "sections" => [] }
+    end
+    stored = {
+      "id" => "dividend-1",
+      "timestamp" => "2026-08-01T10:00:00Z",
+      "category" => "DIVIDEND",
+      "detail" => { "isin" => "US0378331005", "amount" => 4.3 }
+    }
+
+    @client.send(:enrich_timeline_details, Object.new, [ stored ], enrich_events: [ stored.merge("detail" => nil) ])
+
+    assert_empty requested
+  end
+
   test "trade savings saveback and round-up events request timeline details" do
     requested = []
     @client.define_singleton_method(:subscribe) do |_websocket, **payload|
