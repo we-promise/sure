@@ -70,20 +70,80 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # fee inclusion in amount
+  # fee handling
   # ---------------------------------------------------------------------------
 
-  test "includes the Kraken fee in the total withdrawal amount" do
-    # Kraken: balance_change = amount - fee = -500 - 1 = -501 total outflow
+  # A withdrawal has a counterparty. The receiving bank records 500, not 501,
+  # and `Transfer` requires both legs to sum to zero -- so a withdrawal carrying
+  # Kraken's fee can never be matched. The fee becomes its own entry instead;
+  # together the two still move the balance by the 501 Kraken applied.
+  test "a withdrawal fee is charged as its own entry" do
     set_ledgers(
       "LWIT02" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)
     )
 
-    process
+    assert_difference "@account.entries.count", 2 do
+      process
+    end
 
-    entry = @account.entries.find_by(external_id: "kraken_ledger_LWIT02", source: "kraken")
-    assert entry
-    assert_in_delta 501.0, entry.amount.to_f, 0.01
+    principal = @account.entries.find_by(external_id: "kraken_ledger_LWIT02", source: "kraken")
+    assert principal
+    assert_in_delta 500.0, principal.amount.to_f, 0.01
+
+    fee = @account.entries.find_by(external_id: "kraken_ledger_LWIT02_fee", source: "kraken")
+    assert fee, "the fee must be its own entry"
+    assert_in_delta 1.0, fee.amount.to_f, 0.01
+    assert_equal "Fee", fee.entryable.investment_activity_label
+    assert_in_delta 501.0, principal.amount.to_f + fee.amount.to_f, 0.01
+  end
+
+  # The fee is a cost whichever way the principal moved, so it is an outflow on
+  # a deposit too.
+  test "a deposit fee is charged as its own outflow" do
+    set_ledgers(
+      "LDEP02" => ledger_entry(type: "deposit", asset: "ZUSD", amount: "1000.00", fee: "2.00", time: 1_700_000_000)
+    )
+
+    assert_difference "@account.entries.count", 2 do
+      process
+    end
+
+    principal = @account.entries.find_by(external_id: "kraken_ledger_LDEP02", source: "kraken")
+    assert_in_delta(-1000.0, principal.amount.to_f, 0.01)
+
+    fee = @account.entries.find_by(external_id: "kraken_ledger_LDEP02_fee", source: "kraken")
+    assert fee
+    assert fee.amount.positive?, "a fee is always an outflow"
+    assert_in_delta 2.0, fee.amount.to_f, 0.01
+  end
+
+  # Only deposits and withdrawals have a counterparty to reconcile against.
+  # Everything else keeps the combined figure.
+  test "a fee on a ledger type with no counterparty stays folded in" do
+    set_ledgers(
+      "LSTK02" => ledger_entry(type: "staking", asset: "ZUSD", amount: "10.00", fee: "1.00", time: 1_700_000_000)
+    )
+
+    assert_difference "@account.entries.count", 1 do
+      process
+    end
+
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LSTK02", source: "kraken")
+    assert_in_delta(-9.0, entry.amount.to_f, 0.01)
+  end
+
+  test "a split fee entry is not duplicated on reprocessing" do
+    set_ledgers(
+      "LWIT03" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)
+    )
+
+    assert_difference "@account.entries.count", 2 do
+      process
+    end
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
   end
 
   # ---------------------------------------------------------------------------
