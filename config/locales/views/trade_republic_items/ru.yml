@@ -122,7 +122,7 @@ ru:
     initiate_login:
       verification_required: "Вход начат. Подтвердите его через %{method}, затем нажмите «Подтвердить вход»."
       not_configured: Trade Republic не настроен.
-      pin_required: Введите PIN-код Trade Republic, чтобы начать новый вход.
+      pin_required: Введите PIN-код или пароль Trade Republic, чтобы начать новый вход.
     complete_login:
       approval_pending: "Ещё не подтверждено. Одобрите вход в приложении Trade Republic и повторите попытку."
       success: "Trade Republic успешно подключён."
@@ -176,7 +176,7 @@ ru:
       success: Trade Republic сохранён. Подтвердите вход в приложении Trade Republic, чтобы завершить подключение.
     update:
       success: Конфигурация Trade Republic успешно обновлена.
-      pin_required: Введите PIN-код Trade Republic для повторной аутентификации.
+      pin_required: Введите PIN-код или пароль Trade Republic для повторной аутентификации.
     destroy:
       success: Подключение Trade Republic запланировано на удаление.
       unlink_failed: Не удалось полностью отключить Trade Republic. Подключение сохранено, чтобы можно было безопасно повторить попытку.

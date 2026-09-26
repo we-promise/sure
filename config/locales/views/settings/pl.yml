@@ -744,12 +744,12 @@ pl:
         phone_number_placeholder_existing: Zostaw puste, aby zachować bieżący numer
           telefonu
         phone_number_placeholder_new: "+49 170 1234567"
-        pin_label: PIN
-        pin_placeholder_existing: Zostaw puste, aby zachować bieżący PIN
-        pin_placeholder_new: Twój PIN z aplikacji Trade Republic
+        pin_label: PIN lub hasło
+        pin_placeholder_existing: Zostaw puste, aby zachować bieżący PIN lub hasło
+        pin_placeholder_new: Twój PIN lub hasło z aplikacji Trade Republic
         push_login_notice: Zatwierdź teraz logowanie w aplikacji Trade Republic. Sure
           sprawdza to automatycznie w tle. Możesz też sprawdzić status samodzielnie.
-        qr_back_to_credentials: Wróć do numeru telefonu i PIN-u
+        qr_back_to_credentials: Wróć do numeru telefonu i PIN-u lub hasła
         qr_cancel: Anuluj logowanie kodem QR
         qr_error: Nie udało się rozpocząć logowania kodem QR. Spróbuj ponownie.
         qr_instruction: Zeskanuj kod QR aplikacją Trade Republic i zatwierdź logowanie.
@@ -762,7 +762,7 @@ pl:
         status_configured_prefix: Połączono. Przejdź do zakładki
         status_configured_suffix: ", aby zarządzać wykrytymi kontami."
         steps:
-          step_1: Wpisz numer telefonu i PIN używane w aplikacji Trade Republic, a
+          step_1: Wpisz numer telefonu i PIN lub hasło używane w aplikacji Trade Republic, a
             następnie zapisz.
           step_2: Gdy zostaniesz o to poproszony, wpisz kod z aplikacji uwierzytelniającej.
           step_3: Gdy zostaniesz o to poproszony, zatwierdź logowanie w aplikacji

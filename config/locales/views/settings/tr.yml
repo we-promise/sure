@@ -679,15 +679,15 @@ tr:
           title: Şifreleme yapılandırılmamış
           message: Active Record Encryption yapılandırılana kadar Trade Republic kimlik bilgileri ve oturum verileri güvenli şekilde saklanamaz.
         steps:
-          step_1: Trade Republic uygulamasında kullandığınız telefon numarasını ve PIN'i girip kaydedin.
+          step_1: Trade Republic uygulamasında kullandığınız telefon numarasını ve PIN'i veya şifreyi girip kaydedin.
           step_2: İstendiğinde doğrulama uygulamanızdaki kodu girin.
           step_3: İstendiğinde girişi Trade Republic uygulamanızda onaylayın.
         phone_number_label: Telefon numarası
         phone_number_placeholder_new: +49 170 1234567
         phone_number_placeholder_existing: Mevcut telefon numarasını korumak için boş bırakın
-        pin_label: PIN
-        pin_placeholder_new: Trade Republic uygulama PIN'iniz
-        pin_placeholder_existing: Mevcut PIN'i korumak için boş bırakın
+        pin_label: PIN veya şifre
+        pin_placeholder_new: Trade Republic uygulama PIN'iniz veya şifreniz
+        pin_placeholder_existing: Mevcut PIN'i veya şifreyi korumak için boş bırakın
         currency_label: Hesap para birimi
         connect: Giriş yap
         confirm_login: Girişi kontrol et
@@ -709,7 +709,7 @@ tr:
           close: Bitti
         qr_login: QR kodla giriş yap
         qr_cancel: QR girişini iptal et
-        qr_back_to_credentials: Telefon numarası ve PIN'e dön
+        qr_back_to_credentials: Telefon numarası ve PIN'e veya şifreye dön
         qr_loading: QR kod hazırlanıyor …
         qr_instruction: QR kodu Trade Republic uygulamanızla tarayın ve girişi onaylayın.
         qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
