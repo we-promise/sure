@@ -179,6 +179,14 @@ en:
         uri_base_placeholder: "https://api.openai.com/v1 (default)"
         model_label: Model (Optional)
         model_placeholder: "gpt-4.1 (default)"
+        model_discovered:
+          one: "1 model found at this endpoint. Start typing to filter, or enter any model id."
+          other: "%{count} models found at this endpoint. Start typing to filter, or enter any model id."
+        model_discovery_error:
+          http_status: "This endpoint doesn't list its models (HTTP %{status}). Type the model id; it will still work."
+          invalid_response: "This endpoint's model list couldn't be read. Type the model id; it will still work."
+          invalid_url: "This base URL isn't a valid HTTP(S) URL, so models can't be listed. Type the model id; it will still work."
+          unavailable: "Couldn't reach this endpoint to list models. Type the model id; it will still work."
         model_function_calling_help: "The AI assistant reads your data through function calls, so pick a model your provider documents as supporting tools/function calling. Models without it fail chat with an opaque provider error."
         model_function_calling_link: Check the configured model
         json_mode_label: JSON Mode

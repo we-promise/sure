@@ -7,6 +7,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in users(:family_admin)
 
+    # Custom OpenAI base URLs trigger model discovery on render; keep it off the
+    # network by default. Tests that care stub the endpoint explicitly.
+    stub_request(:get, %r{/models(/user)?\z}).to_return(status: 404)
+
     @provider = mock
     Provider::Registry.stubs(:get_provider).with(:twelve_data).returns(@provider)
 
@@ -521,6 +525,148 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_select "input[name=?]", "setting[openai_uri_base]" do |inputs|
         assert_equal "https://api.example.com/v1", inputs.first["value"]
       end
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
+  test "suggests models from the custom openai endpoint" do
+    with_self_hosting do
+      Setting.openai_uri_base = "https://openrouter.ai/api/v1"
+      Setting.openai_model = "google/gemini-2.5-flash"
+      stub_request(:get, "https://openrouter.ai/api/v1/models/user")
+        .to_return(status: 200, body: { data: [ { id: "google/gemini-2.5-flash" }, { id: "anthropic/claude-sonnet-4.5" } ] }.to_json)
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[openai_model]'][list='openai-model-options']"
+      assert_select "datalist#openai-model-options option", count: 2
+      assert_select "datalist#openai-model-options option[value='anthropic/claude-sonnet-4.5']"
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
+  test "openai model stays free text when the endpoint cannot list models" do
+    with_self_hosting do
+      Setting.openai_uri_base = "https://llm.example.com/v1"
+      Setting.openai_model = "my-model"
+      stub_request(:get, "https://llm.example.com/v1/models").to_return(status: 401)
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[openai_model]']:not([list])"
+      assert_select "datalist#openai-model-options", count: 0
+      assert_select "[data-testid='openai-model-discovery-hint']",
+                    text: I18n.t("settings.hostings.openai_settings.model_discovery_error.http_status", status: "401")
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
+  test "settings page survives a stored openai base url without a host" do
+    with_self_hosting do
+      Setting.openai_uri_base = "http:/foo"
+      Setting.openai_model = "my-model"
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "[data-testid='openai-model-discovery-hint']",
+                    text: I18n.t("settings.hostings.openai_settings.model_discovery_error.invalid_url")
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
+  # Cloudflare Workers AI's OpenAI-compatible base has no GET /models: it
+  # answers 405. The model field must stay plain free text with a hint.
+  CLOUDFLARE_AI_BASE = "https://api.cloudflare.com/client/v4/accounts/0123456789abcdef/ai/v1".freeze
+
+  def stub_cloudflare_models_405
+    stub_request(:get, "#{CLOUDFLARE_AI_BASE}/models").to_return(
+      status: 405,
+      headers: { "Content-Type" => "application/json" },
+      body: { result: nil, success: false, errors: [ { code: 7001, message: "GET not supported for requested URI." } ], messages: [] }.to_json
+    )
+  end
+
+  def assert_free_text_model_field_with_405_hint
+    assert_select "input[type='text'][name='setting[openai_model]']:not([list]):not([disabled])"
+    assert_select "datalist#openai-model-options", count: 0
+    assert_select "[data-testid='openai-model-discovery-hint']",
+                  text: "This endpoint doesn't list its models (HTTP 405). Type the model id; it will still work."
+  end
+
+  test "cloudflare base url without a token: rejected save keeps free text and shows the hint" do
+    with_self_hosting do
+      with_env_overrides("OPENAI_URI_BASE" => nil, "OPENAI_ACCESS_TOKEN" => nil, "OPENAI_MODEL" => nil) do
+        Setting.openai_access_token = nil
+        Setting.openai_uri_base = nil
+        Setting.openai_model = nil
+        request = stub_cloudflare_models_405
+
+        patch settings_hosting_url, params: { setting: { openai_access_token: "", openai_uri_base: CLOUDFLARE_AI_BASE, openai_model: "" } }
+
+        assert_response :unprocessable_entity
+        assert_requested request
+        assert_free_text_model_field_with_405_hint
+      end
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
+  test "cloudflare base url saved with a model: settings page keeps free text and shows the hint" do
+    with_self_hosting do
+      with_env_overrides("OPENAI_URI_BASE" => nil, "OPENAI_ACCESS_TOKEN" => nil, "OPENAI_MODEL" => nil) do
+        Setting.openai_uri_base = CLOUDFLARE_AI_BASE
+        Setting.openai_model = "@cf/meta/llama-3.1-8b-instruct"
+        stub_cloudflare_models_405
+
+        get settings_hosting_url
+
+        assert_response :success
+        assert_free_text_model_field_with_405_hint
+        assert_select "input[name='setting[openai_model]'][value='@cf/meta/llama-3.1-8b-instruct']"
+      end
+    end
+  ensure
+    Setting.openai_uri_base = nil
+    Setting.openai_model = nil
+  end
+
+  test "does not call a models endpoint without a custom openai base url" do
+    with_self_hosting do
+      with_env_overrides("OPENAI_URI_BASE" => nil) do
+        Setting.openai_uri_base = nil
+
+        get settings_hosting_url
+
+        assert_response :success
+        assert_not_requested :get, %r{/models(/user)?\z}
+      end
+    end
+  end
+
+  test "rejected openai update suggests models from the submitted base url" do
+    with_self_hosting do
+      Setting.openai_uri_base = nil
+      Setting.openai_model = ""
+      stub_request(:get, "https://api.example.com/v1/models")
+        .to_return(status: 200, body: { data: [ { id: "llama3.1:8b" } ] }.to_json)
+
+      patch settings_hosting_url, params: { setting: { openai_uri_base: "https://api.example.com/v1" } }
+
+      assert_response :unprocessable_entity
+      assert_select "datalist#openai-model-options option[value='llama3.1:8b']"
     end
   ensure
     Setting.openai_uri_base = nil

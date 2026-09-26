@@ -272,6 +272,7 @@ AI_DEBUG_MODE=true
 
 **Important:** When using Ollama or any custom provider:
 - You **must** set `OPENAI_MODEL` - the system cannot default to `gpt-4.1` as that model won't exist in Ollama
+- In **Settings → Self-Hosting → OpenAI**, once a custom API Base URL is set, the Model field suggests the ids the endpoint lists at `GET <base>/models` (Ollama, LM Studio, LiteLLM and other OpenAI-compatible servers). On OpenRouter it uses `GET <base>/models/user`, which only lists models your key's provider, privacy and guardrail settings allow. Start typing to filter; you can still enter any model id if the endpoint doesn't list models or rejects the request
 - The `OPENAI_ACCESS_TOKEN` can be any non-empty value (Ollama ignores it)
 - If you don't set a model, chats will fail with a validation error
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
