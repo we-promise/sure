@@ -34,5 +34,12 @@ pt-BR:
       page_title: Verificar Autenticação de Dois Fatores
       title: Autenticação de Dois Fatores
       verify_button: Verificar
+      or: ou
+      webauthn_button: Usar chave de acesso ou chave de segurança
+      webauthn_unsupported: Este navegador não é compatível com chaves de acesso ou chaves de segurança.
     verify_code:
       invalid_code: Código de autenticação inválido. Tente novamente.
+    verify_webauthn:
+      invalid_credential: Não foi possível verificar essa chave de acesso ou chave de segurança. Tente novamente.
+    webauthn_options:
+      unavailable: Não há chaves de acesso ou chaves de segurança disponíveis para esta conta.

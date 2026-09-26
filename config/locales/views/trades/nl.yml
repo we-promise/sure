@@ -11,6 +11,16 @@ nl:
       submit: Transactie toevoegen
       ticker_placeholder: AAPL
       type: Type
+      fee: Transactiekosten
+      holding_optional: Tickersymbool (optioneel)
+      type_buy: Aankoop
+      type_sell: Verkoop
+      type_deposit: Storting
+      type_withdrawal: Opname
+      type_dividend: Dividend
+      type_interest: Rente
+      dividend_requires_security: Een effect is verplicht voor dividenden
+      trade_requires_security: Een effect (ticker) is verplicht voor aan- en verkooptransacties
     header:
       buy: Kopen
       current_market_price_label: Huidige Marktprijs
@@ -20,6 +30,17 @@ nl:
       sell: Verkopen
       symbol_label: Symbool
       total_return_label: Ongerealiseerde winst/verlies
+      dividend: Dividend
+      interest: Rente
+      contribution: Storting
+      exchange: Omwisseling
+      fee: Kosten
+      other: Overig
+      reinvestment: Herbelegging
+      sweep_in: Sweep in
+      sweep_out: Sweep out
+      transfer: Overboeking
+      withdrawal: Opname
     new:
       title: Nieuwe transactie
     show:
@@ -38,3 +59,14 @@ nl:
       note_placeholder: Voeg hier eventuele aanvullende notities toe...
       quantity_label: Hoeveelheid
       settings: Instellingen
+      amount_label: Bedrag
+      buy: Aankoop
+      fee_label: Transactiekosten
+      provider_disabled_warning: Koersupdates gepauzeerd — provider %{provider} is uitgeschakeld. Schakel deze weer in via Instellingen of wijs de positie toe aan een andere provider.
+      sell: Verkoop
+      type_label: Type
+    api_errors:
+      activity_label_must_match_type: investment_activity_label moet %{label} zijn wanneer type %{type} is
+      invalid_activity_label: Ongeldig beleggingsactiviteitstype (investment_activity_label)
+      invalid_type: Ongeldig type
+      supported_types: 'type moet een van de volgende zijn: %{types}'

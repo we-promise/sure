@@ -3,6 +3,7 @@ pt-BR:
   properties:
     edit:
       edit: Editar %{account}
+      title: Inserir imóvel manualmente
     form:
       address_line1: Endereço
       address_line1_placeholder: Rua Principal, 123
@@ -18,11 +19,22 @@ pt-BR:
       postal_code_placeholder: '01234-567'
       region: Estado
       region_placeholder: SP
-      subtype_prompt: Selecionar tipo de propriedade
+      subtype_prompt: Selecionar tipo de imóvel
       year_built: Ano de construção
       year_built_placeholder: '2000'
     new:
-      title: Inserir detalhes da propriedade
+      title: Inserir detalhes do imóvel
+      next: Próximo
+      avm_option: Adicionar via %{provider}
+      avm_title: Adicionar imóvel via %{provider}
+      avm_description: Informe um nome e o endereço do imóvel. O %{provider} buscará os detalhes do imóvel e o valor de mercado estimado para você.
+      avm_us_only: O %{provider} só aceita imóveis localizados nos Estados Unidos.
+      avm_submit: Buscar imóvel
+      avm_preview_title: Confirmar detalhes do imóvel
+      avm_preview_description: Veja o que o %{provider} encontrou. Revise os detalhes antes de adicionar o imóvel — nada foi criado ainda.
+      avm_preview_no_record: O %{provider} não encontrou um registro de imóvel neste endereço, então o valor exibido é uma estimativa baseada na região. Confira o endereço antes de continuar.
+      avm_preview_back: Voltar
+      avm_preview_confirm: Adicionar imóvel
     overview:
       living_area: Área Útil
       market_value: Valor de Mercado
@@ -30,3 +42,66 @@ pt-BR:
       trend: Tendência
       unknown: Desconhecido
       year_built: Ano de Construção
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    address:
+      title: Inserir imóvel manualmente
+      address_line1_label: Endereço
+      address_line1_placeholder: Rua Principal, 123
+      city_label: Cidade
+      city_placeholder: São Paulo
+      state_region_label: Estado/Região
+      state_region_placeholder: SP
+      postal_code_label: CEP
+      postal_code_placeholder: 01234-567
+      country_label: País
+      country_placeholder: Brasil
+      save: Salvar
+    balances:
+      title: Inserir imóvel manualmente
+      market_value_label: Valor de mercado estimado
+      market_value_tooltip: O valor de mercado estimado do seu imóvel. Esse número pode ser encontrado em portais imobiliários e nunca é exato.
+      save: Salvar
+      next: Próximo
+    overview_fields:
+      name_label: Nome
+      name_placeholder: Casa de praia
+      subtype_prompt: Selecione o tipo
+      property_type_label: Tipo de imóvel
+      year_built_label: Ano de construção (opcional)
+      year_built_placeholder: '1990'
+      area_label: Área (opcional)
+      area_placeholder: '120'
+      square_feet: Pés quadrados
+      square_meters: Metros quadrados
+      area_unit_label: Unidade de área
+    tabs:
+      overview:
+        living_area: Área Útil
+        market_value: Valor de Mercado
+        purchase_price: Preço de Compra
+        trend: Tendência
+        unknown: Desconhecido
+        year_built: Ano de Construção
+        edit_account_details: Editar detalhes da conta
+    subtypes:
+      apartment:
+        short: Apartamento
+        long: Apartamento
+      plot:
+        short: Terreno
+        long: Terreno / Lote
+      commercial:
+        short: Comercial
+        long: Imóvel comercial
+      rented:
+        short: Alugado
+        long: Imóvel alugado
+      agri_land:
+        short: Terra agrícola
+        long: Terra agrícola
+    form_tabs:
+      address: Endereço
+      overview: Visão geral
+      value: Valor

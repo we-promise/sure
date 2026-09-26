@@ -1,0 +1,203 @@
+---
+nl:
+  snaptrade_items:
+    default_name: SnapTrade-verbinding
+    destroy:
+      success: SnapTrade-verbinding ingepland voor verwijdering.
+    connect:
+      decryption_failed: Kan de SnapTrade-inloggegevens niet lezen. Verwijder deze verbinding en maak deze opnieuw aan.
+      connection_failed: 'Verbinden met SnapTrade mislukt: %{message}'
+    callback:
+      success: Broker verbonden! Selecteer welke accounts u wilt koppelen.
+      no_item: SnapTrade-configuratie niet gevonden.
+    complete_account_setup:
+      success:
+        one: '%{count} account succesvol gekoppeld.'
+        other: '%{count} accounts succesvol gekoppeld.'
+      partial_success:
+        one: '%{count} account gekoppeld. Koppelen mislukt voor %{failed_count}.'
+        other: '%{count} accounts gekoppeld. Koppelen mislukt voor %{failed_count}.'
+      link_failed: 'Koppelen van accounts mislukt: %{errors}'
+      no_accounts: Er zijn geen accounts geselecteerd om te koppelen.
+    preload_accounts:
+      not_configured: SnapTrade is niet geconfigureerd.
+    select_accounts:
+      not_configured: SnapTrade is niet geconfigureerd.
+    oauth_authorize:
+      not_configured: Voor de SnapTrade-autorisatie via de browser is naast SNAPTRADE_OAUTH_CLIENT_ID ook SNAPTRADE_OAUTH_CLIENT_SECRET nodig. Stel deze in en herstart, of autoriseer in plaats daarvan met een apparaatcode.
+    oauth_callback:
+      success: SnapTrade-autorisatie voltooid.
+      access_denied: SnapTrade-autorisatie is geannuleerd.
+      state_mismatch: SnapTrade-autorisatie is niet door een beveiligingscontrole gekomen. Probeer het opnieuw.
+      failed: Kan de SnapTrade-autorisatie niet voltooien. Probeer het opnieuw.
+    oauth_device_flow:
+      title: SnapTrade verbinden
+      subtitle: Autoriseer Sure voor SnapTrade met een apparaatcode.
+      instructions: Open SnapTrade, bevestig deze apparaatcode en kom daarna hier terug om af te ronden.
+      code_label: Apparaatcode
+      open_snaptrade: SnapTrade openen
+      start_button: Autorisatie starten
+      complete_button: Ik heb SnapTrade geautoriseerd
+      cancel_button: Annuleren
+      missing_client_id: SnapTrade OAuth is niet geconfigureerd. Voeg SNAPTRADE_OAUTH_CLIENT_ID toe aan .env.local, herstart de app en probeer het opnieuw.
+    start_oauth_device_flow:
+      failed: Kan de SnapTrade-apparaatautorisatie niet starten. Probeer het opnieuw.
+    complete_oauth_device_flow:
+      success: SnapTrade-autorisatie voltooid.
+      device_code_required: Er loopt geen SnapTrade-apparaatautorisatie voor deze verbinding. Start deze opnieuw om een nieuwe code te krijgen.
+      authorization_pending: SnapTrade heeft uw bevestiging nog niet ontvangen. Keur de code goed in SnapTrade en probeer het opnieuw.
+      expired: Deze apparaatcode is verlopen. Start de autorisatie opnieuw.
+      access_denied: SnapTrade-autorisatie is geweigerd.
+      failed: Kan de SnapTrade-apparaatautorisatie niet voltooien. Probeer het opnieuw.
+    select_existing_account:
+      not_found: Account of SnapTrade-configuratie niet gevonden.
+      title: Koppelen aan SnapTrade-account
+      header: Bestaand account koppelen
+      subtitle: Selecteer een SnapTrade-account om aan te koppelen
+      no_accounts: Geen ongekoppelde SnapTrade-accounts beschikbaar.
+      connect_hint: Mogelijk moet u eerst een broker verbinden.
+      settings_link: Naar providerinstellingen
+      linking_to: 'Koppelen aan account:'
+      balance_label: 'Saldo:'
+      link_button: Koppelen
+      cancel_button: Annuleren
+    link_existing_account:
+      success: Succesvol gekoppeld aan SnapTrade-account.
+      failed: 'Koppelen van account mislukt: %{message}'
+      not_found: Account niet gevonden.
+    connections:
+      unknown_brokerage: Onbekende broker
+    delete_connection:
+      success: Verbinding succesvol verwijderd. Er is weer één verbindingsplek vrij.
+      failed: 'Verwijderen van verbinding mislukt: %{message}'
+      missing_authorization_id: Autorisatie-ID ontbreekt
+      api_deletion_failed: Kan de verbinding niet verwijderen bij SnapTrade - dit item is niet geautoriseerd. De verbinding bestaat mogelijk nog in uw SnapTrade-account.
+    setup_accounts:
+      title: SnapTrade-accounts instellen
+      header: Uw SnapTrade-accounts instellen
+      subtitle: Selecteer welke beleggingsrekeningen u wilt koppelen
+      syncing: Uw accounts ophalen...
+      loading: Accounts ophalen bij SnapTrade...
+      loading_hint: Klik op Vernieuwen om te controleren op accounts.
+      refresh: Vernieuwen
+      info_title: SnapTrade-beleggingsgegevens
+      info_holdings: Posities met actuele koersen en aantallen
+      info_cost_basis: Aankoopwaarde per positie (indien beschikbaar)
+      info_activities: Transactiegeschiedenis met activiteitstypes (Kopen, Verkopen, Dividend, enz.)
+      info_history: Tot 3 jaar transactiegeschiedenis
+      free_tier_note: Het gratis abonnement van SnapTrade staat 20 brokerverbindingen toe.
+      no_accounts_title: Geen accounts gevonden
+      no_accounts_message: Er zijn geen beleggingsrekeningen gevonden. Dit kan gebeuren als u de verbinding heeft geannuleerd of als uw broker niet wordt ondersteund.
+      try_again: Broker verbinden
+      back_to_settings: Terug naar instellingen
+      available_accounts: Beschikbare accounts
+      balance_label: 'Saldo:'
+      account_number: 'Account:'
+      account_type_label: Accounttype
+      account_types:
+        depository: Betaal- of spaarrekening
+        credit_card: Creditcard
+        investment: Beleggingsrekening
+        crypto: Crypto-account
+        loan: Lening of kredietlijn
+        other_asset: Overig bezit
+      sync_start_date_label: 'Transacties importeren vanaf:'
+      sync_start_date_help: Laat leeg voor alle beschikbare geschiedenis
+      create_button: Geselecteerde accounts aanmaken
+      cancel_button: Annuleren
+      creating: Accounts aanmaken...
+      done_button: Gereed
+      or_link_existing: 'Of koppel aan een bestaand account in plaats van een nieuw account aan te maken:'
+      select_account: Selecteer een account...
+      link_button: Koppelen
+      linked_accounts: Al gekoppeld
+      linked_to: 'Gekoppeld aan:'
+    snaptrade_item:
+      accounts_need_setup:
+        one: '%{count} account moet worden ingesteld'
+        other: '%{count} accounts moeten worden ingesteld'
+      deletion_in_progress: Bezig met verwijderen...
+      syncing: Synchroniseren...
+      requires_update: Verbinding moet worden bijgewerkt
+      error: Synchronisatiefout
+      status: Laatst gesynchroniseerd %{timestamp} geleden - %{summary}
+      status_never: Nooit gesynchroniseerd
+      reconnect: Opnieuw verbinden
+      connect_brokerage: Broker verbinden
+      add_another_brokerage: Nog een broker verbinden
+      delete: Verwijderen
+      setup_needed: Accounts moeten worden ingesteld
+      setup_description: Sommige accounts van SnapTrade moeten nog aan Sure-accounts worden gekoppeld.
+      setup_action: Accounts instellen
+      setup_accounts_menu: Accounts instellen
+      manage_connections: Verbindingen beheren
+      more_accounts_available:
+        one: Nog %{count} account beschikbaar om in te stellen
+        other: Nog %{count} accounts beschikbaar om in te stellen
+      no_accounts_title: Geen accounts gevonden
+      no_accounts_description: Verbind een broker om uw beleggingsrekeningen te importeren.
+  providers:
+    snaptrade:
+      name: SnapTrade
+      connection_description: Verbind met uw broker via SnapTrade (25+ brokers ondersteund)
+      description: SnapTrade verbindt met 25+ grote brokers (Fidelity, Vanguard, Schwab, Robinhood, enz.) en levert de volledige transactiegeschiedenis met activiteitstypes en kostprijs.
+      oauth_setup_step_1_html: Registreer een OAuth-app op <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: 'Alleen voor de browserflow: voeg de callback-URL van deze app (<code>%{callback_url}</code>) toe als geregistreerde redirect URI'
+      oauth_setup_step_3: Stel SNAPTRADE_OAUTH_CLIENT_ID in uw omgeving in en herstart. Dat is genoeg voor de apparaatcodeflow; voeg voor de browserflow ook SNAPTRADE_OAUTH_CLIENT_SECRET toe
+      free_tier_warning: Het gratis abonnement van SnapTrade omvat 20 brokerverbindingen.
+      oauth_title: SnapTrade OAuth
+      oauth_status_ready: Autoriseer Sure om uw SnapTrade-accountgegevens te lezen.
+      oauth_status_ready_device: Autoriseer Sure met een apparaatcode om uw SnapTrade-accountgegevens te lezen.
+      oauth_status_authorized: Geautoriseerd bij SnapTrade.
+      oauth_connect_button: Verbinden met SnapTrade
+      oauth_device_button: Apparaatcode gebruiken
+      oauth_reauthorize_button: Opnieuw autoriseren
+      status_connected:
+        one: '%{count} account van SnapTrade'
+        other: '%{count} accounts van SnapTrade'
+      needs_setup:
+        one: '%{count} moet worden ingesteld'
+        other: '%{count} moeten worden ingesteld'
+      status_ready: Klaar om brokers te verbinden
+      setup_accounts_button: Accounts instellen
+      connect_button: Broker verbinden
+      connected_brokerages: 'Verbonden:'
+      manage_connections: Verbindingen beheren
+      loading_connections: Verbindingen laden...
+      connections_error: 'Laden van verbindingen mislukt: %{message}'
+      accounts_count:
+        one: '%{count} account'
+        other: '%{count} accounts'
+      orphaned_connection: Verweesde verbinding (niet lokaal gesynchroniseerd)
+      needs_linking: moet worden gekoppeld
+      no_connections: Geen brokerverbindingen gevonden.
+      delete_connection: Verwijderen
+      delete_connection_title: Brokerverbinding verwijderen?
+      delete_connection_body: Hiermee wordt de verbinding met %{brokerage} permanent verwijderd uit SnapTrade. Alle accounts van deze broker worden ontkoppeld. U moet opnieuw verbinden om deze accounts weer te synchroniseren.
+      delete_connection_confirm: Verbinding verwijderen
+      manage_at_snaptrade: Verbindingen beheren bij SnapTrade
+  snaptrade_item:
+    sync_status:
+      no_accounts: Geen accounts gevonden
+      synced:
+        one: '%{count} account gesynchroniseerd'
+        other: '%{count} accounts gesynchroniseerd'
+      synced_with_setup: '%{linked} gesynchroniseerd, %{unlinked} nog in te stellen'
+    institution_summary:
+      none: Geen instellingen verbonden
+      count:
+        one: '%{count} instelling'
+        other: '%{count} instellingen'
+    brokerage_summary:
+      none: Geen brokers verbonden
+      count:
+        one: '%{count} broker'
+        other: '%{count} brokers'
+    syncer:
+      discovering: Accounts zoeken...
+      importing: Accounts importeren van SnapTrade...
+      processing: Posities en activiteiten verwerken...
+      calculating: Saldi berekenen...
+      checking_config: Accountconfiguratie controleren...
+      needs_setup: 'Accounts die moeten worden ingesteld: %{count}...'
+      activities_fetching_async: Activiteiten worden op de achtergrond opgehaald. Bij nieuwe brokerverbindingen kan dit tot een minuut duren.

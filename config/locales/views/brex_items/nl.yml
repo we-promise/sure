@@ -6,7 +6,7 @@ nl:
       provider: Brex
       separator: " • "
     kinds:
-      cash: Contant
+      cash: Cash
       card: Kaart
     statuses:
       ACTIVE: Actief

@@ -1,0 +1,9 @@
+---
+nl:
+  activerecord:
+    errors:
+      models:
+        recurring_allocation:
+          attributes:
+            currency:
+              must_match_occurrence: moet overeenkomen met de valuta van de termijn

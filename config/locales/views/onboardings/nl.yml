@@ -10,8 +10,8 @@ nl:
     logout:
       sign_out: Uitloggen
     show:
-      title: Laten we je account instellen
-      subtitle: Laten we eerst je profiel voltooien.
+      title: Laten we uw account instellen
+      subtitle: Laten we eerst uw profiel instellen.
       first_name: Voornaam
       first_name_placeholder: Voornaam
       last_name: Achternaam
@@ -20,9 +20,14 @@ nl:
       household_name_placeholder: Huishoudnaam
       country: Land
       submit: Doorgaan
+      group_name: Groepsnaam
+      group_name_placeholder: Groepsnaam
+      moniker_prompt: Ik ga %{product_name} gebruiken met ...
+      moniker_family: Gezinsleden (alleen ikzelf of met partner, tieners, enz.)
+      moniker_group: Een groep mensen (bedrijf, club, vereniging of een ander soort groep)
     preferences:
-      title: Configureer je voorkeuren
-      subtitle: Laten we je voorkeuren configureren.
+      title: Configureer uw voorkeuren
+      subtitle: Laten we uw voorkeuren configureren.
       example: Voorbeeldaccount
       preview: Voorbeeld van hoe gegevens worden weergegeven op basis van voorkeuren.
       color_theme: Kleurthema
@@ -34,13 +39,13 @@ nl:
       date_format: Datumformaat
       submit: Voltooien
     goals:
-      title: Wat brengt je hier?
-      subtitle: Selecteer een of meer doelen die je hebt met %{product_name} als je persoonlijke financiële tool.
+      title: Wat brengt u hier?
+      subtitle: Selecteer een of meer doelen die u hebt met %{product_name} als uw persoonlijke financiële tool.
       unified_accounts: Al mijn rekeningen op één plek zien
       cashflow: Cashflow en uitgaven begrijpen
       budgeting: Financiële plannen en budgetten beheren
       partner: Financiën samen met een partner beheren
-      investments: Investeringen volgen
+      investments: Beleggingen volgen
       ai_insights: AI laten helpen om mijn financiën te begrijpen
       optimization: Rekeningen analyseren en optimaliseren
       reduce_stress: Financiële stress of angst verminderen
@@ -48,14 +53,14 @@ nl:
     trial:
       title: Probeer Sure 45 dagen
       data_deletion: Gegevens worden daarna verwijderd
-      description_html: Vanaf vandaag kun je het product uitgebreid testen.<br/>Als je het leuk vindt, host het zelf of draag bij om het hier te blijven gebruiken.
+      description_html: Vanaf vandaag kunt u het product uitgebreid testen.<br/>Bevalt het u, host het dan zelf of draag bij om het hier te blijven gebruiken.
       try_button: Probeer Sure 45 dagen
       continue_trial: Proefperiode voortzetten
       upgrade: Upgraden
       how_it_works: Hoe het werkt
       today: Vandaag
-      today_description: Je krijgt 45 dagen gratis toegang tot Sure op onze AWS.
+      today_description: U krijgt 45 dagen gratis toegang tot Sure op onze AWS.
       in_40_days: Over 40 dagen (%{date})
-      in_40_days_description: We sturen je een herinnering om je gegevens te exporteren.
+      in_40_days_description: We sturen u een herinnering om uw gegevens te exporteren.
       in_45_days: Over 45 dagen (%{date})
-      in_45_days_description: We verwijderen je gegevens — draag bij om Sure hier te blijven gebruiken!
+      in_45_days_description: We verwijderen uw gegevens — draag bij om Sure hier te blijven gebruiken!

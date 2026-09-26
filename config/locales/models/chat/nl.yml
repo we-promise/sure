@@ -1,0 +1,9 @@
+---
+nl:
+  chat:
+    errors:
+      rate_limited: De AI-provider beperkt momenteel het aantal verzoeken. Probeer het over een paar minuten opnieuw.
+      temporarily_unavailable: De AI-provider is momenteel tijdelijk niet beschikbaar. Probeer het over een paar minuten opnieuw.
+      misconfigured: De AI-provider is niet correct geconfigureerd. Neem contact op met uw beheerder.
+      no_response: De assistent heeft niet gereageerd. Mogelijk draait de achtergrondworker niet of is AI niet volledig geconfigureerd. Probeer het opnieuw.
+      default: Er kon geen antwoord worden gegenereerd. Probeer het opnieuw.

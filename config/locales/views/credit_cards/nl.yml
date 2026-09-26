@@ -13,5 +13,12 @@ nl:
       expiration_date: Vervaldatum
       minimum_payment: Minimumbetaling
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automatisch
+      simplefin_balance_sign_credit: Tegoed (de bank is u geld verschuldigd)
+      simplefin_balance_sign_debt: Schuld (u bent de bank geld verschuldigd)
+      simplefin_balance_sign_description: Gebruik alleen een handmatige instelling als SimpleFIN een onduidelijk teken (plus of min) doorgeeft. Automatisch blijft de transactiegeschiedenis en het saldo van de provider gebruiken.
+      simplefin_balance_sign_label: Betekenis van SimpleFIN-saldo
+      treat_balance_as_available_credit_description: Schakel dit in als uw bank het saldo van deze kaart doorgeeft als resterend beschikbaar krediet in plaats van het verschuldigde bedrag. De schuld wordt dan berekend uit de kredietlimiet die uw bank doorgeeft, of uit het veld Beschikbaar krediet als uw bank die niet levert.
+      treat_balance_as_available_credit_label: Saldo is beschikbaar krediet
     new:
       title: Creditcardgegevens invoeren

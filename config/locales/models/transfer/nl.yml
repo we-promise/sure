@@ -6,13 +6,17 @@ nl:
         transfer:
           attributes:
             base:
-              inflow_cannot_be_in_multiple_transfers: Inflow-transactie kan geen deel uitmaken van meerdere transfers
-              must_be_from_different_accounts: Transfer moet verschillende accounts hebben
-              must_be_from_same_family: Transfer moet van dezelfde familie zijn
-              must_be_within_date_range: Transfer-transactiedata moeten binnen 4 dagen van elkaar liggen
-              must_have_opposite_amounts: Transfer-transacties moeten tegengestelde bedragen hebben
-              must_have_single_currency: Transfer moet een enkele valuta hebben
-              outflow_cannot_be_in_multiple_transfers: Outflow-transactie kan geen deel uitmaken van meerdere transfers
+              inflow_cannot_be_in_multiple_transfers: Inkomende transactie kan geen deel uitmaken van meerdere overboekingen
+              must_be_from_different_accounts: Overboeking moet verschillende accounts hebben
+              must_be_from_same_family: Overboeking moet van dezelfde familie zijn
+              must_be_within_date_range: De transactiedata van een overboeking moeten binnen 4 dagen van elkaar liggen
+              must_have_opposite_amounts: De transacties van een overboeking moeten tegengestelde bedragen hebben
+              must_have_single_currency: Overboeking moet één valuta hebben
+              outflow_cannot_be_in_multiple_transfers: Uitgaande transactie kan geen deel uitmaken van meerdere overboekingen
+          different_accounts: Moet tussen verschillende accounts zijn
+          same_family: Moet binnen dezelfde familie/groep zijn
+          opposite_amounts: Moet tegengestelde bedragen hebben
+          within_days: Moet binnen %{count} dagen liggen
   transfer:
-    name: Transfer naar %{to_account}
+    name: Overboeking naar %{to_account}
     payment_name: Betaling naar %{to_account}

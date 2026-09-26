@@ -6,12 +6,19 @@ pt-BR:
     form:
       annual_fee: Taxa anual
       annual_fee_placeholder: '99'
-      apr: TAE
+      apr: Taxa de juros anual
       apr_placeholder: '15,99'
       available_credit: Crédito disponível
       available_credit_placeholder: '10000'
-      expiration_date: Data de expiração
+      expiration_date: Data de validade
       minimum_payment: Pagamento mínimo
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automático
+      simplefin_balance_sign_credit: Crédito (o banco deve a você)
+      simplefin_balance_sign_debt: Dívida (você deve ao banco)
+      simplefin_balance_sign_description: Use uma substituição apenas quando o SimpleFIN informar um sinal ambíguo. O modo automático continua usando o histórico de transações e o saldo do provedor.
+      simplefin_balance_sign_label: Significado do saldo do SimpleFIN
+      treat_balance_as_available_credit_description: Ative se o seu banco informar o saldo deste cartão como o limite disponível restante em vez do valor devido. A dívida passa a ser calculada a partir do limite de crédito informado pelo banco ou, se o banco não fornecer um, a partir do campo Crédito disponível.
+      treat_balance_as_available_credit_label: O saldo é o crédito disponível
     new:
       title: Inserir detalhes do cartão de crédito

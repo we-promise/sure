@@ -5,9 +5,14 @@ nl:
       import:
         currency: Valuta
         number_format: Nummerformaat
+        col_sep: Kolomscheidingsteken
+        col_seps:
+          comma: Komma (,)
+          semicolon: Puntkomma (;)
     errors:
       models:
         import:
           attributes:
             raw_file_str:
               invalid_csv_format: is geen geldig CSV-formaat
+          duplicate_headers: 'CSV-kolomkoppen leveren na normalisatie dubbele kolommen op: %{columns}'

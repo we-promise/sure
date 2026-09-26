@@ -1,0 +1,7 @@
+---
+nl:
+  activerecord:
+    errors:
+      models:
+        sophtron_account:
+          no_balance: Sophtron-account moet een huidig of beschikbaar saldo hebben

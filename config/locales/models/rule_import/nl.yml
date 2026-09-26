@@ -1,0 +1,9 @@
+---
+nl:
+  activerecord:
+    errors:
+      models:
+        rule_import:
+          unsupported_resource_type: 'Niet-ondersteund resourcetype: %{resource_type}'
+          invalid_json: 'Ongeldige JSON in voorwaarden of acties: %{message}'
+          min_actions: Regel moet ten minste één actie hebben

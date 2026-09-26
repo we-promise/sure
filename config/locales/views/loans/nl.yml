@@ -6,10 +6,25 @@ nl:
     form:
       interest_rate: Rentepercentage
       interest_rate_placeholder: '5.25'
-      initial_balance: Oorspronkelijke leningbalans
+      initial_balance: Oorspronkelijk leenbedrag
       rate_type: Rentetype
       term_months: Looptijd (maanden)
       term_months_placeholder: '360'
+      none: Geen
+      subtype_prompt: Selecteer type lening
+      subtype_none: Geen
+      rate_type_adjustable: Periodiek herzienbaar
+      rate_type_fixed: Vast
+      rate_type_variable: Variabel
+      rate_changes: Rentewijzigingen
+      rate_changes_hint: Elke regel bepaalt de rente die geldt vanaf de ingangsdatum tot de volgende wijziging. Als u een datum opnieuw invoert, wordt die regel vervangen in plaats van een tweede toe te voegen.
+      rate_changes_empty: Geen rentewijzigingen vastgelegd. De lening loopt tegen het rentepercentage hierboven.
+      rate_change_effective_date: Ingangsdatum
+      rate_change_rate: Rente
+      rate_change_add: Rentewijziging toevoegen
+      rate_change_remove: Verwijderen
+      start_date: Ingangsdatum lening
+      start_date_hint: Wanneer de lening is uitbetaald. Laat leeg om de openingsdatum van het account te gebruiken.
     new:
       title: Voer leninggegevens in
     overview:
@@ -21,3 +36,29 @@ nl:
       term: Looptijd
       type: Type
       unknown: Onbekend
+      original_payoff_date: Oorspronkelijke einddatum
+    tabs:
+      schedule:
+        date: Datum
+        description: Berekend op basis van het oorspronkelijke bedrag, de rente en de looptijd, vanaf %{start_date}. Extra aflossingen zijn niet meegenomen.
+        variable_rate_notice: De rente van deze lening verandert in de loop van de tijd. Het aflossingsschema wordt bij elke vastgelegde wijziging opnieuw berekend, waarbij de oorspronkelijke einddatum behouden blijft en de termijn wordt aangepast; een wijziging die nog niet is vastgelegd, verandert deze bedragen.
+        opening_payment: Eerste termijn
+        interest: Rente
+        monthly_payment: Maandtermijn
+        number: Nr.
+        payment: Termijn
+        principal: Aflossing
+        remaining_balance: Restschuld
+        total_cost: Totale kosten
+        total_interest: Totale rente
+      overview:
+        interest_rate: Rentepercentage
+        monthly_payment: Maandtermijn
+        not_applicable: N.v.t.
+        original_payoff_date: Oorspronkelijke einddatum
+        original_principal: Oorspronkelijk leenbedrag
+        remaining_principal: Resterend leenbedrag
+        term: Looptijd
+        type: Type
+        unknown: Onbekend
+        edit_loan_details: Leninggegevens bewerken

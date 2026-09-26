@@ -11,7 +11,19 @@ pt-BR:
       success: Um novo e-mail de confirmação está na fila para envio.
       no_pending_change: Nenhuma alteração de e-mail está pendente no momento!
     reset:
-      success: Sua conta foi resetada. Os dados serão excluídos em segundo plano em algum tempo.
+      success: Sua conta foi resetada. Os dados serão excluídos em segundo plano em breve.
       unauthorized: Você não está autorizado a realizar esta ação
     reset_with_sample_data:
       success: Sua conta foi resetada e os dados de exemplo estão sendo preparados. Você verá os dados de demonstração em breve.
+    roles:
+      admin: Administrador
+      member: Membro
+      super_admin: Superadministrador
+    user_menu:
+      aria_label: Abrir menu da conta
+      version: Versão
+      settings: Configurações
+      changelog: Novidades da versão
+      feedback: Feedback
+      contact: Contato
+      log_out: Sair

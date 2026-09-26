@@ -7,6 +7,9 @@ pt-BR:
       requested: Por favor, verifique seu e-mail para um link para redefinir sua senha.
       submit: Redefinir senha
       title: Redefinir senha
+      back: Voltar
     update:
       invalid_token: Token inválido.
       success: Sua senha foi redefinida.
+    disabled: A redefinição de senha pelo Sure está desativada. Redefina sua senha pelo seu provedor de identidade.
+    sso_only_user: Sua conta usa SSO para autenticação. Entre em contato com o administrador para gerenciar suas credenciais.

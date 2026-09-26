@@ -66,12 +66,15 @@ nl:
         deny: 'Weigeren'
       error:
         title: 'Er is een fout opgetreden'
+        go_back: Terug
       new:
         title: 'Autorisatie vereist'
         prompt: '%{client_name} autoriseren om uw account te gebruiken?'
         able_to: 'Deze applicatie kan'
       show:
         title: 'Autorisatiecode'
+        authorization_code_label: 'Autorisatiecode:'
+        copy_instructions: Kopieer deze code en plak hem in de applicatie.
       form_post:
         title: 'Dit formulier verzenden'
 

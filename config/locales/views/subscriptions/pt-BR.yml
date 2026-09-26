@@ -12,3 +12,13 @@ pt-BR:
       redirect_to_stripe: "Na próxima etapa, você será redirecionado para o Stripe, que processa cartões de crédito para nós."
       trialing: "Seus dados serão excluídos em %{days} dias"
       trial_over: "Seu período de teste terminou"
+      already_contributing: Você já está contribuindo. Obrigado!
+      page_title: Fazer upgrade
+      account_settings: Configurações da conta
+      sign_out: Sair
+    create:
+      welcome: Boas-vindas ao Sure!
+      trial_already_used: Você já iniciou ou concluiu um período de teste. Faça upgrade para continuar.
+    success:
+      welcome_with_contribution: Boas-vindas ao Sure! Agradecemos a sua contribuição.
+      contribution_failed: Ocorreu um erro ao processar sua contribuição. Tente novamente.

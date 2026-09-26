@@ -14,6 +14,7 @@ nl:
       empty: Nog geen tags
       new: Nieuwe tag
       tags: Tags
+      delete_all: Alles verwijderen
     new:
       new: Nieuwe tag
     tag:
@@ -21,3 +22,5 @@ nl:
       edit: Bewerken
     update:
       updated: Tag bijgewerkt
+    destroy_all:
+      all_deleted: Alle tags verwijderd

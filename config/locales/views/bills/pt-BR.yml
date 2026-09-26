@@ -1,0 +1,313 @@
+---
+pt-BR:
+  bills:
+    row_overdue: Vencida
+    row_today: Hoje
+    detect:
+      found:
+        one: Encontramos %{count} possível conta a pagar. Revise abaixo.
+        other: Encontramos %{count} possíveis contas a pagar. Revise abaixo.
+      none_found: Nenhum novo padrão recorrente encontrado. Você pode adicionar contas a pagar manualmente.
+      already_running: A detecção já está em andamento. Volte em instantes.
+    feed:
+      calendar_name: Contas a pagar do Sure
+    ai_prompts:
+      due_before_paycheck: O que vence antes do meu próximo salário?
+      subscriptions_up: Quais assinaturas ficaram mais caras este ano?
+      monthly_subscriptions: Quanto eu pago por mês em assinaturas?
+      safe_to_spend: Quanto posso gastar com segurança neste período?
+    smart_configurations:
+      show:
+        trigger: Deixar a IA configurar
+        title: Sugestões da IA para %{name}
+        intro: Marque as alterações que deseja aplicar. As desmarcadas ficam exatamente como estão.
+        no_changes: Esta conta a pagar já corresponde ao histórico de pagamentos. Nada a alterar.
+        failed: Não foi possível analisar esta conta a pagar agora. A configuração dela não foi alterada.
+        field_name: Nome
+        field_amount: Valor
+        field_schedule: Frequência
+        field_category: Categoria
+        field_kind: Tipo
+        field_autopay: Débito automático
+        uncategorized: Sem categoria
+        autopay_off: Desativado
+        autopay_on: Ativado
+        apply: Aplicar selecionadas
+    detail:
+      current: Atual
+      next_payment: Próximo pagamento
+      around: por volta de %{date}
+      rules: Como esta conta a pagar é identificada
+      rule_named: '%{name}'
+      rule_amount_range: de %{min} a %{max}
+      rule_aliases: Também corresponde a %{names}
+      rule_learned_tolerance: Valores até %{percent} diferentes do valor habitual correspondem a esta conta a pagar
+      history_title: Últimos 12 meses
+      history_aria: Pagamentos nos últimos doze meses
+      key_metrics: Por ano
+      year: Ano
+      spent_per_year: Gasto
+      avg_payment: Pagamento médio
+      average: Média paga
+      range: '%{min} a %{max}'
+      annualized: Por ano
+      ytd: Pago este ano
+      last_account: Última conta usada
+      upcoming: Próximos
+      recent_payments: Pagamentos recentes
+      manual_payment: Pagamento manual
+      history: Histórico
+      payment_count:
+        one: '%{count} pagamento'
+        other: '%{count} pagamentos'
+      notes: Observações
+      trial_chip: Teste termina em %{date}
+      renews_chip: Renova em %{date}
+      cancelled_chip: Cancelada em %{date}
+      price_changes: Mudanças de preço
+      price_change_line: '%{from} → %{to}'
+    month_pulse:
+      bill_count:
+        one: '%{count} conta a pagar'
+        other: '%{count} contas a pagar'
+      left_to_pay: a pagar
+      pulse_paid: pago
+      pulse_overdue: vencido
+      pulse_next_seven: nos próximos 7 dias
+      pulse_bar_aria: '%{percent}% das contas a pagar deste mês quitadas'
+      next_up: A seguir
+      view_upcoming: Ver próximas
+      date_today: Hoje
+      date_tomorrow: Amanhã
+      unconvertible:
+        one: '%{count} conta a pagar não está incluída, sem taxa de câmbio disponível'
+        other: '%{count} contas a pagar não estão incluídas, sem taxa de câmbio disponível'
+    summary:
+      remaining: '%{amount} restantes'
+      paid_headline: '%{amount} pagos'
+      cost_line: Média de %{average} por pagamento, cerca de %{annualized} por ano
+    pane:
+      close: Recolher detalhes
+    add_bill: Adicionar conta a pagar
+    manage: Gerenciar
+    find_payment: Encontrar pagamento
+    add_payment: Adicionar pagamento
+    review_match: Revisar correspondência
+    resolve: Resolver
+    manage_payments: Gerenciar pagamentos
+    view_full_bill: Ver conta a pagar completa
+    match:
+      same_merchant: Mesmo comerciante
+      name_matches: Nome corresponde
+      exact_amount: Valor exato
+      amount_off: Diferença de %{amount}
+      due_date: Pago no vencimento
+      days_before:
+        one: '%{count} dia antes do vencimento'
+        other: '%{count} dias antes do vencimento'
+      days_after:
+        one: '%{count} dia após o vencimento'
+        other: '%{count} dias após o vencimento'
+    attention:
+      needs_review: Correspondência precisa de revisão
+      partial: Parcial · faltam %{amount}
+      amount_changed: Valor alterado
+      overdue:
+        one: '%{count} dia de atraso'
+        other: '%{count} dias de atraso'
+    paid_label: Pago
+    paid_over_short: Pago a mais
+    installment_progress: Parcela %{done_plus_one} de %{total}
+    partial_progress: '%{paid} de %{expected} pagos'
+    cancelled_still_scheduled: Você marcou esta assinatura como cancelada em %{date}, mas ela continua agendada, então novas cobranças continuarão aparecendo.
+    paid_over: Pago %{paid}, mais do que o esperado
+    remaining_label: restante
+    debt_payment: · pagamento de dívida
+    paid_from: de %{account}
+    amount_range: varia de %{min} a %{max}
+    possible_duplicate: Possível duplicata
+    due_label:
+      overdue:
+        one: Vencida há %{count} dia, venceu em %{date}
+        other: Vencida há %{count} dias, venceu em %{date}
+      today: Vence hoje
+      settled: Venceu em %{date}
+      due_since: Vence em %{date}
+      snoozed: Adiada até %{date}
+      upcoming:
+        one: Vence amanhã, %{date}
+        other: Vence em %{count} dias, %{date}
+    views:
+      aria_label: Visualizações de contas a pagar
+      overview: Visão geral
+      calendar: Calendário
+      paycheck: Plano de renda
+      all: Todas as contas a pagar
+    pay_period:
+      paycheck_on: Salário em %{date}
+      before_next_paycheck: Antes do seu próximo salário
+      due_before_date: '%{amount} vencem antes de %{date}'
+    paycheck:
+      unconvertible:
+        one: '%{count} compromisso não está incluído, sem taxa de câmbio disponível'
+        other: '%{count} compromissos não estão incluídos, sem taxa de câmbio disponível'
+      income_section_title: Calendário de renda
+      manage: Gerenciar
+      add_income: Adicionar renda
+      income_paused: Pausada, fora do plano
+      income_detected: Detectada automaticamente, não define dias de pagamento
+      income_next_payday: próxima em %{date}
+      income_source_count:
+        one: '%{count} fonte de renda'
+        other: '%{count} fontes de renda'
+      next_on: Próxima em %{date}
+      no_upcoming_income: Nenhuma renda programada daqui em diante.
+      empty:
+        title: Informe seu calendário de renda
+        description: Adicione sua renda para ver o que cada dia de pagamento precisa cobrir. Entradas detectadas nunca definem sozinhas seus dias de pagamento -- quem define é você.
+        action: Adicionar renda
+      all_clear:
+        title: Nada a cobrir
+        description: Nenhuma conta a pagar vence entre hoje e %{date}, então nada nesse período está comprometido.
+      safe_after_bills: Livre após as contas
+      short_after_bills: Faltando após as contas
+      period_source: ' · %{source}'
+      period_source_multiple: ' · %{count} fontes de renda'
+      before_next_paycheck: Antes de %{date}
+      no_income_arriving: Nenhuma renda prevista
+      income_amount: '%{amount} de renda'
+      due_this_period: Vence neste período
+      reserved_ahead: Reservado para depois
+      safe_short: Livre
+      short_short: Falta
+      reserved_footer:
+        one: Reservado para %{count} conta a pagar futura
+        other: Reservado para %{count} contas a pagar futuras
+      bills_this_period:
+        one: Contas a pagar neste período · %{count}
+        other: Contas a pagar neste período · %{count}
+      bills_before_payday:
+        one: Contas a pagar antes do próximo dia de pagamento · %{count}
+        other: Contas a pagar antes do próximo dia de pagamento · %{count}
+      of_total: de %{amount}
+      bridge_label: Antes do seu próximo salário
+      bridge_amount: · %{amount} a vencer
+      bridge_split: Vence antes de %{date}, coberto pelos %{cash} nas suas contas.
+      shortfall_label: Falta antes do próximo dia de pagamento
+      shortfall_amount: · %{amount}
+      shortfall_split: '%{obligations} vencem antes de %{date} e suas contas têm %{cash}.'
+      shortfall_largest: 'Maior compromisso a vencer:'
+      review_plan: Revisar plano
+      allocation_aria: De %{income} de renda, %{due} vence agora, %{reserved} está reservado para depois e %{safe} está livre para gastar.
+      allocation_aria_short: '%{income} de renda vai para o que já está comprometido aqui, e faltam mais %{short}.'
+    reset_feed_token:
+      done: Link do feed redefinido. Os apps de calendário que usam o link antigo deixarão de ser atualizados; assine novamente com o novo link.
+      confirm: Redefinir o link do feed do calendário? Todos os links compartilhados anteriormente deixarão de funcionar.
+    calendar:
+      subscribe_ical: Assinar (iCal)
+      reset_feed: Redefinir link
+      previous_month: Mês anterior
+      next_month: Próximo mês
+      today: Hoje
+      month_totals: '%{expected} previstos · %{paid} pagos'
+      empty_month: Nenhuma conta a pagar vence neste mês.
+    all:
+      search_placeholder: Buscar contas a pagar
+      any_status: Qualquer status
+      status_filters:
+        overdue: Vencidas
+        due: Vencem em breve
+        partial: Pagas em parte
+        paid: Pagas
+        paused: Pausadas
+        ended: Descartadas
+      subscription_monthly: Por mês
+      subscription_annual: Por ano
+      subscription_active: Ativas
+      subscription_price_changes: Mudanças de preço este ano
+      subscription_price_change_line: '%{from} → %{to} (%{percent}%)'
+      any_type: Qualquer tipo
+      sort_due: Por próximo vencimento
+      sort_name: Por nome
+      sort_amount: Por valor
+      no_matches_title: Nenhum resultado
+      no_matches_description: Tente limpar um filtro ou a busca.
+      col_name: Nome
+      col_type: Tipo
+      col_frequency: Frequência
+      col_amount: Valor
+      col_next: Próximo vencimento
+      next_short: próx. %{date}
+      col_status: Status
+      col_actions: Ações
+      monthly_equivalent: '%{amount}/mês'
+      types:
+        bill: Conta a pagar
+        subscription: Assinatura
+        installment: Parcelamento
+        income: Renda
+        transfer: Transferência
+        other: Outro
+    show:
+      edit: Editar conta a pagar
+    index:
+      left_to_pay: a pagar
+      paid_so_far: Pago até agora
+      hero_past_due: '%{amount} vencidos'
+      hero_next_seven: '%{amount} vencem nos próximos 7 dias'
+      add_bill: Adicionar conta a pagar
+      add_income: Adicionar renda
+      review_with_ai: Revisar com IA
+      detected_review:
+        one: Encontramos %{count} pagamento recorrente nas suas transações. Revise-o para que os totais aqui correspondam ao que você realmente paga.
+        other: Encontramos %{count} pagamentos recorrentes nas suas transações. Revise-os para que os totais aqui correspondam ao que você realmente paga.
+      detected_review_action: Revisar
+      needs_review: Precisa de revisão
+      notice_trial: O período de teste de %{name} termina em %{date}
+      notice_renewal: '%{name} renova em %{date}'
+      notice_price: '%{name} mudou de preço: %{from} → %{to} (%{percent})'
+      notices_routine:
+        one: '%{count} alteração menor'
+        other: '%{count} alterações menores'
+      suggestion_line: '%{entry} parece ser um pagamento de %{bill}'
+      suggestion_unknown_entry: Uma transação
+      confidence: '%{percent}% de correspondência'
+      accept: Aplicar
+      reject: Não é esta conta a pagar
+      title: Contas a pagar
+      summary_label: Vencem este mês
+      summary_count:
+        one: '%{count} conta a vencer'
+        other: '%{count} contas a vencer'
+      summary_needs_action:
+        one: '%{count} precisa de você'
+        other: '%{count} precisam de você'
+      all_automatic: todas em débito automático
+      recurring_label: Compromisso recorrente
+      recurring_monthly: '%{amount} por mês'
+      recurring_annual: '%{amount} por ano'
+      unconvertible:
+        one: '%{count} conta a pagar não está incluída, sem taxa de câmbio disponível'
+        other: '%{count} contas a pagar não estão incluídas, sem taxa de câmbio disponível'
+      overdue: Vencidas
+      needs_attention: Precisam de atenção
+      attention_overdue_total: '%{amount} vencidos'
+      this_month: Este mês
+      later: Depois deste mês
+      paid_this_month: Pagas este mês
+      dormant: Inativas
+      kpi_remaining: Restante este mês
+      kpi_paid: Pago este mês
+      kpi_next_seven: Vence nos próximos 7 dias
+      kpi_past_due: Vencido
+      paid_count:
+        one: '%{count} conta quitada'
+        other: '%{count} contas quitadas'
+      needs_action_count:
+        one: '%{count} precisa de você'
+        other: '%{count} precisam de você'
+      empty:
+        title: Nenhuma conta a pagar ainda
+        description: Contas a pagar são suas despesas recorrentes. O Sure as encontra automaticamente no seu histórico de transações, e você pode adicionar um link de pagamento a cada uma para pagar direto daqui.
+        action: Encontrar transações recorrentes
+        no_history_description: Nenhuma transação ainda. Conecte uma conta ou importe seu histórico e o Sure encontrará suas contas a pagar automaticamente, ou adicione uma manualmente.

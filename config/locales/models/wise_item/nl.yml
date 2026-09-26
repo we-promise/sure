@@ -1,0 +1,12 @@
+---
+nl:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: Private SCA-sleutel
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: kan niet worden opgeslagen omdat Active Record-encryptie niet is geconfigureerd op deze installatie

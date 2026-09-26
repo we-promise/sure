@@ -17,5 +17,7 @@ pt-BR:
             base:
               cannot_deactivate_admin_with_other_users: Administrador não pode excluir a conta
                 enquanto outros usuários estiverem presentes. Por favor, exclua todos os membros primeiro.
+              provider_item_has_other_accounts: O usuário possui contas vinculadas a uma conexão de provedor que também tem contas de outro usuário. Mova ou desvincule essas contas antes de alterar a participação na família/grupo.
+              cannot_remove_last_super_admin: Não é possível remover o último superadministrador ativo. Promova outro usuário a superadministrador primeiro.
             profile_image:
               invalid_file_size: tamanho do arquivo deve ser menor que %{max_megabytes}MB
