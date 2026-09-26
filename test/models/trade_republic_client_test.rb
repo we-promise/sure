@@ -794,12 +794,16 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       requested << payload[:id]
       {
         "sections" => [
+          { "title" => "You received €4.30", "type" => "header", "data" => {
+            "icon" => { "asset" => "logos/US0378331005/v2", "badge" => nil }
+          } },
           { "title" => "Transaction", "data" => [
-            { "title" => "Shares", "detail" => { "text" => "10" } },
-            { "title" => "Withholding tax", "detail" => { "text" => "€0.75" } },
-            { "title" => "Total", "detail" => { "text" => "€4.25" } }
+            { "title" => "Shares", "detail" => { "text" => "10.000000" } },
+            { "title" => "Dividend per share", "detail" => { "text" => "0,51 €" } },
+            { "title" => "Tax", "detail" => { "text" => "0,80 €" } },
+            { "title" => "Total", "detail" => { "text" => "4,25 €" } }
           ] },
-          { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } } ] }
+          { "title" => "Documents", "data" => [ { "title" => "Documents", "detail" => "01.08.2026" } ] }
         ]
       }
     end
@@ -819,7 +823,8 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal [ "dividend-1" ], requested
     assert_equal "US0378331005", detail["isin"]
     assert_equal "10.0", detail["quantity"]
-    assert_equal "0.75", detail["taxes"]
+    assert_equal "0.51", detail["dividend_per_share"]
+    assert_equal "0.8", detail["taxes"]
     assert_equal 4.3, detail["amount"]
     assert_nil detail["price"]
   end

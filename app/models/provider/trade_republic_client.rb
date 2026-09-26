@@ -44,10 +44,13 @@ class Provider::TradeRepublicClient
     SPARE_CHANGE_AGGREGATE
   ].freeze
   # New dividends also fetch timelineDetailV2 so provider_detail keeps the
-  # ISIN, share count and withholding tax. The imported cash amount still
-  # comes from the timeline list.
+  # ISIN, share count, dividend per share and withholding tax. The imported
+  # cash amount still comes from the timeline list.
   DIVIDEND_DETAIL_CATEGORY = Provider::TradeRepublicTimelineEvent::CATEGORY_DIVIDEND
-  DIVIDEND_DETAIL_KEYS = %w[isin name quantity taxes].freeze
+  DIVIDEND_DETAIL_KEYS = %w[isin name quantity dividend_per_share taxes].freeze
+  DIVIDEND_PER_SHARE_TITLES = [
+    "dividend per share", "dividende pro aktie", "dividend per aandeel", "ausschüttung pro anteil"
+  ].freeze
   EVENT_TYPE_CATEGORIES = Provider::TradeRepublicTimelineEvent::EVENT_TYPE_CATEGORIES
   PORTFOLIO_CATEGORIES = {
     "stocksAndETFs" => "brokerage",
@@ -66,10 +69,7 @@ class Provider::TradeRepublicClient
   FEE_TITLES = [
     "gebühr", "fee", "fees", "kosten", "costs", "cost", "commission", "kommission"
   ].freeze
-  TAX_TITLES = [
-    "steuer", "steuern", "tax", "taxes", "belasting",
-    "quellensteuer", "withholding tax", "bronbelasting"
-  ].freeze
+  TAX_TITLES = [ "steuer", "steuern", "tax", "taxes", "belasting" ].freeze
   SHARE_TITLES = [
     "aktien", "anteile", "shares", "aandelen",
     "aktien hinzugefügt", "shares added", "aktien erhalten", "shares received",
@@ -1301,6 +1301,7 @@ class Provider::TradeRepublicClient
       fee_amount = decimal_from_row(fees)
       tax_amount = decimal_from_row(taxes)
       price = decimal_from_row(price_row)
+      dividend_per_share = decimal_from_row(find_row(rows, DIVIDEND_PER_SHARE_TITLES))
       if price.nil? && quantity&.nonzero? && amount
         # Provider cash totals embed costs: buy total = gross + fees/taxes,
         # sell total = gross - fees/taxes. Recover share price accordingly.
@@ -1312,14 +1313,15 @@ class Provider::TradeRepublicClient
       return nil if quantity.nil? && amount.nil?
 
       {
-        "isin" => find_isin(item) || find_isin(raw),
+        "isin" => find_isin(item) || find_isin(raw) || find_logo_isin(raw),
         "name" => item&.dig("title") || find_asset_name(raw),
         "quantity" => decimal_string(quantity),
         "price" => decimal_string(price),
         "amount" => decimal_string(amount&.abs),
         "currency" => currency_from_row(total) || currency_from_row(shares) || currency_from_row(price_row),
         "fees" => decimal_string(fee_amount),
-        "taxes" => decimal_string(tax_amount)
+        "taxes" => decimal_string(tax_amount),
+        "dividend_per_share" => decimal_string(dividend_per_share)
       }.compact
     end
 
@@ -1377,6 +1379,16 @@ class Provider::TradeRepublicClient
       values = []
       walk(raw) { |value| values << value if value.is_a?(String) && value.match?(/\A[A-Z]{2}[A-Z0-9]{9}\d\z/) }
       values.first
+    end
+
+    # Dividend details carry the ISIN only in the header logo path, e.g.
+    # "logos/DE000A0F5UH1/v2".
+    def find_logo_isin(raw)
+      isin = nil
+      walk(raw) do |value|
+        isin ||= value[%r{\Alogos/([A-Z]{2}[A-Z0-9]{9}\d)/}, 1] if value.is_a?(String)
+      end
+      isin
     end
 
     def find_asset_name(raw)
