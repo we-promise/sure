@@ -58,7 +58,16 @@
               <div class="flex items-center gap-3">
                 <%= render DS::FilledIcon.new(icon: "plug", size: "md", rounded: true) %>
                 <div class="text-sm space-y-0.5">
-                  <p class="font-medium text-primary"><%= token.application&.name || t(".unknown_client") %></p>
+                  <div class="flex items-center gap-2">
+                    <p class="font-medium text-primary"><%= token.application&.name || t(".unknown_client") %></p>
+                    <%= render DS::Pill.new(
+                      label: token.scopes.include?("read_write") ? t(".access_read_write") : t(".access_read_only"),
+                      icon: "shield-check",
+                      tone: :indigo,
+                      style: :soft,
+                      marker: false
+                    ) %>
+                  </div>
                   <p class="text-secondary"><%= t(".connected_ago", time: time_ago_in_words(token.created_at)) %></p>
                 </div>
               </div>
