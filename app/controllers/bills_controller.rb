@@ -142,6 +142,11 @@ class BillsController < ApplicationController
                      .accessible_by(Current.user)
                      .includes(:merchant)
                      .find(params[:id])
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.bills"), bills_path ],
+      [ @series.display_name, nil ]
+    ]
 
     # A row expansion names the cycle it was opened from; the bill's own page
     # has no cycle in mind and asks the series. Looked up through the series, so
