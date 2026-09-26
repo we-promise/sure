@@ -25,6 +25,9 @@ nb:
       data_quality:
         title: "Datakvalitet og synkroniseringsdetaljer"
         repair: "Reparer importerte data"
+        pending_trade_details:
+          one: "%{count} investeringsaktivitet venter på detaljer"
+          other: "%{count} investeringsaktiviteter venter på detaljer"
     setup_accounts:
       page_title: "Konfigurer Trade Republic-konto"
       subtitle: "Koble til Trade Republic-investeringskontoen din."
@@ -77,5 +80,3 @@ nb:
         card_refund: Kortrefusjon
         tax_refund: Skatterefusjon
         round_up: Round up
-        buy: Kjøp
-        sell: Salg

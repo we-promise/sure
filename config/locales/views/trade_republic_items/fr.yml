@@ -62,6 +62,9 @@ fr:
         unknown:
           one: "%{count} activité inconnue"
           other: "%{count} activités inconnues"
+        pending_trade_details:
+          one: "%{count} opération d'investissement en attente de détails"
+          other: "%{count} opérations d'investissement en attente de détails"
         expenses:
           one: "%{count} dépense au cours des 30 derniers jours (%{amount})"
           other: "%{count} dépenses au cours des 30 derniers jours (%{amount})"
@@ -168,8 +171,6 @@ fr:
         card_refund: Remboursement par carte
         tax_refund: Remboursement d'impôt
         round_up: Round up
-        buy: Achat
-        sell: Vente
     update:
       pin_required: Saisissez votre code PIN Trade Republic pour vous réauthentifier.
       success: Configuration Trade Republic mise à jour avec succès.

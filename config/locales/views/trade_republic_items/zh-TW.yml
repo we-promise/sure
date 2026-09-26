@@ -37,6 +37,9 @@ zh-TW:
         unknown:
           one: "%{count} 筆未知活動"
           other: "%{count} 筆未知活動"
+        pending_trade_details:
+          one: "%{count} 項投資活動等待詳細資料"
+          other: "%{count} 項投資活動等待詳細資料"
         expenses:
           one: "過去 30 天 %{count} 筆支出（%{amount}）"
           other: "過去 30 天 %{count} 筆支出（%{amount}）"
@@ -103,5 +106,3 @@ zh-TW:
         card_refund: 卡片退款
         tax_refund: 退稅
         round_up: Round up
-        buy: 買入
-        sell: 賣出

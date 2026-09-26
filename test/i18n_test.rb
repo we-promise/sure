@@ -80,18 +80,19 @@ class I18nTest < ActiveSupport::TestCase
   def test_trade_republic_activity_labels_exist_for_each_locale
     required_labels = %w[
       contribution withdrawal interest dividend card_payment cash_withdrawal
-      card_fee card_refund tax_refund buy sell
+      card_fee card_refund tax_refund round_up
     ]
 
     Dir[File.expand_path("../config/locales/views/trade_republic_items/*.yml", __dir__)].sort.each do |file|
       locale = File.basename(file, ".yml")
-      labels = YAML.load_file(file, aliases: true)
-        .fetch(locale)
-        .dig("trade_republic_items", "activities", "labels")
+      translations = YAML.load_file(file, aliases: true).fetch(locale)
+      labels = translations.dig("trade_republic_items", "activities", "labels")
 
       assert labels.is_a?(Hash), "#{file} must define trade_republic_items.activities.labels"
       assert_empty required_labels - labels.keys,
                    "#{file} is missing Trade Republic activity labels"
+      assert translations.dig("trade_republic_items", "trade_republic_item", "data_quality", "pending_trade_details").present?,
+             "#{file} is missing trade_republic_item.data_quality.pending_trade_details"
     end
   end
 

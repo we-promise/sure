@@ -37,6 +37,9 @@ vi:
         unknown:
           one: "%{count} hoạt động không xác định"
           other: "%{count} hoạt động không xác định"
+        pending_trade_details:
+          one: "%{count} giao dịch đầu tư đang chờ chi tiết"
+          other: "%{count} giao dịch đầu tư đang chờ chi tiết"
         expenses:
           one: "%{count} khoản chi trong 30 ngày qua (%{amount})"
           other: "%{count} khoản chi trong 30 ngày qua (%{amount})"
@@ -103,5 +106,3 @@ vi:
         card_refund: Hoàn tiền thẻ
         tax_refund: Hoàn thuế
         round_up: Round up
-        buy: Mua
-        sell: Bán

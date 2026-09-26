@@ -25,6 +25,11 @@ ru:
       data_quality:
         title: "Качество данных и сведения о синхронизации"
         repair: "Исправить импортированные данные"
+        pending_trade_details:
+          one: "%{count} инвестиционная операция ожидает деталей"
+          few: "%{count} инвестиционные операции ожидают деталей"
+          many: "%{count} инвестиционных операций ожидают деталей"
+          other: "%{count} инвестиционной операции ожидают деталей"
     setup_accounts:
       page_title: "Настроить счёт Trade Republic"
       subtitle: "Свяжите инвестиционный счёт Trade Republic."
@@ -77,5 +82,3 @@ ru:
         card_refund: Возврат на карту
         tax_refund: Налоговый возврат
         round_up: Round up
-        buy: Покупка
-        sell: Продажа

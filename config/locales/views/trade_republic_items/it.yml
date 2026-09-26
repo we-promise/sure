@@ -25,6 +25,9 @@ it:
       data_quality:
         title: "Qualità dei dati e dettagli della sincronizzazione"
         repair: "Ripara i dati importati"
+        pending_trade_details:
+          one: "%{count} operazione di investimento in attesa di dettagli"
+          other: "%{count} operazioni di investimento in attesa di dettagli"
     setup_accounts:
       page_title: "Configura il conto Trade Republic"
       subtitle: "Collega il tuo conto d’investimento Trade Republic."
@@ -77,5 +80,3 @@ it:
         card_refund: Rimborso carta
         tax_refund: Rimborso fiscale
         round_up: Round up
-        buy: Acquisto
-        sell: Vendita

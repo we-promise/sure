@@ -25,6 +25,9 @@ hu:
       data_quality:
         title: "Adatminőség és szinkronizálási részletek"
         repair: "Importált adatok javítása"
+        pending_trade_details:
+          one: "%{count} befektetési tétel részletekre vár"
+          other: "%{count} befektetési tétel részletekre vár"
     setup_accounts:
       page_title: "Trade Republic-fiók beállítása"
       subtitle: "Kapcsold össze a Trade Republic befektetési számládat."
@@ -77,5 +80,3 @@ hu:
         card_refund: Kártyás visszatérítés
         tax_refund: Adó-visszatérítés
         round_up: Round up
-        buy: Vétel
-        sell: Eladás
