@@ -180,8 +180,10 @@ class Provider::Openai::AutoMerchantDetector
       end
     rescue Faraday::BadRequestError => e
       # If strict mode fails (HTTP 400), fall back to none mode
-      # This handles providers that don't support json_schema response format
-      if json_mode == JSON_MODE_STRICT || json_mode == JSON_MODE_AUTO
+      # This handles providers that don't support json_schema response format.
+      # Auto mode performs its own strict-attempt fallback; a BadRequestError
+      # reaching this rescue while in auto mode came from a none-mode retry.
+      if json_mode == JSON_MODE_STRICT
         Rails.logger.warn("Strict JSON mode failed, falling back to none mode: #{e.message}")
         auto_detect_merchants_with_mode(JSON_MODE_NONE)
       else
@@ -191,13 +193,26 @@ class Provider::Openai::AutoMerchantDetector
 
     # Auto mode: try strict first, fall back to none if too many nulls or missing results
     def auto_detect_merchants_with_auto_mode
-      result = auto_detect_merchants_with_mode(JSON_MODE_STRICT)
+      result = begin
+        auto_detect_merchants_with_mode(JSON_MODE_STRICT)
+      rescue Provider::Openai::ResponseFormatError => e
+        Rails.logger.warn("Auto mode: strict JSON response could not be parsed (#{e.message}), retrying with none mode")
+        return auto_detect_merchants_with_mode(JSON_MODE_NONE)
+      rescue Faraday::BadRequestError => e
+        # Handle the provider-rejects-strict-schema fallback inside auto mode so
+        # a failure of the none-mode retry propagates instead of re-entering
+        # the outer BadRequestError rescue and firing a second fallback.
+        Rails.logger.warn("Auto mode: strict JSON mode rejected by provider (#{e.message}), retrying with none mode")
+        return auto_detect_merchants_with_mode(JSON_MODE_NONE)
+      end
 
       # Check if too many nulls OR missing results were returned
       # Models that can't reason in strict mode often:
       # 1. Return null for everything, OR
       # 2. Simply omit transactions they can't detect (returning fewer results than input)
-      null_count = result.count { |r| r.business_name.nil? || r.business_name == "null" }
+      # A detection is only usable downstream with both a name and a URL, so an
+      # item missing either counts as a failure for the retry heuristic.
+      null_count = result.count { |r| r.business_name.blank? || r.business_url.blank? }
       missing_count = transactions.size - result.size
       failed_count = null_count + missing_count
       failed_ratio = transactions.size > 0 ? failed_count.to_f / transactions.size : 0.0
@@ -313,12 +328,24 @@ class Provider::Openai::AutoMerchantDetector
       raw = response.dig("choices", 0, "message", "content")
       parsed = parse_json_flexibly(raw)
 
-      # Handle different response formats from various LLMs
-      merchants = parsed.dig("merchants") ||
-                  parsed.dig("results") ||
-                  (parsed.is_a?(Array) ? parsed : nil)
+      # Handle different response formats from various LLMs. parsed can be any
+      # JSON value; only Hash (with a known key) and bare Array are usable.
+      merchants = if parsed.is_a?(Hash)
+        parsed.dig("merchants") || parsed.dig("results")
+      else
+        parsed
+      end
 
-      raise Provider::Openai::Error, "Could not find merchants in response" if merchants.nil?
+      unless merchants.is_a?(Array) && merchants.all? { |m| m.is_a?(Hash) }
+        raise Provider::Openai::ResponseFormatError, "Could not find merchants in response"
+      end
+
+      # Drop items with no transaction id: they can't be correlated to a
+      # transaction, and left in they'd surface as nil-field rows that hide a
+      # malformed batch from the auto-mode retry heuristic. Missing name/url
+      # fields are fine (models in none/json_object mode often omit nulls) and
+      # are treated as "unknown" downstream.
+      merchants.select! { |m| (m["transaction_id"] || m["id"] || m["txn_id"]).present? }
 
       # Normalize field names (some LLMs use different naming)
       merchants.map do |m|
@@ -390,7 +417,7 @@ class Provider::Openai::AutoMerchantDetector
         end
       end
 
-      raise Provider::Openai::Error, "Could not parse JSON from response: #{raw.truncate(200)}"
+      raise Provider::Openai::ResponseFormatError, "Could not parse JSON from response: #{raw.truncate(200)}"
     end
 
     # Strip thinking model tags (<think>...</think>) from response
