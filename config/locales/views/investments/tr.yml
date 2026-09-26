@@ -182,6 +182,9 @@ tr:
       workplace_pension_uk:
         long: İşyeri Emeklilik Planı
         short: Emeklilik
+      cash_management:
+        short: CMA
+        long: Nakit Yönetim Hesabı
     value_tooltip:
       cash: Nakit
       holdings: Varlıklar

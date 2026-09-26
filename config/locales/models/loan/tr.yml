@@ -1,0 +1,8 @@
+---
+tr:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Faiz oranı değişikliği satırlarında hem geçerlilik tarihi hem de oran bulunmalıdır.
+          rate_change_before_origination: Faiz oranı değişikliği, kredinin kullandırım tarihinden önce geçerli olamaz.

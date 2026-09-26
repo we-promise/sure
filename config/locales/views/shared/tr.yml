@@ -45,3 +45,13 @@ tr:
       transfer: Transfer
     trend_change:
       no_change: değişiklik yok
+    require_connector_owner: Yalnızca kendi eklediğiniz bağlantıları yönetebilirsiniz
+    sidekiq_health_banner:
+      title: Bazı veriler güncel olmayabilir
+      body: Arka plan işleri işlenmiyor; bu nedenle bakiyeler, net değer ve hesap senkronizasyonları güncel olmayabilir veya eksik olabilir.
+      cta: Sistem durumunu görüntüle
+      reasons:
+        redis_unreachable: Uygulama Redis'e ulaşamıyor. REDIS_URL değerinizi ve Redis'in çalıştığını kontrol edin.
+        no_worker_processes: Bağlı bir Sidekiq çalışan süreci yok. Çalışan konteynerini veya systemd birimini başlatın.
+        stale_heartbeat: Sidekiq çalışanı son zamanlarda canlılık sinyali (heartbeat) bildirmedi. Takılmış veya çökmüş olabilir.
+        queue_backed_up: Kuyruktaki en eski iş, gecikme sınırını aşacak kadar bekliyor. Çalışan ayakta ancak geride kalıyor.

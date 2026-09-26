@@ -1,0 +1,189 @@
+---
+tr:
+  redbark_items:
+    default_name: Redbark Bağlantısı
+    sync_status:
+      no_accounts: Hesap bulunamadı
+      synced:
+        one: '%{count} hesap senkronize edildi'
+        other: '%{count} hesap senkronize edildi'
+      synced_with_setup: '%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor'
+    institution_summary:
+      none: Bağlı kurum yok
+      count:
+        one: '%{count} kurum'
+        other: '%{count} kurum'
+    errors:
+      provider_not_configured: Redbark sağlayıcısı yapılandırılmamış
+    sync:
+      status:
+        importing: Hesaplar Redbark'tan içe aktarılıyor...
+        processing: İşlemler işleniyor...
+        calculating: Bakiyeler hesaplanıyor...
+        importing_data: Hesap verileri içe aktarılıyor...
+        checking_setup: Hesap yapılandırması kontrol ediliyor...
+        needs_setup: '%{count} hesap kurulum gerektiriyor...'
+      success: Senkronizasyon başlatıldı
+    panel:
+      setup_instructions: 'Kurulum talimatları:'
+      step_1: app.redbark.com adresinde Settings altında bir API anahtarı oluşturun
+      step_2: API anahtarınızı aşağıya girin ve Kaydet düğmesine tıklayın
+      step_3: Bağlantı başarılı olduktan sonra yeni hesapları ayarlamak için Hesaplar sekmesine gidin
+      field_descriptions: 'Alan açıklamaları:'
+      optional: (İsteğe bağlı)
+      required: (zorunlu)
+      optional_with_default: '(isteğe bağlı, varsayılan: %{default_value})'
+      save_button: Yapılandırmayı Kaydet
+      update_button: Yapılandırmayı Güncelle
+      status_configured_html: Yapılandırıldı ve kullanıma hazır. Hesapları yönetmek ve ayarlamak için <a href="%{accounts_path}" class="link">Hesaplar</a> sekmesine gidin.
+      status_not_configured: Yapılandırılmadı
+      fields:
+        api_key:
+          label: API Anahtarı
+          description: Redbark API anahtarınız (rbk_live_ ile başlar)
+          placeholder_new: rbk_live_...
+          placeholder_update: Güncellemek için yeni API anahtarını girin
+    create:
+      success: Redbark bağlantısı başarıyla oluşturuldu
+    update:
+      success: Redbark bağlantısı güncellendi
+    destroy:
+      success: Redbark bağlantısı kaldırıldı
+      unlink_failed:
+        one: '%{count} hesabın bağlantısı kaldırılamadı. Lütfen tekrar deneyin.'
+        other: '%{count} hesabın bağlantısı kaldırılamadı. Lütfen tekrar deneyin.'
+    index:
+      title: Redbark Bağlantıları
+    loading:
+      loading_message: Redbark hesapları yükleniyor...
+      loading_title: Yükleniyor
+    redbark_item:
+      accounts_need_setup: Hesaplar kurulum gerektiriyor
+      delete: Bağlantıyı sil
+      deletion_in_progress: siliniyor...
+      error: Hata
+      more_accounts_available:
+        one: '%{count} hesap daha mevcut'
+        other: '%{count} hesap daha mevcut'
+      no_accounts_description: Bu bağlantının henüz bağlı hesabı yok.
+      no_accounts_title: Hesap yok
+      provider_name: Redbark
+      requires_update: Bağlantının güncellenmesi gerekiyor
+      setup_action: Yeni Hesapları Ayarla
+      setup_description: '%{linked} / %{total} hesap bağlandı. Yeni içe aktarılan Redbark hesaplarınız için hesap türlerini seçin.'
+      setup_needed: Yeni hesaplar kuruluma hazır
+      status: '%{timestamp} önce senkronize edildi'
+      status_never: Hiç senkronize edilmedi
+      status_with_summary: Son senkronizasyon %{timestamp} önce - %{summary}
+      syncing: Senkronize ediliyor...
+      total: Toplam
+      unlinked: Bağlı değil
+      update_credentials: Kimlik bilgilerini güncelle
+    select_accounts:
+      accounts_selected: hesap seçildi
+      api_error: 'API hatası: %{message}'
+      cancel: İptal
+      configure_name_in_provider: İçe aktarılamıyor - lütfen hesap adını Redbark'ta yapılandırın
+      description: '%{product_name} hesabınıza bağlamak istediğiniz hesapları seçin.'
+      link_accounts: Seçili hesapları bağla
+      no_accounts_found: Hesap bulunamadı. Lütfen API anahtarı yapılandırmanızı kontrol edin.
+      no_api_key: Redbark API anahtarı yapılandırılmamış. Lütfen Ayarlar'dan yapılandırın.
+      no_credentials_configured: Lütfen önce Sağlayıcı Ayarları'ndan Redbark kimlik bilgilerinizi yapılandırın.
+      no_name_placeholder: (Adsız)
+      title: Redbark Hesaplarını Seçin
+    select_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
+      all_accounts_already_linked: Tüm Redbark hesapları zaten bağlı
+      api_error: 'API hatası: %{message}'
+      balance_label: 'Bakiye:'
+      cancel: İptal
+      cancel_button: İptal
+      configure_name_in_provider: İçe aktarılamıyor - lütfen hesap adını Redbark'ta yapılandırın
+      connect_hint: Otomatik senkronizasyonu etkinleştirmek için bir Redbark hesabı bağlayın.
+      description: Bu hesapla bağlamak için bir Redbark hesabı seçin. İşlemler otomatik olarak senkronize edilir ve yinelenenler ayıklanır.
+      header: Redbark ile bağla
+      link_account: Hesabı bağla
+      link_button: Bu hesabı bağla
+      linking_to: 'Bağlanacak hesap:'
+      no_account_specified: Hesap belirtilmedi
+      no_accounts: Bağlanmamış Redbark hesabı bulunamadı.
+      no_accounts_found: Redbark hesabı bulunamadı. Lütfen API anahtarı yapılandırmanızı kontrol edin.
+      no_api_key: Redbark API anahtarı yapılandırılmamış. Lütfen Ayarlar'dan yapılandırın.
+      no_credentials_configured: Lütfen önce Sağlayıcı Ayarları'ndan Redbark kimlik bilgilerinizi yapılandırın.
+      no_name_placeholder: (Adsız)
+      settings_link: Sağlayıcı Ayarları'na git
+      subtitle: Bir Redbark hesabı seçin
+      title: '%{account_name} hesabını Redbark ile bağla'
+    link_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
+      api_error: 'API hatası: %{message}'
+      invalid_account_name: Adı boş olan bir hesap bağlanamaz
+      provider_account_already_linked: Bu Redbark hesabı zaten başka bir hesaba bağlı
+      provider_account_not_found: Redbark hesabı bulunamadı
+      missing_parameters: Gerekli parametreler eksik
+      no_api_key: Redbark API anahtarı bulunamadı. Lütfen Sağlayıcı Ayarları'ndan yapılandırın.
+      success: '%{account_name} hesabı Redbark ile başarıyla bağlandı'
+    setup_accounts:
+      account_type_label: 'Hesap Türü:'
+      accounts_count:
+        one: '%{count} hesap mevcut'
+        other: '%{count} hesap mevcut'
+      all_accounts_linked: Tüm Redbark hesaplarınız zaten ayarlandı.
+      api_error: 'API hatası: %{message}'
+      creating: Hesaplar oluşturuluyor...
+      fetch_failed: Hesaplar Alınamadı
+      import_selected: Seçili hesapları içe aktar
+      instructions: Redbark'tan içe aktarmak istediğiniz hesapları seçin. Birden fazla hesap seçebilirsiniz.
+      no_accounts: Bu Redbark bağlantısında bağlanmamış hesap bulunamadı.
+      no_accounts_to_setup: Ayarlanacak Hesap Yok
+      no_api_key: Redbark API anahtarı yapılandırılmamış. Lütfen bağlantı ayarlarınızı kontrol edin.
+      select_all: Tümünü seç
+      account_types:
+        skip: Bu hesabı atla
+        depository: Vadesiz veya Tasarruf Hesabı
+        credit_card: Kredi Kartı
+        loan: Kredi veya Konut Kredisi
+        other_asset: Diğer Varlık
+      subtype_labels:
+        depository: 'Hesap Alt Türü:'
+        credit_card: ''
+        loan: 'Kredi Türü:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Kredi kartları otomatik olarak kredi kartı hesabı olarak ayarlanır.
+        other_asset: Diğer Varlıklar için ek seçenek gerekmez.
+      subtypes:
+        depository:
+          checking: Vadesiz
+          savings: Tasarruf
+          hsa: Sağlık Tasarruf Hesabı
+          cd: Vadeli Mevduat
+          money_market: Para Piyasası
+        loan:
+          mortgage: Konut Kredisi
+          student: Öğrenim Kredisi
+          auto: Taşıt Kredisi
+          other: Diğer Kredi
+      balance: Bakiye
+      cancel: İptal
+      done: Bitti
+      choose_account_type: 'Her Redbark hesabı için doğru hesap türünü seçin:'
+      create_accounts: Hesapları Oluştur
+      creating_accounts: Hesaplar Oluşturuluyor...
+      historical_data_range: 'Geçmiş Veri Aralığı:'
+      subtitle: İçe aktarılan hesaplarınız için doğru hesap türlerini seçin
+      sync_start_date_help: İşlem geçmişinin ne kadar geriye kadar senkronize edileceğini seçin.
+      sync_start_date_label: 'İşlemleri şu tarihten itibaren senkronize et:'
+      title: Redbark Hesaplarınızı Ayarlayın
+    setup_required:
+      title: Önce Redbark'ı bağlayın
+      not_configured_title: Redbark henüz bağlı değil
+      not_configured_description: Redbark API anahtarınızı Sağlayıcı ayarları altında ekleyin, ardından hesapları bağlamak için buraya dönün.
+      go_to_provider_settings: Sağlayıcı ayarlarına git
+    complete_account_setup:
+      all_skipped: Tüm hesaplar atlandı. Hiçbir hesap oluşturulmadı.
+      creation_failed: 'Hesaplar oluşturulamadı: %{error}'
+      creation_failed_generic: Hesaplar oluşturulamadı.
+      setup_failed: '%{count} hesap oluşturulamadı. Başka hiçbir şey değiştirilmedi; sorunu giderip tekrar deneyin.'
+      no_accounts: Ayarlanacak hesap yok.
+      success: '%{count} hesap başarıyla oluşturuldu.'

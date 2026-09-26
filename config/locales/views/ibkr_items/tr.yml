@@ -64,10 +64,10 @@ tr:
       info_box:
         items:
           item_1: Güncel fiyat ve miktarlarla varlıklar
-          item_2: Pozisyon başına maliyet esası
+          item_2: Pozisyon başına maliyet bazı
           item_3: İşlemler, temettüler, komisyonlar ve nakit yatırma veya çekmeler
-        title: IBKR Flex Sorgu İçe Aktarımı
-        warning: Geçmiş etkinlik, Flex Sorgusunun rapor penceresiyle sınırlıdır
+        title: IBKR Flex Query İçe Aktarımı
+        warning: Geçmiş etkinlik, Flex Query rapor penceresiyle sınırlıdır
       link_existing:
         description: Ya da bulunan bir IBKR hesabını mevcut bir manuel yatırım hesabına
           bağlayın.
@@ -85,7 +85,7 @@ tr:
       subtitle: Bağlanacak IBKR aracı kurum hesaplarını seçin.
     sync_status:
       all_linked:
-        one: 1 hesap bağlandı
+        one: "%{count} hesap bağlandı"
         other: "%{count} hesap bağlandı"
       no_accounts: Henüz IBKR hesabı bulunamadı
       partial: "%{linked} bağlandı, %{unlinked} kurulum gerektiriyor"
