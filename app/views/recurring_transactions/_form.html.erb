@@ -79,18 +79,39 @@
             { label: income ? t(".income_frequency_label") : t(".frequency_label") },
             { data: { frequency_fields_target: "preset", action: "change->frequency-fields#update" } } %>
 
-      <% if recurring_transaction.persisted? %>
+      <%# Every N weeks, months or years, for the cadences no preset names.
+          Shown on create too: a new bill takes its day details from the
+          first due date, but the count and unit are only asked here. %>
+      <div data-frequency-fields-target="group" data-presets="interval" class="hidden">
         <div class="grid grid-cols-2 gap-3">
-          <div data-frequency-fields-target="group" data-presets="monthly,semimonthly,quarterly,semiannual,annual" class="hidden">
+          <%= f.number_field :frequency_interval,
+                label: t(".frequency_interval_label"),
+                value: recurring_transaction.frequency_interval.presence || 2,
+                min: 1,
+                max: RecurringTransaction::FrequencyPreset::MAX_INTERVAL,
+                step: 1 %>
+          <%= f.select :frequency_interval_unit,
+                frequency_interval_unit_options,
+                { label: t(".frequency_interval_unit_label"),
+                  selected: recurring_transaction.frequency_interval_unit.presence || "monthly" },
+                { data: { frequency_fields_target: "unit", action: "change->frequency-fields#update" } } %>
+        </div>
+      </div>
+
+      <% if recurring_transaction.persisted? %>
+        <%# data-units shows a group for the custom interval in that unit, so
+            "every 3 weeks" asks for a weekday and "every 2 months" a day. %>
+        <div class="grid grid-cols-2 gap-3">
+          <div data-frequency-fields-target="group" data-presets="monthly,semimonthly,quarterly,semiannual,annual" data-units="monthly,yearly" class="hidden">
             <%= f.select :frequency_day_of_month, frequency_day_options, { label: t(".frequency_day_label") } %>
           </div>
           <div data-frequency-fields-target="group" data-presets="semimonthly" class="hidden">
             <%= f.select :frequency_second_day_of_month, frequency_day_options, { label: t(".frequency_second_day_label") } %>
           </div>
-          <div data-frequency-fields-target="group" data-presets="weekly,biweekly" class="hidden">
+          <div data-frequency-fields-target="group" data-presets="weekly,biweekly" data-units="weekly" class="hidden">
             <%= f.select :frequency_weekday, frequency_weekday_options, { label: t(".frequency_weekday_label") } %>
           </div>
-          <div data-frequency-fields-target="group" data-presets="annual" class="hidden">
+          <div data-frequency-fields-target="group" data-presets="annual" data-units="yearly" class="hidden">
             <%= f.select :frequency_month_of_year, frequency_month_options, { label: t(".frequency_month_label") } %>
           </div>
         </div>

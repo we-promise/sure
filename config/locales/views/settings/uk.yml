@@ -21,7 +21,7 @@ uk:
           enqueued: "У черзі"
           retries: "Повтори"
           scheduled: "Заплановано"
-          dead: "Мертві"
+          dead: "Остаточно невдалі"
           queue_label: "%{name}: %{size} · %{latency}с затримка"
         table:
           type: "Операція"
@@ -87,13 +87,13 @@ uk:
     llm_usages:
       show:
         page_title: "Використання та вартість LLM"
-        subtitle: "Відстежуйте використання AI та орієнтовну вартість"
+        subtitle: "Відстежуйте використання ШІ та орієнтовну вартість"
         start_date: "Дата початку"
         end_date: "Дата закінчення"
         filter: "Фільтрувати"
         total_requests: "Усього запитів"
         total_tokens: "Усього токенів"
-        prompt: "запит"
+        prompt: "промпт"
         completion: "завершення"
         total_cost: "Загальна вартість"
         avg_cost_per_request: "Середня вартість/запит"
@@ -106,25 +106,47 @@ uk:
         col_model: "Модель"
         col_tokens: "Токени"
         col_cost: "Вартість"
-        failed: "Невдало"
+        failed: "Не вдалося"
         no_usage_data: "Даних про використання за вибраний період не знайдено"
         cost_estimates_title: "Про оцінку вартості"
         cost_estimates_description: "Витрати оцінюються на основі опублікованих цін постачальників, включаючи ціни OpenAI станом на липень 2026 року. Фактичні витрати можуть відрізнятися. Ціни вказані за 1 мільйон токенів і залежать від моделі. Користувацькі або самостійно розміщені моделі показуватимуть \"Н/Д\" і не включатимуться до загальної вартості."
     ai_prompts:
       show:
-        page_title: AI-запити
+        page_title: Промпти ШІ
         openai_label: OpenAI
-        disable_ai: Вимкнути AI-помічника
-        prompt_instructions: Інструкції до запитів
+        disable_ai: Вимкнути ШІ-помічника
+        prompt_instructions: Інструкції до промптів
         main_system_prompt:
-          title: Основний системний запит
-          subtitle: Основні інструкції, що визначають поведінку AI-помічника у всіх чатах
+          title: Основний системний промпт
+          subtitle: Основні інструкції, що визначають поведінку ШІ-помічника у всіх чатах
+          label: Системний промпт чату
         transaction_categorizer:
           title: Категоризатор транзакцій
-          subtitle: AI автоматично категоризує ваші транзакції на основі визначених вами категорій
+          subtitle: ШІ автоматично категоризує ваші транзакції на основі визначених вами категорій
         merchant_detector:
           title: Детектор продавців
-          subtitle: AI ідентифікує та збагачує дані транзакцій інформацією про продавців
+          subtitle: ШІ ідентифікує та збагачує дані транзакцій інформацією про продавців
+        save: Зберегти промпти
+        save_confirm:
+          title: Зберегти власні промпти ШІ?
+          body: Власні промпти замінюють вбудовані системні інструкції та обмеження безпеки (наприклад, заборону фінансових порад) для вашої сім'ї.
+          dont_show_again: Більше не показувати це попередження
+          cancel: Скасувати
+          confirm: Підтвердити
+      prompt_field:
+        provider_label: Постачальник
+        prompt_label: Промпт
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Скинути до стандартного
+        reset_confirm_title: Повернути стандартний промпт?
+        reset_confirm_body: Ваш власний промпт буде видалено, а вбудовані стандартні інструкції — відновлено.
+        status_custom: Використовується ваш власний промпт
+        status_default: Використовується вбудований стандартний промпт
+        format_risk: 'У вашому промпті для %{provider} відсутній приклад {"%{key}": ...}. Кожен запит і далі вимагає саме такої структури, тож розбір зазвичай працює, але власний промпт, що вимагає іншого формату виводу, його зламає.'
+      update:
+        success: Промпти ШІ оновлено
+        multiple_errors: Кілька промптів задовгі (максимум %{count} символів)
     payments:
       show:
         page_title: Платежі
@@ -135,6 +157,8 @@ uk:
         trial_days_left:
           one: "Дані будуть видалені через %{count} день"
           other: "Дані будуть видалені через %{count} днів"
+          few: Дані будуть видалені через %{count} дні
+          many: Дані будуть видалені через %{count} днів
         not_contributing_prefix: "Ви наразі"
         not_contributing_emphasis: "не робите внесок"
         contributions_note: "Внески до %{product_name} будуть відображатися тут."
@@ -155,12 +179,14 @@ uk:
         disable_modal_click_outside_description: Запобігати закриттю модальних вікон при кліку зовні. Корисно, щоб уникнути випадкової втрати незбережених змін.
         transactions_title: Транзакції
         transactions_subtitle: Налаштуйте відображення транзакцій
-        dashboard_title: Панель приладів
-        dashboard_subtitle: Налаштуйте відображення панелі приладів
+        dashboard_title: Дашборд
+        dashboard_subtitle: Налаштуйте відображення дашборду
         dashboard_two_column_title: Двоколонковий макет
-        dashboard_two_column_description: Відображати віджети панелі приладів у двох колонках на великих екранах, з елементами керування шириною та висотою для кожного віджета в його заголовку. Коли вимкнено, віджети розташовуються в одній колонці.
+        dashboard_two_column_description: Відображати віджети дашборду у двох колонках на великих екранах, з елементами керування шириною та висотою для кожного віджета в його заголовку. Коли вимкнено, віджети розташовуються в одній колонці.
         split_grouped_title: Групувати розділені транзакції
         split_grouped_description: Показувати розділені транзакції згрупованими під їхнім батьківським елементом у списку транзакцій. Коли вимкнено, дочірні елементи розділення відображаються як окремі рядки.
+        dashboard_account_groups_title: Розгорнуті за замовчуванням
+        dashboard_account_groups_description: Ці розділи рахунків будуть розгорнуті за замовчуванням на дашборді та в бічній панелі рахунків. Ви можете будь-коли згорнути їх вручну.
     preferences:
       show:
         country: Країна
@@ -194,15 +220,31 @@ uk:
         selected_currencies_count:
           one: "%{count} вибрано"
           other: "%{count} вибрано"
+          few: '%{count} вибрано'
+          many: '%{count} вибрано'
         save_currencies: Зберегти валюти
         sharing_title: "Спільний доступ до %{moniker}"
-        sharing_subtitle: "Керуйте тим, як облікові записи надаються у вашому %{moniker}"
-        sharing_default_label: Спільний доступ за замовчуванням для нових облікових записів
+        sharing_subtitle: "Керуйте тим, як рахунки надаються у вашому %{moniker}"
+        sharing_default_label: Спільний доступ за замовчуванням для нових рахунків
         sharing_shared: Поділитися з усіма учасниками
         sharing_private: Зберігати приватним за замовчуванням
         preview:
-          title: Увімкнути попередні версії функцій
-          description: Підпишіться на функції, що розробляються, позначені як попередній перегляд або канарейка.
+          title: Увімкнути бета-функції
+          description: Отримайте доступ до функцій у розробці, позначених як бета (preview) або canary.
+        budget_title: Бюджет
+        budget_subtitle: Налаштуйте роботу своїх бюджетів
+        personal_budgets: Особисті бюджети
+        personal_budgets_hint: Увімкнути окремі бюджети для кожного учасника.
+        household_budget_enabled: Спільний бюджет домогосподарства
+        household_budget_enabled_hint: Вести спільний бюджет домогосподарства разом з особистими бюджетами. Вимкніть, щоб використовувати лише особисті бюджети.
+        budget_sharing_title: Спільний доступ до бюджету
+        budget_sharing_subtitle: Дозвольте іншим учасникам переглядати або редагувати ваш особистий бюджет
+        budget_sharing_no_members: Ваша %{moniker} не має інших учасників, з якими можна поділитися
+        budget_sharing_permission_label: 'Доступ: %{name}'
+        budget_sharing_permissions:
+          none: Немає доступу
+          read_only: Лише перегляд
+          read_write: Може редагувати
     profiles:
       destroy:
         cannot_remove_self: Ви не можете видалити себе з облікового запису.
@@ -216,7 +258,7 @@ uk:
             незворотна.
           title: Видалити обліковий запис?
         confirm_reset:
-          body: Ви впевнені, що хочете скинути свій обліковий запис? Це видалить усі ваші облікові записи, категорії, продавців, теги та інші дані. Цю дію неможливо скасувати.
+          body: Ви впевнені, що хочете скинути свій обліковий запис? Це видалить усі ваші рахунки, категорії, продавців, теги та інші дані. Цю дію неможливо скасувати.
           title: Скинути обліковий запис?
         confirm_reset_with_sample_data:
           body: Ви впевнені, що хочете скинути свій обліковий запис і завантажити зразки даних? Це видалить ваші існуючі дані та замінить їх демонстраційними даними, щоб ви могли безпечно досліджувати Sure.
@@ -232,7 +274,7 @@ uk:
         delete_account_warning: Видалення вашого облікового запису назавжди видалить усі
           ваші дані та не може бути скасовано.
         reset_account: Скинути обліковий запис
-        reset_account_warning: Скидання вашого облікового запису видалить усі ваші облікові записи, категорії, продавців, теги та інші дані, але збереже ваш обліковий запис користувача.
+        reset_account_warning: Скидання вашого облікового запису видалить усі ваші рахунки, категорії, продавців, теги та інші дані, але збереже ваш обліковий запис користувача.
         reset_account_with_sample_data: Скинути та попередньо завантажити
         reset_account_with_sample_data_warning: Видаліть усі ваші існуючі дані, а потім завантажте свіжі зразки даних, щоб ви могли досліджувати з попередньо заповненим середовищем.
         email: Електронна пошта
@@ -287,7 +329,7 @@ uk:
     mcp:
       show:
         page_title: Сервер MCP
-        connect_title: Підключити AI-помічника
+        connect_title: Підключити ШІ-помічника
         connect_subtitle: Вставте цю URL-адресу в Claude.ai (або будь-який клієнт, сумісний з MCP), щоб підключити його до свого облікового запису Sure.
         copy_url: Копіювати
         copied: Скопійовано!
@@ -295,24 +337,24 @@ uk:
         step_1: "Відкрийте Claude.ai та перейдіть до Налаштування → Інтеграції."
         step_2: Натисніть "Додати інтеграцію" та вставте URL-адресу сервера MCP вище.
         step_3: Натисніть Підключити — вас буде перенаправлено до Sure для входу та авторизації доступу.
-        step_4: Після авторизації Claude зможе читати ваші облікові записи, транзакції та дані про баланс.
+        step_4: Після авторизації Claude зможе читати ваші рахунки, транзакції та дані про баланс.
         connected_title: Підключені клієнти
         connected_subtitle: Ці програми наразі мають доступ до ваших даних Sure. Скасуйте доступ для тих, якими ви більше не користуєтеся.
         unknown_client: Невідомий клієнт
         connected_ago: "Підключено %{time} тому"
-        revoke: Скасувати
-        revoke_confirm: Скасувати доступ для цього клієнта?
+        revoke: Відкликати
+        revoke_confirm: Відкликати доступ для цього клієнта?
       revoke:
-        revoked: З'єднання скасовано.
+        revoked: З'єднання відкликано.
     settings_nav:
       accounts_label: Рахунки
       advanced_section_title: Розширені
-      ai_prompts_label: AI-запити
+      ai_prompts_label: Промпти ШІ
       background_jobs_label: Фонові завдання
       api_key_label: Ключі API
       payment_label: Оплата
       categories_label: Категорії
-      feedback_label: Зворотній зв'язок
+      feedback_label: Зворотний зв'язок
       general_section_title: Загальні
       imports_label: Імпорт
       exports_label: Експорт
@@ -339,6 +381,7 @@ uk:
       appearance_label: Зовнішній вигляд
       bank_sync_label: Синхронізація з банком
       debug_label: Відладка
+      system_health_label: Стан системи
     settings_nav_link_large:
       next: Далі
       previous: Назад
@@ -354,12 +397,12 @@ uk:
       not_authorized: Не авторизовано
       bank_sync:
         page_title: Синхронізація з банком
-        lede: Підключайте зовнішні облікові записи, щоб транзакції, баланси та активи автоматично надходили до Sure.
+        lede: Підключайте зовнішні рахунки, щоб транзакції, баланси та активи автоматично надходили до Sure.
       status:
         ok: Підключено
         warn: Потрібна дія
         err: Помилка
-        off: Не налаштовано
+        "off": Не налаштовано
       maturity:
         beta: Бета
         alpha: Альфа
@@ -375,7 +418,7 @@ uk:
       health_strip:
         connected: підключено
         needs_attention: потребує уваги
-        accounts_syncing: синхронізація облікових записів
+        accounts_syncing: синхронізація рахунків
         last_synced: Остання синхронізація %{time} тому
       meta:
         sync_error: Помилка синхронізації
@@ -383,8 +426,10 @@ uk:
         registration_needed: Потрібна реєстрація
         reconsent_required: Потрібна повторна згода
         reconsent_needed:
-          one: Повторна згода потрібна через 1 день
+          one: Повторна згода потрібна через %{count} день
           other: Повторна згода потрібна через %{count} днів
+          few: Повторна згода потрібна через %{count} дні
+          many: Повторна згода потрібна через %{count} днів
         last_synced: Синхронізовано %{time} тому
       sync_all: Синхронізувати все
       sync_all_in_progress: Синхронізація всіх підключених постачальників…
@@ -401,7 +446,7 @@ uk:
         coinstats: Відстежуйте весь свій криптовалютний портфель у гаманцях та на біржах.
         wise: Автоматично синхронізуйте свої мультивалютні баланси Wise та міжнародні перекази.
         mercury: Автоматично синхронізуйте свої бізнес-рахунки Mercury.
-        brex: Синхронізуйте готівкові та корпоративні карткові операції Brex з доступом лише для читання.
+        brex: Синхронізуйте операції за рахунками Brex Cash і корпоративними картками з доступом лише для читання.
         coinbase: Імпортуйте свої криптовалютні активи Coinbase та відстежуйте ефективність.
         binance: Синхронізуйте свої спотові баланси Binance за допомогою ключа API лише для читання.
         kraken: Синхронізуйте баланси Kraken та виконання спотових угод за допомогою ключа API лише для читання.
@@ -409,9 +454,15 @@ uk:
         ibkr: Синхронізуйте інвестиційні рахунки Interactive Brokers за допомогою імпорту Flex Query.
         questrade: Синхронізуйте свої інвестиційні рахунки Questrade безпосередньо через API Questrade.
         indexa_capital: Відстежуйте свій автоматизований інвестиційний портфель Indexa Capital.
-        sophtron: Підключайте банки та комунальні послуги США та Канади.
+        sophtron: Підключайте банки та комунальні підприємства США та Канади.
         plaid: Підключайте тисячі фінансових установ США через Plaid.
         plaid_eu: Підключайте європейські фінансові установи через Plaid (PSD2 / Open Banking).
+        redbark: Синхронізуйте австралійські банківські рахунки через open banking Redbark.
+        fio: Синхронізуйте рахунок у Fio banka за допомогою токена API лише для читання.
+        coinspot: Синхронізуйте баланси CoinSpot, вартість в AUD, перекази, поповнення, виведення коштів та історію ордерів за допомогою ключа API лише для читання.
+        onchain_wallet: Відстежуйте некастодіальні гаманці Bitcoin, EVM і Solana за їхніми публічними адресами.
+        trading212: Синхронізуйте свій інвестиційний портфель Trading 212 за допомогою ключа API лише для читання.
+        trade_republic: Синхронізуйте свій інвестиційний рахунок Trade Republic через захищений вхід у вебверсію лише для читання.
       search_filters:
         aria_label: Пошук постачальників
         placeholder: Пошук постачальників
@@ -430,7 +481,7 @@ uk:
       coinbase_panel:
         setup_instructions: "Щоб підключити Coinbase:"
         step1_html: Перейдіть до <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Налаштування API Coinbase</a>
-        step2: Створіть новий ключ API з правами лише для читання (перегляд облікових записів, перегляд транзакцій)
+        step2: Створіть новий ключ API з правами лише для читання (перегляд рахунків, перегляд транзакцій)
         step3: Скопіюйте свій ключ API та секрет API та вставте їх нижче
         api_key_label: Ключ API
         api_key_placeholder: Введіть свій ключ API Coinbase
@@ -439,7 +490,7 @@ uk:
         connect_button: Підключити Coinbase
         syncing: Синхронізація...
         sync: Синхронізувати
-        disconnect_confirm: Ви впевнені, що хочете відключити це з'єднання Coinbase? Ваші синхронізовані облікові записи стануть ручними.
+        disconnect_confirm: Ви впевнені, що хочете відключити це з'єднання Coinbase? Ваші синхронізовані рахунки стануть ручними.
       binance_panel:
         setup_instructions: "Щоб підключити Binance, створіть ключ API лише для читання:"
         step1_html: 'Перейдіть до <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Керування API Binance</a>'
@@ -465,7 +516,7 @@ uk:
         step1_html: 'Перейдіть до <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Налаштування API Kraken</a>'
         step2: "Створіть ключ API лише з Query Funds та Query Closed Orders & Trades."
         step3: "Вставте ключ API та приватний ключ нижче."
-        read_only_title: "Лише синхронізація обміну для читання"
+        read_only_title: "Лише синхронізація біржі для читання"
         read_only_body: "Не надавайте дозволи на торгівлю, скасування, зняття коштів, експорт, книгу, Earn, стейкінг або перекази. Sure імпортує лише баланси, активи та виконання спотових угод."
         default_connection_name: Kraken
         add_connection: Додати з'єднання Kraken
@@ -478,7 +529,7 @@ uk:
         api_secret_label: Приватний ключ
         api_secret_placeholder: Вставте свій приватний ключ Kraken
         keep_api_secret_placeholder: Залиште порожнім, щоб зберегти існуючий приватний ключ
-        setup_accounts: Налаштувати обліковий запис
+        setup_accounts: Налаштувати рахунок
         syncing: Синхронізація...
         sync: Синхронізувати
         disconnect: Відключити
@@ -503,7 +554,7 @@ uk:
         connection: "З'єднання"
         session_expired_reconnect: "Сеанс закінчився - перепідключіться"
         configured: "Налаштовано"
-        ready_to_link: "Готово до пов'язування облікових записів"
+        ready_to_link: "Готово до пов'язування рахунків"
         sync: "Синхронізувати"
         reconnect: "Перепідключити"
         connect_bank: "Підключити банк"
@@ -516,7 +567,7 @@ uk:
       lunchflow_panel:
         step_1_html: "Перейдіть до %{link} і створіть ключ API."
         step_2: "Вставте свій ключ нижче та підключіться."
-        step_3: "Потім перейдіть до Облікові записи, щоб пов'язати свої синхронізовані облікові записи."
+        step_3: "Потім перейдіть до розділу «Рахунки», щоб пов'язати свої синхронізовані рахунки."
         api_key_label: "Ключ API"
         api_key_placeholder_new: "Вставте ключ API тут"
         api_key_placeholder_update: "Введіть новий ключ API для оновлення"
@@ -527,11 +578,11 @@ uk:
       akahu_panel:
         step_1_html: "Перейдіть до %{link} і створіть особисту програму."
         step_2: "Скопіюйте токен своєї програми та токен користувача."
-        step_3: "Вставте токени нижче, збережіть, а потім пов'яжіть свої синхронізовані облікові записи."
+        step_3: "Вставте токени нижче, збережіть, а потім пов'яжіть свої синхронізовані рахунки."
       up_panel:
         step_1_html: "Перейдіть до %{link} і згенеруйте особистий токен доступу."
         step_2: "Скопіюйте свій особистий токен доступу."
-        step_3: "Вставте токен нижче, збережіть, а потім пов'яжіть свої синхронізовані облікові записи."
+        step_3: "Вставте токен нижче, збережіть, а потім пов'яжіть свої синхронізовані рахунки."
       monobank_panel:
         step_1_html: "Перейдіть до %{link}, увійдіть через застосунок Monobank і згенеруйте персональний токен."
         step_2: "Скопіюйте токен — він показується лише один раз."
@@ -539,13 +590,13 @@ uk:
       simplefin_panel:
         step_1_html: "Перейдіть до %{link} для отримання одноразового токена налаштування."
         step_2: "Вставте токен нижче та підключіться."
-        step_3: "Потім перейдіть до Облікові записи, щоб пов'язати свої синхронізовані облікові записи."
+        step_3: "Потім перейдіть до розділу «Рахунки», щоб пов'язати свої синхронізовані рахунки."
         setup_token_label: "Токен налаштування"
         setup_token_placeholder: "Вставте токен налаштування SimpleFIN"
         save_and_connect: "Зберегти та підключити"
       plaid_panel:
         step_1_html: "Відкрийте %{link} і скопіюйте свій ідентифікатор клієнта та секретний ключ."
-        step_2: "Виберіть середовище. Використовуйте пісочницю для тестування та виробництво для реальних облікових записів."
+        step_2: "Виберіть середовище. Використовуйте пісочницю для тестування та виробництво для реальних рахунків."
         step_3: "Вставте свої облікові дані нижче та підключіться."
       plaid_eu_panel:
         step_1_html: "Відкрийте %{link} і скопіюйте свій ідентифікатор клієнта ЄС та секретний ключ."
@@ -557,7 +608,7 @@ uk:
           step_2: 'Натисніть значок "+" у розділі "Activity Flex Query", щоб створити новий запит.'
           step_3: 'Назвіть свій запит (наприклад, "Sure Sync"), потім перегляньте деталі Flex Query нижче та ввімкніть перелічені розділи, поля та параметри конфігурації.'
           step_4: 'Збережіть запит, запишіть свій "ID запиту", потім використовуйте значок шестірні в розділі "Конфігурація веб-служби Flex", щоб згенерувати токен доступу.'
-          step_5: "Вставте свій ID запиту та токен нижче, збережіть конфігурацію, а потім перейдіть до Облікові записи, щоб пов'язати виявлені облікові записи IBKR."
+          step_5: "Вставте свій ID запиту та токен нижче, збережіть конфігурацію, а потім перейдіть до розділу «Рахунки», щоб пов'язати виявлені рахунки IBKR."
         flex_query_details:
           eyebrow: Flex Query
           title: Розділи, поля та конфігурація
@@ -604,5 +655,135 @@ uk:
         update_configuration: Оновити конфігурацію
         status_configured_prefix: "%{summary}. Відвідайте"
         accounts_tab: Рахунки
-        status_configured_suffix: вкладку для керування виявленими обліковими записами.
+        status_configured_suffix: вкладку для керування виявленими рахунками.
         not_configured: Не налаштовано.
+      drawer_trust_statement_encryption_unconfigured: Доступ лише для читання. Sure ніколи не може переміщувати гроші. Перш ніж зберігати облікові дані постачальників у робочому середовищі, налаштуйте явні ключі шифрування.
+      provider_setup_encryption_warning:
+        title: Відсутні ключі шифрування
+        message: У цій самостійно розміщеній інсталяції не налаштовано явних ключів шифрування Active Record. Налаштуйте primary_key, deterministic_key та key_derivation_salt, перш ніж зберігати облікові дані постачальників у робочому середовищі.
+      coinspot_panel:
+        step1_html: Перейдіть до <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">налаштувань API CoinSpot</a>
+        step2: Створіть ключ API з доступом лише для читання до балансів та історії.
+        step3: Вставте ключ API та секрет нижче.
+        read_only_title: Лише синхронізація біржі для читання
+        read_only_body: Не надавайте дозволів на надсилання, виведення коштів, торгівлю чи перекази. Sure імпортує лише баланси, вартість в AUD, перекази, поповнення, виведення коштів та історію виконаних ордерів.
+        default_connection_name: CoinSpot
+        add_connection: Додати з'єднання CoinSpot
+        update_connection: Оновити з'єднання
+        connection_name_label: Назва з'єднання
+        connection_name_placeholder: Основний CoinSpot
+        api_key_label: Ключ API
+        api_key_placeholder: Вставте свій ключ API CoinSpot
+        keep_api_key_placeholder: Залиште порожнім, щоб зберегти наявний ключ API
+        api_secret_label: Секрет API
+        api_secret_placeholder: Вставте свій секрет API CoinSpot
+        keep_api_secret_placeholder: Залиште порожнім, щоб зберегти наявний секрет API
+        setup_accounts: Налаштувати рахунок
+        syncing: Синхронізація...
+        sync: Синхронізувати
+        disconnect: Відключити
+        disconnect_confirm: Ви впевнені, що хочете відключити %{name}?
+      onchain_wallet_panel:
+        add_wallet: Додати гаманець
+        advanced: Додатково
+        disconnect_all: Відключити всі гаманці
+        disconnect_all_confirm: Буде видалено всі відстежувані адреси та їхні рахунки. Продовжити?
+        etherscan_api_key_label: Ключ API Etherscan (необов'язково)
+        etherscan_api_key_placeholder: Вставте ключ API Etherscan
+        etherscan_hint: Дані Ethereum можна зчитувати без ключа. Ключ Etherscan лише підвищує ліміт запитів для Ethereum.
+        keep_etherscan_api_key: Залиште порожнім, щоб зберегти наявний ключ
+        manage_wallets: Керувати гаманцями
+        keyless_body: Sure лише зчитує публічні дані блокчейну. Жодні ключі, сид-фрази чи підписи не використовуються, і нічого не може бути витрачено.
+        keyless_title: Лише читання, ключі не потрібні
+        save: Зберегти
+        sync_start_date_hint: Перекази до цієї дати ігноруються. Залиште порожнім, щоб імпортувати все, що повідомляє оглядач блоків.
+        sync_start_date_label: Ігнорувати перекази до
+      fio_panel:
+        step_1_html: Увійдіть в інтернет-банкінг %{link} і відкрийте Nastavení → API.
+        step_2: Створіть токен із доступом лише для читання («Sledování účtu»). Для цього потрібна посилена автентифікація; токен дійсний до 180 днів.
+        step_3: Вставте токен нижче та збережіть. Один токен дає доступ до одного рахунку, тож додайте окреме з'єднання для кожного рахунку Fio.
+      trade_republic_panel:
+        encryption_warning:
+          title: Шифрування не налаштовано
+          message: Облікові дані та дані сеансу Trade Republic не можна безпечно зберігати, доки не налаштовано шифрування Active Record.
+        steps:
+          step_1: Введіть номер телефону та PIN-код, які ви використовуєте в застосунку Trade Republic, потім збережіть.
+          step_2: Коли з'явиться запит, введіть код із застосунку-автентифікатора.
+          step_3: Коли з'явиться запит, підтвердьте вхід у застосунку Trade Republic.
+        phone_number_label: Номер телефону
+        phone_number_placeholder_new: +49 170 1234567
+        phone_number_placeholder_existing: Залиште порожнім, щоб зберегти поточний номер телефону
+        pin_label: PIN-код
+        pin_placeholder_new: PIN-код вашого застосунку Trade Republic
+        pin_placeholder_existing: Залиште порожнім, щоб зберегти поточний PIN-код
+        currency_label: Валюта рахунку
+        connect: Увійти
+        confirm_login: Перевірити вхід
+        complete_login: Продовжити
+        authenticator_code_label: Код автентифікатора (якщо буде запит)
+        authenticator_code_placeholder: 6-значний код
+        push_login_notice: Підтвердьте вхід у застосунку Trade Republic зараз. Sure автоматично перевіряє статус у фоновому режимі. Ви також можете перевірити його самостійно.
+        check_login_status: Перевірити статус зараз
+        authenticator_code_notice: Введіть код із застосунку-автентифікатора.
+        approval_pending: Вхід розпочато. Підтвердьте його в застосунку Trade Republic; Sure перевіряє автоматично.
+        awaiting_confirmation: Очікується підтвердження в застосунку Trade Republic.
+        awaiting_authenticator_code: Потрібен код автентифікатора.
+        login_expired: Термін дії запиту на підтвердження минув.
+        restart_login: Почати вхід знову
+        connection_success:
+          title: Trade Republic успішно підключено
+          message: Ваше з'єднання з Trade Republic готове.
+          description: Sure синхронізує ваші дані Trade Republic у фоновому режимі.
+          close: Готово
+        qr_login: Увійти за QR-кодом
+        qr_cancel: Скасувати вхід за QR-кодом
+        qr_back_to_credentials: Назад до номера телефону та PIN-коду
+        qr_loading: Підготовка QR-коду…
+        qr_instruction: Відскануйте QR-код у застосунку Trade Republic і підтвердьте вхід.
+        qr_success: Вхід підтверджено. Sure оновлює сторінку постачальника.
+        qr_error: Не вдалося розпочати вхід за QR-кодом. Спробуйте ще раз.
+        save_configuration: Зберегти й увійти
+        update_configuration: Оновити конфігурацію
+        sync: Синхронізувати
+        disconnect: Відключити Trade Republic
+        disconnect_confirm: Відключити Trade Republic? Ваші синхронізовані рахунки стануть ручними.
+        status_configured_prefix: Підключено. Перейдіть на вкладку
+        accounts_tab: Рахунки
+        setup_accounts: Налаштувати рахунки
+        accounts_discovered:
+          one: Знайдено %{count} рахунок Trade Republic.
+          few: Знайдено %{count} рахунки Trade Republic.
+          many: Знайдено %{count} рахунків Trade Republic.
+          other: Знайдено %{count} рахунку Trade Republic.
+        status_configured_suffix: — тут можна керувати знайденими рахунками.
+        not_configured: Не налаштовано.
+      trading212_panel:
+        steps:
+          step_1: Відкрийте Trading 212 → Settings → API (вебверсія або мобільний застосунок).
+          step_2: Згенеруйте новий ключ API — Trading 212 покаже API ID і Secret Key.
+          step_3: Вставте обидва значення нижче, виберіть середовище та валюту рахунку, потім збережіть.
+        api_key_label: API ID
+        api_key_placeholder_new: Вставте свій API ID Trading 212
+        api_key_placeholder_existing: Залиште порожнім, щоб зберегти поточний API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Вставте свій Secret Key Trading 212
+        api_secret_placeholder_existing: Залиште порожнім, щоб зберегти поточний Secret Key
+        environment_label: Середовище
+        environment_live: Реальний рахунок
+        environment_demo: Демо-рахунок
+        currency_label: Валюта рахунку
+        save_configuration: Зберегти конфігурацію
+        update_configuration: Оновити конфігурацію
+        sync: Синхронізувати
+        syncing: Синхронізація...
+        disconnect: Відключити рахунок Trading 212
+        disconnect_confirm: Відключити Trading 212?
+        default_account_name: Рахунок Trading 212
+        add_account: Додати ще один рахунок
+        status_configured_prefix: Налаштовано. Перейдіть на вкладку
+        accounts_tab: Рахунки
+        status_configured_suffix: — тут можна керувати знайденими рахунками.
+        not_configured: Не налаштовано.
+    budget_shares:
+      update:
+        success: Налаштування спільного доступу до бюджету оновлено

@@ -4,9 +4,9 @@ ru:
     account_sharings: Совместное использование счёта
     account_statements: Хранилище выписок
     accounts: Счета
-    ai_prompts: Подсказки ИИ
-    api_key: API ключ
-    api_keys: API ключи
+    ai_prompts: Запросы ИИ
+    api_key: API-ключ
+    api_keys: API-ключи
     appearance: Внешний вид
     appearances: Внешний вид
     bank_sync: Синхронизация с банком
@@ -25,7 +25,7 @@ ru:
     debug: Отладка
     debugs: Отладка
     depositories: Денежные счета
-    enable_banking_items: Включить банковские функции
+    enable_banking_items: Enable Banking
     exports: Экспорт
     family_exports: Экспорт
     family_merchants: Продавцы
@@ -55,19 +55,19 @@ ru:
     onboardings: Онбординг
     other_assets: Прочие активы
     other_liabilities: Прочие обязательства
-    payments: Платежи
+    payments: Оплата
     pending_duplicate_merges: Обзор дубликатов
     plaid_items: Plaid
-    preferences: Настройки
+    preferences: Предпочтения
     profile: Информация профиля
     profiles: Информация профиля
-    properties: Имущество
+    properties: Недвижимость
     providers: Провайдеры
     recurring_transactions: Регулярные операции
     registrations: Регистрация
     reports: Отчёты
     rules: Правила
-    securities: Ценные бумаги
+    securities: "Ценные бумаги"
     security: Безопасность
     self_hosting: Самостоятельный хостинг
     sessions: Вход
@@ -81,8 +81,14 @@ ru:
     tags: Теги
     trades: Сделки
     transactions: Операции
-    transfer_matches: Соответствия переводов
+    transfer_matches: Сопоставление переводов
     transfers: Переводы
     users: Пользователи
     valuations: Оценки
     vehicles: Транспортные средства
+    changelog: Что нового
+    feedback: Обратная связь
+    monobank_items: Monobank
+    plan: Планирование
+    redbark_items: Redbark
+    system_health: Состояние системы

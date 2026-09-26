@@ -13,6 +13,18 @@ tr:
       subtype_prompt: Kredi türünü seçin
       term_months: Vade (ay)
       term_months_placeholder: '360'
+      rate_type_adjustable: Ayarlanabilir
+      rate_type_fixed: Sabit
+      rate_type_variable: Değişken
+      rate_changes: Faiz oranı değişiklikleri
+      rate_changes_hint: Her satır, geçerlilik tarihinden bir sonraki değişikliğe kadar uygulanan oranı belirler. Aynı tarihi yeniden girmek ikinci bir satır eklemez, o satırı değiştirir.
+      rate_changes_empty: Kayıtlı faiz oranı değişikliği yok. Kredi yukarıdaki faiz oranıyla işler.
+      rate_change_effective_date: Geçerlilik tarihi
+      rate_change_rate: Oran
+      rate_change_add: Oran değişikliği ekle
+      rate_change_remove: Kaldır
+      start_date: Kullandırım tarihi
+      start_date_hint: Kredinin kullandırıldığı tarih. Hesabın açılış tarihini kullanmak için boş bırakın.
     new:
       title: Kredi detaylarını girin
     overview:
@@ -24,6 +36,7 @@ tr:
       term: Vade
       type: Tür
       unknown: Bilinmiyor
+      original_payoff_date: Orijinal Vade Sonu Tarihi
     tabs:
       overview:
         edit_loan_details: Kredi detaylarını düzenle
@@ -35,3 +48,17 @@ tr:
         term: Vade
         type: Tür
         unknown: Bilinmiyor
+        original_payoff_date: Orijinal Vade Sonu Tarihi
+      schedule:
+        date: Tarih
+        description: Orijinal bakiye, faiz oranı ve vadeye göre %{start_date} tarihinden itibaren öngörülmüştür. Ek ödemeler yansıtılmaz.
+        variable_rate_notice: Bu kredinin faiz oranı zaman içinde değişir. Ödeme planı her kayıtlı değişiklikte orijinal vade sonu tarihi korunarak ve taksit tutarı yeniden belirlenerek yeniden hesaplanır; henüz kaydedilmemiş bir değişiklik bu rakamları değiştirecektir.
+        opening_payment: İlk Taksit
+        interest: Faiz
+        monthly_payment: Aylık Ödeme
+        number: '#'
+        payment: Taksit
+        principal: Anapara
+        remaining_balance: Kalan Bakiye
+        total_cost: Toplam Maliyet
+        total_interest: Toplam Faiz

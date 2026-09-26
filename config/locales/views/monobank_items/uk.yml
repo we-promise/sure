@@ -31,7 +31,7 @@ uk:
         importing: Імпортуємо рахунки з Monobank...
         checking_setup: Перевіряємо налаштування рахунків...
         needs_setup:
-          one: 1 рахунок потребує налаштування...
+          one: "%{count} рахунок потребує налаштування..."
           few: "%{count} рахунки потребують налаштування..."
           many: "%{count} рахунків потребують налаштування..."
           other: "%{count} рахунків потребують налаштування..."
@@ -40,7 +40,7 @@ uk:
     sync_status:
       no_accounts: Рахунків не знайдено
       all_synced:
-        one: Синхронізовано 1 рахунок
+        one: "Синхронізовано %{count} рахунок"
         few: "Синхронізовано %{count} рахунки"
         many: "Синхронізовано %{count} рахунків"
         other: "Синхронізовано %{count} рахунку"
@@ -49,7 +49,7 @@ uk:
       none: Установи не підключені
       one: 1 установа
       count:
-        one: 1 установа
+        one: "%{count} установа"
         few: "%{count} установи"
         many: "%{count} установ"
         other: "%{count} установи"
@@ -80,30 +80,30 @@ uk:
       title: Підключити рахунки Monobank
       description: Виберіть картки або банки Monobank, які потрібно додати.
       no_accounts_found: Непідключених рахунків Monobank не знайдено.
-      no_credentials_configured: Спершу налаштуйте Monobank у налаштуваннях провайдерів.
+      no_credentials_configured: Спершу налаштуйте Monobank у налаштуваннях постачальників.
       cancel: Скасувати
       link_accounts: Підключити рахунки
     link_accounts:
       success:
-        one: Підключено 1 рахунок Monobank.
+        one: "Підключено %{count} рахунок Monobank."
         few: "Підключено %{count} рахунки Monobank."
         many: "Підключено %{count} рахунків Monobank."
         other: "Підключено %{count} рахунку Monobank."
       no_accounts_selected: Виберіть щонайменше один рахунок.
-      no_credentials_configured: Спершу налаштуйте Monobank у налаштуваннях провайдерів.
+      no_credentials_configured: Спершу налаштуйте Monobank у налаштуваннях постачальників.
       unsupported_account_type: Monobank не підтримує цей тип рахунку.
       link_failed: Жодного рахунку не підключено.
     select_existing_account:
       title: "Підключити рахунок Monobank до %{account_name}"
       description: Виберіть непідключений рахунок Monobank для цього рахунку.
       no_accounts_found: Непідключених рахунків Monobank не знайдено.
-      no_credentials_configured: Спершу налаштуйте Monobank у налаштуваннях провайдерів.
-      account_already_linked: Цей рахунок уже підключено до провайдера.
+      no_credentials_configured: Спершу налаштуйте Monobank у налаштуваннях постачальників.
+      account_already_linked: Цей рахунок уже підключено до постачальника.
       cancel: Скасувати
       link_account: Підключити рахунок
     link_existing_account:
       success: "Рахунок Monobank підключено до %{account_name}."
-      account_already_linked: Цей рахунок уже підключено до провайдера.
+      account_already_linked: Цей рахунок уже підключено до постачальника.
       monobank_account_already_linked: Цей рахунок Monobank уже підключено.
       no_account_selected: Виберіть рахунок Monobank для підключення.
     setup_accounts:
@@ -118,12 +118,12 @@ uk:
       account_type_label: Тип рахунку
       account_types:
         skip: Пропустити
-        depository: Готівка
+        depository: Грошові кошти
       create_accounts: Створити рахунки
       cancel: Скасувати
     complete_account_setup:
       success:
-        one: Створено 1 рахунок Monobank.
+        one: "Створено %{count} рахунок Monobank."
         few: "Створено %{count} рахунки Monobank."
         many: "Створено %{count} рахунків Monobank."
         other: "Створено %{count} рахунку Monobank."

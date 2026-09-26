@@ -69,10 +69,10 @@ ru:
       title: Подключить SimpleFIN
     reconciled_status:
       message:
-        few: "%{count} дублирующиеся ожидающие операции согласованы"
-        many: "%{count} дублирующихся ожидающих операций согласовано"
-        one: "%{count} дублирующаяся ожидающая операция согласована"
-        other: "%{count} дублирующиеся ожидающие операции согласованы"
+        few: "%{count} дублирующиеся ожидающие операции сверены"
+        many: "%{count} дублирующихся ожидающих операций сверено"
+        one: "%{count} дублирующаяся ожидающая операция сверена"
+        other: "%{count} дублирующиеся ожидающие операции сверены"
     replacement_prompt:
       confirm_body: "«%{account_name}» будет связано с «%{new_name}». Ваша история
         операций останется; будущие операции будут поступать с новой карты."
@@ -90,7 +90,7 @@ ru:
       currently_linked_to: 'В настоящее время связано с: %{account_name}'
       description: Выберите счёт SimpleFIN для связи с вашим существующим счётом
       link_account: Связать счёт
-      no_accounts_found: Счета SimpleFIN не найдены для этого %{moniker}.
+      no_accounts_found: Счета SimpleFIN не найдены (%{moniker}).
       title: Связать %{account_name} с SimpleFIN
       unlink_to_move: Чтобы переместить связь, сначала отвяжите её в меню действий
         счёта.
@@ -114,7 +114,7 @@ ru:
         days_ago:
           few: "%{count} дня назад"
           many: "%{count} дней назад"
-          one: 1 день назад
+          one: "%{count} день назад"
           other: "%{count} дня назад"
         dormant: Нет активности в течение %{days} дней
         empty: Операции ещё не импортированы
@@ -123,7 +123,7 @@ ru:
         recent:
           few: "%{count} операции • последняя %{when}"
           many: "%{count} операций • последняя %{when}"
-          one: 1 операция • последняя %{when}
+          one: "%{count} операция • последняя %{when}"
           other: "%{count} операции • последняя %{when}"
         today: сегодня
         yesterday: вчера
@@ -203,3 +203,27 @@ ru:
         unexpected: Произошла непредвиденная ошибка. Пожалуйста, попробуйте снова.
         update_failed: 'Не удалось обновить подключение: %{message}'
       success: Подключение SimpleFIN успешно обновлено! Ваши счета переподключаются.
+    sync_status:
+      no_accounts: Счета не найдены
+      synced:
+        one: '%{count} счёт синхронизирован'
+        few: '%{count} счёта синхронизированы'
+        many: '%{count} счетов синхронизировано'
+        other: '%{count} счёта синхронизированы'
+      partial_setup:
+        one: '%{linked} синхронизировано, %{unlinked} требует настройки'
+        few: '%{linked} синхронизировано, %{unlinked} требуют настройки'
+        many: '%{linked} синхронизировано, %{unlinked} требуют настройки'
+        other: '%{linked} синхронизировано, %{unlinked} требуют настройки'
+    institution_summary:
+      none: Подключённых учреждений нет
+      count:
+        one: '%{count} учреждение'
+        few: '%{count} учреждения'
+        many: '%{count} учреждений'
+        other: '%{count} учреждения'
+    rate_limited:
+      daily_refresh: Вы достигли дневного лимита обновлений SimpleFIN. Повторите попытку после обновления данных в SimpleFIN Bridge (до 24 часов).
+    stale_sync:
+      last_successful: Последняя успешная синхронизация была %{count} дн. назад. Возможно, подключение SimpleFIN требует внимания.
+      no_transactions: Новых операций нет уже %{count} дн. Проверьте панель SimpleFIN и убедитесь, что подключения к банкам активны.
