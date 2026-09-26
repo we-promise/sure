@@ -51,6 +51,7 @@ class BrexEntry::ProcessorTest < ActiveSupport::TestCase
   end
 
   test "does not classify non-card collection as card payment" do
+    @account.update!(accountable: Depository.new)
     @brex_account.update!(account_kind: "cash")
 
     entry = BrexEntry::Processor.new(card_transaction(id: "tx_collection_cash", amount: -50_00, type: "COLLECTION"), brex_account: @brex_account).process
