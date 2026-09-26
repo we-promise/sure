@@ -190,6 +190,40 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal '{"JSESSIONID":"after-scan"}', next_pending["session_blob"]
   end
 
+  test "preserves QR login process after retryable first process request failure" do
+    response_class = Struct.new(:code, :body) do
+      def is_a?(klass)
+        return code.to_i.between?(200, 299) if klass == Net::HTTPSuccess
+
+        super
+      end
+    end
+    session = mock
+    session.stubs(:login_headers).returns({})
+    session.stubs(:cookies_blob).returns('{"JSESSIONID":"after-scan"}')
+    session.expects(:get).with(regexp_matches(%r{/qr-challenges/}), headers: {}).returns(
+      response_class.new("200", { "processId" => "process-1" }.to_json)
+    )
+    session.expects(:get).with("/api/v2/auth/web/login/processes/process-1", headers: {}).returns(
+      response_class.new("503", {}.to_json)
+    )
+    @client.define_singleton_method(:new_session) { |session_blob:| session }
+
+    pending = {
+      "challenge_id" => "challenge-1",
+      "session_blob" => "session=1",
+      "expires_at" => 1.minute.from_now.iso8601
+    }
+
+    error = assert_raises(Provider::TradeRepublicClient::TransientProviderError) do
+      @client.poll_qr_login(pending_login_b64: Base64.strict_encode64(JSON.generate(pending)))
+    end
+    next_pending = JSON.parse(Base64.strict_decode64(error.pending_login_b64))
+
+    assert_equal "process-1", next_pending["process_id"]
+    assert_equal '{"JSESSIONID":"after-scan"}', next_pending["session_blob"]
+  end
+
   test "recognizes Trade Republic approval states from state or status" do
     %w[APPROVED CONFIRMED COMPLETED SUCCESS OK DONE].each do |state|
       assert @client.send(:login_process_completed?, { "state" => state })

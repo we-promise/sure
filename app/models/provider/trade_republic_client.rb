@@ -203,17 +203,23 @@ class Provider::TradeRepublicClient
       end
     end
 
-    process_response = session.get(
-      "/api/v2/auth/web/login/processes/#{escape_path(process_id)}",
-      headers: session.login_headers
-    )
-    raise_http_error(process_response, login: true)
+    pending = pending.merge("process_id" => process_id, "session_blob" => session.cookies_blob)
+    begin
+      process_response = session.get(
+        "/api/v2/auth/web/login/processes/#{escape_path(process_id)}",
+        headers: session.login_headers
+      )
+      raise_http_error(process_response, login: true)
+    rescue RateLimited, Timeout, TransientProviderError => e
+      attach_pending_login_state(e, pending)
+      raise
+    end
     process = parse_json(process_response)
     unless login_process_completed?(process)
       return Result.new(data: {
         "status" => "pending",
         "process_id" => process_id,
-        "pending_login_b64" => encode_pending(pending.merge("process_id" => process_id, "session_blob" => session.cookies_blob))
+        "pending_login_b64" => encode_pending(pending)
       })
     end
 
@@ -430,6 +436,11 @@ class Provider::TradeRepublicClient
 
     def encode_pending(pending)
       Base64.strict_encode64(JSON.generate(pending))
+    end
+
+    def attach_pending_login_state(error, pending)
+      pending_login_b64 = encode_pending(pending)
+      error.define_singleton_method(:pending_login_b64) { pending_login_b64 }
     end
 
     def login_process_completed?(process)
