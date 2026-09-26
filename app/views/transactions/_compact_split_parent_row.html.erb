@@ -1,0 +1,58 @@
+<%# locals: (entry:, view_ctx: "global", is_filtered: false, running_balance: nil, hide_balance: false, flat: false) %>
+<% transaction = entry.entryable %>
+<% has_running_balance = defined?(running_balance) && running_balance.present? %>
+<% show_date = flat || has_running_balance %>
+
+<div data-controller="clickable-row" data-action="click->clickable-row#open">
+  <%= render DS::CompactRow.new(show_date: show_date, show_balance: has_running_balance && view_ctx == "account" && !hide_balance, muted: true) do |row| %>
+    <% if show_date %>
+      <% row.with_date { format_date(entry.date) } %>
+    <% end %>
+
+    <% row.with_primary do %>
+      <div class="max-w-full min-w-0">
+        <div class="space-y-0.5">
+          <div class="flex items-center gap-1 min-w-0">
+            <div class="truncate flex-shrink">
+              <%= link_to entry.name,
+                  entry_path(entry, view_ctx: view_ctx, is_filtered: is_filtered),
+                  data: { turbo_frame: "drawer", turbo_prefetch: false, clickable_row_target: "link" },
+                  class: "hover:underline" %>
+            </div>
+
+            <div class="flex items-center gap-1 flex-shrink-0">
+              <%= render DS::Pill.new(
+                label: t("transactions.split_parent_row.split_label"),
+                tone: :neutral,
+                marker: false,
+                icon: "split"
+              ) %>
+            </div>
+          </div>
+
+          <div class="text-secondary text-xs font-normal truncate">
+            <% if transaction.merchant&.present? %>
+              <span class="hidden lg:inline truncate"><%= transaction.merchant.name %> • </span>
+            <% end %>
+            <span class="text-secondary hidden lg:inline">
+              <%= link_to entry.account.name,
+                  account_path(entry.account, tab: "transactions"),
+                  data: { turbo_frame: "_top" },
+                  class: "hover:underline" %>
+            </span>
+          </div>
+        </div>
+      </div>
+    <% end %>
+
+    <% row.with_amount do %>
+      <%= content_tag :p, format_money(-entry.amount_money), class: "privacy-sensitive text-sm font-medium truncate" %>
+    <% end %>
+
+    <% if has_running_balance && view_ctx == "account" && !hide_balance %>
+      <% row.with_balance do %>
+        <span class="privacy-sensitive text-sm font-medium text-primary truncate" title="<%= format_money(running_balance) %>"><%= format_money(running_balance) %></span>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

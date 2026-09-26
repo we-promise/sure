@@ -38,17 +38,62 @@
   </details>
 
   <div class="bg-container shadow-border-xs rounded-lg">
-    <% if Current.user.show_split_grouped? %>
-      <% helpers.group_split_entries(entries, split_parents).each do |item| %>
-        <% if item.is_a?(EntriesHelper::SplitGroup) %>
-          <%= render "entries/split_group", split_group: item, view_ctx: "account" %>
-        <% else %>
-          <%= render item, view_ctx: "account" %>
+    <% if compact? %>
+      <% if Current.user.show_split_grouped? %>
+        <% helpers.group_split_entries(entries, split_parents).each do |item| %>
+          <% if item.is_a?(EntriesHelper::SplitGroup) %>
+            <div class="split-group">
+              <%= render "transactions/compact_split_parent_row", entry: item.parent, view_ctx: "account", is_filtered: filtered? %>
+              <% item.children.each do |child_entry| %>
+                <% if child_entry.entryable_type == "Transaction" %>
+                  <%= render "transactions/compact_transaction", entry: child_entry, view_ctx: "account", in_split_group: true, is_filtered: filtered? %>
+                <% elsif child_entry.entryable_type == "Trade" %>
+                  <%= render "trades/compact_trade", entry: child_entry, view_ctx: "account", in_split_group: false, is_filtered: filtered? %>
+                <% elsif child_entry.entryable_type == "Valuation" %>
+                  <%= render "valuations/compact_valuation", entry: child_entry %>
+                <% else %>
+                  <%= render child_entry, view_ctx: "account", is_filtered: filtered? %>
+                <% end %>
+              <% end %>
+            </div>
+          <% else %>
+            <% if item.entryable_type == "Transaction" %>
+              <%= render "transactions/compact_transaction", entry: item, view_ctx: "account", in_split_group: false, is_filtered: filtered? %>
+            <% elsif item.entryable_type == "Trade" %>
+              <%= render "trades/compact_trade", entry: item, view_ctx: "account", in_split_group: false, is_filtered: filtered? %>
+            <% elsif item.entryable_type == "Valuation" %>
+              <%= render "valuations/compact_valuation", entry: item %>
+            <% else %>
+              <%= render item, view_ctx: "account", is_filtered: filtered? %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% else %>
+        <% entries.each do |entry| %>
+          <% if entry.entryable_type == "Transaction" %>
+            <%= render "transactions/compact_transaction", entry: entry, view_ctx: "account", in_split_group: false, is_filtered: filtered? %>
+          <% elsif entry.entryable_type == "Trade" %>
+            <%= render "trades/compact_trade", entry: entry, view_ctx: "account", in_split_group: false, is_filtered: filtered? %>
+          <% elsif entry.entryable_type == "Valuation" %>
+            <%= render "valuations/compact_valuation", entry: entry %>
+          <% else %>
+            <%= render entry, view_ctx: "account", is_filtered: filtered? %>
+          <% end %>
         <% end %>
       <% end %>
     <% else %>
-      <% entries.each do |entry| %>
-        <%= render entry, view_ctx: "account" %>
+      <% if Current.user.show_split_grouped? %>
+        <% helpers.group_split_entries(entries, split_parents).each do |item| %>
+          <% if item.is_a?(EntriesHelper::SplitGroup) %>
+            <%= render "entries/split_group", split_group: item, view_ctx: "account", is_filtered: filtered? %>
+          <% else %>
+            <%= render item, view_ctx: "account", is_filtered: filtered? %>
+          <% end %>
+        <% end %>
+      <% else %>
+        <% entries.each do |entry| %>
+          <%= render entry, view_ctx: "account", is_filtered: filtered? %>
+        <% end %>
       <% end %>
     <% end %>
   </div>
