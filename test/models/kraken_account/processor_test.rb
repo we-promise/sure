@@ -42,13 +42,16 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
     KrakenAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
   end
 
+  # Sure stores positive = money out. A buy spends cash, so its entry amount is
+  # positive; a sell returns cash, so its amount is negative. That is also what
+  # `qty * price` yields once qty carries its own sign, which it already did.
   test "imports buy and sell spot fills as trade entries" do
     assert_difference -> { @account.entries.where(source: "kraken").count }, 2 do
       KrakenAccount::Processor.new(@kraken_account).process
     end
 
     buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
-    assert_equal(-50.to_d, buy.amount)
+    assert_equal 50.to_d, buy.amount
     assert_equal "USD", buy.currency
     assert_equal 0.001.to_d, buy.trade.qty
     assert_equal 50_000.to_d, buy.trade.price
@@ -56,10 +59,28 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Buy", buy.trade.investment_activity_label
 
     sell = @account.entries.find_by!(external_id: "kraken_trade_sell_tx", source: "kraken")
-    assert_equal 120.to_d, sell.amount
+    assert_equal(-120.to_d, sell.amount)
     assert_equal(-0.002.to_d, sell.trade.qty)
     assert_equal 0.20.to_d, sell.trade.fee
     assert_equal "Sell", sell.trade.investment_activity_label
+  end
+
+  # The bug this guards against: the entry amount agreed with neither the trade
+  # direction nor `qty * price`, so a buy read as an inflow and a sell as an
+  # outflow. Balances are derived by walking back from today, so the error did
+  # not cancel out -- it accumulated across the whole history.
+  #
+  # This holds for what TradesHistory reports. Once a trade's ledger rows are
+  # available they take precedence, because they net the fee, and the amount
+  # then differs from `qty * price` by exactly that fee.
+  test "a trade entry amount is its signed quantity times price, as reported" do
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    @account.entries.where(source: "kraken").each do |entry|
+      trade = entry.trade
+      assert_equal trade.qty * trade.price, entry.amount,
+        "#{entry.external_id}: entry amount must equal its signed qty * price"
+    end
   end
 
   test "trade import is idempotent by txid" do
