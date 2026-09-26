@@ -6,6 +6,12 @@ class EnableBankingItem::Importer
   # Prefer booked ledger balances for net worth/current_balance. Available balances
   # can include an arranged overdraft facility for some ASPSPs (for example CGD PT),
   # so they are only a last-resort fallback.
+  #
+  # OPBD/PRCD rank above XPCD despite being period-boundary snapshots (opening of
+  # the current period / closing of the previous one) rather than "instant" values:
+  # this mirrors CLBD outranking ITBD above, a reconciled booked figure is trusted
+  # over one that includes unconfirmed pending activity, even if it's up to a day
+  # older.
   BALANCE_TYPE_PRIORITY = %w[
     CLBD closingBooked
     ITBD interimBooked
