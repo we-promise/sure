@@ -618,6 +618,42 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     )
   end
 
+  test "backfilled stored events do not move the list cursor" do
+    @client.define_singleton_method(:collect_timeline_topic) do |_websocket, **_|
+      [ [], nil, [], true ]
+    end
+    @client.define_singleton_method(:subscribe) do |_websocket, **_payload|
+      {
+        "sections" => [
+          { "title" => "Overview", "data" => [
+            { "title" => "Shares", "detail" => { "text" => "1" } },
+            { "title" => "Total", "detail" => { "text" => "€10.00" } }
+          ] },
+          { "data" => [ { "detail" => { "action" => { "payload" => { "instrumentId" => "US0378331005" } } } } ] }
+        ]
+      }
+    end
+
+    events, newest_id, _warnings, complete, backfill_count = @client.send(
+      :collect_all_timeline,
+      Object.new,
+      known_newest_event_id: "newest-1",
+      max_pages: 2,
+      enrich_events: [ {
+        "id" => "old-1",
+        "timestamp" => "2024-06-17T10:00:00Z",
+        "category" => "orderExecution",
+        "eventType" => "SAVINGS_PLAN_INVOICE_CREATED",
+        "detail" => { "amount" => -10.0 }
+      } ]
+    )
+
+    assert_equal [ "old-1" ], events.map { |event| event["id"] }
+    assert_equal 1, backfill_count
+    assert complete
+    assert_nil newest_id
+  end
+
   test "card and cash events do not consume timeline detail requests" do
     requested = []
     @client.define_singleton_method(:subscribe) do |_websocket, **payload|

@@ -1010,7 +1010,9 @@ class Provider::TradeRepublicClient
         skeleton_events,
         enrich_events: enrich_events
       )
-      newest_event = events.max_by { |event| event["timestamp"].to_s }
+      # Backfilled stored events are older than this sync's pages and must not
+      # pull the list cursor backwards.
+      newest_event = skeleton_events.max_by { |event| event["timestamp"].to_s }
       # Pagination completeness only — pending details drain on later syncs.
       timeline_complete = transaction_complete != false && activity_complete != false
       [
