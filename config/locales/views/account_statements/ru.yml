@@ -24,7 +24,7 @@ ru:
       duplicates:
         few: "%{count} дубликата выписки были пропущены."
         many: "%{count} дубликатов выписок были пропущены."
-        one: 1 дубликат выписки был пропущен.
+        one: "%{count} дубликат выписки был пропущен."
         other: "%{count} дубликата выписки были пропущены."
       invalid_file_type: Загрузите выписку в формате PDF, CSV или XLSX, не превышающую
         допустимый размер.
@@ -32,7 +32,7 @@ ru:
       success:
         few: "%{count} выписки загружены."
         many: "%{count} выписок загружено."
-        one: 1 выписка загружена.
+        one: "%{count} выписка загружена."
         other: "%{count} выписки загружены."
     destroy:
       failure: Не удалось удалить выписку.
@@ -47,12 +47,12 @@ ru:
       confidence: "%{confidence} совпадение"
       empty_linked: Пока нет связанных выписок.
       empty_unmatched: Входящие выписки пусты.
-      leave_unmatched: Оставить несоответствующие
+      leave_unmatched: Оставить несопоставленной
       linked_title: Связанные выписки
       no_suggestion: Нет предложений
       storage_used: Использовано места
       title: Хранилище выписок
-      unmatched_title: Несоответствующие входящие
+      unmatched_title: Несопоставленные выписки
       upload_description: Загрузите выписки во входящие или выберите счёт для немедленной
         привязки.
       upload_title: Загрузить выписки
@@ -101,11 +101,11 @@ ru:
       title: Выписка
       unknown_value: Неизвестно
       unlink: Отвязать
-      unmatched_account: Несоответствующие входящие
+      unmatched_account: Несопоставленные выписки
     status:
       linked: Привязано
       rejected: Отклонено
-      unmatched: Несоответствующее
+      unmatched: Не сопоставлена
     table:
       account: Счёт
       actions: Действия
@@ -120,6 +120,6 @@ ru:
       unlink: Отвязать
       view: Просмотр
     unlink:
-      success: Выписка перемещена обратно в несоответствующие входящие.
+      success: Выписка возвращена в несопоставленные.
     update:
       success: Выписка обновлена.

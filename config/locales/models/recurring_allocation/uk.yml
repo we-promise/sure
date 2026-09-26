@@ -1,0 +1,9 @@
+---
+uk:
+  activerecord:
+    errors:
+      models:
+        recurring_allocation:
+          attributes:
+            currency:
+              must_match_occurrence: має збігатися з валютою платежу за цей період

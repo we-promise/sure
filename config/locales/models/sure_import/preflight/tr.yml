@@ -1,0 +1,6 @@
+---
+tr:
+  sure_import:
+    preflight:
+      missing_reference: 'Satır %{line}: %{type}, mevcut olmayan %{field} %{value} değerine başvuruyor.'
+      skipped_missing_reference: 'Satır %{line}: %{type}, mevcut olmayan %{field} %{value} değerine başvuruyor. İçe aktarma sırasında atlanacak.'
