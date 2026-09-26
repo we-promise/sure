@@ -89,7 +89,11 @@ class KrakenAccount::Processor
       # `cost` is the fill's actual cash figure and can differ from `vol * price`
       # by rounding, so it is kept rather than recomputed.
       trade_qty = type == "buy" ? qty : -qty
-      entry_amount = type == "buy" ? cost : -cost
+      # Same reasoning as the quantity: `cost` is what the fill was worth, not
+      # what left the account. A fee charged in the quote currency comes out on
+      # top of it, and the ledger's quote row nets the two already -- whichever
+      # currency the fee was actually taken in.
+      entry_amount = ledger_cash_for(txid, quote_symbol) || (type == "buy" ? cost : -cost)
       label = type == "buy" ? "Buy" : "Sell"
 
       account.entries.create!(
@@ -118,17 +122,33 @@ class KrakenAccount::Processor
     # Kraken applies `balance = previous + amount - fee`, so a fee charged in the
     # base asset is already netted out there and nowhere else.
     def ledger_qty_for(txid, base_symbol)
-      rows = ledgers_by_refid[txid.to_s]
-      return nil if rows.blank?
-
-      wanted = KrakenAccount::SecurityResolver.canonical_asset(base_symbol)
-      row = rows.find do |ledger|
-        KrakenAccount::SecurityResolver.canonical_asset(ledger["asset"]) == wanted
-      end
+      row = ledger_row_for(txid, base_symbol)
       return nil if row.nil?
 
       net = (row["amount"].to_d - row["fee"].to_d).abs
       net.zero? ? nil : net
+    end
+
+    # The quote-currency side of the same trade: what actually moved in or out of
+    # the cash balance. Sure's sign convention is the ledger's inverted -- there a
+    # buy shows the quote asset leaving as a negative amount; here money out is
+    # positive.
+    def ledger_cash_for(txid, quote_symbol)
+      return nil if quote_symbol.blank?
+
+      row = ledger_row_for(txid, quote_symbol)
+      return nil if row.nil?
+
+      net = -(row["amount"].to_d - row["fee"].to_d)
+      net.zero? ? nil : net
+    end
+
+    def ledger_row_for(txid, symbol)
+      rows = ledgers_by_refid[txid.to_s]
+      return nil if rows.blank?
+
+      wanted = KrakenAccount::SecurityResolver.canonical_asset(symbol)
+      rows.find { |ledger| KrakenAccount::SecurityResolver.canonical_asset(ledger["asset"]) == wanted }
     end
 
     def ledgers_by_refid
