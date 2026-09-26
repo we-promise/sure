@@ -208,6 +208,35 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("480"), current.cost_basis
   end
 
+  # An acquisition fee is part of what the units cost, so it belongs in the
+  # basis. Providers already record it on the trade; nothing used to read it.
+  test "an acquisition fee is part of the cost basis" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 1.day.ago.to_date, price: 460, fee: 20, account: @account)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    # 10 * 460 + 20 = 4,620 for 10 units
+    assert_equal BigDecimal("462"), current.cost_basis
+  end
+
+  # A disposal's fee reduces the proceeds, not the basis of what is still held.
+  # Relieving the tracker at a fee-inflated price would overstate the basis of
+  # the remaining units.
+  test "a disposal fee is left out of the cost basis of the remaining units" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 3.days.ago.to_date, price: 460, account: @account)
+    create_trade(@voo, qty: -5, date: 1.day.ago.to_date, price: 480, fee: 30, account: @account)
+
+    calculated = Holding::ForwardCalculator.new(@account).calculate
+    current = calculated.find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    assert_equal BigDecimal("460"), current.cost_basis
+  end
+
   test "offline tickers sync holdings based on most recent trade price" do
     offline_security = Security.create!(ticker: "OFFLINE", name: "Offline Ticker")
 
