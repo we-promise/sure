@@ -39,6 +39,25 @@ class AkahuAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("12345.67"), @account.current_anchor_balance
   end
 
+  test "rolls back cash_balance and includes the failure reason when set_current_balance fails" do
+    @akahu_account.stubs(:current_account).returns(@account)
+    @account.stubs(:set_current_balance).returns(
+      Account::CurrentBalanceManager::Result.new(
+        success?: false,
+        changes_made?: false,
+        error: "currency mismatch"
+      )
+    )
+
+    error = assert_raises(StandardError) do
+      AkahuAccount::Processor.new(@akahu_account).send(:process_account!)
+    end
+
+    assert_includes error.message, "currency mismatch"
+    @account.reload
+    assert_equal BigDecimal("999"), @account.cash_balance
+  end
+
   test "logs account processing failures without raw exception message" do
     sensitive_message = "provider returned account holder details"
     error = RuntimeError.new(sensitive_message)

@@ -34,16 +34,19 @@ class AkahuAccount::Processor
       cash_balance = account.accountable_type == "Investment" ? 0 : balance
       currency = parse_currency(akahu_account.currency) || account.currency || "NZD"
 
-      account.update!(cash_balance: cash_balance, currency: currency)
+      # Wrap both writes in a transaction so a failure on either rolls back both.
+      ActiveRecord::Base.transaction do
+        account.update!(cash_balance: cash_balance, currency: currency)
 
-      # Use set_current_balance so a current_anchor valuation entry is created
-      # (and rotated into a reconciliation waypoint on subsequent days). This
-      # lets Balance::ReverseCalculator preserve each day's bank-reported balance
-      # as a historical waypoint, giving investment accounts that report no
-      # transactions (e.g. Kernel) a real balance curve instead of a flat line
-      # bridged by a single cash adjustment.
-      result = account.set_current_balance(balance)
-      raise StandardError, "Failed to set current balance for Akahu account" unless result.success?
+        # Use set_current_balance so a current_anchor valuation entry is created
+        # (and rotated into a reconciliation waypoint on subsequent days). This
+        # lets Balance::ReverseCalculator preserve each day's bank-reported balance
+        # as a historical waypoint, giving investment accounts that report no
+        # transactions (e.g. Kernel) a real balance curve instead of a flat line
+        # bridged by a single cash adjustment.
+        result = account.set_current_balance(balance)
+        raise StandardError, "Failed to set current balance: #{result.error}" unless result.success?
+      end
     end
 
     def process_transactions
