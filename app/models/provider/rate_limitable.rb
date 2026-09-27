@@ -39,7 +39,7 @@ module Provider::RateLimitable
     # silently turn pacing off -- `"invalid".to_f` is 0 -- so it is an error.
     def positive_interval(value, key)
       interval = Float(value, exception: false)
-      raise ArgumentError, "#{key} must be a positive number of seconds, got #{value.inspect}" if interval.nil? || interval <= 0
+      raise ArgumentError, "#{key} must be a positive number of seconds, got #{value.inspect}" if interval.nil? || !interval.finite? || interval <= 0
 
       interval
     end

@@ -221,6 +221,11 @@ class Provider::KrakenTest < ActiveSupport::TestCase
     with_env_overrides("KRAKEN_MIN_REQUEST_INTERVAL" => "0") do
       assert_raises(ArgumentError) { provider.send(:throttle_request) }
     end
+
+    # Float("1e309") is Infinity, which sleep would reject with a RangeError.
+    with_env_overrides("KRAKEN_MIN_REQUEST_INTERVAL" => "1e309") do
+      assert_raises(ArgumentError) { provider.send(:throttle_request) }
+    end
   end
 
   # Ledgers and TradesHistory cost four counter points against a decay of half
