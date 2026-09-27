@@ -1714,4 +1714,83 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "outgoing_payment_sent", refreshed.extra.dig("wise", "status"),
       "the provider's own namespace should still refresh"
   end
+
+  # Loan repayments across both legs (#3063). Each scenario is a single repayment,
+  # so the income statement should show it once, as an expense, and never as income.
+  test "a matched simplefin loan repayment is counted once after a re-sync" do
+    setup_loan_pair
+    sync_loan_pair(source: "simplefin")
+    @pair_family.auto_match_transfers!
+    sync_loan_pair(source: "simplefin")
+
+    assert_equal 500, pair_totals.expense_money.amount.to_i
+    assert_equal 0, pair_totals.income_money.amount.to_i
+  end
+
+  # Up passes kind: "funds_movement" on both legs of an internal transfer.
+  test "a matched up home loan repayment is counted once after a re-sync" do
+    setup_loan_pair
+    sync_loan_pair(source: "up", kind: "funds_movement")
+    @pair_family.auto_match_transfers!
+    sync_loan_pair(source: "up", kind: "funds_movement")
+
+    assert_equal 500, pair_totals.expense_money.amount.to_i
+  end
+
+  test "an up home loan repayment with only the loan linked is counted once" do
+    setup_loan_pair
+    import_loan_leg(@pair_loan, "up_in_only", -500, source: "up", kind: "funds_movement")
+
+    assert_equal 500, pair_totals.expense_money.amount.to_i
+  end
+
+  test "a loan repayment from an account not in Sure is an expense, not income" do
+    setup_loan_pair
+    import_loan_leg(@pair_loan, "sf_in_only", -500, source: "simplefin")
+
+    assert_equal 0, pair_totals.income_money.amount.to_i
+    assert_equal 500, pair_totals.expense_money.amount.to_i
+  end
+
+  test "a loan repayment from an account not in Sure is not listed as income" do
+    setup_loan_pair
+    entry = import_loan_leg(@pair_loan, "sf_in_only_2", -500, source: "simplefin")
+    income_ids = Transaction::Search.new(@pair_family, filters: { types: [ "income" ] }).transactions_scope.pluck(:id)
+
+    refute_includes income_ids, entry.transaction.id
+  end
+
+  test "monthly repayments on an unmatched loan are not offered as an income source" do
+    setup_loan_pair
+    [ 60, 30, 1 ].each_with_index do |days, i|
+      import_loan_leg(@pair_loan, "sf_rep_#{i}", -1500, source: "simplefin", date: days.days.ago.to_date)
+    end
+
+    candidates = RecurringTransaction::Identifier.new(@pair_family).income_source_candidates
+    assert_empty candidates.select { |c| c[:account_id] == @pair_loan.id }
+  end
+
+  private
+
+    def setup_loan_pair
+      @pair_family = families(:empty)
+      @pair_checking = @pair_family.accounts.create!(name: "Checking", currency: "USD", balance: 5000, accountable: Depository.new)
+      @pair_loan = @pair_family.accounts.create!(name: "Home loan", currency: "USD", balance: 300_000, accountable: Loan.new)
+    end
+
+    def import_loan_leg(account, id, amount, source:, kind: nil, date: Date.current)
+      Account::ProviderImportAdapter.new(account).import_transaction(
+        external_id: id, amount: amount, currency: "USD", date: date,
+        name: "Loan repayment", source: source, kind: kind
+      )
+    end
+
+    def sync_loan_pair(source:, kind: nil)
+      import_loan_leg(@pair_checking, "#{source}_out", 500, source: source, kind: kind)
+      import_loan_leg(@pair_loan, "#{source}_in", -500, source: source, kind: kind)
+    end
+
+    def pair_totals
+      IncomeStatement.new(@pair_family).totals(date_range: (Date.current - 5)..(Date.current + 5))
+    end
 end
