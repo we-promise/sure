@@ -462,7 +462,11 @@ It must be an `http://` or `https://` URL; anything else is ignored and logged a
 
 ### Revoking access
 
-Revoke at the proxy. Deactivating a user in Sure queues `UserPurgeJob`, which destroys the record, and once it's gone Sure cannot tell that email apart from a brand-new one — so with JIT creation enabled the person gets a fresh empty household on their next request. Sure does refuse to log in a deactivated account it can still see, but the durable control is `REMOTE_USER_ALLOW_JIT=false` plus removing the user from whatever your proxy authenticates against.
+Remove the user from whatever your proxy authenticates against. Sure only sees the header, so the proxy is the only place that stops the person from reaching Sure at all.
+
+Removing a user in Sure (Admin → Users) also blocks their email on the header path. The next proxied request for that email is refused, and Sure does not create a new account for it, even with a pending invitation. The block is listed under Admin → Users → Removed SSO identities, and a super admin can allow the email again from there.
+
+A user who deletes their own account is not blocked. With JIT creation enabled, that person gets a new, empty household on their next proxied request. Set `REMOTE_USER_ALLOW_JIT=false` to stop that.
 
 ### Troubleshooting
 

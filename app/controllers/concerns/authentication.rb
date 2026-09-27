@@ -1,8 +1,6 @@
 module Authentication
   extend ActiveSupport::Concern
 
-  REMOTE_HEADER_SSO_PROVIDER = "remote_user_header"
-
   # How far back to look for a session belonging to the same header-authenticated
   # client, and how many candidates to decrypt while matching on user agent.
   REMOTE_HEADER_SESSION_REUSE_WINDOW = 12.hours
@@ -59,7 +57,7 @@ module Authentication
       if created
         SsoAuditLog.log_jit_account_created!(
           user: user,
-          provider: REMOTE_HEADER_SSO_PROVIDER,
+          provider: RemoteUserHeader::SSO_PROVIDER,
           request: request
         )
       elsif existing_session = reusable_remote_header_session_for(user)
@@ -73,7 +71,7 @@ module Authentication
 
       SsoAuditLog.log_login!(
         user: user,
-        provider: REMOTE_HEADER_SSO_PROVIDER,
+        provider: RemoteUserHeader::SSO_PROVIDER,
         request: request
       )
       session_record
@@ -206,6 +204,21 @@ module Authentication
         return [ nil, false ]
       end
 
+      # Checked under the lock that SsoIdentityBlock.block! takes, as
+      # OidcIdentity does, so a removal that commits mid-request can't land
+      # between the check and the insert. The block also beats a pending
+      # invitation: re-inviting a removed user means lifting the block first.
+      SsoIdentityBlock.with_identity_lock(provider: RemoteUserHeader::SSO_PROVIDER, uid: user_email) do
+        if SsoIdentityBlock.blocked?(provider: RemoteUserHeader::SSO_PROVIDER, uid: user_email)
+          reject_remote_user_header("identity was removed from Sure; a super admin can allow it again under Admin > Users", email: user_email)
+          next [ nil, false ]
+        end
+
+        insert_remote_header_user(user_email)
+      end
+    end
+
+    def insert_remote_header_user(user_email)
       # Mirrors OidcAccountsController#create_user: a pending invitation always
       # wins, otherwise the instance's JIT policy decides.
       invitation = Invitation.pending.find_by(email: user_email)
@@ -222,13 +235,17 @@ module Authentication
         user.role = invitation.role
       else
         user.family = Family.new
-        # The first-account guard above keeps the normal registration bootstrap,
-        # so this always resolves to the fallback :admin role.
+        # The first-account guard in create_remote_header_user keeps the
+        # normal registration bootstrap, so this always resolves to the
+        # fallback :admin role.
         user.role = User.role_for_new_family_creator(fallback_role: :admin)
       end
 
       begin
-        ActiveRecord::Base.transaction do
+        # A savepoint, because this runs inside the identity lock's transaction.
+        # Postgres aborts the whole transaction on a unique violation, and the
+        # rescue below still has to query for the row that won the race.
+        ActiveRecord::Base.transaction(requires_new: true) do
           user.save!
           if invitation
             invitation.update!(accepted_at: Time.current)

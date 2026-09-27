@@ -1,8 +1,14 @@
 # Rules for reverse-proxy header authentication that more than one layer
-# enforces. The Authentication concern and the Rack::Attack throttle run at
-# different points in the request, and each must reach the same answer.
+# enforces. The Authentication concern, the Rack::Attack throttle, and user
+# removal run at different points, and each must reach the same answer.
 module RemoteUserHeader
+  SSO_PROVIDER = "remote_user_header"
+
   class << self
+    def enabled?
+      config.app_mode.self_hosted? && config.remote_user_header_email.present?
+    end
+
     # Raises IPAddr::Error when remote_addr is missing or unparseable, so each
     # caller decides how to fail closed.
     def trusted_peer?(remote_addr)

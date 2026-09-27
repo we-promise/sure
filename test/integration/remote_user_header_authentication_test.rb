@@ -359,10 +359,49 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_url
   end
 
+  # User#deactivate rewrites the email, so the lookup can't see the row at all
+  # and the header would otherwise JIT-create the person again. An admin
+  # removal blocks the header identity to stop that.
+  test "a user an admin removed is not re-created by the next header request" do
+    user = users(:family_member)
+    original_email = user.email
+    assert user.permanently_remove!
+
+    assert_no_difference -> { User.count } do
+      get root_url, headers: { HEADER_NAME => original_email }
+    end
+    assert_redirected_to new_session_url
+  end
+
+  test "a pending invitation does not get past a removal block" do
+    invitation = invitations(:one)
+    SsoIdentityBlock.block!(
+      provider: RemoteUserHeader::SSO_PROVIDER,
+      uid: invitation.email,
+      identity_label: invitation.email
+    )
+
+    assert_no_difference -> { User.count } do
+      get root_url, headers: { HEADER_NAME => invitation.email }
+    end
+    assert_nil invitation.reload.accepted_at
+  end
+
+  test "lifting the removal block lets the header create the account again" do
+    user = users(:family_member)
+    original_email = user.email
+    assert user.permanently_remove!
+
+    SsoIdentityBlock.find_by!(provider: RemoteUserHeader::SSO_PROVIDER).destroy!
+
+    assert_difference -> { User.count }, 1 do
+      get root_url, headers: { HEADER_NAME => original_email }
+    end
+  end
+
   test "REMOTE_USER_ALLOW_JIT=false keeps a deactivated email from re-entering" do
-    # User#deactivate mangles the email, so the lookup can't see the row at all
-    # and the account would otherwise be JIT-created fresh. Revocation has to be
-    # enforced by disabling creation (and at the proxy).
+    # A plain deactivate (a user deleting their own account) writes no removal
+    # block, so only the JIT policy stops the email coming back.
     Rails.application.config.stubs(:remote_user_allow_jit).returns(false)
     user = users(:family_member)
     original_email = user.email
