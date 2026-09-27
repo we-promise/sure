@@ -19,7 +19,7 @@ sv:
             payment_url:
               invalid_scheme: "måste vara en giltig http:// eller https://-adress"
             anchor_date:
-              required_for_intervals: "krävs när en regel upprepas var 2:a period eller oftare"
+              required_for_intervals: "krävs när en regel upprepas var 2:a period eller mer sällan"
             bill_type:
               transfer_shape_mismatch: "kan bara vara en överföring när ett målkonto är angivet"
             expected_amount_min:

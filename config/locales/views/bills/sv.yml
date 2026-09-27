@@ -213,7 +213,7 @@ sv:
       shortfall_largest: "Största kommande åtagande:"
       review_plan: Granska plan
       allocation_aria: "Av %{income} inkomst förfaller %{due} nu, %{reserved} är reserverat för senare, och %{safe} är säkert att spendera."
-      allocation_aria_short: "%{income} av inkomsten går till det som är förpliktat här, och %{short} till behövs mer."
+      allocation_aria_short: "%{income} av inkomsten går till det som är förpliktat här, och ytterligare %{short} behövs."
     reset_feed_token:
       done: Kalenderlänken har återställts. Kalenderappar som använder den gamla länken slutar uppdateras; prenumerera på nytt med den nya.
       confirm: Återställ kalenderflödets länk? Varje tidigare delad länk slutar fungera.

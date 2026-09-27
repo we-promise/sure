@@ -96,7 +96,7 @@ sv:
       success: Målet återöppnades.
       invalid_transition: Målet kan inte återöppnas från sitt nuvarande tillstånd.
     consume:
-      title: Registrera en uttag
+      title: Registrera ett uttag
       subtitle: "%{goal}"
       amount_label: Hur mycket använde du?
       amount_hint: "%{saved} backar för närvarande detta mål."
