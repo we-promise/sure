@@ -28,7 +28,8 @@ class BitcoinWalletsTest < ApplicationSystemTestCase
     assert_text I18n.t("bitcoin_wallets.connect")
     page.save_screenshot(Rails.root.join("tmp", "bitcoin-wallet-preview.png"))
     click_on I18n.t("bitcoin_wallets.connect")
-    assert_text I18n.t("bitcoin_wallets.connected")
+    assert_current_path account_path(@account)
+    assert @account.reload.bitcoin_wallet_account.account_provider
     assert_equal BigDecimal("0.2"), @account.reload.current_holdings.find_by!(security: @security).qty
     visit account_bitcoin_wallet_path(@account)
     assert_selector "summary", text: /#{Regexp.escape(I18n.t("bitcoin_wallets.add_source"))}/i
@@ -58,7 +59,9 @@ class BitcoinWalletsTest < ApplicationSystemTestCase
     within "dialog[open]", text: I18n.t("bitcoin_wallets.disconnect_confirm") do
       click_button "Confirm"
     end
-    assert_text I18n.t("bitcoin_wallets.disconnected")
+    assert_current_path account_path(@account)
+    assert_selector "[data-testid='activity-menu'] button"
+    assert_nil @account.reload.bitcoin_wallet_account
     assert @account.reload.manual_accounting?
     assert_equal BigDecimal("0.2"), @account.current_holdings.find_by!(security: @security).qty
   end

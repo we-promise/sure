@@ -25,6 +25,7 @@
 - Full Chromium system: **166 runs, 843 assertions, 0 failures, 0 errors**.
 - Дополнительный integration/holding-прогон, включая годовую историю и приоритет position owner: **82 runs, 281 assertions, 0 failures, 0 errors**. Idle sync сохраняет прежние строки; backdated правка пересчитывает только затронутый диапазон.
 - Ruby lint, ERB lint (748 шаблонов), Biome (133 файла) и Brakeman (**0 security warnings**) прошли.
+- После CI-падения на кратковременном flash browser assertions проверяют постоянное состояние подключения/отключения, сохранённую позицию и доступность ручных действий. Сфокусированный прогон: **3 runs, 18 assertions, 0 failures, 0 errors**; исходный полный system-прогон выше предшествовал усилению этих assertions.
 - Публичные fixture-скриншоты обновлены; CodeGraph использован для scoped impact exploration, Serena — для focused symbols и правок. Динамические Rails связи проверены по source/schema/tests.
 
 Дополнительное ревью подтвердило гонки concurrent wallet sync: разные parents теперь получают независимые children, running read не поглощает source edits, а занятый advisory lock создаёт deferred child вместо преждевременного completion. Замечание CodeRabbit о `CurrentPositions` подтверждено отдельным red/green тестом: position owner имеет приоритет перед более новой строкой complete provider. Контракты затронутых методов документированы для pre-merge Docstring Coverage.
