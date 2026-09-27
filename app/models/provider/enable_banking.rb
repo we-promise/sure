@@ -173,13 +173,15 @@ class Provider::EnableBanking
   # @param psu_headers [Hash] Optional PSU context headers required by some ASPSPs
   # @return [Hash] Transactions and continuation_key for pagination
   def get_account_transactions(account_id:, date_from: nil, date_to: nil,
-                               continuation_key: nil, transaction_status: nil, psu_headers: {}, retry_attempt: 0)
+                               continuation_key: nil, transaction_status: nil, psu_headers: {},
+                               retry_attempt: 0, strategy: nil, allow_longest_retry: false)
     encoded_id = CGI.escape(account_id.to_s)
     query_params = {}
     query_params[:transaction_status] = transaction_status if transaction_status.present?
     query_params[:date_from] = date_from.to_date.iso8601 if date_from
     query_params[:date_to] = date_to.to_date.iso8601 if date_to
     query_params[:continuation_key] = continuation_key if continuation_key
+    query_params[:strategy] = strategy if strategy.present?
 
     response = self.class.get(
       "#{BASE_URL}/accounts/#{encoded_id}/transactions",
@@ -189,17 +191,19 @@ class Provider::EnableBanking
 
     handle_response(response)
   rescue EnableBankingError => e
-    next_date_from = next_transactions_date_from(e, date_from, retry_attempt)
+    next_attempt = next_transactions_attempt(e, date_from, strategy, retry_attempt, allow_longest_retry: allow_longest_retry)
 
-    if next_date_from
+    if next_attempt
       get_account_transactions(
         account_id: account_id,
-        date_from: next_date_from,
+        date_from: next_attempt[:date_from],
         date_to: date_to,
         continuation_key: continuation_key,
         transaction_status: transaction_status,
         psu_headers: psu_headers,
-        retry_attempt: retry_attempt + 1
+        retry_attempt: retry_attempt + 1,
+        strategy: next_attempt[:strategy],
+        allow_longest_retry: allow_longest_retry
       )
     else
       raise
@@ -210,33 +214,55 @@ class Provider::EnableBanking
 
   private
 
-    # Decides the next date_from to retry a transactions fetch with after an
-    # ASPSP rejects the requested window with WRONG_TRANSACTIONS_PERIOD.
+    # Decides the next attempt (date_from + strategy) to retry a transactions
+    # fetch with after an ASPSP rejects the requested period with
+    # WRONG_TRANSACTIONS_PERIOD. Returns nil when no further retry should be
+    # attempted.
     #
-    # Some ASPSPs (e.g. certain PT banks) return this error WITHOUT a corrected
-    # date_from in the payload, which defeated the previous single-shot retry.
-    # In that case we step through progressively shorter windows so the sync can
-    # still succeed instead of surfacing a generic error. Returns nil when no
-    # further retry should be attempted.
-    def next_transactions_date_from(error, current_date_from, retry_attempt)
+    # Order, when allow_longest_retry is true and the failed attempt wasn't
+    # already using strategy: "longest":
+    #   1. The ASPSP-suggested corrected_date_from (cheapest, most precise).
+    #   2. strategy: "longest" (broader, more expensive, but per Enable
+    #      Banking's docs immune to this exact error).
+    #   3. The fixed 89/60/30-day fallback ladder, default strategy.
+    # When allow_longest_retry is false, or the failed attempt was already
+    # using "longest", step 2 is skipped entirely and behavior is identical
+    # to before this method existed (corrected_date_from, then the ladder) —
+    # e.g. an incremental catch-up sync must never escalate into a full
+    # history refetch just because it hit this error once.
+    #
+    # The extra "try longest" rung consumes one retry_attempt slot, so the
+    # upper bound below grows by 1 in that case — without it, the final
+    # (30-day) ladder rung would be silently truncated for callers that opt
+    # into the longest-retry rung.
+    def next_transactions_attempt(error, current_date_from, current_strategy, retry_attempt, allow_longest_retry:)
       return nil unless error.wrong_transactions_period?
-      return nil if retry_attempt > FALLBACK_TRANSACTIONS_DATE_FROM_DAYS.length
+      return nil if retry_attempt > FALLBACK_TRANSACTIONS_DATE_FROM_DAYS.length + (allow_longest_retry ? 1 : 0)
 
       current = current_date_from&.to_date
+      already_longest = current_strategy.to_s == "longest"
 
       # Prefer the ASPSP-suggested date on the first retry (original behaviour),
       # but only when it actually moves the window forward.
       if retry_attempt.zero?
         corrected = error.corrected_date_from
-        return corrected if corrected.present? && (current.nil? || corrected > current)
+        return { date_from: corrected, strategy: current_strategy } if corrected.present? && (current.nil? || corrected > current)
+      end
+
+      if allow_longest_retry && !already_longest && retry_attempt <= 1
+        return { date_from: current_date_from, strategy: "longest" }
       end
 
       # Otherwise pick the first progressively-shorter window that advances the
       # window forward, skipping any window that is not newer than the current
       # date_from. Moving strictly forward guarantees progress and termination.
-      FALLBACK_TRANSACTIONS_DATE_FROM_DAYS
+      # strategy is reset to nil (default) here so a "longest" attempt from
+      # the rung above never leaks into a fixed-window retry.
+      fallback = FALLBACK_TRANSACTIONS_DATE_FROM_DAYS
         .map { |days| days.days.ago.to_date }
         .find { |candidate| current.nil? || candidate > current }
+
+      fallback ? { date_from: fallback, strategy: nil } : nil
     end
 
     # Builds the ladder of consent durations (seconds) to try, most-preferred first:

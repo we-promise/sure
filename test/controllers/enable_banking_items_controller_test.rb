@@ -11,7 +11,7 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
       name: "Test Connection",
       country_code: "DE",
       application_id: "test_app_id",
-      client_certificate: OpenSSL::PKey::RSA.new(2048).to_pem
+      client_certificate: OpenSSL::PKey::RSA.new(2048).to_pem, sync_start_date: 3.months.ago.to_date
     )
   end
 

@@ -2,6 +2,7 @@ class EnableBankingItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
+  enum :sync_strategy, { date: "date", longest: "longest" }, default: :date
 
   # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
@@ -68,6 +69,23 @@ class EnableBankingItem < ApplicationRecord
     return if psu_type.blank? || aspsp_psu_types.blank?
     unless aspsp_psu_types.include?(psu_type)
       errors.add(:psu_type, "must be one of the ASPSP supported types")
+    end
+  end
+
+  # sync_start_date has no bearing once sync_strategy is "longest" (the
+  # importer requests full available history instead), so the presence/bounds
+  # check below only applies to the "date" strategy. Bounds mirror the
+  # setup_accounts form's client-side min/max, now also enforced server-side.
+  validate :sync_start_date_within_bounds, if: :date?
+
+  def sync_start_date_within_bounds
+    if sync_start_date.blank?
+      errors.add(:sync_start_date, "can't be blank")
+      return
+    end
+
+    if sync_start_date > Date.current || sync_start_date < 2.years.ago.to_date
+      errors.add(:sync_start_date, "must be within the last 2 years")
     end
   end
 
@@ -265,6 +283,18 @@ class EnableBankingItem < ApplicationRecord
 
   def has_completed_initial_setup?
     accounts.any?
+  end
+
+  # True when the ASPSP couldn't honor the requested sync_start_date and the
+  # actual earliest imported transaction is materially newer than what the
+  # user asked for (e.g. the bank only exposes 90 days of history). Used to
+  # surface a non-blocking notice; a small buffer avoids false positives from
+  # ordinary banking-day gaps around the requested date.
+  def sync_start_date_shortfall?
+    return false unless date? && sync_start_date.present?
+
+    earliest_imported = accounts.joins(:entries).minimum("entries.date")
+    earliest_imported.present? && earliest_imported > sync_start_date + 3.days
   end
 
   def linked_accounts_count
