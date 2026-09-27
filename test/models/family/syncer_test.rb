@@ -66,6 +66,9 @@ class Family::SyncerTest < ActiveSupport::TestCase
 
     syncer = Family::Syncer.new(@family)
 
+    # Stub transfer matching so its queries don't affect the count.
+    @family.stubs(:auto_match_transfers!)
+
     # Stub apply_later so only the ActiveRecord loading queries are counted.
     Rule.any_instance.stubs(:apply_later)
 
@@ -95,8 +98,12 @@ class Family::SyncerTest < ActiveSupport::TestCase
 
     syncer = Family::Syncer.new(@family)
 
-    # Stub the relation to return our specific instances so expectations work
-    @family.rules.stubs(:where).with(active: true).returns([ active_rule ])
+    # Stub the relation to return our specific instances so expectations work.
+    # The stub returns a mock relation that also responds to .includes (chained
+    # after .where in perform_post_sync) so the array isn't sent an unknown method.
+    mock_relation = mock("active_rules_relation")
+    mock_relation.stubs(:includes).returns([ active_rule ])
+    @family.rules.stubs(:where).with(active: true).returns(mock_relation)
 
     # Expect apply_later to be called only for the active rule
     active_rule.expects(:apply_later).once
