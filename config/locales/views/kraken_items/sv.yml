@@ -1,0 +1,85 @@
+---
+sv:
+  kraken_items:
+    provider_connection:
+      default_name: Kraken
+      default_description: Länka till ett Kraken-börskonto
+      name: "Kraken - %{name}"
+      description: "Länka till %{name}"
+    create:
+      default_name: Kraken
+      success: Ansluten till Kraken. Ditt börskonto synkroniseras nu.
+    update:
+      success: Kraken-anslutningen har uppdaterats.
+    destroy:
+      success: Kraken-anslutningen är schemalagd för borttagning.
+    select_accounts:
+      select_connection: Välj en Kraken-anslutning under Leverantörsinställningar.
+      no_credentials_configured: Lägg till Kraken API-uppgifter innan du sätter upp konton.
+    link_accounts:
+      select_connection: Välj en Kraken-anslutning innan du länkar konton.
+    select_existing_account:
+      title: Länka Kraken-konto
+      no_accounts_found: Inga Kraken-konton hittades.
+      wait_for_sync: Vänta tills Kraken har synkroniserat klart.
+      check_provider_health: Kontrollera att dina Kraken API-uppgifter är giltiga.
+      link: Länka
+      cancel: Avbryt
+    link_existing_account:
+      success: Länkad till Kraken-konto
+      select_connection: Välj en Kraken-anslutning innan du länkar konton.
+      errors:
+        only_manual: Endast manuella Crypto-börskonton utan en befintlig leverantörslänk kan länkas till Kraken
+        invalid_kraken_account: Ogiltigt Kraken-konto
+        kraken_account_already_linked: Det här Kraken-kontot är redan länkat
+    setup_accounts:
+      title: Importera Kraken-konto
+      subtitle: Välj börskontot att följa
+      instructions: Kraken importerar ett sammanslaget Crypto-börskonto för den här anslutningen, med endast innehav och spotaffärer.
+      no_accounts: Alla Kraken-konton har importerats.
+      accounts_count:
+        one: "%{count} konto tillgängligt"
+        other: "%{count} konton tillgängliga"
+      select_all: Markera alla
+      import_selected: Importera valda
+      cancel: Avbryt
+      creating: Importerar...
+    complete_account_setup:
+      success:
+        one: "Importerade %{count} konto"
+        other: "Importerade %{count} konton"
+      none_selected: Inga konton valda
+      no_accounts: Inga konton att importera
+    kraken_item:
+      provider_name: Kraken
+      syncing: Synkroniserar...
+      reconnect: Uppgifterna behöver uppdateras
+      deletion_in_progress: Tar bort...
+      sync_status:
+        no_accounts: Inga konton hittades
+        all_synced:
+          one: "%{count} konto synkroniserat"
+          other: "%{count} konton synkroniserade"
+        partial_sync: "%{linked_count} synkroniserade, %{unlinked_count} behöver konfigureras"
+      status: "Senast synkroniserat %{timestamp} sedan"
+      status_with_summary: "Senast synkroniserat %{timestamp} sedan - %{summary}"
+      status_never: Aldrig synkroniserat
+      delete: Ta bort
+      no_accounts_title: Inga konton hittades
+      no_accounts_message: Ditt Kraken-börskonto visas här efter synkronisering.
+      setup_needed: Kontot är redo att importeras
+      setup_description: Importera den här Kraken-anslutningen som ett Crypto-börskonto.
+      setup_action: Importera konto
+      import_accounts_menu: Importera konto
+      stale_rate_warning: "Saldot är ungefärligt eftersom den exakta växelkursen för %{date} inte var tillgänglig. Uppdateras vid nästa synkronisering."
+  kraken_item:
+    syncer:
+      checking_credentials: Kontrollerar uppgifter...
+      credentials_invalid: Ogiltiga Kraken API-uppgifter. Kontrollera din API-nyckel och hemliga nyckel.
+      importing_accounts: Importerar konton från Kraken...
+      checking_configuration: Kontrollerar kontokonfiguration...
+      accounts_need_setup:
+        one: "%{count} konto behöver konfigureras"
+        other: "%{count} konton behöver konfigureras"
+      processing_accounts: Bearbetar kontodata...
+      calculating_balances: Beräknar saldon...

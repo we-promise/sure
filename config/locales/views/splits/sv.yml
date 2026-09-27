@@ -1,0 +1,47 @@
+---
+sv:
+  splits:
+    new:
+      title: Dela transaktion
+      description: Dela den här transaktionen i flera poster med olika kategorier och belopp.
+      submit: Dela transaktion
+      cancel: Avbryt
+      add_row: Lägg till delning
+      remove_row: Ta bort
+      remaining: Återstår
+      amounts_must_match: Delningsbeloppen måste motsvara det ursprungliga transaktionsbeloppet.
+      name_label: Namn
+      name_placeholder: Namn på delning
+      amount_label: Belopp
+      category_label: Kategori
+      uncategorized: "(okategoriserad)"
+      original_name: "Namn:"
+      original_date: "Datum:"
+      original_amount: "Belopp"
+      split_number: "Delning #%{number}"
+    create:
+      success: Transaktionen delades
+      not_splittable: Den här transaktionen kan inte delas.
+    destroy:
+      success: Delningen av transaktionen togs bort
+    show:
+      title: Delade poster
+      description: Den här transaktionen har delats upp i följande poster.
+      button_title: Dela transaktion
+      button_description: Dela den här transaktionen i flera poster med olika kategorier och belopp.
+      button: Dela
+      unsplit_title: Ångra delning av transaktion
+      unsplit_button: Ångra delning
+      unsplit_confirm: Detta tar bort alla delade poster och återställer den ursprungliga transaktionen.
+    edit:
+      title: Redigera delning
+      description: Ändra de delade posterna för den här transaktionen.
+      submit: Uppdatera delning
+      not_split: Den här transaktionen är inte delad.
+    update:
+      success: Delningen uppdaterades
+    child:
+      title: Del av delning
+      description: Den här posten är en del av en delad transaktion.
+      edit_split: Redigera delning
+      unsplit: Ångra delning

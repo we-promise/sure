@@ -1,0 +1,256 @@
+---
+sv:
+  admin:
+    system_health:
+      push_notifications:
+        send_test: "Skicka testnotis"
+        queueing: "Köar…"
+        title: "Pushnotiser"
+        requested_at: "Senaste test begärdes %{time}"
+        result_help: "Att APNs accepterar notisen bekräftar inte att den levererats till din enhet. Uppdatera för att se workerresultat. Resultaten sparas i 24 timmar."
+        device: "Enhet %{number}"
+        pending: "Väntar"
+        refresh: "Uppdatera resultat"
+        columns:
+          device: "Enhet"
+          environment: "APNs-miljö"
+          status: "Resultat"
+          checked_at: "Senast uppdaterad"
+        environments:
+          sandbox: "Sandlåda"
+          production: "Produktion"
+        messages:
+          enqueue_failed: "Testet kunde inte köas. Kontrollera Sidekiq och uppdatera resultaten nedan."
+          ready: "Skicka en testnotis till de aktiverade iOS-enheter som är registrerade på ditt konto."
+          queued: "Testnotisen har köats. Uppdatera resultaten nedan för att se dess status."
+          hosted_only: "Pushnotiser är endast tillgängliga i hostat läge."
+          ineligible: "Endast en aktiv superadmin kan skicka en testnotis."
+          no_devices: "Aktivera pushnotiser i Sure-appen för iOS för det här kontot för att skicka ett test."
+          disabled: "Pushleverans har inaktiverats av operatören."
+          not_configured: "APNs-uppgifter är inte konfigurerade."
+          cooldown: "Vänta 30 sekunder innan du skickar ett nytt test."
+          storage_unavailable: "Testbegäran kunde inte sparas. Kontrollera konfigurationen för den delade cachen."
+        statuses:
+          queued: "Köad"
+          accepted: "Accepterad av APNs"
+          skipped: "Hoppades över: inte längre behörig"
+          rejected: "Avvisad av APNs; kontrollera pushfelsökningsloggarna"
+          unregistered: "Enhetsregistreringen är inte längre giltig"
+          retrying: "Försöker igen efter tillfälligt fel"
+          failed: "Misslyckades; kontrollera pushfelsökningsloggarna"
+          enqueue_failed: "Kunde inte köas; kontrollera Sidekiq"
+          expired: "Gick ut utan slutligt resultat"
+      push_notification:
+        title: "Testnotis från Sure"
+        body: "Det här är en testnotis för ditt Sure-konto."
+      verify_worker_ai:
+        queued: "Workerkontrollen har köats. Den visas nedan när en workerprocess plockar upp den, vanligtvis inom några sekunder."
+      show:
+        title: Systemhälsa
+        tabs:
+          background_jobs: Bakgrundsjobb
+          ai: AI-status
+        alert:
+          title: Bakgrundsjobben körs inte
+        status_section_title: Sidekiq-status
+        status_section_description: Aktuellt läge för bakgrundsworkern som driver synkningar, saldon och beräkningar av nettoförmögenhet.
+        counters_section_title: Jobbräknare
+        counters_section_description: Sammanlagda Sidekiq-räknare för alla köer.
+        queues_section_title: Köer
+        queues_section_description: Djup och ålder på äldsta jobb per kö. Latens är antalet sekunder som det äldsta jobbet har väntat.
+        labels:
+          status: Status
+          processes: Workerprocesser
+          last_heartbeat: Senaste heartbeat
+          max_queue_latency: Äldsta jobbets ålder
+          enqueued: Köade
+          retries: Omförsök
+          failed: Misslyckade
+          processed_total: Totalt bearbetade
+          queue: Kö
+          size: Storlek
+          latency: Latens
+        values:
+          healthy: Frisk
+          unhealthy: Försämrad
+          time_ago: "för %{time_ago} sedan"
+          never: Aldrig
+          seconds: "%{seconds} s"
+          no_queues: "Inga köer är registrerade. Workern kanske inte körs."
+        ai:
+          run_checks: Kör kontrollerna igen
+          last_checked: "Livekontrollerna slutfördes för %{time_ago} sedan. Resultaten cachas en kort stund."
+          not_checked_help: Öppna AI-statusens URL direkt eller kör kontrollerna för att verifiera att tjänsten lever.
+          alerts:
+            custom_openai:
+              title: Kontrollen av hostad vektorlagring misslyckades mot den här anpassade endpointen
+              message: Den konfigurerade endpointen klarade inte livekontrollen av /v1/vector_stores. De flesta lokala och OpenAI-kompatibla endpoints implementerar inte det API:et. Chatt och PDF-bearbetning kan ändå fungera; använd pgvector med en separat embedding-endpoint för den vanliga lokala uppsättningen. Felet registrerades i Inställningar → Felsökningsloggar och Rails.logger.
+            function_calling_unsupported:
+              title: Modellen stöder inte funktionsanrop
+              message: Endpointen besvarade en vanlig chattbegäran men avvisade samma begäran med parametern tools. AI-assistenten läser konton, transaktioner och innehav via funktionsanrop, så chatten fortsätter att misslyckas – ofta med ett föga hjälpsamt 404 – tills modellen stöder verktyg. Välj en modell vars leverantör dokumenterar stöd för funktionsanrop. Felet registrerades i Inställningar → Felsökningsloggar och Rails.logger.
+            function_calling_not_used:
+              title: Modellen svarade utan att anropa verktyget den ombads anropa
+              message: Endpointen accepterade parametern tools, men modellen svarade med text i stället för att anropa hälsokontrollverktyget. AI-assistenten kan inte läsa ekonomisk data utan verktygsanrop, så chatten kan svara med ingenting eller med påhittade siffror. Välj helst en modell vars leverantör dokumenterar stöd för funktionsanrop.
+            llm_probe_failed:
+              title: Livekontrollen av LLM misslyckades
+              message: Sure kunde inte verifiera både den konfigurerade endpointen och modellen. Felet registrerades i Inställningar → Felsökningsloggar och Rails.logger.
+            llm_model_not_available:
+              title: Den konfigurerade AI-modellen är inte tillgänglig
+              message: Endpointen svarade, men den listade eller tillhandahöll inte den konfigurerade modellen. Välj en aktiv modell för den valda leverantören och kör sedan kontrollerna igen. För Gemini via ett OpenAI-kompatibelt översättningslager, använd en modell som stöds i dag, till exempel gemini-2.5-flash.
+            pdf_text_extraction_failed:
+              title: Den syntetiska kontrollen av PDF-textextrahering misslyckades
+              message: Sure kunde inte slutföra den textbaserade vägen som extraherar inbäddad PDF-text lokalt och skickar den till den konfigurerade modellen. Inga kunddata skickades. Felet registrerades i Inställningar → Felsökningsloggar och Rails.logger.
+            pdf_vision_processing_failed:
+              title: Den syntetiska PDF-kontrollen för vision/native misslyckades
+              message: Sure kunde inte slutföra PDF-vägen för bild eller native-dokument via den konfigurerade modellen. Inga kunddata skickades. Felet registrerades i Inställningar → Felsökningsloggar och Rails.logger.
+            vector_probe_failed:
+              title: Livekontrollen av dokumentsökning misslyckades
+              message: Sure kunde inte verifiera den valda vektorlagringen och alla nödvändiga embedding-tjänster. Felet registrerades i Inställningar → Felsökningsloggar och Rails.logger.
+            pgvector_extension_not_enabled:
+              title: PostgreSQL-tillägget vector är inte aktiverat
+              message: Adaptern pgvector är vald, men PostgreSQL har inte aktiverat tillägget vector för den här databasen. Använd en PostgreSQL-image som innehåller pgvector, aktivera sedan tillägget som databasägare eller superanvändare och kör migreringarna igen med VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: Tabellen vector_store_chunks saknas
+              message: Tillägget pgvector är aktiverat, men chunk-tabellen hittades inte. Kontrollera migreringsstatus och kör sedan vektorlagringsmigreringen igen med VECTOR_STORE_PROVIDER=pgvector så att Sure kan skapa vector_store_chunks.
+            pgvector_probe_failed:
+              title: Lagringskontrollen för pgvector misslyckades
+              message: Sure kunde inte fråga pgvector-tabellen för chunks. Kontrollera PostgreSQL-behörigheter, tillägget vector och migreringen för vector_store_chunks. Felet registrerades i Inställningar → Felsökningsloggar och Rails.logger.
+            embedding_dimensions_mismatch:
+              title: Embedding-dimensionerna stämmer inte
+              message: Embedding-endpointen returnerade en vektor vars längd inte matchar EMBEDDING_DIMENSIONS. Sätt EMBEDDING_MODEL och EMBEDDING_DIMENSIONS till modellens dokumenterade vektorstorlek, starta om Sure så att miljön behålls, ändra eller återskapa sedan pgvector-kolumnen/tabellen för embeddings och gör om embeddings för dokument om befintlig data använde en annan storlek.
+            embedding_probe_timeout:
+              title: Livekontrollen av embeddings fick timeout
+              message: Embedding-endpointen svarade inte innan AI_HEALTH_PROBE_TIMEOUT. Höj timeouten för hälsokontrollen om leverantören är långsam och starta sedan om Sure så att miljön gäller i alla processer. Om vanliga AI-chattanrop också får timeout, höj OPENAI_REQUEST_TIMEOUT separat.
+            embedding_probe_failed:
+              title: Livekontrollen av embeddings misslyckades
+              message: Sure kunde inte skapa en kort test-embedding via den konfigurerade endpointen och modellen. Kontrollera EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN och embedding-leverantörens loggar. Felet registrerades i Inställningar → Felsökningsloggar och Rails.logger.
+            qdrant:
+              title: Stöd för Qdrant är inte implementerat än
+              message: Adaptern för Qdrant finns som stomme, men uppladdning och sökning av dokument misslyckas för närvarande. Välj OpenAI eller pgvector för dokumentsökning.
+            missing_vector_store:
+              title: Ingen vektorlagring är konfigurerad
+              message: Uppladdade dokument kan inte indexeras eller sökas förrän en adapter för vektorlagring och dess krav har konfigurerats.
+            unavailable_vector_store:
+              title: Den valda vektorlagringen är inte tillgänglig
+              message: Kontrollera adapterns krav nedan. För pgvector måste databasen tillhandahålla tillägget vector eller en befintlig tabell vector_store_chunks.
+          llm:
+            title: LLM och PDF-bearbetning
+            description: Livekontrollerna verifierar den konfigurerade modellen, ber den göra ett enkelt funktionsanrop på samma sätt som assistenten gör, och testar sedan separat textextrahering och vision/native-bearbetning med en syntetisk PDF på en sida utan kunddata. Värden för inloggningsuppgifter visas aldrig.
+          vector_store:
+            title: Vektorlagring och dokumentsökning
+            description: Livekontrollen frågar API:et för hostad vektorlagring, eller testar pgvector-tabellen och skapar en kort embedding utan att spara den.
+          labels:
+            selected_provider: Vald leverantör
+            effective_provider: Faktisk leverantör
+            model: Modell
+            endpoint: Endpoint
+            function_calling: Funktionsanrop (verktyg)
+            pdf_text_extraction: Väg för PDF-textextrahering
+            pdf_vision_processing: Väg för PDF vision/native
+            llm_request_timeout: Timeout för LLM-begäran
+            probe_request_timeout: Timeout för hälsokontroll
+            openai_credentials: OpenAI-uppgifter
+            openai_compatible_credentials: Uppgifter för OpenAI-kompatibelt API
+            anthropic_credentials: Anthropic-uppgifter
+            adapter: Adapter
+            adapter_available: Adapter tillgänglig
+            pgvector_extension: PostgreSQL-tillägget vector
+            pgvector_table: Tabell för vektorchunks
+            embedding_model: Embedding-modell
+            embedding_endpoint: Embedding-endpoint
+            embedding_dimensions: Embedding-dimensioner
+            function_calling_failure_reason: Felorsak för funktionsanrop
+            pdf_text_extraction_failure_reason: Felorsak för textextrahering
+            pdf_vision_processing_failure_reason: Felorsak för vision/native
+            storage_probe: Lagringskontroll för pgvector
+            embedding_probe: Kontroll av embedding-endpoint
+            failure_reason: Felorsak
+          providers:
+            openai: OpenAI
+            openai_compatible: OpenAI-kompatibel
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Anpassad endpoint
+          adapters:
+            openai: OpenAI hostad vektorlagring
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Konfigurerad
+            not_configured: Inte konfigurerad
+            fallback: "(reserv)"
+            not_set: Inte angiven
+            "yes": "Ja"
+            "no": "Nej"
+            enabled: Aktiverad
+            available_not_enabled: Tillgänglig, inte aktiverad
+            not_available: Inte tillgänglig
+            available: Tillgänglig
+            not_found: Hittades inte
+          function_calling_statuses:
+            supported: Live-verktygsanrop lyckades
+            unsupported: Stöds inte av den faktiska leverantören/modellen
+            not_used: Verktyg accepterades, men modellen anropade inget
+            failing: Livekontrollen misslyckades
+            not_checked: Inte kontrollerad
+            unavailable: Otillgänglig tills en LLM-leverantör har konfigurerats
+          pdf_statuses:
+            supported: Den syntetiska PDF-kontrollen godkändes
+            failing: Den syntetiska PDF-kontrollen misslyckades
+            unsupported: Inaktiverad eller stöds inte av den faktiska leverantören/modellen
+            not_checked: Inte kontrollerad
+            unavailable: Otillgänglig tills en LLM-leverantör har konfigurerats
+          probe_statuses:
+            passing: Livekontrollen godkändes
+            failing: Livekontrollen misslyckades
+            not_checked: Inte kontrollerad
+            not_configured: Inte konfigurerad
+          vector_statuses:
+            passing: Livekontrollerna godkändes
+            failing: Livekontrollen misslyckades
+            not_checked: Inte kontrollerad
+            not_configured: Inte konfigurerad
+            scaffolded: Stomme
+            missing: Inte konfigurerad
+          failure_codes:
+            model_not_available: Den konfigurerade modellen returnerades inte av leverantören
+            no_tool_call: Modellen svarade utan att anropa hälsokontrollverktyget
+            tools_refused: Tjänsten besvarade samma begäran utan verktyg men avvisade den med verktyg
+            invalid_response: Tjänsten returnerade ett oväntat svar
+            dimensions_mismatch: Embedding-vektorns dimensioner matchar inte de konfigurerade dimensionerna
+            extension_not_enabled: PostgreSQL-tillägget vector är inte aktiverat
+            table_not_found: Tabellen vector_store_chunks hittades inte
+            render_missing_binary: Renderaren pdftoppm (poppler-utils) finns inte i den här containern
+            timeout: Tjänsten svarade inte innan kontrollens timeout
+            request_failed: Begäran till tjänsten misslyckades
+            unsupported_provider: Leverantören stöder inte den här kontrollen
+          worker:
+            title: Workerverifiering
+            description: Kontrollerna ovan kördes från den här webbprocessen. Det mesta AI-arbetet -- assistentsvar, PDF-bearbetning, embeddings, automatisk kategorisering och handlaridentifiering -- körs faktiskt i en Sidekiq-workerprocess, som kan skilja sig i nätverksåtkomst, DNS, proxyregler eller till och med inlästa inloggningsuppgifter. Köa en kontroll för att verifiera en workers egen konfiguration och anslutning.
+            verify_button: Verifiera workerkonfiguration
+            coverage_notice: Varje kontroll verifierar exakt en workerprocess -- den som plockar upp den från kön. Med fler än en workerreplika bekräftar ett godkänt resultat inte att alla workers är friska; köa kontrollen igen för att testa en annan.
+            empty:
+              title: Ingen worker har rapporterat än
+              description: Klicka på "Verifiera workerkonfiguration" för att köa en asynkron kontroll. Resultatet visas här när en workerprocess plockar upp den.
+            labels:
+              process: Workerprocess
+              checked_at: Kontrollerad
+              configuration: Konfiguration
+            configuration_statuses:
+              match: Matchar webben
+              mismatch: Skiljer sig från webben
+            statuses:
+              passing: Godkänd
+              failing: Misslyckas
+              stale: Inaktuell
+            settings_origin:
+              title: Vilka inställningar kräver omstart?
+              database_backed: "Inställningar för leverantör, modell och API-nyckel som ändras i Inställningar → Egen hosting sparas i databasen. rails-settings-cached ogiltigförklarar den delade cachen vid skrivning, så både webb och worker hämtar det nya värdet vid nästa begäran eller köade jobb -- ingen omstart behövs."
+              env_backed: "Embedding-konfiguration, och alla värden som bara anges via en miljövariabel, låses när varje container startar. Rails kan inte ändra en annan containers miljö, så för att ändra dessa måste både webb- och workertjänsterna startas om eller återskapas -- och deployverktyg som bara startar om en av dem (partiell utrullning, en uppdaterad Secret utan podomstart) kommer inte att plocka upp ändringen."
+          local_setup:
+            title: Rekommenderad lokal uppsättning
+            description: Kör LLM:en via din lokala OpenAI-kompatibla endpoint, spara dokumentvektorer i pgvector och peka embedding-inställningarna mot en OpenAI-kompatibel embedding-endpoint. PostgreSQL-imagen måste innehålla tillägget vector, och embedding-dimensionerna måste matcha den valda modellen.

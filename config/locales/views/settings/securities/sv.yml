@@ -1,0 +1,38 @@
+---
+sv:
+  settings:
+    securities:
+      show:
+        disable_mfa: Inaktivera tvåfaktorsautentisering
+        disable_mfa_confirm: Är du säker på att du vill inaktivera tvåfaktorsautentisering?
+          Det gör ditt konto mindre säkert.
+        enable_mfa: Aktivera tvåfaktorsautentisering
+        mfa_enabled_status_html: "Tvåfaktorsautentisering är <span class=\"font-medium text-green-600\">aktiverad</span>"
+        mfa_enabled_description: Ditt konto är skyddat med ett extra säkerhetslager.
+        mfa_disabled_status_html: "Tvåfaktorsautentisering är <span class=\"font-medium text-red-600\">inaktiverad</span>"
+        mfa_disabled_description: Aktivera tvåfaktorsautentisering för att lägga till ett extra säkerhetslager på ditt konto.
+        mfa_description: Lägg till ett extra säkerhetslager på ditt konto genom att
+          kräva en kod från din autentiseringsapp när du loggar in
+        mfa_title: Tvåfaktorsautentisering
+        webauthn_add: Lägg till säkerhetsnyckel eller lösenordsnyckel
+        webauthn_added: Tillagd %{date}
+        webauthn_description: Använd en lösenordsnyckel, Touch ID, Windows Hello eller en
+          fysisk säkerhetsnyckel som andra faktor vid inloggning.
+        webauthn_empty: Inga lösenordsnycklar eller säkerhetsnycklar är registrerade än.
+        webauthn_last_used: Senast använd %{time_ago} sedan
+        webauthn_name_label: Nyckelnamn
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey, osv.
+        webauthn_remove: Ta bort
+        webauthn_remove_confirm: Är du säker på att du vill ta bort denna lösenordsnyckel eller
+          säkerhetsnyckel?
+        webauthn_remove_confirm_body: Du måste registrera denna lösenordsnyckel eller
+          säkerhetsnyckel igen innan den kan användas för inloggningsverifiering.
+        webauthn_title: Lösenordsnycklar och säkerhetsnycklar
+        webauthn_unsupported: Den här webbläsaren stöder inte lösenordsnycklar eller säkerhets-
+          nycklar.
+  webauthn_credentials:
+    default_name: Säkerhetsnyckel
+    failure: Kunde inte spara lösenordsnyckeln eller säkerhetsnyckeln. Försök igen.
+    mfa_required: Aktivera tvåfaktorsautentisering innan du lägger till en lösenordsnyckel eller
+      säkerhetsnyckel.
+    success: Lösenordsnyckel eller säkerhetsnyckel borttagen.

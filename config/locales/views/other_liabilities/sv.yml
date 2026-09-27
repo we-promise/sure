@@ -1,0 +1,7 @@
+---
+sv:
+  other_liabilities:
+    edit:
+      edit: Redigera %{account}
+    new:
+      title: Ange skulddetaljer

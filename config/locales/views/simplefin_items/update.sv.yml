@@ -1,0 +1,7 @@
+sv:
+  simplefin_items:
+    update:
+      success: "SimpleFIN-anslutningen har uppdaterats."
+      errors:
+        blank_token: "SimpleFIN-åtkomsttoken saknas. Ange en token eller använd Länka befintliga konton för att fortsätta."
+        update_failed: "Det gick inte att uppdatera SimpleFIN-anslutningen: %{message}"

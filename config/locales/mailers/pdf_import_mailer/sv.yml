@@ -1,0 +1,5 @@
+---
+sv:
+  pdf_import_mailer:
+    next_steps:
+      subject: "Ditt PDF-dokument har analyserats - %{product_name}"

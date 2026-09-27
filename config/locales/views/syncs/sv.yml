@@ -1,0 +1,6 @@
+---
+sv:
+  syncs:
+    cancel:
+      cancelled: Synkroniseringen avbröts. Allt som redan synkats behålls, men köat arbete stoppades.
+      not_cancellable: Den här synkroniseringen är redan klar.

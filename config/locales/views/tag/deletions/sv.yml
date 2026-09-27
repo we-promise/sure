@@ -1,0 +1,16 @@
+---
+sv:
+  tag:
+    deletions:
+      create:
+        deleted: Tagg borttagen
+      new:
+        delete_and_leave_uncategorized: Ta bort "%{tag_name}"
+        delete_and_recategorize: Ta bort "%{tag_name}" och tilldela ny tagg
+        delete_and_reassign: Ta bort och tilldela om
+        delete_tag: Ta bort tagg?
+        explanation: "%{tag_name} tas bort från transaktioner och andra taggbara
+          objekt. Istället för att lämna dem otaggade kan du också tilldela en ny tagg
+          nedan."
+        replacement_tag_prompt: Välj tagg
+        tag: Tagg

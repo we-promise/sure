@@ -1,0 +1,10 @@
+---
+sv:
+  password_mailer:
+    password_reset:
+      cta: Återställ ditt lösenord
+      ignore_if_not_requested: Om du inte gjorde denna förfrågan kan du ignorera detta
+        e-postmeddelande.
+      request_made: En förfrågan gjordes om att återställa ditt %{product_name}-lösenord. Klicka på länken
+        för att återställa det.
+      subject: '%{product_name}: Återställ ditt lösenord'

@@ -1,0 +1,107 @@
+---
+sv:
+  properties:
+    edit:
+      edit: Redigera %{account}
+      title: Ange fastighet manuellt
+    form:
+      address_line1: Gatuadress
+      address_line1_placeholder: Storgatan 123
+      area: Boyta
+      area_placeholder: '2000'
+      area_unit: Måttenhet
+      country: Land
+      country_placeholder: SE
+      locality: Stad
+      locality_placeholder: Stockholm
+      none: Ingen
+      postal_code: Postnummer
+      postal_code_placeholder: '94105'
+      region: Region/Län
+      region_placeholder: SE
+      subtype_prompt: Välj fastighetstyp
+      year_built: Byggår
+      year_built_placeholder: '2000'
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    new:
+      title: Ange fastighet manuellt
+      next: "Nästa"
+      avm_option: "Lägg till via %{provider}"
+      avm_title: "Lägg till fastighet via %{provider}"
+      avm_description: "Ange ett namn för fastigheten och dess adress. %{provider} slår upp fastighetsdetaljer och uppskattat marknadsvärde åt dig."
+      avm_us_only: "%{provider} stöder endast fastigheter belägna i USA."
+      avm_submit: "Slå upp fastighet"
+      avm_preview_title: "Bekräfta fastighetsdetaljer"
+      avm_preview_description: "Här är vad %{provider} hittade. Granska detaljerna innan du lägger till fastigheten — ingenting har skapats ännu."
+      avm_preview_no_record: "%{provider} kunde inte hitta en fastighetspost för den här adressen, så värdet som visas är en uppskattning baserad på området. Dubbelkolla adressen innan du fortsätter."
+      avm_preview_back: "Tillbaka"
+      avm_preview_confirm: "Lägg till fastighet"
+    address:
+      title: "Ange fastighet manuellt"
+      address_line1_label: "Adressrad 1"
+      address_line1_placeholder: "Storgatan 123"
+      city_label: "Stad"
+      city_placeholder: "Stockholm"
+      state_region_label: "Region/Län"
+      state_region_placeholder: "SE"
+      postal_code_label: "Postnummer"
+      postal_code_placeholder: "12345"
+      country_label: "Land"
+      country_placeholder: "SE"
+      save: "Spara"
+    balances:
+      title: "Ange fastighet manuellt"
+      market_value_label: "Uppskattat marknadsvärde"
+      market_value_tooltip: "Det uppskattade marknadsvärdet för din fastighet. Det här numret finns ofta på sajter som Zillow eller Redfin och är aldrig ett exakt tal."
+      save: "Spara"
+      next: "Nästa"
+    overview_fields:
+      name_label: "Namn"
+      name_placeholder: "Sommarstuga"
+      subtype_prompt: "Välj typ"
+      property_type_label: "Fastighetstyp"
+      year_built_label: "Byggår (valfritt)"
+      year_built_placeholder: "1990"
+      area_label: "Yta (valfritt)"
+      area_placeholder: "1200"
+      square_feet: "Square Feet"
+      square_meters: "Kvadratmeter"
+      area_unit_label: "Ytenhet"
+    overview:
+      living_area: Boyta
+      market_value: Marknadsvärde
+      purchase_price: Inköpspris
+      trend: Trend
+      unknown: Okänd
+      year_built: Byggår
+    tabs:
+      overview:
+        living_area: Boyta
+        market_value: Marknadsvärde
+        purchase_price: Inköpspris
+        trend: Trend
+        unknown: Okänd
+        year_built: Byggår
+        edit_account_details: "Redigera kontodetaljer"
+    subtypes:
+      apartment:
+        short: Lägenhet
+        long: Lägenhet
+      plot:
+        short: Tomt
+        long: Tomt/mark
+      commercial:
+        short: Kommersiell
+        long: Kommersiell fastighet
+      rented:
+        short: Uthyrd
+        long: Uthyrd fastighet
+      agri_land:
+        short: Jordbruksmark
+        long: Jordbruksmark
+    form_tabs:
+      address: Adress
+      overview: Översikt
+      value: Värde
