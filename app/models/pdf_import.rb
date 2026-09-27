@@ -75,6 +75,9 @@ class PdfImport < Import
       if duplicate_upload?(family, prepared_upload)
         duplicate_statement = AccountStatement.duplicate_for(family, prepared_upload)
         if duplicate_statement
+          reusable_import = importing_reusable_import_for(duplicate_statement)
+          return reusable_import if reusable_import
+
           if allow_duplicate_upload && duplicate_statement.manageable_by?(Current.user)
             return create_from_statement!(statement: duplicate_statement)
           end
@@ -95,6 +98,9 @@ class PdfImport < Import
       create_from_statement!(statement: statement)
     rescue AccountStatement::DuplicateUploadError => error
       if duplicate_upload?(family, prepared_upload)
+        reusable_import = importing_reusable_import_for(error.statement)
+        return reusable_import if reusable_import
+
         if allow_duplicate_upload && error.statement.manageable_by?(Current.user)
           return create_from_statement!(statement: error.statement)
         end
@@ -110,10 +116,7 @@ class PdfImport < Import
     end
 
     def duplicate_upload?(family, prepared_upload)
-      existing_statement_import = where(family_id: family.id)
-        .joins(:account_statement)
-        .exists?(account_statements: { content_sha256: prepared_upload.content_sha256 })
-      return true if existing_statement_import
+      return true if AccountStatement.duplicate_for(family, prepared_upload)
 
       legacy_blob_ids = joins(pdf_file_attachment: :blob)
         .where(family_id: family.id, active_storage_blobs: { checksum: prepared_upload.checksum })
@@ -125,6 +128,17 @@ class PdfImport < Import
       (legacy_blob_ids + legacy_statement_blob_ids).uniq.any? do |blob_id|
         Digest::SHA256.hexdigest(ActiveStorage::Blob.find(blob_id).download) == prepared_upload.content_sha256
       end
+    end
+
+    def importing_reusable_import_for(statement)
+      return unless statement.manageable_by?(Current.user)
+
+      reusable_import = statement.latest_reusable_pdf_import
+      return unless reusable_import&.importing?
+      return unless reusable_import.account_id == statement.account_id &&
+                    reusable_import.date_format == statement.family.date_format
+
+      reusable_import
     end
 
     def create_from_statement!(statement:)

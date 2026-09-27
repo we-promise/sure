@@ -268,7 +268,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     files = (1..11).map do |index|
       uploaded_file(filename: "notes-#{index}.txt", content_type: "text/plain", content: "notes")
     end
-    ActionDispatch::Http::UploadedFile.any_instance.stubs(:size).returns(10.megabytes)
+    ActionDispatch::Http::UploadedFile.any_instance.stubs(:size).returns(3.megabytes)
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
@@ -334,11 +334,23 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
       )
     )
 
+    assert_no_difference "Import.where(type: 'PdfImport').count" do
+      post imports_url, params: {
+        import: {
+          import_file: file_fixture_upload("imports/sample_bank_statement.pdf", "application/pdf")
+        }
+      }
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.duplicate_pdf_unconfirmed"), flash[:alert]
+
     assert_no_difference "AccountStatement.count" do
       assert_difference "Import.where(type: 'PdfImport').count", 1 do
         post imports_url, params: {
           import: {
-            import_file: file_fixture_upload("imports/sample_bank_statement.pdf", "application/pdf")
+            import_file: file_fixture_upload("imports/sample_bank_statement.pdf", "application/pdf"),
+            allow_duplicate_upload: "true"
           }
         }
       end
