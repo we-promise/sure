@@ -60,7 +60,7 @@ class BinanceAccount::Processor
       amount, stale, rate_date = convert_from_usd(raw_usd, date: Date.current)
       stale_extra = build_stale_extra(stale, rate_date, Date.current)
 
-      account.update!(
+      account.apply_provider_balance!(
         balance:      amount,
         cash_balance: 0,
         currency:     target_currency

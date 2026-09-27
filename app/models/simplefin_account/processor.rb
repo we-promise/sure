@@ -186,7 +186,7 @@ class SimplefinAccount::Processor
         balance
       end
 
-      account.update!(
+      account.apply_provider_balance!(
         balance: balance,
         cash_balance: cash_balance,
         currency: simplefin_account.currency

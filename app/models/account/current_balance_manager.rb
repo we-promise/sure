@@ -30,15 +30,16 @@ class Account::CurrentBalanceManager
     end
   end
 
-  def set_current_balance(balance)
-    if account.linked?
+  def set_current_balance(balance, provider_balance: false)
+    @provider_balance = provider_balance && account.accounting_start_date.present?
+    if @provider_balance || !account.manual_accounting?
       result = set_current_balance_for_linked_account(balance)
     else
       result = set_current_balance_for_manual_account(balance)
     end
 
     # Update cache field so changes appear immediately to the user
-    account.update!(balance: balance)
+    account.update!(balance: balance) unless @provider_balance
 
     result
   rescue => e
@@ -71,7 +72,7 @@ class Account::CurrentBalanceManager
       if account.balance_type == :cash && account.valuations.reconciliation.empty?
         adjust_opening_balance_with_delta(new_balance: balance, old_balance: account.balance)
       else
-        existing_reconciliation = account.entries.valuations.find_by(date: Date.current)
+        existing_reconciliation = account.entries.valuations.where.not(entryable_id: Valuation.cash_anchor.select(:id)).find_by(date: Date.current)
 
         result = reconciliation_manager.reconcile_balance(balance: balance, date: Date.current, existing_valuation_entry: existing_reconciliation)
 
@@ -145,6 +146,7 @@ class Account::CurrentBalanceManager
         name: Valuation.build_current_anchor_name(account.accountable_type),
         amount: balance,
         currency: account.currency,
+        source: @provider_balance ? "provider_balance" : nil,
         entryable: Valuation.new(kind: "current_anchor")
       )
 
@@ -157,6 +159,7 @@ class Account::CurrentBalanceManager
 
       # Update associated entry attributes
       entry = current_anchor_valuation.entry
+      entry.source = @provider_balance ? "provider_balance" : nil
 
       if entry.amount != balance
         entry.amount = balance

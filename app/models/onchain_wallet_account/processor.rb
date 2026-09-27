@@ -191,7 +191,12 @@ class OnchainWalletAccount::Processor
     end
 
     def update_balances(amount)
-      account.update!(balance: amount, cash_balance: 0, currency: currency)
+      if account.accounting_start_date
+        account.holdings.where(account_provider_id: onchain_wallet_account.account_provider.id, date: Date.current)
+          .each(&:reconcile_trade_quantity!)
+      else
+        account.update!(balance: amount, cash_balance: 0, currency: currency)
+      end
       onchain_wallet_account.update!(current_balance: amount)
     end
 

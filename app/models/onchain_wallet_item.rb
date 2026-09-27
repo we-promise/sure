@@ -131,8 +131,8 @@ class OnchainWalletItem < ApplicationRecord
       .map { |row| [ row.chain, row.wallet_address ] }
       .uniq
       .size
-    legacy_count + bitcoin_wallet_accounts.select { |wallet| visible_ids.include?(wallet.account_id) }
-      .sum { |wallet| wallet.bitcoin_wallet_addresses.size }
+    wallet_ids = bitcoin_wallet_accounts.select { |wallet| visible_ids.include?(wallet.account_id) }.map(&:id)
+    legacy_count + BitcoinWalletAddress.where(bitcoin_wallet_account_id: wallet_ids).count
   end
 
   def institution_display_name

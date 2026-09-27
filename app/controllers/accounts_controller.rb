@@ -37,7 +37,7 @@ class AccountsController < ApplicationController
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:sophtron_accounts))
     @onchain_wallet_items = visible_provider_items(
       family.onchain_wallet_items.ordered.includes(:accounts,
-        bitcoin_wallet_accounts: [ :account, :account_provider, :bitcoin_wallet_addresses ],
+        bitcoin_wallet_accounts: [ :account, :account_provider ],
         onchain_wallet_accounts: { account_provider: :account })
     )
     @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))

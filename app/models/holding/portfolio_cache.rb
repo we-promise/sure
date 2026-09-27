@@ -7,10 +7,12 @@ class Holding::PortfolioCache
     end
   end
 
-  def initialize(account, use_holdings: false, security_ids: nil)
+  def initialize(account, use_holdings: false, security_ids: nil, carry_forward_prices: false, stored_rates_only: false)
     @account = account
     @use_holdings = use_holdings
     @security_ids = security_ids
+    @carry_forward_prices = carry_forward_prices
+    @stored_rates_only = stored_rates_only
     load_prices
   end
 
@@ -22,7 +24,7 @@ class Holding::PortfolioCache
     end
   end
 
-  def get_price(security_id, date, source: nil)
+  def get_price(security_id, date, source: nil, currency: account.currency)
     security = @security_cache[security_id]
     raise SecurityNotFound.new(security_id, account.id) unless security
 
@@ -30,6 +32,13 @@ class Holding::PortfolioCache
       security[:prices_by_date_and_source][[ date, source ]]
     else
       security[:prices_by_date][date]
+    end
+
+    if price_with_priority.nil? && @carry_forward_prices && source.nil?
+      dates = security[:price_dates]
+      index = dates.bsearch_index { |value| value > date }
+      previous_date = index ? (dates[index - 1] if index.positive?) : dates.last
+      price_with_priority = security[:prices_by_date][previous_date] if previous_date
     end
 
     return nil unless price_with_priority
@@ -40,8 +49,18 @@ class Holding::PortfolioCache
     price_money = Money.new(price.price, price.currency)
 
     begin
-      converted_amount = price_money.exchange_to(account.currency, date: date).amount
+      if @stored_rates_only && price.currency != currency
+        rate = ExchangeRate.where(from_currency: price.currency, to_currency: currency)
+          .where(date: (date - ExchangeRate::NEAREST_RATE_LOOKBACK_DAYS)..date).order(date: :desc).first
+        return nil unless rate&.rate.to_d.positive?
+
+        converted_amount = price.price * rate.rate
+      else
+        converted_amount = price_money.exchange_to(currency, date: date).amount
+      end
     rescue Money::ConversionError
+      raise if @carry_forward_prices
+
       converted_amount = price.price
     end
 
@@ -49,7 +68,7 @@ class Holding::PortfolioCache
       security_id: security_id,
       date: price.date,
       price: converted_amount,
-      currency: account.currency
+      currency: currency
     )
   end
 
@@ -83,7 +102,7 @@ class Holding::PortfolioCache
     def collect_unique_securities
       ids = trades_by_security_id.keys
       ids |= holdings_by_security_id.keys if use_holdings
-      ids &= @security_ids if @security_ids
+      ids = @security_ids if @security_ids
 
       Security.where(id: ids).to_a
     end
@@ -168,6 +187,7 @@ class Holding::PortfolioCache
         @security_cache[security.id] = {
           security: security,
           prices_by_date: prices_by_date,
+          price_dates: prices_by_date.keys.sort,
           prices_by_date_and_source: prices_by_date_and_source
         }
       end

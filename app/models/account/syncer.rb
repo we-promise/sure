@@ -6,7 +6,7 @@ class Account::Syncer
   end
 
   def perform_sync(sync)
-    Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
+    Rails.logger.info("Processing balances (#{account.balance_calculation_strategy})")
     import_market_data
     materialize_balances(window_start_date: sync.window_start_date)
     apply_provider_balance_overrides
@@ -18,12 +18,7 @@ class Account::Syncer
 
   private
     def materialize_balances(window_start_date: nil)
-      if (wallet = account.bitcoin_wallet_account)&.account_provider && wallet.baseline_at
-        BitcoinWalletAccount::Processor.new(wallet).process
-        return
-      end
-
-      strategy = account.linked? ? :reverse : :forward
+      strategy = account.balance_calculation_strategy
       Balance::Materializer.new(account, strategy: strategy, window_start_date: window_start_date).materialize_balances
     end
 
@@ -42,6 +37,8 @@ class Account::Syncer
     end
 
     def apply_provider_balance_overrides
+      return if account.accounting_start_date
+
       return unless account.linked_to?("IbkrAccount")
 
       ibkr_account = account.account_providers.find_by(provider_type: "IbkrAccount")&.provider

@@ -32,7 +32,7 @@ class IbkrAccount::Processor
         currency: ibkr_account.currency
       )
       account.save!
-      account.set_current_balance(total_balance)
+      account.set_current_balance(total_balance, provider_balance: true)
     end
 
     def repair_default_opening_anchor!

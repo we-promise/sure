@@ -62,11 +62,13 @@ class BitcoinWalletAccount::Discovery
     # Cache an address once within the aggregate, retain any prior used marker,
     # and reject overlap with other household wallet accounts.
     def remember(address, source: nil, branch: nil, index: nil, used: false)
-      row = wallet.bitcoin_wallet_addresses.find_or_initialize_by(address: address)
-      raise Conflict, "An address is already tracked by another account" if row.conflicts?
+      wallet.family.with_onchain_address_lock(Onchain::Chains::BITCOIN, address) do
+        row = wallet.bitcoin_wallet_addresses.find_or_initialize_by(address: address)
+        raise Conflict, "An address is already tracked by another account" if row.conflicts?
 
-      row.assign_attributes(branch: branch, address_index: index, bitcoin_wallet_source: source) if source
-      row.used = used || row.used
-      row.save! if row.changed?
+        row.assign_attributes(branch: branch, address_index: index, bitcoin_wallet_source: source) if source
+        row.used = used || row.used
+        row.save! if row.changed?
+      end
     end
 end

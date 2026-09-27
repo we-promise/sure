@@ -1,0 +1,17 @@
+en:
+  valuations:
+    cash_anchor: Cash balance reconciliation
+  entries:
+    errors:
+      position_managed: This position is managed by a provider. Disconnect it before changing its quantity.
+  holdings:
+    quantity_reconciliation: Position quantity reconciliation
+    remap_security:
+      managed_position: Disconnect the provider before changing the tracked Bitcoin security.
+  activerecord:
+    errors:
+      models:
+        trade:
+          attributes:
+            security:
+              managed_position: is managed by a provider. Disconnect it before changing this position.

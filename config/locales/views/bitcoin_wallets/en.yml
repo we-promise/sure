@@ -14,6 +14,18 @@ en:
     discover: Discover addresses
     discovering: "Reading the complete source set. Your account keeps its last complete balance until discovery finishes."
     failed: "The wallet could not be fully read. The last complete balance is preserved; retry sync or check the key and gap limit."
+    address_mismatch: "The receive address does not match this account key within the selected gap. Check the account key, address and gap limit."
+    address_conflict: "An address is already tracked by another connected account in this household. Disconnect the overlapping connection first."
+    missing_price: "The Bitcoin quantity is current, but its market value could not be established. The account keeps its previous valuation. Check the price and exchange-rate providers."
+    pricing_warning: "No crypto market data provider is enabled. Known manual prices can still be used; otherwise the account keeps its previous valuation until a quote is available."
+    exchange_rate_warning: "No exchange rate provider is configured for %{currency}. The account keeps its previous valuation when conversion is unavailable. Configure an exchange rate provider in self-hosting settings."
+    stale: "This wallet read is more than two hours old. Sync again before connecting."
+    confirmation: "Confirmed: %{confirmed} BTC · Pending change: %{pending} BTC"
+    pending: Pending
+    discovery_progress:
+      one: Checked 1 derived address
+      other: "Checked %{count} derived addresses"
+    showing_addresses: "Showing %{shown} of %{total} tracked addresses."
     address_count:
       one: Tracking 1 unique address
       other: "Tracking %{count} unique addresses"

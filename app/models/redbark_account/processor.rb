@@ -68,6 +68,6 @@ class RedbarkAccount::Processor
 
       # Create or update the current balance anchor valuation for linked accounts
       # This is critical for reverse sync to work correctly
-      account.set_current_balance(balance)
+      account.set_current_balance(balance, provider_balance: true)
     end
 end

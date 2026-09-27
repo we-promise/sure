@@ -27,6 +27,9 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
             date: date
           )
           end_non_cash_balance = valuation.amount - end_cash_balance
+        elsif (cash_anchor = sync_cache.get_cash_anchor(date))
+          end_cash_balance = cash_anchor.amount + cash_anchor.entryable.cash_entry_total.to_d - sync_cache.cash_entry_total(date)
+          end_non_cash_balance = holdings_value_for_date(date)
         else
           end_cash_balance = derive_end_cash_balance(start_cash_balance: start_cash_balance, date: date)
           end_non_cash_balance = derive_end_non_cash_balance(start_non_cash_balance: start_non_cash_balance, date: date)
@@ -36,7 +39,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
         market_value_change = market_value_change_on_date(date, flows)
 
         cash_adjustments = cash_adjustments_for_date(start_cash_balance, end_cash_balance, (flows[:cash_inflows] - flows[:cash_outflows]) * flows_factor)
-        non_cash_adjustments = non_cash_adjustments_for_date(start_non_cash_balance, end_non_cash_balance, (flows[:non_cash_inflows] - flows[:non_cash_outflows]) * flows_factor)
+        non_cash_adjustments = non_cash_adjustments_for_date(start_non_cash_balance, end_non_cash_balance, (flows[:non_cash_inflows] - flows[:non_cash_outflows]) * flows_factor) + asset_adjustments_for_date(date, flows)
 
         output_balance = build_balance(
           date: date,
@@ -81,7 +84,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
 
         prior = prior_balance
 
-        if prior && (prior.end_non_cash_balance || 0).zero?
+        if prior && ((prior.end_non_cash_balance || 0).zero? || account.accounting_start_date)
           Rails.logger.info("Incremental sync from #{@window_start_date}, seeding from persisted balance on #{prior.date}")
           @fell_back = false
           return [ prior.end_cash_balance, prior.end_non_cash_balance ]
@@ -135,7 +138,8 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     end
 
     def calc_end_date
-      [ account.entries.excluding_pending.maximum(:date), account.holdings.maximum(:date) ].compact.max || Date.current
+      finish = [ account.entries.excluding_pending.maximum(:date), account.holdings.maximum(:date) ].compact.max || Date.current
+      account.accounting_start_date ? [ finish, Date.current ].min : finish
     end
 
     # Negative entries amount on an "asset" account means, "account value has increased"

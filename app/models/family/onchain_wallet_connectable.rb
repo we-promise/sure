@@ -45,4 +45,14 @@ module Family::OnchainWalletConnectable
       .exists?
     legacy || BitcoinWalletAddress.tracks?(family: self, chain: chain, address: address)
   end
+
+  # Both address representations claim ownership under the same short lock.
+  def with_onchain_address_lock(chain, address)
+    canonical = Onchain::Chains.canonical_address(chain, address)
+    key = Digest::SHA256.digest("onchain-address:#{id}:#{chain}:#{canonical}").unpack1("q>")
+    self.class.transaction do
+      self.class.connection.execute("SELECT pg_advisory_xact_lock(#{key})")
+      yield
+    end
+  end
 end

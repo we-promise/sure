@@ -49,6 +49,22 @@ class Provider::OnchainWalletAdapter < Provider::Base
     false
   end
 
+  # Legacy standalone accounts retain their contract; mixed accounts publish units.
+  def position_only?
+    account.accounting_start_date.present?
+  end
+
+  # Legacy assets already identify their securities through imported holdings.
+  def managed_security_ids
+    link = provider_account.account_provider
+    link ? link.holdings.distinct.pluck(:security_id) : []
+  end
+
+  # Cash-anchor adoption establishes the shared accounting boundary.
+  def position_start_date
+    account.accounting_start_date
+  end
+
   # There is no institution behind a self-custody wallet; the chain is the
   # closest thing to one.
   def institution_name

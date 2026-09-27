@@ -26,7 +26,7 @@ class BitcoinWalletAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 2212, @account.balance
     assert_equal 2000, @account.current_holdings.find_by!(security: @wallet.security).cost_basis
     assert_empty @account.transactions
-    assert @account.entries.all? { |entry| entry.amount.zero? }
+    assert @account.entries.where.not(entryable_type: "Valuation").all? { |entry| entry.amount.zero? }
   end
 
   test "repeated processing leaves one cash-neutral transfer" do

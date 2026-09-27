@@ -58,4 +58,25 @@ class BitcoinWalletAccount::DiscoveryTest < ActiveSupport::TestCase
       BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
     end
   end
+
+  test "an unlinked legacy address does not reserve the address" do
+    @wallet.onchain_wallet_item.onchain_wallet_accounts.create!(chain: Onchain::Chains::BITCOIN,
+      wallet_address: RECEIVE, asset_kind: "native", symbol: "BTC", name: "Bitcoin",
+      decimals: 8, quantity: "0.1", currency: "USD")
+    manual_bitcoin_source(@wallet)
+    assert BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+    assert @wallet.bitcoin_wallet_addresses.exists?(address: RECEIVE)
+  end
+
+  test "a linked legacy address blocks grouped ownership" do
+    legacy = @wallet.onchain_wallet_item.onchain_wallet_accounts.create!(chain: Onchain::Chains::BITCOIN,
+      wallet_address: RECEIVE, asset_kind: "native", symbol: "BTC", name: "Bitcoin",
+      decimals: 8, quantity: "0.1", currency: "USD")
+    legacy.ensure_account_provider!(@wallet.account)
+    manual_bitcoin_source(@wallet)
+    assert_raises(BitcoinWalletAccount::Discovery::Conflict) do
+      BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+    end
+    assert_empty @wallet.bitcoin_wallet_addresses.reload
+  end
 end

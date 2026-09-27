@@ -281,16 +281,42 @@ purchase or income. Existing history remains intact, and subsequent on-chain
 movements are cash-neutral transfers. Further source-set changes reconcile the
 new quantity without fabricating a new deposit for previously held coins.
 
+BTC is published through the shared Sure holding and balance materializers.
+Other securities keep their dated quantities, source ownership and manual cost
+basis locks. Cash uses a dated reconciliation of its own; foreign transactions,
+split operations, later total valuations and backdated edits use the usual Sure
+rules. Replaced or reorganized wallet movements can correct their affected
+postconnection dates without rewriting the earlier manual history.
+
+The account keeps manual activity for its other assets. An active publisher's
+BTC quantity and security mapping remain managed by that publisher; disconnect
+it before changing or deleting that position. Refreshing a price keeps its
+observed quantity intact. If no market quote or FX rate is available, the wallet
+quantity remains visible and the previous account valuation is retained with a
+warning instead of publishing a zero-valued BTC position.
+
 Connected wallets update hourly, on a family sync and through **Sync wallet**.
 An incomplete address read, changed chain tip or inconsistent mempool preserves
 the last complete balance. The status API reports freshness, source/address
 counts and history completeness without revealing keys or address lists.
+Wallet reads, discovery checkpoints and account materialization are linked in
+the normal Sync tree, including retries, cancellation and the family timezone.
+The dialog refreshes while work is pending, separates confirmed quantity from
+pending change, and shows a bounded address list. A preview older than two hours
+must be refreshed before connection.
 
 ![Connected Bitcoin wallet](images/bitcoin-wallet-connected.png)
 
 Disconnecting retains the account, its current positions and all imported
 entries; tracking becomes manual. Turning Preview off hides the management UI
 but does not disconnect an existing wallet or stop its background sync.
+The normal account sync action remains available after Preview is disabled.
+
+### Database changes for shared accounting
+
+The additive Rails 8.1 migrations add `cash_entry_total` and `superseded_at` to
+valuations. Existing accounts and credentials are not rewritten; cash anchors
+are established only when an administrator connects a position publisher.
 
 **Solana token names depend on a token list.** RPC returns mints, not names, so
 names come from Jupiter's token search — and only for mints it reports as

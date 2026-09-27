@@ -72,7 +72,7 @@ class CoinspotAccount::Processor
     def process_account!
       amount, stale, rate_date = convert_from_aud((coinspot_account.current_balance || 0).to_d, date: Date.current)
 
-      account.update!(
+      account.apply_provider_balance!(
         balance: amount,
         cash_balance: 0,
         currency: target_currency

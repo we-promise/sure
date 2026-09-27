@@ -17,7 +17,7 @@ class BitcoinWalletAddress < ApplicationRecord
   # Bitcoin account in the same family, while allowing reuse within this wallet.
   def conflicts?
     family = bitcoin_wallet_account.onchain_wallet_item.family
-    legacy = family.onchain_wallet_items.joins(:onchain_wallet_accounts)
+    legacy = family.onchain_wallet_items.active.joins(onchain_wallet_accounts: :account_provider)
       .where(onchain_wallet_accounts: { chain: Onchain::Chains::BITCOIN, wallet_address: address })
       .exists?
     grouped = BitcoinWalletAddress.joins(bitcoin_wallet_account: :onchain_wallet_item)

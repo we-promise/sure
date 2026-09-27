@@ -21,7 +21,7 @@ class BitcoinWalletsController < ApplicationController
       @wallet.save!
       @wallet.bitcoin_wallet_sources.create!(source_params)
     end
-    BitcoinWalletSyncJob.perform_later(@wallet)
+    @wallet.sync_later
     redirect_to account_bitcoin_wallet_path(@account), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @error_message = error.record.errors.full_messages.to_sentence
@@ -32,6 +32,7 @@ class BitcoinWalletsController < ApplicationController
   # Render the discovery result, source controls and latest complete quantity;
   # the view never displays the stored extended public key.
   def show
+    prepare_show
   end
 
   # Reconcile a ready preview into the existing account, reporting setup errors
@@ -55,6 +56,7 @@ class BitcoinWalletsController < ApplicationController
     redirect_to account_bitcoin_wallet_path(@account), status: :see_other
   rescue ActiveRecord::RecordInvalid => error
     @error_message = error.record.errors.full_messages.to_sentence
+    prepare_show
     render :show, status: :unprocessable_entity
   end
 
@@ -78,7 +80,7 @@ class BitcoinWalletsController < ApplicationController
 
   # Request a background wallet refresh through the same authorized account route.
   def sync
-    BitcoinWalletSyncJob.perform_later(@wallet)
+    @wallet.sync_later
     redirect_to account_bitcoin_wallet_path(@account), status: :see_other
   end
 
@@ -89,6 +91,23 @@ class BitcoinWalletsController < ApplicationController
   end
 
   private
+    # Bound address rendering and prepare quantities, progress and safe error copy.
+    def prepare_show
+      @address_count = @wallet.bitcoin_wallet_addresses.count
+      @addresses = @wallet.bitcoin_wallet_addresses.order(:branch, :address_index, :address).limit(100)
+      @sources = @wallet.bitcoin_wallet_sources.order(:created_at)
+      @previous_quantity = @account.current_holdings.find_by(security: @wallet.security)&.qty || 0
+      @pending_quantity = @wallet.pending_quantity
+      @confirmed_quantity = @wallet.quantity - @pending_quantity
+      @discovery_checked = @sources.sum { |source| source.discovery.values.sum { |branch| branch.fetch("index", 0).to_i } }
+      @wallet_error_key = case @wallet.last_error
+      when "BitcoinWalletAccount::Discovery::AddressMismatch" then "address_mismatch"
+      when "BitcoinWalletAccount::Discovery::Conflict" then "address_conflict"
+      when "MissingPrice" then "missing_price"
+      else "failed"
+      end
+    end
+
     # Restrict management to an accessible Crypto account on which the current
     # user has owner or full-control permission, in addition to the admin gate.
     def set_account

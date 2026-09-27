@@ -12,7 +12,7 @@ class BitcoinWalletSyncJob < ApplicationJob
   def perform(wallet)
     return if wallet.onchain_wallet_item.scheduled_for_deletion? || wallet.account.pending_deletion?
 
-    BitcoinWalletAccount::Syncer.new(wallet).perform
+    wallet.sync_later
   end
 
   private

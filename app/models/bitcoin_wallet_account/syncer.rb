@@ -8,6 +8,19 @@ class BitcoinWalletAccount::Syncer
     @provider = provider || Provider::MempoolSpace.new(max_pages: Onchain::HistoryBudget.pages)
   end
 
+  # Keep transient read retries in the parent's tree and use the family date.
+  def perform_sync(sync)
+    @sync = sync
+    return if wallet.account.pending_deletion? || wallet.onchain_wallet_item.scheduled_for_deletion? || sync.cancel_requested?
+
+    Time.use_zone(Time.find_zone(wallet.family.timezone) || Time.zone) { perform }
+  rescue BitcoinWalletAccount::Snapshot::ChangedTip, BitcoinWalletAccount::Snapshot::IncompleteMempool, Provider::MempoolSpace::Error
+    attempts = sync.sync_stats.to_h.fetch("read_attempt", 0).to_i
+    raise if attempts >= 2
+
+    queue_continuation(read_attempt: attempts + 1, wait: (attempts + 1).seconds)
+  end
+
   # Coalesce concurrent readers with a session advisory lock. Provider requests
   # run outside a database transaction; disconnects and source edits invalidate
   # publication, while failed reads preserve the last complete quantity.
@@ -45,7 +58,7 @@ class BitcoinWalletAccount::Syncer
           return unless source_signature == @source_signature
 
           wallet.update!(status: :discovering)
-          BitcoinWalletSyncJob.perform_later(wallet)
+          queue_continuation
         end
         return
       end
@@ -55,8 +68,13 @@ class BitcoinWalletAccount::Syncer
       processor = BitcoinWalletAccount::Processor.new(wallet)
       processor.prepare_prices if wallet.account_provider
 
+      window = nil
       wallet.with_lock do
-        return unless source_signature == @source_signature
+        if source_signature != @source_signature
+          queue_continuation
+          return
+        end
+        return if @sync&.cancel_requested?
 
         wallet.bitcoin_wallet_addresses.where(address: snapshot.used_addresses.to_a, used: false).update_all(used: true)
         remember_transactions(snapshot, statuses)
@@ -70,11 +88,28 @@ class BitcoinWalletAccount::Syncer
             wallet.bitcoin_wallet_transactions.update_all(baseline: true)
             wallet.update!(baseline_at: Time.current, baseline_sats: snapshot.balance_sats,
               baseline_cash_balance: wallet.account.cash_balance, needs_reconciliation: false)
-            wallet.record_reconciliation!
           end
-          processor.process(prepare_prices: false)
+          window = processor.process(prepare_prices: false, materialize: @sync.nil?)
           wallet.restart_discovery!
         end
+      end
+      if @sync && window && !@sync.cancel_requested?
+        wallet.account.sync_later(parent_sync: @sync,
+          window_start_date: [ window, @sync.window_start_date ].compact.min,
+          window_end_date: @sync.window_end_date)
+      end
+    end
+
+    # Checkpoints and retries remain children so their parent cannot finish early.
+    def queue_continuation(read_attempt: 0, wait: 0.seconds)
+      return if @sync&.cancel_requested?
+
+      if @sync
+        child = wallet.syncs.create!(parent: @sync, sync_stats: { read_attempt: read_attempt },
+          window_start_date: @sync.window_start_date, window_end_date: @sync.window_end_date)
+        SyncJob.set(wait: wait).perform_later(child)
+      else
+        wallet.sync_later
       end
     end
 

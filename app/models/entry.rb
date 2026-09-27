@@ -27,14 +27,18 @@ class Entry < ApplicationRecord
   accepts_nested_attributes_for :entryable
 
   validates :date, :name, :amount, :currency, presence: true
-  validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
+  validates :date, uniqueness: { scope: [ :account_id, :entryable_type ],
+    conditions: -> { where.not(entryable_id: Valuation.cash_anchor.select(:id)) } },
+    if: -> { valuation? && !entryable.cash_anchor? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
   validates :external_id, uniqueness: { scope: [ :account_id, :source ] }, if: -> { external_id.present? && source.present? }
 
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
+  validate :position_provider_owns_trade_quantity
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
+  before_validation :reactivate_changed_valuation
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -570,6 +574,22 @@ class Entry < ApplicationRecord
   end
 
   private
+
+    # A monetary or dated edit explicitly restores a superseded total valuation.
+    def reactivate_changed_valuation
+      return unless valuation? && !entryable.cash_anchor? && (amount_changed? || date_changed?)
+
+      entryable.superseded_at = nil
+    end
+
+    # Provider imports may publish units; manual edits must respect dated ownership.
+    def position_provider_owns_trade_quantity
+      return unless trade? && account && date && !entryable.provider_importing
+      return unless new_record? || date_changed?
+      return unless account.provider_managed_security?(entryable.security_id, date: date)
+
+      errors.add(:base, I18n.t("entries.errors.position_managed"))
+    end
 
     def cannot_unexclude_split_parent
       return unless excluded_changed?(from: true, to: false) && split_parent?

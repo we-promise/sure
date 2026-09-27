@@ -1,15 +1,18 @@
 <%# locals: (url:, securities: []) %>
 <%= styled_form_with url: url, scope: :source, method: :post,
-                     data: { turbo_frame: "modal" }, class: "space-y-4" do |form| %>
+                     data: { turbo_frame: "modal", controller: "bitcoin-wallet-source" }, class: "space-y-4" do |form| %>
   <% if local_assigns[:securities].present? %>
     <%= form.collection_select :security_id, securities, :id, :ticker,
                                { label: t("bitcoin_wallets.security"), selected: securities.first.id } %>
   <% end %>
   <%= form.select :kind, [[t("bitcoin_wallets.manual_address"), "address"], [t("bitcoin_wallets.bip84"), "bip84"]],
-                  { label: t("bitcoin_wallets.source_kind") } %>
+                  { label: t("bitcoin_wallets.source_kind") },
+                  { data: { bitcoin_wallet_source_target: "kind", action: "change->bitcoin-wallet-source#toggle" } } %>
   <%= form.text_field :receive_address, label: t("bitcoin_wallets.receive_address"), required: true %>
-  <%= form.password_field :extended_public_key, label: t("bitcoin_wallets.public_key"), autocomplete: "off" %>
-  <%= form.number_field :gap_limit, label: t("bitcoin_wallets.gap_limit"), value: 20, min: 20, max: 1000 %>
+  <div data-bitcoin-wallet-source-target="hdFields" class="space-y-4">
+    <%= form.password_field :extended_public_key, label: t("bitcoin_wallets.public_key"), autocomplete: "off" %>
+    <%= form.number_field :gap_limit, label: t("bitcoin_wallets.gap_limit"), value: 20, min: 20, max: 1000 %>
+  </div>
   <p class="text-sm text-secondary"><%= t("bitcoin_wallets.source_hint") %></p>
   <%= form.submit t("bitcoin_wallets.discover") %>
 <% end %>

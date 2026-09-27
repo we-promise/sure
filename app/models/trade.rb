@@ -1,5 +1,6 @@
 class Trade < ApplicationRecord
   include Entryable, Monetizable
+  attr_accessor :provider_importing
 
   monetize :price
   monetize :fee
@@ -54,6 +55,7 @@ class Trade < ApplicationRecord
   end
 
   validate :exchange_rate_must_be_valid
+  validate :position_provider_owns_quantity
 
   # Trade types for categorization
   def buy?
@@ -68,6 +70,16 @@ class Trade < ApplicationRecord
   # like a sale — same sign, same shape — and only the label tells them apart.
   def internal_movement?
     INTERNAL_MOVEMENT_LABELS.include?(investment_activity_label)
+  end
+
+  # Coverage corrections are adjustments rather than external asset flows.
+  def balance_adjustment?
+    extra&.dig("balance_adjustment") == true
+  end
+
+  # Keep explorer confirmation metadata separate from the cash entry's status.
+  def pending?
+    extra&.dig("bitcoin_wallet", "pending") == true
   end
 
   class << self
@@ -171,6 +183,16 @@ class Trade < ApplicationRecord
   end
 
   private
+
+    # Editing the Trade directly must enforce the same ownership guard as Entry.
+    def position_provider_owns_quantity
+      return if provider_importing || new_record?
+      return unless entry && entry.account
+      return unless new_record? || qty_changed? || security_id_changed?
+      return unless entry.date && entry.account.provider_managed_security?(security_id, date: entry.date)
+
+      errors.add(:security, :managed_position)
+    end
 
     def exchange_rate_must_be_valid
       if extra&.dig("exchange_rate_invalid")

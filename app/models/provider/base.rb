@@ -82,6 +82,21 @@ class Provider::Base
     false
   end
 
+  # Position publishers leave cash and the rest of the account's ledger manual.
+  def position_only?
+    false
+  end
+
+  # Full-account providers do not claim individually protected securities.
+  def managed_security_ids
+    []
+  end
+
+  # Position publishers may begin quantity ownership at a dated connection.
+  def position_start_date
+    nil
+  end
+
   # Provider-specific raw data payload
   # @return [Hash, nil] The raw payload from the provider
   def raw_payload

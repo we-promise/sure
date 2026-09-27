@@ -194,12 +194,15 @@ class ProviderConnectionStatus
     # Return freshness and counts for accessible wallet accounts only. Neither
     # extended public keys nor the underlying address lists enter the status API.
     def bitcoin_wallet_payload
-      wallets = item.bitcoin_wallet_accounts.includes(:bitcoin_wallet_addresses, :bitcoin_wallet_sources)
+      wallets = item.bitcoin_wallet_accounts
       wallets = wallets.where(account_id: Current.user.accessible_accounts.select(:id)) if Current.user
+      wallets = wallets.to_a
+      address_counts = BitcoinWalletAddress.where(bitcoin_wallet_account_id: wallets.map(&:id)).group(:bitcoin_wallet_account_id).count
+      source_counts = BitcoinWalletSource.where(bitcoin_wallet_account_id: wallets.map(&:id)).group(:bitcoin_wallet_account_id).count
       wallets.map do |wallet|
         {
           account_id: wallet.account_id, provider_type: "BitcoinWalletAccount", status: wallet.status,
-          address_count: wallet.bitcoin_wallet_addresses.size, source_count: wallet.bitcoin_wallet_sources.size,
+          address_count: address_counts.fetch(wallet.id, 0), source_count: source_counts.fetch(wallet.id, 0),
           last_synced_at: wallet.last_synced_at, stale: wallet.stale?, history_truncated: wallet.history_truncated?
         }
       end

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class BitcoinWalletAccount < ApplicationRecord
+  include Syncable
   belongs_to :onchain_wallet_item
   belongs_to :account
   belongs_to :security
@@ -21,6 +22,11 @@ class BitcoinWalletAccount < ApplicationRecord
     balance_sats.to_d / 100_000_000
   end
 
+  # The last complete explorer read can precede completion of its account sync.
+  def last_synced_at
+    self[:last_synced_at]
+  end
+
   # Expose the Crypto account to provider setup only after a link exists;
   # a discovery preview must not appear as a connected account.
   def current_account
@@ -35,11 +41,14 @@ class BitcoinWalletAccount < ApplicationRecord
     processor.prepare_prices
     with_lock do
       return if account_provider.present?
-      raise ArgumentError, "Complete wallet discovery before connecting" unless status_preview? && last_synced_at.present?
+      raise ArgumentError, "Complete wallet discovery before connecting" unless status_preview? && !stale?
 
       account.lock!
+      account.holdings.where(security: security, date: ..Date.current).order(date: :desc).first&.reconcile_trade_quantity!
       create_account_provider!(account: account)
       account.account_providers.reset
+      account.create_cash_anchor!
+      account.reconcile_position_journals!
       bitcoin_wallet_transactions.update_all(baseline: true)
       update!(baseline_at: Time.current, baseline_sats: balance_sats,
         baseline_cash_balance: account.cash_balance, status: :active)
@@ -56,12 +65,18 @@ class BitcoinWalletAccount < ApplicationRecord
       # retain their provenance. Nothing owned by the user is deleted.
       account_provider&.destroy!
       destroy! unless destroyed?
+      account.account_providers.reset
     end
   end
 
   # Report a failed, missing or more-than-two-hours-old complete wallet read.
   def stale?
-    status_failed? || last_synced_at.nil? || last_synced_at < 2.hours.ago
+    status_failed? || read_outdated?
+  end
+
+  # Freshness describes the explorer read independently of materialization errors.
+  def read_outdated?
+    last_synced_at.nil? || last_synced_at < 2.hours.ago
   end
 
   # Reopen each HD branch's unused gap after its highest used address, preserving
@@ -81,7 +96,7 @@ class BitcoinWalletAccount < ApplicationRecord
   def sources_changed!
     update!(status: :discovering, needs_reconciliation: account_provider.present?)
     restart_discovery!
-    BitcoinWalletSyncJob.perform_later(self)
+    sync_later
   end
 
   # Align the dated BTC trade journal with the authoritative quantity through a
@@ -91,14 +106,39 @@ class BitcoinWalletAccount < ApplicationRecord
     difference = quantity - recorded
     return if difference.zero?
 
-    price = BitcoinWalletAccount::Portfolio.price(security, account.currency, Date.current) || 0
-    Account::ProviderImportAdapter.new(account).import_trade(
+    price = BitcoinWalletAccount::Processor.new(self).price_on(Date.current)
+    return unless price
+
+    entry = Account::ProviderImportAdapter.new(account).import_trade(
       security: security, quantity: difference, price: price, amount: 0, currency: account.currency,
       date: Date.current, source: "bitcoin_wallet_reconciliation",
       external_id: "bitcoin_wallet_#{id}_reconciliation_#{SecureRandom.uuid}",
       name: I18n.t("bitcoin_wallets.reconciliation", locale: account.family.locale),
       activity_label: Trade::TRANSFER_LABEL
     )
+    entry.entryable.update!(extra: entry.entryable.extra.to_h.merge("balance_adjustment" => true))
+    entry
+  end
+
+  # Present unconfirmed net movements explain the pending share of the quantity.
+  def pending_quantity
+    bitcoin_wallet_transactions.where(present: true, confirmed: false).sum(:amount_sats).to_d / 100_000_000
+  end
+
+  # Remove pending net change from the latest complete quantity for presentation.
+  def confirmed_quantity
+    quantity - pending_quantity
+  end
+
+  # Publish completion after all account materialization children have finished.
+  def perform_post_sync
+    account.broadcast_refresh
+    onchain_wallet_item.broadcast_sync_complete
+  end
+
+  # Refresh the account's existing sync status presentation.
+  def broadcast_sync_complete
+    account.broadcast_refresh
   end
 
   private

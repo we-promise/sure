@@ -29,8 +29,8 @@ class Holding::PortfolioSnapshot
     end
 
     def latest_holdings_scope
-      if account.bitcoin_wallet_account&.account_provider
-        return account.holdings.where(date: ..Date.current).select("DISTINCT ON (security_id) holdings.*").order(:security_id, date: :desc)
+      if account.accounting_start_date
+        return account.current_holdings
       end
 
       if (provider_snapshot_date = account.latest_provider_holdings_snapshot_date)

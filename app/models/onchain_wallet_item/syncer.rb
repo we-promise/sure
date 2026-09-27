@@ -14,7 +14,9 @@ class OnchainWalletItem::Syncer
 
   def perform_sync(sync)
     onchain_wallet_item.bitcoin_wallet_accounts.each do |wallet|
-      BitcoinWalletSyncJob.perform_later(wallet)
+      break if sync.cancel_requested?
+
+      wallet.sync_later(parent_sync: sync, window_start_date: sync.window_start_date, window_end_date: sync.window_end_date)
     end
     result = onchain_wallet_item.import_latest_onchain_data
     onchain_wallet_item.update!(status: :good) if onchain_wallet_item.requires_update?
