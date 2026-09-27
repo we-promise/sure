@@ -7,8 +7,8 @@ class Provider::Openai < Provider
   DEFAULT_MODEL = "gpt-4.1".freeze
   DEFAULT_REQUEST_TIMEOUT = 60
   MIN_REQUEST_TIMEOUT = 1
-  SUPPORTED_MODELS = %w[gpt-4 gpt-5 o1 o3].freeze
-  VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 o1 o3].freeze
+  SUPPORTED_MODELS = %w[gpt-4 gpt-5 gpt-6 o1 o3].freeze
+  VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 gpt-6 o1 o3].freeze
 
   # Returns the effective model that would be used by the provider.
   # Priority: explicit ENV > Setting > DEFAULT_MODEL. A blank ENV value is

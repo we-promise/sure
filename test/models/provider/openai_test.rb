@@ -8,6 +8,23 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject_model = "gpt-4.1"
   end
 
+  test "builtin assistant resolves GPT-6 Sol to the native Responses provider" do
+    with_env_overrides(
+      "OPENAI_ACCESS_TOKEN" => "test-openai-token",
+      "OPENAI_URI_BASE" => nil,
+      "OPENAI_MODEL" => "gpt-6-sol",
+      "OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => nil
+    ) do
+      Setting.stubs(:openai_uri_base).returns(nil)
+      assistant = Assistant::Builtin.for_chat(chats(:two))
+      provider = assistant.get_model_provider("gpt-6-sol")
+
+      assert_instance_of Provider::Openai, provider
+      assert provider.supports_responses_endpoint?
+      assert provider.supports_pdf_processing?(model: "gpt-6-sol")
+    end
+  end
+
   test "effective_model uses Setting when ENV is unset" do
     Setting.stubs(:openai_model).returns("llama3")
     with_env_overrides("OPENAI_MODEL" => nil) do
@@ -488,7 +505,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
   end
 
   test "supported_models_description returns model prefixes for standard provider" do
-    expected = "models starting with: gpt-4, gpt-5, o1, o3"
+    expected = "models starting with: gpt-4, gpt-5, gpt-6, o1, o3"
     assert_equal expected, @subject.supported_models_description
   end
 

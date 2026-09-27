@@ -97,6 +97,54 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     assert_equal expected, processor.process
   end
 
+  test "GPT-6 Sol PDF vision uses the completion token budget" do
+    client = mock
+    client.expects(:chat).with do |request|
+      params = request[:parameters]
+      params[:model] == "gpt-6-sol" &&
+        params[:max_completion_tokens] == 8192 &&
+        !params.key?(:max_tokens)
+    end.returns(
+      "choices" => [ { "message" => { "content" => {
+        document_type: "other", summary: "Synthetic PDF", extracted_data: {}
+      }.to_json } } ],
+      "usage" => { "prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30 }
+    )
+    processor = Provider::Openai::PdfProcessor.new(
+      client,
+      model: "gpt-6-sol",
+      pdf_content: @pdf_content,
+      max_response_tokens: 8192,
+      processing_mode: :vision
+    )
+    processor.stubs(:convert_pdf_to_images).returns([ "synthetic-image" ])
+
+    assert_equal "Synthetic PDF", processor.process.summary
+  end
+
+  test "GPT-6 Sol PDF text extraction uses the completion token budget" do
+    client = mock
+    client.expects(:chat).with do |request|
+      params = request[:parameters]
+      params[:model] == "gpt-6-sol" && params[:max_completion_tokens] == 8192
+    end.returns(
+      "choices" => [ { "message" => { "content" => {
+        document_type: "other", summary: "Synthetic text", extracted_data: {}
+      }.to_json } } ],
+      "usage" => { "prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30 }
+    )
+    processor = Provider::Openai::PdfProcessor.new(
+      client,
+      model: "gpt-6-sol",
+      pdf_content: @pdf_content,
+      max_response_tokens: 8192,
+      processing_mode: :text
+    )
+    processor.stubs(:extract_text_from_pdf).returns("Synthetic statement")
+
+    assert_equal "Synthetic text", processor.process.summary
+  end
+
   test "convert_pdf_to_images raises a coded error when the pdftoppm binary is missing" do
     processor = Provider::Openai::PdfProcessor.new(
       mock,

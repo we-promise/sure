@@ -37,6 +37,16 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_in_delta 0.5, nano, 0.0001
   end
 
+  test "calculate_cost estimates GPT-6 Sol usage at Standard pricing" do
+    cost = LlmUsage.calculate_cost(
+      model: "gpt-6-sol",
+      prompt_tokens: 1_000_000,
+      completion_tokens: 100_000
+    )
+
+    assert_in_delta 3.0, cost, 0.0001
+  end
+
   test "calculate_cost prices snapshot model IDs with the most specific OpenAI prefix" do
     mini = LlmUsage.calculate_cost(
       model: "gpt-5.4-mini-2026-03-17",

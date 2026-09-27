@@ -14,6 +14,9 @@ class LlmUsage < ApplicationRecord
   # Source: https://platform.openai.com/docs/pricing
   PRICING = {
     "openai" => {
+      # GPT-6 Sol Standard pricing, September 2026 (prompts <= 272K tokens).
+      # Source: https://developers.openai.com/api/docs/models/gpt-6-sol
+      "gpt-6-sol" => { prompt: 2.00, completion: 10.00 },
       # GPT-4.1 and similar models
       "gpt-4.1" => { prompt: 2.00, completion: 8.00 },
       "gpt-4.1-mini" => { prompt: 0.40, completion: 1.60 },

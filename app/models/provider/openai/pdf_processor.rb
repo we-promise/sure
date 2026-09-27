@@ -126,6 +126,7 @@ class Provider::Openai::PdfProcessor
         ],
         response_format: { type: "json_object" }
       }
+      params[:max_completion_tokens] = max_response_tokens if native_gpt6?
 
       response = client.chat(parameters: params)
 
@@ -187,9 +188,9 @@ class Provider::Openai::PdfProcessor
         messages: [
           { role: "system", content: instructions + "\n\nIMPORTANT: Respond with valid JSON only, no markdown or other formatting." },
           { role: "user", content: content }
-        ],
-        max_tokens: max_response_tokens
+        ]
       }
+      params[native_gpt6? ? :max_completion_tokens : :max_tokens] = max_response_tokens
 
       response = client.chat(parameters: params)
 
@@ -203,6 +204,10 @@ class Provider::Openai::PdfProcessor
       )
 
       parse_response_generic(response)
+    end
+
+    def native_gpt6?
+      !custom_provider && model.to_s.start_with?("gpt-6")
     end
 
     # Render each PDF page to a base64-encoded PNG using pdftoppm
