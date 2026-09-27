@@ -199,13 +199,13 @@
     {
       "warning_type": "Mass Assignment",
       "warning_code": 105,
-      "fingerprint": "bfdd7e2efadaa4d5cb9740a250aab482c1e73bd0f46fd291af544da1c142104e",
+      "fingerprint": "dc0c96660c7e4fd22afb88b441ad90dda58879fbdbabfcb422ba072b1f5168ed",
       "check_name": "PermitAttributes",
       "message": "Potentially dangerous key allowed for mass assignment",
       "file": "app/controllers/recurring_transactions_controller.rb",
-      "line": 202,
+      "line": 371,
       "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
-      "code": "params.require(:recurring_transaction).permit(:name, :amount, :account_id, :first_due_on, :frequency_preset, :payment_url, :autopay, :notes, :is_income)",
+      "code": "params.require(:recurring_transaction).permit(:name, :amount, :account_id, :first_due_on, :frequency_preset, :frequency_interval, :frequency_interval_unit, :payment_url, :autopay, :notes, :is_income)",
       "render_path": null,
       "location": {
         "type": "controller",

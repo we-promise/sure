@@ -8,10 +8,12 @@ class TradeRepublicAccount::Processor
   def process
     return unless account.present?
 
+    exchange_securities = TradeRepublicAccount::SecurityPrefetcher.new(trade_republic_account).prefetch
+
     ActiveRecord::Base.transaction do
       update_account_balance!
-      TradeRepublicAccount::HoldingsProcessor.new(trade_republic_account).process
-      TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account).process
+      TradeRepublicAccount::HoldingsProcessor.new(trade_republic_account, exchange_securities: exchange_securities).process
+      TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account, exchange_securities: exchange_securities).process
     end
 
     account.broadcast_sync_complete
