@@ -260,6 +260,9 @@ class PdfImportTest < ActiveSupport::TestCase
 
   test "assigning account links statement backed import statement" do
     statement = create_pdf_statement(account: nil)
+    statement.update!(pdf_import_owned: true)
+    assert statement.pdf_import_owned?
+
     import = PdfImport.create_from_statement!(statement: statement)
     account = accounts(:depository)
 
@@ -267,6 +270,7 @@ class PdfImportTest < ActiveSupport::TestCase
 
     assert_equal account, import.reload.account
     assert_equal account, statement.reload.account
+    assert_not statement.pdf_import_owned?
     assert statement.linked?
   end
 

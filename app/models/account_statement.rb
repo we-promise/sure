@@ -260,6 +260,7 @@ class AccountStatement < ApplicationRecord
   def link_to_account!(target_account, confidence: 1.0)
     update!(
       account: target_account,
+      pdf_import_owned: false,
       suggested_account: nil,
       match_confidence: confidence,
       review_status: :linked,

@@ -125,7 +125,7 @@
                     <div class="flex flex-col items-center justify-center pt-5 pb-6">
                       <div data-file-upload-target="uploadText" class="flex flex-col items-center">
                         <%= icon("plus", size: "lg", class: "mb-4 mx-auto") %>
-                        <p class="mb-2 text-md text-gray text-center"><span class="font-medium text-primary"><%= t("import.uploads.show.browse") %></span> <%= t("import.uploads.show.csv_file_prompt") %></p>
+                        <p class="mb-2 text-md text-secondary text-center"><span class="font-medium text-primary"><%= t("import.uploads.show.browse") %></span> <%= t("import.uploads.show.csv_file_prompt") %></p>
                       </div>
                       <div class="flex flex-col gap-4 items-center hidden mb-2" data-file-upload-target="fileName">
                         <span class="text-primary"><%= icon("file-text", size: "lg", color: "current") %></span>
@@ -168,7 +168,7 @@
             <div class="flex flex-col items-center justify-center pt-5 pb-6">
               <div data-file-upload-target="uploadText" class="flex flex-col items-center">
                 <%= icon("plus", size: "lg", class: "mb-4 mx-auto") %>
-                <p class="mb-2 text-md text-gray text-center"><span class="font-medium text-primary"><%= t("imports.new.browse_document") %></span> <%= t("imports.new.document_file_prompt") %></p>
+                <p class="mb-2 text-md text-secondary text-center"><span class="font-medium text-primary"><%= t("imports.new.browse_document") %></span> <%= t("imports.new.document_file_prompt") %></p>
               </div>
               <div data-file-upload-target="fileName" class="flex flex-col gap-4 items-center hidden mb-2">
                 <span class="text-primary"><%= icon("file-text", size: "lg", color: "current") %></span>
@@ -196,7 +196,7 @@
         <label for="qif_import_file" class="flex flex-col items-center justify-center w-full h-64 border border-secondary border-dashed rounded-xl cursor-pointer" data-controller="file-upload" data-file-upload-target="uploadArea">
           <div class="flex flex-col items-center justify-center pt-5 pb-6">
             <%= icon("plus", size: "lg", class: "mb-4 mx-auto") %>
-            <p class="mb-2 text-md text-gray text-center"><span class="font-medium text-primary"><%= t("import.uploads.show.browse") %></span> <%= t("import.uploads.show.qif_file_prompt") %></p>
+            <p class="mb-2 text-md text-secondary text-center"><span class="font-medium text-primary"><%= t("import.uploads.show.browse") %></span> <%= t("import.uploads.show.qif_file_prompt") %></p>
             <p class="text-xs text-secondary"><%= t("import.uploads.show.qif_file_hint") %></p>
             <%= form.file_field :import_file, accept: ".qif", id: "qif_import_file", multiple: true, class: "hidden", "data-file-upload-target": "input", "data-drag-and-drop-import-target": "input", data: { action: "change->batch-upload-warning#upload" } %>
           </div>
@@ -216,7 +216,7 @@
           <div class="flex flex-col items-center justify-center pt-5 pb-6">
             <div data-file-upload-target="uploadText" class="flex flex-col items-center">
               <%= icon("database", size: "lg", class: "mb-4 mx-auto") %>
-              <p class="mb-2 text-md text-gray text-center"><span class="font-medium text-primary"><%= t("import.uploads.sure_import.browse") %></span> <%= t("import.uploads.sure_import.browse_hint") %></p>
+              <p class="mb-2 text-md text-secondary text-center"><span class="font-medium text-primary"><%= t("import.uploads.sure_import.browse") %></span> <%= t("import.uploads.sure_import.browse_hint") %></p>
             </div>
             <div data-file-upload-target="fileName" class="flex flex-col gap-4 items-center hidden mb-2">
               <span class="text-primary"><%= icon("file-text", size: "lg", color: "current") %></span>

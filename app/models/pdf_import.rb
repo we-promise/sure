@@ -12,6 +12,7 @@ class PdfImport < Import
 
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
   validate :account_statement_matches_import
+  before_destroy :release_reconciliations_before_destroy
   after_destroy_commit :destroy_orphaned_import_owned_statement
 
   class << self
@@ -542,6 +543,10 @@ class PdfImport < Import
       statement.destroy!
     rescue StandardError => error
       Rails.logger.warn("Could not clean up source statement for PDF import #{id}: #{error.class}: #{error.message}")
+    end
+
+    def release_reconciliations_before_destroy
+      release_reconciliations!(account_id)
     end
 
     # A statement's posting date routinely differs by a day or two from the date
