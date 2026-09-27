@@ -57,7 +57,7 @@ ca:
         counters_section_title: Comptadors de tasques
         counters_section_description: Comptadors agregats de Sidekiq de totes les cues.
         queues_section_title: Cues
-        queues_section_description: Mida de cada cua i antiguitat de la tasca més antiga. La latència són els segons que fa que espera la tasca més antiga.
+        queues_section_description: Mida de cada cua i antiguitat de la tasca més antiga. La latència és el nombre de segons que fa que la tasca més antiga és a la cua.
         labels:
           status: Estat
           processes: Processos worker
@@ -87,7 +87,7 @@ ca:
               message: L'endpoint configurat no ha superat la comprovació de disponibilitat de /v1/vector_stores. La majoria d'endpoints locals i compatibles amb OpenAI no implementen aquesta API. El xat i el processament de PDF poden funcionar igualment; per a la configuració local habitual, fes servir pgvector amb un endpoint d'embeddings separat. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
             function_calling_unsupported:
               title: El model no admet la crida a funcions
-              message: L'endpoint ha respost a una petició de xat simple, però ha rebutjat la mateixa petició amb el paràmetre tools. L'assistent d'IA llegeix comptes, transaccions i posicions mitjançant crides a funcions, així que el xat continuarà fallant (sovint amb un error 404 poc útil) fins que el model n'admeti. Tria un model el proveïdor del qual documenti la compatibilitat amb la crida a funcions. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
+              message: L'endpoint ha respost a una petició de xat simple, però ha rebutjat la mateixa petició amb el paràmetre tools. L'assistent d'IA llegeix comptes, transaccions i posicions mitjançant crides a funcions, així que el xat continuarà fallant (sovint amb un error 404 poc útil) fins que facis servir un model que admeti eines. Tria un model el proveïdor del qual documenti la compatibilitat amb la crida a funcions. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
             function_calling_not_used:
               title: El model ha respost sense cridar l'eina que se li ha demanat
               message: L'endpoint ha acceptat el paràmetre tools, però el model ha respost amb text en lloc de cridar l'eina de comprovació. L'assistent d'IA no pot llegir dades financeres sense crides a eines, així que el xat pot respondre en blanc o amb xifres inventades. És preferible un model el proveïdor del qual documenti la compatibilitat amb la crida a funcions.
@@ -99,7 +99,7 @@ ca:
               message: L'endpoint ha respost, però no ha llistat ni servit el model configurat. Tria un model actiu per al proveïdor seleccionat i torna a executar les comprovacions. Per a Gemini mitjançant una capa de traducció compatible amb OpenAI, fes servir un model admès actualment, com ara gemini-2.5-flash.
             pdf_text_extraction_failed:
               title: La comprovació d'extracció de text amb un PDF sintètic ha fallat
-              message: Sure no ha pogut completar la via de text prioritari, que extreu localment el text incrustat del PDF i l'envia al model configurat. No s'ha enviat cap dada de clients. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
+              message: Sure no ha pogut completar la via d'extracció de text, que extreu localment el text incrustat del PDF i l'envia al model configurat. No s'ha enviat cap dada de clients. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
             pdf_vision_processing_failed:
               title: La comprovació de visió/nativa amb un PDF sintètic ha fallat
               message: Sure no ha pogut completar la via de PDF com a imatge o document natiu amb el model configurat. No s'ha enviat cap dada de clients. L'error s'ha registrat a Configuració → Registres de depuració i a Rails.logger.
@@ -219,7 +219,7 @@ ca:
           failure_codes:
             model_not_available: El proveïdor no ha retornat el model configurat
             no_tool_call: El model ha respost sense cridar l'eina de comprovació
-            tools_refused: El servei ha respost la mateixa petició sense eines, però l'ha rebutjat amb eines
+            tools_refused: El servei ha respost a la mateixa petició sense eines, però l'ha rebutjada amb eines
             invalid_response: El servei ha retornat una resposta inesperada
             dimensions_mismatch: Les dimensions del vector d'embedding no coincideixen amb les configurades
             extension_not_enabled: L'extensió vector de PostgreSQL no està activada

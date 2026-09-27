@@ -192,8 +192,8 @@ ca:
         sharing_default_label: Compartició predeterminada per a comptes nous
         sharing_private: Mantén privat per defecte
         sharing_shared: Comparteix amb tots els membres
-        sharing_subtitle: Controla com es comparteixen els comptes a %{moniker}
-        sharing_title: "Compartició a %{moniker}"
+        sharing_subtitle: Controla com es comparteixen els comptes entre els membres
+        sharing_title: "Compartició de comptes"
         timezone: Fus horari
         budget_title: Pressupost
         budget_subtitle: Configura com funcionen els teus pressupostos
@@ -203,7 +203,7 @@ ca:
         household_budget_enabled_hint: Mantén un pressupost compartit de la llar juntament amb els pressupostos personals. Desactiva-ho per utilitzar només pressupostos personals.
         budget_sharing_title: Compartició del pressupost
         budget_sharing_subtitle: Permet que altres membres vegin o editin el teu pressupost personal
-        budget_sharing_no_members: No hi ha altres membres a %{moniker} amb qui compartir-lo
+        budget_sharing_no_members: No hi ha altres membres amb qui compartir-lo
         budget_sharing_permission_label: Accés de %{name}
         budget_sharing_permissions:
           none: Sense accés
