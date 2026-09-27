@@ -210,6 +210,8 @@ class LlmUsage < ApplicationRecord
   # - ~50 tokens per category
   # - ~50 tokens for completion per transaction
   # Returns nil if pricing is not available for the model
+  # Aggregate estimates assume short requests produced by the batch slicer.
+  # @return [Float, nil] approximate total USD cost across categorization requests
   def self.estimate_auto_categorize_cost(transaction_count:, category_count:, model: "gpt-4.1")
     return 0.0 if transaction_count.zero?
 

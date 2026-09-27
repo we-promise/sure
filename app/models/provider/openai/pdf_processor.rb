@@ -105,6 +105,8 @@ class Provider::Openai::PdfProcessor
 
     PdfProcessingResult = Provider::LlmConcept::PdfProcessingResult
 
+    # Summarize extracted PDF text using the existing uncapped text request.
+    # @return [Provider::LlmConcept::PdfProcessingResult] parsed document summary
     def process_with_text_extraction
       effective_model = model.presence || Provider::Openai::DEFAULT_MODEL
 
