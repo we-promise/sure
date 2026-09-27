@@ -3,7 +3,12 @@
     <% disclosure.with_summary_content do %>
       <div class="flex items-center justify-between gap-3 w-full">
         <div class="min-w-0">
-          <p class="font-medium text-primary truncate"><%= item.name %></p>
+          <p class="font-medium text-primary truncate">
+            <%= item.name %>
+            <% if identifier_last4 %>
+              <span class="font-normal text-secondary">&middot; &bull;&bull;&bull;&bull; <%= identifier_last4 %></span>
+            <% end %>
+          </p>
           <p class="text-xs text-secondary">
             <% if item.syncing? %>
               <%= translation("syncing") %>
@@ -50,7 +55,7 @@
               title: translation("disconnect"),
               href: helpers.trade_republic_item_path(item),
               method: :delete,
-              confirm: translation("disconnect_confirm")
+              confirm: identifier_last4 ? translation("disconnect_confirm_with_identifier", last4: identifier_last4) : translation("disconnect_confirm")
             ) %>
       </div>
 

@@ -72,4 +72,44 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
 
     assert_selector "form[action='#{Rails.application.routes.url_helpers.trade_republic_items_path}']"
   end
+
+  test "card summary shows the last 4 digits of the phone number" do
+    item = trade_republic_items(:configured_item)
+
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [ item ], family: families(:dylan_family)))
+
+    assert_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(item)}", text: "4567"
+  end
+
+  test "card summary falls back to the account number when there is no phone number" do
+    family = families(:dylan_family)
+    item = family.trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :requires_update, session_blob: "session"
+    )
+    item.trade_republic_accounts.create!(
+      kind: "portfolio", trade_republic_account_id: "DE9876543210", currency: "EUR", raw_positions_payload: [], raw_timeline_payload: []
+    )
+
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [ item ], family: family))
+
+    assert_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(item)}", text: "3210"
+  end
+
+  test "disconnect confirmation names the connection by its last 4 digits" do
+    item = trade_republic_items(:configured_item)
+
+    render_inline(TradeRepublic::ConnectionCardComponent.new(item: item))
+
+    assert_selector "button[data-turbo-confirm*='4567']"
+  end
+
+  test "card summary shows no identifier for a connection with neither a phone number nor an account yet" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :requires_update, session_blob: "session"
+    )
+
+    render_inline(TradeRepublic::ConnectionCardComponent.new(item: item))
+
+    assert_no_text "••••"
+  end
 end

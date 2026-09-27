@@ -760,6 +760,7 @@ en:
         syncing: Syncing...
         disconnect: Disconnect Trade Republic
         disconnect_confirm: Disconnect Trade Republic? Your synced accounts will become manual accounts.
+        disconnect_confirm_with_identifier: "Disconnect the Trade Republic connection ending in %{last4}? Your synced accounts will become manual accounts."
         status_configured_prefix: "Connected. Visit the"
         accounts_tab: Accounts
         setup_accounts: Set up accounts

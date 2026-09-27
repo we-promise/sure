@@ -734,6 +734,7 @@ pl:
         disconnect: Odłącz Trade Republic
         disconnect_confirm: Odłączyć Trade Republic? Twoje zsynchronizowane konta
           staną się kontami ręcznymi.
+        disconnect_confirm_with_identifier: "Odłączyć połączenie Trade Republic kończące się na %{last4}? Twoje zsynchronizowane konta staną się kontami ręcznymi."
         encryption_warning:
           message: Danych logowania i sesji Trade Republic nie można bezpiecznie przechowywać,
             dopóki nie skonfigurowano Active Record Encryption.
