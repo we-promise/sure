@@ -73,12 +73,12 @@ namespace :security do
     # SSO provider client secret. Only process rows still holding plaintext:
     # backfill_model would otherwise re-encrypt already-encrypted values (this
     # column is non-deterministic, so decrypting and re-writing changes the
-    # ciphertext every run), so filter to rows where decryption fails.
+    # ciphertext every run), so filter to rows where the stored value isn't
+    # ciphertext. Checking the raw value (rather than rescuing a decryption
+    # failure) also works when ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA
+    # is set, where a plaintext read succeeds instead of raising.
     results[:sso_providers] = backfill_model(SsoProvider, %i[client_secret], batch_size, dry_run) do |record|
-      record.client_secret
-      false
-    rescue ActiveRecord::Encryption::Errors::Decryption
-      true
+      !record.encrypted_attribute?(:client_secret)
     end
 
     puts({
