@@ -545,6 +545,8 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Transaction", cash_entry.entryable_type
     assert_equal BigDecimal("0.40"), cash_entry.amount
     assert_equal "Round up", cash_entry.transaction.investment_activity_label
+    assert_equal "investment_contribution", cash_entry.transaction.kind
+    assert_nil cash_entry.transaction.category_id
     assert_equal "SPARE_CHANGE_AGGREGATE", cash_entry.transaction.extra.dig("trade_republic", "event_type")
   end
 
@@ -736,7 +738,94 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert entry.reload.user_modified?
   end
 
-  test "savings-plan invoice imports as a portfolio trade and never as cash" do
+  test "split accounts settle buys and sells against the cash account" do
+    cash_account, cash_sure = create_linked_cash_account!
+    buy = order_execution_detail(event_id: "evt_settle_buy", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")
+      .deep_merge(title: "Core S&P 500 USD (Acc)", subtitle: "Buy Order", detail: { signed_amount: -1024.92, fees: "1.0", price: "511.96" })
+    sell = order_execution_detail(event_id: "evt_settle_sell", quantity: "-1.0", isin: "IE00B5BMR087", amount: "529.00")
+      .deep_merge(title: "Core S&P 500 USD (Acc)", subtitle: "Sell Order", detail: { signed_amount: 529.0, fees: "1.0" })
+    @tr_account.update!(raw_timeline_payload: [ buy, sell ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_equal BigDecimal("-1024.92"), find_trade("trade_republic_event_evt_settle_buy").amount
+    assert_equal 0, @account.entries.where(entryable_type: "Transaction").count
+
+    buy_cash = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_settle_buy")
+    assert_equal BigDecimal("1024.92"), buy_cash.amount
+    assert_equal "Core S&P 500 USD (Acc)", buy_cash.name
+    assert_equal "Buy", buy_cash.transaction.investment_activity_label
+    assert_equal "investment_contribution", buy_cash.transaction.kind
+    assert_nil buy_cash.transaction.category_id
+
+    sell_cash = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_settle_sell")
+    assert_equal BigDecimal("-529.0"), sell_cash.amount
+    assert_equal "Sell", sell_cash.transaction.investment_activity_label
+    assert_equal "funds_movement", sell_cash.transaction.kind
+    assert_nil sell_cash.transaction.category_id
+
+    assert_no_difference -> { cash_sure.entries.count } do
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+  end
+
+  test "cash settlement is removed when Trade Republic deletes the trade" do
+    cash_account, cash_sure = create_linked_cash_account!
+    buy = order_execution_detail(event_id: "evt_settle_deleted", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")
+    @tr_account.update!(raw_timeline_payload: [ buy ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    assert cash_sure.entries.exists?(external_id: "trade_republic_event_evt_settle_deleted")
+
+    @tr_account.update!(raw_timeline_payload: [ buy.merge(deleted: true) ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_not cash_sure.entries.exists?(external_id: "trade_republic_event_evt_settle_deleted")
+  end
+
+  test "cash account deposits are fund movements, not investment contributions" do
+    cash_account, cash_sure = create_linked_cash_account!
+    wallet_top_up = deposit_event.merge(id: "evt_google_pay", eventType: "PAYMENT_INBOUND_GOOGLE_PAY", title: "Cash in")
+    bank_credit = deposit_event.merge(id: "evt_bank_credit", eventType: "BANK_TRANSACTION_INCOMING", title: "Employer")
+    cash_account.update!(raw_timeline_payload: [ wallet_top_up, bank_credit ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    top_up = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_google_pay").transaction
+    assert_equal "funds_movement", top_up.kind
+    assert_nil top_up.category_id
+
+    credit = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_bank_credit").transaction
+    assert_equal "standard", credit.kind
+    assert_nil credit.category_id
+  end
+
+  test "resets deposits that earlier syncs stored as investment contributions" do
+    cash_account, cash_sure = create_linked_cash_account!
+    category = @family.investment_contributions_category
+    legacy = Account::ProviderImportAdapter.new(cash_sure).import_transaction(
+      external_id: "trade_republic_event_evt_legacy_dep",
+      amount: BigDecimal("-500.00"),
+      currency: "EUR",
+      date: Date.parse("2026-08-01"),
+      name: "Cash in",
+      source: "trade_republic",
+      investment_activity_label: "Contribution"
+    )
+    assert_equal "investment_contribution", legacy.transaction.kind
+    assert_equal category.id, legacy.transaction.category_id
+
+    cash_account.update!(raw_timeline_payload: [
+      deposit_event.merge(id: "evt_legacy_dep", eventType: "PAYMENT_INBOUND_GOOGLE_PAY", title: "Cash in")
+    ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    legacy.transaction.reload
+    assert_equal "funds_movement", legacy.transaction.kind
+    assert_nil legacy.transaction.category_id
+  end
+
+  test "savings-plan invoice imports as a portfolio trade and a cash outflow" do
     cash_account, cash_sure = create_linked_cash_account!
     event = savings_plan_invoice_event
 
@@ -754,7 +843,9 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-25.00"), trade.amount
     assert_equal "SAVINGS_PLAN_INVOICE_CREATED", trade.entryable.extra.dig("trade_republic", "event_type")
 
-    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_savings_plan")
+    cash_entry = Entry.find_by!(account: cash_sure, external_id: "trade_republic_event_evt_savings_plan")
+    assert_equal "Transaction", cash_entry.entryable_type
+    assert_equal BigDecimal("25.00"), cash_entry.amount
   end
 
   test "savings-plan invoice remains idempotent across repeated processing" do
@@ -775,7 +866,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     end
 
     assert_equal 1, @account.entries.where(entryable_type: "Trade", source: "trade_republic").count
-    assert_equal 0, cash_sure.entries.where(source: "trade_republic").count
+    assert_equal 1, cash_sure.entries.where(entryable_type: "Transaction", source: "trade_republic").count
   end
 
   test "savings-plan invoice duplicated by an execution event imports once" do
@@ -1025,7 +1116,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "Google Pay inbound deposits import as contributions" do
+  test "Google Pay inbound deposits import as fund movements" do
     cash_account, cash_sure = create_linked_cash_account!
     cash_account.update!(raw_timeline_payload: [ {
       id: "evt_gpay",
@@ -1039,7 +1130,8 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     entry = Entry.find_by!(account: cash_sure, external_id: "trade_republic_event_evt_gpay")
     assert_equal BigDecimal("-50.00"), entry.amount
-    assert_equal "Contribution", entry.transaction.investment_activity_label
+    assert_equal "funds_movement", entry.transaction.kind
+    assert_nil entry.transaction.investment_activity_label
   end
 
   test "Legal documents title without event type is ignored silently" do
