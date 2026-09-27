@@ -35,6 +35,15 @@ module TransactionsHelper
     entry.split_child? && Current.user.show_split_grouped? && params_grouped == "true"
   end
 
+  # Whether the current user may annotate (e.g. re-tag) entries on this
+  # account. Memoized per request so list rows don't query per row.
+  def can_annotate_account?(account)
+    return false unless Current.user
+
+    @annotatable_account_ids ||= Account.annotatable_by(Current.user).pluck(:id).to_set
+    @annotatable_account_ids.include?(account.id)
+  end
+
   # ---- Transaction extra details helpers ----
   # Returns a structured hash describing extra details for a transaction.
   # Input can be a Transaction or an Entry (responds_to :transaction).
