@@ -4,6 +4,11 @@ pt-BR:
     changelog:
       title: Novidades
     dashboard:
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Fluxo de caixa"
+          surplus: "Superávit"
+          deficit: "Déficit"
       welcome: "Bem-vindo(a) de volta, %{name}"
       subtitle: "Veja o que está acontecendo com suas finanças"
       new: "Novo"

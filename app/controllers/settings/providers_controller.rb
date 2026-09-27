@@ -191,6 +191,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "akahu",          title: "Akahu",           turbo_id: "akahu",          partial: "akahu_panel" },
       { key: "up",             title: "Up",              turbo_id: "up",             partial: "up_panel" },
       { key: "monobank",       title: "Monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
+      { key: "fio",            title: "Fio banka",       turbo_id: "fio",            partial: "fio_panel" },
       { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
       { key: "redbark",        title: "Redbark",         turbo_id: "redbark",        partial: "redbark_panel" },
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
@@ -220,6 +221,7 @@ class Settings::ProvidersController < ApplicationController
       "akahu"          => "AkahuItem",
       "up"             => "UpItem",
       "monobank"       => "MonobankItem",
+      "fio"            => "FioItem",
       "simplefin"      => "SimplefinItem",
       "lunchflow"      => "LunchflowItem",
       "redbark"        => "RedbarkItem",
@@ -250,6 +252,8 @@ class Settings::ProvidersController < ApplicationController
         @up_items = Current.family.up_items.active.ordered
       when "monobank"
         @monobank_items = Current.family.monobank_items.active.ordered
+      when "fio"
+        @fio_items = Current.family.fio_items.active.ordered
       when "simplefin"
         @simplefin_items = Current.family.simplefin_items.ordered
       when "lunchflow"
@@ -326,6 +330,16 @@ class Settings::ProvidersController < ApplicationController
       @coinspot_items = Current.family.coinspot_items.active.ordered
       @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
+      @fio_items = Current.family.fio_items.active.ordered
+
+      # Wallet uploads are managed on iOS. Only expose linked accounts the
+      # current admin can access, including connections that need repair.
+      accessible_account_ids = Current.family.accounts.accessible_by(Current.user).pluck(:id).to_set
+      @financekit_connections = Current.family.financekit_items.where(status: %w[active repair_required])
+        .ordered.includes(:accounts).filter_map do |item|
+          accounts = item.accounts.select { |account| accessible_account_ids.include?(account.id) && !account.pending_deletion? }
+          { item: item, accounts: accounts } if accounts.any?
+        end
 
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
@@ -334,6 +348,7 @@ class Settings::ProvidersController < ApplicationController
       @connected        = entries.select { |e| e[:summary][:status] == :ok }
       @needs_attention  = entries.select { |e| [ :warn, :err ].include?(e[:summary][:status]) }
       @available        = entries.select { |e| e[:summary][:status] == :off }
+      @can_sync_all = (@connected + @needs_attention).any? { |entry| entry[:sync_supported] != false }
 
       @health = view_context.provider_health_strip(connected: @connected, needs_attention: @needs_attention)
     end
@@ -346,6 +361,7 @@ class Settings::ProvidersController < ApplicationController
         "akahu"          => @akahu_items,
         "up"             => @up_items,
         "monobank"       => @monobank_items,
+        "fio"            => @fio_items,
         "simplefin"      => @simplefin_items,
         "lunchflow"      => @lunchflow_items,
         "redbark"        => @redbark_items,
@@ -428,6 +444,17 @@ class Settings::ProvidersController < ApplicationController
         }
       end
 
-      (configuration_entries + family_entries).sort_by { |entry| entry[:title].downcase }
+      wallet_entry = {
+        provider_key: "financekit", title: Provider::Metadata.for(:financekit)[:name],
+        turbo_id: "financekit", partial: "financekit_panel", maturity: :beta,
+        external_link: {
+          text: t("settings.providers.financekit.app_store"), href: nil,
+          tooltip: t("settings.providers.financekit.coming_soon")
+        },
+        sync_supported: false,
+        summary: view_context.financekit_provider_summary(@financekit_connections)
+      }
+
+      (configuration_entries + family_entries + [ wallet_entry ]).sort_by { |entry| entry[:title].downcase }
     end
 end

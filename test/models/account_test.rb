@@ -21,6 +21,13 @@ class AccountTest < ActiveSupport::TestCase
     admin = users(:empty)
     super_admin = users(:sure_support_staff)
 
+    # Fixtures stamp every row with one `created_at`, and this family holds a
+    # second admin (`sso_only`), so "the earliest admin" is only meaningful
+    # once the timestamps differ. Without this the assertion below rides on
+    # whichever admin the query plan happens to return first.
+    family.users.update_all(created_at: 1.hour.ago)
+    admin.update!(created_at: 2.hours.ago)
+
     Current.reset
 
     account = family.accounts.create!(
@@ -32,6 +39,30 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_equal admin, account.owner
     assert_not_equal super_admin, account.owner
+  end
+
+  test "default owner is stable when two admins share a created_at" do
+    family = families(:empty)
+    family.users.where(role: "admin").update_all(created_at: 1.hour.ago)
+
+    Current.reset
+
+    owners = 2.times.map do |i|
+      family.accounts.create!(
+        name: "Unowned tie-break account #{i}",
+        balance: 0,
+        currency: "USD",
+        accountable: Depository.new
+      ).owner
+    end
+
+    # `id` breaks the tie, so the winner is the tied admin with the lowest id.
+    # Asserting only that the two calls agree would pass without the
+    # tie-breaker whenever the database returned the same tied row twice.
+    expected_owner = family.users.where(role: "admin").order(:id).first
+
+    assert_equal expected_owner, owners.first
+    assert_equal expected_owner, owners.last
   end
 
   test "create_and_sync calls sync_later by default" do
@@ -888,5 +919,16 @@ class AccountTest < ActiveSupport::TestCase
     account.set_opening_anchor_balance(balance: 0, date: default_anchor_date)
 
     assert_nil account.history_start_date
+  end
+
+  test "annotatable_by includes owned and annotate-tier shares but not read-only ones" do
+    member = users(:family_member)
+    ids = Account.annotatable_by(member).pluck(:id)
+
+    assert_includes ids, accounts(:depository).id, "full_control share"
+    assert_not_includes ids, accounts(:credit_card).id, "read_only share"
+
+    accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
+    assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
   end
 end

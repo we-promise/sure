@@ -112,7 +112,7 @@ class Transaction < ApplicationRecord
   INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
 
   # Providers that support pending transaction flags
-  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark].freeze
+  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark financekit].freeze
 
   # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
   # Stored as a constant so static analysis can verify it contains no user input.
@@ -159,6 +159,17 @@ class Transaction < ApplicationRecord
     end
 
     update!(category: category)
+  end
+
+  # Adds or removes one tag while holding the row lock. Assigning tag_ids
+  # replaces the whole set, so two quick toggles computed from the same
+  # snapshot would drop one of them; per-tagging writes under the lock can't.
+  def toggle_tag!(tag)
+    with_lock do
+      existing = taggings.where(tag: tag)
+      existing.exists? ? existing.destroy_all : taggings.create!(tag: tag)
+    end
+    tags.reset
   end
 
   # Marks a category as recently used. Called explicitly from the manual

@@ -47,10 +47,61 @@ class Api::V1::CashFlowsControllerTest < ActionDispatch::IntegrationTest
     excluded.account_shares.create!(user: @user, permission: "read_only", include_in_finances: false)
     create_transaction(account: own, amount: 12, date: month)
     create_transaction(account: excluded, amount: 900, date: month)
-    get "/api/v1/cash_flow", params: { month: month.iso8601 }, headers: api_headers(@auth)
+    get "/api/v1/cash_flow", params: { month: month.iso8601, include: "sankey" }, headers: api_headers(@auth)
     assert_response :success
+    assert_equal "12.0", response.parsed_body.dig("sankey", "spending")
     assert_equal "12.0", response.parsed_body["spending"]
     assert_equal "12.0", response.parsed_body.dig("spending_comparison", "current_total")
+  end
+
+  test "graph is opt-in and date ranges do not calculate daily series" do
+    get "/api/v1/cash_flow", headers: api_headers(@auth)
+    assert_not response.parsed_body.key?("sankey")
+    get "/api/v1/cash_flow", params: { include: "sankey" }, headers: api_headers(@auth)
+    assert_response :success
+    assert_equal "net_by_category", response.parsed_body.dig("sankey", "basis")
+    IncomeStatement.any_instance.expects(:daily_expense_series).never
+    get "/api/v1/cash_flow", params: { view: "sankey", start_date: "2000-01-01", end_date: "2024-02-29" }, headers: api_headers(@auth)
+    assert_response :success
+    assert_equal "2000-01-01", response.parsed_body.dig("period", "start_date")
+    assert_not response.parsed_body.key?("spending_comparison")
+  end
+
+  test "rejects ambiguous or invalid graph ranges" do
+    [ { start_date: "2024-01-01" }, { view: "sankey", start_date: "2024-01-01" },
+      { view: "sankey", start_date: "2024-02-30", end_date: "2024-03-01" },
+      { view: "sankey", start_date: "2024-02-01", end_date: "2024-01-01" },
+      { view: "sankey", month: "2024-01-01", start_date: "2024-01-01", end_date: "2024-01-02" },
+      { view: "invalid" }, { include: "invalid" } ].each do |query|
+      get "/api/v1/cash_flow", params: query, headers: api_headers(@auth)
+      assert_response :unprocessable_entity
+    end
+  end
+
+  test "rejects conflicting graph modes" do
+    [ {}, { month: "2024-01-01" }, { start_date: "2024-01-01", end_date: "2024-01-02" } ].each do |period|
+      get "/api/v1/cash_flow", params: period.merge(include: "sankey", view: "sankey"), headers: api_headers(@auth)
+      assert_response :unprocessable_entity
+      assert_equal "invalid_view", response.parsed_body["error"]
+    end
+  end
+
+  test "a browser session cannot authenticate the API" do
+    sign_in @user
+    get "/api/v1/cash_flow", params: { view: "sankey" }
+    assert_response :unauthorized
+    get "/api/v1/cash_flow", headers: { "X-Api-Key" => "invalid" }
+    assert_response :unauthorized
+  end
+
+  test "API credentials keep their own identity during browser impersonation" do
+    users(:family_member).family.update!(currency: "JPY")
+    @auth.update!(user: users(:empty))
+    sign_in users(:sure_support_staff)
+    post join_impersonation_sessions_path, params: { impersonation_session_id: impersonation_sessions(:in_progress).id }
+    get "/api/v1/cash_flow", params: { view: "sankey" }, headers: api_headers(@auth)
+    assert_response :success
+    assert_equal users(:empty).family.currency, response.parsed_body["currency"]
   end
 
   private

@@ -38,6 +38,11 @@ zh-TW:
       heading: 服務條款
       placeholder: 服務條款的內容會顯示在這裡。
     dashboard:
+      cashflow_preview:
+        node_labels:
+          cash_flow: "現金流"
+          surplus: "盈餘"
+          deficit: "赤字"
       welcome: 歡迎回來，%{name}
       subtitle: 這是您目前的財務概況
       new: 新增帳戶

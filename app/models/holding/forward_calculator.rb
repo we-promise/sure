@@ -1,11 +1,14 @@
 class Holding::ForwardCalculator
+  include Holding::TradeCalculatorHelpers
+
   attr_reader :account
 
   def initialize(account, security_ids: nil)
     @account = account
     @security_ids = security_ids
-    # Track cost basis per security: { security_id => { total_cost: BigDecimal, total_qty: BigDecimal } }
-    @cost_basis_tracker = Hash.new { |h, k| h[k] = { total_cost: BigDecimal("0"), total_qty: BigDecimal("0") } }
+    # Track weighted-average cost basis per security, relieving sells so the
+    # figure stays correct after a position is fully sold and repurchased.
+    @cost_basis_trackers = Hash.new { |h, k| h[k] = Holding::CostBasisTracker.new }
     # Securities whose position has taken in a transfer. A coin moved in was
     # acquired at a price nothing here knows, and averaging the purchases alone
     # would apply their price to units that never cost it.
@@ -20,8 +23,7 @@ class Holding::ForwardCalculator
 
       account.start_date.upto(Date.current).each do |date|
         trades = portfolio_cache.get_trades(date: date)
-        update_cost_basis_tracker(trades)
-        next_portfolio = transform_portfolio(current_portfolio, trades, direction: :forward)
+        next_portfolio = apply_trades(current_portfolio, trades)
         holdings.concat(build_holdings(next_portfolio, date))
         current_portfolio = next_portfolio
       end
@@ -44,19 +46,6 @@ class Holding::ForwardCalculator
       empty_portfolio
     end
 
-    def transform_portfolio(previous_portfolio, trade_entries, direction: :forward)
-      new_quantities = previous_portfolio.dup
-
-      trade_entries.each do |trade_entry|
-        trade = trade_entry.entryable
-        security_id = trade.security_id
-        qty_change = trade.qty
-        qty_change = qty_change * -1 if direction == :reverse
-        new_quantities[security_id] = (new_quantities[security_id] || 0) + qty_change
-      end
-
-      new_quantities
-    end
 
     def build_holdings(portfolio, date, price_source: nil)
       portfolio.map do |security_id, qty|
@@ -82,44 +71,52 @@ class Holding::ForwardCalculator
       end.compact
     end
 
-    # Updates cost basis tracker with buy trades (qty > 0)
-    # Uses weighted average cost method
-    def update_cost_basis_tracker(trade_entries)
+    # Applies the day's trades in order and returns the resulting portfolio, so the
+    # caller does not walk the same trades again to compute quantities.
+    #
+    # Buys raise a security's weighted-average cost basis; sells relieve quantity at
+    # the running average and a full liquidation resets it, so a later repurchase
+    # starts from a clean basis. Tracking the running position here lets an inbound
+    # transfer's "unknown" mark release the moment the position hits zero — even when
+    # a same-day sell-off and repurchase net back to a positive end-of-day quantity.
+    def apply_trades(opening_portfolio, trade_entries)
+      portfolio = opening_portfolio.dup
+
       trade_entries.each do |trade_entry|
         trade = trade_entry.entryable
-        next unless trade.qty > 0 # Only track buys
-
         security_id = trade.security_id
+        previous_quantity = portfolio[security_id] || 0
 
-        # An internal movement is not a purchase: it contributes no cost and it
-        # makes the whole position unknowable, not just its own units.
         if trade.internal_movement?
-          @transferred_security_ids << security_id
-          next
+          # An inbound transfer brings in units at a price nothing here knows, so
+          # it makes the whole position's cost basis unknowable. An outbound
+          # transfer only removes units, so relieve them at the running average
+          # (like a sell) rather than leaving them to contaminate a later buy.
+          if trade.qty.positive?
+            @transferred_security_ids << security_id
+          else
+            @cost_basis_trackers[security_id].apply(converted_trade_price(trade), trade.qty)
+          end
+        else
+          @cost_basis_trackers[security_id].apply(converted_trade_price(trade), trade.qty)
         end
 
-        tracker = @cost_basis_tracker[security_id]
+        portfolio[security_id] = previous_quantity + trade.qty
 
-        # Convert trade price to account currency if needed
-        trade_price = Money.new(trade.price, trade.currency)
-        begin
-          converted_price = trade_price.exchange_to(account.currency).amount
-        rescue Money::ConversionError
-          converted_price = trade.price
-        end
-
-        tracker[:total_cost] += converted_price * trade.qty
-        tracker[:total_qty] += trade.qty
+        # Release the "unknown" mark only on a genuine downward crossing through
+        # zero: a position that was already non-positive never held these units, so
+        # opening and closing must not collapse onto the same trade.
+        @transferred_security_ids.delete(security_id) if previous_quantity.positive? && portfolio[security_id] <= 0
       end
+
+      portfolio
     end
 
-    # Returns the current cost basis for a security, or nil if no buys recorded
+    # Returns the current cost basis for a security, or nil if nothing is held
+    # or the position contains transferred-in units of unknown cost.
     def cost_basis_for(security_id, currency)
       return nil if @transferred_security_ids.include?(security_id)
 
-      tracker = @cost_basis_tracker[security_id]
-      return nil if tracker[:total_qty].zero?
-
-      tracker[:total_cost] / tracker[:total_qty]
+      @cost_basis_trackers[security_id].average_cost
     end
 end

@@ -55,6 +55,9 @@ en:
       enable_category_matcher_hint: When enabled, the provider's suggested category is applied to imported transactions. Disable to leave new transactions uncategorized.
     index:
       accounts: Accounts
+      financekit_accounts:
+        title: Apple Wallet
+        description: Manage Apple Wallet connections and sync in the Sure iOS app.
       cancel_sync: Cancel sync
       manual_accounts:
         other_accounts: Other accounts
@@ -144,6 +147,8 @@ en:
       new_debt: New debt
       new_account: New account
       new_account_group: "New %{account_group}"
+      expand_all: Expand all
+      collapse_all: Collapse all
     types:
       depository: Cash
       investment: Investment
@@ -186,6 +191,7 @@ en:
       title: Unlink account from provider?
       description_html: "You are about to unlink <strong>%{account_name}</strong> from <strong>%{provider_name}</strong>. This will convert it to a manual account."
       warning_title: What this means
+      warning_wallet_connection: All accounts in this Apple Wallet connection will be unlinked. Their transactions and balances will be preserved. You can reconnect through the Sure iOS app with a new Wallet setup.
       warning_no_sync: The account will no longer sync automatically with your provider
       warning_manual_updates: You will need to add transactions and update balances manually
       warning_transactions_kept: All existing transactions and balances will be preserved

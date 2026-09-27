@@ -297,7 +297,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         security: security,
         quantity: 5,
         price: 150.00,
-        amount: 750.00,
+        amount: 754.95,
+        fee: 4.95,
         currency: "USD",
         date: Date.today,
         source: "plaid"
@@ -306,7 +307,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_kind_of Trade, entry.entryable
       assert_equal 5, entry.entryable.qty
       assert_equal 150.00, entry.entryable.price
-      assert_equal 750.00, entry.amount
+      assert_equal BigDecimal("4.95"), entry.entryable.fee
+      assert_equal BigDecimal("754.95"), entry.amount
       assert_match(/Buy.*5.*shares/i, entry.name)
     end
   end
@@ -328,6 +330,39 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     )
 
     assert_equal 0.91, entry.entryable.exchange_rate
+  end
+
+  # So user-entered fees aren't erased by syncing from providers that don't report fees
+  test "preserves existing trade fee when reimport omits it" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    aapl = securities(:aapl)
+
+    entry = adapter.import_trade(
+      external_id: "plaid_trade_fee_preserved",
+      security: aapl,
+      quantity: 5,
+      price: 150.00,
+      amount: 754.95,
+      fee: 4.95,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid"
+    )
+
+    updated_entry = adapter.import_trade(
+      external_id: "plaid_trade_fee_preserved",
+      security: aapl,
+      quantity: 5,
+      price: 150.00,
+      amount: 754.95,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid"
+    )
+
+    assert_equal entry.id, updated_entry.id
+    assert_equal BigDecimal("4.95"), updated_entry.entryable.reload.fee
   end
 
   test "raises error when security is missing for trade import" do
@@ -1574,5 +1609,109 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_not booked_entry.transaction.pending?,
         "pending flag must be cleared even for user-modified entries"
     end
+  end
+
+  # Provider metadata is not user-editable, so a user edit elsewhere on the entry
+  # must not freeze it: the drawer has to reflect what the provider last sent,
+  # including dropping fields it no longer sends.
+  test "refreshes provider metadata on a user-modified entry" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_extra",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "online", "payment_meta" => { "payee" => "Amazon" } } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    entry.transaction.lock_attr!(:category_id)
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_extra",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "in store" } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    plaid_extra = entry.reload.transaction.extra.fetch("plaid")
+    assert_equal "in store", plaid_extra["payment_channel"]
+    assert_nil plaid_extra["payment_meta"], "a dropped field must not survive on a user-modified entry"
+  end
+
+  # determine_skip_reason reports "user_modified" before it checks import_locked?,
+  # so an entry with both flags reaches that branch. Import ownership wins.
+  test "leaves metadata alone on an entry that is also import-locked" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_import_locked",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "online" } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    entry.update!(import_locked: true)
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_import_locked",
+      amount: 12.0,
+      currency: "USD",
+      date: Date.today,
+      name: "Amazon",
+      source: "plaid",
+      extra: { "plaid" => { "payment_channel" => "in store" } },
+      replace_extra_namespaces: [ "plaid" ]
+    )
+
+    assert_equal "online", entry.reload.transaction.extra.dig("plaid", "payment_channel")
+  end
+
+  # extra is not uniformly provider-owned. Transaction#exchange_rate lives at
+  # extra["exchange_rate"], is editable through the transaction form, and drives
+  # balance conversion — so refreshing a protected entry must touch only the
+  # namespaces the provider declared, not the whole payload.
+  test "refreshing a protected entry leaves user-owned extra keys alone" do
+    entry = @adapter.import_transaction(
+      external_id: "user_mod_exchange_rate",
+      amount: 12.0,
+      currency: "EUR",
+      date: Date.today,
+      name: "Wise transfer",
+      source: "wise",
+      extra: { "exchange_rate" => "1.05", "wise" => { "status" => "pending" } },
+      replace_extra_namespaces: [ "wise" ]
+    )
+
+    # The user corrects the rate by hand, which protects the entry.
+    entry.transaction.update!(exchange_rate: "1.23")
+    entry.mark_user_modified!
+
+    @adapter.import_transaction(
+      external_id: "user_mod_exchange_rate",
+      amount: 12.0,
+      currency: "EUR",
+      date: Date.today,
+      name: "Wise transfer",
+      source: "wise",
+      extra: { "exchange_rate" => "1.05", "wise" => { "status" => "outgoing_payment_sent" } },
+      replace_extra_namespaces: [ "wise" ]
+    )
+
+    refreshed = entry.reload.transaction
+
+    assert_equal "1.23", refreshed.extra["exchange_rate"].to_s,
+      "the provider must not overwrite a rate the user typed"
+    assert_equal "outgoing_payment_sent", refreshed.extra.dig("wise", "status"),
+      "the provider's own namespace should still refresh"
   end
 end

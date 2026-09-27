@@ -30,7 +30,7 @@ ru:
         счёта.
       questions_intro: 'Вот несколько вопросов, которые вы можете задать:'
       spending_insights: Показать анализ расходов
-      there: здесь
+      there: друг
       unusual_patterns: Найти необычные шаблоны
     chat:
       delete_chat: Удалить чат
@@ -56,3 +56,5 @@ ru:
       success: Чат обновлён
     worker_unhealthy_warning: Ответы ИИ могут временно не приходить — фоновый процесс не 
       запущен или перегружен. Проверьте, что Sidekiq работает.
+    new:
+      default_title: Новый чат %{timestamp}
