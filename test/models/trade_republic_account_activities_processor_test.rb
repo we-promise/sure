@@ -143,6 +143,26 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_includes rematched.name, "EXV1"
   end
 
+  test "rematch moves ISIN trades even when split history left negative exchange holdings" do
+    Security.stubs(:search_provider).returns([])
+    event = order_execution_detail(event_id: "evt_split_history", quantity: "2", isin: "IE00B5BMR087", amount: "1024.92")
+
+    import_event(event)
+    isin_security = find_trade("trade_republic_event_evt_split_history").entryable.security
+    exchange_security = Security.create!(ticker: "SXR8", exchange_operating_mic: "XETR", name: "Core S&P 500")
+    date = Date.new(2024, 3, 28)
+    @account.holdings.create!(security: isin_security, date: date, qty: 2, price: 511.96, amount: 1023.92, currency: "EUR")
+    @account.holdings.create!(security: exchange_security, date: date, qty: 0, price: 511.96, amount: 0, currency: "EUR")
+      .update_columns(qty: -0.5, amount: -255.98)
+
+    import_event(event.deep_merge(detail: { symbol: "SXR8", exchange_slug: "XETR", name: "Core S&P 500" }))
+
+    trade = find_trade("trade_republic_event_evt_split_history")
+    assert_equal exchange_security.id, trade.entryable.security_id
+    assert_includes trade.name, "SXR8"
+    assert_not @account.holdings.where(security: isin_security).exists?
+  end
+
   test "sell imports negative quantity and positive amount" do
     import_event(order_execution_detail(
       event_id: "evt_sell",

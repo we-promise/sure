@@ -312,18 +312,23 @@ module TradeRepublicAccount::DataHelpers
       return unless account.holdings.where(security_id: from_security.id).exists? ||
         account.trades.where(security_id: from_security.id).exists?
 
-      rematch_holdings_from_isin!(from_security, to_security)
       account.trades.where(security_id: from_security.id).update_all(
         security_id: to_security.id,
         updated_at: Time.current
       )
+      rematch_holdings_from_isin!(from_security, to_security)
     end
 
+    # Holdings are rewritten with update_columns: while trades are split across
+    # the ISIN and exchange securities, calculated history can hold negative
+    # quantities that fail validation, and the next materialization replaces
+    # these rows anyway.
     def rematch_holdings_from_isin!(from_security, to_security)
       existing_keys = account.holdings
         .where(security_id: to_security.id)
         .pluck(:date, :currency)
         .to_set
+      mismatched_dates = []
 
       account.holdings.where(security_id: from_security.id).find_each do |holding|
         key = [ holding.date, holding.currency ]
@@ -346,36 +351,37 @@ module TradeRepublicAccount::DataHelpers
           attrs[:account_provider_id] = holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
           attrs[:cost_basis] = holding.cost_basis if existing.cost_basis.blank? && holding.cost_basis.present?
 
-          if existing.qty != holding.qty || existing.amount != holding.amount
-            DebugLogEntry.capture(
-              category: "sync",
-              level: "info",
-              message: "ISIN rematch collision kept exchange holding market values",
-              source: "trade_republic",
-              family: account.family,
-              provider_key: "trade_republic",
-              account: account,
-              metadata: {
-                from_security_id: from_security.id,
-                to_security_id: to_security.id,
-                date: holding.date,
-                isin_qty: holding.qty,
-                isin_amount: holding.amount,
-                exchange_qty: existing.qty,
-                exchange_amount: existing.amount
-              }
-            )
-          end
+          mismatched_dates << holding.date if existing.qty != holding.qty || existing.amount != holding.amount
 
-          existing.update!(attrs) if attrs.any?
           holding.destroy!
+          existing.update_columns(attrs.merge(updated_at: Time.current)) if attrs.any?
         else
-          holding.update!(
+          holding.update_columns(
             security_id: to_security.id,
-            provider_security_id: holding.provider_security_id.presence || from_security.id
+            provider_security_id: holding.provider_security_id.presence || from_security.id,
+            updated_at: Time.current
           )
           existing_keys << key
         end
       end
+
+      return if mismatched_dates.empty?
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "ISIN rematch collision kept exchange holding market values",
+        source: "trade_republic",
+        family: account.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: {
+          from_security_id: from_security.id,
+          to_security_id: to_security.id,
+          collision_count: mismatched_dates.size,
+          first_date: mismatched_dates.min,
+          last_date: mismatched_dates.max
+        }
+      )
     end
 end
