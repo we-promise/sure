@@ -370,8 +370,7 @@ class TradeRepublicItem::Importer
     # validated price remain visible in the raw payload but contribute zero
     # until Trade Republic provides a current quote.
     def cash_balance(data)
-      parse_decimal(data.dig("cash", "available_amount")) ||
-        parse_decimal(data.dig("cash", "amount")) ||
+      parse_decimal(data.dig("cash", "amount")) ||
         parse_decimal(data.dig("cash", "value")) || BigDecimal("0")
     end
 
