@@ -150,6 +150,32 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     assert_nil @provider_merchant.reload.logo_url
   end
 
+  # Regression: a provider sync can write a real provider logo between the time
+  # backfill_logos loads a merchant and when it saves the Brandfetch fallback.
+  # The lock-and-recheck must keep the provider logo instead of overwriting it.
+  test "backfill_logos does not clobber a logo written concurrently by a provider sync" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil) # the website arrived before Brandfetch was configured
+    merchant = ProviderMerchant.create!(name: "Walmart", source: "ai", website_url: "walmart.com")
+
+    # find_each yields a freshly loaded instance, not `merchant`, so the stub has
+    # to live on the class (restored after) rather than on this one object.
+    original_with_lock = ProviderMerchant.instance_method(:with_lock)
+    ProviderMerchant.define_method(:with_lock) do |&block|
+      if id == merchant.id
+        self.class.where(id: id).update_all(logo_url: "https://provider.example.com/walmart.png")
+      end
+      original_with_lock.bind(self).call(&block)
+    end
+
+    with_brandfetch do
+      assert_equal 1, ProviderMerchant.where(id: merchant.id).backfill_logos
+    end
+
+    assert_equal "https://provider.example.com/walmart.png", merchant.reload.logo_url
+  ensure
+    ProviderMerchant.define_method(:with_lock, original_with_lock) if original_with_lock
+  end
+
   test "backfill_logos does nothing without Brandfetch" do
     merchant = ProviderMerchant.create!(name: "Walmart", source: "ai", website_url: "walmart.com")
     Setting.stubs(:brand_fetch_client_id).returns(nil)
