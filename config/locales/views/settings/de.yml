@@ -556,6 +556,8 @@ de:
         disconnect: Trade Republic trennen
         disconnect_confirm: Trade Republic trennen? Deine synchronisierten Konten werden zu manuellen Konten.
         disconnect_confirm_with_identifier: "Die Trade-Republic-Verbindung mit den Endziffern %{last4} trennen? Deine synchronisierten Konten werden zu manuellen Konten."
+        identifier_phone: Telefon
+        identifier_account: Konto
         status_configured_prefix: "Verbunden. Im Reiter"
         accounts_tab: Konten
         setup_accounts: Konten einrichten

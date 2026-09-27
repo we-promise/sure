@@ -675,6 +675,8 @@ ca:
         disconnect: Desconnecta Trade Republic
         disconnect_confirm: Vols desconnectar Trade Republic? Els comptes sincronitzats passaran a ser comptes manuals.
         disconnect_confirm_with_identifier: "Vols desconnectar la connexió de Trade Republic acabada en %{last4}? Els comptes sincronitzats passaran a ser comptes manuals."
+        identifier_phone: Telèfon
+        identifier_account: Compte
         status_configured_prefix: Connectat. Ves a la pestanya
         accounts_tab: Comptes
         setup_accounts: Configura els comptes
