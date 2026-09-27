@@ -407,6 +407,13 @@ class Family < ApplicationRecord
     Merchant.where(id: merchant_ids)
   end
 
+  # Generates missing Brandfetch logos for provider merchants that have a
+  # website, so records that got their website before Brandfetch was configured
+  # self-heal (issue #2925). Returns the number of logos generated.
+  def backfill_provider_merchant_logos
+    ProviderMerchant.where(id: transactions.select(:merchant_id)).backfill_logos
+  end
+
   def available_merchants
     assigned_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
     recently_unlinked_ids = FamilyMerchantAssociation

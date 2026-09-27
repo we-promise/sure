@@ -105,4 +105,84 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     assert_equal "#4da568", converted.color
     assert_nil @provider_merchant.reload.color
   end
+
+  # Issue #2925: provider merchants that arrive with a website but no logo must
+  # get a Brandfetch logo, without replacing a logo the provider supplied.
+  test "generates a Brandfetch logo for a website-only merchant" do
+    with_brandfetch do
+      merchant = ProviderMerchant.create!(name: "Walmart", source: "akahu", website_url: "https://www.walmart.com")
+
+      assert_equal brandfetch_logo("walmart.com"), merchant.logo_url
+    end
+  end
+
+  test "keeps a provider-supplied logo" do
+    with_brandfetch do
+      merchant = ProviderMerchant.create!(name: "Walmart", source: "plaid", website_url: "walmart.com", logo_url: "https://plaid.com/walmart.png")
+
+      assert_equal "https://plaid.com/walmart.png", merchant.logo_url
+    end
+  end
+
+  test "leaves the logo blank without Brandfetch" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+
+    merchant = ProviderMerchant.create!(name: "Walmart", source: "akahu", website_url: "walmart.com")
+
+    assert_nil merchant.logo_url
+  end
+
+  test "backfill_logos fills website-only merchants in scope and counts them" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil) # the websites arrived before Brandfetch was configured
+    website_only = ProviderMerchant.create!(name: "Walmart", source: "ai", website_url: "walmart.com")
+    out_of_scope = ProviderMerchant.create!(name: "Target", source: "ai", website_url: "target.com")
+    with_logo = ProviderMerchant.create!(name: "Costco", source: "plaid", website_url: "costco.com", logo_url: "https://plaid.com/costco.png")
+
+    with_brandfetch do
+      scope = ProviderMerchant.where(id: [ website_only.id, with_logo.id, @provider_merchant.id ])
+
+      assert_equal 1, scope.backfill_logos
+    end
+
+    assert_equal brandfetch_logo("walmart.com"), website_only.reload.logo_url
+    assert_nil out_of_scope.reload.logo_url
+    assert_equal "https://plaid.com/costco.png", with_logo.reload.logo_url
+    assert_nil @provider_merchant.reload.logo_url
+  end
+
+  test "backfill_logos does nothing without Brandfetch" do
+    merchant = ProviderMerchant.create!(name: "Walmart", source: "ai", website_url: "walmart.com")
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+
+    assert_equal 0, ProviderMerchant.backfill_logos
+    assert_nil merchant.reload.logo_url
+  end
+
+  test "family backfill only touches merchants on the family's transactions" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil) # the websites arrived before Brandfetch was configured
+    assigned = ProviderMerchant.create!(name: "Walmart", source: "ai", website_url: "walmart.com")
+    unassigned = ProviderMerchant.create!(name: "Target", source: "ai", website_url: "target.com")
+    create_transaction(merchant: assigned)
+
+    with_brandfetch do
+      assert_equal 1, @family.backfill_provider_merchant_logos
+    end
+
+    assert_equal brandfetch_logo("walmart.com"), assigned.reload.logo_url
+    assert_nil unassigned.reload.logo_url
+  end
+
+  private
+    def with_brandfetch
+      Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
+      Setting.stubs(:brand_fetch_logo_size).returns(40)
+      yield
+    ensure
+      Setting.unstub(:brand_fetch_client_id)
+      Setting.unstub(:brand_fetch_logo_size)
+    end
+
+    def brandfetch_logo(domain)
+      "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/40/h/40?c=test_client_id"
+    end
 end

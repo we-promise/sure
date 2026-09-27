@@ -194,6 +194,21 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  # Issue #2925: Akahu (and sometimes Plaid) supply a website but no logo.
+  test "creates a website-only merchant with a Brandfetch logo" do
+    Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
+    Setting.stubs(:brand_fetch_logo_size).returns(40)
+
+    merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "akahu_merchant_123",
+      name: "Countdown",
+      source: "akahu",
+      website_url: "https://www.countdown.co.nz"
+    )
+
+    assert_equal "https://cdn.brandfetch.io/countdown.co.nz/icon/fallback/lettermark/w/40/h/40?c=test_client_id", merchant.logo_url
+  end
+
   test "returns nil when merchant data is insufficient" do
     merchant = @adapter.find_or_create_merchant(
       provider_merchant_id: "",
