@@ -55,12 +55,9 @@ This command will do the following:
 
 At this point, you should have `compose.yml` in your directory (and optionally `bin/db-backup.sh` generated alongside `compose.yml` when using backups).
 
-### Step 3 (optional): Configure your environment
+### Step 3: Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  
-That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
-
-If you're running the app locally and don't care much about security, you can skip this step.
+The app needs a secret key of your own before it will start. This key signs sessions and, on self-hosted installs, is also the source of the keys that encrypt stored credentials such as bank connection tokens, so it must be unique to your install and kept private.
 
 #### Create your environment file
 
@@ -100,6 +97,18 @@ Fill in this file with the following variables:
 SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
+
+#### Set explicit encryption keys (recommended)
+
+Without explicit keys, the app derives its Active Record encryption keys from `SECRET_KEY_BASE`. Setting them explicitly lets you rotate `SECRET_KEY_BASE` later without losing access to encrypted data. Generate three values:
+
+```bash
+for k in PRIMARY_KEY DETERMINISTIC_KEY KEY_DERIVATION_SALT; do echo "ACTIVE_RECORD_ENCRYPTION_$k=$(openssl rand -hex 32)"; done
+```
+
+Add the three lines to `.env`. Set all three or none; a partial set stops the app from starting.
+
+Back up `SECRET_KEY_BASE` and these keys somewhere other than your database backups (a password manager works well). If they are lost, encrypted data such as bank connections cannot be recovered.
 
 #### Using HTTPS
 
