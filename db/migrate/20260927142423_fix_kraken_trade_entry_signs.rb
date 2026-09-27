@@ -13,9 +13,16 @@
 # An entry the user edited is theirs, whatever it says, and is left for them.
 #
 # The persisted balance series was derived from the wrong flows, so each
-# account touched is queued for a sync, which rebuilds the whole series for a
-# linked account -- the same follow-through as cleanup_orphaned_currency_balances.
+# account touched gets a sync, which rebuilds the whole series for a linked
+# account -- the same follow-through as cleanup_orphaned_currency_balances,
+# with two differences that make the rebuild certain rather than likely. The
+# UPDATE is committed before anything is queued, so no sync can read the
+# entries mid-flip. And the sync is a fresh record run after Sync::VISIBLE_FOR
+# instead of `sync_later`, which would reuse a sync already in flight -- one
+# that may have materialized the old flows moments before the commit.
 class FixKrakenTradeEntrySigns < ActiveRecord::Migration[8.1]
+  disable_ddl_transaction!
+
   def up
     flipped = execute(<<~SQL).to_a
       UPDATE entries
@@ -39,9 +46,10 @@ class FixKrakenTradeEntrySigns < ActiveRecord::Migration[8.1]
 
     say "Flipped #{flipped.size} Kraken trade entries across #{account_ids.size} accounts"
 
-    if defined?(Account) && Account.respond_to?(:where)
+    if defined?(Account) && defined?(SyncJob) && defined?(Sync)
       Account.where(id: account_ids).find_each do |account|
-        account.sync_later if account.respond_to?(:sync_later)
+        sync = account.syncs.create!
+        SyncJob.set(wait: Sync::VISIBLE_FOR).perform_later(sync)
       end
       say "Queued a balance rebuild for #{account_ids.size} accounts"
     else

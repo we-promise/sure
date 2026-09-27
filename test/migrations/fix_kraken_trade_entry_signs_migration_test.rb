@@ -4,6 +4,8 @@ require "test_helper"
 require Rails.root.join("db/migrate/20260927142423_fix_kraken_trade_entry_signs")
 
 class FixKrakenTradeEntrySignsMigrationTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @account = accounts(:investment)
     @security = Security.create!(ticker: "CRYPTO:BTC", name: "BTC", offline: true)
@@ -15,11 +17,28 @@ class FixKrakenTradeEntrySignsMigrationTest < ActiveSupport::TestCase
 
     # The balance series was derived from the wrong flows and has to be rebuilt.
     assert_difference -> { @account.syncs.count }, 1 do
-      run_migration
+      assert_enqueued_with(job: SyncJob) { run_migration }
     end
 
     assert_equal 50, buy.reload.amount
     assert_equal(-120, sell.reload.amount)
+  end
+
+  # A sync already running may have materialized the old flows moments before
+  # the flip. `sync_later` would reuse it and queue nothing, so the rebuild is
+  # a distinct sync, run once that one can no longer be reused.
+  test "queues a fresh rebuild even when a sync is already in flight" do
+    kraken_trade("buy_tx", qty: 0.001, amount: -50)
+    in_flight = @account.syncs.create!
+    in_flight.start!
+
+    freeze_time do
+      assert_difference -> { @account.syncs.count }, 1 do
+        run_migration
+      end
+
+      assert_enqueued_with(job: SyncJob, at: Sync::VISIBLE_FOR.from_now)
+    end
   end
 
   test "leaves an entry that already agrees, so it can run twice" do
