@@ -116,12 +116,12 @@ ca:
         one: Vençuda fa %{count} dia
         other: Vençuda fa %{count} dies
     paid_label: Pagada
-    paid_over_short: Pagada, de més
+    paid_over_short: Pagada de més
     installment_progress: Termini %{done_plus_one} de %{total}
     partial_progress: '%{paid} de %{expected} pagats'
     cancelled_still_scheduled: La vas marcar com a cancel·lada el %{date}, però encara està programada, així que continuaran apareixent factures futures.
     paid_over: Pagats %{paid}, més del previst
-    remaining_label: pendent
+    remaining_label: pendents
     debt_payment: · pagament de deute
     paid_from: des de %{account}
     amount_range: entre %{min} i %{max}

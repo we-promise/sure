@@ -24,7 +24,7 @@ ca:
           ready: Envia una notificació de prova als dispositius iOS activats registrats al teu compte.
           queued: Notificació de prova a la cua. Actualitza els resultats de sota per comprovar-ne l'estat.
           hosted_only: Les notificacions push només estan disponibles en el mode allotjat.
-          ineligible: Només un super administrador actiu pot enviar una notificació de prova.
+          ineligible: Només un superadministrador actiu pot enviar una notificació de prova.
           no_devices: Activa les notificacions push a l'app de Sure per a iOS per a aquest compte per enviar una prova.
           disabled: L'operador ha desactivat l'enviament de notificacions push.
           not_configured: Les credencials d'APNs no estan configurades.
@@ -66,7 +66,7 @@ ca:
           enqueued: A la cua
           retries: Reintents
           failed: Fallides
-          processed_total: Total processades
+          processed_total: Processades (total)
           queue: Cua
           size: Mida
           latency: Latència

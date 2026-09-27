@@ -160,7 +160,7 @@ ca:
         country: País
         currencies_more: "+%{count} més"
         currencies_subtitle: Tria quines divises apareixen als camps d'import de %{moniker}
-        currencies_title: "Divises de %{moniker}"
+        currencies_title: "Divises"
         currency: Divisa
         currency_search_placeholder: Cerca divises
         date_format: Format de data
