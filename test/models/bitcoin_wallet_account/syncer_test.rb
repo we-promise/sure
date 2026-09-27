@@ -30,6 +30,32 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     assert @wallet.status_failed?
   end
 
+  test "a preview retains newly observed change when its pending transaction confirms" do
+    @wallet.bitcoin_wallet_sources.destroy_all
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB,
+      receive_address: RECEIVE, discovery: { "0" => { "complete" => true }, "1" => { "complete" => true } })
+    @wallet.bitcoin_wallet_addresses.create!(address: RECEIVE, bitcoin_wallet_source: source, used: true)
+    @wallet.bitcoin_wallet_addresses.create!(address: CHANGE, bitcoin_wallet_source: source)
+    @provider.fund(RECEIVE, 100_000)
+    tx = bitcoin_transaction(inputs: [ [ RECEIVE, 100_000 ] ], outputs: [ [ CHANGE, 99_000 ] ], confirmed: false)
+    @provider.transactions = { RECEIVE => [ tx ], CHANGE => [ tx ] }
+
+    BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
+    assert_equal 99_000, @wallet.reload.balance_sats
+
+    @provider.fund(RECEIVE, 0)
+    @provider.fund(CHANGE, 99_000)
+    @provider.transactions = {}
+    @provider.statuses[tx["txid"]] = { "confirmed" => true, "block_height" => 100 }
+    @provider.reads.clear
+    BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
+
+    assert_equal 99_000, @wallet.reload.balance_sats
+    assert @wallet.bitcoin_wallet_addresses.find_by!(address: CHANGE).used?
+    assert @wallet.status_preview?
+    assert_includes @provider.reads, CHANGE
+  end
+
   test "confirmation updates a pending transfer rather than adding another one" do
     tx = bitcoin_transaction(confirmed: false, outputs: [ [ RECEIVE, 100 ] ])
     @provider.transactions[RECEIVE] = [ tx ]

@@ -45,8 +45,28 @@ class BitcoinWalletAccount::SnapshotTest < ActiveSupport::TestCase
     snapshot = BitcoinWalletAccount::Snapshot.new(@wallet, provider: @provider).fetch
 
     assert_equal 59_000, snapshot.balance_sats
-    assert_equal [ RECEIVE ], @provider.reads
+    assert_equal [ RECEIVE, CHANGE ], @provider.reads
     assert_equal(-41_000, BitcoinWalletAccount::Snapshot.net_sats(tx, @wallet.bitcoin_wallet_addresses.pluck(:address).to_set))
+  end
+
+  test "follows pending child spends through newly funded lookahead addresses" do
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    @wallet.bitcoin_wallet_addresses.update_all(bitcoin_wallet_source_id: source.id)
+    @wallet.bitcoin_wallet_addresses.find_by!(address: RECEIVE).update!(used: true)
+    @wallet.bitcoin_wallet_addresses.create!(address: SECOND, bitcoin_wallet_source: source)
+    @provider.fund(RECEIVE, 100_000)
+    parent = bitcoin_transaction(inputs: [ [ RECEIVE, 100_000 ] ], outputs: [ [ CHANGE, 99_000 ] ], confirmed: false)
+    child = bitcoin_transaction(id: "c" * 64, inputs: [ [ CHANGE, 99_000 ] ], outputs: [ [ SECOND, 98_000 ] ], confirmed: false)
+    grandchild = bitcoin_transaction(id: "d" * 64, inputs: [ [ SECOND, 98_000 ] ], outputs: [ [ "recipient", 97_000 ] ], confirmed: false)
+    child["vin"].first.merge!("txid" => parent["txid"], "vout" => 0)
+    grandchild["vin"].first.merge!("txid" => child["txid"], "vout" => 0)
+    @provider.transactions = { RECEIVE => [ parent ], CHANGE => [ parent, child ], SECOND => [ child, grandchild ] }
+
+    snapshot = BitcoinWalletAccount::Snapshot.new(@wallet, provider: @provider).fetch
+
+    assert_equal 0, snapshot.balance_sats
+    assert_equal 3, snapshot.transactions.size
+    assert_equal [ RECEIVE, CHANGE, SECOND ], @provider.reads
   end
 
   test "a changed chain tip prevents publication" do

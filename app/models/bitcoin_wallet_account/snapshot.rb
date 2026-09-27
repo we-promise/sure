@@ -3,7 +3,7 @@
 class BitcoinWalletAccount::Snapshot
   class ChangedTip < StandardError; end
   class IncompleteMempool < StandardError; end
-  Result = Data.define(:balance_sats, :transactions, :block_height, :history_truncated)
+  Result = Data.define(:balance_sats, :transactions, :block_height, :history_truncated, :used_addresses)
 
   def initialize(wallet, provider:)
     @wallet = wallet
@@ -20,14 +20,20 @@ class BitcoinWalletAccount::Snapshot
     owned_addresses = tracked.pluck(:address).to_set
     read_addresses = tracked.where(used: true).or(tracked.where(bitcoin_wallet_source_id: nil))
       .or(tracked.where(address: known)).pluck(:address).to_set
+    pending_addresses = read_addresses.to_a
+    used_addresses = Set.new
     confirmed_sats = 0
     transactions = {}
     truncated = false
 
-    read_addresses.each do |address|
+    until pending_addresses.empty?
+      address = pending_addresses.shift
       summary = provider.get_address(address)
       stats = summary.fetch("chain_stats")
       confirmed_sats += Integer(stats.fetch("funded_txo_sum")) - Integer(stats.fetch("spent_txo_sum"))
+      if %w[chain_stats mempool_stats].sum { |key| Integer(summary.fetch(key).fetch("tx_count")) }.positive?
+        used_addresses.add(address)
+      end
       address_transactions = provider.get_wallet_transactions(address, since: wallet.baseline_at,
         include_history: wallet.baseline_at.present? && Integer(stats.fetch("tx_count")).positive?,
         include_mempool: Integer(summary.fetch("mempool_stats").fetch("tx_count")).positive?)
@@ -37,6 +43,13 @@ class BitcoinWalletAccount::Snapshot
       end
       address_transactions.each do |tx|
         transactions[tx.fetch("txid")] = tx
+        observed = referenced_addresses(tx) & owned_addresses
+        used_addresses.merge(observed)
+        # Follow only addresses touched by observed transactions, so a pending
+        # child spending newly received change is included in this same read.
+        additional = observed - read_addresses
+        read_addresses.merge(additional)
+        pending_addresses.concat(additional.to_a)
       end
       truncated ||= provider.truncated
     end
@@ -57,7 +70,7 @@ class BitcoinWalletAccount::Snapshot
     pending_sats = pending.sum { |tx| net_sats(tx, owned_addresses) }
     raise ChangedTip, "Inconsistent address balances; retry the complete wallet" if confirmed_sats + pending_sats < 0
     Result.new(balance_sats: confirmed_sats + pending_sats, transactions: transactions.values,
-      block_height: height, history_truncated: truncated)
+      block_height: height, history_truncated: truncated, used_addresses: used_addresses)
   end
 
   def self.net_sats(transaction, addresses)
@@ -71,6 +84,11 @@ class BitcoinWalletAccount::Snapshot
 
     def net_sats(transaction, addresses)
       self.class.net_sats(transaction, addresses)
+    end
+
+    def referenced_addresses(transaction)
+      outputs = Array(transaction["vout"]) + Array(transaction["vin"]).filter_map { |input| input["prevout"] }
+      outputs.filter_map { |output| output["scriptpubkey_address"] }.to_set
     end
 
     def self.value_for(output, addresses)

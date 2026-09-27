@@ -51,6 +51,7 @@ class BitcoinWalletAccount::Syncer
       wallet.with_lock do
         return unless source_signature == @source_signature
 
+        wallet.bitcoin_wallet_addresses.where(address: snapshot.used_addresses.to_a, used: false).update_all(used: true)
         remember_transactions(snapshot, statuses)
         attributes = { balance_sats: snapshot.balance_sats,
           history_truncated: snapshot.history_truncated, last_synced_at: Time.current, last_error: nil,
