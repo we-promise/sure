@@ -106,6 +106,9 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "retries last user message" do
+    last_viewed_chat = @user.chats.create!(title: "Last Viewed Chat")
+    @user.update!(last_viewed_chat: last_viewed_chat)
+
     chat = chats(:one)
     chat.messages.destroy_all
     # UserMessage's own after_create_commit already calls ask_assistant_later
