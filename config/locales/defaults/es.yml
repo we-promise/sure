@@ -230,3 +230,11 @@ es:
       long: '%-d de %B de %Y %H:%M'
       short: '%-d de %b %H:%M'
     pm: pm
+  mcp:
+    errors:
+      invalid_session_id: ID de sesión MCP no válido
+      unsupported_protocol_version: 'Versión de protocolo MCP no compatible: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris debe usar https, http de bucle invertido
+        o un esquema de URI de aplicación nativa

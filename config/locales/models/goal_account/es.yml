@@ -1,0 +1,10 @@
+---
+es:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Esta cuenta ya está totalmente reservada
+                para "%{goal_name}". Ingrese una cantidad para dividirla.

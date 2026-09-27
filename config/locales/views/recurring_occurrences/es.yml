@@ -1,0 +1,54 @@
+---
+es:
+  recurring_occurrences:
+    history_status:
+      paid: Pagado
+      skipped: Saltado
+      missed: Omitido
+      scheduled: Abierto
+    show:
+      due_on: Vencimiento %{date}
+      paid_of: "%{paid} de %{expected} pagado"
+      paid_headline: "%{amount} pagado"
+      remaining: "%{amount} restante"
+      settled: Pagado en su totalidad
+      overpaid: más de lo esperado
+      skipped: Saltado
+      missed: marcado perdido
+      payments: Pagos
+      manual_payment: Pago manual
+      unlink: Desconectar
+      review_heading: Revisar pago
+      find_heading: encontrar un pago
+      add_heading: Agregar otro pago
+      other_matches: Otras coincidencias probables
+      no_ranked_candidates: Nada aquí parece un pago por esta factura todavía.
+      search_all: Buscar todas las transacciones
+      search_placeholder: Buscar transacciones
+      no_candidates: No hay transacciones cercanas para vincular.
+      no_search_results: No hay nada que coincida con %{query}.
+      link_payment: Pago por enlace
+      not_this_one: Este no
+      cant_find: "¿No encuentras la transacción?"
+      manual_explainer: Registra un pago que sabes que se realizó cuando ninguna transacción
+        coincide aquí.
+      manual_amount_label: Cantidad
+      manual_date_label: Fecha
+      record_payment: Registrar pago
+      mark_paid: Marcar como pagada
+      mark_paid_hint: Liquida el resto sin registrar una transacción.
+      skip: Saltar
+      snooze_week: Dormir una semana
+      reopen: Reabrir
+      view_bill: Ver factura completa
+    mark_paid:
+      success: Factura marcada como pagada
+    skip:
+      success: Factura omitida
+    reopen:
+      success: Proyecto de ley reabierto
+    snooze:
+      success: Pospuesto hasta %{date}
+      invalid_date: Esa fecha no se pudo leer.
+    override_amount:
+      success: Cantidad esperada actualizada

@@ -1,0 +1,367 @@
+---
+es:
+  admin:
+    system_health:
+      push_notifications:
+        send_test: Enviar notificación push de prueba
+        queueing: En cola…
+        title: Notificaciones push
+        requested_at: Última prueba solicitada en %{time}
+        result_help: La aceptación APNs no confirma la entrega a su dispositivo. Actualice
+          para ver los resultados de los trabajadores. Los resultados se conservan
+          durante 24 horas.
+        device: Dispositivo %{number}
+        pending: Pendiente
+        refresh: Actualizar resultados
+        columns:
+          device: Dispositivo
+          environment: APNs entorno
+          status: Resultado
+          checked_at: Última actualización
+        environments:
+          sandbox: Sandbox
+          production: Producción
+        messages:
+          enqueue_failed: La prueba no se pudo poner en cola. Revisa Sidekiq y actualiza
+            los resultados a continuación.
+          ready: Envíe una notificación de prueba a los dispositivos iOS habilitados
+            registrados en su cuenta.
+          queued: Notificación de prueba en cola. Actualice los resultados a continuación
+            para verificar su estado.
+          hosted_only: Las notificaciones push solo están disponibles en modo alojado.
+          ineligible: Solo un superadministrador activo puede enviar una notificación
+            de prueba.
+          no_devices: Habilite las notificaciones automáticas en la aplicación Sure
+            iOS para que esta cuenta envíe una prueba.
+          disabled: El operador ha desactivado la entrega push.
+          not_configured: Las credenciales APNs no están configuradas.
+          cooldown: Espere 30 segundos antes de enviar otra prueba.
+          storage_unavailable: No se pudo guardar la solicitud de prueba. Verifique
+            la configuración de la caché compartida.
+        statuses:
+          queued: En cola
+          accepted: Aceptado por APNs
+          skipped: 'Omitido: ya no es elegible'
+          rejected: Rechazado por APNs; comprobar los registros de depuración push
+          unregistered: El registro del dispositivo ya no es válido
+          retrying: Reintentar un error temporal
+          failed: Fallido; comprobar los registros de depuración push
+          enqueue_failed: No se pudo poner en cola; comprobar Sidekiq
+          expired: Caducó sin resultado final
+      push_notification:
+        title: Notificación de prueba de Sure
+        body: Esta es una notificación push de prueba para tu cuenta de Sure.
+      verify_worker_ai:
+        queued: Cheque de trabajador en cola. Aparecerá a continuación una vez que
+          un proceso de trabajo lo detecte, generalmente en unos segundos.
+      show:
+        title: Estado del sistema
+        tabs:
+          background_jobs: Trabajos en segundo plano
+          ai: Estado de IA
+        alert:
+          title: Los trabajos en segundo plano no se están ejecutando
+        status_section_title: Estado Sidekiq
+        status_section_description: Estado actual del trabajador en segundo plano
+          que impulsa las sincronizaciones, los saldos y los cálculos del patrimonio
+          neto.
+        counters_section_title: contadores de trabajo
+        counters_section_description: Agregue contadores Sidekiq en todas las colas.
+        queues_section_title: Colas
+        queues_section_description: Profundidad por cola y antigüedad del trabajo
+          más antiguo. La latencia son los segundos que ha estado esperando el trabajo
+          más antiguo.
+        labels:
+          status: Estado
+          processes: Procesos de trabajo
+          last_heartbeat: último latido
+          max_queue_latency: Antigüedad del trabajo más antiguo
+          enqueued: en cola
+          retries: Reintentos
+          failed: Fallido
+          processed_total: Total procesado
+          queue: Cola
+          size: Tamaño
+          latency: Latencia
+        values:
+          healthy: Saludable
+          unhealthy: Degradado
+          time_ago: Hace %{time_ago}
+          never: Nunca
+          seconds: "%{seconds}s"
+          no_queues: No se registran colas. Es posible que el trabajador no esté corriendo.
+        ai:
+          run_checks: Ejecutar comprobaciones nuevamente
+          last_checked: Las comprobaciones en vivo se completaron hace %{time_ago}.
+            Los resultados se almacenan en caché brevemente.
+          not_checked_help: Abra la URL de estado de IA directamente o ejecute las comprobaciones
+            para verificar la vida del servicio.
+          alerts:
+            custom_openai:
+              title: La verificación del almacén de vectores alojado falló en este
+                punto final personalizado
+              message: El punto final configurado no pasó la verificación de actividad
+                /v1/vector_stores. La mayoría de los puntos finales locales y compatibles
+                con OpenAI no implementan ese API. Es posible que el chat y el procesamiento
+                PDF aún funcionen; use pgvector con un punto final de incrustaciones
+                separado para la configuración local habitual. El error se registró
+                en Configuración → Registros de depuración y Rails.logger.
+            function_calling_unsupported:
+              title: El modelo no admite llamadas a funciones.
+              message: El punto final atendió una solicitud de chat simple pero rechazó
+                la misma solicitud que llevaba el parámetro de herramientas. El asistente
+                de IA lee cuentas, transacciones y tenencias a través de llamadas a funciones,
+                por lo que el chat sigue fallando (a menudo con un 404 inútil) hasta
+                que el modelo admite herramientas. Elija un modelo cuyo proveedor
+                documente el soporte de llamada de funciones. El error se registró
+                en Configuración → Registros de depuración y Rails.logger.
+            function_calling_not_used:
+              title: El modelo respondió sin llamar a la herramienta que se le pidió
+                que llamara.
+              message: El punto final aceptó el parámetro de herramientas, pero el
+                modelo respondió con texto en lugar de llamar a la herramienta de
+                verificación de estado. El asistente de IA no puede leer datos financieros
+                sin llamadas a herramientas, por lo que el chat puede responder sin
+                nada o con cifras inventadas. Prefiera un modelo cuyo proveedor documente
+                el soporte de llamada de funciones.
+            llm_probe_failed:
+              title: La verificación en vivo LLM falló
+              message: Sure no pudo verificar tanto el punto final configurado como
+                el modelo. El error se registró en Configuración → Registros de depuración
+                y Rails.logger.
+            llm_model_not_available:
+              title: El modelo de IA configurado no está disponible
+              message: El punto final respondió, pero no enumeró ni proporcionó el
+                modelo configurado. Elija un modelo activo para el proveedor seleccionado
+                y luego ejecute las comprobaciones nuevamente. Para Gemini a través
+                de una capa de traducción compatible con OpenAI, utilice un modelo
+                actualmente compatible, como gemini-2.5-flash.
+            pdf_text_extraction_failed:
+              title: La comprobación de extracción de texto sintético PDF falló
+              message: Sure no pudo completar la ruta de texto primero que extrae
+                el texto PDF incrustado localmente y lo envía al modelo configurado.
+                No se enviaron datos del cliente. El error se registró en Configuración
+                → Registros de depuración y Rails.logger.
+            pdf_vision_processing_failed:
+              title: La verificación sintética PDF de visión/nativa falló
+              message: Sure no pudo completar la ruta de la imagen o del documento
+                nativo PDF a través del modelo configurado. No se enviaron datos del
+                cliente. El error se registró en Configuración → Registros de depuración
+                y Rails.logger.
+            vector_probe_failed:
+              title: La verificación en vivo de búsqueda de documentos falló
+              message: Sure no pudo verificar el almacén de vectores seleccionado
+                y todos los servicios de incorporación requeridos. El error se registró
+                en Configuración → Registros de depuración y Rails.logger.
+            pgvector_extension_not_enabled:
+              title: La extensión de vector PostgreSQL no está habilitada
+              message: El adaptador pgvector está seleccionado, pero PostgreSQL no
+                ha habilitado la extensión vectorial para esta base de datos. Utilice
+                una imagen PostgreSQL que incluya pgvector, luego habilite la extensión
+                como propietario de la base de datos o superusuario y vuelva a ejecutar
+                las migraciones con VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: Falta la tabla vector_store_chunks
+              message: La extensión pgvector está habilitada, pero no se encontró
+                la tabla de fragmentos. Verifique el estado de la migración, luego
+                vuelva a ejecutar la migración del almacén de vectores con VECTOR_STORE_PROVIDER=pgvector
+                para que Sure pueda crear vector_store_chunks.
+            pgvector_probe_failed:
+              title: La verificación de almacenamiento pgvector falló
+              message: Sure no pudo consultar la tabla de fragmentos pgvector. Verifique
+                los permisos PostgreSQL, la extensión del vector y la migración de
+                vector_store_chunks. El error se registró en Configuración → Registros
+                de depuración y Rails.logger.
+            embedding_dimensions_mismatch:
+              title: Las dimensiones de empotramiento no coinciden.
+              message: El punto final de incrustación devolvió un vector cuya longitud
+                no coincide con EMBEDDING_DIMENSIONS. Establezca EMBEDDING_MODEL y
+                EMBEDDING_DIMENSIONS en el tamaño de vector documentado del modelo,
+                reinicie Sure para que el entorno persista, luego modifique o vuelva
+                a crear la columna/tabla de incrustación pgvector y vuelva a incrustar
+                documentos si los datos existentes usaban un tamaño diferente.
+            embedding_probe_timeout:
+              title: Se agotó el tiempo de espera para la verificación en vivo de
+                incrustación.
+              message: El punto final de incorporación no respondió antes de AI_HEALTH_PROBE_TIMEOUT.
+                Aumente ese tiempo de espera de verificación de estado si el proveedor
+                es lento, luego reinicie Sure para que el entorno persista en cada
+                proceso. Si las llamadas de chat normales de IA también expiran, aumenta
+                OPENAI_REQUEST_TIMEOUT por separado.
+            embedding_probe_failed:
+              title: La verificación en vivo de incrustación falló
+              message: Sure no pudo crear una prueba breve incrustada a través del
+                punto final y el modelo configurados. Verifique EMBEDDING_URI_BASE,
+                EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN y los registros del proveedor
+                de incorporación. El error se registró en Configuración → Registros
+                de depuración y Rails.logger.
+            qdrant:
+              title: El soporte Qdrant aún no está implementado
+              message: El adaptador Qdrant tiene scaffolding, pero actualmente fallan
+                las operaciones de carga y búsqueda de documentos. Seleccione OpenAI
+                o pgvector para buscar documentos.
+            missing_vector_store:
+              title: No hay ningún almacén de vectores configurado
+              message: Los documentos cargados no se pueden indexar ni buscar hasta
+                que se configure un adaptador de almacén de vectores y sus requisitos.
+            unavailable_vector_store:
+              title: El almacén de vectores seleccionado no está disponible
+              message: Verifique los requisitos del adaptador a continuación. Para
+                pgvector, la base de datos debe proporcionar la extensión del vector
+                o una tabla vector_store_chunks existente.
+          llm:
+            title: Procesamiento de LLM y PDF
+            description: Las comprobaciones en vivo verifican el modelo configurado,
+              le solicitan una llamada de función trivial como lo hace el asistente,
+              luego ejercitan por separado la extracción de texto y el procesamiento
+              de visión/nativo con un PDF sintético de una página que no contiene
+              datos del cliente. Los valores de credenciales nunca se muestran.
+          vector_store:
+            title: Almacén vectorial y búsqueda de documentos
+            description: La verificación en vivo consulta el almacén de vectores alojado
+              API o prueba la tabla pgvector y crea una incrustación breve sin almacenarla.
+          labels:
+            selected_provider: Proveedor seleccionado
+            effective_provider: Proveedor efectivo
+            model: Modelo
+            endpoint: Punto final
+            function_calling: Llamadas a funciones (herramientas)
+            pdf_text_extraction: PDF ruta de extracción de texto
+            pdf_vision_processing: PDF visión/ruta nativa
+            llm_request_timeout: Tiempo de espera de la solicitud LLM
+            probe_request_timeout: Tiempo de espera de la comprobación de estado
+            openai_credentials: OpenAI credenciales
+            openai_compatible_credentials: Credenciales de API compatible con OpenAI
+            anthropic_credentials: Anthropic credenciales
+            adapter: Adaptador
+            adapter_available: Adaptador disponible
+            pgvector_extension: PostgreSQL extensión vectorial
+            pgvector_table: Tabla de fragmentos vectoriales
+            embedding_model: Modelo de incrustación
+            embedding_endpoint: Endpoint de embeddings
+            embedding_dimensions: Dimensiones de incrustación
+            function_calling_failure_reason: Motivo del error de llamada de función
+            pdf_text_extraction_failure_reason: Motivo del error de extracción de
+              texto
+            pdf_vision_processing_failure_reason: Visión/motivo del fallo nativo
+            storage_probe: pgvector verificación de almacenamiento
+            embedding_probe: Comprobación del endpoint de embeddings
+            failure_reason: Motivo del fallo
+          providers:
+            openai: OpenAI
+            openai_compatible: compatible con OpenAI
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Juntos
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Punto final personalizado
+          adapters:
+            openai: Almacén vectorial alojado en OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Configurado
+            not_configured: No configurado
+            fallback: "(retroceder)"
+            not_set: No establecido
+            'yes': Sí
+            'no': 'No'
+            enabled: Activado
+            available_not_enabled: Disponible, no habilitado
+            not_available: No disponible
+            available: Disponible
+            not_found: Extraviado
+          function_calling_statuses:
+            supported: La llamada a la herramienta en vivo fue exitosa
+            unsupported: No respaldado por el proveedor/modelo efectivo
+            not_used: Se aceptan herramientas, pero el modelo no indica ninguna.
+            failing: La verificación en vivo falló
+            not_checked: No comprobado
+            unavailable: No disponible hasta que se configure un proveedor LLM
+          pdf_statuses:
+            supported: Se pasó la verificación sintética PDF
+            failing: Error en la comprobación sintética PDF
+            unsupported: Deshabilitado o no respaldado por el proveedor/modelo vigente
+            not_checked: No comprobado
+            unavailable: No disponible hasta que se configure un proveedor LLM
+          probe_statuses:
+            passing: Cheque en vivo aprobado
+            failing: La verificación en vivo falló
+            not_checked: No comprobado
+            not_configured: No configurado
+          vector_statuses:
+            passing: Cheques en vivo pasados
+            failing: La verificación en vivo falló
+            not_checked: No comprobado
+            not_configured: No configurado
+            scaffolded: andamio
+            missing: No configurado
+          failure_codes:
+            model_not_available: El modelo configurado no fue devuelto por el proveedor
+            no_tool_call: El modelo respondió sin llamar a la herramienta de control
+              de salud.
+            tools_refused: El servicio atendió la misma solicitud sin herramientas
+              y la rechazó con ellas.
+            invalid_response: El servicio arrojó una respuesta inesperada.
+            dimensions_mismatch: Las dimensiones del vector de incrustación no coinciden
+              con las dimensiones configuradas
+            extension_not_enabled: La extensión de vector PostgreSQL no está habilitada
+            table_not_found: No se encontró la tabla vector_store_chunks
+            render_missing_binary: El renderizador pdftoppm (poppler-utils) no está
+              disponible en este contenedor
+            timeout: El servicio no respondió antes del tiempo de espera de la sonda.
+            request_failed: La solicitud de servicio falló
+            unsupported_provider: El proveedor no admite esta comprobación.
+          worker:
+            title: Verificación del trabajador
+            description: Las comprobaciones anteriores se ejecutaron desde este proceso
+              web. La mayor parte del trabajo de IA (respuestas del asistente, procesamiento
+              PDF, embeddings, categorización automática y detección de comercios)
+              en realidad se ejecuta en un proceso de trabajo Sidekiq, que puede diferir
+              en el acceso a la red, DNS, reglas de proxy o incluso credenciales cargadas.
+              Ponga en cola una verificación para verificar la configuración y conectividad
+              propias de un trabajador.
+            verify_button: Verificar la configuración del trabajador
+            coverage_notice: Cada verificación verifica exactamente un proceso de
+              trabajo, cualquiera que lo retire de la cola. Con más de una réplica
+              de trabajador, un resultado aprobado no confirma que todos los trabajadores
+              estén sanos; vuelva a poner en cola el cheque para probar otro.
+            empty:
+              title: Ningún trabajador se ha registrado todavía
+              description: Haga clic en "Verificar configuración del trabajador" para
+                poner en cola una verificación asincrónica. El resultado aparece aquí
+                una vez que un proceso de trabajo lo recoge.
+            labels:
+              process: proceso de trabajo
+              checked_at: Comprobado
+              configuration: Configuración
+            configuration_statuses:
+              match: Partidos web
+              mismatch: Se diferencia de la web
+            statuses:
+              passing: Paso
+              failing: Defecto
+              stale: Duro
+            settings_origin:
+              title: "¿Qué configuraciones necesitan reiniciar?"
+              database_backed: Las configuraciones de proveedor, modelo y clave API
+                cambiadas en Configuración → Autoalojamiento se almacenan en la base
+                de datos. Rails-settings-cached invalida el caché compartido en escritura,
+                por lo que tanto la web como el trabajador resuelven el nuevo valor
+                para la siguiente solicitud o trabajo en cola; no es necesario reiniciar.
+              env_backed: La configuración de incrustación y cualquier valor establecido
+                únicamente a través de una variable de entorno se fija cuando se inicia
+                cada contenedor. Rails no puede cambiar el entorno de otro contenedor,
+                por lo que cambiarlos requiere reiniciar o recrear tanto los servicios
+                web como los de trabajo, y cualquier herramienta de implementación
+                que solo reinicie uno de ellos (implementación parcial, un Secret
+                actualizado sin un reinicio del pod) no recogerá el cambio.
+          local_setup:
+            title: Configuración local recomendada
+            description: Ejecute LLM a través de su punto final local compatible con
+              OpenAI, almacene vectores de documentos en pgvector y apunte la configuración
+              de incrustación a un punto final de incrustaciones compatible con OpenAI.
+              La imagen PostgreSQL debe incluir la extensión del vector y las dimensiones
+              de incrustación deben coincidir con el modelo seleccionado.

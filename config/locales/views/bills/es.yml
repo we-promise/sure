@@ -1,0 +1,334 @@
+---
+es:
+  bills:
+    row_overdue: Vencida
+    row_today: Hoy
+    detect:
+      found:
+        one: Se encontró 1 posible factura. Revísala a continuación.
+        other: Se encontraron %{count} posibles facturas. Revísalas a continuación.
+      none_found: No se encontraron nuevos patrones recurrentes. Puedes agregar facturas
+        manualmente.
+      already_running: La detección ya está en marcha. Vuelve a consultar en un momento.
+    feed:
+      calendar_name: Facturas de Sure
+    ai_prompts:
+      due_before_paycheck: "¿Qué vence antes de mi próxima nómina?"
+      subscriptions_up: "¿Qué suscripciones aumentaron este año?"
+      monthly_subscriptions: "¿Cuánto pago mensualmente por las suscripciones?"
+      safe_to_spend: "¿Cuánto es seguro gastar este período?"
+    smart_configurations:
+      show:
+        trigger: Dejar que la IA configure
+        title: Sugerencias de IA para %{name}
+        intro: Revisa los cambios que se aplicarán. Los que no están marcados se dejan
+          exactamente como están.
+        no_changes: Esta factura ya coincide con su historial de pagos. Nada que cambiar.
+        failed: No se pudo analizar esta factura en este momento. Su configuración
+          está intacta.
+        field_name: Nombre
+        field_amount: Cantidad
+        field_schedule: Cronograma
+        field_category: Categoría
+        field_kind: Tipo
+        field_autopay: Pago automático
+        uncategorized: Sin categoría
+        autopay_off: Desactivado
+        autopay_on: Activado
+        apply: Aplicar seleccionado
+    detail:
+      current: Actual
+      next_payment: Próximo pago
+      around: alrededor de %{date}
+      rules: Cómo se vincula esta factura
+      rule_named: "%{name}"
+      rule_amount_range: de %{min} a %{max}
+      rule_aliases: También coincide con %{names}
+      rule_learned_tolerance: Los montos dentro de %{percent} del monto habitual coinciden
+        con esta factura
+      history_title: últimos 12 meses
+      history_aria: Pagos de los últimos doce meses
+      key_metrics: Por año
+      year: Año
+      spent_per_year: Gastado
+      avg_payment: Pago promedio
+      average: Promedio pagado
+      range: "%{min} a %{max}"
+      annualized: un año
+      ytd: Pagado este año
+      last_account: Última cuenta utilizada
+      upcoming: Próximas
+      recent_payments: Pagos recientes
+      manual_payment: Pago manual
+      history: Historia
+      payment_count:
+        one: 1 pago
+        other: "%{count} pagos"
+      notes: Notas
+      trial_chip: La prueba finaliza %{date}
+      renews_chip: Renueva %{date}
+      cancelled_chip: Cancelado %{date}
+      price_changes: Cambios de precio
+      price_change_line: "%{from} → %{to}"
+    month_pulse:
+      bill_count:
+        one: 1 factura
+        other: "%{count} facturas"
+      left_to_pay: queda por pagar
+      pulse_paid: pagado
+      pulse_overdue: atrasado
+      pulse_next_seven: los próximos 7 días
+      pulse_bar_aria: "%{percent}% de las facturas de este mes pagadas"
+      next_up: Siguiente
+      view_upcoming: Ver próximos
+      date_today: Hoy
+      date_tomorrow: Mañana
+      unconvertible:
+        one: 1 factura no está incluida porque no hay tipo de cambio disponible
+        other: "%{count} facturas no están incluidas porque no hay tipo de cambio disponible"
+    summary:
+      remaining: "%{amount} restante"
+      paid_headline: "%{amount} pagado"
+      cost_line: Promedia %{average} por pago, aproximadamente %{annualized} por año
+    pane:
+      close: Contraer detalles
+    add_bill: Agregar factura
+    manage: Administrar
+    find_payment: Buscar pago
+    add_payment: Agregar pago
+    review_match: Revisar coincidencia
+    resolve: Resolver
+    manage_payments: Administrar pagos
+    view_full_bill: Ver factura completa
+    match:
+      same_merchant: Mismo comercio
+      name_matches: Coincidencias de nombres
+      exact_amount: Cantidad exacta
+      amount_off: "%{amount} de diferencia"
+      due_date: Coincidencia de fecha de vencimiento
+      days_before:
+        one: 1 día antes del vencimiento
+        other: "%{count} días antes del vencimiento"
+      days_after:
+        one: 1 día después del vencimiento
+        other: "%{count} días después del vencimiento"
+    attention:
+      needs_review: La coincidencia necesita revisión
+      partial: Parcial · %{amount} restante
+      amount_changed: Cantidad cambiada
+      overdue:
+        one: 1 día de retraso
+        other: "%{count} días de retraso"
+    paid_label: Pagado
+    paid_over_short: Pagado, más
+    installment_progress: Pago %{done_plus_one} de %{total}
+    partial_progress: "%{paid} de %{expected} pagado"
+    cancelled_still_scheduled: Marcaste esto como cancelado el %{date}, pero aún está
+      programado, por lo que seguirán apareciendo facturas futuras.
+    paid_over: Pagó %{paid}, más de lo esperado
+    remaining_label: restante
+    debt_payment: "· pago de deuda"
+    paid_from: de %{account}
+    amount_range: rangos %{min} a %{max}
+    possible_duplicate: Posible duplicado
+    due_label:
+      overdue:
+        one: Vencido por 1 día, venció %{date}
+        other: Vencido por %{count} días, venció %{date}
+      today: Vencimiento hoy
+      settled: Se debía %{date}
+      due_since: Vencimiento %{date}
+      snoozed: Pospuesto hasta %{date}
+      upcoming:
+        one: Vence mañana, %{date}
+        other: Vencimiento en %{count} días, %{date}
+    views:
+      aria_label: Vistas de facturas
+      overview: Descripción general
+      calendar: Calendario
+      paycheck: Plan de ingresos
+      all: todas las facturas
+    pay_period:
+      paycheck_on: Cheque de sueldo %{date}
+      before_next_paycheck: Antes de tu próxima nómina
+      due_before_date: "%{amount} vence antes de %{date}"
+    paycheck:
+      unconvertible:
+        one: 1 obligación no incluida, no hay tipo de cambio disponible
+        other: "%{count} obligaciones no incluidas, no hay tipo de cambio disponible"
+      income_section_title: calendario de ingresos
+      manage: Administrar
+      add_income: Agregar ingresos
+      income_paused: En pausa, no planificado
+      income_detected: Detectado automáticamente, no establece días de pago
+      income_next_payday: siguiente %{date}
+      income_source_count:
+        one: "%{count} fuente de ingresos"
+        other: "%{count} fuentes de ingresos"
+      next_on: Siguiente %{date}
+      no_upcoming_income: No hay ingresos programados a partir de ahora.
+      empty:
+        title: Declara tu calendario de ingresos
+        description: 'Sume sus ingresos para ver lo que tiene para cubrir cada día
+          de pago. Los flujos de entrada detectados nunca determinan por sí solos
+          sus días de pago: usted sí.'
+        action: Agregar ingresos
+      all_clear:
+        title: Nada que cubrir
+        description: No vencen facturas entre ahora y %{date}, por lo que no se habla
+          de nada en ese período.
+      safe_after_bills: Seguro después de las facturas
+      short_after_bills: Poco después de las facturas
+      period_source: "· %{source}"
+      period_source_multiple: "· %{count} fuentes de ingresos"
+      before_next_paycheck: Antes de %{date}
+      no_income_arriving: No llegan ingresos
+      income_amount: "%{amount} ingresos"
+      due_this_period: Debido a este período
+      reserved_ahead: Reservado con antelación
+      safe_short: Seguro
+      short_short: Corto
+      reserved_footer:
+        one: Reservado con anticipación para 1 factura posterior
+        other: Reservado con antelación para %{count} facturas posteriores
+      bills_this_period:
+        one: Facturas este periodo · 1
+        other: Factura este periodo · %{count}
+      bills_before_payday:
+        one: Facturas antes de tu próximo día de pago · 1
+        other: Facturas antes de tu próximo día de pago · %{count}
+      of_total: de %{amount}
+      bridge_label: Antes de tu próxima nómina
+      bridge_amount: "· %{amount} vencido"
+      bridge_split: Vencimiento antes del %{date}, cubierto por el %{cash} en sus
+        cuentas.
+      shortfall_label: Poco antes de su próximo día de pago
+      shortfall_amount: "· %{amount}"
+      shortfall_split: "%{obligations} vence antes de %{date} y sus cuentas tienen
+        %{cash}."
+      shortfall_largest: 'Mayor obligación próxima:'
+      review_plan: Plan de revisión
+      allocation_aria: De los ingresos de %{income}, %{due} vence ahora, %{reserved}
+        está reservado para más adelante y %{safe} se puede gastar con seguridad.
+      allocation_aria_short: "%{income} de ingresos se destina a lo comprometido aquí
+        y se necesita %{short} más."
+    reset_feed_token:
+      done: Restablecimiento del enlace de alimentación. Las aplicaciones de calendario
+        que utilicen el enlace anterior dejarán de actualizarse; volver a suscribirme
+        con el nuevo.
+      confirm: "¿Restablecer el enlace del feed del calendario? Todos los enlaces
+        compartidos anteriormente dejan de funcionar."
+    calendar:
+      subscribe_ical: Suscríbete (iCal)
+      reset_feed: Restablecer enlace
+      previous_month: Mes anterior
+      next_month: Mes próximo
+      today: Hoy
+      month_totals: "%{expected} esperado · %{paid} pagado"
+      empty_month: No hay facturas vencidas este mes.
+    all:
+      search_placeholder: Buscar facturas
+      any_status: cualquier estado
+      status_filters:
+        overdue: Vencidas
+        due: Vencimiento pronto
+        partial: parcialmente pagado
+        paid: Pagado
+        paused: En pausa
+        ended: Despedido
+      subscription_monthly: Un mes
+      subscription_annual: un año
+      subscription_active: Activa
+      subscription_price_changes: Cambios de precios este año
+      subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
+      any_type: cualquier tipo
+      sort_due: Para el próximo vencimiento
+      sort_name: Por nombre
+      sort_amount: Por cantidad
+      no_matches_title: Nada coincide
+      no_matches_description: Intente borrar un filtro o la búsqueda.
+      col_name: Nombre
+      col_type: Tipo
+      col_frequency: Frecuencia
+      col_amount: Cantidad
+      col_next: Próximo vencimiento
+      next_short: siguiente %{date}
+      col_status: Estado
+      col_actions: Acciones
+      monthly_equivalent: "%{amount}/mes"
+      types:
+        bill: Factura
+        subscription: Suscripción
+        installment: Plan de cuotas
+        income: Ingreso
+        transfer: Transferir
+        other: Otro
+    show:
+      edit: Editar factura
+    index:
+      left_to_pay: queda por pagar
+      paid_so_far: Pagado hasta ahora
+      hero_past_due: "%{amount} vencido"
+      hero_next_seven: "%{amount} vence en los próximos 7 días"
+      add_bill: Agregar factura
+      add_income: Agregar ingresos
+      review_with_ai: Revisar con IA
+      detected_review:
+        one: Encontramos 1 pago recurrente en sus transacciones. Compruébelo para
+          que los totales aquí coincidan con lo que realmente paga.
+        other: Encontramos %{count} pagos recurrentes en sus transacciones. Revíselos
+          para que los totales aquí coincidan con lo que realmente paga.
+      detected_review_action: Revisarlos
+      needs_review: Necesita revisión
+      notice_trial: La prueba de %{name} finaliza %{date}
+      notice_renewal: "%{name} renueva %{date}"
+      notice_price: "%{name} cambió el precio: %{from} → %{to} (%{percent})"
+      notices_routine:
+        one: 1 cambio más pequeño
+        other: "%{count} cambios más pequeños"
+      suggestion_line: "%{entry} parece un pago de %{bill}"
+      suggestion_unknown_entry: una transacción
+      confidence: "%{percent}% de coincidencia"
+      accept: Aplicar
+      reject: No es esta factura
+      title: Facturas
+      summary_label: Vencimiento este mes
+      summary_count:
+        one: 1 factura vencida
+        other: "%{count} facturas vencidas"
+      summary_needs_action:
+        one: 1 te necesita
+        other: "%{count} te necesita"
+      all_automatic: todo en pago automático
+      recurring_label: Compromiso recurrente
+      recurring_monthly: "%{amount} un mes"
+      recurring_annual: "%{amount} un año"
+      unconvertible:
+        one: 1 factura no está incluida porque no hay tipo de cambio disponible
+        other: "%{count} facturas no están incluidas porque no hay tipo de cambio disponible"
+      overdue: Vencidas
+      needs_attention: necesita atencion
+      attention_overdue_total: "%{amount} vencido"
+      this_month: este mes
+      later: Después de este mes
+      paid_this_month: Pagado este mes
+      dormant: Latente
+      kpi_remaining: Queda este mes
+      kpi_paid: Pagado este mes
+      kpi_next_seven: Vencimiento en los próximos 7 días
+      kpi_past_due: Vencido
+      paid_count:
+        one: 1 factura saldada
+        other: "%{count} facturas liquidadas"
+      needs_action_count:
+        one: 1 te necesita
+        other: "%{count} te necesita"
+      empty:
+        title: Aún no hay facturas
+        description: Las facturas son sus gastos recurrentes. Sure los encuentra automáticamente
+          en su historial de transacciones y puede agregar un enlace de pago a cada
+          uno para poder pagar directamente desde aquí.
+        action: Encuentra transacciones recurrentes
+        no_history_description: Aún no hay transacciones. Conecte una cuenta o importe
+          el historial y Sure encontrará sus facturas automáticamente o agregará una
+          manualmente.
