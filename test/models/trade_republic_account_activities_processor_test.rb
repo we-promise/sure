@@ -770,6 +770,16 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "cash settlement is skipped when the trade direction is unknown" do
+    cash_account, cash_sure = create_linked_cash_account!
+    event = order_execution_detail(event_id: "evt_settle_unknown", quantity: nil, isin: "IE00B5BMR087", amount: "1024.92")
+    @tr_account.update!(raw_timeline_payload: [ event ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_not cash_sure.entries.exists?(external_id: "trade_republic_event_evt_settle_unknown")
+  end
+
   test "cash settlement is removed when Trade Republic deletes the trade" do
     cash_account, cash_sure = create_linked_cash_account!
     buy = order_execution_detail(event_id: "evt_settle_deleted", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")

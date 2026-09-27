@@ -302,7 +302,8 @@ class TradeRepublicAccount::ActivitiesProcessor
     # balance, fees and taxes included. Unlike cash movements (see
     # import_cash_movement), order executions carry a consistent sign across
     # topics: negative for buys, positive for sales. Payloads that only carry
-    # a magnitude fall back to the traded quantity.
+    # a magnitude fall back to the traded quantity; without either signal the
+    # direction is unknown and nothing is booked.
     # Buys count as investment contributions in budgets; sale proceeds are a
     # funds movement rather than income. Neither gets a category.
     def import_order_settlement(event, detail, external_id, date)
@@ -311,7 +312,9 @@ class TradeRepublicAccount::ActivitiesProcessor
       return false unless amount && !amount.zero?
 
       quantity = parse_decimal(detail[:quantity])
-      outflow = signed_amount ? signed_amount.negative? : !quantity&.negative?
+      return false if signed_amount.nil? && (quantity.nil? || quantity.zero?)
+
+      outflow = signed_amount ? signed_amount.negative? : quantity.positive?
 
       import_cash_movement(
         event,
