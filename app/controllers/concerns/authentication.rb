@@ -35,14 +35,16 @@ module Authentication
         Current.session = cookie_session
       elsif session_record = create_session_by_remote_header
         Current.session = session_record
-        end_impersonation_if_target_inactive!
       else
         if self_hosted_first_login?
           redirect_to new_registration_url
         else
           redirect_to new_session_url
         end
+        return
       end
+
+      end_impersonation_if_target_inactive!
     end
 
     def cookie_session_disagrees_with_resolved_header_user?(session)
