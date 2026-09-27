@@ -1,0 +1,40 @@
+en:
+  bitcoin_wallets:
+    title: Bitcoin wallet
+    preview: Preview
+    security: Existing Bitcoin position
+    source_kind: Source
+    manual_address: Public address
+    bip84: Native SegWit account (xpub / zpub)
+    receive_address: Known receive address
+    public_key: Extended public key (only for Native SegWit)
+    gap_limit: Unused address gap limit
+    source_hint: "Use an account-level Native SegWit xpub or zpub and a receive address verified on your wallet. Each key covers one Bitcoin account. Add other accounts separately. Addresses are derived locally; the explorer sees the requested addresses."
+    read_only: "Watch-only: Sure reads balances and cannot spend Bitcoin. Never enter a seed phrase or private key. Existing history and other assets are preserved."
+    discover: Discover addresses
+    discovering: "Reading the complete source set. Your account keeps its last complete balance until discovery finishes."
+    failed: "The wallet could not be fully read. The last complete balance is preserved; retry sync or check the key and gap limit."
+    address_count:
+      one: Tracking 1 unique address
+      other: "Tracking %{count} unique addresses"
+    last_synced: "Last complete read: %{time}"
+    reconcile: "Existing BTC: %{previous}. Wallet BTC: %{current}. Connecting replaces the BTC quantity; it does not add this balance again or rewrite past transactions."
+    connect: Connect Bitcoin position
+    connected: Bitcoin wallet connected.
+    reconciliation: Bitcoin quantity reconciliation
+    not_ready: Complete wallet discovery before connecting.
+    history_truncated: Some transfer history was not returned. This does not change the observed current balance.
+    addresses: Tracked addresses
+    add_source: Add another source
+    remove_source: Remove source
+    remove_source_confirm: Stop tracking this source? Remaining sources will be reconciled without deleting account history.
+    refresh: Refresh status
+    sync: Sync wallet
+    disconnect: Disconnect Bitcoin
+    disconnect_confirm: Stop updating Bitcoin automatically? The account, current positions and history will remain.
+    disconnected: Bitcoin wallet disconnected; the account and history remain.
+    manage: Manage Bitcoin wallet
+    connect_action: Connect Bitcoin wallet
+    movements:
+      received: "Received %{quantity} BTC"
+      sent: "Sent %{quantity} BTC"

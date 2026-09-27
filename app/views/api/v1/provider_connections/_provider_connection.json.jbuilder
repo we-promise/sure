@@ -15,3 +15,4 @@ json.extract! provider_connection,
               :sync,
               :created_at,
               :updated_at
+json.bitcoin_wallets provider_connection[:bitcoin_wallets] if provider_connection.key?(:bitcoin_wallets)

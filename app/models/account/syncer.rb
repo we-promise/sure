@@ -18,6 +18,11 @@ class Account::Syncer
 
   private
     def materialize_balances(window_start_date: nil)
+      if (wallet = account.bitcoin_wallet_account)&.account_provider && wallet.baseline_at
+        BitcoinWalletAccount::Processor.new(wallet).process
+        return
+      end
+
       strategy = account.linked? ? :reverse : :forward
       Balance::Materializer.new(account, strategy: strategy, window_start_date: window_start_date).materialize_balances
     end

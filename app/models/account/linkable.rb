@@ -94,4 +94,11 @@ module Account::Linkable
 
     providers.all?(&:can_delete_holdings?)
   end
+
+  def can_delete_holding?(holding)
+    return can_delete_holdings? unless (wallet = bitcoin_wallet_account)&.account_provider
+    return false if holding.security_id == wallet.security_id && holding.date >= wallet.baseline_at.to_date
+
+    account_providers.reject { |link| link.provider_type == "BitcoinWalletAccount" }.all? { |link| link.adapter.can_delete_holdings? }
+  end
 end

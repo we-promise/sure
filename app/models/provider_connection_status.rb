@@ -90,7 +90,7 @@ class ProviderConnectionStatus
   end
 
   def to_h
-    {
+    payload = {
       id: item.id,
       provider: provider[:key],
       provider_type: provider[:type],
@@ -106,6 +106,8 @@ class ProviderConnectionStatus
       created_at: item.created_at,
       updated_at: item.updated_at
     }
+    payload[:bitcoin_wallets] = bitcoin_wallet_payload if provider[:key] == "onchain_wallet"
+    payload
   end
 
   private
@@ -178,7 +180,27 @@ class ProviderConnectionStatus
     def provider_account_records
       return unless item.respond_to?(provider[:accounts])
 
-      @provider_account_records ||= item.public_send(provider[:accounts]).to_a
+      @provider_account_records ||= begin
+        records = item.public_send(provider[:accounts]).to_a
+        if item.is_a?(OnchainWalletItem)
+          wallets = item.bitcoin_wallet_accounts
+          wallets = wallets.where(account_id: Current.user.accessible_accounts.select(:id)) if Current.user
+          records += wallets.to_a
+        end
+        records
+      end
+    end
+
+    def bitcoin_wallet_payload
+      wallets = item.bitcoin_wallet_accounts.includes(:bitcoin_wallet_addresses, :bitcoin_wallet_sources)
+      wallets = wallets.where(account_id: Current.user.accessible_accounts.select(:id)) if Current.user
+      wallets.map do |wallet|
+        {
+          account_id: wallet.account_id, provider_type: "BitcoinWalletAccount", status: wallet.status,
+          address_count: wallet.bitcoin_wallet_addresses.size, source_count: wallet.bitcoin_wallet_sources.size,
+          last_synced_at: wallet.last_synced_at, stale: wallet.stale?, history_truncated: wallet.history_truncated?
+        }
+      end
     end
 
     def linked_provider_account?(provider_account)

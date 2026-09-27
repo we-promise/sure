@@ -28,7 +28,7 @@ module Account::Anchorable
   end
 
   def history_start_date
-    if linked? && balance_type == :investment
+    if linked? && balance_type == :investment && !bitcoin_wallet_account&.account_provider
       Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(self)
     else
       [

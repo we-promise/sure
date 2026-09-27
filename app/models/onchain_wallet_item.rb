@@ -17,6 +17,7 @@ class OnchainWalletItem < ApplicationRecord
   belongs_to :family
 
   has_many :onchain_wallet_accounts, dependent: :destroy
+  has_many :bitcoin_wallet_accounts, dependent: :destroy
   has_many :accounts, through: :onchain_wallet_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
@@ -116,19 +117,22 @@ class OnchainWalletItem < ApplicationRecord
   # accounts page renders one card per item, and a scope here would cost a
   # query per row.
   def accounts_visible_to(allowed_account_ids)
-    return accounts.to_a if allowed_account_ids.nil?
+    all_accounts = accounts.to_a + bitcoin_wallet_accounts.select(&:account_provider).map(&:account)
+    return all_accounts.uniq(&:id) if allowed_account_ids.nil?
 
-    accounts.select { |account| allowed_account_ids.include?(account.id) }
+    all_accounts.select { |account| allowed_account_ids.include?(account.id) }.uniq(&:id)
   end
 
   def address_count_for(visible_accounts)
     visible_ids = visible_accounts.map(&:id).to_set
 
-    onchain_wallet_accounts
+    legacy_count = onchain_wallet_accounts
       .select { |row| visible_ids.include?(row.account_provider&.account_id) }
       .map { |row| [ row.chain, row.wallet_address ] }
       .uniq
       .size
+    legacy_count + bitcoin_wallet_accounts.select { |wallet| visible_ids.include?(wallet.account_id) }
+      .sum { |wallet| wallet.bitcoin_wallet_addresses.size }
   end
 
   def institution_display_name

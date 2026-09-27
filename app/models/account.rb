@@ -1,4 +1,5 @@
 class Account < ApplicationRecord
+  has_one :bitcoin_wallet_account, dependent: :destroy
   include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
@@ -583,6 +584,12 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
+    if bitcoin_wallet_account&.account_provider
+      return holdings.where(currency: currency, date: ..Date.current).where.not(qty: 0)
+        .where(id: holdings.where(currency: currency, date: ..Date.current).select("DISTINCT ON (security_id) id").order(:security_id, date: :desc))
+        .order(amount: :desc)
+    end
+
     if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
       holdings
         .where.not(account_provider_id: nil)

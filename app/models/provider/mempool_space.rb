@@ -44,6 +44,46 @@ class Provider::MempoolSpace
     get_json("/address/#{ERB::Util.url_encode(address)}")
   end
 
+  def tip_hash
+    get_json("/blocks/tip/hash").to_s.strip
+  end
+
+  def tip_height
+    Integer(get_json("/blocks/tip/height"))
+  end
+
+  def get_transaction_status(txid)
+    get_json("/tx/#{ERB::Util.url_encode(txid)}/status")
+  rescue InvalidAddressError
+    nil
+  end
+
+  # Mempool and confirmed pages are separate: the mixed /txs response can
+  # contain enough pending rows to make its last id an invalid chain cursor.
+  def get_wallet_transactions(address, since: nil, include_history: true, include_mempool: true)
+    encoded = ERB::Util.url_encode(address)
+    pending = include_mempool ? Array(get_json("/address/#{encoded}/txs/mempool")) : []
+    @truncated = pending.size >= 50
+    return pending unless include_history
+
+    page = Array(get_json("/address/#{encoded}/txs/chain"))
+    transactions = pending + page
+    pages_read = 1
+    reached_start = -> { since && page.any? { |tx| tx.dig("status", "block_time").to_i < since.to_i } }
+
+    while page.size >= PAGE_SIZE && pages_read < @max_pages && !reached_start.call
+      last_txid = page.last["txid"]
+      break if last_txid.blank?
+
+      page = Array(get_json("/address/#{encoded}/txs/chain/#{last_txid}"))
+      transactions.concat(page)
+      pages_read += 1
+    end
+
+    @truncated ||= page.size >= PAGE_SIZE && !reached_start.call
+    transactions.uniq { |tx| tx["txid"] }
+  end
+
   # Confirmed transactions, newest first, plus anything still in the mempool.
   def get_address_transactions(address)
     encoded = ERB::Util.url_encode(address)

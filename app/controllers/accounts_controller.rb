@@ -36,7 +36,9 @@ class AccountsController < ApplicationController
     @indexa_capital_items = visible_provider_items(family.indexa_capital_items.ordered.with_attached_logo.includes(:indexa_capital_accounts))
     @sophtron_items = visible_provider_items(family.sophtron_items.ordered.with_attached_logo.includes(:sophtron_accounts))
     @onchain_wallet_items = visible_provider_items(
-      family.onchain_wallet_items.ordered.includes(:accounts, onchain_wallet_accounts: { account_provider: :account })
+      family.onchain_wallet_items.ordered.includes(:accounts,
+        bitcoin_wallet_accounts: [ :account, :account_provider, :bitcoin_wallet_addresses ],
+        onchain_wallet_accounts: { account_provider: :account })
     )
     @binance_items = visible_provider_items(family.binance_items.ordered.with_attached_logo.includes(:binance_accounts, :accounts))
     @kraken_items = visible_provider_items(family.kraken_items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts))
@@ -406,7 +408,11 @@ class AccountsController < ApplicationController
       items.select do |item|
         next true if Current.user.admin?
 
-        account_ids = item.respond_to?(:accounts) ? item.accounts.map(&:id) : []
+        account_ids = if item.is_a?(OnchainWalletItem)
+          item.accounts_visible_to(nil).map(&:id)
+        else
+          item.respond_to?(:accounts) ? item.accounts.map(&:id) : []
+        end
 
         # Ownership shows a member their own connection, importantly including
         # one just created that has not synced any accounts yet. It must not

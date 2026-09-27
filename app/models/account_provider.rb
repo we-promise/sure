@@ -21,6 +21,7 @@ class AccountProvider < ApplicationRecord
   # — so linking that same asset again would collide with a row nothing shows.
   # The Sure account and its holdings are untouched and carry on as manual.
   after_destroy :destroy_onchain_provider_account, if: :onchain_provider?
+  after_destroy :destroy_bitcoin_provider_account, if: -> { provider_type == "BitcoinWalletAccount" }
 
   # Returns the provider adapter for this connection
   def adapter
@@ -34,6 +35,12 @@ class AccountProvider < ApplicationRecord
   end
 
   private
+
+    def destroy_bitcoin_provider_account
+      return if destroyed_by_association&.active_record == BitcoinWalletAccount
+
+      provider&.destroy
+    end
 
     def financekit_has_exclusive_writer
       # belongs_to :account already reports a missing account; bail out rather

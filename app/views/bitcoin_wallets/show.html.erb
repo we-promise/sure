@@ -1,0 +1,62 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("bitcoin_wallets.title"), subtitle: @account.name) %>
+  <% dialog.with_body do %>
+    <div class="space-y-4"
+         <% if @wallet.status_discovering? %>
+           data-controller="polling"
+           data-polling-url-value="<%= account_bitcoin_wallet_path(@account) %>"
+         <% end %>>
+      <%= render DS::Pill.new(label: t("bitcoin_wallets.preview")) %>
+      <%= render "onchain_wallet_items/price_provider_warning" %>
+      <%= render DS::Alert.new(message: @error_message, variant: :error) if @error_message.present? %>
+      <% if @wallet.status_failed? %>
+        <%= render DS::Alert.new(message: t("bitcoin_wallets.failed"), variant: :warning) %>
+      <% elsif @wallet.status_discovering? %>
+        <%= render DS::Alert.new(message: t("bitcoin_wallets.discovering"), variant: :info) %>
+      <% end %>
+      <p class="text-lg font-medium text-primary tabular-nums"><%= @wallet.quantity.to_s("F") %> BTC</p>
+      <p class="text-sm text-secondary"><%= t("bitcoin_wallets.address_count", count: @wallet.bitcoin_wallet_addresses.count) %></p>
+      <% if @wallet.last_synced_at %>
+        <p class="text-sm text-secondary"><%= t("bitcoin_wallets.last_synced", time: l(@wallet.last_synced_at, format: :long)) %></p>
+      <% end %>
+      <% if @wallet.status_preview? %>
+        <% previous = @account.current_holdings.find_by(security: @wallet.security)&.qty || 0 %>
+        <%= render DS::Alert.new(message: t("bitcoin_wallets.reconcile", previous: previous.to_d.to_s("F"), current: @wallet.quantity.to_s("F")), variant: :info) %>
+        <%= render DS::Button.new(text: t("bitcoin_wallets.connect"), href: connect_account_bitcoin_wallet_path(@account),
+                                 method: :post, data: { turbo_frame: "_top" }) %>
+      <% end %>
+      <% if @wallet.history_truncated? %>
+        <%= render DS::Alert.new(message: t("bitcoin_wallets.history_truncated"), variant: :warning) %>
+      <% end %>
+      <ul class="divide-y divide-primary">
+        <% @wallet.bitcoin_wallet_sources.each do |source| %>
+          <li class="flex items-center justify-between gap-3 py-3">
+            <div class="min-w-0">
+              <p class="text-sm text-primary"><%= t("bitcoin_wallets.#{source.kind == 'bip84' ? 'bip84' : 'manual_address'}") %></p>
+              <p class="break-all text-xs text-secondary"><%= source.receive_address %></p>
+            </div>
+            <%= render DS::Button.new(variant: :icon, icon: "unlink", title: t("bitcoin_wallets.remove_source"),
+                  href: remove_source_account_bitcoin_wallet_path(@account, source_id: source.id), method: :delete,
+                  confirm: t("bitcoin_wallets.remove_source_confirm")) %>
+          </li>
+        <% end %>
+      </ul>
+      <%= render DS::Disclosure.new(title: t("bitcoin_wallets.addresses")) do %>
+        <ul class="space-y-2 text-xs text-secondary break-all">
+          <% @wallet.bitcoin_wallet_addresses.order(:branch, :address_index, :address).each do |address| %>
+            <li><%= address.address %></li>
+          <% end %>
+        </ul>
+      <% end %>
+      <%= render DS::Disclosure.new(title: t("bitcoin_wallets.add_source")) do %>
+        <%= render "source_form", url: add_source_account_bitcoin_wallet_path(@account) %>
+      <% end %>
+      <div class="flex flex-wrap gap-2">
+        <%= render DS::Link.new(text: t("bitcoin_wallets.refresh"), href: account_bitcoin_wallet_path(@account), frame: :modal, variant: :secondary) %>
+        <%= render DS::Button.new(text: t("bitcoin_wallets.sync"), href: sync_account_bitcoin_wallet_path(@account), method: :post, variant: :secondary) %>
+        <%= render DS::Button.new(text: t("bitcoin_wallets.disconnect"), href: account_bitcoin_wallet_path(@account),
+                                 method: :delete, variant: :outline_destructive, confirm: t("bitcoin_wallets.disconnect_confirm"), data: { turbo_frame: "_top" }) %>
+      </div>
+    </div>
+  <% end %>
+<% end %>

@@ -12,6 +12,8 @@ class SyncHourlyJob < ApplicationJob
     HOURLY_SYNCABLES.each do |syncable_class|
       sync_items(syncable_class)
     end
+    BitcoinWalletAccount.linked.joins(:onchain_wallet_item)
+      .merge(OnchainWalletItem.active).find_each { |wallet| BitcoinWalletSyncJob.perform_later(wallet) }
     Rails.logger.info("Completed hourly sync")
   end
 

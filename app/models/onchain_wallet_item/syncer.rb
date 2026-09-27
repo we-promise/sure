@@ -13,10 +13,15 @@ class OnchainWalletItem::Syncer
   end
 
   def perform_sync(sync)
+    onchain_wallet_item.bitcoin_wallet_accounts.each do |wallet|
+      BitcoinWalletSyncJob.perform_later(wallet)
+    end
     result = onchain_wallet_item.import_latest_onchain_data
     onchain_wallet_item.update!(status: :good) if onchain_wallet_item.requires_update?
 
-    collect_setup_stats(sync, provider_accounts: onchain_wallet_item.onchain_wallet_accounts.to_a)
+    collect_setup_stats(sync,
+      provider_accounts: onchain_wallet_item.onchain_wallet_accounts.to_a + onchain_wallet_item.bitcoin_wallet_accounts.to_a,
+      linked_check: ->(row) { row.account_provider.present? })
 
     changed = linked_accounts.where(id: result[:changed_account_ids]).to_a
     return if changed.empty?

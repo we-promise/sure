@@ -40,7 +40,7 @@ class HoldingsController < ApplicationController
   end
 
   def destroy
-    if @holding.account.can_delete_holdings?
+    if @holding.account.can_delete_holding?(@holding)
       @holding.destroy_holding_and_entries!
       flash[:notice] = t(".success")
     else

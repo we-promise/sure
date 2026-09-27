@@ -28,7 +28,8 @@ module Family::OnchainWalletConnectable
   end
 
   def has_onchain_wallets?
-    onchain_wallet_items.active.joins(:onchain_wallet_accounts).exists?
+    onchain_wallet_items.active.joins(:onchain_wallet_accounts).exists? ||
+      BitcoinWalletAccount.linked.where(onchain_wallet_item: onchain_wallet_items.active).exists?
   end
 
   # True when an address is already tracked on this chain anywhere in the
@@ -37,10 +38,11 @@ module Family::OnchainWalletConnectable
   # nowhere, so counting it here would refuse the address with nothing to show
   # for it.
   def onchain_address_linked?(chain, address)
-    OnchainWalletAccount
+    legacy = OnchainWalletAccount
       .where(onchain_wallet_item: onchain_wallet_items.active)
       .for_wallet(chain, address)
       .linked
       .exists?
+    legacy || BitcoinWalletAddress.tracks?(family: self, chain: chain, address: address)
   end
 end
