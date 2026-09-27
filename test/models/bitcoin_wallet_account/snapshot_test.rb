@@ -49,4 +49,15 @@ class BitcoinWalletAccount::SnapshotTest < ActiveSupport::TestCase
       BitcoinWalletAccount::Snapshot.new(@wallet, provider: @provider).fetch
     end
   end
+
+  test "unused HD lookahead is not reread inside the stable-tip window" do
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    @wallet.bitcoin_wallet_addresses.update_all(bitcoin_wallet_source_id: source.id)
+    BitcoinWalletAddress.insert_all!(2000.times.map do |index|
+      { bitcoin_wallet_account_id: @wallet.id, bitcoin_wallet_source_id: source.id,
+        family_id: @wallet.family.id, address: "unused-lookahead-#{index}", used: false }
+    end)
+    BitcoinWalletAccount::Snapshot.new(@wallet, provider: @provider).fetch
+    assert_equal [ RECEIVE ], @provider.reads
+  end
 end

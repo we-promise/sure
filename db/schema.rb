@@ -3010,11 +3010,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_140000) do
   add_foreign_key "bitcoin_wallet_accounts", "accounts"
   add_foreign_key "bitcoin_wallet_accounts", "onchain_wallet_items"
   add_foreign_key "bitcoin_wallet_accounts", "securities"
-  add_foreign_key "bitcoin_wallet_addresses", "bitcoin_wallet_accounts"
+  add_foreign_key "bitcoin_wallet_addresses", "bitcoin_wallet_accounts", on_delete: :cascade
   add_foreign_key "bitcoin_wallet_addresses", "bitcoin_wallet_sources", on_delete: :nullify
   add_foreign_key "bitcoin_wallet_addresses", "families"
-  add_foreign_key "bitcoin_wallet_sources", "bitcoin_wallet_accounts"
-  add_foreign_key "bitcoin_wallet_transactions", "bitcoin_wallet_accounts"
+  add_foreign_key "bitcoin_wallet_sources", "bitcoin_wallet_accounts", on_delete: :cascade
+  add_foreign_key "bitcoin_wallet_transactions", "bitcoin_wallet_accounts", on_delete: :cascade
   add_foreign_key "brex_accounts", "brex_items"
   add_foreign_key "brex_items", "families"
   add_foreign_key "budget_categories", "budgets", on_delete: :cascade

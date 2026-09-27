@@ -7,11 +7,25 @@ class BitcoinWalletAccount::Processor
     @wallet = wallet
   end
 
-  def process
+  def prepare_prices
+    import_prices
+    currencies = wallet.security.prices.where(date: ..Date.current).distinct.pluck(:currency) - [ account.currency ]
+    currencies.each do |currency|
+      ExchangeRate.import_provider_rates(from: currency, to: account.currency,
+        start_date: wallet.baseline_at&.to_date || Date.current, end_date: Date.current)
+    end
+  rescue StandardError => error
+    DebugLogEntry.capture(category: "provider_sync_error", level: "warn",
+      message: "Bitcoin exchange rates could not be read", source: self.class.name,
+      provider_key: "onchain_wallet", family: account.family, account: account,
+      account_provider: wallet.account_provider, metadata: { error_class: error.class.name })
+  end
+
+  def process(prepare_prices: true)
     return unless wallet.account_provider && wallet.baseline_at
 
+    self.prepare_prices if prepare_prices
     account.with_lock do
-      import_prices
       materialize_movements
       wallet.record_reconciliation!
       BitcoinWalletAccount::Portfolio.new(wallet).materialize

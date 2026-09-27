@@ -91,4 +91,15 @@ class BitcoinWalletAccount::ProcessorTest < ActiveSupport::TestCase
     present_quantity = @account.trades.where(security: @wallet.security).joins(:entry).where("entries.date <= ?", Date.current).sum(:qty)
     assert_equal BigDecimal("0.2"), present_quantity
   end
+
+  test "idle historical processing does not add read queries per day" do
+    @wallet.connect!
+    @wallet.update!(baseline_at: 2.days.ago)
+    BitcoinWalletAccount::Processor.new(@wallet).process
+    short = capture_sql_queries { BitcoinWalletAccount::Processor.new(@wallet).process }.count { |sql| sql.start_with?("SELECT") }
+    @wallet.update!(baseline_at: 30.days.ago)
+    BitcoinWalletAccount::Processor.new(@wallet).process
+    long = capture_sql_queries { BitcoinWalletAccount::Processor.new(@wallet).process }.count { |sql| sql.start_with?("SELECT") }
+    assert_operator long, :<=, short + 3
+  end
 end

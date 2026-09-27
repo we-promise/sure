@@ -11,10 +11,10 @@ class BitcoinWalletsController < ApplicationController
   end
 
   def create
-    security = selected_security
-    @wallet = BitcoinWalletAccount.new(account: @account, security: security,
-      onchain_wallet_item: Current.family.onchain_wallet_item!)
-    @wallet.transaction do
+    BitcoinWalletAccount.transaction do
+      security = selected_security
+      @wallet = BitcoinWalletAccount.new(account: @account, security: security,
+        onchain_wallet_item: Current.family.onchain_wallet_item!)
       @wallet.save!
       @wallet.bitcoin_wallet_sources.create!(source_params)
     end

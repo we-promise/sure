@@ -45,7 +45,7 @@ class BitcoinWalletsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "invalid source input does not leave a wallet behind" do
-    assert_no_difference "BitcoinWalletAccount.count" do
+    assert_no_difference [ "BitcoinWalletAccount.count", "OnchainWalletItem.count", "Security.count" ] do
       post account_bitcoin_wallet_path(@account), params: { source: { kind: "bip84", receive_address: RECEIVE, extended_public_key: "not-a-public-key" } }
     end
     assert_response :unprocessable_entity

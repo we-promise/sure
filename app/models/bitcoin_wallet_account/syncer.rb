@@ -7,47 +7,87 @@ class BitcoinWalletAccount::Syncer
   end
 
   def perform
-    wallet.with_lock do
-      return if wallet.destroyed?
-      unless BitcoinWalletAccount::Discovery.new(wallet, provider: provider).perform
-        wallet.update!(status: :discovering)
-        BitcoinWalletSyncJob.perform_later(wallet)
-        return
-      end
-      snapshot = BitcoinWalletAccount::Snapshot.new(wallet, provider: provider).fetch
-      remember_transactions(snapshot)
-      attributes = { balance_sats: snapshot.balance_sats,
-        history_truncated: snapshot.history_truncated, last_synced_at: Time.current, last_error: nil,
-        status: wallet.account_provider ? :active : :preview }
-      attributes[:baseline_block_height] = snapshot.block_height if wallet.baseline_at.nil? || wallet.needs_reconciliation?
-      wallet.update!(attributes)
-      if wallet.account_provider
-        if wallet.needs_reconciliation?
-          wallet.bitcoin_wallet_transactions.update_all(baseline: true)
-          wallet.update!(baseline_at: Time.current, baseline_sats: snapshot.balance_sats,
-            baseline_cash_balance: wallet.account.cash_balance, needs_reconciliation: false)
-          wallet.record_reconciliation!
-        end
-        BitcoinWalletAccount::Processor.new(wallet).process
-        wallet.restart_discovery!
+    # Serialize readers without a long transaction or a wallet row lock:
+    # source edits and disconnects remain available during provider requests.
+    wallet.class.connection_pool.with_connection do |connection|
+      key = Digest::SHA256.digest("bitcoin-wallet-sync:#{wallet.id}").unpack1("q>")
+      held = connection.select_value("SELECT pg_try_advisory_lock(#{key})")
+      return unless held
+
+      begin
+        perform_read
+      ensure
+        connection.select_value("SELECT pg_advisory_unlock(#{key})")
       end
     end
+  rescue ActiveRecord::RecordNotFound
+    raise if wallet.class.exists?(wallet.id) && source_signature == @source_signature
   rescue StandardError => error
-    wallet.update!(status: :failed, last_error: error.class.name)
-    DebugLogEntry.capture(category: "provider_sync_error", level: "error",
-      message: "Bitcoin wallet could not be fully read", source: self.class.name,
-      provider_key: "onchain_wallet", family: wallet.onchain_wallet_item.family,
-      account: wallet.account, account_provider: wallet.account_provider,
-      metadata: { bitcoin_wallet_account_id: wallet.id, error_class: error.class.name })
+    record_failure(error)
     raise
   end
 
   private
     attr_reader :wallet, :provider
 
-    def remember_transactions(snapshot)
+    def perform_read
+      @source_signature = source_signature
+      complete = BitcoinWalletAccount::Discovery.new(wallet, provider: provider).perform
+      unless complete
+        wallet.with_lock do
+          return unless source_signature == @source_signature
+
+          wallet.update!(status: :discovering)
+          BitcoinWalletSyncJob.perform_later(wallet)
+        end
+        return
+      end
+
+      snapshot = BitcoinWalletAccount::Snapshot.new(wallet, provider: provider).fetch
+      statuses = missing_statuses(snapshot)
+      processor = BitcoinWalletAccount::Processor.new(wallet)
+      processor.prepare_prices if wallet.account_provider
+
+      wallet.with_lock do
+        return unless source_signature == @source_signature
+
+        remember_transactions(snapshot, statuses)
+        attributes = { balance_sats: snapshot.balance_sats,
+          history_truncated: snapshot.history_truncated, last_synced_at: Time.current, last_error: nil,
+          status: wallet.account_provider ? :active : :preview }
+        attributes[:baseline_block_height] = snapshot.block_height if wallet.baseline_at.nil? || wallet.needs_reconciliation?
+        wallet.update!(attributes)
+        if wallet.account_provider
+          if wallet.needs_reconciliation?
+            wallet.bitcoin_wallet_transactions.update_all(baseline: true)
+            wallet.update!(baseline_at: Time.current, baseline_sats: snapshot.balance_sats,
+              baseline_cash_balance: wallet.account.cash_balance, needs_reconciliation: false)
+            wallet.record_reconciliation!
+          end
+          processor.process(prepare_prices: false)
+          wallet.restart_discovery!
+        end
+      end
+    end
+
+    def source_signature
+      wallet.bitcoin_wallet_sources.order(:id).pluck(:id, :kind, :fingerprint, :gap_limit)
+    end
+
+    def missing_statuses(snapshot)
+      observed = snapshot.transactions.map { |tx| tx.fetch("txid") }
+      wallet.bitcoin_wallet_transactions.where(present: true).where.not(txid: observed)
+        .where("confirmed = false OR block_height >= ?", snapshot.block_height - 6).pluck(:txid).to_h do |txid|
+          status = provider.get_transaction_status(txid)
+          if status && status["confirmed"] && status["block_height"].to_i > snapshot.block_height
+            raise BitcoinWalletAccount::Snapshot::ChangedTip, "A transaction confirmed after the wallet read"
+          end
+          [ txid, status ]
+        end
+    end
+
+    def remember_transactions(snapshot, statuses)
       addresses = wallet.bitcoin_wallet_addresses.pluck(:address).to_set
-      observed_ids = snapshot.transactions.map { |tx| tx.fetch("txid") }.to_set
       snapshot.transactions.each do |transaction|
         txid = transaction.fetch("txid")
         amount = BitcoinWalletAccount::Snapshot.net_sats(transaction, addresses)
@@ -65,20 +105,30 @@ class BitcoinWalletAccount::Syncer
         row.save! if row.changed?
       end
 
-      # An omitted page is never proof that a transfer disappeared. Previously
-      # seen pending and recent confirmed transactions are verified explicitly.
-      wallet.bitcoin_wallet_transactions.where(present: true)
-        .where("confirmed = false OR block_height >= ?", snapshot.block_height - 6).find_each do |row|
-          next if observed_ids.include?(row.txid)
+      statuses.each do |txid, status|
+        row = wallet.bitcoin_wallet_transactions.find_by(txid: txid)
+        next unless row
 
-          status = provider.get_transaction_status(row.txid)
-          if status && status["confirmed"]
-            raise BitcoinWalletAccount::Snapshot::ChangedTip, "A transaction confirmed after the wallet read" if status["block_height"].to_i > snapshot.block_height
-
-            row.update!(confirmed: status.fetch("confirmed"), block_height: status["block_height"])
-          else
-            row.update!(present: false, removed_at: Time.current)
-          end
+        if status && status["confirmed"]
+          row.update!(confirmed: true, block_height: status["block_height"])
+        else
+          row.update!(present: false, removed_at: Time.current)
         end
+      end
+    end
+
+    def record_failure(error)
+      return unless wallet.class.exists?(wallet.id)
+
+      wallet.with_lock do
+        return unless source_signature == @source_signature
+
+        wallet.update!(status: :failed, last_error: error.class.name)
+        DebugLogEntry.capture(category: "provider_sync_error", level: "error",
+          message: "Bitcoin wallet could not be fully read", source: self.class.name,
+          provider_key: "onchain_wallet", family: wallet.family, account: wallet.account,
+          account_provider: wallet.account_provider,
+          metadata: { bitcoin_wallet_account_id: wallet.id, error_class: error.class.name })
+      end
     end
 end

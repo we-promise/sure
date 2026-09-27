@@ -18,7 +18,7 @@ class CreateBitcoinWalletAccounts < ActiveRecord::Migration[8.1]
     end
 
     create_table :bitcoin_wallet_sources, id: :uuid do |t|
-      t.references :bitcoin_wallet_account, null: false, type: :uuid, foreign_key: true
+      t.references :bitcoin_wallet_account, null: false, type: :uuid, foreign_key: { on_delete: :cascade }
       t.string :kind, null: false
       t.text :extended_public_key
       t.string :fingerprint, null: false
@@ -32,7 +32,7 @@ class CreateBitcoinWalletAccounts < ActiveRecord::Migration[8.1]
     end
 
     create_table :bitcoin_wallet_addresses, id: :uuid do |t|
-      t.references :bitcoin_wallet_account, null: false, type: :uuid, foreign_key: true
+      t.references :bitcoin_wallet_account, null: false, type: :uuid, foreign_key: { on_delete: :cascade }
       t.references :family, null: false, type: :uuid, foreign_key: true
       t.references :bitcoin_wallet_source, type: :uuid, foreign_key: { on_delete: :nullify }
       t.string :address, null: false
@@ -46,7 +46,7 @@ class CreateBitcoinWalletAccounts < ActiveRecord::Migration[8.1]
     end
 
     create_table :bitcoin_wallet_transactions, id: :uuid do |t|
-      t.references :bitcoin_wallet_account, null: false, type: :uuid, foreign_key: true
+      t.references :bitcoin_wallet_account, null: false, type: :uuid, foreign_key: { on_delete: :cascade }
       t.string :txid, null: false
       t.bigint :amount_sats, null: false
       t.boolean :confirmed, null: false, default: false

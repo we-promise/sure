@@ -24,6 +24,8 @@ class BitcoinWalletAccount < ApplicationRecord
   end
 
   def connect!
+    processor = BitcoinWalletAccount::Processor.new(self)
+    processor.prepare_prices
     with_lock do
       return if account_provider.present?
       raise ArgumentError, "Complete wallet discovery before connecting" unless status_preview? && last_synced_at.present?
@@ -35,7 +37,7 @@ class BitcoinWalletAccount < ApplicationRecord
       update!(baseline_at: Time.current, baseline_sats: balance_sats,
         baseline_cash_balance: account.cash_balance, status: :active)
       record_reconciliation!
-      BitcoinWalletAccount::Processor.new(self).process
+      processor.process(prepare_prices: false)
     end
   end
 

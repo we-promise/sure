@@ -13,7 +13,12 @@ class BitcoinWalletAccount::Snapshot
   def fetch
     before = provider.tip_hash
     height = provider.tip_height
-    addresses = wallet.bitcoin_wallet_addresses.pluck(:address).to_set
+    # Discovery already probes the unused lookahead. Including those thousands
+    # of zero-balance rows again would make a stable-tip read unfinishable.
+    known = wallet.bitcoin_wallet_sources.pluck(:receive_address)
+    tracked = wallet.bitcoin_wallet_addresses
+    addresses = tracked.where(used: true).or(tracked.where(bitcoin_wallet_source_id: nil))
+      .or(tracked.where(address: known)).pluck(:address).to_set
     confirmed_sats = 0
     transactions = {}
     truncated = false

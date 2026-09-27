@@ -88,4 +88,45 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     assert_equal 0, @wallet.reload.balance_sats
     assert_empty @wallet.account.entries.where(source: "bitcoin_wallet")
   end
+
+  test "a source change during HTTP invalidates the result without changing the balance" do
+    @wallet.update!(balance_sats: 123)
+    original = @provider.method(:get_address)
+    wallet = @wallet
+    @provider.define_singleton_method(:get_address) do |address|
+      unless @changed
+        wallet.bitcoin_wallet_sources.create!(kind: "address", receive_address: BitcoinWalletTestHelper::CHANGE)
+        @changed = true
+      end
+      original.call(address)
+    end
+    BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
+    assert_equal 123, @wallet.reload.balance_sats
+    assert_nil @wallet.last_synced_at
+  end
+
+  test "a held advisory lock coalesces concurrent readers" do
+    config = ActiveRecord::Base.connection_pool.db_config.configuration_hash
+    key = Digest::SHA256.digest("bitcoin-wallet-sync:#{@wallet.id}").unpack1("q>")
+    other = PG.connect(dbname: config[:database], host: config[:host], port: config[:port],
+      user: config[:username] || config[:user], password: config[:password])
+    other.exec("SELECT pg_advisory_lock(#{key})")
+    @provider.expects(:get_address).never
+    BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
+    assert_nil @wallet.reload.last_synced_at
+  ensure
+    other&.close
+  end
+
+  test "a financial reset removes draft wallet descendants safely" do
+    PlaidItem.any_instance.stubs(:remove_plaid_item).returns(true)
+    @wallet.bitcoin_wallet_addresses.create!(address: RECEIVE)
+    @wallet.bitcoin_wallet_transactions.create!(txid: "f" * 64, amount_sats: 100, occurred_at: Time.current)
+    id = @wallet.id
+    Family::FinancialDataReset.new(family: @wallet.family, dry_run: false, confirmed: true).call
+    refute BitcoinWalletAccount.exists?(id)
+    assert_empty BitcoinWalletSource.where(bitcoin_wallet_account_id: id)
+    assert_empty BitcoinWalletAddress.where(bitcoin_wallet_account_id: id)
+    assert_empty BitcoinWalletTransaction.where(bitcoin_wallet_account_id: id)
+  end
 end
