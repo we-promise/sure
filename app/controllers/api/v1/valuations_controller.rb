@@ -83,7 +83,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       return
     end
 
-    account = current_resource_owner.family.accounts.find(valuation_account_id)
+    account = current_resource_owner.family.accounts.writable_by(current_resource_owner).find(valuation_account_id)
     requested_upsert = upsert_requested?
     existing_write = false
 
@@ -232,9 +232,11 @@ class Api::V1::ValuationsController < Api::V1::BaseController
   private
 
     def set_valuation
-      @entry = current_resource_owner.family
-                 .entries
-                 .where(entryable_type: "Valuation")
+      family = current_resource_owner.family
+      # Reading needs access to the account; changing a valuation needs write access.
+      permitted_accounts = action_name == "show" ? family.accounts.accessible_by(current_resource_owner) : family.accounts.writable_by(current_resource_owner)
+      @entry = family.entries
+                 .where(entryable_type: "Valuation", account_id: permitted_accounts.select(:id))
                  .find(params[:id])
       @valuation = @entry.entryable
     rescue ActiveRecord::RecordNotFound

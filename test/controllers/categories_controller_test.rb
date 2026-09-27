@@ -403,6 +403,37 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert Category.exists?(other.id)
   end
 
+
+  test "create does not categorize a transaction on an account the member cannot annotate" do
+    member = users(:family_member)
+    private_account = @family.accounts.create!(name: "Admin Private Checking", owner: @user, balance: 0,
+                                               currency: "USD", accountable: Depository.new)
+    private_entry = private_account.entries.create!(name: "Private", date: Date.current, amount: 10,
+                                                    currency: "USD", entryable: Transaction.new)
+    read_only_entry = accounts(:credit_card).entries.create!(name: "Read only", date: Date.current, amount: 10,
+                                                             currency: "USD", entryable: Transaction.new)
+    sign_in member
+
+    [ private_entry, read_only_entry ].each do |entry|
+      assert_no_difference "Category.count" do
+        post categories_url, params: { transaction_id: entry.transaction.id, category: { name: "Leak #{entry.id}", color: "#000000" } }
+      end
+      assert_response :not_found
+      assert_nil entry.transaction.reload.category
+    end
+  end
+
+  test "create categorizes a transaction on an account shared with the member for annotation" do
+    member = users(:family_member)
+    shared_entry = accounts(:depository).entries.create!(name: "Shared", date: Date.current, amount: 10,
+                                                         currency: "USD", entryable: Transaction.new)
+    sign_in member
+
+    post categories_url, params: { transaction_id: shared_entry.transaction.id, category: { name: "Shared Category", color: "#000000" } }
+
+    assert_equal "Shared Category", shared_entry.transaction.reload.category&.name
+  end
+
   private
     def capture_sql_queries
       queries = []

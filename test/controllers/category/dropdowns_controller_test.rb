@@ -47,4 +47,17 @@ class Category::DropdownsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "[data-list-filter-target='recentSection']", false
   end
+
+  test "does not render for a transaction on an account the member cannot access" do
+    admin = users(:family_admin)
+    private_account = admin.family.accounts.create!(name: "Admin Private Checking", owner: admin, balance: 0,
+                                                    currency: "USD", accountable: Depository.new)
+    private_entry = private_account.entries.create!(name: "Private", date: Date.current, amount: 10,
+                                                    currency: "USD", entryable: Transaction.new)
+    sign_in users(:family_member)
+
+    get category_dropdown_url(transaction_id: private_entry.transaction.id)
+
+    assert_response :not_found
+  end
 end

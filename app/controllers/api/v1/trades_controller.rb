@@ -10,6 +10,7 @@ class Api::V1::TradesController < Api::V1::BaseController
   def index
     family = current_resource_owner.family
     trades_query = family.trades.visible
+      .where(entries: { account_id: family.accounts.accessible_by(current_resource_owner).select(:id) })
 
     trades_query = apply_filters(trades_query)
     trades_query = trades_query.includes({ entry: :account }, :security, :category).reverse_chronological
@@ -39,7 +40,7 @@ class Api::V1::TradesController < Api::V1::BaseController
       return render_validation_error("Account ID is required", [ "Account ID is required" ])
     end
 
-    account = current_resource_owner.family.accounts.visible.find(trade_params[:account_id])
+    account = current_resource_owner.family.accounts.writable_by(current_resource_owner).visible.find(trade_params[:account_id])
 
     unless account.supports_trades?
       return render_validation_error(
@@ -126,7 +127,9 @@ class Api::V1::TradesController < Api::V1::BaseController
 
     def set_trade
       family = current_resource_owner.family
-      @trade = family.trades.visible.find(params[:id])
+      # Reading needs access to the account; changing a trade needs write access.
+      permitted_accounts = action_name == "show" ? family.accounts.accessible_by(current_resource_owner) : family.accounts.writable_by(current_resource_owner)
+      @trade = family.trades.visible.where(entries: { account_id: permitted_accounts.select(:id) }).find(params[:id])
       @entry = @trade.entry
     rescue ActiveRecord::RecordNotFound
       render json: { error: "not_found", message: "Trade not found" }, status: :not_found
