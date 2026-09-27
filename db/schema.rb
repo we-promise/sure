@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_26_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -62,9 +62,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
     t.decimal "match_confidence", precision: 5, scale: 4
     t.decimal "opening_balance", precision: 19, scale: 4
     t.decimal "parser_confidence", precision: 5, scale: 4
+    t.boolean "pdf_import_owned", default: false, null: false
     t.date "period_end_on"
     t.date "period_start_on"
-    t.boolean "pdf_import_owned", default: false, null: false
     t.string "review_status", default: "unmatched", null: false
     t.jsonb "sanitized_parser_output", default: {}, null: false
     t.string "source", default: "manual_upload", null: false
