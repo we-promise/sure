@@ -350,7 +350,11 @@ module TradeRepublicAccount::DataHelpers
             attrs[:provider_security_id] = holding.provider_security_id.presence || from_security.id
           end
           attrs[:account_provider_id] = holding.account_provider_id if existing.account_provider_id.blank? && holding.account_provider_id.present?
-          attrs[:cost_basis] = holding.cost_basis if existing.cost_basis.blank? && holding.cost_basis.present?
+          if existing.cost_basis.blank? && holding.cost_basis.present?
+            attrs[:cost_basis] = holding.cost_basis
+            attrs[:cost_basis_source] = holding.cost_basis_source
+            attrs[:cost_basis_locked] = holding.cost_basis_locked
+          end
 
           mismatched_dates << holding.date if existing.qty != holding.qty || existing.amount != holding.amount
 

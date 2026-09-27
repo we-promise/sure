@@ -793,6 +793,20 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not cash_sure.entries.exists?(external_id: "trade_republic_event_evt_settle_deleted")
   end
 
+  test "a stale cash snapshot does not hide a trade deleted on the portfolio" do
+    cash_account, cash_sure = create_linked_cash_account!
+    buy = order_execution_detail(event_id: "evt_settle_stale", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")
+    @tr_account.update!(raw_timeline_payload: [ buy ])
+    cash_account.update!(raw_timeline_payload: [ buy ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    assert cash_sure.entries.exists?(external_id: "trade_republic_event_evt_settle_stale")
+
+    @tr_account.update!(raw_timeline_payload: [ buy.merge(deleted: true) ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_not cash_sure.entries.exists?(external_id: "trade_republic_event_evt_settle_stale")
+  end
+
   test "cash account deposits are fund movements, not investment contributions" do
     cash_account, cash_sure = create_linked_cash_account!
     wallet_top_up = deposit_event.merge(id: "evt_google_pay", eventType: "PAYMENT_INBOUND_GOOGLE_PAY", title: "Cash in")

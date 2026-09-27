@@ -70,11 +70,14 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     # Trade Republic settles trades directly against the cash balance. The
     # importer keeps order executions on the portfolio payload only, so the
-    # cash account reads them from there to book the settlement.
+    # cash account reads them from there to book the settlement. Portfolio
+    # copies come first so they win the dedupe: a cash snapshot retained from
+    # a failed timeline update can still hold an order execution whose
+    # portfolio copy has since been deleted.
     def timeline_events
       @timeline_events ||= begin
         events = Array(@trade_republic_account.raw_timeline_payload)
-        events += portfolio_order_execution_events if @trade_republic_account.cash?
+        events = portfolio_order_execution_events + events if @trade_republic_account.cash?
         events.uniq { |event| event.is_a?(Hash) ? (event["id"] || event[:id]).presence || event : event }
       end
     end
