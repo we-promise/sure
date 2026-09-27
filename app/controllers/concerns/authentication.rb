@@ -161,16 +161,8 @@ module Authentication
     end
 
     def remote_user_proxy_trusted?
-      trusted = Rails.application.config.remote_user_trusted_proxies
       peer = request.env["REMOTE_ADDR"]
-      peer_ip = IPAddr.new(peer)
-      # IPAddr#include? never crosses address families, so an IPv4-mapped IPv6
-      # peer (::ffff:127.0.0.1 — routine for a dual-stack nginx or Docker
-      # front-end) matches neither an IPv4 nor an IPv6 range. Compare the
-      # native IPv4 form instead.
-      peer_ip = peer_ip.native if peer_ip.ipv4_mapped?
-
-      return true if trusted.any? { |range| range.include?(peer_ip) }
+      return true if RemoteUserHeader.trusted_peer?(peer)
 
       reject_remote_user_header("peer not in REMOTE_USER_TRUSTED_PROXIES", peer: peer)
       false

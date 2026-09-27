@@ -22,14 +22,27 @@ class Rack::Attack
   # not verified here, so this bounds an accident (a proxy looping on one
   # identity, a cookieless client with a rotating user agent) rather than an
   # attacker who is already inside the trusted range.
+  #
+  # Only a header from a trusted peer counts. Authentication ignores the rest,
+  # and counting them would let any peer that reaches the port spend another
+  # user's budget by sending that user's email.
   throttle("remote-user-header/email", limit: 30, period: 1.minute) do |request|
     next if request.cookies["session_token"].present?
     next if request.path.start_with?("/api/", "/mcp")
 
     header_name = Rails.application.config.remote_user_header_email
-    if header_name.present?
-      env_name = "HTTP_#{header_name.upcase.tr("-", "_")}"
-      request.get_header(env_name)&.strip&.downcase.presence
+    next if header_name.blank?
+
+    # Read the header the way request.headers does in the concern. A name that
+    # ActionDispatch won't map to HTTP_* (one with an underscore) is then
+    # invisible to both, rather than counted here and ignored there.
+    email = ActionDispatch::Http::Headers.from_hash(request.env)[header_name]&.strip&.downcase.presence
+    next if email.nil?
+
+    begin
+      email if RemoteUserHeader.trusted_peer?(request.get_header("REMOTE_ADDR"))
+    rescue IPAddr::Error
+      nil
     end
   end
 
