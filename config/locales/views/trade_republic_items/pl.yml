@@ -9,7 +9,6 @@ pl:
   trade_republic_items:
     activities:
       labels:
-        buy: Kupno
         card_fee: Opłata za kartę
         card_payment: Płatność kartą
         card_refund: Zwrot na kartę
@@ -17,7 +16,7 @@ pl:
         contribution: Wpłata
         dividend: Dywidenda
         interest: Odsetki
-        sell: Sprzedaż
+        round_up: Round up
         tax_refund: Zwrot podatku
         withdrawal: Wypłata
     complete_account_setup:
@@ -171,6 +170,11 @@ pl:
           many: "%{count} wydatków w ciągu ostatnich 30 dni (%{amount})"
           one: "%{count} wydatek w ciągu ostatnich 30 dni (%{amount})"
           other: "%{count} wydatków w ciągu ostatnich 30 dni (%{amount})"
+        pending_trade_details:
+          few: "%{count} transakcje inwestycyjne oczekują na szczegóły"
+          many: "%{count} transakcji inwestycyjnych oczekuje na szczegóły"
+          one: "%{count} transakcja inwestycyjna oczekuje na szczegóły"
+          other: "%{count} transakcji inwestycyjnych oczekuje na szczegóły"
         positions:
           few: "%{count} pozycje"
           many: "%{count} pozycji"

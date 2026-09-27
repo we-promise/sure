@@ -39,6 +39,9 @@ de:
         unknown:
           one: "%{count} unbekannte Aktivität"
           other: "%{count} unbekannte Aktivitäten"
+        pending_trade_details:
+          one: "%{count} Investmentaktivität wartet auf Details"
+          other: "%{count} Investmentaktivitäten warten auf Details"
         expenses:
           one: "%{count} Ausgabe in den letzten 30 Tagen (%{amount})"
           other: "%{count} Ausgaben in den letzten 30 Tagen (%{amount})"
@@ -139,5 +142,4 @@ de:
         card_fee: Kartengebühr
         card_refund: Kartenrückerstattung
         tax_refund: Steuerrückerstattung
-        buy: Kauf
-        sell: Verkauf
+        round_up: Round up

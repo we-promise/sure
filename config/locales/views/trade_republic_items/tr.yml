@@ -37,6 +37,9 @@ tr:
         unknown:
           one: "%{count} bilinmeyen işlem"
           other: "%{count} bilinmeyen işlem"
+        pending_trade_details:
+          one: '%{count} yatırım işlemi ayrıntı bekliyor'
+          other: '%{count} yatırım işlemi ayrıntı bekliyor'
         expenses:
           one: "Son 30 günde %{count} gider (%{amount})"
           other: "Son 30 günde %{count} gider (%{amount})"
@@ -144,8 +147,7 @@ tr:
         card_fee: Kart ücreti
         card_refund: Kart iadesi
         tax_refund: Vergi iadesi
-        buy: Alış
-        sell: Satış
+        round_up: Round up
     defaults:
       name: Trade Republic
     sync_status:

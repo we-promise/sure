@@ -45,6 +45,11 @@ uk:
           few: "%{count} невідомі операції"
           many: "%{count} невідомих операцій"
           other: "%{count} невідомі операції"
+        pending_trade_details:
+          one: '%{count} інвестиційна операція очікує деталей'
+          few: '%{count} інвестиційні операції очікують деталей'
+          many: '%{count} інвестиційних операцій очікують деталей'
+          other: '%{count} інвестиційної операції очікують деталей'
         expenses:
           one: "%{count} витрата за останні 30 днів (%{amount})"
           few: "%{count} витрати за останні 30 днів (%{amount})"
@@ -160,8 +165,7 @@ uk:
         card_fee: Комісія за картку
         card_refund: Повернення на картку
         tax_refund: Повернення податку
-        buy: Купівля
-        sell: Продаж
+        round_up: Round up
     defaults:
       name: Trade Republic
     sync_status:
