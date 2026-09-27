@@ -76,7 +76,9 @@ class KrakenAccount::Processor
       return unless security
 
       # Sure's convention is positive = money out, so a buy is +cost and a sell
-      # -cost, which is also what `qty * price` yields once qty carries its sign.
+      # -cost: the sign of the quantity, with Kraken's `cost` as the magnitude.
+      # `cost` is the fill's actual cash figure and can differ from `vol * price`
+      # by rounding, so it is kept rather than recomputed.
       trade_qty = type == "buy" ? qty : -qty
       entry_amount = type == "buy" ? cost : -cost
       label = type == "buy" ? "Buy" : "Sell"

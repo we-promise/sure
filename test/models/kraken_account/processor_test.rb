@@ -70,16 +70,19 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
   # outflow. Balances are derived by walking back from today, so the error did
   # not cancel out -- it accumulated across the whole history.
   #
-  # This holds for what TradesHistory reports. Once a trade's ledger rows are
-  # available they take precedence, because they net the fee, and the amount
-  # then differs from `qty * price` by exactly that fee.
-  test "a trade entry amount is its signed quantity times price, as reported" do
+  # The magnitude is Kraken's `cost`, the fill's actual cash figure, which can
+  # differ from `vol * price` by rounding; only the sign is derived.
+  test "a trade entry amount carries the sign of its quantity and the magnitude of its cost" do
     KrakenAccount::Processor.new(@kraken_account).process
 
     @account.entries.where(source: "kraken").each do |entry|
       trade = entry.trade
-      assert_equal trade.qty * trade.price, entry.amount,
-        "#{entry.external_id}: entry amount must equal its signed qty * price"
+      txid = entry.external_id.delete_prefix("kraken_trade_")
+      cost = @kraken_account.raw_transactions_payload.dig("trades", txid, "cost").to_d
+
+      assert_equal trade.qty.positive?, entry.amount.positive?,
+        "#{entry.external_id}: a buy is money out, a sell money in"
+      assert_equal cost, entry.amount.abs, "#{entry.external_id}: the magnitude is the reported cost"
     end
   end
 
