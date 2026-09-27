@@ -33,7 +33,6 @@ module Authentication
 
       if cookie_session
         Current.session = cookie_session
-        end_impersonation_if_target_inactive!
       elsif session_record = create_session_by_remote_header
         Current.session = session_record
       else
@@ -42,7 +41,10 @@ module Authentication
         else
           redirect_to new_session_url
         end
+        return
       end
+
+      end_impersonation_if_target_inactive!
     end
 
     def cookie_session_disagrees_with_resolved_header_user?(session)
