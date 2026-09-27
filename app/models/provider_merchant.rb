@@ -55,10 +55,16 @@ class ProviderMerchant < Merchant
     return 0 if Setting.brand_fetch_client_id.blank?
 
     missing_logo.find_each.count do |merchant|
+      generated = false
+
       merchant.with_lock do
-        merchant.save! if merchant.logo_url.blank?
+        if merchant.logo_url.blank?
+          merchant.save!
+          generated = merchant.logo_url.present?
+        end
       end
-      merchant.logo_url.present?
+
+      generated
     rescue ActiveRecord::RecordInvalid => e
       Rails.logger.warn("Failed to backfill logo for merchant #{merchant.id}: #{e.message}")
       false

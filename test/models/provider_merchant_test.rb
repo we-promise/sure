@@ -168,7 +168,7 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     end
 
     with_brandfetch do
-      assert_equal 1, ProviderMerchant.where(id: merchant.id).backfill_logos
+      assert_equal 0, ProviderMerchant.where(id: merchant.id).backfill_logos
     end
 
     assert_equal "https://provider.example.com/walmart.png", merchant.reload.logo_url
