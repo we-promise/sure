@@ -8,6 +8,33 @@ class SureImport::Preflight
     def error_messages = errors.map { |error| error[:message] }
     def error_message = valid? ? "" : ([ "Sure import preflight failed:" ] + error_messages).join("\n")
     def payload = { valid: valid?, stats: stats, errors: errors, warnings: warnings }
+
+    # Rows that will import without a merchant because this export predates
+    # provider-merchant support (#3113) -- surfaced as a single friendly count
+    # rather than one line per row, which is what skipped_missing_merchant_reference
+    # warnings would otherwise read as.
+    def skipped_missing_merchant_count
+      warnings.count { |warning| warning[:code] == "skipped_missing_merchant_reference" }
+    end
+
+    # Rows whose Category/Tag/Merchant name already exists in the family and will
+    # be reused instead of duplicated -- same rollup rationale as above.
+    def reused_taxonomy_count
+      warnings.count { |warning| warning[:code] == "existing_taxonomy_collision" }
+    end
+
+    # Shared ProviderMerchants that already exist with different details than the
+    # file carries. The existing record is kept as-is, so the user sees what differs.
+    # Unnamed recurring transactions whose merchant is missing can't be imported
+    # (a series needs a merchant or a name), so they are skipped rather than
+    # imported without a merchant.
+    def skipped_unnamed_recurring_count
+      warnings.count { |warning| warning[:code] == "skipped_unnamed_recurring" }
+    end
+
+    def provider_merchant_diff_warnings
+      warnings.select { |warning| warning[:code] == "provider_merchant_diff" }
+    end
   end
 
   REQUIRED_FIELDS = {
@@ -16,6 +43,7 @@ class SureImport::Preflight
     "Category" => %w[id name],
     "Tag" => %w[id name],
     "Merchant" => %w[id name],
+    "ProviderMerchant" => %w[id name source],
     "RecurringTransaction" => %w[id amount expected_day_of_month last_occurrence_date next_expected_date],
     "Transaction" => %w[id account_id date amount],
     "Transfer" => %w[inflow_transaction_id outflow_transaction_id],
@@ -33,9 +61,27 @@ class SureImport::Preflight
   # a warning rather than a blocking error.
   SOFT_REFERENCE_TYPES = %w[RejectedTransfer].freeze
 
+  # merchant_id specifically (not account_id/category_id) is advisory on these
+  # types: the importer already nulls an unresolved merchant_id rather than
+  # failing (see Family::DataImporter#import_transactions), and an export taken
+  # before #3113 shipped never included the provider-assigned merchants a
+  # transaction could reference -- so a dangling merchant_id is expected on
+  # older exports, not a sign of corrupt data.
+  SOFT_REFERENCE_FIELDS = {
+    "Transaction" => %w[merchant_id],
+    "RecurringTransaction" => %w[merchant_id],
+    "Transaction split line" => %w[merchant_id]
+  }.freeze
+
   TAXONOMY_TYPES = { "Category" => :categories, "Tag" => :tags, "Merchant" => :merchants }.freeze
 
+  # ProviderMerchant shares the :merchants reference namespace with Merchant (a
+  # Transaction/RecurringTransaction's merchant_id can point at either), but it is
+  # a cross-family shared record, not family-owned taxonomy -- so it's deliberately
+  # excluded from TAXONOMY_TYPES, whose collision/duplicate-name checks assume
+  # family-scoped uniqueness.
   SOURCE_ID_TYPES = TAXONOMY_TYPES.merge(
+    "ProviderMerchant" => :merchants,
     "Account" => :accounts,
     "RecurringTransaction" => :recurring_transactions,
     "Transaction" => :transactions,
@@ -77,6 +123,7 @@ class SureImport::Preflight
     validate_accountables
     validate_split_lines
     validate_references
+    validate_provider_merchant_diffs
     validate_duplicate_valuations
     Result.new(
       errors: @errors,
@@ -149,15 +196,19 @@ class SureImport::Preflight
       end
     end
 
+    # A name collision is advisory, not blocking: Family::DataImporter reuses the
+    # family's existing Category/Tag/Merchant with that name (a common case for
+    # Category/Tag on a fresh family, whose onboarding seeds a default set) rather
+    # than trying to create a second record with the same name.
     def validate_taxonomy_collisions
       TAXONOMY_TYPES.each do |type, association|
         existing_names = family.public_send(association).pluck(:name).to_set
         @records[type].each do |record|
           name = record[:data]["name"].to_s
           next if name.blank? || !existing_names.include?(name)
-          add_error(
+          add_warning(
             :existing_taxonomy_collision,
-            "Line #{record[:line_number]} #{type} name #{name.inspect} already exists in this family."
+            "Line #{record[:line_number]} #{type} name #{name.inspect} already exists in this family and will be reused."
           )
         end
       end
@@ -278,9 +329,17 @@ class SureImport::Preflight
       }
       if SOFT_REFERENCE_TYPES.include?(type)
         add_warning(:skipped_missing_reference, I18n.t("sure_import.preflight.skipped_missing_reference", **interpolations))
+      elsif unnamed_recurring_without_merchant?(record, type, field)
+        add_warning(:skipped_unnamed_recurring, I18n.t("sure_import.preflight.skipped_unnamed_recurring", **interpolations))
+      elsif SOFT_REFERENCE_FIELDS.fetch(type, []).include?(field)
+        add_warning(:skipped_missing_merchant_reference, I18n.t("sure_import.preflight.skipped_missing_merchant_reference", **interpolations))
       else
         add_error(:missing_reference, I18n.t("sure_import.preflight.missing_reference", **interpolations))
       end
+    end
+
+    def unnamed_recurring_without_merchant?(record, type, field)
+      type == "RecurringTransaction" && field == "merchant_id" && record[:data]["name"].blank?
     end
 
     def validate_tag_references(record, type)
@@ -321,9 +380,35 @@ class SureImport::Preflight
       end
     end
 
+    def validate_provider_merchant_diffs
+      @records["ProviderMerchant"].each do |record|
+        data = record[:data]
+        source = data["source"].to_s
+        next unless ProviderMerchant.sources.key?(source)
+
+        diff = ProviderMerchant.find_by_import_data(data, source)&.import_diff(data)
+        next if diff.blank?
+
+        add_warning(
+          :provider_merchant_diff,
+          I18n.t(
+            "sure_import.preflight.provider_merchant_diff",
+            line: record[:line_number],
+            name: data["name"],
+            fields: diff.pluck(:field).join(", ")
+          ),
+          details: { merchant_name: data["name"], diff: diff }
+        )
+      end
+    end
+
     def blank_required_value?(value) = value.blank?
 
     def add_error(code, message) = @errors << { code: code.to_s, message: message }
 
-    def add_warning(code, message) = @warnings << { code: code.to_s, message: message }
+    def add_warning(code, message, details: nil)
+      warning = { code: code.to_s, message: message }
+      warning[:details] = details if details
+      @warnings << warning
+    end
 end
