@@ -199,7 +199,8 @@ class TradeRepublicItemsController < ApplicationController
       render json: result.data.except("session_txt")
     end
   rescue Provider::TradeRepublicClient::LoginExpired, Provider::TradeRepublicClient::AuthenticationRequired => e
-    @trade_republic_item.update!(pending_login_state: nil)
+    return render_superseded_qr_login unless update_if_pending_login_current!(pending, pending_login_state: nil)
+
     render json: { error: e.message }, status: :unprocessable_entity
   rescue Provider::TradeRepublicClient::RateLimited => e
     render_qr_login_error(e, pending: pending, status: :too_many_requests, retryable: true)

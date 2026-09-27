@@ -192,7 +192,7 @@ class Provider::TradeRepublicClient
       process_id = challenge["processId"].presence
 
       if process_id.blank? && login_process_completed?(challenge)
-        return authenticated_session_result(session)
+        return authenticated_qr_session_result(session, pending)
       end
 
       unless process_id
@@ -232,7 +232,7 @@ class Provider::TradeRepublicClient
       })
     end
 
-    authenticated_session_result(session)
+    authenticated_qr_session_result(session, pending)
   rescue Net::HTTPClientException => e
     raise_login_error(e.response)
   end
@@ -607,6 +607,13 @@ class Provider::TradeRepublicClient
           "currency" => account["currency"]
         }
       })
+    end
+
+    def authenticated_qr_session_result(session, pending)
+      authenticated_session_result(session)
+    rescue RateLimited, Timeout, TransientProviderError => e
+      attach_pending_login_state(e, pending.merge("session_blob" => session.cookies_blob))
+      raise
     end
 
     def escape_path(value) = CGI.escape(value.to_s).tr("+", "%20")

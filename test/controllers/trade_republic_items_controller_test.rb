@@ -242,6 +242,26 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil item.reload.pending_login_state
   end
 
+  test "expired QR poll does not clear a newer QR login" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic QR Connection",
+      currency: "EUR",
+      status: :requires_update
+    )
+    item.update!(pending_login_state: "qr-pending")
+    provider = Object.new
+    provider.define_singleton_method(:poll_qr_login) do |pending_login_b64:|
+      TradeRepublicItem.find(item.id).update!(pending_login_state: "qr-pending-new")
+      raise Provider::TradeRepublicClient::LoginExpired, "Trade Republic login expired"
+    end
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :conflict
+    assert_equal "qr-pending-new", item.reload.pending_login_state
+  end
+
   test "QR polling does not connect a login cancelled while the poll was in flight" do
     item = families(:dylan_family).trade_republic_items.create!(
       name: "Trade Republic QR Connection",
