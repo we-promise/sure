@@ -95,4 +95,23 @@ class ExchangeRateTest < ActiveSupport::TestCase
     result = ExchangeRate.find_or_fetch_rate(from: "USD", to: "JPY", date: Date.current)
     assert_equal 155.0, result.rate
   end
+
+  test "rejects rates that cannot convert an amount" do
+    [ 0, -1.2, Float::NAN, Float::INFINITY ].each do |value|
+      rate = ExchangeRate.new(from_currency: "CHF", to_currency: "CNY", date: Date.current, rate: value)
+
+      assert_not rate.valid?, "expected a rate of #{value.inspect} to be rejected"
+      assert rate.errors.of_kind?(:rate, :greater_than)
+    end
+  end
+
+  # The importer writes with upsert_all, which skips model validations.
+  test "database rejects a zero rate written without validations" do
+    assert_raises ActiveRecord::CheckViolation do
+      ExchangeRate.upsert_all(
+        [ { from_currency: "CHF", to_currency: "CNY", date: Date.current, rate: 0 } ],
+        unique_by: %i[from_currency to_currency date]
+      )
+    end
+  end
 end

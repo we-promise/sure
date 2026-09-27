@@ -99,6 +99,16 @@ Pending inclusion is provider- and layer-specific:
   budgeting, and keep the pending lookback wide enough that live holds stay in the
   payload instead of being pruned as stale.
 
+## Exchange rate providers
+
+Exchange rate providers include
+[`Provider::ExchangeRateConcept`](../../app/models/provider/exchange_rate_concept.rb),
+which validates their responses: a rate that `ExchangeRate.valid_rate?` rejects
+(zero, negative, NaN, infinite or missing) turns a single lookup into a failed
+response and is dropped from a series, with a `DebugLogEntry` in the
+`exchange_rates` category. Providers do not need their own check. A database
+constraint on `exchange_rates.rate` rejects anything that still gets through.
+
 ## Transaction naming
 
 Where a provider supplies both a cleaned merchant name and the bank's own
