@@ -48,7 +48,7 @@ ca:
       button_title: Mou diners des d'aquesta categoria
       cancel: Cancel·la
       dialog_title: Mou diners
-      no_destination: 'Ara mateix aquest és l''únic sobre entre el qual es poden moure diners: una categoria no pot enviar-ne a la seva categoria pare ni a les seves subcategories.'
+      no_destination: 'Ara mateix no hi ha cap altre sobre on moure diners: una categoria no pot enviar-ne a la seva categoria pare ni a les seves subcategories.'
       submit: Mou
       amount_label: Import
       available: '%{amount} disponibles'

@@ -71,8 +71,8 @@ ca:
         one: '%{count} factura'
         other: '%{count} factures'
       left_to_pay: per pagar
-      pulse_paid: pagat
-      pulse_overdue: vençut
+      pulse_paid: pagats
+      pulse_overdue: vençuts
       pulse_next_seven: pròxims 7 dies
       pulse_bar_aria: '%{percent}% de les factures d''aquest mes pagades'
       next_up: A continuació
@@ -196,7 +196,7 @@ ca:
       shortfall_label: Falta abans del teu proper cobrament
       shortfall_amount: · %{amount}
       shortfall_split: '%{obligations} vencen abans del %{date} i els teus comptes tenen %{cash}.'
-      shortfall_largest: 'Obligació de pagament més gran propera:'
+      shortfall_largest: 'Obligació pendent més gran:'
       review_plan: Revisa el pla
       allocation_aria: Dels %{income} d'ingressos, %{due} vencen ara, %{reserved} es reserven per a més endavant i %{safe} es poden gastar amb tranquil·litat.
       allocation_aria_short: '%{income} d''ingressos van a allò que ja està compromès aquí, i en falten %{short} més.'

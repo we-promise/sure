@@ -29,8 +29,8 @@ ca:
       not_configured: No configurat
       sandbox_note_html: Utilitza l'URL base de <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>) per fer proves. Defineix <code>WISE_BASE_URL</code> al teu entorn.
       encryption_warning:
-        title: El xifrat de la base de dades no està configurat
-        message: Configura les claus de xifrat d'Active Record abans d'afegir tokens de Wise en producció. Sense xifrat, els tokens s'emmagatzemen en text pla.
+        title: El xifratge de la base de dades no està configurat
+        message: Configura les claus de xifratge d'Active Record abans d'afegir tokens de Wise en producció. Sense xifratge, els tokens s'emmagatzemen en text pla.
       sca:
         title: Autenticació reforçada de clients (SCA)
         description: Wise requereix superar un repte signat amb un token d'un sol ús per llegir els extractes complets de transaccions, inclosos els pagaments entrants. Genera aquí un parell de claus i registra la clau pública a Wise per activar-ho.

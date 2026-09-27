@@ -37,7 +37,7 @@ ca:
         reset_confirm_body: Això descartarà el teu prompt personalitzat i restaurarà les instruccions predeterminades integrades.
         status_custom: S'utilitza el teu prompt personalitzat
         status_default: S'utilitza el predeterminat integrat
-        format_risk: 'El teu prompt de %{provider} ha eliminat l''exemple {"%{key}": ...}. Cada sol·licitud continua demanant aquest format, així que l''anàlisi normalment funciona, però una substitució que demani un format de sortida diferent la farà fallar.'
+        format_risk: 'El teu prompt de %{provider} ja no inclou l''exemple {"%{key}": ...}. Cada sol·licitud continua demanant aquest format, així que l''anàlisi normalment funciona, però una substitució que demani un format de sortida diferent la farà fallar.'
       update:
         success: Prompts d'IA actualitzats
         multiple_errors: Hi ha diversos prompts massa llargs (el màxim és de %{count} caràcters)

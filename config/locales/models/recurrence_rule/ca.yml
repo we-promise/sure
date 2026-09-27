@@ -26,7 +26,7 @@ ca:
               required_for_weekly: és obligatori per a una regla setmanal
             weekday_ordinal:
               not_allowed_for_weekly: no s'aplica a una regla setmanal
-              required_with_weekday: és obligatori quan s'indica un dia de la setmana
+              required_with_weekday: és obligatòria quan s'indica un dia de la setmana
               not_allowed_without_weekday: només s'aplica quan s'indica un dia de la setmana
             day_of_month:
               not_allowed_for_weekly: no s'aplica a una regla setmanal

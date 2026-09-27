@@ -198,7 +198,7 @@ ca:
       failed: No s'ha pogut completar l'autorització de SnapTrade. Torna-ho a provar.
     oauth_device_flow:
       title: Connecta SnapTrade
-      subtitle: Autoritza Sure a SnapTrade amb un codi de dispositiu.
+      subtitle: Autoritza Sure a accedir a SnapTrade amb un codi de dispositiu.
       instructions: Obre SnapTrade, confirma aquest codi de dispositiu i torna aquí per acabar.
       code_label: Codi de dispositiu
       open_snaptrade: Obre SnapTrade

@@ -53,9 +53,9 @@ ca:
           user: Usuari
           family: Família / Grup
           keep_current_family: Mantén la família/grup actual
-          create_new_family_option: + Crea una família/grup nou
+          create_new_family_option: + Crea una nova família/grup
           new_family_name: Nom de la nova família/grup
-          new_family_name_placeholder: Introdueix un nom per crear una família/grup nou
+          new_family_name_placeholder: Introdueix un nom per crear una nova família/grup
           new_family_moniker: Tipus de la nova família/grup
           set_password: Defineix una contrasenya nova
           password_placeholder: Deixa-ho en blanc per mantenir l'actual

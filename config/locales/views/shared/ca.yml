@@ -53,5 +53,5 @@ ca:
       reasons:
         redis_unreachable: L'aplicació no pot connectar amb Redis. Comprova el teu REDIS_URL i que Redis estigui en execució.
         no_worker_processes: No hi ha cap procés worker de Sidekiq connectat. Inicia el contenidor del worker o la unitat de systemd.
-        stale_heartbeat: El worker de Sidekiq fa estona que no envia cap senyal d'activitat. Pot estar encallat o s'ha aturat.
-        queue_backed_up: La tasca més antiga de la cua fa més temps que la latència màxima acceptable que espera. El worker funciona però s'està endarrerint.
+        stale_heartbeat: El worker de Sidekiq fa estona que no envia cap senyal d'activitat. Pot estar encallat o haver-se aturat.
+        queue_backed_up: La tasca més antiga de la cua fa més temps que espera del que permet la latència màxima acceptable. El worker funciona, però s'està endarrerint.

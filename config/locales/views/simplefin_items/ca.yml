@@ -205,7 +205,7 @@ ca:
         one: '%{count} entitat'
         other: '%{count} entitats'
     rate_limited:
-      daily_refresh: Has arribat al límit diari d'actualitzacions de SimpleFIN. Torna-ho a provar quan el bridge s'actualitzi (fins a 24 hores).
+      daily_refresh: Has arribat al límit diari d'actualitzacions de SimpleFIN. Torna-ho a provar quan SimpleFIN Bridge s'actualitzi (fins a 24 hores).
     stale_sync:
       last_successful: La darrera sincronització correcta va ser fa %{count} dies. Pot ser que la teva connexió de SimpleFIN necessiti atenció.
       no_transactions: No hi ha transaccions noves des de fa %{count} dies. Comprova al tauler de SimpleFIN que les connexions bancàries estiguin actives.

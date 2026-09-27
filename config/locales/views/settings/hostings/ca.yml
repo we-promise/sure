@@ -156,7 +156,7 @@ ca:
         timeout_heading: Temps d'espera
         timeout_description: Controla quant de temps poden durar les crides a models compatibles amb OpenAI abans que Sure les abandoni. Augmenta aquests valors si executes un model local en maquinari lent.
         openai_request_timeout_label: Temps d'espera de la sol·licitud en segons (opcional)
-        openai_request_timeout_help: 'Per defecte: 60. S''aplica a cada sol·licitud HTTP compatible amb OpenAI, incloses l''autocategorització, la detecció de comerços, el xat, el processament de PDF i les crides al magatzem de vectors. OPENAI_REQUEST_TIMEOUT té prioritat sobre aquest camp.'
+        openai_request_timeout_help: 'Per defecte: 60. S''aplica a cada sol·licitud HTTP compatible amb OpenAI, incloent-hi l''autocategorització, la detecció de comerços, el xat, el processament de PDF i les crides al magatzem de vectors. OPENAI_REQUEST_TIMEOUT té prioritat sobre aquest camp.'
         ai_response_timeout_label: Temps d'espera de la resposta en segons (opcional)
         ai_response_timeout_help: 'Per defecte: 90. Només s''aplica al vigilant de tot el torn del xat, així que calcula''l com una suma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × temps d''espera de la sol·licitud, més el temps d''execució de les eines i de cua. AI_RESPONSE_TIMEOUT té prioritat sobre aquest camp.'
       provider_selection:
@@ -296,7 +296,7 @@ ca:
         status_unknown: S'està comprovant l'estat de Yahoo Finance.
       llm_provider_selector:
         title: Proveïdor d'IA
-        description: Tria quin LLM impulsa el xat d'IA. Les operacions per lots (categorització de transaccions, detecció de comerços i processament de PDF) ara com ara sempre utilitzen OpenAI.
+        description: Tria quin LLM fa servir el xat d'IA. Les operacions per lots (categorització de transaccions, detecció de comerços i processament de PDF) ara com ara sempre utilitzen OpenAI.
         env_configured_message: Configurat correctament mitjançant la variable d'entorn LLM_PROVIDER.
         provider_label: Proveïdor d'LLM actiu
         provider_openai: OpenAI

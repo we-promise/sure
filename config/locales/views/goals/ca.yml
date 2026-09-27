@@ -146,7 +146,7 @@ ca:
       funding_last_30d: últims 30 d
       funding_last_90d: últims 90 d
       status_callout:
-        depleted: '%{amount} per sota del saldo objectiu: reposa-la per recuperar la reserva'
+        depleted: '%{amount} per sota del saldo objectiu: afegeix-hi diners per recuperar la reserva'
         behind: estalvia %{amount}/mes més per posar-te al dia
         behind_covered: les aportacions pendents cobreixen la diferència
         on_track: assolirà l'objectiu cap al %{date}
@@ -172,7 +172,7 @@ ca:
         including_used: Inclou %{amount} ja utilitzats
         saved: Estalviat
         of: de %{target}
-        to_go: en falten %{amount}
+        to_go: Falten %{amount}
         of_target: de l'objectiu
         market_value: 'Valor de mercat: %{amount}'
         aria_label: Objectiu completat al %{percent}%. %{amount} estalviats de %{target}.
@@ -245,7 +245,7 @@ ca:
       archived: Arxivat
     status:
       funded: Reserva completa
-      depleted: Cal reposar-la
+      depleted: Cal reposar fons
       on_track: En bon camí
       behind: Endarrerit
       reached: Assolit
@@ -338,7 +338,7 @@ ca:
         earmark_hint: Deixa un import en blanc per destinar-hi tot el saldo d'aquell compte.
       subtypes:
         checking: Compte corrent
-        savings: Estalvi
+        savings: Estalvis
         hsa: HSA
         cd: Dipòsit a termini
         money_market: Mercat monetari

@@ -68,7 +68,7 @@ ca:
     update:
       success: S'ha actualitzat la connexió de Monobank.
     destroy:
-      success: La connexió de Monobank s'ha programat per eliminar-la.
+      success: S'ha programat l'eliminació de la connexió de Monobank.
       unlink_failed: No s'ha pogut desconnectar la connexió de Monobank
     select_accounts:
       title: Enllaça comptes de Monobank

@@ -34,7 +34,7 @@ ca:
       partial: '%{linked} sincronitzats, %{unlinked} necessiten configuració'
   fio_items:
     account_types:
-      depository: Compte corrent o d'estalvi
+      depository: Compte corrent o d'estalvis
       loan: Préstec, hipoteca o descobert
     provider_panel:
       default_connection_name: Connexió de Fio banka

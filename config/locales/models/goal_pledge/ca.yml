@@ -8,7 +8,7 @@ ca:
         account: Compte
         kind: Tipus
         status: Estat
-        expires_at: Caduca el
+        expires_at: Data de caducitat
     errors:
       models:
         goal_pledge:

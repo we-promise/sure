@@ -100,7 +100,7 @@ ca:
       cancel_button: Cancel·la
       configure_name_in_provider: 'No es pot importar: configura el nom del compte a Redbark'
       connect_hint: Connecta un compte de Redbark per activar la sincronització automàtica.
-      description: Selecciona un compte de Redbark per enllaçar-lo amb aquest compte. Les transaccions se sincronitzaran i es desduplicaran automàticament.
+      description: Selecciona un compte de Redbark per enllaçar-lo amb aquest compte. Les transaccions se sincronitzaran i es deduplicaran automàticament.
       header: Enllaça amb Redbark
       link_account: Enllaça el compte
       link_button: Enllaça aquest compte
@@ -154,7 +154,7 @@ ca:
         other_asset: No calen opcions addicionals per a altres actius.
       subtypes:
         depository:
-          checking: Corrent
+          checking: Compte corrent
           savings: Estalvis
           hsa: Compte d'estalvi per a salut
           cd: Dipòsit a termini
@@ -162,7 +162,7 @@ ca:
         loan:
           mortgage: Hipoteca
           student: Préstec d'estudis
-          auto: Préstec per a vehicle
+          auto: Préstec d'automòbil
           other: Altre préstec
       balance: Saldo
       cancel: Cancel·la
@@ -173,7 +173,7 @@ ca:
       historical_data_range: 'Període de dades històriques:'
       subtitle: Tria els tipus de compte correctes per als comptes importats
       sync_start_date_help: Selecciona fins a quina data vols sincronitzar l'historial de transaccions.
-      sync_start_date_label: 'Sincronitza les transaccions des del:'
+      sync_start_date_label: 'Comença a sincronitzar transaccions des de:'
       title: Configura els teus comptes de Redbark
     setup_required:
       title: Connecta primer Redbark

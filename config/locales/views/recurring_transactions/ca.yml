@@ -31,9 +31,9 @@ ca:
       triggers:
       - Importacions CSV completades (transaccions, operacions, comptes, etc.)
       - Sincronitzacions de proveïdors completades (Plaid, SimpleFIN, etc.)
-    marked_active: Represa.
+    marked_active: S'ha reprès.
     marked_as_recurring: Transacció marcada com a recurrent
-    marked_inactive: En pausa. No tornarà a aparèixer fins que la reprenguis.
+    marked_inactive: S'ha posat en pausa. No tornarà a aparèixer fins que no es reprengui.
     projected: Projectada
     recurring: Recurrent
     settings:
@@ -127,7 +127,7 @@ ca:
       success: Factura afegida
       success_income: Ingrés afegit
       due_date_required: Introdueix la propera data de venciment de la factura
-      amount_invalid: Introdueix l'import com un número sense format
+      amount_invalid: Introdueix l'import com a número sense format
       account_invalid: Tria un compte al qual puguis afegir factures, o deixa-ho en blanc
       already_exists: Aquesta factura ja existeix
     edit:
@@ -137,9 +137,9 @@ ca:
     form:
       payment_url_label: Enllaç de pagament
       payment_url_placeholder: bank.example.com/pay
-      payment_url_hint: On vas per pagar aquesta factura. S'obre en una pestanya nova des de les llistes de recurrents i propers.
+      payment_url_hint: On pagues aquesta factura. S'obre en una pestanya nova des de les llistes de factures recurrents i properes.
       autopay_label: Es paga automàticament
-      autopay_hint: Es manté a la llista de factures, però deixa de tractar-se com una tasca pendent.
+      autopay_hint: Es manté a la llista de factures, però deixa de tractar-se com a tasca pendent.
       more_options: Més opcions
       notes_label: Notes
       notes_placeholder: Compte 4821, carregat a l'Amex
@@ -173,7 +173,7 @@ ca:
       amount_edit_hint: S'aplica a les factures que vencin a partir d'ara. Les que ja han vençut mantenen l'import que tenien.
       income_amount_edit_hint: S'aplica als cobraments a partir d'ara. Els que ja han vençut mantenen l'import que tenien.
       cancelled_on_label: Data de cancel·lació
-      cancelled_on_hint: Registrar la data és només per a la teva referència. Posa la factura en pausa perquè deixin d'aparèixer els propers.
+      cancelled_on_hint: Registrar la data és només per a la teva referència. Posa la factura en pausa perquè deixin d'aparèixer els propers venciments.
       category_label: Categoria
       category_blank: Sense categoria
       frequency_new_hint: Els detalls del dia surten de la data de venciment de dalt. Pots ajustar la periodicitat després de desar.
