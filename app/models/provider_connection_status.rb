@@ -191,6 +191,8 @@ class ProviderConnectionStatus
       end
     end
 
+    # Return freshness and counts for accessible wallet accounts only. Neither
+    # extended public keys nor the underlying address lists enter the status API.
     def bitcoin_wallet_payload
       wallets = item.bitcoin_wallet_accounts.includes(:bitcoin_wallet_addresses, :bitcoin_wallet_sources)
       wallets = wallets.where(account_id: Current.user.accessible_accounts.select(:id)) if Current.user

@@ -95,6 +95,8 @@ module Account::Linkable
     providers.all?(&:can_delete_holdings?)
   end
 
+  # Protect provider-owned BTC since connection while retaining deletion rights
+  # for earlier BTC history and unrelated manual positions in a mixed account.
   def can_delete_holding?(holding)
     return can_delete_holdings? unless (wallet = bitcoin_wallet_account)&.account_provider
     return false if holding.security_id == wallet.security_id && holding.date >= wallet.baseline_at.to_date

@@ -3,10 +3,13 @@
 class BitcoinWalletAccount::Processor
   SOURCE = "bitcoin_wallet"
 
+  # Bind movement publication to the wallet's selected BTC security and account.
   def initialize(wallet)
     @wallet = wallet
   end
 
+  # Import missing BTC quotes and required FX outside publication locks.
+  # Missing pricing logs a warning but does not discard the on-chain quantity.
   def prepare_prices
     import_prices
     currencies = wallet.security.prices.where(date: ..Date.current).distinct.pluck(:currency) - [ account.currency ]
@@ -21,6 +24,9 @@ class BitcoinWalletAccount::Processor
       account_provider: wallet.account_provider, metadata: { error_class: error.class.name })
   end
 
+  # Publish a connected wallet's movements, quantity reconciliation and mixed
+  # portfolio under the account lock. Callers that already fetched quotes can
+  # disable preparation to keep network requests outside their transaction.
   def process(prepare_prices: true)
     return unless wallet.account_provider && wallet.baseline_at
 
@@ -35,10 +41,13 @@ class BitcoinWalletAccount::Processor
   private
     attr_reader :wallet
 
+    # Return the existing Crypto account whose BTC position this publisher owns.
     def account
       wallet.account
     end
 
+    # Fetch a missing current-day quote from the selected security's provider,
+    # starting today when the initial connection has no baseline yet.
     def import_prices
       return if wallet.security.price_data_provider.blank?
       return if wallet.security.prices.exists?(date: Date.current)
@@ -51,6 +60,8 @@ class BitcoinWalletAccount::Processor
         account_provider: wallet.account_provider, metadata: { error_class: error.class.name })
     end
 
+    # Import source-scoped, cash-neutral BTC transfers after the baseline;
+    # vanished baseline movements receive reversals and protected entries stay.
     def materialize_movements
       wallet.bitcoin_wallet_transactions.each do |row|
         external_id = "bitcoin_wallet_#{wallet.id}_#{row.txid}"

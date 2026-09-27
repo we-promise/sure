@@ -1,11 +1,16 @@
 # frozen_string_literal: true
 
 class BitcoinWalletAccount::Syncer
+  # Use the injected explorer for tests or the configured history budget for
+  # production. Source keys are never passed to the provider.
   def initialize(wallet, provider: nil)
     @wallet = wallet
     @provider = provider || Provider::MempoolSpace.new(max_pages: Onchain::HistoryBudget.pages)
   end
 
+  # Coalesce concurrent readers with a session advisory lock. Provider requests
+  # run outside a database transaction; disconnects and source edits invalidate
+  # publication, while failed reads preserve the last complete quantity.
   def perform
     # Serialize readers without a long transaction or a wallet row lock:
     # source edits and disconnects remain available during provider requests.
@@ -30,6 +35,8 @@ class BitcoinWalletAccount::Syncer
   private
     attr_reader :wallet, :provider
 
+    # Discover, read and prepare quotes before taking the short publication
+    # lock. Recheck source membership before committing metadata and positions.
     def perform_read
       @source_signature = source_signature
       complete = BitcoinWalletAccount::Discovery.new(wallet, provider: provider).perform
@@ -71,10 +78,14 @@ class BitcoinWalletAccount::Syncer
       end
     end
 
+    # Describe the configured source set without including decrypted keys, so
+    # changes made during provider requests can invalidate their result.
     def source_signature
       wallet.bitcoin_wallet_sources.order(:id).pluck(:id, :kind, :fingerprint, :gap_limit)
     end
 
+    # Resolve absent pending and recently confirmed transactions explicitly.
+    # A confirmation beyond the captured height requires a new complete read.
     def missing_statuses(snapshot)
       observed = snapshot.transactions.map { |tx| tx.fetch("txid") }
       wallet.bitcoin_wallet_transactions.where(present: true).where.not(txid: observed)
@@ -87,6 +98,8 @@ class BitcoinWalletAccount::Syncer
         end
     end
 
+    # Upsert owned net movements once per TXID, distinguish baseline history by
+    # block height, and mark disappeared transfers for scoped ledger rollback.
     def remember_transactions(snapshot, statuses)
       addresses = wallet.bitcoin_wallet_addresses.pluck(:address).to_set
       snapshot.transactions.each do |transaction|
@@ -118,6 +131,8 @@ class BitcoinWalletAccount::Syncer
       end
     end
 
+    # Mark only a still-existing wallet with the same sources as failed and log
+    # diagnostic classes without including public keys or provider payloads.
     def record_failure(error)
       return unless wallet.class.exists?(wallet.id)
 

@@ -1,4 +1,7 @@
 class CreateBitcoinWalletAccounts < ActiveRecord::Migration[8.1]
+  # Add watch-only source, address and transaction state without rewriting
+  # existing financial records. Household ownership is unique, and wallet-child
+  # cascades support resets that deliberately bypass model destruction callbacks.
   def change
     create_table :bitcoin_wallet_accounts, id: :uuid do |t|
       t.references :onchain_wallet_item, null: false, type: :uuid, foreign_key: true

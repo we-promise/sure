@@ -5,11 +5,17 @@ class BitcoinWalletAccount::Snapshot
   class IncompleteMempool < StandardError; end
   Result = Data.define(:balance_sats, :transactions, :block_height, :history_truncated, :used_addresses)
 
+  # Bind the wallet to a provider without performing network
+  # requests or changing the wallet's published balance.
   def initialize(wallet, provider:)
     @wallet = wallet
     @provider = provider
   end
 
+  # Read an aggregate at a stable chain tip, following transaction references
+  # only when they belong to tracked addresses. Deduplicate pending movements
+  # and reject incomplete or conflicting reads before returning a Result.
+  # Used-address markers are returned for publication, not persisted here.
   def fetch
     before = provider.tip_hash
     height = provider.tip_height
@@ -65,14 +71,16 @@ class BitcoinWalletAccount::Snapshot
         raise IncompleteMempool, "Conflicting pending spends; retry the wallet" unless spent.add?(outpoint)
       end
     end
-    # Change may arrive after discovery checked a lookahead address. It still
-    # belongs to this wallet even when that address does not need another read.
+    # Ownership includes the complete tracked set, independently of the initial
+    # read scope, so newly observed change cannot be treated as an external spend.
     pending_sats = pending.sum { |tx| net_sats(tx, owned_addresses) }
     raise ChangedTip, "Inconsistent address balances; retry the complete wallet" if confirmed_sats + pending_sats < 0
     Result.new(balance_sats: confirmed_sats + pending_sats, transactions: transactions.values,
       block_height: height, history_truncated: truncated, used_addresses: used_addresses)
   end
 
+  # Return owned outputs minus owned inputs in satoshis. Internal movement nets
+  # to its fee, and an exchange batch credits only this wallet's outputs.
   def self.net_sats(transaction, addresses)
     received = Array(transaction["vout"]).sum { |output| value_for(output, addresses) }
     spent = Array(transaction["vin"]).sum { |input| value_for(input["prevout"], addresses) }
@@ -82,15 +90,20 @@ class BitcoinWalletAccount::Snapshot
   private
     attr_reader :wallet, :provider
 
+    # Apply the shared ownership calculation to a transaction in this read.
     def net_sats(transaction, addresses)
       self.class.net_sats(transaction, addresses)
     end
 
+    # Collect script addresses from outputs and spent prevouts; callers must
+    # intersect these untrusted provider references with tracked ownership.
     def referenced_addresses(transaction)
       outputs = Array(transaction["vout"]) + Array(transaction["vin"]).filter_map { |input| input["prevout"] }
       outputs.filter_map { |output| output["scriptpubkey_address"] }.to_set
     end
 
+    # Read an integer output value only when its script belongs to the wallet;
+    # absent coinbase prevouts and external outputs contribute zero.
     def self.value_for(output, addresses)
       return 0 unless output.is_a?(Hash) && addresses.include?(output["scriptpubkey_address"])
 

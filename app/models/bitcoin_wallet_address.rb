@@ -7,10 +7,14 @@ class BitcoinWalletAddress < ApplicationRecord
   before_validation :assign_family
   validates :address, presence: true, uniqueness: { scope: :bitcoin_wallet_account_id }
 
+  # Report whether this household already aggregates a Bitcoin address;
+  # other-chain addresses are outside this ownership table.
   def self.tracks?(family:, chain:, address:)
     chain == Onchain::Chains::BITCOIN && where(family: family, address: address).exists?
   end
 
+  # Detect an address already claimed by another grouped or legacy single-address
+  # Bitcoin account in the same family, while allowing reuse within this wallet.
   def conflicts?
     family = bitcoin_wallet_account.onchain_wallet_item.family
     legacy = family.onchain_wallet_items.joins(:onchain_wallet_accounts)
@@ -23,6 +27,7 @@ class BitcoinWalletAddress < ApplicationRecord
   end
 
   private
+    # Bind uniqueness to the wallet's actual family instead of submitted input.
     def assign_family
       self.family = bitcoin_wallet_account.onchain_wallet_item.family if bitcoin_wallet_account
     end

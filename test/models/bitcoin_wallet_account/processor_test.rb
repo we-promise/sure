@@ -106,8 +106,22 @@ class BitcoinWalletAccount::ProcessorTest < ActiveSupport::TestCase
   test "initial connection prepares a missing quote with today's date" do
     @wallet.security.prices.where(date: Date.current).delete_all
     @wallet.security.stubs(:price_data_provider).returns(:configured)
-    @wallet.security.expects(:import_provider_prices).with(start_date: Date.current, end_date: Date.current).once
+    imports = []
+    # Model the provider's persisted quote and record the requested date range,
+    # so the assertion covers valuation rather than only an import invocation.
+    @wallet.security.define_singleton_method(:import_provider_prices) do |start_date:, end_date:|
+      imports << { start_date: start_date, end_date: end_date }
+      prices.create!(date: Date.current, price: 10_000, currency: "USD")
+    end
     @wallet.connect!
-    assert_equal BigDecimal("0.2"), @account.reload.current_holdings.find_by!(security: @wallet.security).qty
+
+    assert_equal [ { start_date: Date.current, end_date: Date.current } ], imports
+    assert_equal BigDecimal("10_000"), @wallet.security.prices.find_by!(date: Date.current).price
+    holding = @account.reload.current_holdings.find_by!(security: @wallet.security)
+    assert_equal BigDecimal("0.2"), holding.qty
+    assert_equal BigDecimal("10_000"), holding.price
+    assert_equal BigDecimal("2000"), holding.amount
+    assert_equal 2212, @account.balance
+    assert_equal 12, @account.cash_balance
   end
 end

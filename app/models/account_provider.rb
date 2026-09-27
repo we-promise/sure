@@ -36,6 +36,8 @@ class AccountProvider < ApplicationRecord
 
   private
 
+    # Remove tracking after generic unlinking, avoiding recursive destruction
+    # when the wallet itself is already destroying its provider association.
     def destroy_bitcoin_provider_account
       return if destroyed_by_association&.active_record == BitcoinWalletAccount
 

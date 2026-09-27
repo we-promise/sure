@@ -3,11 +3,15 @@
 # Own one security from a dated reconciliation boundary, with one read set for
 # the whole range. Idle historical days do not produce new queries or writes.
 class BitcoinWalletAccount::Portfolio
+  # Bind accounting to one BTC publisher within an existing mixed account.
   def initialize(wallet)
     @wallet = wallet
     @account = wallet.account
   end
 
+  # Rebuild daily holdings and balances from the connection baseline through
+  # today, preserving other positions and manual basis. Reuse preloaded data
+  # and write only changed historical rows; earlier history remains untouched.
   def materialize
     first_date = wallet.baseline_at.to_date
     manual_ids = (account.trades.distinct.pluck(:security_id) + latest_other_holdings.map(&:security_id)).uniq - [ wallet.security_id ]
@@ -72,6 +76,9 @@ class BitcoinWalletAccount::Portfolio
     account.update!(balance: latest.balance, cash_balance: latest.cash_balance) if latest
   end
 
+  # Return a stored quote at or before the date, converted with a sufficiently
+  # recent stored FX rate. Return nil if valuation cannot be established; this
+  # method never performs provider requests inside accounting locks.
   def self.price(security, currency, date)
     quote = security.prices.where(date: ..date).order(date: :desc).first
     return if quote.nil?
@@ -85,6 +92,8 @@ class BitcoinWalletAccount::Portfolio
   private
     attr_reader :wallet, :account
 
+    # Load the dated holdings, balances, quotes, FX and BTC journal once. Roll
+    # the authoritative current quantity backward using dated trade changes.
     def preload(first_date, manual_ids)
       @holdings = account.holdings.where(currency: account.currency, date: first_date..Date.current)
         .index_by { |holding| [ holding.security_id, holding.date ] }
@@ -108,6 +117,8 @@ class BitcoinWalletAccount::Portfolio
       end
     end
 
+    # Find the last row not later than the requested date in an ascending array.
+    # Return nil when all rows are newer or the supplied series is empty.
     def last_on(rows, date)
       return if rows.nil? || rows.empty?
 
@@ -115,6 +126,8 @@ class BitcoinWalletAccount::Portfolio
       index ? (index.positive? ? rows[index - 1] : nil) : rows.last
     end
 
+    # Value a security from preloaded quotes and FX, respecting the shared FX
+    # lookback limit without issuing a query for each historical day.
     def cached_price(security_id, date)
       quote = last_on(@prices[security_id], date)
       return if quote.nil?
@@ -126,6 +139,8 @@ class BitcoinWalletAccount::Portfolio
       quote.price.to_d * rate.rate.to_d
     end
 
+    # Upsert the publisher's BTC position under a date-specific identity,
+    # preserving existing basis and skipping an unchanged owned holding.
     def import_bitcoin_holding(date, quantity, price)
       old = @holdings[[ wallet.security_id, date ]]
       amount = quantity * price
@@ -139,6 +154,8 @@ class BitcoinWalletAccount::Portfolio
       @holdings[[ wallet.security_id, date ]] = row
     end
 
+    # Save calculated manual positions while preserving holdings owned by
+    # another provider and leaving their quantity and provenance intact.
     def persist_manual_holdings(rows)
       rows.each do |row|
         key = [ row.security_id, row.date ]
@@ -152,12 +169,16 @@ class BitcoinWalletAccount::Portfolio
       end
     end
 
+    # Cache the latest non-BTC position for each security through today, for
+    # carrying positions without a trade journal across the baseline range.
     def latest_other_holdings
       @latest_other_holdings ||= account.holdings.where.not(security_id: wallet.security_id)
         .where(currency: account.currency, date: ..Date.current).select("DISTINCT ON (security_id) holdings.*")
         .order(:security_id, date: :desc).to_a
     end
 
+    # Carry untraded assets forward with stored quantities and basis, repricing
+    # when possible and retaining the prior price when a quote is unavailable.
     def fill_untraded_positions(date, traded_ids)
       latest_other_holdings.each do |holding|
         key = [ holding.security_id, date ]

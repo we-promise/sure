@@ -5,12 +5,16 @@ class BitcoinWalletAccount::Discovery
   class Conflict < StandardError; end
   class AddressMismatch < StandardError; end
 
+  # Allocate a per-run HD address budget and use the supplied explorer client.
+  # Address derivation remains local to the wallet's public keys.
   def initialize(wallet, provider:)
     @wallet = wallet
     @provider = provider
     @remaining = MAX_ADDRESSES
   end
 
+  # Remember manual sources and resume HD scans from saved checkpoints.
+  # Return whether every source has completed both branch gaps.
   def perform
     wallet.bitcoin_wallet_sources.each do |source|
       if source.kind == "address"
@@ -25,6 +29,9 @@ class BitcoinWalletAccount::Discovery
   private
     attr_reader :wallet, :provider
 
+    # Scan receive and change branches up to the remaining job budget, counting
+    # historical or mempool activity as usage even when an address is empty.
+    # A completed scan must contain this source's independently supplied address.
     def scan(source)
       state = source.discovery.deep_dup
       [ 0, 1 ].each do |branch|
@@ -52,6 +59,8 @@ class BitcoinWalletAccount::Discovery
       raise AddressMismatch, "The receive address does not match this BIP84 account within the selected gap limit"
     end
 
+    # Cache an address once within the aggregate, retain any prior used marker,
+    # and reject overlap with other household wallet accounts.
     def remember(address, source: nil, branch: nil, index: nil, used: false)
       row = wallet.bitcoin_wallet_addresses.find_or_initialize_by(address: address)
       raise Conflict, "An address is already tracked by another account" if row.conflicts?
