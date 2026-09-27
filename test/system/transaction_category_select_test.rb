@@ -56,4 +56,68 @@ class TransactionCategorySelectTest < ApplicationSystemTestCase
 
     assert_nil transaction.reload.category_id
   end
+
+  test "can create a subcategory from the transaction form" do
+    parent = categories(:food_and_drink)
+    visit new_transaction_url
+
+    assert_difference "Category.count", +1 do
+      find("[data-controller='category-select'] button").click
+
+      within "[data-controller='category-select']" do
+        fill_in "Search categories", with: "Inline Subcategory"
+        click_button "Add as a subcategory…"
+
+        assert_text 'Create "Inline Subcategory" under:'
+        find("button[data-parent-id='#{parent.id}']").click
+
+        assert_selector "[data-category-select-target='selectionContainer']", text: "Inline Subcategory"
+      end
+    end
+
+    assert_equal parent, Category.find_by!(name: "Inline Subcategory").parent
+  end
+
+  test "can create a subcategory from the transaction details panel" do
+    parent = categories(:food_and_drink)
+    transaction = transactions(:one)
+    entry = transaction.entry
+
+    visit transactions_url
+
+    page.execute_script <<~JS
+      const frame = document.querySelector("turbo-frame#drawer")
+      frame.src = "#{transaction_url(entry)}"
+    JS
+
+    within "turbo-frame#drawer", visible: :all do
+      within "[data-controller='category-select']" do
+        find("button", match: :first).click
+        fill_in "Search categories", with: "Drawer Subcategory"
+        click_button "Add as a subcategory…"
+        find("button[data-parent-id='#{parent.id}']").click
+      end
+    end
+
+    assert_selector "##{ActionView::RecordIdentifier.dom_id(entry)}", text: "Drawer Subcategory"
+
+    category = Category.find_by!(name: "Drawer Subcategory")
+    assert_equal parent, category.parent
+    assert_equal category.id, transaction.reload.category_id
+  end
+
+  test "back from the parent picker returns to the category list" do
+    visit new_transaction_url
+    find("[data-controller='category-select'] button").click
+
+    within "[data-controller='category-select']" do
+      fill_in "Search categories", with: "Changed My Mind"
+      click_button "Add as a subcategory…"
+      assert_selector "[data-category-select-target='parentPicker']", visible: true
+
+      click_button "Back"
+      assert_no_selector "[data-category-select-target='parentPicker']", visible: true
+      assert_button 'Create "Changed My Mind"'
+    end
+  end
 end

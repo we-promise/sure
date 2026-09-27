@@ -6,6 +6,7 @@
      data-category-select-auto-submit-value="<%= auto_submit %>"
      data-category-select-create-label-value="<%= helpers.t("transactions.form.create_category", name: "__CATEGORY_NAME__") %>"
      data-category-select-create-error-message-value="<%= helpers.t("transactions.form.create_category_error") %>"
+     data-category-select-parent-picker-label-value="<%= helpers.t("transactions.form.choose_parent", name: "__CATEGORY_NAME__") %>"
      data-action="click@window->category-select#handleOutsideClick">
 
   <div class="form-field">
@@ -58,9 +59,12 @@
         }
       ) %>
 
+      <% parent_options = categories.select { |category| category.parent_id.nil? }.sort_by { |category| category.name.downcase } %>
+
       <div class="flex flex-col gap-1 max-h-64 overflow-auto mt-1"
            id="<%= menu_id %>"
-           role="listbox">
+           role="listbox"
+           data-category-select-target="list">
 
         <% if blank_label.present? %>
           <button type="button"
@@ -107,9 +111,45 @@
           <span data-category-select-target="createLabel"></span>
         <% end %>
 
+        <% if parent_options.any? %>
+          <button type="button"
+                  class="hidden text-secondary text-sm cursor-pointer items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-container-inset-hover"
+                  data-category-select-target="createAsSubcategory"
+                  data-action="click->category-select#showParentPicker">
+            <%= helpers.icon("corner-down-right") %>
+            <span><%= helpers.t("transactions.form.create_as_subcategory") %></span>
+          </button>
+        <% end %>
+
         <p class="hidden px-3 py-1 text-xs text-destructive"
            data-category-select-target="createError"></p>
       </div>
+
+      <%# Shown in place of the list after "Add as a subcategory…": pick a top-level parent. %>
+      <%# Only top-level categories can be parents (categories are at most two levels deep). %>
+      <% if parent_options.any? %>
+        <div class="hidden flex-col gap-1 max-h-64 overflow-auto mt-1"
+             data-category-select-target="parentPicker">
+          <p class="px-3 py-1 text-xs text-secondary"
+             data-category-select-target="parentPickerLabel"></p>
+
+          <% parent_options.each do |parent| %>
+            <button type="button"
+                    class="flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded-lg hover:bg-container-inset-hover"
+                    data-parent-id="<%= parent.id %>"
+                    data-action="click->category-select#createUnderParent">
+              <%= render partial: "categories/badge", locals: { category: parent } %>
+            </button>
+          <% end %>
+
+          <button type="button"
+                  class="flex items-center gap-2 px-3 py-1.5 text-sm text-secondary rounded-lg hover:bg-container-inset-hover"
+                  data-action="click->category-select#hideParentPicker">
+            <%= helpers.icon("arrow-left") %>
+            <span><%= helpers.t("transactions.form.back_to_categories") %></span>
+          </button>
+        </div>
+      <% end %>
     </div>
   <% end %>
 </div>
