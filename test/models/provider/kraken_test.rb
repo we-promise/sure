@@ -210,6 +210,50 @@ class Provider::KrakenTest < ActiveSupport::TestCase
     assert_operator slept.first, :<=, 6.0
   end
 
+  test "throttle_request rejects an interval that is not a positive number" do
+    provider = unthrottled_provider
+
+    with_env_overrides("KRAKEN_MIN_REQUEST_INTERVAL" => "invalid") do
+      error = assert_raises(ArgumentError) { provider.send(:throttle_request) }
+      assert_match(/KRAKEN_MIN_REQUEST_INTERVAL/, error.message)
+    end
+
+    with_env_overrides("KRAKEN_MIN_REQUEST_INTERVAL" => "0") do
+      assert_raises(ArgumentError) { provider.send(:throttle_request) }
+    end
+  end
+
+  # Ledgers and TradesHistory cost four counter points against a decay of half
+  # a point per second, so they are paced on their own, slower clock.
+  test "account-history requests are spaced by the history interval" do
+    provider = unthrottled_provider
+    slept = []
+    provider.define_singleton_method(:sleep) { |duration| slept << duration }
+    response = mock_httparty_response(200, { "error" => [], "result" => { "ledger" => {}, "count" => 0 } })
+    Provider::Kraken.stubs(:post).returns(response)
+
+    provider.get_ledgers
+    provider.get_ledgers
+
+    assert_equal 1, slept.size
+    assert_operator slept.first, :>, Provider::Kraken::MIN_REQUEST_INTERVAL
+    assert_operator slept.first, :<=, Provider::Kraken::HISTORY_MIN_REQUEST_INTERVAL
+  end
+
+  test "an ordinary private request is not held to the history interval" do
+    provider = unthrottled_provider
+    slept = []
+    provider.define_singleton_method(:sleep) { |duration| slept << duration }
+    response = mock_httparty_response(200, { "error" => [], "result" => {} })
+    Provider::Kraken.stubs(:post).returns(response)
+
+    provider.get_extended_balance
+    provider.get_extended_balance
+
+    assert_equal 1, slept.size
+    assert_operator slept.first, :<=, Provider::Kraken::MIN_REQUEST_INTERVAL
+  end
+
   private
 
     def unthrottled_provider
