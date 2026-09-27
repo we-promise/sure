@@ -877,6 +877,8 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
   end
 
   private
+    # Verify the response budget at the provider-to-processor boundary.
+    # @param limit [Integer, nil] expected explicit cap or omitted cap
     def expect_pdf_response_limit(provider, model:, limit:)
       result = Provider::LlmConcept::PdfProcessingResult.new(
         summary: "Synthetic PDF", document_type: "other", extracted_data: {}

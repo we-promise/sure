@@ -213,6 +213,8 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
   end
 
   private
+    # Build a vision processor with synthetic images and a mocked API client.
+    # @return [Provider::Openai::PdfProcessor] processor under test
     def vision_processor(model:, max_response_tokens:, custom_provider: false)
       processor = Provider::Openai::PdfProcessor.new(
         mock,
@@ -226,6 +228,8 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       processor
     end
 
+    # Check the emitted API payload and return a synthetic document response.
+    # @yieldparam params [Hash] outbound Chat Completions parameters
     def expect_vision_request(processor, model:)
       processor.client.expects(:chat).with do |request|
         params = request[:parameters]

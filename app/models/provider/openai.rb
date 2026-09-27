@@ -312,6 +312,11 @@ class Provider::Openai < Provider
     VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.start_with?(prefix) }
   end
 
+  # Analyze PDF bytes with the selected model and attribute usage to the family.
+  # @param pdf_content [String] PDF bytes
+  # @param model [String] optional override of the configured model
+  # @param family [Family, nil] usage attribution
+  # @return [Provider::Response] structured result or provider failure
   def process_pdf(pdf_content:, model: "", family: nil)
     with_provider_response do
       effective_model = model.presence || @default_model

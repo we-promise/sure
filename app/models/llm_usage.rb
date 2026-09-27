@@ -14,9 +14,12 @@ class LlmUsage < ApplicationRecord
   # Source: https://platform.openai.com/docs/pricing
   PRICING = {
     "openai" => {
-      # GPT-6 Sol Standard pricing, September 2026 (prompts <= 272K tokens).
+      # GPT-6 Sol Standard pricing, September 2026.
       # Source: https://developers.openai.com/api/docs/models/gpt-6-sol
-      "gpt-6-sol" => { prompt: 2.00, completion: 10.00 },
+      "gpt-6-sol" => {
+        prompt: 2.00, completion: 10.00,
+        long_context: { threshold: 272_000, prompt: 4.00, completion: 15.00 }
+      },
       # GPT-4.1 and similar models
       "gpt-4.1" => { prompt: 2.00, completion: 8.00 },
       "gpt-4.1-mini" => { prompt: 0.40, completion: 1.60 },
@@ -71,13 +74,21 @@ class LlmUsage < ApplicationRecord
   # Calculate cost for a model and token usage
   # Provider is automatically inferred from the model using the pricing map
   # Returns nil if pricing is not available for the model (e.g., custom/self-hosted providers)
-  def self.calculate_cost(model:, prompt_tokens:, completion_tokens:, cache_creation_tokens: 0, cache_read_tokens: 0)
+  # @param apply_long_context_pricing [Boolean] use per-request tiers; disable for aggregate batch estimates
+  # @return [Float, nil] estimated USD cost
+  def self.calculate_cost(model:, prompt_tokens:, completion_tokens:, cache_creation_tokens: 0, cache_read_tokens: 0,
+                          apply_long_context_pricing: true)
     provider = infer_provider(model)
     pricing = find_pricing(provider, model)
 
     unless pricing
       Rails.logger.info("No pricing found for model: #{model} (inferred provider: #{provider})")
       return nil
+    end
+
+    long_context = pricing[:long_context]
+    if apply_long_context_pricing && long_context && prompt_tokens > long_context[:threshold]
+      pricing = long_context
     end
 
     # Pricing is per 1M tokens, so divide by 1_000_000
@@ -216,7 +227,8 @@ class LlmUsage < ApplicationRecord
     calculate_cost(
       model: model,
       prompt_tokens: estimated_prompt_tokens,
-      completion_tokens: estimated_completion_tokens
+      completion_tokens: estimated_completion_tokens,
+      apply_long_context_pricing: false
     )
   end
 end

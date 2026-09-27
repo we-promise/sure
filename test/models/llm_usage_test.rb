@@ -40,11 +40,47 @@ class LlmUsageTest < ActiveSupport::TestCase
   test "calculate_cost estimates GPT-6 Sol usage at Standard pricing" do
     cost = LlmUsage.calculate_cost(
       model: "gpt-6-sol",
-      prompt_tokens: 1_000_000,
-      completion_tokens: 100_000
+      prompt_tokens: 100_000,
+      completion_tokens: 10_000
     )
 
-    assert_in_delta 3.0, cost, 0.0001
+    assert_in_delta 0.3, cost, 0.0001
+  end
+
+  test "calculate_cost applies GPT-6 Sol long-context rates to the full request" do
+    cost = LlmUsage.calculate_cost(
+      model: "gpt-6-sol", prompt_tokens: 1_000_000, completion_tokens: 100_000
+    )
+
+    assert_in_delta 5.5, cost, 0.0001
+  end
+
+  test "GPT-6 Sol long-context pricing starts strictly above 272000 input tokens" do
+    at_threshold = LlmUsage.calculate_cost(
+      model: "gpt-6-sol", prompt_tokens: 272_000, completion_tokens: 100_000
+    )
+    above_threshold = LlmUsage.calculate_cost(
+      model: "gpt-6-sol", prompt_tokens: 272_001, completion_tokens: 100_000
+    )
+
+    assert_in_delta 1.544, at_threshold, 0.000001
+    assert_in_delta 2.588004, above_threshold, 0.000001
+  end
+
+  test "bulk categorization estimates do not treat aggregate tokens as one long-context request" do
+    cost = LlmUsage.estimate_auto_categorize_cost(
+      model: "gpt-6-sol", transaction_count: 10_000, category_count: 20
+    )
+
+    assert_in_delta 7.0023, cost, 0.0001
+  end
+
+  test "large requests for legacy models retain their existing pricing" do
+    cost = LlmUsage.calculate_cost(
+      model: "gpt-4.1", prompt_tokens: 1_000_000, completion_tokens: 100_000
+    )
+
+    assert_in_delta 2.8, cost, 0.0001
   end
 
   test "calculate_cost prices snapshot model IDs with the most specific OpenAI prefix" do

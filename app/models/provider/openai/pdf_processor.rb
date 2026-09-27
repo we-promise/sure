@@ -158,6 +158,8 @@ class Provider::Openai::PdfProcessor
       nil
     end
 
+    # Summarize rendered pages using the endpoint's completion-limit contract.
+    # @return [Provider::LlmConcept::PdfProcessingResult] parsed document summary
     def process_with_vision
       effective_model = model.presence || Provider::Openai::DEFAULT_MODEL
 
@@ -209,6 +211,8 @@ class Provider::Openai::PdfProcessor
       parse_response_generic(response)
     end
 
+    # Identify native requests that use OpenAI's GPT-6 token-limit parameter.
+    # @return [Boolean] whether native GPT-6 request syntax applies
     def native_gpt6?
       !custom_provider && model.to_s.start_with?("gpt-6")
     end
