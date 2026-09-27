@@ -6,6 +6,19 @@ nl:
       link_provider: Koppel met provider
       unlink_provider: Verbreek verbinding met provider
       troubleshoot: Problemen oplossen
+      complete_setup: Instellen voltooien
+      edit: Bewerken
+      change_simplefin_account: SimpleFIN-account wijzigen
+      enable: Account inschakelen
+      disable: Account uitschakelen
+      exclude_from_reports: Uitsluiten van alle rapporten
+      include_in_reports: Opnemen in rapporten
+      excluded_from_reports_indicator: Uitgesloten van rapporten
+      set_default: Als standaard instellen
+      remove_default: Niet meer als standaard
+      default_label: Standaard
+      delete: Account verwijderen
+      sharing: Delen
     chart:
       data_not_available: Gegevens niet beschikbaar voor de geselecteerde periode
     create:
@@ -13,12 +26,13 @@ nl:
     destroy:
       success: "%{type} account gepland voor verwijdering"
       cannot_delete_linked: "Kan een gekoppeld account niet verwijderen. Koppel het eerst los."
+      failed: Verwijderen mislukt. Probeer het later opnieuw.
     empty:
       empty_message: Voeg een account toe via verbinding, importeren of handmatig invoeren.
       new_account: Nieuw account
       no_accounts: Nog geen accounts
     form:
-      balance: Huidig saldo
+      balance: "Saldo op datum:"
       name_label: Accountnaam
       name_placeholder: Voorbeeld accountnaam
       additional_details: Extra details
@@ -27,13 +41,18 @@ nl:
       institution_domain_label: Domein instelling
       institution_domain_placeholder: bijv. chase.com
       notes_label: Notities
-      notes_placeholder: Sla aanvullende informatie op zoals rekeningnummers, sorteer codes, IBAN, routenummers, enz.
+      notes_placeholder: Sla aanvullende informatie op zoals rekeningnummers, sort codes, IBAN, routingnummers, enz.
+      opening_balance_date_label: Datum beginsaldo
+      exclude_from_reports: Uitsluiten van alle rapporten
+      enable_category_matcher_label: Automatische categorietoewijzing inschakelen
+      enable_category_matcher_hint: Indien ingeschakeld, wordt de door de provider voorgestelde categorie toegepast op geïmporteerde transacties. Schakel dit uit om nieuwe transacties zonder categorie te laten.
     index:
       accounts: Accounts
       manual_accounts:
         other_accounts: Andere accounts
       new_account: Nieuw account
       sync: Synchroniseer alles
+      cancel_sync: Synchronisatie annuleren
     sync_all:
       syncing: "Accounts synchroniseren..."
     new:
@@ -42,29 +61,38 @@ nl:
         connected_entry: Account koppelen
         connected_entry_eu: EU-account koppelen
         link_with_provider: "Koppel met %{provider}"
-        lunchflow_entry: Koppel Lunch Flow account
+        lunchflow_entry: Koppel Lunch Flow-account
         manual_entry: Voer accountsaldo in
         title: Hoe wilt u het toevoegen?
       title: Wat wilt u toevoegen?
+      container:
+        select: Selecteren
+        navigate: Navigeren
+        close: Sluiten
+        next: Volgende
+        previous: Vorige
     show:
       activity:
         amount: Bedrag
         balance: Saldo
         confirmed: Bevestigd
         date: Datum
-        entries: vermeldingen
-        entry: vermelding
+        entries: boekingen
+        entry: boeking
         filter: Filter
         new: Nieuw
         new_activity: Nieuwe activiteit
         new_balance: Nieuw saldo
         new_transaction: Nieuwe transactie
-        no_entries: Geen vermeldingen gevonden
-        pending: In afwachting
+        no_entries: Geen boekingen gevonden
+        pending: Wachtend
         search:
-          placeholder: Zoek vermeldingen op naam
+          placeholder: Zoek boekingen op naam
         status: Status
         title: Activiteit
+        new_trade: Nieuwe effectentransactie
+        new_transfer: Nieuwe overboeking
+        search_placeholder: Zoek boekingen op naam
       chart:
         balance: Saldo
         owed: Bedrag verschuldigd
@@ -75,11 +103,27 @@ nl:
         edit: Bewerken
         import: Transacties importeren
         manage: Beheer accounts
+        delete_account: Account verwijderen
+        import_trades: Effectentransacties importeren
+        import_transactions: Transacties importeren
+        sharing: Delen
+        statements: Afschriften
+        exclude_from_reports: Uitsluiten van alle rapporten
+        include_in_reports: Opnemen in rapporten
+      limited_fx_history_warning: De wisselkoershistorie is pas beschikbaar vanaf %{date}. Voor transacties vóór deze datum worden benaderde valutaomrekeningen gebruikt. Dit kan gebeuren als de wisselkoersprovider maar een beperkte historische periode aanbiedt.
+      tabs:
+        activity: Activiteit
+        holdings: Posities
+        overview: Overzicht
+        schedule: Aflosschema
+        statements: Afschriften
+      header:
+        complete_setup: Instellen voltooien
     update:
       success: "%{type} account bijgewerkt"
     sidebar:
       missing_data: Ontbrekende historische gegevens
-      missing_data_description: "%{product} gebruikt externe providers om historische wisselkoersen, beveiligingsprijzen en meer op te halen. Deze gegevens zijn nodig om nauwkeurige historische accountbalansen te berekenen."
+      missing_data_description: "%{product} gebruikt externe providers om historische wisselkoersen, effectenkoersen en meer op te halen. Deze gegevens zijn nodig om nauwkeurige historische accountsaldi te berekenen."
       configure_providers: Configureer hier uw providers.
       tabs:
         all: Alle
@@ -89,11 +133,13 @@ nl:
       new_debt: Nieuwe schuld
       new_account: Nieuw account
       new_account_group: "Nieuwe %{account_group}"
+      expand_all: Alles uitvouwen
+      collapse_all: Alles samenvouwen
     types:
       depository: Cash
-      investment: Investering
+      investment: Belegging
       crypto: Crypto
-      property: Eigendom
+      property: Onroerend goed
       vehicle: Voertuig
       other_asset: Overige activa
       credit_card: Creditcard
@@ -116,6 +162,7 @@ nl:
       au: Australië
       eu: Europa
       generic: Algemeen
+      in: India
     confirm_unlink:
       title: Account ontkoppelen van provider?
       description_html: "U staat op het punt om <strong>%{account_name}</strong> te ontkoppelen van <strong>%{provider_name}</strong>. Dit zal het omzetten naar een handmatig account."
@@ -135,8 +182,25 @@ nl:
       description: "Kies welke provider u wilt gebruiken om %{account_name} te koppelen"
       already_linked: "Account is al gekoppeld aan een provider"
       no_providers: "Er zijn momenteel geen providers geconfigureerd"
+    not_authorized: U hebt geen toestemming om dit account te beheren
+    set_default:
+      depository_only: Alleen bankrekeningen en creditcards kunnen als standaard worden ingesteld.
+    types_plural:
+      depository: Bankrekeningen
+      investment: Beleggingen
+      crypto: Crypto
+      property: Onroerend goed
+      vehicle: Voertuigen
+      other_asset: Overige bezittingen
+      credit_card: Creditcards
+      loan: Leningen
+      other_liability: Overige schulden
 
   email_confirmations:
     new:
       invalid_token: Ongeldige of verlopen bevestigingslink.
       success_login: Uw e-mail is bevestigd. Log in met uw nieuwe e-mailadres.
+  account:
+    entries:
+      destroy:
+        success: Boeking verwijderd.

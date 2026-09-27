@@ -1,0 +1,102 @@
+---
+nl:
+  providers:
+    trading212:
+      name: Trading 212
+      connection_description: Verbind een Trading 212-beleggingsrekening via een API-sleutel
+      institution_name: Trading 212
+  trading212_items:
+    defaults:
+      name: Trading 212
+    trading212_item:
+      deletion_in_progress: Bezig met verwijderen
+      environment_label_live: Live-account
+      environment_label_demo: Demo-account
+      syncing: Bezig met synchroniseren
+      requires_update: API-sleutel vereist aandacht
+      error: Fout
+      synced: '%{time} geleden gesynchroniseerd. %{summary}.'
+      never_synced: Nooit gesynchroniseerd.
+      setup_accounts: Accounts instellen
+      delete: Verwijderen
+      accounts_need_setup: Account moet worden ingesteld
+      accounts_need_setup_description: Uw Trading 212-account moet aan een Sure-account worden gekoppeld.
+      no_accounts_discovered: Nog geen Trading 212-account gevonden.
+      no_accounts_discovered_description: Voer een synchronisatie uit nadat u uw API-sleutel heeft opgeslagen om uw account te vinden.
+    setup_accounts:
+      page_title: Trading 212-account instellen
+      dialog_title: Uw Trading 212-account instellen
+      subtitle: Koppel uw Trading 212-beleggingsrekening.
+      info_box:
+        title: Trading 212 API-import
+        items:
+          item_1: Huidige posities met koersen en aantallen
+          item_2: Volledige ordergeschiedenis (aankopen en verkopen)
+          item_3: Dividenden en geldtransacties
+      status:
+        fetching_accounts: Account ophalen bij Trading 212...
+        no_accounts_found_title: Geen account gevonden.
+        no_accounts_found_description: Sure kon geen Trading 212-account vinden. Controleer of uw API-sleutel geldig is.
+      available_accounts:
+        title: Beschikbaar account
+        account_type_investment: Belegging
+        account_summary: '%{account_type} • Saldo: %{balance}'
+        account_id: 'Account-ID: %{account_id}'
+      link_existing:
+        description: Of koppel het gevonden Trading 212-account aan een bestaand handmatig beleggingsaccount.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Selecteer een account...
+      linked_accounts:
+        title: Al gekoppeld
+        linked_to_html: 'Gekoppeld aan: %{account}'
+      buttons:
+        refresh: Vernieuwen
+        cancel: Annuleren
+        back_to_settings: Terug naar instellingen
+        create_selected_accounts: Geselecteerde accounts aanmaken
+        link: Koppelen
+        done: Gereed
+    sync:
+      status:
+        checking_credentials: Trading 212-inloggegevens controleren...
+        importing_account: Trading 212-account importeren...
+        checking_configuration: Accountconfiguratie controleren...
+        accounts_need_setup:
+          one: '%{count} Trading 212-account moet worden ingesteld...'
+          other: '%{count} Trading 212-accounts moeten worden ingesteld...'
+        processing_activity: Posities en activiteiten verwerken...
+        calculating_balances: Saldi berekenen...
+    sync_status:
+      no_accounts: Nog geen Trading 212-account gevonden
+      all_linked:
+        one: '%{count} account gekoppeld'
+        other: '%{count} accounts gekoppeld'
+      partial: '%{linked} gekoppeld, %{unlinked} nog in te stellen'
+    select_existing_account:
+      title: Trading 212-account koppelen
+      no_accounts_available: Er zijn nog geen ongekoppelde Trading 212-accounts beschikbaar.
+      run_sync_hint: Voer een synchronisatie uit via Instellingen > Providers nadat u uw API-sleutel heeft opgeslagen.
+      wait_for_sync: Wacht tot de synchronisatie voor het vinden van accounts is voltooid.
+      balance: Saldo
+      link: Koppelen
+      cancel: Annuleren
+    create:
+      success: Trading 212 succesvol geconfigureerd.
+    update:
+      success: Trading 212-configuratie succesvol bijgewerkt.
+    destroy:
+      success: Trading 212-verbinding ingepland voor verwijdering.
+    select_accounts:
+      not_configured: Trading 212 is niet geconfigureerd.
+    link_existing_account:
+      not_found: Account of Trading 212-configuratie niet gevonden.
+      only_manual_investment: Alleen handmatige beleggingsaccounts kunnen aan Trading 212 worden gekoppeld.
+      already_linked: Dit Trading 212-account is al gekoppeld.
+      success: Succesvol gekoppeld aan Trading 212-account.
+      failed: Koppelen van Trading 212-account mislukt.
+    complete_account_setup:
+      success:
+        one: '%{count} Trading 212-account succesvol aangemaakt.'
+        other: '%{count} Trading 212-accounts succesvol aangemaakt.'
+      none_selected: Er zijn geen accounts geselecteerd.
+      none_created: Er zijn geen accounts aangemaakt.

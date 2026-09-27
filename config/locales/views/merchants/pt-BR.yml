@@ -6,14 +6,40 @@ pt-BR:
       success: Novo comerciante criado com sucesso
     destroy:
       success: Comerciante excluído com sucesso
+      unlinked_success: Comerciante removido das suas transações
     edit:
       title: Editar comerciante
     form:
       name_placeholder: Nome do comerciante
+      website_placeholder: 'Site (ex.: starbucks.com)'
+      website_hint: Informe o site do comerciante para exibir o logotipo automaticamente
     index:
       empty: Nenhum comerciante ainda
       new: Novo comerciante
       title: Comerciantes
+      import: Importar comerciantes
+      merge: Mesclar comerciantes
+      family_title: Comerciantes (%{moniker})
+      family_empty: Nenhum comerciante na sua conta %{moniker} ainda
+      provider_title: Comerciantes dos provedores
+      provider_empty: Nenhum comerciante de provedor vinculado a esta conta %{moniker} ainda
+      provider_read_only: Os comerciantes dos provedores são sincronizados das suas instituições conectadas. Eles não podem ser editados aqui.
+      provider_info: Estes comerciantes foram detectados automaticamente pelas suas conexões bancárias ou pela IA. Você pode editá-los para criar sua própria cópia ou removê-los para desvinculá-los das suas transações.
+      enhance_info:
+        one: '%{count} comerciante de provedor está sem informações de site. Aprimore com IA para detectar sites, exibir logotipos e mesclar comerciantes duplicados.'
+        other: '%{count} comerciantes de provedores estão sem informações de site. Aprimore com IA para detectar sites, exibir logotipos e mesclar comerciantes duplicados.'
+      enhance_button: Aprimorar com IA
+      search_family_merchants: Buscar comerciantes da família...
+      search_provider_merchants: Buscar comerciantes dos provedores...
+      no_family_merchants_found: Nenhum comerciante da família encontrado
+      no_provider_merchants_found: Nenhum comerciante de provedor encontrado
+      per_page: por página
+      unlinked_title: Desvinculados recentemente
+      unlinked_info: Estes comerciantes foram removidos recentemente das suas transações. Eles sairão desta lista após 30 dias, a menos que sejam atribuídos novamente a uma transação.
+      table:
+        merchant: Comerciante
+        actions: Ações
+        source: Origem
     merchant:
       confirm_accept: Excluir comerciante
       confirm_body: Tem certeza de que deseja excluir este comerciante? Remover este comerciante
@@ -25,3 +51,32 @@ pt-BR:
       title: Novo comerciante
     update:
       success: Comerciante atualizado com sucesso
+      converted_success: Comerciante convertido e atualizado com sucesso
+    family_merchant:
+      edit: Editar
+      delete: Excluir
+    merge:
+      title: Mesclar comerciantes
+      description: Selecione um comerciante de destino e os comerciantes que serão mesclados nele. Todas as transações dos comerciantes mesclados serão reatribuídas ao destino.
+      target_label: Mesclar em (destino)
+      select_target: Selecione o comerciante de destino...
+      sources_label: Comerciantes a mesclar
+      sources_search_placeholder: Buscar comerciantes...
+      no_merchants_found: Nenhum comerciante encontrado
+      sources_hint: Os comerciantes selecionados serão mesclados no destino. Comerciantes da família serão excluídos e comerciantes de provedores serão desvinculados.
+      submit: Mesclar selecionados
+    perform_merge:
+      success:
+        one: '%{count} comerciante mesclado com sucesso'
+        other: '%{count} comerciantes mesclados com sucesso'
+      no_merchants_selected: Nenhum comerciante selecionado para mesclar
+      target_not_found: Comerciante de destino não encontrado
+      invalid_merchants: Comerciantes selecionados inválidos
+    provider_merchant:
+      edit: Editar
+      remove: Remover
+      remove_confirm_title: Remover comerciante?
+      remove_confirm_body: Tem certeza de que deseja remover %{name}? Isso desvinculará deste comerciante todas as transações associadas, mas não excluirá o comerciante em si.
+    enhance:
+      success: O aprimoramento dos comerciantes de provedores foi iniciado. Os comerciantes serão aprimorados e os duplicados serão mesclados em instantes.
+      already_running: O aprimoramento já está em andamento. Aguarde a conclusão.

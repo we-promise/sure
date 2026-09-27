@@ -24,3 +24,33 @@ pt-BR:
       singular: Família
     trend_change:
       no_change: "sem alteração"
+    preview: Prévia
+    sync_toast:
+      message: Novos dados disponíveis
+      refresh: Atualizar
+    require_admin: Apenas administradores podem realizar esta ação
+    require_connector_owner: Você só pode gerenciar as conexões que você adicionou
+    custom_confirm:
+      default_title: Tem certeza?
+      default_body: Esta ação não pode ser desfeita.
+      default_btn_text: Confirmar
+      resource_deletion_title: 'Excluir: %{resource}?'
+      resource_deletion_body: Tem certeza de que deseja excluir este item (%{resource})? Esta ação não pode ser desfeita.
+      resource_deletion_btn_text: 'Excluir: %{resource}'
+    cancel: Cancelar
+    transaction_tabs:
+      expense: Despesa
+      income: Receita
+      transfer: Transferência
+    sidekiq_health_banner:
+      title: Alguns dados podem estar desatualizados
+      body: Os jobs em segundo plano não estão sendo processados, por isso saldos, patrimônio líquido e sincronizações de contas podem estar desatualizados ou ausentes.
+      cta: Ver saúde do sistema
+      reasons:
+        redis_unreachable: A aplicação não consegue acessar o Redis. Verifique seu REDIS_URL e se o Redis está em execução.
+        no_worker_processes: Nenhum processo worker do Sidekiq está conectado. Inicie o contêiner do worker ou a unidade do systemd.
+        stale_heartbeat: O worker do Sidekiq não envia um sinal de atividade (heartbeat) há algum tempo. Ele pode estar travado ou ter falhado.
+        queue_backed_up: O job mais antigo na fila está esperando além do tempo máximo de latência. O worker está ativo, mas não está dando conta da fila.
+  concerns:
+    self_hostable:
+      redis_configured: O Redis agora está configurado corretamente! Você já pode configurar sua aplicação Sure.

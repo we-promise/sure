@@ -1,0 +1,115 @@
+---
+pt-BR:
+  enable_banking_items:
+    errors:
+      api_error: Ocorreu um erro de comunicação com o banco.
+      network_unreachable: O serviço bancário está temporariamente inacessível. Tente novamente mais tarde.
+      session_invalid: A sessão expirou. Reconecte seu banco.
+      unexpected: Ocorreu um erro inesperado durante a sincronização.
+    authorize:
+      authorization_failed: 'Falha ao iniciar a autorização: %{message}'
+      bank_required: Selecione um banco.
+      invalid_redirect: A URL de autorização recebida é inválida. Tente novamente.
+      redirect_uri_not_allowed: Redirecionamento não permitido. Configure `%{callback_url}` nas configurações do seu app no Enable Banking.
+      unexpected_error: Ocorreu um erro inesperado. Tente novamente.
+    callback:
+      authorization_error: Falha na autorização
+      invalid_callback: Parâmetros de retorno inválidos.
+      item_not_found: Conexão não encontrada.
+      session_failed: Não foi possível concluir a autorização
+      success: Conexão com seu banco estabelecida com sucesso. Suas contas estão sendo sincronizadas.
+      unexpected_error: Ocorreu um erro inesperado. Tente novamente.
+    complete_account_setup:
+      all_skipped: Todas as contas foram ignoradas. Você pode configurá-las depois na página de contas.
+      no_accounts: Nenhuma conta disponível para configurar.
+      success: '%{count} conta(s) criada(s) com sucesso!'
+    create:
+      success: Configuração do Enable Banking concluída com sucesso.
+    destroy:
+      success: A conexão do Enable Banking foi colocada na fila para exclusão.
+    link_accounts:
+      already_linked: As contas selecionadas já estão vinculadas.
+      link_failed: Falha ao vincular as contas
+      no_accounts_selected: Nenhuma conta selecionada.
+      no_session: Nenhuma conexão ativa do Enable Banking. Conecte-se a um banco primeiro.
+      success: '%{count} conta(s) vinculada(s) com sucesso.'
+    link_existing_account:
+      success: Conta vinculada ao Enable Banking com sucesso
+      errors:
+        only_manual: Apenas contas manuais podem ser vinculadas
+        invalid_enable_banking_account: A conta do Enable Banking selecionada é inválida
+    enable_banking_item:
+      deletion_in_progress: Exclusão em andamento
+      provider_name: Enable Banking
+      syncing: Sincronizando...
+      reconnect: Reconectar
+      last_synced: Sincronizado há %{time}
+      never_synced: Nunca sincronizado
+      update: Atualizar
+      delete: Excluir
+      setup_needed: Configuração necessária
+      setup_needed_description:
+        one: '%{count} conta importada do Enable Banking precisa ser configurada'
+        other: '%{count} contas importadas do Enable Banking precisam ser configuradas'
+      set_up_accounts: Configurar contas
+      no_accounts_found: Nenhuma conta encontrada
+      no_accounts_found_description: Nenhuma conta foi encontrada no Enable Banking. Tente sincronizar novamente.
+    select_existing_account:
+      title: Vincular conta do Enable Banking
+      all_linked: Todas as contas do Enable Banking parecem já estar vinculadas.
+      try_after_sync: Se você acabou de conectar ou sincronizar, tente novamente após a conclusão da sincronização.
+      unlink_to_move: Para vincular uma conta diferente, primeiro desvincule-a no menu de ações da conta.
+      balance: Saldo
+      link: Vincular
+      cancel: Cancelar
+    setup_accounts:
+      title: Configure suas contas do Enable Banking
+      header_subtitle: Escolha os tipos de conta corretos para as contas importadas
+      choose_account_type: 'Escolha o tipo de conta correto para cada conta do Enable Banking:'
+      historical_data_range: 'Período do histórico:'
+      sync_start_date_label: 'Sincronizar transações a partir de:'
+      sync_start_date_help: Selecione até quando você quer sincronizar o histórico de transações. O histórico disponível é de no máximo 2 anos.
+      account_type_label: 'Tipo de conta:'
+      balance: Saldo
+      create_accounts: Criar contas
+      creating_accounts: Criando contas...
+      cancel: Cancelar
+    new:
+      link_enable_banking_title: Vincular Enable Banking
+      session_expired: Sessão expirada - é necessário autorizar novamente
+      connected_bank: Banco conectado
+      session_expires: A sessão expira em
+      unknown: Desconhecido
+      connection: Conexão
+      configured: Configurado
+      ready_to_connect: Pronto para conectar um banco
+      sync: Sincronizar
+      reconnect: Reconectar
+      connect_bank: Conectar banco
+      remove_confirm: Tem certeza de que deseja remover esta conexão?
+      remove: Remover
+      add_connection: Adicionar conexão
+      not_configured: Conexão do Enable Banking não configurada
+      not_configured_description: Antes de vincular contas do Enable Banking, você precisa configurar sua conexão do Enable Banking.
+      setup_steps_title: 'Etapas de configuração:'
+      setup_step_1_html: Acesse <strong>Configurações → Provedores</strong>
+      setup_step_2_html: Encontre a seção <strong>Enable Banking</strong>
+      setup_step_3: Insira suas credenciais do Enable Banking
+      setup_step_4: Volte aqui para vincular suas contas
+      go_to_provider_settings: Ir para as configurações de provedores
+    reauthorize:
+      invalid_redirect: A URL de autorização recebida é inválida. Tente novamente.
+      reauthorization_failed: Falha na nova autorização
+    select_bank:
+      beta_label: Beta
+      cancel: Cancelar
+      check_country: Verifique as configurações de código do país.
+      credentials_required: Configure primeiro suas credenciais do Enable Banking.
+      description: Selecione o banco que você quer conectar às suas contas.
+      no_banks: Nenhum banco disponível para este país/região.
+      no_search_results: Nenhum banco corresponde à sua busca.
+      search_label: Buscar seu banco
+      search_placeholder: Buscar seu banco...
+      title: Selecione seu banco
+    update:
+      success: Configuração do Enable Banking atualizada.

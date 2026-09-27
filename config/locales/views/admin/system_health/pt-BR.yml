@@ -1,0 +1,256 @@
+---
+pt-BR:
+  admin:
+    system_health:
+      push_notifications:
+        send_test: Enviar notificação push de teste
+        queueing: Enfileirando…
+        title: Notificações push
+        requested_at: Último teste solicitado em %{time}
+        result_help: O aceite pelo APNs não confirma a entrega no seu dispositivo. Atualize para ver os resultados do worker. Os resultados ficam guardados por 24 horas.
+        device: Dispositivo %{number}
+        pending: Pendente
+        refresh: Atualizar resultados
+        columns:
+          device: Dispositivo
+          environment: Ambiente do APNs
+          status: Resultado
+          checked_at: Última atualização
+        environments:
+          sandbox: Sandbox
+          production: Produção
+        messages:
+          enqueue_failed: Não foi possível enfileirar o teste. Verifique o Sidekiq e atualize os resultados abaixo.
+          ready: Envie uma notificação de teste para os dispositivos iOS habilitados e registrados na sua conta.
+          queued: Notificação de teste enfileirada. Atualize os resultados abaixo para verificar o status.
+          hosted_only: As notificações push estão disponíveis apenas no modo hospedado.
+          ineligible: Apenas um superadministrador ativo pode enviar uma notificação de teste.
+          no_devices: Ative as notificações push no app Sure para iOS nesta conta para enviar um teste.
+          disabled: O envio de notificações push foi desativado pelo operador.
+          not_configured: As credenciais do APNs não estão configuradas.
+          cooldown: Aguarde 30 segundos antes de enviar outro teste.
+          storage_unavailable: Não foi possível salvar a solicitação de teste. Verifique a configuração do cache compartilhado.
+        statuses:
+          queued: Na fila
+          accepted: Aceita pelo APNs
+          skipped: 'Ignorada: não é mais elegível'
+          rejected: Rejeitada pelo APNs; verifique os logs de depuração de push
+          unregistered: O registro do dispositivo não é mais válido
+          retrying: Tentando novamente após uma falha temporária
+          failed: Falhou; verifique os logs de depuração de push
+          enqueue_failed: Não foi possível enfileirar; verifique o Sidekiq
+          expired: Expirou sem um resultado final
+      push_notification:
+        title: Notificação de teste do Sure
+        body: Esta é uma notificação push de teste da sua conta Sure.
+      verify_worker_ai:
+        queued: Verificação do worker enfileirada. Ela aparecerá abaixo assim que um processo worker a executar, geralmente em poucos segundos.
+      show:
+        title: Saúde do sistema
+        tabs:
+          background_jobs: Tarefas em segundo plano
+          ai: Status da IA
+        alert:
+          title: As tarefas em segundo plano não estão sendo executadas
+        status_section_title: Status do Sidekiq
+        status_section_description: Estado atual do worker em segundo plano responsável pelas sincronizações, saldos e cálculos de patrimônio líquido.
+        counters_section_title: Contadores de tarefas
+        counters_section_description: Contadores agregados do Sidekiq em todas as filas.
+        queues_section_title: Filas
+        queues_section_description: Tamanho de cada fila e idade da tarefa mais antiga. A latência é o número de segundos que a tarefa mais antiga está aguardando.
+        labels:
+          status: Status
+          processes: Processos worker
+          last_heartbeat: Último sinal de vida
+          max_queue_latency: Idade da tarefa mais antiga
+          enqueued: Na fila
+          retries: Novas tentativas
+          failed: Com falha
+          processed_total: Total processado
+          queue: Fila
+          size: Tamanho
+          latency: Latência
+        values:
+          healthy: Saudável
+          unhealthy: Degradado
+          time_ago: há %{time_ago}
+          never: Nunca
+          seconds: '%{seconds} s'
+          no_queues: Nenhuma fila registrada. O worker pode não estar em execução.
+        ai:
+          run_checks: Executar verificações novamente
+          last_checked: Verificações em tempo real concluídas há %{time_ago}. Os resultados ficam em cache por pouco tempo.
+          not_checked_help: Abra diretamente a URL de status da IA ou execute as verificações para confirmar que o serviço está ativo.
+          alerts:
+            custom_openai:
+              title: A verificação do vector store hospedado falhou neste endpoint personalizado
+              message: O endpoint configurado não passou na verificação de disponibilidade de /v1/vector_stores. A maioria dos endpoints locais e compatíveis com OpenAI não implementa essa API. O chat e o processamento de PDF ainda podem funcionar; para a configuração local habitual, use pgvector com um endpoint de embeddings separado. A falha foi registrada em Configurações → Logs de depuração e no Rails.logger.
+            function_calling_unsupported:
+              title: O modelo não suporta chamada de funções
+              message: O endpoint atendeu a uma requisição de chat simples, mas rejeitou a mesma requisição com o parâmetro tools. O assistente de IA lê contas, transações e posições por meio de chamadas de função, então o chat continuará falhando — muitas vezes com um erro 404 pouco útil — até que seja usado um modelo com suporte a tools. Escolha um modelo cujo provedor documente suporte a chamada de funções. A falha foi registrada em Configurações → Logs de depuração e no Rails.logger.
+            function_calling_not_used:
+              title: O modelo respondeu sem chamar a ferramenta solicitada
+              message: O endpoint aceitou o parâmetro tools, mas o modelo respondeu com texto em vez de chamar a ferramenta de verificação de saúde. O assistente de IA não consegue ler dados financeiros sem chamadas de ferramentas, então o chat pode responder vazio ou com números inventados. Prefira um modelo cujo provedor documente suporte a chamada de funções.
+            llm_probe_failed:
+              title: A verificação em tempo real do LLM falhou
+              message: O Sure não conseguiu verificar o endpoint e o modelo configurados. A falha foi registrada em Configurações → Logs de depuração e no Rails.logger.
+            llm_model_not_available:
+              title: O modelo de IA configurado não está disponível
+              message: O endpoint respondeu, mas não listou nem disponibilizou o modelo configurado. Escolha um modelo ativo para o provedor selecionado e execute as verificações novamente. Para o Gemini por meio de uma camada de tradução compatível com OpenAI, use um modelo atualmente suportado, como gemini-2.5-flash.
+            pdf_text_extraction_failed:
+              title: A verificação de extração de texto com PDF sintético falhou
+              message: O Sure não conseguiu concluir o caminho que prioriza texto, que extrai localmente o texto incorporado ao PDF e o envia ao modelo configurado. Nenhum dado de cliente foi enviado. A falha foi registrada em Configurações → Logs de depuração e no Rails.logger.
+            pdf_vision_processing_failed:
+              title: A verificação de visão/nativa com PDF sintético falhou
+              message: O Sure não conseguiu concluir o caminho de PDF por imagem ou documento nativo com o modelo configurado. Nenhum dado de cliente foi enviado. A falha foi registrada em Configurações → Logs de depuração e no Rails.logger.
+            vector_probe_failed:
+              title: A verificação em tempo real da busca de documentos falhou
+              message: O Sure não conseguiu verificar o vector store selecionado e todos os serviços de embedding necessários. A falha foi registrada em Configurações → Logs de depuração e no Rails.logger.
+            pgvector_extension_not_enabled:
+              title: A extensão vector do PostgreSQL não está habilitada
+              message: O adaptador pgvector está selecionado, mas o PostgreSQL não habilitou a extensão vector para este banco de dados. Use uma imagem do PostgreSQL que inclua o pgvector, habilite a extensão como proprietário do banco de dados ou superusuário e execute as migrações novamente com VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: A tabela vector_store_chunks está ausente
+              message: A extensão pgvector está habilitada, mas a tabela de chunks não foi encontrada. Verifique o status das migrações e execute novamente a migração do vector store com VECTOR_STORE_PROVIDER=pgvector para que o Sure possa criar a vector_store_chunks.
+            pgvector_probe_failed:
+              title: A verificação de armazenamento do pgvector falhou
+              message: O Sure não conseguiu consultar a tabela de chunks do pgvector. Verifique as permissões do PostgreSQL, a extensão vector e a migração da vector_store_chunks. A falha foi registrada em Configurações → Logs de depuração e no Rails.logger.
+            embedding_dimensions_mismatch:
+              title: As dimensões do embedding não correspondem
+              message: O endpoint de embedding retornou um vetor cujo tamanho não corresponde a EMBEDDING_DIMENSIONS. Defina EMBEDDING_MODEL e EMBEDDING_DIMENSIONS com o tamanho de vetor documentado do modelo, reinicie o Sure para que o ambiente seja aplicado e, em seguida, altere ou recrie a coluna/tabela de embeddings do pgvector e gere novamente os embeddings dos documentos se os dados existentes usaram outro tamanho.
+            embedding_probe_timeout:
+              title: A verificação em tempo real do embedding excedeu o tempo limite
+              message: O endpoint de embedding não respondeu antes de AI_HEALTH_PROBE_TIMEOUT. Aumente esse tempo limite da verificação de saúde se o provedor for lento e reinicie o Sure para que o ambiente seja aplicado em todos os processos. Se as chamadas normais do chat de IA também excederem o tempo limite, aumente OPENAI_REQUEST_TIMEOUT separadamente.
+            embedding_probe_failed:
+              title: A verificação em tempo real do embedding falhou
+              message: O Sure não conseguiu criar um embedding de teste curto com o endpoint e o modelo configurados. Verifique EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN e os logs do provedor de embeddings. A falha foi registrada em Configurações → Logs de depuração e no Rails.logger.
+            qdrant:
+              title: O suporte ao Qdrant ainda não foi implementado
+              message: O adaptador do Qdrant existe apenas como estrutura inicial, e as operações de envio e busca de documentos falham no momento. Selecione OpenAI ou pgvector para a busca de documentos.
+            missing_vector_store:
+              title: Nenhum vector store configurado
+              message: Os documentos enviados não podem ser indexados nem pesquisados até que um adaptador de vector store e seus requisitos sejam configurados.
+            unavailable_vector_store:
+              title: O vector store selecionado não está disponível
+              message: Verifique os requisitos do adaptador abaixo. Para o pgvector, o banco de dados precisa oferecer a extensão vector ou uma tabela vector_store_chunks já existente.
+          llm:
+            title: LLM e processamento de PDF
+            description: As verificações em tempo real validam o modelo configurado, pedem a ele uma chamada de função trivial como o assistente faz e, separadamente, testam a extração de texto e o processamento por visão/nativo com um PDF sintético de uma página sem dados de clientes. Os valores das credenciais nunca são exibidos.
+          vector_store:
+            title: Vector store e busca de documentos
+            description: A verificação em tempo real consulta a API do vector store hospedado ou testa a tabela do pgvector e cria um embedding curto sem armazená-lo.
+          labels:
+            selected_provider: Provedor selecionado
+            effective_provider: Provedor efetivo
+            model: Modelo
+            endpoint: Endpoint
+            function_calling: Chamada de funções (tools)
+            pdf_text_extraction: Caminho de extração de texto do PDF
+            pdf_vision_processing: Caminho de visão/nativo do PDF
+            llm_request_timeout: Tempo limite de requisição do LLM
+            probe_request_timeout: Tempo limite da verificação de saúde
+            openai_credentials: Credenciais da OpenAI
+            openai_compatible_credentials: Credenciais da API compatível com OpenAI
+            anthropic_credentials: Credenciais da Anthropic
+            adapter: Adaptador
+            adapter_available: Adaptador disponível
+            pgvector_extension: Extensão vector do PostgreSQL
+            pgvector_table: Tabela de chunks de vetores
+            embedding_model: Modelo de embedding
+            embedding_endpoint: Endpoint de embedding
+            embedding_dimensions: Dimensões do embedding
+            function_calling_failure_reason: Motivo da falha na chamada de funções
+            pdf_text_extraction_failure_reason: Motivo da falha na extração de texto
+            pdf_vision_processing_failure_reason: Motivo da falha de visão/nativo
+            storage_probe: Verificação de armazenamento do pgvector
+            embedding_probe: Verificação do endpoint de embedding
+            failure_reason: Motivo da falha
+          providers:
+            openai: OpenAI
+            openai_compatible: Compatível com OpenAI
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Endpoint personalizado
+          adapters:
+            openai: Vector store hospedado da OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Configurado
+            not_configured: Não configurado
+            fallback: (alternativo)
+            not_set: Não definido
+            "yes": Sim
+            "no": Não
+            enabled: Habilitada
+            available_not_enabled: Disponível, não habilitada
+            not_available: Indisponível
+            available: Disponível
+            not_found: Não encontrada
+          function_calling_statuses:
+            supported: Chamada de ferramenta em tempo real bem-sucedida
+            unsupported: Não suportada pelo provedor/modelo efetivo
+            not_used: Tools aceitas, mas o modelo não chamou nenhuma
+            failing: A verificação em tempo real falhou
+            not_checked: Não verificado
+            unavailable: Indisponível até que um provedor de LLM seja configurado
+          pdf_statuses:
+            supported: Verificação com PDF sintético aprovada
+            failing: A verificação com PDF sintético falhou
+            unsupported: Desativado ou não suportado pelo provedor/modelo efetivo
+            not_checked: Não verificado
+            unavailable: Indisponível até que um provedor de LLM seja configurado
+          probe_statuses:
+            passing: Verificação em tempo real aprovada
+            failing: A verificação em tempo real falhou
+            not_checked: Não verificado
+            not_configured: Não configurado
+          vector_statuses:
+            passing: Verificações em tempo real aprovadas
+            failing: A verificação em tempo real falhou
+            not_checked: Não verificado
+            not_configured: Não configurado
+            scaffolded: Apenas estrutura inicial
+            missing: Não configurado
+          failure_codes:
+            model_not_available: O provedor não retornou o modelo configurado
+            no_tool_call: O modelo respondeu sem chamar a ferramenta de verificação de saúde
+            tools_refused: O serviço atendeu à mesma requisição sem tools e a recusou com elas
+            invalid_response: O serviço retornou uma resposta inesperada
+            dimensions_mismatch: As dimensões do vetor de embedding não correspondem às dimensões configuradas
+            extension_not_enabled: A extensão vector do PostgreSQL não está habilitada
+            table_not_found: A tabela vector_store_chunks não foi encontrada
+            render_missing_binary: O renderizador pdftoppm (poppler-utils) não está disponível neste contêiner
+            timeout: O serviço não respondeu antes do tempo limite da verificação
+            request_failed: A requisição ao serviço falhou
+            unsupported_provider: O provedor não suporta esta verificação
+          worker:
+            title: Verificação do worker
+            description: As verificações acima foram executadas a partir deste processo web. A maior parte do trabalho de IA -- respostas do assistente, processamento de PDF, embeddings, categorização automática e detecção de comerciantes -- é executada, na verdade, em um processo worker do Sidekiq, que pode ter acesso de rede, DNS, regras de proxy ou até credenciais carregadas diferentes. Enfileire uma verificação para validar a configuração e a conectividade do próprio worker.
+            verify_button: Verificar configuração do worker
+            coverage_notice: Cada verificação valida exatamente um processo worker -- aquele que a retirar da fila. Com mais de uma réplica do worker, um resultado aprovado não confirma que todos os workers estão saudáveis; enfileire a verificação novamente para testar outro.
+            empty:
+              title: Nenhum worker respondeu ainda
+              description: Clique em “Verificar configuração do worker” para enfileirar uma verificação assíncrona. O resultado aparecerá aqui assim que um processo worker a executar.
+            labels:
+              process: Processo worker
+              checked_at: Verificado
+              configuration: Configuração
+            configuration_statuses:
+              match: Igual à web
+              mismatch: Diferente da web
+            statuses:
+              passing: Aprovado
+              failing: Com falha
+              stale: Desatualizado
+            settings_origin:
+              title: Quais configurações exigem reinicialização?
+              database_backed: As configurações de provedor, modelo e chave de API alteradas em Configurações → Auto-hospedagem ficam armazenadas no banco de dados. O rails-settings-cached invalida o cache compartilhado a cada gravação, então tanto a web quanto o worker obtêm o novo valor na próxima requisição ou tarefa enfileirada -- sem necessidade de reinicialização.
+              env_backed: A configuração de embeddings, e qualquer valor definido apenas por variável de ambiente, é fixada quando cada contêiner é iniciado. O Rails não pode alterar o ambiente de outro contêiner, então mudar esses valores exige reiniciar ou recriar os serviços web e worker -- e qualquer ferramenta de implantação que reinicie apenas um deles (rollout parcial, um Secret atualizado sem reiniciar o pod) não aplicará a alteração.
+          local_setup:
+            title: Configuração local recomendada
+            description: Execute o LLM pelo seu endpoint local compatível com OpenAI, armazene os vetores dos documentos no pgvector e aponte as configurações de embedding para um endpoint de embeddings compatível com OpenAI. A imagem do PostgreSQL precisa incluir a extensão vector, e as dimensões do embedding precisam corresponder ao modelo selecionado.

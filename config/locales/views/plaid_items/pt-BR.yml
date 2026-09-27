@@ -19,13 +19,24 @@ pt-BR:
       no_accounts_description: Não conseguimos carregar nenhuma conta desta instituição
         financeira.
       no_accounts_title: Nenhuma conta encontrada
-      requires_update: Requer re-autenticação
+      requires_update: Reconectar
       status: Última sincronização há %{timestamp}
       status_never: Requer sincronização de dados
       syncing: Sincronizando...
       update: Atualizar conexão
+      add_accounts: Adicionar contas
+      deletion_in_progress: (exclusão em andamento...)
+      provider_name: Plaid
     select_existing_account:
       title: "Vincular %{account_name} ao Plaid"
       description: Selecione uma conta do Plaid para vincular à sua conta existente
       cancel: Cancelar
       link_account: Vincular conta
+      no_available_accounts: Nenhuma conta do Plaid disponível para vincular. Conecte primeiro uma nova conta do Plaid.
+    errors:
+      link_token_generic: Não foi possível abrir o Plaid agora. Tente novamente e, se o problema persistir, verifique os logs do servidor para mais detalhes.
+      link_token_with_message: 'O Plaid não conseguiu abrir a conexão: %{message}'
+    link_existing_account:
+      invalid_account: Conta do Plaid selecionada inválida
+      already_linked: Esta conta do Plaid já está vinculada
+      success: Conta vinculada ao Plaid com sucesso

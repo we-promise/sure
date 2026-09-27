@@ -1,0 +1,6 @@
+---
+pt-BR:
+  sure_import:
+    preflight:
+      missing_reference: 'Linha %{line}: %{type} referencia %{field} inexistente %{value}.'
+      skipped_missing_reference: 'Linha %{line}: %{type} referencia %{field} inexistente %{value}. Será ignorado durante a importação.'

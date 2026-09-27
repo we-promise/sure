@@ -10,6 +10,15 @@ nl:
         home: Startpagina
         reports: Rapporten
         transactions: Transacties
+        bills: Vaste lasten
+        plan: Plan
+        goals: Doelen
+      insights: Inzichten
+      resize_left_sidebar: Grootte van de accountzijbalk aanpassen
+      resize_right_sidebar: Grootte van de assistentzijbalk aanpassen
+      release_highlight:
+        title: Wat is er nieuw
+        done: Begrepen
     auth:
       existing_account: Heeft u al een account?
       no_account: Nieuw bij %{product_name}?
@@ -19,6 +28,14 @@ nl:
       footer:
         privacy_policy: Privacybeleid
         terms_of_service: Servicevoorwaarden
+      confirm_dialog:
+        are_you_sure: Weet u het zeker?
+        cannot_be_undone: Deze actie kan niet ongedaan worden gemaakt.
+        confirm: Bevestigen
+      notification_tray:
+        download_complete: Download voltooid
+        download_failed: Download mislukt. Probeer het opnieuw.
+        download_location: Het bestand staat in uw map Downloads.
     trial:
       open_demo: Open demo
       data_deleted_in_days: Gegevens worden over %{days} dagen verwijderd

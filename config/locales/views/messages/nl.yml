@@ -4,3 +4,6 @@ nl:
     chat_form:
       placeholder: "Vraag wat u wilt ..."
       disclaimer: "AI-antwoorden zijn alleen informatief. Geen financieel advies!"
+      coming_soon: Binnenkort beschikbaar
+    create:
+      chat_not_found: Deze chat is niet meer beschikbaar.

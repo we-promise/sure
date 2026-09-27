@@ -10,3 +10,24 @@ pt-BR:
         mfa_description: Adicione uma camada extra de segurança à sua conta exigindo
           um código do seu aplicativo autenticador ao fazer login
         mfa_title: Autenticação de Dois Fatores
+        mfa_enabled_status_html: A autenticação de dois fatores está <span class="font-medium text-green-600">habilitada</span>
+        mfa_enabled_description: Sua conta está protegida por uma camada extra de segurança.
+        mfa_disabled_status_html: A autenticação de dois fatores está <span class="font-medium text-red-600">desabilitada</span>
+        mfa_disabled_description: Habilite a 2FA para adicionar uma camada extra de segurança à sua conta.
+        webauthn_add: Adicionar chave de acesso ou chave de segurança
+        webauthn_added: Adicionada em %{date}
+        webauthn_description: Use uma chave de acesso, Touch ID, Windows Hello ou uma chave de segurança física como segundo fator ao fazer login.
+        webauthn_empty: Nenhuma chave de acesso ou chave de segurança cadastrada ainda.
+        webauthn_last_used: Usada pela última vez há %{time_ago}
+        webauthn_name_label: Nome da chave
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey etc.
+        webauthn_remove: Remover
+        webauthn_remove_confirm: Tem certeza de que deseja remover esta chave de acesso ou chave de segurança?
+        webauthn_remove_confirm_body: Você precisará cadastrar esta chave de acesso ou chave de segurança novamente antes de usá-la para verificar o login.
+        webauthn_title: Chaves de acesso e chaves de segurança
+        webauthn_unsupported: Este navegador não suporta chaves de acesso nem chaves de segurança.
+  webauthn_credentials:
+    default_name: Chave de segurança
+    failure: Não foi possível salvar essa chave de acesso ou chave de segurança. Tente novamente.
+    mfa_required: Habilite a autenticação de dois fatores antes de adicionar uma chave de acesso ou chave de segurança.
+    success: Chave de acesso ou chave de segurança removida.

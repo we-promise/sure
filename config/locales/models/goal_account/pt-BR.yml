@@ -1,0 +1,9 @@
+---
+pt-BR:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Esta conta já está totalmente destinada a “%{goal_name}”. Informe um valor para dividi-la.

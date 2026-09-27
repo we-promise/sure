@@ -1,0 +1,8 @@
+---
+nl:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          own_parent: Categorie '%{name}' kan niet haar eigen bovenliggende categorie zijn
+          missing_columns: 'Verplichte kolommen ontbreken: %{columns}'

@@ -1,0 +1,134 @@
+---
+nl:
+  providers:
+    monobank:
+      name: Monobank
+      description: Koppel Oekraïense Monobank-kaarten en -spaarpotten met een persoonlijk API-token
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Monobank-verbinding
+  monobank_account:
+    jar_fallback: Monobank-spaarpot
+    card_types:
+      black: Black-kaart
+      white: White-kaart
+      platinum: Platinum-kaart
+      iron: Iron-kaart
+      yellow: Yellow-kaart
+      eaid: eAid-kaart
+      fop: Zakelijke rekening (FOP)
+      jar: Spaarpot
+      unknown: Monobank-kaart
+  monobank_item:
+    errors:
+      account_processing_failed: Kon Monobank-account niet synchroniseren
+      account_sync_schedule_failed: Kon synchronisatie van Monobank-account niet inplannen
+      transactions_failed: Kon Monobank-afschrift niet ophalen
+      sync_failed: Kon Monobank-verbinding niet synchroniseren
+    sync:
+      status:
+        importing: Accounts importeren uit Monobank...
+        checking_setup: Accountconfiguratie controleren...
+        needs_setup:
+          one: '%{count} account moet worden ingesteld...'
+          other: '%{count} accounts moeten worden ingesteld...'
+        processing: Transacties verwerken...
+        calculating: Saldi berekenen...
+    sync_status:
+      no_accounts: Geen accounts gevonden
+      all_synced:
+        one: '%{count} account gesynchroniseerd'
+        other: '%{count} accounts gesynchroniseerd'
+      partial: '%{linked} gesynchroniseerd, %{unlinked} moeten worden ingesteld'
+    institution_summary:
+      none: Geen instellingen verbonden
+      one: 1 instelling
+      count:
+        one: '%{count} instelling'
+        other: '%{count} instellingen'
+  monobank_items:
+    provider_panel:
+      default_connection_name: Monobank-verbinding
+      add_connection: Monobank-verbinding toevoegen
+      update_connection: Verbinding bijwerken
+      connection_name_label: Naam verbinding
+      connection_name_placeholder: Mijn Monobank
+      access_token_label: Persoonlijk API-token
+      access_token_placeholder: Plak uw persoonlijke Monobank-token
+      keep_access_token_placeholder: Laat leeg om het bestaande token te behouden
+      setup_accounts: Accounts instellen
+      syncing: Synchroniseren...
+      sync: Synchroniseren
+      disconnect: Ontkoppelen
+      disconnect_confirm: Weet u zeker dat u %{name} wilt ontkoppelen?
+      rate_limit_notice: Monobank staat één verzoek per minuut toe. Een synchronisatie haalt daarom steeds een paar accounts op en oudere transacties komen binnen verspreid over meerdere synchronisaties.
+    create:
+      success: Monobank-verbinding opgeslagen.
+    update:
+      success: Monobank-verbinding bijgewerkt.
+    destroy:
+      success: Monobank-verbinding ingepland voor verwijdering.
+      unlink_failed: Kon Monobank-verbinding niet ontkoppelen
+    select_accounts:
+      title: Monobank-accounts koppelen
+      description: Kies de Monobank-kaarten of -spaarpotten die u wilt toevoegen.
+      no_accounts_found: Geen niet-gekoppelde Monobank-accounts gevonden.
+      no_credentials_configured: Configureer eerst Monobank in de Provider-instellingen.
+      cancel: Annuleren
+      link_accounts: Accounts koppelen
+    link_accounts:
+      success:
+        one: '%{count} Monobank-account gekoppeld.'
+        other: '%{count} Monobank-accounts gekoppeld.'
+      no_accounts_selected: Selecteer ten minste één account.
+      no_credentials_configured: Configureer eerst Monobank in de Provider-instellingen.
+      unsupported_account_type: Monobank ondersteunt dit accounttype niet.
+      link_failed: Er zijn geen accounts gekoppeld.
+    select_existing_account:
+      title: Monobank-account koppelen aan %{account_name}
+      description: Kies een niet-gekoppeld Monobank-account om met dit account te verbinden.
+      no_accounts_found: Geen niet-gekoppelde Monobank-accounts gevonden.
+      no_credentials_configured: Configureer eerst Monobank in de Provider-instellingen.
+      account_already_linked: Dit account is al gekoppeld aan een provider.
+      cancel: Annuleren
+      link_account: Account koppelen
+    link_existing_account:
+      success: Monobank-account gekoppeld aan %{account_name}.
+      account_already_linked: Dit account is al gekoppeld aan een provider.
+      monobank_account_already_linked: Dit Monobank-account is al gekoppeld.
+      no_account_selected: Selecteer een Monobank-account om te koppelen.
+    setup_accounts:
+      title: Monobank-accounts koppelen
+      subtitle: Kies hoe elke Monobank-kaart of -spaarpot in Sure moet worden weergegeven.
+      no_credentials: Configureer eerst de Monobank-inloggegevens.
+      api_error: Kon de accounts niet vernieuwen vanuit Monobank. De accounts van de laatste synchronisatie worden weergegeven.
+      no_accounts_to_setup: Geen accounts om in te stellen
+      all_accounts_linked: Alle Monobank-accounts zijn al gekoppeld.
+      choose_account_type: Kies een accounttype
+      choose_account_type_description: Sla accounts over die u niet wilt volgen.
+      account_type_label: Accounttype
+      account_types:
+        skip: Overslaan
+        depository: Cash
+      create_accounts: Accounts aanmaken
+      cancel: Annuleren
+    complete_account_setup:
+      success:
+        one: '%{count} Monobank-account aangemaakt.'
+        other: '%{count} Monobank-accounts aangemaakt.'
+      all_skipped: Er zijn geen Monobank-accounts aangemaakt.
+      no_accounts: Er zijn geen Monobank-accounts geselecteerd.
+      creation_failed: Kon Monobank-accounts niet aanmaken.
+    monobank_item:
+      deletion_in_progress: Wordt verwijderd
+      syncing: Synchroniseren
+      error: Fout
+      status_with_summary: '%{timestamp} geleden gesynchroniseerd · %{summary}'
+      status_never: Nooit gesynchroniseerd
+      delete: Verwijderen
+      setup_needed: Accounts moeten worden ingesteld
+      setup_description: '%{linked} van %{total} accounts gekoppeld.'
+      setup_action: Accounts instellen
+      no_accounts_title: Nog geen accounts geïmporteerd
+      no_accounts_description: Haal Monobank-accounts op en kies welke u wilt koppelen.

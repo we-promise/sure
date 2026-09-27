@@ -6,9 +6,21 @@ nl:
     dashboard:
       cashflow_preview:
         node_labels:
-          cash_flow: "Kasstroom"
+          cash_flow: "Cashflow"
           surplus: "Overschot"
           deficit: "Tekort"
+        title: Nieuw Sankey-diagram
+        preview: Preview
+        preview_tooltip: Dit vervangt de visualisatie hierboven, omdat het een nieuwe gedeelde API met de mobiele Swift-app gebruikt.
+        feedback_prompt: Vergelijk dit diagram met het origineel hierboven en laat ons weten of het, afgezien van de sortering, afwijkt.
+        positive: Klopt
+        negative: Er klopt iets niet
+        feedback_title: Feedback op het cashflowdiagram
+        feedback_loading: Feedbackformulier laden…
+        feedback_unavailable: Feedback is op dit moment niet beschikbaar. Probeer het later opnieuw.
+        feedback_thanks: Bedankt voor uw hulp bij het verbeteren van het diagram!
+        feedback_privacy: Uw reactie wordt naar PostHog verzonden. Beschrijf het probleem zonder rekeningnummers, saldi of andere privéfinanciële gegevens.
+        feedback_submit: Feedback verzenden
       welcome: "Welkom terug, %{name}"
       subtitle: "Dit gebeurt er met uw financiën"
       new: "Nieuw"
@@ -25,11 +37,27 @@ nl:
         title: "Balans"
         no_items: "Nog geen %{name}"
         add_accounts: "Voeg uw %{name} accounts toe om een volledig overzicht te zien"
+        no_asset: Nog geen bezittingen
+        no_liability: Nog geen schulden
+        add_asset_accounts: Voeg uw vermogensaccounts toe om een volledig overzicht te zien
+        add_liability_accounts: Voeg uw schuldaccounts toe om een volledig overzicht te zien
+        name: Naam
+        weight: Aandeel
+        value: Waarde
+        expand_all: Alles uitklappen
+        collapse_all: Alles inklappen
+        classifications:
+          asset: Bezittingen
+          liability: Schulden
       cashflow_sankey:
         title: "Cashflow"
         no_data_title: "Geen cashflow gegevens voor deze periode"
         no_data_description: "Voeg transacties toe om cashflow gegevens weer te geven of vergroot de periode"
         add_transaction: "Transactie toevoegen"
+        loading: Cashflow laden…
+        load_error: De cashflow kon niet worden geladen. Probeer het opnieuw.
+        retry: Opnieuw proberen
+        zoom_out: Terug naar volledige cashflow
       no_accounts:
         title: "Nog geen accounts"
         description: "Voeg accounts toe om netto vermogen gegevens weer te geven"
@@ -39,17 +67,85 @@ nl:
         total_outflows: "Totale uitgaven"
         categories: "Categorieën"
         value: "Waarde"
-        weight: "Gewicht"
+        weight: "Aandeel"
       investment_summary:
-        title: "Investeringen"
+        title: "Beleggingen"
         total_return: "Totaal rendement"
-        holding: "Bezit"
-        weight: "Gewicht"
+        holding: "Positie"
+        weight: "Aandeel"
         value: "Waarde"
         return: "Rendement"
         period_activity: "%{period} Activiteit"
         contributions: "Stortingen"
         withdrawals: "Opnames"
-        trades: "Transacties"
+        trades: "Effectentransacties"
         no_investments: "Geen beleggingsrekeningen"
         add_investment: "Voeg een beleggingsrekening toe om uw portfolio te volgen"
+      sections_aria_label: Dashboardsecties
+      widget_size:
+        label: Grootte aanpassen
+        width_label: Breedte
+        half: Half
+        full: Volledig
+        height_label: Hoogte
+        compact: Compact
+        auto: Automatisch
+        tall: Hoog
+      insights_feed:
+        title: Inzichten
+      money_flow:
+        title: Inkomsten / uitgaven
+        date_range: '%{start_date} t/m %{end_date}'
+        month_picker_aria_label: Maand selecteren
+        filter_accounts: Accounts filteren (%{count})
+        filter_accounts_all: Alle accounts
+        period_scope_hint: Toont de maanden die u hier kiest — los van de periode van het dashboard bovenaan.
+        search_accounts: Accounts zoeken
+        apply: Toepassen
+        balance: Netto transacties
+        chart_span: Afgelopen %{count} maanden
+        income: Inkomsten
+        expenses: Uitgaven
+      spending_trend:
+        title: Uitgaven
+        date_range: '%{start_date} t/m %{end_date}'
+        date_range_short: '%{start_date} - %{end_day} %{year}'
+        date_range_short_single: '%{date} %{year}'
+        month_picker_aria_label: Maand selecteren
+        period_scope_hint: Toont de maand die u hier kiest — los van de periode van het dashboard bovenaan.
+        no_data: Geen uitgavengegevens voor deze maand
+        previous_comparison_days: (1-%{end_day})
+    feedback:
+      title: Feedback
+      heading: Feedback geven
+      description: Laat het ons weten als u specifieke feedback heeft. U kunt gerust links naar video's of screenshots toevoegen.
+      feature_request: Functieverzoek indienen
+      bug_report: Bug melden
+      discuss: Praat met anderen over %{product}
+    intro:
+      not_authorized: De intro is alleen beschikbaar voor gastgebruikers.
+      welcome: Welkom!
+      coming_soon: Introductie binnenkort beschikbaar
+      description: We werken aan een uitgebreidere kennismaking om meer te weten te komen over uw doelen, mijlpalen en dagelijkse behoeften. Ga voorlopig naar de chatzijbalk om een gesprek met Sure te beginnen en laat ons weten waar u staat in uw financiële reis.
+      start_chatting: Begin met chatten
+    redis_configuration_error:
+      page_title: Redis-configuratie vereist - Sure
+      heading: Redis-configuratie vereist
+      subheading: Voor uw zelf gehoste Sure-installatie moet Redis correct zijn geconfigureerd.
+      why_required_title: Waarom is Redis nodig?
+      why_required_body: Sure gebruikt Redis voor Sidekiq-achtergrondtaken, zoals het synchroniseren van accountgegevens, het verwerken van imports en andere achtergrondprocessen die uw financiële gegevens actueel houden.
+      view_setup_guide: Installatiehandleiding bekijken
+      setup_guide_hint: Volg onze volledige Docker-installatiehandleiding om Redis te configureren
+      refresh_hint: Vernieuw deze pagina zodra u Redis heeft geconfigureerd om door te gaan.
+      refresh_page: Pagina vernieuwen
+    release_notes_unavailable:
+      name: Release notes niet beschikbaar
+      body_html: <p>De nieuwste release notes kunnen op dit moment niet worden opgehaald. Probeer het later opnieuw of bekijk direct onze <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>releasepagina op GitHub</a>.</p>
+    privacy:
+      title: Privacybeleid
+      heading: Privacybeleid
+      placeholder: Hier wordt de inhoud van het privacybeleid weergegeven.
+    terms:
+      title: Servicevoorwaarden
+      heading: Servicevoorwaarden
+      placeholder: Hier wordt de inhoud van de servicevoorwaarden weergegeven.

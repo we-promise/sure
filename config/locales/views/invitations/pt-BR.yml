@@ -4,6 +4,8 @@ pt-BR:
     create:
       failure: Não foi possível enviar o convite
       success: Convite enviado com sucesso
+      existing_user_added: O usuário foi adicionado ao seu grupo familiar.
+      existing_user_has_family_data: Esse usuário já possui um grupo familiar com contas. Ele precisa remover ou transferir essas contas antes de entrar no seu.
     destroy:
       failure: Houve um problema ao remover o convite.
       not_authorized: Você não está autorizado a gerenciar convites.
@@ -15,5 +17,12 @@ pt-BR:
       role_label: Função
       role_member: Membro
       submit: Enviar Convite
-      subtitle: Envie um convite para se juntar à sua conta familiar no %{product_name}
+      subtitle: Envie um convite para participar da sua conta %{moniker} no %{product_name}
       title: Convidar Alguém
+      role_guest: Convidado
+    accept_choice:
+      create_account: Criar nova conta
+      joined_household: Você entrou no grupo familiar.
+      message: '%{inviter} convidou você para participar como %{role}.'
+      sign_in_existing: Já tenho uma conta
+      title: Participar de %{family}

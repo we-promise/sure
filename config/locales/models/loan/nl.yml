@@ -1,0 +1,8 @@
+---
+nl:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Voor een rentewijziging zijn zowel een ingangsdatum als een rentepercentage nodig.
+          rate_change_before_origination: Een rentewijziging kan niet ingaan vóór de ingangsdatum van de lening.

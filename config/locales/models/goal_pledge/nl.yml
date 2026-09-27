@@ -1,0 +1,20 @@
+---
+nl:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: Bedrag
+        currency: Valuta
+        account: Account
+        kind: Soort
+        status: Status
+        expires_at: Verloopt op
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Kies een van de gekoppelde accounts van het doel.
+            currency:
+              must_match_goal: De valuta van de inleg moet overeenkomen met die van het doel.
+          duplicate_open_pledge: U hebt al openstaande inleg voor dit bedrag op dit account. Annuleer of verleng de bestaande voordat u een nieuwe vastlegt.

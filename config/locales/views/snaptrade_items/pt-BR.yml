@@ -1,0 +1,203 @@
+---
+pt-BR:
+  snaptrade_items:
+    default_name: Conexão SnapTrade
+    destroy:
+      success: A exclusão da conexão SnapTrade foi agendada.
+    connect:
+      decryption_failed: Não foi possível ler as credenciais da SnapTrade. Exclua e recrie esta conexão.
+      connection_failed: 'Falha ao conectar à SnapTrade: %{message}'
+    callback:
+      success: Corretora conectada! Selecione quais contas deseja vincular.
+      no_item: Configuração da SnapTrade não encontrada.
+    complete_account_setup:
+      success:
+        one: '%{count} conta vinculada com sucesso.'
+        other: '%{count} contas vinculadas com sucesso.'
+      partial_success:
+        one: '%{count} conta vinculada. Falha ao vincular: %{failed_count}.'
+        other: '%{count} contas vinculadas. Falha ao vincular: %{failed_count}.'
+      link_failed: 'Falha ao vincular contas: %{errors}'
+      no_accounts: Nenhuma conta foi selecionada para vincular.
+    preload_accounts:
+      not_configured: A SnapTrade não está configurada.
+    select_accounts:
+      not_configured: A SnapTrade não está configurada.
+    oauth_authorize:
+      not_configured: A autorização da SnapTrade pelo navegador exige SNAPTRADE_OAUTH_CLIENT_SECRET, além de SNAPTRADE_OAUTH_CLIENT_ID. Defina-a e reinicie, ou autorize com um código de dispositivo.
+    oauth_callback:
+      success: Autorização da SnapTrade concluída.
+      access_denied: A autorização da SnapTrade foi cancelada.
+      state_mismatch: A autorização da SnapTrade falhou em uma verificação de segurança. Tente novamente.
+      failed: Não foi possível concluir a autorização da SnapTrade. Tente novamente.
+    oauth_device_flow:
+      title: Conectar SnapTrade
+      subtitle: Autorize o Sure na SnapTrade com um código de dispositivo.
+      instructions: Abra a SnapTrade, confirme este código de dispositivo e depois volte aqui para concluir.
+      code_label: Código de dispositivo
+      open_snaptrade: Abrir SnapTrade
+      start_button: Iniciar autorização
+      complete_button: Já autorizei a SnapTrade
+      cancel_button: Cancelar
+      missing_client_id: O OAuth da SnapTrade não está configurado. Adicione SNAPTRADE_OAUTH_CLIENT_ID ao .env.local, reinicie a aplicação e tente novamente.
+    start_oauth_device_flow:
+      failed: Não foi possível iniciar a autorização de dispositivo da SnapTrade. Tente novamente.
+    complete_oauth_device_flow:
+      success: Autorização da SnapTrade concluída.
+      device_code_required: Não há nenhuma autorização de dispositivo da SnapTrade em andamento para esta conexão. Inicie-a novamente para obter um novo código.
+      authorization_pending: A SnapTrade ainda não recebeu sua confirmação. Aprove o código na SnapTrade e tente novamente.
+      expired: Este código de dispositivo expirou. Inicie a autorização novamente.
+      access_denied: A autorização da SnapTrade foi recusada.
+      failed: Não foi possível concluir a autorização de dispositivo da SnapTrade. Tente novamente.
+    select_existing_account:
+      not_found: Conta ou configuração da SnapTrade não encontrada.
+      title: Vincular a uma conta SnapTrade
+      header: Vincular conta existente
+      subtitle: Selecione uma conta SnapTrade para vincular
+      no_accounts: Nenhuma conta SnapTrade não vinculada disponível.
+      connect_hint: Talvez seja necessário conectar uma corretora primeiro.
+      settings_link: Ir para as configurações do provedor
+      linking_to: 'Vinculando à conta:'
+      balance_label: 'Saldo:'
+      link_button: Vincular
+      cancel_button: Cancelar
+    link_existing_account:
+      success: Vinculada com sucesso à conta SnapTrade.
+      failed: 'Falha ao vincular a conta: %{message}'
+      not_found: Conta não encontrada.
+    connections:
+      unknown_brokerage: Corretora desconhecida
+    delete_connection:
+      success: Conexão excluída com sucesso. Uma vaga foi liberada.
+      failed: 'Falha ao excluir a conexão: %{message}'
+      missing_authorization_id: ID de autorização ausente
+      api_deletion_failed: Não foi possível excluir a conexão na SnapTrade - este item não está autorizado. A conexão ainda pode existir na sua conta SnapTrade.
+    setup_accounts:
+      title: Configurar contas SnapTrade
+      header: Configure suas contas SnapTrade
+      subtitle: Selecione quais contas da corretora deseja vincular
+      syncing: Buscando suas contas...
+      loading: Buscando contas na SnapTrade...
+      loading_hint: Clique em Atualizar para verificar se há contas.
+      refresh: Atualizar
+      info_title: Dados de investimento da SnapTrade
+      info_holdings: Posições com preços e quantidades atuais
+      info_cost_basis: Custo de aquisição por posição (quando disponível)
+      info_activities: Histórico de negociações com rótulos de atividade (Compra, Venda, Dividendo etc.)
+      info_history: Até 3 anos de histórico de transações
+      free_tier_note: O plano gratuito da SnapTrade permite 20 conexões com corretoras.
+      no_accounts_title: Nenhuma conta encontrada
+      no_accounts_message: Nenhuma conta de corretora foi encontrada. Isso pode acontecer se você cancelou a conexão ou se a sua corretora não é suportada.
+      try_again: Conectar corretora
+      back_to_settings: Voltar às configurações
+      available_accounts: Contas disponíveis
+      balance_label: 'Saldo:'
+      account_number: 'Conta:'
+      account_type_label: Tipo de conta
+      account_types:
+        depository: Conta corrente ou poupança
+        credit_card: Cartão de crédito
+        investment: Conta de investimento
+        crypto: Conta de criptomoedas
+        loan: Empréstimo ou linha de crédito
+        other_asset: Outro ativo
+      sync_start_date_label: 'Importar transações a partir de:'
+      sync_start_date_help: Deixe em branco para importar todo o histórico disponível
+      create_button: Criar contas selecionadas
+      cancel_button: Cancelar
+      creating: Criando contas...
+      done_button: Concluído
+      or_link_existing: 'Ou vincule a uma conta existente em vez de criar uma nova:'
+      select_account: Selecione uma conta...
+      link_button: Vincular
+      linked_accounts: Já vinculadas
+      linked_to: 'Vinculada a:'
+    snaptrade_item:
+      accounts_need_setup:
+        one: '%{count} conta precisa ser configurada'
+        other: '%{count} contas precisam ser configuradas'
+      deletion_in_progress: Exclusão em andamento...
+      syncing: Sincronizando...
+      requires_update: A conexão precisa ser atualizada
+      error: Erro de sincronização
+      status: Sincronizado pela última vez há %{timestamp} - %{summary}
+      status_never: Nunca sincronizado
+      reconnect: Reconectar
+      connect_brokerage: Conectar corretora
+      add_another_brokerage: Conectar outra corretora
+      delete: Excluir
+      setup_needed: As contas precisam ser configuradas
+      setup_description: Algumas contas da SnapTrade precisam ser vinculadas a contas do Sure.
+      setup_action: Configurar contas
+      setup_accounts_menu: Configurar contas
+      manage_connections: Gerenciar conexões
+      more_accounts_available:
+        one: Mais %{count} conta disponível para configurar
+        other: Mais %{count} contas disponíveis para configurar
+      no_accounts_title: Nenhuma conta encontrada
+      no_accounts_description: Conecte uma corretora para importar suas contas de investimento.
+  providers:
+    snaptrade:
+      name: SnapTrade
+      connection_description: Conecte sua corretora via SnapTrade (mais de 25 corretoras suportadas)
+      description: A SnapTrade se conecta a mais de 25 grandes corretoras (Fidelity, Vanguard, Schwab, Robinhood etc.) e fornece o histórico completo de negociações, com rótulos de atividade e custo de aquisição.
+      oauth_setup_step_1_html: Registre um aplicativo OAuth em <a href="https://dashboard.snaptrade.com" target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
+      oauth_setup_step_2_html: 'Apenas para o fluxo pelo navegador: adicione a URL de callback desta aplicação (<code>%{callback_url}</code>) como redirect URI registrado'
+      oauth_setup_step_3: Defina SNAPTRADE_OAUTH_CLIENT_ID no seu ambiente e reinicie. Isso já habilita o fluxo com código de dispositivo; adicione também SNAPTRADE_OAUTH_CLIENT_SECRET para o fluxo pelo navegador
+      free_tier_warning: O plano gratuito da SnapTrade abrange 20 conexões com corretoras.
+      oauth_title: SnapTrade OAuth
+      oauth_status_ready: Autorize o Sure a ler os dados da sua conta SnapTrade.
+      oauth_status_ready_device: Autorize o Sure com um código de dispositivo para ler os dados da sua conta SnapTrade.
+      oauth_status_authorized: Autorizado na SnapTrade.
+      oauth_connect_button: Conectar com SnapTrade
+      oauth_device_button: Usar um código de dispositivo
+      oauth_reauthorize_button: Autorizar novamente
+      status_connected:
+        one: '%{count} conta da SnapTrade'
+        other: '%{count} contas da SnapTrade'
+      needs_setup:
+        one: '%{count} precisa ser configurada'
+        other: '%{count} precisam ser configuradas'
+      status_ready: Pronto para conectar corretoras
+      setup_accounts_button: Configurar contas
+      connect_button: Conectar corretora
+      connected_brokerages: 'Conectadas:'
+      manage_connections: Gerenciar conexões
+      loading_connections: Carregando conexões...
+      connections_error: 'Falha ao carregar as conexões: %{message}'
+      accounts_count:
+        one: '%{count} conta'
+        other: '%{count} contas'
+      orphaned_connection: Conexão órfã (não sincronizada localmente)
+      needs_linking: precisa ser vinculada
+      no_connections: Nenhuma conexão com corretora encontrada.
+      delete_connection: Excluir
+      delete_connection_title: Excluir conexão com a corretora?
+      delete_connection_body: Isso removerá permanentemente a conexão %{brokerage} da SnapTrade. Todas as contas desta corretora serão desvinculadas. Você precisará se reconectar para sincronizar essas contas novamente.
+      delete_connection_confirm: Excluir conexão
+      manage_at_snaptrade: Gerenciar conexões na SnapTrade
+  snaptrade_item:
+    sync_status:
+      no_accounts: Nenhuma conta encontrada
+      synced:
+        one: '%{count} conta sincronizada'
+        other: '%{count} contas sincronizadas'
+      synced_with_setup: 'sincronizadas: %{linked}; aguardando configuração: %{unlinked}'
+    institution_summary:
+      none: Nenhuma instituição conectada
+      count:
+        one: '%{count} instituição'
+        other: '%{count} instituições'
+    brokerage_summary:
+      none: Nenhuma corretora conectada
+      count:
+        one: '%{count} corretora'
+        other: '%{count} corretoras'
+    syncer:
+      discovering: Descobrindo contas...
+      importing: Importando contas da SnapTrade...
+      processing: Processando posições e atividades...
+      calculating: Calculando saldos...
+      checking_config: Verificando a configuração das contas...
+      needs_setup: 'Contas aguardando configuração: %{count}...'
+      activities_fetching_async: As atividades estão sendo buscadas em segundo plano. Isso pode levar até um minuto em conexões recentes com corretoras.

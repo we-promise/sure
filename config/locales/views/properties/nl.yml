@@ -3,6 +3,7 @@ nl:
   properties:
     edit:
       edit: "%{account} bewerken"
+      title: Vastgoed handmatig invoeren
     form:
       address_line1: Straatnaam
       address_line1_placeholder: Hoofdstraat 123
@@ -23,10 +24,84 @@ nl:
       year_built_placeholder: '2000'
     new:
       title: Vastgoedgegevens invoeren
+      next: Volgende
+      avm_option: Toevoegen via %{provider}
+      avm_title: Vastgoed toevoegen via %{provider}
+      avm_description: Voer een naam en het adres van het vastgoed in. %{provider} zoekt de gegevens van het pand en de geschatte marktwaarde voor u op.
+      avm_us_only: '%{provider} ondersteunt alleen vastgoed in de Verenigde Staten.'
+      avm_submit: Vastgoed opzoeken
+      avm_preview_title: Vastgoedgegevens bevestigen
+      avm_preview_description: Dit heeft %{provider} gevonden. Controleer de gegevens voordat u het vastgoed toevoegt — er is nog niets aangemaakt.
+      avm_preview_no_record: '%{provider} heeft op dit adres geen vastgoedgegevens gevonden, dus de getoonde waarde is een schatting op basis van de omgeving. Controleer het adres voordat u verdergaat.'
+      avm_preview_back: Terug
+      avm_preview_confirm: Vastgoed toevoegen
     overview:
       living_area: Woonoppervlakte
       market_value: Marktwaarde
       purchase_price: Aankoopprijs
-      trend: Trend
+      trend: Waardeontwikkeling
       unknown: Onbekend
       year_built: Bouwjaar
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    address:
+      title: Vastgoed handmatig invoeren
+      address_line1_label: Adresregel 1
+      address_line1_placeholder: Hoofdstraat 123
+      city_label: Plaats
+      city_placeholder: Amsterdam
+      state_region_label: Provincie/regio
+      state_region_placeholder: Noord-Holland
+      postal_code_label: Postcode
+      postal_code_placeholder: 1234 AB
+      country_label: Land
+      country_placeholder: Nederland
+      save: Opslaan
+    balances:
+      title: Vastgoed handmatig invoeren
+      market_value_label: Geschatte marktwaarde
+      market_value_tooltip: De geschatte marktwaarde van uw vastgoed. Deze waarde vindt u vaak op sites zoals Funda of via de WOZ-waarde, en is nooit exact.
+      save: Opslaan
+      next: Volgende
+    overview_fields:
+      name_label: Naam
+      name_placeholder: Vakantiewoning
+      subtype_prompt: Selecteer type
+      property_type_label: Type vastgoed
+      year_built_label: Bouwjaar (optioneel)
+      year_built_placeholder: '1990'
+      area_label: Oppervlakte (optioneel)
+      area_placeholder: '120'
+      square_feet: Vierkante voet
+      square_meters: Vierkante meter
+      area_unit_label: Oppervlakte-eenheid
+    tabs:
+      overview:
+        living_area: Woonoppervlakte
+        market_value: Marktwaarde
+        purchase_price: Aankoopprijs
+        trend: Waardeontwikkeling
+        unknown: Onbekend
+        year_built: Bouwjaar
+        edit_account_details: Accountgegevens bewerken
+    subtypes:
+      apartment:
+        short: Appartement
+        long: Appartement
+      plot:
+        short: Perceel
+        long: Perceel / grond
+      commercial:
+        short: Bedrijfspand
+        long: Bedrijfsvastgoed
+      rented:
+        short: Verhuurd
+        long: Verhuurd vastgoed
+      agri_land:
+        short: Landbouwgrond
+        long: Landbouwgrond
+    form_tabs:
+      address: Adres
+      overview: Overzicht
+      value: Waarde

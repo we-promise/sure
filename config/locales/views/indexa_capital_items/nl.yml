@@ -1,0 +1,227 @@
+---
+nl:
+  indexa_capital_items:
+    sync_status:
+      no_accounts: Geen accounts gevonden
+      synced:
+        one: '%{count} account gesynchroniseerd'
+        other: '%{count} accounts gesynchroniseerd'
+      synced_with_setup: '%{linked} gesynchroniseerd, %{unlinked} moeten worden ingesteld'
+    institution_summary:
+      none: Geen instellingen verbonden
+      count:
+        one: '%{count} instelling'
+        other: '%{count} instellingen'
+    errors:
+      provider_not_configured: IndexaCapital-provider is niet geconfigureerd
+    sync:
+      status:
+        importing: Accounts importeren uit IndexaCapital...
+        processing: Posities en activiteiten verwerken...
+        calculating: Saldi berekenen...
+        importing_data: Accountgegevens importeren...
+        checking_setup: Accountconfiguratie controleren...
+        needs_setup: '%{count} accounts moeten worden ingesteld...'
+      success: Synchronisatie gestart
+    panel:
+      setup_instructions: 'Instructies voor instellen:'
+      step_1: Ga naar uw Indexa Capital-dashboard om een alleen-lezen API-token aan te maken
+      step_2: Plak uw API-token hieronder en klik op Opslaan
+      step_3: Ga na een geslaagde verbinding naar het tabblad Accounts om nieuwe accounts in te stellen
+      field_descriptions: 'Veldbeschrijvingen:'
+      optional: (Optioneel)
+      required: (verplicht)
+      optional_with_default: (optioneel, standaard %{default_value})
+      alternative_auth: Of gebruik in plaats daarvan authenticatie met gebruikersnaam en wachtwoord...
+      save_button: Configuratie opslaan
+      update_button: Configuratie bijwerken
+      fields:
+        api_token:
+          label: API-token
+          description: Uw alleen-lezen API-token uit het Indexa Capital-dashboard
+          placeholder_new: Plak hier uw API-token
+          placeholder_update: Voer een nieuw API-token in om bij te werken
+        username:
+          label: Gebruikersnaam
+          description: Uw Indexa Capital-gebruikersnaam/e-mailadres
+          placeholder_new: Plak hier de gebruikersnaam
+          placeholder_update: Voer een nieuwe gebruikersnaam in om bij te werken
+        document:
+          label: Document-ID
+          description: Uw Indexa Capital-identiteitsdocument/ID
+          placeholder_new: Plak hier het document-ID
+          placeholder_update: Voer een nieuw document-ID in om bij te werken
+        password:
+          label: Wachtwoord
+          description: Uw Indexa Capital-wachtwoord
+          placeholder_new: Plak hier het wachtwoord
+          placeholder_update: Voer een nieuw wachtwoord in om bij te werken
+    create:
+      success: IndexaCapital-verbinding succesvol aangemaakt
+    update:
+      success: IndexaCapital-verbinding bijgewerkt
+    destroy:
+      success: IndexaCapital-verbinding verwijderd
+    index:
+      title: IndexaCapital-verbindingen
+    loading:
+      loading_message: IndexaCapital-accounts laden...
+      loading_title: Laden
+    link_accounts:
+      all_already_linked:
+        one: Het geselecteerde account (%{names}) is al gekoppeld
+        other: 'Alle %{count} geselecteerde accounts zijn al gekoppeld: %{names}'
+      api_error: 'API-fout: %{message}'
+      invalid_account_names:
+        one: Kan account met lege naam niet koppelen
+        other: Kan %{count} accounts met lege namen niet koppelen
+      link_failed: Accounts koppelen mislukt
+      no_accounts_selected: Selecteer ten minste één account
+      no_api_key: IndexaCapital-inloggegevens niet gevonden. Configureer ze in de providerinstellingen.
+      partial_invalid: '%{created_count} account(s) succesvol gekoppeld, %{already_linked_count} waren al gekoppeld, %{invalid_count} account(s) hadden ongeldige namen'
+      partial_success: '%{created_count} account(s) succesvol gekoppeld. %{already_linked_count} account(s) waren al gekoppeld: %{already_linked_names}'
+      success:
+        one: '%{count} account succesvol gekoppeld'
+        other: '%{count} accounts succesvol gekoppeld'
+    indexa_capital_item:
+      accounts_need_setup: Accounts moeten worden ingesteld
+      delete: Verbinding verwijderen
+      deletion_in_progress: bezig met verwijderen...
+      error: Fout
+      more_accounts_available:
+        one: Nog %{count} account beschikbaar
+        other: Nog %{count} accounts beschikbaar
+      no_accounts_description: Deze verbinding heeft nog geen gekoppelde accounts.
+      no_accounts_title: Geen accounts
+      provider_name: IndexaCapital
+      requires_update: Verbinding moet worden bijgewerkt
+      setup_action: Nieuwe accounts instellen
+      setup_description: '%{linked} van %{total} accounts gekoppeld. Kies accounttypen voor uw nieuw geïmporteerde IndexaCapital-accounts.'
+      setup_needed: Nieuwe accounts klaar om in te stellen
+      status: '%{timestamp} geleden gesynchroniseerd — %{summary}'
+      status_never: Nooit gesynchroniseerd
+      syncing: Synchroniseren...
+      total: Totaal
+      unlinked: Niet gekoppeld
+      update_credentials: Inloggegevens bijwerken
+    select_accounts:
+      accounts_selected: accounts geselecteerd
+      api_error: 'API-fout: %{message}'
+      cancel: Annuleren
+      configure_name_in_provider: Kan niet importeren - configureer de accountnaam in IndexaCapital
+      description: Selecteer de accounts die u wilt koppelen aan uw %{product_name}-account.
+      link_accounts: Geselecteerde accounts koppelen
+      no_accounts_found: Geen accounts gevonden. Controleer uw IndexaCapital-inloggegevens.
+      no_api_key: IndexaCapital-inloggegevens zijn niet geconfigureerd. Configureer ze in Instellingen.
+      no_credentials_configured: Configureer eerst uw IndexaCapital-inloggegevens in de providerinstellingen.
+      no_name_placeholder: (Geen naam)
+      title: IndexaCapital-accounts selecteren
+    select_existing_account:
+      account_already_linked: Dit account is al gekoppeld aan een provider
+      all_accounts_already_linked: Alle IndexaCapital-accounts zijn al gekoppeld
+      api_error: 'API-fout: %{message}'
+      balance_label: 'Saldo:'
+      cancel: Annuleren
+      cancel_button: Annuleren
+      configure_name_in_provider: Kan niet importeren - configureer de accountnaam in IndexaCapital
+      connect_hint: Verbind een IndexaCapital-account om automatisch synchroniseren in te schakelen.
+      description: Selecteer een IndexaCapital-account om aan dit account te koppelen. Transacties worden automatisch gesynchroniseerd en ontdubbeld.
+      header: Koppelen met IndexaCapital
+      link_account: Account koppelen
+      link_button: Dit account koppelen
+      linking_to: 'Koppelen aan:'
+      no_account_specified: Geen account opgegeven
+      no_accounts: Geen niet-gekoppelde IndexaCapital-accounts gevonden.
+      no_accounts_found: Geen IndexaCapital-accounts gevonden. Controleer uw inloggegevens.
+      no_api_key: IndexaCapital-inloggegevens zijn niet geconfigureerd. Configureer ze in Instellingen.
+      no_credentials_configured: Configureer eerst uw IndexaCapital-inloggegevens in de providerinstellingen.
+      no_name_placeholder: (Geen naam)
+      settings_link: Naar providerinstellingen
+      subtitle: Kies een IndexaCapital-account
+      title: '%{account_name} koppelen met IndexaCapital'
+    link_existing_account:
+      account_already_linked: Dit account is al gekoppeld aan een provider
+      api_error: 'API-fout: %{message}'
+      invalid_account_name: Kan account met lege naam niet koppelen
+      provider_account_already_linked: Dit IndexaCapital-account is al gekoppeld aan een ander account
+      provider_account_not_found: IndexaCapital-account niet gevonden
+      missing_parameters: Ontbrekende vereiste parameters
+      no_api_key: IndexaCapital-inloggegevens niet gevonden. Configureer ze in de providerinstellingen.
+      success: '%{account_name} succesvol gekoppeld met IndexaCapital'
+    setup_accounts:
+      account_type_label: 'Accounttype:'
+      accounts_count:
+        one: '%{count} account beschikbaar'
+        other: '%{count} accounts beschikbaar'
+      all_accounts_linked: Al uw IndexaCapital-accounts zijn al ingesteld.
+      api_error: 'API-fout: %{message}'
+      creating: Accounts aanmaken...
+      fetch_failed: Accounts ophalen mislukt
+      import_selected: Geselecteerde accounts importeren
+      instructions: Selecteer de accounts die u uit IndexaCapital wilt importeren. U kunt meerdere accounts kiezen.
+      no_accounts: Geen niet-gekoppelde accounts gevonden in deze IndexaCapital-verbinding.
+      no_accounts_to_setup: Geen accounts om in te stellen
+      no_api_key: IndexaCapital-inloggegevens zijn niet geconfigureerd. Controleer uw verbindingsinstellingen.
+      select_all: Alles selecteren
+      account_types:
+        skip: Dit account overslaan
+        depository: Betaal- of spaarrekening
+        credit_card: Creditcard
+        investment: Beleggingsrekening
+        crypto: Cryptovaluta-account
+        loan: Lening of hypotheek
+        other_asset: Overig bezit
+      subtype_labels:
+        depository: 'Subtype account:'
+        credit_card: ''
+        investment: 'Beleggingstype:'
+        crypto: ''
+        loan: 'Type lening:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Creditcards worden automatisch ingesteld als creditcardaccounts.
+        other_asset: Geen extra opties nodig voor Overig bezit.
+        crypto: Cryptovaluta-accounts worden ingesteld om posities en transacties bij te houden.
+      subtypes:
+        depository:
+          checking: Betaalrekening
+          savings: Spaarrekening
+          hsa: Gezondheidsspaarrekening (HSA)
+          cd: Termijndeposito
+          money_market: Geldmarktrekening
+        investment:
+          brokerage: Beleggingsrekening
+          pension: Pensioen
+          retirement: Pensioenrekening
+          401k: 401(k)
+          roth_401k: Roth 401(k)
+          403b: 403(b)
+          tsp: Thrift Savings Plan
+          529_plan: 529 Plan
+          hsa: Gezondheidsspaarrekening (HSA)
+          mutual_fund: Beleggingsfonds
+          ira: Traditionele IRA
+          roth_ira: Roth IRA
+          angel: Angel-investering
+        loan:
+          mortgage: Hypotheek
+          student: Studielening
+          auto: Autolening
+          other: Overige lening
+      balance: Saldo
+      cancel: Annuleren
+      choose_account_type: 'Kies het juiste accounttype voor elk IndexaCapital-account:'
+      create_accounts: Accounts aanmaken
+      creating_accounts: Accounts aanmaken...
+      historical_data_range: 'Periode historische gegevens:'
+      subtitle: Kies de juiste accounttypen voor uw geïmporteerde accounts
+      sync_start_date_help: Selecteer hoe ver terug u de transactiegeschiedenis wilt synchroniseren.
+      sync_start_date_label: 'Transacties synchroniseren vanaf:'
+      title: Uw IndexaCapital-accounts instellen
+    complete_account_setup:
+      all_skipped: Alle accounts zijn overgeslagen. Er zijn geen accounts aangemaakt.
+      creation_failed: 'Accounts aanmaken mislukt: %{error}'
+      no_accounts: Geen accounts om in te stellen.
+      success: '%{count} account(s) succesvol aangemaakt.'
+    preload_accounts:
+      no_credentials_configured: Configureer eerst uw IndexaCapital-inloggegevens in de providerinstellingen.

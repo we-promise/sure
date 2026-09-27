@@ -1,0 +1,53 @@
+---
+pt-BR:
+  recurring_occurrences:
+    history_status:
+      paid: Paga
+      skipped: Pulada
+      missed: Não paga
+      scheduled: Em aberto
+    show:
+      due_on: Vence em %{date}
+      paid_of: '%{paid} de %{expected} pagos'
+      paid_headline: '%{amount} pagos'
+      remaining: Faltam %{amount}
+      settled: Paga integralmente
+      overpaid: acima do previsto
+      skipped: Pulada
+      missed: Marcada como não paga
+      payments: Pagamentos
+      manual_payment: Pagamento manual
+      unlink: Desvincular
+      review_heading: Revisar pagamento
+      find_heading: Encontrar um pagamento
+      add_heading: Adicionar outro pagamento
+      other_matches: Outras correspondências prováveis
+      no_ranked_candidates: Nada aqui parece ser um pagamento desta conta a pagar ainda.
+      search_all: Buscar em todas as transações
+      search_placeholder: Buscar transações
+      no_candidates: Nenhuma transação próxima para vincular.
+      no_search_results: Nada corresponde a %{query}.
+      link_payment: Vincular pagamento
+      not_this_one: Não é esta
+      cant_find: Não encontrou a transação?
+      manual_explainer: Registre um pagamento que você sabe que aconteceu quando nenhuma transação aqui corresponder a ele.
+      manual_amount_label: Valor
+      manual_date_label: Data
+      record_payment: Registrar pagamento
+      mark_paid: Marcar como paga
+      mark_paid_hint: Quita o restante sem registrar uma transação.
+      skip: Pular
+      snooze_week: Adiar uma semana
+      reopen: Reabrir
+      view_bill: Ver conta a pagar completa
+    mark_paid:
+      success: Conta a pagar marcada como paga
+    skip:
+      success: Conta a pagar pulada
+    reopen:
+      success: Conta a pagar reaberta
+    snooze:
+      success: Adiada até %{date}
+      invalid_date: Não foi possível ler essa data
+    override_amount:
+      success: Valor previsto atualizado

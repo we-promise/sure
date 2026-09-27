@@ -1,0 +1,17 @@
+---
+pt-BR:
+  pdf_import_mailer:
+    next_steps:
+      greeting: Olá, %{name},
+      intro: Terminamos de analisar o documento PDF que você enviou ao %{product}.
+      document_type_label: Tipo de documento
+      summary_label: Resumo da IA
+      transactions_note: Este documento parece conter transações. Você pode extraí-las e revisá-las agora.
+      document_stored_note: Este documento foi armazenado para sua consulta. Ele pode ser usado como contexto em futuras conversas com a IA.
+      next_steps_label: Próximos passos
+      next_steps_intro: 'Você tem algumas opções:'
+      option_extract_transactions: Extrair as transações deste extrato
+      option_keep_reference: Manter este documento para consulta em futuras conversas com a IA
+      option_delete: Excluir esta importação se você não precisar mais dela
+      view_import_button: Ver detalhes da importação
+      footer_note: Esta é uma mensagem automática. Não responda diretamente a este e-mail.

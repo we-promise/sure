@@ -3,7 +3,7 @@ nl:
   recurring_transactions:
     title: Terugkerende transacties
     upcoming: Aankomende terugkerende transacties
-    projected: Geprojecteerd
+    projected: Verwacht
     recurring: Terugkerend
     expected_on: Verwacht op %{date}
     day_of_month: Dag %{day} van de maand
@@ -11,7 +11,7 @@ nl:
     cleanup_stale: Verouderde opschonen
     settings:
       enable_label: Terugkerende transacties inschakelen
-      enable_description: Automatisch terugkerende transactiepatronen detecteren en aankomende geprojecteerde transacties tonen.
+      enable_description: Automatisch terugkerende transactiepatronen detecteren en verwachte komende transacties tonen.
     settings_updated: Instellingen voor terugkerende transacties bijgewerkt
     info:
       title: Automatische patroondetectie
@@ -22,10 +22,10 @@ nl:
         - Een provider sync is voltooid (Plaid, SimpleFIN, etc.)
     identified: "%{count} terugkerende transactiepatronen geïdentificeerd"
     cleaned_up: "%{count} verouderde terugkerende transacties opgeschoond"
-    marked_inactive: Terugkerende transactie gemarkeerd als inactief
-    marked_active: Terugkerende transactie gemarkeerd als actief
-    deleted: Terugkerende transactie verwijderd
-    confirm_delete: Weet u zeker dat u deze terugkerende transactie wilt verwijderen?
+    marked_inactive: Gepauzeerd. Deze verschijnt pas weer als u deze hervat.
+    marked_active: Hervat.
+    deleted: Vaste last verwijderd. Uw transacties zijn niet gewijzigd.
+    confirm_delete: '%{name} uit uw vaste lasten verwijderen? Uw transacties blijven precies zoals ze zijn. Alleen de vaste last en het bijbehorende betalingsschema worden verwijderd.'
     marked_as_recurring: Transactie gemarkeerd als terugkerend
     already_exists: Er bestaat al een handmatige terugkerende transactie voor dit patroon
     creation_failed: Aanmaken van terugkerende transactie mislukt. Controleer de transactiedetails en probeer het opnieuw.
@@ -42,8 +42,159 @@ nl:
       last_occurrence: Laatste keer
       status: Status
       actions: Acties
+      frequency: Frequentie
     status:
       active: Actief
-      inactive: Inactief
+      inactive: Gepauzeerd
+      suggested: Mogelijke vaste last
+      paused: Gepauzeerd
+      ended: Genegeerd
     badges:
       manual: Handmatig
+    expected_today: Vandaag verwacht
+    expected_in:
+      one: Verwacht over %{count} dag
+      other: Verwacht over %{count} dagen
+    frequency_presets:
+      monthly: Maandelijks
+      weekly: Wekelijks
+      biweekly: Om de 2 weken
+      semimonthly: Twee keer per maand
+      quarterly: Per kwartaal
+      semiannual: Om de 6 maanden
+      annual: Jaarlijks
+      custom: Aangepast schema
+    frequency:
+      monthly: Maandelijks op de %{day}
+      weekly: Wekelijks op %{weekday}
+      biweekly: Om de 2 weken op %{weekday}
+      semimonthly: Twee keer per maand, op de %{first} en de %{second}
+      quarterly: Elk kwartaal op de %{day}
+      semiannual: Om de 6 maanden op de %{day}
+      annual: Jaarlijks in %{month}, op de %{day}
+      custom: Aangepast schema
+      last_day: laatste dag
+    actions:
+      edit_payment_link: Betaallink bewerken
+      pause: Pauzeren
+      resume: Hervatten
+      delete: Verwijderen
+    pay_action:
+      pay: Betalen
+      pay_aria: '%{name} betalen (opent in nieuw tabblad)'
+      add_link: Link toevoegen
+      add_link_aria: Een betaallink toevoegen voor %{name}
+      autopay: Automatische betaling
+      autopay_aria: '%{name} wordt automatisch betaald, open het portaal in een nieuw tabblad'
+      open_site: Betaalsite openen
+    new:
+      title: Vaste last toevoegen
+      income_title: Inkomsten toevoegen
+      start_from_title: Begin met een terugkerende afschrijving die we hebben gevonden
+      start_from_income_title: Begin met een terugkerende bijschrijving die we hebben gevonden
+      start_from_hint: Optioneel. Een keuze vult alleen het formulier in; u kunt nog alles wijzigen.
+      candidate_meta: '%{count}× · laatst %{date}'
+      search_all_prompt: Ziet u niet wat u zoekt?
+      search_all_cta: Al uw transacties doorzoeken
+      pick_different: Begin met een andere transactie
+      smart_fill: Slim invullen met AI
+      smart_fill_applied: AI heeft deze waarden voorgesteld op basis van de betalingsgeschiedenis. Controleer ze voordat u opslaat.
+    smart_fills:
+      create:
+        failed: De betalingsgeschiedenis kan nu niet worden geanalyseerd. Het formulier behoudt de waarden van de transactie zelf.
+    pick_entry:
+      title: Zoek een transactie om mee te beginnen
+      income_title: Zoek een bijschrijving om mee te beginnen
+      hint: Een keuze vult alleen het formulier in; u kunt nog alles wijzigen.
+      search_placeholder: Zoeken op naam, notities of handelaar
+      back: Terug naar het formulier
+      showing_recent: Uw %{count} meest recente worden getoond. Zoek om de lijst te verfijnen.
+      no_results: Niets gevonden voor ‘%{query}’. Probeer minder woorden, of ga terug en vul het formulier zelf in.
+    picker_row:
+      claimed: Onderdeel van %{name}
+    create:
+      success: Vaste last toegevoegd
+      success_income: Inkomsten toegevoegd
+      due_date_required: Voer de volgende vervaldatum van de vaste last in
+      amount_invalid: Voer het bedrag in als een gewoon getal
+      account_invalid: Kies een account waaraan u vaste lasten kunt toevoegen, of laat het leeg
+      already_exists: Deze vaste last bestaat al
+    edit:
+      trigger_label: Vaste last bewerken
+      title: '%{name} bewerken'
+      income_title: Inkomsten bewerken · %{name}
+    form:
+      payment_url_label: Betaallink
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: Waar u deze vaste last betaalt. Opent in een nieuw tabblad vanuit uw lijsten met terugkerende en komende betalingen.
+      autopay_label: Wordt automatisch betaald
+      autopay_hint: Blijft in uw lijst met vaste lasten staan, maar geldt niet meer als iets wat u zelf moet doen.
+      more_options: Meer opties
+      notes_label: Notities
+      notes_placeholder: Klantnummer 4821, betaald met de Amex
+      notes_hint: Alles wat u bij de hand wilt hebben wanneer u betaalt. Wordt getoond bij de vaste last.
+      apply_to_siblings:
+        one: Deze link ook gebruiken voor de andere vaste last %{name}
+        other: Deze link ook gebruiken voor de %{count} andere vaste lasten %{name}
+      submit: Vaste last opslaan
+      submit_income: Inkomsten opslaan
+      income_name_label: Bron
+      income_name_placeholder: Werkgever, klant, bijbaan
+      income_amount_label: Bedrag per uitbetaling
+      income_due_on_label: Volgende betaaldag
+      income_account_label: Gestort op
+      income_frequency_hint: Hoe vaak u wordt betaald. Kies de dagdetails die bij uw betaaldag passen.
+      income_frequency_label: Hoe vaak u wordt betaald
+      income_frequency_new_hint: De details van de betaaldag komen van de datum hierboven. U kunt het schema na het opslaan verfijnen.
+      income_notes_placeholder: Salarisstorting, verdeeld over twee rekeningen
+      income_notes_hint: Alles wat het onthouden waard is over deze inkomsten.
+      name_label: Naam
+      name_placeholder: Huur, energie, Netflix
+      amount_label: Bedrag
+      first_due_on_label: Volgende vervaldatum
+      account_label: Betaald vanaf
+      account_blank: Elk account
+      bill_type_label: Soort
+      installment_count_label: Aantal termijnen
+      installment_count_hint: De regeling eindigt na dit aantal betalingen en toont tot dan de voortgang.
+      renews_on_label: Verlengt op
+      trial_ends_on_label: Proefperiode eindigt
+      amount_edit_hint: Geldt voor vaste lasten die vanaf nu vervallen. Wat al te betalen was, houdt het oude bedrag.
+      income_amount_edit_hint: Geldt voor betaaldagen vanaf nu. Wat al te betalen was, houdt het oude bedrag.
+      cancelled_on_label: Opgezegd op
+      cancelled_on_hint: De datum is alleen voor uw eigen administratie. Pauzeer de vaste last om te voorkomen dat er nieuwe verschijnen.
+      category_label: Categorie
+      category_blank: Geen categorie
+      frequency_new_hint: De dagdetails komen van de vervaldatum hierboven. U kunt het schema na het opslaan verfijnen.
+      frequency_label: Hoe vaak
+      frequency_hint: Hoe vaak deze vaste last vervalt. Kies de dagdetails die bij uw afschrift passen.
+      frequency_day_label: Op dag
+      frequency_second_day_label: En dag
+      frequency_weekday_label: Op
+      frequency_month_label: In
+    update:
+      success: Vaste last bijgewerkt
+      success_with_siblings:
+        one: Vaste last bijgewerkt en de betaallink is gekopieerd naar %{count} andere vaste last
+        other: Vaste last bijgewerkt en de betaallink is gekopieerd naar %{count} andere vaste lasten
+    manage:
+      title: Uw vaste lasten staan op de pagina Vaste lasten
+      description: Daar kunt u alles opgeven, bewerken, pauzeren en betalen. Deze pagina regelt de detectie.
+      cta: Alle vaste lasten openen
+    identify_already_running: De detectie loopt al. Kijk zo nog eens.
+    deleted_income: Inkomsten verwijderd. Uw transacties zijn niet gewijzigd.
+    confirm_delete_income: '%{name} als inkomsten verwijderen? Uw transacties blijven precies zoals ze zijn. Alleen de inkomsten en het bijbehorende schema worden verwijderd.'
+    suggested:
+      title: Mogelijke nieuwe vaste lasten
+      seen_count:
+        one: '%{count} keer gezien'
+        other: '%{count} keer gezien'
+      collapsed_hint: Tik om te controleren
+      confirm: Vaste last toevoegen
+      dismiss: Geen vaste last
+    confirmed: Vaste last toegevoegd aan uw terugkerende transacties
+    dismissed: Genegeerd. Dit patroon wordt niet meer voorgesteld.
+    transfer_marked_as_recurring: Overboeking gemarkeerd als terugkerend
+    transfer_already_exists: Er bestaat al een terugkerende overboeking voor dit rekeningpaar
+    transfer_creation_failed: Aanmaken van terugkerende overboeking mislukt. Controleer de details van de overboeking en probeer het opnieuw.
+    transfer_feature_disabled: Terugkerende transacties zijn uitgeschakeld voor dit huishouden

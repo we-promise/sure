@@ -232,7 +232,7 @@ nl:
       heading: "Gebruikers-ID en toegangssleutel niet geconfigureerd"
       description: "Voordat u Sophtron-accounts kunt koppelen, moet u uw Sophtron-gebruikers-ID en -toegangssleutel configureren."
       setup_steps_title: "Installatiestappen:"
-      step_1_html: "Ga naar <strong>Instellingen → Bank-sync-providers</strong>"
+      step_1_html: "Ga naar <strong>Instellingen → Banksynchronisatie</strong>"
       step_2_html: "Zoek het gedeelte <strong>Sophtron</strong>"
       step_3_html: "Voer uw Sophtron-gebruikers-ID en -toegangssleutel in"
       step_4: "Kom hier terug om uw accounts te koppelen"

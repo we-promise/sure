@@ -9,6 +9,18 @@ pt-BR:
           cash_flow: "Fluxo de caixa"
           surplus: "Superávit"
           deficit: "Déficit"
+        title: Novo gráfico Sankey
+        preview: Prévia
+        preview_tooltip: Esta visualização substituirá a de cima, pois usa uma nova API compartilhada com o app móvel em Swift.
+        feedback_prompt: Compare este gráfico com o original acima e diga se ele parece diferente em algo além da ordenação.
+        positive: Parece certo
+        negative: Algo parece errado
+        feedback_title: Feedback sobre o gráfico de fluxo de caixa
+        feedback_loading: Carregando formulário de feedback…
+        feedback_unavailable: O feedback não está disponível no momento. Tente novamente mais tarde.
+        feedback_thanks: Obrigado por ajudar a melhorar o gráfico!
+        feedback_privacy: Sua resposta é enviada ao PostHog. Descreva o problema sem números de conta, saldos ou outros dados financeiros privados.
+        feedback_submit: Enviar feedback
       welcome: "Bem-vindo(a) de volta, %{name}"
       subtitle: "Veja o que está acontecendo com suas finanças"
       new: "Novo"
@@ -25,11 +37,27 @@ pt-BR:
         title: "Balanço Patrimonial"
         no_items: "Nenhuma %{name} ainda"
         add_accounts: "Adicione suas contas de %{name} para ver um detalhamento completo"
+        no_asset: Nenhum ativo ainda
+        no_liability: Nenhum passivo ainda
+        add_asset_accounts: Adicione suas contas de ativos para ver um detalhamento completo
+        add_liability_accounts: Adicione suas contas de passivos para ver um detalhamento completo
+        name: Nome
+        weight: Peso
+        value: Valor
+        expand_all: Expandir tudo
+        collapse_all: Recolher tudo
+        classifications:
+          asset: Ativos
+          liability: Passivos
       cashflow_sankey:
         title: "Fluxo de Caixa"
         no_data_title: "Sem dados de fluxo de caixa para este período"
         no_data_description: "Adicione transações para exibir dados de fluxo de caixa ou expanda o período de tempo"
         add_transaction: "Adicionar transação"
+        loading: Carregando fluxo de caixa…
+        load_error: Não foi possível carregar o fluxo de caixa. Tente novamente.
+        retry: Tentar novamente
+        zoom_out: Voltar ao fluxo de caixa completo
       no_accounts:
         title: "Nenhuma conta ainda"
         description: "Adicione contas para exibir dados de patrimônio líquido"
@@ -40,3 +68,84 @@ pt-BR:
         categories: "Categorias"
         value: "Valor"
         weight: "Peso"
+      sections_aria_label: Seções do painel
+      widget_size:
+        label: Ajustar tamanho
+        width_label: Largura
+        half: Metade
+        full: Inteira
+        height_label: Altura
+        compact: Compacta
+        auto: Automática
+        tall: Alta
+      insights_feed:
+        title: Insights
+      investment_summary:
+        title: Investimentos
+        total_return: Retorno Total
+        holding: Posição
+        weight: Peso
+        value: Valor
+        return: Retorno
+        period_activity: Atividade – %{period}
+        contributions: Aportes
+        withdrawals: Resgates
+        trades: Negociações
+        no_investments: Nenhuma conta de investimento
+        add_investment: Adicione uma conta de investimento para acompanhar sua carteira
+      money_flow:
+        title: Entradas / Saídas
+        date_range: '%{start_date} a %{end_date}'
+        month_picker_aria_label: Selecionar mês
+        filter_accounts: Filtrar contas (%{count})
+        filter_accounts_all: Todas as contas
+        period_scope_hint: Mostra os meses que você escolher aqui — independente do período do painel lá em cima.
+        search_accounts: Buscar contas
+        apply: Aplicar
+        balance: Resultado do período
+        chart_span: Últimos %{count} meses
+        income: Receitas
+        expenses: Despesas
+      spending_trend:
+        title: Gastos
+        date_range: '%{start_date} a %{end_date}'
+        date_range_short: '%{start_date} - %{end_day}, %{year}'
+        date_range_short_single: '%{date}, %{year}'
+        month_picker_aria_label: Selecionar mês
+        period_scope_hint: Mostra o mês que você escolher aqui — independente do período do painel lá em cima.
+        no_data: Sem dados de gastos para este mês
+        previous_comparison_days: (1-%{end_day})
+    feedback:
+      title: Feedback
+      heading: Enviar feedback
+      description: Conte para nós se você tiver algum feedback específico. Fique à vontade para incluir links de vídeos ou capturas de tela.
+      feature_request: Sugerir um recurso
+      bug_report: Relatar um bug
+      discuss: Converse sobre o %{product} com outras pessoas
+    intro:
+      not_authorized: A introdução está disponível apenas para usuários convidados.
+      welcome: Boas-vindas!
+      coming_soon: Experiência de introdução em breve
+      description: Estamos criando uma jornada de boas-vindas mais completa para conhecer seus objetivos, marcos e necessidades do dia a dia. Por enquanto, vá até a barra lateral do chat para começar uma conversa com o Sure e conte em que ponto você está na sua jornada financeira.
+      start_chatting: Começar a conversar
+    redis_configuration_error:
+      page_title: Configuração do Redis necessária - Sure
+      heading: Configuração do Redis necessária
+      subheading: Sua instalação auto-hospedada do Sure precisa que o Redis esteja configurado corretamente.
+      why_required_title: Por que o Redis é necessário?
+      why_required_body: O Sure usa o Redis para executar os jobs em segundo plano do Sidekiq, em tarefas como sincronizar dados das contas, processar importações e outras operações em segundo plano que mantêm seus dados financeiros atualizados.
+      view_setup_guide: Ver guia de configuração
+      setup_guide_hint: Siga nosso guia completo de configuração do Docker para configurar o Redis
+      refresh_hint: Depois de configurar o Redis, atualize esta página para continuar.
+      refresh_page: Atualizar página
+    release_notes_unavailable:
+      name: Notas de versão indisponíveis
+      body_html: <p>Não foi possível carregar as notas de versão mais recentes no momento. Volte mais tarde ou acesse diretamente nossa <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>página de versões no GitHub</a>.</p>
+    privacy:
+      title: Política de Privacidade
+      heading: Política de Privacidade
+      placeholder: O conteúdo da política de privacidade será exibido aqui.
+    terms:
+      title: Termos de Serviço
+      heading: Termos de Serviço
+      placeholder: O conteúdo dos termos de serviço será exibido aqui.

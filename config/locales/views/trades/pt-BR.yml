@@ -11,15 +11,36 @@ pt-BR:
       submit: Adicionar transação
       ticker_placeholder: AAPL
       type: Tipo
+      fee: Taxa de corretagem
+      holding_optional: Símbolo do ticker (opcional)
+      type_buy: Compra
+      type_sell: Venda
+      type_deposit: Depósito
+      type_withdrawal: Resgate
+      type_dividend: Dividendo
+      type_interest: Juros
+      dividend_requires_security: O ativo é obrigatório para dividendos
+      trade_requires_security: Um ativo (ticker) é obrigatório para negociações de compra e venda
     header:
-      buy: Comprar
+      buy: Compra
       current_market_price_label: Preço de Mercado Atual
       overview: Visão geral
       purchase_price_label: Preço de Compra
       purchase_qty_label: Quantidade de Compra
-      sell: Vender
+      sell: Venda
       symbol_label: Símbolo
       total_return_label: Ganho/perda não realizado
+      dividend: Dividendo
+      interest: Juros
+      contribution: Aporte
+      exchange: Troca
+      fee: Taxa
+      other: Outro
+      reinvestment: Reinvestimento
+      sweep_in: Aplicação automática (sweep)
+      sweep_out: Resgate automático (sweep)
+      transfer: Transferência
+      withdrawal: Resgate
     new:
       title: Nova transação
     show:
@@ -36,3 +57,16 @@ pt-BR:
       note_placeholder: Adicione notas adicionais aqui...
       quantity_label: Quantidade
       settings: Configurações
+      amount_label: Valor
+      buy: Compra
+      category_label: Categoria
+      fee_label: Taxa de corretagem
+      provider_disabled_warning: Atualizações de preço pausadas — o provedor %{provider} está desativado. Reative-o nas Configurações ou associe a posição a outro provedor.
+      no_category: Sem categoria
+      sell: Venda
+      type_label: Tipo
+    api_errors:
+      activity_label_must_match_type: investment_activity_label deve ser %{label} quando type é %{type}
+      invalid_activity_label: Rótulo de atividade de investimento inválido
+      invalid_type: Tipo inválido
+      supported_types: 'type deve ser um destes: %{types}'

@@ -5,6 +5,7 @@ nl:
     no_condition: Geen voorwaarde
     actions:
       value_placeholder: Voer een waarde in
+      to_label: naar
     apply_all:
       button: Alles toepassen
       confirm_title: Alle regels toepassen
@@ -31,10 +32,99 @@ nl:
           queued: In wachtrij
           processed: Verwerkt
           modified: Gewijzigd
+          blocked: Geblokkeerd
       execution_types:
         manual: Handmatig
-        scheduled: Gepland
+        scheduled: Automatisch
       statuses:
         pending: In behandeling
         success: Succesvol
         failed: Mislukt
+    rule:
+      edit: Bewerken
+      re_apply_rule: Regel opnieuw toepassen
+      delete: Verwijderen
+      then: DAN
+      and_more_conditions:
+        one: en nog %{count} voorwaarde
+        other: en nog %{count} voorwaarden
+      and_more_actions:
+        one: en nog %{count} actie
+        other: en nog %{count} acties
+      action_label_to: '%{label} naar %{value}'
+      all_past_and_future: Alle eerdere en toekomstige %{resource}
+      on_or_after: '%{resource} op of na %{date}'
+    form:
+      rule_name_label: Naam regel (optioneel)
+      rule_name_placeholder: Voer een naam in voor deze regel
+      add_condition: Voorwaarde toevoegen
+      add_condition_group: Voorwaardengroep toevoegen
+      add_action: Actie toevoegen
+      all_past_and_future: Alle eerdere en toekomstige %{resource}
+      starting_from: Vanaf
+      then: DAN
+    index:
+      page_title: Regels
+      delete_all_rules: Alle regels verwijderen
+      new_rule: Nieuwe regel
+      ai_cost_warning: Regelacties met AI kosten geld. Filter zo nauwkeurig mogelijk om onnodige kosten te voorkomen.
+      rules_heading: Regels
+      sort_by: 'Sorteren op:'
+      sort_name: Naam
+      sort_updated_at: Laatst bijgewerkt
+      toggle_sort_direction: Sorteervolgorde omdraaien
+      no_rules_title: Nog geen regels
+      no_rules_description: Stel regels in om bij elke accountsynchronisatie acties uit te voeren op uw transacties en andere gegevens.
+    confirm:
+      title: Wijzigingen bevestigen
+      title_with_name: Wijzigingen in ‘%{name}’ bevestigen
+      apply_notice_html: U staat op het punt deze regel toe te passen op <span class="text-primary font-medium">%{count} %{resource}</span> die voldoen aan de criteria van de regel. Bevestig als u deze wijziging wilt doorvoeren.
+      ai_cost_title: AI-kostenraming
+      ai_cost_with_estimate_html: 'Hiermee wordt AI gebruikt om %{count} transactie(s) te categoriseren. Geschatte kosten: <span class="font-semibold">~$%{cost}</span>'
+      ai_cost_no_estimate_html: Hiermee wordt AI gebruikt om %{count} transactie(s) te categoriseren.
+      cost_unavailable_model: Kostenraming niet beschikbaar voor model "%{model}".
+      cost_unavailable_no_provider: Kostenraming niet beschikbaar (geen LLM-provider geconfigureerd).
+      cost_warning: Er kunnen kosten in rekening worden gebracht. Raadpleeg de modelprovider voor de meest actuele prijzen.
+      view_usage_history: Gebruiksgeschiedenis bekijken
+      confirm_changes: Wijzigingen bevestigen
+    update:
+      success: Regel bijgewerkt
+    destroy:
+      success: Regel verwijderd
+    destroy_all:
+      success: Alle regels verwijderd
+    clear_ai_cache:
+      button: AI-cache resetten
+      confirm_title: AI-cache resetten?
+      confirm_body: Weet u zeker dat u de AI-cache wilt resetten? AI-regels kunnen dan alle transacties opnieuw verwerken. Dit kan extra API-kosten met zich meebrengen.
+      confirm_button: Cache resetten
+      success: De AI-cache wordt gewist. Dit kan even duren.
+    condition_filters:
+      transaction_type:
+        income: Inkomsten
+        expense: Uitgave
+        transfer: Overboeking
+        equal_to: Gelijk aan
+      operators:
+        contains: Bevat
+        does_not_contain: Bevat niet
+        equal_to: Gelijk aan
+        is_equal_to: Is gelijk aan
+        not_equal_to: Niet gelijk aan
+        is_empty: Is leeg
+        is_not_empty: Is niet leeg
+        greater_than: Groter dan
+        greater_or_equal_to: Groter dan of gelijk aan
+        less_than: Kleiner dan
+        less_than_or_equal_to: Kleiner dan of gelijk aan
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: en
+        match: voldoet aan
+        all: alle
+        any: een van de
+        of_the_following_conditions: volgende voorwaarden
+        add_condition: Voorwaarde toevoegen
+      condition:
+        value_placeholder: Voer een waarde in

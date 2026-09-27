@@ -41,12 +41,24 @@ pt-BR:
           regenerate_key: "Criar Nova Chave"
           revoke_key: "Revogar Chave"
           revoke_confirmation: "Tem certeza de que deseja revogar esta chave de API? Esta ação não pode ser desfeita e desabilitará imediatamente todas as aplicações que usam esta chave."
+          copy_api_key: Copiar chave de API
+          copy_store_securely: Copie e guarde esta chave com segurança. Você precisará dela para autenticar suas requisições à API.
+          back_to_keys: Voltar para chaves de API
+        newly_created:
+          page_title: Chave de API criada com sucesso
+          heading: Chave de API criada com sucesso!
+          key_ready: Sua nova chave de API “%{name}” foi criada e está pronta para uso.
+          your_api_key: Sua chave de API
+          copy_store_securely: Copie e guarde esta chave com segurança. Você precisará dela para autenticar suas requisições à API.
+          copy_api_key: Copiar chave de API
+          how_to_use: Como usar sua chave de API
+          continue: Continuar para as configurações de chaves de API
       new:
         title: "Criar Chave de API"
         create_new_key: "Criar Nova Chave de API"
         description: "Configure sua nova chave de API com um nome descritivo e permissões apropriadas."
         name_label: "Nome da Chave de API"
-        name_placeholder: "ex: App de Produção, Dashboard de Analytics"
+        name_placeholder: "ex.: Meu app de orçamento, Controle de carteira"
         name_help: "Escolha um nome descritivo para ajudar a identificar o propósito desta chave."
         permissions_label: "Permissões"
         permissions_help: "Selecione as permissões que sua chave de API precisa. Você sempre pode criar uma nova chave com permissões diferentes."
@@ -59,6 +71,15 @@ pt-BR:
         security_warning: "Sua chave de API será mostrada apenas uma vez após a criação. Armazene-a com segurança e nunca a compartilhe publicamente. Se você perdê-la, precisará criar uma nova."
         create_key: "Criar Chave de API"
         cancel: "Cancelar"
+        create_new_api_key: Criar nova chave de API
+        subtitle: Gere uma nova chave de API para acessar seus dados do Sure de forma programática.
+        name_help_text: Escolha um nome descritivo para ajudar a identificar esta chave depois.
+        scope_read_only: Somente leitura
+        scope_read_only_description: Ver suas contas, transações e saldos
+        scope_read_write: Leitura/Gravação
+        scope_read_write_description: Ver seus dados e criar novas transações
+        security_warning_body: Sua chave de API será exibida apenas uma vez após a criação. Copie-a e guarde-a com segurança. Qualquer pessoa com acesso a esta chave poderá acessar seus dados de acordo com as permissões que você selecionar.
+        save_api_key: Salvar chave de API
       created:
         title: "Chave de API Criada"
         success_title: "Chave de API Criada com Sucesso"
@@ -74,3 +95,25 @@ pt-BR:
         usage_instructions: "Use sua chave de API incluindo-a no cabeçalho X-Api-Key:"
         copy_key: "Copiar Chave de API"
         continue: "Continuar para Configurações da Chave de API"
+      create:
+        success: Sua chave de API foi criada com sucesso
+      destroy:
+        revoked_successfully: A chave de API foi revogada com sucesso
+        revoke_failed: Falha ao revogar a chave de API
+      shared:
+        active: Ativa
+        created_ago: Criada há %{time}
+        last_used_ago: Último uso há %{time}
+        never_used: Nunca usada
+        scope_read_only: Somente leitura
+        scope_read_write: Leitura/Gravação
+      index:
+        title: Chaves de API
+        subtitle: Gerencie chaves de API para acesso programático aos seus dados.
+        new_key: Nova chave de API
+        empty_heading: Nenhuma chave de API ainda
+        empty_description: Crie uma chave de API para acessar seus dados de forma programática.
+        revoke_key: Revogar
+        revoke_confirmation: Tem certeza de que deseja revogar “%{name}”? Isso desativará imediatamente qualquer aplicação que use esta chave.
+      key_reveal:
+        copied: Copiado!

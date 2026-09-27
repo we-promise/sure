@@ -15,7 +15,7 @@ nl:
       success: U bent succesvol aangemeld.
     new:
       invitation_message: "%{inviter} heeft u uitgenodigd om lid te worden als %{role}"
-      join_family_title: Word lid van %{family}
+      join_family_title: Word lid van %{moniker} %{family}
       role_admin: beheerder
       role_member: lid
       submit: Account aanmaken
@@ -28,3 +28,4 @@ nl:
         case: Hoofdletters en kleine letters
         number: Een cijfer (0-9)
         special: "Een speciaal teken (!, @, #, $, %, etc)"
+      role_guest: gast

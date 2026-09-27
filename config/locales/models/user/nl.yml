@@ -16,5 +16,7 @@ nl:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: Admin kan account niet verwijderen terwijl andere gebruikers aanwezig zijn. Verwijder eerst alle leden.
+              provider_item_has_other_accounts: Gebruiker heeft accounts die gekoppeld zijn aan een providerverbinding die ook accounts van een andere gebruiker bevat. Verplaats of ontkoppel die accounts voordat u het familie-/groepslidmaatschap wijzigt.
+              cannot_remove_last_super_admin: De laatste actieve superbeheerder kan niet worden verwijderd. Maak eerst een andere gebruiker superbeheerder.
             profile_image:
               invalid_file_size: bestandsgrootte moet minder zijn dan %{max_megabytes} MB

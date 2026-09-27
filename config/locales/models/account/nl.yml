@@ -5,8 +5,8 @@ nl:
       account:
         balance: Saldo
         currency: Valuta
-        family: Familie
-        family_id: Familie
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         name: Naam
         subtype: Subtype
     models:
@@ -19,3 +19,16 @@ nl:
       account/other_liability: Overige Verplichtingen
       account/property: Onroerend Goed
       account/vehicle: Voertuig
+  account_order:
+    balance_asc:
+      label: Saldo (laag naar hoog)
+      label_short: Saldo ↑
+    balance_desc:
+      label: Saldo (hoog naar laag)
+      label_short: Saldo ↓
+    name_asc:
+      label: Naam (A-Z)
+      label_short: Naam ↑
+    name_desc:
+      label: Naam (Z-A)
+      label_short: Naam ↓

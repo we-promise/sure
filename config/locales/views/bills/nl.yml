@@ -1,0 +1,313 @@
+---
+nl:
+  bills:
+    row_overdue: Te laat
+    row_today: Vandaag
+    detect:
+      found:
+        one: '%{count} mogelijke vaste last gevonden. Controleer deze hieronder.'
+        other: '%{count} mogelijke vaste lasten gevonden. Controleer ze hieronder.'
+      none_found: Geen nieuwe terugkerende patronen gevonden. U kunt vaste lasten handmatig toevoegen.
+      already_running: De detectie loopt al. Kijk zo nog eens.
+    feed:
+      calendar_name: Sure vaste lasten
+    ai_prompts:
+      due_before_paycheck: Wat moet ik betalen vóór mijn volgende salaris?
+      subscriptions_up: Welke abonnementen zijn dit jaar duurder geworden?
+      monthly_subscriptions: Hoeveel betaal ik per maand aan abonnementen?
+      safe_to_spend: Hoeveel kan ik deze periode veilig uitgeven?
+    smart_configurations:
+      show:
+        trigger: Laat AI configureren
+        title: AI-suggesties voor %{name}
+        intro: Vink de wijzigingen aan die u wilt toepassen. Niet-aangevinkte instellingen blijven precies zoals ze zijn.
+        no_changes: Deze vaste last komt al overeen met de betalingsgeschiedenis. Er hoeft niets te veranderen.
+        failed: Deze vaste last kan nu niet worden geanalyseerd. De configuratie is ongewijzigd.
+        field_name: Naam
+        field_amount: Bedrag
+        field_schedule: Schema
+        field_category: Categorie
+        field_kind: Soort
+        field_autopay: Automatische betaling
+        uncategorized: Ongecategoriseerd
+        autopay_off: Uit
+        autopay_on: Aan
+        apply: Selectie toepassen
+    detail:
+      current: Huidig
+      next_payment: Volgende betaling
+      around: rond %{date}
+      rules: Hoe deze vaste last wordt herkend
+      rule_named: '%{name}'
+      rule_amount_range: van %{min} tot %{max}
+      rule_aliases: Herkent ook %{names}
+      rule_learned_tolerance: Bedragen die maximaal %{percent} afwijken van het gebruikelijke bedrag worden aan deze vaste last gekoppeld
+      history_title: Afgelopen 12 maanden
+      history_aria: Betalingen in de afgelopen twaalf maanden
+      key_metrics: Per jaar
+      year: Jaar
+      spent_per_year: Uitgegeven
+      avg_payment: Gem. betaling
+      average: Gemiddeld betaald
+      range: '%{min} tot %{max}'
+      annualized: Per jaar
+      ytd: Dit jaar betaald
+      last_account: Laatst gebruikte account
+      upcoming: Binnenkort
+      recent_payments: Recente betalingen
+      manual_payment: Handmatige betaling
+      history: Geschiedenis
+      payment_count:
+        one: '%{count} betaling'
+        other: '%{count} betalingen'
+      notes: Notities
+      trial_chip: Proefperiode eindigt %{date}
+      renews_chip: Verlengt %{date}
+      cancelled_chip: Opgezegd %{date}
+      price_changes: Prijswijzigingen
+      price_change_line: '%{from} → %{to}'
+    month_pulse:
+      bill_count:
+        one: '%{count} vaste last'
+        other: '%{count} vaste lasten'
+      left_to_pay: nog te betalen
+      pulse_paid: betaald
+      pulse_overdue: te laat
+      pulse_next_seven: komende 7 dagen
+      pulse_bar_aria: '%{percent}% van de vaste lasten van deze maand betaald'
+      next_up: Hierna
+      view_upcoming: Komende bekijken
+      date_today: Vandaag
+      date_tomorrow: Morgen
+      unconvertible:
+        one: '%{count} vaste last is niet meegeteld, geen wisselkoers beschikbaar'
+        other: '%{count} vaste lasten zijn niet meegeteld, geen wisselkoers beschikbaar'
+    summary:
+      remaining: '%{amount} nog te betalen'
+      paid_headline: '%{amount} betaald'
+      cost_line: Gemiddeld %{average} per betaling, ongeveer %{annualized} per jaar
+    pane:
+      close: Details inklappen
+    add_bill: Vaste last toevoegen
+    manage: Beheren
+    find_payment: Betaling zoeken
+    add_payment: Betaling toevoegen
+    review_match: Koppeling controleren
+    resolve: Oplossen
+    manage_payments: Betalingen beheren
+    view_full_bill: Volledige vaste last bekijken
+    match:
+      same_merchant: Zelfde handelaar
+      name_matches: Naam komt overeen
+      exact_amount: Exact bedrag
+      amount_off: '%{amount} verschil'
+      due_date: Op de vervaldatum
+      days_before:
+        one: '%{count} dag vóór de vervaldatum'
+        other: '%{count} dagen vóór de vervaldatum'
+      days_after:
+        one: '%{count} dag na de vervaldatum'
+        other: '%{count} dagen na de vervaldatum'
+    attention:
+      needs_review: Koppeling moet worden gecontroleerd
+      partial: Gedeeltelijk · nog %{amount} te betalen
+      amount_changed: Bedrag gewijzigd
+      overdue:
+        one: '%{count} dag te laat'
+        other: '%{count} dagen te laat'
+    paid_label: Betaald
+    paid_over_short: Te veel betaald
+    installment_progress: Termijn %{done_plus_one} van %{total}
+    partial_progress: '%{paid} van %{expected} betaald'
+    cancelled_still_scheduled: U hebt dit op %{date} als opgezegd gemarkeerd, maar het staat nog steeds ingepland, dus toekomstige vaste lasten blijven verschijnen.
+    paid_over: '%{paid} betaald, meer dan verwacht'
+    remaining_label: nog te betalen
+    debt_payment: · aflossing schuld
+    paid_from: van %{account}
+    amount_range: varieert van %{min} tot %{max}
+    possible_duplicate: Mogelijk duplicaat
+    due_label:
+      overdue:
+        one: '%{count} dag te laat, vervaldatum was %{date}'
+        other: '%{count} dagen te laat, vervaldatum was %{date}'
+      today: Vandaag te betalen
+      settled: Vervaldatum was %{date}
+      due_since: Te betalen sinds %{date}
+      snoozed: Uitgesteld tot %{date}
+      upcoming:
+        one: Morgen te betalen, %{date}
+        other: Over %{count} dagen te betalen, %{date}
+    views:
+      aria_label: Weergaven van vaste lasten
+      overview: Overzicht
+      calendar: Kalender
+      paycheck: Inkomstenplan
+      all: Alle vaste lasten
+    pay_period:
+      paycheck_on: Salaris %{date}
+      before_next_paycheck: Vóór uw volgende salaris
+      due_before_date: '%{amount} te betalen vóór %{date}'
+    paycheck:
+      unconvertible:
+        one: '%{count} verplichting is niet meegeteld, geen wisselkoers beschikbaar'
+        other: '%{count} verplichtingen zijn niet meegeteld, geen wisselkoers beschikbaar'
+      income_section_title: Inkomstenschema
+      manage: Beheren
+      add_income: Inkomsten toevoegen
+      income_paused: Gepauzeerd, niet ingepland
+      income_detected: Automatisch gedetecteerd, bepaalt geen betaaldagen
+      income_next_payday: volgende %{date}
+      income_source_count:
+        one: '%{count} inkomstenbron'
+        other: '%{count} inkomstenbronnen'
+      next_on: Volgende %{date}
+      no_upcoming_income: Vanaf nu geen inkomsten ingepland.
+      empty:
+        title: Geef uw inkomstenschema op
+        description: Voeg uw inkomsten toe om te zien wat elke betaaldag moet dekken. Gedetecteerde inkomsten bepalen nooit zelf uw betaaldagen -- dat doet u.
+        action: Inkomsten toevoegen
+      all_clear:
+        title: Niets te dekken
+        description: Tussen nu en %{date} vervallen er geen vaste lasten, dus in die periode is nog niets vastgelegd.
+      safe_after_bills: Vrij na vaste lasten
+      short_after_bills: Tekort na vaste lasten
+      period_source: ' · %{source}'
+      period_source_multiple: ' · %{count} inkomstenbronnen'
+      before_next_paycheck: Vóór %{date}
+      no_income_arriving: Geen inkomsten
+      income_amount: '%{amount} inkomsten'
+      due_this_period: Deze periode te betalen
+      reserved_ahead: Vooruit gereserveerd
+      safe_short: Vrij
+      short_short: Tekort
+      reserved_footer:
+        one: Vooruit gereserveerd voor %{count} latere vaste last
+        other: Vooruit gereserveerd voor %{count} latere vaste lasten
+      bills_this_period:
+        one: Vaste lasten deze periode · %{count}
+        other: Vaste lasten deze periode · %{count}
+      bills_before_payday:
+        one: Vaste lasten vóór uw volgende betaaldag · %{count}
+        other: Vaste lasten vóór uw volgende betaaldag · %{count}
+      of_total: van %{amount}
+      bridge_label: Vóór uw volgende salaris
+      bridge_amount: · %{amount} te betalen
+      bridge_split: Te betalen vóór %{date}, gedekt door de %{cash} op uw rekeningen.
+      shortfall_label: Tekort vóór uw volgende betaaldag
+      shortfall_amount: · %{amount}
+      shortfall_split: '%{obligations} moet vóór %{date} worden betaald en uw rekeningen bevatten %{cash}.'
+      shortfall_largest: 'Grootste komende verplichting:'
+      review_plan: Plan bekijken
+      allocation_aria: Van %{income} aan inkomsten is %{due} nu te betalen, %{reserved} gereserveerd voor later en %{safe} vrij te besteden.
+      allocation_aria_short: '%{income} aan inkomsten gaat naar wat hier al is vastgelegd, en er is %{short} extra nodig.'
+    reset_feed_token:
+      done: Feedlink opnieuw ingesteld. Kalender-apps met de oude link worden niet meer bijgewerkt; abonneer opnieuw met de nieuwe link.
+      confirm: Kalenderfeedlink opnieuw instellen? Elke eerder gedeelde link werkt dan niet meer.
+    calendar:
+      subscribe_ical: Abonneren (iCal)
+      reset_feed: Link opnieuw instellen
+      previous_month: Vorige maand
+      next_month: Volgende maand
+      today: Vandaag
+      month_totals: '%{expected} verwacht · %{paid} betaald'
+      empty_month: Deze maand vervallen er geen vaste lasten.
+    all:
+      search_placeholder: Vaste lasten zoeken
+      any_status: Elke status
+      status_filters:
+        overdue: Te laat
+        due: Binnenkort te betalen
+        partial: Deels betaald
+        paid: Betaald
+        paused: Gepauzeerd
+        ended: Genegeerd
+      subscription_monthly: Per maand
+      subscription_annual: Per jaar
+      subscription_active: Actief
+      subscription_price_changes: Prijswijzigingen dit jaar
+      subscription_price_change_line: '%{from} → %{to} (%{percent}%)'
+      any_type: Elk type
+      sort_due: Op eerstvolgende vervaldatum
+      sort_name: Op naam
+      sort_amount: Op bedrag
+      no_matches_title: Geen resultaten
+      no_matches_description: Probeer een filter of de zoekopdracht te wissen.
+      col_name: Naam
+      col_type: Type
+      col_frequency: Frequentie
+      col_amount: Bedrag
+      col_next: Volgende vervaldatum
+      next_short: volgende %{date}
+      col_status: Status
+      col_actions: Acties
+      monthly_equivalent: '%{amount}/mnd'
+      types:
+        bill: Vaste last
+        subscription: Abonnement
+        installment: Betaling in termijnen
+        income: Inkomsten
+        transfer: Overboeking
+        other: Overig
+    show:
+      edit: Vaste last bewerken
+    index:
+      left_to_pay: nog te betalen
+      paid_so_far: Tot nu toe betaald
+      hero_past_due: '%{amount} te laat'
+      hero_next_seven: '%{amount} te betalen in de komende 7 dagen'
+      add_bill: Vaste last toevoegen
+      add_income: Inkomsten toevoegen
+      review_with_ai: Controleren met AI
+      detected_review:
+        one: We hebben %{count} terugkerende betaling in uw transacties gevonden. Controleer deze, zodat de totalen hier overeenkomen met wat u werkelijk betaalt.
+        other: We hebben %{count} terugkerende betalingen in uw transacties gevonden. Controleer ze, zodat de totalen hier overeenkomen met wat u werkelijk betaalt.
+      detected_review_action: Controleren
+      needs_review: Controle nodig
+      notice_trial: Proefperiode van %{name} eindigt %{date}
+      notice_renewal: '%{name} wordt verlengd op %{date}'
+      notice_price: 'Prijs van %{name} gewijzigd: %{from} → %{to} (%{percent})'
+      notices_routine:
+        one: '%{count} kleinere wijziging'
+        other: '%{count} kleinere wijzigingen'
+      suggestion_line: '%{entry} lijkt een betaling van %{bill}'
+      suggestion_unknown_entry: Een transactie
+      confidence: '%{percent}% overeenkomst'
+      accept: Toepassen
+      reject: Niet deze vaste last
+      title: Vaste lasten
+      summary_label: Deze maand te betalen
+      summary_count:
+        one: '%{count} vaste last te betalen'
+        other: '%{count} vaste lasten te betalen'
+      summary_needs_action:
+        one: '%{count} vraagt uw aandacht'
+        other: '%{count} vragen uw aandacht'
+      all_automatic: allemaal automatisch betaald
+      recurring_label: Terugkerende verplichtingen
+      recurring_monthly: '%{amount} per maand'
+      recurring_annual: '%{amount} per jaar'
+      unconvertible:
+        one: '%{count} vaste last is niet meegeteld, geen wisselkoers beschikbaar'
+        other: '%{count} vaste lasten zijn niet meegeteld, geen wisselkoers beschikbaar'
+      overdue: Te laat
+      needs_attention: Aandacht nodig
+      attention_overdue_total: '%{amount} te laat'
+      this_month: Deze maand
+      later: Na deze maand
+      paid_this_month: Deze maand betaald
+      dormant: Inactief
+      kpi_remaining: Nog te betalen deze maand
+      kpi_paid: Deze maand betaald
+      kpi_next_seven: Te betalen komende 7 dagen
+      kpi_past_due: Te laat
+      paid_count:
+        one: '%{count} vaste last voldaan'
+        other: '%{count} vaste lasten voldaan'
+      needs_action_count:
+        one: '%{count} vraagt uw aandacht'
+        other: '%{count} vragen uw aandacht'
+      empty:
+        title: Nog geen vaste lasten
+        description: Vaste lasten zijn uw terugkerende uitgaven. Sure vindt ze automatisch in uw transactiegeschiedenis, en u kunt bij elke vaste last een betaallink toevoegen, zodat u direct vanaf hier kunt betalen.
+        action: Terugkerende transacties zoeken
+        no_history_description: Nog geen transacties. Verbind een account of importeer uw geschiedenis, dan vindt Sure uw vaste lasten automatisch. U kunt er ook zelf een toevoegen.

@@ -1,0 +1,189 @@
+---
+nl:
+  redbark_items:
+    default_name: Redbark-verbinding
+    sync_status:
+      no_accounts: Geen accounts gevonden
+      synced:
+        one: '%{count} account gesynchroniseerd'
+        other: '%{count} accounts gesynchroniseerd'
+      synced_with_setup: '%{linked} gesynchroniseerd, %{unlinked} moeten worden ingesteld'
+    institution_summary:
+      none: Geen instellingen verbonden
+      count:
+        one: '%{count} instelling'
+        other: '%{count} instellingen'
+    errors:
+      provider_not_configured: Redbark-provider is niet geconfigureerd
+    sync:
+      status:
+        importing: Accounts importeren uit Redbark...
+        processing: Transacties verwerken...
+        calculating: Saldi berekenen...
+        importing_data: Accountgegevens importeren...
+        checking_setup: Accountconfiguratie controleren...
+        needs_setup: '%{count} accounts moeten worden ingesteld...'
+      success: Synchronisatie gestart
+    panel:
+      setup_instructions: 'Installatie-instructies:'
+      step_1: Maak een API-sleutel aan op app.redbark.com onder Settings
+      step_2: Voer hieronder uw API-sleutel in en klik op Opslaan
+      step_3: Ga na een geslaagde verbinding naar het tabblad Accounts om nieuwe accounts in te stellen
+      field_descriptions: 'Veldbeschrijvingen:'
+      optional: (Optioneel)
+      required: (verplicht)
+      optional_with_default: (optioneel, standaard %{default_value})
+      save_button: Configuratie opslaan
+      update_button: Configuratie bijwerken
+      status_configured_html: Geconfigureerd en klaar voor gebruik. Ga naar het tabblad <a href="%{accounts_path}" class="link">Accounts</a> om accounts te beheren en in te stellen.
+      status_not_configured: Niet geconfigureerd
+      fields:
+        api_key:
+          label: API-sleutel
+          description: Uw Redbark API-sleutel (begint met rbk_live_)
+          placeholder_new: rbk_live_...
+          placeholder_update: Voer een nieuwe API-sleutel in om bij te werken
+    create:
+      success: Redbark-verbinding aangemaakt
+    update:
+      success: Redbark-verbinding bijgewerkt
+    destroy:
+      success: Redbark-verbinding verwijderd
+      unlink_failed:
+        one: Kan %{count} account niet ontkoppelen. Probeer het opnieuw.
+        other: Kan %{count} accounts niet ontkoppelen. Probeer het opnieuw.
+    index:
+      title: Redbark-verbindingen
+    loading:
+      loading_message: Redbark-accounts laden...
+      loading_title: Laden
+    redbark_item:
+      accounts_need_setup: Accounts moeten worden ingesteld
+      delete: Verbinding verwijderen
+      deletion_in_progress: wordt verwijderd...
+      error: Fout
+      more_accounts_available:
+        one: '%{count} extra account beschikbaar'
+        other: '%{count} extra accounts beschikbaar'
+      no_accounts_description: Deze verbinding heeft nog geen gekoppelde accounts.
+      no_accounts_title: Geen accounts
+      provider_name: Redbark
+      requires_update: Verbinding moet worden bijgewerkt
+      setup_action: Nieuwe accounts instellen
+      setup_description: '%{linked} van %{total} accounts gekoppeld. Kies accounttypen voor uw nieuw geïmporteerde Redbark-accounts.'
+      setup_needed: Nieuwe accounts klaar om in te stellen
+      status: '%{timestamp} geleden gesynchroniseerd'
+      status_never: Nooit gesynchroniseerd
+      status_with_summary: Laatst gesynchroniseerd %{timestamp} geleden - %{summary}
+      syncing: Synchroniseren...
+      total: Totaal
+      unlinked: Niet gekoppeld
+      update_credentials: Inloggegevens bijwerken
+    select_accounts:
+      accounts_selected: accounts geselecteerd
+      api_error: 'API-fout: %{message}'
+      cancel: Annuleren
+      configure_name_in_provider: Kan niet importeren - stel een accountnaam in bij Redbark
+      description: Selecteer de accounts die u wilt koppelen aan uw %{product_name}-account.
+      link_accounts: Geselecteerde accounts koppelen
+      no_accounts_found: Geen accounts gevonden. Controleer de configuratie van uw API-sleutel.
+      no_api_key: Redbark API-sleutel is niet geconfigureerd. Configureer deze in Instellingen.
+      no_credentials_configured: Configureer eerst uw Redbark-inloggegevens in de Provider-instellingen.
+      no_name_placeholder: (Geen naam)
+      title: Redbark-accounts selecteren
+    select_existing_account:
+      account_already_linked: Dit account is al gekoppeld aan een provider
+      all_accounts_already_linked: Alle Redbark-accounts zijn al gekoppeld
+      api_error: 'API-fout: %{message}'
+      balance_label: 'Saldo:'
+      cancel: Annuleren
+      cancel_button: Annuleren
+      configure_name_in_provider: Kan niet importeren - stel een accountnaam in bij Redbark
+      connect_hint: Verbind een Redbark-account om automatisch synchroniseren in te schakelen.
+      description: Selecteer een Redbark-account om aan dit account te koppelen. Transacties worden automatisch gesynchroniseerd en ontdubbeld.
+      header: Koppelen met Redbark
+      link_account: Account koppelen
+      link_button: Dit account koppelen
+      linking_to: 'Koppelen aan:'
+      no_account_specified: Geen account opgegeven
+      no_accounts: Geen niet-gekoppelde Redbark-accounts gevonden.
+      no_accounts_found: Geen Redbark-accounts gevonden. Controleer de configuratie van uw API-sleutel.
+      no_api_key: Redbark API-sleutel is niet geconfigureerd. Configureer deze in Instellingen.
+      no_credentials_configured: Configureer eerst uw Redbark-inloggegevens in de Provider-instellingen.
+      no_name_placeholder: (Geen naam)
+      settings_link: Ga naar Provider-instellingen
+      subtitle: Kies een Redbark-account
+      title: '%{account_name} koppelen met Redbark'
+    link_existing_account:
+      account_already_linked: Dit account is al gekoppeld aan een provider
+      api_error: 'API-fout: %{message}'
+      invalid_account_name: Kan account zonder naam niet koppelen
+      provider_account_already_linked: Dit Redbark-account is al gekoppeld aan een ander account
+      provider_account_not_found: Redbark-account niet gevonden
+      missing_parameters: Vereiste parameters ontbreken
+      no_api_key: Redbark API-sleutel niet gevonden. Configureer deze in de Provider-instellingen.
+      success: '%{account_name} gekoppeld met Redbark'
+    setup_accounts:
+      account_type_label: 'Accounttype:'
+      accounts_count:
+        one: '%{count} account beschikbaar'
+        other: '%{count} accounts beschikbaar'
+      all_accounts_linked: Al uw Redbark-accounts zijn al ingesteld.
+      api_error: 'API-fout: %{message}'
+      creating: Accounts aanmaken...
+      fetch_failed: Accounts ophalen mislukt
+      import_selected: Geselecteerde accounts importeren
+      instructions: Selecteer de accounts die u uit Redbark wilt importeren. U kunt meerdere accounts kiezen.
+      no_accounts: Geen niet-gekoppelde accounts gevonden in deze Redbark-verbinding.
+      no_accounts_to_setup: Geen accounts om in te stellen
+      no_api_key: Redbark API-sleutel is niet geconfigureerd. Controleer uw verbindingsinstellingen.
+      select_all: Alles selecteren
+      account_types:
+        skip: Dit account overslaan
+        depository: Betaal- of spaarrekening
+        credit_card: Creditcard
+        loan: Lening of hypotheek
+        other_asset: Overige bezittingen
+      subtype_labels:
+        depository: 'Subtype account:'
+        credit_card: ''
+        loan: 'Type lening:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Creditcards worden automatisch ingesteld als creditcardaccounts.
+        other_asset: Geen extra opties nodig voor overige bezittingen.
+      subtypes:
+        depository:
+          checking: Betaalrekening
+          savings: Spaarrekening
+          hsa: Gezondheidsspaarrekening (HSA)
+          cd: Termijndeposito
+          money_market: Geldmarktrekening
+        loan:
+          mortgage: Hypotheek
+          student: Studielening
+          auto: Autolening
+          other: Andere lening
+      balance: Saldo
+      cancel: Annuleren
+      done: Gereed
+      choose_account_type: 'Kies het juiste accounttype voor elk Redbark-account:'
+      create_accounts: Accounts aanmaken
+      creating_accounts: Accounts aanmaken...
+      historical_data_range: 'Periode historische gegevens:'
+      subtitle: Kies de juiste accounttypen voor uw geïmporteerde accounts
+      sync_start_date_help: Selecteer hoe ver terug u de transactiegeschiedenis wilt synchroniseren.
+      sync_start_date_label: 'Transacties synchroniseren vanaf:'
+      title: Uw Redbark-accounts instellen
+    setup_required:
+      title: Verbind eerst Redbark
+      not_configured_title: Redbark is nog niet verbonden
+      not_configured_description: Voeg uw Redbark API-sleutel toe in de Provider-instellingen en kom daarna hier terug om accounts te koppelen.
+      go_to_provider_settings: Ga naar Provider-instellingen
+    complete_account_setup:
+      all_skipped: Alle accounts zijn overgeslagen. Er zijn geen accounts aangemaakt.
+      creation_failed: 'Accounts aanmaken mislukt: %{error}'
+      creation_failed_generic: Accounts aanmaken mislukt.
+      setup_failed: '%{count} account(s) konden niet worden aangemaakt. Er is verder niets gewijzigd - los het probleem op en probeer het opnieuw.'
+      no_accounts: Geen accounts om in te stellen.
+      success: '%{count} account(s) aangemaakt.'

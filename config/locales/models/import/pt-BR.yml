@@ -5,9 +5,14 @@ pt-BR:
       import:
         currency: Moeda
         number_format: Formato de Número
+        col_sep: Separador de colunas
+        col_seps:
+          comma: Vírgula (,)
+          semicolon: Ponto e vírgula (;)
     errors:
       models:
         import:
           attributes:
             raw_file_str:
               invalid_csv_format: não é um formato CSV válido
+          duplicate_headers: 'Os cabeçalhos do CSV, após normalizados, geram colunas duplicadas: %{columns}'

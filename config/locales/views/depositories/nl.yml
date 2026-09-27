@@ -8,3 +8,19 @@ nl:
       subtype_prompt: Selecteer accounttype
     new:
       title: Saldo invoeren
+    subtypes:
+      cd:
+        long: Termijndeposito
+        short: Deposito
+      checking:
+        long: Betaalrekening
+        short: Betaalrekening
+      hsa:
+        long: Zorgspaarrekening (HSA)
+        short: HSA
+      money_market:
+        long: Geldmarktrekening
+        short: Geldmarkt
+      savings:
+        long: Spaarrekening
+        short: Sparen

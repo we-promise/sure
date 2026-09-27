@@ -14,6 +14,14 @@ nl:
       edit: Categorie bewerken
     form:
       placeholder: Categorienaam
+      name_label: Naam
+      unassigned: (geen)
+      parent_category_label: Hoofdcategorie (optioneel)
+      trigger_label: Kies kleur en pictogram
+      color: Kleur
+      icon: Pictogram
+      auto_adjust: automatisch aanpassen.
+      poor_contrast: Onvoldoende contrast, kies een donkerdere kleur of
     index:
       bootstrap: Gebruik standaardinstellingen (aanbevolen)
       categories: Categorieën
@@ -21,14 +29,42 @@ nl:
       categories_incomes: Inkomenscategorieën
       empty: Geen categorieën gevonden
       new: Nieuwe categorie
+      delete_all: Alles verwijderen
+      merge: Categorieën samenvoegen
     menu:
       loading: Laden...
     new:
       new_category: Nieuwe categorie
     update:
       success: Categorie succesvol bijgewerkt
+    destroy_all:
+      success: Alle categorieën verwijderd
+    merge:
+      title: Categorieën samenvoegen
+      description: Selecteer een doelcategorie en de categorieën die erin moeten worden samengevoegd. Bijbehorende transacties en budgetregels worden naar de doelcategorie verplaatst.
+      target_label: Samenvoegen in (doel)
+      select_target: Selecteer doelcategorie...
+      sources_label: Samen te voegen categorieën
+      sources_hint: Geselecteerde categorieën worden verwijderd nadat hun transacties en budgetregels naar de doelcategorie zijn verplaatst. Selecteer de doelcategorie niet ook als bron.
+      submit: Selectie samenvoegen
+    perform_merge:
+      success:
+        one: '%{count} categorie succesvol samengevoegd'
+        other: '%{count} categorieën succesvol samengevoegd'
+      no_categories_selected: Geen categorieën geselecteerd om samen te voegen
+      target_not_found: Doelcategorie niet gevonden
+      invalid_categories: Ongeldige categorieën geselecteerd
+      target_selected_as_source: Kies verschillende categorieën voor het doel en de bronnen.
+    virtual:
+      transfer: Overboeking
+      payment: Betaling
+      trade: Effectentransactie
   category:
     dropdowns:
       show:
         bootstrap: Standaardcategorieën genereren
         empty: Geen categorieën gevonden
+        match_transfer: Koppelen als overboeking/betaling
+        one_time: Eenmalige %{type}
+        income: inkomsten
+        expense: uitgave

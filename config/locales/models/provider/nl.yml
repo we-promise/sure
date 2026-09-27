@@ -1,0 +1,17 @@
+---
+nl:
+  providers:
+    property_valuation:
+      not_configured: Deze provider voor vastgoedgegevens is niet geconfigureerd.
+      missing_fields: Geef een naam en een volledig Amerikaans adres op (straat, plaats, staat en postcode).
+      preview_expired: Deze voorvertoning van de woning is verlopen. Zoek het adres opnieuw op.
+    rentcast:
+      errors:
+        no_valuation: RentCast heeft geen waardeschatting voor dit adres teruggegeven.
+        not_found: RentCast kon geen woning vinden die bij dit adres past.
+    realie:
+      errors:
+        no_property: Realie heeft geen woning voor dit adres teruggegeven.
+        no_valuation: Realie heeft geen waardering voor deze woning teruggegeven.
+        not_found: Realie kon geen woning vinden die bij dit adres past.
+        location_mismatch: Realie vond een woning in een andere plaats of met een andere postcode. Controleer het adres.

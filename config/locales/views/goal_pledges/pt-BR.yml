@@ -1,0 +1,20 @@
+---
+pt-BR:
+  goal_pledges:
+    new:
+      helper_transfer: O Sure vai procurar um depósito correspondente na sua conta vinculada. O aporte fica pendente por 7 dias e é confirmado automaticamente assim que o Sure o identificar.
+      helper_manual: O Sure vai registrar isso na próxima vez que você editar o saldo manualmente e confirmar o aporte.
+      amount_label: Valor
+      account_label: Para a conta
+      submit: Registrar aporte
+      preview_zero: No momento, {current} de {target} guardados.
+      preview_nonzero: Chega a {percent}%, {newTotal} de {target}.
+      preview_reached: Atinge seu objetivo de {target}. Meta alcançada.
+    create:
+      success: Aporte registrado. O Sure vai confirmá-lo na próxima sincronização.
+    renew:
+      success: Prazo do aporte prorrogado por 7 dias.
+      not_open: Apenas aportes pendentes podem ser prorrogados.
+    destroy:
+      success: Aporte cancelado.
+      not_open: Apenas aportes pendentes podem ser cancelados.

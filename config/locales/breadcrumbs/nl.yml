@@ -1,0 +1,94 @@
+---
+nl:
+  breadcrumbs:
+    account_sharings: Account delen
+    account_statements: Afschriften
+    accounts: Accounts
+    ai_prompts: AI-prompts
+    api_key: API-sleutel
+    api_keys: API-sleutels
+    appearance: Weergave
+    appearances: Weergave
+    bank_sync: Banksynchronisatie
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Budgetcategorieën
+    budgets: Budgetten
+    categories: Categorieën
+    categorize: Categoriseren
+    changelog: Wat is er nieuw
+    chats: Chats
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Creditcards
+    cryptos: Crypto
+    dashboard: Dashboard
+    debug: Debug
+    debugs: Debug
+    depositories: Bankrekeningen
+    enable_banking_items: Enable Banking
+    exports: Exports
+    family_exports: Exports
+    family_merchants: Handelaren
+    feedback: Feedback
+    guides: Handleidingen
+    holdings: Posities
+    home: Home
+    hostings: Zelfhosting
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Meekijksessies
+    imports: Imports
+    indexa_capital_items: Indexa Capital
+    intro: Intro
+    investments: Beleggingen
+    invitations: Uitnodigingen
+    invite_codes: Uitnodigingscodes
+    kraken_items: Kraken
+    llm_usage: LLM-gebruik
+    llm_usages: LLM-gebruik
+    loans: Leningen
+    lunchflow_items: Lunch Flow
+    mcp: MCP-server
+    merchants: Handelaren
+    mercury_items: Mercury
+    messages: Berichten
+    mfa: Tweestapsverificatie
+    monobank_items: Monobank
+    oidc_accounts: SSO-accounts
+    onboardings: Onboarding
+    other_assets: Overige bezittingen
+    other_liabilities: Overige schulden
+    payments: Betalingen
+    pending_duplicate_merges: Dubbele transacties controleren
+    plaid_items: Plaid
+    plan: Plan
+    preferences: Voorkeuren
+    profile: Profielgegevens
+    profiles: Profielgegevens
+    properties: Onroerend goed
+    providers: Providers
+    recurring_transactions: Terugkerend
+    redbark_items: Redbark
+    registrations: Registreren
+    reports: Rapporten
+    rules: Regels
+    securities: Beveiliging
+    security: Beveiliging
+    self_hosting: Zelfhosting
+    sessions: Inloggen
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Splitsing
+    sso_identities: SSO-koppelingen
+    sso_providers: SSO-providers
+    subscriptions: Abonnement
+    system_health: Systeemstatus
+    tags: Tags
+    trades: Effectentransacties
+    transactions: Transacties
+    transfer_matches: Overboekingen koppelen
+    transfers: Overboekingen
+    users: Gebruikers
+    valuations: Waarderingen
+    vehicles: Voertuigen

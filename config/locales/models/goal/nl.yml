@@ -1,0 +1,36 @@
+---
+nl:
+  activerecord:
+    attributes:
+      goal:
+        name: Naam
+        target_amount: Doelbedrag
+        currency: Valuta
+        target_date: Streefdatum
+        color: Kleur
+        notes: Notities
+        state: Status
+        linked_accounts: Gekoppelde accounts
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Kies ten minste één account om dit doel te financieren.
+              whole_account_conflict_on_restore: 'Dit doel kan niet worden hersteld: “%{account_name}” is nu volledig gereserveerd voor “%{goal_name}”. Voer eerst bij een van beide een bedrag in.'
+            target_mode:
+              months_requires_maintained: Alleen een buffer die u aanhoudt kan een doel in maanden aan uitgaven hebben.
+            target_months:
+              blank: Geef aan hoeveel maanden aan uitgaven deze buffer moet dekken.
+              only_with_months_mode: Maanden aan uitgaven zijn alleen van toepassing als het doel zo is ingesteld.
+            linked_accounts:
+              must_be_fundable: Alle gekoppelde accounts moeten bank- of beleggingsrekeningen zijn.
+              currency_mismatch: Alle gekoppelde accounts moeten dezelfde valuta hebben.
+              must_belong_to_family: Gekoppelde accounts moeten bij dezelfde familie/groep horen als het doel.
+            kind:
+              locked_while_released: Heropen dit doel voordat u het omzet in een buffer.
+              locked_once_consumed: Voor dit doel is al geld als uitgegeven geregistreerd, dus het kan geen buffer worden.
+            target_amount:
+              below_consumed: Het doelbedrag kan niet lager zijn dan wat voor dit doel al als uitgegeven is geregistreerd.
+            currency:
+              locked_after_linked: De valuta kan niet worden gewijzigd nadat het doel aan accounts is gekoppeld.

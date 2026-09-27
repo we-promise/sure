@@ -1,0 +1,36 @@
+---
+pt-BR:
+  activerecord:
+    attributes:
+      goal:
+        name: Nome
+        target_amount: Valor-alvo
+        currency: Moeda
+        target_date: Data-alvo
+        color: Cor
+        notes: Observações
+        state: Situação
+        linked_accounts: Contas vinculadas
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              at_least_one_linked_account_required: Escolha pelo menos uma conta para financiar esta meta.
+              whole_account_conflict_on_restore: 'Não é possível restaurar esta meta: “%{account_name}” agora está totalmente destinada a “%{goal_name}”. Informe um valor em uma delas primeiro.'
+            target_mode:
+              months_requires_maintained: Somente uma reserva que você mantém pode ter uma meta definida em meses de despesas.
+            target_months:
+              blank: Informe quantos meses de despesas esta reserva deve cobrir.
+              only_with_months_mode: Meses de despesas só se aplicam quando a meta é definida dessa forma.
+            linked_accounts:
+              must_be_fundable: Todas as contas vinculadas devem ser contas bancárias ou de investimento.
+              currency_mismatch: Todas as contas vinculadas devem ter a mesma moeda.
+              must_belong_to_family: As contas vinculadas devem pertencer à mesma família da meta.
+            kind:
+              locked_while_released: Reabra esta meta antes de transformá-la em uma reserva.
+              locked_once_consumed: Esta meta já registrou dinheiro como gasto, então não pode se tornar uma reserva.
+            target_amount:
+              below_consumed: Não é possível definir um valor-alvo abaixo do que esta meta já registrou como gasto.
+            currency:
+              locked_after_linked: Não é possível alterar a moeda depois que a meta foi vinculada a contas.

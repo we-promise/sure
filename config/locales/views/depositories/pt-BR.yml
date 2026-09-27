@@ -8,3 +8,19 @@ pt-BR:
       subtype_prompt: Selecionar tipo de conta
     new:
       title: Inserir saldo da conta
+    subtypes:
+      cd:
+        long: Certificado de Depósito Bancário (CDB)
+        short: CDB
+      checking:
+        long: Conta corrente
+        short: Corrente
+      hsa:
+        long: Conta poupança-saúde (HSA)
+        short: HSA
+      money_market:
+        long: Conta money market
+        short: MM
+      savings:
+        long: Poupança
+        short: Poupança

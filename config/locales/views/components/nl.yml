@@ -2,7 +2,7 @@
 nl:
   provider_sync_summary:
     title: Synchronisatie samenvatting
-    last_sync: "Laatste sync: %{time_ago} geleden"
+    last_sync: "Laatste synchronisatie: %{time_ago} geleden"
     accounts:
       title: Accounts
       total: "Totaal: %{count}"
@@ -16,16 +16,17 @@ nl:
       updated: "Bijgewerkt: %{count}"
       skipped: "Overgeslagen: %{count}"
       protected:
-        one: "%{count} item beschermd (niet overschreven)"
-        other: "%{count} items beschermd (niet overschreven)"
-      view_protected: Beschermde items bekijken
+        one: "%{count} boeking beschermd (niet overschreven)"
+        other: "%{count} boekingen beschermd (niet overschreven)"
+      view_protected: Beschermde boekingen bekijken
+      fetching: Ophalen bij broker...
     skip_reasons:
       excluded: Uitgesloten
-      user_modified: Gebruiker aangepast
+      user_modified: Door gebruiker aangepast
       import_locked: CSV import
       protected: Beschermd
     holdings:
-      title: Bezittingen
+      title: Posities
       found: "Gevonden: %{count}"
       processed: "Verwerkt: %{count}"
     health:
@@ -35,23 +36,23 @@ nl:
       recently: recent
       errors: "Fouten: %{count}"
       pending_reconciled:
-        one: "%{count} dubbele pending transactie afgestemd"
-        other: "%{count} dubbele pending transacties afgestemd"
+        one: "%{count} dubbele wachtende transactie afgestemd"
+        other: "%{count} dubbele wachtende transacties afgestemd"
       view_reconciled: Afgestemde transacties bekijken
       duplicate_suggestions:
         one: "%{count} mogelijk duplicaat moet worden beoordeeld"
         other: "%{count} mogelijke duplicaten moeten worden beoordeeld"
       view_duplicate_suggestions: Voorgestelde duplicaten bekijken
       stale_pending:
-        one: "%{count} verlopen pending transactie (uitgesloten van budgetten)"
-        other: "%{count} verlopen pending transacties (uitgesloten van budgetten)"
+        one: "%{count} verouderde wachtende transactie (uitgesloten van budgetten)"
+        other: "%{count} verouderde wachtende transacties (uitgesloten van budgetten)"
       view_stale_pending: Betrokken accounts bekijken
       stale_pending_count:
         one: "%{count} transactie"
         other: "%{count} transacties"
       stale_unmatched:
-        one: "%{count} pending transactie moet handmatig worden beoordeeld"
-        other: "%{count} pending transacties moeten handmatig worden beoordeeld"
+        one: "%{count} wachtende transactie moet handmatig worden beoordeeld"
+        other: "%{count} wachtende transacties moeten handmatig worden beoordeeld"
       view_stale_unmatched: Transacties bekijken die beoordeling nodig hebben
       stale_unmatched_count:
         one: "%{count} transactie"
@@ -59,3 +60,110 @@ nl:
       data_warnings: "Datawaarschuwingen: %{count}"
       notices: "Mededelingen: %{count}"
       view_data_quality: Datakwaliteit details bekijken
+    trades:
+      title: Effectentransacties
+      imported: 'Geïmporteerd: %{count}'
+      skipped: 'Overgeslagen: %{count}'
+      fetching: Activiteiten ophalen bij broker...
+  UI:
+    period_picker:
+      aria_label: 'Periode: %{period}'
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Selectie aan/uit
+      balance_reconciliation:
+        labels:
+          adjustments: Correcties
+          buys: Aankopen
+          change_in_brokerage_cash: Wijziging in liquide middelen
+          change_in_holdings_market: Wijziging in posities (koersbewegingen)
+          change_in_holdings_trades: Wijziging in posities (aan-/verkopen)
+          charges: Uitgaven
+          end_balance: Berekend eindsaldo
+          end_principal: Berekende eindhoofdsom
+          end_value: Berekende eindwaarde
+          final_balance: Definitief saldo
+          final_principal: Definitieve hoofdsom
+          final_value: Definitieve waarde
+          market_changes: Koerswijzigingen
+          net_cash_flow: Netto cashflow
+          net_principal_change: Netto wijziging hoofdsom
+          net_value_change: Netto waardewijziging
+          payments: Aflossingen
+          sells: Verkopen
+          start_balance: Beginsaldo
+          start_principal: Beginhoofdsom
+          start_value: Beginwaarde
+        tooltips:
+          adjustments: Handmatige afstemmingen of andere correcties
+          adjustments_asset: Handmatige waardecorrecties of taxaties
+          buys: Crypto-aankopen gedurende de dag
+          change_in_brokerage_cash: Netto wijziging in liquide middelen door stortingen, opnames en transacties
+          change_in_holdings_market: Wijziging in de waarde van posities door koersbewegingen
+          change_in_holdings_trades: Effect van aan- en verkopen van effecten op de posities
+          charges: Nieuwe uitgaven met de kaart gedurende de dag
+          end_balance: Het berekende saldo na alle transacties
+          end_balance_investment: Het berekende saldo na alle activiteit
+          end_principal: De berekende hoofdsom na alle transacties
+          end_value: De berekende waarde na alle wijzigingen
+          final_balance: Het definitieve accountsaldo voor de dag
+          final_balance_credit: Het definitieve openstaande saldo voor de dag
+          final_balance_crypto: De definitieve waarde van de crypto-posities voor de dag
+          final_balance_investment: De definitieve portefeuillewaarde voor de dag
+          final_principal: De definitieve resterende hoofdsom voor de dag
+          final_value: De definitieve waarde van het bezit voor de dag
+          market_changes: Waardewijzigingen door koersbewegingen
+          net_cash_flow: Netto wijziging in saldo door alle transacties gedurende de dag
+          net_principal_change: Aflossingen en nieuwe opnames van krediet gedurende de dag
+          net_value_change: Alle waardewijzigingen, inclusief verbeteringen en afschrijvingen
+          payments: Betalingen aan de kaart gedurende de dag
+          sells: Crypto-verkopen gedurende de dag
+          start_balance: Het accountsaldo aan het begin van deze dag
+          start_balance_credit: Het openstaande saldo aan het begin van deze dag
+          start_balance_crypto: De waarde van de crypto-posities aan het begin van deze dag
+          start_balance_investment: De totale portefeuillewaarde aan het begin van deze dag
+          start_principal: De resterende hoofdsom aan het begin van deze dag
+          start_value: De waarde van het bezit aan het begin van deze dag
+      chart:
+        no_data_available: Geen gegevens beschikbaar
+        title:
+          balance: Saldo
+          cash_value: Liquide middelen
+          debt_balance: Openstaande schuld
+          estimated_property_value: Geschatte woningwaarde
+          estimated_vehicle_value: Geschatte voertuigwaarde
+          holdings_value: Waarde posities
+          remaining_principal_balance: Resterende hoofdsom
+          total_account_value: Totale accountwaarde
+          total_gains: Totaal rendement
+        views:
+          cash: Liquide middelen
+          gains: Rendement / ROI
+          holdings: Posities
+          total_value: Totale waarde
+        vs_available_history: t.o.v. beschikbare historie
+      activity_date:
+        balance_tooltip: Het saldo aan het einde van de dag, na alle transacties en correcties
+        no_balance_data: Geen saldogegevens beschikbaar voor deze datum
+  ds:
+    alert:
+      variants:
+        info: Info
+        success: Gelukt
+        warning: Waarschuwing
+        error: Fout
+        destructive: Fout
+    pill:
+      aria_label: '%{label}'
+      default_label: Preview
+    dialog:
+      close: Sluiten
+    popover:
+      avatar_default_label: Menu openen
+    tooltip:
+      trigger_label: Meer informatie
+    link:
+      opens_in_new_tab: (opent in nieuw tabblad)
+    icon_picker:
+      no_matching_icons: Geen overeenkomende pictogrammen
+      search_placeholder: Pictogrammen zoeken...

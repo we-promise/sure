@@ -1,0 +1,256 @@
+---
+nl:
+  admin:
+    system_health:
+      push_notifications:
+        send_test: Testpushmelding verzenden
+        queueing: In wachtrij plaatsen…
+        title: Pushmeldingen
+        requested_at: Laatste test aangevraagd om %{time}
+        result_help: Acceptatie door APNs bevestigt niet dat de melding op uw apparaat is afgeleverd. Vernieuw om de resultaten van de worker te zien. Resultaten worden 24 uur bewaard.
+        device: Apparaat %{number}
+        pending: In afwachting
+        refresh: Resultaten vernieuwen
+        columns:
+          device: Apparaat
+          environment: APNs-omgeving
+          status: Resultaat
+          checked_at: Laatste update
+        environments:
+          sandbox: Sandbox
+          production: Productie
+        messages:
+          enqueue_failed: De test kon niet in de wachtrij worden geplaatst. Controleer Sidekiq en vernieuw de resultaten hieronder.
+          ready: Stuur een testmelding naar de ingeschakelde iOS-apparaten die aan uw account zijn gekoppeld.
+          queued: Testmelding in de wachtrij geplaatst. Vernieuw de resultaten hieronder om de status te controleren.
+          hosted_only: Pushmeldingen zijn alleen beschikbaar in de gehoste versie.
+          ineligible: Alleen een actieve superbeheerder kan een testmelding verzenden.
+          no_devices: Schakel pushmeldingen in de Sure-app voor iOS in voor dit account om een test te verzenden.
+          disabled: Het verzenden van pushmeldingen is uitgeschakeld door de beheerder.
+          not_configured: APNs-inloggegevens zijn niet geconfigureerd.
+          cooldown: Wacht 30 seconden voordat u nog een test verzendt.
+          storage_unavailable: Het testverzoek kon niet worden opgeslagen. Controleer de configuratie van de gedeelde cache.
+        statuses:
+          queued: In wachtrij
+          accepted: Geaccepteerd door APNs
+          skipped: 'Overgeslagen: komt niet meer in aanmerking'
+          rejected: Geweigerd door APNs; controleer de debuglogs voor push
+          unregistered: Apparaatregistratie is niet meer geldig
+          retrying: Tijdelijke fout, wordt opnieuw geprobeerd
+          failed: Mislukt; controleer de debuglogs voor push
+          enqueue_failed: Kon niet in de wachtrij worden geplaatst; controleer Sidekiq
+          expired: Verlopen zonder eindresultaat
+      push_notification:
+        title: Sure-testmelding
+        body: Dit is een testpushmelding voor uw Sure-account.
+      verify_worker_ai:
+        queued: Workercontrole in de wachtrij geplaatst. Het resultaat verschijnt hieronder zodra een workerproces de controle oppakt, meestal binnen enkele seconden.
+      show:
+        title: Systeemstatus
+        tabs:
+          background_jobs: Achtergrondtaken
+          ai: AI-status
+        alert:
+          title: Achtergrondtaken worden niet uitgevoerd
+        status_section_title: Sidekiq-status
+        status_section_description: Huidige status van de achtergrondworker die synchronisaties, saldi en berekeningen van het vermogen uitvoert.
+        counters_section_title: Taaktellers
+        counters_section_description: Totale Sidekiq-tellers over alle wachtrijen.
+        queues_section_title: Wachtrijen
+        queues_section_description: Lengte per wachtrij en leeftijd van de oudste taak. Latentie is het aantal seconden dat de oudste taak al wacht.
+        labels:
+          status: Status
+          processes: Workerprocessen
+          last_heartbeat: Laatste heartbeat
+          max_queue_latency: Leeftijd oudste taak
+          enqueued: In wachtrij
+          retries: Nieuwe pogingen
+          failed: Mislukt
+          processed_total: Totaal verwerkt
+          queue: Wachtrij
+          size: Grootte
+          latency: Latentie
+        values:
+          healthy: Gezond
+          unhealthy: Verstoord
+          time_ago: '%{time_ago} geleden'
+          never: Nooit
+          seconds: '%{seconds} s'
+          no_queues: Er zijn geen wachtrijen geregistreerd. Mogelijk draait de worker niet.
+        ai:
+          run_checks: Controles opnieuw uitvoeren
+          last_checked: Livecontroles %{time_ago} geleden voltooid. Resultaten worden kort in de cache bewaard.
+          not_checked_help: Open de AI-status-URL rechtstreeks of voer de controles uit om te verifiëren dat de services actief zijn.
+          alerts:
+            custom_openai:
+              title: De controle van de gehoste vectoropslag is mislukt op dit aangepaste endpoint
+              message: Het geconfigureerde endpoint heeft de livenesscontrole van /v1/vector_stores niet doorstaan. De meeste lokale en OpenAI-compatibele endpoints implementeren die API niet. Chat en pdf-verwerking kunnen nog steeds werken; gebruik voor de gebruikelijke lokale opzet pgvector met een apart endpoint voor embeddings. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger.
+            function_calling_unsupported:
+              title: Het model ondersteunt geen function calling
+              message: Het endpoint verwerkte een gewoon chatverzoek, maar weigerde hetzelfde verzoek met de parameter tools. De AI-assistent leest accounts, transacties en posities via function calls, dus de chat blijft mislukken (vaak met een nietszeggende 404) totdat het model tools ondersteunt. Kies een model waarvan de provider ondersteuning voor function calling documenteert. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger.
+            function_calling_not_used:
+              title: Het model antwoordde zonder de gevraagde tool aan te roepen
+              message: Het endpoint accepteerde de parameter tools, maar het model antwoordde met tekst in plaats van de health-check-tool aan te roepen. Zonder tool calls kan de AI-assistent geen financiële gegevens lezen, dus de chat kan leeg antwoorden of verzonnen cijfers geven. Kies bij voorkeur een model waarvan de provider ondersteuning voor function calling documenteert.
+            llm_probe_failed:
+              title: De livecontrole van het LLM is mislukt
+              message: Sure kon het geconfigureerde endpoint en model niet allebei verifiëren. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger.
+            llm_model_not_available:
+              title: Het geconfigureerde AI-model is niet beschikbaar
+              message: Het endpoint antwoordde, maar vermeldde of leverde het geconfigureerde model niet. Kies een actief model voor de geselecteerde provider en voer de controles opnieuw uit. Gebruik voor Gemini via een OpenAI-compatibele vertaallaag een momenteel ondersteund model, zoals gemini-2.5-flash.
+            pdf_text_extraction_failed:
+              title: De synthetische controle van pdf-tekstextractie is mislukt
+              message: Sure kon de tekst-eerst-route niet voltooien, waarbij ingesloten pdf-tekst lokaal wordt geëxtraheerd en naar het geconfigureerde model wordt gestuurd. Er zijn geen klantgegevens verzonden. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger.
+            pdf_vision_processing_failed:
+              title: De synthetische pdf-controle (vision/native) is mislukt
+              message: Sure kon de pdf-route via afbeeldingen of native documenten niet voltooien met het geconfigureerde model. Er zijn geen klantgegevens verzonden. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger.
+            vector_probe_failed:
+              title: De livecontrole van het zoeken in documenten is mislukt
+              message: Sure kon de geselecteerde vectoropslag en alle vereiste embeddingservices niet verifiëren. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger.
+            pgvector_extension_not_enabled:
+              title: De vector-extensie van PostgreSQL is niet ingeschakeld
+              message: De pgvector-adapter is geselecteerd, maar PostgreSQL heeft de vector-extensie niet ingeschakeld voor deze database. Gebruik een PostgreSQL-image met pgvector, schakel de extensie in als database-eigenaar of superuser en voer de migraties opnieuw uit met VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: De tabel vector_store_chunks ontbreekt
+              message: De pgvector-extensie is ingeschakeld, maar de chunks-tabel is niet gevonden. Controleer de migratiestatus en voer de vectoropslagmigratie opnieuw uit met VECTOR_STORE_PROVIDER=pgvector, zodat Sure vector_store_chunks kan aanmaken.
+            pgvector_probe_failed:
+              title: De pgvector-opslagcontrole is mislukt
+              message: Sure kon de pgvector-chunks-tabel niet bevragen. Controleer de PostgreSQL-rechten, de vector-extensie en de migratie van vector_store_chunks. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger.
+            embedding_dimensions_mismatch:
+              title: De embeddingdimensies komen niet overeen
+              message: Het embedding-endpoint gaf een vector terug waarvan de lengte niet overeenkomt met EMBEDDING_DIMENSIONS. Stel EMBEDDING_MODEL en EMBEDDING_DIMENSIONS in op de gedocumenteerde vectorgrootte van het model, herstart Sure zodat de omgeving behouden blijft, en pas daarna de pgvector-embeddingkolom/-tabel aan of maak deze opnieuw aan. Maak de embeddings van documenten opnieuw aan als bestaande gegevens een andere grootte gebruikten.
+            embedding_probe_timeout:
+              title: Er is een time-out opgetreden bij de livecontrole van embeddings
+              message: Het embedding-endpoint antwoordde niet binnen AI_HEALTH_PROBE_TIMEOUT. Verhoog die time-out voor de health check als de provider traag is en herstart Sure zodat de omgeving in elk proces behouden blijft. Als ook gewone AI-chataanroepen een time-out geven, verhoog dan apart OPENAI_REQUEST_TIMEOUT.
+            embedding_probe_failed:
+              title: De livecontrole van embeddings is mislukt
+              message: Sure kon via het geconfigureerde endpoint en model geen korte test-embedding aanmaken. Controleer EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN en de logs van de embeddingprovider. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger.
+            qdrant:
+              title: Ondersteuning voor Qdrant is nog niet geïmplementeerd
+              message: De Qdrant-adapter is alleen als basisopzet aanwezig; uploaden en zoeken van documenten mislukt op dit moment. Selecteer OpenAI of pgvector voor het zoeken in documenten.
+            missing_vector_store:
+              title: Er is geen vectoropslag geconfigureerd
+              message: Geüploade documenten kunnen niet worden geïndexeerd of doorzocht totdat een vectoropslagadapter en de bijbehorende vereisten zijn geconfigureerd.
+            unavailable_vector_store:
+              title: De geselecteerde vectoropslag is niet beschikbaar
+              message: Controleer hieronder de vereisten van de adapter. Voor pgvector moet de database de vector-extensie of een bestaande tabel vector_store_chunks bieden.
+          llm:
+            title: LLM en pdf-verwerking
+            description: De livecontroles verifiëren het geconfigureerde model, laten het één eenvoudige function call uitvoeren zoals de assistent dat doet, en testen daarna apart tekstextractie en vision/native-verwerking met een synthetische pdf van één pagina zonder klantgegevens. Waarden van inloggegevens worden nooit getoond.
+          vector_store:
+            title: Vectoropslag en zoeken in documenten
+            description: De livecontrole bevraagt de API van de gehoste vectoropslag, of test de pgvector-tabel en maakt één korte embedding aan zonder die op te slaan.
+          labels:
+            selected_provider: Geselecteerde provider
+            effective_provider: Actieve provider
+            model: Model
+            endpoint: Endpoint
+            function_calling: Function calling (tools)
+            pdf_text_extraction: Route pdf-tekstextractie
+            pdf_vision_processing: Route pdf vision/native
+            llm_request_timeout: Time-out LLM-verzoek
+            probe_request_timeout: Time-out health check
+            openai_credentials: OpenAI-inloggegevens
+            openai_compatible_credentials: Inloggegevens OpenAI-compatibele API
+            anthropic_credentials: Anthropic-inloggegevens
+            adapter: Adapter
+            adapter_available: Adapter beschikbaar
+            pgvector_extension: Vector-extensie PostgreSQL
+            pgvector_table: Tabel met vectorchunks
+            embedding_model: Embeddingmodel
+            embedding_endpoint: Embedding-endpoint
+            embedding_dimensions: Embeddingdimensies
+            function_calling_failure_reason: Oorzaak fout bij function calling
+            pdf_text_extraction_failure_reason: Oorzaak fout bij tekstextractie
+            pdf_vision_processing_failure_reason: Oorzaak fout bij vision/native
+            storage_probe: pgvector-opslagcontrole
+            embedding_probe: Controle embedding-endpoint
+            failure_reason: Oorzaak fout
+          providers:
+            openai: OpenAI
+            openai_compatible: OpenAI-compatibel
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Aangepast endpoint
+          adapters:
+            openai: Gehoste vectoropslag van OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Geconfigureerd
+            not_configured: Niet geconfigureerd
+            fallback: (terugvaloptie)
+            not_set: Niet ingesteld
+            "yes": Ja
+            "no": Nee
+            enabled: Ingeschakeld
+            available_not_enabled: Beschikbaar, niet ingeschakeld
+            not_available: Niet beschikbaar
+            available: Beschikbaar
+            not_found: Niet gevonden
+          function_calling_statuses:
+            supported: Live tool call geslaagd
+            unsupported: Niet ondersteund door de actieve provider/het actieve model
+            not_used: Tools geaccepteerd, maar het model riep er geen aan
+            failing: Livecontrole mislukt
+            not_checked: Niet gecontroleerd
+            unavailable: Niet beschikbaar totdat er een LLM-provider is geconfigureerd
+          pdf_statuses:
+            supported: Synthetische pdf-controle geslaagd
+            failing: Synthetische pdf-controle mislukt
+            unsupported: Uitgeschakeld of niet ondersteund door de actieve provider/het actieve model
+            not_checked: Niet gecontroleerd
+            unavailable: Niet beschikbaar totdat er een LLM-provider is geconfigureerd
+          probe_statuses:
+            passing: Livecontrole geslaagd
+            failing: Livecontrole mislukt
+            not_checked: Niet gecontroleerd
+            not_configured: Niet geconfigureerd
+          vector_statuses:
+            passing: Livecontroles geslaagd
+            failing: Livecontrole mislukt
+            not_checked: Niet gecontroleerd
+            not_configured: Niet geconfigureerd
+            scaffolded: Alleen basisopzet
+            missing: Niet geconfigureerd
+          failure_codes:
+            model_not_available: Het geconfigureerde model werd niet door de provider teruggegeven
+            no_tool_call: Het model antwoordde zonder de health-check-tool aan te roepen
+            tools_refused: De service verwerkte hetzelfde verzoek zonder tools, maar weigerde het met tools
+            invalid_response: De service gaf een onverwacht antwoord
+            dimensions_mismatch: De dimensies van de embeddingvector komen niet overeen met de geconfigureerde dimensies
+            extension_not_enabled: De vector-extensie van PostgreSQL is niet ingeschakeld
+            table_not_found: De tabel vector_store_chunks is niet gevonden
+            render_missing_binary: De pdftoppm-renderer (poppler-utils) is niet beschikbaar in deze container
+            timeout: De service antwoordde niet binnen de time-out van de controle
+            request_failed: Het verzoek aan de service is mislukt
+            unsupported_provider: De provider ondersteunt deze controle niet
+          worker:
+            title: Workerverificatie
+            description: De controles hierboven zijn uitgevoerd vanuit dit webproces. Het meeste AI-werk (antwoorden van de assistent, pdf-verwerking, embeddings, automatische categorisering en handelaarherkenning) draait echter in een Sidekiq-workerproces, dat kan verschillen in netwerktoegang, DNS, proxyregels of zelfs geladen inloggegevens. Plaats een controle in de wachtrij om de eigen configuratie en connectiviteit van een worker te verifiëren.
+            verify_button: Workerconfiguratie verifiëren
+            coverage_notice: Elke controle verifieert precies één workerproces, namelijk het proces dat de controle uit de wachtrij haalt. Met meer dan één workerreplica bevestigt een geslaagd resultaat niet dat elke worker gezond is; plaats de controle opnieuw in de wachtrij om een andere te testen.
+            empty:
+              title: Er heeft zich nog geen worker gemeld
+              description: Klik op "Workerconfiguratie verifiëren" om een asynchrone controle in de wachtrij te plaatsen. Het resultaat verschijnt hier zodra een workerproces de controle oppakt.
+            labels:
+              process: Workerproces
+              checked_at: Gecontroleerd
+              configuration: Configuratie
+            configuration_statuses:
+              match: Gelijk aan web
+              mismatch: Wijkt af van web
+            statuses:
+              passing: Geslaagd
+              failing: Mislukt
+              stale: Verouderd
+            settings_origin:
+              title: Welke instellingen vereisen een herstart?
+              database_backed: Instellingen voor provider, model en API-sleutel die in Instellingen → Zelfhosting worden gewijzigd, worden in de database opgeslagen. rails-settings-cached maakt de gedeelde cache bij het schrijven ongeldig, zodat zowel web als worker de nieuwe waarde gebruiken voor het volgende verzoek of de volgende taak in de wachtrij. Een herstart is niet nodig.
+              env_backed: De embeddingconfiguratie, en elke waarde die alleen via een omgevingsvariabele is ingesteld, ligt vast zodra een container start. Rails kan de omgeving van een andere container niet wijzigen, dus voor wijzigingen moeten zowel de web- als de workerservice worden herstart of opnieuw aangemaakt. Deploymenttools die maar één ervan herstarten (gedeeltelijke uitrol, een bijgewerkt Secret zonder herstart van de pod) nemen de wijziging niet over.
+          local_setup:
+            title: Aanbevolen lokale opzet
+            description: Laat het LLM draaien via uw lokale OpenAI-compatibele endpoint, sla documentvectoren op in pgvector en laat de embeddinginstellingen verwijzen naar een OpenAI-compatibel endpoint voor embeddings. Het PostgreSQL-image moet de vector-extensie bevatten en de embeddingdimensies moeten overeenkomen met het geselecteerde model.

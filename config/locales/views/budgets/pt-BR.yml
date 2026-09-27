@@ -6,8 +6,23 @@ pt-BR:
       month_year: "%{month}"
     show:
       tabs:
-        actual: Atual
-        budgeted: Orçamento
+        actual: Real
+        budgeted: Orçado
+      categories:
+        amount: Valor
+        edit: Editar
+        title: Categorias
+      on_track_categories:
+        short_title: Dentro do orçamento
+        title: Dentro do orçamento
+      over_budget_categories:
+        short_title: Acima do orçamento
+        title: Acima do orçamento
+      filter:
+        all: Todas
+        aria_label: Filtrar categorias do orçamento
+        on_track: Dentro do orçamento
+        over_budget: Acima do orçamento
     copy_previous_prompt:
       title: "Defina seu orçamento"
       description: "Você pode copiar seu orçamento de %{source_name} ou começar do zero."
@@ -17,3 +32,104 @@ pt-BR:
       success: "Orçamento copiado de %{source_name}"
       no_source: "Não foi encontrado nenhum orçamento anterior para servir de base."
       already_initialized: "Este orçamento já foi definido."
+    switcher:
+      aria_label: Alternar orçamento
+      household: Casa
+    budget_donut:
+      spent: Gasto
+      new_budget: Novo orçamento
+      of_budget: de %{amount}
+      unused: Não utilizado
+    budget_header:
+      today: Hoje
+    budget_nav:
+      categories: Categorias
+      setup: Configuração
+    over_allocation_warning:
+      over_allocated_message: Você distribuiu mais do que o valor do seu orçamento. Corrija as distribuições.
+      fix_allocations: Corrigir distribuições
+    actuals_summary:
+      income: Receitas
+      expenses: Despesas
+    budgeted_summary:
+      expected_income: Receita prevista
+      budgeted: Orçado
+      earned: '%{amount} recebidos'
+      over: '%{amount} acima'
+      left: '%{amount} restantes'
+      spent: '%{amount} gastos'
+    edit:
+      setup_title: Configure seu orçamento
+      setup_description: Informe abaixo sua renda mensal e os gastos planejados para configurar seu orçamento.
+      budgeted_spending: Gastos orçados
+      expected_income: Receita prevista
+      autosuggest_title: Sugerir automaticamente receita e orçamento de gastos
+      autosuggest_description: A sugestão será baseada no histórico de transações. A IA pode cometer erros; verifique antes de continuar.
+      continue: Continuar
+    available_cash:
+      heading: Dinheiro disponível
+      subtitle: Ao lado do plano acima, não faz parte dele.
+      available: Disponível em conta
+      earmarked: Já destinado a metas
+      free: Realmente livre
+      goals_link: Ver metas
+  budget_categories:
+    bills_reserved: '%{amount} reservados por contas a pagar'
+    bills_reserved_unconvertible:
+      one: '%{count} conta a pagar não está reservada, sem taxa de câmbio disponível'
+      other: '%{count} contas a pagar não estão reservadas, sem taxa de câmbio disponível'
+    allocation_progress:
+      budget_exceeded_html: Orçamento excedido em <span class="text-red-500 privacy-sensitive">%{amount}</span>
+      left_to_allocate: a distribuir
+      over_set: '> 100% definido'
+      percent_set: '%{percent} definido'
+    budget_category:
+      rolled_over: +%{amount} acumulado
+    budget_category_form:
+      monthly_average: '%{amount}/mês em média'
+      rollover_label: Acumular saldo
+      rollover_title: Levar o valor não gasto desta categoria de um mês para o seguinte
+      shared_placeholder: Compartilhado
+      shared_title: Deixe vazio para compartilhar o orçamento da categoria principal
+    confirm_button:
+      confirm: Confirmar
+    move:
+      button_title: Mover dinheiro desta categoria
+      cancel: Cancelar
+      dialog_title: Mover dinheiro
+      no_destination: No momento, não há outro envelope para onde mover o dinheiro — uma categoria não pode enviar para a própria categoria principal nem para suas subcategorias.
+      submit: Mover
+      amount_label: Valor
+      available: '%{amount} disponíveis'
+      from_label: De
+      to_label: Para
+      success: Dinheiro movido.
+      errors:
+        different_budgets: As duas categorias precisam pertencer ao mesmo orçamento.
+        insufficient_funds: Esse valor é maior do que o que esta categoria tem distribuído.
+        non_positive_amount: Informe um valor maior que zero.
+        parent_child: Não é possível mover dinheiro entre uma categoria e sua própria subcategoria — ajuste a subcategoria diretamente.
+        same_category: Escolha outra categoria para onde mover o dinheiro.
+        uncategorized: Sem categoria não é um envelope real, então não é possível mover dinheiro para dentro ou para fora dele.
+    no_categories:
+      oops: Ops!
+      no_categories_message: Você ainda não criou nem atribuiu nenhuma categoria de despesa às suas transações.
+      use_defaults: Usar padrões (recomendado)
+      new_category: Nova categoria
+    index:
+      title: Edite os orçamentos por categoria
+      description: Ajuste os orçamentos das categorias para definir limites de gastos. Valores não distribuídos serão atribuídos automaticamente como sem categoria.
+    show:
+      category: Categoria
+      overview: Visão geral
+      spending: Gastos de %{date}
+      status: Status
+      overspent: acima do orçamento
+      left: restante
+      budgeted: Orçado
+      rolled_over: Acumulado
+      monthly_average_spending: Gasto médio mensal
+      monthly_median_spending: Gasto mediano mensal
+      recent_transactions: Transações recentes
+      view_all_transactions: Ver todas as transações da categoria
+      no_transactions: Nenhuma transação encontrada neste período do orçamento.

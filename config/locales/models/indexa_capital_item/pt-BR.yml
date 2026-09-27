@@ -1,0 +1,7 @@
+---
+pt-BR:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: É necessário definir a variável de ambiente INDEXA_API_TOKEN ou informar as credenciais de usuário/documento/senha

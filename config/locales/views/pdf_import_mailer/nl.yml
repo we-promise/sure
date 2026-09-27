@@ -1,0 +1,17 @@
+---
+nl:
+  pdf_import_mailer:
+    next_steps:
+      greeting: Hallo %{name},
+      intro: We hebben het PDF-document geanalyseerd dat u naar %{product} heeft geüpload.
+      document_type_label: Documenttype
+      summary_label: AI-samenvatting
+      transactions_note: Dit document lijkt transacties te bevatten. U kunt ze nu extraheren en controleren.
+      document_stored_note: Dit document is bewaard ter referentie. Het kan worden gebruikt als context in toekomstige AI-gesprekken.
+      next_steps_label: Wat nu?
+      next_steps_intro: 'U heeft verschillende mogelijkheden:'
+      option_extract_transactions: Transacties uit dit afschrift halen
+      option_keep_reference: Dit document bewaren als referentie voor toekomstige AI-gesprekken
+      option_delete: Deze import verwijderen als u die niet meer nodig heeft
+      view_import_button: Importgegevens bekijken
+      footer_note: Dit is een automatisch bericht. Beantwoord deze e-mail niet rechtstreeks.

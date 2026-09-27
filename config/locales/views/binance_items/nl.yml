@@ -26,6 +26,7 @@ nl:
         other: "%{count} accounts geïmporteerd"
       none_selected: Geen accounts geselecteerd
       no_accounts: Geen accounts om te importeren
+      invalid_sync_start_date: De startdatum van de synchronisatie moet een geldige datum in het verleden zijn.
     binance_item:
       provider_name: Binance
       syncing: Synchroniseren...

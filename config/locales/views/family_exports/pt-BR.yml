@@ -28,4 +28,21 @@ pt-BR:
         actions:
           delete: Excluir
           download: Descarregar
+          mark_failed: Marcar como com falha
+          confirm_mark_failed: Esta exportação está inativa há algum tempo e a tarefa em segundo plano provavelmente foi interrompida. Marcá-la como com falha? Você poderá criar uma nova exportação em seguida.
       empty: Nenhuma exportação ainda.
+    cancel:
+      cancelled: Exportação marcada como com falha. Você já pode criar uma nova exportação.
+      not_cancellable: Esta exportação não pode ser marcada como com falha agora — a tarefa ainda pode estar em execução. Tente novamente depois que ela ficar inativa por uma hora.
+    new:
+      dialog_title: Exportar seus dados
+      dialog_subtitle: Baixe todos os seus dados financeiros
+      whats_included: 'O que está incluído:'
+      accounts_and_balances: Todas as contas e saldos
+      transaction_history: Histórico de transações
+      investment_trades: Negociações de investimentos
+      categories_tags_rules: Categorias, tags e regras
+      note_label: Observação
+      note_description: Esta exportação inclui todos os seus dados, mas apenas parte deles pode ser importada de volta pelo recurso de importação de CSV. É possível importar contas, transações (com categoria e tags) e negociações. Os demais dados das contas não podem ser importados e servem apenas para seus registros.
+      cancel: Cancelar
+      export_data: Exportar dados

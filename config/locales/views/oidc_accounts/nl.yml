@@ -20,6 +20,8 @@ nl:
       submit_create: Account aanmaken
       account_creation_disabled: Het aanmaken van accounts via single sign-on is uitgeschakeld. Neem contact op met een beheerder.
       cancel: Annuleren
+      no_pending_oidc: Geen openstaande OIDC-authenticatie gevonden
+      submit_accept_invitation: Uitnodiging accepteren
     new_user:
       title: Account voltooien
       heading: Account aanmaken
@@ -31,3 +33,10 @@ nl:
       last_name_placeholder: Voer uw achternaam in
       submit: Account aanmaken
       cancel: Annuleren
+      no_pending_oidc: Geen openstaande OIDC-authenticatie gevonden
+    create_link:
+      no_pending_oidc: Geen openstaande OIDC-authenticatie gevonden
+    create_user:
+      no_pending_oidc: Geen openstaande OIDC-authenticatie gevonden
+      account_creation_disabled: Het aanmaken van accounts via SSO is uitgeschakeld. Neem contact op met een beheerder.
+      account_created: Welkom! Uw account is aangemaakt.

@@ -1,6 +1,47 @@
 ---
 nl:
   chats:
-    demo_banner_title: "Demo Modus Actief"
+    demo_banner_title: "Demomodus actief"
     demo_banner_message: "U gebruikt een LLM met credits verstrekt door Cloudflare Workers AI. Resultaten kunnen variëren aangezien de codebase voornamelijk is getest op `gpt-4.1`, maar uw tokens worden nergens anders voor training gebruikt! 🤖"
     thinking: "Bezig ..."
+    worker_unhealthy_warning: AI-antwoorden worden mogelijk niet afgeleverd — de achtergrondworker lijkt niet te draaien of loopt achter. Controleer of uw Sidekiq-worker actief is.
+    ai_greeting:
+      greeting: Hoi %{name}! Ik ben een AI-assistent op basis van een groot taalmodel en kan u helpen met uw financiën. Ik heb toegang tot het web en tot uw accountgegevens.
+      there: daar
+      commands_hint_html: U kunt <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> gebruiken om opdrachten te openen
+      questions_intro: 'Een paar vragen die u kunt stellen:'
+      evaluate_portfolio: Beoordeel mijn beleggingsportefeuille
+      spending_insights: Geef inzicht in mijn uitgaven
+      unusual_patterns: Zoek ongebruikelijke patronen
+    chat:
+      edit_chat_title: Chattitel bewerken
+      delete_chat: Chat verwijderen
+    chat_nav:
+      all_chats: Alle chats
+      start_new_chat: Nieuwe chat starten
+      edit_chat_title: Chattitel bewerken
+      delete_chat: Chat verwijderen
+    error:
+      retry: Opnieuw proberen
+    destroy:
+      notice: Chat is verwijderd
+    index:
+      chats: Chats
+      new_chat: Nieuwe chat
+    new:
+      default_title: Nieuwe chat %{timestamp}
+    update:
+      success: Chat bijgewerkt
+    ai_consent:
+      title: AI-chats inschakelen
+      available_description: AI-chat kan financiële vragen beantwoorden en inzichten geven op basis van uw gegevens. Om deze functie te gebruiken, moet u haar uitdrukkelijk inschakelen.
+      unavailable_description_html: Om de AI-assistent te gebruiken, moet u de omgevingsvariabele <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> instellen of deze configureren in de Self-Hosting-instellingen van uw instantie.
+      enable_button: AI-chats inschakelen
+      disable_note: U kunt dit altijd weer uitschakelen. Alle gegevens die naar onze LLM-providers worden verzonden, zijn geanonimiseerd.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Redenering van de assistent
+    tool_calls:
+      tool_calls: Toolaanroepen
+      function: 'Functie:'
+      arguments: 'Argumenten:'

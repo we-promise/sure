@@ -16,3 +16,178 @@ pt-BR:
       total: Saldo do portfólio
       total_value_tooltip: O saldo total do portfólio é a soma do dinheiro da corretora
         (disponível para negociação) e o valor de mercado atual de suas posições.
+    subtypes:
+      brokerage:
+        short: Corretagem
+        long: Conta de corretagem
+      cash_management:
+        short: CMA
+        long: Conta de gestão de caixa (CMA)
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan
+      ira:
+        short: IRA
+        long: IRA tradicional
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: Plano 529
+        long: Plano de poupança educacional 529
+      hsa:
+        short: HSA
+        long: Conta poupança de saúde (HSA)
+      ugma:
+        short: UGMA
+        long: Conta custodial UGMA
+      utma:
+        short: UTMA
+        long: Conta custodial UTMA
+      isa:
+        short: ISA
+        long: Individual Savings Account (ISA)
+      lisa:
+        short: LISA
+        long: Lifetime ISA
+      sipp:
+        short: SIPP
+        long: Self-Invested Personal Pension (SIPP)
+      workplace_pension_uk:
+        short: Previdência
+        long: Previdência corporativa
+      rrsp:
+        short: RRSP
+        long: Registered Retirement Savings Plan (RRSP)
+      tfsa:
+        short: TFSA
+        long: Tax-Free Savings Account (TFSA)
+      resp:
+        short: RESP
+        long: Registered Education Savings Plan (RESP)
+      lira:
+        short: LIRA
+        long: Locked-In Retirement Account (LIRA)
+      rrif:
+        short: RRIF
+        long: Registered Retirement Income Fund (RRIF)
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Self-Managed Super Fund (SMSF)
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions
+      pillar_3a:
+        short: Pilar 3a
+        long: Previdência privada (Pilar 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      nps:
+        short: NPS
+        long: National Pension System
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      indian_stocks:
+        short: Ações indianas
+        long: Ações indianas (Demat)
+      indian_equity:
+        short: Renda variável indiana
+        long: Renda variável indiana
+      indian_etf:
+        short: ETF indiano
+        long: ETF indiano
+      life_insurance:
+        short: Seguro de vida
+        long: Seguro de vida
+      ppf:
+        short: PPF
+        long: Public Provident Fund
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: National Savings Certificate
+      scss:
+        short: SCSS
+        long: Senior Citizens' Savings Scheme
+      fd:
+        short: FD
+        long: Depósito a prazo fixo (FD)
+      rd:
+        short: RD
+        long: Depósito recorrente (RD)
+      pomis:
+        short: POMIS
+        long: Post Office Monthly Income Scheme
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: ETF de ouro
+        long: ETF de ouro
+      gold_mf:
+        short: Fundo de ouro
+        long: Fundo de investimento em ouro
+      sgb:
+        short: SGB
+        long: Sovereign Gold Bond
+      g_sec:
+        short: G-Sec
+        long: Títulos públicos (G-Secs)
+      sdl:
+        short: SDL
+        long: Títulos estaduais (SDLs)
+      corporate_bond:
+        short: Debênture
+        long: Título corporativo (debênture)
+      infrastructure_bond:
+        short: Título infra
+        long: Título de infraestrutura
+      tax_free_bond:
+        short: Título isento
+        long: Título isento de impostos
+      pension:
+        short: Previdência
+        long: Previdência
+      retirement:
+        short: Aposentadoria
+        long: Conta de aposentadoria
+      mutual_fund:
+        short: Fundo
+        long: Fundo de investimento
+      gold:
+        short: Ouro
+        long: Ouro (físico ou digital)
+      angel:
+        short: Anjo
+        long: Investimento-anjo
+      trust:
+        short: Trust
+        long: Trust
+      other:
+        short: Outro
+        long: Outro investimento

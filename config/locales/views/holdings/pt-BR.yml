@@ -5,9 +5,12 @@ pt-BR:
       brokerage_cash: Dinheiro da corretora
     destroy:
       success: Posição excluída
+      cannot_delete: Você não pode excluir esta posição
     holding:
       per_share: por ação
       shares: "%{qty} ações"
+      unknown: --
+      no_cost_basis: Sem custo de aquisição
     index:
       positions:
         one: "%{count} posição"
@@ -20,9 +23,9 @@ pt-BR:
       return: Retorno total
       weight: Peso
     missing_price_tooltip:
-      description: Este investimento tem valores em falta e não conseguimos calcular
+      description: Este investimento tem valores ausentes e não conseguimos calcular
         seus retornos ou valor.
-      missing_data: Dados em falta
+      missing_data: Dados ausentes
     show:
       avg_cost_label: Custo Médio
       current_market_price_label: Preço de Mercado Atual
@@ -38,3 +41,66 @@ pt-BR:
       trade_history_entry: "%{qty} ações de %{security} a %{price}"
       total_return_label: Retorno Total
       unknown: Desconhecido
+      edit_security: Editar ativo
+      no_trade_history: Nenhum histórico de negociações disponível para esta posição.
+      security_label: Ativo
+      originally: antes %{ticker}
+      search_security: Buscar ativo
+      search_security_placeholder: Buscar por ticker ou nome
+      cancel: Cancelar
+      remap_security: Salvar
+      provider_disabled_warning: Atualizações de preço pausadas — o provedor %{provider} está desativado. Troque para outro provedor abaixo ou reative-o nas Configurações.
+      truncated_history_warning: O histórico de preços só está disponível a partir de %{date}. Não há dados do provedor selecionado para datas anteriores — isso pode acontecer quando o ativo foi listado depois da data da sua negociação ou quando o provedor oferece apenas um período histórico limitado no plano atual.
+      switch_provider_label: Trocar provedor
+      switch_provider_description: '%{provider} está desativado. Busque este ativo em outro provedor ativo.'
+      switch_provider_button: Trocar
+      no_security_provider: Provedor de ativos não configurado. Não é possível buscar ativos.
+      security_remapped_label: Ativo remapeado
+      provider_sent: 'Enviado pelo provedor: %{ticker}'
+      reset_to_provider: Redefinir para o provedor
+      reset_confirm_title: Redefinir o ativo para o do provedor?
+      reset_confirm_body: Isso mudará o ativo de %{current} de volta para %{original} e moverá todas as negociações associadas.
+      cost_basis_locked_label: Custo de aquisição bloqueado
+      cost_basis_locked_description: O custo de aquisição que você definiu manualmente não será alterado pelas sincronizações.
+      unlock_cost_basis: Desbloquear
+      unlock_confirm_title: Desbloquear o custo de aquisição?
+      unlock_confirm_body: Isso permitirá que o custo de aquisição seja atualizado pelas sincronizações do provedor ou pelos cálculos das negociações.
+      shares_label: Ações
+      book_value_label: Valor contábil
+      market_value_label: Valor de mercado
+      market_data_label: Dados de mercado
+      market_data_sync_button: Atualizar
+      last_price_update: Última atualização de preço
+      syncing: Sincronizando...
+      never: Nunca
+    update:
+      success: Custo de aquisição salvo.
+      error: Valor de custo de aquisição inválido.
+    unlock_cost_basis:
+      success: Custo de aquisição desbloqueado. Ele poderá ser atualizado na próxima sincronização.
+    remap_security:
+      success: Ativo atualizado com sucesso.
+      security_not_found: Não foi possível encontrar o ativo selecionado.
+    reset_security:
+      success: Ativo redefinido para o valor do provedor.
+    sync_prices:
+      success: Dados de mercado sincronizados com sucesso.
+      unavailable: A sincronização de dados de mercado não está disponível para ativos offline.
+      provider_error: Não foi possível obter os preços mais recentes. Tente novamente em alguns minutos.
+    errors:
+      security_collision: 'Não é possível remapear: você já tem uma posição em %{ticker} em %{date}.'
+    cost_basis_sources:
+      manual: Definido pelo usuário
+      calculated: Das negociações
+      provider: Do provedor
+    cost_basis_cell:
+      unknown: --
+      set: Definir
+      set_cost_basis_header: Definir custo de aquisição de %{ticker} (%{qty} ações)
+      total_cost_basis_label: Custo de aquisição total
+      or_per_share_label: 'Ou informe por ação:'
+      per_share: por ação
+      cancel: Cancelar
+      save: Salvar
+      overwrite_confirm_title: Substituir o custo de aquisição?
+      overwrite_confirm_body: Isso substituirá o custo de aquisição atual de %{current}.

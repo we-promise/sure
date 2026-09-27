@@ -3,12 +3,18 @@ pt-BR:
   sessions:
     create:
       invalid_credentials: E-mail ou senha inválidos.
+      local_login_disabled: O login local com senha está desativado. Use o login único (SSO).
+      account_deactivated: Esta conta foi desativada. Entre em contato com um administrador.
     destroy:
       logout_successful: Você saiu com sucesso.
     openid_connect:
       failed: Não foi possível autenticar via OpenID Connect.
+      account_linked: Conta vinculada com sucesso a %{provider}
     failure:
       failed: Não foi possível autenticar.
+      sso_provider_unavailable: O provedor de SSO está indisponível no momento. Tente novamente mais tarde ou entre em contato com um administrador.
+      sso_invalid_response: Resposta inválida recebida do provedor de SSO. Tente novamente.
+      sso_failed: Falha na autenticação por login único (SSO). Tente novamente.
     new:
       email: Endereço de e-mail
       email_placeholder: voce@exemplo.com
@@ -22,3 +28,11 @@ pt-BR:
       google_auth_connect: Entrar com Google
       demo_banner_title: "Modo de Demonstração Ativo"
       demo_banner_message: "Este é um ambiente de demonstração. As credenciais de login foram preenchidas para sua conveniência. Por favor, não insira informações reais ou sensíveis."
+      local_login_admin_only: O login local é restrito a administradores.
+      passkey_button: Entrar com uma chave de acesso
+      passkey_unsupported: Este navegador não é compatível com chaves de acesso.
+      no_auth_methods_enabled: Nenhum método de autenticação está ativado no momento. Entre em contato com um administrador.
+    post_logout:
+      logout_successful: Você saiu com sucesso.
+    mobile_sso_start:
+      redirecting_html: Redirecionando para o login... <a href="%{url}">Clique aqui</a> se não for redirecionado.

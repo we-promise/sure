@@ -1,0 +1,36 @@
+---
+pt-BR:
+  plans:
+    show:
+      title: Planejamento
+      subtitle: Decida para onde vai seu dinheiro — o que você gasta e o que você guarda.
+    budget_card:
+      title: Este mês
+      edit_budget: Editar orçamento
+      of_total: de %{total}
+      days_left:
+        one: '%{count} dia restante'
+        other: '%{count} dias restantes'
+      percent_used: '%{percent}% usado'
+      top_categories: Principais categorias
+      view_budget: Ver orçamento completo
+      empty_body: Defina uma meta de gastos mensal e limites por categoria para ver como está o andamento deste mês.
+      set_up: Configurar o orçamento deste mês
+    goals_card:
+      title: Suas metas
+      new_goal: Nova meta
+      active_count:
+        one: '%{count} ativa'
+        other: '%{count} ativas'
+      of_targets: de %{total} somando todas as metas
+      behind_count:
+        one: '%{count} abaixo do ritmo'
+        other: '%{count} abaixo do ritmo'
+      pending_count:
+        one: '%{count} aporte pendente'
+        other: '%{count} aportes pendentes'
+      all_on_pace: Tudo no ritmo certo
+      active_goals: Metas ativas
+      pending_marker: pendente
+      runway: dura %{months} meses · %{pace}/mês
+      all_goals: Todas as metas

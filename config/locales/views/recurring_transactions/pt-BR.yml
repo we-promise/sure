@@ -18,10 +18,10 @@ pt-BR:
         - Sincronização de qualquer provedor concluída (Plaid, SimpleFIN, etc.)
     identified: Identificados %{count} padrões de transações recorrentes
     cleaned_up: Limpadas %{count} transações recorrentes obsoletas
-    marked_inactive: Transação recorrente marcada como inativa
-    marked_active: Transação recorrente marcada como ativa
-    deleted: Transação recorrente excluída
-    confirm_delete: Tem certeza de que deseja excluir esta transação recorrente?
+    marked_inactive: Pausada. Ela não aparecerá novamente até você retomá-la.
+    marked_active: Retomada.
+    deleted: Conta a pagar removida. Suas transações não foram alteradas.
+    confirm_delete: "Remover %{name} das suas contas a pagar? Suas transações continuam exatamente como estão. Isso remove apenas a conta a pagar e sua periodicidade de pagamento."
     marked_as_recurring: Transação marcada como recorrente
     already_exists: Já existe uma transação recorrente manual para este padrão
     creation_failed: Falha ao criar transação recorrente. Verifique os detalhes e tente novamente.
@@ -38,8 +38,163 @@ pt-BR:
       last_occurrence: Última Ocorrência
       status: Status
       actions: Ações
+      frequency: Frequência
     status:
       active: Ativa
-      inactive: Inativa
+      inactive: Pausada
+      suggested: Possível conta a pagar
+      paused: Pausada
+      ended: Descartada
     badges:
       manual: Manual
+    expected_today: Previsto para hoje
+    expected_in:
+      one: Previsto em %{count} dia
+      other: Previsto em %{count} dias
+    frequency_presets:
+      monthly: Mensal
+      weekly: Semanal
+      biweekly: A cada 2 semanas
+      semimonthly: Duas vezes por mês
+      quarterly: Trimestral
+      semiannual: Semestral
+      annual: Anual
+      custom: Periodicidade personalizada
+    frequency:
+      monthly: Mensal, no %{day}
+      weekly: 'Semanal: %{weekday}'
+      biweekly: 'A cada 2 semanas: %{weekday}'
+      semimonthly: Duas vezes por mês, no %{first} e no %{second}
+      quarterly: Trimestral, no %{day}
+      semiannual: Semestral, no %{day}
+      annual: Anual, no %{day} de %{month}
+      custom: Periodicidade personalizada
+      last_day: último dia
+    actions:
+      edit_payment_link: Editar link de pagamento
+      pause: Pausar
+      resume: Retomar
+      delete: Remover
+    pay_action:
+      pay: Pagar
+      pay_aria: Pagar %{name} (abre em uma nova aba)
+      add_link: Adicionar link
+      add_link_aria: Adicionar um link de pagamento para %{name}
+      autopay: Débito automático
+      autopay_aria: '%{name} é paga automaticamente; abrir o portal em uma nova aba'
+      open_site: Abrir site de pagamento
+    new:
+      title: Adicionar conta a pagar
+      income_title: Adicionar receita
+      start_from_title: Começar a partir de uma cobrança recorrente que identificamos
+      start_from_income_title: Começar a partir de um depósito recorrente que identificamos
+      start_from_hint: Opcional. Escolher uma apenas preenche o formulário; você ainda pode alterar qualquer coisa.
+      candidate_meta: '%{count}× · última %{date}'
+      search_all_prompt: Não encontrou o que procura?
+      search_all_cta: Buscar em todas as suas transações
+      pick_different: Começar a partir de outra transação
+      smart_fill: Preencher com IA
+      smart_fill_applied: A IA sugeriu estes valores com base no histórico de cobranças. Revise antes de salvar.
+    smart_fills:
+      create:
+        failed: Não foi possível analisar o histórico de cobranças agora. O formulário manteve os valores da própria transação.
+    pick_entry:
+      title: Encontre uma transação para começar
+      income_title: Encontre um depósito para começar
+      hint: Escolher uma apenas preenche o formulário; você ainda pode alterar qualquer coisa.
+      search_placeholder: Buscar por nome, notas ou comerciante
+      back: Voltar ao formulário
+      showing_recent: Mostrando as %{count} mais recentes. Busque para refinar.
+      no_results: Nada corresponde a “%{query}”. Tente menos palavras ou volte e preencha o formulário você mesmo.
+    picker_row:
+      claimed: Parte de %{name}
+    create:
+      success: Conta a pagar adicionada
+      success_income: Receita adicionada
+      due_date_required: Informe a próxima data de vencimento da conta a pagar
+      amount_invalid: Informe o valor apenas como número
+      account_invalid: Escolha uma conta à qual você possa adicionar contas a pagar ou deixe em branco
+      already_exists: Esta conta a pagar já existe
+    edit:
+      trigger_label: Editar conta a pagar
+      title: Editar %{name}
+      income_title: Editar receita · %{name}
+    form:
+      payment_url_label: Link de pagamento
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: Onde você paga esta conta. Abre em uma nova aba a partir das listas de recorrentes e próximas contas.
+      autopay_label: Paga automaticamente
+      autopay_hint: Mantém na sua lista de contas a pagar, mas deixa de tratá-la como uma pendência.
+      more_options: Mais opções
+      notes_label: Notas
+      notes_placeholder: Conta 4821, cobrada no cartão Amex
+      notes_hint: Qualquer informação que você queira ter à mão na hora de pagar. Exibida na conta a pagar.
+      apply_to_siblings:
+        one: Usar este link também para a outra conta a pagar %{name}
+        other: Usar este link também para as outras %{count} contas a pagar %{name}
+      submit: Salvar conta a pagar
+      submit_income: Salvar receita
+      income_name_label: Fonte
+      income_name_placeholder: Empregador, cliente, bico
+      income_amount_label: Valor por pagamento
+      income_due_on_label: Próximo dia de pagamento
+      income_account_label: Depositado em
+      income_frequency_hint: Com que frequência você recebe. Ajuste os detalhes do dia para coincidir com seu dia de pagamento.
+      income_frequency_label: Com que frequência você recebe
+      income_frequency_new_hint: Os detalhes do dia de pagamento vêm da data acima. Você pode ajustar a periodicidade depois de salvar.
+      income_notes_placeholder: Depósito em conta, dividido entre duas contas
+      income_notes_hint: Qualquer coisa que valha a pena lembrar sobre esta receita.
+      name_label: Nome
+      name_placeholder: Aluguel, luz, Netflix
+      amount_label: Valor
+      first_due_on_label: Próximo vencimento
+      account_label: Pago com
+      account_blank: Qualquer conta
+      bill_type_label: Tipo
+      installment_count_label: Número de parcelas
+      installment_count_hint: O parcelamento termina após esse número de parcelas e mostra o progresso até lá.
+      renews_on_label: Renovação
+      trial_ends_on_label: Fim do período de teste
+      amount_edit_hint: Vale para as contas que vencerem daqui em diante. As que já venceram mantêm o valor que tinham.
+      income_amount_edit_hint: Vale para os pagamentos daqui em diante. Os que já venceram mantêm o valor que tinham.
+      cancelled_on_label: Cancelada em
+      cancelled_on_hint: A data serve apenas como referência para você. Pause a conta para que as próximas deixem de aparecer.
+      category_label: Categoria
+      category_blank: Sem categoria
+      frequency_new_hint: Os detalhes do dia vêm da data de vencimento acima. Você pode ajustar a periodicidade depois de salvar.
+      frequency_label: Frequência
+      frequency_hint: Com que frequência esta conta vence. Ajuste os detalhes do dia para coincidir com sua fatura ou extrato.
+      frequency_day_label: No dia
+      frequency_second_day_label: E no dia
+      frequency_weekday_label: Dia da semana
+      frequency_month_label: Mês
+    update:
+      success: Conta a pagar atualizada
+      success_with_siblings:
+        one: Conta a pagar atualizada, e o link de pagamento foi copiado para %{count} outra conta a pagar
+        other: Conta a pagar atualizada, e o link de pagamento foi copiado para %{count} outras contas a pagar
+    manage:
+      title: Suas contas a pagar ficam na página Contas a pagar
+      description: Cadastre, edite, pause e pague tudo por lá. Esta página controla a detecção.
+      cta: Abrir todas as contas a pagar
+    settings:
+      enable_label: Ativar transações recorrentes
+      enable_description: Detecta automaticamente padrões de transações recorrentes e mostra as próximas transações previstas.
+    settings_updated: Configurações de transações recorrentes atualizadas
+    identify_already_running: A detecção já está em andamento. Volte em instantes.
+    deleted_income: Receita removida. Suas transações não foram alteradas.
+    confirm_delete_income: Remover %{name} das receitas? Suas transações continuam exatamente como estão. Isso remove apenas a receita e sua periodicidade.
+    suggested:
+      title: Possíveis novas contas a pagar
+      seen_count:
+        one: vista %{count} vez
+        other: vista %{count} vezes
+      collapsed_hint: Toque para revisar
+      confirm: Adicionar conta a pagar
+      dismiss: Não é uma conta a pagar
+    confirmed: Conta a pagar adicionada às suas transações recorrentes
+    dismissed: Descartada. Este padrão não será mais sugerido.
+    transfer_marked_as_recurring: Transferência marcada como recorrente
+    transfer_already_exists: Já existe uma transferência recorrente para este par de contas
+    transfer_creation_failed: Não foi possível criar a transferência recorrente. Verifique os detalhes da transferência e tente novamente.
+    transfer_feature_disabled: As transações recorrentes estão desativadas para esta família

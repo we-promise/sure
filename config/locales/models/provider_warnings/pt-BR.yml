@@ -2,3 +2,10 @@
 pt-BR:
   provider_warnings:
     limited_investment_data: "Os dados de investimento deste provedor são limitados. Rótulos de atividade (Compra, Venda, Dividendo) não estão disponíveis, o que pode afetar a precisão do orçamento. Considere criar regras para excluir ou categorizar transações de investimento."
+    lunchflow_accounts_failed:
+      one: 'Importação do Lunchflow: %{count} conta não foi atualizada'
+      other: 'Importação do Lunchflow: %{count} contas não foram atualizadas'
+    lunchflow_transactions_failed:
+      one: 'Importação do Lunchflow: falha ao buscar transações de %{count} conta'
+      other: 'Importação do Lunchflow: falha ao buscar transações de %{count} contas'
+    lunchflow_import_error: 'Importação do Lunchflow: %{error}'
