@@ -13,13 +13,20 @@ class Provider::Kraken
   class OTPRequiredError < Error; end
   class ApiError < Error; end
 
-  # Kraken meters private endpoints with a decaying counter: Ledgers and
-  # TradesHistory each cost 2 points against a cap of ~15-20 that refills at
-  # under 1 point/second. Paginated backfills (MAX_LEDGER_PAGES = 200) issue
-  # those calls back to back and exhaust it, so requests are spaced out.
-  # Public endpoints are limited separately, per IP, at about the same rate,
-  # so the one interval covers both.
+  # Kraken meters private endpoints with a counter that decays by 0.5 points
+  # per second (1.0 on higher-limit accounts) against a cap of 20. Ordinary
+  # calls cost 1 point; public endpoints are limited separately, per IP, at
+  # about one per second. One interval covers both.
   MIN_REQUEST_INTERVAL = 1.0
+
+  # Account-history endpoints cost 4 points each. The paginated backfills
+  # (MAX_LEDGER_PAGES = 200) issue them back to back, so they get their own,
+  # slower pacing: 4 points at the slowest decay is one call every 8 seconds,
+  # which a sustained run cannot exceed once the initial allowance is spent.
+  # Overridable through KRAKEN_HISTORY_MIN_REQUEST_INTERVAL; higher-limit
+  # accounts can halve it.
+  HISTORY_MIN_REQUEST_INTERVAL = 8.0
+  HISTORY_METHODS = %w[Ledgers QueryLedgers TradesHistory QueryTrades ClosedOrders].freeze
 
   BASE_URL = "https://api.kraken.com"
   PRIVATE_PREFIX = "/0/private"
@@ -94,7 +101,7 @@ class Provider::Kraken
     end
 
     def private_post(method, params = {})
-      throttle_request
+      HISTORY_METHODS.include?(method) ? throttle_history_request : throttle_request
       path = "#{PRIVATE_PREFIX}/#{method}"
       request_params = { "nonce" => nonce_generator.call.to_s }.merge(stringify_params(params))
       body = URI.encode_www_form(request_params)
@@ -125,6 +132,20 @@ class Provider::Kraken
       digest = OpenSSL::Digest::SHA256.digest(nonce + encoded_payload)
       hmac = OpenSSL::HMAC.digest("sha512", Base64.decode64(api_secret), path + digest)
       Base64.strict_encode64(hmac)
+    end
+
+    # Same shape as RateLimitable#throttle_request, on its own clock: a history
+    # call is spaced from the previous history call, whatever else went out in
+    # between.
+    def throttle_history_request
+      @last_history_request_time ||= Time.at(0)
+      sleep_time = history_min_request_interval - (Time.current - @last_history_request_time)
+      sleep(sleep_time) if sleep_time > 0
+      @last_history_request_time = Time.current
+    end
+
+    def history_min_request_interval
+      positive_interval(ENV.fetch("KRAKEN_HISTORY_MIN_REQUEST_INTERVAL", HISTORY_MIN_REQUEST_INTERVAL), "KRAKEN_HISTORY_MIN_REQUEST_INTERVAL")
     end
 
     def handle_response(response)
