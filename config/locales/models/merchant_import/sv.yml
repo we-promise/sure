@@ -1,0 +1,8 @@
+---
+sv:
+  activerecord:
+    errors:
+      models:
+        merchant_import:
+          missing_columns: "Saknade obligatoriska kolumner: %{columns}"
+          duplicate_columns: "Dubblerade kolumnnamn efter normalisering: %{columns}"

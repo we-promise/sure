@@ -1,0 +1,381 @@
+---
+sv:
+  transactions:
+    bulk_updates:
+      new:
+        cancel: Avbryt
+        category_label: Kategori
+        category_prompt: Välj en kategori
+        date_label: Datum
+        header_title: Redigera transaktioner
+        merchant_label: Handlare
+        merchant_prompt: Välj en handlare
+        name_label: Namn
+        name_placeholder: Ange ett namn som tillämpas på markerade transaktioner
+        none: "(ingen)"
+        notes_label: Anteckningar
+        notes_placeholder: Ange en anteckning som tillämpas på markerade transaktioner
+        overview: Översikt
+        save: Spara
+        tags_label: Taggar
+        transactions_section: Transaktioner
+    unknown_name: Okänd transaktion
+    selection_bar:
+      duplicate: Duplicera
+      edit: Redigera
+      selected: markerade
+    form:
+      details: Detaljer
+      account: Konto
+      account_prompt: Välj ett konto
+      amount: Belopp
+      category: Kategori
+      category_label: Kategori
+      category_prompt: Välj en kategori
+      category_search_placeholder: Sök kategorier
+      create_category: 'Skapa "%{name}"'
+      create_category_error: Det gick inte att skapa kategorin
+      date: Datum
+      description: Beskrivning
+      description_placeholder: Beskriv transaktionen
+      expense: Utgift
+      income: Inkomst
+      merchant_label: Handlare
+      none: (ingen)
+      note_label: Anteckningar
+      note_placeholder: Ange en anteckning
+      create_tag: Skapa
+      create_merchant: Skapa
+      create_merchant_error: Det gick inte att skapa handlaren
+      merchant_search_placeholder: Sök eller skapa handlare
+      submit: Lägg till transaktion
+      tag_search_placeholder: Sök eller skapa tagg
+      tags_label: Taggar
+      transfer: Överföring
+    create:
+      created: Transaktionen skapades
+    update:
+      updated: Transaktionen uppdaterades
+    new:
+      new_transaction: Ny transaktion
+    show:
+      keep_both: Nej, behåll båda
+      loan_payment: Låneavbetalning
+      mark_recurring: Markera som återkommande
+      create_bill: Skapa en räkning
+      mark_recurring_subtitle: Spåra detta som en återkommande transaktion. Beloppsvariation beräknas automatiskt från de senaste 6 månadernas liknande transaktioner.
+      mark_recurring_title: Återkommande transaktion
+      applied_to_title: Räkningar som denna betalade
+      applied_to_detail: "%{amount} mot räkningen som förfaller %{date}"
+      applied_to_unreviewed: Behöver granskas
+      merge_duplicate: Ja, slå samman dem
+      potential_duplicate_description: Denna väntande transaktion kan vara samma som den bokförda transaktionen nedan. Om så är fallet, slå samman dem för att undvika dubbelräkning.
+      potential_duplicate_title: Möjlig dubblett upptäckt
+      transfer: Överföring
+      account_label: Konto
+      amount: Belopp
+      category_label: Kategori
+      date_label: Datum
+      delete: Ta bort
+      delete_subtitle: Detta tar bort transaktionen permanent, påverkar dina historiska
+        saldon och kan inte ångras.
+      delete_title: Ta bort transaktion
+      details: Detaljer
+      attachments: Bilagor
+      exclude: Exkludera
+      exclude_description: Exkluderade transaktioner tas bort från budgetberäkningar och rapporter.
+      activity_type: Aktivitetstyp
+      activity_type_description: Typ av investeringsaktivitet (Köp, Sälj, Utdelning, etc.). Identifieras automatiskt eller anges manuellt.
+      one_time_title: Engångs-%{type}
+      one_time_description: Engångstransaktioner exkluderas från vissa budgetberäkningar och rapporter för att hjälpa dig se vad som verkligen är viktigt.
+      convert_to_trade_title: Konvertera till värdepappersaffär
+      convert_to_trade_description: Konvertera denna transaktion till ett köp eller en försäljning med värdepappersdetaljer för portföljspårning.
+      convert_to_trade_button: Konvertera till affär
+      transfer_matcher_description: Koppla denna transaktion till dess motsvarighet i ett annat konto.
+      pending_duplicate_merger_title: Dubblett av bokförd transaktion?
+      pending_duplicate_merger_description: Slå manuellt samman denna väntande transaktion med dess bokförda version.
+      pending_duplicate_merger_button: Öppna sammanslagning
+      merchant_label: Handlare
+      name_label: Namn
+      nature: Typ
+      none: "(ingen)"
+      note_label: Anteckningar
+      note_placeholder: Ange en anteckning
+      overview: Översikt
+      settings: Inställningar
+      tags_label: Taggar
+      tab_transactions: Transaktioner
+      tab_upcoming: Kommande
+      uncategorized: "(okategoriserad)"
+      additional_details: "Ytterligare detaljer"
+      payee: "Betalningsmottagare"
+      description: "Beskrivning"
+      memo: "Meddelande"
+      original_description: "Ursprunglig beskrivning"
+      payment_channel: "Betalningskanal"
+      transaction_code: "Transaktionskod"
+      provider_extras: "Extra leverantörsdata"
+      plaid_payment_meta_label: "Betalningsmetadata · %{name}"
+      plaid_counterparty_label: "Motpart %{index}"
+      # Provider field names. The set is open-ended — anything not listed falls
+      # back to a humanized form of the provider's own identifier.
+      provider_extra_fields:
+        by_order_of: "På uppdrag av"
+        confidence_level: "Konfidensnivå"
+        entity_id: "Entitets-ID"
+        logo_url: "Logotyp-URL"
+        name: "Namn"
+        payee: "Betalningsmottagare"
+        payer: "Betalare"
+        phone_number: "Telefonnummer"
+        ppd_id: "PPD-ID"
+        reason: "Anledning"
+        reference_number: "Referensnummer"
+        type: "Typ"
+        website: "Webbplats"
+      transfer_or_debt_payment: "Överföring eller skuldbetalning?"
+      open_matcher: "Öppna matchare"
+      convert: "Konvertera"
+    activity_labels:
+      buy: Köp
+      sell: Sälj
+      sweep_in: Insvep
+      sweep_out: Utsvep
+      dividend: Utdelning
+      reinvestment: Återinvestering
+      interest: Ränta
+      fee: Avgift
+      transfer: Överföring
+      contribution: Insättning
+      withdrawal: Uttag
+      exchange: Byte
+      other: Övrigt
+    mark_recurring: Markera som återkommande
+    mark_recurring_subtitle: Spåra detta som en återkommande transaktion. Beloppsvariation beräknas automatiskt från de senaste 6 månadernas liknande transaktioner.
+    mark_recurring_title: Återkommande transaktion
+    potential_duplicate_title: Möjlig dubblett upptäckt
+    potential_duplicate_description: Denna väntande transaktion kan vara samma som den bokförda transaktionen nedan. Om så är fallet, slå samman dem för att undvika dubbelräkning.
+    keep_both: Nej, behåll båda
+    split_parent_row:
+      split_label: "Delad"
+    transfer_match:
+      auto_matched: Automatiskt matchad
+      auto_matched_short: A/M
+      confirm_match: Bekräfta matchning
+      payment_confirmed: Betalningen är bekräftad
+      reject_match: Avvisa matchning
+      transfer_confirmed: Överföringen är bekräftad
+    transaction:
+      pending: Väntande
+      pending_tooltip: Väntande transaktion — kan ändras när den bokförs
+      linked_with_provider: Kopplad till %{provider}
+      activity_type_tooltip: Typ av investeringsaktivitet
+      possible_duplicate: Dubblett?
+      potential_duplicate_tooltip: Detta kan vara en dubblett av en annan transaktion
+      review_recommended: Granska
+      review_recommended_tooltip: Stor beloppsskillnad — granskning rekommenderas för att kontrollera om detta är en dubblett
+      split: Delad
+      split_tooltip: Denna transaktion har delats upp i flera poster
+      split_child_tooltip: Del av en delad transaktion
+    merge_duplicate:
+      success: Transaktionerna slogs samman
+      failure: Det gick inte att slå samman transaktionerna
+    dismiss_duplicate:
+      success: Behölls som separata transaktioner
+      failure: Det gick inte att avvisa dubblettförslaget
+    pending_duplicate_merge:
+      possible_duplicate: Dubblett?
+      possible_duplicate_short: Dub?
+      review_recommended: Granska
+      review_recommended_short: Gra
+      confirm_title: "Slå samman med bokförd transaktion (%{posted_amount})"
+      reject_title: Behåll som separata transaktioner
+    summary:
+      total_transactions: Totalt antal transaktioner
+      income: Inkomst
+      expenses: Utgifter
+      inflow: Inflöde
+      outflow: Utflöde
+    header:
+      edit_categories: Redigera kategorier
+      edit_imports: Redigera importer
+      edit_merchants: Redigera handlare
+      edit_tags: Redigera taggar
+      import: Importera
+    index:
+      title: "Transaktioner"
+      transaction: transaktion
+      transactions: transaktioner
+      import: Importera
+      new_rule: "Ny regel"
+      edit_rules: "Redigera regler"
+      edit_categories: "Redigera kategorier"
+      edit_tags: "Redigera taggar"
+      edit_merchants: "Redigera handlare"
+      edit_imports: "Redigera importer"
+      new_transaction: "Ny transaktion"
+      categorize_button:
+        one: "Kategorisera (1)"
+        other: "Kategorisera (%{count})"
+    categorizes:
+      show:
+        exit: "Avsluta"
+        skip: "Hoppa över"
+        remaining:
+          one: "1 okategoriserad transaktion kvar"
+          other: "%{count} okategoriserade transaktioner kvar"
+        transaction_count:
+          one: "1 transaktion"
+          other: "%{count} transaktioner"
+        transactions_hint: "Avmarkera för att exkludera en transaktion, eller tilldela den en annan kategori direkt i dess rad."
+        assign_category: "Tilldela en kategori"
+        assign_category_prompt: "→ tilldela"
+        filter_placeholder: "Sök kategorier..."
+        col_transaction: "Transaktion"
+        col_date: "Datum"
+        col_amount: "Belopp"
+        col_category: "Kategori"
+        type_income: "Inkomst"
+        type_expense: "Utgift"
+        create_rule_label: "Skapa kategoriseringsregel"
+        rule_description_prefix: "Framtida %{type}-transaktioner med namn som innehåller"
+        rule_description_suffix: "ska också få denna kategori."
+        no_categories: "Inga matchande kategorier"
+        all_done: "Alla transaktioner är kategoriserade"
+      create:
+        categorized:
+          one: "1 transaktion kategoriserad"
+          other: "%{count} transaktioner kategoriserade"
+        rule_creation_failed: "Transaktionerna kategoriserades, men regeln kunde inte skapas (den kan redan finnas)."
+      entry_row:
+        include_checkbox: "Inkludera %{name}"
+        assign_category_select: "Tilldela kategori för %{name}"
+    list:
+      drag_drop_title: Släpp CSV för att importera
+      drag_drop_subtitle: Ladda upp transaktioner direkt
+      transaction: transaktion
+      transactions: transaktioner
+    toggle_recurring_section: Visa/dölj kommande återkommande transaktioner
+    search:
+      filters:
+        account: Konto
+        date: Datum
+        type: Typ
+        status: Status
+        amount: Belopp
+        category: Kategori
+        tag: Tagg
+        merchant: Handlare
+    convert_to_trade:
+      title: Konvertera till värdepappersaffär
+      description: Konvertera denna transaktion till en affär med värdepappersdetaljer
+      date_label: "Datum:"
+      account_label: "Konto:"
+      amount_label: "Belopp:"
+      security_label: Värdepapper
+      security_prompt: Välj ett värdepapper...
+      security_custom: "+ Ange egen ticker"
+      security_not_listed_hint: Hittar du inte ditt värdepapper? Välj "Ange egen ticker" längst ner i listan.
+      ticker_placeholder: AAPL
+      ticker_hint: Ange aktiens/ETF:ns tickersymbol (t.ex. AAPL, MSFT)
+      ticker_search_placeholder: Sök efter en ticker...
+      ticker_search_hint: Sök på tickersymbol eller företagsnamn, eller ange en egen ticker
+      price_mismatch_title: Priset stämmer eventuellt inte
+      price_mismatch_message: "Ditt pris (%{entered_price}/aktie) skiljer sig avsevärt från %{ticker}s nuvarande marknadspris (%{market_price}). Om detta verkar fel kan du ha valt fel värdepapper — försök använda \"Ange egen ticker\" för att ange rätt."
+      quantity_label: Antal (aktier)
+      quantity_placeholder: t.ex. 20
+      quantity_hint: Antal aktier som handlades
+      price_label: Pris per aktie
+      price_placeholder: t.ex. 52,15
+      price_hint: Pris per aktie (%{currency})
+      qty_or_price_hint: Ange minst antal ELLER pris. Det andra beräknas utifrån transaktionsbeloppet (%{amount}).
+      trade_type_label: Affärstyp
+      trade_type_hint: Köp eller sälj aktier i ett värdepapper
+      exchange_label: Börs (valfritt)
+      exchange_placeholder: XNAS
+      exchange_hint: Lämna tomt för automatisk identifiering
+      cancel: Avbryt
+      submit: Konvertera till affär
+      success: Transaktionen konverterades till en affär
+      conversion_note: "Konverterad från transaktion: %{original_name} (%{original_date})"
+      errors:
+        not_investment_account: Endast transaktioner i investeringskonton kan konverteras till affärer
+        already_converted: Denna transaktion har redan konverterats eller exkluderats
+        enter_ticker: Ange en tickersymbol
+        security_not_found: Det valda värdepapperet finns inte längre. Välj ett annat.
+        select_security: Välj eller ange ett värdepapper
+        enter_qty_or_price: Ange antal eller pris per aktie. Det andra beräknas utifrån transaktionsbeloppet.
+        invalid_qty_or_price: Ogiltigt antal eller pris. Ange giltiga positiva värden.
+        conversion_failed: "Det gick inte att konvertera transaktionen: %{error}"
+        unexpected_error: "Oväntat fel vid konvertering: %{error}"
+    searches:
+      filters:
+        account_filter:
+          filter_accounts: Filtrera konton
+        category_filter:
+          filter_category: Filtrera kategori
+        date_filter:
+          start_date: "Startdatum"
+          end_date: "Slutdatum"
+        merchant_filter:
+          filter_merchants: Filtrera handlare
+        tag_filter:
+          filter_tags: Filtrera taggar
+        amount_filter:
+          equal_to: Lika med
+          greater_than: Större än
+          less_than: Mindre än
+          placeholder: '0'
+        badge:
+          expense: Utgift
+          income: Inkomst
+          on_or_after: den %{date} eller senare
+          on_or_before: den %{date} eller tidigare
+          transfer: Överföring
+          confirmed: Bekräftad
+          pending: Väntande
+        type_filter:
+          expense: Utgift
+          income: Inkomst
+          transfer: Överföring
+        status_filter:
+          confirmed: Bekräftad
+          pending: Väntande
+      menu:
+        account_filter: Konto
+        amount_filter: Belopp
+        apply: Använd
+        cancel: Avbryt
+        category_filter: Kategori
+        clear_filters: Rensa filter
+        date_filter: Datum
+        merchant_filter: Handlare
+        status_filter: Status
+        tag_filter: Tagg
+        type_filter: Typ
+      search:
+        equal_to: lika med
+        greater_than: större än
+        less_than: mindre än
+      form:
+        toggle_selection_checkboxes: Markera/avmarkera alla kryssrutor
+        search_placeholder: "Sök transaktioner ..."
+        filter: "Filtrera"
+    attachments:
+      cannot_exceed: "Kan inte överstiga %{count} bilagor per transaktion"
+      uploaded_one: "Bilagan laddades upp"
+      uploaded_many: "%{count} bilagor laddades upp"
+      failed_upload: "Det gick inte att ladda upp bilagan: %{error}"
+      no_files_selected: "Inga filer valda för uppladdning"
+      attachment_deleted: "Bilagan togs bort"
+      failed_delete: "Det gick inte att ta bort bilagan: %{error}"
+      upload_failed: "Det gick inte att ladda upp bilagan. Försök igen eller kontakta support."
+      delete_failed: "Det gick inte att ta bort bilagan. Försök igen eller kontakta support."
+      upload: "Ladda upp"
+      no_attachments: "Inga bilagor än"
+      select_up_to: "Välj upp till %{count} filer (bilder eller PDF:er, max %{size}MB var) • %{used} av %{count} använda"
+      files:
+        one: "Fil (1)"
+        other: "Filer (%{count})"
+      browse_to_add: "Bläddra för att lägga till filer"
+      max_reached: "Maximalt antal filer uppnått (%{count}/%{max}). Ta bort en befintlig fil för att ladda upp en annan."

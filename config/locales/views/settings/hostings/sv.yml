@@ -1,0 +1,328 @@
+---
+sv:
+  settings:
+    hostings:
+      invite_code_settings:
+        description: Styr hur nya personer registrerar sig för din instans av %{product}.
+        email_confirmation_description: När aktiverat måste användare bekräfta sin e-post-
+          adress när de ändrar den.
+        email_confirmation_title: Kräv e-postbekräftelse
+        default_family_title: Standardfamilj för nya användare
+        default_family_description: "Placera nya användare i endast denna familj/grupp om de inte har en inbjudan."
+        default_family_none: Ingen (skapa ny familj)
+        generate_tokens: Skapa ny kod
+        generated_tokens: Skapade koder
+        title: Onboarding
+        states:
+          open: Öppen
+          closed: Stängd
+          invite_only: Endast inbjudan
+      show:
+        general: Allmänna inställningar
+        ai_assistant: AI-assistent
+        financial_data_providers: Leverantörer av finansiell data
+        property_valuation_providers: Leverantörer av fastighetsvärdering
+        sync_settings: Synkroniseringsinställningar
+        invites: Inbjudningskoder
+        title: Självhosting
+        danger_zone: Farozon
+        clear_cache: Rensa datacache
+        clear_cache_warning: Att rensa datacachen tar bort alla växelkurser, värdepapperspriser, kontosaldon och annan data. Detta tar inte bort konton, transaktioner, kategorier eller annan användarägd data.
+        confirm_clear_cache:
+          title: Rensa datacache?
+          body: Är du säker på att du vill rensa datacachen? Detta tar bort alla växelkurser, värdepapperspriser, kontosaldon och annan data. Denna åtgärd kan inte ångras.
+      provider_selection:
+        exchange_rate_title: Leverantör av växelkurser
+        exchange_rate_description: Välj en enda leverantör för att hämta valutaväxelkurser.
+        exchange_rate_provider_label: Leverantör av växelkurser
+        securities_title: Leverantörer av värdepapper
+        securities_description: Aktivera en eller flera leverantörer för att hämta priser på aktier, ETF:er och fonder. Vid sökning frågas alla aktiverade leverantörer och resultaten slås samman.
+        env_configured_message: Val av leverantör är inaktiverat eftersom miljövariabler är satta. För att aktivera val här, ta bort dessa miljövariabler från din konfiguration.
+        twelve_data_hint: kräver API-nyckel, 800 krediter/dag
+        yahoo_finance_hint: gratis, ingen API-nyckel krävs
+        requires_api_key: kräver API-nyckel
+        requires_api_key_eodhd: kräver API-nyckel, gräns 20 anrop/dag
+        requires_api_key_alpha_vantage: kräver API-nyckel, gräns 25 anrop/dag
+        mfapi_hint: gratis, ingen API-nyckel -- endast indiska fonder
+        binance_public_hint: gratis, ingen API-nyckel -- endast krypto (BTC, ETH, osv.)
+        moex_public_hint: gratis, ingen API-nyckel -- ryska aktier, fonder och obligationer (MOEX), inkl. RUB-valutakurs
+        tinkoff_invest_hint: kräver läsbehörig token -- priser på ryska aktier/fonder/obligationer + varumärkeslogotyper
+        requires_api_key_mansa: kräver API-nyckel, 100 anrop/dag gratisnivå -- endast NGX (Nigerian Exchange)
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+          tiingo: Tiingo
+          eodhd: EODHD
+          alpha_vantage: Alpha Vantage
+          mfapi: MFAPI.in
+          binance_public: Binance
+          moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
+          mansa: Mansa
+      assistant_settings:
+        title: AI-assistent
+        description: Välj hur chattassistenten svarar. Inbyggd använder din konfigurerade LLM-leverantör direkt. Extern delegerar till en fjärragent som kan anropa Sures finansiella verktyg via MCP.
+        type_label: Assistenttyp
+        type_builtin: Inbyggd (direkt LLM)
+        type_external: Extern (fjärragent)
+        external_status: Extern assistentendpoint
+        external_configured: Konfigurerad
+        external_not_configured: Inte konfigurerad. Ange URL och token nedan, eller sätt miljövariablerna EXTERNAL_ASSISTANT_URL och EXTERNAL_ASSISTANT_TOKEN.
+        env_notice: "Assistenttypen är låst till '%{type}' via miljövariabeln ASSISTANT_TYPE."
+        env_configured_external: Konfigurerad via miljövariabler.
+        url_label: Endpoint-URL
+        url_placeholder: "https://din-agent-host/v1/chat"
+        url_help: Den fullständiga URL:en till din agents API-endpoint. Din agentleverantör ger dig denna.
+        token_label: API-token
+        token_placeholder: Ange token från din agentleverantör
+        token_help: Autentiseringstoken från din externa agent. Skickas som Bearer-token med varje begäran.
+        agent_id_label: Agent (obligatorisk)
+        agent_id_placeholder: "main (standard)"
+        agent_id_help: Sure hämtar denna lista från endpointens /v1/models-svar. Den valda agenten styr routing; dess underliggande modell hanteras av den externa tjänsten.
+        agent_discovery_configure_first: Spara en giltig endpoint-URL och API-token för att hämta tillgängliga agenter.
+        external_agent_required: Välj en extern agent innan du sparar.
+        external_agent_invalid: Välj en agent som returneras av den konfigurerade endpointen.
+        external_agent_reselect: Endpointen har ändrats och den tidigare valda agenten finns inte längre där. Välj en agent från den nya endpointen.
+        agent_discovery_error: "Kunde inte hämta agenter: %{error}"
+        external_info:
+          title: Extern AI-konfiguration
+          items:
+            - Ange den fullständiga OpenAI-kompatibla endpoint-URL:en som slutar med /v1/chat/completions.
+            - Sure hämtar tillgängliga agenter från /v1/models efter att endpoint och token har sparats.
+            - Den externa tjänsten väljer modellen bakom varje agent; Sure väljer endast agentrouten.
+            - Autentiserings-, endpoint- eller agentfel returneras av den externa tjänsten. Kontrollera dess loggar om en begäran misslyckas.
+        disconnect_title: Extern anslutning
+        disconnect_description: Ta bort den externa assistentanslutningen och byt tillbaka till den inbyggda assistenten.
+        disconnect_button: Koppla bort
+        confirm_disconnect:
+          title: Koppla bort extern assistent?
+          body: Detta tar bort den sparade URL:en, token och agent-ID:t, och byter till den inbyggda assistenten. Du kan återansluta senare genom att ange nya uppgifter.
+      brand_fetch_settings:
+        description: Ange klient-ID:t från Brandfetch
+        env_configured_message: Ditt Brandfetch-klient-ID är konfigurerat via miljövariabeln BRAND_FETCH_CLIENT_ID.
+        show_details: "(visa detaljer)"
+        setup_step_1_html: 'Besök <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> och skapa ett kostnadsfritt Brandfetch Developer-konto.'
+        setup_step_2_html: 'Gå till sidan <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
+        setup_step_3: 'Tryck på ögonikonen under avsnittet "Your Client ID" för att visa ditt klient-ID och klistra in det nedan.'
+        label: Klient-ID
+        placeholder: Ange ditt klient-ID här
+        title: Brandfetch-inställningar
+        high_res_label: Aktivera högupplösta logotyper
+        high_res_description: När aktiverat hämtas logotyper i 120x120-upplösning istället för 40x40. Detta ger skarpare bilder på skärmar med hög pixeldensitet.
+      llm_provider_selector:
+        title: AI-leverantör
+        description: Välj vilken LLM som driver AI-chatt, handlarigenkänning och PDF-bearbetning. Transaktionskategorisering konfigureras separat nedan.
+        env_configured_message: Konfigurerad via miljövariabeln LLM_PROVIDER.
+        provider_label: Aktiv LLM-leverantör
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Byte av leverantör börjar gälla vid nästa chatt. Konfigurera den aktiva leverantörens uppgifter nedan.
+        not_configured_hint: "Lägg till en %{provider}-API-nyckel nedan för att aktivera den."
+        data_retention_heading: Datahantering
+        data_retention: API-indata används som standard inte för att träna modeller; leverantörernas hostade API:er lagrar data i cirka 30 dagar för säkerhet och tillförlitlighet. Anpassade eller självhostade endpoints följer din egen policy.
+      anthropic_settings:
+        title: Anthropic (Claude)
+        description: Ange din Anthropic-API-nyckel. Ange eventuellt en bas-URL mot AWS Bedrock eller GCP Vertex.
+        env_configured_message: Konfigurerad via miljövariabler.
+        access_token_label: API-nyckel
+        access_token_placeholder: Ange din Anthropic-API-nyckel
+        base_url_label: Bas-URL (valfritt)
+        base_url_placeholder: "https://api.anthropic.com (standard)"
+        model_label: Standardmodell (valfritt)
+        model_placeholder: "claude-sonnet-4-6 (standard)"
+        model_help: Används för chatt och PDF-bearbetning. Batchåtgärder (kategorisering, handlarigenkänning) använder Haiku som standard av kostnadsskäl.
+      categorization_provider_selector:
+        title: Transaktionskategorisering
+        preview_pill: Förhandsvisning
+        description: Välj vilken leverantör som kategoriserar transaktioner. Detta är separat från AI-leverantören ovan, som hanterar chatt och PDF-bearbetning.
+        env_notice: "Satt till %{type} via miljövariabler."
+        provider_label: Kategoriseringsleverantör
+        provider_llm: AI-leverantör (OpenAI eller Anthropic)
+        provider_jev: Jev (TypeSafe)
+        provider_help: AI-leverantören läser en batch av transaktioner och skriver tillbaka kategorinamn. Jev väljer från din kategorilista och returnerar en kalibrerad konfidens för varje transaktion.
+        jev_configured: Jev-API-nyckel konfigurerad.
+        jev_not_configured: Jev är vald men har ingen API-nyckel konfigurerad. Kategorisering fortsätter använda AI-leverantören tills du lägger till en nedan.
+        data_retention_heading: Datadelning
+        data_retention_direct: Transaktionsbeskrivningar, belopp och dina kategorinamn skickas till TypeSafe för kategorisering. Granska deras lagringspolicy innan du aktiverar detta med verklig data.
+        data_retention_proxied: Transaktionsbeskrivningar, belopp och dina kategorinamn skickas till %{host}, som vidarebefordrar dem till TypeSafe. Granska båda leverantörernas lagringspolicyer innan du aktiverar detta med verklig data.
+        confidence_threshold_label: Minsta konfidens (0–1)
+        confidence_threshold_help: Under denna konfidens tillämpas inte kategorin och transaktionen lämnas okategoriserad, så en senare körning kan försöka igen. Ingenting kastas bort. Sätt till 0 för att tillämpa alla svar.
+        confidence_threshold_env_notice: Låst av miljövariabeln CATEGORIZATION_CONFIDENCE_THRESHOLD.
+        shadow_rate_label: Skugg­jämförelsefrekvens (0–1)
+        shadow_rate_help: Kör leverantören du INTE valde parallellt med den du valde, och registrerar var de är oense utan att ändra någon kategori. Detta fördubblar API-kostnaden för varje kategoriseringskörning den samplar. Sätt till 0 för att stänga av.
+        shadow_rate_env_notice: Låst av miljövariabeln CATEGORIZATION_SHADOW_RATE.
+      categorization_shadow_results:
+        shadow_results_heading: Skuggjämförelse
+        shadow_results_empty: Inga jämförelser registrerade än. Sätt en skuggjämförelsefrekvens över 0 och kör kategorisering för att samla in några.
+        shadow_results_summary: "%{agreement}%% samstämmighet över %{count} samplade transaktioner."
+        shadow_disagreements_heading: Senaste avvikelserna
+        shadow_disagreement_row: "%{applied_provider} valde %{applied_category}; %{shadow_provider} valde %{shadow_category}."
+        shadow_disagreement_confidence: "(konfidens %{confidence})"
+        shadow_no_disagreements: De två leverantörerna var eniga om alla samplade transaktioner.
+        shadow_no_category: ingen kategori
+      jev_settings:
+        env_configured_message: Konfigurerad via miljövariabler.
+        api_key_label: API-nyckel
+        api_key_placeholder: Ange din TypeSafe-API-nyckel
+        endpoint_label: Endpoint (valfritt)
+        endpoint_placeholder: "https://api.typesafe.ai/v1/systemone (standard)"
+        model_label: Modell (valfritt)
+        model_placeholder: "jev-latest (standard)"
+        model_help: Använder TypeSafe direkt som standard. För att istället nå Jev via OpenRouter, sätt endpointen till https://openrouter.ai/api/alpha/decisions och modellen till ~typesafe/jev-latest.
+      openai_settings:
+        description: Ange åtkomsttoken och konfigurera eventuellt en anpassad OpenAI-kompatibel leverantör
+        env_configured_message: Konfigurerad via miljövariabler.
+        access_token_label: Åtkomsttoken
+        access_token_placeholder: Ange din åtkomsttoken här
+        uri_base_label: API-bas-URL (valfritt)
+        uri_base_placeholder: "https://api.openai.com/v1 (standard)"
+        model_label: Modell (valfritt)
+        model_placeholder: "gpt-4.1 (standard)"
+        model_function_calling_help: "AI-assistenten läser din data genom funktionsanrop, så välj en modell som din leverantör dokumenterar som stöd för tools/function calling. Modeller utan detta stöd misslyckas med chatt med ett otydligt leverantörsfel."
+        model_function_calling_link: Kontrollera den konfigurerade modellen
+        json_mode_label: JSON-läge
+        json_mode_auto: Automatiskt (rekommenderas)
+        json_mode_strict: Strikt (bäst för resonerande modeller)
+        json_mode_none: Ingen (bäst för standardmodeller)
+        json_mode_json_object: JSON-objekt
+        json_mode_help: "Strikt läge fungerar bäst med resonerande modeller (qwen-thinking, deepseek-reasoner). Läget Ingen fungerar bäst med standardmodeller (llama, mistral, gpt-oss)."
+        budget_heading: Tokenbudget
+        budget_description: Gäller OpenAI-kompatibla anrop (chatt, autokategorisering, handlarigenkänning och PDF-bearbetning). Standardvärdena är konservativa för lokala modeller med litet kontextfönster. Höj för molnmodeller med större kontextfönster.
+        context_window_label: Kontextfönster (valfritt)
+        context_window_help: "Totalt antal tokens modellen accepterar. Standard: 2048 — höj till 8192+ för molnbaserad OpenAI eller lokala modeller med stort kontextfönster."
+        max_response_tokens_label: Max svars-tokens (valfritt)
+        max_response_tokens_help: "Tokens reserverade för modellens svar. Standard: 512. Sänk för att frigöra plats åt längre historik."
+        max_items_per_call_label: Max poster per batch (valfritt)
+        max_items_per_call_help: "Övre gräns för batchar vid autokategorisering/handlarigenkänning. Standard: 25. Större batchar delas automatiskt upp för att passa kontextfönstret."
+        timeout_heading: Timeouts
+        timeout_description: Styr hur länge OpenAI-kompatibla modellanrop får köra innan Sure ger upp. Höj dessa om du kör en lokal modell på långsam hårdvara.
+        openai_request_timeout_label: Timeout för begäran i sekunder (valfritt)
+        openai_request_timeout_help: "Standard: 60. Gäller varje OpenAI-kompatibel HTTP-begäran, inklusive autokategorisering, handlarigenkänning, chatt, PDF-bearbetning och anrop till vektorlager. OPENAI_REQUEST_TIMEOUT åsidosätter detta fält."
+        ai_response_timeout_label: Timeout för svar i sekunder (valfritt)
+        ai_response_timeout_help: "Standard: 90. Gäller endast chattens övervakning av hela turen, så beräkna det som en summa: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × timeout för begäran, plus verktygskörning och kötid. AI_RESPONSE_TIMEOUT åsidosätter detta fält."
+        title: OpenAI
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance ger gratis åtkomst till aktiepriser, växelkurser och finansiell data utan att kräva en API-nyckel.
+        status_healthy: Yahoo Finance är aktiv och fungerar.
+        status_rate_limited: Yahoo Finance hastighetsbegränsar tillfälligt begäranden.
+        rate_limited_title: Yahoo Finances hastighetsgräns nådd.
+        rate_limited_message: Ingen åtgärd krävs. Sure undviker ytterligare hälsokontroller i 30 minuter. Pris- och växelkursåtgärder fortsätter oberoende.
+        status_unavailable: Yahoo Finance är för närvarande inte tillgänglig.
+        unavailable_title: Kunde inte verifiera Yahoo Finance.
+        unavailable_message: Yahoo Finance kunde inte nås eller returnerade ett oväntat svar. Kontrollera din internetanslutning och försök igen senare.
+        status_unknown: Yahoo Finance-status kontrolleras.
+      rentcast_settings:
+        title: RentCast
+        description: Ange din RentCast-API-nyckel för att slå upp fastighetsdetaljer och värdeuppskattningar för amerikanska fastigheter när du lägger till en fastighet. Gratisnivån är begränsad till 50 API-anrop per månad, delade mellan fastighetsuppslag och dagliga värderingsuppdateringar. På en betald plan, höj gränsen med miljövariabeln RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Konfigurerad via miljövariabeln RENTCAST_API_KEY.
+        label: API-nyckel
+        placeholder: Ange din RentCast-API-nyckel här
+        usage: "%{used} av %{limit} månatliga anrop använda"
+      realie_settings:
+        title: Realie
+        description: Ange din Realie-API-nyckel för att slå upp fastighetsdetaljer och värdeuppskattningar för amerikanska fastigheter när du lägger till en fastighet. Gratisnivån är begränsad till 25 API-anrop per månad, delade mellan fastighetsuppslag och dagliga värderingsuppdateringar. På en betald plan, höj gränsen med miljövariabeln REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Konfigurerad via miljövariabeln REALIE_API_KEY.
+        label: API-nyckel
+        placeholder: Ange din Realie-API-nyckel här
+        usage: "%{used} av %{limit} månatliga anrop använda"
+      tiingo_settings:
+        title: Tiingo
+        description: Ange API-token från Tiingo. Gratisnivån stöder 50 unika symboler per timme med 30+ års historisk data.
+        env_configured_message: Konfigurerad via miljövariabeln TIINGO_API_KEY.
+        label: API-token
+        placeholder: Ange din Tiingo-API-token här
+        show_details: "(visa detaljer)"
+        step_1_html: 'Besök <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> och skapa ett kostnadsfritt konto.'
+        step_2_html: 'Gå till sidan <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a>.'
+        step_3: Kopiera din API-token och klistra in den nedan.
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: Ange en läsbehörig T-Invest-API-token. Används för att hämta varumärkeslogotyper för värdepapper (inkl. fonder och obligationer, även när MOEX prissätter dem) och, när aktiverat ovan, priser för ryska instrument.
+        moex_only_notice: Inte aktiverat för priser ovan — T-Invest används för att hämta varumärkeslogotyper för alla dina värdepapper när en token är konfigurerad, oberoende av kryssrutan ovan.
+        env_configured_message: Konfigurerad via miljövariabeln TINKOFF_INVEST_API_KEY.
+        label: API-token
+        placeholder: Ange din T-Invest-API-token här
+        show_details: "(visa detaljer)"
+        step_1: Öppna T-Bank-investeringar, sedan Inställningar, sedan API-tokens (kräver ett öppet T-Bank-mäklarkonto).
+        step_2: Skapa en token med endast läsbehörighet.
+        step_3: Kopiera token och klistra in den nedan.
+      eodhd_settings:
+        title: EODHD
+        description: Ange API-token från EODHD. Stöder europeiska ETF:er på LSE, XETRA och andra internationella börser.
+        env_configured_message: Konfigurerad via miljövariabeln EODHD_API_KEY.
+        label: API-token
+        placeholder: Ange din EODHD-API-token här
+        show_details: "(visa detaljer)"
+        step_1_html: 'Besök <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> och skapa ett kostnadsfritt konto.'
+        step_2_html: 'Gå till din <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> för att hitta din API-token.'
+        step_3: Kopiera din API-token och klistra in den nedan.
+        rate_limit_warning: "EODHDs gratisnivå är begränsad till 20 API-anrop per dag. Används bäst som en kompletterande leverantör för europeiska ETF:er som inte finns hos andra leverantörer."
+      mansa_settings:
+        title: Mansa
+        description: Ange API-nyckeln från Mansa API. Stöder NGX (Nigerian Exchange), som inte täcks av någon annan leverantör här. Mansa täcker även andra afrikanska börser, men endast NGX är verifierad mot denna integration.
+        env_configured_message: Konfigurerad via miljövariabeln MANSA_API_KEY.
+        label: API-nyckel
+        placeholder: Ange din Mansa-API-nyckel här
+        show_details: "(visa detaljer)"
+        step_1_html: 'Besök <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> och hämta din kostnadsfria API-nyckel -- inget kort krävs.'
+        step_2: Kopiera din API-nyckel och klistra in den nedan.
+        rate_limit_warning: "Mansas gratisnivå är begränsad till 100 API-anrop per dag och visar endast aktuella kurser -- historiska priser kräver en betald plan. Endast NGX (Nigerian Exchange) är verifierad mot denna integration; andra afrikanska börser som Mansa täcker stöds inte här ännu."
+      alpha_vantage_settings:
+        title: Alpha Vantage
+        description: Ange API-nyckeln från Alpha Vantage. Stöder europeiska ETF:er på London Stock Exchange, XETRA och andra börser.
+        env_configured_message: Konfigurerad via miljövariabeln ALPHA_VANTAGE_API_KEY.
+        label: API-nyckel
+        placeholder: Ange din Alpha Vantage-API-nyckel här
+        show_details: "(visa detaljer)"
+        step_1_html: 'Besök <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> och hämta din kostnadsfria API-nyckel.'
+        step_2: Kopiera API-nyckeln och klistra in den nedan.
+        rate_limit_warning: "Alpha Vantages gratisnivå är begränsad till 25 API-anrop per dag. Används bäst som en kompletterande leverantör för europeiska ETF:er som inte finns hos andra leverantörer."
+        no_health_check_note: "Hälsokontroll av anslutningen är inte tillgänglig för denna leverantör på grund av den strikta hastighetsgränsen."
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} dagliga API-anrop använda (%{percentage})"
+        description: Ange API-nyckeln från Twelve Data
+        env_configured_message: Konfigurerad via miljövariabeln TWELVE_DATA_API_KEY.
+        label: API-nyckel
+        placeholder: Ange din API-nyckel här
+        show_details: "(visa detaljer)"
+        step_1_html: 'Besök <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> och skapa ett kostnadsfritt Twelve Data Developer-konto.'
+        step_2_html: 'Gå till sidan <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.'
+        step_3: Visa din hemliga nyckel och klistra in den nedan.
+        plan: "%{plan}-plan"
+        plan_upgrade_warning_title: Vissa tickers kräver en betald plan
+        plan_upgrade_warning_description: Följande tickers i din portfölj kan inte synkronisera priser med din nuvarande Twelve Data-plan.
+        requires_plan: kräver %{plan}-plan
+        view_pricing: Visa Twelve Datas priser
+        title: Twelve Data
+      update:
+        failure: Ogiltigt inställningsvärde
+        success: Inställningar uppdaterade
+        invalid_onboarding_state: Ogiltigt onboarding-tillstånd
+        invalid_sync_time: Ogiltigt format för synktid. Använd formatet HH:MM (t.ex. 02:30).
+        invalid_llm_budget: "%{field} måste vara ett heltal ≥ %{minimum}."
+        invalid_anthropic_base_url: Anthropic bas-URL måste vara en http(s)-URL.
+        anthropic_model_required_for_base_url: Anthropic-modell krävs när en anpassad bas-URL är satt.
+        invalid_jev_endpoint: Jev-endpoint måste vara en https-URL. Ren http accepteras bara för localhost.
+        invalid_categorization_rate: "%{field} måste vara ett tal mellan 0 och 1."
+        scheduler_sync_failed: Inställningarna sparades, men det gick inte att uppdatera synkschemat. Försök igen eller kontrollera serverloggarna.
+      disconnect_external_assistant:
+        external_assistant_disconnected: Extern assistent bortkopplad
+      clear_cache:
+        cache_cleared: Datacachen har rensats. Detta kan ta en stund att slutföra.
+      not_authorized: Du är inte behörig att utföra denna åtgärd
+      ensure_admin:
+        not_authorized: Du är inte behörig att utföra denna åtgärd
+      ensure_super_admin_for_onboarding:
+        not_authorized: Du är inte behörig att utföra denna åtgärd
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Inställningarna sparades, men det gick inte att uppdatera synkschemat. Försök igen eller kontrollera serverloggarna.
+      sync_settings:
+        auto_sync_label: Aktivera automatisk synkronisering
+        auto_sync_description: När aktiverat synkroniseras alla konton automatiskt varje dag vid angiven tid.
+        auto_sync_time_label: Synktid (HH:MM)
+        auto_sync_time_description: Ange tid på dagen när automatisk synkronisering ska ske.
+        include_pending_label: Inkludera väntande transaktioner
+        include_pending_description: När aktiverat importeras väntande (oklara) transaktioner och stäms automatiskt av när de bokförs. Inaktivera om din bank levererar opålitlig väntandedata.
+        env_configured_message: Den här inställningen är inaktiverad eftersom en leverantörsmiljövariabel (SIMPLEFIN_INCLUDE_PENDING eller PLAID_INCLUDE_PENDING) är satt. Ta bort den för att aktivera denna inställning.

@@ -1,0 +1,10 @@
+sv:
+  invite_codes:
+    create:
+      success: "Kod genererad"
+    destroy:
+      success: "Kod borttagen"
+    index:
+      invite_code_description: Generera en ny kod för att se den visas här. Genererade
+        koder som har använts visas inte längre.
+      no_invite_codes: Inga koder att visa

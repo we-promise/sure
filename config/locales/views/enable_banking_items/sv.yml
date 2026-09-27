@@ -1,0 +1,115 @@
+---
+sv:
+  enable_banking_items:
+    errors:
+      api_error: "Ett kommunikationsfel uppstod med banken."
+      network_unreachable: "Banktjänsten är tillfälligt onåbar. Försök igen senare."
+      session_invalid: "Sessionen har gått ut. Anslut din bank igen."
+      unexpected: "Ett oväntat fel uppstod under synkroniseringen."
+    authorize:
+      authorization_failed: "Kunde inte starta auktorisering: %{message}"
+      bank_required: Välj en bank.
+      invalid_redirect: Den mottagna auktoriseringsadressen är ogiltig. Försök igen.
+      redirect_uri_not_allowed: Omdirigering ej tillåten. Konfigurera `%{callback_url}` i dina Enable Banking-appinställningar.
+      unexpected_error: Ett oväntat fel uppstod. Försök igen.
+    callback:
+      authorization_error: Auktoriseringen misslyckades
+      invalid_callback: Ogiltiga callback-parametrar.
+      item_not_found: Anslutningen hittades inte.
+      session_failed: Kunde inte slutföra auktoriseringen
+      success: Ansluten till din bank. Dina konton synkroniseras nu.
+      unexpected_error: Ett oväntat fel uppstod. Försök igen.
+    complete_account_setup:
+      all_skipped: Alla konton hoppades över. Du kan konfigurera dem senare på kontosidan.
+      no_accounts: Inga konton tillgängliga att konfigurera.
+      success: Skapade %{count} konton!
+    create:
+      success: Enable Banking-konfigurationen lyckades.
+    destroy:
+      success: Enable Banking-anslutningen är köad för borttagning.
+    link_accounts:
+      already_linked: De valda kontona är redan länkade.
+      link_failed: Kunde inte länka konton
+      no_accounts_selected: Inga konton valda.
+      no_session: Ingen aktiv Enable Banking-anslutning. Anslut till en bank först.
+      success: Länkade %{count} konton.
+    link_existing_account:
+      success: Kontot har länkats till Enable Banking
+      errors:
+        only_manual: Endast manuella konton kan länkas
+        invalid_enable_banking_account: Ogiltigt Enable Banking-konto valt
+    enable_banking_item:
+      deletion_in_progress: Borttagning pågår
+      provider_name: Enable Banking
+      syncing: Synkroniserar...
+      reconnect: Återanslut
+      last_synced: Senast synkroniserad för %{time} sedan
+      never_synced: Aldrig synkroniserad
+      update: Uppdatera
+      delete: Ta bort
+      setup_needed: Konfiguration behövs
+      setup_needed_description:
+        one: 1 konto importerat från Enable Banking behöver konfigureras
+        other: "%{count} konton importerade från Enable Banking behöver konfigureras"
+      set_up_accounts: Konfigurera konton
+      no_accounts_found: Inga konton hittades
+      no_accounts_found_description: Inga konton hittades från Enable Banking. Försök synkronisera igen.
+    select_existing_account:
+      title: Länka Enable Banking-konto
+      all_linked: Alla Enable Banking-konton verkar redan vara länkade.
+      try_after_sync: Om du precis anslöt eller synkroniserade, försök igen när synkroniseringen är klar.
+      unlink_to_move: För att länka ett annat konto, koppla först bort det via kontots åtgärdsmeny.
+      balance: Saldo
+      link: Länka
+      cancel: Avbryt
+    setup_accounts:
+      title: Konfigurera dina Enable Banking-konton
+      header_subtitle: Välj rätt kontotyper för dina importerade konton
+      choose_account_type: "Välj rätt kontotyp för varje Enable Banking-konto:"
+      historical_data_range: "Historiskt dataintervall:"
+      sync_start_date_label: "Börja synkronisera transaktioner från:"
+      sync_start_date_help: Välj hur långt tillbaka du vill synkronisera transaktionshistorik. Max 2 års historik tillgänglig.
+      account_type_label: "Kontotyp:"
+      balance: Saldo
+      create_accounts: Skapa konton
+      creating_accounts: Skapar konton...
+      cancel: Avbryt
+    new:
+      link_enable_banking_title: Länka Enable Banking
+      session_expired: Sessionen har gått ut - ny auktorisering krävs
+      connected_bank: Ansluten bank
+      session_expires: "Sessionen går ut"
+      unknown: Okänd
+      connection: Anslutning
+      configured: Konfigurerad
+      ready_to_connect: Redo att ansluta en bank
+      sync: Synkronisera
+      reconnect: Återanslut
+      connect_bank: Anslut bank
+      remove_confirm: Är du säker på att du vill ta bort denna anslutning?
+      remove: Ta bort
+      add_connection: Lägg till anslutning
+      not_configured: Enable Banking-anslutningen är inte konfigurerad
+      not_configured_description: Innan du kan länka Enable Banking-konton måste du konfigurera din Enable Banking-anslutning.
+      setup_steps_title: "Installationssteg:"
+      setup_step_1_html: "Gå till <strong>Inställningar → Leverantörer</strong>"
+      setup_step_2_html: "Hitta avsnittet <strong>Enable Banking</strong>"
+      setup_step_3: Ange dina Enable Banking-autentiseringsuppgifter
+      setup_step_4: Kom tillbaka hit för att länka dina konton
+      go_to_provider_settings: Gå till leverantörsinställningar
+    reauthorize:
+      invalid_redirect: Den mottagna auktoriseringsadressen är ogiltig. Försök igen.
+      reauthorization_failed: Ny auktorisering misslyckades
+    select_bank:
+      beta_label: Beta
+      cancel: Avbryt
+      check_country: Kontrollera dina landskodinställningar.
+      credentials_required: Konfigurera dina Enable Banking-autentiseringsuppgifter först.
+      description: Välj banken du vill ansluta till dina konton.
+      no_banks: Inga banker tillgängliga för detta land/region.
+      no_search_results: Inga banker matchar din sökning.
+      search_label: Sök efter din bank
+      search_placeholder: Sök efter din bank...
+      title: Välj din bank
+    update:
+      success: Enable Banking-konfigurationen har uppdaterats.

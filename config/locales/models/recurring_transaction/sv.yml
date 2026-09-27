@@ -1,0 +1,33 @@
+---
+sv:
+  recurring_transactions:
+    allocator:
+      missing_rate: "ingen växelkurs från %{from} till %{to}; ange ett belopp uttryckligen"
+      unmeasurable: "denna transaktion har en fördelning som inte kan konverteras till %{currency}, så det som återstår av den kan inte mätas. Lägg till en växelkurs för %{date} eller ta bort den befintliga betalningen först"
+      over_allocated: "att fördela %{amount} överskrider transaktionens återstående %{capacity} %{currency}"
+      exceeds_remaining: "%{amount} överskrider de %{remaining} som återstår för denna cykel"
+  activerecord:
+    attributes:
+      recurring_transaction:
+        payment_url: "Betalningslänk"
+        frequency_interval: "Upprepningsintervall"
+    errors:
+      models:
+        recurring_transaction:
+          merchant_or_name_required: "Antingen handlare eller namn måste anges"
+          attributes:
+            payment_url:
+              invalid_scheme: "måste vara en giltig http:// eller https://-adress"
+            anchor_date:
+              required_for_intervals: "krävs när en regel upprepas var 2:a period eller oftare"
+            bill_type:
+              transfer_shape_mismatch: "kan bara vara en överföring när ett målkonto är angivet"
+            expected_amount_min:
+              greater_than_max: "kan inte vara större än det förväntade maxbeloppet"
+            account:
+              required_for_transfer: "måste anges för en återkommande överföring"
+              wrong_family: "måste tillhöra denna familj"
+            destination_account:
+              same_as_source: "kan inte vara samma som källkontot"
+              family_mismatch: "måste tillhöra samma familj som källkontot"
+              wrong_family: "måste tillhöra denna familj"

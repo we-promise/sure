@@ -1,0 +1,28 @@
+sv:
+  account_sharings:
+    show:
+      title: Kontodelning
+      subtitle: Kontrollera vem som kan se och interagera med det här kontot
+      member: Medlem
+      permission: Behörighet
+      shared: Delat
+      no_members: Inga andra medlemmar i din %{moniker} att dela med
+      permissions:
+        full_control: Full kontroll
+        full_control_description: Kan visa, redigera och hantera transaktioner
+        read_write: Kan annotera
+        read_write_description: Kan kategorisera, tagga och lägga till anteckningar
+        read_only: Endast visning
+        read_only_description: Kan bara visa kontodata
+      save: Spara delningsinställningar
+      owner_label: "Ägare: %{name}"
+      shared_with_count:
+        one: Delat med 1 medlem
+        other: "Delat med %{count} medlemmar"
+      include_in_finances: Inkludera i mina budgetar och rapporter
+      exclude_from_finances: Exkludera från mina budgetar och rapporter
+      finance_toggle_description: Räkna med det här kontot i din nettoförmögenhet, budgetar och rapporter
+    update:
+      success: Delningsinställningarna uppdaterades
+      not_owner: Endast kontots ägare kan hantera delning
+      finance_toggle_success: Inställningen för inkludering i ekonomin uppdaterades

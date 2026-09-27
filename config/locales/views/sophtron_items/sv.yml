@@ -1,0 +1,313 @@
+---
+sv:
+  sophtron_items:
+    defaults:
+      name: Sophtron-anslutning
+    new:
+      title: Anslut Sophtron
+      user_id: Användar-ID
+      user_id_placeholder: klistra in ditt Sophtron-användar-ID
+      access_key: Åtkomstnyckel
+      access_key_placeholder: klistra in din Sophtron-åtkomstnyckel
+      connect: Anslut
+      cancel: Avbryt
+    create:
+      success: Sophtron-anslutningen har skapats
+    destroy:
+      success: Sophtron-anslutningen har tagits bort
+    update:
+      success: Sophtron-anslutningen har uppdaterats! Dina konton återansluts.
+      errors:
+        blank_user_id: Ange ett Sophtron-användar-ID.
+        invalid_user_id: Ogiltigt användar-ID. Kontrollera att du kopierade hela användar-ID:t från Sophtron.
+        user_id_compromised: Användar-ID:t kan vara komprometterat, utgånget eller redan använt. Skapa ett nytt.
+        blank_access_key: Ange en Sophtron-åtkomstnyckel.
+        invalid_access_key: Ogiltig åtkomstnyckel. Kontrollera att du kopierade hela åtkomstnyckeln från Sophtron.
+        access_key_compromised: Åtkomstnyckeln kan vara komprometterad, utgången eller redan använd. Skapa en ny.
+        update_failed: "Det gick inte att uppdatera anslutningen: %{message}"
+        unexpected: Ett oväntat fel uppstod. Försök igen eller kontakta support.
+    edit:
+      user_id:
+        label: "Sophtron-användar-ID:"
+        placeholder: "Klistra in ditt Sophtron-användar-ID här..."
+        help_text: "Användar-ID:t ska vara en lång sträng som börjar med bokstäver och siffror"
+      access_key:
+        label: "Sophtron-åtkomstnyckel:"
+        placeholder: "Klistra in din Sophtron-åtkomstnyckel här..."
+        help_text: "Åtkomstnyckeln ska vara en lång sträng som börjar med bokstäver och siffror"
+    index:
+      title: Sophtron-anslutningar
+    loading:
+      loading_message: Läser in Sophtron-konton...
+      loading_title: Läser in
+    link_accounts:
+      all_already_linked:
+        one: "Det valda kontot (%{names}) är redan länkat"
+        other: "Alla %{count} valda konton är redan länkade: %{names}"
+      api_error: "API-anslutningsfel"
+      invalid_account_names:
+        one: "Kan inte länka konto med tomt namn"
+        other: "Kan inte länka %{count} konton med tomma namn"
+      link_failed: Det gick inte att länka konton
+      no_accounts_selected: Välj minst ett konto
+      partial_invalid: "%{created_count} konto(n) länkades, %{already_linked_count} var redan länkade, %{invalid_count} konto(n) hade ogiltiga namn"
+      partial_success: "%{created_count} konto(n) länkades. %{already_linked_count} konto(n) var redan länkade: %{already_linked_names}"
+      success:
+        one: "%{count} konto länkades"
+        other: "%{count} konton länkades"
+      no_credentials_configured: "Konfigurera ditt Sophtron API-användar-ID och åtkomstnyckel först i leverantörsinställningar."
+      no_accounts_found: Inga konton hittades. Kontrollera din API-nyckelkonfiguration.
+      no_access_key: Sophtron-åtkomstnyckel är inte konfigurerad. Konfigurera den i Inställningar.
+      no_user_id: Sophtron-användar-ID är inte konfigurerat. Konfigurera det i Inställningar.
+      no_institution_connected: Anslut en bankinstitution med Sophtron först.
+    connect:
+      cancel: Avbryt
+      captcha: Captcha
+      connect: Anslut
+      institution_search_label: Institution
+      institution_search_placeholder: Sök på banknamn
+      no_institutions: Inga matchande institutioner hittades.
+      password: Lösenord
+      search: Sök
+      search_too_short: Ange minst två tecken för att söka.
+      title: Anslut Sophtron-institution
+      username: Användarnamn
+    connect_institution:
+      api_error: "Sophtron-anslutningen misslyckades: %{message}"
+      missing_parameters: Välj en institution och ange dina bankinloggningsuppgifter.
+    connection_status:
+      api_error: "API-anslutningsfel: %{message}"
+      attempt: "Försök %{attempt} av %{max}"
+      check_again: Kontrollera igen
+      failed: Sophtron kunde inte slutföra anslutningen till institutionen.
+      failed_timeout: Sophtron fick timeout medan institutionen slutförde inloggningen.
+      timeout: Sophtron slutförde inte anslutningen inom förväntad tid. Du kan kontrollera igen eller försöka återansluta senare.
+      title: Ansluter Sophtron
+      waiting: Sophtron ansluter fortfarande till din institution.
+    mfa:
+      captcha: Captcha-text
+      captcha_alt: Sophtron-captcha
+      phone_confirmed: Jag bekräftade via telefon
+      submit: Skicka
+      title: Sophtron-verifiering
+      token: Verifieringskod
+    submit_mfa:
+      api_error: "Verifieringen misslyckades: %{message}"
+      invalid_security_answers: Säkerhetssvar saknas eller är för långa.
+      unknown_challenge: Okänt Sophtron-verifieringssteg.
+    sophtron_item:
+      accounts_need_setup: Konton behöver konfigureras
+      automatic_sync: Använd automatisk synkronisering
+      delete: Ta bort anslutning
+      deletion_in_progress: borttagning pågår...
+      error: Fel
+      no_accounts_description: Den här anslutningen har inga länkade konton än.
+      no_accounts_title: Inga konton
+      manual_sync: Manuell synkronisering
+      manual_sync_action: Kräv manuell synkronisering
+      manual_sync_action_for: "Kräv manuell synkronisering för %{institution}"
+      automatic_sync_for: "Använd automatisk synkronisering för %{institution}"
+      setup_action: Ställ in nya konton
+      setup_description: "%{linked} av %{total} konton länkade. Välj kontotyper för dina nyimporterade Sophtron-konton."
+      setup_needed: Nya konton redo att ställas in
+      status: "Synkroniserad %{timestamp} sedan"
+      status_never: Aldrig synkroniserad
+      status_with_summary: "Senast synkroniserad %{timestamp} sedan • %{summary}"
+      sync_now: Synkronisera nu
+      syncing: Synkroniserar...
+      total: Totalt
+      unlinked: Olänkade
+    preload_accounts:
+      preload_accounts: förladda konton
+      api_error: "API-anslutningsfel"
+      unexpected_error: "Ett oväntat fel uppstod"
+      no_credentials_configured: "Konfigurera ditt Sophtron API-användar-ID och åtkomstnyckel först i leverantörsinställningar."
+      no_accounts_found: Inga konton hittades. Kontrollera din API-nyckelkonfiguration.
+      no_access_key: Sophtron-åtkomstnyckel är inte konfigurerad. Konfigurera den i Inställningar.
+      no_user_id: Sophtron-användar-ID är inte konfigurerat. Konfigurera det i Inställningar.
+    select_accounts:
+      accounts_selected: konton valda
+      api_error: "API-anslutningsfel"
+      unexpected_error: "Ett oväntat fel uppstod"
+      cancel: Avbryt
+      configure_name_in_sophtron: Kan inte importera – konfigurera kontonamn i Sophtron
+      description: Välj de konton du vill länka till ditt %{product_name}-konto.
+      link_accounts: Länka valda konton
+      no_accounts_found: Inga konton hittades. Kontrollera din API-nyckelkonfiguration.
+      no_access_key: Sophtron-åtkomstnyckel är inte konfigurerad. Konfigurera den i Inställningar.
+      no_user_id: Sophtron-användar-ID är inte konfigurerat. Konfigurera det i Inställningar.
+      no_credentials_configured: "Konfigurera ditt Sophtron API-användar-ID och åtkomstnyckel först i leverantörsinställningar."
+      no_institution_connected: Anslut en bankinstitution med Sophtron först.
+      no_name_placeholder: "(Inget namn)"
+      title: Välj Sophtron-konton
+    select_existing_account:
+      account_already_linked: Det här kontot är redan länkat till en leverantör
+      all_accounts_already_linked: Alla Sophtron-konton är redan länkade
+      api_error: "API-anslutningsfel"
+      cancel: Avbryt
+      configure_name_in_sophtron: Kan inte importera – konfigurera kontonamn i Sophtron
+      description: Välj ett Sophtron-konto att länka med det här kontot. Transaktioner synkroniseras och dubbletter tas bort automatiskt.
+      link_account: Länka konto
+      no_account_specified: Inget konto angivet
+      no_accounts_found: Inga Sophtron-konton hittades. Kontrollera din API-nyckelkonfiguration.
+      no_access_key: Sophtron-åtkomstnyckel är inte konfigurerad. Konfigurera den i Inställningar.
+      no_user_id: Sophtron-användar-ID är inte konfigurerat. Konfigurera det i Inställningar.
+      no_institution_connected: Anslut en bankinstitution med Sophtron först.
+      no_name_placeholder: "(Inget namn)"
+      title: "Länka %{account_name} med Sophtron"
+      unexpected_error: "Ett oväntat fel uppstod"
+    link_existing_account:
+      account_already_linked: Det här kontot är redan länkat till en leverantör
+      api_error: "API-anslutningsfel"
+      unexpected_error: "Ett oväntat fel uppstod"
+      invalid_account_name: Kan inte länka konto med tomt namn
+      sophtron_account_already_linked: Det här Sophtron-kontot är redan länkat till ett annat konto
+      sophtron_account_not_found: Sophtron-kontot hittades inte
+      missing_parameters: Obligatoriska parametrar saknas
+      no_institution_connected: Anslut en bankinstitution med Sophtron först.
+      success: "%{account_name} länkades med Sophtron"
+    setup_accounts:
+      account_type_label: "Kontotyp:"
+      all_accounts_linked: "Alla dina Sophtron-konton har redan ställts in."
+      api_error: "API-anslutningsfel"
+      unexpected_error: "Ett oväntat fel uppstod"
+      fetch_failed: "Det gick inte att hämta konton"
+      no_accounts_to_setup: "Inga konton att ställa in"
+      no_access_key: "Sophtron-åtkomstnyckel är inte konfigurerad. Kontrollera dina anslutningsinställningar."
+      no_user_id: "Sophtron-användar-ID är inte konfigurerat. Kontrollera dina anslutningsinställningar."
+      no_institution_connected: "Sophtron-institutionen är inte ansluten än."
+      account_types:
+        skip: Hoppa över det här kontot
+        depository: Check- eller sparkonto
+        credit_card: Kreditkort
+        investment: Investeringskonto
+        loan: Lån eller bolån
+        other_asset: Annan tillgång
+      subtype_labels:
+        depository: "Kontounderart:"
+        credit_card: ""
+        investment: "Investeringstyp:"
+        loan: "Lånetyp:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kreditkort ställs automatiskt in som kreditkortskonton."
+        other_asset: "Inga ytterligare alternativ behövs för Andra tillgångar."
+      balance: Saldo
+      cancel: Avbryt
+      choose_account_type: "Välj rätt kontotyp för varje Sophtron-konto:"
+      create_accounts: Skapa konton
+      creating_accounts: Skapar konton...
+      historical_data_range: "Historiskt dataintervall:"
+      subtitle: Välj rätt kontotyper för dina importerade konton
+      sync_start_date_help: Välj hur långt tillbaka du vill synkronisera transaktionshistorik. Max 3 års historik tillgänglig.
+      sync_start_date_label: "Börja synkronisera transaktioner från:"
+      title: Ställ in dina Sophtron-konton
+    complete_account_setup:
+      all_skipped: "Alla konton hoppades över. Inga konton skapades."
+      creation_failed: "Det gick inte att skapa konton"
+      api_error: "API-anslutningsfel"
+      unexpected_error: "Ett oväntat fel uppstod"
+      no_accounts: "Inga konton att ställa in."
+      success: "%{count} konto(n) skapades."
+    sync:
+      already_running: Sophtron manuell synkronisering pågår redan.
+      api_error: "Sophtron manuell synkronisering misslyckades: %{message}"
+      failed: Sophtron manuell synkronisering misslyckades
+      no_linked_accounts: Den här Sophtron-institutionen har inga länkade konton att synkronisera.
+      processing_failed: Sophtron manuell synkronisering kunde inte bearbeta de uppdaterade transaktionerna.
+      success: Synkronisering startad
+    toggle_manual_sync:
+      success_disabled: Sophtron-institutionen synkroniseras automatiskt.
+      success_enabled: Sophtron-institutionen kräver nu manuell synkronisering.
+    manual_sync_complete:
+      close: Stäng
+      description: Kontosaldon blir klara i bakgrunden.
+      message: Transaktioner laddades ner efter Sophtron-verifiering.
+      title: Sophtron-synkronisering startad
+    sophtron_setup_required:
+      title: Sophtron-konfiguration krävs
+      message: >
+        För att slutföra konfigurationen av din Sophtron-anslutning, gå till leverantörsinställningarna och följ instruktionerna för att auktorisera och konfigurera din Sophtron-anslutning.
+      go_to_provider_settings: Gå till leverantörsinställningar
+      heading: "Användar-ID och åtkomstnyckel inte konfigurerade"
+      description: "Innan du kan länka Sophtron-konton måste du konfigurera ditt Sophtron-användar-ID och åtkomstnyckel."
+      setup_steps_title: "Konfigurationssteg:"
+      step_1_html: "Gå till <strong>Inställningar → Banksynkroniseringsleverantörer</strong>"
+      step_2_html: "Hitta <strong>Sophtron</strong>-sektionen"
+      step_3_html: "Ange ditt Sophtron-användar-ID och åtkomstnyckel"
+      step_4: "Kom tillbaka hit för att länka dina konton"
+    api_error:
+      title: "Sophtron-anslutningsfel"
+      unable_to_connect: "Det gick inte att ansluta till Sophtron"
+      institution_unable_to_connect: "Det gick inte att ansluta till institutionen"
+      common_issues_title: "Vanliga problem:"
+      incorrect_user_id: "Felaktigt användar-ID: Kontrollera ditt användar-ID i leverantörsinställningar"
+      invalid_access_key: "Ogiltig åtkomstnyckel: Kontrollera din åtkomstnyckel i leverantörsinställningar"
+      expired_credentials: "Utgångna uppgifter: Skapa ett nytt användar-ID och åtkomstnyckel från Sophtron"
+      network_issue: "Nätverksproblem: Kontrollera din internetanslutning"
+      service_down: "Tjänsten nere: Sophtron API kan vara tillfälligt otillgängligt"
+      bad_credentials: "Bankuppgifter: Kontrollera att användarnamn och lösenord är korrekta"
+      verification_code: "Verifieringskod: Se till att den senaste koden angavs innan den gick ut"
+      institution_timeout: "Institution timeout: Bankens inloggningssida slutfördes inte i tid"
+      unsupported_mfa: "MFA-stöd: Sophtron kan sakna stöd för institutionens nuvarande verifieringsflöde"
+      check_provider_settings: "Kontrollera leverantörsinställningar"
+      try_again: "Försök ansluta igen"
+    select_option: "Välj %{type}"
+    subtype: "underart"
+    type: "typ"
+    sophtron_panel:
+      setup_instructions_title: "Konfigurationsinstruktioner:"
+      setup_instructions:
+        step_1_html: 'Besök <a href="%{url}" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a> för att få dina API-uppgifter'
+        step_2: "Kopiera ditt användar-ID och din åtkomstnyckel från dina Sophtron-kontoinställningar"
+        step_3: "Klistra in uppgifterna nedan och klicka på Spara; Sure skapar eller återanvänder automatiskt ditt Sophtron-kund-ID"
+      field_descriptions_title: "Fältbeskrivningar:"
+      field_descriptions:
+        user_id_html: "<strong>Användar-ID:</strong> Dina Sophtron-användar-ID-uppgifter"
+        access_key_html: "<strong>Åtkomstnyckel:</strong> Dina Sophtron-åtkomstnyckeluppgifter"
+        base_url_html: "<strong>Bas-URL:</strong> Sophtron API-slutpunktens URL, oftast https://api.sophtron.com/api"
+      fields:
+        user_id:
+          label: "Användar-ID"
+          placeholder_new: "Klistra in ditt Sophtron-användar-ID"
+          placeholder_edit: "••••••••"
+        access_key:
+          label: "Åtkomstnyckel"
+          placeholder_new: "Klistra in din Sophtron-åtkomstnyckel"
+          placeholder_edit: "••••••••"
+        base_url:
+          label: "Bas-URL"
+          placeholder: "https://api.sophtron.com/api"
+      save: "Spara konfiguration"
+      update: "Uppdatera konfiguration"
+    syncer:
+      manual_sync_required: "Manuell Sophtron-synkronisering krävs för den här institutionen; de kontona hoppas över under automatisk synkronisering."
+      importing_accounts: "Importerar konton från Sophtron..."
+      checking_account_configuration: "Kontrollerar kontokonfiguration..."
+      accounts_need_setup: "%{count} konto(n) behöver konfigureras"
+      processing_transactions: "Bearbetar transaktioner för länkade konton..."
+      calculating_balances: "Beräknar saldon för länkade konton..."
+    sophtron_entry:
+      processor:
+        unknown_transaction: "Okänd transaktion"
+    render_connection_timeout:
+      timeout: "Anslutningen fick timeout. Försök igen."
+    redirect_after_account_link:
+      invalid_account_names:
+        one: "Kan inte länka %{count} konto med tomt namn"
+        other: "Kan inte länka %{count} konton med tomma namn"
+      partial_invalid: "%{created_count} konto(n) länkades. %{already_linked_count} redan länkade, %{invalid_count} hade ogiltiga namn."
+      partial_success: "%{created_count} konto(n) länkades. %{already_linked_count} konto(n) var redan länkade."
+      success:
+        one: "%{count} konto länkades."
+        other: "%{count} konton länkades."
+      all_already_linked:
+        one: "Det valda kontot är redan länkat"
+        other: "Alla %{count} valda konton är redan länkade"
+      link_failed: "Det gick inte att länka konton"
+    start_manual_sync:
+      already_running: "En synkronisering pågår redan."
+      no_linked_accounts: "Inga länkade konton tillgängliga att synkronisera."
+      api_error: "API-fel: %{message}"
+    start_manual_sync_for_account:
+      failed: "Det gick inte att synkronisera kontot"

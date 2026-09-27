@@ -1,0 +1,167 @@
+---
+sv:
+  wise_items:
+    profile_types:
+      personal: Privat
+      business: Företag
+    entries:
+      default_name: Wise-transaktion
+      fee_name: Wise-avgift
+    activities:
+      jar_deposit: Överföring till Jar
+      jar_withdrawal: Överföring från Jar
+      transfer_to_jar: "Överföring till %{jar}"
+      transfer_from_jar: "Överföring från %{jar}"
+      interest: Wise-ränta
+      asset_fee: Wise Assets-avgift
+      default_name: Wise-aktivitet
+    sync_status:
+      no_accounts: Inga konton hittades
+      all_synced:
+        one: "%{count} konto synkat"
+        other: "%{count} konton synkade"
+      partial_setup: "%{synced} synkade, %{pending} behöver konfigureras"
+    create:
+      no_profiles_found: Inga Wise-profiler hittades. Kontrollera din API-token.
+      invalid_token: Ogiltig API-token. Kontrollera och försök igen.
+      connection_failed: Kunde inte ansluta till Wise. Försök igen senare.
+    destroy:
+      success: Wise-anslutningen har tagits bort
+    update:
+      success: Wise-anslutningen har uppdaterats
+    sync:
+      success: Synkning startad
+    syncer:
+      importing_accounts: Importerar konton från Wise...
+      checking_account_configuration: Kontrollerar kontokonfiguration...
+      accounts_need_setup:
+        one: "%{count} konto behöver konfigureras..."
+        other: "%{count} konton behöver konfigureras..."
+      processing_transactions: Bearbetar transaktioner...
+      calculating_balances: Beräknar saldon...
+      credentials_invalid: Ogiltig Wise API-token eller otillräckliga behörigheter
+      failed: Synkningen misslyckades. Försök igen eller kontakta support.
+      import_failed: Wise-importen misslyckades.
+      accounts_failed:
+        one: "%{count} saldo kunde inte importeras."
+        other: "%{count} saldon kunde inte importeras."
+      transactions_failed:
+        one: "%{count} saldo hade fel vid transaktionsimport."
+        other: "%{count} saldon hade fel vid transaktionsimport."
+      account_processing_failed:
+        one: "%{count} Wise-konto misslyckades vid bearbetning."
+        other: "%{count} Wise-konton misslyckades vid bearbetning."
+      account_sync_failed:
+        one: "%{count} Wise-kontosynkning kunde inte schemaläggas."
+        other: "%{count} Wise-kontosynkningar kunde inte schemaläggas."
+    provider_panel:
+      setup_title: "Installationsinstruktioner:"
+      add_connection: Lägg till Wise-anslutning
+      token_label: API-token
+      token_placeholder: Klistra in din personliga Wise API-token
+      keep_token_placeholder: Lämna tomt för att behålla nuvarande token
+      connection_name_label: Anslutningsnamn
+      connection_name_placeholder: Wise Privat
+      sync_start_date_label: Importera transaktioner från
+      sync_start_date_help: Wise-utdrag importeras från och med detta datum. Lämna standardvärdet för upp till ett års historik.
+      import_all_history_label: Importera fullständig transaktionshistorik
+      import_all_history_help: Hämta alla historiska Wise-utdrag istället för bara det senaste året.
+      connect: Anslut Wise
+      update_connection: Uppdatera anslutning
+      setup_accounts: Konfigurera konton
+      sync: Synka
+      disconnect: Koppla från
+      disconnect_label: "Koppla från %{name}"
+      disconnect_confirm: "Är du säker på att du vill koppla från %{name}? Detta tar bort all synkad kontodata."
+      accounts_link: Konton
+      configured_html: "Ansluten och synkar. Besök fliken %{accounts_link} för att hantera dina konton."
+      not_configured: Inte konfigurerad
+      sandbox_note_html: "Använd <strong>sandbox</strong>-bas-URL:en (<code>https://api.sandbox.transferwise.tech</code>) för testning. Ange <code>WISE_BASE_URL</code> i din miljö."
+      encryption_warning:
+        title: Databaskryptering är inte konfigurerad
+        message: Konfigurera Active Record-krypteringsnycklar innan du lägger till Wise-tokens i produktion. Utan kryptering lagras tokens i klartext.
+      instructions:
+        sign_in_html: "Besök %{link} och logga in på ditt konto"
+        open_tokens: "Gå till Inställningar → Anslut och hantera appar → Utvecklarverktyg → API-tokens"
+        create_token: "Skapa en ny personlig API-token med skrivskyddad åtkomst"
+        copy_token_html: "Kopiera token och klistra in den nedan. Sure använder den bara för att synka dina saldon och transaktioner."
+      sca:
+        title: Strong Customer Authentication (SCA)
+        description: Wise kräver en signerad engångstoken-utmaning för att läsa fullständiga transaktionsutdrag, inklusive inkommande betalningar. Skapa ett nyckelpar här och registrera den publika nyckeln hos Wise för att aktivera detta.
+        public_key_label: Publik nyckel (PEM)
+        registered_help_html: "Registrera den här nyckeln hos Wise: Inställningar → Anslut och hantera appar → Utvecklarverktyg → Publika nycklar → Lägg till publik nyckel."
+        copy: Kopiera
+        copied: Kopierat!
+        generate: Skapa nyckelpar
+        regenerate: Skapa nytt nyckelpar
+        regenerate_confirm: "Detta skapar ett nytt nyckelpar. Wise fortsätter att godkänna den tidigare publika nyckeln tills du själv tar bort den i ditt Wise-konto — Sure kan inte återkalla den på distans. Du behöver registrera den nya publika nyckeln hos Wise innan utdrag kan synkas igen. Vill du fortsätta?"
+    provider_connection:
+      default_name: Wise
+      default_description: Anslut ditt Wise-flervalutakonto
+      name: "Wise — %{name}"
+      description: "Anslut med %{name}"
+    link_profiles:
+      session_expired: Sessionen har gått ut. Försök ansluta igen.
+      no_profiles_selected: Välj minst en profil.
+      already_connected: Alla valda profiler är redan anslutna.
+      success:
+        one: "Anslöt %{count} Wise-profil"
+        other: "Anslöt %{count} Wise-profiler"
+    select_profiles:
+      session_expired: Sessionen har gått ut. Försök ansluta igen.
+      title: Välj Wise-profiler
+      subtitle: Välj vilka profiler du vill ansluta
+      description: Ditt Wise-konto har flera profiler. Välj de du vill synka med Sure.
+      unnamed_profile: "(Namnlös profil)"
+      already_connected_label: Redan ansluten
+      connect: Anslut valda profiler
+      cancel: Avbryt
+    wise_item:
+      deletion_in_progress: borttagning pågår...
+      syncing: Synkar...
+      error: Synkfel
+      status: "Synkade %{timestamp} sedan"
+      status_never: Har aldrig synkats
+      status_with_summary: "Senast synkad %{timestamp} sedan — %{summary}"
+      delete: Koppla från
+      setup_needed: Nya konton redo att konfigureras
+      setup_description: "%{linked} av %{total} konton länkade. Skapa Sure-konton för dina Wise-valutasaldon."
+      setup_action: Konfigurera konton
+      no_accounts_title: Inga konton länkade än
+      no_accounts_description: Kör en synk för att upptäcka dina Wise-saldon och länka dem till Sure-konton.
+    setup_accounts:
+      title: Konfigurera Wise-konton
+      subtitle: Länka dina Wise-valutasaldon
+      description: Skapa ett Sure-konto för varje Wise-valutasaldo du vill spåra. Varje valuta blir sitt eget konto.
+      no_accounts_to_setup: Alla konton är konfigurerade
+      all_accounts_linked: Alla dina Wise-valutasaldon har länkats till Sure-konton.
+      create_account: Skapa konto
+      done: Klar
+    select_accounts:
+      title: Välj Wise-saldo
+      description: Välj vilket Wise-valutasaldo du vill länka till ditt %{product_name}-konto.
+      no_accounts_found: Alla Wise-saldon är redan länkade till Sure-konton.
+      no_connection: Ingen Wise-anslutning hittades. Anslut Wise i leverantörsinställningarna först.
+      link_account: Länka saldo
+      cancel: Avbryt
+    select_existing_account:
+      title: "Länka %{account_name} med Wise"
+      description: Välj vilket Wise-valutasaldo du vill länka med detta konto. Transaktioner synkas automatiskt.
+      no_accounts_found: Inga olänkade Wise-saldon hittades.
+      link_account: Länka saldo
+      cancel: Avbryt
+    link_accounts:
+      not_found: Wise-saldo hittades inte.
+      success: Wise-saldo har länkats till kontot.
+      failed: Det gick inte att länka Wise-saldo. Försök igen.
+    link_existing_account:
+      not_found: Konto eller Wise-saldo hittades inte.
+      success: "Länkade %{account_name} med Wise"
+      failed: Det gick inte att länka kontot. Försök igen.
+    complete_account_setup:
+      not_found: Wise-saldo hittades inte.
+      success: Kontot har skapats och länkats.
+      failed: Det gick inte att skapa kontot. Försök igen.
+    generate_sca_keypair:
+      success: Nytt SCA-nyckelpar har skapats. Registrera den publika nyckeln hos Wise för att slutföra aktiveringen.
+      failed: Det gick inte att skapa ett nytt SCA-nyckelpar. Försök igen.

@@ -1,0 +1,207 @@
+sv:
+  mercury_items:
+    api_error:
+      title: Anslutningsfel för Mercury
+      unable_to_connect: Kan inte ansluta till Mercury
+      common_issues: "Vanliga problem:"
+      invalid_api_token_label: Ogiltig API-token
+      invalid_api_token_desc: Kontrollera din API-token i Leverantörsinställningar
+      expired_credentials_label: Utgångna autentiseringsuppgifter
+      expired_credentials_desc: Generera en ny API-token från Mercury
+      insufficient_permissions_label: Otillräckliga behörigheter
+      insufficient_permissions_desc: Se till att din token har skrivskyddad åtkomst
+      network_issue_label: Nätverksproblem
+      network_issue_desc: Kontrollera din internetanslutning
+      service_down_label: Tjänsten nere
+      service_down_desc: Mercury API kan vara tillfälligt otillgängligt
+      check_provider_settings: Kontrollera Leverantörsinställningar
+    setup_required:
+      title: Mercury-konfiguration krävs
+      api_token_not_configured: API-token inte konfigurerad
+      api_token_description: Innan du kan länka Mercury-konton måste du konfigurera din Mercury API-token.
+      setup_steps_title: "Konfigurationssteg:"
+      setup_step_1_html: "Gå till <strong>Inställningar > Leverantörer</strong>"
+      setup_step_2_html: "Hitta avsnittet <strong>Mercury</strong>"
+      setup_step_3: Ange din Mercury API-token
+      setup_step_4: Kom tillbaka hit för att länka dina konton
+      go_to_provider_settings: Gå till Leverantörsinställningar
+    create:
+      success: Mercury-anslutningen skapades
+    destroy:
+      success: Mercury-anslutningen togs bort
+    index:
+      title: Mercury-anslutningar
+    loading:
+      loading_message: Laddar Mercury-konton...
+      loading_title: Laddar
+    link_accounts:
+      all_already_linked:
+        one: "Det valda kontot (%{names}) är redan länkat"
+        other: "Alla %{count} valda konton är redan länkade: %{names}"
+      api_error: "API-fel: %{message}"
+      invalid_account_names:
+        one: "Kan inte länka konto med tomt namn"
+        other: "Kan inte länka %{count} konton med tomma namn"
+      link_failed: Det gick inte att länka konton
+      no_accounts_selected: Välj minst ett konto
+      no_api_token: Mercury API-token hittades inte. Konfigurera den i Leverantörsinställningar.
+      partial_invalid: "Länkade %{created_count} konto(n), %{already_linked_count} var redan länkade, %{invalid_count} konto(n) hade ogiltiga namn"
+      partial_success: "Länkade %{created_count} konto(n). %{already_linked_count} konto(n) var redan länkade: %{already_linked_names}"
+      select_connection: Välj en Mercury-anslutning innan du länkar konton.
+      success:
+        one: "Länkade %{count} konto"
+        other: "Länkade %{count} konton"
+    mercury_item:
+      accounts_need_setup: Konton behöver konfigureras
+      delete: Ta bort anslutning
+      deletion_in_progress: borttagning pågår...
+      error: Fel
+      no_accounts_description: Denna anslutning har inga länkade konton ännu.
+      no_accounts_title: Inga konton
+      setup_action: Konfigurera nya konton
+      setup_description: "%{linked} av %{total} konton länkade. Välj kontotyper för dina nyligen importerade Mercury-konton."
+      setup_needed: Nya konton redo att konfigureras
+      status: "Synkades för %{timestamp} sedan"
+      status_never: Aldrig synkad
+      status_with_summary: "Senast synkad för %{timestamp} sedan - %{summary}"
+      syncing: Synkar...
+      total: Totalt
+      unlinked: Ej länkad
+    provider_panel:
+      add_connection: Lägg till Mercury-anslutning
+      base_url_label: Bas-URL (valfritt)
+      base_url_placeholder: https://api.mercury.com/api/v1 (standard)
+      connection_name_label: Anslutningsnamn
+      connection_name_placeholder: Företagskonto
+      default_connection_name: Mercury-anslutning
+      disconnect_confirm: "Koppla bort %{name}?"
+      instructions:
+        copy_token_html: "Kopiera <strong>hela token</strong> (inklusive prefixet <code>secret-token:</code>) och lägg till den som en namngiven anslutning nedan"
+        create_token: Skapa en ny API-token med behörigheten "Skrivskyddad"
+        open_tokens: Gå till Inställningar > Utvecklare > API-tokens
+        sign_in_html: "Besök %{link} och logga in på kontot du vill ansluta"
+        whitelist_ip_html: "<strong>Viktigt:</strong> Lägg till din servers IP-adress i tokenets vitlista"
+      keep_token_placeholder: Lämna tomt för att behålla den nuvarande token
+      sandbox_note_html: "Använd en separat namngiven anslutning för varje Mercury-inloggning/API-token du vill synka. För sandbox-testning, använd <code>https://api-sandbox.mercury.com/api/v1</code> som bas-URL. Mercury kräver IP-vitlistning - se till att lägga till din IP i Mercury-instrumentpanelen."
+      setup_accounts: Konfigurera konton
+      setup_title: "Konfigurationsinstruktioner:"
+      sync: Synka
+      token_label: Token
+      token_placeholder: Klistra in token här
+      update_connection: Uppdatera anslutning
+    provider_connection:
+      default_description: Anslut till din bank via Mercury
+      default_name: Mercury
+      description: "Anslut med %{name}"
+      name: "Mercury - %{name}"
+    select_accounts:
+      accounts_selected: konton valda
+      api_error: "API-fel: %{message}"
+      cancel: Avbryt
+      configure_name_in_mercury: Kan inte importera - konfigurera kontonamn i Mercury
+      description: Välj de konton du vill länka till ditt %{product_name}-konto.
+      link_accounts: Länka valda konton
+      no_accounts_found: Inga konton hittades. Kontrollera din API-tokenkonfiguration.
+      no_api_token: Mercury API-token är inte konfigurerad. Konfigurera den i Inställningar.
+      no_credentials_configured: Konfigurera din Mercury API-token först i Leverantörsinställningar.
+      no_name_placeholder: "(Inget namn)"
+      select_connection: Välj en Mercury-anslutning i Leverantörsinställningar.
+      title: Välj Mercury-konton
+    select_existing_account:
+      account_already_linked: Detta konto är redan länkat till en leverantör
+      all_accounts_already_linked: Alla Mercury-konton är redan länkade
+      api_error: "API-fel: %{message}"
+      cancel: Avbryt
+      configure_name_in_mercury: Kan inte importera - konfigurera kontonamn i Mercury
+      description: Välj ett Mercury-konto att länka med detta konto. Transaktioner synkas och dedupliceras automatiskt.
+      link_account: Länka konto
+      no_account_specified: Inget konto angivet
+      no_accounts_found: Inga Mercury-konton hittades. Kontrollera din API-tokenkonfiguration.
+      no_api_token: Mercury API-token är inte konfigurerad. Konfigurera den i Inställningar.
+      no_credentials_configured: Konfigurera din Mercury API-token först i Leverantörsinställningar.
+      no_name_placeholder: "(Inget namn)"
+      select_connection: Välj en Mercury-anslutning i Leverantörsinställningar.
+      title: "Länka %{account_name} med Mercury"
+    link_existing_account:
+      account_already_linked: Detta konto är redan länkat till en leverantör
+      api_error: "API-fel: %{message}"
+      invalid_account_name: Kan inte länka konto med tomt namn
+      mercury_account_already_linked: Detta Mercury-konto är redan länkat till ett annat konto
+      mercury_account_not_found: Mercury-kontot hittades inte
+      missing_parameters: Obligatoriska parametrar saknas
+      no_api_token: Mercury API-token hittades inte. Konfigurera den i Leverantörsinställningar.
+      select_connection: Välj en Mercury-anslutning innan du länkar konton.
+      success: "Länkade %{account_name} med Mercury"
+    setup_accounts:
+      account_type_label: "Kontotyp:"
+      all_accounts_linked: "Alla dina Mercury-konton har redan konfigurerats."
+      api_error: "API-fel: %{message}"
+      fetch_failed: "Det gick inte att hämta konton"
+      no_accounts_to_setup: "Inga konton att konfigurera"
+      no_api_token: "Mercury API-token är inte konfigurerad. Kontrollera dina anslutningsinställningar."
+      account_types:
+        skip: Hoppa över detta konto
+        depository: Transaktionskonto eller sparkonto
+        credit_card: Kreditkort
+        investment: Investeringskonto
+        loan: Lån eller bolån
+        other_asset: Övrig tillgång
+      subtype_labels:
+        depository: "Kontounderyp:"
+        credit_card: ""
+        investment: "Investeringstyp:"
+        loan: "Lånetyp:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kreditkort konfigureras automatiskt som kreditkortskonton."
+        other_asset: "Inga ytterligare alternativ behövs för övriga tillgångar."
+      subtypes:
+        depository:
+          checking: Transaktionskonto
+          savings: Sparkonto
+          hsa: Hälsosparkonto
+          cd: Insättningsbevis
+          money_market: Penningmarknadskonto
+        investment:
+          brokerage: Depå
+          pension: Pension
+          retirement: Pensionssparande
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "529 Plan"
+          hsa: Hälsosparkonto
+          mutual_fund: Fond
+          ira: Traditionell IRA
+          roth_ira: Roth IRA
+          angel: Ängelinvestering
+        loan:
+          mortgage: Bolån
+          student: Studielån
+          auto: Billån
+          other: Övrigt lån
+      balance: Saldo
+      cancel: Avbryt
+      choose_account_type: "Välj rätt kontotyp för varje Mercury-konto:"
+      create_accounts: Skapa konton
+      creating_accounts: Skapar konton...
+      historical_data_range: "Historiskt dataintervall:"
+      subtitle: Välj rätt kontotyper för dina importerade konton
+      sync_start_date_help: Välj hur långt tillbaka du vill synka transaktionshistorik. Max 3 års historik tillgänglig.
+      sync_start_date_label: "Börja synka transaktioner från:"
+      title: Konfigurera dina Mercury-konton
+    complete_account_setup:
+      all_skipped: "Alla konton hoppades över. Inga konton skapades."
+      creation_failed: "Det gick inte att skapa konton: %{error}"
+      no_accounts: "Inga konton att konfigurera."
+      success: "Skapade %{count} konto(n)."
+    sync:
+      success: Synkning startad
+    update:
+      success: Mercury-anslutningen uppdaterades
+    mercury_item_selection_error_payload:
+      select_connection: Välj en Mercury-anslutning innan du laddar konton.
+    render_mercury_item_selection_failure:
+      select_connection: Välj en Mercury-anslutning i Leverantörsinställningar.
+      no_credentials_configured: Konfigurera din Mercury API-token först i Leverantörsinställningar.
