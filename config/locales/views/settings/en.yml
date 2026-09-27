@@ -753,9 +753,11 @@ en:
         qr_instruction: Scan the QR code with your Trade Republic app and approve the login.
         qr_success: Login approved. Sure is refreshing the provider page.
         qr_error: QR login could not be started. Please try again.
+        add_account: Add another connection
         save_configuration: Save & Start Login
         update_configuration: Update Configuration
         sync: Sync
+        syncing: Syncing...
         disconnect: Disconnect Trade Republic
         disconnect_confirm: Disconnect Trade Republic? Your synced accounts will become manual accounts.
         status_configured_prefix: "Connected. Visit the"

@@ -37,9 +37,8 @@ class TradeRepublicItemsController < ApplicationController
             "trade-republic-providers-panel",
             partial: "settings/providers/trade_republic_panel",
             locals: {
-              trade_republic_item: @trade_republic_item,
               qr_code_svg: @qr_code_svg,
-              qr_login_auto_poll: qr_login_requested && @error_message.blank?
+              qr_login_auto_poll_item: (@trade_republic_item if qr_login_requested && @error_message.blank?)
             }
           ),
           *flash_notification_stream_items
@@ -217,8 +216,7 @@ class TradeRepublicItemsController < ApplicationController
       format.turbo_stream do
         render turbo_stream: turbo_stream.replace(
           "trade-republic-providers-panel",
-          partial: "settings/providers/trade_republic_panel",
-          locals: { trade_republic_item: @trade_republic_item }
+          partial: "settings/providers/trade_republic_panel"
         )
       end
       format.json { render json: { status: "cancelled" } }
@@ -247,8 +245,7 @@ class TradeRepublicItemsController < ApplicationController
         render turbo_stream: [
           turbo_stream.replace(
             "trade-republic-providers-panel",
-            partial: "settings/providers/trade_republic_panel",
-            locals: { trade_republic_item: @trade_republic_item }
+            partial: "settings/providers/trade_republic_panel"
           ),
           *flash_notification_stream_items
         ]
@@ -540,8 +537,7 @@ class TradeRepublicItemsController < ApplicationController
       render turbo_stream: [
         turbo_stream.replace(
           "trade-republic-providers-panel",
-          partial: "settings/providers/trade_republic_panel",
-          locals: { trade_republic_item: @trade_republic_item }
+          partial: "settings/providers/trade_republic_panel"
         ),
         *flash_notification_stream_items
       ]
@@ -558,7 +554,7 @@ class TradeRepublicItemsController < ApplicationController
         render turbo_stream: turbo_stream.replace(
           "trade-republic-providers-panel",
           partial: "settings/providers/trade_republic_panel",
-          locals: { error_message: @error_message, trade_republic_item: @trade_republic_item }
+          locals: { error_message: @error_message }
         ), status: :unprocessable_entity
       else
         redirect_to settings_providers_path(anchor: "trade-republic"), alert: @error_message, status: :see_other

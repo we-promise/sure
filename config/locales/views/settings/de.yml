@@ -548,9 +548,11 @@ de:
         qr_instruction: Scanne den QR-Code mit deiner Trade-Republic-App und bestätige die Anmeldung.
         qr_success: Anmeldung bestätigt. Sure lädt die Provider-Übersicht neu.
         qr_error: Der QR-Login konnte nicht gestartet werden. Bitte versuche es erneut.
+        add_account: Weitere Verbindung hinzufügen
         save_configuration: Speichern und Login starten
         update_configuration: Konfiguration aktualisieren
         sync: Sync
+        syncing: Wird synchronisiert...
         disconnect: Trade Republic trennen
         disconnect_confirm: Trade Republic trennen? Deine synchronisierten Konten werden zu manuellen Konten.
         status_configured_prefix: "Verbunden. Im Reiter"

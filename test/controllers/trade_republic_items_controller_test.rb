@@ -19,6 +19,32 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("trade_republic_items.initiate_login.pin_required"), flash[:alert]
   end
 
+  test "create adds a second connection without touching the first" do
+    existing_item = trade_republic_items(:configured_item)
+    provider = mock
+    provider.expects(:initiate_qr_login).returns(
+      Provider::TradeRepublicClient::Result.new(
+        data: { "status" => "qr_pending", "pending_login_b64" => "qr-second-pending" }
+      )
+    )
+    provider.stubs(:login_stage).returns("qr_pending")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    assert_difference "TradeRepublicItem.count", 1 do
+      post trade_republic_items_url, params: {
+        login_method: "qr",
+        trade_republic_item: { currency: "EUR" }
+      }, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+    end
+
+    assert_response :success
+    new_item = families(:dylan_family).trade_republic_items.order(:created_at).last
+    assert_equal "qr-second-pending", new_item.pending_login_state
+    assert_includes response.body, existing_item.name
+    assert_includes response.body, new_item.name
+    assert_equal existing_item.session_blob, existing_item.reload.session_blob
+  end
+
   test "Trade Republic PIN is filtered from logs" do
     parameter_filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
     filtered_params = parameter_filter.filter(
