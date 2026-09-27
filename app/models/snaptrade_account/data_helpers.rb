@@ -100,7 +100,8 @@ module SnaptradeAccount::DataHelpers
 
         if underlying.present? && strike.present?
           formatted_strike = (strike.to_f % 1).zero? ? "$#{strike.to_i}" : "$#{strike}"
-          return "#{underlying} #{formatted_strike} #{opt_type.to_s.upcase}#{exp_date.present? ? " (#{exp_date})" : ""}"
+          formatted_exp = parse_date(exp_date)&.to_s || exp_date
+          return "#{underlying} #{formatted_strike} #{opt_type.to_s.upcase}#{formatted_exp.present? ? " (#{formatted_exp})" : ""}"
         end
       end
 

@@ -40,6 +40,17 @@ class SnaptradeAccount::DataHelpersTest < ActiveSupport::TestCase
     assert_equal "TQQQ $51.5 CALL (2026-02-13)", result
   end
 
+  test "extract_security_name formats ISO timestamp expiration as YYYY-MM-DD" do
+    symbol_data = {
+      option_type: "CALL",
+      strike_price: 51.0,
+      expiration_date: "2026-02-20T00:00:00Z",
+      underlying_symbol: { symbol: "TQQQ" }
+    }
+    result = @helper.extract_security_name(symbol_data, "TQQQ  260220C00051000")
+    assert_equal "TQQQ $51 CALL (2026-02-20)", result
+  end
+
   test "extract_security_name titleizes all-caps company descriptions" do
     result = @helper.extract_security_name({ description: "APPLE INC" }, "AAPL")
     assert_equal "Apple Inc", result

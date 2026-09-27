@@ -345,9 +345,10 @@ class SnaptradeAccount::ActivitiesProcessor
       raw_symbol_data = data[:symbol] || data["symbol"] || {}
       symbol_data = raw_symbol_data.is_a?(Hash) ? raw_symbol_data.with_indifferent_access : {}
       symbol = symbol_data[:symbol] || symbol_data["symbol"] || symbol_data[:ticker]
-      if symbol.blank? && (raw_opt = data[:option_symbol] || data["option_symbol"]).present?
+      if (raw_opt = data[:option_symbol] || data["option_symbol"]).present?
         opt_data = raw_opt.is_a?(Hash) ? raw_opt.with_indifferent_access : {}
-        symbol = opt_data[:ticker]
+        option_ticker = opt_data[:ticker]
+        symbol = option_ticker if option_ticker.present?
       end
       description = data[:description] || data["description"] || build_description(activity_type, symbol)
 

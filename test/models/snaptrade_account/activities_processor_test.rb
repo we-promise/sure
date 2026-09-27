@@ -1232,6 +1232,37 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Transfer - JNJ   260116C00125000", entry.name
   end
 
+  # Modeled on Robinhood option transfer activity where underlying equity is in symbol and option ticker is in option_symbol
+  test "prefers option ticker over underlying symbol for transaction description in cash activities" do
+    process_activities(
+      {
+        "id" => "opt_transfer_with_underlying_001",
+        "type" => "TRANSFER",
+        "amount" => 1500.0,
+        "units" => 1.0,
+        "price" => 0.0,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => {
+          "symbol" => "U",
+          "description" => "Unity Software Inc."
+        },
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "U     270115C00015000",
+          "option_type" => "CALL",
+          "strike_price" => 15.0,
+          "expiration_date" => "2027-01-15"
+        }
+      }
+    )
+
+    entry = snaptrade_entry("opt_transfer_with_underlying_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Transaction)
+    assert_equal "Transfer - U     270115C00015000", entry.name
+  end
+
   # Modeled on minimal SnapTrade option payload with bare ticker
   test "falls back to raw ticker when option symbol lacks underlying symbol details" do
     process_activities(
