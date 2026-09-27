@@ -1,10 +1,6 @@
-# duplicate_connection? only checked trade_republic_accounts, which the
-# importer creates on first sync -- not at login. Two logins for the same
-# broker account (concurrently, or sequentially before the first item's
-# sync_later job has run) could both pass that check. Storing the account id
-# on the item itself as soon as login succeeds, backed by this unique index,
-# closes that window: the second write raises RecordNotUnique instead of
-# silently creating a second item for the same account.
+# trade_republic_accounts only exist after the first sync, so the account id is
+# stored on the item at login; this index makes a second active login for the
+# same account raise RecordNotUnique.
 class AddBrokerageAccountIdToTradeRepublicItems < ActiveRecord::Migration[8.1]
   def change
     add_column :trade_republic_items, :brokerage_account_id, :string

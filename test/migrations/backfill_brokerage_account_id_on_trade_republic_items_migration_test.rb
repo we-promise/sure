@@ -32,6 +32,40 @@ class BackfillBrokerageAccountIdOnTradeRepublicItemsMigrationTest < ActiveSuppor
     assert_equal "DE9999", item.reload.brokerage_account_id
   end
 
+  test "gives a shared account to the oldest active item only" do
+    oldest = trade_republic_items(:configured_item)
+    duplicate = oldest.family.trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :good, session_blob: "session"
+    )
+    duplicate.trade_republic_accounts.create!(
+      kind: "portfolio", trade_republic_account_id: "DE1234", currency: "EUR", raw_positions_payload: [], raw_timeline_payload: []
+    )
+
+    run_migration
+
+    assert_equal "DE1234", oldest.reload.brokerage_account_id
+    assert_nil duplicate.reload.brokerage_account_id
+  end
+
+  test "skips an account another active item already claimed" do
+    claimed = trade_republic_items(:requires_update_item)
+    claimed.update_column(:brokerage_account_id, "DE1234")
+
+    run_migration
+
+    assert_nil trade_republic_items(:configured_item).reload.brokerage_account_id
+    assert_equal "DE1234", claimed.reload.brokerage_account_id
+  end
+
+  test "leaves items scheduled for deletion unclaimed" do
+    item = trade_republic_items(:configured_item)
+    item.update_column(:scheduled_for_deletion, true)
+
+    run_migration
+
+    assert_nil item.reload.brokerage_account_id
+  end
+
   test "can be run again" do
     item = trade_republic_items(:configured_item)
 
