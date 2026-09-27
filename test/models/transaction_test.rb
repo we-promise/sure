@@ -330,4 +330,39 @@ class TransactionTest < ActiveSupport::TestCase
 
     assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
   end
+
+  test "an unconfirmed auto-matched transfer keeps showing its own category" do
+    outflow, inflow = create_transfer_pair(to: accounts(:credit_card))
+
+    refute outflow.shows_transfer_category?
+    refute inflow.shows_transfer_category?
+  end
+
+  test "a confirmed transfer shows the transfer category" do
+    outflow, inflow = create_transfer_pair(to: accounts(:credit_card))
+    outflow.transfer_as_outflow.confirm!
+
+    assert outflow.reload.shows_transfer_category?
+    assert inflow.reload.shows_transfer_category?
+  end
+
+  test "a confirmed loan payment keeps its own category" do
+    outflow, _inflow = create_transfer_pair(to: accounts(:loan))
+    outflow.transfer_as_outflow.confirm!
+
+    refute outflow.reload.shows_transfer_category?
+  end
+
+  test "a transaction without a transfer shows its own category" do
+    refute create_transaction(kind: "funds_movement").transaction.shows_transfer_category?
+  end
+
+  private
+    def create_transfer_pair(to:)
+      outflow = create_transaction(account: accounts(:depository), amount: 500).transaction
+      inflow = create_transaction(account: to, amount: -500).transaction
+      Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow)
+
+      [ outflow, inflow ]
+    end
 end
