@@ -33,6 +33,22 @@ class BitcoinWalletAccount::SnapshotTest < ActiveSupport::TestCase
     assert_equal 1_234_567, BitcoinWalletAccount::Snapshot.new(@wallet, provider: @provider).fetch.balance_sats
   end
 
+  test "pending change belongs to the wallet even before its HD address is marked used" do
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    @wallet.bitcoin_wallet_addresses.update_all(bitcoin_wallet_source_id: source.id)
+    @wallet.bitcoin_wallet_addresses.find_by!(address: RECEIVE).update!(used: true)
+    @provider.fund(RECEIVE, 100_000)
+    tx = bitcoin_transaction(inputs: [ [ RECEIVE, 100_000 ] ],
+      outputs: [ [ "recipient", 40_000 ], [ CHANGE, 59_000 ] ], confirmed: false)
+    @provider.transactions[RECEIVE] = [ tx ]
+
+    snapshot = BitcoinWalletAccount::Snapshot.new(@wallet, provider: @provider).fetch
+
+    assert_equal 59_000, snapshot.balance_sats
+    assert_equal [ RECEIVE ], @provider.reads
+    assert_equal(-41_000, BitcoinWalletAccount::Snapshot.net_sats(tx, @wallet.bitcoin_wallet_addresses.pluck(:address).to_set))
+  end
+
   test "a changed chain tip prevents publication" do
     @provider.stubs(:tip_hash).returns("old", "new")
     assert_raises(BitcoinWalletAccount::Snapshot::ChangedTip) do

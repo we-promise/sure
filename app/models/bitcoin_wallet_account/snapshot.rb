@@ -17,13 +17,14 @@ class BitcoinWalletAccount::Snapshot
     # of zero-balance rows again would make a stable-tip read unfinishable.
     known = wallet.bitcoin_wallet_sources.pluck(:receive_address)
     tracked = wallet.bitcoin_wallet_addresses
-    addresses = tracked.where(used: true).or(tracked.where(bitcoin_wallet_source_id: nil))
+    owned_addresses = tracked.pluck(:address).to_set
+    read_addresses = tracked.where(used: true).or(tracked.where(bitcoin_wallet_source_id: nil))
       .or(tracked.where(address: known)).pluck(:address).to_set
     confirmed_sats = 0
     transactions = {}
     truncated = false
 
-    addresses.each do |address|
+    read_addresses.each do |address|
       summary = provider.get_address(address)
       stats = summary.fetch("chain_stats")
       confirmed_sats += Integer(stats.fetch("funded_txo_sum")) - Integer(stats.fetch("spent_txo_sum"))
@@ -51,7 +52,9 @@ class BitcoinWalletAccount::Snapshot
         raise IncompleteMempool, "Conflicting pending spends; retry the wallet" unless spent.add?(outpoint)
       end
     end
-    pending_sats = pending.sum { |tx| net_sats(tx, addresses) }
+    # Change may arrive after discovery checked a lookahead address. It still
+    # belongs to this wallet even when that address does not need another read.
+    pending_sats = pending.sum { |tx| net_sats(tx, owned_addresses) }
     raise ChangedTip, "Inconsistent address balances; retry the complete wallet" if confirmed_sats + pending_sats < 0
     Result.new(balance_sats: confirmed_sats + pending_sats, transactions: transactions.values,
       block_height: height, history_truncated: truncated)
