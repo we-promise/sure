@@ -7,7 +7,7 @@ it:
         description: "Gestisci i ruoli utente per la tua istanza. I super amministratori possono accedere alle impostazioni del provider SSO e alla gestione utenti."
         section_title: "Famiglie / Gruppi"
         you: "(Tu)"
-        trial_ends_at: "Prova scade"
+        trial_ends_at: "Fine prova"
         not_available: "n/d"
         no_users: "Nessun utente trovato."
         unnamed_family: "Famiglia/Gruppo senza nome"
@@ -25,13 +25,22 @@ it:
           trials_expiring_7_days: "Prove in scadenza nei prossimi 7 giorni"
         table:
           user: "Utente"
-          trial_ends_at: "Prova scade"
+          trial_ends_at: "Fine prova"
           family_accounts: "Conti famiglia"
           family_transactions: "Transazioni famiglia"
           last_login: "Ultimo accesso"
           session_count: "Numero sessioni"
           never: "Mai"
           role: "Ruolo"
+          family: Famiglia / Gruppo
+          keep_current_family: Mantieni famiglia/gruppo attuale
+          create_new_family_option: + Crea nuova famiglia/gruppo
+          new_family_name: Nome nuova famiglia/gruppo
+          new_family_name_placeholder: Inserisci un nome per creare una nuova famiglia/gruppo
+          new_family_moniker: Tipo nuova famiglia/gruppo
+          set_password: Imposta nuova password
+          password_placeholder: Lascia vuoto per mantenere quella attuale
+          actions: Azioni
         role_descriptions_title: "Descrizioni ruoli"
         roles:
           guest: "Ospite"
@@ -48,6 +57,64 @@ it:
           expires: "Scade %{date}"
           delete: "Elimina"
           delete_all: "Elimina tutto"
+        family_monikers:
+          family: Famiglia
+          group: Gruppo
+        actions:
+          manage_user: Gestisci utente
+          update: Aggiorna utente
+          delete_user: Elimina utente
+          self_edit_warning: Modificare il tuo ruolo cambierà i tuoi privilegi di amministrazione.
+          self_update_confirm: Sei sicuro di voler modificare il ruolo o la famiglia del tuo account?
+          last_super_admin_role_locked: La modifica del ruolo è bloccata perché sei l'ultimo super amministratore del sistema.
+        delete_confirm: Sei sicuro di voler eliminare questo utente? Questa azione non può essere annullata.
+        delete_confirm_last_user: Sei sicuro di voler eliminare questo utente? È l'ultimo utente della sua famiglia/gruppo, quindi eliminarlo eliminerà anche l'intera famiglia/gruppo e tutti i dati associati. Questa azione non può essere annullata.
+        remove: Elimina utente
+        removed_sso_identities:
+          title: Identità SSO rimosse
+          description: Queste identità non possono creare né ricollegare un account. Consenti di nuovo un'identità solo se la rimozione è stata accidentale.
+          allow_again: Consenti di nuovo
+          confirm: Consentire di nuovo a %{email} di accedere o creare un account tramite SSO?
+        auth_types:
+          sso: SSO
+          local: Locale
+          local_and_sso: Locale + SSO
+          sso_provider_tooltip: 'Provider SSO: %{providers}'
+        unused_families:
+          title: Famiglie / gruppi inutilizzati
+          family_id: 'ID famiglia: %{id}'
+          delete: Elimina famiglia inutilizzata
+          delete_confirm: Sei sicuro di voler eliminare questa famiglia/gruppo inutilizzato? Questa azione non può essere annullata.
+          empty: Nessuna famiglia/gruppo inutilizzato trovato.
       update:
         success: "Ruolo utente aggiornato con successo."
-        failure: "Aggiornamento ruolo utente fallito."
+        failure: "Impossibile aggiornare i dati dell'utente (ruolo o appartenenza alla famiglia/gruppo)."
+        success_role: Ruolo utente aggiornato con successo.
+        success_password: Password utente aggiornata con successo.
+        success_role_and_password: Ruolo e password utente aggiornati con successo.
+        success_family: Appartenenza dell'utente a famiglia/gruppo aggiornata con successo.
+        family_required: Seleziona una famiglia/gruppo esistente o inserisci un nome per crearne uno nuovo.
+        password_and_family_conflict: Password e appartenenza a famiglia/gruppo non possono essere aggiornate contemporaneamente.
+        password_too_short: La password deve contenere almeno 8 caratteri.
+        password_missing_case: La password deve contenere sia lettere maiuscole sia minuscole.
+        password_missing_number: La password deve contenere almeno un numero.
+        password_missing_special: La password deve contenere almeno un carattere speciale.
+        last_super_admin_error: Impossibile retrocedere l'ultimo super amministratore del sistema.
+      destroy:
+        success: Accesso dell'utente revocato ed eliminazione definitiva pianificata.
+        failure: Impossibile rimuovere l'utente.
+        cannot_remove_self: Non puoi rimuovere il tuo account da qui.
+        cannot_remove_last_super_admin: Non puoi rimuovere l'ultimo super amministratore attivo.
+        confirmation_mismatch: L'indirizzo email non corrisponde. L'utente non è stato rimosso.
+      deletion:
+        title: Rimuovi definitivamente l'utente
+        warning: Questa operazione revoca immediatamente l'accesso e pianifica l'eliminazione definitiva dell'utente e dei suoi dati. Non può essere annullata.
+        instruction: Digita %{email} per confermare.
+        email_label: Email dell'utente
+        cancel: Annulla
+        submit: Rimuovi definitivamente l'utente
+    families:
+      destroy:
+        family_has_active_subscription: La famiglia/gruppo ha un abbonamento attivo e non può essere eliminata finché l'abbonamento non viene annullato.
+        family_has_users: La famiglia/gruppo ha ancora degli utenti e non può essere eliminata.
+        success: Famiglia/gruppo eliminata con successo.

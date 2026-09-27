@@ -16,5 +16,7 @@ it:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: L'amministratore non può eliminare l'account mentre altri utenti sono presenti. Elimina prima tutti i membri.
+              provider_item_has_other_accounts: L'utente possiede conti collegati a una connessione provider che contiene anche conti di un altro utente. Sposta o scollega quei conti prima di cambiare l'appartenenza a famiglia/gruppo.
+              cannot_remove_last_super_admin: Impossibile rimuovere l'ultimo super amministratore attivo. Promuovi prima un altro utente a super amministratore.
             profile_image:
               invalid_file_size: la dimensione del file deve essere inferiore a %{max_megabytes}MB

@@ -30,6 +30,7 @@ pt-PT:
       status_never: Requer sincronização de dados
       syncing: A sincronizar...
       update: Atualizar
+      provider_name: Plaid
     select_existing_account:
       no_available_accounts: Não existem contas do Plaid por ligar disponíveis. Ligue primeiro uma nova conta do Plaid.
       title: "Ligar %{account_name} ao Plaid"

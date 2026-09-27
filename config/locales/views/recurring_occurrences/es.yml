@@ -1,0 +1,53 @@
+---
+es:
+  recurring_occurrences:
+    history_status:
+      paid: Pagado
+      skipped: Omitido
+      missed: No pagado
+      scheduled: Pendiente
+    show:
+      due_on: Vence el %{date}
+      paid_of: '%{paid} de %{expected} pagados'
+      paid_headline: '%{amount} pagados'
+      remaining: Quedan %{amount}
+      settled: Pagado por completo
+      overpaid: más de lo previsto
+      skipped: Omitido
+      missed: Marcado como no pagado
+      payments: Pagos
+      manual_payment: Pago manual
+      unlink: Desvincular
+      review_heading: Revisar pago
+      find_heading: Buscar un pago
+      add_heading: Añadir otro pago
+      other_matches: Otras coincidencias probables
+      no_ranked_candidates: Todavía no hay nada que parezca un pago de este recibo.
+      search_all: Buscar en todas las transacciones
+      search_placeholder: Buscar transacciones
+      no_candidates: No hay transacciones cercanas que vincular.
+      no_search_results: Nada coincide con %{query}.
+      link_payment: Vincular pago
+      not_this_one: Este no
+      cant_find: ¿No encuentras la transacción?
+      manual_explainer: Registra un pago que sabes que se hizo cuando ninguna transacción de aquí coincide con él.
+      manual_amount_label: Importe
+      manual_date_label: Fecha
+      record_payment: Registrar pago
+      mark_paid: Marcar como pagado
+      mark_paid_hint: Liquida el resto sin registrar ninguna transacción.
+      skip: Omitir
+      snooze_week: Posponer una semana
+      reopen: Reabrir
+      view_bill: Ver recibo completo
+    mark_paid:
+      success: Recibo marcado como pagado
+    skip:
+      success: Recibo omitido
+    reopen:
+      success: Recibo reabierto
+    snooze:
+      success: Pospuesto hasta el %{date}
+      invalid_date: No se ha podido leer esa fecha
+    override_amount:
+      success: Importe previsto actualizado

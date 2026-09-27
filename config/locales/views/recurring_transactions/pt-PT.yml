@@ -25,18 +25,18 @@ pt-PT:
         - Qualquer sincronização de serviço concluída (Plaid, SimpleFIN, etc.)
     identified: Identificados %{count} padrões de transações recorrentes
     cleaned_up: Limpadas %{count} transações recorrentes obsoletas
-    marked_inactive: Transação recorrente marcada como inativa
-    marked_active: Transação recorrente marcada como ativa
-    deleted: Transação recorrente eliminada
-    confirm_delete: Tem a certeza de que pretende eliminar esta transação recorrente?
+    marked_inactive: Em pausa. Não voltará a aparecer até a retomar.
+    marked_active: Retomada.
+    deleted: Fatura removida. As suas transações não foram alteradas.
+    confirm_delete: Remover %{name} das suas faturas? As suas transações ficam exatamente como estão. Isto remove apenas a fatura e a respetiva periodicidade de pagamento.
     marked_as_recurring: Transação marcada como recorrente
     already_exists: Já existe uma transação recorrente manual para este padrão
     creation_failed: Falha ao criar a transação recorrente. Verifique os detalhes da transação e tente novamente.
-    unexpected_error: Ocorreu um erro ao criar a transação recorrente
+    unexpected_error: Ocorreu um erro inesperado ao criar a transação recorrente
     amount_range: "Intervalo: %{min} a %{max}"
     empty:
       title: Nenhuma transação recorrente encontrada
-      description: Clique em "Identificar Padrões" para detectar automaticamente transações recorrentes do seu histórico.
+      description: Clique em "Identificar Padrões" para detetar automaticamente transações recorrentes do seu histórico.
     table:
       merchant: Designação
       amount: Montante
@@ -45,12 +45,155 @@ pt-PT:
       last_occurrence: Última Ocorrência
       status: Estado
       actions: Ações
+      frequency: Frequência
     status:
       active: Ativa
-      inactive: Inativa
+      inactive: Em pausa
+      suggested: Possível fatura
+      paused: Em pausa
+      ended: Ignorada
     badges:
       manual: Manual
     transfer_marked_as_recurring: Transferência marcada como recorrente
     transfer_already_exists: Já existe uma transferência recorrente para este par de contas
     transfer_creation_failed: Falha ao criar a transferência recorrente. Verifique os detalhes da transferência e tente novamente.
     transfer_feature_disabled: As transações recorrentes estão desativadas para esta família
+    frequency_presets:
+      monthly: Mensal
+      weekly: Semanal
+      biweekly: A cada 2 semanas
+      semimonthly: Duas vezes por mês
+      quarterly: Trimestral
+      semiannual: A cada 6 meses
+      annual: Anual
+      custom: Periodicidade personalizada
+    frequency:
+      monthly: Mensal (%{day})
+      weekly: Semanal (%{weekday})
+      biweekly: A cada 2 semanas (%{weekday})
+      semimonthly: Duas vezes por mês (%{first} e %{second})
+      quarterly: Trimestral (%{day})
+      semiannual: A cada 6 meses (%{day})
+      annual: Anual (%{day} de %{month})
+      custom: Periodicidade personalizada
+      last_day: último dia
+    actions:
+      edit_payment_link: Editar link de pagamento
+      pause: Pausar
+      resume: Retomar
+      delete: Remover
+    pay_action:
+      pay: Pagar
+      pay_aria: Pagar %{name} (abre num novo separador)
+      add_link: Adicionar link
+      add_link_aria: Adicionar um link de pagamento para %{name}
+      autopay: Débito direto
+      autopay_aria: '%{name} é paga automaticamente; abrir o respetivo portal num novo separador'
+      open_site: Abrir site da fatura
+    new:
+      title: Adicionar uma fatura
+      income_title: Adicionar rendimento
+      start_from_title: Começar a partir de uma cobrança recorrente que detetámos
+      start_from_income_title: Começar a partir de um depósito recorrente que detetámos
+      start_from_hint: Opcional. Escolher uma apenas preenche o formulário; pode alterar tudo na mesma.
+      candidate_meta: '%{count}× · última %{date}'
+      search_all_prompt: Não encontra o que procura?
+      search_all_cta: Pesquisar todas as suas transações
+      pick_different: Começar a partir de outra transação
+      smart_fill: Preencher com IA
+      smart_fill_applied: A IA sugeriu estes valores com base no histórico de cobranças. Reveja-os antes de guardar.
+    smart_fills:
+      create:
+        failed: De momento não foi possível analisar o histórico de cobranças. O formulário manteve os valores da própria transação.
+    pick_entry:
+      title: Encontre uma transação para começar
+      income_title: Encontre um depósito para começar
+      hint: Escolher uma apenas preenche o formulário; pode alterar tudo na mesma.
+      search_placeholder: Pesquisar por nome, notas ou comerciante
+      back: Voltar ao formulário
+      showing_recent: A mostrar as suas %{count} mais recentes. Pesquise para restringir a lista.
+      no_results: Nada corresponde a «%{query}». Experimente menos palavras ou volte atrás e preencha o formulário manualmente.
+    picker_row:
+      claimed: Faz parte de %{name}
+    create:
+      success: Fatura adicionada
+      success_income: Rendimento adicionado
+      due_date_required: Introduza a próxima data de vencimento da fatura
+      amount_invalid: Introduza o montante como um número simples
+      account_invalid: Escolha uma conta à qual possa adicionar faturas ou deixe em branco
+      already_exists: Esta fatura já existe
+    edit:
+      trigger_label: Editar fatura
+      title: Editar %{name}
+      income_title: Editar rendimento · %{name}
+    form:
+      payment_url_label: Link de pagamento
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: Onde paga esta fatura. Abre num novo separador a partir das listas de recorrentes e próximas.
+      autopay_label: Paga automaticamente
+      autopay_hint: Mantém-na na lista de faturas, mas deixa de a tratar como algo a fazer.
+      more_options: Mais opções
+      notes_label: Notas
+      notes_placeholder: Conta 4821, cobrada no cartão Amex
+      notes_hint: Tudo o que quer ter à mão quando pagar. Apresentado na fatura.
+      apply_to_siblings:
+        one: Usar também este link na outra fatura %{name}
+        other: Usar também este link nas outras %{count} faturas %{name}
+      submit: Guardar fatura
+      submit_income: Guardar rendimento
+      income_name_label: Origem
+      income_name_placeholder: Entidade patronal, cliente, trabalho extra
+      income_amount_label: Montante por salário
+      income_due_on_label: Próximo dia de pagamento
+      income_account_label: Depositado em
+      income_frequency_hint: Com que frequência é pago. Escolha os detalhes do dia de acordo com o seu dia de pagamento.
+      income_frequency_label: Com que frequência é pago
+      income_frequency_new_hint: Os detalhes do dia de pagamento vêm da data acima. Pode ajustar a periodicidade depois de guardar.
+      income_notes_placeholder: Transferência de salário, dividida por duas contas
+      income_notes_hint: Tudo o que valha a pena lembrar sobre este rendimento.
+      name_label: Nome
+      name_placeholder: Renda, EDP, Netflix
+      amount_label: Montante
+      first_due_on_label: Próximo vencimento
+      account_label: Paga a partir de
+      account_blank: Qualquer conta
+      bill_type_label: Tipo
+      installment_count_label: Número de prestações
+      installment_count_hint: O plano termina após este número de prestações e mostra o progresso até lá.
+      renews_on_label: Renova-se a
+      trial_ends_on_label: Fim do período experimental
+      amount_edit_hint: Aplica-se às faturas que vencem a partir de agora. As que já venceram mantêm o montante que tinham.
+      income_amount_edit_hint: Aplica-se aos pagamentos a partir de agora. Os que já venceram mantêm o montante que tinham.
+      cancelled_on_label: Cancelada em
+      cancelled_on_hint: Registar a data serve apenas para sua referência. Pause a fatura para deixar de ver as próximas.
+      category_label: Categoria
+      category_blank: Sem categoria
+      frequency_new_hint: Os detalhes do dia vêm da data de vencimento acima. Pode ajustar a periodicidade depois de guardar.
+      frequency_label: Frequência
+      frequency_hint: Com que frequência esta fatura vence. Escolha os detalhes do dia de acordo com o seu extrato.
+      frequency_day_label: No dia
+      frequency_second_day_label: E no dia
+      frequency_weekday_label: Dia da semana
+      frequency_month_label: Mês
+    update:
+      success: Fatura atualizada
+      success_with_siblings:
+        one: Fatura atualizada; o link de pagamento foi copiado para %{count} outra fatura
+        other: Fatura atualizada; o link de pagamento foi copiado para %{count} outras faturas
+    manage:
+      title: As suas faturas estão na página Faturas
+      description: Declare, edite, pause e pague tudo a partir daí. Esta página controla a deteção.
+      cta: Abrir todas as faturas
+    identify_already_running: A deteção já está em curso. Volte a verificar daqui a pouco.
+    deleted_income: Rendimento removido. As suas transações não foram alteradas.
+    confirm_delete_income: Remover %{name} como rendimento? As suas transações ficam exatamente como estão. Isto remove apenas o rendimento e a respetiva periodicidade.
+    suggested:
+      title: Possíveis novas faturas
+      seen_count:
+        one: vista %{count} vez
+        other: vista %{count} vezes
+      collapsed_hint: Toque para rever
+      confirm: Adicionar fatura
+      dismiss: Não é uma fatura
+    confirmed: Fatura adicionada às suas transações recorrentes
+    dismissed: Ignorado. Este padrão não voltará a ser sugerido.

@@ -19,10 +19,10 @@ es:
       show:
         general: Configuración General
         ai_assistant: Asistente de IA
-        financial_data_providers: Proveedores de Datos Financieros
+        financial_data_providers: 'Proveedores de datos financieros'
         property_valuation_providers: Proveedores de valoración de propiedades
-        sync_settings: Ajustes de Sincronización
-        invites: Códigos de Invitación
+        sync_settings: 'Ajustes de sincronización'
+        invites: 'Códigos de invitación'
         title: Autoalojamiento
         danger_zone: Zona de Peligro
         clear_cache: Limpiar caché de datos
@@ -57,9 +57,11 @@ es:
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
+          mansa: Mansa
         title: Selección de Proveedores
         description: Elige qué servicio usar para obtener tipos de cambio y precios de acciones. Yahoo Finance es gratuito y no requiere clave API. Twelve Data requiere una clave API (gratuita disponible) pero ofrece mayor cobertura de datos.
         securities_provider_label: Proveedor de valores (Precios de acciones)
+        requires_api_key_mansa: requiere clave API, nivel gratuito de 100 llamadas/día -- solo NGX (Bolsa de Nigeria)
       assistant_settings:
         title: Asistente de IA
         description: Elige cómo responde el asistente del chat. "Integrado" utiliza directamente tu proveedor de LLM configurado. "Externo" delega en un agente remoto que puede interactuar con las herramientas financieras de Sure mediante MCP.
@@ -150,6 +152,8 @@ es:
         ai_response_timeout_label: Tiempo de espera de respuesta en segundos (opcional)
         ai_response_timeout_help: "Predeterminado: 90. Solo se aplica al monitor de turno completo del chat, así que dimensiona este valor como una suma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × tiempo de espera de solicitud, más el tiempo de ejecución de herramientas y cola. AI_RESPONSE_TIMEOUT sobrescribe este campo."
         title: OpenAI
+        model_function_calling_help: El asistente de IA lee tus datos mediante llamadas a funciones, así que elige un modelo que tu proveedor indique como compatible con herramientas/llamadas a funciones. Los modelos sin esta capacidad hacen fallar el chat con un error poco claro del proveedor.
+        model_function_calling_link: Comprobar el modelo configurado
       yahoo_finance_settings:
         title: Yahoo Finance
         description: Yahoo Finance proporciona acceso gratuito a precios de acciones, tipos de cambio y datos financieros sin necesidad de una clave API.
@@ -195,6 +199,7 @@ es:
         step_1: Abre las inversiones de T-Bank, luego Ajustes y después Tokens de API (requiere una cuenta de bróker abierta en T-Bank).
         step_2: Crea un token con acceso de solo lectura.
         step_3: Copia el token y pégalo abajo.
+        moex_only_notice: No está activado para los precios de arriba; T-Invest se usa para obtener los logotipos de marcas de todos tus valores siempre que haya un token configurado, independientemente de la casilla de arriba.
       eodhd_settings:
         title: EODHD
         description: Introduce el token de API proporcionado por EODHD. Admite ETF de la UE en LSE, XETRA y otras bolsas internacionales.
@@ -261,3 +266,13 @@ es:
         include_pending_label: Incluir transacciones pendientes
         include_pending_description: Cuando está habilitado, las transacciones pendientes (no liquidadas) se importarán y se conciliarán automáticamente cuando se confirmen. Desactívalo si tu banco proporciona datos pendientes poco fiables.
         env_configured_message: Este ajuste está desactivado porque hay una variable de entorno del proveedor (SIMPLEFIN_INCLUDE_PENDING o PLAID_INCLUDE_PENDING) definida. Elimínala para habilitar este ajuste aquí.
+      mansa_settings:
+        title: Mansa
+        description: Introduce la clave API de Mansa API. Admite NGX (Bolsa de Nigeria), que no cubre ningún otro proveedor de esta lista. Mansa también cubre otras bolsas africanas, pero solo NGX se ha verificado con esta integración.
+        env_configured_message: Configurado correctamente mediante la variable de entorno MANSA_API_KEY.
+        label: Clave API
+        placeholder: Introduce aquí tu clave API de Mansa
+        show_details: (ver detalles)
+        step_1_html: Visita <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> y solicita tu clave API gratuita; no se requiere tarjeta.
+        step_2: Copia tu clave API y pégala abajo.
+        rate_limit_warning: El nivel gratuito de Mansa está limitado a 100 llamadas a la API al día y solo ofrece cotizaciones actuales; los precios históricos requieren un plan de pago. Solo NGX (Bolsa de Nigeria) se ha verificado con esta integración; las demás bolsas africanas que cubre Mansa todavía no son compatibles aquí.

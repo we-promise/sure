@@ -58,9 +58,11 @@ pt-PT:
           moex_public: MOEX
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
+          mansa: Mansa
+        requires_api_key_mansa: requer chave de API, nível gratuito de 100 chamadas/dia -- apenas NGX (Nigerian Exchange)
       assistant_settings:
         title: Assistente de IA
-        description: Escolha como o assistente de chat responde. O incorporado utiliza diretamente o seu serviço de AI configurado. O externo delega num agente de IA remoto que pode invocar as ferramentas financeiras da Sure via MCP.
+        description: Escolha como o assistente de chat responde. O incorporado utiliza diretamente o seu serviço de LLM configurado. O externo delega num agente de IA remoto que pode invocar as ferramentas financeiras do Sure via MCP.
         type_label: Tipo de assistente
         type_builtin: Incorporado (LLM direto)
         type_external: Externo (agente remoto)
@@ -100,7 +102,7 @@ pt-PT:
         title: Serviço de IA
         description: Escolha o modelo de IA utilizado pelo chat. As operações em lote, como a categorização de transações, a deteção de comerciantes e o processamento de PDFs, utilizam atualmente a OpenAI. 
         env_configured_message: Configurado com sucesso através da variável de ambiente LLM_PROVIDER.
-        provider_label: Serviço de AI ativo
+        provider_label: Serviço de IA ativo
         provider_openai: OpenAI
         provider_anthropic: Anthropic (Claude)
         provider_help: A mudança de serviço tem efeito no próximo chat. Configure abaixo as credenciais do serviço ativo.
@@ -144,15 +146,21 @@ pt-PT:
         ai_response_timeout_heading: Tempo Limite de Resposta do Chat
         ai_response_timeout_description: Quanto tempo o chat espera pelo assistente antes de mostrar um erro de "sem resposta". Aumente isto se executar um modelo local em hardware lento — as respostas dos serviços compatíveis com OpenAI não são transmitidas em fluxo e as rondas de chamadas de ferramentas não mostram nada, pelo que o chat pode permanecer em "A pensar…" durante toda a vez.
         ai_response_timeout_label: Tempo Limite de Resposta em Segundos (Opcional)
-        ai_response_timeout_help: "Predefinição: 90. Isto cobre toda a vez, por isso dimensione-o como uma soma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT, mais o tempo de execução e de fila da ferramenta. Reduzir ASSISTANT_MAX_TOOL_CALL_ITERATIONS diminui o tamanho necessário e é, muitas vezes, a melhor alavanca em hardware lento."
+        ai_response_timeout_help: "Predefinição: 90. Aplica-se apenas ao limite de tempo da ronda completa do chat, por isso dimensione-o como uma soma: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × tempo limite do pedido, mais o tempo de execução e de fila das ferramentas. AI_RESPONSE_TIMEOUT sobrepõe-se a este campo."
         title: OpenAI
+        model_function_calling_help: O assistente de IA lê os seus dados através de chamadas de funções, por isso escolha um modelo que o seu serviço indique como compatível com tools/function calling. Os modelos sem esta capacidade fazem o chat falhar com um erro pouco claro do serviço.
+        model_function_calling_link: Verificar o modelo configurado
+        timeout_heading: Tempos Limite
+        timeout_description: Controla durante quanto tempo as chamadas a modelos compatíveis com OpenAI podem decorrer antes de o Sure desistir. Aumente estes valores se executar um modelo local em hardware lento.
+        openai_request_timeout_label: Tempo Limite do Pedido em Segundos (Opcional)
+        openai_request_timeout_help: 'Predefinição: 60. Aplica-se a cada pedido HTTP compatível com OpenAI, incluindo a categorização automática, a deteção de comerciantes, o chat, o processamento de PDF e as chamadas ao vector store. OPENAI_REQUEST_TIMEOUT sobrepõe-se a este campo.'
       yahoo_finance_settings:
         title: Yahoo Finance
         description: O Yahoo Finance fornece acesso gratuito a preços de ações, taxas de câmbio e dados financeiros sem requerer uma chave de API.
         status_healthy: O Yahoo Finance está ativo e a funcionar.
         status_rate_limited: O Yahoo Finance está temporariamente a limitar os pedidos.
         rate_limited_title: Limite de pedidos do Yahoo Finance atingido.
-        rate_limited_message: Não é necessária qualquer ação. A Sure evitará verificações de estado adicionais durante 30 minutos. As operações de preço e de taxa de câmbio continuam de forma independente.
+        rate_limited_message: Não é necessária qualquer ação. O Sure evitará verificações de estado adicionais durante 30 minutos. As operações de preço e de taxa de câmbio continuam de forma independente.
         status_unavailable: O Yahoo Finance está atualmente indisponível.
         unavailable_title: Não foi possível verificar o Yahoo Finance.
         unavailable_message: Não foi possível contactar o Yahoo Finance ou este devolveu uma resposta inesperada. Verifique a sua ligação à internet e tente novamente mais tarde.
@@ -191,6 +199,7 @@ pt-PT:
         step_1: Abra os investimentos do T-Bank, depois Definições e depois tokens de API (requer uma conta de corretagem T-Bank aberta).
         step_2: Crie um token com acesso de leitura.
         step_3: Copie o token e cole-o abaixo.
+        moex_only_notice: Não ativado para os preços acima — a T-Invest é utilizada para obter logótipos de marcas de todos os seus valores mobiliários sempre que estiver configurado um token, independentemente da caixa de seleção acima.
       eodhd_settings:
         title: EODHD
         description: Introduza o token de API fornecido pela EODHD. Suporta ETFs da UE na LSE, XETRA e noutras bolsas internacionais.
@@ -257,3 +266,13 @@ pt-PT:
         include_pending_label: Incluir transações pendentes
         include_pending_description: Quando ativada, a opção permite importar automaticamente as transações pendentes (não liquidadas) e reconciliá-las quando forem registadas. Desative-a se o seu banco fornecer informações pouco fiáveis sobre transações pendentes.
         env_configured_message: Esta definição está desativada porque está definida uma variável de ambiente do serviço (SIMPLEFIN_INCLUDE_PENDING ou PLAID_INCLUDE_PENDING). Remova-a para ativar esta definição.
+      mansa_settings:
+        title: Mansa
+        description: Introduza a chave de API da Mansa API. Suporta a NGX (Nigerian Exchange), que não é abrangida por nenhum outro serviço aqui. A Mansa também abrange outras bolsas africanas, mas apenas a NGX está verificada nesta integração.
+        env_configured_message: Configurado com sucesso através da variável de ambiente MANSA_API_KEY.
+        label: Chave de API
+        placeholder: Introduza a sua chave de API da Mansa aqui
+        show_details: (mostrar detalhes)
+        step_1_html: Visite <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> e obtenha a sua chave de API gratuita -- não é necessário cartão.
+        step_2: Copie a sua chave de API e cole-a abaixo.
+        rate_limit_warning: O nível gratuito da Mansa está limitado a 100 chamadas de API por dia e só disponibiliza cotações atuais -- os preços históricos requerem um plano pago. Apenas a NGX (Nigerian Exchange) está verificada nesta integração; as outras bolsas africanas abrangidas pela Mansa ainda não são suportadas aqui.

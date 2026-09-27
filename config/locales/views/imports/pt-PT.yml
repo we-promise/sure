@@ -9,20 +9,20 @@ pt-PT:
         description: "Reveja o formato de data detetado e escolha quais as categorias e etiquetas do seu ficheiro QIF que pretende trazer para o %{product_name}."
         categories_heading: Categorias
         categories_found:
-          one: "1 categoria encontrada"
+          one: "%{count} categoria encontrada"
           other: "%{count} categorias encontradas"
         category_name_col: Designação da categoria
         transactions_col: Transações
         tags_heading: Etiquetas
         tags_found:
-          one: "1 etiqueta encontrada"
+          one: "%{count} etiqueta encontrada"
           other: "%{count} etiquetas encontradas"
         tag_name_col: Designação da etiqueta
         txn_count:
-          one: "1 trans."
+          one: "%{count} trans."
           other: "%{count} trans."
         split_warning_title: Transações divididas detetadas
-        split_warning_description: "Este ficheiro QIF contém transações divididas. As divisões ainda não são suportadas, pelo que cada transação dividida será importada como uma única transação com o montante total e sem categoria. Os detalhes das divisões individuais não serão preservados."
+        split_warning_description: "Este ficheiro QIF contém transações divididas. Reveja abaixo as categorias e etiquetas das divisões detetadas antes de importar."
         split_badge: dividida
         empty_state_primary: Não foram encontradas categorias ou etiquetas neste ficheiro QIF.
         empty_state_secondary: Todas as transações serão importadas sem categorias ou etiquetas.
@@ -102,7 +102,7 @@ pt-PT:
         account_label: Conta
         name_label: Designação
         note_label: Nota
-        no_security_provider_warning: O serviço de preços de valores mobiliários não está configurado.  As suas importações de negociações funcionarão, mas a Sure não preencherá o histórico de preços.  Vá às suas definições para configurar isto.
+        no_security_provider_warning: O serviço de preços de valores mobiliários não está configurado.  As suas importações de negociações funcionarão, mas o Sure não preencherá o histórico de preços.  Vá às suas definições para configurar isto.
         date_format_label: Formato de data
         apply_configuration: Aplicar configuração
       category_import:
@@ -163,6 +163,11 @@ pt-PT:
       show:
         description: Selecione as colunas que correspondem a cada campo do seu CSV.
         title: Configure a sua importação
+        template_found: Configuração de modelo encontrada
+        template_description: Encontrámos uma configuração de uma importação anterior para esta conta. Pretende aplicá-la a esta importação?
+        manually_configure: Configurar manualmente
+        apply_template: Aplicar modelo
+        sample_caption: Dados de exemplo do CSV que carregou
     confirms:
       sure_import:
         title: Confirme a sua importação
@@ -201,6 +206,7 @@ pt-PT:
     uploads:
       handle_qif_upload:
         qif_uploaded: "Ficheiro QIF carregado com sucesso."
+        qif_account_required: Selecione uma conta para a importação QIF
       update:
         qif_uploaded: "Ficheiro QIF carregado com sucesso."
       show:
@@ -216,7 +222,7 @@ pt-PT:
         download_sample_csv: Descarregar um CSV de exemplo
         to_see_format: para consultar o formato de CSV exigido
         qif_title: Carregar ficheiro QIF
-        qif_description: Selecione a conta a que este ficheiro QIF pertence e carregue a sua exportação .qif do Quicken.
+        qif_description: Selecione uma conta para ficheiros de conta única, ou deixe em branco quando a sua exportação QIF incluir os nomes das contas.
         qif_account_label: Conta
         qif_account_placeholder: Selecione uma conta…
         qif_file_prompt: para adicionar o seu ficheiro QIF
@@ -296,7 +302,7 @@ pt-PT:
       fully_reconciled:
         one: "Nada precisou de ser importado — a única transação do extrato já estava registada."
         other: "Nada precisou de ser importado — todas as %{count} transações já estavam registadas."
-      statement_evidence_html: "Reconciliado contra %{statement}."
+      statement_evidence_html: "Reconciliado com %{statement}."
       close: "Fechar"
     update:
       account_saved: "Conta guardada."
@@ -361,7 +367,7 @@ pt-PT:
       merchant_import: "Importação de comerciantes"
       pdf_import: "Importação de PDF"
       document_import: "Importação de documentos"
-      sure_import: "Importação da Sure"
+      sure_import: "Importação do Sure"
     steps:
       upload: Carregar
       configure: Configurar
@@ -370,6 +376,7 @@ pt-PT:
       confirm: Confirmar
       select: Selecionar
       progress: "Passo %{step} de %{total}"
+      label: Passo %{step}
     empty:
       message: Não foram encontradas importações.
     index:
@@ -426,7 +433,7 @@ pt-PT:
       import_rules: Importar regras
       import_transactions: Importar transações
       import_qif: Importar do Quicken (QIF)
-      import_sure: Importar da Sure
+      import_sure: Importar do Sure
       import_sure_description: Ficheiro .ndjson de exportação completa
       import_file: Importar documento
       import_file_description: Análise com IA para PDFs e carregamento de ficheiros pesquisáveis

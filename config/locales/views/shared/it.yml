@@ -43,4 +43,14 @@ it:
     transaction_tabs:
       expense: Spesa
       income: Entrata
-      transfer: Bonifico
+      transfer: Trasferimento
+    require_connector_owner: Puoi gestire solo le connessioni che hai aggiunto tu
+    sidekiq_health_banner:
+      title: Alcuni dati potrebbero non essere aggiornati
+      body: I job in background non vengono elaborati, quindi saldi, patrimonio netto e sincronizzazioni dei conti potrebbero essere obsoleti o mancanti.
+      cta: Visualizza lo stato del sistema
+      reasons:
+        redis_unreachable: L'app non riesce a raggiungere Redis. Controlla REDIS_URL e verifica che Redis sia in esecuzione.
+        no_worker_processes: Nessun processo worker di Sidekiq è connesso. Avvia il container del worker o l'unità systemd.
+        stale_heartbeat: Il worker di Sidekiq non ha inviato un heartbeat di recente. Potrebbe essere bloccato o arrestato in modo anomalo.
+        queue_backed_up: Il job più vecchio in coda attende oltre il limite di latenza. Il worker è attivo ma sta accumulando ritardo.

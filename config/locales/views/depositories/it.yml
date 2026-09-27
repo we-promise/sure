@@ -13,14 +13,14 @@ it:
         long: Certificato di Deposito
         short: CD
       checking:
-        long: Conto Corrente
+        long: Conto corrente
         short: Corrente
       hsa:
-        long: Conto Risparmio Sanitario
+        long: Conto di risparmio sanitario
         short: HSA
       money_market:
         long: Mercato Monetario
         short: MM
       savings:
-        long: Conto Risparmio
+        long: Conto di risparmio
         short: Risparmio

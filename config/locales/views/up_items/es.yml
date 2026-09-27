@@ -19,14 +19,14 @@ es:
     sync_status:
       no_accounts: No se encontraron cuentas
       all_synced:
-        one: 1 cuenta sincronizada
+        one: '%{count} cuenta sincronizada'
         other: '%{count} cuentas sincronizadas'
       partial: '%{linked} sincronizadas, %{unlinked} pendientes de configurar'
     institution_summary:
       none: No hay entidades conectadas
       one: 1 entidad
       count:
-        one: 1 entidad
+        one: '%{count} entidad'
         other: '%{count} entidades'
   up_items:
     provider_panel:
@@ -59,7 +59,7 @@ es:
       link_accounts: Vincular cuentas
     link_accounts:
       success:
-        one: Se vinculó 1 cuenta Up.
+        one: 'Se vinculó %{count} cuenta Up.'
         other: Se vincularon %{count} cuentas Up.
       no_accounts_selected: Selecciona al menos una cuenta.
       no_credentials_configured: Configura Up primero en los ajustes de proveedores.
@@ -97,7 +97,7 @@ es:
       cancel: Cancelar
     complete_account_setup:
       success:
-        one: Se creó 1 cuenta Up.
+        one: 'Se creó %{count} cuenta Up.'
         other: Se crearon %{count} cuentas Up.
       all_skipped: No se creó ninguna cuenta Up.
       no_accounts: No se seleccionó ninguna cuenta Up.

@@ -2,14 +2,17 @@
 it:
   transfers:
     create:
-      success: Bonifico creato
+      success: Trasferimento creato
+      exchange_rate_unavailable: Tasso di cambio non disponibile per le valute e la data selezionate
+      date_invalid: non è valida
+      stale_form: Questo modulo è già stato inviato con dati diversi. Aggiorna la pagina e riprova.
     destroy:
-      success: Bonifico rimosso
+      success: Trasferimento rimosso
     form:
       amount: Importo
       bank_charges: Commissioni bancarie
-      outgoing_fee: Commissione bonifico in uscita
-      incoming_fee: Commissione bonifico in entrata
+      outgoing_fee: Commissione trasferimento in uscita
+      incoming_fee: Commissione trasferimento in entrata
       date: Data
       destination_amount: Importo di destinazione
       destination_amount_display: "Importo di destinazione: %{amount}"
@@ -19,27 +22,27 @@ it:
       income: Entrata
       select_account: Seleziona conto
       source_amount: Importo di origine
-      submit: Crea bonifico
+      submit: Crea trasferimento
       to: A
-      transfer: Bonifico
+      transfer: Trasferimento
     new:
-      title: Nuovo bonifico
+      title: Nuovo trasferimento
     show:
-      delete: Rimuovi bonifico
-      delete_subtitle: Questo rimuove il bonifico. Non eliminerà le transazioni sottostanti.
-      delete_title: Rimuovere il bonifico?
+      delete: Rimuovi trasferimento
+      delete_subtitle: Questo rimuove il trasferimento. Non eliminerà le transazioni sottostanti.
+      delete_title: Rimuovere il trasferimento?
       details: Dettagli
       mark_recurring: Segna come ricorrente
-      mark_recurring_subtitle: Traccia questo bonifico come schema ricorrente nel feed delle prossime uscite e nella pagina dei ricorrenti.
-      mark_recurring_title: Segna il bonifico come ricorrente
+      mark_recurring_subtitle: Traccia questo trasferimento come schema ricorrente nel feed delle prossime uscite e nella pagina dei ricorrenti.
+      mark_recurring_title: Segna il trasferimento come ricorrente
       note_label: Note
-      note_placeholder: Aggiungi una nota a questo bonifico
+      note_placeholder: Aggiungi una nota a questo trasferimento
       overview: Panoramica
       settings: Impostazioni
       from: Da
       to: A
       date: Data
-      transfer_amount: Importo bonifico
+      transfer_amount: Importo trasferimento
       total: Totale
       bank_charges: Commissioni bancarie
       source_fee: Commissione origine
@@ -47,4 +50,4 @@ it:
       category: Categoria
       uncategorized: Non categorizzata
     update:
-      success: Bonifico aggiornato
+      success: Trasferimento aggiornato

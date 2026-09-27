@@ -47,7 +47,7 @@ it:
         one: "%{count} posizione"
         other: "%{count} posizioni"
       average_cost: Costo medio
-      holdings: Portafoglio
+      holdings: Posizioni
       name: Nome
       new_holding: Nuova attività
       no_holdings: Nessuna posizione da mostrare.
@@ -66,7 +66,7 @@ it:
       history: Cronologia
       no_trade_history: Nessuna cronologia movimenti disponibile per questa posizione.
       overview: Panoramica
-      portfolio_weight_label: Peso in Portafoglio
+      portfolio_weight_label: Peso nel portafoglio
       settings: Impostazioni
       security_label: Titolo
       originally: "era %{ticker}"

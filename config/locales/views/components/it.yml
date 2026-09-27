@@ -70,10 +70,12 @@ it:
           holdings_value: Valore posizioni
           remaining_principal_balance: Saldo capitale residuo
           total_account_value: Valore totale del conto
+          total_gains: Guadagni totali
         views:
           cash: Liquidità
           holdings: Posizioni
           total_value: Valore totale
+          gains: Guadagni / ROI
         vs_available_history: vs. cronologia disponibile
       activity_date:
         balance_tooltip: "Il saldo a fine giornata, dopo tutte le transazioni e rettifiche"
@@ -97,6 +99,9 @@ it:
       trigger_label: Ulteriori informazioni
     link:
       opens_in_new_tab: (si apre in una nuova scheda)
+    icon_picker:
+      no_matching_icons: Nessuna icona corrispondente
+      search_placeholder: Cerca icone...
   provider_sync_summary:
     title: Riepilogo sincronizzazione
     last_sync: "Ultima sincronizzazione: %{time_ago} fa"
@@ -105,7 +110,7 @@ it:
       total: "Totale: %{count}"
       linked: "Collegati: %{count}"
       unlinked: "Scollegati: %{count}"
-      institutions: "Istituti: %{count}"
+      institutions: "Istituzioni: %{count}"
     transactions:
       title: Transazioni
       seen: "Viste: %{count}"

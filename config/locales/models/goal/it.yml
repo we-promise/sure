@@ -17,9 +17,20 @@ it:
           attributes:
             base:
               at_least_one_linked_account_required: Scegli almeno un conto per finanziare questo obiettivo.
+              whole_account_conflict_on_restore: 'Impossibile ripristinare questo obiettivo: “%{account_name}” è ora interamente accantonato per “%{goal_name}”. Inserisci prima un importo su uno dei due.'
             linked_accounts:
               must_be_fundable: Tutti i conti collegati devono essere conti correnti o conti di investimento.
               currency_mismatch: Tutti i conti collegati devono avere la stessa valuta.
               must_belong_to_family: I conti collegati devono appartenere alla stessa famiglia dell'obiettivo.
             currency:
               locked_after_linked: Impossibile cambiare la valuta dopo che l'obiettivo è stato collegato ai conti.
+            target_mode:
+              months_requires_maintained: Solo una riserva da mantenere può avere un obiettivo espresso in mesi di spese.
+            target_months:
+              blank: Indica quanti mesi di spese deve coprire questa riserva.
+              only_with_months_mode: I mesi di spese si applicano solo quando l'obiettivo è impostato in questo modo.
+            kind:
+              locked_while_released: Riapri questo obiettivo prima di trasformarlo in una riserva.
+              locked_once_consumed: Questo obiettivo ha già registrato denaro come speso, quindi non può diventare una riserva.
+            target_amount:
+              below_consumed: Impossibile impostare un obiettivo inferiore a quanto questo obiettivo ha già registrato come speso.

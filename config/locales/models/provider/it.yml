@@ -1,0 +1,17 @@
+---
+it:
+  providers:
+    property_valuation:
+      not_configured: Questo provider di dati immobiliari non è configurato.
+      missing_fields: Inserisci un nome e un indirizzo statunitense completo (via, città, stato e codice ZIP).
+      preview_expired: 'L''anteprima di questo immobile è scaduta: cerca di nuovo l''indirizzo.'
+    rentcast:
+      errors:
+        no_valuation: RentCast non ha restituito una stima del valore per questo indirizzo.
+        not_found: RentCast non ha trovato alcun immobile corrispondente a questo indirizzo.
+    realie:
+      errors:
+        no_property: Realie non ha restituito alcun immobile per questo indirizzo.
+        no_valuation: Realie non ha restituito una valutazione per questo immobile.
+        not_found: Realie non ha trovato alcun immobile corrispondente a questo indirizzo.
+        location_mismatch: Realie ha trovato un immobile in una città o con un codice ZIP diversi. Ricontrolla l'indirizzo.

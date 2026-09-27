@@ -13,7 +13,7 @@ it:
       link_provider: Collega con provider
       unlink_provider: Scollega dal provider
       change_simplefin_account: Cambia conto SimpleFIN
-      troubleshoot: Risoluzione problemi
+      troubleshoot: Risolvi problemi
       enable: Abilita conto
       disable: Disabilita conto
       exclude_from_reports: Escludi da tutti i report
@@ -29,7 +29,7 @@ it:
     create:
       success: "Conto %{type} creato"
     set_default:
-      depository_only: "Solo i conti correnti e le carte di credito possono essere impostati come predefiniti."
+      depository_only: "Solo i conti di liquidità e le carte di credito possono essere impostati come predefiniti."
     destroy:
       success: "Conto %{type} pianificato per l'eliminazione"
       cannot_delete_linked: "Impossibile eliminare un conto collegato. Prima scollega il provider."
@@ -51,12 +51,15 @@ it:
       notes_label: Note
       notes_placeholder: Conserva informazioni aggiuntive come numeri di conto, IBAN, codici ABI/CAB, ecc.
       exclude_from_reports: Escludi da tutti i report
+      enable_category_matcher_label: Abilita assegnazione automatica delle categorie
+      enable_category_matcher_hint: Se abilitata, la categoria suggerita dal provider viene applicata alle transazioni importate. Disabilitala per lasciare le nuove transazioni senza categoria.
     index:
       accounts: Conti
       manual_accounts:
         other_accounts: Altri conti
       new_account: Nuovo conto
       sync: Sincronizza tutti
+      cancel_sync: Annulla sincronizzazione
     sync_all:
       syncing: "Sincronizzazione conti in corso..."
     new:
@@ -65,6 +68,8 @@ it:
         select: Seleziona
         navigate: Naviga
         close: Chiudi
+        next: Avanti
+        previous: Indietro
       method_selector:
         connected_entry: Collega conto
         connected_entry_eu: Collega conto EU
@@ -77,9 +82,10 @@ it:
       limited_fx_history_warning: "La cronologia dei tassi di cambio è disponibile solo dal %{date} in poi. Le transazioni precedenti a questa data usano conversioni valutarie approssimate — questo può accadere quando il provider FX offre solo una finestra storica limitata."
       tabs:
         activity: Attività
-        holdings: Portafoglio
+        holdings: Posizioni
         overview: Panoramica
         statements: Estratti conto
+        schedule: Piano di rimborso
       activity:
         amount: Importo
         balance: Saldo
@@ -93,7 +99,7 @@ it:
         new_balance: Nuovo saldo
         new_trade: Nuova operazione
         new_transaction: Nuova transazione
-        new_transfer: Nuovo bonifico
+        new_transfer: Nuovo trasferimento
         no_entries: Nessuna voce trovata
         pending: In attesa
         search:
@@ -133,7 +139,9 @@ it:
       new_asset: Nuova attività
       new_debt: Nuova passività
       new_account: Nuovo conto
-      new_account_group: "Nuovo %{account_group}"
+      new_account_group: "Aggiungi %{account_group}"
+      expand_all: Espandi tutto
+      collapse_all: Comprimi tutto
     types:
       depository: Liquidità
       investment: Investimento

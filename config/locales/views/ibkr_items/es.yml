@@ -59,7 +59,7 @@ es:
     sync_status:
       no_accounts: Aún no se han detectado cuentas de IBKR
       all_linked:
-        one: 1 cuenta vinculada
+        one: '%{count} cuenta vinculada'
         other: "%{count} cuentas vinculadas"
       partial: "%{linked} vinculadas, %{unlinked} necesitan configuración"
     select_existing_account:

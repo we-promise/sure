@@ -20,7 +20,7 @@ it:
     errors:
       account_processing_failed: Impossibile sincronizzare il conto Akahu
       account_sync_schedule_failed: Impossibile pianificare la sincronizzazione del conto Akahu
-      pending_transactions_failed: Impossibile recuperare le transazioni in sospeso di Akahu
+      pending_transactions_failed: Impossibile recuperare le transazioni in attesa di Akahu
       transactions_failed: Impossibile recuperare le transazioni Akahu
       sync_failed: Impossibile sincronizzare la connessione Akahu
     sync_status:

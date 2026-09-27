@@ -90,7 +90,7 @@ pt-PT:
         destructive: Erro
     pill:
       aria_label: "%{label}"
-      default_label: Pré-visualizar
+      default_label: Antevisão
     dialog:
       close: Fechar
     popover:

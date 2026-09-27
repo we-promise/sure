@@ -13,6 +13,8 @@ es:
       model_placeholder: Camry
       year: Año
       year_placeholder: '2025'
+      mileage_unit_kilometers: Kilómetros
+      mileage_unit_miles: Millas
     new:
       title: Introduce los detalles del vehículo
     overview:

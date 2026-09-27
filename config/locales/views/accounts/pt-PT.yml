@@ -68,6 +68,8 @@ pt-PT:
         select: Selecionar
         navigate: Navegar
         close: Fechar
+        next: Seguinte
+        previous: Anterior
       method_selector:
         connected_entry: Ligar conta
         connected_entry_eu: Ligar conta da UE
@@ -83,6 +85,7 @@ pt-PT:
         holdings: Posições
         overview: Visão geral
         statements: Extratos
+        schedule: Plano de pagamentos
       activity:
         amount: Montante
         balance: Saldo
@@ -141,6 +144,8 @@ pt-PT:
       new_debt: Nova dívida
       new_account: Nova conta
       new_account_group: "Novo(a) %{account_group}"
+      expand_all: Expandir tudo
+      collapse_all: Recolher tudo
     types:
       depository: Dinheiro
       investment: Investimento

@@ -129,3 +129,5 @@ it:
         usage_instructions: "Usa la tua chiave API includendola nell'intestazione X-Api-Key:"
         copy_key: "Copia chiave API"
         continue: "Vai alle impostazioni chiave API"
+      key_reveal:
+        copied: Copiata!

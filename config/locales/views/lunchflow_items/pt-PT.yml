@@ -14,6 +14,7 @@ pt-PT:
       service_down_label: Serviço indisponível
       service_down_desc: A API do Lunch Flow pode estar temporariamente indisponível
       check_provider_settings: Verificar definições do serviço
+      unexpected_error: Ocorreu um erro inesperado. Tente novamente mais tarde.
     setup_required:
       title: Configuração do Lunch Flow necessária
       api_key_not_configured: Chave de API não configurada
@@ -64,6 +65,14 @@ pt-PT:
       syncing: A sincronizar...
       total: Total
       unlinked: Por associar
+      sync_status:
+        no_accounts: Não foram encontradas contas
+        synced:
+          one: '%{count} conta sincronizada'
+          other: '%{count} contas sincronizadas'
+        partial_setup:
+          one: '%{linked} sincronizadas, %{unlinked} por configurar'
+          other: '%{linked} sincronizadas, %{unlinked} por configurar'
     select_accounts:
       accounts_selected: contas selecionadas
       api_error: "Erro de API: %{message}"
@@ -155,12 +164,18 @@ pt-PT:
       sync_start_date_help: Selecione até onde quer recuar no histórico de transações. Estão disponíveis no máximo 3 anos de histórico.
       sync_start_date_label: "Iniciar a sincronização de transações a partir de:"
       title: Configurar as suas contas Lunch Flow
+      page_title: Configurar contas Lunch Flow
     complete_account_setup:
       all_skipped: "Todas as contas foram ignoradas. Não foi criada nenhuma conta."
       creation_failed: "Falha ao criar contas: %{error}"
       no_accounts: "Não existem contas para configurar."
       success: "%{count} conta(s) criada(s) com sucesso."
+      unexpected_error: Ocorreu um erro inesperado
     sync:
       success: Sincronização iniciada
     update:
       success: Ligação Lunch Flow atualizada
+    subtype_select:
+      placeholder:
+        subtype: Selecionar subtipo
+        type: Selecionar tipo

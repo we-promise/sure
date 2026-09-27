@@ -7,7 +7,7 @@ it:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Conto di intermediazione"
+      brokerage: "Conto titoli"
       private_markets: "Mercati privati"
       interest_products: "Prodotti fruttiferi"
       crypto_wallet: "Portafoglio crypto"
@@ -25,6 +25,31 @@ it:
       data_quality:
         title: "Qualità dei dati e dettagli della sincronizzazione"
         repair: "Ripara i dati importati"
+        positions:
+          one: '%{count} posizione'
+          other: '%{count} posizioni'
+        unpriced:
+          one: '%{count} senza prezzo attuale'
+          other: '%{count} senza prezzo attuale'
+        events:
+          one: '%{count} attività'
+          other: '%{count} attività'
+        unknown:
+          one: '%{count} attività sconosciuta'
+          other: '%{count} attività sconosciute'
+        expenses:
+          one: '%{count} spesa negli ultimi 30 giorni (%{amount})'
+          other: '%{count} spese negli ultimi 30 giorni (%{amount})'
+        reconciliation: '%{matched}/%{total} saldi dei conti riconciliati'
+        sync_history: Sincronizzazioni recenti
+        sync_status:
+          completed: Completata
+          failed: Non riuscita
+          pending: In attesa
+          syncing: In corso
+          stale: Obsoleta
+      deletion_in_progress: Eliminazione in corso
+      never_synced: Mai sincronizzato.
     setup_accounts:
       page_title: "Configura il conto Trade Republic"
       subtitle: "Collega il tuo conto d’investimento Trade Republic."
@@ -33,6 +58,32 @@ it:
         cancel: "Annulla"
         link: "Collega"
         done: "Fine"
+        back_to_settings: Torna alle Impostazioni
+        create_selected_accounts: Crea i conti selezionati
+      dialog_title: Configura il tuo conto Trade Republic
+      info_box:
+        title: Importazione Trade Republic
+        items:
+          item_1: Posizioni attuali con prezzi e quantità
+          item_2: Operazioni eseguite (acquisti e vendite)
+          item_3: Depositi, prelievi e interessi accreditati
+      status:
+        fetching_accounts: Recupero del conto da Trade Republic...
+        no_accounts_found_title: Nessun conto trovato.
+        no_accounts_found_description: Sure non ha trovato alcun conto Trade Republic. Verifica che la sessione sia ancora valida.
+      available_accounts:
+        title: Conto disponibile
+        account_type_investment: Portafoglio d'investimento
+        account_type_cash: Conto di liquidità
+        account_summary: '%{account_type} • Saldo: %{balance}'
+        account_id: 'ID conto: %{account_id}'
+      link_existing:
+        description: Oppure collega il conto Trade Republic rilevato a un conto d'investimento manuale esistente.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Seleziona un conto...
+      linked_accounts:
+        title: Già collegati
+        linked_to_html: 'Collegato a: %{account}'
     sync:
       errors:
         phone_number_missing: "Manca il numero di telefono Trade Republic."
@@ -42,21 +93,37 @@ it:
         importing_account: "Importazione del conto Trade Republic..."
         processing_activity: "Elaborazione di posizioni e attività..."
         calculating_balances: "Calcolo dei saldi..."
+        checking_configuration: Verifica della configurazione del conto...
+        accounts_need_setup:
+          one: '%{count} conto Trade Republic da configurare...'
+          other: '%{count} conti Trade Republic da configurare...'
     repair:
       scheduled: "Riparazione dei dati Trade Republic pianificata."
     select_existing_account:
       title: "Collega il conto Trade Republic"
       link: "Collega"
       cancel: "Annulla"
+      no_accounts_available: Non ci sono ancora conti Trade Republic non collegati disponibili.
+      run_sync_hint: Completa l'accesso ed esegui una sincronizzazione da Impostazioni > Provider.
+      wait_for_sync: Attendi il completamento della sincronizzazione di rilevamento dei conti.
+      balance: Saldo
     initiate_login:
       verification_required: "Accesso avviato. Confermalo tramite %{method}, poi premi Conferma accesso."
+      not_configured: Trade Republic non è configurato.
+      pin_required: Inserisci il tuo PIN Trade Republic per avviare un nuovo accesso.
     complete_login:
       approval_pending: "Non ancora confermato. Approva l’accesso nell’app Trade Republic e riprova."
       success: "Trade Republic collegato correttamente."
       login_expired: "La richiesta di accesso è scaduta. Riavvia la procedura."
+      no_pending_login: Nessun accesso in attesa. Avvia prima un nuovo accesso.
+      still_pending: Non ancora confermato. Approva l'accesso nell'app Trade Republic e riprova.
     link_existing_account:
       not_found: "Conto o configurazione Trade Republic non trovati."
       success: "Conto collegato correttamente a Trade Republic."
+      only_manual_investment: Solo i conti d'investimento manuali possono essere collegati a Trade Republic.
+      already_linked: Questo conto Trade Republic è già collegato.
+      processing_failed: Il conto è stato collegato, ma l'elaborazione iniziale dei dati non è riuscita. È stata pianificata una sincronizzazione; controlla il registro di debug se i dati restano incompleti.
+      failed: Impossibile collegare il conto Trade Republic.
     complete_account_setup:
       success:
         one: "È stato creato correttamente %{count} conto Trade Republic."
@@ -65,9 +132,10 @@ it:
       partial_failure:
         one: "Non è stato possibile completare un conto Trade Republic selezionato. Controlla il registro di debug e riprova."
         other: "Non è stato possibile completare %{count} conti Trade Republic selezionati. Controlla il registro di debug e riprova."
+      none_selected: Nessun conto selezionato.
     activities:
       labels:
-        contribution: Versamento
+        contribution: Contributo
         withdrawal: Prelievo
         interest: Interessi
         dividend: Dividendo
@@ -78,3 +146,29 @@ it:
         tax_refund: Rimborso fiscale
         buy: Acquisto
         sell: Vendita
+    defaults:
+      name: Trade Republic
+    sync_status:
+      no_accounts: Nessun conto Trade Republic ancora rilevato
+      all_linked:
+        one: '%{count} conto collegato'
+        other: '%{count} conti collegati'
+      partial: '%{linked} collegati, %{unlinked} da configurare'
+    create:
+      success: Trade Republic salvato. Conferma l'accesso nell'app Trade Republic per completare la connessione.
+    update:
+      success: Configurazione Trade Republic aggiornata correttamente.
+      pin_required: Inserisci il tuo PIN Trade Republic per autenticarti di nuovo.
+    destroy:
+      success: Eliminazione della connessione Trade Republic pianificata.
+      unlink_failed: Non è stato possibile disconnettere completamente Trade Republic. La connessione è stata mantenuta per poter riprovare in sicurezza.
+    select_accounts:
+      not_configured: Trade Republic non è configurato.
+    initiate_qr_login:
+      not_configured: Trade Republic non è configurato.
+    poll_login:
+      no_pending_login: Nessun accesso in attesa. Avvia prima un nuovo accesso.
+      login_expired: La richiesta di accesso è scaduta. Ricomincia.
+    poll_qr_login:
+      no_pending_login: Nessun accesso QR in attesa.
+      success: Trade Republic collegato correttamente.

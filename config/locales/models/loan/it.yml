@@ -1,0 +1,8 @@
+---
+it:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Le righe di variazione del tasso richiedono sia una data di decorrenza sia un tasso.
+          rate_change_before_origination: Una variazione del tasso non può decorrere prima dell'erogazione del prestito.

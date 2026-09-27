@@ -33,6 +33,7 @@ es:
       idle_cash: Efectivo inactivo
       budget_at_risk: Presupuesto
       budget_on_track: Presupuesto
+      maintained_goal_depleted: Reserva
     meta:
       next_n_days:
         one: Próximo día
@@ -61,6 +62,7 @@ es:
       savings_rate_change: Ver transacciones de ese mes
       idle_cash: Ir a la cuenta
       budget: Ver presupuesto
+      maintained_goal_depleted: Ver reserva
     titles:
       spending_anomaly:
         above: El gasto en %{category} va en aumento
@@ -78,6 +80,7 @@ es:
         one: Una categoría necesita atención en tu presupuesto
         other: "%{count} categorías necesitan atención en tu presupuesto"
       budget_on_track: Tu presupuesto va según lo previsto
+      maintained_goal_depleted: '%{goal} ha bajado de su nivel'
     templates:
       spending_anomaly:
         above: Vas camino de gastar %{projected_spend} en %{category} este mes, aproximadamente un %{deviation_pct}% más que tu promedio mensual reciente de %{baseline_spend}.
@@ -96,3 +99,4 @@ es:
         over: "%{categories} superaron el presupuesto este mes. Has usado el %{budget_spent_pct}% de tu presupuesto total hasta ahora."
         near: "%{categories} están cerca de sus límites este mes. Has usado el %{budget_spent_pct}% de tu presupuesto total hasta ahora."
       budget_on_track: Has gastado %{spent} de tu presupuesto de %{budgeted} (%{budget_spent_pct}%) y todo está dentro de su límite.
+      maintained_goal_depleted: '%{goal} tiene %{saved} de los %{target} que debería mantener. Le faltan %{missing}.'

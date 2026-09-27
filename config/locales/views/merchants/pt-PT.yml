@@ -19,10 +19,10 @@ pt-PT:
       import: Importar comerciantes
       merge: Unir comerciantes
       title: Comerciantes
-      family_title: "Comerciantes da %{moniker}"
-      family_empty: "Ainda não há comerciantes da %{moniker}"
+      family_title: "Comerciantes (%{moniker})"
+      family_empty: "Ainda não há comerciantes (%{moniker})"
       provider_title: Comerciantes externos
-      provider_empty: "Ainda não existem comerciantes externos associados a esta %{moniker}"
+      provider_empty: "Ainda não existem comerciantes externos associados (%{moniker})"
       provider_read_only: Os comerciantes externos são sincronizados a partir das suas instituições associadas. Não podem ser editados.
       provider_info: Estes comerciantes foram detetados automaticamente pelas suas ligações bancárias ou por IA. Pode editá-los para criar a sua própria cópia ou removê-los para os desassociar das suas transações.
       enhance_info:

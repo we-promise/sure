@@ -161,16 +161,14 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # Italian translates part of yahoo_finance_settings but not the rate-limited
-  # strings this path renders (status_rate_limited, rate_limited_title,
-  # rate_limited_message), which is what makes it exercise the fallback. Move to
-  # another such locale if it gains them, rather than dropping the coverage.
+  # Japanese ships only Rails defaults and is outside SUPPORTED_LOCALES, so the
+  # rate-limited strings this path renders always fall back to English.
   test "falls back to English for untranslated Yahoo Finance health guidance" do
     @provider.stubs(:health_status).returns(:rate_limited)
 
     with_env_overrides("EXCHANGE_RATE_PROVIDER" => "yahoo_finance") do
       with_self_hosting do
-        get settings_hosting_url(locale: :it)
+        get settings_hosting_url(locale: :ja)
 
         assert_includes response.body, "Yahoo Finance is temporarily rate limiting requests."
         assert_not_includes response.body, "translation missing"

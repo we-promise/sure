@@ -1,0 +1,143 @@
+---
+es:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: Nombre
+        redirect_uri: URI de redirección
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              fragment_present: no puede contener un fragmento.
+              invalid_uri: debe ser una URI válida.
+              unspecified_scheme: debe especificar un esquema.
+              relative_uri: debe ser una URI absoluta.
+              secured_uri: debe ser una URI HTTPS/SSL.
+              forbidden_uri: está prohibida por el servidor.
+            scopes:
+              not_match_configured: no coinciden con los configurados en el servidor.
+  doorkeeper:
+    applications:
+      confirmations:
+        destroy: ¿Estás seguro?
+      buttons:
+        edit: Editar
+        destroy: Eliminar
+        submit: Enviar
+        cancel: Cancelar
+        authorize: Autorizar
+      form:
+        error: ¡Vaya! Revisa el formulario por si hay errores
+      help:
+        confidential: La aplicación se usará donde el secreto de cliente pueda mantenerse confidencial. Las aplicaciones móviles nativas y las aplicaciones de una sola página (SPA) se consideran no confidenciales.
+        redirect_uri: Usa una línea por URI
+        blank_redirect_uri: Déjalo en blanco si configuraste tu proveedor para usar Client Credentials, Resource Owner Password Credentials o cualquier otro tipo de concesión que no requiera URI de redirección.
+        scopes: Separa los ámbitos con espacios. Déjalo en blanco para usar los ámbitos predeterminados.
+      edit:
+        title: Editar aplicación
+      index:
+        title: Tus aplicaciones
+        new: Nueva aplicación
+        name: Nombre
+        callback_url: URL de callback
+        confidential: ¿Confidencial?
+        actions: Acciones
+        confidentiality:
+          "yes": Sí
+          "no": 'No'
+      new:
+        title: Nueva aplicación
+      show:
+        title: 'Aplicación: %{name}'
+        application_id: UID
+        secret: Secreto
+        secret_hashed: Secreto cifrado con hash
+        scopes: Ámbitos
+        confidential: Confidencial
+        callback_urls: URL de callback
+        actions: Acciones
+        not_defined: Sin definir
+    authorizations:
+      buttons:
+        authorize: Autorizar
+        deny: Denegar
+      error:
+        title: Se ha producido un error
+        go_back: Volver
+      new:
+        title: Autorización necesaria
+        prompt: ¿Autorizar a %{client_name} a usar tu cuenta?
+        able_to: Esta aplicación podrá
+      show:
+        title: Código de autorización
+        authorization_code_label: 'Código de autorización:'
+        copy_instructions: Copia este código y pégalo en la aplicación.
+      form_post:
+        title: Envía este formulario
+    authorized_applications:
+      confirmations:
+        revoke: ¿Estás seguro?
+      buttons:
+        revoke: Revocar
+      index:
+        title: Tus aplicaciones autorizadas
+        application: Aplicación
+        created_at: Fecha de creación
+        date_format: '%d/%m/%Y %H:%M:%S'
+    pre_authorization:
+      status: Preautorización
+    errors:
+      messages:
+        invalid_request:
+          unknown: Falta un parámetro obligatorio en la solicitud, incluye un valor de parámetro no admitido o tiene un formato incorrecto.
+          missing_param: 'Falta el parámetro obligatorio: %{value}.'
+          request_not_authorized: La solicitud debe estar autorizada. Falta el parámetro necesario para autorizarla o no es válido.
+          invalid_code_challenge: Se requiere el code challenge.
+        invalid_redirect_uri: La URI de redirección solicitada tiene un formato incorrecto o no coincide con la URI de redirección del cliente.
+        unauthorized_client: El cliente no está autorizado para realizar esta solicitud con este método.
+        access_denied: El propietario del recurso o el servidor de autorización denegó la solicitud.
+        invalid_scope: El ámbito solicitado no es válido, es desconocido o tiene un formato incorrecto.
+        invalid_code_challenge_method:
+          zero: El servidor de autorización no admite PKCE porque no hay valores de code_challenge_method aceptados.
+          one: El code_challenge_method debe ser %{challenge_methods}.
+          other: El code_challenge_method debe ser uno de %{challenge_methods}.
+        server_error: El servidor de autorización encontró una condición inesperada que le impidió completar la solicitud.
+        temporarily_unavailable: El servidor de autorización no puede gestionar la solicitud en este momento debido a una sobrecarga temporal o a un mantenimiento del servidor.
+        credential_flow_not_configured: El flujo Resource Owner Password Credentials falló porque Doorkeeper.configure.resource_owner_from_credentials no está configurado.
+        resource_owner_authenticator_not_configured: La búsqueda del Resource Owner falló porque Doorkeeper.configure.resource_owner_authenticator no está configurado.
+        admin_authenticator_not_configured: El acceso al panel de administración está prohibido porque Doorkeeper.configure.admin_authenticator no está configurado.
+        unsupported_response_type: El servidor de autorización no admite este tipo de respuesta.
+        unsupported_response_mode: El servidor de autorización no admite este modo de respuesta.
+        invalid_client: La autenticación del cliente falló porque el cliente es desconocido, no se incluyó autenticación del cliente o el método de autenticación no es compatible.
+        invalid_grant: La concesión de autorización proporcionada no es válida, ha caducado, se ha revocado, no coincide con la URI de redirección usada en la solicitud de autorización o se emitió para otro cliente.
+        unsupported_grant_type: El servidor de autorización no admite este tipo de concesión de autorización.
+        invalid_token:
+          revoked: El token de acceso se ha revocado
+          expired: El token de acceso ha caducado
+          unknown: El token de acceso no es válido
+        revoke:
+          unauthorized: No tienes autorización para revocar este token
+        forbidden_token:
+          missing_scope: El acceso a este recurso requiere el ámbito "%{oauth_scopes}".
+    flash:
+      applications:
+        create:
+          notice: Aplicación creada.
+        destroy:
+          notice: Aplicación eliminada.
+        update:
+          notice: Aplicación actualizada.
+      authorized_applications:
+        destroy:
+          notice: Aplicación revocada.
+    layouts:
+      admin:
+        title: Doorkeeper
+        nav:
+          oauth2_provider: Proveedor OAuth2
+          applications: Aplicaciones
+          home: Inicio
+      application:
+        title: Autorización OAuth necesaria

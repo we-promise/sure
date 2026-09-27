@@ -30,7 +30,7 @@ it:
     family_exports: Esportazioni
     family_merchants: Esercenti
     guides: Guide
-    holdings: Portafoglio
+    holdings: Posizioni
     home: Home
     hostings: Self-Hosting
     ibkr_items: Interactive Brokers
@@ -68,7 +68,7 @@ it:
     registrations: Registrazione
     reports: Rapporti
     rules: Regole
-    securities: Titoli
+    securities: Sicurezza
     security: Sicurezza
     self_hosting: Self-Hosting
     sessions: Accedi
@@ -82,8 +82,13 @@ it:
     tags: Etichette
     trades: Operazioni
     transactions: Transazioni
-    transfer_matches: Corrispondenze bonifici
-    transfers: Bonifici
+    transfer_matches: Abbinamenti trasferimenti
+    transfers: Trasferimenti
     users: Utenti
     valuations: Valutazioni
     vehicles: Veicoli
+    changelog: Novità
+    feedback: Feedback
+    monobank_items: Monobank
+    redbark_items: Redbark
+    system_health: Stato del sistema

@@ -19,5 +19,10 @@ pt-PT:
         pelo seu banco, ou do campo Crédito disponível se o seu banco não fornecer
         um.
       treat_balance_as_available_credit_label: O saldo é crédito disponível
+      simplefin_balance_sign_auto: Automático
+      simplefin_balance_sign_credit: Crédito (o banco deve-lhe dinheiro)
+      simplefin_balance_sign_debt: Dívida (deve dinheiro ao banco)
+      simplefin_balance_sign_description: Utilize uma substituição apenas quando o SimpleFIN comunicar um sinal ambíguo. A opção Automático continua a utilizar o histórico de transações e o saldo do serviço externo.
+      simplefin_balance_sign_label: Significado do saldo SimpleFIN
     new:
       title: Introduza os detalhes do cartão de crédito

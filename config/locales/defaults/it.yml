@@ -53,6 +53,7 @@ it:
       short: "%d %b"
       month_year: "%B %Y"
       short_month_year: "%b %Y"
+      short_with_year: '%d %b %Y'
     month_names:
     -
     - gennaio
@@ -232,3 +233,10 @@ it:
       long: "%d %B %Y %H:%M"
       short: "%d %b %H:%M"
     pm: pm
+  mcp:
+    errors:
+      invalid_session_id: ID sessione MCP non valido
+      unsupported_protocol_version: 'Versione del protocollo MCP non supportata: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris deve usare https, http loopback o uno schema URI di app nativa

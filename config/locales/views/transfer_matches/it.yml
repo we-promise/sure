@@ -2,10 +2,10 @@
 it:
   transfer_matches:
     create:
-      success: Bonifico creato
+      success: Trasferimento creato
     new:
       header:
-        title: Abbina bonifico o pagamento
+        title: Abbina trasferimento o pagamento
         subtitle: Abbina la transazione corrispondente in un altro conto o creane una nuova se non esiste.
       from_account: Conto di origine
       from_account_named: "Conto di origine: %{name}"
@@ -13,7 +13,7 @@ it:
       to_account_named: "Conto di destinazione: %{name}"
       outflow_transaction: Transazione in uscita
       inflow_transaction: Transazione in entrata
-      create_transfer_match: Crea abbinamento bonifico
+      create_transfer_match: Crea abbinamento trasferimento
     matching_fields:
       select_method: Seleziona un metodo per abbinare le tue transazioni.
       match_existing_recommended: Abbina transazione esistente (consigliato)

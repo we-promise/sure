@@ -26,6 +26,7 @@ es:
         other: "Se han importado %{count} cuentas"
       none_selected: No se ha seleccionado ninguna cuenta
       no_accounts: No hay cuentas para importar
+      invalid_sync_start_date: La fecha de inicio de sincronización debe ser una fecha válida en el pasado.
     binance_item:
       provider_name: Binance
       syncing: Sincronizando...

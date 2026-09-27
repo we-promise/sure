@@ -1,0 +1,313 @@
+---
+it:
+  bills:
+    row_overdue: Scaduta
+    row_today: Oggi
+    detect:
+      found:
+        one: Trovata %{count} possibile bolletta. Controllala qui sotto.
+        other: Trovate %{count} possibili bollette. Controllale qui sotto.
+      none_found: Nessun nuovo schema ricorrente trovato. Puoi aggiungere le bollette a mano.
+      already_running: Il rilevamento è già in corso. Ricontrolla tra poco.
+    feed:
+      calendar_name: Bollette Sure
+    ai_prompts:
+      due_before_paycheck: Cosa scade prima del mio prossimo stipendio?
+      subscriptions_up: Quali abbonamenti sono aumentati quest'anno?
+      monthly_subscriptions: Quanto pago ogni mese per gli abbonamenti?
+      safe_to_spend: Quanto posso spendere senza rischi in questo periodo?
+    smart_configurations:
+      show:
+        trigger: Fai configurare all'AI
+        title: Suggerimenti AI per %{name}
+        intro: Seleziona le modifiche da applicare. Quelle non selezionate restano esattamente come sono.
+        no_changes: Questa bolletta corrisponde già alla cronologia dei pagamenti. Non c'è nulla da modificare.
+        failed: Impossibile analizzare questa bolletta al momento. La sua configurazione non è stata modificata.
+        field_name: Nome
+        field_amount: Importo
+        field_schedule: Pianificazione
+        field_category: Categoria
+        field_kind: Tipo
+        field_autopay: Addebito automatico
+        uncategorized: Senza categoria
+        autopay_off: Disattivato
+        autopay_on: Attivo
+        apply: Applica selezionate
+    detail:
+      current: Attuale
+      next_payment: Prossimo pagamento
+      around: intorno al %{date}
+      rules: Come viene abbinata questa bolletta
+      rule_named: '%{name}'
+      rule_amount_range: da %{min} a %{max}
+      rule_aliases: Corrisponde anche a %{names}
+      rule_learned_tolerance: Gli importi entro il %{percent} dall'importo abituale vengono abbinati a questa bolletta
+      history_title: Ultimi 12 mesi
+      history_aria: Pagamenti degli ultimi dodici mesi
+      key_metrics: Per anno
+      year: Anno
+      spent_per_year: Speso
+      avg_payment: Pagamento medio
+      average: Media pagata
+      range: da %{min} a %{max}
+      annualized: All'anno
+      ytd: Pagato quest'anno
+      last_account: Ultimo conto usato
+      upcoming: In arrivo
+      recent_payments: Pagamenti recenti
+      manual_payment: Pagamento manuale
+      history: Cronologia
+      payment_count:
+        one: '%{count} pagamento'
+        other: '%{count} pagamenti'
+      notes: Note
+      trial_chip: Prova fino al %{date}
+      renews_chip: Si rinnova il %{date}
+      cancelled_chip: Disdetta il %{date}
+      price_changes: Variazioni di prezzo
+      price_change_line: '%{from} → %{to}'
+    month_pulse:
+      bill_count:
+        one: '%{count} bolletta'
+        other: '%{count} bollette'
+      left_to_pay: da pagare
+      pulse_paid: pagati
+      pulse_overdue: scaduti
+      pulse_next_seven: nei prossimi 7 giorni
+      pulse_bar_aria: Pagato il %{percent}% delle bollette di questo mese
+      next_up: Prossime
+      view_upcoming: Vedi prossime
+      date_today: Oggi
+      date_tomorrow: Domani
+      unconvertible:
+        one: '%{count} bolletta non è inclusa, nessun tasso di cambio disponibile'
+        other: '%{count} bollette non sono incluse, nessun tasso di cambio disponibile'
+    summary:
+      remaining: '%{amount} da pagare'
+      paid_headline: '%{amount} pagati'
+      cost_line: In media %{average} a pagamento, circa %{annualized} all'anno
+    pane:
+      close: Comprimi dettagli
+    add_bill: Aggiungi bolletta
+    manage: Gestisci
+    find_payment: Trova pagamento
+    add_payment: Aggiungi pagamento
+    review_match: Rivedi abbinamento
+    resolve: Risolvi
+    manage_payments: Gestisci pagamenti
+    view_full_bill: Vedi bolletta completa
+    match:
+      same_merchant: Stesso esercente
+      name_matches: Nome corrispondente
+      exact_amount: Importo esatto
+      amount_off: Differenza di %{amount}
+      due_date: Pagata alla scadenza
+      days_before:
+        one: '%{count} giorno prima della scadenza'
+        other: '%{count} giorni prima della scadenza'
+      days_after:
+        one: '%{count} giorno dopo la scadenza'
+        other: '%{count} giorni dopo la scadenza'
+    attention:
+      needs_review: Abbinamento da rivedere
+      partial: Parziale · %{amount} da pagare
+      amount_changed: Importo cambiato
+      overdue:
+        one: Scaduta da %{count} giorno
+        other: Scaduta da %{count} giorni
+    paid_label: Pagata
+    paid_over_short: Pagata, in più
+    installment_progress: Rata %{done_plus_one} di %{total}
+    partial_progress: '%{paid} di %{expected} pagati'
+    cancelled_still_scheduled: L'hai segnata come disdetta il %{date}, ma è ancora pianificata, quindi le bollette future continueranno a comparire.
+    paid_over: Pagati %{paid}, più del previsto
+    remaining_label: da pagare
+    debt_payment: · rimborso debito
+    paid_from: da %{account}
+    amount_range: varia da %{min} a %{max}
+    possible_duplicate: Possibile duplicato
+    due_label:
+      overdue:
+        one: Scaduta da %{count} giorno, era dovuta il %{date}
+        other: Scaduta da %{count} giorni, era dovuta il %{date}
+      today: Scade oggi
+      settled: Era dovuta il %{date}
+      due_since: Scade il %{date}
+      snoozed: Posticipata fino al %{date}
+      upcoming:
+        one: Scade domani, %{date}
+        other: Scade tra %{count} giorni, %{date}
+    views:
+      aria_label: Viste delle bollette
+      overview: Panoramica
+      calendar: Calendario
+      paycheck: Piano entrate
+      all: Tutte le bollette
+    pay_period:
+      paycheck_on: Stipendio del %{date}
+      before_next_paycheck: Prima del prossimo stipendio
+      due_before_date: '%{amount} da pagare prima del %{date}'
+    paycheck:
+      unconvertible:
+        one: '%{count} impegno non è incluso, nessun tasso di cambio disponibile'
+        other: '%{count} impegni non sono inclusi, nessun tasso di cambio disponibile'
+      income_section_title: Calendario delle entrate
+      manage: Gestisci
+      add_income: Aggiungi entrata
+      income_paused: In pausa, non pianificata
+      income_detected: Rilevata automaticamente, non definisce i giorni di paga
+      income_next_payday: prossima il %{date}
+      income_source_count:
+        one: '%{count} fonte di reddito'
+        other: '%{count} fonti di reddito'
+      next_on: Prossima il %{date}
+      no_upcoming_income: Nessuna entrata prevista da qui in avanti.
+      empty:
+        title: Indica il calendario delle tue entrate
+        description: 'Aggiungi le tue entrate per vedere cosa deve coprire ogni giorno di paga. Le entrate rilevate non definiscono mai da sole i tuoi giorni di paga: lo fai tu.'
+        action: Aggiungi entrata
+      all_clear:
+        title: Nulla da coprire
+        description: Nessuna bolletta scade da oggi al %{date}, quindi nulla in quel periodo è già impegnato.
+      safe_after_bills: Spendibile dopo le bollette
+      short_after_bills: Mancante dopo le bollette
+      period_source: ' · %{source}'
+      period_source_multiple: ' · %{count} fonti di reddito'
+      before_next_paycheck: Prima del %{date}
+      no_income_arriving: Nessuna entrata in arrivo
+      income_amount: '%{amount} di entrate'
+      due_this_period: Da pagare nel periodo
+      reserved_ahead: Accantonato
+      safe_short: Libero
+      short_short: Ammanco
+      reserved_footer:
+        one: Accantonato per %{count} bolletta successiva
+        other: Accantonato per %{count} bollette successive
+      bills_this_period:
+        one: Bollette in questo periodo · %{count}
+        other: Bollette in questo periodo · %{count}
+      bills_before_payday:
+        one: Bollette prima del prossimo giorno di paga · %{count}
+        other: Bollette prima del prossimo giorno di paga · %{count}
+      of_total: su %{amount}
+      bridge_label: Prima del prossimo stipendio
+      bridge_amount: · %{amount} da pagare
+      bridge_split: Da pagare prima del %{date}, coperti dai %{cash} disponibili sui tuoi conti.
+      shortfall_label: Ammanco prima del prossimo giorno di paga
+      shortfall_amount: · %{amount}
+      shortfall_split: '%{obligations} da pagare prima del %{date} e sui tuoi conti ci sono %{cash}.'
+      shortfall_largest: 'Impegno più consistente in arrivo:'
+      review_plan: Rivedi piano
+      allocation_aria: Su %{income} di entrate, %{due} è da pagare ora, %{reserved} è accantonato per dopo e %{safe} è spendibile.
+      allocation_aria_short: '%{income} di entrate vanno agli impegni di questo periodo e servono altri %{short}.'
+    reset_feed_token:
+      done: Link del feed reimpostato. Le app di calendario che usano il vecchio link smetteranno di aggiornarsi; iscriviti di nuovo con quello nuovo.
+      confirm: Reimpostare il link del feed del calendario? Tutti i link condivisi in precedenza smetteranno di funzionare.
+    calendar:
+      subscribe_ical: Iscriviti (iCal)
+      reset_feed: Reimposta link
+      previous_month: Mese precedente
+      next_month: Mese successivo
+      today: Oggi
+      month_totals: '%{expected} previsti · %{paid} pagati'
+      empty_month: Nessuna bolletta in scadenza questo mese.
+    all:
+      search_placeholder: Cerca bollette
+      any_status: Qualsiasi stato
+      status_filters:
+        overdue: Scadute
+        due: In scadenza
+        partial: Pagate in parte
+        paid: Pagate
+        paused: In pausa
+        ended: Ignorate
+      subscription_monthly: Al mese
+      subscription_annual: All'anno
+      subscription_active: Attivi
+      subscription_price_changes: Variazioni di prezzo quest'anno
+      subscription_price_change_line: '%{from} → %{to} (%{percent}%)'
+      any_type: Qualsiasi tipo
+      sort_due: Per prossima scadenza
+      sort_name: Per nome
+      sort_amount: Per importo
+      no_matches_title: Nessun risultato
+      no_matches_description: Prova a rimuovere un filtro o la ricerca.
+      col_name: Nome
+      col_type: Tipo
+      col_frequency: Frequenza
+      col_amount: Importo
+      col_next: Prossima scadenza
+      next_short: prossima il %{date}
+      col_status: Stato
+      col_actions: Azioni
+      monthly_equivalent: '%{amount}/mese'
+      types:
+        bill: Bolletta
+        subscription: Abbonamento
+        installment: Piano rateale
+        income: Entrata
+        transfer: Trasferimento
+        other: Altro
+    show:
+      edit: Modifica bolletta
+    index:
+      left_to_pay: da pagare
+      paid_so_far: Pagato finora
+      hero_past_due: '%{amount} scaduti'
+      hero_next_seven: '%{amount} in scadenza nei prossimi 7 giorni'
+      add_bill: Aggiungi bolletta
+      add_income: Aggiungi entrata
+      review_with_ai: Rivedi con l'AI
+      detected_review:
+        one: Abbiamo trovato %{count} pagamento ricorrente nelle tue transazioni. Controllalo affinché i totali qui corrispondano a ciò che paghi davvero.
+        other: Abbiamo trovato %{count} pagamenti ricorrenti nelle tue transazioni. Controllali affinché i totali qui corrispondano a ciò che paghi davvero.
+      detected_review_action: Controllali
+      needs_review: Da rivedere
+      notice_trial: La prova di %{name} termina il %{date}
+      notice_renewal: '%{name} si rinnova il %{date}'
+      notice_price: '%{name} ha cambiato prezzo: %{from} → %{to} (%{percent})'
+      notices_routine:
+        one: '%{count} modifica minore'
+        other: '%{count} modifiche minori'
+      suggestion_line: '%{entry} sembra un pagamento di %{bill}'
+      suggestion_unknown_entry: Una transazione
+      confidence: Corrispondenza %{percent}%
+      accept: Applica
+      reject: Non è questa bolletta
+      title: Bollette
+      summary_label: In scadenza questo mese
+      summary_count:
+        one: '%{count} bolletta in scadenza'
+        other: '%{count} bollette in scadenza'
+      summary_needs_action:
+        one: '%{count} richiede un tuo intervento'
+        other: '%{count} richiedono un tuo intervento'
+      all_automatic: tutte con addebito automatico
+      recurring_label: Impegno ricorrente
+      recurring_monthly: '%{amount} al mese'
+      recurring_annual: '%{amount} all''anno'
+      unconvertible:
+        one: '%{count} bolletta non è inclusa, nessun tasso di cambio disponibile'
+        other: '%{count} bollette non sono incluse, nessun tasso di cambio disponibile'
+      overdue: Scadute
+      needs_attention: Richiedono attenzione
+      attention_overdue_total: '%{amount} scaduti'
+      this_month: Questo mese
+      later: Dopo questo mese
+      paid_this_month: Pagate questo mese
+      dormant: Inattive
+      kpi_remaining: Da pagare questo mese
+      kpi_paid: Pagato questo mese
+      kpi_next_seven: In scadenza nei prossimi 7 giorni
+      kpi_past_due: Scaduto
+      paid_count:
+        one: '%{count} bolletta saldata'
+        other: '%{count} bollette saldate'
+      needs_action_count:
+        one: '%{count} richiede un tuo intervento'
+        other: '%{count} richiedono un tuo intervento'
+      empty:
+        title: Ancora nessuna bolletta
+        description: Le bollette sono le tue spese ricorrenti. Sure le trova automaticamente dalla cronologia delle transazioni e puoi aggiungere a ciascuna un link di pagamento per pagare direttamente da qui.
+        action: Trova transazioni ricorrenti
+        no_history_description: Ancora nessuna transazione. Collega un conto o importa la cronologia e Sure troverà automaticamente le tue bollette, oppure aggiungine una a mano.

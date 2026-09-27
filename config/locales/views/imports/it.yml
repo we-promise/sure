@@ -22,7 +22,7 @@ it:
           one: "1 trans."
           other: "%{count} trans."
         split_warning_title: Transazioni suddivise rilevate
-        split_warning_description: "Questo file QIF contiene transazioni suddivise. Le suddivisioni non sono ancora supportate, quindi ogni transazione suddivisa verrà importata come singola transazione con il suo importo totale e senza categoria. I dettagli delle singole suddivisioni non verranno preservati."
+        split_warning_description: "Questo file QIF contiene transazioni suddivise. Controlla le categorie e le etichette delle suddivisioni rilevate qui sotto prima di importare."
         split_badge: suddivisa
         empty_state_primary: Nessuna categoria o etichetta trovata in questo file QIF.
         empty_state_secondary: Tutte le transazioni verranno importate senza categorie o etichette.
@@ -113,6 +113,20 @@ it:
         instructions: Seleziona continua per analizzare il tuo CSV e passare alla fase di pulizia.
       mint_import:
         date_format_label: Formato data
+        account_optional: Conto (opzionale)
+        amount: Importo
+        apply_configuration: Applica configurazione
+        category_optional: Categoria (opzionale)
+        currency: Valuta
+        date: Data
+        format: Formato
+        incomes_negative: Le entrate sono negative
+        incomes_positive: Le entrate sono positive
+        intro: Abbiamo preconfigurato la tua importazione da Mint. Procedi al passo successivo.
+        leave_empty: Lascia vuoto
+        name_optional: Nome (opzionale)
+        select_format: Seleziona formato
+        tags_optional: Etichette (opzionale)
       actual_import:
         preconfigured_notice: Abbiamo preconfigurato la tua importazione da Actual Budget. Procedi al passo successivo.
         leave_empty: Lascia vuoto
@@ -145,6 +159,11 @@ it:
       show:
         description: Seleziona le colonne che corrispondono a ogni campo nel tuo CSV.
         title: Configura la tua importazione
+        template_found: Trovato un template di configurazione
+        template_description: Abbiamo trovato una configurazione da un'importazione precedente per questo conto. Vuoi applicarla a questa importazione?
+        manually_configure: Configura manualmente
+        apply_template: Applica template
+        sample_caption: Dati di esempio dal CSV caricato
     confirms:
       sure_import:
         title: Conferma la tua importazione
@@ -174,6 +193,7 @@ it:
     uploads:
       handle_qif_upload:
         qif_uploaded: "File QIF caricato con successo."
+        qif_account_required: Seleziona un conto per l'importazione QIF
       update:
         qif_uploaded: "File QIF caricato con successo."
       show:
@@ -229,8 +249,8 @@ it:
       rules: "Regole"
       merchants: "Esercenti"
       recurring_transactions: "Transazioni ricorrenti"
-      transfers: "Bonifici"
-      rejected_transfers: "Bonifici rifiutati"
+      transfers: "Trasferimenti"
+      rejected_transfers: "Trasferimenti rifiutati"
       trades: "Operazioni"
       holdings: "Posizioni"
       valuations: "Valutazioni"
@@ -258,6 +278,7 @@ it:
     update:
       account_saved: "Conto salvato."
       invalid_account: "Conto non trovato."
+      account_locked: Questa importazione è già stata pubblicata, quindi il suo conto non può essere modificato. Annullala prima se devi importarla altrove.
     publish:
       started: "La tua importazione è iniziata in background."
       max_rows_exceeded: "La tua importazione supera il numero massimo di righe di %{max}."
@@ -323,6 +344,7 @@ it:
       confirm: Conferma
       select: Seleziona
       progress: "Passo %{step} di %{total}"
+      label: Passo %{step}
     empty:
       message: Nessuna importazione trovata.
     index:
@@ -355,13 +377,15 @@ it:
           uploading: Elaborazione righe
           reverting: Ripristino
           revert_failed: Ripristino fallito
-          complete: Completa
+          complete: Completata
           failed: Fallita
         actions:
           revert: Ripristina
           confirm_revert: Verranno eliminate le transazioni importate, ma potrai comunque rivedere e reimportare i tuoi dati in qualsiasi momento.
           delete: Elimina
           view: Vedi
+          mark_failed: Contrassegna come fallita
+          confirm_mark_failed: Questa importazione è inattiva da un po' e il suo job in background è stato probabilmente interrotto. Contrassegnarla come fallita per poter riprovare? Nessun dato importato viene conservato.
       empty: Nessuna importazione ancora.
     new:
       description: Importa da uno strumento finanziario o carica file di dati grezzi.
@@ -413,6 +437,8 @@ it:
       back_to_imports: Torna alle importazioni
     errors:
       custom_column_requires_inflow: "Le importazioni con colonne personalizzate richiedono la selezione di una colonna di flusso in entrata"
+      interrupted: Il worker in background è stato interrotto prima del completamento. I dati importati sono stati annullati — puoi riprovare in sicurezza.
+      presumed_lost: Contrassegnata come fallita perché il job in background è stato considerato perso. I dati importati sono stati annullati — puoi riprovare in sicurezza.
     document_types:
       bank_statement: Estratto conto bancario
       credit_card_statement: Estratto carta di credito
@@ -442,7 +468,9 @@ it:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Elaborazione fallita: %{error}"
       ready_for_review_title: Pronto per la revisione
-      ready_for_review_description: "Abbiamo estratto %{count} transazioni dal tuo estratto conto. Revisiona e pubblica per aggiungerle al tuo conto."
+      ready_for_review_description:
+        one: "%{count} transazione del tuo estratto conto non è ancora in questo conto. Rivedila e pubblicala per aggiungerla."
+        other: "%{count} transazioni del tuo estratto conto non sono ancora in questo conto. Rivedile e pubblicale per aggiungerle."
       transactions_extracted: Transazioni estratte
       transactions_extracted_count:
         one: "%{count} transazione"
@@ -459,3 +487,30 @@ it:
       review_transactions: Rivedi transazioni
       select_account_to_continue: Seleziona un conto sopra per continuare.
       unknown_document_type: Sconosciuto
+      errors:
+        provider_not_configured: Provider IA non configurato
+        provider_no_pdf_support: Il provider IA non supporta l'elaborazione dei PDF
+      view_summary: Vedi riepilogo importazione
+      already_recorded_note:
+        one: '%{count} era già presente in questo conto ed è stata abbinata all''estratto conto.'
+        other: '%{count} erano già presenti in questo conto e sono state abbinate all''estratto conto.'
+      complete_fully_reconciled:
+        one: Ogni transazione di questo estratto conto era già nel tuo conto. %{count} è stata abbinata e contrassegnata come riconciliata — non c'era niente da importare.
+        other: Ogni transazione di questo estratto conto era già nel tuo conto. Tutte le %{count} sono state abbinate e contrassegnate come riconciliate — non c'era niente da importare.
+    summary:
+      title: Riepilogo importazione
+      subtitle: Cosa è successo a ogni transazione di questo estratto conto in %{account}.
+      subtitle_no_account: Cosa è successo a ogni transazione di questo estratto conto.
+      extracted: Trovate nell'estratto conto
+      already_recorded: Già registrate
+      already_recorded_hint: Abbinate a una transazione già presente in questo conto e contrassegnate come riconciliate.
+      imported: Importate come nuove
+      awaiting_review: In attesa di importazione
+      fully_reconciled:
+        one: Non c'era niente da importare — l'unica transazione dell'estratto conto era già registrata.
+        other: Non c'era niente da importare — tutte le %{count} transazioni erano già registrate.
+      statement_evidence_html: Riconciliato con %{statement}.
+      close: Chiudi
+    cancel:
+      cancelled: Importazione contrassegnata come fallita. Puoi riprovare dalla pagina dell'importazione.
+      not_cancellable: Al momento questa importazione non può essere contrassegnata come fallita — il suo job potrebbe essere ancora in esecuzione. Riprova quando sarà inattiva da un'ora.

@@ -4,6 +4,7 @@ it:
     create:
       invalid_credentials: Email o password non validi.
       local_login_disabled: L'accesso con password locale è disabilitato. Utilizza il single sign-on.
+      account_deactivated: Questo account è stato disattivato. Contatta un amministratore.
     destroy:
       logout_successful: Hai effettuato la disconnessione con successo.
     post_logout:
@@ -33,3 +34,5 @@ it:
       no_auth_methods_enabled: Nessun metodo di autenticazione è attualmente abilitato. Contatta un amministratore.
       demo_banner_title: "Modalità demo attiva"
       demo_banner_message: "Questo è un ambiente dimostrativo. Le credenziali di accesso sono state precompilate per tua comodità. Non inserire informazioni reali o sensibili."
+      passkey_button: Accedi con una passkey
+      passkey_unsupported: Questo browser non supporta le passkey.

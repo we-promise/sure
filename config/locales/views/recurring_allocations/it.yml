@@ -1,0 +1,15 @@
+---
+it:
+  recurring_allocations:
+    over_allocation: In questo modo verrebbe assegnato più dell'importo della transazione
+    missing_rate: Nessun tasso di cambio disponibile; inserisci l'importo manualmente
+    already_allocated: Questa transazione è già applicata a questa bolletta
+    invalid: Impossibile registrare il pagamento
+    create:
+      success: Pagamento applicato
+    destroy:
+      success: Pagamento scollegato
+    confirm:
+      success: Pagamento applicato alla bolletta
+    reject:
+      success: Ignorata. Questa transazione non verrà più suggerita per questa bolletta.

@@ -9,10 +9,10 @@ es:
         other: "%{count} cuentas sincronizadas"
       synced_with_setup: "Sincronizadas: %{linked}; necesitan configuración: %{unlinked}"
     institution_summary:
-      none: "No hay instituciones conectadas"
+      none: "No hay entidades conectadas"
       count:
-        one: "%{count} institución"
-        other: "%{count} instituciones"
+        one: "%{count} entidad"
+        other: "%{count} entidades"
     errors:
       provider_not_configured: "El proveedor Redbark no está configurado"
     sync:

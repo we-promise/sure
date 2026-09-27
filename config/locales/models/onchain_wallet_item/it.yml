@@ -1,0 +1,17 @@
+---
+it:
+  onchain:
+    chains:
+      arbitrum: Arbitrum
+      base: Base
+      bitcoin: Bitcoin
+      ethereum: Ethereum
+      gnosis: Gnosis
+      optimism: Optimism
+      polygon: Polygon
+      solana: Solana
+    institution_name: Wallet in autocustodia
+  onchain_wallet_item:
+    movement:
+      received: Ricevuti %{quantity} %{symbol}
+      sent: Inviati %{quantity} %{symbol}

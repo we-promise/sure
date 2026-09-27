@@ -91,7 +91,7 @@ it:
       account_type_label: Tipo di conto
       account_types:
         skip: Salta
-        depository: Contanti
+        depository: Liquidità
         loan: Prestito
       create_accounts: Crea conti
       cancel: Annulla

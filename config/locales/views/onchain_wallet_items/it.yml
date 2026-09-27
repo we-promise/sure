@@ -1,0 +1,111 @@
+---
+it:
+  onchain_wallet_items:
+    choose_chain:
+      activity_found: Attività trovata
+      explanation: Questo formato di indirizzo è usato da più di una rete e i saldi su ciascuna sono diversi. Scegli quella che vuoi monitorare.
+      no_activity_found: Nessuna attività
+      subtitle: '%{address}'
+      title: Quale rete?
+    destroy:
+      success: La connessione al wallet in autocustodia è stata pianificata per l'eliminazione.
+    disconnect_asset:
+      success: Monitoraggio di %{symbol} interrotto. Il conto e la cronologia sono stati mantenuti.
+    disconnect_wallet:
+      success:
+        one: Monitoraggio interrotto per %{count} asset a quell'indirizzo.
+        other: Monitoraggio interrotto per %{count} asset a quell'indirizzo.
+    enable_crypto_prices:
+      not_self_hosted: Su questa installazione i provider di dati di mercato sono configurati dall'operatore dell'istanza.
+      success: Prezzi crypto abilitati. I valori dei wallet compariranno dopo la prossima sincronizzazione.
+    errors:
+      address_required: Inserisci un indirizzo wallet.
+      already_linked: Questo indirizzo è già monitorato su questa rete. Usa Verifica token per cambiare gli asset monitorati.
+      chain_unreachable: Impossibile raggiungere l'explorer pubblico di questa rete. Riprova tra un momento.
+      rate_limited: L'explorer pubblico sta limitando le richieste in questo momento. Riprova tra qualche minuto.
+      unexpected: Si è verificato un errore durante la lettura di questo wallet. I dettagli sono stati registrati per l'assistenza.
+      unrecognized_address: Non sembra un indirizzo valido su nessuna delle reti supportate.
+      wallet_not_found: Questo wallet non è monitorato da questa connessione.
+    link_wallet:
+      errors:
+        none_tracked: 'Nessun asset monitorato: impossibile aggiungere %{assets}. Riprova tra un momento.'
+        nothing_selected: Scegli almeno un asset da monitorare.
+        some_failed: 'Impossibile monitorare %{assets}: esclusi dal monitoraggio.'
+      success:
+        one: Monitoraggio di %{count} asset da questo wallet.
+        other: Monitoraggio di %{count} asset da questo wallet.
+    manage:
+      assets_truncated: Questo indirizzo contiene più token di quanti ne restituisca una singola lettura, quindi sono elencati solo i %{count} più attendibili. Gli asset già monitorati continuano a sincronizzarsi.
+      disconnect_asset: Interrompi monitoraggio
+      disconnect_asset_confirm: Interrompere il monitoraggio di %{symbol}? Il conto e la cronologia vengono mantenuti ma non saranno più aggiornati.
+      disconnect_wallet: Disconnetti wallet
+      disconnect_wallet_confirm: Interrompere il monitoraggio di tutti gli asset a questo indirizzo?
+      history_note: La disconnessione mantiene i conti e la loro cronologia, che semplicemente smettono di aggiornarsi.
+      history_truncated: 'Non è stato possibile leggere tutti i trasferimenti di questo indirizzo: la cronologia è più lunga di quanto copra una sincronizzazione, oppure l''explorer ha rifiutato la richiesta. I saldi sono completi, ma mancano alcuni trasferimenti.'
+      native: Nativo
+      no_wallets: Nessun wallet ancora monitorato.
+      review_tokens: Verifica token
+      subtitle: Tutti gli indirizzi letti da questa connessione e cosa viene monitorato per ciascuno.
+      title: Gestisci wallet in autocustodia
+    new_wallet:
+      address_label: Indirizzo wallet
+      address_placeholder: bc1..., 0x... o un indirizzo Solana
+      bitcoin_single_address_note: Bitcoin viene monitorato un indirizzo alla volta. Le chiavi estese (xpub/ypub/zpub) non sono supportate, quindi per un wallet che distribuisce i fondi su più indirizzi derivati verrà mostrato solo il saldo dell'indirizzo inserito.
+      chain_auto_detect: Rileva automaticamente
+      chain_label: Rete
+      continue: Continua
+      read_only_note: Vengono letti solo i dati pubblici della blockchain. Non inserire mai una seed phrase o una chiave privata.
+      subtitle: Monitora un wallet di cui possiedi le chiavi, a partire dal suo indirizzo pubblico.
+      title: Aggiungi un wallet in autocustodia
+    onchain_wallet_item:
+      assets_tracked:
+        one: '%{count} asset monitorato'
+        other: '%{count} asset monitorati'
+      sync: Sincronizza ora
+      syncing: Sincronizzazione in corso...
+    wallet_card:
+      addresses_tracked:
+        one: '%{count} indirizzo monitorato'
+        other: '%{count} indirizzi monitorati'
+      deletion_in_progress: Rimozione in corso...
+      delete: Rimuovi connessione
+      needs_attention: Richiede attenzione
+      no_wallets_message: Collega un indirizzo dalle impostazioni provider per vederlo qui.
+      no_wallets_title: Nessun wallet ancora collegato
+      status: Sincronizzato %{timestamp} fa
+      sync: Sincronizza ora
+      status_never: Non ancora sincronizzato
+      syncing: Sincronizzazione in corso...
+    price_provider_warning:
+      body: Nessun provider di dati di mercato abilitato può fornire i prezzi delle crypto, quindi questi wallet monitorano le quantità ma mostrano un valore pari a zero.
+      enable: Abilita prezzi crypto
+      exchange_rate_body: 'Le crypto sono valutate in USD e non è configurato alcun provider di tassi di cambio per convertirle in %{currency}, quindi questi wallet monitorano le quantità ma mostrano un valore pari a zero. Imposta EXCHANGE_RATE_PROVIDER: Frankfurter non richiede una chiave API.'
+      exchange_rate_title: Nessun provider di tassi di cambio configurato
+      link: Apri impostazioni dati di mercato
+      title: Prezzi crypto non configurati
+    provider_connection:
+      description: Monitora un wallet di cui possiedi le chiavi, a partire dal suo indirizzo pubblico.
+      name: Wallet in autocustodia
+    review_tokens:
+      save: Salva asset monitorati
+      subtitle: '%{chain} · %{address}'
+      title: Verifica asset monitorati
+    token_review:
+      import_selected: Monitora asset selezionati
+      subtitle: '%{chain} · %{address}'
+      title: Scegli cosa monitorare
+    token_review_form:
+      assets_truncated: Questo indirizzo contiene più token di quanti ne restituisca una singola lettura, quindi sono elencati solo i %{count} più attendibili.
+      cancel: Annulla
+      explanation: 'Gli asset con un prezzo noto sono selezionati. Tutti gli altri restano deselezionati: i wallet ricevono airdrop spam e monitorarli non ha alcun valore.'
+      native: Nativo
+      no_price: Nessun prezzo disponibile; monitorato solo per quantità
+      nothing_found: Non vediamo nulla a questo indirizzo su questa rete.
+    update:
+      success: Connessione al wallet in autocustodia aggiornata.
+    update_tokens:
+      errors:
+        no_changes: 'Nessuna modifica: sono ancora selezionati gli stessi asset.'
+        none_tracked: 'Nessuna modifica: impossibile aggiungere %{assets}. Riprova tra un momento.'
+        some_failed: 'Impossibile monitorare %{assets}: esclusi dal monitoraggio.'
+      success: Asset monitorati aggiornati (%{created} aggiunti, %{removed} rimossi).

@@ -18,7 +18,7 @@ es:
       save: Guardar ajustes de uso compartido
       owner_label: "Propietario: %{name}"
       shared_with_count:
-        one: Compartida con 1 miembro
+        one: 'Compartida con %{count} miembro'
         other: "Compartida con %{count} miembros"
       include_in_finances: Incluir en mis presupuestos e informes
       exclude_from_finances: Excluir de mis presupuestos e informes

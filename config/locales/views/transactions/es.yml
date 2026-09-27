@@ -46,6 +46,12 @@ es:
       tag_search_placeholder: Buscar o crear etiqueta
       tags_label: Etiquetas
       transfer: Transferencia
+      category_search_placeholder: Buscar categorías
+      create_category: Crear "%{name}"
+      create_category_error: No se pudo crear la categoría
+      create_merchant: Crear
+      create_merchant_error: No se pudo crear el comercio
+      merchant_search_placeholder: Buscar o crear comercio
     create:
       created: Transacción creada
     update:
@@ -72,10 +78,10 @@ es:
       details: Detalles
       attachments: Adjuntos
       exclude: Excluir
-      exclude_description: Las transacciones excluidas se eliminarán de los cálculos y presupuestos e informes.
+      exclude_description: Las transacciones excluidas se eliminarán de los cálculos de presupuesto y de los informes.
       activity_type: Tipo de actividad
       activity_type_description: Tipo de actividad de inversión (Compra, Venta, Dividendo, etc.). Detectado automáticamente o configurado manualmente.
-      one_time_title: Transacción puntual %{type}
+      one_time_title: '%{type} puntual'
       one_time_description: Las transacciones puntuales se excluirán de ciertos cálculos de presupuesto e informes para ayudarte a ver lo que es realmente importante.
       convert_to_trade_title: Convertir en operación de valores
       convert_to_trade_description: Convierte esta transacción en una operación de compra o venta con detalles del valor para el seguimiento de la cartera.
@@ -104,6 +110,10 @@ es:
       transfer_or_debt_payment: ¿Transferencia o pago de deuda?
       open_matcher: Abrir emparejador
       convert: Convertir
+      create_bill: Crear un recibo
+      applied_to_title: Recibos pagados con esta transacción
+      applied_to_detail: '%{amount} para el recibo con vencimiento el %{date}'
+      applied_to_unreviewed: Pendiente de revisión
     activity_labels:
       buy: Compra
       sell: Venta
@@ -122,7 +132,7 @@ es:
     mark_recurring_subtitle: Realiza el seguimiento como una transacción recurrente. La variación del importe se calcula automáticamente basándose en transacciones similares de los últimos 6 meses.
     mark_recurring_title: Transacción recurrente
     potential_duplicate_title: Posible duplicado detectado
-    potential_duplicate_description: Esta transacción pendiente podría ser la misma que la transacción confirmada a continuación. Si es así, combínalas para evitar una doble contabilización.
+    potential_duplicate_description: 'Esta transacción pendiente podría ser la misma que la transacción contabilizada a continuación. Si es así, combínalas para evitar una doble contabilización.'
     merge_duplicate:
       success: Transacciones combinadas correctamente
       failure: No se pudieron combinar las transacciones
@@ -139,7 +149,7 @@ es:
     transaction:
       pending: Pendiente
       pending_tooltip: Transacción pendiente — puede cambiar al confirmarse
-      linked_with_provider: Vinculado con %{provider}
+      linked_with_provider: Vinculada con %{provider}
       activity_type_tooltip: Tipo de actividad de inversión
       possible_duplicate: ¿Duplicada?
       potential_duplicate_tooltip: Esto puede ser un duplicado de otra transacción
@@ -183,17 +193,17 @@ es:
       edit_imports: Editar importaciones
       new_transaction: Nueva transacción
       categorize_button:
-        one: Categorizar (1)
+        one: 'Categorizar (%{count})'
         other: Categorizar (%{count})
     categorizes:
       show:
         exit: Salir
         skip: Omitir
         remaining:
-          one: Queda 1 transacción sin categorizar
+          one: 'Queda %{count} transacción sin categorizar'
           other: Quedan %{count} transacciones sin categorizar
         transaction_count:
-          one: 1 transacción
+          one: '%{count} transacción'
           other: '%{count} transacciones'
         transactions_hint: Desmarca para excluir una transacción, o asígnale una categoría distinta directamente en su fila.
         assign_category: Asignar una categoría
@@ -212,7 +222,7 @@ es:
         all_done: Todas las transacciones están categorizadas
       create:
         categorized:
-          one: 1 transacción categorizada
+          one: '%{count} transacción categorizada'
           other: '%{count} transacciones categorizadas'
         rule_creation_failed: Transacciones categorizadas, pero no se pudo crear la regla (puede que ya exista).
       entry_row:
@@ -250,7 +260,7 @@ es:
       ticker_search_hint: Busca por símbolo de ticker o nombre de empresa, o escribe un ticker personalizado
       price_mismatch_title: Es posible que el precio no coincida
       price_mismatch_message: Tu precio (%{entered_price}/acción) difiere significativamente del precio de mercado actual de %{ticker} (%{market_price}). Si esto parece incorrecto, es posible que hayas seleccionado el valor equivocado — intenta usar "Introducir ticker personalizado" para especificar el correcto.
-      quantity_label: Cantidad (Acciones)
+      quantity_label: 'Cantidad (acciones)'
       quantity_placeholder: ej. 20
       quantity_hint: Número de acciones negociadas
       price_label: Precio por acción
@@ -259,7 +269,7 @@ es:
       qty_or_price_hint: Introduce al menos la cantidad O el precio. El otro se calculará a partir del importe de la transacción (%{amount}).
       trade_type_label: Tipo de operación
       trade_type_hint: Comprar o vender acciones de un valor
-      exchange_label: Bolsa (Opcional)
+      exchange_label: 'Bolsa (opcional)'
       exchange_placeholder: XNAS
       exchange_hint: Deja en blanco para detectar automáticamente
       cancel: Cancelar
@@ -343,7 +353,7 @@ es:
       no_attachments: Aún no hay adjuntos
       select_up_to: Selecciona hasta %{count} archivos (imágenes o PDF, máx. %{size}MB cada uno) • %{used} de %{count} usados
       files:
-        one: Archivo (1)
+        one: 'Archivo (%{count})'
         other: Archivos (%{count})
       browse_to_add: Explora para añadir archivos
       max_reached: Se ha alcanzado el límite de archivos (%{count}/%{max}). Elimina un archivo existente para subir otro.

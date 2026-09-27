@@ -9,20 +9,20 @@ es:
         description: Revisa el formato de fecha detectado y luego elige qué categorías y etiquetas de tu archivo QIF importar en %{product_name}.
         categories_heading: Categorías
         categories_found:
-          one: 1 categoría encontrada
+          one: '%{count} categoría encontrada'
           other: '%{count} categorías encontradas'
         category_name_col: Nombre de categoría
         transactions_col: Transacciones
         tags_heading: Etiquetas
         tags_found:
-          one: 1 etiqueta encontrada
+          one: '%{count} etiqueta encontrada'
           other: '%{count} etiquetas encontradas'
         tag_name_col: Nombre de etiqueta
         txn_count:
-          one: 1 transacción
+          one: '%{count} transacción'
           other: '%{count} transacciones'
         split_warning_title: Transacciones divididas detectadas
-        split_warning_description: Este archivo QIF contiene transacciones divididas. Las divisiones aún no son compatibles, por lo que cada transacción dividida se importará como una única transacción con su importe total y sin categoría. Los desgloses individuales de las divisiones no se conservarán.
+        split_warning_description: 'Este archivo QIF contiene transacciones divididas. Revisa a continuación las categorías y etiquetas de las divisiones detectadas antes de importar.'
         split_badge: dividida
         empty_state_primary: No se encontraron categorías ni etiquetas en este archivo QIF.
         empty_state_secondary: Todas las transacciones se importarán sin categorías ni etiquetas.
@@ -44,7 +44,7 @@ es:
       account_import:
         leave_empty: Dejar vacío
         default: Predeterminado
-        entity_type: Tipo de entidad
+        entity_type: Tipo de cuenta
         name: Nombre
         balance: Saldo
         currency: Moneda
@@ -113,6 +113,20 @@ es:
         instructions: Selecciona continuar para procesar tu CSV y pasar al paso de limpieza.
       mint_import:
         date_format_label: Formato de fecha
+        account_optional: Cuenta (opcional)
+        amount: Importe
+        apply_configuration: Aplicar configuración
+        category_optional: Categoría (opcional)
+        currency: Moneda
+        date: Fecha
+        format: Formato
+        incomes_negative: Los ingresos son negativos
+        incomes_positive: Los ingresos son positivos
+        intro: Hemos preconfigurado tu importación de Mint. Continúa con el siguiente paso.
+        leave_empty: Dejar vacío
+        name_optional: Nombre (opcional)
+        select_format: Selecciona el formato
+        tags_optional: Etiquetas (opcional)
       actual_import:
         preconfigured_notice: Hemos preconfigurado tu importación de Actual Budget. Continúa con el siguiente paso.
         leave_empty: Dejar vacío
@@ -145,6 +159,11 @@ es:
       show:
         description: Selecciona las columnas que corresponden a cada campo en tu CSV.
         title: Configura tu importación
+        template_found: Se ha encontrado una plantilla de configuración
+        template_description: Hemos encontrado una configuración de una importación anterior para esta cuenta. ¿Quieres aplicarla a esta importación?
+        manually_configure: Configurar manualmente
+        apply_template: Aplicar plantilla
+        sample_caption: Datos de muestra del CSV que has subido
     confirms:
       sure_import:
         title: Confirma tu importación
@@ -174,6 +193,7 @@ es:
     uploads:
       handle_qif_upload:
         qif_uploaded: Archivo QIF subido correctamente.
+        qif_account_required: Selecciona una cuenta para la importación QIF
       update:
         qif_uploaded: Archivo QIF subido correctamente.
       show:
@@ -189,7 +209,7 @@ es:
         download_sample_csv: Descarga un CSV de ejemplo
         to_see_format: para ver el formato CSV requerido
         qif_title: Subir archivo QIF
-        qif_description: Selecciona la cuenta a la que pertenece este archivo QIF y sube tu exportación .qif desde Quicken.
+        qif_description: 'Selecciona una cuenta para los archivos de una sola cuenta, o déjalo en blanco si tu exportación QIF incluye los nombres de las cuentas.'
         qif_account_label: Cuenta
         qif_account_placeholder: Seleccionar una cuenta…
         qif_file_prompt: para añadir tu archivo QIF aquí
@@ -258,6 +278,7 @@ es:
     update:
       account_saved: Cuenta guardada.
       invalid_account: Cuenta no encontrada.
+      account_locked: Esta importación ya se ha publicado, así que no se puede cambiar su cuenta. Reviértela primero si necesitas importarla en otra cuenta.
     publish:
       started: Tu importación ha comenzado en segundo plano.
       max_rows_exceeded: Tu importación supera el número máximo de filas de %{max}.
@@ -323,6 +344,7 @@ es:
       confirm: Confirmar
       select: Seleccionar
       progress: Paso %{step} de %{total}
+      label: Paso %{step}
     empty:
       message: No se han encontrado importaciones.
     index:
@@ -362,9 +384,11 @@ es:
           confirm_revert: Esto eliminará las transacciones que se importaron, pero aún podrás revisar y volver a importar tus datos en cualquier momento.
           delete: Eliminar
           view: Ver
+          mark_failed: Marcar como fallida
+          confirm_mark_failed: Esta importación lleva un tiempo inactiva y es probable que su tarea en segundo plano se interrumpiera. ¿Marcarla como fallida para poder volver a intentarlo? No se conservará ningún dato importado.
       empty: Aún no hay importaciones.
     new:
-      description: Puedes importar manualmente varios tipos de datos mediante CSV o usar una de nuestras plantillas de importación como Mint.
+      description: 'Importa desde una herramienta financiera o sube archivos de datos sin procesar.'
       tab_financial_tools: Herramientas y archivos financieros
       tab_raw_data: Datos en bruto
       import_ynab: Importar desde YNAB
@@ -395,11 +419,11 @@ es:
       invalid_pdf: El archivo subido no es un PDF válido.
       duplicate_pdf_unavailable: Este PDF ya está almacenado como un extracto al que no tienes acceso.
       document_too_large: El documento es demasiado grande. El tamaño máximo es %{max_size}MB.
-      invalid_document_file_type: Tipo de archivo de documento no válido para el almacén de vectores activo.
+      invalid_document_file_type: 'Tipo de archivo de documento no válido para el almacén de vectores activo.'
       document_uploaded: Documento subido correctamente.
-      document_upload_failed: No hemos podido subir el documento al almacén de vectores. Por favor, inténtalo de nuevo.
+      document_upload_failed: 'No hemos podido subir el documento al almacén de vectores. Por favor, inténtalo de nuevo.'
       invalid_ndjson_file_type: Tipo o formato de archivo no válido. Sube un archivo de exportación .ndjson o .json válido.
-      document_provider_not_configured: No hay ningún almacén de vectores configurado para la subida de documentos.
+      document_provider_not_configured: 'No hay ningún almacén de vectores configurado para la subida de documentos.'
     show:
       finalize_upload: Por favor, finaliza la subida de tu archivo.
       finalize_mappings: Por favor, finaliza tus mapeos antes de continuar.
@@ -413,6 +437,8 @@ es:
       back_to_imports: Volver a importaciones
     errors:
       custom_column_requires_inflow: Las importaciones de columnas personalizadas requieren que se seleccione una columna de entrada de fondos (inflow)
+      interrupted: 'El proceso en segundo plano se interrumpió antes de terminar. Los datos importados se han revertido: puedes volver a intentarlo sin problema.'
+      presumed_lost: 'Marcada como fallida porque se dio por perdida la tarea en segundo plano. Los datos importados se han revertido: puedes volver a intentarlo sin problema.'
     document_types:
       bank_statement: Extracto bancario
       credit_card_statement: Extracto de tarjeta de crédito
@@ -442,7 +468,9 @@ es:
       processing_failed_with_message: '%{message}'
       processing_failed_generic: 'Error en el procesamiento: %{error}'
       ready_for_review_title: Listo para revisar
-      ready_for_review_description: Hemos extraído %{count} transacciones de tu extracto. Revísalas y publícalas para añadirlas a tu cuenta.
+      ready_for_review_description:
+        one: '%{count} transacción de tu extracto aún no está en esta cuenta. Revísala y publícala para añadirla.'
+        other: '%{count} transacciones de tu extracto aún no están en esta cuenta. Revísalas y publícalas para añadirlas.'
       transactions_extracted: Transacciones extraídas
       transactions_extracted_count:
         one: '%{count} transacción'
@@ -459,3 +487,30 @@ es:
       review_transactions: Revisar transacciones
       select_account_to_continue: Selecciona una cuenta arriba para continuar.
       unknown_document_type: Desconocido
+      errors:
+        provider_not_configured: Proveedor de IA no configurado
+        provider_no_pdf_support: El proveedor de IA no admite el procesamiento de PDF
+      view_summary: Ver resumen de la importación
+      already_recorded_note:
+        one: '%{count} ya estaba en esta cuenta y se ha emparejado con el extracto.'
+        other: '%{count} ya estaban en esta cuenta y se han emparejado con el extracto.'
+      complete_fully_reconciled:
+        one: 'Todas las transacciones de este extracto ya estaban en tu cuenta. %{count} se ha emparejado y marcado como conciliada: no había nada que importar.'
+        other: 'Todas las transacciones de este extracto ya estaban en tu cuenta. Las %{count} se han emparejado y marcado como conciliadas: no había nada que importar.'
+    summary:
+      title: Resumen de la importación
+      subtitle: Qué ha pasado con cada transacción de este extracto en %{account}.
+      subtitle_no_account: Qué ha pasado con cada transacción de este extracto.
+      extracted: Encontradas en el extracto
+      already_recorded: Ya registradas
+      already_recorded_hint: Emparejadas con una transacción que esta cuenta ya tenía y marcadas como conciliadas.
+      imported: Importadas como nuevas
+      awaiting_review: Pendientes de importar
+      fully_reconciled:
+        one: 'No había nada que importar: la única transacción del extracto ya estaba registrada.'
+        other: 'No había nada que importar: las %{count} transacciones ya estaban registradas.'
+      statement_evidence_html: Conciliado con %{statement}.
+      close: Cerrar
+    cancel:
+      cancelled: Importación marcada como fallida. Puedes volver a intentarlo desde la página de la importación.
+      not_cancellable: 'Esta importación no se puede marcar como fallida ahora mismo: puede que su tarea siga en ejecución. Vuelve a intentarlo cuando lleve una hora inactiva.'

@@ -45,7 +45,13 @@ it:
       submit: Aggiungi transazione
       tag_search_placeholder: Cerca o crea etichetta
       tags_label: Etichette
-      transfer: Bonifico
+      transfer: Trasferimento
+      category_search_placeholder: Cerca categorie
+      create_category: Crea "%{name}"
+      create_category_error: Impossibile creare la categoria
+      create_merchant: Crea
+      create_merchant_error: Impossibile creare l'esercente
+      merchant_search_placeholder: Cerca o crea esercente
     create:
       created: Transazione creata
     update:
@@ -61,7 +67,7 @@ it:
       merge_duplicate: Sì, uniscile
       potential_duplicate_description: Questa transazione in attesa potrebbe essere la stessa di quella registrata qui sotto. In caso affermativo, uniscile per evitare il doppio conteggio.
       potential_duplicate_title: Possibile duplicato rilevato
-      transfer: Bonifico
+      transfer: Trasferimento
       account_label: Conto
       amount: Importo
       category_label: Categoria
@@ -101,22 +107,26 @@ it:
       description: "Descrizione"
       memo: "Memo"
       provider_extras: "Dati provider"
-      transfer_or_debt_payment: "Bonifico o pagamento debito?"
-      open_matcher: "Apri corrispondenza"
+      transfer_or_debt_payment: "Trasferimento o pagamento debito?"
+      open_matcher: "Apri abbinamento"
       convert: "Converti"
+      create_bill: Crea una bolletta
+      applied_to_title: Bollette pagate con questa transazione
+      applied_to_detail: '%{amount} per la bolletta in scadenza il %{date}'
+      applied_to_unreviewed: Da verificare
     activity_labels:
       buy: Acquisto
       sell: Vendita
-      sweep_in: Trasferimento in entrata
-      sweep_out: Trasferimento in uscita
+      sweep_in: Sweep in entrata
+      sweep_out: Sweep in uscita
       dividend: Dividendo
       reinvestment: Reinvestimento
       interest: Interessi
       fee: Commissione
-      transfer: Bonifico
+      transfer: Trasferimento
       contribution: Contributo
       withdrawal: Prelievo
-      exchange: Cambio
+      exchange: Scambio
       other: Altro
     mark_recurring: Segna come ricorrente
     mark_recurring_subtitle: Monitora questa come transazione ricorrente. La varianza dell'importo viene calcolata automaticamente dagli ultimi 6 mesi di transazioni simili.
@@ -132,7 +142,7 @@ it:
       confirm_match: Conferma abbinamento
       payment_confirmed: Pagamento confermato
       reject_match: Rifiuta abbinamento
-      transfer_confirmed: Bonifico confermato
+      transfer_confirmed: Trasferimento confermato
     transaction:
       pending: In attesa
       pending_tooltip: Transazione in attesa — potrebbe cambiare alla registrazione
@@ -299,13 +309,13 @@ it:
           income: Entrata
           on_or_after: dal %{date}
           on_or_before: fino al %{date}
-          transfer: Bonifico
+          transfer: Trasferimento
           confirmed: Confermata
           pending: In attesa
         type_filter:
           expense: Spesa
           income: Entrata
-          transfer: Bonifico
+          transfer: Trasferimento
         status_filter:
           confirmed: Confermata
           pending: In attesa

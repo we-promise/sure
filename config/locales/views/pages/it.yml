@@ -55,7 +55,7 @@ it:
         tall: "Alta"
       net_worth_chart:
         data_not_available: Dati non disponibili per il periodo selezionato
-        title: Patrimonio Netto
+        title: Patrimonio netto
       no_account_empty_state:
         new_account: Nuovo conto
         no_account_subtitle: Poiché non sono stati aggiunti conti, non ci sono dati da visualizzare. Aggiungi i tuoi primi conti per iniziare a vedere i dati della dashboard.
@@ -74,17 +74,34 @@ it:
         classifications:
           asset: "Attività"
           liability: "Passività"
+        expand_all: Espandi tutto
+        collapse_all: Comprimi tutto
       cashflow_preview:
         node_labels:
           cash_flow: "Flusso di cassa"
           surplus: "Avanzo"
           deficit: "Disavanzo"
+        title: Nuovo grafico Sankey
+        preview: Anteprima
+        preview_tooltip: Sostituirà la visualizzazione qui sopra, perché usa una nuova API condivisa con il client mobile Swift.
+        feedback_prompt: Confronta questo grafico con quello originale qui sopra e facci sapere se appare diverso, ordinamento a parte.
+        positive: Sembra corretto
+        negative: Qualcosa non va
+        feedback_title: Feedback sul grafico del flusso di cassa
+        feedback_loading: Caricamento del modulo di feedback…
+        feedback_unavailable: Il feedback non è disponibile al momento. Riprova più tardi.
+        feedback_thanks: Grazie per aiutarci a migliorare il grafico!
+        feedback_privacy: La tua risposta viene inviata a PostHog. Descrivi il problema senza numeri di conto, saldi o altri dati finanziari privati.
+        feedback_submit: Invia feedback
       cashflow_sankey:
         title: "Flusso di cassa"
         zoom_out: "Torna al flusso completo"
         no_data_title: "Nessun dato di flusso di cassa per questo periodo"
         no_data_description: "Aggiungi transazioni per visualizzare i dati di flusso di cassa o amplia il periodo"
         add_transaction: "Aggiungi transazione"
+        loading: Caricamento del flusso di cassa…
+        load_error: Impossibile caricare il flusso di cassa. Riprova.
+        retry: Riprova
       no_accounts:
         title: "Nessun conto ancora"
         description: "Aggiungi conti per visualizzare i dati del patrimonio netto"
@@ -105,6 +122,30 @@ it:
         period_activity: "Attività %{period}"
         contributions: "Contributi"
         withdrawals: "Prelievi"
-        trades: "Movimenti"
+        trades: "Operazioni"
         no_investments: "Nessun conto investimenti"
         add_investment: "Aggiungi un conto investimenti per tracciare il tuo portafoglio"
+      insights_feed:
+        title: Insight
+      money_flow:
+        title: Entrate / Uscite
+        date_range: '%{start_date} - %{end_date}'
+        month_picker_aria_label: Seleziona mese
+        filter_accounts: Filtra conti (%{count})
+        filter_accounts_all: Tutti i conti
+        period_scope_hint: Mostra i mesi scelti qui, indipendentemente dal periodo della dashboard selezionato in alto.
+        search_accounts: Cerca conti
+        apply: Applica
+        balance: Saldo delle transazioni
+        chart_span: Ultimi %{count} mesi
+        income: Entrate
+        expenses: Spese
+      spending_trend:
+        title: Spese
+        date_range: '%{start_date} - %{end_date}'
+        date_range_short: '%{start_date} - %{end_day} %{year}'
+        date_range_short_single: '%{date} %{year}'
+        month_picker_aria_label: Seleziona mese
+        period_scope_hint: Mostra il mese scelto qui, indipendentemente dal periodo della dashboard selezionato in alto.
+        no_data: Nessun dato di spesa per questo mese
+        previous_comparison_days: (1-%{end_day})

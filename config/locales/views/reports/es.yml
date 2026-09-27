@@ -145,7 +145,7 @@ es:
       period_return: Rentabilidad del periodo
       contributions: Aportaciones del periodo
       withdrawals: Retiradas del periodo
-      top_holdings: Top activos
+      top_holdings: Principales posiciones
       holding: Activo
       weight: Peso
       value: Valor
@@ -159,17 +159,17 @@ es:
       no_data: '-'
       view_details: Ver detalles
       holdings_count:
-        one: '%{count} activo'
-        other: '%{count} activos'
+        one: '%{count} posición'
+        other: '%{count} posiciones'
       sells_count:
         one: '%{count} venta'
         other: '%{count} ventas'
-      holdings: Activos
+      holdings: Posiciones
       sell_trades: Operaciones de venta
       and_more: +%{count} más
     investment_flows:
       title: Flujos de inversión
-      description: Controla el dinero que entra y sale de tus cuentas de inversión
+      description: 'Controla el dinero que entra y sale de tus cuentas de inversión mediante aportaciones y retiradas.'
       contributions: Aportaciones
       contributions_description: Dinero aportado a inversiones
       withdrawals: Retiradas
@@ -177,7 +177,7 @@ es:
       net_flow: Flujo neto
       net_flow_description: Variación neta total
     google_sheets_instructions:
-      title_with_key: ✅ Copiar URL para Google Sheets
+      title_with_key: '✅ Copiar URL para Google Sheets'
       title_no_key: ⚠️ Se requiere clave API
       ready: Tu URL de CSV (con clave API) está lista.
       steps: 'Para importar en Google Sheets:
@@ -229,13 +229,13 @@ es:
         current_month_note: '* Mes actual (datos parciales)'
       investments:
         title: Inversiones
-        portfolio_value: Valor de la Cartera
-        total_return: Rentabilidad Total
+        portfolio_value: Valor de la cartera
+        total_return: Rentabilidad total
         period_return: Rentabilidad del periodo
         contributions: Aportaciones
         withdrawals: Retiradas
         this_period: este periodo
-        top_holdings: Top Activos
+        top_holdings: Principales posiciones
         holding: Activo
         weight: Peso
         value: Valor

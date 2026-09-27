@@ -1,0 +1,102 @@
+---
+it:
+  providers:
+    trading212:
+      name: Trading 212
+      connection_description: Collega un conto d'investimento Trading 212 tramite chiave API
+      institution_name: Trading 212
+  trading212_items:
+    defaults:
+      name: Trading 212
+    trading212_item:
+      deletion_in_progress: Eliminazione in corso
+      environment_label_live: Conto reale
+      environment_label_demo: Conto demo
+      syncing: Sincronizzazione
+      requires_update: La chiave API richiede attenzione
+      error: Errore
+      synced: Sincronizzato %{time} fa. %{summary}.
+      never_synced: Mai sincronizzato.
+      setup_accounts: Configura i conti
+      delete: Elimina
+      accounts_need_setup: Conto da configurare
+      accounts_need_setup_description: Il tuo conto Trading 212 deve essere collegato a un conto Sure.
+      no_accounts_discovered: Nessun conto Trading 212 ancora rilevato.
+      no_accounts_discovered_description: Esegui una sincronizzazione dopo aver salvato la chiave API per rilevare il tuo conto.
+    setup_accounts:
+      page_title: Configura il conto Trading 212
+      dialog_title: Configura il tuo conto Trading 212
+      subtitle: Collega il tuo conto d'investimento Trading 212.
+      info_box:
+        title: Importazione tramite API Trading 212
+        items:
+          item_1: Posizioni attuali con prezzi e quantità
+          item_2: Cronologia completa degli ordini (acquisti e vendite)
+          item_3: Dividendi e movimenti di liquidità
+      status:
+        fetching_accounts: Recupero del conto da Trading 212...
+        no_accounts_found_title: Nessun conto trovato.
+        no_accounts_found_description: Sure non ha trovato alcun conto Trading 212. Verifica che la chiave API sia valida.
+      available_accounts:
+        title: Conto disponibile
+        account_type_investment: Investimento
+        account_summary: '%{account_type} • Saldo: %{balance}'
+        account_id: 'ID conto: %{account_id}'
+      link_existing:
+        description: Oppure collega il conto Trading 212 rilevato a un conto d'investimento manuale esistente.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Seleziona un conto...
+      linked_accounts:
+        title: Già collegati
+        linked_to_html: 'Collegato a: %{account}'
+      buttons:
+        refresh: Aggiorna
+        cancel: Annulla
+        back_to_settings: Torna alle Impostazioni
+        create_selected_accounts: Crea i conti selezionati
+        link: Collega
+        done: Fine
+    sync:
+      status:
+        checking_credentials: Verifica delle credenziali Trading 212...
+        importing_account: Importazione del conto Trading 212...
+        checking_configuration: Verifica della configurazione del conto...
+        accounts_need_setup:
+          one: '%{count} conto Trading 212 da configurare...'
+          other: '%{count} conti Trading 212 da configurare...'
+        processing_activity: Elaborazione di posizioni e attività...
+        calculating_balances: Calcolo dei saldi...
+    sync_status:
+      no_accounts: Nessun conto Trading 212 ancora rilevato
+      all_linked:
+        one: '%{count} conto collegato'
+        other: '%{count} conti collegati'
+      partial: '%{linked} collegati, %{unlinked} da configurare'
+    select_existing_account:
+      title: Collega il conto Trading 212
+      no_accounts_available: Non ci sono ancora conti Trading 212 non collegati disponibili.
+      run_sync_hint: Esegui una sincronizzazione da Impostazioni > Provider dopo aver salvato la chiave API.
+      wait_for_sync: Attendi il completamento della sincronizzazione di rilevamento dei conti.
+      balance: Saldo
+      link: Collega
+      cancel: Annulla
+    create:
+      success: Trading 212 configurato correttamente.
+    update:
+      success: Configurazione Trading 212 aggiornata correttamente.
+    destroy:
+      success: Eliminazione della connessione Trading 212 pianificata.
+    select_accounts:
+      not_configured: Trading 212 non è configurato.
+    link_existing_account:
+      not_found: Conto o configurazione Trading 212 non trovati.
+      only_manual_investment: Solo i conti d'investimento manuali possono essere collegati a Trading 212.
+      already_linked: Questo conto Trading 212 è già collegato.
+      success: Conto collegato correttamente a Trading 212.
+      failed: Impossibile collegare il conto Trading 212.
+    complete_account_setup:
+      success:
+        one: '%{count} conto Trading 212 creato correttamente.'
+        other: '%{count} conti Trading 212 creati correttamente.'
+      none_selected: Nessun conto selezionato.
+      none_created: Non è stato creato alcun conto.

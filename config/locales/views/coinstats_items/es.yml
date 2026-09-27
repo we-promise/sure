@@ -24,16 +24,16 @@ es:
       failed: No se pudo vincular el exchange.
       error: 'No se pudo vincular el exchange: %{message}.'
     new:
-      title: Vincular una cartera de criptomonedas con CoinStats
+      title: 'Vincular criptomonedas con CoinStats'
       blockchain_fetch_error: Error al cargar las Blockchains. Por favor, inténtalo de nuevo más tarde.
-      link_wallet_title: Vincular dirección de monedero
-      link_wallet_description: Sigue un monedero de autocustodia o una única dirección on-chain a través de CoinStats.
+      link_wallet_title: Vincular dirección de cartera
+      link_wallet_description: Sigue una cartera de autocustodia o una única dirección on-chain a través de CoinStats.
       address_label: Dirección
       address_placeholder: Obligatorio
       blockchain_label: Blockchain
       blockchain_placeholder: Obligatorio
       blockchain_select_blank: Selecciona una Blockchain
-      link_wallet_submit: Vincular monedero cripto
+      link_wallet_submit: Vincular cartera cripto
       link_exchange_title: Vincular API de exchange
       link_exchange_description: Usa una clave de API de exchange de solo lectura para que CoinStats pueda sincronizar saldos y transacciones de Bitvavo, Binance y otros exchanges compatibles.
       link_exchange_note: Si tu exchange requiere activación de la clave de API o confirmación por correo electrónico, completa ese paso antes de vincularlo aquí.

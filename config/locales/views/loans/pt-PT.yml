@@ -16,25 +16,49 @@ pt-PT:
       rate_type_adjustable: Ajustável
       rate_type_fixed: Fixa
       rate_type_variable: Variável
+      rate_changes: Alterações de taxa
+      rate_changes_hint: Cada linha define a taxa que se aplica desde a sua data de início de vigência até à seguinte. Introduzir novamente uma data substitui essa linha em vez de adicionar uma segunda.
+      rate_changes_empty: Nenhuma alteração de taxa registada. O empréstimo mantém a taxa de juro indicada acima.
+      rate_change_effective_date: Data de início de vigência
+      rate_change_rate: Taxa
+      rate_change_add: Adicionar alteração de taxa
+      rate_change_remove: Remover
+      start_date: Data de contratação
+      start_date_hint: Quando o montante do empréstimo foi disponibilizado. Deixe em branco para utilizar a data de abertura da conta.
     new:
       title: Introduzir dados do empréstimo
     overview:
       interest_rate: Taxa de juro
       monthly_payment: Pagamento mensal
       not_applicable: n/d
-      original_principal: Capital inicial
-      remaining_principal: Capital remanescente
+      original_principal: Montante inicial do empréstimo
+      remaining_principal: Montante em dívida
       term: Prazo
       type: Tipo
       unknown: Desconhecido
+      original_payoff_date: Data de Liquidação Original
     tabs:
       overview:
         interest_rate: Taxa de juro
         monthly_payment: Pagamento mensal
         not_applicable: n/d
-        original_principal: Capital inicial
-        remaining_principal: Capital remanescente
+        original_principal: Montante inicial do empréstimo
+        remaining_principal: Montante em dívida
         term: Prazo
         type: Tipo
         unknown: Desconhecido
         edit_loan_details: "Editar dados do empréstimo"
+        original_payoff_date: Data de Liquidação Original
+      schedule:
+        date: Data
+        description: Projetado a partir do saldo, taxa e prazo originais, com início em %{start_date}. Os pagamentos antecipados não estão refletidos.
+        variable_rate_notice: A taxa deste empréstimo varia ao longo do tempo. O plano é recalculado a cada alteração registada, mantendo a data de liquidação original e ajustando o valor da prestação; uma alteração ainda não registada irá alterar estes valores.
+        opening_payment: Prestação Inicial
+        interest: Juros
+        monthly_payment: Prestação Mensal
+        number: N.º
+        payment: Prestação
+        principal: Capital
+        remaining_balance: Capital em Dívida
+        total_cost: Custo Total
+        total_interest: Total de Juros

@@ -82,18 +82,18 @@ pt-PT:
     budget_category:
       rolled_over: "+%{amount} transitados"
     budget_category_form:
-      monthly_average: "%{amount}/m média"
+      monthly_average: "média de %{amount}/mês"
       rollover_label: Transição
       rollover_title: Manter o dinheiro não gasto desta categoria de um mês para o seguinte
       shared_placeholder: Partilhado
-      shared_title: Deixe vazio para partilhar o orçamento do pai
+      shared_title: Deixe vazio para partilhar o orçamento da categoria principal
     confirm_button:
       confirm: "Confirmar"
     move:
       button_title: Mover dinheiro desta categoria
       cancel: Cancelar
       dialog_title: Mover dinheiro
-      no_destination: Esta é a única conta onde o dinheiro se pode mover neste momento — uma categoria não pode enviar para o seu próprio pai ou filho.
+      no_destination: Não existe outro envelope para onde o dinheiro se possa mover neste momento — uma categoria não pode enviar para a sua própria categoria principal ou subcategoria.
       submit: Mover
       amount_label: Montante
       available: "%{amount} disponível"
@@ -106,7 +106,7 @@ pt-PT:
         non_positive_amount: Introduza um montante superior a zero.
         parent_child: O dinheiro não pode mover-se entre uma categoria e a sua própria subcategoria — ajuste a subcategoria diretamente.
         same_category: Escolha uma categoria diferente para mover o dinheiro.
-        uncategorized: "Por categorizar não é uma conta real, por isso o dinheiro não pode entrar nem sair dela."
+        uncategorized: "Por categorizar não é um envelope real, por isso o dinheiro não pode entrar nem sair dele."
     no_categories:
       oops: "Ops!"
       no_categories_message: "Ainda não criou nem atribuiu nenhuma categoria de despesa às suas transações."
@@ -129,3 +129,7 @@ pt-PT:
       recent_transactions: "Transações recentes"
       view_all_transactions: "Ver todas as transações da categoria"
       no_transactions: "Não foram encontradas transações para este período de orçamento."
+    bills_reserved: '%{amount} reservados para faturas'
+    bills_reserved_unconvertible:
+      one: '%{count} fatura não está reservada, sem taxa de câmbio disponível'
+      other: '%{count} faturas não estão reservadas, sem taxa de câmbio disponível'

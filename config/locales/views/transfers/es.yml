@@ -3,6 +3,9 @@ es:
   transfers:
     create:
       success: Transferencia creada
+      exchange_rate_unavailable: No hay tipo de cambio disponible para las divisas y la fecha seleccionadas
+      date_invalid: no es válida
+      stale_form: Este formulario ya se envió con otros datos. Actualiza la página y vuelve a intentarlo.
     destroy:
       success: Transferencia eliminada
     form:
@@ -13,7 +16,7 @@ es:
       date: Fecha
       destination_amount: Importe de destino
       destination_amount_display: 'Importe de destino: %{amount}'
-      exchange_rate_display: 'Tasa de cambio: %{rate}'
+      exchange_rate_display: 'Tipo de cambio: %{rate}'
       expense: Gasto
       from: Desde
       income: Ingreso

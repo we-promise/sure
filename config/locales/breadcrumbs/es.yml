@@ -4,7 +4,7 @@ es:
     account_sharings: Cuentas compartidas
     account_statements: Archivo de extractos
     accounts: Cuentas
-    ai_prompts: Prompts de IA
+    ai_prompts: Indicaciones de IA
     api_key: Clave API
     api_keys: Claves API
     appearance: Apariencia
@@ -61,7 +61,7 @@ es:
     preferences: Preferencias
     profile: Datos del perfil
     profiles: Datos del perfil
-    properties: Inmuebles
+    properties: 'Propiedades'
     providers: Proveedores
     recurring_transactions: Recurrentes
     registrations: Registro
@@ -86,3 +86,9 @@ es:
     users: Usuarios
     valuations: Valoraciones
     vehicles: Vehículos
+    changelog: Novedades
+    feedback: Comentarios
+    monobank_items: Monobank
+    plan: Plan
+    redbark_items: Redbark
+    system_health: Estado del sistema

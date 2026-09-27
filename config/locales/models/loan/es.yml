@@ -1,0 +1,8 @@
+---
+es:
+  activerecord:
+    errors:
+      models:
+        loan:
+          invalid_rate_change: Las filas de cambio de tipo necesitan una fecha de efecto y un tipo de interés.
+          rate_change_before_origination: Un cambio de tipo no puede entrar en vigor antes de la fecha de formalización del préstamo.

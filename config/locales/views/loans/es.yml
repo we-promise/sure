@@ -4,26 +4,39 @@ es:
     edit:
       edit: Editar %{account}
     form:
-      interest_rate: Tasa de interés
+      interest_rate: Tipo de interés
       interest_rate_placeholder: '5.25'
       initial_balance: Saldo original del préstamo
-      rate_type: Tipo de interés
+      rate_type: 'Modalidad del tipo de interés'
       term_months: Plazo (meses)
       term_months_placeholder: '360'
       none: Ninguno
       subtype_prompt: Selecciona el tipo de préstamo
       subtype_none: Ninguno
+      rate_type_adjustable: Revisable
+      rate_type_fixed: Fijo
+      rate_type_variable: Variable
+      rate_changes: Cambios de tipo de interés
+      rate_changes_hint: Cada fila fija el tipo que se aplica desde su fecha de efecto hasta la siguiente. Si vuelves a introducir una fecha, se sustituye esa fila en lugar de añadir otra.
+      rate_changes_empty: No hay cambios de tipo registrados. El préstamo se rige por el tipo de interés indicado arriba.
+      rate_change_effective_date: Fecha de efecto
+      rate_change_rate: Tipo
+      rate_change_add: Añadir cambio de tipo
+      rate_change_remove: Eliminar
+      start_date: Fecha de formalización
+      start_date_hint: Cuándo se desembolsó el préstamo. Déjalo en blanco para usar la fecha de apertura de la cuenta.
     new:
       title: Introduce los detalles del préstamo
     overview:
-      interest_rate: Tasa de interés
-      monthly_payment: Pago mensual
-      not_applicable: N/A
-      original_principal: Principal original
-      remaining_principal: Principal restante
+      interest_rate: Tipo de interés
+      monthly_payment: 'Cuota mensual'
+      not_applicable: 'N/D'
+      original_principal: Capital inicial
+      remaining_principal: Capital pendiente
       term: Plazo
       type: Tipo
       unknown: Desconocido
+      original_payoff_date: Fecha de vencimiento original
     tabs:
       overview:
         interest_rate: Tipo de interés
@@ -35,3 +48,17 @@ es:
         type: Tipo
         unknown: Desconocido
         edit_loan_details: Editar detalles del préstamo
+        original_payoff_date: Fecha de vencimiento original
+      schedule:
+        date: Fecha
+        description: Proyectado a partir del saldo original, el tipo y el plazo, desde el %{start_date}. No incluye pagos extraordinarios.
+        variable_rate_notice: El tipo de este préstamo cambia con el tiempo. El cuadro de amortización se recalcula en cada cambio registrado, manteniendo la fecha de vencimiento original y ajustando la cuota; un cambio que aún no se haya registrado alterará estas cifras.
+        opening_payment: Cuota inicial
+        interest: Intereses
+        monthly_payment: Cuota mensual
+        number: N.º
+        payment: Cuota
+        principal: Capital
+        remaining_balance: Capital pendiente
+        total_cost: Coste total
+        total_interest: Intereses totales

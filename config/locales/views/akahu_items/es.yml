@@ -26,14 +26,14 @@ es:
     sync_status:
       no_accounts: No se han encontrado cuentas
       all_synced:
-        one: 1 cuenta sincronizada
+        one: '%{count} cuenta sincronizada'
         other: '%{count} cuentas sincronizadas'
       partial: '%{linked} sincronizadas, %{unlinked} necesitan configuración'
     institution_summary:
       none: No hay entidades conectadas
       one: 1 entidad
       count:
-        one: 1 entidad
+        one: '%{count} entidad'
         other: '%{count} entidades'
   akahu_items:
     provider_panel:
@@ -69,7 +69,7 @@ es:
       link_accounts: Vincular cuentas
     link_accounts:
       success:
-        one: Se ha vinculado 1 cuenta de Akahu.
+        one: 'Se ha vinculado %{count} cuenta de Akahu.'
         other: Se han vinculado %{count} cuentas de Akahu.
       no_accounts_selected: Selecciona al menos una cuenta.
       no_credentials_configured: Configura primero Akahu en los ajustes de proveedores.
@@ -108,7 +108,7 @@ es:
       cancel: Cancelar
     complete_account_setup:
       success:
-        one: Se ha creado 1 cuenta de Akahu.
+        one: 'Se ha creado %{count} cuenta de Akahu.'
         other: Se han creado %{count} cuentas de Akahu.
       all_skipped: No se ha creado ninguna cuenta de Akahu.
       no_accounts: No se ha seleccionado ninguna cuenta de Akahu.

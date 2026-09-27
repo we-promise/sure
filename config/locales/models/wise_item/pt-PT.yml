@@ -1,0 +1,12 @@
+---
+pt-PT:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: Chave privada SCA
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: não pode ser guardada porque a encriptação do Active Record não está configurada nesta instalação

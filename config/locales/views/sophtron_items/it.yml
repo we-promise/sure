@@ -178,11 +178,11 @@ it:
       no_institution_connected: "L'istituzione Sophtron non è ancora connessa."
       account_types:
         skip: Salta questo conto
-        depository: Conto Corrente o Risparmio
+        depository: Conto corrente o di risparmio
         credit_card: Carta di credito
         investment: Conto investimento
         loan: Prestito o Mutuo
-        other_asset: Altro attivo
+        other_asset: Altro asset
       subtype_labels:
         depository: "Sottotipo conto:"
         credit_card: ""
@@ -191,7 +191,7 @@ it:
         other_asset: ""
       subtype_messages:
         credit_card: "Le carte di credito saranno configurate automaticamente come conti carta di credito."
-        other_asset: "Nessuna opzione aggiuntiva necessaria per gli altri attivi."
+        other_asset: "Nessuna opzione aggiuntiva necessaria per gli altri asset."
       balance: Saldo
       cancel: Annulla
       choose_account_type: "Scegli il tipo di conto corretto per ogni conto Sophtron:"

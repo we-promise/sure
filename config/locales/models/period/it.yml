@@ -52,3 +52,5 @@ it:
     custom:
       label_short: "Person."
       label: "Periodo personalizzato"
+      comparison_label: '%{start_date} – %{end_date}'
+    range: '%{start_date} – %{end_date}'

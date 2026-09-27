@@ -49,7 +49,7 @@ es:
       delete: Eliminar
       setup_needed: Configuración necesaria
       setup_needed_description:
-        one: 1 cuenta importada de Enable Banking necesita configurarse
+        one: '%{count} cuenta importada de Enable Banking necesita configurarse'
         other: '%{count} cuentas importadas de Enable Banking necesitan configurarse'
       set_up_accounts: Configurar cuentas
       no_accounts_found: No se encontraron cuentas

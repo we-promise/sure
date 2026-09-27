@@ -1,0 +1,9 @@
+---
+es:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Esta cuenta ya está reservada por completo para «%{goal_name}». Introduce un importe para repartirla.

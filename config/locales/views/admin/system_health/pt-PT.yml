@@ -84,17 +84,17 @@ pt-PT:
               title: A verificação do armazenamento de vetores alojado falhou neste endpoint personalizado
               message: O endpoint configurado não passou na verificação de funcionamento /v1/vector_stores. A maioria dos endpoints locais e compatíveis com OpenAI não implementa essa API. O chat e o processamento de PDF podem continuar a funcionar; para a configuração local habitual, utilize pgvector com um endpoint de embeddings separado. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
             llm_probe_failed:
-              title: A verificação em direto do serviço de AI falhou
-              message: A Sure não conseguiu verificar tanto o endpoint como o modelo configurados. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
+              title: A verificação em direto do serviço de IA falhou
+              message: O Sure não conseguiu verificar tanto o endpoint como o modelo configurados. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
             pdf_text_extraction_failed:
               title: A verificação sintética de extração de texto de PDF falhou
-              message: A Sure não conseguiu concluir o percurso de extração de texto que extrai localmente o texto incorporado no PDF e o envia para o modelo configurado. Não foram enviados dados de clientes. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
+              message: O Sure não conseguiu concluir o percurso de extração de texto que extrai localmente o texto incorporado no PDF e o envia para o modelo configurado. Não foram enviados dados de clientes. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
             pdf_vision_processing_failed:
               title: A verificação sintética de visão/nativo de PDF falhou
-              message: A Sure não conseguiu concluir o percurso de imagem ou documento nativo em PDF através do modelo configurado. Não foram enviados dados de clientes. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
+              message: O Sure não conseguiu concluir o percurso de imagem ou documento nativo em PDF através do modelo configurado. Não foram enviados dados de clientes. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
             vector_probe_failed:
               title: A verificação em direto da pesquisa de documentos falhou
-              message: A Sure não conseguiu verificar o armazenamento de vetores selecionado e todos os serviços de embeddings exigidos. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
+              message: O Sure não conseguiu verificar o armazenamento de vetores selecionado e todos os serviços de embeddings exigidos. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
             qdrant:
               title: O suporte para Qdrant ainda não está implementado
               message: O adaptador Qdrant está estruturado, mas as operações de carregamento e pesquisa de documentos falham atualmente. Selecione OpenAI ou pgvector para a pesquisa de documentos.
@@ -104,8 +104,35 @@ pt-PT:
             unavailable_vector_store:
               title: O armazenamento de vetores selecionado está indisponível
               message: Verifique os requisitos do adaptador abaixo. Para pgvector, a base de dados deve fornecer a extensão vector ou uma tabela vector_store_chunks existente.
+            function_calling_unsupported:
+              title: O modelo não suporta chamadas de funções
+              message: O endpoint respondeu a um pedido de chat simples, mas rejeitou o mesmo pedido com o parâmetro tools. O assistente de IA lê contas, transações e posições através de chamadas de funções, pelo que o chat continuará a falhar — muitas vezes com um erro 404 pouco útil — até ser usado um modelo que suporte ferramentas. Escolha um modelo cujo serviço documente o suporte a chamadas de funções. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
+            function_calling_not_used:
+              title: O modelo respondeu sem chamar a ferramenta que lhe foi pedida
+              message: O endpoint aceitou o parâmetro tools, mas o modelo respondeu com texto em vez de chamar a ferramenta de verificação de estado. O assistente de IA não consegue ler dados financeiros sem chamadas de ferramentas, pelo que o chat pode não responder nada ou responder com valores inventados. Prefira um modelo cujo serviço documente o suporte a chamadas de funções.
+            llm_model_not_available:
+              title: O modelo de IA configurado não está disponível
+              message: O endpoint respondeu, mas não listou nem serviu o modelo configurado. Escolha um modelo ativo para o serviço selecionado e execute novamente as verificações. Para o Gemini através de uma camada de tradução compatível com OpenAI, utilize um modelo atualmente suportado, como gemini-2.5-flash.
+            pgvector_extension_not_enabled:
+              title: A extensão vector do PostgreSQL não está ativada
+              message: O adaptador pgvector está selecionado, mas o PostgreSQL não ativou a extensão vector para esta base de dados. Utilize uma imagem PostgreSQL que inclua o pgvector, ative a extensão como proprietário da base de dados ou superutilizador e volte a executar as migrações com VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: A tabela vector_store_chunks não existe
+              message: A extensão pgvector está ativada, mas a tabela de blocos não foi encontrada. Verifique o estado das migrações e volte a executar a migração do armazenamento de vetores com VECTOR_STORE_PROVIDER=pgvector para que o Sure possa criar a tabela vector_store_chunks.
+            pgvector_probe_failed:
+              title: A verificação do armazenamento pgvector falhou
+              message: O Sure não conseguiu consultar a tabela de blocos do pgvector. Verifique as permissões do PostgreSQL, a extensão vector e a migração vector_store_chunks. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
+            embedding_dimensions_mismatch:
+              title: As dimensões dos embeddings não correspondem
+              message: O endpoint de embeddings devolveu um vetor cujo comprimento não corresponde a EMBEDDING_DIMENSIONS. Defina EMBEDDING_MODEL e EMBEDDING_DIMENSIONS com o tamanho de vetor documentado do modelo, reinicie o Sure para que o ambiente seja aplicado e, em seguida, altere ou recrie a coluna/tabela de embeddings do pgvector e volte a gerar os embeddings dos documentos se os dados existentes usaram um tamanho diferente.
+            embedding_probe_timeout:
+              title: A verificação em direto dos embeddings excedeu o tempo limite
+              message: O endpoint de embeddings não respondeu antes de AI_HEALTH_PROBE_TIMEOUT. Aumente esse tempo limite da verificação de estado se o serviço for lento e reinicie o Sure para que o ambiente seja aplicado em todos os processos. Se as chamadas normais do chat de IA também excederem o tempo limite, aumente OPENAI_REQUEST_TIMEOUT separadamente.
+            embedding_probe_failed:
+              title: A verificação em direto dos embeddings falhou
+              message: O Sure não conseguiu criar um embedding de teste curto através do endpoint e do modelo configurados. Verifique EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN e os registos do serviço de embeddings. A falha foi registada em Definições → Registos de depuração e no Rails.logger.
           llm:
-            title: Processamento AI e de PDF
+            title: Processamento de IA e de PDF
             description: As verificações em direto confirmam o modelo configurado e, em seguida, testam separadamente a extração de texto e o processamento de visão/nativo com um PDF sintético de uma página que não contém dados de clientes. Os valores das credenciais nunca são apresentados.
           vector_store:
             title: Armazenamento de vetores e pesquisa de documentos
@@ -133,6 +160,10 @@ pt-PT:
             storage_probe: Verificação do armazenamento pgvector
             embedding_probe: Verificação do endpoint de embeddings
             failure_reason: Motivo da falha
+            function_calling: Chamadas de funções (tools)
+            llm_request_timeout: Tempo limite dos pedidos ao LLM
+            probe_request_timeout: Tempo limite da verificação de estado
+            function_calling_failure_reason: Motivo da falha nas chamadas de funções
           providers:
             openai: OpenAI
             openai_compatible: Compatível com OpenAI
@@ -164,7 +195,7 @@ pt-PT:
             failing: Verificação sintética de PDF falhou
             unsupported: Desativado ou não suportado pelo serviço/modelo efetivo
             not_checked: Não verificado
-            unavailable: Indisponível até ser configurado um serviço de AI
+            unavailable: Indisponível até ser configurado um serviço de IA
           probe_statuses:
             passing: Verificação em direto passou
             failing: Verificação em direto falhou
@@ -186,6 +217,41 @@ pt-PT:
             timeout: O serviço não respondeu antes do tempo limite da verificação
             request_failed: O pedido ao serviço falhou
             unsupported_provider: O serviço não suporta esta verificação
+            no_tool_call: O modelo respondeu sem chamar a ferramenta de verificação de estado
+            tools_refused: O serviço respondeu ao mesmo pedido sem ferramentas, mas recusou-o com elas
+            render_missing_binary: O renderizador pdftoppm (poppler-utils) não está disponível neste contentor
           local_setup:
             title: Configuração local recomendada
-            description: Execute AI através do seu endpoint local compatível com OpenAI, armazene os vetores de documentos em pgvector e aponte as definições de embeddings para um endpoint de embeddings compatível com OpenAI. A imagem PostgreSQL deve incluir a extensão vector e as dimensões dos embeddings devem corresponder ao modelo selecionado.
+            description: Execute a IA através do seu endpoint local compatível com OpenAI, armazene os vetores de documentos em pgvector e aponte as definições de embeddings para um endpoint de embeddings compatível com OpenAI. A imagem PostgreSQL deve incluir a extensão vector e as dimensões dos embeddings devem corresponder ao modelo selecionado.
+          function_calling_statuses:
+            supported: Chamada de ferramenta em direto bem-sucedida
+            unsupported: Não suportado pelo serviço/modelo efetivo
+            not_used: Ferramentas aceites, mas o modelo não chamou nenhuma
+            failing: Verificação em direto falhou
+            not_checked: Não verificado
+            unavailable: Indisponível até ser configurado um serviço de LLM
+          worker:
+            title: Verificação do worker
+            description: As verificações acima foram executadas a partir deste processo web. A maior parte do trabalho de IA -- respostas do assistente, processamento de PDF, embeddings, categorização automática e deteção de comerciantes -- é na verdade executada num processo worker do Sidekiq, que pode diferir no acesso à rede, DNS, regras de proxy ou até nas credenciais carregadas. Coloque uma verificação em fila para validar a configuração e a conectividade do próprio worker.
+            verify_button: Verificar configuração do worker
+            coverage_notice: Cada verificação valida exatamente um processo worker -- aquele que a retirar da fila. Com mais de uma réplica de worker, um resultado positivo não confirma que todos os workers estão operacionais; coloque a verificação novamente em fila para testar outro.
+            empty:
+              title: Nenhum worker respondeu ainda
+              description: Clique em "Verificar configuração do worker" para colocar uma verificação assíncrona em fila. O resultado aparece aqui assim que um processo worker a processar.
+            labels:
+              process: Processo worker
+              checked_at: Verificado
+              configuration: Configuração
+            configuration_statuses:
+              match: Igual à web
+              mismatch: Diferente da web
+            statuses:
+              passing: A passar
+              failing: A falhar
+              stale: Desatualizado
+            settings_origin:
+              title: Que definições exigem um reinício?
+              database_backed: As definições de serviço, modelo e chave de API alteradas em Definições → Self-Hosting são guardadas na base de dados. O rails-settings-cached invalida a cache partilhada ao escrever, pelo que tanto a web como o worker obtêm o novo valor no pedido seguinte ou na próxima tarefa em fila -- não é necessário reiniciar.
+              env_backed: A configuração de embeddings, e qualquer valor definido apenas através de uma variável de ambiente, fica fixa quando cada contentor arranca. O Rails não consegue alterar o ambiente de outro contentor, pelo que alterar estes valores exige reiniciar ou recriar tanto o serviço web como o worker -- e qualquer ferramenta de implementação que reinicie apenas um deles (implementação parcial, um Secret atualizado sem reiniciar o pod) não aplicará a alteração.
+      verify_worker_ai:
+        queued: Verificação do worker em fila. Aparecerá abaixo assim que um processo worker a processar, normalmente em poucos segundos.

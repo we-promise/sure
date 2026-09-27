@@ -41,16 +41,16 @@ es:
         edit: Editar
         title: Categorías
       on_track_categories:
-        short_title: En camino
-        title: En camino
+        short_title: 'Dentro del presupuesto'
+        title: 'Dentro del presupuesto'
       over_budget_categories:
-        short_title: Sobre presupuesto
-        title: Sobre presupuesto
+        short_title: 'Presupuesto excedido'
+        title: 'Presupuesto excedido'
       filter:
         all: Todas
         aria_label: Filtrar categorías del presupuesto
-        on_track: En camino
-        over_budget: Sobre presupuesto
+        on_track: 'Dentro del presupuesto'
+        over_budget: 'Presupuesto excedido'
       tabs:
         actual: Real
         budgeted: Presupuestado
@@ -63,6 +63,16 @@ es:
       success: Presupuesto copiado de %{source_name}
       no_source: No se ha encontrado ningún presupuesto anterior del que copiar
       already_initialized: Este presupuesto ya se ha configurado
+    switcher:
+      aria_label: Cambiar de presupuesto
+      household: Hogar
+    available_cash:
+      heading: Efectivo disponible
+      subtitle: Junto al plan de arriba, pero fuera de él.
+      available: Disponible en efectivo
+      earmarked: Ya reservado para objetivos
+      free: Realmente libre
+      goals_link: Ver objetivos
   budget_categories:
     allocation_progress:
       budget_exceeded_html: Presupuesto superado en <span class="text-red-500 privacy-sensitive">%{amount}</span>
@@ -73,6 +83,8 @@ es:
       monthly_average: '%{amount}/mes de media'
       shared_placeholder: Compartido
       shared_title: Deja vacío para compartir el presupuesto de la categoría padre
+      rollover_label: Traspaso al mes siguiente
+      rollover_title: Conserva el dinero no gastado de esta categoría de un mes al siguiente
     confirm_button:
       confirm: Confirmar
     no_categories:
@@ -96,3 +108,28 @@ es:
       recent_transactions: Transacciones recientes
       view_all_transactions: Ver todas las transacciones de la categoría
       no_transactions: No se han encontrado transacciones en este periodo presupuestario.
+      rolled_over: Trasladado
+    bills_reserved: '%{amount} reservado para recibos'
+    bills_reserved_unconvertible:
+      one: '%{count} recibo no está reservado porque no hay tipo de cambio disponible'
+      other: '%{count} recibos no están reservados porque no hay tipo de cambio disponible'
+    budget_category:
+      rolled_over: +%{amount} trasladado
+    move:
+      button_title: Mover dinero de esta categoría
+      cancel: Cancelar
+      dialog_title: Mover dinero
+      no_destination: 'Ahora mismo este es el único sobre entre el que se puede mover dinero: una categoría no puede enviar dinero a su propia categoría padre ni a sus subcategorías.'
+      submit: Mover
+      amount_label: Importe
+      available: '%{amount} disponible'
+      from_label: Desde
+      to_label: Hacia
+      success: Dinero movido.
+      errors:
+        different_budgets: Ambas categorías deben pertenecer al mismo presupuesto.
+        insufficient_funds: Es más de lo que esta categoría tiene asignado.
+        non_positive_amount: Introduce un importe mayor que cero.
+        parent_child: No se puede mover dinero entre una categoría y su propia subcategoría; ajusta la subcategoría directamente.
+        same_category: Elige otra categoría a la que mover el dinero.
+        uncategorized: «Sin categoría» no es un sobre real, así que no se puede mover dinero hacia ni desde él.

@@ -63,6 +63,16 @@ it:
       success: "Budget copiato da %{source_name}"
       no_source: "Nessun budget precedente trovato da copiare"
       already_initialized: "Questo budget è già stato configurato"
+    switcher:
+      aria_label: Cambia budget
+      household: Nucleo familiare
+    available_cash:
+      heading: Liquidità disponibile
+      subtitle: Accanto al piano qui sopra, non ne fa parte.
+      available: Disponibile in liquidità
+      earmarked: Già accantonato per gli obiettivi
+      free: Davvero libero
+      goals_link: Vedi obiettivi
   budget_categories:
     allocation_progress:
       budget_exceeded_html: 'Budget superato di <span class="text-red-500 privacy-sensitive">%{amount}</span>'
@@ -72,7 +82,9 @@ it:
     budget_category_form:
       monthly_average: "%{amount}/mese medio"
       shared_placeholder: Condiviso
-      shared_title: Lascia vuoto per condividere il budget del genitore
+      shared_title: Lascia vuoto per condividere il budget della categoria genitore
+      rollover_label: Riporto
+      rollover_title: Riporta al mese successivo il denaro non speso di questa categoria
     confirm_button:
       confirm: "Conferma"
     no_categories:
@@ -96,3 +108,28 @@ it:
       recent_transactions: "Transazioni recenti"
       view_all_transactions: "Vedi tutte le transazioni della categoria"
       no_transactions: "Nessuna transazione trovata per questo periodo di budget."
+      rolled_over: Riportato
+    bills_reserved: '%{amount} riservati alle bollette'
+    bills_reserved_unconvertible:
+      one: '%{count} bolletta non è riservata, nessun tasso di cambio disponibile'
+      other: '%{count} bollette non sono riservate, nessun tasso di cambio disponibile'
+    budget_category:
+      rolled_over: +%{amount} riportati
+    move:
+      button_title: Sposta denaro da questa categoria
+      cancel: Annulla
+      dialog_title: Sposta denaro
+      no_destination: Al momento questa è l'unica busta tra cui spostare denaro — una categoria non può inviarne alla propria categoria genitore o figlia.
+      submit: Sposta
+      amount_label: Importo
+      available: '%{amount} disponibili'
+      from_label: Da
+      to_label: A
+      success: Denaro spostato.
+      errors:
+        different_budgets: Entrambe le categorie devono appartenere allo stesso budget.
+        insufficient_funds: L'importo supera quanto allocato a questa categoria.
+        non_positive_amount: Inserisci un importo maggiore di zero.
+        parent_child: Non è possibile spostare denaro tra una categoria e una sua sottocategoria — modifica direttamente la sottocategoria.
+        same_category: Scegli un'altra categoria verso cui spostare il denaro.
+        uncategorized: Senza categoria non è una vera busta, quindi non è possibile spostarvi denaro né prelevarne.

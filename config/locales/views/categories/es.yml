@@ -21,6 +21,7 @@ es:
       icon: Icono
       auto_adjust: ajustar automáticamente.
       poor_contrast: Contraste insuficiente, elige un color más oscuro o
+      trigger_label: Elegir color e icono
     destroy_all:
       success: Todas las categorías eliminadas
     index:

@@ -3,9 +3,10 @@ es:
   properties:
     edit:
       edit: Editar %{account}
+      title: Introducir propiedad manualmente
     form:
       address_line1: Dirección
-      address_line1_placeholder: Calle Principal 123
+      address_line1_placeholder: 'Calle Mayor 123'
       area: Área habitable
       area_placeholder: '2000'
       area_unit: Unidad de medida
@@ -18,12 +19,22 @@ es:
       postal_code_placeholder: '28001'
       region: Estado/Provincia
       region_placeholder: Madrid
-      subtype_prompt: Seleccione el tipo de propiedad
+      subtype_prompt: Selecciona el tipo de propiedad
       year_built: Año de construcción
       year_built_placeholder: '2000'
     new:
-      title: Introduzca los detalles de la propiedad
+      title: Introducir propiedad manualmente
       next: Siguiente
+      avm_option: Añadir mediante %{provider}
+      avm_title: Añadir propiedad mediante %{provider}
+      avm_description: Introduce un nombre para la propiedad y su dirección. %{provider} buscará los detalles de la propiedad y su valor de mercado estimado por ti.
+      avm_us_only: '%{provider} solo admite propiedades situadas en Estados Unidos.'
+      avm_submit: Buscar propiedad
+      avm_preview_title: Confirma los detalles de la propiedad
+      avm_preview_description: 'Esto es lo que ha encontrado %{provider}. Revisa los detalles antes de añadir la propiedad: todavía no se ha creado nada.'
+      avm_preview_no_record: '%{provider} no ha encontrado ningún registro de propiedad en esta dirección, así que el valor mostrado es una estimación basada en la zona. Comprueba bien la dirección antes de continuar.'
+      avm_preview_back: Atrás
+      avm_preview_confirm: Añadir propiedad
     address:
       title: Introducir propiedad manualmente
       address_line1_label: Dirección (línea 1)
@@ -87,3 +98,10 @@ es:
       agri_land:
         short: Terreno agrícola
         long: Terreno agrícola
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    form_tabs:
+      address: Dirección
+      overview: Resumen
+      value: Valor

@@ -37,9 +37,11 @@ it:
       new:
         title: "Aggiungi provider SSO"
         description: "Configura un nuovo provider di autenticazione single sign-on"
+        provider_configuration: Configurazione provider
       edit:
         title: "Modifica provider SSO"
         description: "Aggiorna la configurazione per %{label}"
+        provider_configuration: Configurazione provider
       create:
         success: "Il provider SSO è stato creato con successo."
       update:

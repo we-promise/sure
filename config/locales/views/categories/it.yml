@@ -56,7 +56,7 @@ it:
     update:
       success: Categoria aggiornata con successo
     virtual:
-      transfer: Bonifico
+      transfer: Trasferimento
       payment: Pagamento
       trade: Operazione
   category:
@@ -64,7 +64,7 @@ it:
       show:
         bootstrap: Genera categorie predefinite
         empty: Nessuna categoria trovata
-        match_transfer: "Abbina bonifico/pagamento"
+        match_transfer: "Abbina trasferimento/pagamento"
         one_time: "%{type} una tantum"
         income: "entrata"
         expense: "spesa"

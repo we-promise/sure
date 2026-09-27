@@ -12,14 +12,14 @@ pt-PT:
       not_authorized: "A Introdução está disponível apenas para utilizadores convidados."
       welcome: "Bem-vindo(a)!"
       coming_soon: A experiência de introdução chega em breve
-      description: "Estamos a desenvolver uma jornada de integração mais completa para conhecer os seus objetivos, marcos e necessidades do dia a dia. Por agora, dirija-se à barra lateral de chat para iniciar uma conversa com a Sure e diga-nos em que ponto está da sua jornada financeira."
+      description: "Estamos a desenvolver uma jornada de integração mais completa para conhecer os seus objetivos, marcos e necessidades do dia a dia. Por agora, dirija-se à barra lateral de chat para iniciar uma conversa com o Sure e diga-nos em que ponto está da sua jornada financeira."
       start_chatting: Começar a conversar
     redis_configuration_error:
       page_title: Configuração de Redis Necessária - Sure
       heading: Configuração de Redis Necessária
-      subheading: A sua instalação da Sure com alojamento próprio precisa que o Redis esteja configurado corretamente.
+      subheading: A sua instalação do Sure com alojamento próprio precisa que o Redis esteja configurado corretamente.
       why_required_title: Porque é que o Redis é necessário?
-      why_required_body: A Sure utiliza o Redis para potenciar os trabalhos em segundo plano do Sidekiq para tarefas como sincronizar dados de contas, processar importações e outras operações em segundo plano que mantêm os seus dados financeiros atualizados.
+      why_required_body: O Sure utiliza o Redis para executar tarefas em segundo plano através do Sidekiq, como sincronizar contas, processar importações e manter os seus dados financeiros atualizados.
       view_setup_guide: Ver Guia de Configuração
       setup_guide_hint: Siga o nosso guia completo de configuração Docker para configurar o Redis
       refresh_hint: "Depois de configurar o Redis, atualize esta página para continuar."
@@ -43,6 +43,18 @@ pt-PT:
           cash_flow: "Fluxo de caixa"
           surplus: "Excedente"
           deficit: "Défice"
+        title: Novo gráfico Sankey
+        preview: Antevisão
+        preview_tooltip: Isto irá substituir a visualização acima, pois utiliza uma nova API partilhada com o cliente móvel em Swift.
+        feedback_prompt: Compare este gráfico com o original acima e diga-nos se parece diferente para além da ordenação.
+        positive: Parece correto
+        negative: Algo parece errado
+        feedback_title: Feedback sobre o gráfico de fluxo de caixa
+        feedback_loading: A carregar o formulário de feedback…
+        feedback_unavailable: O feedback não está disponível neste momento. Tente novamente mais tarde.
+        feedback_thanks: Obrigado por ajudar a melhorar o gráfico!
+        feedback_privacy: A sua resposta é enviada para a PostHog. Descreva o problema sem números de conta, saldos ou outros dados financeiros privados.
+        feedback_submit: Enviar feedback
       welcome: "Bem-vindo(a) de volta, %{name}"
       subtitle: "Acompanhe a evolução das suas finanças"
       new: "Novo"
@@ -79,6 +91,8 @@ pt-PT:
         classifications:
           asset: "Ativos"
           liability: "Passivos"
+        expand_all: Expandir tudo
+        collapse_all: Recolher tudo
       insights_feed:
         title: "Indicadores"
       cashflow_sankey:
@@ -87,6 +101,9 @@ pt-PT:
         no_data_title: "Sem dados de fluxo de caixa para este período"
         no_data_description: "Adicione transações para apresentar os dados de fluxo de caixa ou alargue o período de tempo"
         add_transaction: "Adicionar transação"
+        loading: A carregar o fluxo de caixa…
+        load_error: Não foi possível carregar o fluxo de caixa. Tente novamente.
+        retry: Tentar novamente
       no_accounts:
         title: "Ainda sem contas"
         description: "Adicione contas para apresentar os dados de património líquido"
@@ -100,7 +117,7 @@ pt-PT:
       investment_summary:
         title: "Investimentos"
         total_return: "Retorno Total"
-        holding: "Detenção"
+        holding: "Posição"
         weight: "Peso"
         value: "Valor"
         return: "Retorno"
@@ -123,3 +140,12 @@ pt-PT:
         chart_span: "Últimos %{count} meses"
         income: "Rendimentos"
         expenses: "Despesas"
+      spending_trend:
+        title: Despesas
+        date_range: '%{start_date} a %{end_date}'
+        date_range_short: '%{start_date} - %{end_day} de %{year}'
+        date_range_short_single: '%{date} de %{year}'
+        month_picker_aria_label: Selecionar mês
+        period_scope_hint: Apresenta o mês selecionado aqui, independentemente do período definido no topo da visão geral.
+        no_data: Sem dados de despesas para este mês
+        previous_comparison_days: (1-%{end_day})

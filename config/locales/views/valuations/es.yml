@@ -2,7 +2,7 @@
 es:
   valuations:
     confirmation_contents:
-      this_will: Esto %{action_verb} el valor de la cuenta el
+      this_will: Esto va a %{action_verb} el valor de la cuenta el
       to_colon: 'a:'
       total_account_value: Valor total de la cuenta
       holdings_value: Valor de las posiciones
@@ -20,7 +20,9 @@ es:
       to: a
       recalculate_notice: Todas las transacciones y saldos futuros se recalcularán en función de este %{change_or_update}.
       change: cambio
-      update: actualización
+      update: nuevo saldo
+      action_set: establecer
+      action_update: actualizar
     create:
       account_updated: Cuenta actualizada
     update:
@@ -58,3 +60,9 @@ es:
       settings: Configuración
       opening_balance: Saldo inicial
       update_value: Actualizar valor
+    confirm_create:
+      confirm: Confirmar
+      title: Confirmar nuevo saldo
+    confirm_update:
+      title: Actualizar saldo
+      update: Actualizar

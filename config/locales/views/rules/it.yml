@@ -52,6 +52,7 @@ it:
       confirm_changes: Conferma modifiche
     actions:
       value_placeholder: Inserisci un valore
+      to_label: a
     update:
       success: Regola aggiornata
     destroy:
@@ -87,7 +88,7 @@ it:
           blocked: Bloccate
       execution_types:
         manual: Manuale
-        scheduled: Pianificata
+        scheduled: Automatica
       statuses:
         pending: In attesa
         success: Successo
@@ -102,14 +103,28 @@ it:
       transaction_type:
         income: Entrata
         expense: Spesa
-        transfer: Bonifico
+        transfer: Trasferimento
         equal_to: Uguale a
+      operators:
+        contains: Contiene
+        does_not_contain: Non contiene
+        equal_to: Uguale a
+        is_equal_to: È uguale a
+        not_equal_to: Diverso da
+        is_empty: È vuoto
+        is_not_empty: Non è vuoto
+        greater_than: Maggiore di
+        greater_or_equal_to: Maggiore o uguale a
+        less_than: Minore di
+        less_than_or_equal_to: Minore o uguale a
   rule:
     conditions:
       condition_group:
         and_prefix: e
-        match: corrispondono
+        match: Soddisfa
         all: tutte
         any: almeno una
         of_the_following_conditions: delle seguenti condizioni
         add_condition: Aggiungi condizione
+      condition:
+        value_placeholder: Inserisci un valore

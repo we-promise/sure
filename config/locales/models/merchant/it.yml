@@ -1,0 +1,5 @@
+---
+it:
+  models:
+    merchant:
+      no_merchant: Nessun esercente

@@ -9,10 +9,10 @@ pt-PT:
       delete: Eliminar
       then: THEN
       and_more_conditions:
-        one: e mais 1 condição
+        one: "e mais %{count} condição"
         other: e mais %{count} condições
       and_more_actions:
-        one: e mais 1 ação
+        one: "e mais %{count} ação"
         other: e mais %{count} ações
       action_label_to: "%{label} para %{value}"
       all_past_and_future: Todos os %{resource} passados e futuros
@@ -46,12 +46,13 @@ pt-PT:
       ai_cost_with_estimate_html: "Isto utilizará IA para categorizar %{count} transação(ões). Custo estimado: <span class=\"font-semibold\">~$%{cost}</span>"
       ai_cost_no_estimate_html: "Isto utilizará IA para categorizar %{count} transação(ões)."
       cost_unavailable_model: "Indisponível estimativa de custo para o modelo \"%{model}\"."
-      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum serviço de AI configurado).
+      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum serviço de IA configurado).
       cost_warning: Poderão ocorrer custos; verifique junto do serviço do modelo os preços mais atualizados.
       view_usage_history: Ver histórico de utilização
       confirm_changes: Confirmar alterações
     actions:
       value_placeholder: Introduza um valor
+      to_label: para
     update:
       success: Regra atualizada
     destroy:
@@ -68,7 +69,7 @@ pt-PT:
       ai_cost_message: Isto utilizará IA para categorizar até %{transactions} transações.
       estimated_cost: "Custo estimado: ~$%{cost}"
       cost_unavailable_model: Indisponível estimativa de custo para o modelo "%{model}".
-      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum serviço de AI configurado).
+      cost_unavailable_no_provider: Estimativa de custo indisponível (nenhum serviço de IA configurado).
       cost_warning: Poderão ocorrer custos; verifique junto do serviço do modelo os preços mais atualizados.
       view_usage: Ver histórico de utilização
     recent_runs:
@@ -104,14 +105,26 @@ pt-PT:
         expense: Despesa
         transfer: Transferência
         equal_to: Igual a
+      operators:
+        contains: Contém
+        does_not_contain: Não contém
+        equal_to: Igual a
+        is_equal_to: É igual a
+        not_equal_to: Diferente de
+        is_empty: Está vazio
+        is_not_empty: Não está vazio
+        greater_than: Maior que
+        greater_or_equal_to: Maior ou igual a
+        less_than: Menor que
+        less_than_or_equal_to: Menor ou igual a
   rule:
     conditions:
       condition_group:
         and_prefix: e
-        match: corresponder
+        match: corresponder a
         all: todas
-        any: qualquer
-        of_the_following_conditions: às seguintes condições
+        any: qualquer uma
+        of_the_following_conditions: das seguintes condições
         add_condition: Adicionar condição
       condition:
         value_placeholder: Introduza um valor

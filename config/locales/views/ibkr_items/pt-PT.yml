@@ -59,7 +59,7 @@ pt-PT:
     sync_status:
       no_accounts: Nenhuma conta da IBKR encontrada até agora
       all_linked:
-        one: 1 conta ligada
+        one: "%{count} conta ligada"
         other: "%{count} contas ligadas"
       partial: "%{linked} ligadas, %{unlinked} precisam de configuração"
     select_existing_account:

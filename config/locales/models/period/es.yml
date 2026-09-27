@@ -52,3 +52,5 @@ es:
     custom:
       label_short: Personalizado
       label: Período personalizado
+      comparison_label: '%{start_date} a %{end_date}'
+    range: '%{start_date} – %{end_date}'

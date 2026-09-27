@@ -8,10 +8,10 @@ pt-PT:
       default_name: Transação Wise
       fee_name: Comissão da Wise
     activities:
-      jar_deposit: Depósito no jar
-      jar_withdrawal: Levantamento do jar
+      jar_deposit: Transferência para o mealheiro
+      jar_withdrawal: Transferência do mealheiro
       transfer_to_jar: "Transferência para %{jar}"
-      transfer_from_jar: "Transferência do %{jar}"
+      transfer_from_jar: "Transferência de %{jar}"
       interest: Juros da Wise
       asset_fee: Comissão de ativo da Wise
       default_name: Atividade Wise
@@ -84,7 +84,17 @@ pt-PT:
         sign_in_html: "Visite %{link} e inicie sessão na sua conta"
         open_tokens: "Vá a Settings → Connect and manage apps → Developer tools → API tokens"
         create_token: "Crie um novo token de API pessoal com acesso só de leitura"
-        copy_token_html: "Copie o token e cole-o abaixo. A Sure utiliza-o apenas para sincronizar os seus saldos e transações."
+        copy_token_html: "Copie o token e cole-o abaixo. O Sure utiliza-o apenas para sincronizar os seus saldos e transações."
+      sca:
+        title: Autenticação Forte do Cliente (SCA)
+        description: A Wise exige um desafio assinado com token de utilização única para ler os extratos completos, incluindo os pagamentos recebidos. Gere aqui um par de chaves e registe a chave pública na Wise para ativar esta opção.
+        public_key_label: Chave pública (PEM)
+        registered_help_html: 'Registe esta chave na Wise: Settings → Connect and manage apps → Developer tools → Public keys → Add public key.'
+        copy: Copiar
+        copied: Copiado!
+        generate: Gerar par de chaves
+        regenerate: Gerar novo par de chaves
+        regenerate_confirm: Isto gera um novo par de chaves. A Wise continuará a aceitar a chave pública anterior até que a remova na sua conta Wise — o Sure não a consegue revogar remotamente. Terá de registar a nova chave pública na Wise antes de os extratos poderem voltar a ser sincronizados. Continuar?
     provider_connection:
       default_name: Wise
       default_description: Ligue a sua conta multimoeda da Wise
@@ -101,7 +111,7 @@ pt-PT:
       session_expired: Sessão expirada. Tente ligar novamente.
       title: Selecionar Perfis da Wise
       subtitle: Escolha os perfis a ligar
-      description: A sua conta da Wise tem vários perfis. Selecione os que pretende sincronizar com a Sure.
+      description: A sua conta da Wise tem vários perfis. Selecione os que pretende sincronizar com o Sure.
       unnamed_profile: "(Perfil sem designação)"
       already_connected_label: Já ligado
       connect: Ligar perfis selecionados
@@ -115,9 +125,9 @@ pt-PT:
       status_with_summary: "Última sincronização há %{timestamp} — %{summary}"
       delete: Desligar
       setup_needed: Novas contas prontas para configurar
-      setup_description: "%{linked} de %{total} contas ligadas. Crie contas Sure para os seus saldos em moeda da Wise."
+      setup_description: "%{linked} de %{total} contas associadas. Crie contas Sure para os seus saldos em moeda da Wise."
       setup_action: Configurar Contas
-      no_accounts_title: Ainda não existem contas ligadas
+      no_accounts_title: Ainda não existem contas associadas
       no_accounts_description: Execute uma sincronização para descobrir os seus saldos da Wise e, depois, associe-os a contas Sure.
     setup_accounts:
       title: Configurar Contas da Wise
@@ -152,3 +162,6 @@ pt-PT:
       not_found: Saldo da Wise não encontrado.
       success: Conta criada e associada com sucesso.
       failed: Falha ao criar a conta. Tente novamente.
+    generate_sca_keypair:
+      success: Novo par de chaves SCA gerado. Registe a chave pública na Wise para concluir a ativação.
+      failed: Falha ao gerar um novo par de chaves SCA. Tente novamente.
