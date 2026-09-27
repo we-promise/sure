@@ -165,7 +165,9 @@ class TradeRepublicItemsController < ApplicationController
     result = provider.complete_login(pending_login_b64: @trade_republic_item.pending_login_state)
     if result.data["status"] == "pending"
       @trade_republic_item.update!(pending_login_state: result.data.fetch("pending_login_b64")) if result.data["pending_login_b64"].present?
-      render_login_panel
+      # Re-rendering the card would reconnect the poller, which restarts its
+      # timeout and polls again without waiting.
+      head :no_content
     elsif duplicate_connection?(result)
       discard_duplicate_connection!
       render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
@@ -182,7 +184,16 @@ class TradeRepublicItemsController < ApplicationController
   rescue Provider::TradeRepublicClient::LoginExpired, Provider::TradeRepublicClient::AuthenticationRequired
     @trade_republic_item.update!(pending_login_state: nil)
     render_login_panel(alert: t(".login_expired"))
+  rescue Provider::TradeRepublicClient::RateLimited => e
+    capture_login_poll_error(e, login: "push", retryable: true)
+    head :too_many_requests
+  rescue Provider::TradeRepublicClient::Timeout,
+         Provider::TradeRepublicClient::TransientProviderError => e
+    capture_login_poll_error(e, login: "push", retryable: true)
+    head :service_unavailable
   rescue Provider::TradeRepublicClient::Error => e
+    capture_login_poll_error(e, login: "push", retryable: false)
+    @trade_republic_item.update!(pending_login_state: nil)
     render_login_panel(alert: e.message)
   end
 
@@ -647,23 +658,27 @@ class TradeRepublicItemsController < ApplicationController
     end
 
     def render_qr_login_error(error, pending: nil, status: :unprocessable_entity, retryable: false)
-      # Malformed-response messages can quote the provider response body.
-      detail = error.is_a?(Provider::TradeRepublicClient::MalformedResponse) ? error.class.name : "#{error.class} - #{error.message}"
-      DebugLogEntry.capture(
-        category: "sync",
-        level: retryable ? "info" : "warn",
-        message: "Trade Republic QR login poll failed for item #{@trade_republic_item.id} " \
-                 "(#{retryable ? "retryable" : "fatal"}): #{detail}",
-        source: "trade_republic",
-        family: Current.family,
-        provider_key: "trade_republic"
-      )
+      capture_login_poll_error(error, login: "QR", retryable: retryable)
 
       if pending.present? && error.respond_to?(:pending_login_b64) && error.pending_login_b64.present?
         update_if_pending_login_current!(pending, pending_login_state: error.pending_login_b64)
       end
 
       render json: { error: error.message, retryable: retryable }, status: status
+    end
+
+    def capture_login_poll_error(error, login:, retryable:)
+      # Malformed-response messages can quote the provider response body.
+      detail = error.is_a?(Provider::TradeRepublicClient::MalformedResponse) ? error.class.name : "#{error.class} - #{error.message}"
+      DebugLogEntry.capture(
+        category: "sync",
+        level: retryable ? "info" : "warn",
+        message: "Trade Republic #{login} login poll failed for item #{@trade_republic_item.id} " \
+                 "(#{retryable ? "retryable" : "fatal"}): #{detail}",
+        source: "trade_republic",
+        family: Current.family,
+        provider_key: "trade_republic"
+      )
     end
 
     # Cancellation or a newer QR login can replace the state while a poll is

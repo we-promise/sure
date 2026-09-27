@@ -369,14 +369,27 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("settings.providers.trade_republic_panel.connection_success.close")
   end
 
-  test "pending push login poll replaces only that connection's card" do
+  test "pending push login poll stores the new state without re-rendering the card" do
     item = trade_republic_items(:requires_update_item)
     item.update!(pending_login_state: "pending-login")
     provider = mock
     provider.expects(:complete_login).with(pending_login_b64: "pending-login").returns(
-      Provider::TradeRepublicClient::Result.new(data: { "status" => "pending" })
+      Provider::TradeRepublicClient::Result.new(data: { "status" => "pending", "pending_login_b64" => "pending-login-2" })
     )
-    provider.stubs(:login_stage).returns("waiting_for_approval")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_response :no_content
+    assert_empty response.body
+    assert_equal "pending-login-2", item.reload.pending_login_state
+  end
+
+  test "expired push login replaces only that connection's card" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "pending-login")
+    provider = mock
+    provider.expects(:complete_login).raises(Provider::TradeRepublicClient::LoginExpired, "expired")
     TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
 
     post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
@@ -386,6 +399,45 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, %(target="#{card_id}")
     assert_not_includes response.body, %(target="trade-republic-providers-panel")
     assert_not_includes response.body, trade_republic_items(:configured_item).name
+    assert_nil item.reload.pending_login_state
+  end
+
+  test "retryable push login poll failures keep the login pending for the poller's backoff" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "pending-login")
+    provider = mock
+    provider.expects(:complete_login).twice
+      .raises(Provider::TradeRepublicClient::RateLimited, "slow down")
+      .then.raises(Provider::TradeRepublicClient::TransientProviderError, "unavailable")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    assert_difference -> { DebugLogEntry.where(source: "trade_republic", level: "info").count }, 2 do
+      post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+      assert_response :too_many_requests
+
+      post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+      assert_response :service_unavailable
+    end
+
+    assert_empty response.body
+    assert_equal "pending-login", item.reload.pending_login_state
+  end
+
+  test "fatal push login poll failure stops polling and shows the error" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "pending-login")
+    provider = mock
+    provider.expects(:complete_login).raises(Provider::TradeRepublicClient::InvalidChallenge, "Login state is invalid")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    assert_difference -> { DebugLogEntry.where(source: "trade_republic", level: "warn").count }, 1 do
+      post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+    end
+
+    assert_response :success
+    assert_includes response.body, "Login state is invalid"
+    assert_not_includes response.body, 'data-controller="trade-republic-login"'
+    assert_nil item.reload.pending_login_state
   end
 
   test "push login for an account already connected by another item is discarded" do
