@@ -180,9 +180,10 @@ export default class extends Controller {
   }
 
   // Called directly as an action (receives an Event) or with a parent id.
-  async createCategory(parentId = null) {
+  async createCategory(parentIdOrEvent = null) {
     if (this.creating) return;
-    if (typeof parentId !== "string") parentId = null;
+    const parentId =
+      typeof parentIdOrEvent === "string" ? parentIdOrEvent : null;
 
     const name = this.searchTarget.value.trim();
     if (!name) return;
