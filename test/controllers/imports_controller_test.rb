@@ -218,7 +218,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter.stubs(:supported_extensions).returns(%w[.pdf])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
     source = file_fixture("imports/sample_bank_statement.pdf").binread
-    files = ["first.pdf", "second.pdf"].each_with_index.map do |filename, index|
+    files = [ "first.pdf", "second.pdf" ].each_with_index.map do |filename, index|
       uploaded_file(filename: filename, content_type: "application/octet-stream", content: source + "\n% copy #{index}")
     end
 
@@ -235,7 +235,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     VectorStore::Registry.stubs(:adapter).returns(adapter)
     PdfImport.any_instance.stubs(:process_with_ai_later).returns(false)
     source = file_fixture("imports/sample_bank_statement.pdf").binread
-    files = ["first.pdf", "second.pdf"].each_with_index.map do |filename, index|
+    files = [ "first.pdf", "second.pdf" ].each_with_index.map do |filename, index|
       uploaded_file(filename: filename, content_type: "application/pdf", content: source + "\n% copy #{index}")
     end
 
