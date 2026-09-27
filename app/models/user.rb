@@ -305,6 +305,7 @@ class User < ApplicationRecord
       raise ActiveRecord::Rollback unless deactivate
 
       SsoIdentityBlock.block_all!(oidc_identities, identity_label: identity_label)
+      block_remote_header_identity!(identity_label) if was_active
       revoke_all_credentials!
       true
     end || false
@@ -784,6 +785,22 @@ class User < ApplicationRecord
 
     def deactivated_email
       email.gsub(/@/, "-deactivated-#{SecureRandom.uuid}@")
+    end
+
+    # A header user owns no OidcIdentity, and deactivate rewrites the email, so
+    # without a block the proxy's next request for the original email would
+    # JIT-create the removed person again. Blocked for every removed user, not
+    # only password-less ones: a user with a local password reaches the same
+    # JIT path. Skipped when the user was already inactive, because the email
+    # was rewritten then and the original is gone.
+    def block_remote_header_identity!(original_email)
+      return unless RemoteUserHeader.enabled?
+
+      SsoIdentityBlock.block!(
+        provider: RemoteUserHeader::SSO_PROVIDER,
+        uid: original_email,
+        identity_label: original_email
+      )
     end
 
     def profile_image_size

@@ -1038,6 +1038,38 @@ class UserTest < ActiveSupport::TestCase
     end
   end
 
+  test "permanently_remove! blocks the header identity when header auth is on" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    Rails.application.config.stubs(:remote_user_header_email).returns("Remote-Email")
+    target = users(:family_member)
+    original_email = target.email
+
+    assert target.permanently_remove!
+
+    assert SsoIdentityBlock.blocked?(provider: RemoteUserHeader::SSO_PROVIDER, uid: original_email)
+  end
+
+  test "permanently_remove! writes no header block when header auth is off" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    Rails.application.config.stubs(:remote_user_header_email).returns(nil)
+
+    assert users(:family_member).permanently_remove!
+
+    assert_not SsoIdentityBlock.exists?(provider: RemoteUserHeader::SSO_PROVIDER)
+  end
+
+  # deactivate already rewrote the email, so there is no original to block.
+  test "permanently_remove! writes no header block for an already inactive user" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    Rails.application.config.stubs(:remote_user_header_email).returns("Remote-Email")
+    target = users(:family_member)
+    assert target.deactivate
+
+    assert target.permanently_remove!
+
+    assert_not SsoIdentityBlock.exists?(provider: RemoteUserHeader::SSO_PROVIDER)
+  end
+
   test "purging an impersonated user nullifies the admin's active_impersonator_session instead of failing" do
     admin = users(:sure_support_staff)
     target = users(:family_member)
