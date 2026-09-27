@@ -84,7 +84,8 @@ class Account < ApplicationRecord
   # or shared with full_control or read_write
   scope :annotatable_by, ->(user) {
     left_joins(:account_shares)
-      .where("accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission IN ('full_control', 'read_write'))", uid: user.id)
+      .where("accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission IN (:permissions))",
+             uid: user.id, permissions: AccountShare::ANNOTATE_PERMISSIONS)
       .distinct
   }
 

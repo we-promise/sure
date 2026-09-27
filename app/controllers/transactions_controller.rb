@@ -257,7 +257,10 @@ class TransactionsController < ApplicationController
     @entry.sync_account_later
 
     respond_to do |format|
+      # JSON stays first so Accept: */* callers keep the original response.
       format.json { render json: { tag_ids: @entry.transaction.tag_ids } }
+      # Without Turbo the row picker's button_to posts as plain HTML.
+      format.html { redirect_back_or_to transaction_path(@entry) }
       format.turbo_stream do
         transaction = @entry.transaction
         streams = %i[desktop mobile].map do |variant|

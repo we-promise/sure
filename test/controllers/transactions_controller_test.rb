@@ -508,6 +508,15 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ tags(:two).id ], @entry.reload.entryable.tag_ids
   end
 
+  test "tag-only endpoint falls back to a redirect for plain HTML toggles" do
+    @entry.entryable.update!(tag_ids: [], locked_attributes: {})
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:one).id }
+
+    assert_redirected_to transaction_path(@entry)
+    assert_equal [ tags(:one).id ], @entry.reload.entryable.tag_ids
+  end
+
   test "tag-only endpoint does not toggle tags from another family" do
     other_tag = users(:empty).family.tags.create!(name: "Other family")
     original_tag_ids = @entry.entryable.tag_ids
