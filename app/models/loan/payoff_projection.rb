@@ -13,7 +13,7 @@ class Loan
   # re-sizing the repayment to today's balance would answer a different and much
   # less useful question, and would land every borrower who is ahead back on
   # the original maturity. Paying what the contract asks against a smaller
-  # balance is how they finish sooner (#100, decision 1).
+  # balance is how they finish sooner.
   #
   # Extra payments the borrower has already made are in here without being
   # named: they are why today's balance is what it is.

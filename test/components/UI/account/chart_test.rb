@@ -40,7 +40,7 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_equal "+$110.00", component.converted_balance_display
   end
 
-  # #100: a loan with a schedule takes the loan balance chart; every other
+  # A loan with a schedule takes the loan balance chart; every other
   # account keeps the chart it always had. Asserted on the mounted controller,
   # because "unchanged for everyone else" is the blast-radius promise this
   # branch makes.
@@ -53,8 +53,6 @@ class UI::Account::ChartTest < ViewComponent::TestCase
 
     assert_selector "[data-controller='loan-payoff-chart']"
     assert_no_selector "[data-controller='time-series-chart']"
-    # Owner review of #3474: no data table under the chart; the Schedule tab
-    # carries the figures.
     assert_no_selector "table", visible: :all
     assert_selector "p.sr-only", text: payload[:aria_description], visible: :all
   end
@@ -67,7 +65,7 @@ class UI::Account::ChartTest < ViewComponent::TestCase
 
   # The balance a loan's chart plots is what is still owed, and the title says
   # so without "principal". Only the loan chart: a loan without a schedule
-  # keeps the title every loan had (jjmata on #3474).
+  # keeps the title every loan had.
   test "a loan account's chart is titled remaining balance only when it has the loan chart" do
     loan_account = accounts(:loan)
     payload = Loan::PayoffChart.new(loan_account.loan, as_of: Date.current).payload
@@ -89,7 +87,7 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_selector "[data-controller='time-series-chart']", count: 1
   end
 
-  # Degradation matrix (#100 brief 7.5): the legend promises only the lines
+  # Degradation matrix: the legend promises only the lines
   # the payload says are drawn. Under a period that ends today the forward
   # lines have no room, and a legend entry for a line that is not there is a
   # chart lying about itself.
@@ -176,8 +174,6 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_selector "button", text: "All"
   end
 
-  # Owner review of #3474: on a loan the change line compares today's balance
-  # with the amount borrowed, whatever window is picked.
   test "a loan's change line compares with the original loan amount" do
     loan_account = accounts(:loan)
     payload = Loan::PayoffChart.new(loan_account.loan, as_of: Date.current).payload

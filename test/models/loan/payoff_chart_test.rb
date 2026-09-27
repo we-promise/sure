@@ -47,8 +47,8 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
   end
 
   # A period picked on a loan's chart means what it means on every other
-  # chart: 90D is the last ninety days (jjmata and CodeRabbit on #3474). The
-  # recorded series runs from the window's start to today, and never before
+  # chart: 90D is the last ninety days.
+  # The recorded series runs from the window's start to today, and never before
   # origination. Queried past today it would carry today's balance forward as
   # a flat line.
   test "the actual series runs from the window's start to today, in the loan's currency" do
@@ -108,7 +108,7 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
     assert_includes whole_life[:visible].map(&:to_s), "projected"
   end
 
-  # jjmata and CodeRabbit on #3474: a loan drawn down years before the app
+  # A loan drawn down years before the app
   # tracked it -- a 2016 mortgage added in 2024 -- must draw its recorded
   # balance under every period it offers, not the contract alone. Windows that
   # counted forward from origination ended before the history began.
@@ -321,7 +321,7 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
   end
 
 
-  # jjmata on we-promise/sure#3474: the domain was recomputed for every plotted
+  # The domain was recomputed for every plotted
   # point and table row, and for a loan with no start date each computation
   # looked origination up again -- about 4,400 statements for one page under
   # All. The work a payload does must not grow with the length of the schedule.

@@ -6,7 +6,7 @@ class UI::Account::Chart < ApplicationComponent
   # inner chart element becomes the loan balance chart -- recorded balance,
   # original schedule and projection on one axis -- and the rest of this card
   # (title, hero figure, trend, period picker, Turbo frame) is unchanged. Every
-  # other account type takes the branch it always took (#100, decision 7).
+  # other account type takes the branch it always took.
   # The page's reference date travels inside the payload (`today`), so the
   # component takes no date of its own.
   def initialize(account:, period: nil, view: nil, loan_chart: nil)

@@ -134,7 +134,7 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_equal 0, projection.current_balance.amount
   end
 
-  # jjmata on #3474: the projection pays the contract's own repayment and never
+  # The projection pays the contract's own repayment and never
   # settles early, so it converges only when today's balance is at or below
   # the contract's. A converged projection therefore never adds interest, which
   # is why the chart has no "additional interest" card.

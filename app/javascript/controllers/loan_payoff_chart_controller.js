@@ -85,7 +85,7 @@ export default class extends Controller {
     // Functional tokens, referenced as CSS variables and applied with
     // .style(), never .attr(): a variable is substituted in an inline style
     // property but not in an SVG presentation attribute, where it leaves the
-    // stroke at `none` (#101). No fallback colours: a token that fails to
+    // stroke at `none`. No fallback colours: a token that fails to
     // resolve must fail visibly, and the browser test checks the resolved
     // stroke. Because these are live variables the browser recolours the
     // chart on a theme change by itself; no redraw is needed for that.
@@ -422,7 +422,7 @@ export default class extends Controller {
     // The live region announces only what the keyboard asks for. Under a
     // pointer the tooltip rewrites on every movement, and a live region that
     // announces every one of those is noise for anyone using a pointer with a
-    // screen reader (#57).
+    // screen reader.
     const announce = (on) => {
       if (on) {
         tooltip.setAttribute("role", "status");
@@ -439,8 +439,8 @@ export default class extends Controller {
       splitAt(width - margin.right);
     };
 
-    // The dates the tooltip stops at: the scheduled payment dates in the window
-    // (G6), or every plotted date when there is no schedule in it. The recorded
+    // The dates the tooltip stops at: the scheduled payment dates in the window,
+    // or every plotted date when there is no schedule in it. The recorded
     // line's own points are weekly and would otherwise repeat the same month
     // several times over.
     const scheduledDates = (data.scheduled || [])

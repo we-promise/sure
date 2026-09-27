@@ -4,14 +4,12 @@ require "application_system_test_case"
 #
 # Loan::PayoffChartTest proves the payload is right, and the controller test
 # proves it reaches the data attribute. Neither proves a line is PAINTED --
-# which is the failure mode this chart has already been reported for once
-# (#101: a projected payoff line that renders with correct geometry and no
-# error, because its stroke never resolved to a colour).
+# which is the failure mode this chart has already been reported for once.
 #
 # So these assertions are deliberately about the rendered SVG and the DOM
 # around it: that each series exists as a path with real geometry and a
 # stroke that will mark the screen, in both themes; that the description and
-# the keyboard give a screen-reader or keyboard user the figures (gate G6);
+# the keyboard give a screen-reader or keyboard user the figures;
 # and that the live region stays quiet under a pointer. A test that
 # re-checked payoff dates here would be re-running Loan::PayoffChartTest
 # through a browser, slowly.
@@ -47,8 +45,7 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
     end
   end
 
-  # Gate G6 without a table (owner review of #3474: the Schedule tab carries the
-  # figures). The SVG names the balance and every payoff date in its label, the
+  # The SVG names the balance and every payoff date in its label, the
   # same text is real DOM, and it points at no table that is not there.
   test "the SVG carries its description and no data table" do
     travel_to TODAY do
@@ -65,9 +62,9 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
     end
   end
 
-  # Gate G6: every plotted date is reachable from the keyboard, and only the
+  # Every plotted date is reachable from the keyboard, and only the
   # keyboard talks to the live region -- a pointer sweeping the chart would
-  # otherwise announce on every movement (#57).
+  # otherwise announce on every movement.
   test "arrow keys step the tooltip through the plotted dates and only they announce" do
     travel_to TODAY do
       account = on_contract_loan_account
@@ -80,8 +77,6 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
       tooltip = find("[data-controller='loan-payoff-chart'] div[aria-live='polite']", visible: :all)
       first = tooltip.text(:all)
       assert_match I18n.t("UI.account.chart.loan.scheduled"), first
-      # jjmata on we-promise/sure#3474: the tooltip is built from
-      # utils/chart_tooltip, so it shares the other charts' surface and z-index.
       assert_includes tooltip[:class].to_s.split, "chart-tooltip"
       assert_includes tooltip[:class].to_s.split, "z-50"
 

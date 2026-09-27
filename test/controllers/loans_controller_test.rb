@@ -239,7 +239,7 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     node && JSON.parse(node["data-loan-payoff-chart-data-value"])
   end
 
-  # #100: the chart lives at the top of the account page, inside the chart
+  # The chart lives at the top of the account page, inside the chart
   # card's Turbo frame, on whichever tab is open. The Schedule tab keeps its
   # table and cards and no longer carries a chart of its own.
   test "the account page mounts the loan balance chart with its three series" do
@@ -475,7 +475,7 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_match "2,997.75", response.body
   end
 
-  # Brief 7.4 row 8: the period picker re-renders the chart card's frame, and
+  # The period picker re-renders the chart card's frame, and
   # the cards and the mount must both live inside it.
   test "a chart_details frame request carries the mount and both cards inside the frame" do
     frame_id = ActionView::RecordIdentifier.dom_id(@account, :chart_details)
@@ -536,7 +536,7 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "h4", text: "Payoff Date", count: 0
   end
 
-  # Owner review of #3474: beside the contract's figures, the Schedule tab says
+  # Beside the contract's figures, the Schedule tab says
   # when the loan will actually be paid off -- the projection from today's
   # balance that the chart above it draws.
   test "the schedule tab forecasts the payoff date from today's balance" do

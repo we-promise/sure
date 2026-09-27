@@ -137,7 +137,7 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
       "the interest booked must be the schedule's interest, not a flat figure"
   end
 
-  # Owner review of #3474: what the chart says about the demo loans follows
+  # What the chart says about the demo loans follows
   # from their balances. The mortgage and the car loan sit on their schedules,
   # so each pays off on time; the student loan is ahead by its extra payment,
   # so it pays off early. None of them is quoted early while it is not ahead.
