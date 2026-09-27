@@ -246,7 +246,11 @@ class TransfersController < ApplicationController
     end
 
     def update_transfer_details
-      @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
+      # Confirming from the transaction list sends only the status; leave the
+      # category alone unless the form actually submitted one.
+      if transfer_update_params.key?(:category_id)
+        @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
+      end
       @transfer.update!(notes: transfer_update_params[:notes])
     end
 

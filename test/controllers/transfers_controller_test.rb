@@ -647,6 +647,17 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Test notes", transfer.reload.notes
   end
 
+  test "confirming a transfer keeps the outflow category" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.update!(category: categories(:food_and_drink))
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+
+    assert_redirected_to transactions_url
+    assert transfer.reload.confirmed?
+    assert_equal categories(:food_and_drink), transfer.outflow_transaction.reload.category
+  end
+
   test "handles rejection without FrozenError" do
     transfer = transfers(:one)
 
