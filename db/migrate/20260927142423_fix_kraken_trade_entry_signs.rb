@@ -11,9 +11,13 @@
 # agrees is left alone, which makes the migration safe to run more than once.
 #
 # An entry the user edited is theirs, whatever it says, and is left for them.
+#
+# The persisted balance series was derived from the wrong flows, so each
+# account touched is queued for a sync, which rebuilds the whole series for a
+# linked account -- the same follow-through as cleanup_orphaned_currency_balances.
 class FixKrakenTradeEntrySigns < ActiveRecord::Migration[8.1]
   def up
-    execute <<~SQL
+    flipped = execute(<<~SQL).to_a
       UPDATE entries
       SET amount = -amount
       WHERE source = 'kraken'
@@ -27,7 +31,22 @@ class FixKrakenTradeEntrySigns < ActiveRecord::Migration[8.1]
             AND trades.qty <> 0
             AND SIGN(trades.qty) <> SIGN(entries.amount)
         )
+      RETURNING account_id
     SQL
+
+    account_ids = flipped.map { |row| row["account_id"] }.uniq
+    return say "No inverted Kraken trade entries found" if account_ids.empty?
+
+    say "Flipped #{flipped.size} Kraken trade entries across #{account_ids.size} accounts"
+
+    if defined?(Account) && Account.respond_to?(:where)
+      Account.where(id: account_ids).find_each do |account|
+        account.sync_later if account.respond_to?(:sync_later)
+      end
+      say "Queued a balance rebuild for #{account_ids.size} accounts"
+    else
+      say "Please sync these accounts to rebuild their balances: #{account_ids.join(', ')}"
+    end
   end
 
   # The rows that were flipped cannot be told apart afterwards from rows that

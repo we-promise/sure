@@ -13,7 +13,10 @@ class FixKrakenTradeEntrySignsMigrationTest < ActiveSupport::TestCase
     buy  = kraken_trade("buy_tx",  qty: 0.001,  amount: -50)   # a buy written as money in
     sell = kraken_trade("sell_tx", qty: -0.002, amount: 120)   # a sell written as money out
 
-    run_migration
+    # The balance series was derived from the wrong flows and has to be rebuilt.
+    assert_difference -> { @account.syncs.count }, 1 do
+      run_migration
+    end
 
     assert_equal 50, buy.reload.amount
     assert_equal(-120, sell.reload.amount)
@@ -22,8 +25,10 @@ class FixKrakenTradeEntrySignsMigrationTest < ActiveSupport::TestCase
   test "leaves an entry that already agrees, so it can run twice" do
     buy = kraken_trade("buy_tx", qty: 0.001, amount: 50)
 
-    run_migration
-    run_migration
+    assert_no_difference -> { @account.syncs.count } do
+      run_migration
+      run_migration
+    end
 
     assert_equal 50, buy.reload.amount
   end
