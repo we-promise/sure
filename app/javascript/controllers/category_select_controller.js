@@ -12,6 +12,10 @@ export default class extends Controller {
     "createForm",
     "createLabel",
     "createError",
+    "list",
+    "createAsSubcategory",
+    "parentPicker",
+    "parentPickerLabel",
   ];
 
   static values = {
@@ -21,6 +25,7 @@ export default class extends Controller {
     autoSubmit: Boolean,
     createLabel: String,
     createErrorMessage: String,
+    parentPickerLabel: String,
   };
 
   connect() {
@@ -42,6 +47,7 @@ export default class extends Controller {
 
     this.searchTarget.value = "";
     this.filter();
+    this.hideParentPicker();
 
     requestAnimationFrame(() => this.searchTarget.focus());
   }
@@ -54,6 +60,8 @@ export default class extends Controller {
 
   filter() {
     this.clearCreateError();
+    // Editing the name returns to the list, so the picker never shows a stale name.
+    this.hideParentPicker();
 
     const rawQuery = this.searchTarget.value.trim();
     const query = rawQuery.toLowerCase();
@@ -73,6 +81,11 @@ export default class extends Controller {
 
     this.createFormTarget.classList.toggle("hidden", !canCreate);
     this.createFormTarget.classList.toggle("flex", canCreate);
+
+    if (this.hasCreateAsSubcategoryTarget) {
+      this.createAsSubcategoryTarget.classList.toggle("hidden", !canCreate);
+      this.createAsSubcategoryTarget.classList.toggle("flex", canCreate);
+    }
 
     this.createLabelTarget.textContent =
       this.createLabelValue.replace("__CATEGORY_NAME__", rawQuery);
@@ -137,8 +150,39 @@ export default class extends Controller {
     }
   }
 
-  async createCategory() {
+  showParentPicker(event) {
+    event?.preventDefault();
+    if (!this.hasParentPickerTarget) return;
+
+    const name = this.searchTarget.value.trim();
+    if (!name) return;
+
+    this.parentPickerLabelTarget.textContent =
+      this.parentPickerLabelValue.replace("__CATEGORY_NAME__", name);
+
+    this.listTarget.classList.add("hidden");
+    this.parentPickerTarget.classList.remove("hidden");
+    this.parentPickerTarget.classList.add("flex");
+  }
+
+  hideParentPicker(event) {
+    event?.preventDefault();
+    if (!this.hasParentPickerTarget) return;
+
+    this.parentPickerTarget.classList.add("hidden");
+    this.parentPickerTarget.classList.remove("flex");
+    this.listTarget.classList.remove("hidden");
+  }
+
+  createUnderParent(event) {
+    event.preventDefault();
+    this.createCategory(event.currentTarget.dataset.parentId);
+  }
+
+  // Called directly as an action (receives an Event) or with a parent id.
+  async createCategory(parentId = null) {
     if (this.creating) return;
+    if (typeof parentId !== "string") parentId = null;
 
     const name = this.searchTarget.value.trim();
     if (!name) return;
@@ -152,9 +196,11 @@ export default class extends Controller {
         url: this.createUrlValue,
         name,
         color: this.defaultColorValue,
+        parentId,
       });
 
       if (!category) {
+        this.hideParentPicker();
         this.showCreateError(error);
         return;
       }
