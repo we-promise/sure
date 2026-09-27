@@ -776,6 +776,11 @@ class Account < ApplicationRecord
         provider_balance_adjustment_caught_up_at: nil
       )
 
+      # Once unlinked, the balance belongs to the user. Writing it through the
+      # manual path could shift the opening anchor and restate history, so
+      # clearing only removes the adjustment record.
+      next Account::CurrentBalanceManager::Result.new(success?: true, changes_made?: true, error: nil) if unlinked?
+
       result = set_current_balance(provider_balance, apply_provider_adjustment: true)
       raise Account::CurrentBalanceManager::InvalidOperation, result.error unless result.success?
 

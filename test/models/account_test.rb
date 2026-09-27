@@ -993,17 +993,20 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal(-25, @account.reload.provider_balance_adjustment)
   end
 
-  test "clears a leftover adjustment on an account that is no longer linked" do
-    @account.update_columns(balance: @account.balance - 25, provider_balance_adjustment: -25,
-      provider_balance_adjustment_reason: "Pending refund", provider_balance_adjustment_effective_date: Date.current)
-    raw_balance = @account.reload.balance + 25
-    assert @account.unlinked?
+  test "clears a leftover adjustment on an unlinked account without restating history" do
+    @account.update_columns(provider_balance_adjustment: -25, provider_balance_adjustment_reason: "Pending refund",
+      provider_balance_adjustment_effective_date: Date.current)
+    assert @account.reload.unlinked?
+    balance = @account.balance
+    entry_snapshot = @account.entries.order(:id).pluck(:id, :date, :amount)
 
     result = @account.set_provider_balance_adjustment(amount: "", reason: "")
 
     assert result.success?, result.error
     assert_equal 0, @account.reload.provider_balance_adjustment
     assert_nil @account.provider_balance_adjustment_reason
-    assert_equal raw_balance, @account.balance
+    assert_nil @account.provider_balance_adjustment_effective_date
+    assert_equal balance, @account.balance
+    assert_equal entry_snapshot, @account.entries.order(:id).pluck(:id, :date, :amount)
   end
 end
