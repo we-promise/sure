@@ -122,11 +122,12 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     assert_equal "Synthetic PDF", processor.process.summary
   end
 
-  test "GPT-6 Sol PDF text extraction uses the completion token budget" do
+  test "GPT-6 Sol PDF text extraction preserves the existing uncapped request" do
     client = mock
     client.expects(:chat).with do |request|
       params = request[:parameters]
-      params[:model] == "gpt-6-sol" && params[:max_completion_tokens] == 8192
+      params[:model] == "gpt-6-sol" &&
+        !params.key?(:max_completion_tokens) && !params.key?(:max_tokens)
     end.returns(
       "choices" => [ { "message" => { "content" => {
         document_type: "other", summary: "Synthetic text", extracted_data: {}
@@ -143,6 +144,33 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     processor.stubs(:extract_text_from_pdf).returns("Synthetic statement")
 
     assert_equal "Synthetic text", processor.process.summary
+  end
+
+  test "GPT-6 Sol PDF vision omits an unconfigured completion limit" do
+    processor = vision_processor(model: "gpt-6-sol", max_response_tokens: nil)
+    expect_vision_request(processor, model: "gpt-6-sol") do |params|
+      !params.key?(:max_tokens) && !params.key?(:max_completion_tokens)
+    end
+
+    assert_equal "Synthetic PDF", processor.process.summary
+  end
+
+  test "legacy OpenAI PDF vision retains max_tokens" do
+    processor = vision_processor(model: "gpt-4.1", max_response_tokens: 512)
+    expect_vision_request(processor, model: "gpt-4.1") do |params|
+      params[:max_tokens] == 512 && !params.key?(:max_completion_tokens)
+    end
+
+    assert_equal "Synthetic PDF", processor.process.summary
+  end
+
+  test "custom provider PDF vision retains max_tokens even with a GPT-6 model name" do
+    processor = vision_processor(model: "gpt-6-sol", max_response_tokens: 512, custom_provider: true)
+    expect_vision_request(processor, model: "gpt-6-sol") do |params|
+      params[:max_tokens] == 512 && !params.key?(:max_completion_tokens)
+    end
+
+    assert_equal "Synthetic PDF", processor.process.summary
   end
 
   test "convert_pdf_to_images raises a coded error when the pdftoppm binary is missing" do
@@ -185,6 +213,31 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
   end
 
   private
+    def vision_processor(model:, max_response_tokens:, custom_provider: false)
+      processor = Provider::Openai::PdfProcessor.new(
+        mock,
+        model: model,
+        pdf_content: @pdf_content,
+        max_response_tokens: max_response_tokens,
+        custom_provider: custom_provider,
+        processing_mode: :vision
+      )
+      processor.stubs(:convert_pdf_to_images).returns([ "synthetic-image" ])
+      processor
+    end
+
+    def expect_vision_request(processor, model:)
+      processor.client.expects(:chat).with do |request|
+        params = request[:parameters]
+        params[:model] == model && yield(params)
+      end.returns(
+        "choices" => [ { "message" => { "content" => {
+          document_type: "other", summary: "Synthetic PDF", extracted_data: {}
+        }.to_json } } ],
+        "usage" => { "prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30 }
+      )
+    end
+
     def build_processor(error, trace)
       client = mock
       client.expects(:chat).raises(error)

@@ -126,7 +126,7 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 **Recommended models:**
 - `gpt-6-sol` - Strong reasoning for multi-step financial analysis; use the native OpenAI provider and Responses API for reasoning with function tools
 - `gpt-4.1` - Default, best balance of speed and quality
-- `gpt-5` - Latest model, highest quality (more expensive)
+- `gpt-5` - Earlier-generation reasoning model
 - `gpt-4o-mini` - Cheaper, good quality
 
 **Pricing:** See [OpenAI Pricing](https://openai.com/api/pricing/)
@@ -134,8 +134,10 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 GPT-6 Sol uses the native Responses API for assistant tools. Leave the custom
 Base URL setting empty when connecting directly to OpenAI. Its PDF vision
 requests use `max_completion_tokens`, which includes reasoning and visible
-output. Increase the LLM context and response budgets for cloud reasoning
-models; the default 2048-token context is intended for small local models.
+output, when an output limit is explicitly configured. Text extraction keeps
+its existing request behavior. Custom endpoints retain their existing token
+parameters. Increase the LLM context budget for cloud reasoning models; the
+default 2048-token context is intended for small local models.
 
 ### Google Gemini (via OpenRouter)
 

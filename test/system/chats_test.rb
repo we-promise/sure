@@ -66,4 +66,30 @@ class ChatsTest < ApplicationSystemTestCase
       assert_text "Can you help with my finances?"
     end
   end
+
+  test "create chat with an opted-in GPT-6 Sol model" do
+    with_env_overrides(
+      OPENAI_ACCESS_TOKEN: "test-token",
+      OPENAI_MODEL: "gpt-6-sol",
+      OPENAI_URI_BASE: nil,
+      ASSISTANT_TYPE: "builtin"
+    ) do
+      Setting.stubs(:openai_uri_base).returns(nil)
+      @user.update!(ai_enabled: true)
+      @user.chats.destroy_all
+
+      visit root_url
+      Chat.any_instance.expects(:ask_assistant_later).once
+
+      within "#chat-form" do
+        fill_in "chat[content]", with: "Help me understand my spending"
+        find("button[type='submit']").click
+      end
+
+      assert_text "Help me understand my spending"
+      chat = @user.chats.reload.first
+      assert_equal "gpt-6-sol", chat.messages.where(type: "UserMessage").first.ai_model
+      assert_instance_of Assistant::Builtin, Assistant.for_chat(chat)
+    end
+  end
 end

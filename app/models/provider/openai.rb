@@ -322,6 +322,14 @@ class Provider::Openai < Provider
         input: { pdf_size: pdf_content&.bytesize }
       )
 
+      # GPT-6 completion limits include reasoning; the fallback is a budget reserve.
+      response_limit =
+        if !custom_provider? && effective_model.start_with?("gpt-6")
+          explicit_max_response_tokens
+        else
+          max_response_tokens
+        end
+
       result = PdfProcessor.new(
         client,
         model: effective_model,
@@ -329,7 +337,7 @@ class Provider::Openai < Provider
         custom_provider: custom_provider?,
         langfuse_trace: trace,
         family: family,
-        max_response_tokens: max_response_tokens
+        max_response_tokens: response_limit
       ).process
 
       upsert_langfuse_trace(trace: trace, output: result.to_h)

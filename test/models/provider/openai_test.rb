@@ -25,6 +25,33 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  test "GPT-6 PDF processing reserves only an explicitly configured output limit" do
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+      Setting.stubs(:llm_max_response_tokens).returns(nil)
+      expect_pdf_response_limit(@openai, model: "gpt-6-sol", limit: nil)
+      assert @openai.process_pdf(pdf_content: "synthetic PDF", model: "gpt-6-sol").success?
+    end
+  end
+
+  test "GPT-6 PDF processing honors an explicit output limit" do
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "8192") do
+      expect_pdf_response_limit(@openai, model: "gpt-6-sol", limit: 8192)
+      assert @openai.process_pdf(pdf_content: "synthetic PDF", model: "gpt-6-sol").success?
+    end
+  end
+
+  test "legacy and custom PDF processing preserve the fallback output limit" do
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+      Setting.stubs(:llm_max_response_tokens).returns(nil)
+      expect_pdf_response_limit(@openai, model: "gpt-4.1", limit: 512)
+      assert @openai.process_pdf(pdf_content: "synthetic PDF", model: "gpt-4.1").success?
+
+      custom = Provider::Openai.new("test-token", uri_base: "https://custom.example/v1", model: "gpt-6-sol")
+      expect_pdf_response_limit(custom, model: "gpt-6-sol", limit: 512)
+      assert custom.process_pdf(pdf_content: "synthetic PDF", model: "gpt-6-sol").success?
+    end
+  end
+
   test "effective_model uses Setting when ENV is unset" do
     Setting.stubs(:openai_model).returns("llama3")
     with_env_overrides("OPENAI_MODEL" => nil) do
@@ -848,4 +875,18 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     tool_call = messages.find { |m| m[:role] == "assistant" }[:tool_calls].first
     assert_equal "{}", tool_call.dig(:function, :arguments)
   end
+
+  private
+    def expect_pdf_response_limit(provider, model:, limit:)
+      result = Provider::LlmConcept::PdfProcessingResult.new(
+        summary: "Synthetic PDF", document_type: "other", extracted_data: {}
+      )
+      processor = mock
+      processor.expects(:process).returns(result)
+      Provider::Openai::PdfProcessor.expects(:new).with do |*args|
+        params = args.last
+        params[:model] == model && params[:max_response_tokens] == limit &&
+          params[:custom_provider] == provider.custom_provider?
+      end.returns(processor)
+    end
 end

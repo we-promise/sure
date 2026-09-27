@@ -126,7 +126,6 @@ class Provider::Openai::PdfProcessor
         ],
         response_format: { type: "json_object" }
       }
-      params[:max_completion_tokens] = max_response_tokens if native_gpt6?
 
       response = client.chat(parameters: params)
 
@@ -190,7 +189,11 @@ class Provider::Openai::PdfProcessor
           { role: "user", content: content }
         ]
       }
-      params[native_gpt6? ? :max_completion_tokens : :max_tokens] = max_response_tokens
+      if native_gpt6?
+        params[:max_completion_tokens] = max_response_tokens if max_response_tokens
+      else
+        params[:max_tokens] = max_response_tokens
+      end
 
       response = client.chat(parameters: params)
 
