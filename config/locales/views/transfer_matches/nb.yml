@@ -1,0 +1,24 @@
+---
+nb:
+  transfer_matches:
+    create:
+      success: Overføring opprettet
+    new:
+      header:
+        title: Koble overføring eller betaling
+        subtitle: Koble til den motsvarende transaksjonen i en annen konto, eller opprett en hvis den ikke finnes.
+      from_account: Fra konto
+      from_account_named: 'Fra konto: %{name}'
+      to_account: Til konto
+      to_account_named: 'Til konto: %{name}'
+      outflow_transaction: Utgående transaksjon
+      inflow_transaction: Inngående transaksjon
+      create_transfer_match: Opprett overføringskobling
+    matching_fields:
+      select_method: Velg hvordan transaksjonene dine skal kobles.
+      match_existing_recommended: Koble til eksisterende transaksjon (anbefalt)
+      create_new_transaction: Opprett ny transaksjon
+      matching_method: Koblingsmetode
+      matching_transaction: Motsvarende transaksjon
+      target_account: Målkonto
+      no_matching_transactions: Vi fant ingen transaksjoner å koble til i de andre kontoene dine. Velg en konto, så oppretter vi en ny inngående transaksjon for deg.

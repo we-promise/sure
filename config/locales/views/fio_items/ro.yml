@@ -1,0 +1,143 @@
+---
+ro:
+  providers:
+    fio:
+      name: Fio banka
+      description: Sincronizează un cont Fio banka cu un token API doar pentru citire
+  family:
+    fio:
+      create_fio_item:
+        default_name: Conexiune Fio banka
+  fio_item:
+    errors:
+      account_processing_failed: Contul Fio nu a putut fi sincronizat
+      account_mismatch: Acest token aparține altui cont Fio decât cel pe care această conexiune îl sincronizează deja. Adaugă-l ca o conexiune separată.
+      account_sync_schedule_failed: Sincronizarea contului Fio nu a putut fi programată
+      statement_too_large: Extrasul de cont are mai multe tranzacții decât returnează Fio într-o singură cerere. Mută data de început a sincronizării mai încoace și sincronizează din nou.
+      statement_fetch_failed: Extrasul de cont nu a putut fi preluat de la Fio
+      history_locked: Fio a refuzat această perioadă a extrasului. Deblochează istoricul complet al contului în internet banking, la Setări → API, apoi sincronizează din nou în maximum 10 minute.
+      sync_failed: Conexiunea Fio nu a putut fi sincronizată
+    sync:
+      status:
+        importing: Se importă extrasul de cont de la Fio...
+        checking_setup: Se verifică configurarea contului...
+        needs_setup:
+          one: '%{count} cont necesită configurare...'
+          few: '%{count} conturi necesită configurare...'
+          other: '%{count} de conturi necesită configurare...'
+        processing: Se procesează tranzacțiile...
+        calculating: Se calculează soldurile...
+    sync_status:
+      no_accounts: Niciun cont găsit încă
+      all_synced:
+        one: '%{count} cont sincronizat'
+        few: '%{count} conturi sincronizate'
+        other: '%{count} de conturi sincronizate'
+      partial: '%{linked} sincronizate, %{unlinked} necesită configurare'
+  fio_items:
+    account_types:
+      depository: Cont curent sau de economii
+      loan: Credit, credit ipotecar sau descoperit de cont
+    provider_panel:
+      default_connection_name: Conexiune Fio banka
+      add_connection: Adaugă o conexiune Fio banka
+      update_connection: Actualizează conexiunea
+      connection_name_label: Numele conexiunii
+      connection_name_placeholder: Contul meu Fio
+      token_label: Token API (doar citire)
+      token_placeholder: Lipește tokenul de 64 de caractere
+      keep_token_placeholder: Lasă gol pentru a păstra tokenul existent
+      sync_start_date_label: Importă tranzacțiile începând cu
+      sync_start_date_hint: Fio oferă ultimele 90 de zile fără autorizare suplimentară. Pentru date mai vechi, deblochează istoricul complet al contului în internet banking, la Setări → API (pictograma lacăt) — astfel se deschide o fereastră de 10 minute — și sincronizează în acest interval.
+      one_account_notice: Un token oferă acces la un singur cont Fio, așa că adaugă câte o conexiune pentru fiecare cont pe care vrei să-l urmărești. Un token poate fi folosit o dată la 30 de secunde; o sincronizare care vine mai devreme este preluată de următoarea.
+      connected_account: Cont conectat
+      no_account_yet: Niciun cont încă — prima sincronizare descoperă contul la care are acces acest token.
+      account_needs_setup: Nu este încă conectat la un cont Sure.
+      requires_update: Este necesar un token nou
+      requires_update_notice: Fio a respins acest token. Tokenurile sunt valabile până la 180 de zile, cu excepția cazului în care sunt prelungite automat la fiecare autentificare în internet banking, așa că creează un nou token doar pentru citire la Setări → API și lipește-l mai jos.
+      last_synced: Sincronizat acum %{timestamp}
+      never_synced: Nesincronizat niciodată
+      syncing: Se sincronizează...
+      sync: Sincronizează
+      setup_accounts: Configurează contul
+      disconnect: Deconectează
+      disconnect_confirm: Sigur vrei să deconectezi %{name}?
+    create:
+      success: Conexiunea Fio banka a fost salvată.
+      token_required: Lipește tokenul API din internet banking-ul Fio.
+    update:
+      success: Conexiunea Fio banka a fost actualizată.
+    destroy:
+      success: Conexiunea Fio banka a fost programată pentru ștergere.
+      unlink_failed: Conexiunea Fio banka nu a putut fi deconectată
+    select_accounts:
+      title: Conectează contul Fio
+      description: Acest token oferă acces la un singur cont. Alege cum să fie urmărit în Sure.
+      account_type_label: Tipul contului
+      awaiting_first_sync: Fio nu a raportat încă contul pentru acest token. Rulează o sincronizare și revino.
+      already_linked: Contul acestei conexiuni este deja conectat la un cont Sure.
+      sync_now: Sincronizează acum
+      no_credentials_configured: Configurează mai întâi Fio banka în setările furnizorilor.
+      cancel: Anulează
+      link_account: Conectează contul
+    link_accounts:
+      success: Contul tău Fio a fost conectat la %{account_name}.
+      no_account_found: Nu s-a găsit niciun cont Fio neconectat pentru această conexiune.
+      no_credentials_configured: Configurează mai întâi Fio banka în setările furnizorilor.
+      unsupported_account_type: Fio nu acceptă acest tip de cont.
+      link_failed: Contul nu a putut fi conectat.
+    select_existing_account:
+      title: Conectează contul Fio la %{account_name}
+      description: Conectează contul la care are acces acest token la contul pe care l-ai ales.
+      awaiting_first_sync: Fio nu a raportat încă contul pentru acest token. Rulează o sincronizare și revino.
+      already_linked: Contul acestei conexiuni este deja conectat la un cont Sure.
+      sync_now: Sincronizează acum
+      no_credentials_configured: Configurează mai întâi Fio banka în setările furnizorilor.
+      account_already_linked: Acest cont este deja conectat la un furnizor.
+      cancel: Anulează
+      link_account: Conectează contul
+    link_existing_account:
+      success: Contul tău Fio a fost conectat la %{account_name}.
+      account_already_linked: Acest cont este deja conectat la un furnizor.
+      fio_account_already_linked: Acest cont Fio este deja conectat.
+      no_account_selected: Nu a fost disponibil niciun cont Fio de conectat.
+      unsupported_account_type: Fio poate sincroniza doar conturi de numerar și de credit.
+    setup_accounts:
+      title: Conectează contul Fio
+      subtitle: Alege cum să apară în Sure contul la care are acces acest token.
+      choose_account_type: Alege un tip de cont
+      choose_account_type_description: Omite-l dacă nu vrei să urmărești acest cont.
+      account_type_label: Tipul contului
+      account_types:
+        skip: Omite
+      create_account: Creează contul
+      awaiting_first_sync: Niciun cont găsit încă
+      awaiting_first_sync_description: Fio raportează contul doar într-un extras de cont, așa că acesta apare după prima sincronizare reușită.
+      sync_now: Sincronizează acum
+      nothing_to_setup: Nimic de configurat
+      account_already_handled: Contul acestei conexiuni este deja conectat sau omis.
+      close: Închide
+      cancel: Anulează
+    complete_account_setup:
+      success: A fost creat %{account_name}.
+      skipped: Contul Fio a fost omis.
+      no_account: Niciun cont Fio nu necesita configurare.
+      unsupported_account_type: Fio nu acceptă acest tip de cont.
+      creation_failed: Contul Sure nu a putut fi creat.
+    fio_item:
+      deletion_in_progress: Ștergere în curs
+      syncing: Se sincronizează
+      requires_update: Este necesar un token nou
+      error: Eroare
+      status_with_summary: Sincronizat acum %{timestamp} · %{summary}
+      status_never: Nesincronizat niciodată
+      delete: Șterge
+      requires_update_title: Este necesar un token nou
+      requires_update_description: Fio a respins tokenul acestei conexiuni. Creează un nou token doar pentru citire în internet banking, la Setări → API.
+      update_token: Actualizează tokenul
+      setup_needed: Contul necesită configurare
+      setup_description: Contul la care are acces acest token nu este încă conectat la un cont Sure.
+      setup_action: Configurează contul
+      no_accounts_title: Niciun cont importat încă
+      no_accounts_description: Fio raportează contul doar într-un extras de cont, așa că acesta apare după prima sincronizare reușită.
+      sync_now: Sincronizează acum

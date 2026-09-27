@@ -1,0 +1,7 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        plaid_account:
+          no_balance: Contul Plaid trebuie să aibă fie sold curent, fie sold disponibil

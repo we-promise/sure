@@ -1,0 +1,119 @@
+---
+nb:
+  admin:
+    users:
+      index:
+        title: Brukeradministrasjon
+        description: Administrer brukerroller, medlemskap i husholdning/gruppe og fjerning av kontoer for instansen din. Superadministratorer har tilgang til innstillinger for SSO-leverandører og brukeradministrasjon.
+        section_title: Husholdninger / grupper
+        you: (Deg)
+        trial_ends_at: Prøveperioden slutter
+        not_available: i/t
+        no_users: Ingen brukere funnet.
+        unnamed_family: Husholdning/gruppe uten navn
+        no_subscription: Intet abonnement
+        family_summary: '%{members} medlemmer · %{accounts} kontoer · %{transactions} transaksjoner'
+        filters:
+          role: Rolle
+          role_all: Alle roller
+          trial_status: Status for prøveperiode
+          trial_all: Alle
+          trial_expiring_soon: Utløper innen 7 dager
+          trial_trialing: I prøveperiode
+          submit: Filtrer
+        summary:
+          trials_expiring_7_days: Prøveperioder som utløper de neste 7 dagene
+        table:
+          user: Bruker
+          trial_ends_at: Prøveperioden slutter
+          family_accounts: Kontoer i husholdningen
+          family_transactions: Transaksjoner i husholdningen
+          last_login: Siste innlogging
+          session_count: Antall økter
+          never: Aldri
+          role: Rolle
+          family: Husholdning / gruppe
+          keep_current_family: Behold nåværende husholdning/gruppe
+          create_new_family_option: + Opprett ny husholdning/gruppe
+          new_family_name: Navn på ny husholdning/gruppe
+          new_family_name_placeholder: Skriv inn et navn for å opprette en ny husholdning/gruppe
+          new_family_moniker: Type for ny husholdning/gruppe
+          set_password: Angi nytt passord
+          password_placeholder: La stå tomt for å beholde nåværende
+          actions: Handlinger
+        family_monikers:
+          family: Husholdning
+          group: Gruppe
+        actions:
+          manage_user: Administrer bruker
+          update: Oppdater bruker
+          delete_user: Slett bruker
+          self_edit_warning: Hvis du endrer din egen rolle, endres dine administrative rettigheter.
+          self_update_confirm: Er du sikker på at du vil endre din egen kontorolle eller husholdning?
+          last_super_admin_role_locked: Rolleendring er blokkert fordi du er den siste superadministratoren i systemet.
+        delete_confirm: Er du sikker på at du vil slette denne brukeren? Denne handlingen kan ikke angres.
+        delete_confirm_last_user: Er du sikker på at du vil slette denne brukeren? Dette er den siste brukeren i husholdningen/gruppen, så hvis du sletter brukeren, slettes også hele husholdningen/gruppen og alle tilknyttede data. Denne handlingen kan ikke angres.
+        remove: Slett bruker
+        role_descriptions_title: Rollebeskrivelser
+        removed_sso_identities:
+          title: Fjernede SSO-identiteter
+          description: Disse identitetene kan ikke opprette eller koble til en konto på nytt. Tillat en identitet igjen bare hvis fjerningen var en feil.
+          allow_again: Tillat igjen
+          confirm: Vil du tillate at %{email} logger inn eller oppretter en konto via SSO igjen?
+        roles:
+          guest: Gjest
+          member: Medlem
+          admin: Administrator
+          super_admin: Superadministrator
+        auth_types:
+          sso: SSO
+          local: Lokal
+          local_and_sso: Lokal + SSO
+          sso_provider_tooltip: 'SSO-leverandør: %{providers}'
+        role_descriptions:
+          guest: Assistentbasert opplevelse med bevisst begrensede tillatelser for introduksjonsforløp.
+          member: Grunnleggende brukertilgang. Kan administrere egne kontoer, transaksjoner og innstillinger.
+          admin: Administrator for husholdningen. Har tilgang til avanserte innstillinger som API-nøkler, importer og AI-instruksjoner.
+          super_admin: Administrator for instansen. Kan administrere SSO-leverandører og brukerroller, og logge inn som brukere for å gi støtte.
+        invitations:
+          pending_label: Invitert (venter)
+          expires: Utløper %{date}
+          delete: Slett
+          delete_all: Slett alle
+        unused_families:
+          title: Ubrukte husholdninger / grupper
+          family_id: 'Husholdnings-ID: %{id}'
+          delete: Slett ubrukt husholdning
+          delete_confirm: Er du sikker på at du vil slette denne ubrukte husholdningen/gruppen? Denne handlingen kan ikke angres.
+          empty: Ingen ubrukte husholdninger/grupper funnet.
+      update:
+        success_role: Brukerrollen ble oppdatert.
+        success_password: Brukerens passord ble oppdatert.
+        success_role_and_password: Brukerens rolle og passord ble oppdatert.
+        success_family: Brukerens medlemskap i husholdning/gruppe ble oppdatert.
+        failure: Kunne ikke oppdatere brukerdetaljene (rolle eller medlemskap i husholdning/gruppe).
+        family_required: Velg en eksisterende husholdning/gruppe, eller skriv inn et navn på en ny.
+        password_and_family_conflict: Passord og medlemskap i husholdning/gruppe kan ikke oppdateres samtidig.
+        password_too_short: Passordet må være minst 8 tegn langt.
+        password_missing_case: Passordet må inneholde både store og små bokstaver.
+        password_missing_number: Passordet må inneholde minst ett tall.
+        password_missing_special: Passordet må inneholde minst ett spesialtegn.
+        last_super_admin_error: Kan ikke nedgradere den siste superadministratoren i systemet.
+      destroy:
+        success: Brukerens tilgang er tilbakekalt, og permanent sletting er planlagt.
+        failure: Kunne ikke fjerne brukeren.
+        cannot_remove_self: Du kan ikke fjerne din egen konto herfra.
+        cannot_remove_last_super_admin: Du kan ikke fjerne den siste aktive superadministratoren.
+        confirmation_mismatch: E-postadressen samsvarte ikke. Brukeren ble ikke fjernet.
+      deletion:
+        title: Fjern bruker permanent
+        warning: Dette tilbakekaller tilgangen umiddelbart og planlegger permanent sletting av brukeren og brukerens data. Dette kan ikke angres.
+        instruction: Skriv %{email} for å bekrefte.
+        email_label: Brukerens e-post
+        cancel: Avbryt
+        submit: Fjern bruker permanent
+    families:
+      destroy:
+        family_has_active_subscription: Husholdningen/gruppen har et aktivt abonnement og kan ikke slettes før abonnementet er sagt opp.
+        family_has_users: Husholdningen/gruppen har fortsatt brukere og kan ikke slettes.
+        success: Husholdningen/gruppen ble slettet.

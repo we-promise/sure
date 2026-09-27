@@ -1,0 +1,257 @@
+---
+nb:
+  questrade_items:
+    default_name: Questrade-tilkobling
+    sync_status:
+      no_accounts: Fant ingen kontoer
+      synced:
+        one: '%{count} konto synkronisert'
+        other: '%{count} kontoer synkronisert'
+      synced_with_setup: '%{linked} synkronisert, %{unlinked} må settes opp'
+    institution_summary:
+      none: Ingen institusjoner tilkoblet
+      count:
+        one: '%{count} institusjon'
+        other: '%{count} institusjoner'
+    errors:
+      provider_not_configured: Questrade-leverandøren er ikke konfigurert
+    sync:
+      status:
+        importing: Importerer kontoer fra Questrade ...
+        processing: Behandler beholdninger og aktiviteter ...
+        calculating: Beregner saldoer ...
+        importing_data: Importerer kontodata ...
+        checking_setup: Kontrollerer kontooppsettet ...
+        needs_setup: '%{count} kontoer må settes opp ...'
+      success: Synkronisering startet
+    panel:
+      eyebrow: Oppsett · kun på datamaskin
+      help_text: API-dokumentasjon for Questrade
+      disconnect: Koble fra
+      disconnect_confirm: Koble fra Questrade? Dette fjerner tilkoblingen og kobler fra de synkroniserte kontoene.
+      steps:
+        s1_html: Logg inn på <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">Questrade-portalen</a> i en nettleser på datamaskin. API-innstillingene er ikke tilgjengelige i mobilappen.
+        s2: Åpne Settings, og rediger IQ API settings under General settings.
+        s3_html: I API access-vinduet klikker du <strong>Manage</strong> under <strong>My applications</strong>.
+        s4: Registrer en personlig app med navn og beskrivelse, og lagre.
+        s5: Legg til en ny enhet og generer et token.
+        s6: Lim inn det genererte tokenet nedenfor og lagre.
+      setup_instructions: 'Oppsettsinstruksjoner:'
+      step_1: Gå til Questrade-dashbordet ditt for å hente påloggingsinformasjonen
+      step_2: Skriv inn påloggingsinformasjonen nedenfor og klikk Lagre
+      step_3: Når tilkoblingen er opprettet, går du til Kontoer-fanen for å sette opp nye kontoer
+      field_descriptions: 'Feltbeskrivelser:'
+      optional: (valgfritt)
+      required: (påkrevd)
+      optional_with_default: (valgfritt, standard er %{default_value})
+      save_button: Lagre konfigurasjon
+      update_button: Oppdater konfigurasjon
+      token_refresh_hint: Questrade-tokener fornyes automatisk hver gang kontoene synkroniseres. Hvis en tilkobling står ubrukt i mer enn 7 dager og utløper, kan du lime inn et nytt token her for å aktivere den igjen uten å koble fra.
+      status_configured_html: Konfigurert og klar til bruk. Gå til <a href="%{accounts_path}" class="link">Kontoer</a>-fanen for å administrere og sette opp kontoer.
+      status_not_configured: Ikke konfigurert
+      fields:
+        refresh_token:
+          label: Refresh token
+          description: Refresh token for Questrade
+          placeholder_new: Lim inn refresh token her
+          placeholder_update: Skriv inn nytt refresh token for å oppdatere
+        api_server:
+          label: API-server
+          description: API-serveren din hos Questrade
+          placeholder_new: Lim inn API-server her
+          placeholder_update: Skriv inn ny API-server for å oppdatere
+    create:
+      success: Questrade-tilkoblingen ble opprettet
+    update:
+      success: Questrade-tilkoblingen ble oppdatert
+    destroy:
+      success: Questrade-tilkoblingen ble fjernet
+    index:
+      title: Questrade-tilkoblinger
+    loading:
+      loading_message: Laster inn Questrade-kontoer ...
+      loading_title: Laster inn
+    link_accounts:
+      all_already_linked:
+        one: Den valgte kontoen (%{names}) er allerede koblet til
+        other: 'Alle %{count} valgte kontoer er allerede koblet til: %{names}'
+      api_error: 'API-feil: %{message}'
+      invalid_account_names:
+        one: Kan ikke koble til en konto uten navn
+        other: Kan ikke koble til %{count} kontoer uten navn
+      link_failed: Kunne ikke koble til kontoer
+      no_accounts_selected: Velg minst én konto
+      no_api_key: Fant ikke API-nøkkel for Questrade. Konfigurer den i leverandørinnstillingene.
+      partial_invalid: Koblet til %{created_count} konto(er), %{already_linked_count} var allerede koblet til, %{invalid_count} konto(er) hadde ugyldige navn
+      partial_success: 'Koblet til %{created_count} konto(er). %{already_linked_count} konto(er) var allerede koblet til: %{already_linked_names}'
+      success:
+        one: Koblet til %{count} konto
+        other: Koblet til %{count} kontoer
+    questrade_item:
+      kind: Megler
+      accounts_need_setup: Kontoer må settes opp
+      delete: Slett tilkobling
+      deletion_in_progress: sletting pågår ...
+      error: Feil
+      more_accounts_available:
+        one: '%{count} konto til er tilgjengelig'
+        other: '%{count} kontoer til er tilgjengelige'
+      no_accounts_description: Denne tilkoblingen har ingen tilkoblede kontoer ennå.
+      no_accounts_title: Ingen kontoer
+      provider_name: Questrade
+      requires_update: Tilkoblingen må oppdateres
+      setup_action: Sett opp nye kontoer
+      setup_description: '%{linked} av %{total} kontoer er koblet til. Velg kontotyper for de nylig importerte Questrade-kontoene dine.'
+      setup_needed: Nye kontoer er klare til å settes opp
+      status: Synkronisert for %{timestamp} siden
+      status_never: Aldri synkronisert
+      status_with_summary: Sist synkronisert for %{timestamp} siden – %{summary}
+      syncing: Synkroniserer ...
+      total: Totalt
+      unlinked: Ikke tilkoblet
+      update_credentials: Oppdater påloggingsinformasjon
+    select_accounts:
+      accounts_selected: kontoer valgt
+      api_error: 'API-feil: %{message}'
+      cancel: Avbryt
+      configure_name_in_provider: Kan ikke importere – angi kontonavnet i Questrade
+      description: Velg kontoene du vil koble til %{product_name}-kontoen din.
+      link_accounts: Koble til valgte kontoer
+      no_accounts_found: Fant ingen kontoer. Sjekk API-nøkkelkonfigurasjonen.
+      no_api_key: API-nøkkel for Questrade er ikke konfigurert. Konfigurer den i Innstillinger.
+      no_credentials_configured: Konfigurer påloggingsinformasjonen for Questrade i leverandørinnstillingene først.
+      no_name_placeholder: (Uten navn)
+      title: Velg Questrade-kontoer
+    select_existing_account:
+      page_title: Koble til en Questrade-konto
+      dialog_title: Koble til en Questrade-konto
+      linking_label: Kobler til
+      none_available: Ingen ikke-tilkoblede Questrade-kontoer er tilgjengelige.
+      buttons:
+        cancel: Avbryt
+        link: Koble til
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør
+      all_accounts_already_linked: Alle Questrade-kontoer er allerede koblet til
+      api_error: 'API-feil: %{message}'
+      balance_label: 'Saldo:'
+      cancel: Avbryt
+      cancel_button: Avbryt
+      configure_name_in_provider: Kan ikke importere – angi kontonavnet i Questrade
+      connect_hint: Koble til en Questrade-konto for å aktivere automatisk synkronisering.
+      description: Velg en Questrade-konto som skal kobles til denne kontoen. Transaksjoner synkroniseres, og duplikater fjernes automatisk.
+      header: Koble til Questrade
+      link_account: Koble til konto
+      link_button: Koble til denne kontoen
+      linking_to: 'Kobler til:'
+      no_account_specified: Ingen konto er angitt
+      no_accounts: Fant ingen ikke-tilkoblede Questrade-kontoer.
+      no_accounts_found: Fant ingen Questrade-kontoer. Sjekk API-nøkkelkonfigurasjonen.
+      no_api_key: API-nøkkel for Questrade er ikke konfigurert. Konfigurer den i Innstillinger.
+      no_credentials_configured: Konfigurer påloggingsinformasjonen for Questrade i leverandørinnstillingene først.
+      no_name_placeholder: (Uten navn)
+      settings_link: Gå til leverandørinnstillinger
+      subtitle: Koble denne kontoen til en av Questrade-kontoene dine
+      title: Koble %{account_name} til Questrade
+    link_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør
+      api_error: 'API-feil: %{message}'
+      invalid_account_name: Kan ikke koble til en konto uten navn
+      provider_account_already_linked: Denne Questrade-kontoen er allerede koblet til en annen konto
+      provider_account_not_found: Fant ikke Questrade-kontoen
+      missing_parameters: Mangler påkrevde parametere
+      no_api_key: Fant ikke API-nøkkel for Questrade. Konfigurer den i leverandørinnstillingene.
+      success: '%{account_name} ble koblet til Questrade'
+    setup_accounts:
+      page_title: Sett opp Questrade-kontoer
+      dialog_title: Sett opp Questrade-kontoene dine
+      all_linked: Alle Questrade-kontoer er allerede koblet til.
+      import_as: Importer som
+      buttons:
+        cancel: Avbryt
+        create: Opprett kontoer
+        done: Ferdig
+      types:
+        investment: Investering
+        depository: Bankkonto
+        skip: Hopp over denne kontoen
+      account_type_label: 'Kontotype:'
+      accounts_count:
+        one: '%{count} konto tilgjengelig'
+        other: '%{count} kontoer tilgjengelige'
+      all_accounts_linked: Alle Questrade-kontoene dine er allerede satt opp.
+      api_error: 'API-feil: %{message}'
+      creating: Oppretter kontoer ...
+      fetch_failed: Kunne ikke hente kontoer
+      import_selected: Importer valgte kontoer
+      instructions: Velg kontoene du vil importere fra Questrade. Du kan velge flere kontoer.
+      no_accounts: Fant ingen ikke-tilkoblede kontoer i denne Questrade-tilkoblingen.
+      no_accounts_to_setup: Ingen kontoer å sette opp
+      no_api_key: API-nøkkel for Questrade er ikke konfigurert. Sjekk tilkoblingsinnstillingene.
+      select_all: Velg alle
+      account_types:
+        skip: Hopp over denne kontoen
+        depository: Brukskonto eller sparekonto
+        credit_card: Kredittkort
+        investment: Investeringskonto
+        crypto: Kryptokonto
+        loan: Lån eller boliglån
+        other_asset: Annen eiendel
+      subtype_labels:
+        depository: 'Kontoundertype:'
+        credit_card: ''
+        investment: 'Investeringstype:'
+        crypto: ''
+        loan: 'Lånetype:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Kredittkort settes automatisk opp som kredittkortkontoer.
+        other_asset: Ingen flere valg trengs for andre eiendeler.
+        crypto: Kryptokontoer settes opp for å følge beholdninger og transaksjoner.
+      subtypes:
+        depository:
+          checking: Brukskonto
+          savings: Sparekonto
+          hsa: Helsesparekonto (HSA)
+          cd: Tidsinnskudd
+          money_market: Pengemarked
+        investment:
+          brokerage: Aksjekonto
+          pension: Pensjon
+          retirement: Pensjonssparing
+          401k: 401(k)
+          roth_401k: Roth 401(k)
+          403b: 403(b)
+          tsp: Thrift Savings Plan
+          529_plan: 529-plan
+          hsa: Helsesparekonto (HSA)
+          mutual_fund: Verdipapirfond
+          ira: Tradisjonell IRA
+          roth_ira: Roth IRA
+          angel: Engleinvestering
+        loan:
+          mortgage: Boliglån
+          student: Studielån
+          auto: Billån
+          other: Annet lån
+      balance: Saldo
+      cancel: Avbryt
+      choose_account_type: 'Velg riktig kontotype for hver Questrade-konto:'
+      create_accounts: Opprett kontoer
+      creating_accounts: Oppretter kontoer ...
+      historical_data_range: 'Periode for historiske data:'
+      subtitle: Velg hvordan hver konto skal importeres
+      sync_start_date_help: Velg hvor langt tilbake du vil synkronisere transaksjonshistorikken.
+      sync_start_date_label: 'Synkroniser transaksjoner fra:'
+      title: Sett opp Questrade-kontoene dine
+    setup_required:
+      title: Koble til Questrade først
+      not_configured_title: Questrade er ikke tilkoblet ennå
+      not_configured_description: Legg til Questrade-tilkoblingen under leverandørinnstillinger, og kom tilbake hit for å koble til kontoer.
+      go_to_provider_settings: Gå til leverandørinnstillinger
+    complete_account_setup:
+      all_skipped: Alle kontoer ble hoppet over. Ingen kontoer ble opprettet.
+      creation_failed: 'Kunne ikke opprette kontoer: %{error}'
+      no_accounts: Ingen kontoer å sette opp.
+      success: Opprettet %{count} konto(er).
+    preload_accounts:
+      no_credentials_configured: Konfigurer påloggingsinformasjonen for Questrade i leverandørinnstillingene først.

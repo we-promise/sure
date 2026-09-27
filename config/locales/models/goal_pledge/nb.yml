@@ -1,0 +1,20 @@
+---
+nb:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: Beløp
+        currency: Valuta
+        account: Konto
+        kind: Type
+        status: Status
+        expires_at: Utløper
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Velg en av kontoene som er knyttet til målet.
+            currency:
+              must_match_goal: Valutaen for spareløftet må være den samme som målets valuta.
+          duplicate_open_pledge: Du har allerede et åpent spareløfte for dette beløpet på denne kontoen. Avbryt eller forleng det eksisterende før du registrerer et nytt.

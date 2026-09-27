@@ -1,0 +1,191 @@
+---
+nb:
+  redbark_items:
+    default_name: Redbark-tilkobling
+    sync_status:
+      no_accounts: Fant ingen kontoer
+      synced:
+        one: '%{count} konto synkronisert'
+        other: '%{count} kontoer synkronisert'
+      synced_with_setup: '%{linked} synkronisert, %{unlinked} må settes opp'
+    institution_summary:
+      none: Ingen banker tilkoblet
+      count:
+        one: '%{count} bank'
+        other: '%{count} banker'
+    errors:
+      provider_not_configured: Redbark-leverandøren er ikke konfigurert
+    sync:
+      status:
+        importing: Importerer kontoer fra Redbark...
+        processing: Behandler transaksjoner...
+        calculating: Beregner saldoer...
+        importing_data: Importerer kontodata...
+        checking_setup: Kontrollerer kontooppsettet...
+        needs_setup:
+          one: '%{count} konto må settes opp...'
+          other: '%{count} kontoer må settes opp...'
+      success: Synkronisering startet
+    panel:
+      setup_instructions: 'Oppsettinstruksjoner:'
+      step_1: Opprett en API-nøkkel på app.redbark.com under Settings
+      step_2: Skriv inn API-nøkkelen nedenfor og klikk på Lagre
+      step_3: Når tilkoblingen er opprettet, går du til Kontoer-fanen for å sette opp nye kontoer
+      field_descriptions: 'Feltbeskrivelser:'
+      optional: (valgfritt)
+      required: (påkrevd)
+      optional_with_default: (valgfritt, standard er %{default_value})
+      save_button: Lagre konfigurasjon
+      update_button: Oppdater konfigurasjon
+      status_configured_html: Konfigurert og klar til bruk. Gå til <a href="%{accounts_path}" class="link">Kontoer</a>-fanen for å administrere og sette opp kontoer.
+      status_not_configured: Ikke konfigurert
+      fields:
+        api_key:
+          label: API-nøkkel
+          description: Redbark-API-nøkkelen din (begynner med rbk_live_)
+          placeholder_new: rbk_live_...
+          placeholder_update: Skriv inn en ny API-nøkkel for å oppdatere
+    create:
+      success: Redbark-tilkoblingen ble opprettet
+    update:
+      success: Redbark-tilkoblingen ble oppdatert
+    destroy:
+      success: Redbark-tilkoblingen ble fjernet
+      unlink_failed:
+        one: Kunne ikke koble fra %{count} konto. Prøv igjen.
+        other: Kunne ikke koble fra %{count} kontoer. Prøv igjen.
+    index:
+      title: Redbark-tilkoblinger
+    loading:
+      loading_message: Laster inn Redbark-kontoer...
+      loading_title: Laster inn
+    redbark_item:
+      accounts_need_setup: Kontoer må settes opp
+      delete: Slett tilkobling
+      deletion_in_progress: sletting pågår...
+      error: Feil
+      more_accounts_available:
+        one: '%{count} konto til er tilgjengelig'
+        other: '%{count} kontoer til er tilgjengelige'
+      no_accounts_description: Denne tilkoblingen har ingen tilknyttede kontoer ennå.
+      no_accounts_title: Ingen kontoer
+      provider_name: Redbark
+      requires_update: Tilkoblingen må oppdateres
+      setup_action: Sett opp nye kontoer
+      setup_description: '%{linked} av %{total} kontoer er koblet til. Velg kontotyper for de nylig importerte Redbark-kontoene dine.'
+      setup_needed: Nye kontoer er klare til å settes opp
+      status: Synkronisert for %{timestamp} siden
+      status_never: Aldri synkronisert
+      status_with_summary: Sist synkronisert for %{timestamp} siden – %{summary}
+      syncing: Synkroniserer...
+      total: Totalt
+      unlinked: Ikke tilkoblet
+      update_credentials: Oppdater påloggingsinformasjon
+    select_accounts:
+      accounts_selected: kontoer valgt
+      api_error: 'API-feil: %{message}'
+      cancel: Avbryt
+      configure_name_in_provider: Kan ikke importere – angi et kontonavn i Redbark
+      description: Velg kontoene du vil koble til %{product_name}-kontoen din.
+      link_accounts: Koble til valgte kontoer
+      no_accounts_found: Fant ingen kontoer. Kontroller API-nøkkelkonfigurasjonen.
+      no_api_key: Redbark-API-nøkkelen er ikke konfigurert. Konfigurer den under Innstillinger.
+      no_credentials_configured: Konfigurer påloggingsinformasjonen for Redbark under leverandørinnstillingene først.
+      no_name_placeholder: (Uten navn)
+      title: Velg Redbark-kontoer
+    select_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør
+      all_accounts_already_linked: Alle Redbark-kontoer er allerede koblet til
+      api_error: 'API-feil: %{message}'
+      balance_label: 'Saldo:'
+      cancel: Avbryt
+      cancel_button: Avbryt
+      configure_name_in_provider: Kan ikke importere – angi et kontonavn i Redbark
+      connect_hint: Koble til en Redbark-konto for å aktivere automatisk synkronisering.
+      description: Velg en Redbark-konto som skal kobles til denne kontoen. Transaksjoner synkroniseres, og duplikater fjernes automatisk.
+      header: Koble til Redbark
+      link_account: Koble til konto
+      link_button: Koble til denne kontoen
+      linking_to: 'Kobler til:'
+      no_account_specified: Ingen konto er angitt
+      no_accounts: Fant ingen Redbark-kontoer som ikke er koblet til.
+      no_accounts_found: Fant ingen Redbark-kontoer. Kontroller API-nøkkelkonfigurasjonen.
+      no_api_key: Redbark-API-nøkkelen er ikke konfigurert. Konfigurer den under Innstillinger.
+      no_credentials_configured: Konfigurer påloggingsinformasjonen for Redbark under leverandørinnstillingene først.
+      no_name_placeholder: (Uten navn)
+      settings_link: Gå til leverandørinnstillinger
+      subtitle: Velg en Redbark-konto
+      title: Koble %{account_name} til Redbark
+    link_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør
+      api_error: 'API-feil: %{message}'
+      invalid_account_name: Kan ikke koble til en konto uten navn
+      provider_account_already_linked: Denne Redbark-kontoen er allerede koblet til en annen konto
+      provider_account_not_found: Fant ikke Redbark-kontoen
+      missing_parameters: Påkrevde parametere mangler
+      no_api_key: Fant ikke Redbark-API-nøkkelen. Konfigurer den under leverandørinnstillingene.
+      success: '%{account_name} er koblet til Redbark'
+    setup_accounts:
+      account_type_label: 'Kontotype:'
+      accounts_count:
+        one: '%{count} konto tilgjengelig'
+        other: '%{count} kontoer tilgjengelige'
+      all_accounts_linked: Alle Redbark-kontoene dine er allerede satt opp.
+      api_error: 'API-feil: %{message}'
+      creating: Oppretter kontoer...
+      fetch_failed: Kunne ikke hente kontoer
+      import_selected: Importer valgte kontoer
+      instructions: Velg kontoene du vil importere fra Redbark. Du kan velge flere kontoer.
+      no_accounts: Fant ingen kontoer i denne Redbark-tilkoblingen som ikke er koblet til.
+      no_accounts_to_setup: Ingen kontoer å sette opp
+      no_api_key: Redbark-API-nøkkelen er ikke konfigurert. Kontroller tilkoblingsinnstillingene.
+      select_all: Velg alle
+      account_types:
+        skip: Hopp over denne kontoen
+        depository: Brukskonto eller sparekonto
+        credit_card: Kredittkort
+        loan: Lån eller boliglån
+        other_asset: Annen eiendel
+      subtype_labels:
+        depository: 'Kontoundertype:'
+        credit_card: ''
+        loan: 'Lånetype:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Kredittkort settes automatisk opp som kredittkortkontoer.
+        other_asset: Ingen flere valg er nødvendige for andre eiendeler.
+      subtypes:
+        depository:
+          checking: Brukskonto
+          savings: Sparekonto
+          hsa: Helsesparekonto (HSA)
+          cd: Tidsinnskudd
+          money_market: Pengemarkedskonto
+        loan:
+          mortgage: Boliglån
+          student: Studielån
+          auto: Billån
+          other: Annet lån
+      balance: Saldo
+      cancel: Avbryt
+      done: Ferdig
+      choose_account_type: 'Velg riktig kontotype for hver Redbark-konto:'
+      create_accounts: Opprett kontoer
+      creating_accounts: Oppretter kontoer...
+      historical_data_range: 'Historikkperiode:'
+      subtitle: Velg riktige kontotyper for de importerte kontoene dine
+      sync_start_date_help: Velg hvor langt tilbake du vil synkronisere transaksjonshistorikken.
+      sync_start_date_label: 'Synkroniser transaksjoner fra:'
+      title: Sett opp Redbark-kontoene dine
+    setup_required:
+      title: Koble til Redbark først
+      not_configured_title: Redbark er ikke koblet til ennå
+      not_configured_description: Legg til Redbark-API-nøkkelen under leverandørinnstillingene, og kom deretter tilbake hit for å koble til kontoer.
+      go_to_provider_settings: Gå til leverandørinnstillinger
+    complete_account_setup:
+      all_skipped: Alle kontoer ble hoppet over. Ingen kontoer ble opprettet.
+      creation_failed: 'Kunne ikke opprette kontoer: %{error}'
+      creation_failed_generic: Kunne ikke opprette kontoer.
+      setup_failed: '%{count} konto(er) kunne ikke opprettes. Ingenting annet ble endret – løs problemet og prøv igjen.'
+      no_accounts: Ingen kontoer å sette opp.
+      success: '%{count} konto(er) ble opprettet.'

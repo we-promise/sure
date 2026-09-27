@@ -1,0 +1,94 @@
+---
+ro:
+  providers:
+    ibkr:
+      name: Interactive Brokers
+      connection_description: Conectează un raport Interactive Brokers Flex Web Service
+      institution_name: Interactive Brokers
+  ibkr_items:
+    defaults:
+      name: Interactive Brokers
+    ibkr_item:
+      deletion_in_progress: Ștergere în curs
+      flex_web_service: Flex Web Service
+      syncing: Se sincronizează
+      requires_update: Datele de autentificare necesită atenție
+      error: Eroare
+      synced: Sincronizat acum %{time}. %{summary}.
+      never_synced: Nesincronizat niciodată.
+      setup_accounts: Configurează conturile
+      delete: Șterge
+      accounts_need_setup: Conturile necesită configurare
+      accounts_need_setup_description: Unele conturi IBKR trebuie conectate la conturi Sure.
+      no_accounts_discovered: Nu a fost descoperit încă niciun cont IBKR.
+      no_accounts_discovered_description: Rulează o sincronizare după configurarea Flex Query pentru a descoperi conturile.
+    setup_accounts:
+      page_title: Configurează conturile Interactive Brokers
+      dialog_title: Configurează conturile tale Interactive Brokers
+      subtitle: Selectează conturile de brokeraj IBKR pe care vrei să le conectezi.
+      info_box:
+        title: Import IBKR Flex Query
+        items:
+          item_1: Dețineri cu prețurile și cantitățile curente
+          item_2: Costul de achiziție pentru fiecare poziție
+          item_3: Tranzacții, dividende, comisioane și depuneri sau retrageri de numerar
+        warning: Activitatea istorică este limitată la intervalul raportului Flex Query
+      status:
+        fetching_accounts: Se preiau conturile de la Interactive Brokers...
+        no_accounts_found_title: Nu s-au găsit conturi.
+        no_accounts_found_description: Sure nu a găsit niciun cont IBKR în cel mai recent raport Flex.
+      available_accounts:
+        title: Conturi disponibile
+        account_type_investment: Investiții
+        account_summary: '%{account_type} • Sold: %{balance}'
+        account_id: 'ID cont: %{account_id}'
+      link_existing:
+        description: Sau conectează un cont IBKR descoperit la un cont de investiții manual existent.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Selectează un cont...
+      linked_accounts:
+        title: Deja conectate
+        linked_to_html: 'Conectat la: %{account}'
+      buttons:
+        refresh: Reîmprospătează
+        cancel: Anulează
+        back_to_settings: Înapoi la setări
+        create_selected_accounts: Creează conturile selectate
+        link: Conectează
+        done: Gata
+    sync_status:
+      no_accounts: Nu a fost descoperit încă niciun cont IBKR
+      all_linked:
+        one: '%{count} cont conectat'
+        few: '%{count} conturi conectate'
+        other: '%{count} de conturi conectate'
+      partial: '%{linked} conectate, %{unlinked} necesită configurare'
+    select_existing_account:
+      title: Conectează contul Interactive Brokers
+      no_accounts_available: Nu există încă conturi Interactive Brokers neconectate disponibile.
+      run_sync_hint: Rulează o sincronizare din Setări > Furnizori după ce actualizezi Flex Query.
+      wait_for_sync: Așteaptă finalizarea sincronizării de descoperire a conturilor.
+      balance: Sold
+      link: Conectează
+      cancel: Anulează
+    create:
+      success: Interactive Brokers a fost configurat cu succes.
+    update:
+      success: Configurația Interactive Brokers a fost actualizată cu succes.
+    destroy:
+      success: Conexiunea Interactive Brokers a fost programată pentru ștergere.
+    select_accounts:
+      not_configured: Interactive Brokers nu este configurat.
+    link_existing_account:
+      not_found: Contul sau configurația Interactive Brokers nu a fost găsită.
+      only_manual_investment: Doar conturile de investiții manuale pot fi conectate la Interactive Brokers.
+      already_linked: Acest cont Interactive Brokers este deja conectat.
+      success: Conectat cu succes la contul Interactive Brokers.
+      failed: Conectarea contului Interactive Brokers a eșuat.
+    complete_account_setup:
+      success:
+        one: A fost creat cu succes %{count} cont Interactive Brokers.
+        few: Au fost create cu succes %{count} conturi Interactive Brokers.
+        other: Au fost create cu succes %{count} de conturi Interactive Brokers.
+      none_selected: Nu a fost selectat niciun cont.
+      none_created: Nu a fost creat niciun cont.

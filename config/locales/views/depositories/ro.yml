@@ -8,3 +8,19 @@ ro:
       subtype_prompt: Selectează tipul contului
     new:
       title: Introdu soldul contului
+    subtypes:
+      cd:
+        long: Depozit la termen
+        short: Depozit
+      checking:
+        long: Cont curent
+        short: Curent
+      hsa:
+        long: Cont de economii pentru sănătate (HSA)
+        short: HSA
+      money_market:
+        long: Cont de piață monetară
+        short: Piață monetară
+      savings:
+        long: Cont de economii
+        short: Economii

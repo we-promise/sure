@@ -4,3 +4,91 @@ nb:
     exports: Eksporter
     home: Hjem
     imports: Importer
+    account_sharings: Kontodeling
+    account_statements: Kontoutskriftsarkiv
+    accounts: Kontoer
+    ai_prompts: AI-instruksjoner
+    api_key: API-nøkkel
+    api_keys: API-nøkler
+    appearance: Utseende
+    appearances: Utseende
+    bank_sync: Banksynkronisering
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: Budsjettkategorier
+    budgets: Budsjetter
+    categories: Kategorier
+    categorize: Kategorisering
+    changelog: Hva er nytt
+    chats: Chatter
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: Kredittkort
+    cryptos: Krypto
+    dashboard: Oversikt
+    debug: Feilsøking
+    debugs: Feilsøking
+    depositories: Bankkontoer
+    enable_banking_items: Enable Banking
+    family_exports: Eksporter
+    family_merchants: Forhandlere
+    feedback: Tilbakemelding
+    guides: Veiledninger
+    holdings: Beholdninger
+    hostings: Selvhosting
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Støtteøkter
+    indexa_capital_items: Indexa Capital
+    intro: Intro
+    investments: Investeringer
+    invitations: Invitasjoner
+    invite_codes: Invitasjonskoder
+    kraken_items: Kraken
+    llm_usage: LLM-bruk
+    llm_usages: LLM-bruk
+    loans: Lån
+    lunchflow_items: Lunch Flow
+    mcp: MCP-server
+    merchants: Forhandlere
+    mercury_items: Mercury
+    messages: Meldinger
+    mfa: Tofaktorautentisering
+    monobank_items: Monobank
+    oidc_accounts: SSO-kontoer
+    onboardings: Kom i gang
+    other_assets: Andre eiendeler
+    other_liabilities: Annen gjeld
+    payments: Betalinger
+    pending_duplicate_merges: Duplikatgjennomgang
+    plaid_items: Plaid
+    plan: Plan
+    preferences: Preferanser
+    profile: Profilinformasjon
+    profiles: Profilinformasjon
+    properties: Eiendommer
+    providers: Leverandører
+    recurring_transactions: Faste transaksjoner
+    redbark_items: Redbark
+    registrations: Registrering
+    reports: Rapporter
+    rules: Regler
+    securities: Sikkerhet
+    security: Sikkerhet
+    self_hosting: Selvhosting
+    sessions: Logg inn
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: Oppdeling
+    sso_identities: SSO-tilkoblinger
+    sso_providers: SSO-leverandører
+    subscriptions: Abonnement
+    system_health: Systemstatus
+    tags: Tagger
+    trades: Handler
+    transactions: Transaksjoner
+    transfer_matches: Overføringskoblinger
+    transfers: Overføringer
+    users: Brukere
+    valuations: Saldooppdateringer
+    vehicles: Kjøretøy

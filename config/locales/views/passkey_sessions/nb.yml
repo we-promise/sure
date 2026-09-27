@@ -1,0 +1,4 @@
+---
+nb:
+  passkey_sessions:
+    invalid_credential: Kunne ikke logge inn med den passnøkkelen. Prøv igjen, eller bruk passordet ditt.

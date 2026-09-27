@@ -13,6 +13,10 @@ nb:
               must_have_opposite_amounts: Overføringstransaksjoner må ha motsatte beløp
               must_have_single_currency: Overføringen må bruke én enkelt valuta
               outflow_cannot_be_in_multiple_transfers: Utgående transaksjon kan ikke være del av flere overføringer
+          different_accounts: Må være fra ulike kontoer
+          same_family: Må være fra samme husholdning
+          opposite_amounts: Må ha motsatte beløp
+          within_days: Må være innenfor %{count} dager
   transfer:
     name: Overføring til %{to_account}
     payment_name: Betaling til %{to_account}

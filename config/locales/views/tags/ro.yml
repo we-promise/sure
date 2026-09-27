@@ -14,6 +14,7 @@ ro:
       empty: Nu există etichete încă
       new: Etichetă nouă
       tags: Etichete
+      delete_all: Șterge tot
     new:
       new: Etichetă nouă
     tag:
@@ -21,3 +22,5 @@ ro:
       edit: Editează
     update:
       updated: Etichetă actualizată
+    destroy_all:
+      all_deleted: Toate etichetele au fost șterse

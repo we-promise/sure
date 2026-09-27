@@ -1,0 +1,7 @@
+---
+ro:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: Nu poți deconecta ultima identitate de autentificare
+        success: Identitatea a fost deconectată cu succes

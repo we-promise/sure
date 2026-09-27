@@ -1,0 +1,136 @@
+---
+ro:
+  budgets:
+    switcher:
+      aria_label: Schimbă bugetul
+      household: Gospodărie
+    budget_donut:
+      spent: Cheltuit
+      new_budget: Buget nou
+      of_budget: din %{amount}
+      unused: Neutilizat
+    budget_header:
+      today: Astăzi
+    budget_nav:
+      categories: Categorii
+      setup: Configurare
+    over_allocation_warning:
+      over_allocated_message: Ai alocat mai mult decât bugetul disponibil. Te rugăm să corectezi alocările.
+      fix_allocations: Corectează alocările
+    actuals_summary:
+      income: Venituri
+      expenses: Cheltuieli
+    budgeted_summary:
+      expected_income: Venituri estimate
+      budgeted: Bugetat
+      earned: '%{amount} câștigat'
+      over: '%{amount} peste buget'
+      left: '%{amount} rămas'
+      spent: '%{amount} cheltuit'
+    edit:
+      setup_title: Configurează-ți bugetul
+      setup_description: Introdu mai jos veniturile lunare și cheltuielile planificate pentru a-ți configura bugetul.
+      budgeted_spending: Cheltuieli bugetate
+      expected_income: Venituri estimate
+      autosuggest_title: Sugerează automat bugetul de venituri și cheltuieli
+      autosuggest_description: Sugestia se va baza pe istoricul tranzacțiilor. AI-ul poate greși, verifică înainte de a continua.
+      continue: Continuă
+    name:
+      custom_range: '%{start} - %{end_date}'
+      month_year: '%{month}'
+    available_cash:
+      heading: Numerar disponibil
+      subtitle: Separat de planul de mai sus, nu face parte din el.
+      available: Disponibil în numerar
+      earmarked: Deja rezervat pentru obiective
+      free: Cu adevărat liber
+      goals_link: Vezi obiectivele
+    show:
+      categories:
+        amount: Sumă
+        edit: Editează
+        title: Categorii
+      on_track_categories:
+        short_title: În limita bugetului
+        title: În limita bugetului
+      over_budget_categories:
+        short_title: Peste buget
+        title: Peste buget
+      filter:
+        all: Toate
+        aria_label: Filtrează categoriile bugetului
+        on_track: În limita bugetului
+        over_budget: Peste buget
+      tabs:
+        actual: Real
+        budgeted: Bugetat
+    copy_previous_prompt:
+      title: Configurează-ți bugetul
+      description: Poți copia bugetul din %{source_name} sau poți începe de la zero.
+      copy_button: Copiază din %{source_name}
+      fresh_button: Începe de la zero
+    copy_previous:
+      success: Bugetul a fost copiat din %{source_name}
+      no_source: Nu s-a găsit niciun buget anterior din care să se copieze
+      already_initialized: Acest buget a fost deja configurat
+  budget_categories:
+    bills_reserved: '%{amount} rezervat pentru facturi'
+    bills_reserved_unconvertible:
+      one: '%{count} factură nu este rezervată, nu există curs de schimb disponibil'
+      few: '%{count} facturi nu sunt rezervate, nu există curs de schimb disponibil'
+      other: '%{count} de facturi nu sunt rezervate, nu există curs de schimb disponibil'
+    allocation_progress:
+      budget_exceeded_html: Buget depășit cu <span class="text-red-500 privacy-sensitive">%{amount}</span>
+      left_to_allocate: rămas de alocat
+      over_set: '> 100% alocat'
+      percent_set: '%{percent} alocat'
+    budget_category:
+      rolled_over: +%{amount} reportat
+    budget_category_form:
+      monthly_average: '%{amount}/lună în medie'
+      rollover_label: Reportare
+      rollover_title: Reportează banii necheltuiți din această categorie de la o lună la alta
+      shared_placeholder: Comun
+      shared_title: Lasă gol pentru a folosi bugetul categoriei părinte
+    confirm_button:
+      confirm: Confirmă
+    move:
+      button_title: Mută bani din această categorie
+      cancel: Anulează
+      dialog_title: Mută bani
+      no_destination: Acesta este singurul plic între care se pot muta bani în acest moment — o categorie nu poate trimite bani către propria categorie părinte sau subcategorie.
+      submit: Mută
+      amount_label: Sumă
+      available: '%{amount} disponibil'
+      from_label: Din
+      to_label: În
+      success: Banii au fost mutați.
+      errors:
+        different_budgets: Ambele categorii trebuie să aparțină aceluiași buget.
+        insufficient_funds: Suma depășește ce are alocat această categorie.
+        non_positive_amount: Introdu o sumă mai mare decât zero.
+        parent_child: Banii nu pot fi mutați între o categorie și propria subcategorie — ajustează direct subcategoria.
+        same_category: Alege o altă categorie în care să muți banii.
+        uncategorized: Necategorizat nu este un plic real, așa că banii nu pot fi mutați în sau din el.
+    no_categories:
+      oops: Hopa!
+      no_categories_message: Nu ai creat sau atribuit încă nicio categorie de cheltuieli tranzacțiilor tale.
+      use_defaults: Folosește valorile implicite (recomandat)
+      new_category: Categorie nouă
+    index:
+      title: Editează bugetele pe categorii
+      description: Ajustează bugetele pe categorii pentru a stabili limite de cheltuieli. Fondurile nealocate vor fi atribuite automat ca necategorizate.
+    show:
+      category: Categorie
+      overview: Prezentare generală
+      spending: Cheltuieli în %{date}
+      status: Stare
+      overspent: cheltuit peste buget
+      left: rămas
+      budgeted: Bugetat
+      rolled_over: Reportat
+      monthly_average_spending: Cheltuieli lunare medii
+      monthly_median_spending: Mediana cheltuielilor lunare
+      recent_transactions: Tranzacții recente
+      view_all_transactions: Vezi toate tranzacțiile din categorie
+      no_transactions: Nu s-au găsit tranzacții pentru această perioadă a bugetului.

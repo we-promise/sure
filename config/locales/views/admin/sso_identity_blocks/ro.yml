@@ -1,0 +1,6 @@
+---
+ro:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: Identitatea SSO se poate autentifica sau poate crea din nou un cont.

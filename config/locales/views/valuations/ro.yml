@@ -7,7 +7,7 @@ ro:
     index:
       change: modificare
       date: dată
-      new_entry: Intrare nouă
+      new_entry: Înregistrare nouă
       no_valuations: Nu există încă evaluări pentru acest cont
       valuations: Valoare
       value: valoare
@@ -25,3 +25,44 @@ ro:
       overview: Prezentare generală
       settings: Setări
       opening_balance: Sold inițial
+      amount_label: Valoarea contului la data respectivă
+      name_label: Nume
+      name_placeholder: Introdu un nume pentru această înregistrare
+      update_value: Actualizează valoarea
+    confirmation_contents:
+      this_will: Această acțiune %{action_verb} valoarea contului la data de
+      to_colon: 'la:'
+      total_account_value: Valoarea totală a contului
+      holdings_value: Valoarea deținerilor
+      brokerage_cash: Numerar de brokeraj
+      account_balance: soldul contului
+      credit_card_balance: soldul cardului de credit
+      loan_balance: soldul împrumutului
+      property_value: valoarea proprietății
+      vehicle_value: valoarea vehiculului
+      crypto_balance: soldul crypto
+      asset_value: valoarea activului
+      liability_balance: soldul datoriei
+      balance: soldul
+      "on": pe
+      to: la
+      recalculate_notice: Toate tranzacțiile și soldurile viitoare vor fi recalculate pe baza acestei %{change_or_update}.
+      change: modificări
+      update: actualizări
+      action_set: setează
+      action_update: actualizează
+    create:
+      account_updated: Cont actualizat
+    update:
+      account_updated: Cont actualizat
+      entry_updated: Înregistrare actualizată
+    errors:
+      amount_required: Suma este obligatorie
+    header:
+      balance: Sold
+    confirm_create:
+      confirm: Confirmă
+      title: Confirmă noul sold
+    confirm_update:
+      title: Actualizează soldul
+      update: Actualizează

@@ -12,9 +12,9 @@ ro:
         write_transactions: "Creează Tranzacții"
     api_keys:
       show:
-        title: "Gestionare Chei API"
+        title: "Gestionarea cheilor API"
         no_api_key:
-          title: "API Key"
+          title: "Cheie API"
           heading: "Accesează datele contului tău programatic"
           description: "Obține acces programatic la datele tale Sure cu o cheie API securizată."
           what_you_can_do: "Ce poți face cu API-ul:"
@@ -23,7 +23,7 @@ ro:
           feature_3: "Automatizează preluarea și analiza datelor"
           security_note_title: "Securitatea pe primul loc"
           security_note: "Cheia ta API va avea permisiuni restricționate bazate pe domeniile pe care le selectezi. Poți avea o singură cheie API activă la un moment dat."
-          create_api_key: "Creează Cheie API"
+          create_api_key: "Creează o cheie API"
         current_api_key:
           title: "Cheia ta API"
           description: "Cheia ta API activă este gata de utilizare. Păstreaz-o în siguranță și nu o partaja niciodată public."
@@ -37,28 +37,49 @@ ro:
           never_expires: "Nu expiră niciodată"
           permissions: "Permisiuni"
           usage_instructions_title: "Cum să folosești cheia ta API"
-          usage_instructions: "Include cheia ta API în antetul X-Api-Key atunci când faci cereri către API-ul Sure:"
+          usage_instructions: "Include cheia ta API în antetul X-Api-Key atunci când faci cereri către API-ul %{product_name}:"
           regenerate_key: "Creează Cheie Nouă"
-          revoke_key: "Revocă Cheia"
+          revoke_key: "Revocă cheia"
           revoke_confirmation: "Ești sigur că vrei să revocezi această cheie API? Această acțiune nu poate fi anulată și va dezactiva imediat toate aplicațiile care folosesc această cheie."
+          copy_api_key: Copiază cheia API
+          copy_store_securely: Copiază și păstrează această cheie în siguranță. Vei avea nevoie de ea pentru a autentifica cererile API.
+          back_to_keys: Înapoi la cheile API
+        newly_created:
+          page_title: Cheia API a fost creată cu succes
+          heading: Cheia API a fost creată cu succes!
+          key_ready: Noua ta cheie API „%{name}” a fost creată și este gata de utilizare.
+          your_api_key: Cheia ta API
+          copy_store_securely: Copiază și păstrează această cheie în siguranță. Vei avea nevoie de ea pentru a autentifica cererile API.
+          copy_api_key: Copiază cheia API
+          how_to_use: Cum să folosești cheia API
+          continue: Continuă la setările cheii API
       new:
-        title: "Creează Cheie API"
+        title: "Creează o cheie API"
         create_new_key: "Creează o Cheie API Nouă"
         description: "Configurează noua ta cheie API cu un nume descriptiv și permisiuni adecvate."
-        name_label: "Nume Cheie API"
-        name_placeholder: "ex: Aplicație Producție, Tablou de Bord Analitic"
+        name_label: "Numele cheii API"
+        name_placeholder: "ex.: Aplicația mea de buget, Monitorizare portofoliu"
         name_help: "Alege un nume descriptiv pentru a te ajuta să identifici scopul acestei chei."
         permissions_label: "Permisiuni"
-        permissions_help: "Selectează permisiunile de care are nevoie cheia ta API. Poți oricând să creezi o nouă cheie cu permisiuni diferite."
+        permissions_help: "Selectează permisiunile pe care să le aibă această cheie API:"
         scope_details:
           read_accounts: "Vizualizează informații despre cont, solduri și date la nivel de cont"
           read_transactions: "Vizualizează date despre tranzacții, categorii și detalii despre tranzacții"
           read_balances: "Vizualizează date istorice despre solduri și tendințe ale valorii contului"
           write_transactions: "Creează și actualizează înregistrări de tranzacții (în curând)"
-        security_warning_title: "Notă Importantă de Securitate"
+        security_warning_title: "Avertisment de securitate"
         security_warning: "Cheia ta API va fi afișată o singură dată după creare. Păstreaz-o în siguranță și nu o partaja niciodată public. Dacă o pierzi, va trebui să creezi una nouă."
-        create_key: "Creează Cheie API"
+        create_key: "Creează cheia API"
         cancel: "Anulează"
+        create_new_api_key: Creează o cheie API nouă
+        subtitle: Generează o cheie API nouă pentru a accesa datele tale Sure în mod programatic.
+        name_help_text: Alege un nume descriptiv care să te ajute să identifici ulterior această cheie.
+        scope_read_only: Doar citire
+        scope_read_only_description: Vizualizează conturile, tranzacțiile și soldurile tale
+        scope_read_write: Citire/scriere
+        scope_read_write_description: Vizualizează datele tale și creează tranzacții noi
+        security_warning_body: Cheia ta API va fi afișată o singură dată, după creare. Asigură-te că o copiezi și o păstrezi în siguranță. Oricine are acces la această cheie îți poate accesa datele conform permisiunilor pe care le selectezi.
+        save_api_key: Salvează cheia API
       created:
         title: "Cheie API Creată"
         success_title: "Cheie API Creată cu Succes"
@@ -74,3 +95,25 @@ ro:
         usage_instructions: "Folosește cheia ta API incluzând-o în antetul X-Api-Key:"
         copy_key: "Copiază Cheia API"
         continue: "Continuă la Setările Cheii API"
+      create:
+        success: Cheia ta API a fost creată cu succes
+      destroy:
+        revoked_successfully: Cheia API a fost revocată cu succes
+        revoke_failed: Revocarea cheii API a eșuat
+      shared:
+        active: Activă
+        created_ago: Creată acum %{time}
+        last_used_ago: Utilizată ultima dată acum %{time}
+        never_used: Neutilizată niciodată
+        scope_read_only: Doar citire
+        scope_read_write: Citire/scriere
+      index:
+        title: Chei API
+        subtitle: Gestionează cheile API pentru accesul programatic la datele tale.
+        new_key: Cheie API nouă
+        empty_heading: Nicio cheie API încă
+        empty_description: Creează o cheie API pentru a accesa datele tale în mod programatic.
+        revoke_key: Revocă
+        revoke_confirmation: Sigur vrei să revoci „%{name}”? Toate aplicațiile care folosesc această cheie vor fi dezactivate imediat.
+      key_reveal:
+        copied: Copiat!

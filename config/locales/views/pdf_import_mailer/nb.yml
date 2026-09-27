@@ -1,0 +1,17 @@
+---
+nb:
+  pdf_import_mailer:
+    next_steps:
+      greeting: Hei %{name},
+      intro: Vi er ferdige med å analysere PDF-dokumentet du lastet opp til %{product}.
+      document_type_label: Dokumenttype
+      summary_label: AI-sammendrag
+      transactions_note: Dette dokumentet ser ut til å inneholde transaksjoner. Du kan hente dem ut og gå gjennom dem nå.
+      document_stored_note: Dette dokumentet er lagret som referanse. Det kan gi kontekst i fremtidige AI-samtaler.
+      next_steps_label: Hva nå?
+      next_steps_intro: 'Du har flere alternativer:'
+      option_extract_transactions: Hent ut transaksjoner fra denne kontoutskriften
+      option_keep_reference: Behold dokumentet som referanse i fremtidige AI-samtaler
+      option_delete: Slett denne importen hvis du ikke lenger trenger den
+      view_import_button: Se importdetaljer
+      footer_note: Dette er en automatisk melding. Ikke svar direkte på denne e-posten.

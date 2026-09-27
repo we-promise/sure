@@ -7,4 +7,25 @@ ro:
         disable_mfa_confirm: Ești sigur că vrei să dezactivezi autentificarea cu doi factori? Acest lucru va face contul tău mai puțin sigur.
         enable_mfa: Activează 2FA
         mfa_description: Adaugă un strat suplimentar de securitate contului tău solicitând un cod din aplicația ta de autentificare la conectare
-        mfa_title: Autentificare cu Doi Factori
+        mfa_title: Autentificare cu doi factori
+        mfa_enabled_status_html: Autentificarea cu doi factori este <span class="font-medium text-green-600">activată</span>
+        mfa_enabled_description: Contul tău este protejat de un nivel suplimentar de securitate.
+        mfa_disabled_status_html: Autentificarea cu doi factori este <span class="font-medium text-red-600">dezactivată</span>
+        mfa_disabled_description: Activează 2FA pentru a adăuga un nivel suplimentar de securitate contului tău.
+        webauthn_add: Adaugă o cheie de acces sau o cheie de securitate
+        webauthn_added: Adăugată pe %{date}
+        webauthn_description: Folosește o cheie de acces, Touch ID, Windows Hello sau o cheie de securitate hardware ca al doilea factor la conectare.
+        webauthn_empty: Nu există încă chei de acces sau chei de securitate înregistrate.
+        webauthn_last_used: Folosită ultima dată acum %{time_ago}
+        webauthn_name_label: Numele cheii
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey etc.
+        webauthn_remove: Elimină
+        webauthn_remove_confirm: Sigur vrei să elimini această cheie de acces sau cheie de securitate?
+        webauthn_remove_confirm_body: Va trebui să înregistrezi din nou această cheie de acces sau cheie de securitate înainte de a o putea folosi pentru verificarea la conectare.
+        webauthn_title: Chei de acces și chei de securitate
+        webauthn_unsupported: Acest browser nu acceptă chei de acces sau chei de securitate.
+  webauthn_credentials:
+    default_name: Cheie de securitate
+    failure: Cheia de acces sau cheia de securitate nu a putut fi salvată. Încearcă din nou.
+    mfa_required: Activează autentificarea cu doi factori înainte de a adăuga o cheie de acces sau o cheie de securitate.
+    success: Cheia de acces sau cheia de securitate a fost eliminată.

@@ -12,3 +12,12 @@ nb:
       loading: Laster oppføringer...
     update:
       success: Oppføring oppdatert
+    unlock:
+      success: Oppføringen er låst opp. Den kan bli oppdatert ved neste synkronisering.
+    protection:
+      tooltip: Beskyttet mot synkronisering
+      title: Beskyttet mot synkronisering
+      description: Endringene dine i denne oppføringen blir ikke overskrevet av synkronisering fra leverandøren.
+      locked_fields_label: 'Låste felt:'
+      unlock_button: Tillat oppdatering ved synkronisering
+      unlock_confirm: Vil du tillate at synkroniseringen oppdaterer denne oppføringen? Endringene dine kan bli overskrevet ved neste synkronisering.

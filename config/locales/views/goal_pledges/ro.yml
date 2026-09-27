@@ -1,0 +1,20 @@
+---
+ro:
+  goal_pledges:
+    new:
+      helper_transfer: Sure va căuta o depunere corespunzătoare în contul tău conectat. Angajamentul rămâne în așteptare timp de 7 zile, apoi se confirmă automat când Sure îl identifică.
+      helper_manual: Sure va înregistra acest lucru la următoarea editare manuală a soldului și va confirma contribuția.
+      amount_label: Sumă
+      account_label: În contul
+      submit: Înregistrează angajamentul
+      preview_zero: În prezent ai economisit {current} din {target}.
+      preview_nonzero: Ajunge la {percent}%, {newTotal} din {target}.
+      preview_reached: Atinge ținta de {target}. Obiectiv atins.
+    create:
+      success: Angajament înregistrat. Sure îl va confirma la următoarea sincronizare.
+    renew:
+      success: Perioada angajamentului a fost prelungită cu 7 zile.
+      not_open: Doar angajamentele deschise pot fi prelungite.
+    destroy:
+      success: Angajament anulat.
+      not_open: Doar angajamentele deschise pot fi anulate.

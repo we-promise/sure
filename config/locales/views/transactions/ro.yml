@@ -20,6 +20,15 @@ ro:
       tag_search_placeholder: Caută sau creează etichetă
       tags_label: Etichete
       transfer: Transfer
+      details: Detalii
+      category_label: Categorie
+      category_search_placeholder: Caută categorii
+      create_category: Creează „%{name}”
+      create_category_error: Categoria nu a putut fi creată
+      merchant_label: Comerciant
+      create_merchant: Creează
+      create_merchant_error: Comerciantul nu a putut fi creat
+      merchant_search_placeholder: Caută sau creează un comerciant
     new:
       new_transaction: Tranzacție nouă
     show:
@@ -41,6 +50,43 @@ ro:
       settings: Setări
       tags_label: Etichete
       uncategorized: "(necategorizat)"
+      keep_both: Nu, păstrează-le pe amândouă
+      loan_payment: Rată de împrumut
+      mark_recurring: Marchează ca recurentă
+      create_bill: Creează o factură
+      mark_recurring_subtitle: Urmărește această tranzacție ca recurentă. Variația sumei este calculată automat din tranzacțiile similare din ultimele 6 luni.
+      mark_recurring_title: Tranzacție recurentă
+      applied_to_title: Facturi achitate cu această plată
+      applied_to_detail: '%{amount} pentru factura scadentă pe %{date}'
+      applied_to_unreviewed: Necesită verificare
+      merge_duplicate: Da, combină-le
+      potential_duplicate_description: Această tranzacție în așteptare poate fi aceeași cu tranzacția înregistrată de mai jos. Dacă da, combină-le pentru a evita dubla contabilizare.
+      potential_duplicate_title: Posibil duplicat detectat
+      transfer: Transfer
+      attachments: Atașamente
+      exclude: Exclude
+      exclude_description: Tranzacțiile excluse nu vor fi luate în calcul în bugete și rapoarte.
+      activity_type: Tip de activitate
+      activity_type_description: Tipul activității de investiții (Cumpărare, Vânzare, Dividend etc.). Detectat automat sau setat manual.
+      one_time_title: '%{type} (o singură dată)'
+      one_time_description: Tranzacțiile unice vor fi excluse din anumite calcule de buget și rapoarte, ca să vezi ce contează cu adevărat.
+      convert_to_trade_title: Convertește în tranzacție cu titluri de valoare
+      convert_to_trade_description: Convertește această tranzacție într-o cumpărare sau vânzare cu detaliile titlului de valoare, pentru urmărirea portofoliului.
+      convert_to_trade_button: Convertește în tranzacție bursieră
+      transfer_matcher_description: Leagă această tranzacție de tranzacția corespondentă din alt cont.
+      pending_duplicate_merger_title: Duplicat al unei tranzacții înregistrate?
+      pending_duplicate_merger_description: Combină manual această tranzacție în așteptare cu versiunea ei înregistrată.
+      pending_duplicate_merger_button: Deschide instrumentul de combinare
+      tab_transactions: Tranzacții
+      tab_upcoming: Viitoare
+      additional_details: Detalii suplimentare
+      payee: Beneficiar
+      description: Descriere
+      memo: Mențiuni
+      provider_extras: Date suplimentare de la furnizor
+      transfer_or_debt_payment: Transfer sau plată a unei datorii?
+      open_matcher: Deschide potrivirea
+      convert: Convertește
     header:
       edit_categories: Editează categorii
       edit_imports: Editează importuri
@@ -48,10 +94,33 @@ ro:
       edit_tags: Editează etichete
       import: Importă
     transaction:
-      linked_with_provider: Conectat cu %{provider}
+      linked_with_provider: Conectată la %{provider}
+      pending: În așteptare
+      pending_tooltip: Tranzacție în așteptare — se poate modifica la înregistrare
+      activity_type_tooltip: Tipul activității de investiții
+      possible_duplicate: Duplicat?
+      potential_duplicate_tooltip: Aceasta poate fi un duplicat al altei tranzacții
+      review_recommended: Verifică
+      review_recommended_tooltip: Diferență mare de sumă — se recomandă verificarea, pentru a vedea dacă este un duplicat
+      split: Împărțită
+      split_tooltip: Această tranzacție a fost împărțită în mai multe înregistrări
+      split_child_tooltip: Parte dintr-o tranzacție împărțită
     index:
       transaction: tranzacție
       transactions: tranzacții
+      title: Tranzacții
+      import: Importă
+      new_rule: Regulă nouă
+      edit_rules: Editează regulile
+      edit_categories: Editează categoriile
+      edit_tags: Editează etichetele
+      edit_merchants: Editează comercianții
+      edit_imports: Editează importurile
+      new_transaction: Tranzacție nouă
+      categorize_button:
+        one: Categorizează (%{count})
+        few: Categorizează (%{count})
+        other: Categorizează (%{count})
     searches:
       filters:
         amount_filter:
@@ -65,10 +134,26 @@ ro:
           on_or_after: pe sau după %{date}
           on_or_before: pe sau înainte de %{date}
           transfer: Transfer
+          confirmed: Confirmată
+          pending: În așteptare
         type_filter:
           expense: Cheltuială
           income: Venit
           transfer: Transfer
+        account_filter:
+          filter_accounts: Filtrează conturile
+        category_filter:
+          filter_category: Filtrează categoriile
+        date_filter:
+          start_date: Data de început
+          end_date: Data de sfârșit
+        merchant_filter:
+          filter_merchants: Filtrează comercianții
+        tag_filter:
+          filter_tags: Filtrează etichetele
+        status_filter:
+          confirmed: Confirmată
+          pending: În așteptare
       menu:
         account_filter: Cont
         amount_filter: Sumă
@@ -80,9 +165,200 @@ ro:
         merchant_filter: Comerciant
         tag_filter: Etichetă
         type_filter: Tip
+        status_filter: Stare
       search:
         equal_to: egal cu
         greater_than: mai mare decât
         less_than: mai mic decât
       form:
         toggle_selection_checkboxes: Comută toate casetele de selectare
+        search_placeholder: Caută tranzacții...
+        filter: Filtrează
+    bulk_updates:
+      new:
+        cancel: Anulează
+        category_label: Categorie
+        category_prompt: Selectează o categorie
+        date_label: Dată
+        header_title: Editează tranzacțiile
+        merchant_label: Comerciant
+        merchant_prompt: Selectează un comerciant
+        name_label: Nume
+        name_placeholder: Introdu un nume care va fi aplicat tranzacțiilor selectate
+        none: (niciunul)
+        notes_label: Notițe
+        notes_placeholder: Introdu o notiță care va fi aplicată tranzacțiilor selectate
+        overview: Prezentare generală
+        save: Salvează
+        tags_label: Etichete
+        transactions_section: Tranzacții
+    unknown_name: Tranzacție necunoscută
+    selection_bar:
+      duplicate: Duplică
+      edit: Editează
+      selected: selectate
+    create:
+      created: Tranzacție creată
+    update:
+      updated: Tranzacție actualizată
+    activity_labels:
+      buy: Cumpărare
+      sell: Vânzare
+      sweep_in: Transfer automat (intrare)
+      sweep_out: Transfer automat (ieșire)
+      dividend: Dividend
+      reinvestment: Reinvestire
+      interest: Dobândă
+      fee: Comision
+      transfer: Transfer
+      contribution: Contribuție
+      withdrawal: Retragere
+      exchange: Schimb
+      other: Altele
+    mark_recurring: Marchează ca recurentă
+    mark_recurring_subtitle: Urmărește această tranzacție ca recurentă. Variația sumei este calculată automat din tranzacțiile similare din ultimele 6 luni.
+    mark_recurring_title: Tranzacție recurentă
+    potential_duplicate_title: Posibil duplicat detectat
+    potential_duplicate_description: Această tranzacție în așteptare poate fi aceeași cu tranzacția înregistrată de mai jos. Dacă da, combină-le pentru a evita dubla contabilizare.
+    keep_both: Nu, păstrează-le pe amândouă
+    split_parent_row:
+      split_label: Împărțită
+    transfer_match:
+      auto_matched: Potrivită automat
+      auto_matched_short: P/A
+      confirm_match: Confirmă potrivirea
+      payment_confirmed: Plata este confirmată
+      reject_match: Respinge potrivirea
+      transfer_confirmed: Transferul este confirmat
+    merge_duplicate:
+      success: Tranzacțiile au fost combinate cu succes
+      failure: Tranzacțiile nu au putut fi combinate
+    dismiss_duplicate:
+      success: Păstrate ca tranzacții separate
+      failure: Sugestia de duplicat nu a putut fi respinsă
+    pending_duplicate_merge:
+      possible_duplicate: Duplicat?
+      possible_duplicate_short: Dup?
+      review_recommended: Verifică
+      review_recommended_short: Verif.
+      confirm_title: Combină cu tranzacția înregistrată (%{posted_amount})
+      reject_title: Păstrează ca tranzacții separate
+    summary:
+      total_transactions: Total tranzacții
+      income: Venituri
+      expenses: Cheltuieli
+      inflow: Intrări
+      outflow: Ieșiri
+    categorizes:
+      show:
+        exit: Ieși
+        skip: Omite
+        remaining:
+          one: A rămas %{count} tranzacție necategorizată
+          few: Au rămas %{count} tranzacții necategorizate
+          other: Au rămas %{count} de tranzacții necategorizate
+        transaction_count:
+          one: '%{count} tranzacție'
+          few: '%{count} tranzacții'
+          other: '%{count} de tranzacții'
+        transactions_hint: Debifează pentru a exclude o tranzacție sau atribuie-i direct o altă categorie din rândul ei.
+        assign_category: Atribuie o categorie
+        assign_category_prompt: → atribuie
+        filter_placeholder: Caută categorii...
+        col_transaction: Tranzacție
+        col_date: Dată
+        col_amount: Sumă
+        col_category: Categorie
+        type_income: Venit
+        type_expense: Cheltuială
+        create_rule_label: Creează o regulă de categorizare
+        rule_description_prefix: Viitoarele tranzacții de tip %{type} al căror nume conține
+        rule_description_suffix: vor primi și ele această categorie.
+        no_categories: Nicio categorie potrivită
+        all_done: Toate tranzacțiile sunt categorizate
+      create:
+        categorized:
+          one: '%{count} tranzacție categorizată'
+          few: '%{count} tranzacții categorizate'
+          other: '%{count} de tranzacții categorizate'
+        rule_creation_failed: Tranzacțiile au fost categorizate, dar regula nu a putut fi creată (poate există deja).
+      entry_row:
+        include_checkbox: Include %{name}
+        assign_category_select: Atribuie o categorie pentru %{name}
+    list:
+      drag_drop_title: Plasează fișierul CSV aici pentru import
+      drag_drop_subtitle: Încarcă tranzacțiile direct
+      transaction: tranzacție
+      transactions: tranzacții
+    toggle_recurring_section: Afișează/ascunde tranzacțiile recurente viitoare
+    search:
+      filters:
+        account: Cont
+        date: Dată
+        type: Tip
+        status: Stare
+        amount: Sumă
+        category: Categorie
+        tag: Etichetă
+        merchant: Comerciant
+    convert_to_trade:
+      title: Convertește în tranzacție cu titluri de valoare
+      description: Convertește această tranzacție într-o tranzacție bursieră cu detaliile titlului de valoare
+      date_label: 'Dată:'
+      account_label: 'Cont:'
+      amount_label: 'Sumă:'
+      security_label: Titlu de valoare
+      security_prompt: Selectează un titlu de valoare...
+      security_custom: + Introdu un simbol personalizat
+      security_not_listed_hint: Nu găsești titlul de valoare? Selectează „Introdu un simbol personalizat” la finalul listei.
+      ticker_placeholder: AAPL
+      ticker_hint: Introdu simbolul bursier al acțiunii/ETF-ului (de ex. AAPL, MSFT)
+      ticker_search_placeholder: Caută un simbol bursier...
+      ticker_search_hint: Caută după simbolul bursier sau numele companiei ori introdu un simbol personalizat
+      price_mismatch_title: Prețul s-ar putea să nu corespundă
+      price_mismatch_message: Prețul tău (%{entered_price}/acțiune) diferă semnificativ de prețul curent de piață al %{ticker} (%{market_price}). Dacă ți se pare greșit, este posibil să fi selectat alt titlu de valoare — încearcă „Introdu un simbol personalizat” pentru a-l specifica pe cel corect.
+      quantity_label: Cantitate (acțiuni)
+      quantity_placeholder: de ex. 20
+      quantity_hint: Numărul de acțiuni tranzacționate
+      price_label: Preț pe acțiune
+      price_placeholder: de ex. 52,15
+      price_hint: Preț pe acțiune (%{currency})
+      qty_or_price_hint: Introdu cel puțin cantitatea SAU prețul. Celălalt va fi calculat din suma tranzacției (%{amount}).
+      trade_type_label: Tipul tranzacției
+      trade_type_hint: Cumpărare sau vânzare de acțiuni ale unui titlu de valoare
+      exchange_label: Bursă (opțional)
+      exchange_placeholder: XNAS
+      exchange_hint: Lasă gol pentru detectare automată
+      cancel: Anulează
+      submit: Convertește în tranzacție bursieră
+      success: Tranzacția a fost convertită în tranzacție bursieră
+      conversion_note: 'Convertit din tranzacția: %{original_name} (%{original_date})'
+      errors:
+        not_investment_account: Doar tranzacțiile din conturile de investiții pot fi convertite în tranzacții bursiere
+        already_converted: Această tranzacție a fost deja convertită sau exclusă
+        enter_ticker: Introdu un simbol bursier
+        security_not_found: Titlul de valoare selectat nu mai există. Selectează altul.
+        select_security: Selectează sau introdu un titlu de valoare
+        enter_qty_or_price: Introdu fie cantitatea, fie prețul pe acțiune. Celălalt va fi calculat din suma tranzacției.
+        invalid_qty_or_price: Cantitate sau preț nevalid. Introdu valori pozitive valide.
+        conversion_failed: 'Conversia tranzacției a eșuat: %{error}'
+        unexpected_error: 'Eroare neașteptată la conversie: %{error}'
+    attachments:
+      cannot_exceed: Nu poți depăși %{count} atașamente per tranzacție
+      uploaded_one: Atașamentul a fost încărcat cu succes
+      uploaded_many: 'Atașamente încărcate cu succes: %{count}'
+      failed_upload: 'Încărcarea atașamentului a eșuat: %{error}'
+      no_files_selected: Nu a fost selectat niciun fișier pentru încărcare
+      attachment_deleted: Atașamentul a fost șters cu succes
+      failed_delete: 'Ștergerea atașamentului a eșuat: %{error}'
+      upload_failed: Încărcarea atașamentului a eșuat. Încearcă din nou sau contactează asistența.
+      delete_failed: Ștergerea atașamentului a eșuat. Încearcă din nou sau contactează asistența.
+      upload: Încarcă
+      no_attachments: Nu există încă atașamente
+      select_up_to: Selectează până la %{count} fișiere (imagini sau PDF-uri, maximum %{size} MB fiecare) • %{used} din %{count} folosite
+      files:
+        one: Fișier (%{count})
+        few: Fișiere (%{count})
+        other: Fișiere (%{count})
+      browse_to_add: Răsfoiește pentru a adăuga fișiere
+      max_reached: Limita maximă de fișiere a fost atinsă (%{count}/%{max}). Șterge un fișier existent pentru a încărca altul.

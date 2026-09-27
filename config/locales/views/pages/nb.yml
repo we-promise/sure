@@ -9,6 +9,18 @@ nb:
           cash_flow: "Kontantstrøm"
           surplus: "Overskudd"
           deficit: "Underskudd"
+        title: Nytt Sankey-diagram
+        preview: Forhåndsversjon
+        preview_tooltip: Dette vil erstatte visualiseringen over, siden det bruker et nytt delt API med mobilklienten i Swift.
+        feedback_prompt: Sammenlign dette diagrammet med originalen over, og si fra hvis det ser annerledes ut bortsett fra sorteringen.
+        positive: Ser riktig ut
+        negative: Noe ser feil ut
+        feedback_title: Tilbakemelding på kontantstrømdiagrammet
+        feedback_loading: Laster inn tilbakemeldingsskjema …
+        feedback_unavailable: Tilbakemelding er ikke tilgjengelig akkurat nå. Prøv igjen senere.
+        feedback_thanks: Takk for at du hjelper oss med å forbedre diagrammet!
+        feedback_privacy: Svaret ditt sendes til PostHog. Beskriv problemet uten kontonumre, saldoer eller andre private økonomiske opplysninger.
+        feedback_submit: Send tilbakemelding
       net_worth_chart:
         data_not_available: Data ikke tilgjengelig for den valgte perioden
         title: Nettoformue
@@ -16,4 +28,125 @@ nb:
         new_account: Ny konto
         no_account_subtitle: Siden ingen kontoer er lagt til, er det ingen data å
           vise. Legg til dine første kontoer for å begynne å vise dashboard-data.
-        no_account_title: Ingen kontoer enda
+        no_account_title: Ingen kontoer ennå
+      welcome: Velkommen tilbake, %{name}
+      subtitle: Her er status for økonomien din
+      new: Ny
+      sections_aria_label: Seksjoner på dashbordet
+      drag_to_reorder: Dra for å endre rekkefølgen på seksjonen
+      toggle_section: Vis eller skjul seksjonen
+      widget_size:
+        label: Juster størrelse
+        width_label: Bredde
+        half: Halv
+        full: Full
+        height_label: Høyde
+        compact: Kompakt
+        auto: Automatisk
+        tall: Høy
+      balance_sheet:
+        title: Balanse
+        no_items: Ingen %{name} ennå
+        add_accounts: Legg til %{name}-kontoene dine for å se en fullstendig oversikt
+        no_asset: Ingen eiendeler ennå
+        no_liability: Ingen gjeld ennå
+        add_asset_accounts: Legg til eiendelskontoene dine for å se en fullstendig oversikt
+        add_liability_accounts: Legg til gjeldskontoene dine for å se en fullstendig oversikt
+        name: Navn
+        weight: Andel
+        value: Verdi
+        expand_all: Vis alle
+        collapse_all: Skjul alle
+        classifications:
+          asset: Eiendeler
+          liability: Gjeld
+      insights_feed:
+        title: Innsikt
+      cashflow_sankey:
+        loading: Laster inn kontantstrøm …
+        load_error: Kunne ikke laste inn kontantstrømmen. Prøv igjen.
+        retry: Prøv igjen
+        title: Kontantstrøm
+        zoom_out: Tilbake til hele kontantstrømmen
+        no_data_title: Ingen kontantstrømdata for denne perioden
+        no_data_description: Legg til transaksjoner for å vise kontantstrømdata, eller utvid perioden
+        add_transaction: Legg til transaksjon
+      no_accounts:
+        title: Ingen kontoer ennå
+        description: Legg til kontoer for å vise nettoformue
+        add_account: Legg til konto
+      outflows_donut:
+        title: Utgående
+        total_outflows: Totalt utgående
+        categories: Kategorier
+        value: Verdi
+        weight: Andel
+      investment_summary:
+        title: Investeringer
+        total_return: Total avkastning
+        holding: Beholdning
+        weight: Andel
+        value: Verdi
+        return: Avkastning
+        period_activity: 'Aktivitet: %{period}'
+        contributions: Innskudd
+        withdrawals: Uttak
+        trades: Handler
+        no_investments: Ingen investeringskontoer
+        add_investment: Legg til en investeringskonto for å følge porteføljen din
+      money_flow:
+        title: Inn / ut
+        date_range: '%{start_date} til %{end_date}'
+        month_picker_aria_label: Velg måned
+        filter_accounts: Filtrer kontoer (%{count})
+        filter_accounts_all: Alle kontoer
+        period_scope_hint: Viser månedene du velger her – uavhengig av dashbordets tidsperiode øverst.
+        search_accounts: Søk i kontoer
+        apply: Bruk
+        balance: Netto
+        chart_span: Siste %{count} måneder
+        income: Inntekter
+        expenses: Utgifter
+      spending_trend:
+        title: Forbruk
+        date_range: '%{start_date} til %{end_date}'
+        date_range_short: '%{start_date} – %{end_day}, %{year}'
+        date_range_short_single: '%{date} %{year}'
+        month_picker_aria_label: Velg måned
+        period_scope_hint: Viser måneden du velger her – uavhengig av dashbordets tidsperiode øverst.
+        no_data: Ingen forbruksdata for denne måneden
+        previous_comparison_days: (1–%{end_day})
+    feedback:
+      title: Tilbakemelding
+      heading: Gi tilbakemelding
+      description: Si fra hvis du har konkrete tilbakemeldinger. Du kan gjerne legge ved lenker til videoer eller skjermbilder.
+      feature_request: Skriv et funksjonsønske
+      bug_report: Rapporter en feil
+      discuss: Diskuter %{product} med andre
+    intro:
+      not_authorized: Introduksjonen er bare tilgjengelig for gjestebrukere.
+      welcome: Velkommen!
+      coming_soon: Introduksjonen kommer snart
+      description: Vi bygger en mer omfattende introduksjon for å bli kjent med målene, milepælene og de daglige behovene dine. Inntil videre kan du åpne chat-sidepanelet for å starte en samtale med Sure og fortelle hvor du står i din økonomiske reise.
+      start_chatting: Start en samtale
+    redis_configuration_error:
+      page_title: Redis-konfigurasjon kreves - Sure
+      heading: Redis-konfigurasjon kreves
+      subheading: Den selvhostede Sure-installasjonen din trenger en riktig konfigurert Redis.
+      why_required_title: Hvorfor kreves Redis?
+      why_required_body: Sure bruker Redis til å drive Sidekiq-bakgrunnsjobber for oppgaver som synkronisering av kontodata, behandling av importer og andre bakgrunnsoperasjoner som holder de økonomiske dataene dine oppdatert.
+      view_setup_guide: Se oppsettsveiledningen
+      setup_guide_hint: Følg den komplette Docker-oppsettsveiledningen vår for å konfigurere Redis
+      refresh_hint: Når du har konfigurert Redis, laster du inn denne siden på nytt for å fortsette.
+      refresh_page: Last inn siden på nytt
+    release_notes_unavailable:
+      name: Versjonsmerknader er ikke tilgjengelige
+      body_html: <p>Kan ikke hente de nyeste versjonsmerknadene akkurat nå. Prøv igjen senere, eller gå direkte til <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>utgivelsessiden vår på GitHub</a>.</p>
+    privacy:
+      title: Personvernerklæring
+      heading: Personvernerklæring
+      placeholder: Innholdet i personvernerklæringen vises her.
+    terms:
+      title: Vilkår for bruk
+      heading: Vilkår for bruk
+      placeholder: Innholdet i vilkårene for bruk vises her.

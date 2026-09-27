@@ -20,6 +20,11 @@ ro:
       household_name_placeholder: Numele gospodăriei
       country: Țară
       submit: Continuă
+      group_name: Numele grupului
+      group_name_placeholder: Numele grupului
+      moniker_prompt: Voi folosi %{product_name} împreună cu ...
+      moniker_family: Membrii familiei (doar eu sau cu partenerul, copiii etc.)
+      moniker_group: Un grup de persoane (firmă, club, asociație sau orice alt tip)
     preferences:
       title: Configurează preferințele
       subtitle: Să-ți configurăm preferințele.
@@ -32,7 +37,7 @@ ro:
       locale: Limbă
       currency: Monedă
       date_format: Format dată
-      submit: Finalizare
+      submit: Finalizează
     goals:
       title: Ce te aduce aici?
       subtitle: Selectează unul sau mai multe obiective pe care le ai cu %{product_name} ca instrument de finanțe personale.
@@ -51,7 +56,7 @@ ro:
       description_html: Începând de azi poți testa produsul în profunzime.<br/>Dacă îți place, găzduiește-l singur sau contribuie pentru a continua să-l folosești aici.
       try_button: Încearcă Sure timp de 45 de zile
       continue_trial: Continuă perioada de probă
-      upgrade: Actualizează
+      upgrade: Fă upgrade
       how_it_works: Cum funcționează
       today: Astăzi
       today_description: Vei avea acces gratuit la Sure timp de 45 de zile pe AWS-ul nostru.

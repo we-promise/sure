@@ -7,4 +7,20 @@ nb:
       none: Ingen
       subtype_prompt: Velg kontotype
     new:
-      title: Angi kontobalanse
+      title: Angi kontosaldo
+    subtypes:
+      cd:
+        long: Tidsinnskudd
+        short: Tidsinnskudd
+      checking:
+        long: Brukskonto
+        short: Brukskonto
+      hsa:
+        long: Helsesparekonto (HSA)
+        short: HSA
+      money_market:
+        long: Pengemarkedskonto
+        short: Pengemarked
+      savings:
+        long: Sparekonto
+        short: Sparekonto

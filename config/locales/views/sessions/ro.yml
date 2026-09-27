@@ -3,12 +3,18 @@ ro:
   sessions:
     create:
       invalid_credentials: Email sau parolă incorecte.
+      local_login_disabled: Autentificarea locală cu parolă este dezactivată. Folosește autentificarea unică (SSO).
+      account_deactivated: Acest cont a fost dezactivat. Contactează un administrator.
     destroy:
       logout_successful: Te-ai deconectat cu succes.
     openid_connect:
       failed: Autentificarea prin OpenID Connect nu a reușit.
+      account_linked: Contul a fost asociat cu succes cu %{provider}
     failure:
       failed: Autentificarea nu a reușit.
+      sso_provider_unavailable: Furnizorul SSO nu este disponibil momentan. Încearcă din nou mai târziu sau contactează un administrator.
+      sso_invalid_response: S-a primit un răspuns invalid de la furnizorul SSO. Încearcă din nou.
+      sso_failed: Autentificarea unică (SSO) a eșuat. Încearcă din nou.
     new:
       email: Adresă de email
       email_placeholder: tu@exemplu.com
@@ -20,3 +26,13 @@ ro:
       openid_connect: Conectează-te cu OpenID Connect
       oidc: Conectează-te cu OpenID Connect
       google_auth_connect: Conectează-te cu Google
+      local_login_admin_only: Autentificarea locală este permisă doar administratorilor.
+      passkey_button: Conectează-te cu o cheie de acces
+      passkey_unsupported: Acest browser nu acceptă chei de acces.
+      no_auth_methods_enabled: Nicio metodă de autentificare nu este activată momentan. Contactează un administrator.
+      demo_banner_title: Mod demo activ
+      demo_banner_message: Acesta este un mediu demonstrativ. Datele de autentificare au fost completate în prealabil pentru comoditatea ta. Nu introduce informații reale sau sensibile.
+    post_logout:
+      logout_successful: Te-ai deconectat cu succes.
+    mobile_sso_start:
+      redirecting_html: Se face redirecționarea către autentificare... <a href="%{url}">Apasă aici</a> dacă nu ești redirecționat.

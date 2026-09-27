@@ -3,17 +3,20 @@ nb:
   settings:
     hostings:
       invite_code_settings:
-        description: Kontroller hvordan nye personer registrerer seg for din instans av %{product}.
+        description: Styr hvordan nye personer registrerer seg for din instans av %{product}.
         email_confirmation_description: Når aktivert, må brukere bekrefte e-postadressen
           sin når de endrer den.
         email_confirmation_title: Krev e-postbekreftelse
         generate_tokens: Generer ny kode
         generated_tokens: Genererte koder
-        title: Onboarding
+        title: Registrering
         states:
           open: Åpen
           closed: Stengt
           invite_only: Kun invitasjon
+        default_family_title: Standardhusholdning for nye brukere
+        default_family_description: Legg nye brukere i denne husholdningen/gruppen bare hvis de ikke har en invitasjon.
+        default_family_none: Ingen (opprett ny husholdning)
       show:
         general: Generelle innstillinger
         financial_data_providers: Finansdata-leverandører
@@ -21,14 +24,22 @@ nb:
         title: Selvhosting
         danger_zone: Fareområde
         clear_cache: Tøm cache
-        clear_cache_warning: Tømming av cache vil fjerne alle valutakurser, verdipapirpriser, kontobalanser og andre data. Dette vil ikke slette kontoer, transaksjoner, kategorier eller andre bruker-eide data.
+        clear_cache_warning: Tømming av cache vil fjerne alle valutakurser, verdipapirpriser, kontosaldoer og andre data. Dette vil ikke slette kontoer, transaksjoner, kategorier eller andre bruker-eide data.
         confirm_clear_cache:
           title: Tøm cache?
-          body: Er du sikker på at du vil tømme cache? Dette vil fjerne alle valutakurser, verdipapirpriser, kontobalanser og andre data. Denne handlingen kan ikke angres.
+          body: Er du sikker på at du vil tømme cache? Dette vil fjerne alle valutakurser, verdipapirpriser, kontosaldoer og andre data. Denne handlingen kan ikke angres.
+        ai_assistant: AI-assistent
+        property_valuation_providers: Leverandører av eiendomsverdier
+        sync_settings: Synkroniseringsinnstillinger
       update:
         failure: Ugyldig innstillingsverdi
         success: Innstillinger oppdatert
-        invalid_onboarding_state: Ugyldig onboarding-modus
+        invalid_onboarding_state: Ugyldig registreringsmodus
+        invalid_sync_time: Ugyldig tidsformat for synkronisering. Bruk formatet HH:MM (f.eks. 02:30).
+        invalid_llm_budget: '%{field} må være et heltall ≥ %{minimum}.'
+        invalid_anthropic_base_url: Basis-URL for Anthropic må være en http(s)-URL.
+        anthropic_model_required_for_base_url: Anthropic-modell er påkrevd når en egendefinert basis-URL er satt.
+        scheduler_sync_failed: Innstillingene er lagret, men synkroniseringsplanen kunne ikke oppdateres. Prøv igjen eller sjekk serverloggene.
       clear_cache:
         cache_cleared: Cachen er tømt. Dette kan ta noen øyeblikk å fullføre.
       not_authorized: Du er ikke autorisert til å utføre denne handlingen
@@ -39,4 +50,232 @@ nb:
         status_inactive: Yahoo Finance-tilkobling feilet
         connection_failed: Kunne ikke koble til Yahoo Finance
         troubleshooting: Sjekk internettilkoblingen og brannmurinnstillingene. Yahoo Finance kan være midlertidig utilgjengelig.
+        status_healthy: Yahoo Finance er aktiv og fungerer.
+        status_rate_limited: Yahoo Finance begrenser forespørsler midlertidig.
+        rate_limited_title: Forespørselsgrensen for Yahoo Finance er nådd.
+        rate_limited_message: Du trenger ikke gjøre noe. Sure hopper over ytterligere tilkoblingssjekker i 30 minutter. Henting av kurser og valutakurser fortsetter uavhengig av dette.
+        status_unavailable: Yahoo Finance er utilgjengelig for øyeblikket.
+        unavailable_title: Kunne ikke verifisere Yahoo Finance.
+        unavailable_message: Yahoo Finance kunne ikke nås eller returnerte et uventet svar. Sjekk internettilkoblingen og prøv igjen senere.
+        status_unknown: Statusen til Yahoo Finance sjekkes.
+      provider_selection:
+        exchange_rate_title: Leverandør av valutakurser
+        exchange_rate_description: Velg én leverandør som skal hente valutakurser.
+        exchange_rate_provider_label: Leverandør av valutakurser
+        securities_title: Leverandører av verdipapirkurser
+        securities_description: Aktiver én eller flere leverandører som skal hente kurser for aksjer, ETF-er og verdipapirfond. Ved søk spørres alle aktiverte leverandører, og resultatene slås sammen.
+        env_configured_message: Valg av leverandør er deaktivert fordi miljøvariabler er satt. Fjern disse miljøvariablene fra konfigurasjonen for å kunne velge her.
+        twelve_data_hint: krever API-nøkkel, 800 kreditter/dag
+        yahoo_finance_hint: gratis, ingen API-nøkkel nødvendig
+        requires_api_key: krever API-nøkkel
+        requires_api_key_eodhd: krever API-nøkkel, grense på 20 kall/dag
+        requires_api_key_alpha_vantage: krever API-nøkkel, grense på 25 kall/dag
+        mfapi_hint: gratis, ingen API-nøkkel -- kun indiske verdipapirfond
+        binance_public_hint: gratis, ingen API-nøkkel -- kun krypto (BTC, ETH osv.)
+        moex_public_hint: gratis, ingen API-nøkkel -- russiske aksjer, fond og obligasjoner (MOEX), inkl. RUB FX
+        tinkoff_invest_hint: krever skrivebeskyttet token -- kurser for russiske aksjer/fond/obligasjoner + merkelogoer
+        requires_api_key_mansa: krever API-nøkkel, gratisnivå med 100 kall/dag -- kun NGX (Nigerian Exchange)
+        providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
+          tiingo: Tiingo
+          eodhd: EODHD
+          alpha_vantage: Alpha Vantage
+          mfapi: MFAPI.in
+          binance_public: Binance
+          moex_public: MOEX
+          tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
+          mansa: Mansa
+      assistant_settings:
+        title: AI-assistent
+        description: Velg hvordan chat-assistenten svarer. Innebygd bruker den konfigurerte LLM-leverandøren direkte. Ekstern delegerer til en ekstern AI-agent som kan kalle tilbake til Sures finansverktøy via MCP.
+        type_label: Assistenttype
+        type_builtin: Innebygd (direkte LLM)
+        type_external: Ekstern (ekstern agent)
+        external_status: Endepunkt for ekstern assistent
+        external_configured: Konfigurert
+        external_not_configured: Ikke konfigurert. Skriv inn URL og token nedenfor, eller sett miljøvariablene EXTERNAL_ASSISTANT_URL og EXTERNAL_ASSISTANT_TOKEN.
+        env_notice: Assistenttypen er låst til '%{type}' via miljøvariabelen ASSISTANT_TYPE.
+        env_configured_external: Konfigurert via miljøvariabler.
+        url_label: Endepunkt-URL
+        url_placeholder: https://your-agent-host/v1/chat
+        url_help: Den fullstendige URL-en til agentens API-endepunkt. Du får den fra agentleverandøren din.
+        token_label: API-token
+        token_placeholder: Skriv inn tokenet fra agentleverandøren din
+        token_help: Autentiseringstokenet fra den eksterne agenten. Det sendes som et Bearer-token med hver forespørsel.
+        agent_id_label: Agent-ID (valgfritt)
+        agent_id_placeholder: main (standard)
+        agent_id_help: Sender til en bestemt agent når leverandøren har flere. La stå tomt for standardagenten.
+        disconnect_title: Ekstern tilkobling
+        disconnect_description: Fjern tilkoblingen til den eksterne assistenten og bytt tilbake til den innebygde assistenten.
+        disconnect_button: Koble fra
+        confirm_disconnect:
+          title: Koble fra ekstern assistent?
+          body: Dette fjerner lagret URL, token og agent-ID, og bytter til den innebygde assistenten. Du kan koble til igjen senere ved å skrive inn ny påloggingsinformasjon.
+      brand_fetch_settings:
+        description: Skriv inn klient-ID-en du har fått fra Brandfetch
+        env_configured_message: Brandfetch-klient-ID-en er konfigurert via miljøvariabelen BRAND_FETCH_CLIENT_ID.
+        show_details: (vis detaljer)
+        setup_step_1_html: Gå til <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> og opprett en gratis Brandfetch Developer-konto.
+        setup_step_2_html: Gå til siden <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
+        setup_step_3: Trykk på øyeikonet under «Your Client ID» for å vise klient-ID-en, og lim den inn nedenfor.
+        label: Klient-ID
+        placeholder: Skriv inn klient-ID-en her
+        title: Brandfetch-innstillinger
+        high_res_label: Aktiver logoer med høy oppløsning
+        high_res_description: Når dette er aktivert, hentes logoer i 120x120-oppløsning i stedet for 40x40. Det gir skarpere bilder på skjermer med høy DPI.
+      llm_provider_selector:
+        title: AI-leverandør
+        description: Velg hvilken LLM som driver AI-chatten. Batchoperasjoner (kategorisering av transaksjoner, forhandlergjenkjenning og PDF-behandling) bruker foreløpig alltid OpenAI.
+        env_configured_message: Konfigurert via miljøvariabelen LLM_PROVIDER.
+        provider_label: Aktiv LLM-leverandør
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Bytte av leverandør gjelder fra neste chat. Konfigurer påloggingsinformasjonen til den aktive leverandøren nedenfor.
+        not_configured_hint: Legg til en API-nøkkel for %{provider} nedenfor for å aktivere den.
+        data_retention_heading: Databehandling
+        data_retention: API-inndata brukes som standard ikke til å trene modeller; leverandørenes API-er lagrer data i ca. 30 dager for misbruksovervåking. Egendefinerte eller selvhostede endepunkter følger dine egne retningslinjer.
+      anthropic_settings:
+        title: Anthropic (Claude)
+        description: Skriv inn Anthropic-API-nøkkelen din. Du kan eventuelt peke basis-URL-en mot AWS Bedrock eller GCP Vertex.
+        env_configured_message: Konfigurert via miljøvariabler.
+        access_token_label: API-nøkkel
+        access_token_placeholder: Skriv inn Anthropic-API-nøkkelen din
+        base_url_label: Basis-URL (valgfritt)
+        base_url_placeholder: https://api.anthropic.com (standard)
+        model_label: Standardmodell (valgfritt)
+        model_placeholder: claude-sonnet-4-6 (standard)
+        model_help: Brukes til chat og PDF-behandling. Batchoperasjoner (kategorisering, forhandlergjenkjenning) bruker Haiku som standard av kostnadshensyn.
+      openai_settings:
+        description: Skriv inn tilgangstokenet, og konfigurer eventuelt en egendefinert OpenAI-kompatibel leverandør
+        env_configured_message: Konfigurert via miljøvariabler.
+        access_token_label: Tilgangstoken
+        access_token_placeholder: Skriv inn tilgangstokenet her
+        uri_base_label: API-basis-URL (valgfritt)
+        uri_base_placeholder: https://api.openai.com/v1 (standard)
+        model_label: Modell (valgfritt)
+        model_placeholder: gpt-4.1 (standard)
+        model_function_calling_help: AI-assistenten leser dataene dine via funksjonskall, så velg en modell som leverandøren dokumenterer at støtter verktøy/funksjonskall. Modeller uten dette får chatten til å feile med en uklar feilmelding fra leverandøren.
+        model_function_calling_link: Sjekk den konfigurerte modellen
+        json_mode_label: JSON-modus
+        json_mode_auto: Auto (anbefalt)
+        json_mode_strict: Streng (best for resonneringsmodeller)
+        json_mode_none: Ingen (best for standardmodeller)
+        json_mode_json_object: JSON Object
+        json_mode_help: Streng modus fungerer best med resonneringsmodeller (qwen-thinking, deepseek-reasoner). Ingen fungerer best med standardmodeller (llama, mistral, gpt-oss).
+        budget_heading: Tokengrenser
+        budget_description: Gjelder OpenAI-kompatible kall (chat, automatisk kategorisering, forhandlergjenkjenning og PDF-behandling). Standardverdiene er forsiktige, tilpasset lokale modeller med lite kontekstvindu. Øk dem for skymodeller med større kontekstvinduer.
+        context_window_label: Kontekstvindu (valgfritt)
+        context_window_help: 'Totalt antall tokens modellen tar imot. Standard: 2048 – øk til 8192+ for OpenAI i skyen eller lokale modeller med stort kontekstvindu.'
+        max_response_tokens_label: Maks svartokens (valgfritt)
+        max_response_tokens_help: 'Tokens som reserveres til modellens svar. Standard: 512. Senk for å gi plass til lengre historikk.'
+        max_items_per_call_label: Maks elementer per batch (valgfritt)
+        max_items_per_call_help: 'Øvre grense for batcher med automatisk kategorisering / forhandlergjenkjenning. Standard: 25. Større batcher deles automatisk opp for å passe i kontekstvinduet.'
+        timeout_heading: Tidsavbrudd
+        timeout_description: Styrer hvor lenge kall til OpenAI-kompatible modeller kan pågå før Sure gir opp. Øk disse hvis du kjører en lokal modell på treg maskinvare.
+        openai_request_timeout_label: Tidsavbrudd for forespørsel i sekunder (valgfritt)
+        openai_request_timeout_help: 'Standard: 60. Gjelder hver OpenAI-kompatible HTTP-forespørsel, inkludert automatisk kategorisering, forhandlergjenkjenning, chat, PDF-behandling og kall til vektorlageret. OPENAI_REQUEST_TIMEOUT overstyrer dette feltet.'
+        ai_response_timeout_label: Tidsavbrudd for svar i sekunder (valgfritt)
+        ai_response_timeout_help: 'Standard: 90. Gjelder bare vakthunden for en hel chatrunde, så sett den som en sum: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × tidsavbrudd for forespørsel, pluss tid til verktøykjøring og kø. AI_RESPONSE_TIMEOUT overstyrer dette feltet.'
+        title: OpenAI
+      rentcast_settings:
+        title: RentCast
+        description: Skriv inn RentCast-API-nøkkelen din for å slå opp detaljer og verdianslag for amerikanske eiendommer når du legger til en eiendom. Gratisnivået er begrenset til 50 API-forespørsler per måned, delt mellom eiendomsoppslag og daglige verdioppdateringer. Med et betalt abonnement kan du øke grensen med miljøvariabelen RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Konfigurert via miljøvariabelen RENTCAST_API_KEY.
+        label: API-nøkkel
+        placeholder: Skriv inn RentCast-API-nøkkelen din her
+        usage: '%{used} av %{limit} månedlige forespørsler brukt'
+      realie_settings:
+        title: Realie
+        description: Skriv inn Realie-API-nøkkelen din for å slå opp detaljer og verdianslag for amerikanske eiendommer når du legger til en eiendom. Gratisnivået er begrenset til 25 API-forespørsler per måned, delt mellom eiendomsoppslag og daglige verdioppdateringer. Med et betalt abonnement kan du øke grensen med miljøvariabelen REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Konfigurert via miljøvariabelen REALIE_API_KEY.
+        label: API-nøkkel
+        placeholder: Skriv inn Realie-API-nøkkelen din her
+        usage: '%{used} av %{limit} månedlige forespørsler brukt'
+      tiingo_settings:
+        title: Tiingo
+        description: Skriv inn API-tokenet fra Tiingo. Gratisnivået støtter 50 unike tickere per time med over 30 års historiske data.
+        env_configured_message: Konfigurert via miljøvariabelen TIINGO_API_KEY.
+        label: API-token
+        placeholder: Skriv inn Tiingo-API-tokenet ditt her
+        show_details: (vis detaljer)
+        step_1_html: Gå til <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> og opprett en gratis konto.
+        step_2_html: Gå til siden <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a>.
+        step_3: Kopier API-tokenet ditt og lim det inn nedenfor.
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: Skriv inn et skrivebeskyttet T-Invest-API-token. Brukes til å hente merkelogoer for verdipapirer (inkl. fond og obligasjoner, også når MOEX leverer kursene) og, når det er aktivert ovenfor, kurser for russiske instrumenter.
+        moex_only_notice: Ikke aktivert for kurser ovenfor – T-Invest brukes til å hente merkelogoer for alle verdipapirene dine så lenge et token er konfigurert, uavhengig av avkrysningsboksen ovenfor.
+        env_configured_message: Konfigurert via miljøvariabelen TINKOFF_INVEST_API_KEY.
+        label: API-token
+        placeholder: Skriv inn T-Invest-API-tokenet ditt her
+        show_details: (vis detaljer)
+        step_1: Åpne T-Bank-investeringer, deretter Innstillinger og API-tokens (krever en åpen meglerkonto i T-Bank).
+        step_2: Opprett et token med skrivebeskyttet tilgang.
+        step_3: Kopier tokenet og lim det inn nedenfor.
+      eodhd_settings:
+        title: EODHD
+        description: Skriv inn API-tokenet fra EODHD. Støtter europeiske ETF-er på LSE, XETRA og andre internasjonale børser.
+        env_configured_message: Konfigurert via miljøvariabelen EODHD_API_KEY.
+        label: API-token
+        placeholder: Skriv inn EODHD-API-tokenet ditt her
+        show_details: (vis detaljer)
+        step_1_html: Gå til <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> og opprett en gratis konto.
+        step_2_html: Gå til <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> for å finne API-tokenet ditt.
+        step_3: Kopier API-tokenet ditt og lim det inn nedenfor.
+        rate_limit_warning: Gratisnivået til EODHD er begrenset til 20 API-kall per dag. Passer best som en supplerende leverandør for europeiske ETF-er som ikke er tilgjengelige hos andre leverandører.
+      mansa_settings:
+        title: Mansa
+        description: Skriv inn API-nøkkelen fra Mansa API. Støtter NGX (Nigerian Exchange), som ingen av de andre leverandørene her dekker. Mansa dekker også andre afrikanske børser, men bare NGX er verifisert mot denne integrasjonen.
+        env_configured_message: Konfigurert via miljøvariabelen MANSA_API_KEY.
+        label: API-nøkkel
+        placeholder: Skriv inn Mansa-API-nøkkelen din her
+        show_details: (vis detaljer)
+        step_1_html: Gå til <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> og hent din gratis API-nøkkel -- ingen kort kreves.
+        step_2: Kopier API-nøkkelen din og lim den inn nedenfor.
+        rate_limit_warning: Gratisnivået til Mansa er begrenset til 100 API-kall per dag og gir bare gjeldende kurser -- historiske kurser krever et betalt abonnement. Bare NGX (Nigerian Exchange) er verifisert mot denne integrasjonen; andre afrikanske børser som Mansa dekker, støttes ikke her ennå.
+      alpha_vantage_settings:
+        title: Alpha Vantage
+        description: Skriv inn API-nøkkelen fra Alpha Vantage. Støtter europeiske ETF-er på London Stock Exchange, XETRA og andre børser.
+        env_configured_message: Konfigurert via miljøvariabelen ALPHA_VANTAGE_API_KEY.
+        label: API-nøkkel
+        placeholder: Skriv inn Alpha Vantage-API-nøkkelen din her
+        show_details: (vis detaljer)
+        step_1_html: Gå til <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> og hent din gratis API-nøkkel.
+        step_2: Kopier API-nøkkelen og lim den inn nedenfor.
+        rate_limit_warning: Gratisnivået til Alpha Vantage er begrenset til 25 API-kall per dag. Passer best som en supplerende leverandør for europeiske ETF-er som ikke er tilgjengelige hos andre leverandører.
+        no_health_check_note: Tilkoblingssjekk er ikke tilgjengelig for denne leverandøren på grunn av den strenge forespørselsgrensen.
+      twelve_data_settings:
+        api_calls_used: '%{used} / %{limit} daglige API-kall brukt (%{percentage})'
+        description: Skriv inn API-nøkkelen fra Twelve Data
+        env_configured_message: Konfigurert via miljøvariabelen TWELVE_DATA_API_KEY.
+        label: API-nøkkel
+        placeholder: Skriv inn API-nøkkelen din her
+        show_details: (vis detaljer)
+        step_1_html: Gå til <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> og opprett en gratis Twelve Data Developer-konto.
+        step_2_html: Gå til siden <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.
+        step_3: Vis Secret Key og lim den inn nedenfor.
+        plan: '%{plan}-abonnement'
+        plan_upgrade_warning_title: Noen tickere krever et betalt abonnement
+        plan_upgrade_warning_description: Følgende tickere i porteføljen din kan ikke synkronisere kurser med ditt nåværende Twelve Data-abonnement.
+        requires_plan: krever %{plan}-abonnement
+        view_pricing: Se priser for Twelve Data
+        title: Twelve Data
+      disconnect_external_assistant:
+        external_assistant_disconnected: Ekstern assistent frakoblet
+      ensure_admin:
+        not_authorized: Du har ikke tilgang til å utføre denne handlingen
+      ensure_super_admin_for_onboarding:
+        not_authorized: Du har ikke tilgang til å utføre denne handlingen
+      sync_auto_sync_scheduler!:
+        scheduler_sync_failed: Innstillingene er lagret, men synkroniseringsplanen kunne ikke oppdateres. Prøv igjen eller sjekk serverloggene.
+      sync_settings:
+        auto_sync_label: Aktiver automatisk synkronisering
+        auto_sync_description: Når dette er aktivert, synkroniseres alle kontoer automatisk hver dag på angitt klokkeslett.
+        auto_sync_time_label: Synkroniseringstidspunkt (HH:MM)
+        auto_sync_time_description: Angi klokkeslettet da automatisk synkronisering skal kjøres.
+        include_pending_label: Inkluder reserverte transaksjoner
+        include_pending_description: Når dette er aktivert, importeres reserverte (ikke bokførte) transaksjoner og avstemmes automatisk når de bokføres. Deaktiver hvis banken din leverer upålitelige data om reserverte transaksjoner.
+        env_configured_message: Denne innstillingen er deaktivert fordi en miljøvariabel for leverandøren (SIMPLEFIN_INCLUDE_PENDING eller PLAID_INCLUDE_PENDING) er satt. Fjern den for å aktivere innstillingen.
 

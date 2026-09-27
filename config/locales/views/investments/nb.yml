@@ -7,12 +7,187 @@ nb:
       none: Ingen
       subtype_prompt: Velg investeringstype
     new:
-      title: Angi kontobalanse
+      title: Angi kontosaldo
     show:
       chart_title: Total verdi
     value_tooltip:
       cash: Kontanter
       holdings: Beholdninger
-      total: Porteføljebalanse
-      total_value_tooltip: Den totale porteføljebalansen er summen av meglerkontanter
+      total: Porteføljeverdi
+      total_value_tooltip: Den totale porteføljeverdien er summen av kontantbeholdningen
         (tilgjengelig for handel) og gjeldende markedsverdi av beholdningene dine.
+    subtypes:
+      brokerage:
+        short: Meglerkonto
+        long: Meglerkonto
+      cash_management:
+        short: CMA
+        long: Cash Management Account (CMA)
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan
+      ira:
+        short: IRA
+        long: Tradisjonell IRA
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: 529-plan
+        long: 529-utdanningssparing
+      hsa:
+        short: HSA
+        long: Health Savings Account
+      ugma:
+        short: UGMA
+        long: UGMA-konto for mindreårige
+      utma:
+        short: UTMA
+        long: UTMA-konto for mindreårige
+      isa:
+        short: ISA
+        long: Individual Savings Account
+      lisa:
+        short: LISA
+        long: Lifetime ISA
+      sipp:
+        short: SIPP
+        long: Self-Invested Personal Pension
+      workplace_pension_uk:
+        short: Pensjon
+        long: Tjenestepensjon
+      rrsp:
+        short: RRSP
+        long: Registered Retirement Savings Plan
+      tfsa:
+        short: TFSA
+        long: Tax-Free Savings Account
+      resp:
+        short: RESP
+        long: Registered Education Savings Plan
+      lira:
+        short: LIRA
+        long: Locked-In Retirement Account
+      rrif:
+        short: RRIF
+        long: Registered Retirement Income Fund
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Self-Managed Super Fund
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions
+      pillar_3a:
+        short: Søyle 3a
+        long: Privat pensjonssparing (søyle 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      nps:
+        short: NPS
+        long: National Pension System
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      indian_stocks:
+        short: Indiske aksjer
+        long: Indiske aksjer (Demat)
+      indian_equity:
+        short: Indisk egenkapital
+        long: Indiske egenkapitalinstrumenter
+      indian_etf:
+        short: Indisk ETF
+        long: Indisk ETF
+      life_insurance:
+        short: Livsforsikring
+        long: Livsforsikring
+      ppf:
+        short: PPF
+        long: Public Provident Fund
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: National Savings Certificate
+      scss:
+        short: SCSS
+        long: Senior Citizens' Savings Scheme
+      fd:
+        short: FD
+        long: Fastrenteinnskudd (FD)
+      rd:
+        short: RD
+        long: Fast månedlig innskudd (RD)
+      pomis:
+        short: POMIS
+        long: Post Office Monthly Income Scheme
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: Gull-ETF
+        long: Gull-ETF
+      gold_mf:
+        short: Gullfond
+        long: Gullfond (MF)
+      sgb:
+        short: SGB
+        long: Sovereign Gold Bond
+      g_sec:
+        short: G-Sec
+        long: Statsobligasjoner (G-Secs)
+      sdl:
+        short: SDL
+        long: Delstatsobligasjoner (SDLs)
+      corporate_bond:
+        short: Selskapsobligasjon
+        long: Selskapsobligasjon
+      infrastructure_bond:
+        short: Infraobligasjon
+        long: Infrastrukturobligasjon
+      tax_free_bond:
+        short: Skattefri obligasjon
+        long: Skattefri obligasjon
+      pension:
+        short: Pensjon
+        long: Pensjon
+      retirement:
+        short: Pensjonssparing
+        long: Pensjonskonto
+      mutual_fund:
+        short: Verdipapirfond
+        long: Verdipapirfond
+      gold:
+        short: Gull
+        long: Gull (fysisk eller digitalt)
+      angel:
+        short: Engleinvestering
+        long: Engleinvestering
+      trust:
+        short: Trust
+        long: Trust
+      other:
+        short: Annet
+        long: Annen investering

@@ -2,22 +2,25 @@
 nb:
   tags:
     create:
-      created: Tag opprettet
-      error: 'Feil ved opprettelse av tag: %{error}'
+      created: Taggen er opprettet
+      error: 'Feil ved opprettelse av tagg: %{error}'
     destroy:
-      deleted: Tag slettet
+      deleted: Taggen er slettet
     edit:
-      edit: Rediger tag
+      edit: Rediger tagg
     form:
-      placeholder: Tagnavn
+      placeholder: Taggnavn
     index:
       empty: Ingen tagger ennå
-      new: Ny tag
+      new: Ny tagg
       tags: Tagger
+      delete_all: Slett alle
     new:
-      new: Ny tag
+      new: Ny tagg
     tag:
       delete: Slett
       edit: Rediger
     update:
-      updated: Tag oppdatert
+      updated: Taggen er oppdatert
+    destroy_all:
+      all_deleted: Alle tagger er slettet

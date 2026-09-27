@@ -1,0 +1,21 @@
+---
+nb:
+  pending_duplicate_merges:
+    create:
+      no_posted_selected: Velg en bokført transaksjon å slå sammen med
+      invalid_transaction: Ugyldig transaksjon valgt for sammenslåing
+      merge_success: Den reserverte transaksjonen ble slått sammen med den bokførte transaksjonen
+      merge_failed: Kunne ikke slå sammen transaksjonene
+    set_transaction:
+      pending_only: Denne funksjonen er bare tilgjengelig for reserverte transaksjoner
+    new:
+      title: Slå sammen med bokført transaksjon
+      warning_title: Manuell sammenslåing av duplikater
+      warning_description: Bruk dette for å slå sammen en reservert transaksjon manuelt med den bokførte versjonen. Den reserverte transaksjonen slettes, og bare den bokførte beholdes.
+      pending_transaction: Reservert transaksjon
+      select_posted: Velg bokført transaksjon å slå sammen med
+      showing_range: Viser %{start}–%{end}
+      previous: ← Forrige 10
+      next: Neste 10 →
+      no_candidates: Fant ingen bokførte transaksjoner på denne kontoen.
+      submit_button: Slå sammen transaksjoner

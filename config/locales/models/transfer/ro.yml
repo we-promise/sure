@@ -12,6 +12,10 @@ ro:
               must_have_opposite_amounts: Tranzacțiile de transfer trebuie să aibă sume opuse
               must_have_single_currency: Transferul trebuie să aibă o singură monedă
               outflow_cannot_be_in_multiple_transfers: Tranzacția de ieșire nu poate face parte din mai multe transferuri
+          different_accounts: Trebuie să fie din conturi diferite
+          same_family: Trebuie să fie din aceeași familie
+          opposite_amounts: Trebuie să aibă sume opuse
+          within_days: Trebuie să fie la cel mult %{count} zile distanță
   transfer:
     name: Transfer către %{to_account}
     payment_name: Plată către %{to_account}

@@ -1,0 +1,208 @@
+---
+nb:
+  mercury_items:
+    api_error:
+      title: Tilkoblingsfeil for Mercury
+      unable_to_connect: Kan ikke koble til Mercury
+      common_issues: 'Vanlige problemer:'
+      invalid_api_token_label: Ugyldig API-token
+      invalid_api_token_desc: Kontroller API-tokenet i leverandørinnstillingene
+      expired_credentials_label: Utløpt legitimasjon
+      expired_credentials_desc: Generer et nytt API-token i Mercury
+      insufficient_permissions_label: Utilstrekkelige tillatelser
+      insufficient_permissions_desc: Sørg for at tokenet har lesetilgang
+      network_issue_label: Nettverksproblem
+      network_issue_desc: Kontroller internettforbindelsen
+      service_down_label: Tjenesten er nede
+      service_down_desc: Mercury API kan være midlertidig utilgjengelig
+      check_provider_settings: Kontroller leverandørinnstillingene
+    setup_required:
+      title: Mercury må konfigureres
+      api_token_not_configured: API-token er ikke konfigurert
+      api_token_description: Før du kan koble til Mercury-kontoer, må du konfigurere Mercury API-tokenet ditt.
+      setup_steps_title: 'Slik konfigurerer du:'
+      setup_step_1_html: Gå til <strong>Innstillinger > Leverandører</strong>
+      setup_step_2_html: Finn delen <strong>Mercury</strong>
+      setup_step_3: Skriv inn Mercury API-tokenet ditt
+      setup_step_4: Kom tilbake hit for å koble til kontoene dine
+      go_to_provider_settings: Gå til leverandørinnstillinger
+    create:
+      success: Mercury-tilkoblingen er opprettet
+    destroy:
+      success: Mercury-tilkoblingen er fjernet
+    index:
+      title: Mercury-tilkoblinger
+    loading:
+      loading_message: Laster inn Mercury-kontoer...
+      loading_title: Laster inn
+    link_accounts:
+      all_already_linked:
+        one: Den valgte kontoen (%{names}) er allerede koblet til
+        other: 'Alle %{count} valgte kontoer er allerede koblet til: %{names}'
+      api_error: 'API-feil: %{message}'
+      invalid_account_names:
+        one: Kan ikke koble til en konto uten navn
+        other: Kan ikke koble til %{count} kontoer uten navn
+      link_failed: Kunne ikke koble til kontoer
+      no_accounts_selected: Velg minst én konto
+      no_api_token: Fant ikke Mercury API-token. Konfigurer det i leverandørinnstillingene.
+      partial_invalid: Koblet til %{created_count} konto(er), %{already_linked_count} var allerede koblet til, %{invalid_count} konto(er) hadde ugyldige navn
+      partial_success: 'Koblet til %{created_count} konto(er). %{already_linked_count} konto(er) var allerede koblet til: %{already_linked_names}'
+      select_connection: Velg en Mercury-tilkobling før du kobler til kontoer.
+      success:
+        one: Koblet til %{count} konto
+        other: Koblet til %{count} kontoer
+    mercury_item:
+      accounts_need_setup: Kontoer må settes opp
+      delete: Slett tilkobling
+      deletion_in_progress: sletting pågår...
+      error: Feil
+      no_accounts_description: Denne tilkoblingen har ingen tilkoblede kontoer ennå.
+      no_accounts_title: Ingen kontoer
+      setup_action: Sett opp nye kontoer
+      setup_description: '%{linked} av %{total} kontoer er koblet til. Velg kontotyper for de nylig importerte Mercury-kontoene dine.'
+      setup_needed: Nye kontoer er klare til å settes opp
+      status: Synkronisert for %{timestamp} siden
+      status_never: Aldri synkronisert
+      status_with_summary: Sist synkronisert for %{timestamp} siden - %{summary}
+      syncing: Synkroniserer...
+      total: Totalt
+      unlinked: Ikke tilkoblet
+    provider_panel:
+      add_connection: Legg til Mercury-tilkobling
+      base_url_label: Base-URL (valgfritt)
+      base_url_placeholder: https://api.mercury.com/api/v1 (standard)
+      connection_name_label: Navn på tilkobling
+      connection_name_placeholder: Bedriftskonto
+      default_connection_name: Mercury-tilkobling
+      disconnect_confirm: Koble fra %{name}?
+      instructions:
+        copy_token_html: Kopier <strong>hele tokenet</strong> (inkludert prefikset <code>secret-token:</code>) og legg det til som en navngitt tilkobling nedenfor
+        create_token: Opprett et nytt API-token med tilgangen «Read Only» (kun lesing)
+        open_tokens: Gå til Settings > Developer > API Tokens
+        sign_in_html: Gå til %{link} og logg inn på kontoen du vil koble til
+        whitelist_ip_html: <strong>Viktig:</strong> Legg til serverens IP-adresse i tokenets liste over tillatte IP-adresser
+      keep_token_placeholder: La stå tomt for å beholde gjeldende token
+      sandbox_note_html: Bruk en egen navngitt tilkobling for hver Mercury-pålogging/API-token du vil synkronisere. For testing i sandkassen bruker du <code>https://api-sandbox.mercury.com/api/v1</code> som Base-URL. Mercury krever at IP-adresser godkjennes – husk å legge til IP-adressen din i Mercury-dashbordet.
+      setup_accounts: Sett opp kontoer
+      setup_title: 'Oppsettsinstruksjoner:'
+      sync: Synkroniser
+      token_label: Token
+      token_placeholder: Lim inn token her
+      update_connection: Oppdater tilkobling
+    provider_connection:
+      default_description: Koble til banken din via Mercury
+      default_name: Mercury
+      description: Koble til med %{name}
+      name: Mercury - %{name}
+    select_accounts:
+      accounts_selected: kontoer valgt
+      api_error: 'API-feil: %{message}'
+      cancel: Avbryt
+      configure_name_in_mercury: Kan ikke importeres – angi et kontonavn i Mercury
+      description: Velg kontoene du vil koble til %{product_name}-kontoen din.
+      link_accounts: Koble til valgte kontoer
+      no_accounts_found: Fant ingen kontoer. Kontroller konfigurasjonen av API-tokenet.
+      no_api_token: Mercury API-token er ikke konfigurert. Konfigurer det i Innstillinger.
+      no_credentials_configured: Konfigurer Mercury API-tokenet ditt i leverandørinnstillingene først.
+      no_name_placeholder: (Uten navn)
+      select_connection: Velg en Mercury-tilkobling i leverandørinnstillingene.
+      title: Velg Mercury-kontoer
+    select_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør
+      all_accounts_already_linked: Alle Mercury-kontoer er allerede koblet til
+      api_error: 'API-feil: %{message}'
+      cancel: Avbryt
+      configure_name_in_mercury: Kan ikke importeres – angi et kontonavn i Mercury
+      description: Velg en Mercury-konto som skal kobles til denne kontoen. Transaksjoner synkroniseres, og duplikater fjernes automatisk.
+      link_account: Koble til konto
+      no_account_specified: Ingen konto angitt
+      no_accounts_found: Fant ingen Mercury-kontoer. Kontroller konfigurasjonen av API-tokenet.
+      no_api_token: Mercury API-token er ikke konfigurert. Konfigurer det i Innstillinger.
+      no_credentials_configured: Konfigurer Mercury API-tokenet ditt i leverandørinnstillingene først.
+      no_name_placeholder: (Uten navn)
+      select_connection: Velg en Mercury-tilkobling i leverandørinnstillingene.
+      title: Koble %{account_name} til Mercury
+    link_existing_account:
+      account_already_linked: Denne kontoen er allerede koblet til en leverandør
+      api_error: 'API-feil: %{message}'
+      invalid_account_name: Kan ikke koble til en konto uten navn
+      mercury_account_already_linked: Denne Mercury-kontoen er allerede koblet til en annen konto
+      mercury_account_not_found: Fant ikke Mercury-kontoen
+      missing_parameters: Mangler påkrevde parametere
+      no_api_token: Fant ikke Mercury API-token. Konfigurer det i leverandørinnstillingene.
+      select_connection: Velg en Mercury-tilkobling før du kobler til kontoer.
+      success: Koblet %{account_name} til Mercury
+    setup_accounts:
+      account_type_label: 'Kontotype:'
+      all_accounts_linked: Alle Mercury-kontoene dine er allerede satt opp.
+      api_error: 'API-feil: %{message}'
+      fetch_failed: Kunne ikke hente kontoer
+      no_accounts_to_setup: Ingen kontoer å sette opp
+      no_api_token: Mercury API-token er ikke konfigurert. Kontroller tilkoblingsinnstillingene.
+      account_types:
+        skip: Hopp over denne kontoen
+        depository: Bruks- eller sparekonto
+        credit_card: Kredittkort
+        investment: Investeringskonto
+        loan: Lån eller boliglån
+        other_asset: Annen eiendel
+      subtype_labels:
+        depository: 'Kontoundertype:'
+        credit_card: ''
+        investment: 'Investeringstype:'
+        loan: 'Lånetype:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: Kredittkort settes automatisk opp som kredittkortkontoer.
+        other_asset: Ingen flere valg trengs for andre eiendeler.
+      subtypes:
+        depository:
+          checking: Brukskonto
+          savings: Sparekonto
+          hsa: Helsesparekonto (HSA)
+          cd: Tidsinnskudd
+          money_market: Pengemarkedskonto
+        investment:
+          brokerage: Meglerkonto
+          pension: Pensjon
+          retirement: Pensjonssparing
+          401k: 401(k)
+          roth_401k: Roth 401(k)
+          403b: 403(b)
+          tsp: Thrift Savings Plan
+          529_plan: 529-plan
+          hsa: Helsesparekonto (HSA)
+          mutual_fund: Verdipapirfond
+          ira: Tradisjonell IRA
+          roth_ira: Roth IRA
+          angel: Engleinvestering
+        loan:
+          mortgage: Boliglån
+          student: Studielån
+          auto: Billån
+          other: Annet lån
+      balance: Saldo
+      cancel: Avbryt
+      choose_account_type: 'Velg riktig kontotype for hver Mercury-konto:'
+      create_accounts: Opprett kontoer
+      creating_accounts: Oppretter kontoer...
+      historical_data_range: 'Periode for historiske data:'
+      subtitle: Velg riktige kontotyper for de importerte kontoene dine
+      sync_start_date_help: Velg hvor langt tilbake du vil synkronisere transaksjonshistorikken. Opptil 3 år med historikk er tilgjengelig.
+      sync_start_date_label: 'Synkroniser transaksjoner fra:'
+      title: Sett opp Mercury-kontoene dine
+    complete_account_setup:
+      all_skipped: Alle kontoer ble hoppet over. Ingen kontoer ble opprettet.
+      creation_failed: 'Kunne ikke opprette kontoer: %{error}'
+      no_accounts: Ingen kontoer å sette opp.
+      success: Opprettet %{count} konto(er).
+    sync:
+      success: Synkronisering startet
+    update:
+      success: Mercury-tilkoblingen er oppdatert
+    mercury_item_selection_error_payload:
+      select_connection: Velg en Mercury-tilkobling før du laster inn kontoer.
+    render_mercury_item_selection_failure:
+      select_connection: Velg en Mercury-tilkobling i leverandørinnstillingene.
+      no_credentials_configured: Konfigurer Mercury API-tokenet ditt i leverandørinnstillingene først.

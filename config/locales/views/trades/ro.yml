@@ -11,15 +11,36 @@ ro:
       submit: Adaugă tranzacție
       ticker_placeholder: AAPL
       type: Tip
+      fee: Comision de tranzacționare
+      holding_optional: Simbol bursier (opțional)
+      type_buy: Cumpărare
+      type_sell: Vânzare
+      type_deposit: Depunere
+      type_withdrawal: Retragere
+      type_dividend: Dividend
+      type_interest: Dobândă
+      dividend_requires_security: Pentru dividende este necesar un titlu de valoare
+      trade_requires_security: Pentru cumpărări și vânzări este necesar un titlu de valoare (simbol bursier)
     header:
-      buy: Cumpără
+      buy: Cumpărare
       current_market_price_label: Preț curent de piață
       overview: Prezentare generală
       purchase_price_label: Preț de achiziție
       purchase_qty_label: Cantitate achiziționată
-      sell: Vinde
+      sell: Vânzare
       symbol_label: Simbol
       total_return_label: Câștig/pierdere nerealizată
+      dividend: Dividend
+      interest: Dobândă
+      contribution: Contribuție
+      exchange: Schimb
+      fee: Comision
+      other: Altele
+      reinvestment: Reinvestire
+      sweep_in: Transfer automat (intrare)
+      sweep_out: Transfer automat (ieșire)
+      transfer: Transfer
+      withdrawal: Retragere
     new:
       title: Tranzacție nouă
     show:
@@ -36,3 +57,16 @@ ro:
       note_placeholder: Adaugă orice notă suplimentară aici...
       quantity_label: Cantitate
       settings: Setări
+      amount_label: Sumă
+      buy: Cumpărare
+      category_label: Categorie
+      fee_label: Comision de tranzacționare
+      provider_disabled_warning: Actualizările de preț sunt întrerupte — furnizorul %{provider} este dezactivat. Reactivează-l din Setări sau asociază deținerea cu alt furnizor.
+      no_category: Fără categorie
+      sell: Vânzare
+      type_label: Tip
+    api_errors:
+      activity_label_must_match_type: investment_activity_label trebuie să fie %{label} când type este %{type}
+      invalid_activity_label: Etichetă de activitate de investiții nevalidă
+      invalid_type: Tip nevalid
+      supported_types: 'type trebuie să fie unul dintre: %{types}'

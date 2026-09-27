@@ -16,3 +16,178 @@ ro:
       total: Soldul portofoliului
       total_value_tooltip: Soldul total al portofoliului este suma numerarului de brokeraj
         (disponibil pentru tranzacționare) și a valorii de piață curente a deținerilor tale.
+    subtypes:
+      brokerage:
+        short: Brokeraj
+        long: Cont de brokeraj
+      cash_management:
+        short: CMA
+        long: Cash Management Account
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan
+      ira:
+        short: IRA
+        long: IRA tradițional
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: Plan 529
+        long: Plan de economii pentru educație 529
+      hsa:
+        short: HSA
+        long: Health Savings Account
+      ugma:
+        short: UGMA
+        long: Cont custodial UGMA
+      utma:
+        short: UTMA
+        long: Cont custodial UTMA
+      isa:
+        short: ISA
+        long: Individual Savings Account
+      lisa:
+        short: LISA
+        long: Lifetime ISA
+      sipp:
+        short: SIPP
+        long: Self-Invested Personal Pension
+      workplace_pension_uk:
+        short: Pensie
+        long: Pensie ocupațională
+      rrsp:
+        short: RRSP
+        long: Registered Retirement Savings Plan
+      tfsa:
+        short: TFSA
+        long: Tax-Free Savings Account
+      resp:
+        short: RESP
+        long: Registered Education Savings Plan
+      lira:
+        short: LIRA
+        long: Locked-In Retirement Account
+      rrif:
+        short: RRIF
+        long: Registered Retirement Income Fund
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Self-Managed Super Fund
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions
+      pillar_3a:
+        short: Pilonul 3a
+        long: Pensie privată (Pilonul 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      nps:
+        short: NPS
+        long: National Pension System
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      indian_stocks:
+        short: Acțiuni indiene
+        long: Acțiuni indiene (Demat)
+      indian_equity:
+        short: Acțiuni indiene
+        long: Acțiuni indiene
+      indian_etf:
+        short: ETF indian
+        long: ETF indian
+      life_insurance:
+        short: Asigurare de viață
+        long: Asigurare de viață
+      ppf:
+        short: PPF
+        long: Public Provident Fund
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: National Savings Certificate
+      scss:
+        short: SCSS
+        long: Senior Citizens' Savings Scheme
+      fd:
+        short: FD
+        long: Depozit la termen (Fixed Deposit)
+      rd:
+        short: RD
+        long: Depozit recurent (Recurring Deposit)
+      pomis:
+        short: POMIS
+        long: Post Office Monthly Income Scheme
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: ETF pe aur
+        long: ETF pe aur
+      gold_mf:
+        short: Fond mutual aur
+        long: Fond mutual pe aur
+      sgb:
+        short: SGB
+        long: Sovereign Gold Bond
+      g_sec:
+        short: G-Sec
+        long: Titluri de stat (G-Secs)
+      sdl:
+        short: SDL
+        long: Obligațiuni de stat regionale (SDLs)
+      corporate_bond:
+        short: Obligațiune corporativă
+        long: Obligațiune corporativă
+      infrastructure_bond:
+        short: Oblig. infrastr.
+        long: Obligațiune de infrastructură
+      tax_free_bond:
+        short: Oblig. neimpozabilă
+        long: Obligațiune neimpozabilă
+      pension:
+        short: Pensie
+        long: Pensie
+      retirement:
+        short: Pensionare
+        long: Cont de pensionare
+      mutual_fund:
+        short: Fond mutual
+        long: Fond mutual
+      gold:
+        short: Aur
+        long: Aur (fizic sau digital)
+      angel:
+        short: Angel
+        long: Investiție angel
+      trust:
+        short: Trust
+        long: Trust (fiducie)
+      other:
+        short: Altele
+        long: Altă investiție

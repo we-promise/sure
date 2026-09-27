@@ -1,0 +1,198 @@
+---
+nb:
+  recurring_transactions:
+    title: Faste transaksjoner
+    upcoming: Kommende faste transaksjoner
+    projected: Forventet
+    recurring: Fast
+    expected_today: Forventet i dag
+    expected_in:
+      one: Forventet om %{count} dag
+      other: Forventet om %{count} dager
+    day_of_month: Dag %{day} i måneden
+    frequency_presets:
+      monthly: Månedlig
+      weekly: Ukentlig
+      biweekly: Annenhver uke
+      semimonthly: To ganger i måneden
+      quarterly: Kvartalsvis
+      semiannual: Hver 6. måned
+      annual: Årlig
+      custom: Egendefinert plan
+    frequency:
+      monthly: Månedlig (%{day})
+      weekly: Hver %{weekday}
+      biweekly: Annenhver %{weekday}
+      semimonthly: To ganger i måneden (%{first} og %{second})
+      quarterly: Kvartalsvis (%{day})
+      semiannual: Hver 6. måned (%{day})
+      annual: Årlig (%{month}, %{day})
+      custom: Egendefinert plan
+      last_day: siste dag
+    identify_patterns: Finn mønstre
+    cleanup_stale: Rydd opp i utdaterte
+    actions:
+      edit_payment_link: Rediger betalingslenke
+      pause: Sett på pause
+      resume: Gjenoppta
+      delete: Fjern
+    pay_action:
+      pay: Betal
+      pay_aria: Betal %{name} (åpnes i ny fane)
+      add_link: Legg til lenke
+      add_link_aria: Legg til en betalingslenke for %{name}
+      autopay: Automatisk trekk
+      autopay_aria: '%{name} betales automatisk, åpne portalen i en ny fane'
+      open_site: Åpne betalingssiden
+    new:
+      title: Legg til en regning
+      income_title: Legg til inntekt
+      start_from_title: Start fra en fast utgift vi har oppdaget
+      start_from_income_title: Start fra en fast innbetaling vi har oppdaget
+      start_from_hint: Valgfritt. Å velge en fyller bare ut skjemaet; du kan fortsatt endre alt.
+      candidate_meta: '%{count}× · sist %{date}'
+      search_all_prompt: Finner du ikke det du leter etter?
+      search_all_cta: Søk i alle transaksjonene dine
+      pick_different: Start fra en annen transaksjon
+      smart_fill: Fyll ut med AI
+      smart_fill_applied: AI foreslo disse verdiene ut fra betalingshistorikken. Se over før du lagrer.
+    smart_fills:
+      create:
+        failed: Kunne ikke analysere betalingshistorikken akkurat nå. Skjemaet beholdt transaksjonens egne verdier.
+    pick_entry:
+      title: Finn en transaksjon å starte fra
+      income_title: Finn en innbetaling å starte fra
+      hint: Å velge en fyller bare ut skjemaet; du kan fortsatt endre alt.
+      search_placeholder: Søk etter navn, notater eller forhandler
+      back: Tilbake til skjemaet
+      showing_recent: Viser de %{count} nyeste. Søk for å snevre inn.
+      no_results: Ingen treff for «%{query}». Prøv færre ord, eller gå tilbake og fyll ut skjemaet selv.
+    picker_row:
+      claimed: Del av %{name}
+    create:
+      success: Regningen er lagt til
+      success_income: Inntekten er lagt til
+      due_date_required: Angi neste forfallsdato for regningen
+      amount_invalid: Skriv inn beløpet som et vanlig tall
+      account_invalid: Velg en konto du kan legge til regninger på, eller la feltet stå tomt
+      already_exists: Denne regningen finnes allerede
+    edit:
+      trigger_label: Rediger regning
+      title: Rediger %{name}
+      income_title: Rediger inntekt · %{name}
+    form:
+      payment_url_label: Betalingslenke
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: Der du betaler denne regningen. Åpnes i en ny fane fra listene over faste og kommende betalinger.
+      autopay_label: Betales automatisk
+      autopay_hint: Behold den på regningslisten, men slutt å behandle den som en oppgave.
+      more_options: Flere valg
+      notes_label: Notater
+      notes_placeholder: Kundenr. 4821, belastes Visa-kortet
+      notes_hint: Alt du vil ha foran deg når du betaler. Vises på regningen.
+      apply_to_siblings:
+        one: Bruk også denne lenken for den andre %{name}-regningen
+        other: Bruk også denne lenken for de %{count} andre %{name}-regningene
+      submit: Lagre regning
+      submit_income: Lagre inntekt
+      income_name_label: Kilde
+      income_name_placeholder: Arbeidsgiver, kunde, ekstrajobb
+      income_amount_label: Beløp per utbetaling
+      income_due_on_label: Neste lønningsdag
+      income_account_label: Settes inn på
+      income_frequency_hint: Hvor ofte du får betalt. Velg dagdetaljene slik at de passer lønningsdagen din.
+      income_frequency_label: Hvor ofte du får betalt
+      income_frequency_new_hint: Detaljene for lønningsdagen hentes fra datoen over. Du kan justere planen etter at du har lagret.
+      income_notes_placeholder: Lønn rett på konto, fordeles på to kontoer
+      income_notes_hint: Alt som er verdt å huske om denne inntekten.
+      name_label: Navn
+      name_placeholder: Husleie, strøm, Netflix
+      amount_label: Beløp
+      first_due_on_label: Neste forfall
+      account_label: Betales fra
+      account_blank: Hvilken som helst konto
+      bill_type_label: Type
+      installment_count_label: Antall avdrag
+      installment_count_hint: Planen avsluttes etter så mange avdrag og viser fremdriften fram til da.
+      renews_on_label: Fornyes
+      trial_ends_on_label: Prøveperioden slutter
+      amount_edit_hint: Gjelder regninger som forfaller fra nå av. Det som allerede har forfalt, beholder beløpet det hadde.
+      income_amount_edit_hint: Gjelder lønningsdager fra nå av. Det som allerede har forfalt, beholder beløpet det hadde.
+      cancelled_on_label: Sagt opp
+      cancelled_on_hint: Datoen registreres bare som referanse for deg. Sett regningen på pause for å hindre at fremtidige regninger vises.
+      category_label: Kategori
+      category_blank: Ingen kategori
+      frequency_new_hint: Dagdetaljene hentes fra forfallsdatoen over. Du kan justere planen etter at du har lagret.
+      frequency_label: Hvor ofte
+      frequency_hint: Hvor ofte denne regningen forfaller. Velg dagdetaljene slik at de passer kontoutskriften din.
+      frequency_day_label: På dag
+      frequency_second_day_label: Og dag
+      frequency_weekday_label: Ukedag
+      frequency_month_label: Måned
+    update:
+      success: Regningen er oppdatert
+      success_with_siblings:
+        one: Regningen er oppdatert, og betalingslenken ble kopiert til %{count} annen regning
+        other: Regningen er oppdatert, og betalingslenken ble kopiert til %{count} andre regninger
+    manage:
+      title: Regningene dine finner du på Regninger-siden
+      description: Legg til, rediger, sett på pause og betal alt derfra. Denne siden styrer gjenkjenningen.
+      cta: Åpne alle regninger
+    settings:
+      enable_label: Aktiver faste transaksjoner
+      enable_description: Gjenkjenn mønstre i faste transaksjoner automatisk og vis kommende forventede transaksjoner.
+    settings_updated: Innstillingene for faste transaksjoner er oppdatert
+    info:
+      title: Automatisk mønstergjenkjenning
+      manual_description: Du kan finne mønstre manuelt eller rydde opp i utdaterte faste transaksjoner med knappene over.
+      automatic_description: 'Automatisk gjenkjenning kjøres også etter at:'
+      triggers:
+      - CSV-importer er fullført (transaksjoner, handler, kontoer osv.)
+      - En synkronisering med en leverandør er fullført (Plaid, SimpleFIN osv.)
+    identified: Fant %{count} mønstre for faste transaksjoner
+    identify_already_running: Gjenkjenningen kjører allerede. Sjekk igjen om litt.
+    cleaned_up: Ryddet opp i %{count} utdaterte faste transaksjoner
+    marked_inactive: Satt på pause. Den vises ikke igjen før du gjenopptar den.
+    marked_active: Gjenopptatt.
+    deleted: Regningen er fjernet. Transaksjonene dine ble ikke endret.
+    deleted_income: Inntekten er fjernet. Transaksjonene dine ble ikke endret.
+    confirm_delete: Fjerne %{name} fra regningene dine? Transaksjonene dine forblir akkurat som de er. Dette fjerner bare regningen og betalingsplanen.
+    confirm_delete_income: Fjerne %{name} som inntekt? Transaksjonene dine forblir akkurat som de er. Dette fjerner bare inntekten og planen.
+    marked_as_recurring: Transaksjonen er merket som fast
+    already_exists: Det finnes allerede en manuell fast transaksjon for dette mønsteret
+    creation_failed: Kunne ikke opprette den faste transaksjonen. Sjekk transaksjonsdetaljene og prøv igjen.
+    unexpected_error: Det oppstod en uventet feil under opprettelsen av den faste transaksjonen
+    amount_range: 'Spenn: %{min} til %{max}'
+    empty:
+      title: Fant ingen faste transaksjoner
+      description: Klikk «Finn mønstre» for å gjenkjenne faste transaksjoner automatisk i transaksjonshistorikken din.
+    table:
+      merchant: Navn
+      amount: Beløp
+      frequency: Frekvens
+      next_date: Neste dato
+      last_occurrence: Siste forekomst
+      status: Status
+      actions: Handlinger
+    status:
+      active: Aktiv
+      inactive: På pause
+      suggested: Mulig regning
+      paused: På pause
+      ended: Avsluttet
+    suggested:
+      title: Mulige nye regninger
+      seen_count:
+        one: sett én gang
+        other: sett %{count} ganger
+      collapsed_hint: Trykk for å se over
+      confirm: Legg til regning
+      dismiss: Ikke en regning
+    confirmed: Regningen er lagt til i de faste transaksjonene dine
+    dismissed: Avvist. Dette mønsteret blir ikke foreslått igjen.
+    badges:
+      manual: Manuell
+    transfer_marked_as_recurring: Overføringen er merket som fast
+    transfer_already_exists: Det finnes allerede en fast overføring for dette kontoparet
+    transfer_creation_failed: Kunne ikke opprette den faste overføringen. Sjekk overføringsdetaljene og prøv igjen.
+    transfer_feature_disabled: Faste transaksjoner er deaktivert for denne husholdningen

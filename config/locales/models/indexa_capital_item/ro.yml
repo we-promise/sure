@@ -1,0 +1,7 @@
+---
+ro:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: Este necesară fie variabila de mediu INDEXA_API_TOKEN, fie datele de autentificare (nume de utilizator/document/parolă)

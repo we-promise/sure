@@ -11,24 +11,31 @@ nb:
     create:
       invalid_code: Ugyldig verifiseringskode. Prøv igjen.
     disable:
-      success: To-faktor autentisering er deaktivert
+      success: Tofaktorautentisering er deaktivert
     new:
       code_label: Verifiseringskode
       code_placeholder: Angi 6-sifret kode
-      description: Forbedre kontoens sikkerhet ved å sette opp to-faktor autentisering
-      page_title: Oppsett av to-faktor autentisering
+      description: Forbedre kontoens sikkerhet ved å sette opp tofaktorautentisering
+      page_title: Oppsett av tofaktorautentisering
       scan_description: Bruk en autentiseringsapp som Google Authenticator eller 1Password for å skanne denne QR-koden
       scan_title: 1. Skann QR-kode
       secret_description: Hvis du ikke kan skanne QR-koden, angi denne hemmelige nøkkelen manuelt i autentiseringsappen din
       secret_title: Manuell inntastingskode
-      title: Sett opp to-faktor autentisering
+      title: Sett opp tofaktorautentisering
       verify_button: Verifiser og aktiver 2FA
       verify_description: Angi den 6-sifrede koden fra autentiseringsappen din
       verify_title: 2. Angi verifiseringskode
     verify:
       description: Angi koden fra autentiseringsappen din for å fortsette
-      page_title: Verifiser to-faktor autentisering
-      title: To-faktor autentisering
+      page_title: Verifiser tofaktorautentisering
+      title: Tofaktorautentisering
       verify_button: Verifiser
+      or: eller
+      webauthn_button: Bruk passnøkkel eller sikkerhetsnøkkel
+      webauthn_unsupported: Denne nettleseren støtter ikke passnøkler eller sikkerhetsnøkler.
     verify_code:
       invalid_code: Ugyldig autentiseringskode. Prøv igjen.
+    verify_webauthn:
+      invalid_credential: Kunne ikke bekrefte passnøkkelen eller sikkerhetsnøkkelen. Prøv igjen.
+    webauthn_options:
+      unavailable: Ingen passnøkler eller sikkerhetsnøkler er tilgjengelige for denne kontoen.

@@ -3,9 +3,9 @@ ro:
   family_exports:
     access_denied: Acces interzis
     create:
-      success: Export început. Veți putea să-l descărcați în curând.
-    delete_confirmation: Sigur doriți să ștergeți acest export? Această acțiune nu poate fi anulată.
-    delete_failed_confirmation: Sigur doriți să ștergeți acest export eșuat?
+      success: Export început. Îl vei putea descărca în curând.
+    delete_confirmation: Sigur vrei să ștergi acest export? Această acțiune nu poate fi anulată.
+    delete_failed_confirmation: Sigur vrei să ștergi acest export eșuat?
     destroy:
       success: Export șters cu succes
     export_not_ready: Exportul nu este gata pentru descărcare
@@ -28,4 +28,21 @@ ro:
         actions:
           delete: Șterge
           download: Descărcare
+          mark_failed: Marchează ca eșuat
+          confirm_mark_failed: Acest export este inactiv de ceva timp, iar procesul său în fundal a fost probabil întrerupt. Îl marchezi ca eșuat? Poți crea imediat un export nou.
       empty: Nu există încă exporturi.
+    cancel:
+      cancelled: Exportul a fost marcat ca eșuat. Poți crea imediat un export nou.
+      not_cancellable: Acest export nu poate fi marcat ca eșuat acum — procesul său poate fi încă în desfășurare. Încearcă din nou după ce a fost inactiv timp de o oră.
+    new:
+      dialog_title: Exportă datele
+      dialog_subtitle: Descarcă toate datele tale financiare
+      whats_included: 'Ce include:'
+      accounts_and_balances: Toate conturile și soldurile
+      transaction_history: Istoricul tranzacțiilor
+      investment_trades: Tranzacții de investiții
+      categories_tags_rules: Categorii, etichete și reguli
+      note_label: Notă
+      note_description: Acest export include toate datele tale, dar doar o parte dintre ele pot fi importate înapoi prin funcția de import CSV. Acceptăm importuri de conturi, tranzacții (cu categorie și etichete) și tranzacții de investiții. Celelalte date ale conturilor nu pot fi importate și sunt doar pentru evidența ta.
+      cancel: Anulează
+      export_data: Exportă datele

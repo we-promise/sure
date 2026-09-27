@@ -15,5 +15,7 @@ ro:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: Administratorul nu poate șterge contul cât timp există alți utilizatori. Te rugăm să ștergi toți membrii mai întâi.
+              provider_item_has_other_accounts: Utilizatorul deține conturi conectate la o conexiune de furnizor care are și conturi deținute de alt utilizator. Mută sau deconectează acele conturi înainte de a schimba apartenența la familie/grup.
+              cannot_remove_last_super_admin: Nu poate fi eliminat ultimul super administrator activ. Promovează mai întâi alt utilizator la rolul de super administrator.
             profile_image:
               invalid_file_size: dimensiunea fișierului trebuie să fie mai mică de %{max_megabytes}MB

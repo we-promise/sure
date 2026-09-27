@@ -13,5 +13,12 @@ ro:
       expiration_date: Data expirării
       minimum_payment: Plată minimă
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automat
+      simplefin_balance_sign_credit: Credit (banca îți datorează)
+      simplefin_balance_sign_debt: Datorie (datorezi băncii)
+      simplefin_balance_sign_description: Folosește o suprascriere doar când SimpleFIN raportează un semn ambiguu. Opțiunea Automat continuă să folosească istoricul tranzacțiilor și soldul raportat de furnizor.
+      simplefin_balance_sign_label: Semnificația soldului SimpleFIN
+      treat_balance_as_available_credit_description: Activează dacă banca ta raportează soldul acestui card ca fiind creditul disponibil rămas, în loc de suma datorată. Datoria este apoi calculată din limita de credit raportată de bancă sau din câmpul Credit disponibil, dacă banca nu o furnizează.
+      treat_balance_as_available_credit_label: Soldul reprezintă creditul disponibil
     new:
       title: Introdu detaliile cardului de credit

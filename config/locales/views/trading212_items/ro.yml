@@ -1,0 +1,105 @@
+---
+ro:
+  providers:
+    trading212:
+      name: Trading 212
+      connection_description: Conectează un cont de investiții Trading 212 prin cheie API
+      institution_name: Trading 212
+  trading212_items:
+    defaults:
+      name: Trading 212
+    trading212_item:
+      deletion_in_progress: Ștergere în curs
+      environment_label_live: Cont real
+      environment_label_demo: Cont demo
+      syncing: Se sincronizează
+      requires_update: Cheia API necesită atenție
+      error: Eroare
+      synced: Sincronizat acum %{time}. %{summary}.
+      never_synced: Nesincronizat niciodată.
+      setup_accounts: Configurează conturile
+      delete: Șterge
+      accounts_need_setup: Contul necesită configurare
+      accounts_need_setup_description: Contul tău Trading 212 trebuie conectat la un cont Sure.
+      no_accounts_discovered: Niciun cont Trading 212 nu a fost descoperit încă.
+      no_accounts_discovered_description: Rulează o sincronizare după ce salvezi cheia API pentru a descoperi contul.
+    setup_accounts:
+      page_title: Configurează contul Trading 212
+      dialog_title: Configurează contul tău Trading 212
+      subtitle: Conectează contul tău de investiții Trading 212.
+      info_box:
+        title: Import prin API Trading 212
+        items:
+          item_1: Pozițiile curente, cu prețuri și cantități
+          item_2: Istoricul complet al ordinelor (cumpărări și vânzări)
+          item_3: Dividende și tranzacții în numerar
+      status:
+        fetching_accounts: Se preia contul din Trading 212...
+        no_accounts_found_title: Nu a fost găsit niciun cont.
+        no_accounts_found_description: Sure nu a găsit niciun cont Trading 212. Verifică dacă cheia API este validă.
+      available_accounts:
+        title: Cont disponibil
+        account_type_investment: Investiții
+        account_summary: '%{account_type} • Sold: %{balance}'
+        account_id: 'ID cont: %{account_id}'
+      link_existing:
+        description: Sau conectează contul Trading 212 descoperit la un cont de investiții manual existent.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Selectează un cont...
+      linked_accounts:
+        title: Deja conectate
+        linked_to_html: 'Conectat la: %{account}'
+      buttons:
+        refresh: Reîmprospătează
+        cancel: Anulează
+        back_to_settings: Înapoi la Setări
+        create_selected_accounts: Creează conturile selectate
+        link: Conectează
+        done: Gata
+    sync:
+      status:
+        checking_credentials: Se verifică datele de autentificare Trading 212...
+        importing_account: Se importă contul Trading 212...
+        checking_configuration: Se verifică configurația contului...
+        accounts_need_setup:
+          one: '%{count} cont Trading 212 necesită configurare...'
+          few: '%{count} conturi Trading 212 necesită configurare...'
+          other: '%{count} de conturi Trading 212 necesită configurare...'
+        processing_activity: Se procesează pozițiile și activitatea...
+        calculating_balances: Se calculează soldurile...
+    sync_status:
+      no_accounts: Niciun cont Trading 212 descoperit încă
+      all_linked:
+        one: '%{count} cont conectat'
+        few: '%{count} conturi conectate'
+        other: '%{count} de conturi conectate'
+      partial: 'Conectate: %{linked}, necesită configurare: %{unlinked}'
+    select_existing_account:
+      title: Conectează un cont Trading 212
+      no_accounts_available: Nu există încă niciun cont Trading 212 neconectat disponibil.
+      run_sync_hint: Rulează o sincronizare din Setări > Furnizori după ce salvezi cheia API.
+      wait_for_sync: Așteaptă finalizarea sincronizării de descoperire a contului.
+      balance: Sold
+      link: Conectează
+      cancel: Anulează
+    create:
+      success: Trading 212 a fost configurat cu succes.
+    update:
+      success: Configurația Trading 212 a fost actualizată cu succes.
+    destroy:
+      success: Conexiunea Trading 212 a fost programată pentru ștergere.
+    select_accounts:
+      not_configured: Trading 212 nu este configurat.
+    link_existing_account:
+      not_found: Contul sau configurația Trading 212 nu a fost găsită.
+      only_manual_investment: Doar conturile de investiții manuale pot fi conectate la Trading 212.
+      already_linked: Acest cont Trading 212 este deja conectat.
+      success: Cont conectat cu succes la Trading 212.
+      failed: Conectarea contului Trading 212 a eșuat.
+    complete_account_setup:
+      success:
+        one: A fost creat cu succes %{count} cont Trading 212.
+        few: Au fost create cu succes %{count} conturi Trading 212.
+        other: Au fost create cu succes %{count} de conturi Trading 212.
+      none_selected: Nu a fost selectat niciun cont.
+      none_created: Nu a fost creat niciun cont.

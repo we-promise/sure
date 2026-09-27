@@ -1,0 +1,334 @@
+---
+ro:
+  bills:
+    row_overdue: Restantă
+    row_today: Azi
+    detect:
+      found:
+        one: Am găsit %{count} posibilă factură. Verific-o mai jos.
+        few: Am găsit %{count} posibile facturi. Verifică-le mai jos.
+        other: Am găsit %{count} de posibile facturi. Verifică-le mai jos.
+      none_found: Nu s-au găsit tipare recurente noi. Poți adăuga facturi manual.
+      already_running: Detectarea rulează deja. Revino în câteva momente.
+    feed:
+      calendar_name: Facturi Sure
+    ai_prompts:
+      due_before_paycheck: Ce am de plătit înainte de următorul salariu?
+      subscriptions_up: Care abonamente s-au scumpit anul acesta?
+      monthly_subscriptions: Cât plătesc lunar pentru abonamente?
+      safe_to_spend: Cât pot cheltui fără griji în această perioadă?
+    smart_configurations:
+      show:
+        trigger: Lasă AI-ul să configureze
+        title: Sugestii AI pentru %{name}
+        intro: Bifează modificările pe care vrei să le aplici. Cele nebifate rămân exact cum sunt.
+        no_changes: Această factură corespunde deja istoricului de plăți. Nu este nimic de modificat.
+        failed: Această factură nu poate fi analizată acum. Configurația ei a rămas neschimbată.
+        field_name: Nume
+        field_amount: Sumă
+        field_schedule: Programare
+        field_category: Categorie
+        field_kind: Tip
+        field_autopay: Plată automată
+        uncategorized: Necategorizat
+        autopay_off: Dezactivată
+        autopay_on: Activată
+        apply: Aplică selecția
+    detail:
+      current: Actual
+      next_payment: Următoarea plată
+      around: în jurul datei de %{date}
+      rules: Cum este asociată această factură
+      rule_named: '%{name}'
+      rule_amount_range: de la %{min} la %{max}
+      rule_aliases: Se potrivește și cu %{names}
+      rule_learned_tolerance: Sumele care diferă cu cel mult %{percent} de suma obișnuită sunt asociate cu această factură
+      history_title: Ultimele 12 luni
+      history_aria: Plăți din ultimele douăsprezece luni
+      key_metrics: Pe an
+      year: An
+      spent_per_year: Cheltuit
+      avg_payment: Plată medie
+      average: Media plăților
+      range: '%{min} – %{max}'
+      annualized: Pe an
+      ytd: Plătit anul acesta
+      last_account: Ultimul cont folosit
+      upcoming: Urmează
+      recent_payments: Plăți recente
+      manual_payment: Plată manuală
+      history: Istoric
+      payment_count:
+        one: '%{count} plată'
+        few: '%{count} plăți'
+        other: '%{count} de plăți'
+      notes: Note
+      trial_chip: Perioada de probă se încheie pe %{date}
+      renews_chip: Se reînnoiește pe %{date}
+      cancelled_chip: Anulat pe %{date}
+      price_changes: Modificări de preț
+      price_change_line: '%{from} → %{to}'
+    month_pulse:
+      bill_count:
+        one: '%{count} factură'
+        few: '%{count} facturi'
+        other: '%{count} de facturi'
+      left_to_pay: rămas de plată
+      pulse_paid: plătit
+      pulse_overdue: restant
+      pulse_next_seven: în următoarele 7 zile
+      pulse_bar_aria: '%{percent}% din facturile acestei luni sunt plătite'
+      next_up: Urmează
+      view_upcoming: Vezi ce urmează
+      date_today: Azi
+      date_tomorrow: Mâine
+      unconvertible:
+        one: '%{count} factură nu este inclusă, nu există un curs de schimb disponibil'
+        few: '%{count} facturi nu sunt incluse, nu există un curs de schimb disponibil'
+        other: '%{count} de facturi nu sunt incluse, nu există un curs de schimb disponibil'
+    summary:
+      remaining: 'Rest de plată: %{amount}'
+      paid_headline: 'Plătit: %{amount}'
+      cost_line: În medie %{average} pe plată, aproximativ %{annualized} pe an
+    pane:
+      close: Restrânge detaliile
+    add_bill: Adaugă factură
+    manage: Gestionează
+    find_payment: Găsește plata
+    add_payment: Adaugă plată
+    review_match: Verifică asocierea
+    resolve: Rezolvă
+    manage_payments: Gestionează plățile
+    view_full_bill: Vezi factura completă
+    match:
+      same_merchant: Același comerciant
+      name_matches: Numele se potrivește
+      exact_amount: Sumă exactă
+      amount_off: Diferență de %{amount}
+      due_date: Se potrivește cu data scadenței
+      days_before:
+        one: Cu %{count} zi înainte de scadență
+        few: Cu %{count} zile înainte de scadență
+        other: Cu %{count} de zile înainte de scadență
+      days_after:
+        one: La %{count} zi după scadență
+        few: La %{count} zile după scadență
+        other: La %{count} de zile după scadență
+    attention:
+      needs_review: Asocierea trebuie verificată
+      partial: Parțial · rest de plată %{amount}
+      amount_changed: Suma s-a modificat
+      overdue:
+        one: Restantă de %{count} zi
+        few: Restantă de %{count} zile
+        other: Restantă de %{count} de zile
+    paid_label: Plătită
+    paid_over_short: Plătită, peste
+    installment_progress: Plata %{done_plus_one} din %{total}
+    partial_progress: '%{paid} din %{expected} plătit'
+    cancelled_still_scheduled: Ai marcat-o ca anulată pe %{date}, dar este încă programată, așa că vor continua să apară facturi viitoare.
+    paid_over: Plătit %{paid}, mai mult decât era așteptat
+    remaining_label: rest de plată
+    debt_payment: · plată datorie
+    paid_from: din %{account}
+    amount_range: între %{min} și %{max}
+    possible_duplicate: Posibil duplicat
+    due_label:
+      overdue:
+        one: Restantă de %{count} zi, scadentă pe %{date}
+        few: Restantă de %{count} zile, scadentă pe %{date}
+        other: Restantă de %{count} de zile, scadentă pe %{date}
+      today: Scadentă azi
+      settled: Era scadentă pe %{date}
+      due_since: Scadentă pe %{date}
+      snoozed: Amânată până pe %{date}
+      upcoming:
+        one: Scadentă mâine, %{date}
+        few: Scadentă în %{count} zile, %{date}
+        other: Scadentă în %{count} de zile, %{date}
+    views:
+      aria_label: Vizualizări facturi
+      overview: Prezentare generală
+      calendar: Calendar
+      paycheck: Plan de venituri
+      all: Toate facturile
+    pay_period:
+      paycheck_on: Salariu %{date}
+      before_next_paycheck: Înainte de următorul salariu
+      due_before_date: '%{amount} de plătit înainte de %{date}'
+    paycheck:
+      unconvertible:
+        one: '%{count} obligație nu este inclusă, nu există un curs de schimb disponibil'
+        few: '%{count} obligații nu sunt incluse, nu există un curs de schimb disponibil'
+        other: '%{count} de obligații nu sunt incluse, nu există un curs de schimb disponibil'
+      income_section_title: Programul veniturilor
+      manage: Gestionează
+      add_income: Adaugă venit
+      income_paused: Întrerupt, neplanificat
+      income_detected: Detectat automat, nu stabilește zilele de salariu
+      income_next_payday: următorul pe %{date}
+      income_source_count:
+        one: '%{count} sursă de venit'
+        few: '%{count} surse de venit'
+        other: '%{count} de surse de venit'
+      next_on: Următorul pe %{date}
+      no_upcoming_income: Niciun venit programat de acum înainte.
+      empty:
+        title: Declară programul veniturilor
+        description: Adaugă-ți veniturile ca să vezi ce trebuie să acopere fiecare zi de salariu. Încasările detectate nu îți stabilesc niciodată singure zilele de salariu -- tu le stabilești.
+        action: Adaugă venit
+      all_clear:
+        title: Nimic de acoperit
+        description: Nicio factură nu devine scadentă de acum până pe %{date}, așa că nimic din acest interval nu este deja angajat.
+      safe_after_bills: Disponibil după facturi
+      short_after_bills: Deficit după facturi
+      period_source: ' · %{source}'
+      period_source_multiple: ' · surse de venit: %{count}'
+      before_next_paycheck: Înainte de %{date}
+      no_income_arriving: Nu intră niciun venit
+      income_amount: 'Venit: %{amount}'
+      due_this_period: Scadent în perioadă
+      reserved_ahead: Rezervat în avans
+      safe_short: Disponibil
+      short_short: Deficit
+      reserved_footer:
+        one: Rezervat în avans pentru %{count} factură ulterioară
+        few: Rezervat în avans pentru %{count} facturi ulterioare
+        other: Rezervat în avans pentru %{count} de facturi ulterioare
+      bills_this_period:
+        one: Facturi în această perioadă · %{count}
+        few: Facturi în această perioadă · %{count}
+        other: Facturi în această perioadă · %{count}
+      bills_before_payday:
+        one: Facturi înainte de următoarea zi de salariu · %{count}
+        few: Facturi înainte de următoarea zi de salariu · %{count}
+        other: Facturi înainte de următoarea zi de salariu · %{count}
+      of_total: din %{amount}
+      bridge_label: Înainte de următorul salariu
+      bridge_amount: · %{amount} de plătit
+      bridge_split: Scadente înainte de %{date}, acoperite de %{cash} din conturile tale.
+      shortfall_label: Deficit înainte de următoarea zi de salariu
+      shortfall_amount: · %{amount}
+      shortfall_split: Suma de %{obligations} este scadentă înainte de %{date}, iar în conturile tale sunt %{cash}.
+      shortfall_largest: 'Cea mai mare obligație viitoare:'
+      review_plan: Verifică planul
+      allocation_aria: Din venitul de %{income}, %{due} este scadent acum, %{reserved} este rezervat pentru mai târziu și %{safe} poate fi cheltuit fără griji.
+      allocation_aria_short: Venitul de %{income} merge integral către obligațiile de aici și mai este nevoie de %{short}.
+    reset_feed_token:
+      done: Linkul feedului a fost resetat. Aplicațiile de calendar care folosesc vechiul link nu se vor mai actualiza; abonează-te din nou folosind linkul nou.
+      confirm: Resetezi linkul feedului de calendar? Toate linkurile distribuite anterior nu vor mai funcționa.
+    calendar:
+      subscribe_ical: Abonează-te (iCal)
+      reset_feed: Resetează linkul
+      previous_month: Luna anterioară
+      next_month: Luna următoare
+      today: Azi
+      month_totals: '%{expected} așteptat · %{paid} plătit'
+      empty_month: Nicio factură scadentă luna aceasta.
+    all:
+      search_placeholder: Caută facturi
+      any_status: Orice stare
+      status_filters:
+        overdue: Restante
+        due: Scadente curând
+        partial: Plătite parțial
+        paid: Plătite
+        paused: Întrerupte
+        ended: Închise
+      subscription_monthly: Pe lună
+      subscription_annual: Pe an
+      subscription_active: Active
+      subscription_price_changes: Modificări de preț anul acesta
+      subscription_price_change_line: '%{from} → %{to} (%{percent}%)'
+      any_type: Orice tip
+      sort_due: După următoarea scadență
+      sort_name: După nume
+      sort_amount: După sumă
+      no_matches_title: Niciun rezultat
+      no_matches_description: Încearcă să elimini un filtru sau termenul căutat.
+      col_name: Nume
+      col_type: Tip
+      col_frequency: Frecvență
+      col_amount: Sumă
+      col_next: Următoarea scadență
+      next_short: următoarea pe %{date}
+      col_status: Stare
+      col_actions: Acțiuni
+      monthly_equivalent: '%{amount}/lună'
+      types:
+        bill: Factură
+        subscription: Abonament
+        installment: Plată în rate
+        income: Venit
+        transfer: Transfer
+        other: Altele
+    show:
+      edit: Editează factura
+    index:
+      left_to_pay: rămas de plată
+      paid_so_far: Plătit până acum
+      hero_past_due: '%{amount} restant'
+      hero_next_seven: '%{amount} scadent în următoarele 7 zile'
+      add_bill: Adaugă factură
+      add_income: Adaugă venit
+      review_with_ai: Verifică cu AI
+      detected_review:
+        one: Am găsit %{count} plată recurentă în tranzacțiile tale. Verific-o, ca totalurile de aici să corespundă cu ce plătești de fapt.
+        few: Am găsit %{count} plăți recurente în tranzacțiile tale. Verifică-le, ca totalurile de aici să corespundă cu ce plătești de fapt.
+        other: Am găsit %{count} de plăți recurente în tranzacțiile tale. Verifică-le, ca totalurile de aici să corespundă cu ce plătești de fapt.
+      detected_review_action: Verifică-le
+      needs_review: Necesită verificare
+      notice_trial: Perioada de probă pentru %{name} se încheie pe %{date}
+      notice_renewal: '%{name} se reînnoiește pe %{date}'
+      notice_price: '%{name} și-a schimbat prețul: %{from} → %{to} (%{percent})'
+      notices_routine:
+        one: '%{count} modificare minoră'
+        few: '%{count} modificări minore'
+        other: '%{count} de modificări minore'
+      suggestion_line: '%{entry} pare a fi o plată pentru %{bill}'
+      suggestion_unknown_entry: O tranzacție
+      confidence: Potrivire %{percent}%
+      accept: Aplică
+      reject: Nu este această factură
+      title: Facturi
+      summary_label: Scadente luna aceasta
+      summary_count:
+        one: '%{count} factură scadentă'
+        few: '%{count} facturi scadente'
+        other: '%{count} de facturi scadente'
+      summary_needs_action:
+        one: '%{count} necesită acțiunea ta'
+        few: '%{count} necesită acțiunea ta'
+        other: '%{count} necesită acțiunea ta'
+      all_automatic: toate cu plată automată
+      recurring_label: Angajamente recurente
+      recurring_monthly: '%{amount} pe lună'
+      recurring_annual: '%{amount} pe an'
+      unconvertible:
+        one: '%{count} factură nu este inclusă, nu există un curs de schimb disponibil'
+        few: '%{count} facturi nu sunt incluse, nu există un curs de schimb disponibil'
+        other: '%{count} de facturi nu sunt incluse, nu există un curs de schimb disponibil'
+      overdue: Restante
+      needs_attention: Necesită atenție
+      attention_overdue_total: '%{amount} restant'
+      this_month: Luna aceasta
+      later: După luna aceasta
+      paid_this_month: Plătite luna aceasta
+      dormant: Inactive
+      kpi_remaining: Rămas luna aceasta
+      kpi_paid: Plătit luna aceasta
+      kpi_next_seven: Scadent în următoarele 7 zile
+      kpi_past_due: Restant
+      paid_count:
+        one: '%{count} factură achitată'
+        few: '%{count} facturi achitate'
+        other: '%{count} de facturi achitate'
+      needs_action_count:
+        one: '%{count} necesită acțiunea ta'
+        few: '%{count} necesită acțiunea ta'
+        other: '%{count} necesită acțiunea ta'
+      empty:
+        title: Nicio factură încă
+        description: Facturile sunt cheltuielile tale recurente. Sure le găsește automat din istoricul tranzacțiilor, iar pentru fiecare poți adăuga un link de plată, ca să plătești direct de aici.
+        action: Găsește tranzacții recurente
+        no_history_description: Nicio tranzacție încă. Conectează un cont sau importă istoricul, iar Sure îți va găsi automat facturile; le poți adăuga și manual.

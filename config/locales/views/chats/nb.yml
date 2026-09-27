@@ -1,0 +1,47 @@
+---
+nb:
+  chats:
+    demo_banner_title: Demomodus er aktiv
+    demo_banner_message: Du bruker LLM-er via kreditter fra Cloudflare Workers AI. Resultatene kan variere siden kodebasen ble testet på `gpt-4.1`, men tokenene dine sendes ikke noe annet sted for å brukes til trening! 🤖
+    thinking: Tenker ...
+    worker_unhealthy_warning: AI-svar blir kanskje ikke levert akkurat nå – bakgrunnsprosessen (worker) ser ut til å være nede eller overbelastet. Sjekk at Sidekiq-workeren kjører.
+    ai_greeting:
+      greeting: Hei %{name}! Jeg er en AI-assistent (stor språkmodell) som kan hjelpe deg med økonomien. Jeg har tilgang til nettet og kontodataene dine.
+      there: der
+      commands_hint_html: Du kan bruke <span class="bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs">/</span> for å få tilgang til kommandoer
+      questions_intro: 'Her er noen spørsmål du kan stille:'
+      evaluate_portfolio: Vurder investeringsporteføljen min
+      spending_insights: Vis innsikt i forbruket mitt
+      unusual_patterns: Finn uvanlige mønstre
+    chat:
+      edit_chat_title: Rediger tittel på chat
+      delete_chat: Slett chat
+    chat_nav:
+      all_chats: Alle chatter
+      start_new_chat: Start ny chat
+      edit_chat_title: Rediger tittel på chat
+      delete_chat: Slett chat
+    error:
+      retry: Prøv igjen
+    destroy:
+      notice: Chatten er slettet
+    index:
+      chats: Chatter
+      new_chat: Ny chat
+    new:
+      default_title: Ny chat %{timestamp}
+    update:
+      success: Chatten er oppdatert
+    ai_consent:
+      title: Aktiver AI-chatter
+      available_description: AI-chat kan svare på økonomiske spørsmål og gi innsikt basert på dataene dine. For å bruke denne funksjonen må du aktivere den eksplisitt.
+      unavailable_description_html: For å bruke AI-assistenten må du angi miljøvariabelen <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code> eller konfigurere den i innstillingene for selvhosting på instansen din.
+      enable_button: Aktiver AI-chatter
+      disable_note: Kan deaktiveres når som helst. Alle data som sendes til LLM-leverandørene våre, anonymiseres.
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: Assistentens resonnement
+    tool_calls:
+      tool_calls: Verktøykall
+      function: 'Funksjon:'
+      arguments: 'Argumenter:'

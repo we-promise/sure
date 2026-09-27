@@ -2,7 +2,7 @@
 nb:
   plaid_items:
     create:
-      success: Konto tilkobling vellykket. Vennligst vent mens kontoer synkroniseres.
+      success: Kontoen ble koblet til. Vent mens kontoene synkroniseres.
     destroy:
       success: Kontoer planlagt for sletting.
     plaid_item:
@@ -18,8 +18,24 @@ nb:
       error: Feil oppsto under synkronisering av data
       no_accounts_description: Vi kunne ikke laste inn noen kontoer fra denne finansinstitusjonen.
       no_accounts_title: Ingen kontoer funnet
-      requires_update: Krever re-autentisering
+      requires_update: Koble til på nytt
       status: Sist synkronisert for %{timestamp} siden
       status_never: Krever datasynkronisering
       syncing: Synkroniserer...
-      update: Oppdater tilkobling
+      update: Oppdater
+      add_accounts: Legg til kontoer
+      deletion_in_progress: (sletting pågår ...)
+      provider_name: Plaid
+    errors:
+      link_token_generic: Vi kunne ikke åpne Plaid akkurat nå. Prøv igjen, og sjekk serverloggene for detaljer hvis problemet vedvarer.
+      link_token_with_message: 'Plaid kunne ikke åpne tilkoblingen: %{message}'
+    select_existing_account:
+      no_available_accounts: Ingen tilgjengelige Plaid-kontoer å koble til. Koble til en ny Plaid-konto først.
+      title: Koble %{account_name} til Plaid
+      description: Velg en Plaid-konto som skal kobles til den eksisterende kontoen din
+      cancel: Avbryt
+      link_account: Koble til konto
+    link_existing_account:
+      invalid_account: Ugyldig Plaid-konto valgt
+      already_linked: Denne Plaid-kontoen er allerede koblet til
+      success: Kontoen ble koblet til Plaid

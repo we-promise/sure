@@ -1,0 +1,35 @@
+---
+nb:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        frequency: Frekvens
+        interval: Intervall
+        day_of_month: Dag i måneden
+        weekday: Ukedag
+        weekday_ordinal: Uke i måneden
+        month_of_year: Måned
+      recurring_transaction/recurrence_rules:
+        base: 'Gjentakelsesregel:'
+        frequency: Frekvens
+        interval: Intervall
+        day_of_month: Dag i måneden
+        weekday: Ukedag
+        weekday_ordinal: Uke i måneden
+        month_of_year: Måned
+    errors:
+      models:
+        recurrence_rule:
+          day_spec_required: Velg nøyaktig én av en dag i måneden eller en ukedag
+          attributes:
+            weekday:
+              required_for_weekly: er påkrevd for en ukentlig regel
+            weekday_ordinal:
+              not_allowed_for_weekly: gjelder ikke for en ukentlig regel
+              required_with_weekday: er påkrevd når en ukedag er angitt
+              not_allowed_without_weekday: gjelder bare når en ukedag er angitt
+            day_of_month:
+              not_allowed_for_weekly: gjelder ikke for en ukentlig regel
+            month_of_year:
+              required_for_yearly: er påkrevd for en årlig regel
+              not_allowed: gjelder bare for en årlig regel

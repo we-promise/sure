@@ -20,6 +20,8 @@ ro:
       submit_create: Creează cont
       account_creation_disabled: Crearea conturilor prin autentificare unică este dezactivată. Contactează un administrator.
       cancel: Anulează
+      no_pending_oidc: Nu a fost găsită nicio autentificare OIDC în așteptare
+      submit_accept_invitation: Acceptă invitația
     new_user:
       title: Finalizează contul
       heading: Creează-ți contul
@@ -31,3 +33,10 @@ ro:
       last_name_placeholder: Introdu numele de familie
       submit: Creează cont
       cancel: Anulează
+      no_pending_oidc: Nu a fost găsită nicio autentificare OIDC în așteptare
+    create_link:
+      no_pending_oidc: Nu a fost găsită nicio autentificare OIDC în așteptare
+    create_user:
+      no_pending_oidc: Nu a fost găsită nicio autentificare OIDC în așteptare
+      account_creation_disabled: Crearea conturilor prin autentificare unică este dezactivată. Contactează un administrator.
+      account_created: Bun venit! Contul tău a fost creat.

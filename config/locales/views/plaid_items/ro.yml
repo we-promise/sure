@@ -19,8 +19,24 @@ ro:
       no_accounts_description: Nu am putut încărca niciun cont de la această instituție
         financiară.
       no_accounts_title: Nu s-au găsit conturi
-      requires_update: Necesită reautentificare
+      requires_update: Reconectează
       status: Ultima sincronizare acum %{timestamp}
       status_never: Necesită sincronizarea datelor
       syncing: Se sincronizează...
       update: Actualizează conexiunea
+      add_accounts: Adaugă conturi
+      deletion_in_progress: (ștergere în curs...)
+      provider_name: Plaid
+    errors:
+      link_token_generic: Nu am putut deschide Plaid acum. Te rugăm să încerci din nou, iar dacă problema persistă, verifică jurnalele serverului pentru detalii.
+      link_token_with_message: 'Plaid nu a putut deschide conexiunea: %{message}'
+    select_existing_account:
+      no_available_accounts: Nu există conturi Plaid disponibile pentru conectare. Te rugăm să conectezi mai întâi un cont Plaid nou.
+      title: Conectează %{account_name} la Plaid
+      description: Selectează un cont Plaid pe care să îl conectezi la contul tău existent
+      cancel: Anulează
+      link_account: Conectează contul
+    link_existing_account:
+      invalid_account: Cont Plaid invalid selectat
+      already_linked: Acest cont Plaid este deja conectat
+      success: Contul a fost conectat cu succes la Plaid

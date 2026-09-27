@@ -2,7 +2,7 @@
 nb:
   layouts:
     application:
-      privacy_mode: Veksle personvernmodus
+      privacy_mode: Slå personvernmodus av/på
       skip_to_main: Hopp til hovedinnhold
       nav:
         assistant: Assistent
@@ -10,6 +10,15 @@ nb:
         home: Hjem
         reports: Rapporter
         transactions: Transaksjoner
+        bills: Regninger
+        plan: Plan
+        goals: Mål
+      insights: Innsikt
+      resize_left_sidebar: Endre størrelse på kontosidepanelet
+      resize_right_sidebar: Endre størrelse på assistentpanelet
+      release_highlight:
+        title: Nyheter
+        done: Skjønner
     auth:
       existing_account: Har du allerede en konto?
       no_account: Ny hos %{product_name}?
@@ -19,6 +28,14 @@ nb:
       footer:
         privacy_policy: Personvernerklæring
         terms_of_service: Vilkår for bruk
+      confirm_dialog:
+        are_you_sure: Er du sikker?
+        cannot_be_undone: Denne handlingen kan ikke angres.
+        confirm: Bekreft
+      notification_tray:
+        download_complete: Nedlastingen er fullført
+        download_failed: Nedlastingen mislyktes. Prøv igjen.
+        download_location: Filen ligger i mappen Nedlastinger.
     trial:
       open_demo: Åpen demo
       data_deleted_in_days: Data slettes om %{days} dager

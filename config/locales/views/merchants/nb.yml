@@ -3,26 +3,43 @@ nb:
   family_merchants:
     create:
       error: 'Feil ved oppretting av forhandler: %{error}'
-      success: Ny forhandler opprettet vellykket
+      success: Ny forhandler er opprettet
     destroy:
-      success: Forhandler slettet vellykket
+      success: Forhandleren er slettet
+      unlinked_success: Forhandleren er fjernet fra transaksjonene dine
     edit:
       title: Rediger forhandler
     form:
       name_placeholder: Forhandlernavn
+      website_placeholder: Nettsted (f.eks. starbucks.com)
+      website_hint: Oppgi forhandlerens nettsted for å vise logoen automatisk
     index:
       empty: Ingen forhandlere ennå
       new: Ny forhandler
       title: Forhandlere
-      family_title: Familieforhandlere
-      family_empty: Ingen familieforhandlere ennå
+      family_title: Forhandlere i din %{moniker}
+      family_empty: Ingen forhandlere i din %{moniker} ennå
       provider_title: Leverandørforhandlere
-      provider_empty: Ingen leverandørforhandlere er koblet til denne familien ennå
+      provider_empty: Ingen leverandørforhandlere er koblet til din %{moniker} ennå
       provider_read_only: Leverandørforhandlere synkroniseres fra dine tilkoblede institusjoner. De kan ikke redigeres her.
       table:
         merchant: Forhandler
         actions: Handlinger
         source: Kilde
+      import: Importer forhandlere
+      merge: Slå sammen forhandlere
+      provider_info: Disse forhandlerne ble oppdaget automatisk via banktilkoblingene dine eller AI. Du kan redigere dem for å lage din egen kopi, eller fjerne dem for å koble dem fra transaksjonene dine.
+      enhance_info:
+        one: '%{count} leverandørforhandler mangler nettstedsinformasjon. Forbedre med AI for å finne nettsteder, vise logoer og slå sammen dupliserte forhandlere.'
+        other: '%{count} leverandørforhandlere mangler nettstedsinformasjon. Forbedre med AI for å finne nettsteder, vise logoer og slå sammen dupliserte forhandlere.'
+      enhance_button: Forbedre med AI
+      search_family_merchants: Søk i husholdningens forhandlere...
+      search_provider_merchants: Søk i leverandørforhandlere...
+      no_family_merchants_found: Fant ingen samsvarende forhandlere i husholdningen
+      no_provider_merchants_found: Fant ingen samsvarende leverandørforhandlere
+      per_page: per side
+      unlinked_title: Nylig frakoblet
+      unlinked_info: Disse forhandlerne ble nylig fjernet fra transaksjonene dine. De forsvinner fra listen etter 30 dager med mindre de knyttes til en transaksjon igjen.
     merchant:
       confirm_accept: Slett forhandler
       confirm_body: Er du sikker på at du vil slette denne forhandleren? Fjerning av denne forhandleren
@@ -33,4 +50,33 @@ nb:
     new:
       title: Ny forhandler
     update:
-      success: Forhandler oppdatert vellykket
+      success: Forhandleren er oppdatert
+      converted_success: Forhandleren er konvertert og oppdatert
+    family_merchant:
+      edit: Rediger
+      delete: Slett
+    merge:
+      title: Slå sammen forhandlere
+      description: Velg en målforhandler og forhandlerne som skal slås sammen med den. Alle transaksjoner fra de sammenslåtte forhandlerne flyttes til målforhandleren.
+      target_label: Slå sammen med (mål)
+      select_target: Velg målforhandler...
+      sources_label: Forhandlere som skal slås sammen
+      sources_search_placeholder: Søk etter forhandlere...
+      no_merchants_found: Fant ingen samsvarende forhandlere
+      sources_hint: De valgte forhandlerne slås sammen med målforhandleren. Husholdningens forhandlere slettes, og leverandørforhandlere kobles fra.
+      submit: Slå sammen valgte
+    perform_merge:
+      success:
+        one: Slo sammen %{count} forhandler
+        other: Slo sammen %{count} forhandlere
+      no_merchants_selected: Ingen forhandlere er valgt for sammenslåing
+      target_not_found: Fant ikke målforhandleren
+      invalid_merchants: Ugyldige forhandlere valgt
+    provider_merchant:
+      edit: Rediger
+      remove: Fjern
+      remove_confirm_title: Fjerne forhandler?
+      remove_confirm_body: Er du sikker på at du vil fjerne %{name}? Alle tilknyttede transaksjoner kobles fra denne forhandleren, men selve forhandleren slettes ikke.
+    enhance:
+      success: Forbedring av leverandørforhandlere har startet. Forhandlerne forbedres og duplikater slås sammen om kort tid.
+      already_running: Forbedringen pågår allerede. Vent til den er ferdig.

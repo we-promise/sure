@@ -1,4 +1,13 @@
 ---
 ro:
   provider_warnings:
-    limited_investment_data: "Datele de investiții de la acest furnizor sunt limitate. Etichetele de activitate (Cumpărare, Vânzare, Dividend) nu sunt disponibile, ceea ce poate afecta acuratețea bugetului. Luați în considerare crearea de reguli pentru a exclude sau categoriza tranzacțiile de investiții."
+    limited_investment_data: "Datele de investiții de la acest furnizor sunt limitate. Etichetele de activitate (Cumpărare, Vânzare, Dividend) nu sunt disponibile, ceea ce poate afecta acuratețea bugetului. Ia în considerare crearea de reguli pentru a exclude sau categoriza tranzacțiile de investiții."
+    lunchflow_accounts_failed:
+      one: 'Import Lunchflow: actualizarea a eșuat pentru %{count} cont'
+      few: 'Import Lunchflow: actualizarea a eșuat pentru %{count} conturi'
+      other: 'Import Lunchflow: actualizarea a eșuat pentru %{count} de conturi'
+    lunchflow_transactions_failed:
+      one: 'Import Lunchflow: preluarea tranzacțiilor a eșuat pentru %{count} cont'
+      few: 'Import Lunchflow: preluarea tranzacțiilor a eșuat pentru %{count} conturi'
+      other: 'Import Lunchflow: preluarea tranzacțiilor a eșuat pentru %{count} de conturi'
+    lunchflow_import_error: 'Import Lunchflow: %{error}'

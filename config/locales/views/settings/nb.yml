@@ -4,12 +4,24 @@ nb:
     settings:
       payments:
         renewal: "Bidraget ditt fortsetter den %{date}."
+        cancellation: Bidraget ditt avsluttes %{date}.
   settings:
     payments:
       show:
         page_title: Betaling
-        subscription_subtitle: Oppdater abonnementet og betalingsdetaljene dine
-        subscription_title: Administrer abonnement
+        subscription_subtitle: Oppdater kortopplysningene dine
+        subscription_title: Administrer bidrag
+        currently_on_plan: 'Nåværende nivå:'
+        trialing: Du bruker for øyeblikket den åpne demoen av %{product_name}
+        trial_days_left:
+          one: Dataene slettes om %{count} dag
+          other: Dataene slettes om %{count} dager
+        not_contributing_prefix: Du
+        not_contributing_emphasis: bidrar ikke for øyeblikket
+        contributions_note: Bidrag til %{product_name} vises her.
+        manage: Administrer
+        choose_level: Velg nivå
+        payment_via_stripe: Betaling via Stripe
     preferences:
       show:
         country: Land
@@ -27,18 +39,79 @@ nb:
         theme_system: System
         theme_title: Tema
         timezone: Tidssone
+        default_account_order: Standard kontorekkefølge
+        translations_notice: Merk at vi fortsatt jobber med oversettelser til flere språk.
+        budget_title: Budsjett
+        budget_subtitle: Konfigurer hvordan budsjettene dine fungerer
+        month_start_day: Budsjettmåneden starter
+        month_start_day_hint: Angi når budsjettmåneden din starter (f.eks. lønningsdag)
+        month_start_day_warning: Budsjettene og beregningene for hittil i måneden bruker denne startdagen i stedet for den 1. i hver måned.
+        personal_budgets: Personlige budsjetter
+        personal_budgets_hint: Aktiver egne budsjetter for hvert medlem av husholdningen.
+        household_budget_enabled: Husholdningsbudsjett
+        household_budget_enabled_hint: Behold et felles husholdningsbudsjett ved siden av de personlige budsjettene. Slå av for å bare bruke personlige budsjetter.
+        budget_sharing_title: Budsjettdeling
+        budget_sharing_subtitle: La andre medlemmer se eller redigere det personlige budsjettet ditt
+        budget_sharing_no_members: Det finnes ingen andre medlemmer i din %{moniker} å dele med
+        budget_sharing_permission_label: Tilgang for %{name}
+        budget_sharing_permissions:
+          none: Ingen tilgang
+          read_only: Kun visning
+          read_write: Kan redigere
+        currencies_title: Valutaer – %{moniker}
+        currencies_subtitle: Velg hvilke valutaer som vises i beløpsfelter for din %{moniker}
+        base_currency_label: Basisvaluta
+        base_currency_badge: Basisvaluta
+        additional_currencies_label: Ekstra valutaer
+        no_additional_currencies: Ingen valgt
+        currencies_more: +%{count} til
+        manage_currencies: Administrer valutaer
+        manage_currencies_subtitle: Fjern valutaene du aldri bruker, eller begrens listen til bare noen få.
+        select_all_currencies: Velg alle
+        select_base_only: Bare basisvaluta
+        currency_search_placeholder: Søk etter valutaer
+        no_matching_currencies: Fant ingen valutaer
+        selected_currencies_count:
+          one: '%{count} valgt'
+          other: '%{count} valgt'
+        save_currencies: Lagre valutaer
+        sharing_title: Deling – %{moniker}
+        sharing_subtitle: Styr hvordan kontoer deles i din %{moniker}
+        sharing_default_label: Standard deling for nye kontoer
+        sharing_shared: Del med alle medlemmer
+        sharing_private: Hold privat som standard
+        preview:
+          title: Aktiver forhåndsversjonsfunksjoner
+          description: Bli med og test funksjoner under utvikling som er merket preview eller canary.
     appearances:
       show:
         modals_title: Modaler
         modals_subtitle: Tilpass oppførselen til modaler
         disable_modal_click_outside_title: Hold modaler åpne ved klikk utenfor
         disable_modal_click_outside_description: Forhindrer at modaler lukkes ved klikk utenfor. Nyttig for å unngå å miste ulagrede endringer ved et uhell.
+        page_title: Utseende
+        theme_title: Tema
+        theme_subtitle: Velg et foretrukket tema for appen
+        theme_dark: Mørk
+        theme_light: Lys
+        theme_system: System
+        transactions_title: Transaksjoner
+        transactions_subtitle: Tilpass hvordan transaksjoner vises
+        dashboard_title: Oversikt
+        dashboard_subtitle: Tilpass hvordan oversikten vises
+        dashboard_two_column_title: Oppsett med to kolonner
+        dashboard_two_column_description: Vis moduler på oversikten i to kolonner på store skjermer, med bredde- og høydekontroller i toppfeltet til hver modul. Når dette er av, stables modulene i én kolonne.
+        dashboard_account_groups_title: Vis utvidet som standard
+        dashboard_account_groups_description: Disse kontoseksjonene vises utvidet på oversikten og i kontosidefeltet. Du kan fortsatt skjule dem manuelt når som helst.
+        split_grouped_title: Grupper oppdelte transaksjoner
+        split_grouped_description: Vis oppdelte transaksjoner gruppert under hovedtransaksjonen i transaksjonslisten. Når dette er av, vises delene som egne rader.
     profiles:
       destroy:
         cannot_remove_self: Du kan ikke fjerne deg selv fra din egen konto.
         member_removal_failed: Det oppsto et problem med å fjerne medlemmet.
-        member_removed: Medlemmet ble fjernet vellykket.
+        member_removed: Medlemmet ble fjernet.
         not_authorized: Du er ikke autorisert til å fjerne medlemmer.
+        member_owns_other_family_data: Dette medlemmet eier fortsatt kontoer i en annen husholdning og kan ikke fjernes. Overfør eller fjern disse kontoene først.
       show:
         confirm_delete:
           body: Er du sikker på at du vil permanent slette kontoen din? Denne handlingen er irreversibel.
@@ -47,8 +120,8 @@ nb:
           body: Er du sikker på at du vil tilbakestille kontoen din? Dette vil slette alle kontoene dine, kategorier, forhandlere, tagger og andre data. Denne handlingen kan ikke angres.
           title: Tilbakestill konto?
         confirm_reset_with_sample_data:
-          body: Are you sure you want to reset your account and load sample data? This will delete your existing data and replace it with demo data so you can explore Sure safely.
-          title: Reset account and load sample data?
+          body: Er du sikker på at du vil tilbakestille kontoen din og laste inn eksempeldata? Dette sletter de eksisterende dataene dine og erstatter dem med demodata, slik at du trygt kan utforske Sure.
+          title: Tilbakestille kontoen og laste inn eksempeldata?
         confirm_remove_invitation:
           body: Er du sikker på at du vil fjerne invitasjonen for %{email}?
           title: Fjern invitasjon
@@ -61,31 +134,607 @@ nb:
           dataene dine og kan ikke angres.
         reset_account: Tilbakestill konto
         reset_account_warning: Tilbakestilling av kontoen din vil slette alle kontoene dine, kategorier, forhandlere, tagger og andre data, men beholde brukerkontoen din intakt.
-        reset_account_with_sample_data: Reset account and load sample data
-        reset_account_with_sample_data_warning: Resetting your account will delete all your existing data and then load fresh sample data so you can explore Sure with a pre-filled environment.
+        reset_account_with_sample_data: Tilbakestill og last inn eksempeldata
+        reset_account_with_sample_data_warning: Slett alle de eksisterende dataene dine og last deretter inn nye eksempeldata, slik at du kan utforske med et ferdig utfylt miljø.
         email: E-post
         first_name: Fornavn
         household_form_input_placeholder: Angi husholdningsnavn
         household_form_label: Husholdningsnavn
-        household_subtitle: Inviter familiemedlemmer, partnere og andre individer.  Inviterte
-          kan logge inn på husholdningen din og få tilgang til dine delte kontoer.
+        household_subtitle: Inviterte kan logge inn på kontoen til din %{moniker} og få tilgang til delte ressurser.
         household_title: Husholdning
         invitation_link: Invitasjonslenke
         invite_member: Legg til medlem
         last_name: Etternavn
-        page_title: Konto
+        page_title: Profilinformasjon
         pending: Venter
         profile_subtitle: Tilpass hvordan du vises på %{product_name}
-        profile_title: Profil
+        profile_title: Personlig
         remove_invitation: Fjern invitasjon
         remove_member: Fjern medlem
         save: Lagre
+        group_form_input_placeholder: Skriv inn gruppenavn
+        group_form_label: Gruppenavn
+        group_title: Gruppemedlemmer
+        resend_confirmation_link: be om en ny bekreftelses-e-post
+        unconfirmed_email_notice_html: Du har bedt om å endre e-postadressen din til %{email}. Gå til e-posten din og bekreft for at endringen skal tre i kraft. Hvis du ikke har mottatt e-posten, kan du sjekke søppelpostmappen eller %{resend_link}.
     securities:
       show:
         page_title: Sikkerhet
+        encryption_warning:
+          title: Krypteringsnøkler mangler
+          intro: 'Sensitive data (API-nøkler, leverandørtokens, MFA-hemmeligheter og personopplysninger) lagres ukryptert. For å aktivere kryptering må du angi følgende nøkler i miljøvariablene eller i Rails credentials:'
+          keys:
+            - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+            - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+            - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: 'Generer et sett med: bin/rails db:encryption:init'
+        sso_title: Tilkoblede kontoer
+        sso_subtitle: Administrer kontotilkoblingene dine for enkel pålogging
+        sso_disconnect: Koble fra
+        sso_last_used: Sist brukt
+        sso_never: Aldri
+        sso_no_email: Ingen e-post
+        sso_no_identities: Ingen SSO-kontoer er tilkoblet
+        sso_connect_hint: Logg ut og logg inn med en SSO-leverandør for å koble til en konto.
+        sso_confirm_title: Koble fra kontoen?
+        sso_confirm_body: Er du sikker på at du vil koble fra %{provider}-kontoen din? Du kan koble den til igjen senere ved å logge inn med den leverandøren på nytt.
+        sso_confirm_button: Koble fra
+        sso_warning_message: Dette er den eneste påloggingsmetoden din. Du bør angi et passord i sikkerhetsinnstillingene før du kobler fra, ellers kan du bli utestengt fra kontoen din.
+    mcp:
+      show:
+        page_title: MCP-server
+        connect_title: Koble til en AI-assistent
+        connect_subtitle: Lim inn denne URL-en i Claude.ai (eller en annen MCP-kompatibel klient) for å koble den til Sure-kontoen din.
+        copy_url: Kopier
+        copied: Kopiert!
+        how_to_connect_title: Slik kobler du til Claude
+        step_1: Åpne Claude.ai og gå til Settings → Customize → Connectors.
+        step_2: Klikk på «Add connector» og lim inn MCP-server-URL-en ovenfor.
+        step_3: Klikk på Connect – du blir sendt til Sure for å logge inn og gi tilgang.
+        step_4: Når tilgangen er gitt, kan Claude lese kontoene, transaksjonene og saldodataene dine.
+        connected_title: Tilkoblede klienter
+        connected_subtitle: Disse appene har for øyeblikket tilgang til Sure-dataene dine. Tilbakekall tilgangen for dem du ikke lenger bruker.
+        unknown_client: Ukjent klient
+        connected_ago: Tilkoblet for %{time} siden
+        revoke: Tilbakekall
+        revoke_confirm: Tilbakekalle tilgangen for denne klienten?
+      revoke:
+        revoked: Tilkoblingen ble tilbakekalt.
+    providers:
+      update:
+        updated_successfully: Leverandørinnstillingene ble oppdatert
+        no_changes: Ingen endringer ble gjort
+      not_authorized: Ikke autorisert
+      bank_sync:
+        page_title: Banksynkronisering
+        lede: Koble til eksterne kontoer slik at transaksjoner, saldoer og beholdninger hentes inn i Sure automatisk.
+      status:
+        ok: Tilkoblet
+        warn: Krever handling
+        err: Feil
+        "off": Ikke konfigurert
+      maturity:
+        beta: Beta
+        alpha: Alfa
+      drawer_trust_statement: Kun lesetilgang. Sure kan aldri flytte penger, og påloggingsinformasjonen din lagres kryptert.
+      drawer_trust_statement_encryption_unconfigured: Kun lesetilgang. Sure kan aldri flytte penger. Konfigurer eksplisitte krypteringsnøkler før du lagrer påloggingsinformasjon for leverandører i produksjon.
+      provider_setup_encryption_warning:
+        title: Krypteringsnøkler mangler
+        message: Denne selvhostede installasjonen har ikke konfigurert eksplisitte krypteringsnøkler for Active Record. Konfigurer primary_key, deterministic_key og key_derivation_salt før du lagrer påloggingsinformasjon for leverandører i produksjon.
+      setup_steps:
+        eyebrow: Oppsett
+        need_help: Trenger du hjelp?
+      connect: Koble til
+      groups:
+        your_connections: Dine tilkoblinger
+        available: Tilgjengelige
+        empty_available: Alle tilgjengelige leverandører er tilkoblet.
+      health_strip:
+        connected: tilkoblet
+        needs_attention: krever oppmerksomhet
+        accounts_syncing: kontoer synkroniseres
+        last_synced: Sist synkronisert for %{time} siden
+      meta:
+        sync_error: Synkroniseringsfeil
+        no_recent_sync: Synkronisering er forsinket
+        reconsent_required: Nytt samtykke kreves
+        reconsent_needed:
+          one: Nytt samtykke kreves om %{count} dag
+          other: Nytt samtykke kreves om %{count} dager
+        last_synced: Synkronisert for %{time} siden
+      sync_all: Synkroniser alle
+      sync_all_in_progress: Synkroniserer alle tilkoblede leverandører …
+      sync_all_recently: Synkronisering pågår allerede. Prøv igjen om litt.
+      sync_provider: Synkroniser nå
+      sync_provider_in_progress: Synkronisering startet.
+      recently_synced: Nylig synkronisert. Prøv igjen om litt.
+      taglines:
+        akahu: Synkroniser finansinstitusjoner i New Zealand via Akahu.
+        simplefin: Koble til amerikanske bankkontoer via den åpne SimpleFIN-protokollen.
+        lunchflow: Koble til over 20 000 banker i over 40 land (Storbritannia, EU, USA med flere!)
+        redbark: Synkroniser australske bankkontoer via Redbark open banking.
+        monobank: Synkroniser ukrainske Monobank-kort og -sparebokser («jars») med et personlig API-token.
+        fio: Synkroniser en Fio banka-konto med et API-token med kun lesetilgang.
+        enable_banking: Synkroniser europeiske bankkontoer via PSD2 open banking.
+        coinstats: Følg hele kryptoporteføljen din på tvers av lommebøker og børser.
+        wise: Synkroniser Wise-saldoer i flere valutaer og internasjonale overføringer automatisk.
+        mercury: Synkroniser Mercury-bedriftskontoene dine automatisk.
+        brex: Synkroniser Brex-konto- og firmakortaktivitet med kun lesetilgang.
+        coinbase: Importer kryptobeholdningene dine fra Coinbase og følg utviklingen.
+        binance: Synkroniser spot-saldoene dine hos Binance med en API-nøkkel med kun lesetilgang.
+        kraken: Synkroniser Kraken-saldoer og utførte spothandler med en API-nøkkel med kun lesetilgang.
+        coinspot: Synkroniser CoinSpot-saldoer, AUD-verdier, overføringer, innskudd, uttak og ordrehistorikk med en API-nøkkel med kun lesetilgang.
+        onchain_wallet: Følg Bitcoin-, EVM- og Solana-lommebøker du selv forvalter, via de offentlige adressene.
+        snaptrade: Koble til meglerkontoer via SnapTrades aggregeringsnettverk.
+        trading212: Synkroniser Trading 212-investeringsporteføljen din med en API-nøkkel med kun lesetilgang.
+        trade_republic: Synkroniser Trade Republic-investeringskontoen din via sikker nettpålogging med kun lesetilgang.
+        ibkr: Synkroniser Interactive Brokers-investeringskontoer via Flex Query-importer.
+        questrade: Synkroniser Questrade-investeringskontoene dine direkte via Questrade-API-et.
+        indexa_capital: Følg den automatiserte investeringsporteføljen din hos Indexa Capital.
+        sophtron: Koble til banker og forsyningsselskaper i USA og Canada.
+        plaid: Koble til tusenvis av amerikanske finansinstitusjoner via Plaid.
+        plaid_eu: Koble til europeiske finansinstitusjoner via Plaid (PSD2 / Open Banking).
+      search_filters:
+        aria_label: Søk etter leverandører
+        placeholder: Søk etter leverandører
+        chips:
+          all: Alle
+          bank: Banker
+          crypto: Krypto
+          investment: Investeringer
+      empty_filter: Ingen leverandører samsvarer med filteret.
+      clear_filter: Fjern filtre
+      encryption_error:
+        title: Krypteringsnøkler mangler
+        message: Banksynkronisering krever at Active Record-kryptering er konfigurert. Angi primary_key, deterministic_key og key_derivation_salt i Rails credentials eller i miljøvariablene.
+      provider_form:
+        save_and_connect: Lagre og koble til
+      coinbase_panel:
+        setup_instructions: 'Slik kobler du til Coinbase:'
+        step1_html: Gå til <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">API-innstillingene i Coinbase</a>
+        step2: Opprett en ny API-nøkkel med kun lesetillatelser (vise kontoer, vise transaksjoner)
+        step3: Kopier API-nøkkelen og API-hemmeligheten, og lim dem inn nedenfor
+        api_key_label: API-nøkkel
+        api_key_placeholder: Skriv inn Coinbase-API-nøkkelen din
+        api_secret_label: API-hemmelighet
+        api_secret_placeholder: Skriv inn Coinbase-API-hemmeligheten din
+        connect_button: Koble til Coinbase
+        syncing: Synkroniserer...
+        sync: Synkroniser
+        disconnect_confirm: Er du sikker på at du vil koble fra denne Coinbase-tilkoblingen? De synkroniserte kontoene dine blir gjort om til manuelle kontoer.
+      binance_panel:
+        setup_instructions: 'Opprett en API-nøkkel med kun lesetilgang for å koble til Binance:'
+        step1_html: Gå til <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">API-administrasjon i Binance</a>
+        step2: Opprett en ny API-nøkkel med bare tillatelsen «Enable Reading»
+        step3: Lim inn API-nøkkelen og hemmeligheten nedenfor
+        no_withdraw_title: Bare nøkkel med lesetilgang
+        no_withdraw_body: Ikke aktiver uttakstillatelser når du oppretter Binance-API-nøkkelen. Sure trenger bare lesetilgang.
+        ip_hint_title: IP-hviteliste kreves
+        ip_hint_body: 'Legg til den utgående IP-adressen til appserveren i hvitelisten for Binance-API-nøkkelen:'
+        ip_hint_contact_admin: Kontakt administratoren din for å få den utgående IP-adressen til appserveren.
+        api_key_label: API-nøkkel
+        api_key_placeholder: Lim inn Binance-API-nøkkelen din
+        api_secret_label: API-hemmelighet
+        api_secret_placeholder: Lim inn Binance-API-hemmeligheten din
+        connect_button: Koble til Binance
+        syncing: Synkroniserer...
+        sync: Synkroniser
+        historical_import: Innstillinger for historisk import
+        sync_start_date_label: Importer data fra og med
+        sync_start_date_help: Velg hvor langt tilbake historiske handler skal hentes.
+        disconnect_confirm: Er du sikker på at du vil koble fra Binance?
+      kraken_panel:
+        step1_html: Gå til <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">API-innstillingene i Kraken</a>
+        step2: Opprett en API-nøkkel med bare Query Funds og Query Closed Orders & Trades.
+        step3: Lim inn API-nøkkelen og den private nøkkelen nedenfor.
+        read_only_title: Bare synkronisering med lesetilgang
+        read_only_body: Ikke gi tillatelser for handel, kansellering, uttak, eksport, ledger, Earn, staking eller overføringer. Sure importerer bare saldoer, beholdninger og utførte spothandler.
+        default_connection_name: Kraken
+        add_connection: Legg til Kraken-tilkobling
+        update_connection: Oppdater tilkobling
+        connection_name_label: Navn på tilkobling
+        connection_name_placeholder: Kraken hovedkonto
+        api_key_label: API-nøkkel
+        api_key_placeholder: Lim inn Kraken-API-nøkkelen din
+        keep_api_key_placeholder: La stå tomt for å beholde den eksisterende API-nøkkelen
+        api_secret_label: Privat nøkkel
+        api_secret_placeholder: Lim inn den private Kraken-nøkkelen din
+        keep_api_secret_placeholder: La stå tomt for å beholde den eksisterende private nøkkelen
+        setup_accounts: Sett opp konto
+        syncing: Synkroniserer...
+        sync: Synkroniser
+        disconnect: Koble fra
+        disconnect_confirm: Er du sikker på at du vil koble fra %{name}?
+      coinspot_panel:
+        step1_html: Gå til <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">API-innstillingene i CoinSpot</a>
+        step2: Opprett en API-nøkkel med kun lesetilgang til saldoer og historikk.
+        step3: Lim inn API-nøkkelen og hemmeligheten nedenfor.
+        read_only_title: Bare synkronisering med lesetilgang
+        read_only_body: Ikke gi tillatelser for sending, uttak, handel eller overføringer. Sure importerer bare saldoer, AUD-verdier, overføringer, innskudd, uttak og fullført ordrehistorikk.
+        default_connection_name: CoinSpot
+        add_connection: Legg til CoinSpot-tilkobling
+        update_connection: Oppdater tilkobling
+        connection_name_label: Navn på tilkobling
+        connection_name_placeholder: CoinSpot hovedkonto
+        api_key_label: API-nøkkel
+        api_key_placeholder: Lim inn CoinSpot-API-nøkkelen din
+        keep_api_key_placeholder: La stå tomt for å beholde den eksisterende API-nøkkelen
+        api_secret_label: API-hemmelighet
+        api_secret_placeholder: Lim inn CoinSpot-API-hemmeligheten din
+        keep_api_secret_placeholder: La stå tomt for å beholde den eksisterende API-hemmeligheten
+        setup_accounts: Sett opp konto
+        syncing: Synkroniserer...
+        sync: Synkroniser
+        disconnect: Koble fra
+        disconnect_confirm: Er du sikker på at du vil koble fra %{name}?
+      onchain_wallet_panel:
+        add_wallet: Legg til lommebok
+        advanced: Avansert
+        disconnect_all: Koble fra alle lommebøker
+        disconnect_all_confirm: Dette fjerner alle adresser som følges, og kontoene deres. Vil du fortsette?
+        etherscan_api_key_label: Etherscan-API-nøkkel (valgfritt)
+        etherscan_api_key_placeholder: Lim inn en Etherscan-API-nøkkel
+        etherscan_hint: Ethereum-data kan leses uten nøkkel. En Etherscan-nøkkel øker bare forespørselsgrensen for Ethereum.
+        keep_etherscan_api_key: La stå tomt for å beholde den eksisterende nøkkelen
+        manage_wallets: Administrer lommebøker
+        keyless_body: Sure leser bare offentlige blokkjededata. Ingen nøkler, gjenopprettingsfraser eller signaturer brukes, og ingenting kan brukes eller overføres.
+        keyless_title: Kun lesetilgang, ingen nøkler kreves
+        save: Lagre
+        sync_start_date_hint: Overføringer før denne datoen ignoreres. La stå tomt for å importere alt blokkutforskeren rapporterer.
+        sync_start_date_label: Ignorer overføringer før
+      enable_banking_panel:
+        callback_url_instruction: Bruk %{callback_url} som callback-URL.
+        connection_error: Tilkoblingsfeil
+        step_1_html: Gå til %{link} og hent utviklerlegitimasjonen din.
+        step_2: Velg land og lim inn Application ID og klientsertifikatet nedenfor.
+        step_3: Lagre, og bruk deretter Legg til tilkobling for å koble til banken din.
+        config_locked_title: Konfigurasjonen er låst
+        config_locked_message: Koble fra alle tilkoblede banker før du endrer denne påloggingsinformasjonen.
+        application_id_label: Application ID
+        application_id_placeholder_new: Skriv inn Application ID
+        application_id_placeholder_update: Skriv inn en ny ID for å oppdatere
+        client_certificate_label: Klientsertifikat (med privat nøkkel)
+        save_and_connect: Lagre og koble til
+        update_connection: Oppdater tilkobling
+        connected_bank: Tilkoblet bank
+        session_expires: 'Samtykket utløper: %{date}'
+        unknown: Ukjent
+        connection: Tilkobling
+        session_expired_reconnect: Økten er utløpt – koble til på nytt
+        configured: Konfigurert
+        ready_to_link: Klar til å koble til kontoer
+        sync: Synkroniser
+        reconnect: Koble til på nytt
+        connect_bank: Koble til bank
+        remove: Fjern
+        remove_confirm: Er du sikker på at du vil fjerne denne tilkoblingen?
+        add_connection: Legg til tilkobling
+        syncing: Synkroniserer
+        select_country: Velg land...
+        country_label: Land
+      lunchflow_panel:
+        step_1_html: Gå til %{link} og opprett en API-nøkkel.
+        step_2: Lim inn nøkkelen nedenfor og koble til.
+        step_3: Gå deretter til Kontoer for å koble til de synkroniserte kontoene dine.
+        api_key_label: API-nøkkel
+        api_key_placeholder_new: Lim inn API-nøkkelen her
+        api_key_placeholder_update: Skriv inn en ny API-nøkkel for å oppdatere
+        base_url_label: Basis-URL (valgfritt)
+        base_url_placeholder: https://lunchflow.app/api/v1 (standard)
+        save_and_connect: Lagre og koble til
+        update_connection: Oppdater tilkobling
+      akahu_panel:
+        step_1_html: Gå til %{link} og opprett en personlig app.
+        step_2: Kopier apptokenet og brukertokenet ditt.
+        step_3: Lim inn tokenene nedenfor, lagre, og koble deretter til de synkroniserte kontoene dine.
+      up_panel:
+        step_1_html: Gå til %{link} og generer et personlig tilgangstoken.
+        step_2: Kopier det personlige tilgangstokenet ditt.
+        step_3: Lim inn tokenet nedenfor, lagre, og koble deretter til de synkroniserte kontoene dine.
+      monobank_panel:
+        step_1_html: Gå til %{link}, logg inn med Monobank-appen og generer et personlig token.
+        step_2: Kopier tokenet – det vises bare én gang.
+        step_3: Lim inn tokenet nedenfor, lagre, og koble deretter til kortene og spareboksene («jars») du vil følge.
+      fio_panel:
+        step_1_html: Logg inn i nettbanken til %{link} og åpne Settings → API.
+        step_2: Opprett et token med kun lesetilgang («Sledování účtu»). Det krever sterk autentisering og er gyldig i opptil 180 dager.
+        step_3: Lim inn tokenet nedenfor og lagre. Ett token gir tilgang til én konto, så legg til en tilkobling per Fio-konto.
+      simplefin_panel:
+        step_1_html: Gå til %{link} for å få et engangstoken for oppsett.
+        step_2: Lim inn tokenet nedenfor og koble til.
+        step_3: Gå deretter til Kontoer for å koble til de synkroniserte kontoene dine.
+        setup_token_label: Oppsettstoken
+        setup_token_placeholder: Lim inn SimpleFIN-oppsettstokenet
+        save_and_connect: Lagre og koble til
+      plaid_panel:
+        step_1_html: Åpne %{link} og kopier Client ID og Secret Key.
+        step_2: Velg et miljø. Bruk sandbox til testing og production for ekte kontoer.
+        step_3: Lim inn påloggingsinformasjonen nedenfor og koble til.
+      plaid_eu_panel:
+        step_1_html: Åpne %{link} og kopier EU-Client ID og Secret Key.
+      not_found: Fant ikke leverandøren.
+      sync_provider_no_items: Ingen tilkoblinger å synkronisere.
+      ibkr_panel:
+        steps:
+          step_1: Gå til «Performance & Reports» > «Flex Queries» i IBKR Client Portal.
+          step_2: Klikk på «+»-ikonet i seksjonen «Activity Flex Query» for å opprette en ny spørring.
+          step_3: Gi spørringen et navn (f.eks. «Sure Sync»), gå deretter gjennom Flex Query-detaljene nedenfor og aktiver seksjonene, feltene og konfigurasjonsvalgene som er oppført.
+          step_4: Lagre spørringen, noter «Query ID», og bruk deretter tannhjulikonet i seksjonen «Flex Web Service Configuration» for å generere et tilgangstoken.
+          step_5: Lim inn Query ID og token nedenfor, lagre konfigurasjonen, og gå deretter til Kontoer for å koble til IBKR-kontoene som er funnet.
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Seksjoner, felt og konfigurasjon
+          summary: Utvid for å se nøyaktig hvilke seksjoner, felt og innstillinger IBKR Activity Flex Query må inneholde.
+          sections_heading: Aktiver disse seksjonene og feltene
+          configuration_heading: Angi disse spørringsvalgene
+        sections:
+          account_information: 'Account Information: Account ID, Currency'
+          cash_report: 'Cash Report:'
+          cash_report_options: 'Valg: None'
+          cash_report_fields: 'Felt: Currency, Ending Cash'
+          cash_transactions: 'Cash Transactions:'
+          cash_transactions_options: 'Valg: Dividends, Deposits & Withdrawals, Detail'
+          cash_transactions_fields: 'Felt: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type'
+          change_in_position_value_summary: 'Change In Position Value Summary: Currency, End Of Period Value'
+          net_asset_value: 'Net Asset Value (NAV) in Base:'
+          net_asset_value_options: 'Valg: None'
+          net_asset_value_fields: 'Felt: Currency, Report Date, Total'
+          open_positions: 'Open Positions:'
+          open_positions_options: 'Valg: Summary'
+          open_positions_fields: 'Felt: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol'
+          trades: 'Trades:'
+          trades_options: 'Valg: Execution'
+          trades_fields: 'Felt: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID'
+        configuration:
+          models: 'Models: Optional'
+          format: 'Format: XML'
+          period: 'Period: Last 365 Calendar Days'
+          date_format: 'Date Format: yyyy-MM-dd'
+          time_format: 'Time Format: HH:mm:ss'
+          date_time_separator: 'Date/Time Separator: ; (semikolon)'
+          profit_and_loss: 'Profit and Loss: Default'
+          all_other_options: 'Alle andre konfigurasjonsvalg: «No»'
+        report_window_note: IBKR Flex-rapporter er begrenset til spørringsperioden du har konfigurert i IBKR. Sure importerer alle nåværende beholdninger og aktivitet for opptil de siste 365 dagene fra denne rapporten.
+        sync: Synkroniser
+        disconnect_confirm: Koble fra Interactive Brokers?
+        query_id_label: Query ID
+        query_id_placeholder_new: Skriv inn IBKR Flex Query ID
+        query_id_placeholder_existing: La stå tomt for å beholde gjeldende Query ID
+        token_label: Token
+        token_placeholder_new: Skriv inn IBKR Flex Web Service-tokenet ditt
+        token_placeholder_existing: La stå tomt for å beholde gjeldende token
+        save_configuration: Lagre konfigurasjon
+        update_configuration: Oppdater konfigurasjon
+        status_configured_prefix: '%{summary}. Gå til fanen'
+        accounts_tab: Kontoer
+        status_configured_suffix: for å administrere kontoene som er funnet.
+        not_configured: Ikke konfigurert.
+      trade_republic_panel:
+        encryption_warning:
+          title: Kryptering er ikke konfigurert
+          message: Påloggingsinformasjon og øktdata for Trade Republic kan ikke lagres sikkert før Active Record Encryption er konfigurert.
+        steps:
+          step_1: Skriv inn telefonnummeret og PIN-koden du bruker i Trade Republic-appen, og lagre.
+          step_2: Skriv inn koden fra autentiseringsappen når du blir bedt om det.
+          step_3: Godkjenn påloggingen i Trade Republic-appen når du blir bedt om det.
+        phone_number_label: Telefonnummer
+        phone_number_placeholder_new: +49 170 1234567
+        phone_number_placeholder_existing: La stå tomt for å beholde gjeldende telefonnummer
+        pin_label: PIN-kode
+        pin_placeholder_new: PIN-koden til Trade Republic-appen
+        pin_placeholder_existing: La stå tomt for å beholde gjeldende PIN-kode
+        currency_label: Kontovaluta
+        connect: Logg inn
+        confirm_login: Kontroller pålogging
+        complete_login: Fortsett
+        authenticator_code_label: Kode fra autentiseringsappen (hvis du blir bedt om det)
+        authenticator_code_placeholder: 6-sifret kode
+        push_login_notice: Godkjenn påloggingen i Trade Republic-appen nå. Sure sjekker automatisk i bakgrunnen. Du kan også sjekke statusen selv.
+        check_login_status: Sjekk status nå
+        authenticator_code_notice: Skriv inn koden fra autentiseringsappen.
+        approval_pending: Påloggingen er startet. Godkjenn den i Trade Republic-appen – Sure sjekker automatisk.
+        awaiting_confirmation: Venter på godkjenning i Trade Republic-appen.
+        awaiting_authenticator_code: Kode fra autentiseringsappen kreves.
+        login_expired: Godkjenningsforespørselen er utløpt.
+        restart_login: Start påloggingen på nytt
+        connection_success:
+          title: Trade Republic er koblet til
+          message: Trade Republic-tilkoblingen din er klar.
+          description: Sure synkroniserer nå Trade Republic-dataene dine i bakgrunnen.
+          close: Ferdig
+        qr_login: Logg inn med QR-kode
+        qr_cancel: Avbryt QR-pålogging
+        qr_back_to_credentials: Tilbake til telefonnummer og PIN-kode
+        qr_loading: Klargjør QR-kode …
+        qr_instruction: Skann QR-koden med Trade Republic-appen og godkjenn påloggingen.
+        qr_success: Påloggingen er godkjent. Sure oppdaterer leverandørsiden.
+        qr_error: Kunne ikke starte QR-pålogging. Prøv igjen.
+        save_configuration: Lagre og start pålogging
+        update_configuration: Oppdater konfigurasjon
+        sync: Synkroniser
+        disconnect: Koble fra Trade Republic
+        disconnect_confirm: Koble fra Trade Republic? De synkroniserte kontoene dine blir gjort om til manuelle kontoer.
+        status_configured_prefix: Tilkoblet. Gå til fanen
+        accounts_tab: Kontoer
+        setup_accounts: Sett opp kontoer
+        accounts_discovered:
+          one: '%{count} Trade Republic-konto funnet.'
+          other: '%{count} Trade Republic-kontoer funnet.'
+        status_configured_suffix: for å administrere kontoene som er funnet.
+        not_configured: Ikke konfigurert.
+      trading212_panel:
+        steps:
+          step_1: Gå til Trading 212 → Settings → API (nettsiden eller mobilappen).
+          step_2: Generer en ny API-nøkkel – Trading 212 viser deg en API ID og en Secret Key.
+          step_3: Lim inn begge nedenfor, velg miljø og kontovaluta, og lagre.
+        api_key_label: API ID
+        api_key_placeholder_new: Lim inn Trading 212 API ID
+        api_key_placeholder_existing: La stå tomt for å beholde gjeldende API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Lim inn Trading 212 Secret Key
+        api_secret_placeholder_existing: La stå tomt for å beholde gjeldende Secret Key
+        environment_label: Miljø
+        environment_live: Ekte konto
+        environment_demo: Demokonto
+        currency_label: Kontovaluta
+        save_configuration: Lagre konfigurasjon
+        update_configuration: Oppdater konfigurasjon
+        sync: Synkroniser
+        syncing: Synkroniserer...
+        disconnect: Koble fra Trading 212-konto
+        disconnect_confirm: Koble fra Trading 212?
+        default_account_name: Trading 212-konto
+        add_account: Legg til en konto til
+        status_configured_prefix: Konfigurert. Gå til fanen
+        accounts_tab: Kontoer
+        status_configured_suffix: for å administrere kontoene som er funnet.
+        not_configured: Ikke konfigurert.
+    background_jobs:
+      show:
+        page_title: Bakgrunnsjobber
+        title: Workerstatus
+        subtitle: 'Sanntidsstatus for Sidekiq: workerprosesser, kødybder og retry/dead-sett.'
+        redis_unreachable: Sidekiq-status er utilgjengelig (Redis kan ikke nås). Det er ukjent om jobbene lever, så handlingene er deaktivert.
+        operations_title: Pågående operasjoner
+        operations_subtitle: Synkroniseringer, importer og eksporter på tvers av alle husholdninger som ikke har nådd en endelig status. Operasjoner som har vært inaktive i over 30 minutter uten en synlig jobb, antas å være tapt og kan markeres som det.
+        empty: Ingen pågående operasjoner.
+        missing_value: '-'
+        stats:
+          workers: Workere
+          busy: Opptatt
+          enqueued: I kø
+          retries: Nye forsøk
+          scheduled: Planlagt
+          dead: Endelig mislyktes
+          queue_label: '%{name}: %{size} · %{latency}s forsinkelse'
+        table:
+          type: Operasjon
+          family: Husholdning
+          status: Status
+          last_activity: Siste aktivitet
+          liveness: Livstegn
+          action: Handling
+      operation:
+        ago: for %{time} siden
+        sync_label: Synkronisering · %{type}
+        running: Kjører
+        queued: I kø
+        recent: Nylig aktiv
+        unknown: Ukjent
+        stuck: Står fast – antatt tapt
+        confirm: Markere denne operasjonen som tapt? Posten flyttes til en endelig status slik at den kan prøves på nytt. De underliggende dataene berøres ikke.
+        missing_value: '-'
+        actions:
+          mark_stale: Merk som utdatert
+          mark_failed: Merk som mislykket
+          release_claim: Frigi reservasjon
+      cancel:
+        cancelled: '%{type} er markert som tapt.'
+        not_cancellable: Denne operasjonen kan ikke endres akkurat nå – jobben kan fortsatt stå i kø eller kjøre. Prøv igjen når den har vært inaktiv i 30 minutter.
+        cancelled_error: Markert som mislykket av en administrator – bakgrunnsjobben ble antatt tapt.
+    debugs:
+      show:
+        page_title: Feilsøking
+        title: Feilsøkingslogg
+        subtitle: Viktige driftshendelser for superadministratorer. Nyeste først.
+        empty: Fant ingen feilsøkingshendelser.
+        missing_value: '-'
+        filters:
+          all: Alle
+          category: Kategori
+          level: Nivå
+          source: Kilde
+          provider: Leverandør
+          start_date: Fra
+          end_date: Til
+          family_id: Husholdnings-ID
+          account_id: Konto-ID
+          user_id: Bruker-ID
+          account_provider_id: Kontoleverandør-ID
+          submit: Filtrer
+          reset: Tilbakestill
+        table:
+          time: Tid
+          level: Nivå
+          category: Kategori
+          source: Kilde
+          message: Melding
+          context: Kontekst
+          metadata: Metadata
+          view_metadata: Vis
+        context:
+          provider: provider=%{value}
+          family: family=%{value}
+          account: account=%{value}
+          user: user=%{value}
+          account_provider: account_provider=%{value}
+    llm_usages:
+      show:
+        page_title: LLM-bruk og kostnader
+        subtitle: Følg med på AI-bruken din og de estimerte kostnadene
+        start_date: Startdato
+        end_date: Sluttdato
+        filter: Filtrer
+        total_requests: Forespørsler totalt
+        total_tokens: Tokens totalt
+        prompt: inndata
+        completion: utdata
+        total_cost: Total kostnad
+        avg_cost_per_request: Snittkostnad/forespørsel
+        based_on_requests: Basert på %{with_cost} av %{total} forespørsler med kostnadsdata
+        cost_by_operation: Kostnad per operasjon
+        cost_by_model: Kostnad per modell
+        recent_usage: Nylig bruk
+        col_date: Dato
+        col_operation: Operasjon
+        col_model: Modell
+        col_tokens: Tokens
+        col_cost: Kostnad
+        failed: Mislyktes
+        no_usage_data: Fant ingen bruksdata for valgt periode
+        cost_estimates_title: Om kostnadsestimatene
+        cost_estimates_description: Kostnadene er estimert ut fra leverandørenes publiserte priser, inkludert OpenAI-priser per juli 2026. De faktiske kostnadene kan avvike. Prisene gjelder per 1 million tokens og varierer etter modell. Egendefinerte eller selvhostede modeller vises som «N/A» og tas ikke med i kostnadssummene.
+    ai_prompts:
+      prompt_field:
+        provider_label: Leverandør
+        prompt_label: Instruks
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Tilbakestill til standard
+        reset_confirm_title: Tilbakestille til standardinstruksen?
+        reset_confirm_body: Dette forkaster den egendefinerte instruksen din og gjenoppretter de innebygde standardinstruksjonene.
+        status_custom: Bruker den egendefinerte instruksen din
+        status_default: Bruker den innebygde standarden
+        format_risk: 'Instruksen din for %{provider} mangler eksempelet {"%{key}": ...}. Hver forespørsel ber fortsatt om den strukturen, så tolkingen fungerer som regel, men en overstyring som ber om et annet utdataformat, vil ødelegge den.'
+      show:
+        page_title: AI-instruksjoner
+        disable_ai: Deaktiver AI-assistenten
+        save: Lagre instruksjoner
+        save_confirm:
+          title: Lagre egendefinerte AI-instruksjoner?
+          body: Egendefinerte instruksjoner erstatter de innebygde systeminstruksjonene og sikkerhetsbegrensningene (for eksempel begrensninger på økonomisk rådgivning) for husholdningen din.
+          dont_show_again: Ikke vis denne advarselen igjen
+          cancel: Avbryt
+          confirm: Bekreft
+        main_system_prompt:
+          title: Hovedinstruks for systemet
+          subtitle: Kjerneinstruksjoner som bestemmer hvordan AI-assistenten oppfører seg i alle chatsamtaler
+          label: Systeminstruks for chat
+        transaction_categorizer:
+          title: Transaksjonskategorisering
+          subtitle: AI kategoriserer transaksjonene dine automatisk basert på kategoriene du har definert
+        merchant_detector:
+          title: Forhandlergjenkjenning
+          subtitle: AI identifiserer forhandlere og beriker transaksjonsdataene med forhandlerinformasjon
+      update:
+        success: AI-instruksjonene ble oppdatert
+        multiple_errors: Flere instruksjoner er for lange (maks %{count} tegn)
+    budget_shares:
+      update:
+        success: Innstillingene for budsjettdeling ble oppdatert
     settings_nav:
       accounts_label: Kontoer
-      api_key_label: API-nøkkel
+      api_key_label: API-nøkler
       advanced_section_title: Avansert
       payment_label: Betaling
       categories_label: Kategorier
@@ -97,13 +746,28 @@ nb:
       merchants_label: Forhandlere
       other_section_title: Mer
       preferences_label: Preferanser
-      profile_label: Konto
+      profile_label: Profilinformasjon
       rules_label: Regler
       security_label: Sikkerhet
       self_hosting_label: Selvhosting
       tags_label: Tagger
       transactions_section_title: Transaksjoner
       whats_new_label: Hva er nytt
+      ai_prompts_label: AI-instruksjoner
+      background_jobs_label: Bakgrunnsjobber
+      llm_usage_label: LLM-bruk
+      providers_label: Leverandører
+      guides_label: Veiledninger
+      recurring_transactions_label: Faste transaksjoner
+      mcp_label: MCP
+      sso_providers_label: SSO-leverandører
+      statement_vault_label: Kontoutskriftsarkiv
+      system_health_label: Systemstatus
+      users_label: Brukere
+      api_keys_label: API-nøkler
+      appearance_label: Utseende
+      bank_sync_label: Banksynkronisering
+      debug_label: Feilsøking
     settings_nav_link_large:
       next: Neste
       previous: Tilbake

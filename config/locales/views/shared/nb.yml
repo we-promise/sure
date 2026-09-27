@@ -10,10 +10,10 @@ nb:
     money_field:
       label: Beløp
     exchange_rate_tabs:
-      calculate_rate_tab: Beregn FX-kurs
-      convert_tab: Konverter med FX-kurs
-      destination_amount: Beløp for destinasjon
-      exchange_rate: Vekslingskurs
+      calculate_rate_tab: Beregn valutakurs
+      convert_tab: Konverter med valutakurs
+      destination_amount: Beløp på mottakerkonto
+      exchange_rate: Valutakurs
       exchange_rate_help: Velg hvordan du vil fylle inn beløpet.
     syncing_notice:
       syncing: Synkroniserer kontodata...
@@ -24,3 +24,33 @@ nb:
       singular: Husholdning
     trend_change:
       no_change: "ingen endring"
+    preview: Beta
+    sync_toast:
+      message: Nye data tilgjengelig
+      refresh: Oppdater
+    require_admin: Bare administratorer kan utføre denne handlingen
+    require_connector_owner: Du kan bare administrere tilkoblinger du selv har lagt til
+    custom_confirm:
+      default_title: Er du sikker?
+      default_body: Dette kan ikke angres.
+      default_btn_text: Bekreft
+      resource_deletion_title: Slette %{resource}?
+      resource_deletion_body: Er du sikker på at du vil slette %{resource}? Dette kan ikke angres.
+      resource_deletion_btn_text: Slett %{resource}
+    cancel: Avbryt
+    transaction_tabs:
+      expense: Utgift
+      income: Inntekt
+      transfer: Overføring
+    sidekiq_health_banner:
+      title: Noen data kan være utdaterte
+      body: Bakgrunnsjobber blir ikke behandlet, så saldoer, nettoformue og kontosynkroniseringer kan være utdaterte eller mangle.
+      cta: Vis systemstatus
+      reasons:
+        redis_unreachable: Appen får ikke kontakt med Redis. Sjekk REDIS_URL og at Redis kjører.
+        no_worker_processes: Ingen Sidekiq-arbeidsprosess er tilkoblet. Start worker-containeren eller systemd-enheten.
+        stale_heartbeat: Sidekiq-arbeidsprosessen har ikke sendt livstegn på en stund. Den kan ha hengt seg opp eller krasjet.
+        queue_backed_up: Den eldste jobben i køen har ventet lenger enn tillatt forsinkelse. Arbeidsprosessen kjører, men henger etter.
+  concerns:
+    self_hostable:
+      redis_configured: Redis er nå riktig konfigurert! Du kan nå sette opp Sure-applikasjonen din.

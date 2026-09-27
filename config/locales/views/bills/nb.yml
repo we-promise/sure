@@ -1,0 +1,313 @@
+---
+nb:
+  bills:
+    row_overdue: Forfalt
+    row_today: I dag
+    detect:
+      found:
+        one: Fant %{count} mulig regning. Se gjennom den nedenfor.
+        other: Fant %{count} mulige regninger. Se gjennom dem nedenfor.
+      none_found: Fant ingen nye gjentakende mønstre. Du kan legge til regninger manuelt.
+      already_running: Søket kjører allerede. Sjekk igjen om litt.
+    feed:
+      calendar_name: Sure-regninger
+    ai_prompts:
+      due_before_paycheck: Hva forfaller før neste lønning?
+      subscriptions_up: Hvilke abonnementer har gått opp i pris i år?
+      monthly_subscriptions: Hva betaler jeg for abonnementer hver måned?
+      safe_to_spend: Hvor mye kan jeg trygt bruke denne perioden?
+    smart_configurations:
+      show:
+        trigger: La AI konfigurere
+        title: AI-forslag for %{name}
+        intro: Kryss av for endringene du vil bruke. De som ikke er avkrysset, forblir nøyaktig som de er.
+        no_changes: Denne regningen samsvarer allerede med betalingshistorikken. Ingenting å endre.
+        failed: Kunne ikke analysere denne regningen akkurat nå. Konfigurasjonen er uendret.
+        field_name: Navn
+        field_amount: Beløp
+        field_schedule: Tidsplan
+        field_category: Kategori
+        field_kind: Type
+        field_autopay: Automatisk betaling
+        uncategorized: Ukategorisert
+        autopay_off: Av
+        autopay_on: På
+        apply: Bruk valgte
+    detail:
+      current: Nåværende
+      next_payment: Neste betaling
+      around: rundt %{date}
+      rules: Slik gjenkjennes denne regningen
+      rule_named: «%{name}»
+      rule_amount_range: fra %{min} til %{max}
+      rule_aliases: Gjenkjenner også %{names}
+      rule_learned_tolerance: Beløp innenfor %{percent} av det vanlige beløpet knyttes til denne regningen
+      history_title: Siste 12 måneder
+      history_aria: Betalinger de siste tolv månedene
+      key_metrics: Per år
+      year: År
+      spent_per_year: Brukt
+      avg_payment: Snittbetaling
+      average: Betalt i snitt
+      range: '%{min} til %{max}'
+      annualized: Per år
+      ytd: Betalt i år
+      last_account: Sist brukte konto
+      upcoming: Kommende
+      recent_payments: Nylige betalinger
+      manual_payment: Manuell betaling
+      history: Historikk
+      payment_count:
+        one: '%{count} betaling'
+        other: '%{count} betalinger'
+      notes: Notater
+      trial_chip: Prøveperioden slutter %{date}
+      renews_chip: Fornyes %{date}
+      cancelled_chip: Sagt opp %{date}
+      price_changes: Prisendringer
+      price_change_line: '%{from} → %{to}'
+    month_pulse:
+      bill_count:
+        one: '%{count} regning'
+        other: '%{count} regninger'
+      left_to_pay: gjenstår å betale
+      pulse_paid: betalt
+      pulse_overdue: forfalt
+      pulse_next_seven: neste 7 dager
+      pulse_bar_aria: '%{percent} % av månedens regninger er betalt'
+      next_up: Neste
+      view_upcoming: Se kommende
+      date_today: I dag
+      date_tomorrow: I morgen
+      unconvertible:
+        one: '%{count} regning er ikke tatt med fordi valutakurs mangler'
+        other: '%{count} regninger er ikke tatt med fordi valutakurs mangler'
+    summary:
+      remaining: '%{amount} gjenstår'
+      paid_headline: '%{amount} betalt'
+      cost_line: I snitt %{average} per betaling, omtrent %{annualized} per år
+    pane:
+      close: Skjul detaljer
+    add_bill: Legg til regning
+    manage: Administrer
+    find_payment: Finn betaling
+    add_payment: Legg til betaling
+    review_match: Se gjennom treff
+    resolve: Løs
+    manage_payments: Administrer betalinger
+    view_full_bill: Vis hele regningen
+    match:
+      same_merchant: Samme forhandler
+      name_matches: Navnet samsvarer
+      exact_amount: Nøyaktig beløp
+      amount_off: '%{amount} avvik'
+      due_date: Betalt på forfallsdato
+      days_before:
+        one: '%{count} dag før forfall'
+        other: '%{count} dager før forfall'
+      days_after:
+        one: '%{count} dag etter forfall'
+        other: '%{count} dager etter forfall'
+    attention:
+      needs_review: Treffet må gjennomgås
+      partial: Delvis betalt · %{amount} gjenstår
+      amount_changed: Beløpet er endret
+      overdue:
+        one: '%{count} dag over forfall'
+        other: '%{count} dager over forfall'
+    paid_label: Betalt
+    paid_over_short: Betalt, for mye
+    installment_progress: Avdrag %{done_plus_one} av %{total}
+    partial_progress: '%{paid} av %{expected} betalt'
+    cancelled_still_scheduled: Du markerte denne som sagt opp %{date}, men den er fortsatt planlagt, så fremtidige regninger vil fortsatt dukke opp.
+    paid_over: Betalt %{paid}, mer enn forventet
+    remaining_label: gjenstår
+    debt_payment: · nedbetaling av gjeld
+    paid_from: fra %{account}
+    amount_range: varierer fra %{min} til %{max}
+    possible_duplicate: Mulig duplikat
+    due_label:
+      overdue:
+        one: '%{count} dag over forfall, forfallsdato %{date}'
+        other: '%{count} dager over forfall, forfallsdato %{date}'
+      today: Forfaller i dag
+      settled: Forfallsdato var %{date}
+      due_since: Forfallsdato %{date}
+      snoozed: Utsatt til %{date}
+      upcoming:
+        one: Forfaller i morgen, %{date}
+        other: Forfaller om %{count} dager, %{date}
+    views:
+      aria_label: Visninger av regninger
+      overview: Oversikt
+      calendar: Kalender
+      paycheck: Inntektsplan
+      all: Alle regninger
+    pay_period:
+      paycheck_on: Lønn %{date}
+      before_next_paycheck: Før neste lønning
+      due_before_date: '%{amount} forfaller før %{date}'
+    paycheck:
+      unconvertible:
+        one: '%{count} forpliktelse er ikke tatt med fordi valutakurs mangler'
+        other: '%{count} forpliktelser er ikke tatt med fordi valutakurs mangler'
+      income_section_title: Inntektsplan
+      manage: Administrer
+      add_income: Legg til inntekt
+      income_paused: Satt på pause, ikke planlagt
+      income_detected: Oppdaget automatisk, bestemmer ikke lønningsdager
+      income_next_payday: neste %{date}
+      income_source_count:
+        one: '%{count} inntektskilde'
+        other: '%{count} inntektskilder'
+      next_on: Neste %{date}
+      no_upcoming_income: Ingen inntekt er planlagt fremover.
+      empty:
+        title: Legg inn inntektsplanen din
+        description: Legg til inntekten din for å se hva hver lønning må dekke. Oppdagede innbetalinger bestemmer aldri lønningsdagene dine på egen hånd -- det gjør du.
+        action: Legg til inntekt
+      all_clear:
+        title: Ingenting å dekke
+        description: Ingen regninger forfaller mellom nå og %{date}, så ingenting i den perioden er bundet opp.
+      safe_after_bills: Til overs etter regninger
+      short_after_bills: Mangler etter regninger
+      period_source: ' · %{source}'
+      period_source_multiple: ' · %{count} inntektskilder'
+      before_next_paycheck: Før %{date}
+      no_income_arriving: Ingen inntekt kommer inn
+      income_amount: '%{amount} i inntekt'
+      due_this_period: Forfaller denne perioden
+      reserved_ahead: Satt av på forhånd
+      safe_short: Til overs
+      short_short: Mangler
+      reserved_footer:
+        one: Satt av på forhånd til %{count} senere regning
+        other: Satt av på forhånd til %{count} senere regninger
+      bills_this_period:
+        one: Regninger denne perioden · %{count}
+        other: Regninger denne perioden · %{count}
+      bills_before_payday:
+        one: Regninger før neste lønningsdag · %{count}
+        other: Regninger før neste lønningsdag · %{count}
+      of_total: av %{amount}
+      bridge_label: Før neste lønning
+      bridge_amount: · %{amount} forfaller
+      bridge_split: Forfaller før %{date}, dekkes av de %{cash} du har på kontoene dine.
+      shortfall_label: Mangler før neste lønningsdag
+      shortfall_amount: · %{amount}
+      shortfall_split: '%{obligations} forfaller før %{date}, og du har %{cash} på kontoene dine.'
+      shortfall_largest: 'Største kommende forpliktelse:'
+      review_plan: Se gjennom planen
+      allocation_aria: Av %{income} i inntekt forfaller %{due} nå, %{reserved} er satt av til senere, og %{safe} kan trygt brukes.
+      allocation_aria_short: '%{income} i inntekt går til det som er bundet opp her, og det trengs %{short} til.'
+    reset_feed_token:
+      done: Kalenderlenken er tilbakestilt. Kalenderapper som bruker den gamle lenken, slutter å oppdateres; abonner på nytt med den nye.
+      confirm: Vil du tilbakestille kalenderlenken? Alle lenker som er delt tidligere, slutter å fungere.
+    calendar:
+      subscribe_ical: Abonner (iCal)
+      reset_feed: Tilbakestill lenke
+      previous_month: Forrige måned
+      next_month: Neste måned
+      today: I dag
+      month_totals: '%{expected} forventet · %{paid} betalt'
+      empty_month: Ingen regninger forfaller denne måneden.
+    all:
+      search_placeholder: Søk i regninger
+      any_status: Alle statuser
+      status_filters:
+        overdue: Forfalt
+        due: Forfaller snart
+        partial: Delvis betalt
+        paid: Betalt
+        paused: Satt på pause
+        ended: Avsluttet
+      subscription_monthly: Per måned
+      subscription_annual: Per år
+      subscription_active: Aktive
+      subscription_price_changes: Prisendringer i år
+      subscription_price_change_line: '%{from} → %{to} (%{percent} %)'
+      any_type: Alle typer
+      sort_due: Etter neste forfall
+      sort_name: Etter navn
+      sort_amount: Etter beløp
+      no_matches_title: Ingen treff
+      no_matches_description: Prøv å fjerne et filter eller søket.
+      col_name: Navn
+      col_type: Type
+      col_frequency: Hyppighet
+      col_amount: Beløp
+      col_next: Neste forfall
+      next_short: neste %{date}
+      col_status: Status
+      col_actions: Handlinger
+      monthly_equivalent: '%{amount}/mnd.'
+      types:
+        bill: Regning
+        subscription: Abonnement
+        installment: Delbetaling
+        income: Inntekt
+        transfer: Overføring
+        other: Annet
+    show:
+      edit: Rediger regning
+    index:
+      left_to_pay: gjenstår å betale
+      paid_so_far: Betalt hittil
+      hero_past_due: '%{amount} forfalt'
+      hero_next_seven: '%{amount} forfaller de neste 7 dagene'
+      add_bill: Legg til regning
+      add_income: Legg til inntekt
+      review_with_ai: Gå gjennom med AI
+      detected_review:
+        one: Vi fant %{count} gjentakende betaling i transaksjonene dine. Se over den, så totalene her stemmer med det du faktisk betaler.
+        other: Vi fant %{count} gjentakende betalinger i transaksjonene dine. Se over dem, så totalene her stemmer med det du faktisk betaler.
+      detected_review_action: Se gjennom dem
+      needs_review: Må gjennomgås
+      notice_trial: Prøveperioden for %{name} slutter %{date}
+      notice_renewal: '%{name} fornyes %{date}'
+      notice_price: '%{name} har endret pris: %{from} → %{to} (%{percent})'
+      notices_routine:
+        one: '%{count} mindre endring'
+        other: '%{count} mindre endringer'
+      suggestion_line: '%{entry} ser ut som en betaling av %{bill}'
+      suggestion_unknown_entry: En transaksjon
+      confidence: '%{percent} % treff'
+      accept: Bruk
+      reject: Ikke denne regningen
+      title: Regninger
+      summary_label: Forfaller denne måneden
+      summary_count:
+        one: '%{count} regning forfaller'
+        other: '%{count} regninger forfaller'
+      summary_needs_action:
+        one: '%{count} krever handling'
+        other: '%{count} krever handling'
+      all_automatic: alle med automatisk betaling
+      recurring_label: Faste utgifter
+      recurring_monthly: '%{amount} per måned'
+      recurring_annual: '%{amount} per år'
+      unconvertible:
+        one: '%{count} regning er ikke tatt med fordi valutakurs mangler'
+        other: '%{count} regninger er ikke tatt med fordi valutakurs mangler'
+      overdue: Forfalt
+      needs_attention: Trenger oppmerksomhet
+      attention_overdue_total: '%{amount} forfalt'
+      this_month: Denne måneden
+      later: Etter denne måneden
+      paid_this_month: Betalt denne måneden
+      dormant: Inaktive
+      kpi_remaining: Gjenstår denne måneden
+      kpi_paid: Betalt denne måneden
+      kpi_next_seven: Forfaller neste 7 dager
+      kpi_past_due: Forfalt
+      paid_count:
+        one: '%{count} regning betalt'
+        other: '%{count} regninger betalt'
+      needs_action_count:
+        one: '%{count} krever handling'
+        other: '%{count} krever handling'
+      empty:
+        title: Ingen regninger ennå
+        description: Regninger er de faste utgiftene dine. Sure finner dem automatisk i transaksjonshistorikken din, og du kan legge til en betalingslenke på hver av dem, slik at du kan betale rett herfra.
+        action: Finn gjentakende transaksjoner
+        no_history_description: Ingen transaksjoner ennå. Koble til en konto eller importer historikk, så finner Sure regningene dine automatisk – eller legg til en manuelt.

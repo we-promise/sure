@@ -1,0 +1,9 @@
+---
+nb:
+  chat:
+    errors:
+      rate_limited: AI-leverandøren har nådd grensen for antall forespørsler. Prøv igjen om noen minutter.
+      temporarily_unavailable: AI-leverandøren er midlertidig utilgjengelig. Prøv igjen om noen minutter.
+      misconfigured: AI-leverandøren er ikke riktig konfigurert. Kontakt administratoren din.
+      no_response: Assistenten svarte ikke. Bakgrunnsprosessen kan være nede, eller AI er kanskje ikke ferdig konfigurert. Prøv igjen.
+      default: Kunne ikke generere et svar. Prøv igjen.

@@ -1,0 +1,4 @@
+---
+ro:
+  passkey_sessions:
+    invalid_credential: Nu te-ai putut autentifica cu această cheie de acces. Te rugăm să încerci din nou sau să folosești parola.

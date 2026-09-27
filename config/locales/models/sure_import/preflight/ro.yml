@@ -1,0 +1,6 @@
+---
+ro:
+  sure_import:
+    preflight:
+      missing_reference: Linia %{line} %{type} face referire la %{field} %{value}, care lipsește.
+      skipped_missing_reference: Linia %{line} %{type} face referire la %{field} %{value}, care lipsește. Va fi omisă la import.

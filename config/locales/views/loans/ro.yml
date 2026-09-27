@@ -10,14 +10,55 @@ ro:
       rate_type: Tipul ratei
       term_months: Termen (luni)
       term_months_placeholder: '360'
+      none: Niciunul
+      subtype_prompt: Selectează tipul împrumutului
+      subtype_none: Niciunul
+      rate_type_adjustable: Ajustabilă
+      rate_type_fixed: Fixă
+      rate_type_variable: Variabilă
+      rate_changes: Modificări ale dobânzii
+      rate_changes_hint: Fiecare rând stabilește dobânda aplicată de la data intrării în vigoare până la următoarea modificare. Dacă introduci din nou o dată, rândul respectiv este înlocuit, nu se adaugă unul nou.
+      rate_changes_empty: Nu există modificări ale dobânzii. Împrumutul folosește rata dobânzii de mai sus.
+      rate_change_effective_date: Data intrării în vigoare
+      rate_change_rate: Dobândă
+      rate_change_add: Adaugă o modificare a dobânzii
+      rate_change_remove: Elimină
+      start_date: Data acordării
+      start_date_hint: Data la care împrumutul a fost acordat (sumele au fost trase). Lasă necompletat pentru a folosi data deschiderii contului.
     new:
       title: Introdu detaliile împrumutului
     overview:
       interest_rate: Rata dobânzii
-      monthly_payment: Plată lunară
+      monthly_payment: Rată lunară
       not_applicable: N/A
-      original_principal: Principalul inițial
-      remaining_principal: Principalul rămas
+      original_principal: Suma împrumutată inițial
+      remaining_principal: Suma rămasă de rambursat
       term: Termen
       type: Tip
       unknown: Necunoscut
+      original_payoff_date: Data scadenței inițiale
+    tabs:
+      schedule:
+        date: Data
+        description: Calculat pe baza soldului inițial, a dobânzii și a duratei, începând cu %{start_date}. Rambursările anticipate nu sunt incluse.
+        variable_rate_notice: Dobânda acestui împrumut se modifică în timp. Graficul de rambursare este recalculat la fiecare modificare înregistrată, păstrând data scadenței inițiale și ajustând valoarea ratei; o modificare care nu a fost încă înregistrată va schimba aceste cifre.
+        opening_payment: Prima rată
+        interest: Dobândă
+        monthly_payment: Rată lunară
+        number: Nr.
+        payment: Rată
+        principal: Principal
+        remaining_balance: Sold rămas
+        total_cost: Cost total
+        total_interest: Dobândă totală
+      overview:
+        interest_rate: Rata dobânzii
+        monthly_payment: Rată lunară
+        not_applicable: N/A
+        original_payoff_date: Data scadenței inițiale
+        original_principal: Suma împrumutată inițial
+        remaining_principal: Suma rămasă de rambursat
+        term: Durată
+        type: Tip
+        unknown: Necunoscut
+        edit_loan_details: Editează detaliile împrumutului
