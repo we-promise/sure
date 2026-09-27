@@ -299,8 +299,10 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     # The timeline list amount is what Trade Republic booked against the cash
-    # balance, fees and taxes included. Direction follows its sign, falling
-    # back to the traded quantity for payloads that only carry a magnitude.
+    # balance, fees and taxes included. Unlike cash movements (see
+    # import_cash_movement), order executions carry a consistent sign across
+    # topics: negative for buys, positive for sales. Payloads that only carry
+    # a magnitude fall back to the traded quantity.
     # Buys count as investment contributions in budgets; sale proceeds are a
     # funds movement rather than income. Neither gets a category.
     def import_order_settlement(event, detail, external_id, date)
@@ -367,8 +369,9 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     # Earlier syncs stored cash-account deposits as investment contributions.
-    # The adapter neither downgrades that kind nor clears the category it
-    # assigned with it, so reset untouched inflows outside a matched transfer.
+    # The adapter neither downgrades that kind nor clears the category and
+    # label it assigned with it, so reset untouched inflows outside a matched
+    # transfer.
     def reset_legacy_contribution!(entry, event)
       return unless @trade_republic_account.cash?
 
@@ -379,6 +382,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       attrs = {}
       attrs[:kind] = transfer_event?(event) ? "funds_movement" : "standard" if transaction.investment_contribution?
       attrs[:category_id] = nil if investment_contribution_category_ids.include?(transaction.category_id)
+      attrs[:investment_activity_label] = nil if transaction.investment_activity_label == "Contribution"
       transaction.update!(attrs) if attrs.any?
     end
 

@@ -823,6 +823,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     legacy.transaction.reload
     assert_equal "funds_movement", legacy.transaction.kind
     assert_nil legacy.transaction.category_id
+    assert_nil legacy.transaction.investment_activity_label
   end
 
   test "savings-plan invoice imports as a portfolio trade and a cash outflow" do
