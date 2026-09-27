@@ -573,6 +573,52 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name='recurring_transaction[frequency_interval_unit]'] option[selected][value='monthly']"
   end
 
+  # The form disables the fields of every group the chosen preset hides, and
+  # disabled fields do not submit. So each preset reaches the server with only
+  # the fields its groups show, and has to keep every value given from that
+  # subset alone. The groups are read from the rendered form, so moving a field
+  # into the wrong one fails here instead of quietly saving a default.
+  test "every preset keeps its values when only the fields shown for it submit" do
+    get edit_recurring_transaction_url(@recurring_transaction)
+    groups = css_select("[data-frequency-fields-target='group']").map do |group|
+      { presets: group["data-presets"].to_s.split(","),
+        units: group["data-units"].to_s.split(","),
+        fields: group.css("[name]").map { |field| field["name"][/\[(\w+)\]\z/, 1] } }
+    end
+
+    # Each unlike what the server falls back on for a missing field: the
+    # series' expected day (5), the anchor's day, month and weekday (Thursday
+    # 9 July) and the semimonthly defaults (1 and 15). Every 4 units is no
+    # named preset in any unit, where every 3 months would read as quarterly.
+    anchor = Date.new(2026, 7, 9)
+    given = { "frequency_interval" => "4", "frequency_day_of_month" => "12",
+              "frequency_second_day_of_month" => "27", "frequency_weekday" => "2",
+              "frequency_month_of_year" => "2" }
+
+    cases = RecurringTransaction::FrequencyPreset::PRESETS.map { |preset| [ preset, nil ] } +
+            RecurringTransaction::FrequencyPreset::INTERVAL_UNITS.map { |unit| [ "interval", unit ] }
+
+    cases.each do |preset, unit|
+      label = [ preset, unit ].compact.join(" ")
+      @recurring_transaction.recurrence_rules.destroy_all
+      @recurring_transaction.update_columns(expected_day_of_month: 5, anchor_date: anchor)
+
+      shown = groups.select { |group| group[:presets].include?(preset) || (unit && group[:units].include?(unit)) }
+                    .flat_map { |group| group[:fields] }
+      submitted = given.slice(*shown).merge("frequency_preset" => preset)
+      submitted["frequency_interval_unit"] = unit if shown.include?("frequency_interval_unit")
+
+      patch recurring_transaction_url(@recurring_transaction), params: { recurring_transaction: submitted }
+
+      assert_redirected_to recurring_transactions_url, "#{label} did not save from the fields shown for it"
+      detected = RecurringTransaction::FrequencyPreset.detect(@recurring_transaction.reload)
+      assert_equal [ preset, unit ], [ detected.key, detected.interval_unit ]
+      detected.to_h.except(:key, :interval_unit).compact.each do |attribute, value|
+        assert_equal given.fetch("frequency_#{attribute}").to_i, value, "#{label} lost its #{attribute}"
+      end
+    end
+  end
+
   test "update rejects a non-http scheme instead of storing it" do
     patch recurring_transaction_url(@recurring_transaction),
           params: { recurring_transaction: { payment_url: "javascript:alert(1)" } }

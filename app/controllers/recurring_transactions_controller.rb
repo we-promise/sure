@@ -182,6 +182,8 @@ class RecurringTransactionsController < ApplicationController
     apply_editable_identity
     apply_frequency_preset
 
+    # end_after_count submits only while the type reads installment (the form
+    # disables it otherwise), so any other type leaves the stored count alone.
     if @recurring_transaction.typed_installment? && @recurring_transaction.end_after_count.present?
       @recurring_transaction.end_mode = "after_count"
       @recurring_transaction.anchor_date ||= @recurring_transaction.last_occurrence_date
@@ -443,6 +445,13 @@ class RecurringTransactionsController < ApplicationController
       end
     end
 
+    # The form disables the fields of every group the chosen preset hides, and
+    # disabled fields do not submit, so each preset arrives with only the
+    # fields shown for it; the rest are nil here. That holds because
+    # FrequencyPreset defaults every missing day detail except the weekday of
+    # weekly and biweekly, and the weekday select sits in the group those two
+    # presets show. Moving a field to another group in _form changes what
+    # reaches this method.
     def apply_frequency_preset
       changed = RecurringTransaction::FrequencyPreset.apply(
         @recurring_transaction,

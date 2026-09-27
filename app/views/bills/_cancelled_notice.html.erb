@@ -5,7 +5,7 @@
 <% if series.cancelled_on.present? && series.active? %>
   <div class="flex items-center justify-between gap-3 bg-container-inset rounded-lg p-3">
     <p class="text-xs text-secondary">
-      <%= t("bills.cancelled_still_scheduled", date: l(series.cancelled_on, format: :short)) %>
+      <%= t("bills.cancelled_still_scheduled", date: l(series.cancelled_on, format: :short_with_year)) %>
     </p>
     <%= render DS::Link.new(
           text: t("recurring_transactions.actions.pause"),
