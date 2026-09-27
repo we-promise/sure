@@ -52,6 +52,30 @@ class Family::SyncerTest < ActiveSupport::TestCase
     syncer.perform_sync(family_sync)
   end
 
+  test "eager-loads rule actions and conditions to avoid N+1 queries" do
+    # Create several active rules, each with actions and conditions, so an
+    # un-eager-loaded loop would fire 2*N extra queries.
+    3.times do
+      @family.rules.create!(
+        resource_type: "transaction",
+        active: true,
+        actions: [ Rule::Action.new(action_type: "exclude_transaction") ],
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "coffee") ]
+      )
+    end
+
+    syncer = Family::Syncer.new(@family)
+
+    # Stub apply_later so only the ActiveRecord loading queries are counted.
+    Rule.any_instance.stubs(:apply_later)
+
+    # With eager loading the query count is constant (rules + actions +
+    # conditions = 3), regardless of the number of rules.
+    assert_queries_count(3) do
+      syncer.perform_post_sync
+    end
+  end
+
   test "only applies active rules during sync" do
     family_sync = syncs(:family)
 
