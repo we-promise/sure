@@ -752,17 +752,18 @@ class Account < ApplicationRecord
 
   def set_provider_balance_adjustment(amount:, reason:)
     amount = amount.presence&.to_d || 0.to_d
-    # Clearing stays allowed so an adjustment set before a provider change can be removed.
-    unless linked? && (amount.zero? || supports_provider_balance_adjustment?)
-      return Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "This account's provider does not support balance adjustments")
-    end
-
     previous_adjustment = provider_balance_adjustment.to_d
     provider_balance = balance.to_d - previous_adjustment
     normalized_reason = amount.zero? ? nil : reason.presence
 
     if amount == previous_adjustment && normalized_reason == provider_balance_adjustment_reason
       return Account::CurrentBalanceManager::Result.new(success?: true, changes_made?: false, error: nil)
+    end
+
+    # Clearing stays allowed so an adjustment set before a provider change or
+    # unlink can still be removed.
+    unless amount.zero? || supports_provider_balance_adjustment?
+      return Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "This account's provider does not support balance adjustments")
     end
 
     Account.transaction do

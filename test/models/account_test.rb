@@ -980,4 +980,30 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal 0, @account.reload.provider_balance_adjustment
     assert_equal original_balance, @account.balance
   end
+
+  test "resubmitting an unchanged adjustment succeeds after the provider stops supporting it" do
+    AccountProvider.create!(account: @account, provider: mercury_accounts(:checking_account))
+    @account.update_columns(provider_balance_adjustment: -25, provider_balance_adjustment_reason: "Pending refund",
+      provider_balance_adjustment_effective_date: Date.current)
+
+    result = @account.reload.set_provider_balance_adjustment(amount: "-25", reason: "Pending refund")
+
+    assert result.success?
+    assert_not result.changes_made?
+    assert_equal(-25, @account.reload.provider_balance_adjustment)
+  end
+
+  test "clears a leftover adjustment on an account that is no longer linked" do
+    @account.update_columns(balance: @account.balance - 25, provider_balance_adjustment: -25,
+      provider_balance_adjustment_reason: "Pending refund", provider_balance_adjustment_effective_date: Date.current)
+    raw_balance = @account.reload.balance + 25
+    assert @account.unlinked?
+
+    result = @account.set_provider_balance_adjustment(amount: "", reason: "")
+
+    assert result.success?, result.error
+    assert_equal 0, @account.reload.provider_balance_adjustment
+    assert_nil @account.provider_balance_adjustment_reason
+    assert_equal raw_balance, @account.balance
+  end
 end
