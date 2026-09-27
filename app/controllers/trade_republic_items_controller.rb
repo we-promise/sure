@@ -182,12 +182,18 @@ class TradeRepublicItemsController < ApplicationController
 
     result = provider.poll_qr_login(pending_login_b64: pending)
     if result.data["status"] == "pending"
-      @trade_republic_item.update!(pending_login_state: result.data.fetch("pending_login_b64"))
+      unless update_if_pending_login_current!(pending, pending_login_state: result.data.fetch("pending_login_b64"))
+        return render_superseded_qr_login
+      end
+
       response_data = result.data.except("pending_login_b64")
       response_data["qr_code_svg"] = view_context.generate_mfa_qr_code(result.data["qr_code_payload"]) if result.data["qr_code_payload"].present?
       render json: response_data
     else
-      @trade_republic_item.update!(session_blob: result.data.fetch("session_txt"), pending_login_state: nil, status: :good)
+      unless update_if_pending_login_current!(pending, session_blob: result.data.fetch("session_txt"), pending_login_state: nil, status: :good)
+        return render_superseded_qr_login
+      end
+
       @trade_republic_item.sync_later unless @trade_republic_item.syncing?
       flash[:notice] = t(".success")
       render json: result.data.except("session_txt")
@@ -196,12 +202,12 @@ class TradeRepublicItemsController < ApplicationController
     @trade_republic_item.update!(pending_login_state: nil)
     render json: { error: e.message }, status: :unprocessable_entity
   rescue Provider::TradeRepublicClient::RateLimited => e
-    render_qr_login_error(e, status: :too_many_requests, retryable: true)
+    render_qr_login_error(e, pending: pending, status: :too_many_requests, retryable: true)
   rescue Provider::TradeRepublicClient::Timeout,
          Provider::TradeRepublicClient::TransientProviderError => e
-    render_qr_login_error(e, status: :service_unavailable, retryable: true)
+    render_qr_login_error(e, pending: pending, status: :service_unavailable, retryable: true)
   rescue Provider::TradeRepublicClient::Error => e
-    render_qr_login_error(e)
+    render_qr_login_error(e, pending: pending)
   end
 
   def cancel_qr_login
@@ -558,11 +564,35 @@ class TradeRepublicItemsController < ApplicationController
       end
     end
 
-    def render_qr_login_error(error, status: :unprocessable_entity, retryable: false)
-      if error.respond_to?(:pending_login_b64) && error.pending_login_b64.present?
-        @trade_republic_item.update!(pending_login_state: error.pending_login_b64)
+    def render_qr_login_error(error, pending: nil, status: :unprocessable_entity, retryable: false)
+      DebugLogEntry.capture(
+        category: "sync",
+        level: retryable ? "info" : "warn",
+        message: "Trade Republic QR login poll failed for item #{@trade_republic_item.id} " \
+                 "(#{retryable ? "retryable" : "fatal"}): #{error.class} - #{error.message}",
+        source: "trade_republic",
+        family: Current.family,
+        provider_key: "trade_republic"
+      )
+
+      if pending.present? && error.respond_to?(:pending_login_b64) && error.pending_login_b64.present?
+        update_if_pending_login_current!(pending, pending_login_state: error.pending_login_b64)
       end
 
       render json: { error: error.message, retryable: retryable }, status: status
+    end
+
+    # Cancellation or a newer QR login can replace the state while a poll is
+    # in flight; only the poll that started from the current state may write.
+    def update_if_pending_login_current!(expected_pending, **attributes)
+      @trade_republic_item.with_lock do
+        current = @trade_republic_item.pending_login_state == expected_pending
+        @trade_republic_item.update!(attributes) if current
+        current
+      end
+    end
+
+    def render_superseded_qr_login
+      render json: { error: t("trade_republic_items.poll_qr_login.no_pending_login"), retryable: false }, status: :conflict
     end
 end

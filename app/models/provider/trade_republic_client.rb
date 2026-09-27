@@ -211,7 +211,7 @@ class Provider::TradeRepublicClient
       end
     end
 
-    pending = pending.merge("process_id" => process_id, "session_blob" => session.cookies_blob)
+    pending = pending.merge("process_id" => process_id)
     begin
       process_response = session.get(
         "/api/v2/auth/web/login/processes/#{escape_path(process_id)}",
@@ -219,9 +219,10 @@ class Provider::TradeRepublicClient
       )
       raise_http_error(process_response, login: true)
     rescue RateLimited, Timeout, TransientProviderError => e
-      attach_pending_login_state(e, pending)
+      attach_pending_login_state(e, pending.merge("session_blob" => session.cookies_blob))
       raise
     end
+    pending = pending.merge("session_blob" => session.cookies_blob)
     process = parse_json(process_response)
     unless login_process_completed?(process)
       return Result.new(data: {

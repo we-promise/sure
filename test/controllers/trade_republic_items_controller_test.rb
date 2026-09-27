@@ -199,6 +199,73 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "qr-pending-with-process", item.reload.pending_login_state
   end
 
+  test "QR polling records retryable provider failures for support" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic QR Connection",
+      currency: "EUR",
+      status: :requires_update
+    )
+    item.update!(pending_login_state: "qr-pending")
+    provider = mock
+    provider.expects(:poll_qr_login).raises(Provider::TradeRepublicClient::RateLimited, "Slow down")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    assert_difference -> { DebugLogEntry.where(source: "trade_republic", level: "info").count }, 1 do
+      post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+    end
+
+    assert_response :too_many_requests
+    entry = DebugLogEntry.where(source: "trade_republic").order(:created_at).last
+    assert_equal families(:dylan_family), entry.family
+    assert_includes entry.message, "RateLimited"
+  end
+
+  test "QR polling does not restore a login cancelled while a retryable poll was in flight" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic QR Connection",
+      currency: "EUR",
+      status: :requires_update
+    )
+    item.update!(pending_login_state: "qr-pending")
+    error = Provider::TradeRepublicClient::TransientProviderError.new("Trade Republic login failed")
+    error.define_singleton_method(:pending_login_b64) { "qr-pending-with-process" }
+    provider = Object.new
+    provider.define_singleton_method(:poll_qr_login) do |pending_login_b64:|
+      TradeRepublicItem.find(item.id).update!(pending_login_state: nil)
+      raise error
+    end
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :service_unavailable
+    assert_nil item.reload.pending_login_state
+  end
+
+  test "QR polling does not connect a login cancelled while the poll was in flight" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic QR Connection",
+      currency: "EUR",
+      status: :requires_update
+    )
+    item.update!(pending_login_state: "qr-pending")
+    provider = Object.new
+    provider.define_singleton_method(:poll_qr_login) do |pending_login_b64:|
+      TradeRepublicItem.find(item.id).update!(pending_login_state: nil)
+      Provider::TradeRepublicClient::Result.new(data: { "status" => "confirmed", "session_txt" => "qr-session" })
+    end
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :conflict
+    assert_equal false, JSON.parse(response.body).fetch("retryable")
+    item.reload
+    assert_predicate item, :requires_update?
+    assert_not item.session_configured?
+    assert_nil item.pending_login_state
+  end
+
   test "successful web login renders a dialog button that closes the modal" do
     item = trade_republic_items(:requires_update_item)
     item.update!(pending_login_state: "pending-login")

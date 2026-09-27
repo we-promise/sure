@@ -208,11 +208,13 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
     session = mock
     session.stubs(:login_headers).returns({})
-    session.stubs(:cookies_blob).returns('{"JSESSIONID":"after-scan"}')
+    process_poll = states("process_poll").starts_as("before")
+    session.stubs(:cookies_blob).returns('{"JSESSIONID":"before-poll"}').when(process_poll.is("before"))
+    session.stubs(:cookies_blob).returns('{"JSESSIONID":"after-poll"}').when(process_poll.is("after"))
     session.expects(:get).with(regexp_matches(%r{/qr-challenges/}), headers: {}).never
     session.expects(:get).with("/api/v2/auth/web/login/processes/process-1", headers: {}).returns(
       response_class.new("200", { "status" => "PENDING" }.to_json)
-    )
+    ).then(process_poll.is("after"))
     @client.define_singleton_method(:new_session) { |session_blob:| session }
 
     pending = {
@@ -227,7 +229,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     assert_equal "pending", result.data["status"]
     assert_equal "process-1", next_pending["process_id"]
-    assert_equal '{"JSESSIONID":"after-scan"}', next_pending["session_blob"]
+    assert_equal '{"JSESSIONID":"after-poll"}', next_pending["session_blob"]
   end
 
   test "preserves QR login process after retryable first process request failure" do
@@ -240,13 +242,15 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
     session = mock
     session.stubs(:login_headers).returns({})
-    session.stubs(:cookies_blob).returns('{"JSESSIONID":"after-scan"}')
+    process_poll = states("process_poll").starts_as("before")
+    session.stubs(:cookies_blob).returns('{"JSESSIONID":"after-scan"}').when(process_poll.is("before"))
+    session.stubs(:cookies_blob).returns('{"JSESSIONID":"after-poll"}').when(process_poll.is("after"))
     session.expects(:get).with(regexp_matches(%r{/qr-challenges/}), headers: {}).returns(
       response_class.new("200", { "processId" => "process-1" }.to_json)
     )
     session.expects(:get).with("/api/v2/auth/web/login/processes/process-1", headers: {}).returns(
       response_class.new("503", {}.to_json)
-    )
+    ).then(process_poll.is("after"))
     @client.define_singleton_method(:new_session) { |session_blob:| session }
 
     pending = {
@@ -261,7 +265,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     next_pending = JSON.parse(Base64.strict_decode64(error.pending_login_b64))
 
     assert_equal "process-1", next_pending["process_id"]
-    assert_equal '{"JSESSIONID":"after-scan"}', next_pending["session_blob"]
+    assert_equal '{"JSESSIONID":"after-poll"}', next_pending["session_blob"]
   end
 
   test "recognizes Trade Republic approval states from state or status" do
