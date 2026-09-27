@@ -108,7 +108,9 @@ class Transfer < ApplicationRecord
         next if transaction.nil?
         next unless Transaction.exists?(transaction.id)
         begin
-          transaction.update!(kind: "standard")
+          # A pending auto-match never changed the kind (see #confirm!), so
+          # only reset kinds this transfer actually assigned.
+          transaction.update!(kind: "standard") if transaction.transfer?
           # The entry survives this destroy (only the Transfer join row and
           # fee transactions go away), but its idempotency_key must not: a
           # later retry of the original create request looks up that key,
@@ -125,8 +127,26 @@ class Transfer < ApplicationRecord
     end
   end
 
+  # Auto-matched transfers start out pending and leave both transactions as
+  # they were, so an unconfirmed suggestion never moves budgets or reports.
+  # The transfer kinds (and the Investment Contributions category) only apply
+  # once the user confirms the match.
   def confirm!
-    update!(status: "confirmed")
+    Transfer.transaction do
+      update!(status: "confirmed")
+
+      # The kind is determined by the DESTINATION account (inflow), matching Transfer::Creator logic
+      outflow_kind = Transfer.kind_for_account(to_account)
+      outflow_attrs = { kind: outflow_kind }
+
+      if outflow_kind == "investment_contribution" && outflow_transaction.category_id.blank?
+        category = to_account.family.investment_contributions_category
+        outflow_attrs[:category] = category if category.present?
+      end
+
+      inflow_transaction.update!(kind: "funds_movement")
+      outflow_transaction.update!(outflow_attrs)
+    end
   end
 
   def date
