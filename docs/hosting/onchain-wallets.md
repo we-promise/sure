@@ -1,13 +1,18 @@
 # On-chain (self-custody) wallets
 
 Sure can track wallets you hold the keys to — Bitcoin, six EVM networks and
-Solana — from their **public addresses only**. Nothing is signed, no key or seed
-phrase is ever entered, and no API key is required for any chain.
+Solana — from public addresses. The Bitcoin preview also accepts an account-level
+**extended public key** for watch-only address discovery. Nothing is signed, no
+private key or seed phrase is ever entered, and no API key is required for any chain.
 
 This document covers where the data comes from, what needs configuring, the
 limits you will hit, and how to diagnose a wallet that looks wrong.
 
 ## What gets tracked
+
+The existing single-address flow creates accounts per asset. For an existing
+Crypto account containing several assets, the Bitcoin preview updates its BTC
+position only; see [Multi-address Bitcoin accounts](#multi-address-bitcoin-accounts).
 
 One Sure account is created per **asset**, per **address**, per **network**. A
 wallet holding ETH and USDC on Ethereum becomes two accounts, both Crypto
@@ -223,14 +228,69 @@ of its value in a staking or lending protocol will report a fraction of it. This
 is a scope limit, not a bug — nothing in the UI claims those positions were
 checked.
 
-**Bitcoin is one address at a time.** Extended keys (`xpub`, `ypub`, `zpub`) are
-not supported and are rejected as addresses. This matters: most Bitcoin wallets
-are HD wallets, where one extended key derives thousands of addresses and change
-is sent to derived ones. Tracking a single address of such a wallet reports only
-that address's balance, which is usually a fraction of the wallet. Supporting
-extended keys would require BIP32 derivation — a dependency this codebase
-deliberately avoids — or a descriptor-indexing backend. If you use a single-address
-setup, or want to follow one specific address, this works exactly as expected.
+**The original Bitcoin linking flow tracks one address.** Extended keys remain
+invalid in that flow. To aggregate addresses and discover an HD account's receive
+and change branches, use the Bitcoin preview below. HD discovery initially
+supports mainnet Native SegWit only; Legacy, Nested SegWit and Taproot accounts
+can still be tracked through manually supplied public addresses.
+
+## Multi-address Bitcoin accounts
+
+An administrator with **Settings → Preferences → Preview features** enabled can
+open an existing Crypto account's menu and choose **Connect Bitcoin wallet**.
+This preserves the existing account, its other assets and its cash balance.
+
+1. Choose the existing BTC position, if the account has one.
+2. Add a public address, or select **Native SegWit account (xpub / zpub)**.
+3. For an extended key, supply its account-level public key and a receive address
+   independently verified on the hardware wallet. On Ledger Wallet, the public
+   key is available in the Bitcoin account's advanced details. Never enter a
+   recovery phrase, xprv, zprv or private key.
+4. Wait for background discovery and review the aggregate BTC quantity.
+5. Connect the position. The observed quantity replaces the existing quantity;
+   it is not added to it a second time.
+
+![Bitcoin quantity preview](images/bitcoin-wallet-preview.png)
+
+Each key covers one Bitcoin account, not every account on a physical Ledger.
+Add additional account keys or addresses under **Manage Bitcoin wallet → Add
+another source**. Duplicate addresses within the aggregate are counted once.
+The same address cannot be counted by another wallet in the household.
+
+The key is stored using Active Record encryption. Configure all three encryption
+keys or application credentials before adding an xpub; there is no plaintext
+fallback. Keys are never returned by the status API or sent to the explorer.
+Address derivation happens locally, but the selected explorer sees the address
+queries. `MEMPOOL_SPACE_URL` can point to a compatible self-hosted indexer.
+
+Discovery scans receive `/0/index` and change `/1/index`, including used addresses
+whose balance is now zero. The default gap is 20 consecutive unused addresses per
+branch. Increase it, up to 1000, if the wallet generated a larger unused gap.
+Discovery checks at most 200 addresses per job, saves its cursor and continues in
+another job. A wallet using addresses beyond the selected gap needs a larger gap
+or explicit manual addresses; the UI does not claim to discover other accounts.
+
+Current balance is the sum of confirmed address balances plus the net effect of
+unique mempool transactions. Transactions appearing at several owned addresses
+are imported once. Internal transfers and change stay within the aggregate;
+only their network fee reduces the quantity. An exchange's batch transaction
+credits only outputs belonging to this wallet.
+
+The initial snapshot records a quantity reconciliation without a cash movement,
+purchase or income. Existing history remains intact, and subsequent on-chain
+movements are cash-neutral transfers. Further source-set changes reconcile the
+new quantity without fabricating a new deposit for previously held coins.
+
+Connected wallets update hourly, on a family sync and through **Sync wallet**.
+An incomplete address read, changed chain tip or inconsistent mempool preserves
+the last complete balance. The status API reports freshness, source/address
+counts and history completeness without revealing keys or address lists.
+
+![Connected Bitcoin wallet](images/bitcoin-wallet-connected.png)
+
+Disconnecting retains the account, its current positions and all imported
+entries; tracking becomes manual. Turning Preview off hides the management UI
+but does not disconnect an existing wallet or stop its background sync.
 
 **Solana token names depend on a token list.** RPC returns mints, not names, so
 names come from Jupiter's token search — and only for mints it reports as
