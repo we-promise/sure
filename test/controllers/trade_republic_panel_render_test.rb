@@ -17,6 +17,29 @@ class TradeRepublicPanelRenderTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "hover:border-primary"
   end
 
+  test "item stuck in a pending login state still renders disconnect" do
+    item = trade_republic_items(:configured_item)
+    item.update!(pending_login_state: "some-state")
+
+    get connect_form_settings_providers_path(provider_key: "trade_republic")
+    assert_response :success
+
+    disconnect_label = I18n.t("settings.providers.trade_republic_panel.disconnect")
+    assert_includes response.body, %(aria-label="#{disconnect_label}")
+    assert_includes response.body, trade_republic_item_path(item)
+  end
+
+  test "item without a configured session still renders disconnect" do
+    item = trade_republic_items(:no_session_item)
+
+    get connect_form_settings_providers_path(provider_key: "trade_republic")
+    assert_response :success
+
+    disconnect_label = I18n.t("settings.providers.trade_republic_panel.disconnect")
+    assert_includes response.body, %(aria-label="#{disconnect_label}")
+    assert_includes response.body, trade_republic_item_path(item)
+  end
+
   test "new record form renders QR submit via DS::Button" do
     sign_in users(:empty)
 

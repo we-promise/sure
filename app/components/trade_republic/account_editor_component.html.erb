@@ -20,41 +20,39 @@
            data-controller="trade-republic-login"
            data-trade-republic-login-url-value="<%= helpers.poll_login_trade_republic_item_path(item) %>"
          <% end %>>
-      <% if item.pending_login_state.blank? %>
-        <% if item.session_configured? %>
-          <div class="flex flex-wrap justify-end gap-2">
-            <%= render DS::Button.new(
-                  text: translation("connect"),
-                  variant: :outline,
-                  size: :sm,
-                  icon: "log-in",
-                  href: helpers.initiate_login_trade_republic_item_path(item),
-                  method: :post
-                ) %>
+      <div class="flex flex-wrap justify-end gap-2">
+        <% if item.pending_login_state.blank? && item.session_configured? %>
+          <%= render DS::Button.new(
+                text: translation("connect"),
+                variant: :outline,
+                size: :sm,
+                icon: "log-in",
+                href: helpers.initiate_login_trade_republic_item_path(item),
+                method: :post
+              ) %>
 
-            <%= render DS::Button.new(
-                  text: translation("sync"),
-                  variant: :outline,
-                  size: :sm,
-                  icon: "refresh-cw",
-                  href: helpers.sync_trade_republic_item_path(item),
-                  method: :post,
-                  disabled: item.syncing?
-                ) %>
-
-            <%= render DS::Button.new(
-                  variant: :outline_destructive,
-                  size: :sm,
-                  icon: "trash-2",
-                  aria_label: translation("disconnect"),
-                  title: translation("disconnect"),
-                  href: helpers.trade_republic_item_path(item),
-                  method: :delete,
-                  confirm: translation("disconnect_confirm")
-                ) %>
-          </div>
+          <%= render DS::Button.new(
+                text: translation("sync"),
+                variant: :outline,
+                size: :sm,
+                icon: "refresh-cw",
+                href: helpers.sync_trade_republic_item_path(item),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
         <% end %>
-      <% end %>
+
+        <%= render DS::Button.new(
+              variant: :outline_destructive,
+              size: :sm,
+              icon: "trash-2",
+              aria_label: translation("disconnect"),
+              title: translation("disconnect"),
+              href: helpers.trade_republic_item_path(item),
+              method: :delete,
+              confirm: translation("disconnect_confirm")
+            ) %>
+      </div>
 
       <% qr_active = qr_login_active?(item) %>
       <% if item.pending_login_state.blank? || item.login_stage == "qr_pending" %>
