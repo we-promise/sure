@@ -157,7 +157,8 @@ jobs:
 
   test_system:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Allow the complete browser suite plus Chrome/Ruby setup to finish.
+    timeout-minutes: 20
 
     env:
       PLAID_CLIENT_ID: foo
