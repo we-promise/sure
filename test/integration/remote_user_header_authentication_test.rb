@@ -118,6 +118,33 @@ class RemoteUserHeaderAuthenticationTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # The unlocked active? check passes, then the user is deactivated before
+  # with_active_lock! takes the row lock. Stubbing the lock to raise stands in
+  # for that interleaving.
+  test "a user deactivated before the lock gets no session and no login audit" do
+    user = users(:family_admin)
+    User.any_instance.stubs(:with_active_lock!).raises(User::InactiveError)
+
+    assert_no_difference [ -> { SsoAuditLog.count }, -> { user.sessions.count } ] do
+      get root_url, headers: { HEADER_NAME => user.email }
+    end
+    assert_redirected_to new_session_url
+  end
+
+  test "a reusable session is not handed back to a user deactivated before the lock" do
+    user = users(:family_admin)
+    assert_difference -> { user.sessions.count }, 1 do
+      get root_url, headers: { HEADER_NAME => user.email }
+    end
+
+    reset!
+    User.any_instance.stubs(:with_active_lock!).raises(User::InactiveError)
+
+    get root_url, headers: { HEADER_NAME => user.email }
+    assert_redirected_to new_session_url
+    assert cookies[:session_token].blank?, "the reused session must not be re-issued"
+  end
+
   test "cookie session for a different user is invalidated when the header asserts another identity" do
     user_a = users(:family_admin)
     sign_in(user_a)

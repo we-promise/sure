@@ -63,21 +63,36 @@ module Authentication
           request: request
         )
       elsif existing_session = reusable_remote_header_session_for(user)
-        # The proxy stamps the header on every request it forwards, so any
-        # cookieless client (curl, health checks, crawlers) would otherwise mint
-        # a Session and an SsoAuditLog row per request. Hand the same client its
-        # existing session back instead, and don't re-log a login it never made.
-        cookies.signed.permanent[:session_token] = { value: existing_session.id, httponly: true }
-        existing_session.touch
-        return existing_session
+        return reissue_remote_header_session(user, existing_session)
       end
+
+      # create_session_for refuses a user deactivated since the unlocked
+      # active? check, so audit only a login that actually got a session.
+      session_record = create_session_for(user)
+      return unless session_record
 
       SsoAuditLog.log_login!(
         user: user,
         provider: REMOTE_HEADER_SSO_PROVIDER,
         request: request
       )
-      create_session_for(user)
+      session_record
+    end
+
+    # The proxy stamps the header on every request it forwards, so any
+    # cookieless client (curl, health checks, crawlers) would otherwise mint a
+    # Session and an SsoAuditLog row per request. Hand the same client its
+    # existing session back instead, and don't re-log a login it never made.
+    # Re-issuing the cookie is still issuance, so it goes through the same
+    # locked active check as create_session_for.
+    def reissue_remote_header_session(user, existing_session)
+      user.with_active_lock! do
+        cookies.signed.permanent[:session_token] = { value: existing_session.id, httponly: true }
+        existing_session.touch
+        existing_session
+      end
+    rescue User::InactiveError
+      nil
     end
 
     # Returns [ user, created ] for the header assertion, or [ nil, false ] when
