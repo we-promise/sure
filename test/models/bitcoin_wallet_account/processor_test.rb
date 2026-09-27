@@ -102,4 +102,12 @@ class BitcoinWalletAccount::ProcessorTest < ActiveSupport::TestCase
     long = capture_sql_queries { BitcoinWalletAccount::Processor.new(@wallet).process }.count { |sql| sql.start_with?("SELECT") }
     assert_operator long, :<=, short + 3
   end
+
+  test "initial connection prepares a missing quote with today's date" do
+    @wallet.security.prices.where(date: Date.current).delete_all
+    @wallet.security.stubs(:price_data_provider).returns(:configured)
+    @wallet.security.expects(:import_provider_prices).with(start_date: Date.current, end_date: Date.current).once
+    @wallet.connect!
+    assert_equal BigDecimal("0.2"), @account.reload.current_holdings.find_by!(security: @wallet.security).qty
+  end
 end

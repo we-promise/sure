@@ -43,7 +43,7 @@ class BitcoinWalletAccount::Processor
       return if wallet.security.price_data_provider.blank?
       return if wallet.security.prices.exists?(date: Date.current)
 
-      wallet.security.import_provider_prices(start_date: wallet.baseline_at.to_date, end_date: Date.current)
+      wallet.security.import_provider_prices(start_date: wallet.baseline_at&.to_date || Date.current, end_date: Date.current)
     rescue StandardError => error
       DebugLogEntry.capture(category: "provider_sync_error", level: "warn",
         message: "Bitcoin price history could not be read", source: self.class.name,
