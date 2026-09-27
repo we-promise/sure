@@ -100,7 +100,7 @@ de:
       link: "Verknüpfen"
       cancel: "Abbrechen"
     initiate_login:
-      pin_required: "Gib deine Trade-Republic-PIN ein, um eine neue Anmeldung zu starten."
+      pin_required: "Gib deine Trade-Republic-PIN oder dein Passwort ein, um eine neue Anmeldung zu starten."
       verification_required: "Anmeldung gestartet. Bestätige sie über %{method} und klicke anschließend auf Anmeldung bestätigen."
     initiate_qr_login:
       not_configured: "Trade Republic ist nicht konfiguriert."
@@ -125,7 +125,7 @@ de:
         one: "Ein ausgewähltes Trade-Republic-Konto konnte nicht vollständig eingerichtet werden. Prüfe das Debug-Log und versuche es erneut."
         other: "%{count} ausgewählte Trade-Republic-Konten konnten nicht vollständig eingerichtet werden. Prüfe das Debug-Log und versuche es erneut."
     update:
-      pin_required: "Gib deine Trade-Republic-PIN ein, um die Verbindung erneut zu authentifizieren."
+      pin_required: "Gib deine Trade-Republic-PIN oder dein Passwort ein, um die Verbindung erneut zu authentifizieren."
     destroy:
       unlink_failed: "Trade Republic konnte nicht vollständig getrennt werden. Die Verbindung bleibt für einen sicheren erneuten Versuch erhalten."
     activities:
