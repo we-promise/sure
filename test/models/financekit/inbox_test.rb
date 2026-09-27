@@ -189,6 +189,124 @@ class Financekit::InboxTest < ActiveSupport::TestCase
     assert_nil @item.credential_digest
   end
 
+  test "draining a backlog fans downstream work out once, not once per capture" do
+    first, first_raw = accept_batch
+    second, = accept_batch(financekit_payload(sequence: 2,
+      predecessor_digest: Digest::SHA256.hexdigest(first_raw), events: []))
+
+    # Two captures, one fan-out: transfer matching scans the whole family and
+    # costs the same whether one capture or fifty just landed.
+    Family.any_instance.expects(:auto_match_transfers!).once.returns(nil)
+
+    FinancekitInboxJob.perform_now(@item.id)
+
+    assert_equal "applied", first.reload.status
+    assert_equal "applied", second.reload.status
+    assert_not_nil first.downstream_completed_at
+    assert_not_nil second.downstream_completed_at
+    assert_not_nil @item.reload.last_downstream_at
+  end
+
+  test "a multi-chunk capture fans downstream work out once, not once per chunk" do
+    capture_id = SecureRandom.uuid
+    first_payload = financekit_payload(events: [])
+    first_payload.merge!("capture_id" => capture_id, "chunk_index" => 0, "chunk_count" => 2)
+    first, first_raw = accept_batch(first_payload)
+    second_payload = financekit_payload(sequence: 2, predecessor_digest: Digest::SHA256.hexdigest(first_raw),
+      events: [])
+    second_payload.merge!("capture_id" => capture_id, "chunk_index" => 1, "chunk_count" => 2)
+    second, = accept_batch(second_payload)
+
+    # Completing only the last chunk left the earlier ones for the recovery
+    # sweep, which then repeated the whole fan-out inside the same job run.
+    Family.any_instance.expects(:auto_match_transfers!).once.returns(nil)
+
+    FinancekitInboxJob.perform_now(@item.id)
+
+    assert_not_nil first.reload.downstream_completed_at
+    assert_not_nil second.reload.downstream_completed_at
+  end
+
+  test "overlapping downstream workers fan out once" do
+    batch, = accept_batch
+    assert Financekit::Processor.new(@item).apply_next!.present?
+    # Both snapshot the same incomplete ids before either performs, which is how
+    # a per-upload job and the periodic sweep overlap in production.
+    first = Financekit::Downstream.new(@item, FinancekitBatch.where(id: batch.id))
+    second = Financekit::Downstream.new(@item, FinancekitBatch.where(id: batch.id))
+    Family.any_instance.expects(:auto_match_transfers!).once.returns(nil)
+
+    first.perform!
+    second.perform!
+
+    assert_not_nil batch.reload.downstream_completed_at
+  end
+
+  test "a failure writing publisher health leaves the batches for recovery" do
+    batch, = accept_batch
+    assert Financekit::Processor.new(@item).apply_next!.present?
+    FinancekitItem.any_instance.stubs(:update!).raises(ActiveRecord::StatementInvalid.new("health write failed"))
+
+    enqueued_before = enqueued_jobs.size
+    Financekit::Downstream.new(@item, FinancekitBatch.where(id: batch.id)).perform!
+
+    # Completing the batch without the health write would hide it from the
+    # recovery sweep, which only looks for incomplete batches. Rolling it back
+    # has to take the scheduling with it, or recovery redoes work already
+    # queued and RuleJob records a second RuleRun for the same capture.
+    assert_nil batch.reload.downstream_completed_at
+    assert_nil FinancekitItem.find(@item.id).last_downstream_at
+    assert_equal enqueued_before, enqueued_jobs.size,
+      "rolled-back downstream work must not leave jobs queued"
+  end
+
+  test "the sweep recovers a backlog without materializing batch rows" do
+    first = accept_and_apply
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: []))
+    FinancekitBatch.where(id: [ first.id, second.id ]).update_all(downstream_completed_at: nil)
+
+    # A pending batch still carries its payload bytes, so the recovery sweep
+    # must work from ids: loading the rows puts the whole backlog in memory.
+    loaded = 0
+    counter = ->(_name, _start, _finish, _id, payload) do
+      loaded += payload[:record_count].to_i if payload[:class_name] == "FinancekitBatch"
+    end
+    ActiveSupport::Notifications.subscribed(counter, "instantiation.active_record") do
+      FinancekitInboxJob.perform_now
+    end
+
+    assert_equal 0, loaded, "recovery sweep materialized #{loaded} FinancekitBatch rows"
+    assert_not_nil first.reload.downstream_completed_at
+    assert_not_nil second.reload.downstream_completed_at
+  end
+
+  test "the sweep recovers a bounded backlog in the publisher's own order" do
+    first = accept_and_apply
+    second = accept_and_apply(financekit_payload(sequence: 2, predecessor_digest: first.payload_digest,
+      events: []))
+    FinancekitBatch.where(id: [ first.id, second.id ]).update_all(downstream_completed_at: nil)
+
+    # One batch per pass, so the pass has to choose. Without an order Postgres
+    # may return either, and the choice decides which capture waits for the
+    # next sweep.
+    stub_const(Financekit, :MAX_QUEUED, 1) { FinancekitInboxJob.perform_now }
+
+    assert_not_nil first.reload.downstream_completed_at
+    assert_nil second.reload.downstream_completed_at
+  end
+
+  test "the sweep recovers applied batches whose downstream work was lost" do
+    batch = accept_and_apply
+    batch.update_columns(downstream_completed_at: nil)
+    @item.update_columns(last_downstream_at: nil)
+
+    FinancekitInboxJob.perform_now
+
+    assert_not_nil batch.reload.downstream_completed_at
+    assert_not_nil @item.reload.last_downstream_at
+  end
+
   test "payload bytes are removed after the bounded replay window" do
     batch = accept_and_apply
     batch.update_columns(updated_at: 8.days.ago)

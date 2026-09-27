@@ -1,0 +1,365 @@
+---
+uk:
+  goals:
+    color_picker:
+      trigger_label: Вибрати колір та іконку
+      color_heading: Колір
+      icon_heading: Іконка
+      poor_contrast: 'Низька контрастність: виберіть темніший колір або'
+      auto_adjust: налаштуйте автоматично.
+    index:
+      title: Цілі
+      subtitle: Відкладайте на те, що важливо.
+      new_goal: Нова ціль
+      empty_filtered: Немає відповідних цілей.
+      pending_pledges_callout: У вас є очікувані внески. Sure підтвердить їх під час наступної синхронізації.
+      kpi:
+        contributed_label: Внесено · 30 дн.
+        velocity_delta_up: ↑ %{percent}%% порівняно з попередніми 30 дн.
+        velocity_delta_down: ↓ %{percent}%% порівняно з попередніми 30 дн.
+        velocity_delta_flat: порівняно з попередніми 30 дн.
+        velocity_delta_zero_base: Перші 30 дн. активності
+        needs_this_month_label: Потрібно цього місяця
+        needs_this_month_sub:
+          one: '%{count} ціль відстає від графіка'
+          few: '%{count} цілі відстають від графіка'
+          many: '%{count} цілей відстають від графіка'
+          other: '%{count} цілі відстають від графіка'
+        needs_this_month_zero_sub: Жодна ціль не відстає від графіка
+        on_track_label: Цілі за планом
+        on_track_value: '%{on_track} з %{total}'
+        on_track_sub_parts:
+          reached:
+            one: '%{count} досягнута'
+            few: '%{count} досягнуті'
+            many: '%{count} досягнутих'
+            other: '%{count} досягнутої'
+          behind:
+            one: '%{count} відстає'
+            few: '%{count} відстають'
+            many: '%{count} відстають'
+            other: '%{count} відстають'
+          no_date:
+            one: '%{count} без терміну'
+            few: '%{count} без терміну'
+            many: '%{count} без терміну'
+            other: '%{count} без терміну'
+          paused:
+            one: '%{count} призупинена'
+            few: '%{count} призупинені'
+            many: '%{count} призупинених'
+            other: '%{count} призупиненої'
+        on_track_sub_all_good: Усі активні цілі йдуть за графіком
+        on_track_all_caught_up: Усе за планом
+      goals_section:
+        heading: Цілі
+        subtitle: Відкладайте на те, що важливо.
+      ongoing_section:
+        heading: Цілі
+      archived_section:
+        heading: Архів
+      search:
+        placeholder: Пошук цілей…
+        aria_label: Пошук цілей
+        empty: Немає відповідних цілей.
+        empty_with_query: Немає цілей, що відповідають «%{query}».
+        empty_with_filter: Немає цілей, що відповідають цьому фільтру.
+        empty_with_both: Немає цілей, що відповідають «%{query}» з цим фільтром.
+        clear_search: Очистити пошук
+        show_all: Показати всі
+      chips_aria: Фільтрувати цілі за статусом
+      chips:
+        all: Усі
+        on_track: За планом
+        behind: Відстають
+        no_target_date: Безстрокові
+        paused: Призупинені
+        completed: Завершені
+    new:
+      heading: Нова ціль
+      subtitle: Відкладайте на щось конкретне.
+    edit:
+      heading: Редагувати ціль
+      save: Зберегти зміни
+    create:
+      success: Ціль створено.
+    update:
+      success: Ціль оновлено.
+    destroy:
+      success: Ціль видалено.
+    pause:
+      success: Ціль призупинено.
+      invalid_transition: У поточному стані ціль не можна призупинити.
+    resume:
+      success: Ціль відновлено.
+      invalid_transition: У поточному стані ціль не можна відновити.
+    complete:
+      success: Ціль позначено як завершену.
+      invalid_transition: У поточному стані ціль не можна завершити.
+    archive:
+      success: Ціль архівовано.
+      invalid_transition: У поточному стані ціль не можна архівувати.
+    unarchive:
+      success: Ціль повернуто з архіву.
+      invalid_transition: У поточному стані ціль не можна повернути з архіву.
+    reopen:
+      success: Ціль знову відкрито.
+      invalid_transition: У поточному стані ціль не можна відкрити знову.
+    consume:
+      title: Записати витрату
+      subtitle: '%{goal}'
+      amount_label: Скільки ви використали?
+      amount_hint: Зараз на цю ціль припадає %{saved}.
+      account_label: З якого рахунку?
+      earmark_note: Записана сума більше не буде відкладена для цієї цілі, тож інші ваші цілі на цьому рахунку отримають свою частку назад.
+      cancel: Скасувати
+      submit: Записати
+      success: '%{amount} записано як використане.'
+      errors:
+        non_positive: Введіть суму, більшу за нуль.
+        maintained: Резерв використовують і поповнюють, а не витрачають — його нестача вже відображається в цілі.
+        exceeds_target: Це більше, ніж ця ціль узагалі мала накопичити.
+        account_required: Цю ціль фінансують кілька рахунків — вкажіть, з якого з них знято гроші.
+        account_not_linked: Цей рахунок не фінансує цю ціль.
+        not_active: Ця ціль більше не активна, тому для неї нічого не можна записати.
+        exceeds_earmark: Це більше, ніж відкладено для цієї цілі на цьому рахунку.
+        transaction_already_claimed: Це списання вже зараховано.
+        transaction_not_found: Це списання більше не можна зарахувати.
+        no_linked_account: У цієї цілі не залишилося рахунків фінансування.
+    unattributed_outflows:
+      heading: Списання з цих рахунків
+      body: Якщо щось із цього було витрачено на %{goal}, позначте це — і ця сума більше не зменшуватиме прогрес до цілі.
+      attribute: Це та витрата
+    show:
+      edit: Редагувати
+      consume: Записати використання частини грошей
+      pause: Призупинити
+      resume: Відновити
+      complete: Позначити як завершену
+      archive: Архівувати
+      unarchive: Повернути з архіву
+      reopen: Відкрити ціль знову
+      delete: Видалити
+      reserve_shortfall:
+        heading: Резерв нижче цільового балансу
+        body: Зараз у вас %{saved} з %{target}. Додайте %{missing}, щоб повернути резерв до цільового балансу.
+      record_pledge_cta: Записати внесок
+      pledge_just_transferred: Записати зроблений переказ
+      pledge_just_saved: Записати відкладені гроші
+      funding_accounts_heading: Рахунки фінансування
+      funding_accounts:
+        earmarked_of: '%{earmarked} відкладено з %{balance}'
+        empty:
+          heading: Рахунки фінансування ще не пов'язано
+          body: Відредагуйте ціль, щоб пов'язати поточні чи ощадні рахунки, на які ви відкладаєте гроші.
+      notes: Нотатки
+      funding_last_30d: за 30 дн.
+      funding_last_90d: за 90 дн.
+      status_callout:
+        depleted: на %{amount} нижче цільового балансу — поповніть, щоб відновити резерв
+        behind: відкладайте на %{amount}/міс. більше, щоб наздогнати
+        behind_covered: очікувані внески покривають різницю
+        on_track: ціль буде досягнуто приблизно %{date}
+        no_target_date: встановіть цільову дату, щоб спрогнозувати завершення
+      pending_pledge:
+        title:
+          zero: 'Очікується: %{amount} на %{account} · спливає сьогодні'
+          one: 'Очікується: %{amount} на %{account} · залишився %{count} день'
+          few: 'Очікується: %{amount} на %{account} · залишилося %{count} дні'
+          many: 'Очікується: %{amount} на %{account} · залишилося %{count} днів'
+          other: 'Очікується: %{amount} на %{account} · залишилося %{count} дня'
+        body_transfer: Підтвердиться автоматично, щойно Sure виявить відповідне надходження під час наступної синхронізації.
+        body_manual: Підтвердиться під час наступного ручного редагування балансу.
+        pledged_at: Внесок записано %{time_ago} тому
+        extend: Продовжити на 7 днів
+        cancel: Скасувати
+        confirm_cancel_title: Скасувати цей внесок?
+        confirm_cancel_body: Внесок на %{amount} буде видалено. Ви будь-коли можете записати новий.
+        confirm_cancel_cta: Скасувати внесок
+      header:
+        target: 'Ціль: %{amount}'
+        target_by: 'Ціль: %{amount} до %{date}'
+        target_by_past: 'Ціль: %{amount} · термін минув %{date}'
+      ring:
+        including_used: Включно з уже використаними %{amount}
+        saved: Накопичено
+        of: з %{target}
+        to_go: Залишилося %{amount}
+        of_target: від цілі
+        market_value: Ринкова вартість %{amount}
+        aria_label: Ціль виконано на %{percent}%. Накопичено %{amount} з %{target}.
+        aria_label_with_used: Ціль виконано на %{percent}%. %{amount} з %{target}, включно з уже використаними %{used}.
+      projection:
+        heading: Прогноз
+        legend_saved: Накопичено
+        legend_projection: Прогноз
+        legend_required: Потрібно
+        reserve: Резерв підтримує цільовий баланс, тому дати завершення для прогнозу немає.
+        reached: Ви досягли цілі. Прогноз не потрібен.
+        no_target_date: Цільову дату не встановлено. Встановіть її, щоб спрогнозувати завершення.
+        no_pace: Надходжень ще немає. Поповніть пов'язаний рахунок, щоб побудувати прогноз.
+        behind: За поточного темпу ви не встигаєте.
+        on_track_html: За поточного темпу ви досягнете цієї цілі приблизно <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        aria_label: Графік прогнозу для %{name}
+        today_marker: Сьогодні
+        tooltip_projected: 'Прогноз: %{amount}'
+        tooltip_saved: 'Накопичено: %{amount}'
+        tooltip_target_relation: '%{percent}% від цілі %{target}'
+      catch_up:
+        title: Відкладайте на %{amount}/міс. більше, щоб наздогнати
+        body: Поточний темп %{avg}/міс. · щоб досягти цілі, потрібно %{required}/міс.
+        adjust_target_cta: Натомість змінити ціль
+      confirm_complete_title: Позначити цю ціль як завершену?
+      confirm_complete_body: Гроші, відкладені для неї, звільняться для інших ваших цілей на тому ж рахунку. Ціль зникне зі списку активних, але пізніше її можна буде архівувати або відновити.
+      confirm_complete_body_short: 'Ви досягли %{progress}%: %{saved} з %{target}. Позначивши ціль завершеною, ви зафіксуєте цей результат замість початкової цілі. Продовжити чи закрити це вікно й натомість змінити ціль?'
+      confirm_complete_cta: Позначити як завершену
+      confirm_archive_title: Архівувати цю ціль?
+      confirm_archive_body: Архівовані цілі зникають з основного списку. Пізніше їх можна відновити. Архівування не фіксує досягнутий результат — щоб його зберегти, спершу позначте ціль як завершену.
+      confirm_archive_cta: Архівувати
+      confirm_delete_title: Видалити цю ціль?
+      confirm_delete_body: '%{name} та історію внесків буде видалено назавжди. Ваші пов''язані рахунки, баланси й транзакції не зміняться. Щоб зберегти ціль як запис, архівуйте її.'
+      confirm_delete_cta: Видалити ціль
+      paused_banner:
+        title: Цю ціль призупинено
+        body: Відновіть її, щоб і далі відстежувати прогрес.
+        resume_cta: Відновити ціль
+      archived_banner:
+        title: Цю ціль архівовано
+        body: Поверніть її з архіву, щоб продовжити внески, або залиште як запис.
+        restore_cta: Повернути ціль
+      celebration:
+        heading_reserve: Резерв повний
+        body_reserve: 'Ваш резерв на цільовому рівні: %{saved} з %{target}. Нічого робити не потрібно — кошти залишаються відкладеними.'
+        heading: Ціль досягнуто. Чудова робота!
+        body_reached: 'Ви досягли цілі: %{saved} з %{target}. Вона ще не закрита — гроші досі відкладені для неї.'
+        close_cta: Закрити цю ціль
+        close_hint: Закриття звільняє відкладені гроші для інших ваших цілей на тому ж рахунку. Зробіть це, коли справді їх витратите.
+        frozen: Досягнуто %{date} · %{amount}
+        body: Ціль закрито на рівні %{saved} з %{target}. Залиште її як запис або архівуйте зараз.
+        archive_cta: Архівувати ціль
+      inactive:
+        heading_paused: Цю ціль призупинено
+        heading_archived: Цю ціль архівовано
+        body: Наразі накопичено %{saved} з %{target}.
+      no_target_date:
+        heading: Додайте цільову дату
+        body: Встановіть термін, щоб спрогнозувати завершення й відстежувати потрібний темп.
+        cta: Встановити цільову дату
+      empty:
+        heading: Надходжень ще немає
+        body: Зробіть переказ на пов'язаний рахунок — Sure виявить його під час наступної синхронізації. Або оновіть баланс ручного рахунку.
+    errors:
+      not_found: Цю ціль не знайдено. Можливо, її видалено.
+    states:
+      active: Активна
+      paused: Призупинена
+      completed: Завершена
+      archived: В архіві
+    status:
+      funded: Резерв повний
+      depleted: Потребує поповнення
+      on_track: За планом
+      behind: Відстає
+      reached: Досягнуто
+      completed: Завершено
+      no_target_date: Безстрокова
+      paused: Призупинено
+      archived: В архіві
+    empty_state:
+      heading: Цілей ще немає
+      body: Встановіть ціль, пов'яжіть рахунки, на які відкладаєте гроші, і спостерігайте, як зростає прогрес.
+      subtitle: Встановіть ціль і почніть відкладати на неї.
+      new_goal: Створити першу ціль
+      no_depository_accounts: Перш ніж створити ціль, потрібен принаймні один грошовий рахунок (поточний, ощадний, HSA, строковий депозит, рахунок грошового ринку).
+      add_account: Додати рахунок
+    goal_card:
+      including_used: Включно з уже використаними %{amount}
+      no_accounts: Немає пов'язаних рахунків
+      n_accounts: '%{first} +%{count}'
+      left: залишилося
+      aria_progress: '%{percent}% від %{target}'
+      accounts:
+        one: '%{count} рахунок'
+        few: '%{count} рахунки'
+        many: '%{count} рахунків'
+        other: '%{count} рахунку'
+      no_target_date: Безстрокова
+      completed: Завершено
+      past_due: Термін минув
+      days_left:
+        one: Залишився %{count} день
+        few: Залишилося %{count} дні
+        many: Залишилося %{count} днів
+        other: Залишилося %{count} дня
+      pace_with_target: '%{avg}/міс. · ціль %{target}/міс.'
+      pace_no_target: у середньому %{avg}/міс.
+      footer_paused: Призупинено
+      footer_archived: В архіві
+      footer_reserve_intact: Резерв повний
+      footer_reserve_short: Поповнити на %{amount}
+      footer_reached: Ціль досягнуто
+      footer_catch_up: Відкладайте %{amount}/міс., щоб наздогнати
+      footer_no_deadline: Безстрокова
+      pending_pledge: Очікуваний внесок
+      pending_count:
+        one: '%{count} очікує'
+        few: '%{count} очікують'
+        many: '%{count} очікують'
+        other: '%{count} очікують'
+      footer_no_pledges: Ще немає підтверджених внесків
+      footer_last_today: Останній внесок підтверджено сьогодні
+      footer_last_days:
+        one: Останній внесок підтверджено %{count} день тому
+        few: Останній внесок підтверджено %{count} дні тому
+        many: Останній внесок підтверджено %{count} днів тому
+        other: Останній внесок підтверджено %{count} дня тому
+    form:
+      target_modes:
+        fixed: Фіксована сума
+        months_of_expenses: Кількість місяців витрат
+      kinds:
+        one_off:
+          hint: Накопичуйте на щось, а потім закрийте ціль, коли витратите гроші.
+          label: Разова ціль
+        maintained:
+          hint: Баланс, який потрібно підтримувати, як-от резервний фонд. Ніколи не закривається.
+          label: Резерв для підтримання
+      create: Створити ціль
+      save: Зберегти зміни
+      suggested_with_date: 'Відкладайте {monthly}/міс. (рахунки: {accounts}), щоб встигнути вчасно.'
+      suggested_no_date: Встановіть цільову дату, щоб спрогнозувати завершення.
+      errors:
+        name_required: Дайте цілі назву.
+        amount_required: Вкажіть цільову суму, більшу за нуль.
+        accounts_required: Виберіть принаймні один рахунок фінансування.
+      earmark:
+        headroom: На цьому рахунку ще можна відкласти {left}.
+        prorata: Ваші цілі на цьому рахунку разом становлять {total} при балансі {balance} — вони просуватимуться пропорційно.
+        whole_balance: Цей рахунок фінансуватиме все, що залишиться після інших відкладених сум.
+        whole_balance_alone: Ця ціль використовуватиме весь баланс цього рахунку.
+      fields:
+        target_mode: Як визначається цільовий баланс
+        target_months: Місяців витрат
+        target_months_hint: Перераховується 1-го числа кожного місяця на основі медіани ваших щомісячних витрат.
+        name: Назва
+        name_placeholder: Резервний фонд, перший внесок за житло…
+        target_amount: Цільова сума
+        target_balance: Цільовий баланс
+        target_balance_pending: Буде розраховано під час збереження
+        target_balance_hint: На основі медіани ваших щомісячних витрат за вказану вище кількість місяців. Оновлюється щомісяця.
+        target_date: Цільова дата
+        color: Колір
+        notes: Нотатки (необов'язково)
+        notes_placeholder: Нагадування для себе в майбутньому…
+        funding_accounts: Рахунки фінансування
+        funding_accounts_hint: Баланс цієї цілі — це баланс (або відкладена частина) цих рахунків.
+        whole_balance: Весь баланс
+        earmark_for: Сума, яку відкласти з %{account}
+        earmark_hint: Залиште суму порожньою, щоб використати весь баланс рахунку.
+      subtypes:
+        checking: Поточні
+        savings: Ощадні
+        hsa: HSA
+        cd: Строкові депозити
+        money_market: Грошовий ринок
+        other: Інші

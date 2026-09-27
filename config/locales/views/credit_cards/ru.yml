@@ -13,14 +13,12 @@ ru:
       expiration_date: Дата окончания
       minimum_payment: Минимальный платёж
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Автоматически
+      simplefin_balance_sign_credit: Переплата (банк должен вам)
+      simplefin_balance_sign_debt: Задолженность (вы должны банку)
+      simplefin_balance_sign_description: Меняйте этот параметр, только если SimpleFIN передаёт неоднозначный знак баланса. В автоматическом режиме учитываются история операций и баланс от провайдера.
+      simplefin_balance_sign_label: Значение баланса SimpleFIN
+      treat_balance_as_available_credit_description: Включите, если ваш банк передаёт баланс этой карты как оставшийся доступный кредит, а не как сумму задолженности. Тогда задолженность рассчитывается из кредитного лимита, который сообщает банк, или из поля «Доступный кредит», если банк его не передаёт.
+      treat_balance_as_available_credit_label: Баланс — это доступный кредит
     new:
       title: Введите данные кредитной карты
-    overview:
-      amount_owed: Задолженность
-      annual_fee: Годовая плата
-      apr: Годовая процентная ставка (APR)
-      available_credit: Доступный кредит
-      edit_account_details: Изменить данные счёта
-      expiration_date: Дата окончания
-      minimum_payment: Минимальный платёж
-      unknown: Неизвестно

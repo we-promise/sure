@@ -32,6 +32,8 @@ tr:
       status_never: Veri senkronizasyonu gerekli
       syncing: Senkronize ediliyor...
       update: Bağlantıyı güncelle
+      add_accounts: Hesap ekle
+      provider_name: Plaid
     select_existing_account:
       cancel: İptal
       description: Mevcut hesabınıza bağlamak için bir Plaid hesabı seçin
