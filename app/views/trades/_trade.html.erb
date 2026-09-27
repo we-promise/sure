@@ -48,14 +48,14 @@
             </div>
 
             <% if entry.scheduled? %>
-              <div class="flex items-center flex-shrink-0">
+              <div class="flex items-center gap-1 flex-shrink-0">
                 <%= render DS::Pill.new(
                   label: t("trades.trade.scheduled"),
                   tone: :neutral,
                   marker: false,
-                  icon: "calendar",
-                  title: t("trades.trade.scheduled_tooltip")
+                  icon: "calendar"
                 ) %>
+                <%= render DS::Tooltip.new(text: t("trades.trade.scheduled_tooltip"), as: :span) %>
               </div>
             <% end %>
           <% end %>
