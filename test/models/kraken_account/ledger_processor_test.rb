@@ -132,6 +132,28 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
     assert_in_delta(-9.0, entry.amount.to_f, 0.01)
   end
 
+  # Pricing the fee can fail on one sync and succeed on the next. The principal
+  # being present must not stop the fee from being created later.
+  test "a fee missing after an earlier pass is created without duplicating the principal" do
+    @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date, name: "Withdrawal 500.0 USD", amount: 500, currency: "USD",
+      external_id: "kraken_ledger_LWIT05", source: "kraken",
+      entryable: Transaction.new(kind: "funds_movement", investment_activity_label: "Withdrawal")
+    )
+    set_ledgers(
+      "LWIT05" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)
+    )
+
+    assert_difference "@account.entries.count", 1 do
+      process
+    end
+
+    assert_equal 1, @account.entries.where(external_id: "kraken_ledger_LWIT05").count
+    fee = @account.entries.find_by(external_id: "kraken_ledger_LWIT05_fee", source: "kraken")
+    assert fee
+    assert_in_delta 1.0, fee.amount.to_f, 0.01
+  end
+
   test "a split fee entry is not duplicated on reprocessing" do
     set_ledgers(
       "LWIT03" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)
