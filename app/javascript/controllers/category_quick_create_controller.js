@@ -12,6 +12,10 @@ export default class extends Controller {
     "assignForm",
     "categoryIdField",
     "error",
+    "list",
+    "createAsSubcategory",
+    "parentPicker",
+    "parentPickerLabel",
   ];
 
   static values = {
@@ -20,6 +24,7 @@ export default class extends Controller {
     labelTemplate: String,
     errorMessage: String,
     existingNames: Array,
+    parentPickerLabel: String,
   };
 
   connect() {
@@ -27,11 +32,19 @@ export default class extends Controller {
   }
 
   update() {
+    // Editing the name returns to the list, so the picker never shows a stale name.
+    this.hideParentPicker();
+
     const name = this.inputTarget.value.trim();
     const canCreate = name.length > 0 && !this.nameExists(name);
 
     this.createButtonTarget.classList.toggle("hidden", !canCreate);
     this.createButtonTarget.classList.toggle("flex", canCreate);
+
+    if (this.hasCreateAsSubcategoryTarget) {
+      this.createAsSubcategoryTarget.classList.toggle("hidden", !canCreate);
+      this.createAsSubcategoryTarget.classList.toggle("flex", canCreate);
+    }
 
     if (canCreate) {
       this.createLabelTarget.textContent = this.labelTemplateValue.replace(
@@ -47,14 +60,47 @@ export default class extends Controller {
   // list-filter keeps handling Enter to pick the highlighted row.
   createOnEnter(event) {
     if (this.createButtonTarget.classList.contains("hidden")) return;
+    if (this.parentPickerOpen) return;
     if (this.hasVisibleRows) return;
 
     event.preventDefault();
     this.create();
   }
 
-  async create() {
+  showParentPicker(event) {
+    event?.preventDefault();
+    if (!this.hasParentPickerTarget) return;
+
+    const name = this.inputTarget.value.trim();
+    if (!name) return;
+
+    this.parentPickerLabelTarget.textContent =
+      this.parentPickerLabelValue.replace("__NAME__", name);
+
+    this.listTarget.classList.add("hidden");
+    this.parentPickerTarget.classList.remove("hidden");
+    this.parentPickerTarget.classList.add("flex");
+  }
+
+  hideParentPicker(event) {
+    event?.preventDefault();
+    if (!this.hasParentPickerTarget) return;
+
+    this.parentPickerTarget.classList.add("hidden");
+    this.parentPickerTarget.classList.remove("flex");
+    this.listTarget.classList.remove("hidden");
+  }
+
+  createUnderParent(event) {
+    event.preventDefault();
+    this.create(event.currentTarget.dataset.parentId);
+  }
+
+  // Called directly as an action (receives an Event) or with a parent id.
+  async create(parentIdOrEvent = null) {
     if (this.creating) return;
+    const parentId =
+      typeof parentIdOrEvent === "string" ? parentIdOrEvent : null;
 
     const name = this.inputTarget.value.trim();
     if (!name) return;
@@ -71,11 +117,18 @@ export default class extends Controller {
           "Content-Type": "application/json",
           "X-CSRF-Token": this.csrfToken,
         },
-        body: JSON.stringify({ category: { name, color: this.colorValue } }),
+        body: JSON.stringify({
+          category: {
+            name,
+            color: this.colorValue,
+            ...(parentId ? { parent_id: parentId } : {}),
+          },
+        }),
       });
       const body = await response.json().catch(() => ({}));
 
       if (!response.ok || !body.id) {
+        this.hideParentPicker();
         this.showError(body.errors?.join(", ") || body.error);
         return;
       }
@@ -83,6 +136,7 @@ export default class extends Controller {
       this.categoryIdFieldTarget.value = body.id;
       this.assignFormTarget.requestSubmit();
     } catch {
+      this.hideParentPicker();
       this.showError();
     } finally {
       this.creating = false;
@@ -94,6 +148,13 @@ export default class extends Controller {
     const wanted = name.toLocaleLowerCase();
     return this.existingNamesValue.some(
       (existing) => existing.toLocaleLowerCase() === wanted,
+    );
+  }
+
+  get parentPickerOpen() {
+    return (
+      this.hasParentPickerTarget &&
+      !this.parentPickerTarget.classList.contains("hidden")
     );
   }
 

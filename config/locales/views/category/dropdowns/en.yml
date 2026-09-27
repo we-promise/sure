@@ -6,8 +6,11 @@ en:
         delete: Delete category
         edit: Edit category
       show:
+        back: Back
+        choose_parent: 'Create "%{name}" under:'
         clear: Clear category
         create: Create "%{name}"
+        create_as_subcategory: Add as a subcategory…
         create_error: Couldn't create that category. Please try again.
         no_categories: No categories found
         recent: Recent

@@ -5,6 +5,7 @@
        data-category-quick-create-color-value="<%= Category::COLORS.sample %>"
        data-category-quick-create-label-template-value="<%= t(".create", name: "__NAME__") %>"
        data-category-quick-create-error-message-value="<%= t(".create_error") %>"
+       data-category-quick-create-parent-picker-label-value="<%= t(".choose_parent", name: "__NAME__") %>"
        data-category-quick-create-existing-names-value="<%= @categories.map(&:name).to_json %>">
     <div class="grow p-1.5">
       <div class="relative flex items-center bg-container border border-secondary rounded-lg">
@@ -23,7 +24,8 @@
           <%= icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
         </div>
       </div>
-      <div data-list-filter-target="list" role="listbox" class="flex flex-col gap-0.5 p-1.5 mt-0.5 mr-2 max-h-64 overflow-y-scroll scrollbar">
+      <% parent_options = @categories.select { |category| category.parent_id.nil? }.sort_by { |category| category.name.downcase } %>
+      <div data-list-filter-target="list" data-category-quick-create-target="list" role="listbox" class="flex flex-col gap-0.5 p-1.5 mt-0.5 mr-2 max-h-64 overflow-y-scroll scrollbar">
         <div class="pb-2 pl-4 mr-2 text-secondary hidden" data-list-filter-target="emptyMessage">
           <%= t(".no_categories") %>
         </div>
@@ -44,6 +46,15 @@
           <span class="flex items-center justify-center w-5 h-5 shrink-0"><%= icon("plus") %></span>
           <span data-category-quick-create-target="createLabel"></span>
         </button>
+        <% if parent_options.any? %>
+          <button type="button"
+                  class="hidden items-center gap-1.5 w-full rounded-lg px-2 py-2 text-sm text-secondary hover:bg-container-inset-hover cursor-pointer"
+                  data-category-quick-create-target="createAsSubcategory"
+                  data-action="category-quick-create#showParentPicker">
+            <span class="flex items-center justify-center w-5 h-5 shrink-0"><%= icon("corner-down-right") %></span>
+            <span><%= t(".create_as_subcategory") %></span>
+          </button>
+        <% end %>
         <p class="hidden px-2 pb-1 text-xs text-destructive" data-category-quick-create-target="error"></p>
         <% if @recent_categories.any? %>
           <div data-list-filter-target="recentSection">
@@ -77,6 +88,30 @@
           </div>
         <% end %>
       </div>
+
+      <%# Shown in place of the list after "Add as a subcategory…". Only top-level %>
+      <%# categories can be parents (categories are at most two levels deep). %>
+      <% if parent_options.any? %>
+        <div class="hidden flex-col gap-0.5 p-1.5 mt-0.5 mr-2 max-h-64 overflow-y-scroll scrollbar"
+             data-category-quick-create-target="parentPicker">
+          <p class="px-2 pb-1 text-xs text-secondary" data-category-quick-create-target="parentPickerLabel"></p>
+          <% parent_options.each do |parent| %>
+            <button type="button"
+                    class="flex items-center gap-1.5 w-full rounded-lg px-2 py-1 hover:bg-container-inset-hover cursor-pointer"
+                    data-parent-id="<%= parent.id %>"
+                    data-action="category-quick-create#createUnderParent">
+              <span class="w-5 h-5 shrink-0"></span>
+              <%= render partial: "categories/badge", locals: { category: parent } %>
+            </button>
+          <% end %>
+          <button type="button"
+                  class="flex items-center gap-1.5 w-full rounded-lg px-2 py-2 text-sm text-secondary hover:bg-container-inset-hover cursor-pointer"
+                  data-action="category-quick-create#hideParentPicker">
+            <span class="flex items-center justify-center w-5 h-5 shrink-0"><%= icon("arrow-left") %></span>
+            <span><%= t(".back") %></span>
+          </button>
+        </div>
+      <% end %>
 
       <%= render "shared/ruler", classes: "my-2" %>
 

@@ -67,4 +67,15 @@ class Category::DropdownsControllerTest < ActionDispatch::IntegrationTest
     names_attr = css_select("[data-controller~='category-quick-create']").first["data-category-quick-create-existing-names-value"]
     assert_includes JSON.parse(names_attr), categories(:food_and_drink).name
   end
+
+  test "offers only top-level categories as parents for a new subcategory" do
+    get category_dropdown_url(transaction_id: @transaction.id)
+
+    assert_response :success
+    assert_select "button.hidden[data-category-quick-create-target='createAsSubcategory']"
+    assert_select "[data-category-quick-create-target='parentPicker']" do
+      assert_select "button[data-parent-id=?]", categories(:food_and_drink).id
+      assert_select "button[data-parent-id=?]", categories(:subcategory).id, count: 0
+    end
+  end
 end

@@ -44,4 +44,46 @@ class TransactionQuickCategoryCreateTest < ApplicationSystemTestCase
       assert_no_button "Create \"#{existing.name.upcase}\""
     end
   end
+
+  test "creates a new subcategory from the list's quick picker and assigns it" do
+    parent = categories(:food_and_drink)
+    visit transactions_url
+
+    within "##{dom_id(@entry.entryable, 'category_menu_desktop')}" do
+      find("button", match: :first).click
+    end
+
+    assert_difference "Category.count", +1 do
+      within "turbo-frame#category_dropdown" do
+        find("input[type='search']").fill_in with: "Quick Picker Subcategory"
+        click_button "Add as a subcategory…"
+        assert_text 'Create "Quick Picker Subcategory" under:'
+        find("button[data-parent-id='#{parent.id}']").click
+      end
+
+      assert_selector "##{dom_id(@entry.entryable, 'category_menu_desktop')} [data-testid='category-name']", text: "Quick Picker Subcategory"
+    end
+
+    category = @user.family.categories.find_by!(name: "Quick Picker Subcategory")
+    assert_equal parent, category.parent
+    assert_equal category.id, @entry.entryable.reload.category_id
+  end
+
+  test "back from the quick picker's parent list returns to the category list" do
+    visit transactions_url
+
+    within "##{dom_id(@entry.entryable, 'category_menu_desktop')}" do
+      find("button", match: :first).click
+    end
+
+    within "turbo-frame#category_dropdown" do
+      find("input[type='search']").fill_in with: "Changed My Mind"
+      click_button "Add as a subcategory…"
+      assert_selector "[data-category-quick-create-target='parentPicker']", visible: true
+
+      click_button "Back"
+      assert_no_selector "[data-category-quick-create-target='parentPicker']", visible: true
+      assert_button 'Create "Changed My Mind"'
+    end
+  end
 end
