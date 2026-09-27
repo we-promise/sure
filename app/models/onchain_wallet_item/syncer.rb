@@ -12,6 +12,7 @@ class OnchainWalletItem::Syncer
     @onchain_wallet_item = onchain_wallet_item
   end
 
+  # Schedule grouped wallet children and retain legacy imports in the same completion tree.
   def perform_sync(sync)
     onchain_wallet_item.bitcoin_wallet_accounts.each do |wallet|
       break if sync.cancel_requested?

@@ -86,6 +86,7 @@ class Holding < ApplicationRecord
     account.entries.where(entryable: account.trades.where(security: security)).reverse_chronological
   end
 
+  # Protect managed journals; cash-anchor accounts remove manual derived series.
   def destroy_holding_and_entries!
     raise ManagedPositionError, "A provider manages this position" unless account.can_delete_holding?(self)
 

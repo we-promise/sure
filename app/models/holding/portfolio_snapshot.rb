@@ -28,6 +28,7 @@ class Holding::PortfolioSnapshot
       portfolio
     end
 
+    # Use scoped current composition for mixed accounts instead of one provider snapshot.
     def latest_holdings_scope
       if account.accounting_start_date
         return account.current_holdings

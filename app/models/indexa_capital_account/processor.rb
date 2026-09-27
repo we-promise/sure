@@ -49,6 +49,7 @@ class IndexaCapitalAccount::Processor
 
   private
 
+    # Calculate the provider total and tag it for shared cash capture when applicable.
     def update_account_balance(account)
       # Calculate total balance and cash balance from provider data
       total_balance = calculate_total_balance

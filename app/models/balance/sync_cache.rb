@@ -21,6 +21,7 @@ class Balance::SyncCache
     @unconvertible_holding_count
   end
 
+  # Return an authoritative total valuation, excluding cash-only and superseded anchors.
   def get_valuation(date)
     valuation = entries_by_date[date]&.find { |e| e.valuation? && !e.entryable.cash_anchor? }
     cash_anchor = get_cash_anchor(date)

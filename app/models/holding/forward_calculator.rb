@@ -3,6 +3,7 @@ class Holding::ForwardCalculator
 
   attr_reader :account
 
+  # Track journal basis before the requested window and carry dated untraded snapshots.
   def initialize(account, security_ids: nil, window_start_date: nil)
     @account = account
     @security_ids = security_ids
@@ -17,6 +18,7 @@ class Holding::ForwardCalculator
     @transferred_security_ids = Set.new
   end
 
+  # Seed earlier trades, then emit positions only inside the materialization window.
   def calculate
     Rails.logger.tagged("Holding::ForwardCalculator") do
       current_portfolio = generate_starting_portfolio
@@ -41,6 +43,7 @@ class Holding::ForwardCalculator
   end
 
   private
+    # Allow known snapshot prices to support accounts using shared cash anchors.
     def portfolio_cache
       @portfolio_cache ||= Holding::PortfolioCache.new(account, security_ids: @security_ids,
         use_holdings: @carry_holdings, carry_forward_prices: @carry_holdings)

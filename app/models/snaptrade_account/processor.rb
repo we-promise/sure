@@ -52,6 +52,7 @@ class SnaptradeAccount::Processor
 
   private
 
+    # Calculate the provider total and preserve separately published account positions.
     def update_account_balance(account)
       # Calculate total balance and cash balance from SnapTrade data
       total_balance = calculate_total_balance

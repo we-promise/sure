@@ -22,6 +22,7 @@ class IbkrAccount::Processor
       @account ||= ibkr_account.current_account
     end
 
+    # Import IBKR's reported total through the shared provider valuation boundary.
     def update_account_balance!
       total_balance = ibkr_account.current_balance || ibkr_account.cash_balance || 0
       cash_balance = ibkr_account.cash_balance || 0

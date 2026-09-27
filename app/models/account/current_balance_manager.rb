@@ -30,6 +30,7 @@ class Account::CurrentBalanceManager
     end
   end
 
+  # Stage provider totals for cash capture while manual totals retain reconciliation.
   def set_current_balance(balance, provider_balance: false)
     @provider_balance = provider_balance && account.accounting_start_date.present?
     if @provider_balance || !account.manual_accounting?
@@ -140,6 +141,7 @@ class Account::CurrentBalanceManager
       @current_anchor_valuation = nil
     end
 
+    # Tag imported totals so shared materialization can isolate their reported cash.
     def create_current_anchor(balance)
       account.entries.create!(
         date: Date.current,
@@ -154,6 +156,7 @@ class Account::CurrentBalanceManager
       @current_anchor_valuation = nil
     end
 
+    # Update the total anchor without prematurely replacing a mixed account's balance.
     def update_current_anchor(balance)
       changes_made = false
 

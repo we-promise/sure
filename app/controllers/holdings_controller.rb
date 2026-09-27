@@ -40,6 +40,7 @@ class HoldingsController < ApplicationController
     redirect_to account_path(@holding.account, tab: "holdings")
   end
 
+  # Delete only holdings whose complete journal may be removed by this account.
   def destroy
     if @holding.account.can_delete_holding?(@holding)
       @holding.destroy_holding_and_entries!
@@ -54,6 +55,7 @@ class HoldingsController < ApplicationController
     end
   end
 
+  # Remap editable securities and rebuild through the account's accounting strategy.
   def remap_security
     if @holding.account.provider_managed_security?(@holding.security_id)
       redirect_to account_path(@holding.account, tab: "holdings"), alert: t("holdings.remap_security.managed_position")
@@ -110,6 +112,7 @@ class HoldingsController < ApplicationController
     end
   end
 
+  # Refresh a quote and revalue the selected security without changing provider units.
   def sync_prices
     security = @holding.security
 

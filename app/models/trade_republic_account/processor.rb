@@ -25,6 +25,7 @@ class TradeRepublicAccount::Processor
       @account ||= trade_republic_account.current_account
     end
 
+    # Record the provider's total as an imported anchor for shared accounting.
     def update_account_balance!
       total_balance = trade_republic_account.current_balance || 0
       cash_balance = trade_republic_account.cash_balance || 0

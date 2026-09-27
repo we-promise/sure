@@ -7,6 +7,7 @@ class SyncHourlyJob < ApplicationJob
     CoinstatsItem # https://coinstats.app/api-docs/rate-limits#plan-limits
   ].freeze
 
+  # Schedule configured providers, including existing wallets outside Preview gating.
   def perform
     Rails.logger.info("Starting hourly sync")
     HOURLY_SYNCABLES.each do |syncable_class|

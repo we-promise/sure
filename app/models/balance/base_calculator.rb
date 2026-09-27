@@ -106,6 +106,7 @@ class Balance::BaseCalculator
       0
     end
 
+    # Separate cash, quantity trades, income and cash-neutral asset transfers.
     def flows_for_date(date)
       entries = sync_cache.get_entries(date)
 

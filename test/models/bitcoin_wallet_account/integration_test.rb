@@ -236,6 +236,21 @@ class BitcoinWalletAccount::IntegrationTest < ActiveSupport::TestCase
     assert @account.current_holdings.exists?(security: remaining)
   end
 
+  test "a managed position takes precedence over a newer complete provider row" do
+    @wallet.connect!
+    managed = @account.current_holdings.find_by!(security: @wallet.security)
+    link = @account.account_providers.create!(provider: kraken_accounts(:one))
+    travel 1.day do
+      @account.holdings.create!(security: @wallet.security, date: Date.current, qty: "0.9",
+        price: 10_000, amount: 9000, currency: "USD", account_provider: link)
+      other = @account.holdings.create!(security: @other, date: Date.current, qty: 1,
+        price: 100, amount: 100, currency: "USD", account_provider: link)
+      assert_equal managed.id, @account.current_holdings.find_by!(security: @wallet.security).id
+      assert_equal BigDecimal("0.2"), @account.current_holdings.find_by!(security: @wallet.security).qty
+      assert @account.current_holdings.exists?(id: other.id)
+    end
+  end
+
   test "notes on a superseded valuation do not restore its old total" do
     old = @account.entries.create!(date: Date.current, amount: 1100, currency: "USD", name: "Old total", entryable: Valuation.new)
     @wallet.connect!

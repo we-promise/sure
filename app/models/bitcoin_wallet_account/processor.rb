@@ -3,6 +3,7 @@
 class BitcoinWalletAccount::Processor
   SOURCE = "bitcoin_wallet"
 
+  # Bind a publisher to its wallet and existing account without a separate portfolio.
   def initialize(wallet)
     @wallet = wallet
   end
@@ -66,10 +67,12 @@ class BitcoinWalletAccount::Processor
   private
     attr_reader :wallet
 
+    # Use the existing account as the tenancy and accounting boundary.
     def account
       wallet.account
     end
 
+    # Reconcile source-scoped transfers and reversals, returning the earliest changed date.
     def materialize_movements
       window = Date.current
       rows = account.entries.where(source: SOURCE).includes(:entryable).index_by(&:external_id)

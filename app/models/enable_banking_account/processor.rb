@@ -30,6 +30,7 @@ class EnableBankingAccount::Processor
 
   private
 
+    # Import account metadata and tag its reported total as provider-owned valuation data.
     def process_account!
       if enable_banking_account.current_account.blank?
         Rails.logger.error("Enable Banking account #{enable_banking_account.id} has no associated Account")

@@ -30,7 +30,10 @@ class BitcoinWalletAccount::Syncer
     wallet.class.connection_pool.with_connection do |connection|
       key = Digest::SHA256.digest("bitcoin-wallet-sync:#{wallet.id}").unpack1("q>")
       held = connection.select_value("SELECT pg_try_advisory_lock(#{key})")
-      return unless held
+      unless held
+        queue_continuation(wait: 5.seconds) if @sync
+        return
+      end
 
       begin
         perform_read

@@ -42,6 +42,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
     end
 
     private
+      # Limit complete-provider history without trimming accounts with cash anchors.
       def common_supported_history_start_date(account_ids)
         account_ids = Array(account_ids).compact
         account_ids -= Account.where(id: account_ids).joins(:valuations).where(valuations: { kind: "cash_anchor" }).pluck(:id)

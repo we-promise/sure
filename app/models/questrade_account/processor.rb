@@ -38,6 +38,7 @@ class QuestradeAccount::Processor
 
   private
 
+    # Keep the last balance when absent; otherwise tag the provider's reported total.
     def update_account_balance(account)
       total = questrade_account.current_balance
       return if total.blank?

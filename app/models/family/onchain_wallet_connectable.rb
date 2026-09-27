@@ -27,6 +27,7 @@ module Family::OnchainWalletConnectable
     end
   end
 
+  # Count connected legacy and grouped wallets, excluding discovery-only drafts.
   def has_onchain_wallets?
     onchain_wallet_items.active.joins(:onchain_wallet_accounts).exists? ||
       BitcoinWalletAccount.linked.where(onchain_wallet_item: onchain_wallet_items.active).exists?

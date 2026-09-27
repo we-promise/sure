@@ -38,6 +38,7 @@ class RedbarkAccount::Processor
 
   private
 
+    # Preserve missing snapshots and route known totals through provider reconciliation.
     def update_account_balance(account)
       balance = redbark_account.current_balance
 

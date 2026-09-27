@@ -21,11 +21,13 @@
 
 Верификация в изолированных Docker-контейнерах, без личных счетов и production БД:
 
-- Full Rails: **10 122 runs, 42 606 assertions, 0 failures, 0 errors, 33 существующих условных skips**.
+- Full Rails: **10 127 runs, 42 628 assertions, 0 failures, 0 errors, 33 существующих условных skips**.
 - Full Chromium system: **166 runs, 843 assertions, 0 failures, 0 errors**.
-- Дополнительный integration-прогон с регрессией годовой истории: **29 runs, 80 assertions, 0 failures, 0 errors**. Idle sync сохраняет прежние строки; backdated правка пересчитывает только затронутый диапазон.
+- Дополнительный integration/holding-прогон, включая годовую историю и приоритет position owner: **82 runs, 281 assertions, 0 failures, 0 errors**. Idle sync сохраняет прежние строки; backdated правка пересчитывает только затронутый диапазон.
 - Ruby lint, ERB lint (748 шаблонов), Biome (133 файла) и Brakeman (**0 security warnings**) прошли.
 - Публичные fixture-скриншоты обновлены; CodeGraph использован для scoped impact exploration, Serena — для focused symbols и правок. Динамические Rails связи проверены по source/schema/tests.
+
+Дополнительное ревью подтвердило гонки concurrent wallet sync: разные parents теперь получают независимые children, running read не поглощает source edits, а занятый advisory lock создаёт deferred child вместо преждевременного completion. Замечание CodeRabbit о `CurrentPositions` подтверждено отдельным red/green тестом: position owner имеет приоритет перед более новой строкой complete provider. Контракты затронутых методов документированы для pre-merge Docstring Coverage.
 
 ## P1: до слияния
 

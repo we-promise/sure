@@ -85,6 +85,7 @@ class Account::ReconciliationManager
       valuation.amount.to_d - prior_balance.to_d
     end
 
+    # Keep total reconciliations distinct from cash anchors and reactivate explicit edits.
     def prepare_reconciliation(balance, date, existing_valuation)
       valuation_record = existing_valuation ||
                          account.entries.valuations.where.not(entryable_id: Valuation.cash_anchor.select(:id)).find_by(date: date) ||

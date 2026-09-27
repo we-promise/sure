@@ -112,6 +112,7 @@ class OnchainWalletItem::WalletLinker
         .each(&:destroy!)
     end
 
+    # Claim legacy addresses under the same lock used by grouped wallet discovery.
     def create_asset!(asset)
       onchain_wallet_item.family.with_onchain_address_lock(chain, address) do
         if BitcoinWalletAddress.tracks?(family: onchain_wallet_item.family, chain: chain, address: address)

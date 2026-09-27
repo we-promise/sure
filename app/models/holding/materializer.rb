@@ -6,6 +6,7 @@ class Holding::Materializer
   # alongside the full @holdings collection. Reduces peak RSS during sync.
   PERSIST_BATCH_SIZE = 2_000
 
+  # Configure shared basis reconciliation and scoped publication of provider positions.
   def initialize(account, strategy:, security_ids: nil, window_start_date: nil)
     @account = account
     @strategy = strategy
@@ -54,6 +55,7 @@ class Holding::Materializer
       @holdings = calculator.calculate
     end
 
+    # Persist calculated or carried holdings while respecting provider ownership and basis locks.
     def persist_holdings
       return if @holdings.empty?
 
@@ -187,6 +189,7 @@ class Holding::Materializer
       existing.cost_basis_source.nil? || existing.cost_basis_source == "calculated"
     end
 
+    # Preload dated rows whose provider priority or locked basis affects reconciliation.
     def load_existing_holdings_map
       # Load holdings that might affect reconciliation:
       # - Locked holdings (must preserve their cost_basis)
@@ -293,6 +296,7 @@ class Holding::Materializer
       end
     end
 
+    # Preserve imported mixed-account history while retaining legacy cleanup elsewhere.
     def purge_stale_holdings
       return if account.accounting_start_date
 
@@ -312,6 +316,7 @@ class Holding::Materializer
       end
     end
 
+    # Choose forward journal reconstruction or the established reverse provider calculation.
     def calculator
       if strategy == :reverse
         portfolio_snapshot = Holding::PortfolioSnapshot.new(account)

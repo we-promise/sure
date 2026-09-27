@@ -123,6 +123,7 @@ class OnchainWalletItem < ApplicationRecord
     all_accounts.select { |account| allowed_account_ids.include?(account.id) }.uniq(&:id)
   end
 
+  # Aggregate active address counts only for the accounts visible to this caller.
   def address_count_for(visible_accounts)
     visible_ids = visible_accounts.map(&:id).to_set
 

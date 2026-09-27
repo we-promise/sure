@@ -73,6 +73,47 @@ class BitcoinWalletAccount::SyncLifecycleTest < ActiveSupport::TestCase
     assert @wallet.reload.status_preview?
   end
 
+  test "independent wallet parents cannot borrow each other's pending read" do
+    first = @wallet.onchain_wallet_item.syncs.create!
+    second = @wallet.onchain_wallet_item.syncs.create!
+    one = @wallet.sync_later(parent_sync: first)
+    two = @wallet.sync_later(parent_sync: second)
+    refute_equal one.id, two.id
+    assert_equal first.id, one.parent_id
+    assert_equal second.id, two.parent_id
+    assert_equal two.id, @wallet.sync_later(parent_sync: second).id
+  end
+
+  test "source changes during a running wallet sync receive a follow-up read" do
+    current = @wallet.syncs.create!(status: "syncing")
+    @wallet.sources_changed!
+    next_sync = @wallet.syncs.pending.first
+    assert next_sync
+    refute_equal current.id, next_sync.id
+  end
+
+  test "advisory lock contention defers completion until its read can run" do
+    config = ActiveRecord::Base.connection_pool.db_config.configuration_hash
+    key = Digest::SHA256.digest("bitcoin-wallet-sync:#{@wallet.id}").unpack1("q>")
+    other = PG.connect(dbname: config[:database], host: config[:host], port: config[:port],
+      user: config[:username] || config[:user], password: config[:password])
+    other.exec("SELECT pg_advisory_lock(#{key})")
+    parent = @wallet.syncs.create!
+    parent.perform
+    assert_empty @provider.reads
+    assert parent.reload.syncing?
+    continuation = parent.children.find_by!(syncable: @wallet)
+    other.close
+    other = nil
+
+    continuation.perform
+    assert continuation.reload.completed?
+    assert parent.reload.completed?
+    assert_equal 30_000_000, @wallet.reload.balance_sats
+  ensure
+    other&.close
+  end
+
   test "cancellation stops a queued wallet read" do
     parent = @wallet.syncs.create!
     parent.request_cancel!

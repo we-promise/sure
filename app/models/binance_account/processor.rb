@@ -54,6 +54,7 @@ class BinanceAccount::Processor
       binance_account.binance_item.family.currency
     end
 
+    # Convert the provider's USD cash report and stage it through shared accounting.
     def process_account!
       account  = binance_account.current_account
       raw_usd  = (binance_account.current_balance || 0).to_d

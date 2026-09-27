@@ -28,6 +28,7 @@ class PlaidAccount::Processor
       @security_resolver ||= PlaidAccount::Investments::SecurityResolver.new(plaid_account)
     end
 
+    # Persist provider account metadata and mark imported totals for shared cash capture.
     def process_account!
       PlaidAccount.transaction do
         # Find existing account through account_provider or legacy plaid_account_id

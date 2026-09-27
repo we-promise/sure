@@ -14,6 +14,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     @window_start_date.present? && @fell_back == false
   end
 
+  # Rebuild daily balances from dated total valuations, cash anchors and ledger flows.
   def calculate
     Rails.logger.tagged("Balance::ForwardCalculator") do
       start_cash_balance, start_non_cash_balance = resolve_starting_balances
@@ -137,6 +138,7 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
       incremental? ? @window_start_date : calculation_start_date
     end
 
+    # Exclude future positions from the current balance in cash-anchor accounting.
     def calc_end_date
       finish = [ account.entries.excluding_pending.maximum(:date), account.holdings.maximum(:date) ].compact.max || Date.current
       account.accounting_start_date ? [ finish, Date.current ].min : finish

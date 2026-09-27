@@ -6,6 +6,7 @@ class AccountsController < ApplicationController
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
+  # List accessible accounts and provider connections with bounded association reads.
   def index
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
     @manual_accounts = family.accounts
@@ -402,6 +403,7 @@ class AccountsController < ApplicationController
       end
     end
 
+    # Hide connections whose linked accounts are outside the current user's access.
     def visible_provider_items(items)
       accessible_ids = @accessible_account_ids.to_a
 

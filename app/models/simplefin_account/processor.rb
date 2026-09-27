@@ -31,6 +31,7 @@ class SimplefinAccount::Processor
 
   private
 
+    # Import account metadata and its reported cash using the shared accounting boundary.
     def process_account!
       # This should not happen in normal flow since accounts are created manually
       # during setup, but keeping as safety check

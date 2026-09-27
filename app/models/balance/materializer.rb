@@ -6,6 +6,7 @@ class Balance::Materializer
 
   attr_reader :account, :strategy, :security_ids
 
+  # Choose an incremental window that preserves earlier imported account history.
   def initialize(account, strategy:, security_ids: nil, window_start_date: nil)
     @account = account
     @strategy = strategy
@@ -13,6 +14,7 @@ class Balance::Materializer
     @window_start_date = account.materialization_window(window_start_date)
   end
 
+  # Serialize mixed-account publication and persist holdings and balances atomically.
   def materialize_balances
     Balance.transaction do
       account.lock! if account.accounting_start_date
@@ -62,6 +64,7 @@ class Balance::Materializer
       account.reset_current_anchor_cache!
     end
 
+    # Pass the same security filter and history window to the shared holding materializer.
     def materialize_holdings
       @holdings = Holding::Materializer.new(account, strategy: strategy, security_ids: security_ids,
         window_start_date: @window_start_date).materialize_holdings
@@ -91,6 +94,7 @@ class Balance::Materializer
       )
     end
 
+    # Retain only calculated rows in the requested mixed-account write window.
     def calculate_balances
       @balances = calculator.calculate
       @balances.select! { |balance| balance.date >= @window_start_date } if account.accounting_start_date && @window_start_date
@@ -106,6 +110,7 @@ class Balance::Materializer
       end
     end
 
+    # Remove stale tails while preserving valid history before an incremental window.
     def purge_stale_balances
       if @balances.empty?
         # In incremental forward-sync, even when no balances were calculated for the window

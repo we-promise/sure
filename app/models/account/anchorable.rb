@@ -27,6 +27,7 @@ module Account::Anchorable
     opening_balance_manager.has_opening_anchor?
   end
 
+  # Keep manual history visible when a linked provider publishes only positions.
   def history_start_date
     if linked? && balance_type == :investment && !position_tracking?
       Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(self)
@@ -39,6 +40,7 @@ module Account::Anchorable
     end
   end
 
+  # Distinguish an imported provider total from a user-entered account valuation.
   def set_current_balance(balance, provider_balance: false)
     result = current_balance_manager.set_current_balance(balance, provider_balance: provider_balance)
     sync_later if result.success?

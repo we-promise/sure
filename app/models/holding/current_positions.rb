@@ -1,11 +1,12 @@
 class Holding::CurrentPositions
-  # Read provider links afresh so a connection made on this account is visible.
+  # Bind the account without depending on preloaded provider associations.
   def initialize(account)
     @account = account
   end
 
   # Combine complete provider snapshots with individually published and manual
-  # positions, without reviving assets omitted from a newer complete snapshot.
+  # positions. Position owners take precedence over newer complete-provider rows;
+  # assets omitted from a newer complete snapshot are not revived.
   def scope
     holdings = @account.holdings.where(date: ..Date.current)
     links = AccountProvider.where(account_id: @account.id).includes(:provider).to_a
@@ -16,10 +17,13 @@ class Holding::CurrentPositions
     provider_security_ids = holdings.where(account_provider_id: complete_provider_ids).select(:security_id)
     eligible = holdings.where(account_provider_id: nil).where.not(security_id: provider_security_ids)
     position_ids = links.map(&:id) - complete_provider_ids
+    position_priority = Arel::Nodes::Case.new
+      .when(Holding.arel_table[:account_provider_id].in(position_ids)).then(0)
+      .else(1)
     eligible = eligible.or(holdings.where(account_provider_id: position_ids))
     latest.each { |provider_id, date| eligible = eligible.or(holdings.where(account_provider_id: provider_id, date: date)) }
 
-    @account.holdings.where(id: eligible.select("DISTINCT ON (security_id) id").order(:security_id, date: :desc))
+    @account.holdings.where(id: eligible.select("DISTINCT ON (security_id) id").order(:security_id, position_priority, date: :desc))
       .where.not(qty: 0).order(amount: :desc)
   end
 end

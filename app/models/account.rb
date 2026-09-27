@@ -583,6 +583,7 @@ class Account < ApplicationRecord
     raise e
   end
 
+  # Select current composition using each provider's scope of position ownership.
   def current_holdings
     if position_tracking? || accounting_start_date
       return Holding::CurrentPositions.new(self).scope

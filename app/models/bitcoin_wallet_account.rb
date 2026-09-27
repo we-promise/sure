@@ -142,6 +142,13 @@ class BitcoinWalletAccount < ApplicationRecord
   end
 
   private
+    # Running reads cannot absorb source edits; independent parents must each
+    # retain a child whose completion they can observe.
+    def coalescible_syncs(parent_sync: nil)
+      scope = syncs.visible.pending
+      parent_sync ? scope.where(parent_id: [ nil, parent_sync.id ]) : scope
+    end
+
     # Restrict the publisher to a same-family Crypto account and BTC security
     # without another provider already owning that position.
     def eligible_account

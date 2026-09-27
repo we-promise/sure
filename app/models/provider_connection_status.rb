@@ -89,6 +89,7 @@ class ProviderConnectionStatus
     @sync_context = sync_context
   end
 
+  # Expose safe connection counts and sync metadata without wallet keys or address lists.
   def to_h
     payload = {
       id: item.id,
@@ -177,6 +178,7 @@ class ProviderConnectionStatus
       0
     end
 
+    # Preload provider records without loading unbounded grouped-wallet address collections.
     def provider_account_records
       return unless item.respond_to?(provider[:accounts])
 

@@ -7,6 +7,7 @@ class Holding::PortfolioCache
     end
   end
 
+  # Configure quote fallback, currency conversion and optional stored-rate-only reads.
   def initialize(account, use_holdings: false, security_ids: nil, carry_forward_prices: false, stored_rates_only: false)
     @account = account
     @use_holdings = use_holdings
@@ -24,6 +25,7 @@ class Holding::PortfolioCache
     end
   end
 
+  # Resolve a dated quote with shared precedence and convert it to the requested currency.
   def get_price(security_id, date, source: nil, currency: account.currency)
     security = @security_cache[security_id]
     raise SecurityNotFound.new(security_id, account.id) unless security
@@ -99,6 +101,7 @@ class Holding::PortfolioCache
       @holdings_by_security_id ||= holdings.group_by(&:security_id)
     end
 
+    # Include selected securities before their journal or initial provider holding exists.
     def collect_unique_securities
       ids = trades_by_security_id.keys
       ids |= holdings_by_security_id.keys if use_holdings
