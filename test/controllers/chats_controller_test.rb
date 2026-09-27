@@ -105,6 +105,33 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to chats_url
   end
 
+  test "retries last user message" do
+    chat = chats(:one)
+    chat.messages.destroy_all
+    # UserMessage's own after_create_commit already calls ask_assistant_later
+    # once (creating the pending AssistantMessage reply); clear that out so
+    # the user message is the last one left for retry to act on.
+    user_message = chat.messages.create!(type: "UserMessage", content: "Hello", ai_model: "gpt-4.1")
+    chat.messages.where.not(id: user_message.id).destroy_all
+
+    Chat.any_instance.expects(:ask_assistant_later).with(user_message).once
+
+    post retry_chat_url(chat)
+
+    assert_redirected_to chat_path(chat)
+  end
+
+  test "redirects to the chat instead of retrying if AI is disabled" do
+    @user.update!(ai_enabled: false)
+    chat = chats(:one)
+
+    Chat.any_instance.expects(:ask_assistant_later).never
+
+    post retry_chat_url(chat)
+
+    assert_redirected_to chat_path(chat)
+  end
+
   test "should not allow access to other user's chats" do
     other_user = users(:family_member)
     other_chat = Chat.create!(user: other_user, title: "Other User's Chat")
@@ -113,6 +140,9 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
 
     delete chat_url(other_chat)
+    assert_response :not_found
+
+    post retry_chat_url(other_chat)
     assert_response :not_found
   end
 end
