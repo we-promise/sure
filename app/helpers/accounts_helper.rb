@@ -47,7 +47,10 @@ module AccountsHelper
       # so toggling it in Settings busts the 12h fragment cache immediately
       # (this partial renders with skip_digest: true, so the template digest
       # would not otherwise reflect the change).
-      Current.user&.always_expanded_account_groups&.sort
+      Current.user&.always_expanded_account_groups&.sort,
+      # Account logos come from Brandfetch only when a client id is set, so
+      # adding or removing it in Settings must bust the cached sidebar too.
+      Setting.brand_fetch_client_id.present?
     ]
   end
 end

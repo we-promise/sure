@@ -944,4 +944,25 @@ class AccountTest < ActiveSupport::TestCase
     accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
     assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
   end
+
+  test "institution_domain is normalized to a bare host" do
+    {
+      "https://www.tbank.ru/" => "tbank.ru",
+      "https://www.krungsri.com/en/personal" => "krungsri.com",
+      "  HTTP://Chase.com:443/?q=1#top " => "chase.com",
+      "www.example.co.uk" => "example.co.uk",
+      "sberbank.ru" => "sberbank.ru",
+      "   " => nil
+    }.each do |input, expected|
+      @account.update!(institution_domain: input)
+      assert_equal expected, @account.read_attribute(:institution_domain), "for #{input.inspect}"
+    end
+  end
+
+  test "logo_url builds a Brandfetch URL from a legacy unnormalized domain" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    @account.update_column(:institution_domain, "https://www.tbank.ru/")
+
+    assert_match %r{\Ahttps://cdn\.brandfetch\.io/tbank\.ru/icon/}, @account.logo_url
+  end
 end

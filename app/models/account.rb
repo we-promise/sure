@@ -121,6 +121,10 @@ class Account < ApplicationRecord
   }
 
   has_one_attached :logo, dependent: :purge_later
+
+  # People paste whole URLs ("https://www.tbank.ru/") into the domain field,
+  # but the Brandfetch logo URL needs the bare host ("tbank.ru").
+  normalizes :institution_domain, with: ->(value) { normalize_institution_domain(value) }
   # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
   has_many :account_statements
 
@@ -193,6 +197,15 @@ class Account < ApplicationRecord
   end
 
   class << self
+    def normalize_institution_domain(value)
+      host = value.to_s.strip.downcase
+        .sub(%r{\A[a-z][a-z0-9+.-]*://}, "")
+        .split(%r{[/?#]}, 2).first.to_s
+        .sub(/:\d+\z/, "")
+        .delete_prefix("www.")
+      host.presence
+    end
+
     def human_attribute_name(attribute, options = {})
       options = { moniker: Current.family&.moniker_label || "Family" }.merge(options)
       super(attribute, options)
@@ -572,7 +585,8 @@ class Account < ApplicationRecord
   end
 
   def institution_domain
-    read_attribute(:institution_domain).presence || provider&.institution_domain
+    # Normalized on read too, so domains saved before normalization existed still resolve a logo.
+    self.class.normalize_institution_domain(read_attribute(:institution_domain)) || provider&.institution_domain
   end
 
   def manual_crypto_exchange?

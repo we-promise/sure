@@ -105,4 +105,26 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "a[href=?]", new_depository_path, count: 1
   end
+
+  test "edit form explains the institution domain and links to Brandfetch settings when the key is missing" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+
+    with_self_hosting do
+      get edit_account_url(@account)
+    end
+
+    assert_response :success
+    assert_select "[data-testid=institution-domain-hint]", text: /Brandfetch/
+    assert_select "[data-testid=institution-domain-hint] a[href=?]", settings_hosting_path
+  end
+
+  test "edit form only explains the institution domain when Brandfetch is configured" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+
+    get edit_account_url(@account)
+
+    assert_response :success
+    assert_select "[data-testid=institution-domain-hint]", text: I18n.t("accounts.form.institution_domain_hint")
+    assert_select "[data-testid=institution-domain-hint] a", 0
+  end
 end

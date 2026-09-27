@@ -45,9 +45,21 @@
             label: t(".institution_name_label"),
             placeholder: account.provider&.institution_name || t(".institution_name_placeholder") %>
 
-        <%= form.text_field :institution_domain,
-            label: t(".institution_domain_label"),
-            placeholder: account.provider&.institution_domain || t(".institution_domain_placeholder") %>
+        <div class="space-y-1">
+          <%= form.text_field :institution_domain,
+              label: t(".institution_domain_label"),
+              placeholder: account.provider&.institution_domain || t(".institution_domain_placeholder") %>
+          <p class="text-xs text-secondary" data-testid="institution-domain-hint">
+            <% if Setting.brand_fetch_client_id.present? %>
+              <%= t(".institution_domain_hint") %>
+            <% else %>
+              <%= t(".institution_domain_missing_logo_key_hint") %>
+              <% if self_hosted? && Current.user&.admin? %>
+                <%= link_to t(".institution_domain_settings_link"), settings_hosting_path, class: "underline" %>
+              <% end %>
+            <% end %>
+          </p>
+        </div>
 
         <%= form.text_area :notes,
             label: t(".notes_label"),

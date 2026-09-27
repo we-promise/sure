@@ -48,6 +48,9 @@ en:
       institution_name_placeholder: e.g., Chase Bank
       institution_domain_label: Institution domain
       institution_domain_placeholder: e.g., chase.com
+      institution_domain_hint: Used to show the institution's logo.
+      institution_domain_missing_logo_key_hint: Logos aren't loaded from this domain because no Brandfetch client ID is configured.
+      institution_domain_settings_link: Add one in Self-Hosting settings
       notes_label: Notes
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
       exclude_from_reports: Exclude from all reports
