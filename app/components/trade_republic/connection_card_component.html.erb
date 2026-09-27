@@ -144,7 +144,7 @@
                               value: nil %>
 
           <div class="flex flex-wrap justify-end gap-2">
-            <%= form.submit(translation("update_configuration")) %>
+            <%= form.submit(item.session_configured? ? translation("update_configuration") : translation("save_configuration")) %>
           </div>
         <% end %>
       <% end %>

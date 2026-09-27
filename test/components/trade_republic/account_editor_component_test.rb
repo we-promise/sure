@@ -112,4 +112,27 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
 
     assert_no_text "••••"
   end
+
+  test "an item with a configured session offers to update its configuration" do
+    render_inline(TradeRepublic::ConnectionCardComponent.new(item: trade_republic_items(:configured_item)))
+
+    assert_selector "button[type=submit]", text: I18n.t("settings.providers.trade_republic_panel.update_configuration")
+    assert_no_text I18n.t("settings.providers.trade_republic_panel.save_configuration")
+  end
+
+  test "an item without a configured session offers to save and start login instead" do
+    render_inline(TradeRepublic::ConnectionCardComponent.new(item: trade_republic_items(:requires_update_item)))
+
+    assert_selector "button[type=submit]", text: I18n.t("settings.providers.trade_republic_panel.save_configuration")
+    assert_no_text I18n.t("settings.providers.trade_republic_panel.update_configuration")
+  end
+
+  test "a failed connection attempt is redisplayed with its phone number" do
+    family = families(:dylan_family)
+    failed_item = family.trade_republic_items.build(phone_number: "+491701234567")
+
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [], family: family, new_item: failed_item))
+
+    assert_selector "input[name='trade_republic_item[phone_number]'][value='+491701234567']"
+  end
 end
