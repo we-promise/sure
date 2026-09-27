@@ -84,6 +84,8 @@ class EnableBankingItem < ApplicationRecord
       return
     end
 
+    return unless new_record? || will_save_change_to_sync_start_date? || will_save_change_to_sync_strategy?
+
     if sync_start_date > Date.current || sync_start_date < 2.years.ago.to_date
       errors.add(:sync_start_date, "must be within the last 2 years")
     end

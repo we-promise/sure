@@ -270,6 +270,26 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     assert @item.valid?
   end
 
+  test "does not revalidate sync_start_date bounds on unrelated updates once it ages past 2 years" do
+    @item.save!
+    @item.update_column(:sync_start_date, 2.years.ago.to_date - 1.day)
+    @item.reload
+
+    assert @item.valid?
+    assert @item.update(status: :requires_update)
+  end
+
+  test "is invalid when sync_start_date is edited to a date outside the bounds" do
+    @item.save!
+    @item.update_column(:sync_start_date, 2.years.ago.to_date - 1.day)
+    @item.reload
+
+    @item.sync_start_date = 3.years.ago.to_date
+
+    assert_not @item.valid?
+    assert_includes @item.errors[:sync_start_date], "must be within the last 2 years"
+  end
+
   test "sync_start_date_shortfall? is false when sync_strategy is longest" do
     @item.sync_strategy = "longest"
     @item.sync_start_date = nil
