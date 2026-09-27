@@ -27,6 +27,23 @@ module Account::Anchorable
     opening_balance_manager.has_opening_anchor?
   end
 
+  # An account whose history a provider imports gets its opening anchor before
+  # any of that history exists, so it is dated by default -- two years back.
+  # Once the entries are in, an anchor that is not before the oldest of them
+  # sits in the middle of the series: the reverse calculator pins the balance
+  # there and every earlier day is derived from it, running the flows the
+  # wrong way. Called after an import, this moves the anchor to the day before
+  # the first entry and keeps its balance. Uses the manager directly so it does
+  # not queue a sync of its own; the caller's sync follows anyway.
+  def ensure_opening_anchor_precedes_entries
+    return unless has_opening_anchor?
+
+    oldest = entries.where.not(entryable_type: "Valuation").minimum(:date)
+    return if oldest.nil? || opening_anchor_date < oldest
+
+    opening_balance_manager.set_opening_balance(balance: opening_anchor_balance, date: oldest.prev_day)
+  end
+
   def history_start_date
     if linked? && balance_type == :investment
       Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(self)
