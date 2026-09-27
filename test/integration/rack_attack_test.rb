@@ -35,6 +35,7 @@ class RackAttackTest < ActionDispatch::IntegrationTest
   # ordinary browsing.
   test "remote user header throttle counts only cookieless requests to the UI" do
     Rails.application.config.stubs(:remote_user_header_email).returns("Remote-Email")
+    stub_loopback_trusted_proxies
     discriminator = Rack::Attack.throttles["remote-user-header/email"].block
 
     assert_equal "user@example.com", discriminator.call(header_request("/"))
@@ -51,6 +52,33 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     assert_nil discriminator.call(header_request("/mcp"))
     assert_nil discriminator.call(header_request("/", email: ""))
     assert_nil discriminator.call(Rack::Attack::Request.new(Rack::MockRequest.env_for("/")))
+  end
+
+  # Authentication ignores a header from outside REMOTE_USER_TRUSTED_PROXIES,
+  # so the throttle must too. Otherwise any peer that reaches the port can send
+  # a victim's email 30 times a minute and lock out the victim's header login.
+  test "remote user header throttle counts only headers from a trusted peer" do
+    Rails.application.config.stubs(:remote_user_header_email).returns("Remote-Email")
+    stub_loopback_trusted_proxies
+    discriminator = Rack::Attack.throttles["remote-user-header/email"].block
+
+    assert_equal "user@example.com", discriminator.call(header_request("/", remote_addr: "127.0.0.1"))
+    assert_equal "user@example.com", discriminator.call(header_request("/", remote_addr: "::ffff:127.0.0.1")),
+      "an IPv4-mapped peer is normalized the same way the concern normalizes it"
+    assert_nil discriminator.call(header_request("/", remote_addr: "203.0.113.5"))
+    assert_nil discriminator.call(header_request("/", remote_addr: "not-an-ip"))
+    assert_nil discriminator.call(header_request("/", remote_addr: nil))
+  end
+
+  # ActionDispatch maps only /\A[A-Za-z0-9-]+\z/ names to HTTP_*, so the
+  # concern never sees a header configured with an underscore. The throttle
+  # must not count what authentication can't read.
+  test "remote user header throttle reads the header the way authentication does" do
+    Rails.application.config.stubs(:remote_user_header_email).returns("Remote_Email")
+    stub_loopback_trusted_proxies
+    discriminator = Rack::Attack.throttles["remote-user-header/email"].block
+
+    assert_nil discriminator.call(header_request("/"))
   end
 
   test "remote user header throttle is inert when the header is not configured" do
@@ -235,9 +263,15 @@ class RackAttackTest < ActionDispatch::IntegrationTest
       Rack::Attack::Request.new(env)
     end
 
-    def header_request(path, email: "user@example.com", cookie: nil)
+    def header_request(path, email: "user@example.com", cookie: nil, remote_addr: "127.0.0.1")
       env = Rack::MockRequest.env_for(path, "HTTP_REMOTE_EMAIL" => email)
       env["HTTP_COOKIE"] = cookie if cookie
+      env["REMOTE_ADDR"] = remote_addr
       Rack::Attack::Request.new(env)
+    end
+
+    def stub_loopback_trusted_proxies
+      Rails.application.config.stubs(:remote_user_trusted_proxies)
+                              .returns([ IPAddr.new("127.0.0.0/8"), IPAddr.new("::1/128") ])
     end
 end
