@@ -3,8 +3,12 @@ class Financekit::Processor
     @item = item
   end
 
+  # Returns every part of the capture it applied, so the caller can complete
+  # them together. Returning only the last chunk left the earlier ones without
+  # downstream work, and the recovery sweep then repeated the fan-out for them.
   def apply_next!
     batch = nil
+    applied = nil
     @item.with_lock do
       @item.require_publisher!
       batch = @item.financekit_batches.find_by(generation: @item.generation,
@@ -39,9 +43,14 @@ class Financekit::Processor
       @item.update!(next_sequence: last.sequence + 1, predecessor_digest: last.payload_digest,
         last_imported_at: applied_at, last_captured_at: last.captured_at)
       batch = last
+      applied = capture
     end
-    Financekit::Downstream.new(batch).perform!
-    true
+    Financekit::Diagnostics.capture(item: @item, batch: batch, source: self.class.name,
+      message: "FinanceKit capture imported", event: "capture_imported", counts: batch.counts, sync_id: batch.sync_id)
+    # Downstream work belongs to the caller: it completes every part of the
+    # capture together, and a drain pays for the family fan-out once rather
+    # than once per capture.
+    applied
   rescue ActiveRecord::RecordInvalid => error
     # Retryable. RecordInvalid covers ordinary races — a concurrent balance
     # observation or conflict insert, an entry validation a later attempt
@@ -54,16 +63,16 @@ class Financekit::Processor
     # unlucky save.
     Rails.error.report(error, handled: true,
       context: { financekit_item_id: @item.id, batch_id: batch&.batch_id })
-    fail_batch!(batch, "import_validation", permanent: false)
+    fail_batch!(batch, "import_validation", permanent: false, error_class: error.class.name)
     false
   rescue Financekit::Error, JSON::ParserError => error
     # Not retryable. The stored payload is immutable, so a protocol violation
     # or bytes that no longer parse give every later attempt the same input.
-    fail_batch!(batch, error.is_a?(Financekit::Error) ? error.code : "import_validation", permanent: true)
+    fail_batch!(batch, error.is_a?(Financekit::Error) ? error.code : "import_validation", permanent: true, error_class: error.class.name)
     false
   rescue StandardError => error
     Rails.error.report(error, handled: true, context: { financekit_item_id: @item.id, batch_id: batch&.batch_id })
-    fail_batch!(batch, "processing_error", permanent: false)
+    fail_batch!(batch, "processing_error", permanent: false, error_class: error.class.name)
     false
   end
 
@@ -96,16 +105,25 @@ class Financekit::Processor
     def import_balance!(mapping, record, counts)
       observed_at = Financekit::Payload.timestamp!(record["observed_at"])
       money = record.fetch("money")
+      amount = Financekit::Payload.money!(money)
       observation = mapping.financekit_balance_observations.find_or_create_by!(source_id: record["source_id"],
         kind: record["kind"], observed_at: observed_at) do |balance|
         balance.financekit_account = mapping
-        balance.amount = Financekit::Payload.money!(money)
+        balance.amount = amount
         balance.currency = money["currency"]
         balance.direction = money["direction"]
       end
-      Financekit.require!(observation.amount == Financekit::Payload.money!(money) &&
-        observation.currency == money["currency"] && observation.direction == money["direction"],
-        "balance_observation_conflict", 409)
+      # A stored observation is immutable, so the retained value and the
+      # canonical balance both stay as they are. Detecting the disagreement is
+      # right; ending ingestion over it is not. Fencing here would clear the
+      # upload credential, and only a foreground OAuth repair can reissue one —
+      # the same reason import validation retries rather than fences. Raise it
+      # for the family and carry on with the rest of the capture.
+      if observation.amount != amount || observation.currency != money["currency"] ||
+          observation.direction != money["direction"]
+        counts[create_observation_conflict!(mapping, record, observed_at) ? "review_required" : "settled"] += 1
+        return
+      end
       counts["balances"] += 1 if observation.previously_new_record?
       return unless record["kind"] == "booked"
 
@@ -131,8 +149,7 @@ class Financekit::Processor
       # capture that covers it, so without this the resolved conflict reopens
       # on the next batch and the family is asked the same question forever.
       if settled_by_family?(identity)
-        identity.review_required = false
-        identity.save!
+        identity.refresh_review_required!
         counts["settled"] += 1
         return
       end
@@ -202,7 +219,9 @@ class Financekit::Processor
         # The family already chose to keep Sure's entry for this identity. The
         # tombstone is still recorded so the source cannot resurrect it, but the
         # protected entry stays and the answered conflict is not reopened.
-        identity.review_required = false
+        # Review state follows the same rule as resolution and upserts: it is
+        # open while any conflict about this record still is.
+        identity.review_required = identity.review_required_from_conflicts
         counts["settled"] += 1
       elsif entry
         Entry.transaction do
@@ -219,10 +238,10 @@ class Financekit::Processor
         end
       end
       identity.save!
-      DebugLogEntry.capture(category: "provider_sync", level: "info", message: "FinanceKit tombstone processed",
-        source: self.class.name, provider_key: "financekit", family: @item.family,
-        metadata: { batch_id: batch.batch_id, source_identity_id: identity.id,
-          review_required: identity.review_required })
+      Financekit::Diagnostics.capture(item: @item, batch: batch, source: self.class.name,
+        message: "FinanceKit tombstone processed", event: "tombstone_processed",
+        account_provider: mapping.financekit_account_lineage.account_provider,
+        source_identity_id: identity.id, review_required: identity.review_required)
     end
 
     # A conflict the family resolved with "keep_sure" settles that source
@@ -271,10 +290,13 @@ class Financekit::Processor
       end
     end
 
+    # Ordered cheapest first: every check below the columns loads an
+    # association, and transfer/split membership each cost a query.
     def protected_entry?(entry)
-      entry.protected_from_sync? || entry.transaction.transfer.present? || entry.transaction.transfer_id.present? || entry.reconciled_at.present? ||
-        entry.split_parent? || entry.split_child? || entry.locked_attributes.present? ||
-        entry.transaction.locked_attributes.present?
+      entry.protected_from_sync? || entry.reconciled_at.present? || entry.split_child? ||
+        entry.locked_attributes.present? || entry.transaction.locked_attributes.present? ||
+        entry.transaction.transfer_id.present? || entry.transaction.transfer.present? ||
+        entry.split_parent?
     end
 
     # Preserve the shared importer's pending-to-booked exception for user edits,
@@ -287,10 +309,57 @@ class Financekit::Processor
         return unless entry.user_modified? && !entry.excluded? && !entry.import_locked?
 
         transaction = entry.transaction
-        if transaction.extra.dig("financekit", "pending")
+        if transaction.extra&.dig("financekit", "pending")
           transaction.update!(extra: transaction.extra.deep_merge("financekit" => { "pending" => false }))
         end
       end
+    end
+
+    # Balance observations have no source transaction, so the conflict hangs off
+    # the lineage and carries the observation identity in its details. Returns
+    # whether the record still needs review.
+    #
+    # Matching on that identity rather than the lineage alone is what makes
+    # "keep Sure" durable here, the same way it is for a source transaction: the
+    # publisher re-sends the same disagreement on every capture that covers it,
+    # so keying the lookup on open rows made the decision last one capture. A
+    # different observation still opens its own conflict.
+    def create_observation_conflict!(mapping, record, observed_at)
+      # Canonical UTC, not the wire string: the observation itself is keyed on
+      # the parsed instant, so two payloads spelling the same moment differently
+      # hit one observation and must consult one decision.
+      details = { "source_id" => record["source_id"], "kind" => record["kind"],
+        "observed_at" => observed_at.utc.iso8601(6) }
+      # Searched across the family rather than this connection, the same way a
+      # source transaction's decision is, because the observation lives on the
+      # lineage and outlives the publisher that sent it. A replacement device
+      # must not reopen a question the family already answered. The new row
+      # still belongs to the connection that raised it.
+      history = FinancekitConflict.where(family_id: @item.family_id)
+        .where(kind: "balance_observation_conflict",
+          financekit_account_lineage_id: mapping.financekit_account_lineage_id)
+        .where("details @> ?::jsonb", details.to_json)
+      return false if history.exists?(resolution: "keep_sure")
+      return true if history.open.exists?
+
+      # The check above cannot settle it alone: two publishers can share one
+      # lineage — a replacement device keeps the lineage of the device it
+      # replaces — so both can find no open row and then both insert. The
+      # financekit_conflicts_open_observation index decides which one wins. In a
+      # savepoint because a unique violation aborts the surrounding transaction,
+      # and this import has the rest of the capture still to apply.
+      begin
+        FinancekitConflict.transaction(requires_new: true) do
+          @item.financekit_conflicts.create!(family: @item.family,
+            financekit_account_lineage: mapping.financekit_account_lineage,
+            kind: "balance_observation_conflict", status: "open", details: details)
+        end
+      rescue ActiveRecord::RecordNotUnique
+        # The other publisher asked first. The question is open either way, and
+        # the row belongs to whichever connection got there first.
+        nil
+      end
+      true
     end
 
     def create_conflict!(mapping, identity, kind)
@@ -301,8 +370,12 @@ class Financekit::Processor
       end
     end
 
-    def fail_batch!(batch, code, permanent:)
-      return unless batch
+    def fail_batch!(batch, code, permanent:, error_class:)
+      unless batch
+        Financekit::Diagnostics.capture(item: @item, source: self.class.name, level: "error",
+          message: "FinanceKit import blocked", event: "import_blocked", error_code: code, error_class: error_class)
+        return
+      end
 
       @item.with_lock do
         batch.reload
@@ -319,8 +392,10 @@ class Financekit::Processor
             retry_at: Time.current + (2**attempts).minutes)
         end
       end
-      DebugLogEntry.capture(category: "provider_sync", level: "error", message: "FinanceKit import requires attention",
-        source: self.class.name, provider_key: "financekit", family: @item.family,
-        metadata: { batch_id: batch.batch_id, error_code: code })
+      retrying = batch.status == "accepted"
+      Financekit::Diagnostics.capture(item: @item, batch: batch, source: self.class.name,
+        level: retrying ? "warn" : "error",
+        message: retrying ? "FinanceKit import retry scheduled" : "FinanceKit import requires repair",
+        event: retrying ? "import_retry" : "import_failed", error_code: code, error_class: error_class)
     end
 end

@@ -16,6 +16,18 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     flunk "generated invalid Ruby: #{e.message}\n\n#{source}"
   end
 
+  test "the unlinking scaffold renders to valid Ruby and carries the disposition seam" do
+    template = Rails.root.join("lib/generators/provider/family/templates/unlinking_concern.rb.tt").read
+    context = Struct.new(:class_name, :file_name).new("Gocardless", "gocardless")
+    rendered = ERB.new(template, trim_mode: "-").result(context.instance_eval { binding })
+
+    assert_parses rendered
+    # A generated provider retains by default and refuses a discard it has not
+    # implemented, rather than accepting one and keeping the data.
+    assert_includes rendered, "disposition: ProviderDisconnectable::DEFAULT_DISPOSITION"
+    assert_includes rendered, "does not implement the #{'#{disposition}'} disposition"
+  end
+
   test "appends to a single-line enum" do
     result = append(<<~RUBY)
       class ProviderMerchant < Merchant

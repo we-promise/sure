@@ -3685,7 +3685,7 @@ components:
           items:
             type: string
             format: uuid
-            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         upload_authorized:
           type: boolean
           enum:
@@ -3713,11 +3713,11 @@ components:
         enrollment_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         replaces_connection_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         consent:
           "$ref": "#/components/schemas/FinancekitConsent"
     FinancekitMappingRequest:
@@ -3761,11 +3761,11 @@ components:
         account_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         lineage_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         booked_balance:
           "$ref": "#/components/schemas/FinancekitMoney"
         observed_at:
@@ -3791,11 +3791,11 @@ components:
         source_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         lineage_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         mapping_version:
           type: integer
           minimum: 1
@@ -3816,7 +3816,7 @@ components:
           allOf:
           - type: string
             format: uuid
-            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
           nullable: true
     FinancekitAccountBinding:
       type: object
@@ -3829,11 +3829,11 @@ components:
         source_account_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         lineage_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         mapping_version:
           type: integer
           minimum: 1
@@ -3851,15 +3851,15 @@ components:
         id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         connection_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         publisher_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         status:
           type: string
           enum:
@@ -3874,7 +3874,7 @@ components:
           allOf:
           - type: string
             format: uuid
-            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
           nullable: true
         next_sequence:
           type: integer
@@ -3916,6 +3916,21 @@ components:
             "$ref": "#/components/schemas/FinancekitAccountMapping"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+        purge_requested_at:
+          allOf:
+          - type: string
+            format: date-time
+          nullable: true
+        purge_completed_at:
+          allOf:
+          - type: string
+            format: date-time
+          nullable: true
+        disposition:
+          type: string
+          enum:
+          - retain
+          - discard
     FinancekitPublisherConfiguration:
       allOf:
       - "$ref": "#/components/schemas/FinancekitConnection"
@@ -3970,11 +3985,11 @@ components:
         source_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         lineage_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         mapping_version:
           type: integer
           minimum: 1
@@ -4012,15 +4027,15 @@ components:
         source_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         source_account_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         lineage_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         mapping_version:
           type: integer
           minimum: 1
@@ -4052,15 +4067,15 @@ components:
         source_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         source_account_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         lineage_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         mapping_version:
           type: integer
           minimum: 1
@@ -4113,15 +4128,15 @@ components:
         source_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         source_account_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         lineage_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         mapping_version:
           type: integer
           minimum: 1
@@ -4154,11 +4169,11 @@ components:
           source_account_id:
             type: string
             format: uuid
-            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
           lineage_id:
             type: string
             format: uuid
-            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
           mapping_version:
             type: integer
             minimum: 1
@@ -4225,22 +4240,22 @@ components:
         connection_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         publisher_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         generation:
           type: integer
           minimum: 1
         stream_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         batch_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         sequence:
           type: integer
           minimum: 1
@@ -4250,7 +4265,7 @@ components:
         capture_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         chunk_index:
           type: integer
           minimum: 0
@@ -4276,7 +4291,7 @@ components:
           items:
             type: string
             format: uuid
-            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         events:
           type: array
           maxItems: 500
@@ -4304,21 +4319,21 @@ components:
         connection_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         publisher_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         generation:
           type: integer
         stream_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         batch_id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         sequence:
           type: integer
         payload_digest:
@@ -4354,7 +4369,7 @@ components:
         id:
           type: string
           format: uuid
-          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+          pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
         kind:
           type: string
         status:
@@ -4379,13 +4394,13 @@ components:
           allOf:
           - type: string
             format: uuid
-            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
           nullable: true
         financekit_transaction_id:
           allOf:
           - type: string
             format: uuid
-            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-5][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12}$"
+            pattern: "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$"
           nullable: true
     FinancekitConflictResolution:
       type: object
@@ -4416,6 +4431,7 @@ components:
       - transaction_statuses
       - amount_precision
       - amount_scale
+      - connection_dispositions
       properties:
         available:
           type: boolean
@@ -4445,6 +4461,13 @@ components:
           type: integer
         amount_scale:
           type: integer
+        connection_dispositions:
+          type: array
+          items:
+            type: string
+            enum:
+            - retain
+            - discard
     FinancekitError:
       type: object
       additionalProperties: false
@@ -6084,16 +6107,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/connections":
     post:
       summary: Enroll a FinanceKit device publisher
@@ -6155,16 +6168,6 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
           headers:
             Retry-After:
               schema:
@@ -6263,27 +6266,39 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
     delete:
-      summary: Revoke a publisher and retain imported financial history
+      summary: Revoke a publisher, retaining or discarding imported financial history
       tags:
       - FinanceKit
       security:
       - apiKeyAuth: []
       - oauth2:
         - read_write
+      parameters:
+      - name: disposition
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - retain
+          - discard
+        description: 'What happens to the data this connection imported. retain (the
+          default) keeps every account, balance and transaction. discard removes them:
+          accounts FinanceKit created are destroyed, accounts it was linked to are
+          emptied of FinanceKit-sourced entries and rebalanced, and source identities,
+          balance observations and conflicts are deleted. Irreversible, and it removes
+          imported entries the family later reconciled, excluded or edited. Supported
+          dispositions are advertised by GET /api/v1/financekit/capabilities.'
       responses:
         '204':
-          description: Publisher revoked
+          description: Publisher revoked, imported history retained
+        '202':
+          description: Publisher revoked, discard of imported history accepted
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/FinancekitConnection"
         '400':
           description: Malformed or unsupported protocol
           content:
@@ -6328,16 +6343,6 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
           headers:
             Retry-After:
               schema:
@@ -6428,16 +6433,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
       requestBody:
         content:
           application/json:
@@ -6511,16 +6506,6 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
           headers:
             Retry-After:
               schema:
@@ -6604,16 +6589,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/connections/{connection_id}/repair":
     parameters:
     - name: connection_id
@@ -6681,16 +6656,6 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
           headers:
             Retry-After:
               schema:
@@ -6917,16 +6882,6 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
   "/api/v1/financekit/connections/{connection_id}/conflicts/{id}":
     parameters:
     - name: connection_id
@@ -7001,16 +6956,6 @@ paths:
                 "$ref": "#/components/schemas/FinancekitError"
         '429':
           description: Rate limited or publisher inbox full
-          headers:
-            Retry-After:
-              schema:
-                type: integer
-          content:
-            application/json:
-              schema:
-                "$ref": "#/components/schemas/FinancekitError"
-        '503':
-          description: Feature unavailable
           headers:
             Retry-After:
               schema:

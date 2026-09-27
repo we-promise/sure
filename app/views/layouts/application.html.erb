@@ -230,7 +230,7 @@ end %>
       <% end %>
     <% end %>
 <%# Preserve the account sidebar's group open/closed state across Turbo Drive navigations so the sidebar height stays stable and the scroll position is not clamped to the top. See the inline script below for details. %>
-<%= javascript_tag nonce: true do %>
+<script nonce="<%= content_security_policy_nonce %>">
   // Preserves the account sidebar's group open/closed state across Turbo Drive
   // navigations so the sidebar height stays stable and the scroll position
   // (restored by the `preserve-scroll` controller) is not clamped to the top.
@@ -377,6 +377,6 @@ end %>
     restore();
   })();
 
-<% end %>
+</script>
   </div>
 <% end %>

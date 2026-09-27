@@ -40,21 +40,15 @@
   </div>
 
   <% unless @family.recurring_transactions_disabled? %>
-    <div class="p-4 bg-container-inset border border-secondary rounded-lg">
-      <div class="flex items-start gap-2">
-        <%= icon "info", class: "w-5 h-5 text-link mt-0.5 flex-shrink-0" %>
-        <div>
-          <p class="text-sm font-medium text-primary mb-2"><%= t("recurring_transactions.info.title") %></p>
-          <p class="text-xs text-secondary mb-2"><%= t("recurring_transactions.info.manual_description") %></p>
-          <p class="text-xs text-secondary mb-1"><%= t("recurring_transactions.info.automatic_description") %></p>
-          <ul class="list-disc list-inside text-xs text-secondary space-y-0.5 ml-2">
-            <% t("recurring_transactions.info.triggers").each do |trigger| %>
-              <li><%= trigger %></li>
-            <% end %>
-          </ul>
-        </div>
-      </div>
-    </div>
+    <%= render DS::Alert.new(title: t("recurring_transactions.info.title"), variant: :info) do %>
+      <p><%= t("recurring_transactions.info.manual_description") %></p>
+      <p><%= t("recurring_transactions.info.automatic_description") %></p>
+      <ul class="list-disc list-inside space-y-0.5">
+        <% t("recurring_transactions.info.triggers").each do |trigger| %>
+          <li><%= trigger %></li>
+        <% end %>
+      </ul>
+    <% end %>
 
       <% if @suggested.any? %>
         <%= render "recurring_transactions/suggested_series", suggested: @suggested %>

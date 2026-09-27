@@ -591,11 +591,11 @@ fr:
         phone_number_label: Numéro de téléphone
         phone_number_placeholder_existing: Laissez vide pour conserver le numéro actuel
         phone_number_placeholder_new: "+33 6 12 34 56 78"
-        pin_label: Code PIN
-        pin_placeholder_existing: Laissez vide pour conserver le code PIN actuel
-        pin_placeholder_new: Le code PIN de votre application Trade Republic
+        pin_label: Code PIN ou mot de passe
+        pin_placeholder_existing: Laissez vide pour conserver le code PIN ou le mot de passe actuel
+        pin_placeholder_new: Le code PIN ou le mot de passe de votre application Trade Republic
         push_login_notice: Approuvez la connexion dans votre application Trade Republic dès maintenant. Sure vérifie automatiquement en arrière-plan. Vous pouvez aussi vérifier l'état vous-même.
-        qr_back_to_credentials: Revenir au numéro de téléphone et au code PIN
+        qr_back_to_credentials: Revenir au numéro de téléphone et au code PIN ou mot de passe
         qr_cancel: Annuler la connexion par QR code
         qr_error: La connexion par QR code n'a pas pu être lancée. Veuillez réessayer.
         qr_instruction: Scannez le QR code avec votre application Trade Republic et approuvez la connexion.
@@ -608,7 +608,7 @@ fr:
         status_configured_prefix: Connecté. Ouvrez l'onglet
         status_configured_suffix: pour gérer les comptes détectés.
         steps:
-          step_1: Saisissez le numéro de téléphone et le code PIN que vous utilisez pour l'application Trade Republic, puis enregistrez.
+          step_1: Saisissez le numéro de téléphone et le code PIN ou le mot de passe que vous utilisez pour l'application Trade Republic, puis enregistrez.
           step_2: Saisissez le code de votre application d'authentification lorsqu'il vous est demandé.
           step_3: Approuvez la connexion dans votre application Trade Republic lorsque vous y êtes invité.
         sync: Synchroniser
