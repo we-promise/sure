@@ -66,7 +66,7 @@ sv:
       year_built_placeholder: "1990"
       area_label: "Yta (valfritt)"
       area_placeholder: "1200"
-      square_feet: "Square Feet"
+      square_feet: "Kvadratfot"
       square_meters: "Kvadratmeter"
       area_unit_label: "Ytenhet"
     overview:

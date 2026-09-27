@@ -184,7 +184,7 @@ sv:
         loan: Lån eller bolån
         other_asset: Annan tillgång
       subtype_labels:
-        depository: "Kontounderart:"
+        depository: "Kontoundertyp:"
         credit_card: ""
         investment: "Investeringstyp:"
         loan: "Lånetyp:"
