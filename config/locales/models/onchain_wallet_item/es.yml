@@ -1,0 +1,17 @@
+---
+es:
+  onchain:
+    chains:
+      arbitrum: Arbitrum
+      base: Base
+      bitcoin: Bitcoin
+      ethereum: Ethereum
+      gnosis: Gnosis
+      optimism: Optimismo
+      polygon: Polygon
+      solana: Solana
+    institution_name: Carteras de autocustodia
+  onchain_wallet_item:
+    movement:
+      received: Recibido %{quantity} %{symbol}
+      sent: Enviado %{quantity} %{symbol}
