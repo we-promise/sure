@@ -566,11 +566,13 @@ class TradeRepublicItemsController < ApplicationController
     end
 
     def render_qr_login_error(error, pending: nil, status: :unprocessable_entity, retryable: false)
+      # Malformed-response messages can quote the provider response body.
+      detail = error.is_a?(Provider::TradeRepublicClient::MalformedResponse) ? error.class.name : "#{error.class} - #{error.message}"
       DebugLogEntry.capture(
         category: "sync",
         level: retryable ? "info" : "warn",
         message: "Trade Republic QR login poll failed for item #{@trade_republic_item.id} " \
-                 "(#{retryable ? "retryable" : "fatal"}): #{error.class} - #{error.message}",
+                 "(#{retryable ? "retryable" : "fatal"}): #{detail}",
         source: "trade_republic",
         family: Current.family,
         provider_key: "trade_republic"

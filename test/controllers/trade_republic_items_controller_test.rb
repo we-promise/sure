@@ -220,6 +220,29 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes entry.message, "RateLimited"
   end
 
+  test "QR polling does not log provider response content from malformed responses" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic QR Connection",
+      currency: "EUR",
+      status: :requires_update
+    )
+    item.update!(pending_login_state: "qr-pending")
+    provider = mock
+    provider.expects(:poll_qr_login).raises(
+      Provider::TradeRepublicClient::MalformedResponse,
+      "Trade Republic returned invalid JSON: unexpected token at '<html>secret-body</html>'"
+    )
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    assert_difference -> { DebugLogEntry.where(source: "trade_republic", level: "warn").count }, 1 do
+      post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+    end
+
+    entry = DebugLogEntry.where(source: "trade_republic").order(:created_at).last
+    assert_includes entry.message, "MalformedResponse"
+    assert_not_includes entry.message, "secret-body"
+  end
+
   test "QR polling does not restore a login cancelled while a retryable poll was in flight" do
     item = families(:dylan_family).trade_republic_items.create!(
       name: "Trade Republic QR Connection",
