@@ -750,6 +750,8 @@ uk:
         disconnect: Відключити Trade Republic
         disconnect_confirm: Відключити Trade Republic? Ваші синхронізовані рахунки стануть ручними.
         disconnect_confirm_with_identifier: "Відключити підключення Trade Republic, що закінчується на %{last4}? Ваші синхронізовані рахунки стануть ручними."
+        identifier_phone: Телефон
+        identifier_account: Рахунок
         status_configured_prefix: Підключено. Перейдіть на вкладку
         accounts_tab: Рахунки
         setup_accounts: Налаштувати рахунки

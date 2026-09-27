@@ -78,7 +78,19 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
 
     render_inline(TradeRepublic::AccountEditorComponent.new(items: [ item ], family: families(:dylan_family)))
 
-    assert_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(item)}", text: "4567"
+    assert_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(item)}",
+                    text: "#{I18n.t("settings.providers.trade_republic_panel.identifier_phone")} •••• 4567"
+  end
+
+  test "card summary shows the account number stored at login before the first sync" do
+    family = families(:dylan_family)
+    item = family.trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :good, session_blob: "session", brokerage_account_id: "DE1122334455"
+    )
+
+    render_inline(TradeRepublic::ConnectionCardComponent.new(item: item))
+
+    assert_text "#{I18n.t("settings.providers.trade_republic_panel.identifier_account")} •••• 4455"
   end
 
   test "card summary falls back to the account number when there is no phone number" do
@@ -92,7 +104,8 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
 
     render_inline(TradeRepublic::AccountEditorComponent.new(items: [ item ], family: family))
 
-    assert_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(item)}", text: "3210"
+    assert_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(item)}",
+                    text: "#{I18n.t("settings.providers.trade_republic_panel.identifier_account")} •••• 3210"
   end
 
   test "disconnect confirmation names the connection by its last 4 digits" do

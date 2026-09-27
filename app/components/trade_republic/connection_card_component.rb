@@ -20,7 +20,11 @@ class TradeRepublic::ConnectionCardComponent < ApplicationComponent
   # number, so the last 4 characters of whichever identifier is available
   # help tell cards apart when disconnecting one of several.
   def identifier_last4
-    last4(item.phone_number) || last4(portfolio_account_id)
+    identifier&.last
+  end
+
+  def identifier_label
+    translation("identifier_#{identifier.first}") if identifier
   end
 
   def translation(key, **options)
@@ -28,6 +32,17 @@ class TradeRepublic::ConnectionCardComponent < ApplicationComponent
   end
 
   private
+
+    def identifier
+      return @identifier if defined?(@identifier)
+
+      @identifier =
+        if (digits = last4(item.phone_number))
+          [ :phone, digits ]
+        elsif (digits = last4(item.brokerage_account_id.presence || portfolio_account_id))
+          [ :account, digits ]
+        end
+    end
 
     def portfolio_account_id
       item.trade_republic_accounts.detect { |account| account.kind == "portfolio" }&.trade_republic_account_id

@@ -709,6 +709,8 @@ ru:
         disconnect: Отключить Trade Republic
         disconnect_confirm: Отключить Trade Republic? Ваши синхронизированные счета станут ручными.
         disconnect_confirm_with_identifier: "Отключить подключение Trade Republic, оканчивающееся на %{last4}? Ваши синхронизированные счета станут ручными."
+        identifier_phone: Телефон
+        identifier_account: Счёт
         status_configured_prefix: Подключено. Перейдите на
         accounts_tab: Счета
         setup_accounts: Настроить счета

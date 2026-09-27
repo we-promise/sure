@@ -722,6 +722,8 @@ tr:
         disconnect: Trade Republic bağlantısını kes
         disconnect_confirm: Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir.
         disconnect_confirm_with_identifier: "%{last4} ile biten Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir."
+        identifier_phone: Telefon
+        identifier_account: Hesap
         status_configured_prefix: Bağlandı. Keşfedilen hesapları yönetmek için
         accounts_tab: Hesaplar
         setup_accounts: Hesapları kur

@@ -6,6 +6,7 @@ vi:
       connection_description: "Kết nối tài khoản đầu tư Trade Republic bằng đăng nhập web an toàn"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Tài khoản Trade Republic này đã được kết nối. Kết nối mới đã bị xóa."
     portfolio_categories:
       brokerage: "Tài khoản môi giới"
       private_markets: "Thị trường tư nhân"
