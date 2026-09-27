@@ -6,6 +6,7 @@ de:
       connection_description: "Verbinde ein Trade-Republic-Investmentkonto über eine sichere Web-Anmeldung"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Dieses Trade-Republic-Konto ist bereits verbunden. Die neue Verbindung wurde entfernt."
     defaults:
       name: Trade Republic
     portfolio_categories:

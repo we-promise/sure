@@ -603,6 +603,7 @@ fr:
         qr_login: Se connecter avec un QR code
         qr_success: Connexion approuvée. Sure actualise la page du fournisseur.
         restart_login: Relancer la connexion
+        add_account: "Ajouter une autre connexion"
         save_configuration: Enregistrer et lancer la connexion
         setup_accounts: Configurer les comptes
         status_configured_prefix: Connecté. Ouvrez l'onglet
@@ -612,6 +613,7 @@ fr:
           step_2: Saisissez le code de votre application d'authentification lorsqu'il vous est demandé.
           step_3: Approuvez la connexion dans votre application Trade Republic lorsque vous y êtes invité.
         sync: Synchroniser
+        syncing: "Synchronisation..."
         update_configuration: Mettre à jour la configuration
       trading212_panel:
         accounts_tab: Comptes

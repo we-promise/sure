@@ -701,9 +701,11 @@ ru:
         qr_instruction: Отсканируйте QR-код в приложении Trade Republic и подтвердите вход.
         qr_success: Вход подтверждён. Sure обновляет страницу провайдера.
         qr_error: Не удалось начать вход по QR-коду. Пожалуйста, попробуйте снова.
+        add_account: "Добавить ещё одно подключение"
         save_configuration: Сохранить и войти
         update_configuration: Обновить конфигурацию
         sync: Синхронизировать
+        syncing: "Синхронизация..."
         disconnect: Отключить Trade Republic
         disconnect_confirm: Отключить Trade Republic? Ваши синхронизированные счета станут ручными.
         status_configured_prefix: Подключено. Перейдите на

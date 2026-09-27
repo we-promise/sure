@@ -742,9 +742,11 @@ uk:
         qr_instruction: Відскануйте QR-код у застосунку Trade Republic і підтвердьте вхід.
         qr_success: Вхід підтверджено. Sure оновлює сторінку постачальника.
         qr_error: Не вдалося розпочати вхід за QR-кодом. Спробуйте ще раз.
+        add_account: "Додати ще одне підключення"
         save_configuration: Зберегти й увійти
         update_configuration: Оновити конфігурацію
         sync: Синхронізувати
+        syncing: "Синхронізація..."
         disconnect: Відключити Trade Republic
         disconnect_confirm: Відключити Trade Republic? Ваші синхронізовані рахунки стануть ручними.
         status_configured_prefix: Підключено. Перейдіть на вкладку

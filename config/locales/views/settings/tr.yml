@@ -714,9 +714,11 @@ tr:
         qr_instruction: QR kodu Trade Republic uygulamanızla tarayın ve girişi onaylayın.
         qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
         qr_error: QR girişi başlatılamadı. Lütfen tekrar deneyin.
+        add_account: "Başka bir bağlantı ekle"
         save_configuration: Kaydet ve Girişi Başlat
         update_configuration: Yapılandırmayı Güncelle
         sync: Senkronize et
+        syncing: "Senkronize ediliyor..."
         disconnect: Trade Republic bağlantısını kes
         disconnect_confirm: Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir.
         status_configured_prefix: Bağlandı. Keşfedilen hesapları yönetmek için

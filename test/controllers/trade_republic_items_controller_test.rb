@@ -353,4 +353,90 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, 'data-action="DS--dialog#close"'
     assert_includes response.body, I18n.t("settings.providers.trade_republic_panel.connection_success.close")
   end
+
+  test "pending push login poll replaces only that connection's card" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "pending-login")
+    provider = mock
+    provider.expects(:complete_login).with(pending_login_b64: "pending-login").returns(
+      Provider::TradeRepublicClient::Result.new(data: { "status" => "pending" })
+    )
+    provider.stubs(:login_stage).returns("waiting_for_approval")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    card_id = TradeRepublic::ConnectionCardComponent.dom_id_for(item)
+    assert_includes response.body, %(target="#{card_id}")
+    assert_not_includes response.body, %(target="trade-republic-providers-panel")
+    assert_not_includes response.body, trade_republic_items(:configured_item).name
+  end
+
+  test "push login for an account already connected by another item is discarded" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :requires_update, pending_login_state: "pending-login"
+    )
+    provider = mock
+    provider.expects(:complete_login).with(pending_login_b64: "pending-login").returns(
+      Provider::TradeRepublicClient::Result.new(
+        data: { "status" => "ok", "session_txt" => "duplicate-session", "account" => { "brokerage_account_id" => "DE1234" } }
+      )
+    )
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_includes response.body, %(target="trade-republic-providers-panel")
+    assert_includes response.body, I18n.t("trade_republic_items.duplicate_connection")
+    item.reload
+    assert_predicate item, :scheduled_for_deletion?
+    assert_not item.session_configured?
+    assert_nil item.pending_login_state
+  end
+
+  test "QR login for an account already connected by another item is discarded" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :requires_update, pending_login_state: "qr-pending"
+    )
+    provider = mock
+    provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").returns(
+      Provider::TradeRepublicClient::Result.new(
+        data: { "status" => "ok", "session_txt" => "duplicate-session", "account" => { "brokerage_account_id" => "DE1234" } }
+      )
+    )
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :success
+    assert_equal "duplicate_connection", JSON.parse(response.body).fetch("status")
+    assert_equal I18n.t("trade_republic_items.duplicate_connection"), flash[:alert]
+    item.reload
+    assert_predicate item, :scheduled_for_deletion?
+    assert_not item.session_configured?
+    assert_predicate trade_republic_items(:configured_item).reload, :session_configured?
+  end
+
+  test "reconnecting an item to its own account is not treated as a duplicate" do
+    item = trade_republic_items(:configured_item)
+    item.update!(pending_login_state: "qr-pending", status: :requires_update)
+    provider = mock
+    provider.expects(:poll_qr_login).with(pending_login_b64: "qr-pending").returns(
+      Provider::TradeRepublicClient::Result.new(
+        data: { "status" => "ok", "session_txt" => "fresh-session", "account" => { "brokerage_account_id" => "DE1234" } }
+      )
+    )
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+    TradeRepublicItem.any_instance.stubs(:syncing?).returns(true)
+
+    post poll_qr_login_trade_republic_item_url(item), headers: { "ACCEPT" => "application/json" }
+
+    assert_response :success
+    item.reload
+    assert_predicate item, :good?
+    assert_equal "fresh-session", item.session_blob
+    assert_not item.scheduled_for_deletion?
+  end
 end

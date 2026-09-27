@@ -1,6 +1,6 @@
 class TradeRepublic::AccountEditorComponent < ApplicationComponent
   def initialize(items: nil, family:, qr_code_svg: nil, qr_login_auto_poll_item: nil)
-    @items = items || family.trade_republic_items.ordered
+    @items = items || family.trade_republic_items.active.ordered
     @family = family
     @qr_code_svg = qr_code_svg
     @qr_login_auto_poll_item = qr_login_auto_poll_item
@@ -10,6 +10,12 @@ class TradeRepublic::AccountEditorComponent < ApplicationComponent
 
   def new_item
     @new_item ||= family.trade_republic_items.build
+  end
+
+  # A collapsed card would hide the QR code, the push notice or the
+  # authenticator form, so only healthy connections among several start closed.
+  def open?(item)
+    items.size == 1 || qr_login_active?(item) || item.pending_login_state.present? || !item.good?
   end
 
   def qr_login_active?(item)
