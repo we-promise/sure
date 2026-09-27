@@ -25,7 +25,7 @@ class EnableBankingItem::Importer
     ITAV interimAvailable
   ].freeze
 
-  PERIOD_BOUNDARY_TYPES = %w[opbd prcd].freeze
+  PERIOD_BOUNDARY_TYPES = %w[opbd openingbooked prcd previouslyclosedbooked].freeze
 
   # Only these types may outrank OPBD/PRCD on freshness (see fresher_balance) —
   # the same accounting-semantics exclusion as BALANCE_TYPE_PRIORITY itself, so a
