@@ -47,4 +47,24 @@ class Category::DropdownsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "[data-list-filter-target='recentSection']", false
   end
+
+  test "renders a hidden create option wired to assign the new category to this transaction" do
+    get category_dropdown_url(transaction_id: @transaction.id)
+
+    assert_response :success
+    assert_select "[data-controller~='category-quick-create'][data-category-quick-create-create-url-value=?]", categories_path(format: :json)
+    assert_select "button.hidden[data-category-quick-create-target='createButton']"
+    assert_select "form[data-category-quick-create-target='assignForm'][action=?]", transaction_category_path(@transaction.entry) do
+      assert_select "input[name='entry[entryable_attributes][id]'][value=?]", @transaction.id.to_s
+      assert_select "input[name='entry[entryable_attributes][category_id]'][data-category-quick-create-target='categoryIdField']"
+    end
+  end
+
+  test "passes existing category names so the create option hides on an exact match" do
+    get category_dropdown_url(transaction_id: @transaction.id)
+
+    assert_response :success
+    names_attr = css_select("[data-controller~='category-quick-create']").first["data-category-quick-create-existing-names-value"]
+    assert_includes JSON.parse(names_attr), categories(:food_and_drink).name
+  end
 end

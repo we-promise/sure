@@ -1,5 +1,11 @@
 <%= turbo_frame_tag "category_dropdown" do %>
-  <div class="flex flex-col relative" data-controller="list-filter">
+  <div class="flex flex-col relative"
+       data-controller="list-filter category-quick-create"
+       data-category-quick-create-create-url-value="<%= categories_path(format: :json) %>"
+       data-category-quick-create-color-value="<%= Category::COLORS.sample %>"
+       data-category-quick-create-label-template-value="<%= t(".create", name: "__NAME__") %>"
+       data-category-quick-create-error-message-value="<%= t(".create_error") %>"
+       data-category-quick-create-existing-names-value="<%= @categories.map(&:name).to_json %>">
     <div class="grow p-1.5">
       <div class="relative flex items-center bg-container border border-secondary rounded-lg">
         <input
@@ -12,7 +18,8 @@
           aria-autocomplete="list"
           class="bg-container placeholder:text-sm placeholder:text-secondary font-normal h-10 relative pl-10 w-full border-none rounded-lg focus:outline-hidden focus:ring-0"
           data-list-filter-target="input"
-          data-action="list-filter#filter keydown->list-filter#handleKeydown">
+          data-category-quick-create-target="input"
+          data-action="list-filter#filter category-quick-create#update keydown->list-filter#handleKeydown keydown.enter->category-quick-create#createOnEnter">
           <%= icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
         </div>
       </div>
@@ -20,6 +27,24 @@
         <div class="pb-2 pl-4 mr-2 text-secondary hidden" data-list-filter-target="emptyMessage">
           <%= t(".no_categories") %>
         </div>
+        <%# Shown by category-quick-create when the search matches no existing category name. %>
+        <%# Creating goes through the same update form as picking a row, so the list row %>
+        <%# refreshes and the "create a rule?" prompt still appears. %>
+        <%= form_with url: transaction_category_path(@transaction.entry, grouped: params[:grouped]),
+                      method: :patch,
+                      data: { turbo_frame: "category_dropdown", category_quick_create_target: "assignForm" } do |f| %>
+          <%= hidden_field_tag "entry[entryable_type]", "Transaction", id: nil %>
+          <%= hidden_field_tag "entry[entryable_attributes][id]", @transaction.id, id: nil %>
+          <%= hidden_field_tag "entry[entryable_attributes][category_id]", nil, id: nil, data: { category_quick_create_target: "categoryIdField" } %>
+        <% end %>
+        <button type="button"
+                class="hidden items-center gap-1.5 w-full rounded-lg px-2 py-2 text-sm font-medium text-primary hover:bg-container-inset-hover cursor-pointer disabled:opacity-50"
+                data-category-quick-create-target="createButton"
+                data-action="category-quick-create#create">
+          <span class="flex items-center justify-center w-5 h-5 shrink-0"><%= icon("plus") %></span>
+          <span data-category-quick-create-target="createLabel"></span>
+        </button>
+        <p class="hidden px-2 pb-1 text-xs text-destructive" data-category-quick-create-target="error"></p>
         <% if @recent_categories.any? %>
           <div data-list-filter-target="recentSection">
             <p class="pl-2 pb-1 text-xs font-medium text-secondary uppercase tracking-wide"><%= t(".recent") %></p>

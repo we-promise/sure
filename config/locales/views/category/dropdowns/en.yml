@@ -7,6 +7,8 @@ en:
         edit: Edit category
       show:
         clear: Clear category
+        create: Create "%{name}"
+        create_error: Couldn't create that category. Please try again.
         no_categories: No categories found
         recent: Recent
         search_placeholder: Search
