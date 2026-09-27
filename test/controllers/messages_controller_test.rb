@@ -21,12 +21,14 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("messages.create.chat_not_found"), flash[:alert]
   end
 
-  test "cannot create a message if AI is disabled" do
+  test "redirects to the chat instead of creating a message if AI is disabled" do
     @user.update!(ai_enabled: false)
 
-    post chat_messages_url(@chat), params: { message: { content: "Hello", ai_model: "gpt-4.1" } }
+    assert_no_difference("Message.count") do
+      post chat_messages_url(@chat), params: { message: { content: "Hello", ai_model: "gpt-4.1" } }
+    end
 
-    assert_response :forbidden
+    assert_redirected_to chat_path(@chat)
   end
 
   test "report_timeout fails an undelivered assistant message" do

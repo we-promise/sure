@@ -16,6 +16,21 @@ class ChatsTest < ApplicationSystemTestCase
     end
   end
 
+  # Regression test: the mobile bottom-nav "Assistant" item links straight to
+  # `/chats`, which has no sidebar to gate. Before this fix that page rendered
+  # the compose form unconditionally, letting a user without AI consent send
+  # one message (via the unguarded ChatsController#create) before every
+  # follow-up message silently 403'd.
+  test "chats page shows consent instead of compose form when ai is disabled" do
+    @user.update!(ai_enabled: false)
+    @user.chats.destroy_all
+
+    visit chats_path
+
+    assert_selector "h3", text: "Enable AI Chats"
+    assert_no_selector "textarea[name='chat[content]']"
+  end
+
   test "sidebar shows index when enabled and chats are empty" do
     with_env_overrides OPENAI_ACCESS_TOKEN: "test-token" do
       @user.update!(ai_enabled: true)

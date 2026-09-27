@@ -26,8 +26,13 @@ class Provider::Openai::ChatStreamParser
         type: "error",
         data: StreamErrorData.new(
           event: "error",
-          message: object.dig("message").presence || "OpenAI stream returned an error event",
-          code: object.dig("code"),
+          # The Responses API nests the payload under "error" (e.g. rate-limit
+          # and quota errors: `{"type"=>"error","error"=>{"message"=>...,
+          # "code"=>...}}`). Some OpenAI-compatible endpoints have been seen
+          # sending it flat instead, so fall back to the top level before the
+          # generic placeholder.
+          message: object.dig("error", "message").presence || object.dig("message").presence || "OpenAI stream returned an error event",
+          code: object.dig("error", "code") || object.dig("code"),
           details: object
         ),
         usage: nil

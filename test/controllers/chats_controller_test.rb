@@ -46,6 +46,47 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Hello", chat.messages.find_by!(type: "UserMessage").content
   end
 
+  test "redirects to chats index instead of creating a chat if AI is disabled" do
+    @user.update!(ai_enabled: false)
+
+    assert_no_difference("Chat.count") do
+      post chats_url, params: { chat: { content: "Hello", ai_model: "gpt-4.1" } }
+    end
+
+    assert_redirected_to chats_path
+  end
+
+  test "index shows the AI consent screen instead of the compose form when AI is disabled" do
+    @user.update!(ai_enabled: false)
+    @user.chats.destroy_all
+
+    get chats_url
+
+    assert_response :success
+    assert_select "h3", text: I18n.t("chats.ai_consent.title")
+    assert_select "form textarea", count: 0
+  end
+
+  test "new shows the AI consent screen instead of the compose form when AI is disabled" do
+    @user.update!(ai_enabled: false)
+
+    get new_chat_url
+
+    assert_response :success
+    assert_select "h3", text: I18n.t("chats.ai_consent.title")
+    assert_select "form textarea", count: 0
+  end
+
+  test "show shows the AI consent screen instead of the compose form when AI is disabled" do
+    @user.update!(ai_enabled: false)
+
+    get chat_url(chats(:one))
+
+    assert_response :success
+    assert_select "h3", text: I18n.t("chats.ai_consent.title")
+    assert_select "form textarea", count: 0
+  end
+
   test "shows chat" do
     chat = chats(:one)
     @user.update!(last_viewed_chat: nil)
