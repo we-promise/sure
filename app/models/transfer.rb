@@ -108,9 +108,9 @@ class Transfer < ApplicationRecord
         next if transaction.nil?
         next unless Transaction.exists?(transaction.id)
         begin
-          # A pending auto-match never changed the kind (see #confirm!), so
-          # only reset kinds this transfer actually assigned.
-          transaction.update!(kind: "standard") if transaction.transfer?
+          # A pending auto-match never changed the kind (see #confirm!), so a
+          # transfer kind on its transactions predates the match and stays.
+          transaction.update!(kind: "standard") if transaction.transfer? && !pending?
           # The entry survives this destroy (only the Transfer join row and
           # fee transactions go away), but its idempotency_key must not: a
           # later retry of the original create request looks up that key,

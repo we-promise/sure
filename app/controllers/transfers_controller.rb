@@ -88,7 +88,10 @@ class TransfersController < ApplicationController
 
   def update
     outflow_account = @transfer.outflow_transaction.entry.account
+    inflow_account = @transfer.inflow_transaction.entry.account
     return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
+    # Confirming or rejecting rewrites the kind of both legs
+    return unless require_account_permission!(inflow_account, redirect_path: transactions_url)
 
     Transfer.transaction do
       update_transfer_status
