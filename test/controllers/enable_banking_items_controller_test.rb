@@ -100,6 +100,16 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 3.months.ago.to_date, @item.reload.sync_start_date
   end
 
+  test "complete_account_setup rejects a malformed sync_strategy instead of raising" do
+    original_strategy = @item.sync_strategy
+
+    post complete_account_setup_enable_banking_item_url(@item), params: { sync_strategy: "not_a_real_strategy" }
+
+    assert_redirected_to accounts_path
+    assert_equal "Invalid sync strategy.", flash[:alert]
+    assert_equal original_strategy, @item.reload.sync_strategy
+  end
+
   test "complete_account_setup ignores params outside its explicit allowlist" do
     original_cert = @item.client_certificate
 

@@ -21,6 +21,7 @@ en:
       unexpected_error: An unexpected error occurred. Please try again.
     complete_account_setup:
       all_skipped: All accounts were skipped. You can set them up later on the accounts page.
+      invalid_sync_strategy: Invalid sync strategy.
       no_accounts: No accounts available to set up.
       success: Successfully created %{count} accounts!
     create:
@@ -55,7 +56,7 @@ en:
       no_accounts_found: No accounts found
       no_accounts_found_description: No accounts were found from Enable Banking. Try syncing again.
       sync_start_date_shortfall_title: Limited history available
-      sync_start_date_shortfall_body: "Your bank only made transaction history available starting later than the %{requested} you requested."
+      sync_start_date_shortfall_body: "Your bank only made transaction history available starting later than %{requested}, the date you requested."
     select_existing_account:
       title: Link Enable Banking account
       all_linked: All Enable Banking accounts appear to be linked already.

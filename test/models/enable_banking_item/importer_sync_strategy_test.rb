@@ -167,4 +167,64 @@ class EnableBankingItem::ImporterSyncStrategyTest < ActiveSupport::TestCase
     assert_equal "error", debug_log.level
     assert_equal "validation_error", debug_log.metadata["error_type"]
   end
+
+  test "fetch_and_store_transactions reports the effective_date_from the provider granted for an initial date-strategy sync" do
+    @importer.stubs(:include_pending?).returns(false)
+    granted_date = 89.days.ago.to_date
+
+    @mock_provider.stubs(:get_account_transactions).returns({
+      transactions: [],
+      continuation_key: nil,
+      effective_date_from: granted_date,
+      effective_strategy: "longest"
+    })
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+    assert_equal granted_date, result[:effective_date_from]
+  end
+
+  test "fetch_and_store_transactions omits effective_date_from for an incremental sync" do
+    @enable_banking_item.stubs(:last_synced_at).returns(10.days.ago)
+    @enable_banking_account.stubs(:raw_transactions_payload).returns([ { "transaction_id" => "1" } ])
+    @importer.stubs(:include_pending?).returns(false)
+    granted_date = 89.days.ago.to_date
+
+    @mock_provider.stubs(:get_account_transactions).returns({
+      transactions: [],
+      continuation_key: nil,
+      effective_date_from: granted_date,
+      effective_strategy: nil
+    })
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+    assert_nil result[:effective_date_from]
+  end
+
+  test "import persists effective_sync_start_date so a later shortfall check reflects what the bank actually granted" do
+    linked_enable_banking_account = @enable_banking_item.enable_banking_accounts.create!(
+      uid: "linked_uid", name: "Linked", currency: "EUR"
+    )
+    depository = Depository.create!
+    linked_account = Account.create!(
+      family: @family, name: "Linked", balance: 0, cash_balance: 0, currency: "EUR", accountable: depository
+    )
+    AccountProvider.create!(account: linked_account, provider: linked_enable_banking_account)
+
+    granted_date = 89.days.ago.to_date
+
+    @enable_banking_item.stubs(:upsert_enable_banking_snapshot!)
+    @importer.stubs(:fetch_session_data).returns(accounts: [])
+    @importer.stubs(:fetch_and_update_balance).returns(true)
+    @importer.stubs(:fetch_and_store_transactions).returns(
+      success: true, transactions_count: 0, effective_date_from: granted_date
+    )
+
+    @importer.import
+
+    assert_equal granted_date, @enable_banking_item.reload.effective_sync_start_date
+  end
 end

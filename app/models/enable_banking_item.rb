@@ -299,16 +299,19 @@ class EnableBankingItem < ApplicationRecord
     accounts.any?
   end
 
-  # True when the ASPSP couldn't honor the requested sync_start_date and the
-  # actual earliest imported transaction is materially newer than what the
-  # user asked for (e.g. the bank only exposes 90 days of history). Used to
-  # surface a non-blocking notice; a small buffer avoids false positives from
-  # ordinary banking-day gaps around the requested date.
+  # True when the ASPSP couldn't honor the requested sync_start_date -
+  # effective_sync_start_date is the date the bank actually granted for the
+  # initial sync (see EnableBankingItem::Importer#fetch_and_store_transactions),
+  # which may be later than what was requested after a WRONG_TRANSACTIONS_PERIOD
+  # retry corrected it. Comparing against that confirmed boundary, rather than
+  # against the earliest imported transaction, avoids a false "limited history"
+  # notice for an account that simply has no transactions early in an otherwise
+  # fully-honored window. A small buffer avoids false positives from ordinary
+  # banking-day rounding in the retry.
   def sync_start_date_shortfall?
-    return false unless date? && sync_start_date.present?
+    return false unless date? && sync_start_date.present? && effective_sync_start_date.present?
 
-    earliest_imported = accounts.joins(:entries).minimum("entries.date")
-    earliest_imported.present? && earliest_imported > sync_start_date + 3.days
+    effective_sync_start_date > sync_start_date + 3.days
   end
 
   def linked_accounts_count

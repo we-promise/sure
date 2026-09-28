@@ -124,6 +124,8 @@ class EnableBankingItem::Importer
 
     linked_accounts_query = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
 
+    effective_date_froms = []
+
     linked_accounts_query.each do |enable_banking_account|
       begin
         balances_failed += 1 unless fetch_and_update_balance(enable_banking_account)
@@ -131,6 +133,7 @@ class EnableBankingItem::Importer
         result = fetch_and_store_transactions(enable_banking_account)
         if result[:success]
           transactions_imported += result[:transactions_count]
+          effective_date_froms << result[:effective_date_from] if result[:effective_date_from].present?
         else
           transactions_failed += 1
           @sync_error = promote_session_invalid(@sync_error, result[:error])
@@ -139,6 +142,16 @@ class EnableBankingItem::Importer
         transactions_failed += 1
         @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
         Rails.logger.error "EnableBankingItem::Importer - Failed to process account #{enable_banking_account.uid}: #{e.message}"
+      end
+    end
+
+    if effective_date_froms.any?
+      # The latest (most restrictive) effective date across accounts is what
+      # would actually trigger the shortfall notice - if any linked account's
+      # history was truncated, the user should see it.
+      latest_effective_date_from = effective_date_froms.max
+      if enable_banking_item.effective_sync_start_date != latest_effective_date_from
+        enable_banking_item.update_column(:effective_sync_start_date, latest_effective_date_from)
       end
     end
 
@@ -508,6 +521,15 @@ class EnableBankingItem::Importer
         raise
       end
 
+      # Only the initial (non-incremental) fetch for a "date" strategy item can
+      # tell us whether the bank actually honored the requested date -
+      # determine_sync_start_date's incremental branch requests a rolling
+      # catch-up window that has nothing to do with sync_start_date, and
+      # would otherwise stomp this with an unrelated value on every routine
+      # sync. Captured before the PDNG fetch below (fetch_paginated_transactions
+      # resets @last_effective_date_from on every call).
+      effective_date_from = @last_effective_date_from if !stored_transactions?(enable_banking_account) && enable_banking_item.date?
+
       if include_pending
         # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG) with _pending: true
         all_transactions = all_transactions.map do |tx|
@@ -649,7 +671,7 @@ class EnableBankingItem::Importer
         )
       end
 
-      { success: true, transactions_count: transactions_count }
+      { success: true, transactions_count: transactions_count, effective_date_from: effective_date_from }
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "EnableBankingItem::Importer - Error fetching transactions for account #{enable_banking_account.uid}: #{e.message}"
       { success: false, transactions_count: 0, error: handle_sync_error(e) }
@@ -731,6 +753,7 @@ class EnableBankingItem::Importer
       continuation_key = nil
       previous_continuation_key = nil
       page_count = 0
+      @last_effective_date_from = nil
 
       loop do
         page_count += 1
@@ -792,7 +815,10 @@ class EnableBankingItem::Importer
         # query parameters of the page they continue, otherwise the ASPSP can
         # reject them mid-pagination and the rescue above would keep a
         # silently truncated result.
-        start_date = transactions_data[:effective_date_from] if transactions_data.key?(:effective_date_from)
+        if transactions_data.key?(:effective_date_from)
+          start_date = transactions_data[:effective_date_from]
+          @last_effective_date_from = start_date
+        end
         strategy = transactions_data[:effective_strategy] if transactions_data.key?(:effective_strategy)
 
         previous_continuation_key = continuation_key

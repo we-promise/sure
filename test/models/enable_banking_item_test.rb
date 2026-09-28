@@ -313,8 +313,30 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     assert_not @item.sync_start_date_shortfall?
   end
 
-  test "sync_start_date_shortfall? is false when the earliest imported entry matches the requested date" do
+  test "sync_start_date_shortfall? is false when no effective_sync_start_date has been recorded yet" do
+    @item.sync_start_date = 1.year.ago.to_date
+    @item.effective_sync_start_date = nil
+
+    assert_not @item.sync_start_date_shortfall?
+  end
+
+  test "sync_start_date_shortfall? is false when the bank honored the requested date" do
     @item.sync_start_date = 90.days.ago.to_date
+    @item.effective_sync_start_date = 90.days.ago.to_date
+
+    assert_not @item.sync_start_date_shortfall?
+  end
+
+  test "sync_start_date_shortfall? is true when the bank granted a materially newer date than requested" do
+    @item.sync_start_date = 1.year.ago.to_date
+    @item.effective_sync_start_date = 90.days.ago.to_date
+
+    assert @item.sync_start_date_shortfall?
+  end
+
+  test "sync_start_date_shortfall? is false when an account simply has no early transactions despite the bank honoring the date" do
+    @item.sync_start_date = 1.year.ago.to_date
+    @item.effective_sync_start_date = 1.year.ago.to_date
     @item.save!
     enable_banking_account = @item.enable_banking_accounts.create!(uid: "uid_1", name: "Acct", currency: "USD")
     account = Account.create!(family: @item.family, name: "Linked", balance: 0, cash_balance: 0, currency: "USD", accountable: Depository.new)
@@ -322,16 +344,5 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     create_transaction(account: account, date: 90.days.ago.to_date)
 
     assert_not @item.sync_start_date_shortfall?
-  end
-
-  test "sync_start_date_shortfall? is true when the earliest imported entry is materially newer than requested" do
-    @item.sync_start_date = 1.year.ago.to_date
-    @item.save!
-    enable_banking_account = @item.enable_banking_accounts.create!(uid: "uid_1", name: "Acct", currency: "USD")
-    account = Account.create!(family: @item.family, name: "Linked", balance: 0, cash_balance: 0, currency: "USD", accountable: Depository.new)
-    AccountProvider.create!(account: account, provider: enable_banking_account)
-    create_transaction(account: account, date: 90.days.ago.to_date)
-
-    assert @item.sync_start_date_shortfall?
   end
 end

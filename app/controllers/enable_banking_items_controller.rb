@@ -390,7 +390,19 @@ class EnableBankingItemsController < ApplicationController
     # a prior date isn't wiped just because it wasn't resubmitted.
     setup_params = params.permit(:sync_start_date, :sync_strategy)
     setup_attrs = {}
-    setup_attrs[:sync_strategy] = setup_params[:sync_strategy] if setup_params[:sync_strategy].present?
+
+    if setup_params[:sync_strategy].present?
+      # Enum assignment raises ArgumentError (not RecordInvalid) for a value
+      # outside EnableBankingItem.sync_strategies, which the rescue below
+      # doesn't handle - reject it the same way as any other invalid input.
+      unless EnableBankingItem.sync_strategies.key?(setup_params[:sync_strategy])
+        redirect_to accounts_path, alert: t(".invalid_sync_strategy", default: "Invalid sync strategy."), status: :see_other
+        return
+      end
+
+      setup_attrs[:sync_strategy] = setup_params[:sync_strategy]
+    end
+
     setup_attrs[:sync_start_date] = setup_params[:sync_start_date] if setup_params.key?(:sync_start_date)
 
     if setup_attrs.any?
