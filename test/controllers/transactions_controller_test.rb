@@ -1834,6 +1834,7 @@ end
 
     assert_response :success
     rendered_ids = rendered_entry_ids
+    transfer.reload
     assert_includes rendered_ids, transfer.outflow_transaction.entry.id.to_s
     assert_not_includes rendered_ids, transfer.inflow_transaction.entry.id.to_s
   end
