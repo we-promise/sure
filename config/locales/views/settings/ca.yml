@@ -667,11 +667,16 @@ ca:
         qr_instruction: Escaneja el codi QR amb l'aplicació de Trade Republic i aprova l'inici de sessió.
         qr_success: Inici de sessió aprovat. Sure està actualitzant la pàgina del proveïdor.
         qr_error: No s'ha pogut iniciar la sessió amb QR. Torna-ho a provar.
+        add_account: "Afegeix una altra connexió"
         save_configuration: Desa i inicia sessió
         update_configuration: Actualitza la configuració
         sync: Sincronitza
+        syncing: "Sincronitzant..."
         disconnect: Desconnecta Trade Republic
         disconnect_confirm: Vols desconnectar Trade Republic? Els comptes sincronitzats passaran a ser comptes manuals.
+        disconnect_confirm_with_identifier: "Vols desconnectar la connexió de Trade Republic acabada en %{last4}? Els comptes sincronitzats passaran a ser comptes manuals."
+        identifier_phone: Telèfon
+        identifier_account: Compte
         status_configured_prefix: Connectat. Ves a la pestanya
         accounts_tab: Comptes
         setup_accounts: Configura els comptes
