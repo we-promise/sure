@@ -144,27 +144,16 @@
     <% if (details = build_transaction_extra_details(@entry)) %>
       <% dialog.with_section(title: t(".additional_details"), open: false) do %>
         <div class="px-3 py-2 space-y-3">
-          <% if details[:kind] == :simplefin %>
-            <% sf = details[:simplefin] %>
-            <% if sf.present? %>
+          <% if details[:kind] == :simplefin || details[:kind] == :plaid %>
+            <%# build_transaction_extra_details already drops blank values, so every
+                key present here has something to show. Its keys double as locale
+                keys: payee/description/memo for SimpleFIN, original_description/
+                payment_channel/transaction_code for Plaid. %>
+            <% named_details = details[details[:kind]] %>
+            <% if named_details.present? %>
               <dl class="space-y-2">
-                <% if sf[:payee].present? %>
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-secondary text-sm"><%= t(".payee") %></dt>
-                    <dd class="text-sm text-primary"><%= sf[:payee] %></dd>
-                  </div>
-                <% end %>
-                <% if sf[:description].present? %>
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-secondary text-sm"><%= t(".description") %></dt>
-                    <dd class="text-sm text-primary"><%= sf[:description] %></dd>
-                  </div>
-                <% end %>
-                <% if sf[:memo].present? %>
-                  <div class="flex items-center justify-between gap-2">
-                    <dt class="text-secondary text-sm"><%= t(".memo") %></dt>
-                    <dd class="text-sm text-primary"><%= sf[:memo] %></dd>
-                  </div>
+                <% named_details.each do |key, value| %>
+                  <%= render DS::DetailRow.new(label: t(".#{key}"), value: value) %>
                 <% end %>
               </dl>
             <% end %>
@@ -173,16 +162,22 @@
                 <h4 class="text-sm text-secondary mb-1"><%= t(".provider_extras") %></h4>
                 <dl class="space-y-2">
                   <% details[:provider_extras].each do |ex| %>
-                    <div class="flex items-center justify-between gap-2">
-                      <dt class="text-secondary text-sm"><%= ex[:key] %></dt>
-                      <dd class="text-sm text-primary truncate max-w-[60%]" title="<%= ex[:title] %>"><%= ex[:value] %></dd>
-                    </div>
+                    <% if ex[:multiline] %>
+                      <div class="space-y-1">
+                        <dt class="text-secondary text-sm"><%= ex[:key] %></dt>
+                        <dd>
+                          <pre class="text-xs text-secondary bg-surface-inset rounded p-2 overflow-auto whitespace-pre-wrap break-words"><%= ex[:value] %></pre>
+                        </dd>
+                      </div>
+                    <% else %>
+                      <%= render DS::DetailRow.new(label: ex[:key], value: ex[:value]) %>
+                    <% end %>
                   <% end %>
                 </dl>
               </div>
             <% end %>
           <% else %>
-            <pre class="text-xs text-secondary bg-surface-inset rounded p-2 overflow-auto"><%= details[:raw] %></pre>
+            <pre class="text-xs text-secondary bg-surface-inset rounded p-2 overflow-auto whitespace-pre-wrap break-words"><%= details[:raw] %></pre>
           <% end %>
         </div>
       <% end %>

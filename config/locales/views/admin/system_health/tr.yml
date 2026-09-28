@@ -1,0 +1,256 @@
+---
+tr:
+  admin:
+    system_health:
+      push_notifications:
+        send_test: Test anlık bildirimi gönder
+        queueing: Kuyruğa alınıyor…
+        title: Anlık bildirimler
+        requested_at: Son test isteği %{time}
+        result_help: APNs tarafından kabul edilmesi, bildirimin cihazınıza ulaştığını doğrulamaz. Çalışan sonuçlarını görmek için yenileyin. Sonuçlar 24 saat saklanır.
+        device: Cihaz %{number}
+        pending: Beklemede
+        refresh: Sonuçları yenile
+        columns:
+          device: Cihaz
+          environment: APNs ortamı
+          status: Sonuç
+          checked_at: Son güncelleme
+        environments:
+          sandbox: Sandbox
+          production: Production
+        messages:
+          enqueue_failed: Test kuyruğa alınamadı. Sidekiq'i kontrol edin ve aşağıdaki sonuçları yenileyin.
+          ready: Hesabınıza kayıtlı, bildirimleri etkin iOS cihazlarına bir test bildirimi gönderin.
+          queued: Test bildirimi kuyruğa alındı. Durumunu görmek için aşağıdaki sonuçları yenileyin.
+          hosted_only: Anlık bildirimler yalnızca barındırılan modda kullanılabilir.
+          ineligible: Test bildirimini yalnızca aktif bir süper yönetici gönderebilir.
+          no_devices: Test göndermek için bu hesapta Sure iOS uygulamasından anlık bildirimleri etkinleştirin.
+          disabled: Anlık bildirim gönderimi operatör tarafından devre dışı bırakıldı.
+          not_configured: APNs kimlik bilgileri yapılandırılmamış.
+          cooldown: Yeni bir test göndermeden önce lütfen 30 saniye bekleyin.
+          storage_unavailable: Test isteği kaydedilemedi. Paylaşılan önbellek yapılandırmasını kontrol edin.
+        statuses:
+          queued: Kuyrukta
+          accepted: APNs tarafından kabul edildi
+          skipped: 'Atlandı: artık uygun değil'
+          rejected: APNs tarafından reddedildi; push hata ayıklama günlüklerini kontrol edin
+          unregistered: Cihaz kaydı artık geçerli değil
+          retrying: Geçici bir hata nedeniyle yeniden deneniyor
+          failed: Başarısız; push hata ayıklama günlüklerini kontrol edin
+          enqueue_failed: Kuyruğa alınamadı; Sidekiq'i kontrol edin
+          expired: Kesin sonuç alınmadan süresi doldu
+      push_notification:
+        title: Sure test bildirimi
+        body: Bu, Sure hesabınız için bir test anlık bildirimidir.
+      verify_worker_ai:
+        queued: Çalışan kontrolü kuyruğa alındı. Bir çalışan işlemi onu aldığında, genellikle birkaç saniye içinde aşağıda görünecek.
+      show:
+        title: Sistem durumu
+        tabs:
+          background_jobs: Arka plan işleri
+          ai: AI durumu
+        alert:
+          title: Arka plan işleri çalışmıyor
+        status_section_title: Sidekiq durumu
+        status_section_description: Senkronizasyonları, bakiyeleri ve net değer hesaplamalarını yürüten arka plan çalışanının mevcut durumu.
+        counters_section_title: İş sayaçları
+        counters_section_description: Tüm kuyruklardaki toplam Sidekiq sayaçları.
+        queues_section_title: Kuyruklar
+        queues_section_description: Kuyruk başına derinlik ve en eski işin yaşı. Gecikme, en eski işin kaç saniyedir beklediğini gösterir.
+        labels:
+          status: Durum
+          processes: Çalışan işlemleri
+          last_heartbeat: Son sinyal
+          max_queue_latency: En eski işin yaşı
+          enqueued: Kuyrukta
+          retries: Yeniden denemeler
+          failed: Başarısız
+          processed_total: Toplam işlenen
+          queue: Kuyruk
+          size: Boyut
+          latency: Gecikme
+        values:
+          healthy: Sağlıklı
+          unhealthy: Sorunlu
+          time_ago: '%{time_ago} önce'
+          never: Hiçbir zaman
+          seconds: '%{seconds} sn'
+          no_queues: Kayıtlı kuyruk yok. Çalışan çalışmıyor olabilir.
+        ai:
+          run_checks: Kontrolleri yeniden çalıştır
+          last_checked: Canlı kontroller %{time_ago} önce tamamlandı. Sonuçlar kısa süreliğine önbelleğe alınır.
+          not_checked_help: Hizmetin çalıştığını doğrulamak için AI durum URL'sini doğrudan açın veya kontrolleri çalıştırın.
+          alerts:
+            custom_openai:
+              title: Barındırılan vektör deposu kontrolü bu özel uç noktada başarısız oldu
+              message: Yapılandırılan uç nokta /v1/vector_stores canlılık kontrolünü geçemedi. Yerel ve OpenAI uyumlu uç noktaların çoğu bu API'yi uygulamaz. Sohbet ve PDF işleme yine de çalışabilir; olağan yerel kurulum için pgvector'ı ayrı bir embedding uç noktasıyla kullanın. Hata, Ayarlar → Hata ayıklama günlükleri ve Rails.logger'a kaydedildi.
+            function_calling_unsupported:
+              title: Model fonksiyon çağırmayı desteklemiyor
+              message: Uç nokta düz bir sohbet isteğini yanıtladı ancak tools parametresini içeren aynı isteği reddetti. AI asistanı hesapları, işlemleri ve varlıkları fonksiyon çağrılarıyla okur; bu nedenle model araçları destekleyen bir model olana kadar sohbet — çoğu zaman yardımcı olmayan bir 404 hatasıyla — başarısız olmaya devam eder. Sağlayıcısı fonksiyon çağırma desteğini belgeleyen bir model seçin. Hata, Ayarlar → Hata ayıklama günlükleri ve Rails.logger'a kaydedildi.
+            function_calling_not_used:
+              title: Model, çağırması istenen aracı çağırmadan yanıt verdi
+              message: Uç nokta tools parametresini kabul etti, ancak model sağlık kontrolü aracını çağırmak yerine metinle yanıt verdi. AI asistanı araç çağrıları olmadan finansal verileri okuyamaz, bu yüzden sohbet boş yanıt verebilir veya uydurma rakamlar sunabilir. Sağlayıcısı fonksiyon çağırma desteğini belgeleyen bir model tercih edin.
+            llm_probe_failed:
+              title: LLM canlı kontrolü başarısız oldu
+              message: Sure, yapılandırılan uç noktayı ve modeli birlikte doğrulayamadı. Hata, Ayarlar → Hata ayıklama günlükleri ve Rails.logger'a kaydedildi.
+            llm_model_not_available:
+              title: Yapılandırılan AI modeli kullanılamıyor
+              message: Uç nokta yanıt verdi, ancak yapılandırılan modeli listelemedi veya sunmadı. Seçilen sağlayıcı için aktif bir model seçin, ardından kontrolleri yeniden çalıştırın. OpenAI uyumlu bir çeviri katmanı üzerinden Gemini kullanıyorsanız gemini-2.5-flash gibi şu anda desteklenen bir model kullanın.
+            pdf_text_extraction_failed:
+              title: Sentetik PDF metin çıkarma kontrolü başarısız oldu
+              message: Sure, gömülü PDF metnini yerel olarak çıkarıp yapılandırılan modele gönderen metin öncelikli yolu tamamlayamadı. Hiçbir müşteri verisi gönderilmedi. Hata, Ayarlar → Hata ayıklama günlükleri ve Rails.logger'a kaydedildi.
+            pdf_vision_processing_failed:
+              title: Sentetik PDF görsel/yerel işleme kontrolü başarısız oldu
+              message: Sure, görüntü veya yerel belge PDF yolunu yapılandırılan model üzerinden tamamlayamadı. Hiçbir müşteri verisi gönderilmedi. Hata, Ayarlar → Hata ayıklama günlükleri ve Rails.logger'a kaydedildi.
+            vector_probe_failed:
+              title: Belge arama canlı kontrolü başarısız oldu
+              message: Sure, seçilen vektör deposunu ve gerekli tüm embedding hizmetlerini doğrulayamadı. Hata, Ayarlar → Hata ayıklama günlükleri ve Rails.logger'a kaydedildi.
+            pgvector_extension_not_enabled:
+              title: PostgreSQL vector uzantısı etkin değil
+              message: pgvector adaptörü seçili, ancak PostgreSQL bu veritabanı için vector uzantısını etkinleştirmemiş. pgvector içeren bir PostgreSQL imajı kullanın, ardından uzantıyı veritabanı sahibi veya süper kullanıcı olarak etkinleştirin ve migration'ları VECTOR_STORE_PROVIDER=pgvector ile yeniden çalıştırın.
+            pgvector_table_not_found:
+              title: vector_store_chunks tablosu eksik
+              message: pgvector uzantısı etkin, ancak parça (chunk) tablosu bulunamadı. Migration durumunu kontrol edin, ardından Sure'un vector_store_chunks tablosunu oluşturabilmesi için vektör deposu migration'ını VECTOR_STORE_PROVIDER=pgvector ile yeniden çalıştırın.
+            pgvector_probe_failed:
+              title: pgvector depolama kontrolü başarısız oldu
+              message: Sure, pgvector parça tablosunu sorgulayamadı. PostgreSQL izinlerini, vector uzantısını ve vector_store_chunks migration'ını kontrol edin. Hata, Ayarlar → Hata ayıklama günlükleri ve Rails.logger'a kaydedildi.
+            embedding_dimensions_mismatch:
+              title: Embedding boyutları eşleşmiyor
+              message: Embedding uç noktası, uzunluğu EMBEDDING_DIMENSIONS ile eşleşmeyen bir vektör döndürdü. EMBEDDING_MODEL ve EMBEDDING_DIMENSIONS değerlerini modelin belgelenmiş vektör boyutuna ayarlayın, ortam değişkenlerinin kalıcı olması için Sure'u yeniden başlatın, ardından pgvector embedding sütununu/tablosunu değiştirin veya yeniden oluşturun ve mevcut veriler farklı bir boyut kullanıyorsa belgeleri yeniden embed edin.
+            embedding_probe_timeout:
+              title: Embedding canlı kontrolü zaman aşımına uğradı
+              message: Embedding uç noktası AI_HEALTH_PROBE_TIMEOUT süresi dolmadan yanıt vermedi. Sağlayıcı yavaşsa bu sağlık kontrolü zaman aşımını artırın, ardından ortam değişkenlerinin her işlemde kalıcı olması için Sure'u yeniden başlatın. Normal AI sohbet çağrıları da zaman aşımına uğruyorsa OPENAI_REQUEST_TIMEOUT değerini ayrıca yükseltin.
+            embedding_probe_failed:
+              title: Embedding canlı kontrolü başarısız oldu
+              message: Sure, yapılandırılan uç nokta ve model üzerinden kısa bir test embedding'i oluşturamadı. EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN değerlerini ve embedding sağlayıcısının günlüklerini kontrol edin. Hata, Ayarlar → Hata ayıklama günlükleri ve Rails.logger'a kaydedildi.
+            qdrant:
+              title: Qdrant desteği henüz uygulanmadı
+              message: Qdrant adaptörünün iskeleti hazır, ancak belge yükleme ve arama işlemleri şu anda başarısız oluyor. Belge arama için OpenAI veya pgvector seçin.
+            missing_vector_store:
+              title: Hiçbir vektör deposu yapılandırılmamış
+              message: Bir vektör deposu adaptörü ve gereksinimleri yapılandırılana kadar yüklenen belgeler dizine eklenemez veya aranamaz.
+            unavailable_vector_store:
+              title: Seçilen vektör deposu kullanılamıyor
+              message: Aşağıdaki adaptör gereksinimlerini kontrol edin. pgvector için veritabanı vector uzantısını veya mevcut bir vector_store_chunks tablosunu sağlamalıdır.
+          llm:
+            title: LLM ve PDF işleme
+            description: Canlı kontroller yapılandırılan modeli doğrular, asistanın yaptığı gibi ondan basit bir fonksiyon çağrısı ister, ardından müşteri verisi içermeyen tek sayfalık sentetik bir PDF ile metin çıkarmayı ve görsel/yerel işlemeyi ayrı ayrı sınar. Kimlik bilgisi değerleri asla gösterilmez.
+          vector_store:
+            title: Vektör deposu ve belge arama
+            description: Canlı kontrol, barındırılan vektör deposu API'sini sorgular veya pgvector tablosunu test edip saklamadan kısa bir embedding oluşturur.
+          labels:
+            selected_provider: Seçilen sağlayıcı
+            effective_provider: Kullanılan sağlayıcı
+            model: Model
+            endpoint: Uç nokta
+            function_calling: Fonksiyon çağırma (tools)
+            pdf_text_extraction: PDF metin çıkarma yolu
+            pdf_vision_processing: PDF görsel/yerel yolu
+            llm_request_timeout: LLM istek zaman aşımı
+            probe_request_timeout: Sağlık kontrolü zaman aşımı
+            openai_credentials: OpenAI kimlik bilgileri
+            openai_compatible_credentials: OpenAI uyumlu API kimlik bilgileri
+            anthropic_credentials: Anthropic kimlik bilgileri
+            adapter: Adaptör
+            adapter_available: Adaptör kullanılabilir
+            pgvector_extension: PostgreSQL vector uzantısı
+            pgvector_table: Vektör parça tablosu
+            embedding_model: Embedding modeli
+            embedding_endpoint: Embedding uç noktası
+            embedding_dimensions: Embedding boyutları
+            function_calling_failure_reason: Fonksiyon çağırma hata nedeni
+            pdf_text_extraction_failure_reason: Metin çıkarma hata nedeni
+            pdf_vision_processing_failure_reason: Görsel/yerel işleme hata nedeni
+            storage_probe: pgvector depolama kontrolü
+            embedding_probe: Embedding uç noktası kontrolü
+            failure_reason: Hata nedeni
+          providers:
+            openai: OpenAI
+            openai_compatible: OpenAI uyumlu
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Özel uç nokta
+          adapters:
+            openai: OpenAI barındırılan vektör deposu
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Yapılandırıldı
+            not_configured: Yapılandırılmadı
+            fallback: (yedek)
+            not_set: Ayarlanmadı
+            "yes": Evet
+            "no": Hayır
+            enabled: Etkin
+            available_not_enabled: Kullanılabilir, etkin değil
+            not_available: Kullanılamıyor
+            available: Kullanılabilir
+            not_found: Bulunamadı
+          function_calling_statuses:
+            supported: Canlı araç çağrısı başarılı
+            unsupported: Kullanılan sağlayıcı/model tarafından desteklenmiyor
+            not_used: Araçlar kabul edildi, ancak model hiçbirini çağırmadı
+            failing: Canlı kontrol başarısız
+            not_checked: Kontrol edilmedi
+            unavailable: Bir LLM sağlayıcısı yapılandırılana kadar kullanılamaz
+          pdf_statuses:
+            supported: Sentetik PDF kontrolü başarılı
+            failing: Sentetik PDF kontrolü başarısız
+            unsupported: Devre dışı veya kullanılan sağlayıcı/model tarafından desteklenmiyor
+            not_checked: Kontrol edilmedi
+            unavailable: Bir LLM sağlayıcısı yapılandırılana kadar kullanılamaz
+          probe_statuses:
+            passing: Canlı kontrol başarılı
+            failing: Canlı kontrol başarısız
+            not_checked: Kontrol edilmedi
+            not_configured: Yapılandırılmadı
+          vector_statuses:
+            passing: Canlı kontroller başarılı
+            failing: Canlı kontrol başarısız
+            not_checked: Kontrol edilmedi
+            not_configured: Yapılandırılmadı
+            scaffolded: İskelet hazır
+            missing: Yapılandırılmadı
+          failure_codes:
+            model_not_available: Yapılandırılan model sağlayıcı tarafından döndürülmedi
+            no_tool_call: Model, sağlık kontrolü aracını çağırmadan yanıt verdi
+            tools_refused: Hizmet aynı isteği araçlar olmadan yanıtladı, araçlarla birlikte ise reddetti
+            invalid_response: Hizmet beklenmeyen bir yanıt döndürdü
+            dimensions_mismatch: Embedding vektör boyutları yapılandırılan boyutlarla eşleşmiyor
+            extension_not_enabled: PostgreSQL vector uzantısı etkin değil
+            table_not_found: vector_store_chunks tablosu bulunamadı
+            render_missing_binary: pdftoppm işleyicisi (poppler-utils) bu container'da mevcut değil
+            timeout: Hizmet, kontrol zaman aşımından önce yanıt vermedi
+            request_failed: Hizmet isteği başarısız oldu
+            unsupported_provider: Sağlayıcı bu kontrolü desteklemiyor
+          worker:
+            title: Çalışan doğrulaması
+            description: Yukarıdaki kontroller bu web işleminden çalıştırıldı. AI işlerinin çoğu -- asistan yanıtları, PDF işleme, embedding'ler, otomatik kategorizasyon ve satıcı tespiti -- aslında bir Sidekiq çalışan işleminde yürütülür; bu işlemin ağ erişimi, DNS, proxy kuralları, hatta yüklenen kimlik bilgileri farklı olabilir. Bir çalışanın kendi yapılandırmasını ve bağlantısını doğrulamak için bir kontrolü kuyruğa alın.
+            verify_button: Çalışan yapılandırmasını doğrula
+            coverage_notice: Her kontrol yalnızca tek bir çalışan işlemini -- kontrolü kuyruktan alanı -- doğrular. Birden fazla çalışan replikası varsa, başarılı bir sonuç her çalışanın sağlıklı olduğunu doğrulamaz; başka bir örnek almak için kontrolü yeniden kuyruğa alın.
+            empty:
+              title: Henüz hiçbir çalışan kontrol bildirmedi
+              description: Eşzamansız bir kontrolü kuyruğa almak için "Çalışan yapılandırmasını doğrula" düğmesine tıklayın. Sonuç, bir çalışan işlemi onu aldığında burada görünür.
+            labels:
+              process: Çalışan işlemi
+              checked_at: Kontrol zamanı
+              configuration: Yapılandırma
+            configuration_statuses:
+              match: Web ile aynı
+              mismatch: Web'den farklı
+            statuses:
+              passing: Başarılı
+              failing: Başarısız
+              stale: Güncel değil
+            settings_origin:
+              title: Hangi ayarlar yeniden başlatma gerektirir?
+              database_backed: Ayarlar → Kendi Barındırma bölümünde değiştirilen sağlayıcı, model ve API anahtarı ayarları veritabanında saklanır. rails-settings-cached yazma sırasında paylaşılan önbelleği geçersiz kılar; böylece hem web hem de çalışan bir sonraki istek veya kuyruğa alınan iş için yeni değeri kullanır -- yeniden başlatma gerekmez.
+              env_backed: Embedding yapılandırması ve yalnızca bir ortam değişkeniyle ayarlanan her değer, her container başlatıldığında sabitlenir. Rails başka bir container'ın ortamını değiştiremez; bu nedenle bunları değiştirmek hem web hem de çalışan servislerinin yeniden başlatılmasını veya yeniden oluşturulmasını gerektirir -- ve bunlardan yalnızca birini yeniden başlatan dağıtım araçları (kısmi dağıtım, pod yeniden başlatılmadan güncellenen bir Secret) değişikliği almaz.
+          local_setup:
+            title: Önerilen yerel kurulum
+            description: LLM'i yerel OpenAI uyumlu uç noktanız üzerinden çalıştırın, belge vektörlerini pgvector'da saklayın ve embedding ayarlarını OpenAI uyumlu bir embedding uç noktasına yönlendirin. PostgreSQL imajı vector uzantısını içermeli ve embedding boyutları seçilen modelle eşleşmelidir.
