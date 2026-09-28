@@ -673,6 +673,50 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   #         Caching Tests
   # ================================
 
+  test "fetch_authenticated_chart refreshes credentials after an Unauthorized body" do
+    anonymous_response = mock
+    anonymous_response.stubs(:body).returns('{"chart":{"error":{"code":"Unauthorized"}}}')
+    retry_response = mock
+    retry_response.stubs(:body).returns('{"chart":{"result":[{}]}}')
+    anonymous_client = mock
+    anonymous_client.expects(:get).once.returns(anonymous_response)
+    retry_request = OpenStruct.new(params: {})
+    authenticated_client = mock
+    authenticated_client.expects(:get).once.yields(retry_request).returns(retry_response)
+
+    @provider.stubs(:client).returns(anonymous_client)
+    @provider.expects(:clear_crumb_cache).once
+    @provider.expects(:fetch_cookie_and_crumb).once.returns([ "fresh-cookie", "fresh-crumb" ])
+    @provider.expects(:authenticated_client).with("fresh-cookie").returns(authenticated_client)
+
+    result = @provider.send(:fetch_authenticated_chart, "AAPL", {})
+
+    assert_equal [ {} ], result.dig("chart", "result")
+    assert_equal "fresh-crumb", retry_request.params["crumb"]
+  end
+
+  test "fetch_authenticated_chart refreshes credentials after an HTTP 401" do
+    anonymous_client = mock
+    anonymous_client.expects(:get).once.raises(
+      Faraday::UnauthorizedError.new("Unauthorized", { body: "Invalid Crumb" })
+    )
+    retry_response = mock
+    retry_response.stubs(:body).returns('{"chart":{"result":[{}]}}')
+    retry_request = OpenStruct.new(params: {})
+    authenticated_client = mock
+    authenticated_client.expects(:get).once.yields(retry_request).returns(retry_response)
+
+    @provider.stubs(:client).returns(anonymous_client)
+    @provider.expects(:clear_crumb_cache).once
+    @provider.expects(:fetch_cookie_and_crumb).once.returns([ "fresh-cookie", "fresh-crumb" ])
+    @provider.expects(:authenticated_client).with("fresh-cookie").returns(authenticated_client)
+
+    result = @provider.send(:fetch_authenticated_chart, "AAPL", {})
+
+    assert_equal [ {} ], result.dig("chart", "result")
+    assert_equal "fresh-crumb", retry_request.params["crumb"]
+  end
+
   # Note: Caching tests are skipped as Rails.cache may not be properly configured in test environment
   # and caching functionality is not the focus of the validation fixes
 
