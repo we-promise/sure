@@ -193,6 +193,16 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "Test Brex Connection"
   end
 
+  # The provider card reads its tagline with `default: nil`, so a missing key
+  # renders a bare name rather than failing. Up shipped that way.
+  test "every family panel provider has an English tagline" do
+    missing = Settings::ProvidersController::FAMILY_PANEL_KEYS.reject do |key|
+      I18n.exists?("settings.providers.taglines.#{key}", :en)
+    end
+
+    assert_empty missing
+  end
+
   test "sync all control submits with POST" do
     SimplefinItem.create!(
       family: families(:dylan_family),
