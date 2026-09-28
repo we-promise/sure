@@ -204,6 +204,49 @@ class EnableBankingItem::ImporterSyncStrategyTest < ActiveSupport::TestCase
     assert_nil result[:effective_date_from]
   end
 
+  test "fetch_and_store_transactions falls back to the earliest returned transaction date when a WRONG_TRANSACTIONS_PERIOD retry escalated to an unbounded longest fetch" do
+    saved_account = @enable_banking_item.enable_banking_accounts.create!(uid: "saved_uid", name: "Acct", currency: "EUR")
+    @importer.stubs(:include_pending?).returns(false)
+    earliest_date = 60.days.ago.to_date
+
+    # effective_date_from: nil mirrors Provider::EnableBanking's response when
+    # next_transactions_attempt escalated all the way to strategy: "longest"
+    # with no date bound (no corrected_date_from offered by the ASPSP) - the
+    # provider itself has no boundary to report, but the escalation is proof
+    # the originally requested date was rejected.
+    @mock_provider.stubs(:get_account_transactions).returns({
+      transactions: [
+        { "transaction_id" => "1", "booking_date" => earliest_date.iso8601 },
+        { "transaction_id" => "2", "booking_date" => (earliest_date + 5.days).iso8601 }
+      ],
+      continuation_key: nil,
+      effective_date_from: nil,
+      effective_strategy: "longest"
+    })
+
+    result = @importer.send(:fetch_and_store_transactions, saved_account)
+
+    assert result[:success]
+    assert_equal earliest_date, result[:effective_date_from]
+  end
+
+  test "fetch_and_store_transactions reports nil effective_date_from when an unbounded longest fetch returns no transactions at all" do
+    saved_account = @enable_banking_item.enable_banking_accounts.create!(uid: "saved_uid", name: "Acct", currency: "EUR")
+    @importer.stubs(:include_pending?).returns(false)
+
+    @mock_provider.stubs(:get_account_transactions).returns({
+      transactions: [],
+      continuation_key: nil,
+      effective_date_from: nil,
+      effective_strategy: "longest"
+    })
+
+    result = @importer.send(:fetch_and_store_transactions, saved_account)
+
+    assert result[:success]
+    assert_nil result[:effective_date_from]
+  end
+
   test "import persists effective_sync_start_date so a later shortfall check reflects what the bank actually granted" do
     linked_enable_banking_account = @enable_banking_item.enable_banking_accounts.create!(
       uid: "linked_uid", name: "Linked", currency: "EUR"

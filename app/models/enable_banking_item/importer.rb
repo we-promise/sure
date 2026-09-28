@@ -537,7 +537,21 @@ class EnableBankingItem::Importer
       # would otherwise stomp this with an unrelated value on every routine
       # sync. Captured before the PDNG fetch below (fetch_paginated_transactions
       # resets @last_effective_date_from on every call).
-      effective_date_from = @last_effective_date_from if !stored_transactions?(enable_banking_account) && enable_banking_item.date?
+      if !stored_transactions?(enable_banking_account) && enable_banking_item.date?
+        # @last_effective_date_from is nil when a WRONG_TRANSACTIONS_PERIOD
+        # retry escalated all the way to an unbounded strategy: "longest"
+        # request with no corrected date (Provider::EnableBanking#
+        # next_transactions_attempt's final rung, reached when the ASPSP's
+        # error response carries no corrected_date_from to retry with a
+        # tighter bound). That escalation itself is proof the requested date
+        # was rejected, so - unlike the general case this file used to
+        # (wrongly) infer a shortfall from any earliest-transaction date -
+        # falling back to the earliest transaction actually returned here is
+        # safe: we already know from the ASPSP's own rejection that the
+        # request wasn't honored, not just guessing from an account that
+        # happens to have no early activity.
+        effective_date_from = @last_effective_date_from || earliest_transaction_date(all_transactions)
+      end
 
       if include_pending
         # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG) with _pending: true
@@ -853,16 +867,25 @@ class EnableBankingItem::Importer
       return transactions unless start_date
 
       transactions.reject do |tx|
-        tx = tx.with_indifferent_access
-        date_str = tx[:booking_date] || tx[:value_date] || tx[:transaction_date]
-        next false if date_str.blank?  # Keep if no date (cannot determine)
-
-        begin
-          Date.parse(date_str.to_s) < start_date
-        rescue ArgumentError
-          false  # Keep if date is unparseable
-        end
+        date = parsed_transaction_date(tx)
+        date.present? && date < start_date
       end
+    end
+
+    # Best-available date the provider's response reports for a transaction,
+    # trying the same fields and fallback order as filter_transactions_by_date.
+    def parsed_transaction_date(tx)
+      tx = tx.with_indifferent_access
+      date_str = tx[:booking_date] || tx[:value_date] || tx[:transaction_date]
+      return nil if date_str.blank?
+
+      Date.parse(date_str.to_s)
+    rescue ArgumentError
+      nil
+    end
+
+    def earliest_transaction_date(transactions)
+      transactions.filter_map { |tx| parsed_transaction_date(tx) }.min
     end
 
     def tag_as_pending(transactions)
