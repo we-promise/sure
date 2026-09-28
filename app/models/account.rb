@@ -492,8 +492,6 @@ class Account < ApplicationRecord
           }
         }
 
-        account = create_and_sync(attributes, skip_initial_sync: true)
-
         # An exchange account's ledger is imported from inception, so it opens at
         # zero. Without this it inherits create_and_sync's default: an opening
         # balance equal to what the account is worth *today*, dated two years ago
@@ -502,11 +500,20 @@ class Account < ApplicationRecord
         # own opening balance.
         #
         # Through the manager, not set_opening_anchor_balance: that queues a
-        # sync, which is what skip_initial_sync above just declined. Running
+        # sync, which is what skip_initial_sync below just declined. Running
         # before the provider link exists, it would see one zero anchor and no
         # entries and write that zero over the balance set here.
-        result = Account::OpeningBalanceManager.new(account).set_opening_balance(balance: 0)
-        raise result.error if result.error
+        #
+        # Both in one transaction: creation commits on its own, so a failure
+        # while zeroing the anchor would otherwise leave an account behind
+        # carrying today's balance as its opening one, and the retry would
+        # create a second.
+        account = nil
+        transaction do
+          account = create_and_sync(attributes, skip_initial_sync: true)
+          result = Account::OpeningBalanceManager.new(account).set_opening_balance(balance: 0)
+          raise result.error if result.error
+        end
 
         account
       end
