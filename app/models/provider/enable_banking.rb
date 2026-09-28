@@ -189,7 +189,16 @@ class Provider::EnableBanking
       query: query_params.presence
     )
 
-    handle_response(response)
+    # A WRONG_TRANSACTIONS_PERIOD retry (rescue below) recurses with a
+    # different date_from/strategy, so the innermost success reports the
+    # parameters that actually produced this page. Enable Banking requires
+    # continuation requests to repeat the same query as the first page, so
+    # callers paginating with continuation_key must reuse these instead of
+    # the values they originally passed in.
+    handle_response(response).merge(
+      effective_date_from: date_from&.to_date,
+      effective_strategy: strategy
+    )
   rescue EnableBankingError => e
     next_attempt = next_transactions_attempt(e, date_from, strategy, retry_attempt, allow_longest_retry: allow_longest_retry)
 

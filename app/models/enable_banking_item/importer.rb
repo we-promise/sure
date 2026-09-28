@@ -786,6 +786,15 @@ class EnableBankingItem::Importer
         transactions = transactions_data[:transactions] || []
         all_transactions.concat(transactions)
 
+        # A WRONG_TRANSACTIONS_PERIOD retry inside the provider may have
+        # changed the window (corrected date_from, strategy: "longest", or a
+        # fallback-ladder rung). Continuation requests must repeat the exact
+        # query parameters of the page they continue, otherwise the ASPSP can
+        # reject them mid-pagination and the rescue above would keep a
+        # silently truncated result.
+        start_date = transactions_data[:effective_date_from] if transactions_data.key?(:effective_date_from)
+        strategy = transactions_data[:effective_strategy] if transactions_data.key?(:effective_strategy)
+
         previous_continuation_key = continuation_key
         continuation_key = transactions_data[:continuation_key]
 

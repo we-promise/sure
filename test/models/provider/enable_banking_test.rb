@@ -238,6 +238,42 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_nil requested_queries.second[:strategy]
   end
 
+  test "get_account_transactions reports the effective date_from and strategy of the attempt that succeeded" do
+    validation_response = OpenStruct.new(
+      code: 422,
+      body: { error: "WRONG_TRANSACTIONS_PERIOD", detail: { message: "out of bound" } }.to_json
+    )
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+
+    Provider::EnableBanking.expects(:get).twice.returns(validation_response, success_response)
+
+    result = @provider.get_account_transactions(
+      account_id: "acct_123",
+      date_from: 6.months.ago.to_date,
+      transaction_status: "BOOK",
+      allow_longest_retry: true
+    )
+
+    # The retry succeeded via the strategy: "longest" rung, so callers must
+    # repeat exactly these parameters on continuation requests.
+    assert_equal 6.months.ago.to_date, result[:effective_date_from]
+    assert_equal "longest", result[:effective_strategy]
+  end
+
+  test "get_account_transactions reports the original parameters when no retry happened" do
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+    Provider::EnableBanking.expects(:get).returns(success_response)
+
+    result = @provider.get_account_transactions(
+      account_id: "acct_123",
+      date_from: 6.months.ago.to_date,
+      transaction_status: "BOOK"
+    )
+
+    assert_equal 6.months.ago.to_date, result[:effective_date_from]
+    assert_nil result[:effective_strategy]
+  end
+
   test "validation errors expose parsed response data" do
     response = OpenStruct.new(
       code: 422,
