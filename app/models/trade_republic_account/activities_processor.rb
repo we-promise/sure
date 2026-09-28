@@ -380,7 +380,7 @@ class TradeRepublicAccount::ActivitiesProcessor
           }.compact
         }
       )
-      reset_legacy_cash_kind!(entry, event, legacy_kind) if legacy_kind
+      reset_legacy_cash_kind!(entry, event, legacy_kind) if legacy_kind && kind.nil?
       link_settlement_counterpart!(entry) if settles_trade
 
       true

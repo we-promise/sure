@@ -44,8 +44,42 @@ class NormalizeTradeRepublicActivityLabelsMigrationTest < ActiveSupport::TestCas
     assert_equal "Buy", round_up.reload.investment_activity_label
   end
 
+  test "clears English deposit and withdrawal labels the importer stored on the cash account" do
+    withdrawal = create_transaction(@cash, "Withdrawal")
+    deposit = create_transaction(@cash, "Contribution")
+
+    run_migration
+
+    assert_nil withdrawal.reload.investment_activity_label
+    assert_nil deposit.reload.investment_activity_label
+  end
+
+  test "keeps English cash labels set by the user or a rule" do
+    user_modified = create_transaction(@cash, "Withdrawal")
+    user_modified.entry.update!(user_modified: true)
+    locked = create_transaction(@cash, "Withdrawal")
+    locked.lock_attr!(:investment_activity_label)
+    rule_set = create_transaction(@cash, "Withdrawal")
+    rule_set.data_enrichments.create!(attribute_name: "investment_activity_label", value: "Withdrawal", source: "rule")
+
+    run_migration
+
+    assert_equal "Withdrawal", user_modified.reload.investment_activity_label
+    assert_equal "Withdrawal", locked.reload.investment_activity_label
+    assert_equal "Withdrawal", rule_set.reload.investment_activity_label
+  end
+
+  test "keeps locked translated labels" do
+    locked = create_transaction(@portfolio, "Storting")
+    locked.lock_attr!(:investment_activity_label)
+
+    run_migration
+
+    assert_equal "Storting", locked.reload.investment_activity_label
+  end
+
   test "leaves fixed labels, other providers and unknown values alone" do
-    listed = create_transaction(@cash, "Withdrawal")
+    listed = create_transaction(@portfolio, "Withdrawal")
     other_provider = create_transaction(@cash, "Storting", source: "plaid")
     unknown = create_transaction(@cash, "Something else")
 
