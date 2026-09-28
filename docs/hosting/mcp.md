@@ -150,6 +150,9 @@ At the time of writing, `tools/list` includes:
 | `create_tag` / `update_tag` | Manage tags |
 | `create_category` / `update_category` | Manage categories |
 | `update_transaction` | Edit a transaction's metadata (name, notes, category, merchant, tags) |
+| `get_transfer_match_candidates` | A transaction's current transfer (including a pending auto-match) or the transactions it could be matched with, as in the "Match transfer" dialog |
+| `match_transfer` | Match a transaction as a transfer with an existing counterpart, or create the counterpart in a target account (e.g. a manual loan). Supports `dry_run` |
+| `review_transfer` | Confirm or reject a pending auto-matched transfer |
 | `update_budget` | Update budget allocations for a month |
 | `import_bank_statement` | Import bank statement data |
 | `search_family_files` | Search documents uploaded through the import flow. Note this is the vector-store document index, not the Statement Vault — statements archived via `upload_account_statement` are not searchable through it |
