@@ -2,22 +2,18 @@
 # Expects the including class to expose an `account` reader.
 module Holding::TradeCalculatorHelpers
   private
-    # Converts a trade's price into the account's currency, falling back to the
-    # raw price when no exchange rate is available.
-    def converted_trade_price(trade)
-      Money.new(trade.price, trade.currency).exchange_to(account.currency).amount
-    rescue Money::ConversionError
-      trade.price
+    # Converts a trade's price into the account's currency at the rate of the
+    # day it was made, falling back to the raw price when no rate is available.
+    def converted_trade_price(trade, date:)
+      convert_to_account_currency(trade.price, trade, date: date)
     end
 
     # Same, for the fee the trade was charged.
-    def converted_trade_fee(trade)
+    def converted_trade_fee(trade, date:)
       fee = trade.fee || 0
       return fee if fee.zero?
 
-      Money.new(fee, trade.currency).exchange_to(account.currency).amount
-    rescue Money::ConversionError
-      fee
+      convert_to_account_currency(fee, trade, date: date)
     end
 
     # What the units actually cost, per unit.
@@ -32,13 +28,21 @@ module Holding::TradeCalculatorHelpers
     # average cost, and its fee reduces the proceeds rather than the basis of
     # whatever remains, so applying it here would understate the units still
     # held.
-    def effective_trade_price(trade)
-      price = converted_trade_price(trade)
+    def effective_trade_price(trade, date:)
+      price = converted_trade_price(trade, date: date)
       return price unless trade.qty&.positive?
 
-      fee = converted_trade_fee(trade)
+      fee = converted_trade_fee(trade, date: date)
       return price if fee.zero?
 
       price + (fee / trade.qty)
+    end
+
+    # The rate on the trade's own day: a basis is what was paid then, and must
+    # not drift with the exchange rate afterwards.
+    def convert_to_account_currency(amount, trade, date:)
+      Money.new(amount, trade.currency).exchange_to(account.currency, date: date).amount
+    rescue Money::ConversionError
+      amount
     end
 end
