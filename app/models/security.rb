@@ -323,6 +323,11 @@ class Security < ApplicationRecord
     # security whose classification the user has locked. That is what makes it
     # safe on every save, which is also how an existing security picks these
     # up: as it is next written to, with no backfill job.
+    #
+    # The order is a contract for the writers that follow, not something this
+    # code enforces: nothing yet reads `classification_source` to let a
+    # stronger writer replace a `default`. That arrives with provider
+    # classification ingestion; until then a stored default stays put.
     def apply_classification_defaults
       return if classification_locked?
 
@@ -349,6 +354,13 @@ class Security < ApplicationRecord
       # Each field is filled on its own. Guarding on "either is set" left a
       # half-classified security half-classified for good -- an asset class
       # with no sub-class is not a state anything downstream can group by.
+      # But only when the half already there agrees with the default: a cash
+      # security another writer called `equity` must not become an
+      # `equity`/`cash` pair nobody asserted. That disagreement is left for a
+      # stronger writer to settle.
+      return unless asset_class.blank? || asset_class == defaults.first
+      return unless asset_sub_class.blank? || asset_sub_class == defaults.last
+
       self.asset_class = defaults.first if asset_class.blank?
       self.asset_sub_class = defaults.last if asset_sub_class.blank?
       # Claimed only when this actually classified the instrument. Filling a

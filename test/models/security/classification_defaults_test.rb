@@ -252,6 +252,44 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
     assert_equal "manual", security.classification_source
   end
 
+  # Filling the missing half is only right when it agrees with the half that is
+  # there. A cash security some other writer called `equity` would otherwise
+  # become `equity`/`cash` -- a pair nobody asserted -- and be marked
+  # `default` into the bargain. The weakest writer leaves a disagreement for a
+  # stronger one to settle.
+  test "a default does not complete a pair it would contradict" do
+    security = Security.create!(ticker: "CASH-CONTRA", kind: "cash", offline: true, asset_class: "equity")
+
+    assert_equal "equity", security.asset_class
+    assert_nil security.asset_sub_class, "the default invented an equity/cash pair"
+    assert_nil security.classification_source, "the default claimed a classification it did not make"
+
+    security = Security.create!(ticker: "CASH-CONTRA-SUB", kind: "cash", offline: true, asset_sub_class: "stock")
+
+    assert_nil security.asset_class, "the default invented a liquidity/stock pair"
+    assert_equal "stock", security.asset_sub_class
+    assert_nil security.classification_source
+  end
+
+  # The callback runs on every save, including the health check's routine
+  # `update!(last_health_check_at:)`. Once a row is classified, running it
+  # again must leave nothing dirty, or every such save would write columns it
+  # has no news about.
+  test "validating an already-classified security leaves it unchanged" do
+    cash = Security.create!(ticker: "CASH-NOCHURN", kind: "cash", offline: true).reload
+    listed = Security.create!(ticker: "REG-NOCHURN", country_code: "US").reload
+    # Written past the callback, so the row really holds a provider's answer
+    # rather than whatever the callback made of it on create.
+    provided = Security.create!(ticker: "CASH-NOCHURN-PROV", kind: "cash", offline: true)
+    provided.update_columns(asset_class: "liquidity", asset_sub_class: "cash", classification_source: "provider")
+    provided.reload
+
+    [ cash, listed, provided ].each do |security|
+      assert security.valid?
+      assert_not security.changed?, "validation dirtied #{security.ticker}: #{security.changes.inspect}"
+    end
+  end
+
   test "every country in the config declares a development classification" do
     Security::REGIONS.each do |code, entry|
       assert_includes %w[developed emerging], entry["development"],
