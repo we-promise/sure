@@ -51,12 +51,22 @@ class PagesController < ApplicationController
     net_totals = income_statement.net_category_totals(period: @period)
 
     @cashflow_sankey_view = Current.user.cashflow_sankey_view
+    category_sankey = -> { build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency) }
     @cashflow_sankey_data = if @cashflow_sankey_view == "accounts"
       IncomeStatement::AccountSankey.new(Current.family, accounts: Current.user.finance_accounts, period: @period)
         .as_json.merge(currency_symbol: Money::Currency.new(family_currency).symbol)
     else
-      build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
+      category_sankey.call
     end
+    # The preview chart compares itself against the by-category chart, whichever
+    # view is shown; only build that separately when the preview is on and the
+    # dashboard is showing the by-account view.
+    @cashflow_preview_comparison_data =
+      if @cashflow_sankey_view == "categories"
+        @cashflow_sankey_data
+      elsif preview_features_enabled?
+        category_sankey.call
+      end
     @outflows_data = build_outflows_donut_data(net_totals)
     # Preview-gated: skip the query outright rather than loading rows the
     # section won't be built from.

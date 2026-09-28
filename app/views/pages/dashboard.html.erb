@@ -107,13 +107,15 @@
             <% show_width = layout[:width_toggle] && two_column %>
             <% sankey_options = section[:key] == "cashflow_sankey" %>
             <% if layout[:grow] || show_width || sankey_options %>
+              <%# The Sankey's view switch must be reachable on touch screens, so its menu shows at every
+                  width with an always-visible trigger; the other widgets' size menus stay desktop-only. %>
               <details
-                class="relative hidden lg:block"
+                class="relative <%= sankey_options ? "block" : "hidden lg:block" %>"
                 data-controller="dashboard-widget-size"
                 data-dashboard-widget-size-section-key-value="<%= section[:key] %>"
                 data-action="keydown->dashboard-widget-size#stopKeydown">
                 <summary
-                  class="focus-ring list-none cursor-pointer flex items-center justify-center w-6 h-6 rounded-md text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors opacity-0 group-hover:opacity-100 [&::-webkit-details-marker]:hidden"
+                  class="focus-ring list-none cursor-pointer flex items-center justify-center w-6 h-6 rounded-md text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors <%= sankey_options ? "opacity-100 lg:opacity-0 lg:group-hover:opacity-100" : "opacity-0 group-hover:opacity-100" %> [&::-webkit-details-marker]:hidden"
                   aria-label="<%= t("pages.dashboard.widget_size.label") %>">
                   <%= icon("sliders-horizontal", size: "sm", class: "!w-3.5 !h-3.5") %>
                 </summary>
@@ -136,7 +138,7 @@
                     </div>
                   <% end %>
                   <% if show_width %>
-                    <div class="space-y-1.5">
+                    <div class="space-y-1.5 hidden lg:block">
                       <p class="flex items-center gap-1.5 text-xs font-medium text-secondary">
                         <%= icon("move-horizontal", size: "xs") %>
                         <%= t("pages.dashboard.widget_size.width_label") %>
@@ -153,7 +155,7 @@
                     </div>
                   <% end %>
                   <% if layout[:grow] %>
-                    <div class="space-y-1.5">
+                    <div class="space-y-1.5 hidden lg:block">
                       <p class="flex items-center gap-1.5 text-xs font-medium text-secondary">
                         <%= icon("move-vertical", size: "xs") %>
                         <%= t("pages.dashboard.widget_size.height_label") %>
@@ -188,7 +190,7 @@
         <div class="py-4" data-dashboard-section-target="content">
           <%= render partial: section[:partial], locals: section[:locals] %>
           <% if section[:key] == "cashflow_sankey" && preview_features_enabled? %>
-            <%= render "pages/dashboard/cashflow_preview", period: @period, legacy_data: section[:locals][:sankey_data] %>
+            <%= render "pages/dashboard/cashflow_preview", period: @period, legacy_data: @cashflow_preview_comparison_data %>
           <% end %>
         </div>
       </section>
