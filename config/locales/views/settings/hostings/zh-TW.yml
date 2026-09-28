@@ -87,15 +87,15 @@ zh-TW:
           title: 要中斷外部助手嗎？
           body: 這會移除已儲存的網址、Token 與 Agent ID，並切換回內建助手。日後輸入新的憑證就能重新連線。
       brand_fetch_settings:
-        description: 輸入 Brand Fetch 提供的 Client ID
-        env_configured_message: 您已透過 BRAND_FETCH_CLIENT_ID 環境變數成功設定 Brand Fetch Client ID。
+        description: 輸入 Brandfetch 提供的 Client ID
+        env_configured_message: 您已透過 BRAND_FETCH_CLIENT_ID 環境變數成功設定 Brandfetch Client ID。
         show_details: （顯示詳細資訊）
-        setup_step_1_html: 前往 <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> 註冊一個免費的 Brand Fetch 開發者帳號。
+        setup_step_1_html: 前往 <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> 註冊一個免費的 Brandfetch 開發者帳號。
         setup_step_2_html: 前往 <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a> 頁面。
         setup_step_3: 點選「Your Client ID」區塊下方的眼睛圖示以顯示您的 Client ID，然後貼到下方。
         label: Client ID
         placeholder: 在此輸入您的 Client ID
-        title: Brand Fetch 設定
+        title: Brandfetch 設定
         high_res_label: 啟用高解析度標誌
         high_res_description: 啟用後，標誌會以 120x120 而非 40x40 的解析度取得，在高 DPI 螢幕上會更清晰。
       llm_provider_selector:

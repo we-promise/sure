@@ -1,4 +1,6 @@
 class FamilyMerchantsController < ApplicationController
+  include WriteOnlyIbanParams
+
   before_action :set_merchant, only: %i[edit update destroy]
 
   def index
@@ -41,7 +43,7 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def create
-    @family_merchant = FamilyMerchant.new(merchant_params.merge(family: Current.family))
+    @family_merchant = FamilyMerchant.new(effective_merchant_params.merge(family: Current.family))
 
     if @family_merchant.save
       respond_to do |format|
@@ -50,18 +52,16 @@ class FamilyMerchantsController < ApplicationController
         format.json { render json: merchant_json(@family_merchant), status: :created }
       end
     else
-      respond_to do |format|
-        # No explicit format.turbo_stream branch: Turbo's form submissions send an
-        # Accept header that prefers turbo-stream, but forcing that format here would
-        # lock the response's Content-Type to turbo-stream while still rendering the
-        # plain :new HTML template — Turbo's client then sees a turbo-stream
-        # Content-Type with no <turbo-stream> tags in the body and does nothing.
-        # Leaving turbo-stream undeclared lets Rails' content negotiation fall back to
-        # format.html below, which renders :new with the correct text/html type.
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: { errors: @family_merchant.errors.full_messages }, status: :unprocessable_entity }
-      end
+      render_create_error
     end
+  rescue ActiveRecord::RecordNotUnique
+    # A raw DB-level race on the partial (family_id, iban) unique index: two
+    # concurrent creates both passed the Rails uniqueness validation before
+    # either committed, so it surfaces here instead of the `save` branch
+    # above. #save doesn't rescue this on its own since it's a raw
+    # PG::UniqueViolation, not a validation failure.
+    @family_merchant.errors.add(:iban, :taken)
+    render_create_error
   end
 
   def edit
@@ -69,32 +69,32 @@ class FamilyMerchantsController < ApplicationController
 
   def update
     if @merchant.is_a?(ProviderMerchant)
-      name_changed = merchant_params[:name].present? && merchant_params[:name] != @merchant.name
+      name_changed = effective_merchant_params[:name].present? && effective_merchant_params[:name] != @merchant.name
       # An IBAN edit must not mutate the shared ProviderMerchant row: unlike
       # website_url (cosmetic, logo lookup only), iban drives cross-family
       # merchant-identity matching (Account::ProviderImportAdapter looks
       # merchants up globally by source+iban), so one family setting it would
       # silently redirect another family's future transactions to this
       # merchant. Route it through the same conversion path as a name change.
-      iban_changed = merchant_params.key?(:iban) && normalize_iban(merchant_params[:iban]) != @merchant.iban
+      iban_changed = effective_merchant_params.key?(:iban) && normalize_iban(effective_merchant_params[:iban]) != @merchant.iban
 
       if name_changed || iban_changed
         # Convert ProviderMerchant to FamilyMerchant for this family only
-        @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, merchant_params)
+        @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, effective_merchant_params)
         respond_to do |format|
           format.html { redirect_to family_merchants_path, notice: t(".converted_success") }
           format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
         end
       else
         # Only website changed — update the ProviderMerchant directly
-        @merchant.update!(merchant_params.slice(:website_url))
+        @merchant.update!(effective_merchant_params.slice(:website_url))
         @merchant.generate_logo_url_from_website!
         respond_to do |format|
           format.html { redirect_to family_merchants_path, notice: t(".success") }
           format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
         end
       end
-    elsif @merchant.update(merchant_params)
+    elsif @merchant.update(effective_merchant_params)
       respond_to do |format|
         format.html { redirect_to family_merchants_path, notice: t(".success") }
         format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
@@ -103,7 +103,26 @@ class FamilyMerchantsController < ApplicationController
       render :edit, status: :unprocessable_entity
     end
   rescue ActiveRecord::RecordInvalid => e
-    @family_merchant = e.record
+    # e.record is the unsaved, never-persisted FamilyMerchant the failed
+    # conversion tried to create. Replacing @family_merchant with it (as a
+    # naive rescue would) breaks the re-rendered form: _form.html.erb picks
+    # its action URL from `family_merchant.persisted?`, so an unpersisted
+    # record posts to the FamilyMerchant#create route instead of back to
+    # this ProviderMerchant's #update -- silently dropping the whole
+    # conversion (transaction reassignment, user_modified protection) on
+    # the next submit. Keep @merchant/@family_merchant pointed at the
+    # original, persisted ProviderMerchant so the form still targets
+    # #update; copy over the failed attempt's errors and submitted values
+    # so the user sees what they typed and why it failed.
+    restore_merchant_after_failed_conversion!
+    e.record.errors.each { |error| @merchant.errors.add(error.attribute, error.type, **error.options) }
+    render :edit, status: :unprocessable_entity
+  rescue ActiveRecord::RecordNotUnique
+    # Same race as above, surfaced through the raw DB constraint instead of
+    # the Rails-level validation: two concurrent conversions in the same
+    # family both passed uniqueness before either committed.
+    restore_merchant_after_failed_conversion!
+    @merchant.errors.add(:iban, :taken)
     render :edit, status: :unprocessable_entity
   end
 
@@ -175,13 +194,46 @@ class FamilyMerchantsController < ApplicationController
     def merchant_params
       # Handle both family_merchant and provider_merchant param keys
       key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
-      params.require(key).permit(:name, :color, :website_url, :iban)
+      params.require(key).permit(:name, :color, :website_url, :iban, :remove_iban)
     end
 
-    # Mirrors Merchant#normalize_iban so a submitted value can be compared
-    # against the persisted (already-normalized) iban without saving first.
+    # iban is write-only (see family_merchants/_form.html.erb) -- a blank
+    # submit means "unchanged", not "clear it". Every place that writes
+    # merchant_params to a model should go through this instead, or a form
+    # submit that doesn't retype the IBAN would silently wipe it.
+    def effective_merchant_params
+      @effective_merchant_params ||= resolve_write_only_iban(merchant_params, clear_flag: merchant_params[:remove_iban]).except(:remove_iban)
+    end
+
+    # So a submitted value can be compared against the persisted
+    # (already-normalized) iban without saving first.
     def normalize_iban(value)
-      value.to_s.gsub(/[[:space:]]+/, "").upcase.presence
+      IbanNormalizable.normalize(value)
+    end
+
+    def render_create_error
+      respond_to do |format|
+        # No explicit format.turbo_stream branch: Turbo's form submissions send an
+        # Accept header that prefers turbo-stream, but forcing that format here would
+        # lock the response's Content-Type to turbo-stream while still rendering the
+        # plain :new HTML template — Turbo's client then sees a turbo-stream
+        # Content-Type with no <turbo-stream> tags in the body and does nothing.
+        # Leaving turbo-stream undeclared lets Rails' content negotiation fall back to
+        # format.html below, which renders :new with the correct text/html type.
+        format.html { render :new, status: :unprocessable_entity }
+        format.json { render json: { errors: @family_merchant.errors.full_messages }, status: :unprocessable_entity }
+      end
+    end
+
+    # Keeps @merchant/@family_merchant pointed at the original, persisted
+    # ProviderMerchant after a failed conversion attempt (see the #update
+    # rescues), instead of an unpersisted FamilyMerchant that would break
+    # the re-rendered form's submit target. Restores every attribute the
+    # form could have submitted, including :color -- merchant_params
+    # permits it and convert_to_family_merchant_for receives it, so omitting
+    # it here would silently revert a color change on the failed attempt.
+    def restore_merchant_after_failed_conversion!
+      @merchant.assign_attributes(effective_merchant_params.slice(:name, :color, :website_url, :iban))
     end
 
     def merchant_json(merchant)

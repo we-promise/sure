@@ -22,6 +22,7 @@
       <%= icon "chevron-right", size: "sm", class: "!w-3.5 !h-3.5 text-secondary group-open:rotate-90 transition-transform" %>
       <div class="flex items-center flex-wrap gap-2 min-w-0 flex-1">
         <div class="flex items-center gap-2 shrink-0 flex-1">
+          <%= render ProviderLogo.new(provider_key: entry[:provider_key], class_name: "w-7 h-7 rounded-lg") %>
           <h3 class="text-sm font-medium text-primary"><%= entry[:title] %></h3>
           <%= render "settings/providers/maturity_badge", label: maturity_lbl %>
         </div>

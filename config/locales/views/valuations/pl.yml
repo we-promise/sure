@@ -1,6 +1,39 @@
 ---
 pl:
   valuations:
+    confirm_create:
+      confirm: Potwierdź
+      title: Potwierdź nowe saldo
+    confirm_update:
+      title: Zaktualizuj saldo
+      update: Aktualizuj
+    confirmation_contents:
+      account_balance: saldo konta
+      action_set: ustawi
+      action_update: zaktualizuje
+      asset_value: wartość aktywa
+      balance: saldo
+      brokerage_cash: Gotówka maklerska
+      change: zmiany
+      credit_card_balance: saldo karty kredytowej
+      crypto_balance: saldo kryptowalut
+      holdings_value: Wartość portfela
+      liability_balance: saldo zobowiązania
+      loan_balance: saldo pożyczki
+      'on': w dniu
+      property_value: wartość nieruchomości
+      recalculate_notice: Wszystkie przyszłe transakcje i salda zostaną przeliczone
+        na podstawie tej %{change_or_update}.
+      this_will: To %{action_verb} wartość konta w dniu
+      to: na
+      to_colon: 'Do:'
+      total_account_value: Całkowita wartość konta
+      update: aktualizacji
+      vehicle_value: wartość pojazdu
+    create:
+      account_updated: Konto zaktualizowane
+    errors:
+      amount_required: Kwota jest wymagana
     form:
       amount: Kwota
       submit: Dodaj aktualizację salda
@@ -17,6 +50,7 @@ pl:
       title: Nowe saldo
     show:
       amount: Kwota
+      amount_label: Wartość konta w dniu
       date_label: Data
       delete: Usuń
       delete_subtitle: Tej akcji nie można cofnąć
@@ -26,5 +60,10 @@ pl:
       name_placeholder: Wprowadź nazwę tego wpisu
       note_label: Notatki
       note_placeholder: Dodaj dodatkowe szczegóły dotyczące tego wpisu
+      opening_balance: Saldo początkowe
       overview: Przegląd
       settings: Ustawienia
+      update_value: Zaktualizuj wartość
+    update:
+      account_updated: Konto zaktualizowane
+      entry_updated: Wpis zaktualizowany

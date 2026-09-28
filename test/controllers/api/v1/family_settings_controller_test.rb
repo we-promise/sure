@@ -47,8 +47,8 @@ class Api::V1::FamilySettingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "private", response_body["default_account_sharing"]
     assert_equal true, response_body["custom_enabled_currencies"]
     assert_equal @family.enabled_currency_codes, response_body["enabled_currencies"]
-    assert_equal @family.created_at.iso8601, response_body["created_at"]
-    assert_equal @family.updated_at.iso8601, response_body["updated_at"]
+    assert_equal @family.created_at.change(usec: 0), Time.iso8601(response_body["created_at"])
+    assert_equal @family.updated_at.change(usec: 0), Time.iso8601(response_body["updated_at"])
     assert_not response_body.key?("stripe_customer_id")
     assert_not response_body.key?("vector_store_id")
   end
