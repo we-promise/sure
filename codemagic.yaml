@@ -2,24 +2,22 @@ workflows:
   ios-release:
     name: Sure iOS Release (no codesign)
     instance_type: mac_mini_m1
+    working_directory: mobile
     environment:
       flutter: stable
     scripts:
       - name: Install dependencies
-        working_directory: mobile
         script: |
           flutter pub get
-      - name: Build iOS
-        working_directory: mobile
+      - name: Build iOS without code signing
         script: |
           flutter build ios --release --no-codesign
       - name: Package IPA
-        working_directory: mobile
         script: |
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r sure_mobile.ipa Payload/
-          mkdir -p $CM_BUILD_OUTPUT_DIR
-          cp sure_mobile.ipa $CM_BUILD_OUTPUT_DIR/
+          mkdir -p "$CM_BUILD_OUTPUT_DIR"
+          cp sure_mobile.ipa "$CM_BUILD_OUTPUT_DIR/"
     artifacts:
       - "**/*.ipa"
