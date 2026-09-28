@@ -516,8 +516,6 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   test "search_securities falls back to a direct chart lookup when the search index has no results" do
     empty_search_response = mock
     empty_search_response.stubs(:body).returns('{"quotes":[]}')
-    @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.stubs(:get).returns(empty_search_response)
 
     chart_response = mock
     chart_response.stubs(:body).returns({
@@ -532,10 +530,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
         } ]
       }
     }.to_json)
-    chart_client = mock
-    chart_client.expects(:get).with(regexp_matches(%r{/v8/finance/chart/VAN0111AU\.AX$})).returns(chart_response)
-    @provider.stubs(:fetch_cookie_and_crumb).returns([ "cookie", "crumb" ])
-    @provider.stubs(:authenticated_client).with("cookie").returns(chart_client)
+
+    mock_client = mock
+    mock_client.stubs(:get).with(regexp_matches(%r{/v1/finance/search})).returns(empty_search_response)
+    mock_client.expects(:get).with(regexp_matches(%r{/v8/finance/chart/VAN0111AU\.AX$})).returns(chart_response)
+    @provider.stubs(:client).returns(mock_client)
     @provider.stubs(:throttle_request)
 
     response = @provider.search_securities("VAN0111AU.AX")
@@ -555,15 +554,14 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   test "search_securities direct chart fallback returns no results when the symbol doesn't exist" do
     empty_search_response = mock
     empty_search_response.stubs(:body).returns('{"quotes":[]}')
-    @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.stubs(:get).returns(empty_search_response)
 
     not_found_response = mock
     not_found_response.stubs(:body).returns({ chart: { result: nil, error: { code: "Not Found" } } }.to_json)
-    chart_client = mock
-    chart_client.stubs(:get).returns(not_found_response)
-    @provider.stubs(:fetch_cookie_and_crumb).returns([ "cookie", "crumb" ])
-    @provider.stubs(:authenticated_client).with("cookie").returns(chart_client)
+
+    mock_client = mock
+    mock_client.stubs(:get).with(regexp_matches(%r{/v1/finance/search})).returns(empty_search_response)
+    mock_client.stubs(:get).with(regexp_matches(%r{/v8/finance/chart/})).returns(not_found_response)
+    @provider.stubs(:client).returns(mock_client)
     @provider.stubs(:throttle_request)
 
     response = @provider.search_securities("NOTAREAL.XX")
@@ -650,8 +648,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     }.to_json)
     chart_client = mock
     chart_client.expects(:get).with(regexp_matches(%r{/v8/finance/chart/CIBEST\.CL$})).twice.returns(chart_response)
-    @provider.stubs(:fetch_cookie_and_crumb).returns([ "cookie", "crumb" ])
-    @provider.stubs(:authenticated_client).with("cookie").returns(chart_client)
+    @provider.stubs(:client).returns(chart_client)
     @provider.stubs(:throttle_request)
 
     responses = [ "CIBEST", "CIBEST.CL" ].map do |symbol|
