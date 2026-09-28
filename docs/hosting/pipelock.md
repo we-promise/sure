@@ -38,9 +38,9 @@ The `compose.example.ai.yml` file includes Pipelock. To use it:
 
 2. Create a `.env` file with a secret key unique to your install. The stack will not start without one:
    ```bash
-   grep -qE '^[[:space:]]*(export[[:space:]]+)?SECRET_KEY_BASE[[:space:]]*=' .env 2>/dev/null || echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> .env
+   grep -qE "^[[:space:]]*(export[[:space:]]+)?SECRET_KEY_BASE[[:space:]]*=[[:space:]]*[\"']?[^\"'[:space:]]" .env 2>/dev/null || echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> .env
    ```
-   The command only adds a key when `.env` has none. If you are adding Pipelock to an existing install, keep the `SECRET_KEY_BASE` you already use; see [Configure your environment](docker.md#step-3-configure-your-environment) for why.
+   The command only adds a key when `.env` has no non-empty one; an empty `SECRET_KEY_BASE=` line, as in `.env.example`, is overridden because Compose uses the last assignment. If you are adding Pipelock to an existing install, keep the `SECRET_KEY_BASE` you already use; see [Configure your environment](docker.md#step-3-configure-your-environment) for why.
 
 3. Start the stack:
    ```bash
