@@ -457,6 +457,7 @@ en:
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
         redbark: Sync Australian bank accounts via Redbark open banking.
+        up: Sync Australian Up bank accounts with a personal access token.
         monobank: Sync Ukrainian Monobank cards and jars with a personal API token.
         fio: Sync a Fio banka account with a read-only API token.
         enable_banking: Sync European bank accounts via PSD2 open banking.
