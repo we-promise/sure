@@ -109,7 +109,7 @@ class ApplicationHelperTest < ActionView::TestCase
   end
 
   test "#mask_last4 masks all but the last 4 characters" do
-    assert_equal "•••3000", mask_last4("DE89370400440532013000")
+    assert_equal "•••7890", mask_last4("account-number-1234567890")
     assert_equal "•••2345", mask_last4("12345")
   end
 
