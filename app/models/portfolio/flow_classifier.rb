@@ -30,6 +30,17 @@
 # counterpart leg's account is inside the scope. Direction for an external
 # flow comes from the Trade's quantity sign or the Transaction's amount sign
 # (negative amount = money in).
+#
+# What a caller must do with the answer:
+#
+# - Sum signed amounts per class. :income and :fee are decided by the label
+#   alone, not by the sign of the amount, so a margin-interest charge labelled
+#   "Interest" is :income with a positive amount, and a fee rebate labelled
+#   "Fee" is :fee with a negative one. A signed sum nets them correctly; a sum
+#   of absolute values would count the charge as more income.
+# - Scope to one family itself. Neither form filters by family: #classify_ids
+#   reads whichever entry ids it is given, and scope_account_ids is taken as
+#   given. Pass only ids and accounts the caller has already scoped.
 class Portfolio::FlowClassifier
   CLASSES = %i[external_inflow external_outflow income fee internal].freeze
 
@@ -105,6 +116,7 @@ class Portfolio::FlowClassifier
   # The same decision as #classify for every id given, taken in SQL. Returns
   # { entry_id => class or nil }. Later drops embed #sql_case in their own
   # daily queries; this method is the reference the parity test holds them to.
+  # The ids are not filtered by family; the caller passes ids it has scoped.
   def classify_ids(entry_ids)
     ids = Array(entry_ids).map(&:to_s)
     return {} if ids.empty?

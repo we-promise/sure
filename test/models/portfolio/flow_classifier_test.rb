@@ -60,6 +60,28 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :fee, @family_scope.classify(transaction)
   end
 
+  # Income and fee are decided by the label alone; the amount keeps its sign,
+  # so a caller summing signed amounts per class nets a reversal correctly.
+  test "income and fee are decided by label, not by the sign of the amount" do
+    interest_charge = create_labelled_transaction(account: @brokerage, label: "Interest", amount: 7.5)
+    fee_rebate = create_labelled_transaction(account: @brokerage, label: "Fee", amount: -2)
+    interest_trade_charge = create_income_trade(account: @brokerage, label: "Interest", amount: 4)
+    interest_trade_charge.update_columns(amount: 4)
+
+    assert interest_charge.amount.positive?, "precondition: money out, as a margin-interest charge"
+    assert fee_rebate.amount.negative?, "precondition: money in, as a fee rebate"
+    assert interest_trade_charge.reload.amount.positive?, "precondition: money out on a trade"
+
+    sql = @family_scope.classify_ids([ interest_charge.id, fee_rebate.id, interest_trade_charge.id ])
+
+    [ interest_charge, interest_trade_charge ].each do |entry|
+      assert_equal :income, @family_scope.classify(entry)
+      assert_equal :income, sql[entry.id]
+    end
+    assert_equal :fee, @family_scope.classify(fee_rebate)
+    assert_equal :fee, sql[fee_rebate.id]
+  end
+
   test "the fee leg of a linked transfer is a fee" do
     transfer = create_linked_transfer(family: @family, from: @checking, to: @brokerage, amount: 500, source_fee_amount: 2)
     fee_entry = transfer.fee_transactions.first.entry
