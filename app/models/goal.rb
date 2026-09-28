@@ -929,7 +929,6 @@ class Goal < ApplicationRecord
       destructive: true,
       high_severity: true,
       title: I18n.t("goals.show.confirm_delete_title"),
-      # CustomConfirm escapes the body, which the dialog renders as HTML.
       body: I18n.t("goals.show.confirm_delete_body", name: name),
       btn_text: I18n.t("goals.show.confirm_delete_cta")
     )

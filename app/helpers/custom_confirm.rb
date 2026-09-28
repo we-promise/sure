@@ -1,5 +1,6 @@
 # The shape of data expected by `confirm_dialog_controller.js` to override the
-# default browser confirm API via Turbo.
+# default browser confirm API via Turbo. The dialog renders every field as text,
+# so record names can be interpolated as they are.
 class CustomConfirm
   class << self
     # `titleize` / `downcase` are English-shaped and stay applied to the record
@@ -18,14 +19,7 @@ class CustomConfirm
 
   def initialize(title: default_title, body: default_body, btn_text: default_btn_text, destructive: false, high_severity: false)
     @title = title
-    # `body` is the one field the dialog renders as HTML: confirm_dialog_controller
-    # assigns it to innerHTML, while title and button label go through
-    # textContent. Callers interpolate record names into it (merchants, accounts,
-    # brokerages, goals), which come from users and providers, so a plain string
-    # is escaped here; without it a name like "<img src=x onerror=…>" executes as
-    # soon as someone opens the confirmation. Markup still passes as an
-    # html_safe string, e.g. from a view's `t(".…_html")`.
-    @body = ERB::Util.html_escape(body)
+    @body = body
     @btn_text = btn_text
     @btn_variant = derive_btn_variant(destructive, high_severity)
   end

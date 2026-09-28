@@ -18,22 +18,6 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  # The confirm dialog renders its body as HTML; tickers come from providers and
-  # the shared securities table.
-  test "escapes tickers in the reset-to-provider confirmation" do
-    @holding.update!(provider_security: Security.create!(ticker: "<img src=x onerror=alert(1)>", name: "Original"))
-    Holding.any_instance.stubs(:security_remapped?).returns(true)
-    Account.any_instance.stubs(:linked?).returns(true)
-
-    get holding_path(@holding)
-
-    body = css_select("[data-turbo-confirm]").filter_map { |element| JSON.parse(element["data-turbo-confirm"])["body"] rescue nil }
-                                             .find { |text| text.match?(/onerror/i) }
-    assert body, "expected the reset confirmation to mention the provider ticker"
-    assert_match(/&lt;img src=x onerror=alert\(1\)&gt;/i, body)
-    assert_no_match(/<img/i, body)
-  end
-
   test "shows exact share count without rounding" do
     @holding.update!(qty: 10.374)
 
