@@ -474,6 +474,23 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil item.reload.pending_login_state
   end
 
+  test "fatal push login poll failure keeps a newer login started meanwhile" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "old-login")
+    provider = mock
+    # A new login replaces the state while the old poll waits on the provider.
+    provider.expects(:complete_login).with do |pending_login_b64:|
+      TradeRepublicItem.where(id: item.id).update_all(pending_login_state: "new-login")
+      pending_login_b64 == "old-login"
+    end.raises(Provider::TradeRepublicClient::InvalidChallenge, "Login state is invalid")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: login_poller_headers
+
+    assert_response :no_content
+    assert_equal "new-login", item.reload.pending_login_state
+  end
+
   test "push login for an account already connected by another item is discarded" do
     item = families(:dylan_family).trade_republic_items.create!(
       name: "Trade Republic", currency: "EUR", status: :requires_update, pending_login_state: "pending-login"

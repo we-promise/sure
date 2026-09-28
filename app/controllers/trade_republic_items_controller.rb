@@ -158,13 +158,14 @@ class TradeRepublicItemsController < ApplicationController
   # the user approves the login in the Trade Republic app (maximum two minutes).
   def poll_login
     provider = @trade_republic_item.trade_republic_provider
-    unless provider && @trade_republic_item.pending_login_state.present?
+    pending = @trade_republic_item.pending_login_state
+    unless provider && pending.present?
       return render_login_panel(alert: t(".no_pending_login"))
     end
 
-    result = provider.complete_login(pending_login_b64: @trade_republic_item.pending_login_state)
+    result = provider.complete_login(pending_login_b64: pending)
     if result.data["status"] == "pending"
-      @trade_republic_item.update!(pending_login_state: result.data.fetch("pending_login_b64")) if result.data["pending_login_b64"].present?
+      update_if_pending_login_current!(pending, pending_login_state: result.data.fetch("pending_login_b64")) if result.data["pending_login_b64"].present?
       login_poll_response(:no_content) { render_login_panel }
     elsif duplicate_connection?(result)
       discard_duplicate_connection!
@@ -180,7 +181,8 @@ class TradeRepublicItemsController < ApplicationController
       render_login_panel(success: true)
     end
   rescue Provider::TradeRepublicClient::LoginExpired, Provider::TradeRepublicClient::AuthenticationRequired
-    @trade_republic_item.update!(pending_login_state: nil)
+    return render_superseded_push_login unless update_if_pending_login_current!(pending, pending_login_state: nil)
+
     render_login_panel(alert: t(".login_expired"))
   rescue Provider::TradeRepublicClient::RateLimited => e
     capture_login_poll_error(e, login: "push", retryable: true)
@@ -191,7 +193,8 @@ class TradeRepublicItemsController < ApplicationController
     login_poll_response(:service_unavailable) { render_login_panel(alert: e.message) }
   rescue Provider::TradeRepublicClient::Error => e
     capture_login_poll_error(e, login: "push", retryable: false)
-    @trade_republic_item.update!(pending_login_state: nil)
+    return render_superseded_push_login unless update_if_pending_login_current!(pending, pending_login_state: nil)
+
     render_login_panel(alert: e.message)
   end
 
@@ -695,6 +698,11 @@ class TradeRepublicItemsController < ApplicationController
         @trade_republic_item.update!(attributes) if current
         current
       end
+    end
+
+    # A newer login owns the card now; leave its state and poller alone.
+    def render_superseded_push_login
+      login_poll_response(:no_content) { render_login_panel }
     end
 
     def render_superseded_qr_login
