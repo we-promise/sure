@@ -26,6 +26,8 @@ class NormalizeTradeRepublicActivityLabels < ActiveRecord::Migration[8.1]
 
   def up
     TARGETS.each do |key, (investment_label, other_label)|
+      clear_listed_labels(key, other_label)
+
       stale = translations_for(key) - Transaction::ACTIVITY_LABELS
       next if stale.empty?
 
@@ -43,8 +45,6 @@ class NormalizeTradeRepublicActivityLabels < ActiveRecord::Migration[8.1]
           AND NOT (COALESCE(transactions.locked_attributes, '{}'::jsonb) ? 'investment_activity_label')
           AND transactions.investment_activity_label IN (:stale)
       SQL
-
-      clear_listed_labels(key, investment_label, other_label)
     end
   end
 
@@ -54,7 +54,7 @@ class NormalizeTradeRepublicActivityLabels < ActiveRecord::Migration[8.1]
 
   private
 
-    def clear_listed_labels(key, investment_label, other_label)
+    def clear_listed_labels(key, other_label)
       listed = translations_for(key) & Transaction::ACTIVITY_LABELS
       return if other_label || listed.empty?
 
