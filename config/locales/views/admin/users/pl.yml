@@ -1,53 +1,140 @@
 ---
 pl:
   admin:
+    families:
+      destroy:
+        family_has_active_subscription: Rodzina/grupa ma aktywną subskrypcję i nie
+          można jej usunąć, dopóki subskrypcja nie zostanie anulowana.
+        family_has_users: Rodzina/grupa nadal ma użytkowników i nie można jej usunąć.
+        success: Rodzina/grupa została usunięta.
     users:
+      deletion:
+        cancel: Anuluj
+        email_label: E-mail użytkownika
+        instruction: Wpisz %{email}, aby potwierdzić.
+        submit: Trwale usuń użytkownika
+        title: Trwale usuń użytkownika
+        warning: To natychmiast odbiera dostęp i planuje trwałe usunięcie użytkownika
+          oraz jego danych. Tej operacji nie można cofnąć.
+      destroy:
+        cannot_remove_last_super_admin: Nie można usunąć ostatniego aktywnego super
+          administratora.
+        cannot_remove_self: Nie możesz stąd usunąć własnego konta.
+        confirmation_mismatch: Adres e-mail się nie zgadza. Użytkownik nie został
+          usunięty.
+        failure: Nie udało się usunąć użytkownika.
+        success: Dostęp użytkownika odebrano, zaplanowano trwałe usunięcie.
       index:
-        title: Zarządzanie użytkownikami
-        description: Zarządzaj rolami użytkowników w swojej instancji. Superadministratorzy mają dostęp do ustawień dostawców SSO i zarządzania użytkownikami.
-        section_title: Rodziny / Grupy
-        you: "(Ty)"
-        trial_ends_at: Koniec okresu próbnego
-        not_available: brak danych
-        no_users: Nie znaleziono użytkowników.
-        unnamed_family: Nienazwana rodzina/grupa
-        no_subscription: Brak subskrypcji
-        family_summary: "%{members} członków · %{accounts} kont · %{transactions} transakcji"
+        actions:
+          delete_user: Usuń użytkownika
+          last_super_admin_role_locked: Zmiana roli jest zablokowana, ponieważ jesteś
+            ostatnim super administratorem w systemie.
+          manage_user: Zarządzaj użytkownikiem
+          self_edit_warning: Zmiana własnej roli zmieni Twoje uprawnienia administracyjne.
+          self_update_confirm: Czy na pewno chcesz zmienić rolę lub rodzinę/grupę
+            własnego konta?
+          update: Zaktualizuj użytkownika
+        auth_types:
+          local: Lokalne
+          local_and_sso: Lokalne + SSO
+          sso: SSO
+          sso_provider_tooltip: 'Dostawca SSO: %{providers}'
+        delete_confirm: Czy na pewno chcesz usunąć tego użytkownika? Tej operacji
+          nie można cofnąć.
+        delete_confirm_last_user: Czy na pewno chcesz usunąć tego użytkownika? To
+          ostatni użytkownik w tej rodzinie/grupie, więc jego usunięcie usunie też
+          całą rodzinę/grupę i wszystkie powiązane dane. Tej operacji nie można cofnąć.
+        description: Zarządzaj rolami użytkowników w swojej instancji. Superadministratorzy
+          mają dostęp do ustawień dostawców SSO i zarządzania użytkownikami.
+        family_monikers:
+          family: Rodzina
+          group: Grupa
+        family_summary: 'Członkowie: %{members} · Konta: %{accounts} · Transakcje:
+          %{transactions}'
         filters:
           role: Rola
           role_all: Wszystkie role
-          trial_status: Status okresu próbnego
+          submit: Filtruj
           trial_all: Wszystkie
           trial_expiring_soon: Wygasa za 7 dni
+          trial_status: Status okresu próbnego
           trial_trialing: W okresie próbnym
-          submit: Filtruj
+        invitations:
+          delete: Usuń
+          delete_all: Usuń wszystkie
+          expires: Wygasa %{date}
+          pending_label: Zaproszony (oczekuje)
+        no_subscription: Brak subskrypcji
+        no_users: Nie znaleziono użytkowników.
+        not_available: brak danych
+        remove: Usuń użytkownika
+        removed_sso_identities:
+          allow_again: Zezwól ponownie
+          confirm: Czy ponownie zezwolić na logowanie się lub zakładanie konta przez
+            SSO dla użytkownika %{email}?
+          description: Te tożsamości nie mogą założyć ani ponownie połączyć konta.
+            Zezwól ponownie tylko wtedy, gdy usunięcie było przypadkowe.
+          title: Usunięte tożsamości SSO
+        role_descriptions:
+          admin: Administrator rodziny. Ma dostęp do ustawień zaawansowanych, takich
+            jak klucze API, importy i prompty AI.
+          guest: Tryb skupiony na Asystencie z celowo ograniczonymi uprawnieniami
+            dla przepływów wprowadzających.
+          member: Podstawowy dostęp użytkownika. Może zarządzać własnymi kontami,
+            transakcjami i ustawieniami.
+          super_admin: Administrator instancji. Może zarządzać dostawcami SSO, rolami
+            użytkowników i wcielać się w użytkowników na potrzeby wsparcia.
+        role_descriptions_title: Opisy ról
+        roles:
+          admin: Administrator
+          guest: Gość
+          member: Członek
+          super_admin: Superadministrator
+        section_title: Rodziny / Grupy
         summary:
           trials_expiring_7_days: Okresy próbne wygasające w ciągu 7 dni
         table:
-          user: Użytkownik
-          trial_ends_at: Koniec okresu próbnego
+          actions: Akcje
+          create_new_family_option: "+ Utwórz nową rodzinę/grupę"
+          family: Rodzina / grupa
           family_accounts: Konta rodziny
           family_transactions: Transakcje rodziny
+          keep_current_family: Zachowaj obecną rodzinę/grupę
           last_login: Ostatnie logowanie
-          session_count: Liczba sesji
           never: Nigdy
+          new_family_moniker: Typ nowej rodziny/grupy
+          new_family_name: Nazwa nowej rodziny/grupy
+          new_family_name_placeholder: Wpisz nazwę, aby utworzyć nową rodzinę/grupę
+          password_placeholder: Zostaw puste, aby zachować obecne
           role: Rola
-        role_descriptions_title: Opisy ról
-        roles:
-          guest: Gość
-          member: Członek
-          admin: Administrator
-          super_admin: Superadministrator
-        role_descriptions:
-          guest: Tryb skupiony na Asystencie z celowo ograniczonymi uprawnieniami dla przepływów wprowadzających.
-          member: Podstawowy dostęp użytkownika. Może zarządzać własnymi kontami, transakcjami i ustawieniami.
-          admin: Administrator rodziny. Ma dostęp do ustawień zaawansowanych, takich jak klucze API, importy i prompty AI.
-          super_admin: Administrator instancji. Może zarządzać dostawcami SSO, rolami użytkowników i wcielać się w użytkowników na potrzeby wsparcia.
-        invitations:
-          pending_label: Zaproszony (oczekuje)
-          expires: Wygasa %{date}
-          delete: Usuń
-          delete_all: Usuń wszystkie
+          session_count: Liczba sesji
+          set_password: Ustaw nowe hasło
+          trial_ends_at: Koniec okresu próbnego
+          user: Użytkownik
+        title: Zarządzanie użytkownikami
+        trial_ends_at: Koniec okresu próbnego
+        unnamed_family: Nienazwana rodzina/grupa
+        unused_families:
+          delete: Usuń nieużywaną rodzinę
+          delete_confirm: Czy na pewno chcesz usunąć tę nieużywaną rodzinę/grupę?
+            Tej operacji nie można cofnąć.
+          empty: Nie znaleziono nieużywanych rodzin/grup.
+          family_id: 'ID rodziny: %{id}'
+          title: Nieużywane rodziny / grupy
+        you: "(Ty)"
       update:
-        success: Rola użytkownika została pomyślnie zaktualizowana.
         failure: Nie udało się zaktualizować roli użytkownika.
+        family_required: Wybierz istniejącą rodzinę/grupę albo wpisz nazwę nowej.
+        last_super_admin_error: Nie można zdegradować ostatniego super administratora
+          w systemie.
+        password_and_family_conflict: Nie można jednocześnie zaktualizować hasła i
+          przynależności do rodziny/grupy.
+        password_missing_case: Hasło musi zawierać zarówno wielkie, jak i małe litery.
+        password_missing_number: Hasło musi zawierać co najmniej jedną cyfrę.
+        password_missing_special: Hasło musi zawierać co najmniej jeden znak specjalny.
+        password_too_short: Hasło musi mieć co najmniej 8 znaków.
+        success: Rola użytkownika została pomyślnie zaktualizowana.
+        success_family: Przynależność użytkownika do rodziny/grupy została zaktualizowana.
+        success_password: Hasło użytkownika zostało zaktualizowane.
+        success_role: Rola użytkownika została zaktualizowana.
+        success_role_and_password: Rola i hasło użytkownika zostały zaktualizowane.

@@ -2,29 +2,54 @@
 pl:
   transfers:
     create:
+      date_invalid: jest nieprawidłowa
+      exchange_rate_unavailable: Kurs wymiany niedostępny dla wybranych walut i daty
+      stale_form: Ten formularz został już wysłany z innymi danymi. Odśwież stronę
+        i spróbuj ponownie.
       success: Przelew został utworzony
     destroy:
       success: Przelew został usunięty
     form:
       amount: Kwota
+      bank_charges: Opłaty bankowe
       date: Data
+      destination_amount: Kwota docelowa
+      destination_amount_display: 'Kwota docelowa: %{amount}'
+      exchange_rate_display: 'Kurs wymiany: %{rate}'
       expense: Wydatek
       from: Z
       income: Przychód
+      incoming_fee: Opłata za przelew przychodzący
+      outgoing_fee: Opłata za przelew wychodzący
       select_account: Wybierz konto
+      source_amount: Kwota źródłowa
       submit: Utwórz przelew
       to: Do
       transfer: Przelew
     new:
       title: Nowy przelew
     show:
+      bank_charges: Opłaty bankowe
+      category: Kategoria
+      date: Data
       delete: Usuń przelew
       delete_subtitle: Ta operacja usuwa przelew. Nie usunie transakcji źródłowych.
       delete_title: Usunąć przelew?
+      destination_fee: Opłata docelowa
       details: Szczegóły
+      from: Z
+      mark_recurring: Oznacz jako cykliczny
+      mark_recurring_subtitle: Śledź ten przelew jako powtarzający się wzorzec w nadchodzących
+        wydarzeniach i na stronie cykliczności.
+      mark_recurring_title: Oznacz przelew jako cykliczny
       note_label: Notatki
       note_placeholder: Dodaj notatkę do tego przelewu
       overview: Przegląd
       settings: Ustawienia
+      source_fee: Opłata źródłowa
+      to: Do
+      total: Razem
+      transfer_amount: Kwota przelewu
+      uncategorized: Bez kategorii
     update:
       success: Przelew został zaktualizowany

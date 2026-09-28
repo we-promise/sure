@@ -36,13 +36,18 @@ module AccountsHelper
       end
 
     [
-      family.build_cache_key("account_sidebar_tabs_v2", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v3", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
       active_tab,
       mobile,
       I18n.locale,
-      sidebar_active_account_id
+      sidebar_active_account_id,
+      # Fold the per-user "start expanded by default" preference into the key
+      # so toggling it in Settings busts the 12h fragment cache immediately
+      # (this partial renders with skip_digest: true, so the template digest
+      # would not otherwise reflect the change).
+      Current.user&.always_expanded_account_groups&.sort
     ]
   end
 end
