@@ -287,7 +287,7 @@ class Settings::ProvidersController < ApplicationController
       when "trading212"
         @trading212_items = Current.family.trading212_items.ordered
       when "trade_republic"
-        @trade_republic_items = Current.family.trade_republic_items.ordered
+        @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
       when "indexa_capital"
         @indexa_capital_items = Current.family.indexa_capital_items.ordered
       when "sophtron"
@@ -323,7 +323,7 @@ class Settings::ProvidersController < ApplicationController
       @snaptrade_items = Current.family.snaptrade_items.ordered
       @ibkr_items = Current.family.ibkr_items.ordered.select(:id)
       @trading212_items = Current.family.trading212_items.ordered
-      @trade_republic_items = Current.family.trade_republic_items.ordered.select(:id)
+      @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered

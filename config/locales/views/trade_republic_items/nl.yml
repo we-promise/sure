@@ -6,6 +6,7 @@ nl:
       connection_description: "Verbind een Trade Republic-beleggingsrekening via een veilige webaanmelding"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Deze Trade Republic-rekening is al gekoppeld. De nieuwe koppeling is verwijderd."
     portfolio_categories:
       brokerage: "Brokeragerekening"
       private_markets: "Privémarkten"
