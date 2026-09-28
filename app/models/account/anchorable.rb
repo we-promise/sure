@@ -41,10 +41,17 @@ module Account::Anchorable
   def ensure_opening_anchor_precedes_entries
     return unless has_opening_anchor? && opening_anchor_balance.zero?
 
-    oldest = entries.where.not(entryable_type: "Valuation").minimum(:date)
+    # Every entry but the anchor itself, which is how the manager decides
+    # whether a date is early enough. Skipping valuations wholesale instead
+    # would pick a date it then rejects, leaving the anchor where it was.
+    anchor_entry_id = valuations.opening_anchor.first&.entry&.id
+    oldest = entries.where.not(id: anchor_entry_id).minimum(:date)
     return if oldest.nil? || opening_anchor_date < oldest
 
-    opening_balance_manager.set_opening_balance(balance: opening_anchor_balance, date: oldest.prev_day)
+    result = opening_balance_manager.set_opening_balance(balance: opening_anchor_balance, date: oldest.prev_day)
+    raise result.error if result.error
+
+    result
   end
 
   def history_start_date
