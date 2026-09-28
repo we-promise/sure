@@ -47,7 +47,7 @@
         </span>
 
         <%= form.number_field amount_method,
-          class: "form-field__input",
+          class: class_names("form-field__input", options[:input_class]),
           inline: true,
           placeholder: "100",
           value: if options[:value]

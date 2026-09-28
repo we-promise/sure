@@ -149,6 +149,16 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_select "label[for=amount]", text: /#{I18n.t("goals.consume.amount_label")}/
   end
 
+  # Both figures in the dialog blur under privacy mode, as they do on the goal
+  # page. The amount also stays clickable: it is the one field the reader fills.
+  test "the consumption dialog blurs its figures under privacy mode and the amount stays editable" do
+    get consume_goal_url(@goal)
+
+    assert_response :success
+    assert_select "input[name=amount].form-field__input.privacy-sensitive.privacy-sensitive-interactive"
+    assert_select "p.privacy-sensitive", text: /is currently backing this goal/
+  end
+
   test "consumption is refused against a linked account the viewer cannot see" do
     private_account = private_linked_account
     link = @goal.goal_accounts.find_by(account_id: private_account.id)
