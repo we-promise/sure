@@ -22,14 +22,14 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     @tr_account.reload
   end
 
-  test "buy is imported as a trade with negative amount, never as spending income" do
+  test "buy is imported as a trade that spends cash, never as spending income" do
     import_event(order_execution_detail(quantity: "13.439945", isin: "US0378331005", amount: "2472.14"))
 
     trade = find_trade("trade_republic_event_evt_buy")
     assert_not_nil trade
     assert_equal BigDecimal("13.439945"), trade.entryable.qty
     assert_equal "Buy", trade.entryable.investment_activity_label
-    assert_equal BigDecimal("-2472.14"), trade.amount
+    assert_equal BigDecimal("2472.14"), trade.amount
   end
 
   test "fractional quantity retains exact precision" do
@@ -163,7 +163,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not @account.holdings.where(security: isin_security).exists?
   end
 
-  test "sell imports negative quantity and positive amount" do
+  test "sell imports negative quantity and a cash inflow amount" do
     import_event(order_execution_detail(
       event_id: "evt_sell",
       quantity: "-2.500000",
@@ -175,7 +175,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not_nil trade
     assert_equal BigDecimal("-2.5"), trade.entryable.qty
     assert_equal "Sell", trade.entryable.investment_activity_label
-    assert_equal BigDecimal("459.85"), trade.amount
+    assert_equal BigDecimal("-459.85"), trade.amount
   end
 
   test "trade derives a missing amount from quantity and price" do
@@ -189,7 +189,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     trade = find_trade("trade_republic_event_evt_price_only")
     assert_not_nil trade
     assert_equal BigDecimal("184.00"), trade.entryable.price
-    assert_equal BigDecimal("-460.00"), trade.amount
+    assert_equal BigDecimal("460.00"), trade.amount
   end
 
   test "syncing the same events twice creates no duplicates" do
@@ -373,7 +373,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     trade = find_trade("trade_republic_event_evt_buy")
     assert_equal BigDecimal("511.96"), trade.entryable.price
     assert_equal BigDecimal("1.00"), trade.entryable.fee
-    assert_equal BigDecimal("-1024.92"), trade.amount
+    assert_equal BigDecimal("1024.92"), trade.amount
     assert_equal "1.00", trade.entryable.extra.dig("trade_republic", "fees")
   end
 
@@ -403,7 +403,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not_nil trade
     assert_equal BigDecimal("511.96"), trade.entryable.price
     assert_equal BigDecimal("1.00"), trade.entryable.fee
-    assert_equal BigDecimal("1022.92"), trade.amount
+    assert_equal BigDecimal("-1022.92"), trade.amount
     assert_equal "Sell", trade.entryable.investment_activity_label
   end
 
@@ -418,7 +418,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     trade = find_trade("trade_republic_event_evt_sell_derive")
     assert_equal BigDecimal("511.96"), trade.entryable.price
     assert_equal BigDecimal("1.00"), trade.entryable.fee
-    assert_equal BigDecimal("1022.92"), trade.amount
+    assert_equal BigDecimal("-1022.92"), trade.amount
   end
 
   test "buy and sell fallbacks include taxes alongside fees" do
@@ -434,7 +434,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     buy = find_trade("trade_republic_event_evt_buy_tax")
     assert_equal BigDecimal("511.96"), buy.entryable.price
     assert_equal BigDecimal("1.00"), buy.entryable.fee
-    assert_equal BigDecimal("-1025.42"), buy.amount # 2*511.96 + 1 + 0.50
+    assert_equal BigDecimal("1025.42"), buy.amount # 2*511.96 + 1 + 0.50
 
     import_event(order_execution_detail(
       event_id: "evt_sell_tax",
@@ -447,7 +447,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     # Sell cash 1022.42 = gross - fee - tax → price (1022.42+1.50)/2
     assert_equal BigDecimal("511.96"), sell.entryable.price
     assert_equal BigDecimal("1.00"), sell.entryable.fee
-    assert_equal BigDecimal("1022.42"), sell.amount
+    assert_equal BigDecimal("-1022.42"), sell.amount
   end
 
   test "reprocessing updates fee and share price on an existing trade" do
@@ -553,7 +553,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Trade", trade.entryable_type
     assert_equal BigDecimal("0.09329"), trade.entryable.qty
     assert_equal "Buy", trade.entryable.investment_activity_label
-    assert_equal BigDecimal("-3.74"), trade.amount
+    assert_equal BigDecimal("3.74"), trade.amount
     assert_equal "SAVEBACK_AGGREGATE", trade.entryable.extra.dig("trade_republic", "event_type")
 
     assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_saveback")
@@ -573,7 +573,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not_nil trade
     assert_equal "Trade", trade.entryable_type
     assert_equal BigDecimal("0.009977"), trade.entryable.qty
-    assert_equal BigDecimal("-0.40"), trade.amount
+    assert_equal BigDecimal("0.40"), trade.amount
     assert_equal "SPARE_CHANGE_AGGREGATE", trade.entryable.extra.dig("trade_republic", "event_type")
 
     cash_entry = Entry.find_by(account: cash_sure, external_id: "trade_republic_event_evt_round_up")
@@ -584,6 +584,10 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "investment_contribution", cash_entry.transaction.kind
     assert_nil cash_entry.transaction.category_id
     assert_equal "SPARE_CHANGE_AGGREGATE", cash_entry.transaction.extra.dig("trade_republic", "event_type")
+
+    counterpart = @account.entries.find_by!(external_id: "trade_republic_settlement_evt_round_up")
+    assert_equal BigDecimal("-0.40"), counterpart.amount
+    assert_equal counterpart.transaction, cash_entry.transaction.transfer.inflow_transaction
   end
 
   test "round up and saveback remain idempotent across repeated processing" do
@@ -785,8 +789,8 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
     TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
 
-    assert_equal BigDecimal("-1024.92"), find_trade("trade_republic_event_evt_settle_buy").amount
-    assert_equal 0, @account.entries.where(entryable_type: "Transaction").count
+    assert_equal BigDecimal("1024.92"), find_trade("trade_republic_event_evt_settle_buy").amount
+    assert_equal 2, @account.entries.where(entryable_type: "Transaction").count
 
     buy_cash = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_settle_buy")
     assert_equal BigDecimal("1024.92"), buy_cash.amount
@@ -801,9 +805,68 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "funds_movement", sell_cash.transaction.kind
     assert_nil sell_cash.transaction.category_id
 
-    assert_no_difference -> { cash_sure.entries.count } do
+    buy_counterpart = @account.entries.find_by!(external_id: "trade_republic_settlement_evt_settle_buy")
+    assert_equal BigDecimal("-1024.92"), buy_counterpart.amount
+    assert_equal buy_cash.date, buy_counterpart.date
+    assert_equal "Transfer from #{cash_sure.name}", buy_counterpart.name
+    assert_equal "funds_movement", buy_counterpart.transaction.kind
+    assert_equal "Transfer", buy_counterpart.transaction.investment_activity_label
+    buy_transfer = buy_cash.transaction.transfer
+    assert buy_transfer.confirmed?
+    assert_equal buy_counterpart.transaction, buy_transfer.inflow_transaction
+    assert_equal buy_cash.transaction, buy_transfer.outflow_transaction
+
+    sell_counterpart = @account.entries.find_by!(external_id: "trade_republic_settlement_evt_settle_sell")
+    assert_equal BigDecimal("529.0"), sell_counterpart.amount
+    assert_equal "Transfer to #{cash_sure.name}", sell_counterpart.name
+    sell_transfer = sell_cash.transaction.transfer
+    assert_equal sell_cash.transaction, sell_transfer.inflow_transaction
+    assert_equal sell_counterpart.transaction, sell_transfer.outflow_transaction
+
+    # Each trade's cash impact is offset by its counterpart, so the
+    # portfolio's own cash stays at zero.
+    assert_equal 0, @account.entries.sum(:amount)
+
+    assert_no_difference [ -> { cash_sure.entries.count }, -> { @account.entries.count }, -> { Transfer.count } ] do
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
       TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
     end
+    assert_equal buy_transfer, buy_cash.transaction.reload.transfer
+  end
+
+  test "settlement counterpart is removed with its trade and never relinked after the user unlinks it" do
+    cash_account, cash_sure = create_linked_cash_account!
+    buy = order_execution_detail(event_id: "evt_counterpart", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")
+    @tr_account.update!(raw_timeline_payload: [ buy ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    cash_entry = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_counterpart")
+    counterpart = @account.entries.find_by!(external_id: "trade_republic_settlement_evt_counterpart")
+
+    cash_entry.transaction.transfer.reject!
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    assert_nil cash_entry.transaction.reload.transfer
+    assert_nil counterpart.transaction.reload.transfer
+
+    @tr_account.update!(raw_timeline_payload: [ buy.merge(deleted: true) ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_not @account.entries.exists?(external_id: "trade_republic_settlement_evt_counterpart")
+    assert_not cash_sure.entries.exists?(external_id: "trade_republic_event_evt_counterpart")
+  end
+
+  test "cash settlement without a portfolio trade books no counterpart" do
+    cash_account, cash_sure = create_linked_cash_account!
+    buy = order_execution_detail(event_id: "evt_no_trade", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")
+    @tr_account.update!(raw_timeline_payload: [ buy ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    cash_entry = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_no_trade")
+    assert_nil cash_entry.transaction.transfer
+    assert_not @account.entries.exists?(external_id: "trade_republic_settlement_evt_no_trade")
   end
 
   test "cash settlement is skipped when the trade direction is unknown" do
@@ -997,7 +1060,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Trade", trade.entryable_type
     assert_equal BigDecimal("0.25"), trade.entryable.qty
     assert_equal "Buy", trade.entryable.investment_activity_label
-    assert_equal BigDecimal("-25.00"), trade.amount
+    assert_equal BigDecimal("25.00"), trade.amount
     assert_equal "SAVINGS_PLAN_INVOICE_CREATED", trade.entryable.extra.dig("trade_republic", "event_type")
 
     cash_entry = Entry.find_by!(account: cash_sure, external_id: "trade_republic_event_evt_savings_plan")
@@ -1077,7 +1140,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     trade = find_trade("trade_republic_event_evt_savings_plan")
     assert_not_nil trade
     assert_equal BigDecimal("0.25"), trade.entryable.qty
-    assert_equal BigDecimal("-25.00"), trade.amount
+    assert_equal BigDecimal("25.00"), trade.amount
   end
 
   test "executed card payments import while declined cards are skipped" do

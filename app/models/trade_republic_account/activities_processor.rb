@@ -14,6 +14,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     "round_up" => "Buy"
   }.freeze
   CASH_UNLABELED_KEYS = %w[contribution withdrawal].freeze
+  SETTLEMENT_COUNTERPART_PREFIX = "trade_republic_settlement_"
 
   def initialize(trade_republic_account, exchange_securities: {})
     @trade_republic_account = trade_republic_account
@@ -51,6 +52,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     reconcile_split_portfolio_transactions!
     reconcile_stale_saveback_cash_transactions!
     reconcile_non_importable_entries!
+    reconcile_settlement_counterparts!
 
     { trades: trade_count, transactions: transaction_count }
   end
@@ -173,7 +175,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       if @trade_republic_account.portfolio?
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       else
-        import_labeled_cash_movement(event, detail, external_id, date, "round_up", sign: 1, kind: "investment_contribution")
+        import_labeled_cash_movement(event, detail, external_id, date, "round_up", sign: 1, kind: "investment_contribution", settles_trade: true)
       end
     end
 
@@ -260,7 +262,8 @@ class TradeRepublicAccount::ActivitiesProcessor
       end
       return false unless amount && !amount.zero?
 
-      signed_amount = is_buy ? -amount.abs : amount.abs
+      # Sure trade amounts are cash impact: buys spend cash, sells return it.
+      signed_amount = is_buy ? amount.abs : -amount.abs
       if price.nil?
         # Provider totals include costs: buy total = gross + costs, sell total =
         # gross - costs. Recover share price from the cash amount accordingly.
@@ -329,20 +332,22 @@ class TradeRepublicAccount::ActivitiesProcessor
         label: outflow ? "Buy" : "Sell",
         activity_label: outflow ? "Buy" : "Sell",
         sign: outflow ? 1 : -1,
-        kind: outflow ? "investment_contribution" : "funds_movement"
+        kind: outflow ? "investment_contribution" : "funds_movement",
+        settles_trade: true
       )
     end
 
     # The label key names the entry (in the sync's locale) when Trade Republic
     # sends no title, and picks the stored activity label.
-    def import_labeled_cash_movement(event, detail, external_id, date, label_key, sign:, kind: nil)
+    def import_labeled_cash_movement(event, detail, external_id, date, label_key, sign:, kind: nil, settles_trade: false)
       import_cash_movement(
         event, detail, external_id, date,
-        label: t(label_key), activity_label: activity_label_for(label_key), sign: sign, kind: kind
+        label: t(label_key), activity_label: activity_label_for(label_key), sign: sign, kind: kind,
+        settles_trade: settles_trade
       ) ? :transaction : nil
     end
 
-    def import_cash_movement(event, detail, external_id, date, label:, activity_label:, sign:, kind: nil)
+    def import_cash_movement(event, detail, external_id, date, label:, activity_label:, sign:, kind: nil, settles_trade: false)
       amount = parse_decimal(detail[:amount])
       return false unless amount && !amount.zero?
 
@@ -376,8 +381,54 @@ class TradeRepublicAccount::ActivitiesProcessor
         }
       )
       reset_legacy_cash_kind!(entry, event, legacy_kind) if legacy_kind
+      link_settlement_counterpart!(entry) if settles_trade
 
       true
+    end
+
+    # The portfolio account holds no cash: Trade Republic settles every trade
+    # on the cash account. Each trade still moves the portfolio's cash in
+    # Sure, so book the opposite leg there and link both legs as a transfer.
+    # The portfolio's cash then nets to zero per trade, and the settlement
+    # shows which account the money went to. Without the portfolio trade the
+    # counterpart would itself leave cash on the portfolio, so it waits for
+    # the trade.
+    def link_settlement_counterpart!(cash_entry)
+      cash_transaction = cash_entry&.entryable
+      return unless cash_transaction.is_a?(Transaction)
+
+      portfolio_account = linked_portfolio_account
+      return unless portfolio_account && portfolio_trade_present?(portfolio_account, cash_entry.external_id)
+
+      counterpart = portfolio_import_adapter(portfolio_account).import_transaction(
+        external_id: settlement_counterpart_external_id(cash_entry.external_id),
+        amount: -cash_entry.amount,
+        currency: cash_entry.currency,
+        date: cash_entry.date,
+        name: cash_entry.amount.positive? ? "Transfer from #{account.name}" : "Transfer to #{account.name}",
+        source: "trade_republic",
+        kind: "funds_movement",
+        investment_activity_label: "Transfer",
+        allow_heuristic_matching: false,
+        extra: { trade_republic: { settlement_for: cash_entry.external_id } }
+      )
+      counterpart_transaction = counterpart&.entryable
+      return unless counterpart_transaction.is_a?(Transaction)
+
+      inflow, outflow = cash_entry.amount.positive? ? [ counterpart_transaction, cash_transaction ] : [ cash_transaction, counterpart_transaction ]
+      return if inflow.transfer.present? || outflow.transfer.present?
+      # A user who unlinked the pair keeps it unlinked.
+      return if RejectedTransfer.exists?(inflow_transaction_id: inflow.id, outflow_transaction_id: outflow.id)
+
+      Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+    end
+
+    def portfolio_import_adapter(portfolio_account)
+      @portfolio_import_adapter ||= Account::ProviderImportAdapter.new(portfolio_account)
+    end
+
+    def settlement_counterpart_external_id(settlement_external_id)
+      settlement_external_id.sub(/\Atrade_republic_event_/, SETTLEMENT_COUNTERPART_PREFIX)
     end
 
     # Stored as fixed Transaction::ACTIVITY_LABELS values: budgets, the import
@@ -558,7 +609,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
         # Keep the legacy cash row until the portfolio trade is present so an
         # incomplete Saveback detail cannot open a ledger gap.
-        unless portfolio_saveback_trade_present?(portfolio_account, entry.external_id)
+        unless portfolio_trade_present?(portfolio_account, entry.external_id)
           skipped_count += 1
           DebugLogEntry.capture(
             category: "sync",
@@ -610,10 +661,53 @@ class TradeRepublicAccount::ActivitiesProcessor
       portfolio_account
     end
 
-    def portfolio_saveback_trade_present?(portfolio_account, external_id)
+    def portfolio_trade_present?(portfolio_account, external_id)
       portfolio_account.entries
         .where(source: "trade_republic", entryable_type: "Trade", external_id: external_id)
         .exists?
+    end
+
+    # Runs last, after this run removed stale cash entries and the portfolio
+    # run removed stale trades: a counterpart without both would put cash on
+    # the portfolio again.
+    def reconcile_settlement_counterparts!
+      return unless @trade_republic_account.cash?
+
+      portfolio_account = linked_portfolio_account
+      return unless portfolio_account
+
+      settlement_ids = account.entries
+        .where(source: "trade_republic", entryable_type: "Transaction")
+        .pluck(:external_id)
+      trade_ids = portfolio_account.entries
+        .where(source: "trade_republic", entryable_type: "Trade")
+        .pluck(:external_id)
+      linked_ids = (settlement_ids & trade_ids).map { |id| settlement_counterpart_external_id(id) }
+
+      stale_entries = portfolio_account.entries
+        .where(source: "trade_republic", entryable_type: "Transaction")
+        .where("external_id LIKE ?", "#{ActiveRecord::Base.sanitize_sql_like(SETTLEMENT_COUNTERPART_PREFIX)}%")
+        .where.not(external_id: linked_ids)
+
+      removed_count = 0
+      stale_entries.find_each do |entry|
+        next if entry.protected_from_sync?
+
+        entry.destroy!
+        removed_count += 1
+      end
+      return unless removed_count.positive?
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Removed #{removed_count} Trade Republic settlement counterpart(s) without a settlement or trade",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
+        account: portfolio_account,
+        metadata: { trade_republic_account_id: @trade_republic_account.id, removed_count: removed_count }
+      )
     end
 
     # Remove previously imported entries whose upstream events are now deleted,
