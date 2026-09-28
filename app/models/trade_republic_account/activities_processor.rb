@@ -115,9 +115,21 @@ class TradeRepublicAccount::ActivitiesProcessor
       Array(@trade_republic_account.sibling("portfolio")&.raw_timeline_payload)
     end
 
+    # Matches the positions the Crypto account holds: an XF000 pseudo-ISIN,
+    # or the ISIN of a position Trade Republic lists under crypto.
     def crypto_event?(event)
       detail = event[:detail]
-      detail.is_a?(Hash) && TradeRepublicAccount.crypto_isin?(detail.with_indifferent_access[:isin])
+      return false unless detail.is_a?(Hash)
+
+      isin = detail.with_indifferent_access[:isin].to_s
+      TradeRepublicAccount.crypto_isin?(isin) || crypto_position_isins.include?(isin)
+    end
+
+    def crypto_position_isins
+      @crypto_position_isins ||= Array(@trade_republic_account.sibling("portfolio")&.raw_positions_payload)
+        .select { |position| TradeRepublicAccount.crypto_position?(position) }
+        .filter_map { |position| position.with_indifferent_access[:isin].to_s.presence }
+        .to_set
     end
 
     # Saveback and Round Up stay classified as POC_CREATED at the client

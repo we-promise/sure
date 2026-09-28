@@ -850,6 +850,20 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not crypto_sure.entries.exists?
   end
 
+  test "trades of a position listed under crypto go to the Crypto account whatever its ISIN" do
+    @tr_account.update!(raw_positions_payload: [
+      { "isin" => "XS0000000001", "name" => "Some Coin", "category" => "crypto_wallet", "quantity" => "1", "price" => "10" }
+    ])
+    coin = order_execution_detail(event_id: "evt_coin", quantity: "1", isin: "XS0000000001", amount: "10.00")
+    @tr_account.update!(raw_timeline_payload: [ coin ])
+
+    crypto_account, crypto_sure = create_linked_crypto_account!
+    process_all(@tr_account, crypto_account)
+
+    assert_not find_trade("trade_republic_event_evt_coin")
+    assert crypto_sure.entries.exists?(external_id: "trade_republic_event_evt_coin")
+  end
+
   test "crypto trades stay on the portfolio while the Crypto account is unlinked" do
     @item.trade_republic_accounts.create!(name: "Crypto", kind: "crypto", trade_republic_account_id: "crypto:DEPROC1", currency: "EUR")
 
