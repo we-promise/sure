@@ -36,7 +36,14 @@ class Account::CurrentBalanceManager
   # today by design.
   def set_current_balance(balance, date: nil)
     if account.linked?
-      result = set_current_balance_for_linked_account(balance, date || Date.current)
+      target_date = date || Date.current
+
+      # A statement older than the anchor already holds is a correction to a day
+      # gone by, not the balance now: it is recorded on its own date and the
+      # newer anchor, with the newer figure, is left where it stands.
+      return record_historical_balance(balance, target_date) if anchor_newer_than?(target_date)
+
+      result = set_current_balance_for_linked_account(balance, target_date)
     else
       result = set_current_balance_for_manual_account(balance)
     end
@@ -100,12 +107,28 @@ class Account::CurrentBalanceManager
     # Before overwriting a stale (previous-day) current_anchor, we convert it to a
     # reconciliation valuation. This preserves the API-reported balance as a historical
     # waypoint that the ReverseCalculator uses for more accurate balance history.
+    def anchor_newer_than?(date)
+      current_anchor_valuation.present? && current_anchor_valuation.entry.date > date
+    end
+
+    # The account's balance as of now is unchanged, so the cache is not touched.
+    def record_historical_balance(balance, date)
+      result = reconciliation_manager.reconcile_balance(
+        balance: balance,
+        date: date,
+        existing_valuation_entry: account.entries.valuations.find_by(date: date)
+      )
+
+      Result.new(success?: result.success?, changes_made?: result.success?, error: result.error_message)
+    end
+
     def set_current_balance_for_linked_account(balance, date)
       changes_made = false
 
       ActiveRecord::Base.transaction do
-        # If an anchor exists from an earlier day, preserve it as a reconciliation
-        # before replacing it with the fresh one.
+        # Only a statement that moves the balance forward leaves the previous
+        # anchor behind as a reconciliation. One carrying the anchor's own date
+        # is that same anchor restated, so it is updated rather than duplicated.
         preserve_anchor_as_reconciliation_if_stale(date) if current_anchor_valuation
 
         # Re-check: the memoized value was cleared if the anchor was converted

@@ -222,6 +222,29 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     assert_equal 1000, entry.amount
   end
 
+  # A statement older than the anchor is a correction to a day gone by. It is
+  # recorded on that day, and the newer anchor -- with the newer figure, and the
+  # balance the account reports -- is left alone. This also covers an account
+  # whose anchor is still dated by the day it was written: that anchor keeps its
+  # date until a statement catches up with it, and is corrected in place then.
+  test "a statement older than the anchor is recorded on its own date" do
+    manager = Account::CurrentBalanceManager.new(@linked_account)
+    manager.set_current_balance(2000)
+    anchor_id = @linked_account.valuations.current_anchor.first.id
+
+    manager.set_current_balance(1000, date: Date.current - 1.day)
+
+    anchor = @linked_account.valuations.current_anchor.first
+    assert_equal anchor_id, anchor.id, "the newer anchor must survive"
+    assert_equal Date.current, anchor.entry.date
+    assert_equal 2000, anchor.entry.amount
+    assert_equal 2000, @linked_account.reload.balance, "the cached balance must not go backwards"
+
+    older = @linked_account.entries.valuations.find_by(date: Date.current - 1.day)
+    assert_not_nil older, "the older statement is kept where it belongs"
+    assert_equal 1000, older.amount
+  end
+
   # Two statements carrying the same date are one anchor, not an anchor and a
   # reconciliation sitting on the same day.
   test "a repeated statement date updates the anchor in place" do
