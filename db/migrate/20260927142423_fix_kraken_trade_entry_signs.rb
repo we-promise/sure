@@ -21,11 +21,11 @@
 # not depend on this migration having run to completion.
 class FixKrakenTradeEntrySigns < ActiveRecord::Migration[8.1]
   def up
-    flipped = execute(<<~SQL).to_a
+    flipped = execute(<<~'SQL').to_a
       UPDATE entries
       SET amount = -amount
       WHERE source = 'kraken'
-        AND external_id LIKE 'kraken\\_trade\\_%'
+        AND external_id LIKE 'kraken\_trade\_%'
         AND entryable_type = 'Trade'
         AND user_modified = false
         AND amount <> 0
