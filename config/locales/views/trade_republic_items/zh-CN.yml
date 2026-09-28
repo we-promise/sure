@@ -6,6 +6,7 @@ zh-CN:
       connection_description: "通过安全的网页登录连接 Trade Republic 投资账户"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "此 Trade Republic 账户已连接。新的连接已被移除。"
     portfolio_categories:
       brokerage: "券商账户"
       private_markets: "私募市场"

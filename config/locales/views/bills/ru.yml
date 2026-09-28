@@ -301,7 +301,7 @@ ru:
         few: '%{count} мелких изменения'
         many: '%{count} мелких изменений'
         other: '%{count} мелкого изменения'
-      suggestion_line: '%{entry} похоже на оплату платежа «%{bill}»'
+      suggestion_line: '%{entry} похоже на оплату «%{bill}»'
       suggestion_unknown_entry: Операция
       confidence: Совпадение %{percent}%
       accept: Применить

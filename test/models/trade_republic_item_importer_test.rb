@@ -39,6 +39,26 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal 1, account.raw_positions_payload.size
   end
 
+  test "cash balance keeps funds reserved for open orders" do
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(
+      "status" => "ok",
+      "session_txt" => "# refreshed cookies",
+      "account" => { "brokerage_account_id" => "DE9998", "currency" => "EUR" },
+      "cash" => { "amount" => "1145.19", "available_amount" => "777.19", "currency" => "EUR" },
+      "positions" => [],
+      "events" => [],
+      "newest_event_id" => nil,
+      "warnings" => []
+    ))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    cash_account = @item.trade_republic_accounts.find_by(kind: "cash")
+    assert_equal BigDecimal("1145.19"), cash_account.current_balance
+    assert_equal BigDecimal("1145.19"), cash_account.cash_balance
+  end
+
   test "repeated sync updates the same account row and stays idempotent" do
     provider_payload = lambda {
       client_result(
