@@ -276,7 +276,8 @@ class UserTest < ActiveSupport::TestCase
     user = users(:family_member)
     user.setup_mfa!
     totp = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances")
-    time_step = totp.verify(totp.now)
+    now = Time.current
+    time_step = totp.verify(totp.at(now), at: now)
 
     first = User.find(user.id)
     second = User.find(user.id)
