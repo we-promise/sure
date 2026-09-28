@@ -18,6 +18,44 @@ class UserTest < ActiveSupport::TestCase
     assert @user.valid?, @user.errors.full_messages.to_sentence
   end
 
+  test "assistant notes are stored in preferences without touching other keys" do
+    @user.update!(preferences: { "preview_features_enabled" => true })
+
+    @user.update!(assistant_notes: "  The trust accounts are not mine.\r\nKeep it short.  ")
+
+    @user.reload
+    assert_equal "The trust accounts are not mine.\nKeep it short.", @user.assistant_notes
+    assert @user.preview_features_enabled?
+  end
+
+  test "assistant notes drop NUL characters and normalize line endings" do
+    @user.assistant_notes = "one\u0000two\rthree"
+
+    assert_equal "onetwo\nthree", @user.assistant_notes
+  end
+
+  test "clearing assistant notes removes the preference key" do
+    @user.update!(assistant_notes: "Something to remember")
+
+    @user.update!(assistant_notes: "   ")
+
+    assert_nil @user.reload.assistant_notes
+    assert_not @user.preferences.key?("assistant_notes")
+  end
+
+  test "assistant notes over the length limit are invalid" do
+    @user.assistant_notes = "a" * (User::ASSISTANT_NOTES_MAX_LENGTH + 1)
+
+    assert_not @user.valid?
+    assert @user.errors.added?(:assistant_notes, :too_long, count: User::ASSISTANT_NOTES_MAX_LENGTH)
+  end
+
+  test "assistant notes at the length limit are valid" do
+    @user.assistant_notes = "a" * User::ASSISTANT_NOTES_MAX_LENGTH
+
+    assert @user.valid?, @user.errors.full_messages.to_sentence
+  end
+
   # email
   test "email must be present" do
     potential_user = User.new(

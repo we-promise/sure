@@ -51,6 +51,83 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_not user.reload.preview_features_enabled?
   end
 
+  test "renders the assistant notes card when AI is enabled" do
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "textarea[name='user[assistant_notes]'][maxlength='#{User::ASSISTANT_NOTES_MAX_LENGTH}']"
+  end
+
+  test "hides the assistant notes card when AI is disabled" do
+    users(:family_admin).update!(ai_enabled: false)
+
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "textarea[name='user[assistant_notes]']", count: 0
+  end
+
+  test "hides the assistant notes card when the family uses the external assistant" do
+    users(:family_admin).family.update!(assistant_type: "external")
+
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "textarea[name='user[assistant_notes]']", count: 0
+  end
+
+  test "update saves assistant notes" do
+    patch settings_preferences_url, params: { user: { assistant_notes: "The trust accounts are not mine." } }
+
+    assert_redirected_to settings_preferences_url
+    assert_equal I18n.t("settings.preferences.update.assistant_notes_saved"), flash[:notice]
+    assert_equal "The trust accounts are not mine.", users(:family_admin).reload.assistant_notes
+  end
+
+  test "update with blank assistant notes clears them" do
+    user = users(:family_admin)
+    user.update!(assistant_notes: "Old note")
+
+    patch settings_preferences_url, params: { user: { assistant_notes: "" } }
+
+    assert_redirected_to settings_preferences_url
+    assert_nil user.reload.assistant_notes
+  end
+
+  test "update rejects assistant notes over the limit and keeps what was typed" do
+    user = users(:family_admin)
+    user.update!(assistant_notes: "Old note")
+    too_long = "a" * (User::ASSISTANT_NOTES_MAX_LENGTH + 1)
+
+    patch settings_preferences_url, params: { user: { assistant_notes: too_long } }
+
+    assert_response :unprocessable_entity
+    assert_select "textarea[name='user[assistant_notes]']"
+    assert_includes response.body, too_long
+    assert_equal "Old note", user.reload.assistant_notes
+  end
+
+  test "saving assistant notes leaves the preview toggle alone" do
+    user = users(:family_admin)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+
+    patch settings_preferences_url, params: { user: { assistant_notes: "Keep answers short." } }
+
+    user.reload
+    assert user.preview_features_enabled?
+    assert_equal "Keep answers short.", user.assistant_notes
+  end
+
+  test "non-admin members can save their own assistant notes" do
+    sign_in users(:family_member)
+
+    patch settings_preferences_url, params: { user: { assistant_notes: "Only mine." } }
+
+    assert_redirected_to settings_preferences_url
+    assert_equal "Only mine.", users(:family_member).reload.assistant_notes
+    assert_nil users(:family_admin).reload.assistant_notes
+  end
+
   test "household budget toggle and sharing card only render once personal_budgets is on" do
     user = users(:family_admin)
     user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))

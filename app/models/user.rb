@@ -44,7 +44,19 @@ class User < ApplicationRecord
 
   MFA_BACKUP_CODE_COUNT = 8
 
+  # Assistant notes are sent with every chat request, so keep them short enough
+  # that they stay a small, cheap part of the prompt.
+  ASSISTANT_NOTES_MAX_LENGTH = 2_000
+
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
+  validates :assistant_notes,
+    length: {
+      maximum: ASSISTANT_NOTES_MAX_LENGTH,
+      message: ->(_object, _data) {
+        I18n.t("errors.messages.too_long", count: ASSISTANT_NOTES_MAX_LENGTH.to_fs(:delimited))
+      }
+    },
+    allow_blank: true
   validate :ensure_valid_profile_image
   validates :default_period, inclusion: { in: Period::PERIODS.keys }
   validates :default_account_order, inclusion: { in: AccountOrder::ORDERS.keys }
@@ -198,14 +210,25 @@ class User < ApplicationRecord
   def ai_available?
     return true unless Rails.application.config.app_mode.self_hosted?
 
-    effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
-
-    case effective_type
+    case effective_assistant_type
     when "external"
       Assistant::External.available_for?(self)
     else
       openai_configured? || anthropic_configured?
     end
+  end
+
+  # Which chat assistant handles this user's messages. Mirrors the resolution
+  # in Assistant.implementation_for: the ASSISTANT_TYPE override, then the
+  # family's setting, then builtin.
+  def effective_assistant_type
+    ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
+  end
+
+  # Assistant notes only reach the builtin assistant's prompt; an external
+  # agent builds its own.
+  def assistant_notes_available?
+    ai_enabled? && effective_assistant_type == "builtin"
   end
 
   def openai_configured?
@@ -700,6 +723,27 @@ class User < ApplicationRecord
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
+  end
+
+  # Standing notes the user wants the chat assistant to keep in mind ("the
+  # trust accounts are not mine"). Stored in the preferences JSONB and added
+  # to the session context of every builtin-assistant chat.
+  def assistant_notes
+    preferences&.dig("assistant_notes").presence
+  end
+
+  # Clearing the notes removes the key instead of storing an empty string.
+  def assistant_notes=(value)
+    cleaned = value.to_s.delete("\u0000").gsub(/\r\n?/, "\n").strip
+    updated_prefs = (preferences || {}).deep_dup
+
+    if cleaned.empty?
+      updated_prefs.delete("assistant_notes")
+    else
+      updated_prefs["assistant_notes"] = cleaned
+    end
+
+    self.preferences = updated_prefs
   end
 
   private
