@@ -95,10 +95,7 @@
 
   <% akahu_item = Current.family.akahu_items.build(name: t("akahu_items.provider_panel.default_connection_name")) %>
   <% if active_items.any? %>
-    <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
-      <%= icon "plus", size: "sm" %>
-      <%= t("akahu_items.provider_panel.add_connection") %>
-    </h3>
+    <%= render "settings/providers/add_connection_heading", label: t("akahu_items.provider_panel.add_connection") %>
   <% end %>
 
   <%= styled_form_with model: akahu_item,

@@ -280,6 +280,7 @@ ca:
         api_secret_label: Secret de l'API
         api_secret_placeholder: Enganxa el teu secret de l'API de Binance
         connect_button: Connecta Binance
+        disconnect: Desconnecta
         disconnect_confirm: Segur que vols desconnectar Binance?
         ip_hint_body: 'Afegeix la IP de sortida del servidor de l''aplicació a la
           llista blanca de la clau API de Binance:'
@@ -307,6 +308,7 @@ ca:
         api_secret_label: Secret de l'API
         api_secret_placeholder: Introdueix el teu secret de l'API de Coinbase
         connect_button: Connecta Coinbase
+        disconnect: Desconnecta
         disconnect_confirm: Segur que vols desconnectar aquesta connexió de Coinbase?
           Els teus comptes sincronitzats passaran a ser comptes manuals.
         setup_instructions: 'Per connectar Coinbase:'

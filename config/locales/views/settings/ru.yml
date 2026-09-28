@@ -316,6 +316,7 @@ ru:
         api_secret_label: Секретный ключ API
         api_secret_placeholder: Вставьте ваш секретный ключ API Binance
         connect_button: Подключить Binance
+        disconnect: Отключить
         disconnect_confirm: Вы уверены, что хотите отключить Binance?
         historical_import: Настройки исторического импорта
         ip_hint_body: 'Добавьте IP-адрес выхода сервера приложения в белый список
@@ -345,6 +346,7 @@ ru:
         api_secret_label: Секретный ключ API
         api_secret_placeholder: Введите ваш секретный ключ API Coinbase
         connect_button: Подключить Coinbase
+        disconnect: Отключить
         disconnect_confirm: Вы уверены, что хотите отключить это подключение Coinbase?
           Ваши синхронизированные счета станут ручными счетами.
         setup_instructions: 'Чтобы подключить Coinbase:'

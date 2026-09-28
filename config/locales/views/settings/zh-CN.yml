@@ -359,6 +359,7 @@ zh-CN:
         connect_button: 连接 Coinbase
         syncing: 正在同步...
         sync: 同步
+        disconnect: 断开连接
         disconnect_confirm: 确定要断开此 Coinbase 连接吗？同步的账户会变为手动账户。
       binance_panel:
         setup_instructions: 连接 Binance，请创建一个只读 API key：
@@ -377,6 +378,7 @@ zh-CN:
         connect_button: 连接 Binance
         syncing: 正在同步...
         sync: 同步
+        disconnect: 断开连接
         disconnect_confirm: 确定要断开 Binance 吗？
         historical_import: 历史导入设置
         sync_start_date_label: 导入起始日期

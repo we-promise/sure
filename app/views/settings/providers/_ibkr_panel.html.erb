@@ -1,9 +1,4 @@
 <div id="ibkr-providers-panel" class="space-y-4">
-  <% error_msg = local_assigns[:error_message] || @error_message %>
-  <% if error_msg.present? %>
-    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
-  <% end %>
-
   <%= render "settings/providers/setup_steps",
              steps: [
                t(".steps.step_1"),
@@ -12,6 +7,11 @@
                t(".steps.step_4"),
                t(".steps.step_5")
              ] %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
 
   <%= render DS::Disclosure.new(variant: :card_inset) do |disclosure| %>
     <% disclosure.with_summary_content do %>

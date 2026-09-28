@@ -380,6 +380,7 @@ pl:
         api_secret_label: Sekret API
         api_secret_placeholder: Wklej swój sekret API Binance
         connect_button: Połącz Binance
+        disconnect: Rozłącz
         disconnect_confirm: Na pewno rozłączyć Binance?
         historical_import: Ustawienia importu historycznego
         ip_hint_body: 'Dodaj adres IP wyjściowy serwera aplikacji do białej listy
@@ -408,6 +409,7 @@ pl:
         api_secret_label: Sekret API
         api_secret_placeholder: Wprowadź sekret API Coinbase
         connect_button: Połącz Coinbase
+        disconnect: Rozłącz
         disconnect_confirm: Czy na pewno chcesz odłączyć to połączenie Coinbase? Twoje
           zsynchronizowane konta staną się kontami ręcznymi.
         setup_instructions: 'Aby połączyć Coinbase:'
