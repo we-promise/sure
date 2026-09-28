@@ -573,11 +573,33 @@ class Provider::YahooFinance < Provider
     # MIC code to its Yahoo-specific symbol suffix, the default currency when
     # Yahoo omits one, and an optional dual-listing group with a preference
     # rank (lower = preferred).  Adding a new market is a one-line hash entry.
+    # A MIC missing here means the symbol is sent to Yahoo bare, which for any
+    # non-US listing is a 404: the security then accumulates failed fetches and
+    # never gets a price, with nothing telling the user why.
     EXCHANGE_CONFIG = {
       "XNSE" => { yahoo_suffix: ".NS", default_currency: "INR", dual_list_group: :india, preference_rank: 0 },
       "XBOM" => { yahoo_suffix: ".BO", default_currency: "INR", dual_list_group: :india, preference_rank: 1 },
       "XBOG" => { yahoo_suffix: ".CL", default_currency: "COP" },
-      "XIDX" => { yahoo_suffix: ".JK", default_currency: "IDR" }
+      "XIDX" => { yahoo_suffix: ".JK", default_currency: "IDR" },
+      # Europe. Yahoo quotes London in pence (GBp), which
+      # normalize_currency_and_price already converts.
+      "XETR" => { yahoo_suffix: ".DE", default_currency: "EUR" }, # Xetra
+      "XFRA" => { yahoo_suffix: ".F",  default_currency: "EUR" }, # Frankfurt floor
+      "XMUN" => { yahoo_suffix: ".MU", default_currency: "EUR" }, # Munich
+      "XSTU" => { yahoo_suffix: ".SG", default_currency: "EUR" }, # Stuttgart
+      "XLON" => { yahoo_suffix: ".L",  default_currency: "GBP" },
+      "XPAR" => { yahoo_suffix: ".PA", default_currency: "EUR" },
+      "XAMS" => { yahoo_suffix: ".AS", default_currency: "EUR" },
+      "XBRU" => { yahoo_suffix: ".BR", default_currency: "EUR" },
+      "XLIS" => { yahoo_suffix: ".LS", default_currency: "EUR" },
+      "XMAD" => { yahoo_suffix: ".MC", default_currency: "EUR" },
+      "XMIL" => { yahoo_suffix: ".MI", default_currency: "EUR" },
+      "XSWX" => { yahoo_suffix: ".SW", default_currency: "CHF" },
+      "XSTO" => { yahoo_suffix: ".ST", default_currency: "SEK" },
+      "XCSE" => { yahoo_suffix: ".CO", default_currency: "DKK" },
+      "XHEL" => { yahoo_suffix: ".HE", default_currency: "EUR" },
+      "XOSL" => { yahoo_suffix: ".OL", default_currency: "NOK" },
+      "XWBO" => { yahoo_suffix: ".VI", default_currency: "EUR" }  # Vienna
     }.freeze
 
     # Yahoo Finance sometimes returns currencies in minor units (pence, cents)

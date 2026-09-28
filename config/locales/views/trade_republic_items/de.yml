@@ -6,6 +6,7 @@ de:
       connection_description: "Verbinde ein Trade-Republic-Investmentkonto über eine sichere Web-Anmeldung"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Dieses Trade-Republic-Konto ist bereits verbunden. Die neue Verbindung wurde entfernt."
     defaults:
       name: Trade Republic
     portfolio_categories:
@@ -39,6 +40,9 @@ de:
         unknown:
           one: "%{count} unbekannte Aktivität"
           other: "%{count} unbekannte Aktivitäten"
+        pending_trade_details:
+          one: "%{count} Investmentaktivität wartet auf Details"
+          other: "%{count} Investmentaktivitäten warten auf Details"
         expenses:
           one: "%{count} Ausgabe in den letzten 30 Tagen (%{amount})"
           other: "%{count} Ausgaben in den letzten 30 Tagen (%{amount})"
@@ -100,7 +104,7 @@ de:
       link: "Verknüpfen"
       cancel: "Abbrechen"
     initiate_login:
-      pin_required: "Gib deine Trade-Republic-PIN ein, um eine neue Anmeldung zu starten."
+      pin_required: "Gib deine Trade-Republic-PIN oder dein Passwort ein, um eine neue Anmeldung zu starten."
       verification_required: "Anmeldung gestartet. Bestätige sie über %{method} und klicke anschließend auf Anmeldung bestätigen."
     initiate_qr_login:
       not_configured: "Trade Republic ist nicht konfiguriert."
@@ -125,7 +129,7 @@ de:
         one: "Ein ausgewähltes Trade-Republic-Konto konnte nicht vollständig eingerichtet werden. Prüfe das Debug-Log und versuche es erneut."
         other: "%{count} ausgewählte Trade-Republic-Konten konnten nicht vollständig eingerichtet werden. Prüfe das Debug-Log und versuche es erneut."
     update:
-      pin_required: "Gib deine Trade-Republic-PIN ein, um die Verbindung erneut zu authentifizieren."
+      pin_required: "Gib deine Trade-Republic-PIN oder dein Passwort ein, um die Verbindung erneut zu authentifizieren."
     destroy:
       unlink_failed: "Trade Republic konnte nicht vollständig getrennt werden. Die Verbindung bleibt für einen sicheren erneuten Versuch erhalten."
     activities:
@@ -139,5 +143,4 @@ de:
         card_fee: Kartengebühr
         card_refund: Kartenrückerstattung
         tax_refund: Steuerrückerstattung
-        buy: Kauf
-        sell: Verkauf
+        round_up: Round up
