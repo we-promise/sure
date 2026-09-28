@@ -223,6 +223,37 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
     assert_in_delta 1.0, fee.amount.to_f, 0.01
   end
 
+  # A crypto principal is converted at the current spot price, so the stored
+  # figure and anything recomputed later drift apart as the price moves. The
+  # native quantity does not, which is why the classification reads that.
+  test "a crypto principal written with its fee inside it survives a price move" do
+    set_raw_payload_assets([ { "symbol" => "BTC", "price_usd" => "50000.00" } ])
+    set_ledgers(
+      "LWBTC1" => ledger_entry(type: "withdrawal", asset: "XXBT", amount: "-0.50000000", fee: "0.00100000", time: 1_700_000_000)
+    )
+    # As the old code wrote it: one entry for 0.501 BTC, priced at 50,000.
+    @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date,
+      name: "Withdrawal 0.501 BTC",
+      amount: 25_050,
+      currency: "USD",
+      external_id: "kraken_ledger_LWBTC1",
+      source: "kraken",
+      entryable: Transaction.new
+    )
+
+    # Upwards: the stored figure now sits nearer the fee-less candidate than the
+    # fee-inclusive one, which is what a comparison of converted amounts reads
+    # as "still owed its fee".
+    set_raw_payload_assets([ { "symbol" => "BTC", "price_usd" => "60000.00" } ])
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    assert_nil @account.entries.find_by(external_id: "kraken_ledger_LWBTC1_fee")
+  end
+
   # The legacy check must not cost a query per ledger row: the principal
   # amounts are loaded with the external ids, in the same bulk read.
   test "the legacy-principal check does not scale entries queries with ledger count" do

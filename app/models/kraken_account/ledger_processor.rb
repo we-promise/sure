@@ -38,14 +38,14 @@ class KrakenAccount::LedgerProcessor
     # membership in memory, instead of an EXISTS query per ledger entry (a full
     # sync can carry up to ~10k entries — see MAX_LEDGER_PAGES in the importer).
     # Scoped to the kraken_ledger_ prefix so trade entries aren't loaded.
-    # The amount comes along so a principal already holding its fee can be told
+    # The name comes along so a principal already holding its fee can be told
     # from one still owed it, without a lookup per ledger row.
     existing = account.entries
                       .where(source: "kraken")
                       .where("external_id LIKE 'kraken_ledger_%'")
-                      .pluck(:external_id, :amount, :user_modified)
+                      .pluck(:external_id, :name, :user_modified)
     @existing_external_ids = existing.map(&:first).to_set
-    @existing_principals = existing.to_h { |external_id, amount, user_modified| [ external_id, [ amount, user_modified ] ] }
+    @existing_principals = existing.to_h { |external_id, name, user_modified| [ external_id, [ name, user_modified ] ] }
 
     raw_ledgers.each do |ledger_id, ledger|
       process_ledger_entry(ledger_id, ledger)
@@ -122,7 +122,7 @@ class KrakenAccount::LedgerProcessor
       # without duplicating the one it has.
       if abs_impact.zero? || @existing_external_ids.include?(external_id)
         if split_fee && !@existing_external_ids.include?("#{external_id}_fee") &&
-           principal_awaits_fee?(external_id, raw_amount, raw_fee, symbol, date)
+           principal_awaits_fee?(external_id, raw_amount, symbol)
           process_ledger_fee(external_id, ledger_id, ledger, raw_fee, symbol, date)
         end
         return
@@ -163,20 +163,31 @@ class KrakenAccount::LedgerProcessor
     # An entry written before fees were split holds the fee inside it: adding the
     # fee entry now would charge it twice. Only a principal already standing on
     # its own is owed one -- which happens when pricing the fee failed on an
-    # earlier sync. Told apart by which of the two figures the stored amount is
-    # nearer to, so a rate that has moved since cannot turn one into the other,
-    # and ties go to leaving it alone.
-    def principal_awaits_fee?(external_id, raw_amount, raw_fee, symbol, date)
-      stored_amount, user_modified = @existing_principals[external_id]
-      return true if stored_amount.nil? # no principal at all: a correction row carrying only a fee
+    # earlier sync. The two are told apart by the native quantity the entry was
+    # charged, which its name carries. Not by the stored amount: a crypto row is
+    # converted at the current spot price, so recomputing it later scales the
+    # candidates while the stored figure stays where it was, and after any real
+    # price move nearness decides nothing.
+    def principal_awaits_fee?(external_id, raw_amount, symbol)
+      stored_name, user_modified = @existing_principals[external_id]
+      return true if stored_name.nil? # no principal at all: a correction row carrying only a fee
       return false if user_modified
 
-      split, = resolve_amount(raw_amount.abs, symbol, date)
-      legacy, = resolve_amount((raw_amount - raw_fee).abs, symbol, date)
-      return false if split.nil? || legacy.nil?
+      charged = charged_quantity(stored_name, symbol)
+      return false if charged.nil?
 
-      stored = stored_amount.abs
-      (stored - split.abs).abs < (stored - legacy.abs).abs
+      charged == raw_amount.abs.round(8)
+    end
+
+    # The quantity out of "Withdrawal 0.501 BTC", compared as a number so a name
+    # written when the formatting differed -- "500.0" against today's "500" --
+    # still reads. Nil unless the name is one this class built for this symbol,
+    # which leaves a renamed entry alone.
+    def charged_quantity(name, symbol)
+      parts = name.to_s.split(" ")
+      return nil unless parts.length >= 3 && parts.last == symbol
+
+      BigDecimal(parts[-2], exception: false)&.round(8)
     end
 
     def process_ledger_fee(principal_external_id, ledger_id, ledger, raw_fee, symbol, date)
