@@ -8,6 +8,7 @@ class DarkThemeTest < ApplicationSystemTestCase
     user.update!(theme: "dark")
     sign_in user
     visit transactions_url
+    assert_selector "html[data-theme='dark']"
 
     assert_equal element_style("text-secondary", "color"),
       find("#q_search").evaluate_script("getComputedStyle(this, '::placeholder').color")
