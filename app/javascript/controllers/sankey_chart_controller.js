@@ -10,7 +10,7 @@ import {
 
 // Connects to data-controller="sankey-chart"
 export default class extends Controller {
-  static targets = ["chart", "zoomOutButton"];
+  static targets = ["chart", "zoomOutButton", "sortSegment"];
 
   static values = {
     data: Object,
@@ -37,6 +37,9 @@ export default class extends Controller {
     "var(--color-gray-500)": "#737373",
   };
   static MIN_LABEL_SPACING = 28; // Minimum vertical space needed for labels (2 lines)
+  static SORT_ORDERS = ["auto", "ascending", "descending"];
+  static SORT_STORAGE_KEY = "cashflowSankeySortOrder";
+  static SORT_EVENT = "cashflow-sankey:sort-changed";
 
   connect() {
     this.connected = true;
@@ -44,8 +47,14 @@ export default class extends Controller {
     this.resizeObserver = new ResizeObserver(() => this.#draw());
     this.resizeObserver.observe(this.#chartElement());
     this.tooltip = null;
+    this.sortOrder = this.#storedSortOrder();
+    // The dashboard renders this chart twice (inline and in the expand dialog):
+    // keep every instance on the page in step when one changes the order.
+    this.onSortChanged = (event) => this.#applySortOrder(event.detail.order);
+    window.addEventListener(this.constructor.SORT_EVENT, this.onSortChanged);
     this.#createTooltip();
     this.#syncZoomControls();
+    this.#syncSortControls();
     this.#draw();
   }
 
@@ -59,10 +68,37 @@ export default class extends Controller {
 
   disconnect() {
     this.connected = false;
+    window.removeEventListener(this.constructor.SORT_EVENT, this.onSortChanged);
     this.resizeObserver?.disconnect();
     clearTimeout(this.drawTimeout);
     this.tooltip?.remove();
     this.tooltip = null;
+  }
+
+  // Top-to-bottom order of the nodes in each column. "auto" is d3-sankey's
+  // default layout (minimises crossings); the others order by amount.
+  setSort(event) {
+    const order = event.currentTarget.dataset.sortOrder;
+    if (!this.constructor.SORT_ORDERS.includes(order)) return;
+    if (order === this.sortOrder) return;
+
+    try {
+      localStorage.setItem(this.constructor.SORT_STORAGE_KEY, order);
+    } catch {
+      // Ignore storage errors (e.g. private browsing); the choice still applies now.
+    }
+    window.dispatchEvent(
+      new CustomEvent(this.constructor.SORT_EVENT, { detail: { order } }),
+    );
+  }
+
+  #applySortOrder(order) {
+    if (!this.constructor.SORT_ORDERS.includes(order)) return;
+    if (order === this.sortOrder) return;
+
+    this.sortOrder = order;
+    this.#syncSortControls();
+    this.#draw({ animate: true });
   }
 
   zoomOut() {
@@ -154,6 +190,23 @@ export default class extends Controller {
     return zoomSankeyData(this.dataValue, this.zoomRootId);
   }
 
+  #storedSortOrder() {
+    try {
+      const stored = localStorage.getItem(this.constructor.SORT_STORAGE_KEY);
+      return this.constructor.SORT_ORDERS.includes(stored) ? stored : "auto";
+    } catch {
+      return "auto";
+    }
+  }
+
+  #syncSortControls() {
+    this.sortSegmentTargets.forEach((segment) => {
+      const active = segment.dataset.sortOrder === this.sortOrder;
+      segment.classList.toggle("segmented-control__segment--active", active);
+      segment.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+
   #syncZoomControls() {
     this.zoomOutButtonTargets.forEach((button) => {
       button.hidden = !this.zoomRootId;
@@ -208,6 +261,12 @@ export default class extends Controller {
         [margin, margin],
         [width - margin, height - margin],
       ]);
+
+    if (this.sortOrder === "ascending") {
+      sankeyGenerator.nodeSort((a, b) => a.value - b.value);
+    } else if (this.sortOrder === "descending") {
+      sankeyGenerator.nodeSort((a, b) => b.value - a.value);
+    }
 
     return sankeyGenerator({
       nodes: nodes.map((d) => ({ ...d })),

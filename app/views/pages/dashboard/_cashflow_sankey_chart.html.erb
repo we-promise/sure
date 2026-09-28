@@ -6,7 +6,7 @@
   data-sankey-chart-start-date-value="<%= period.start_date&.iso8601 %>"
   data-sankey-chart-end-date-value="<%= period.end_date&.iso8601 %>"
   class="w-full h-full privacy-sensitive flex flex-col gap-2">
-  <div class="flex justify-start px-4">
+  <div class="flex items-center justify-between gap-2 px-4">
     <%= render DS::Button.new(
       variant: :icon,
       icon: "arrow-left",
@@ -19,6 +19,17 @@
         action: "sankey-chart#zoomOut"
       }
     ) %>
+    <%# Remembered per browser; "auto" keeps d3-sankey's crossing-minimising layout. %>
+    <%= render DS::SegmentedControl.new(aria_label: t("pages.dashboard.cashflow_sankey.sort_label"), class: "ml-auto") do |sc| %>
+      <% { "auto" => "sort_auto", "ascending" => "sort_ascending", "descending" => "sort_descending" }.each do |order, key| %>
+        <% sc.with_segment(
+             t("pages.dashboard.cashflow_sankey.#{key}"),
+             active: order == "auto",
+             class: "text-xs",
+             data: { sankey_chart_target: "sortSegment", sort_order: order, action: "sankey-chart#setSort" }
+           ) %>
+      <% end %>
+    <% end %>
   </div>
   <div data-sankey-chart-target="chart" class="min-h-0 flex-1"></div>
 </div>
