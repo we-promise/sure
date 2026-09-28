@@ -29,6 +29,7 @@ class ChatsTest < ApplicationSystemTestCase
 
     assert_selector "h3", text: "Enable AI Chats"
     assert_no_selector "textarea[name='chat[content]']"
+    assert_no_selector "[data-action='chat#submitSampleQuestion']"
   end
 
   test "sidebar shows index when enabled and chats are empty" do

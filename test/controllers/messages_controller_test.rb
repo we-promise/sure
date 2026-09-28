@@ -77,6 +77,17 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_not Message.exists?(pending.id)
   end
 
+  test "report_timeout is forbidden when AI is disabled" do
+    @user.update!(ai_enabled: false)
+
+    pending = @chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending, created_at: 5.minutes.ago)
+
+    post report_timeout_chat_message_url(@chat, pending)
+
+    assert_response :forbidden
+    assert Message.exists?(pending.id)
+  end
+
   test "report_timeout cannot touch another user's chat" do
     other_chat = users(:family_member).chats.first
     pending = other_chat.messages.create!(type: "AssistantMessage", content: "", ai_model: "gpt-4.1", status: :pending)

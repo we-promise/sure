@@ -111,6 +111,18 @@ class Provider::Openai::ChatStreamParserTest < ActiveSupport::TestCase
     assert_nil chunk.data.code
   end
 
+  # A non-Hash "error" value must not raise TypeError from Hash#dig — it
+  # should fall through to the flat/placeholder fallback like a missing one.
+  test "error event with a non-Hash error value falls back instead of raising" do
+    chunk = Provider::Openai::ChatStreamParser.new(
+      { "type" => "error", "error" => "boom" }
+    ).parsed
+
+    assert_equal "error", chunk.type
+    assert_equal "OpenAI stream returned an error event", chunk.data.message
+    assert_nil chunk.data.code
+  end
+
   test "response.completed parses into a response chunk" do
     chunk = Provider::Openai::ChatStreamParser.new(
       {
