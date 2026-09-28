@@ -145,6 +145,7 @@ class _BudgetDetailScreenState extends State<_BudgetDetailScreen> {
   late Future<(Budget, BudgetPage<BudgetCategory>)> _future;
   int _page = 1;
   int _generation = 0;
+  final _categoryStates = <String, _CategoryState>{};
 
   @override
   void initState() {
@@ -153,21 +154,26 @@ class _BudgetDetailScreenState extends State<_BudgetDetailScreen> {
   }
 
   Future<(Budget, BudgetPage<BudgetCategory>)> _load() async {
+    final page = _page;
     final token = await _token(context);
-    final budget = await widget.service
-        .getBudget(accessToken: token, id: widget.budget.id);
-    final categories = await widget.service.getCategories(
-      accessToken: token,
-      budgetId: widget.budget.id,
-      page: _page,
-    );
-    return (budget, categories);
+    final results = await Future.wait<Object>([
+      widget.service.getBudget(accessToken: token, id: widget.budget.id),
+      widget.service.getCategories(
+        accessToken: token,
+        budgetId: widget.budget.id,
+        page: page,
+      ),
+    ]);
+    return (results[0] as Budget, results[1] as BudgetPage<BudgetCategory>);
   }
 
   Future<void> _refresh([int? page]) async {
     setState(() {
       _page = page ?? _page;
-      _generation++;
+      if (page == null) {
+        _generation++;
+        _categoryStates.clear();
+      }
       _future = _load();
     });
     try {
@@ -214,6 +220,8 @@ class _BudgetDetailScreenState extends State<_BudgetDetailScreen> {
                       key: ValueKey('${category.id}:$_generation'),
                       category: category,
                       service: widget.service,
+                      state: _categoryStates.putIfAbsent(
+                          category.id, () => _CategoryState()),
                     ),
                   _PageControls(
                       page: categories.page,
@@ -229,19 +237,27 @@ class _BudgetDetailScreenState extends State<_BudgetDetailScreen> {
   }
 }
 
+// Owned by the detail screen so removing a page's widgets does not lose state.
+class _CategoryState {
+  bool expanded = false;
+  Future<BudgetCategory>? future;
+}
+
 class _CategoryTile extends StatefulWidget {
   const _CategoryTile(
-      {super.key, required this.category, required this.service});
+      {super.key,
+      required this.category,
+      required this.service,
+      required this.state});
   final BudgetCategory category;
   final BudgetsService service;
+  final _CategoryState state;
 
   @override
   State<_CategoryTile> createState() => _CategoryTileState();
 }
 
 class _CategoryTileState extends State<_CategoryTile> {
-  Future<BudgetCategory>? _future;
-
   Future<BudgetCategory> _load() async => widget.service.getCategory(
         accessToken: await _token(context),
         id: widget.category.id,
@@ -249,7 +265,7 @@ class _CategoryTileState extends State<_CategoryTile> {
 
   void _refresh() {
     setState(() {
-      _future = _load();
+      widget.state.future = _load();
     });
   }
 
@@ -257,18 +273,20 @@ class _CategoryTileState extends State<_CategoryTile> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return ExpansionTile(
+      initiallyExpanded: widget.state.expanded,
       title: Text(widget.category.name),
       subtitle: _AmountRow(
           label: l.budgetsPlanned, value: widget.category.amounts.budgeted),
       onExpansionChanged: (expanded) {
-        if (expanded && _future == null) _refresh();
+        widget.state.expanded = expanded;
+        if (expanded && widget.state.future == null) _refresh();
       },
       children: [
-        if (_future != null)
+        if (widget.state.future != null)
           Padding(
             padding: const EdgeInsets.all(SureSpacing.xl),
             child: FutureBuilder<BudgetCategory>(
-              future: _future,
+              future: widget.state.future,
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
                   return const CircularProgressIndicator();

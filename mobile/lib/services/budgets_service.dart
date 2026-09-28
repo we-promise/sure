@@ -80,10 +80,17 @@ class BudgetsService {
       T Function(Map<String, dynamic>) parse) {
     return _parse(() {
       final pagination = json['pagination'] as Map<String, dynamic>;
+      final items = <T>[];
+      for (final item
+          in (json[key] as List).whereType<Map<String, dynamic>>()) {
+        try {
+          items.add(parse(item));
+        } on FormatException {
+          // A malformed record must not hide the rest of a valid page.
+        }
+      }
       return BudgetPage(
-        (json[key] as List)
-            .map((item) => parse(item as Map<String, dynamic>))
-            .toList(),
+        items,
         pagination['page'] as int,
         pagination['total_pages'] as int,
       );

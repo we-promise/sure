@@ -67,6 +67,106 @@ Future<void> openBudget(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('starts both detail requests before either response completes',
+      (tester) async {
+    final budget = Completer<http.Response>();
+    final categories = Completer<http.Response>();
+    final paths = <String>[];
+    await tester.pumpWidget(harness(MockClient((request) async {
+      paths.add(request.url.path);
+      return switch (request.url.path) {
+        '/api/v1/budgets' => http.Response(jsonEncode(budgetPage()), 200),
+        '/api/v1/budgets/budget-1' => await budget.future,
+        _ => await categories.future,
+      };
+    })));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('September budget'));
+    await tester.pump();
+    expect(
+        paths,
+        containsAll([
+          '/api/v1/budgets/budget-1',
+          '/api/v1/budget_categories',
+        ]));
+    budget.complete(http.Response(jsonEncode(budgetJson(detail: true)), 200));
+    categories.complete(http.Response(jsonEncode(categoryPage()), 200));
+    await tester.pumpAndSettle();
+    expect(find.text('Groceries'), findsOneWidget);
+  });
+
+  testWidgets('parallel detail failures retain the session-expired message',
+      (tester) async {
+    await tester.pumpWidget(harness(MockClient((request) async {
+      return switch (request.url.path) {
+        '/api/v1/budgets' => http.Response(jsonEncode(budgetPage()), 200),
+        '/api/v1/budgets/budget-1' => http.Response('', 401),
+        _ => http.Response(jsonEncode(categoryPage()), 200),
+      };
+    })));
+    await tester.pumpAndSettle();
+    await openBudget(tester);
+    expect(find.textContaining('Your session has expired'), findsOneWidget);
+  });
+
+  testWidgets('paging preserves expanded details until an explicit refresh',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var detailCalls = 0;
+    await tester.pumpWidget(harness(MockClient((request) async {
+      final path = request.url.path;
+      if (path == '/api/v1/budgets') {
+        return http.Response(jsonEncode(budgetPage()), 200);
+      }
+      if (path == '/api/v1/budgets/budget-1') {
+        return http.Response(jsonEncode(budgetJson(detail: true)), 200);
+      }
+      if (path == '/api/v1/budget_categories') {
+        final page = int.parse(request.url.queryParameters['page']!);
+        final payload = categoryPage(page: page, totalPages: 2);
+        if (page == 2) {
+          payload['budget_categories'] = [
+            {
+              ...categoryJson(),
+              'id': 'category-2',
+              'category': {'name': 'Travel'}
+            },
+          ];
+        }
+        return http.Response(jsonEncode(payload), 200);
+      }
+      detailCalls++;
+      return http.Response(jsonEncode(categoryJson(detail: true)), 200);
+    })));
+    await tester.pumpAndSettle();
+    await openBudget(tester);
+    await tester.tap(find.text('Groceries'));
+    await tester.pumpAndSettle();
+    expect(detailCalls, 1);
+    expect(find.text(r'$150.00'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('Travel'), findsOneWidget);
+    await tester.tap(find.text('Previous'));
+    await tester.pumpAndSettle();
+    expect(find.text(r'$150.00'), findsOneWidget);
+    expect(detailCalls, 1);
+
+    final refresh =
+        tester.widget<RefreshIndicator>(find.byType(RefreshIndicator));
+    final refreshing = refresh.onRefresh();
+    await tester.pumpAndSettle();
+    await refreshing;
+    expect(find.text(r'$150.00'), findsNothing);
+    await tester.tap(find.text('Groceries'));
+    await tester.pumpAndSettle();
+    expect(detailCalls, 2);
+    expect(find.text(r'$150.00'), findsOneWidget);
+  });
+
   testWidgets('shows loading then a useful empty state', (tester) async {
     final pending = Completer<http.Response>();
     await tester.pumpWidget(harness(MockClient((_) => pending.future)));

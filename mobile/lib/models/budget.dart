@@ -66,8 +66,15 @@ class BudgetCategory {
   BudgetCategory.fromJson(Map<String, dynamic> json)
       : id = JsonParsing.parseRequiredString(json['id'], 'id'),
         name = JsonParsing.parseRequiredString(
-            (json['category'] as Map<String, dynamic>)['name'],
-            'category.name'),
+            _categoryObject(json)['name'], 'category.name'),
         inheritsParentBudget = json['inherits_parent_budget'] == true,
         amounts = BudgetAmounts.fromJson(json, category: true);
+
+  static Map<String, dynamic> _categoryObject(Map<String, dynamic> json) {
+    final category = json['category'];
+    if (category is! Map<String, dynamic>) {
+      throw const FormatException('Invalid category object');
+    }
+    return category;
+  }
 }

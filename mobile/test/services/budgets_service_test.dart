@@ -11,6 +11,45 @@ import '../support/budget_fixtures.dart';
 void main() {
   tearDown(ApiConfig.clearApiKeyAuth);
 
+  test('skips malformed budgets while preserving valid rows and pagination',
+      () async {
+    final payload = budgetPage(page: 2, totalPages: 3);
+    payload['budgets'] = [
+      null,
+      42,
+      {},
+      budgetJson(),
+      {'id': 'broken'}
+    ];
+    final service = BudgetsService(
+        client:
+            MockClient((_) async => http.Response(jsonEncode(payload), 200)));
+    final result = await service.getBudgets(accessToken: 'token', page: 2);
+    expect(result.items.map((item) => item.id), ['budget-1']);
+    expect(result.page, 2);
+    expect(result.totalPages, 3);
+  });
+
+  test('skips malformed category associations without hiding valid categories',
+      () async {
+    final payload = categoryPage(page: 2, totalPages: 3);
+    payload['budget_categories'] = [
+      null,
+      {},
+      for (final category in [null, 'invalid', [], {}])
+        {...categoryJson(), 'category': category},
+      categoryJson(),
+    ];
+    final service = BudgetsService(
+        client:
+            MockClient((_) async => http.Response(jsonEncode(payload), 200)));
+    final result = await service.getCategories(
+        accessToken: 'token', budgetId: 'budget-1', page: 2);
+    expect(result.items.map((item) => item.name), ['Groceries']);
+    expect(result.page, 2);
+    expect(result.totalPages, 3);
+  });
+
   test('list reads the requested page without fetching derived spending',
       () async {
     final service = BudgetsService(client: MockClient((request) async {
