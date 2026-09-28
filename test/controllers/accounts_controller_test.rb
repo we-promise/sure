@@ -203,6 +203,25 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#account-activity-filters li", count: 2
   end
 
+  test "show renders badge delete links that preserve the other active filters" do
+    get account_url(@account), params: { q: { categories: [ "Food & Drink" ], search: "grocery" } }
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    badge = doc.css("#account-activity-filters li").find { |li| li.text.include?("Food & Drink") }
+    form = badge&.at_css("form")
+
+    assert_not_nil form, "expected the category badge to render a delete form"
+    action_uri = URI.parse(form["action"])
+    action_params = Rack::Utils.parse_nested_query(action_uri.query)
+
+    # Regression: the badge's delete link must carry the *other* active
+    # filters along (like clear_filter_transactions_path does via
+    # request.query_parameters), or clearing one filter wipes them all.
+    assert_equal "grocery", action_params.dig("q", "search"),
+      "clearing the category badge must not drop the search filter from the delete link"
+  end
+
   test "clear_filter removes only the targeted filter value and preserves the rest" do
     delete clear_filter_account_url(@account), params: {
       q: { categories: [ "Food & Drink" ], search: "grocery" },

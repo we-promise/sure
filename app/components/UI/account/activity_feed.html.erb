@@ -105,14 +105,14 @@
               <%= render partial: "transactions/searches/filters/badge", locals: {
                     param_key: "amount",
                     param_value: "#{amount_operator} #{param_value}",
-                    clear_filter_path: helpers.clear_filter_account_path(account, param_key: "amount", param_value: param_value)
+                    clear_filter_path: helpers.clear_filter_account_path(account, param_key: "amount", param_value: param_value, **request.query_parameters)
                   } %>
             <% else %>
               <% Array(param_value).each do |value| %>
                 <%= render partial: "transactions/searches/filters/badge", locals: {
                       param_key: param_key,
                       param_value: value,
-                      clear_filter_path: helpers.clear_filter_account_path(account, param_key: param_key, param_value: value)
+                      clear_filter_path: helpers.clear_filter_account_path(account, param_key: param_key, param_value: value, **request.query_parameters)
                     } %>
               <% end %>
             <% end %>
