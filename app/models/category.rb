@@ -30,6 +30,11 @@ class Category < ApplicationRecord
 
   before_save :inherit_color_from_parent
 
+  # prepend: runs before dependent: :nullify's own before_destroy, so the
+  # reassignment (which touches entries to bust report caches) still sees the
+  # transactions; nullify then runs as the safety net.
+  before_destroy :reassign_transactions_to_nothing, prepend: true
+
   scope :alphabetically, -> { order(:name) }
   scope :recently_used, -> { where.not(last_used_at: nil).order(last_used_at: :desc) }
   scope :alphabetically_by_hierarchy, -> {
@@ -406,6 +411,10 @@ class Category < ApplicationRecord
   end
 
   private
+    def reassign_transactions_to_nothing
+      Transaction.reassign_category!(transactions, nil)
+    end
+
     def category_level_limit
       if (subcategory? && parent&.subcategory?) || (parent? && subcategory?)
         errors.add(:parent, "can't have more than 2 levels of subcategories")

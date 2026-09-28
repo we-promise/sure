@@ -159,6 +159,53 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
+  test "investment_contributions_category merges duplicates across accounts" do
+    family = families(:dylan_family)
+    family.update!(locale: "en")
+    family.categories.where(name: [ "Investment Contributions", "Contributions aux investissements" ]).destroy_all
+
+    english_category = family.categories.create!(
+      name: "Investment Contributions",
+      color: "#0d9488",
+      lucide_icon: "trending-up"
+    )
+
+    french_category = family.categories.create!(
+      name: "Contributions aux investissements",
+      color: "#0d9488",
+      lucide_icon: "trending-up"
+    )
+
+    # Transactions on two different accounts of the same family: the
+    # transactions-through-accounts scope must reach both.
+    txn1 = Transaction.create!(category: english_category)
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: txn1,
+      amount: 100,
+      currency: "USD",
+      date: Date.current,
+      name: "First account txn"
+    )
+
+    txn2 = Transaction.create!(category: french_category)
+    Entry.create!(
+      account: accounts(:credit_card),
+      entryable: txn2,
+      amount: 50,
+      currency: "USD",
+      date: Date.current,
+      name: "Second account txn"
+    )
+
+    result = family.investment_contributions_category
+
+    assert_equal english_category.id, result.id
+    assert_equal english_category.id, txn1.reload.category_id
+    assert_equal english_category.id, txn2.reload.category_id,
+      "transaction on the second account must also be reassigned to the keeper"
+  end
+
   test "moniker helpers return expected singular and plural labels" do
     family = families(:dylan_family)
 

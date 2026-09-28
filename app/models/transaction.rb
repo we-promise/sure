@@ -114,6 +114,10 @@ class Transaction < ApplicationRecord
   # Providers that support pending transaction flags
   PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark].freeze
 
+  # Slice size for the entry touch in reassign_category! — bounds the UPDATE
+  # statement size when a merge or category destroy hits many transactions.
+  REASSIGN_TOUCH_BATCH_SIZE = 5_000
+
   # Pre-computed SQL fragment for subqueries that check if a transaction (aliased as "t") is pending.
   # Stored as a constant so static analysis can verify it contains no user input.
   PENDING_CHECK_SQL = PENDING_PROVIDERS
@@ -149,25 +153,35 @@ class Transaction < ApplicationRecord
   # Bulk category reassignment that still busts entry-keyed report caches.
   # update_all skips callbacks, so the `has_one :entry, touch: true` bump that
   # every normal save relies on (Family#entries_cache_version) never happens.
+  # Expects a plain relation — `to_sql` on a scope carrying `select` or
+  # `includes` would emit the wrong subquery for the IN clause.
   def self.reassign_category!(scope, category_id)
     transaction do
-      # UPDATE ... RETURNING captures exactly the rows it reassigned, so the
-      # entry touch below covers the same set: a transaction entering the
-      # scope between a separate lock/touch and the update would be updated
-      # without its entry being touched, leaving report caches stale. The
-      # UPDATE takes row locks on `transactions` only (family scopes join
-      # entries and accounts) and taking them before the entry locks keeps
-      # our lock order the same as a normal save's.
-      updated_ids = connection.select_values(<<~SQL)
-        UPDATE transactions
+      sql = <<~SQL
+        UPDATE #{quoted_table_name}
         SET category_id = #{connection.quote(category_id)}
-        WHERE id IN (#{scope.select(:id).to_sql})
+        WHERE id IN (#{scope.reselect(:id).to_sql})
         RETURNING id
       SQL
 
+      # exec_query is the uncached primitive (QueryCache only wraps select_all)
+      # and isn't in dirties_query_cache's list, so clear the cache explicitly.
+      updated_ids = connection.exec_query(sql, "Transaction Reassign Category").rows.flatten
+      connection.clear_query_cache
+
       next 0 if updated_ids.empty?
 
-      Entry.where(entryable_type: "Transaction", entryable_id: updated_ids).touch_all
+      # UPDATE ... RETURNING captured exactly the rows it reassigned, so the
+      # entry touch covers the same set: a transaction entering the scope
+      # between a separate lock/touch and the update would be updated without
+      # its entry being touched, leaving report caches stale. The UPDATE takes
+      # row locks on `transactions` only (family scopes join entries and
+      # accounts) and taking them before the entry locks keeps our lock order
+      # the same as a normal save's. Sliced so a large merge doesn't build a
+      # single unbounded UPDATE on entries.
+      updated_ids.each_slice(REASSIGN_TOUCH_BATCH_SIZE) do |batch|
+        Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
+      end
 
       updated_ids.size
     end

@@ -41,6 +41,18 @@ class CategoryTest < ActiveSupport::TestCase
     assert_not_equal before, @family.entries_cache_version
   end
 
+  test "destroy nullifies transaction categories and bumps entries_cache_version" do
+    transaction = transactions(:one)
+    before = @family.entries_cache_version
+
+    travel_to 1.minute.from_now do
+      categories(:food_and_drink).destroy!
+    end
+
+    assert_nil transaction.reload.category_id
+    assert_not_equal before, @family.entries_cache_version
+  end
+
   test "destroying parent category preserves subcategory transaction assignments" do
     parent = @family.categories.create!(
       name: "Parent With Child Transactions",

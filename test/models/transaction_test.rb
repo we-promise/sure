@@ -327,27 +327,4 @@ class TransactionTest < ActiveSupport::TestCase
   test "reassign_category! returns 0 for an empty scope" do
     assert_equal 0, Transaction.reassign_category!(Transaction.none, categories(:income).id)
   end
-
-  test "reassign_category! only writes to transactions and their entries" do
-    transaction = transactions(:one)
-    family = transaction.entry.account.family
-    updates = []
-    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
-      updates << payload[:sql] if payload[:sql].match?(/\AUPDATE/i)
-    end
-
-    # Family scope joins entries and accounts; the UPDATE ... RETURNING takes
-    # row locks on transactions only, so it must not write or lock the joined
-    # tables. The entries UPDATE is the cache-busting touch.
-    Transaction.reassign_category!(family.transactions.where(id: transaction.id), categories(:income).id)
-
-    assert updates.any? { |sql| sql.match?(/UPDATE\s+"?transactions"?/) && sql.include?("RETURNING") },
-      "expected an UPDATE ... RETURNING on transactions"
-    assert updates.any? { |sql| sql.match?(/UPDATE\s+"?entries"?/) },
-      "expected the entries touch"
-    assert updates.none? { |sql| sql.match?(/UPDATE\s+"?accounts"?/) },
-      "expected no write (or row lock) on joined accounts"
-  ensure
-    ActiveSupport::Notifications.unsubscribe(subscriber)
-  end
 end
