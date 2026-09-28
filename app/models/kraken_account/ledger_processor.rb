@@ -118,7 +118,9 @@ class KrakenAccount::LedgerProcessor
       # half -- pricing it can fail on one sync and succeed on the next --
       # without duplicating the one it has.
       if abs_impact.zero? || @existing_external_ids.include?(external_id)
-        process_ledger_fee(external_id, ledger_id, ledger, raw_fee, symbol, date) if split_fee
+        if split_fee && principal_awaits_fee?(external_id, raw_amount, raw_fee, symbol, date)
+          process_ledger_fee(external_id, ledger_id, ledger, raw_fee, symbol, date)
+        end
         return
       end
 
@@ -154,6 +156,25 @@ class KrakenAccount::LedgerProcessor
 
     # Kraken's fee is always a cost, so it is an outflow whichever way the principal
     # moved. Its own external_id keeps it idempotent alongside the principal entry.
+    # An entry written before fees were split holds the fee inside it: adding the
+    # fee entry now would charge it twice. Only a principal already standing on
+    # its own is owed one -- which happens when pricing the fee failed on an
+    # earlier sync. Told apart by which of the two figures the stored amount is
+    # nearer to, so a rate that has moved since cannot turn one into the other,
+    # and ties go to leaving it alone.
+    def principal_awaits_fee?(external_id, raw_amount, raw_fee, symbol, date)
+      entry = account.entries.find_by(external_id: external_id)
+      return true if entry.nil? # no principal at all: a correction row carrying only a fee
+      return false if entry.user_modified?
+
+      split, = resolve_amount(raw_amount.abs, symbol, date)
+      legacy, = resolve_amount((raw_amount - raw_fee).abs, symbol, date)
+      return false if split.nil? || legacy.nil?
+
+      stored = entry.amount.abs
+      (stored - split.abs).abs < (stored - legacy.abs).abs
+    end
+
     def process_ledger_fee(principal_external_id, ledger_id, ledger, raw_fee, symbol, date)
       fee_external_id = "#{principal_external_id}_fee"
       return if @existing_external_ids.include?(fee_external_id)

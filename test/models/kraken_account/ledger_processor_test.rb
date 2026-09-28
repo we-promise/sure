@@ -173,6 +173,56 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
     assert_in_delta 0.5, fee.amount.to_f, 0.01
   end
 
+  # An account synced before fees were split carries the fee inside the
+  # withdrawal. An ordinary sync reaches it long before the re-import this
+  # change asks for, and must not charge the fee a second time.
+  test "a principal written with its fee inside it is left alone" do
+    set_ledgers(
+      "LWIT07" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)
+    )
+    legacy = @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date,
+      name: "Withdrawal 501 USD",
+      amount: 501,
+      currency: "USD",
+      external_id: "kraken_ledger_LWIT07",
+      source: "kraken",
+      entryable: Transaction.new
+    )
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    assert_nil @account.entries.find_by(external_id: "kraken_ledger_LWIT07_fee")
+    assert_equal 501, legacy.reload.amount
+  end
+
+  # The other reason a principal can stand alone: pricing the fee failed on an
+  # earlier sync. That one is still owed its other half.
+  test "a principal written without its fee still gets one" do
+    set_ledgers(
+      "LWIT08" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)
+    )
+    @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date,
+      name: "Withdrawal 500 USD",
+      amount: 500,
+      currency: "USD",
+      external_id: "kraken_ledger_LWIT08",
+      source: "kraken",
+      entryable: Transaction.new
+    )
+
+    assert_difference "@account.entries.count", 1 do
+      process
+    end
+
+    fee = @account.entries.find_by(external_id: "kraken_ledger_LWIT08_fee", source: "kraken")
+    assert fee
+    assert_in_delta 1.0, fee.amount.to_f, 0.01
+  end
+
   test "a split fee entry is not duplicated on reprocessing" do
     set_ledgers(
       "LWIT03" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)
