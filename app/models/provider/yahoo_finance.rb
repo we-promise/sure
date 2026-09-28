@@ -833,15 +833,19 @@ class Provider::YahooFinance < Provider
     # If Yahoo returns a stale-crumb error (200 OK with Unauthorized body),
     # clears the crumb cache and retries once with fresh credentials.
     def fetch_authenticated_chart(symbol, params)
-      cookie, crumb = fetch_cookie_and_crumb
-      response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+      # The /v8/finance/chart endpoint does NOT require cookie/crumb auth, and
+      # Yahoo rate-limits AUTHENTICATED chart requests far more aggressively than
+      # anonymous ones (verified live: cookie+crumb => 429, same symbol/IP with
+      # no auth => 200). Use the plain client for price/chart data. Cookie+crumb
+      # remains scoped to quoteSummary (fetch_security_info), which needs it.
+      response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
         params.each { |k, v| req.params[k] = v }
-        req.params["crumb"] = crumb
       end
       data = JSON.parse(response.body)
 
+      # Rare fallback: if Yahoo ever demands auth for a specific symbol
+      # (200 OK with an Unauthorized body), retry once with cookie+crumb.
       if data.dig("chart", "error", "code") == "Unauthorized"
-        clear_crumb_cache
         cookie, crumb = fetch_cookie_and_crumb
         response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
           params.each { |k, v| req.params[k] = v }
