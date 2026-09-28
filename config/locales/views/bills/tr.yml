@@ -76,7 +76,7 @@ tr:
       pulse_next_seven: önümüzdeki 7 gün
       pulse_bar_aria: Bu ayın faturalarının yüzde %{percent} kadarı ödendi
       next_up: Sıradaki
-      view_upcoming: Yaklaşanları görüntüle
+      view_calendar: Takvimi görüntüle
       date_today: Bugün
       date_tomorrow: Yarın
       unconvertible:
