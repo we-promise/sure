@@ -119,15 +119,19 @@ class Account::MarketDataImporter
 
     # Earliest required date per price currency that differs from the account currency.
     # Securities are shared across families, so a price's own date is not a bound.
+    # Currencies whose prices all predate the account's first required date are skipped.
     def security_price_currency_start_dates
       @security_price_currency_start_dates ||= begin
-        foreign_prices = Security::Price.where(security_id: security_ids)
-                                        .where.not(currency: account.currency)
-                                        .distinct
-                                        .pluck(:security_id, :currency)
+        latest_foreign_price_dates = Security::Price.where(security_id: security_ids)
+                                                    .where.not(currency: account.currency)
+                                                    .group(:security_id, :currency)
+                                                    .maximum(:date)
 
-        foreign_prices.each_with_object({}) do |(security_id, currency), dates|
-          dates[currency] = [ dates[currency], first_required_price_dates[security_id] ].compact.min
+        latest_foreign_price_dates.each_with_object({}) do |((security_id, currency), latest_date), dates|
+          start_date = first_required_price_dates[security_id]
+          next if latest_date < start_date
+
+          dates[currency] = [ dates[currency], start_date ].compact.min
         end
       end
     end

@@ -147,6 +147,30 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     assert ExchangeRate.where(from_currency: "USD", to_currency: "EUR", date: trade_date).exists?
   end
 
+  test "ignores price currencies that only occur before the account needs prices" do
+    family = Family.create!(name: "Smith", currency: "USD")
+
+    account = family.accounts.create!(
+      name: "Brokerage",
+      currency: "USD",
+      balance: 0,
+      accountable: Investment.new
+    )
+
+    security = Security.create!(ticker: "SHEL", exchange_operating_mic: "XLON")
+    trade_date = 10.days.ago.to_date
+    trade      = Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy SHEL", date: trade_date, amount: 100, currency: "USD", entryable: trade)
+
+    # Older GBP prices from before this account traded the security, then USD prices
+    Security::Price.create!(security: security, date: 2.years.ago.to_date, price: 20, currency: "GBP")
+    Security::Price.create!(security: security, date: trade_date, price: 100, currency: "USD")
+
+    @provider.expects(:fetch_exchange_rates).never
+
+    Account::MarketDataImporter.new(account).import_exchange_rates
+  end
+
   test "does not fetch exchange rates for security prices in the account currency" do
     family = Family.create!(name: "Smith", currency: "USD")
 
