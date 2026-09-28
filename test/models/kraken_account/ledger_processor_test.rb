@@ -93,6 +93,7 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
     fee = @account.entries.find_by(external_id: "kraken_ledger_LWIT02_fee", source: "kraken")
     assert fee, "the fee must be its own entry"
     assert_in_delta 1.0, fee.amount.to_f, 0.01
+    assert_equal "Fee 1 USD", fee.name, "a BigDecimal must not reach the name as 0.1e1"
     assert_equal "Fee", fee.entryable.investment_activity_label
     assert_in_delta 501.0, principal.amount.to_f + fee.amount.to_f, 0.01
   end
@@ -152,6 +153,24 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
     fee = @account.entries.find_by(external_id: "kraken_ledger_LWIT05_fee", source: "kraken")
     assert fee
     assert_in_delta 1.0, fee.amount.to_f, 0.01
+  end
+
+  # A correction row can carry a fee against a zero principal. Before the fee
+  # was split out the combined figure kept it; now the fee is its own entry and
+  # a zero principal must not swallow it.
+  test "a fee-only ledger row still produces its fee entry" do
+    set_ledgers(
+      "LWIT06" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "0.00", fee: "0.50", time: 1_700_000_000)
+    )
+
+    assert_difference "@account.entries.count", 1 do
+      process
+    end
+
+    assert_nil @account.entries.find_by(external_id: "kraken_ledger_LWIT06"), "no principal for a zero amount"
+    fee = @account.entries.find_by(external_id: "kraken_ledger_LWIT06_fee", source: "kraken")
+    assert fee
+    assert_in_delta 0.5, fee.amount.to_f, 0.01
   end
 
   test "a split fee entry is not duplicated on reprocessing" do
