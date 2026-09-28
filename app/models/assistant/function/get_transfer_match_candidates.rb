@@ -59,12 +59,12 @@ class Assistant::Function::GetTransferMatchCandidates < Assistant::Function
       return result
     end
 
-    rows = Transfer::Matcher.new(transaction).candidates
-    counterpart_ids = rows.map { |r| r.inflow_transaction_id == transaction.id ? r.outflow_transaction_id : r.inflow_transaction_id }
-    counterparts = Transaction.includes(entry: :account).where(id: counterpart_ids).index_by(&:id)
+    matcher = Transfer::Matcher.new(transaction)
+    rows = matcher.candidates
+    counterparts = Transaction.includes(entry: :account).where(id: rows.map { |row| matcher.counterpart_id(row) }).index_by(&:id)
 
     result[:candidates] = rows.filter_map do |row|
-      counterpart = counterparts[row.inflow_transaction_id == transaction.id ? row.outflow_transaction_id : row.inflow_transaction_id]
+      counterpart = counterparts[matcher.counterpart_id(row)]
       next unless counterpart && accessible_account_ids.include?(counterpart.entry.account_id)
 
       serialize_transaction(counterpart).merge(
