@@ -297,7 +297,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         security: security,
         quantity: 5,
         price: 150.00,
-        amount: 750.00,
+        amount: 754.95,
+        fee: 4.95,
         currency: "USD",
         date: Date.today,
         source: "plaid"
@@ -306,7 +307,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_kind_of Trade, entry.entryable
       assert_equal 5, entry.entryable.qty
       assert_equal 150.00, entry.entryable.price
-      assert_equal 750.00, entry.amount
+      assert_equal BigDecimal("4.95"), entry.entryable.fee
+      assert_equal BigDecimal("754.95"), entry.amount
       assert_match(/Buy.*5.*shares/i, entry.name)
     end
   end
@@ -328,6 +330,39 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     )
 
     assert_equal 0.91, entry.entryable.exchange_rate
+  end
+
+  # So user-entered fees aren't erased by syncing from providers that don't report fees
+  test "preserves existing trade fee when reimport omits it" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    aapl = securities(:aapl)
+
+    entry = adapter.import_trade(
+      external_id: "plaid_trade_fee_preserved",
+      security: aapl,
+      quantity: 5,
+      price: 150.00,
+      amount: 754.95,
+      fee: 4.95,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid"
+    )
+
+    updated_entry = adapter.import_trade(
+      external_id: "plaid_trade_fee_preserved",
+      security: aapl,
+      quantity: 5,
+      price: 150.00,
+      amount: 754.95,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid"
+    )
+
+    assert_equal entry.id, updated_entry.id
+    assert_equal BigDecimal("4.95"), updated_entry.entryable.reload.fee
   end
 
   test "raises error when security is missing for trade import" do
@@ -1574,5 +1609,119 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_not booked_entry.transaction.pending?,
         "pending flag must be cleared even for user-modified entries"
     end
+  end
+
+  test "backfills counterparty iban on a user-modified entry that predates the feature" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_user_mod_no_iban",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Old Landlord Payment",
+      source: "enable_banking"
+    )
+    assert_nil entry.transaction.counterparty_iban
+
+    entry.mark_user_modified!
+    assert entry.reload.user_modified?, "entry should be marked user-modified"
+
+    # A later sync now carries counterparty data the original payload lacked.
+    # The entry is protected (user_modified), but this field has no UI for the
+    # user to have relied upon, so it should still be backfilled.
+    assert_no_difference "@account.entries.count" do
+      updated_entry = @adapter.import_transaction(
+        external_id: "eb_user_mod_no_iban",
+        amount: 20.0,
+        currency: "EUR",
+        date: Date.today - 5.days,
+        name: "Old Landlord Payment",
+        source: "enable_banking",
+        extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+      )
+
+      assert_equal entry.id, updated_entry.id
+      updated_entry.reload
+      assert_equal "AT611904300234573201", updated_entry.transaction.counterparty_iban # pipelock:ignore IBAN
+    end
+  end
+
+  test "does not clobber a backfilled counterparty iban with a later nil on a user-modified entry" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_user_mod_iban_then_nil",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Old Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+    )
+    assert_equal "AT611904300234573201", entry.transaction.counterparty_iban # pipelock:ignore IBAN
+
+    entry.mark_user_modified!
+    assert entry.reload.user_modified?, "entry should be marked user-modified"
+
+    # A later sync's payload doesn't carry counterparty data this time (e.g. a
+    # re-delivery through a path that doesn't populate it) -- this is a purely
+    # additive backfill for a protected entry, so it must not erase data a
+    # previous sync already filled in.
+    assert_no_difference "@account.entries.count" do
+      updated_entry = @adapter.import_transaction(
+        external_id: "eb_user_mod_iban_then_nil",
+        amount: 20.0,
+        currency: "EUR",
+        date: Date.today - 5.days,
+        name: "Old Landlord Payment",
+        source: "enable_banking",
+        extra: { "counterparty_iban" => nil }
+      )
+
+      assert_equal entry.id, updated_entry.id
+      updated_entry.reload
+      assert_equal "AT611904300234573201", updated_entry.transaction.counterparty_iban, # pipelock:ignore IBAN
+        "a nil counterparty_iban on a later sync must not clobber an already-backfilled value on a protected entry"
+    end
+  end
+
+  test "always assigns counterparty iban on the unprotected path, clearing a stale value on correction" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_unprotected_iban_then_nil",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+    )
+    assert_equal "AT611904300234573201", entry.transaction.counterparty_iban # pipelock:ignore IBAN
+
+    updated_entry = @adapter.import_transaction(
+      external_id: "eb_unprotected_iban_then_nil",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => nil }
+    )
+
+    assert_equal entry.id, updated_entry.id
+    assert_nil updated_entry.reload.transaction.counterparty_iban,
+      "an unprotected entry must have a corrected/removed counterparty iban actually cleared"
+  end
+
+  test "leaves counterparty iban columns untouched when the provider never mentions them" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_no_counterparty_keys",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Some Payment",
+      source: "plaid",
+      extra: { "fx_rate" => "1.05" }
+    )
+
+    assert_nil entry.transaction.counterparty_iban
+    assert_nil entry.transaction.counterparty_account_id
+    assert_equal "1.05", entry.transaction.extra["fx_rate"]
   end
 end

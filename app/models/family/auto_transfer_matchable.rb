@@ -1,11 +1,57 @@
 module Family::AutoTransferMatchable
+  # A confirmed IBAN match (the destination account's own IBAN equals the
+  # outflow's recorded counterparty IBAN) is the most precise signal
+  # available -- more precise than amount+date alone, which can be ambiguous
+  # with several similar transactions in flight. It therefore gets a wider
+  # date-tolerance window to absorb bank clearing delays; transactions
+  # without a confirmed IBAN keep the existing, narrower window unchanged.
+  #
+  # Matches Transfer#transfer_within_date_range's own 30-day cap for
+  # status: "confirmed" (the status this match gets once it needs the wider
+  # window at all) -- a narrower value here would make the SQL candidate
+  # lookup itself exclude confirmed-eligible matches between that value and
+  # 30 days, before the model validation ever got a chance to allow them.
+  IBAN_CONFIRMED_DATE_WINDOW = 30
+  DEFAULT_DATE_WINDOW = 4
+
+  # The automatic path's cross-currency tolerance when TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE
+  # is unset or unusable. 10% is the long-standing default. Real-world FX slippage between
+  # a transaction's timestamp and the cached daily rate is typically 1-3%, so an operator
+  # seeing coincidental matches on round-number amounts can tighten it without a code change.
+  DEFAULT_EXCHANGE_RATE_TOLERANCE = 0.1
+
+  # Beyond this the band stops meaning anything: at 1.0 the lower bound reaches zero and
+  # any two cross-currency amounts inside the date window would match.
+  MAX_EXCHANGE_RATE_TOLERANCE = 0.5
+
+  # The manual "match as transfer" dialog (Transaction#transfer_match_candidates) is never
+  # narrower than this: a user is confirming the match themselves, and FX slippage or
+  # card-network markup on a manual-account leg can be wide. Mirrors the same
+  # date_window: 30 vs. 4 widening that dialog already applies.
+  MANUAL_MATCH_EXCHANGE_RATE_TOLERANCE = 0.1
+
+  # Read at call time rather than frozen into a constant at boot, so a bad value falls back
+  # instead of raising inside every sync: Family::Syncer and Account::Syncer both call
+  # auto_match_transfers! without a tolerance of their own.
+  def self.exchange_rate_tolerance
+    tolerance = Float(ENV["TRANSFER_MATCH_EXCHANGE_RATE_TOLERANCE"], exception: false)
+    return DEFAULT_EXCHANGE_RATE_TOLERANCE if tolerance.nil? || !tolerance.finite? || tolerance.negative?
+
+    [ tolerance, MAX_EXCHANGE_RATE_TOLERANCE ].min
+  end
+
+  def self.manual_match_exchange_rate_tolerance
+    [ MANUAL_MATCH_EXCHANGE_RATE_TOLERANCE, exchange_rate_tolerance ].max
+  end
+
   def transfer_match_candidates(
     date_window: 4,
-    exchange_rate_tolerance: 0.1,
+    exchange_rate_tolerance: Family::AutoTransferMatchable.exchange_rate_tolerance,
     inflow_transaction_id: nil,
     outflow_transaction_id: nil,
     account_id: nil,
-    include_rejected: true
+    include_rejected: true,
+    restrict_cross_currency_to_linked_accounts: false
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
@@ -19,19 +65,47 @@ module Family::AutoTransferMatchable
         outflow_transaction_id:,
         account_id:,
         include_rejected:,
+        restrict_cross_currency_to_linked_accounts:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
     ])
   end
 
-  def auto_match_transfers!(account: nil)
-    # Exclude already matched transfers
-    candidates_scope = transfer_match_candidates(account_id: account&.id, include_rejected: false)
+  def auto_match_transfers!(account: nil, exchange_rate_tolerance: Family::AutoTransferMatchable.exchange_rate_tolerance)
+    # Exclude already matched transfers. Loads the wider IBAN-confirmed window
+    # up front; candidates that turn out not to be IBAN-confirmed are pruned
+    # back down to the normal window just below, so unconfirmed behavior is
+    # unchanged. Cross-currency FX-tolerance matching is restricted to
+    # provider-linked accounts ONLY on this automatic path -- a coincidental
+    # amount/FX-rate match applied here has no human reviewing it first. The
+    # manual "match as transfer" dialog goes through
+    # Transaction#transfer_match_candidates, which calls transfer_match_candidates
+    # directly without this restriction, so a user can still find and confirm a
+    # real cross-currency transfer that happens to involve a manual account.
+    candidates_scope = transfer_match_candidates(
+      account_id: account&.id,
+      include_rejected: false,
+      date_window: IBAN_CONFIRMED_DATE_WINDOW,
+      exchange_rate_tolerance:,
+      restrict_cross_currency_to_linked_accounts: true
+    )
     transaction_ids = candidates_scope.flat_map do |match|
       [ match.inflow_transaction_id, match.outflow_transaction_id ]
     end.uniq
     transactions_by_id = Transaction.includes(entry: :account).where(id: transaction_ids).index_by(&:id)
+
+    # IBAN-confirmed candidates may use the wider window and are tried first;
+    # everything else is restricted back to the original narrow window so
+    # transactions with no IBAN data see no behavior change. Confirmation is
+    # computed once per match and carried alongside it -- Transfer's own
+    # transfer_within_date_range validation caps unconfirmed transfers at 4
+    # days, so an IBAN-confirmed match also needs status: "confirmed" (its
+    # 30-day cap) to actually persist beyond that.
+    candidates_with_confirmation = candidates_scope
+      .map { |match| [ match, iban_confirmed?(match, transactions_by_id) ] }
+      .select { |match, confirmed| confirmed || match.date_diff <= DEFAULT_DATE_WINDOW }
+      .sort_by { |match, confirmed| [ confirmed ? 0 : 1, match.date_diff ] }
 
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
@@ -39,14 +113,24 @@ module Family::AutoTransferMatchable
     investment_category_loaded = false
 
     Transfer.transaction do
-      candidates_scope.each do |match|
+      candidates_with_confirmation.each do |match, confirmed|
         next if used_transaction_ids.include?(match.inflow_transaction_id) ||
                used_transaction_ids.include?(match.outflow_transaction_id)
+
+        # status: "confirmed" is only for the IBAN-confirmed candidates that
+        # actually NEED it to persist -- those beyond the default window,
+        # where transfer_within_date_range would otherwise reject an
+        # unconfirmed transfer. An IBAN-confirmed match that also falls
+        # inside the default window would have matched without the IBAN
+        # signal at all, so it must stay pending like every other automatic
+        # match, not skip user review just because it happens to be
+        # IBAN-confirmed too.
+        needs_confirmed_status = confirmed && match.date_diff > DEFAULT_DATE_WINDOW
 
         # Skip this candidate when the transfer for this exact pair was not created
         # (a concurrent sync claimed one of the transactions for a different pairing);
         # marking it matched here would leave a transaction matched with no Transfer.
-        next unless find_or_create_transfer!(match)
+        next unless find_or_create_transfer!(match, confirmed: needs_confirmed_status)
 
         inflow_transaction = transactions_by_id.fetch(match.inflow_transaction_id)
         outflow_transaction = transactions_by_id.fetch(match.outflow_transaction_id)
@@ -76,6 +160,41 @@ module Family::AutoTransferMatchable
   end
 
   private
+    # True when the inflow's destination account has its own IBAN set and it
+    # matches the outflow transaction's recorded counterparty IBAN. Blank on
+    # either side (no accounts.iban set, or the provider never supplied a
+    # counterparty IBAN for this transaction) always resolves to false --
+    # this is an additive signal, never a requirement.
+    def iban_confirmed?(match, transactions_by_id)
+      inflow = transactions_by_id[match.inflow_transaction_id]
+      outflow = transactions_by_id[match.outflow_transaction_id]
+      return false unless inflow && outflow
+
+      destination_iban = inflow.entry.account.iban
+      counterparty_iban = outflow.counterparty_iban
+      return false if destination_iban.blank? || counterparty_iban.blank?
+      return false unless normalize_iban(destination_iban) == normalize_iban(counterparty_iban)
+
+      # The inflow side's own recorded counterparty IBAN (who the destination
+      # account's bank says paid it) is a second, independent signal from the
+      # same provider sync. When it's present, it must agree with the source
+      # account's IBAN too -- a contradiction here (matching amount/date, but
+      # the destination account's bank recorded a DIFFERENT payer) means this
+      # is very likely two distinct transactions that merely coincide, not a
+      # confirmed transfer. Blank is not a contradiction: not every provider
+      # supplies this on the inflow side, so its absence is uninformative.
+      source_iban = outflow.entry.account.iban
+      inflow_counterparty_iban = inflow.counterparty_iban
+      return false if source_iban.present? && inflow_counterparty_iban.present? &&
+        normalize_iban(source_iban) != normalize_iban(inflow_counterparty_iban)
+
+      true
+    end
+
+    def normalize_iban(value)
+      IbanNormalizable.normalize(value).to_s
+    end
+
     # Create the transfer for a matched candidate, tolerating a concurrent sync
     # that already inserted the same pair.
     #
@@ -85,12 +204,19 @@ module Family::AutoTransferMatchable
     # next write would fail with PG::InFailedSqlTransaction and the remaining
     # candidates would be silently dropped. Isolating the insert in a savepoint
     # rolls back only the failed statement, leaving the outer transaction healthy.
-    def find_or_create_transfer!(match)
+    def find_or_create_transfer!(match, confirmed: false)
       Transfer.transaction(requires_new: true) do
         Transfer.find_or_create_by!(
           inflow_transaction_id: match.inflow_transaction_id,
           outflow_transaction_id: match.outflow_transaction_id,
-        )
+        ) do |transfer|
+          # Only takes effect when a new record is being built -- an
+          # already-existing transfer's status is left untouched. Needed so
+          # an IBAN-confirmed match beyond the default 4-day window doesn't
+          # immediately fail transfer_within_date_range, which only allows
+          # up to 30 days for status: "confirmed".
+          transfer.status = "confirmed" if confirmed
+        end
       end
     rescue ActiveRecord::RecordNotUnique
       # The composite unique index rejected the insert because this exact
@@ -134,6 +260,25 @@ module Family::AutoTransferMatchable
       tolerance
     end
 
+    # The second UNION branch below (cross-currency, FX-rate-tolerance matching) is a
+    # coincidence guess -- amount x FX-rate within a tolerance band, not an exact amount
+    # match -- and a manual account has no institution behind it confirming money actually
+    # moved, so an unrelated pair of round-number transactions can land inside the tolerance
+    # band purely by chance. When :restrict_cross_currency_to_linked_accounts is true, that
+    # branch additionally requires both accounts to have a live provider connection
+    # (Plaid/SimpleFIN/account_providers). Manual accounts always participate in the first
+    # branch's exact-amount, same-currency matching, which carries no such ambiguity.
+    #
+    # The restriction is opt-in (default false) rather than baked into the branch
+    # unconditionally: Family#auto_match_transfers! passes true because a coincidental match
+    # there is applied automatically with no human reviewing it first, but
+    # Transaction#transfer_match_candidates (the manual "match as transfer" dialog) leaves it
+    # off so a user can still find and confirm a real cross-currency transfer that happens to
+    # involve a manual account, rather than being forced into creating a duplicate.
+    #
+    # NOTE: this is passed through `.squish`, which collapses all whitespace (including
+    # newlines) into single spaces -- a `--` SQL line comment anywhere in this heredoc would
+    # swallow the remainder of the query. Put explanatory comments here in Ruby instead.
     def transfer_match_candidates_sql
       <<~SQL.squish
         SELECT transfer_match_candidates.*
@@ -220,9 +365,27 @@ module Family::AutoTransferMatchable
               BETWEEN :lower_exchange_rate_bound AND :upper_exchange_rate_bound AND
             (:inflow_transaction_id IS NULL OR inflow_candidates.entryable_id = :inflow_transaction_id) AND
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
-            (:include_rejected = TRUE OR rejected_transfers.id IS NULL)
+            (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
+            (
+              :restrict_cross_currency_to_linked_accounts = FALSE OR
+              (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")})
+            )
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.date_diff ASC
+      SQL
+    end
+
+    # The inverse of Account#manual? / the Account.manual scope, inlined as SQL so
+    # it can run against the inflow/outflow account aliases in the same query
+    # rather than round-tripping through AR. Keep in sync with Account#manual? if
+    # what counts as "linked" ever changes (e.g. a new provider type).
+    def linked_account_sql(accounts_alias)
+      <<~SQL.squish
+        (
+          #{accounts_alias}.plaid_account_id IS NOT NULL OR
+          #{accounts_alias}.simplefin_account_id IS NOT NULL OR
+          EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = #{accounts_alias}.id)
+        )
       SQL
     end
 end

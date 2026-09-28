@@ -9,6 +9,8 @@ pl:
       mileage: Przebieg
       mileage_placeholder: '15000'
       mileage_unit: Jednostka
+      mileage_unit_kilometers: Kilometry
+      mileage_unit_miles: Mile
       model: Model
       model_placeholder: Camry
       year: Rok
@@ -23,3 +25,13 @@ pl:
       trend: Trend
       unknown: Nieznane
       year: Rok
+    tabs:
+      overview:
+        current_price: Aktualna cena
+        edit_account_details: Edytuj dane konta
+        make_model: Marka i model
+        mileage: Przebieg
+        purchase_price: Cena zakupu
+        trend: Trend
+        unknown: Nieznane
+        year: Rok

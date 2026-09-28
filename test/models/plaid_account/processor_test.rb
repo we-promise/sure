@@ -43,6 +43,26 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "PlaidAccount", account.account_providers.first.provider_type
   end
 
+  test "a new account inherits the owner of the item that produced it" do
+    # Accounts are created inside the sync job, where Current.user is nil. If
+    # the owner were left to Account#assign_default_owner it would fall back to
+    # the family's first admin, quietly taking a member's own connection away
+    # from them (issue #3579).
+    Account.destroy_all
+    member = users(:family_member)
+    @plaid_account.plaid_item.update!(owner: member)
+
+    expect_default_subprocessor_calls
+
+    Current.reset
+
+    assert_difference "Account.count" do
+      PlaidAccount::Processor.new(@plaid_account).process
+    end
+
+    assert_equal member, Account.order(created_at: :desc).first.owner
+  end
+
   test "processing is idempotent with updates and enrichments" do
     expect_default_subprocessor_calls
 
@@ -123,6 +143,23 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     expect_depository_product_processor_calls
 
     @plaid_account.update!(plaid_type: "credit", plaid_subtype: "credit card")
+
+    PlaidAccount::Liabilities::CreditProcessor.any_instance.expects(:process).once
+    PlaidAccount::Liabilities::MortgageProcessor.any_instance.expects(:process).never
+    PlaidAccount::Liabilities::StudentLoanProcessor.any_instance.expects(:process).never
+
+    PlaidAccount::Processor.new(@plaid_account).process
+  end
+
+  test "processes credit liability data for non-credit-card subtypes" do
+    # Plaid reports PayPal Credit as credit/paypal. Dispatching only on
+    # ["credit", "credit card"] left these accounts with a stored liabilities
+    # payload but no minimum_payment or apr.
+    expect_investment_product_processor_calls
+    expect_no_investment_balance_calculator_calls
+    expect_depository_product_processor_calls
+
+    @plaid_account.update!(plaid_type: "credit", plaid_subtype: "paypal")
 
     PlaidAccount::Liabilities::CreditProcessor.any_instance.expects(:process).once
     PlaidAccount::Liabilities::MortgageProcessor.any_instance.expects(:process).never

@@ -1,67 +1,95 @@
 ---
 pl:
   coinstats_items:
-    create:
-      success: Połączenie z dostawcą CoinStats zostało pomyślnie skonfigurowane.
-      default_name: Połączenie CoinStats
-      errors:
-        validation_failed: 'Walidacja nie powiodła się: %{message}.'
-    update:
-      success: Połączenie z dostawcą CoinStats zostało pomyślnie zaktualizowane.
-      errors:
-        validation_failed: 'Walidacja nie powiodła się: %{message}.'
-    destroy:
-      success: Połączenie z dostawcą CoinStats zostało zaplanowane do usunięcia.
-    link_wallet:
-      success:
-        one: "Pomyślnie połączono %{count} portfel kryptowalutowy."
-        few: "Pomyślnie połączono %{count} portfele kryptowalutowe."
-        many: "Pomyślnie połączono %{count} portfeli kryptowalutowych."
-        other: "Pomyślnie połączono %{count} portfela kryptowalutowego."
-      missing_params: 'Brak wymaganych parametrów: address i blockchain.'
-      failed: Łączenie portfela kryptowalutowego nie powiodło się.
-      error: 'Łączenie portfela kryptowalutowego nie powiodło się: %{message}.'
-    new:
-      title: Połącz portfel kryptowalutowy z CoinStats
-      blockchain_fetch_error: Nie udało się wczytać blockchainów. Spróbuj ponownie później.
-      address_label: Adres
-      address_placeholder: Wymagane
-      blockchain_label: Blockchain
-      blockchain_placeholder: Wymagane
-      blockchain_select_blank: Wybierz blockchain
-      link: Połącz portfel kryptowalutowy
-      not_configured_title: Połączenie z dostawcą CoinStats nie jest skonfigurowane
-      not_configured_message: Aby połączyć portfel kryptowalutowy, najpierw skonfiguruj połączenie z dostawcą CoinStats.
-      not_configured_step1_html: Przejdź do <strong>Ustawienia → Dostawcy</strong>
-      not_configured_step2_html: Znajdź dostawcę <strong>CoinStats</strong>
-      not_configured_step3_html: Postępuj zgodnie z podanymi <strong>instrukcjami konfiguracji</strong>, aby ukończyć konfigurację dostawcy
-      go_to_settings: Przejdź do ustawień dostawców
-      setup_instructions: 'Instrukcje konfiguracji:'
-      step1_html: Odwiedź <a href="https://openapi.coinstats.app/" class="link" target="_blank" rel="noopener noreferrer">panel publicznego API CoinStats</a>, aby uzyskać klucz API.
-      step2: Wprowadź poniżej swój klucz API i kliknij Skonfiguruj.
-      step3_html: Po udanym połączeniu przejdź do zakładki <a href="%{accounts_url}" class="link" data-turbo-frame="_top">Konta</a>, aby skonfigurować portfele kryptowalutowe.
-      api_key_label: Klucz API
-      api_key_placeholder: Wymagane
-      configure: Skonfiguruj
-      update_configuration: Skonfiguruj ponownie
-      default_name: Połączenie CoinStats
     coinstats_item:
+      delete: Usuń
       deletion_in_progress: Trwa usuwanie danych portfela kryptowalutowego…
+      no_wallets_message: Obecnie żadne portfele kryptowalutowe nie są połączone z
+        CoinStats.
+      no_wallets_title: Brak połączonych portfeli kryptowalutowych
       provider_name: CoinStats
-      syncing: Synchronizacja…
-      sync_status:
-        no_accounts: Nie znaleziono portfeli kryptowalutowych
-        all_synced:
-          one: "Zsynchronizowano %{count} portfel kryptowalutowy"
-          few: "Zsynchronizowano %{count} portfele kryptowalutowe"
-          many: "Zsynchronizowano %{count} portfeli kryptowalutowych"
-          other: "Zsynchronizowano %{count} portfeli kryptowalutowych"
-        partial_sync: "Zsynchronizowano %{linked_count} portfeli kryptowalutowych, %{unlinked_count} wymaga konfiguracji"
       reconnect: Połącz ponownie
       status: Ostatnia synchronizacja %{timestamp} temu
       status_never: Nigdy nie synchronizowano
       status_with_summary: Ostatnia synchronizacja %{timestamp} temu • %{summary}
+      sync_status:
+        all_synced:
+          few: Zsynchronizowano %{count} portfele kryptowalutowe
+          many: Zsynchronizowano %{count} portfeli kryptowalutowych
+          one: Zsynchronizowano %{count} portfel kryptowalutowy
+          other: Zsynchronizowano %{count} portfeli kryptowalutowych
+        no_accounts: Nie znaleziono portfeli kryptowalutowych
+        partial_sync: Zsynchronizowano %{linked_count} portfeli kryptowalutowych,
+          %{unlinked_count} wymaga konfiguracji
+      syncing: Synchronizacja…
       update_api_key: Zaktualizuj klucz API
-      delete: Usuń
-      no_wallets_title: Brak połączonych portfeli kryptowalutowych
-      no_wallets_message: Obecnie żadne portfele kryptowalutowe nie są połączone z CoinStats.
+    create:
+      default_name: Połączenie CoinStats
+      errors:
+        validation_failed: 'Walidacja nie powiodła się: %{message}.'
+      success: Połączenie z dostawcą CoinStats zostało pomyślnie skonfigurowane.
+    destroy:
+      success: Połączenie z dostawcą CoinStats zostało zaplanowane do usunięcia.
+    link_exchange:
+      error: 'Nie udało się połączyć giełdy: %{message}.'
+      failed: Nie udało się połączyć giełdy.
+      invalid_exchange: Wybrana giełda nie jest już obsługiwana.
+      missing_params: Giełda i dane uwierzytelniające są wymagane.
+      success: Giełda %{name} połączona.
+    link_wallet:
+      error: 'Łączenie portfela kryptowalutowego nie powiodło się: %{message}.'
+      failed: Łączenie portfela kryptowalutowego nie powiodło się.
+      missing_params: 'Brak wymaganych parametrów: address i blockchain.'
+      success:
+        few: Pomyślnie połączono %{count} portfele kryptowalutowe.
+        many: Pomyślnie połączono %{count} portfeli kryptowalutowych.
+        one: Pomyślnie połączono %{count} portfel kryptowalutowy.
+        other: Pomyślnie połączono %{count} portfela kryptowalutowego.
+    new:
+      address_label: Adres
+      address_placeholder: Wymagane
+      api_key_label: Klucz API
+      api_key_placeholder: Wymagane
+      blockchain_fetch_error: Nie udało się wczytać blockchainów. Spróbuj ponownie
+        później.
+      blockchain_label: Blockchain
+      blockchain_placeholder: Wymagane
+      blockchain_select_blank: Wybierz blockchain
+      configure: Skonfiguruj
+      default_name: Połączenie CoinStats
+      exchange_label: Giełda
+      exchange_select_blank: Wybierz giełdę
+      go_to_settings: Przejdź do ustawień dostawców
+      link: Połącz portfel kryptowalutowy
+      link_exchange_description: Użyj klucza API giełdy tylko do odczytu, żeby CoinStats
+        mógł synchronizować salda i transakcje z Bitvavo, Binance i innych obsługiwanych
+        giełd.
+      link_exchange_note: Jeśli Twoja giełda wymaga aktywacji klucza API albo potwierdzenia
+        e-mail, zrób to najpierw, zanim połączysz ją tutaj.
+      link_exchange_submit: Połącz giełdę
+      link_exchange_title: Połącz API giełdy
+      link_wallet_description: Śledź portfel własnej kontroli albo pojedynczy adres
+        on-chain przez CoinStats.
+      link_wallet_submit: Połącz portfel krypto
+      link_wallet_title: Połącz adres portfela
+      not_configured_message: Aby połączyć portfel kryptowalutowy, najpierw skonfiguruj
+        połączenie z dostawcą CoinStats.
+      not_configured_step1_html: Przejdź do <strong>Ustawienia → Dostawcy</strong>
+      not_configured_step2_html: Znajdź dostawcę <strong>CoinStats</strong>
+      not_configured_step3_html: Postępuj zgodnie z podanymi <strong>instrukcjami
+        konfiguracji</strong>, aby ukończyć konfigurację dostawcy
+      not_configured_title: Połączenie z dostawcą CoinStats nie jest skonfigurowane
+      setup_instructions: 'Instrukcje konfiguracji:'
+      step1_html: Odwiedź <a href="https://openapi.coinstats.app/" class="link" target="_blank"
+        rel="noopener noreferrer">panel publicznego API CoinStats</a>, aby uzyskać
+        klucz API.
+      step2: Wprowadź poniżej swój klucz API i kliknij Skonfiguruj.
+      step3_html: Po udanym połączeniu przejdź do zakładki <a href="%{accounts_url}"
+        class="link" data-turbo-frame="_top">Konta</a>, aby skonfigurować portfele
+        kryptowalutowe.
+      title: Połącz portfel kryptowalutowy z CoinStats
+      update_configuration: Skonfiguruj ponownie
+    update:
+      errors:
+        validation_failed: 'Walidacja nie powiodła się: %{message}.'
+      success: Połączenie z dostawcą CoinStats zostało pomyślnie zaktualizowane.

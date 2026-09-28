@@ -10,6 +10,9 @@
 
 @import "./simonweb_pickr.css";
 
+@import "./driverjs.css";
+@import "./release-highlights.css";
+
 @import "./date-picker-dark-mode.css";
 @import "./print-report.css";
 @import "./privacy-mode.css";
