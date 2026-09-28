@@ -1,6 +1,15 @@
 require "test_helper"
 
 class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
+  # The account fixtures ship unlinked (no account_providers rows); pairing
+  # each with a Sure account puts an item into the fully set up state.
+  def link_all_accounts(item)
+    sure_accounts = accounts(:investment, :depository, :credit_card)
+    item.trade_republic_accounts.each_with_index do |provider_account, index|
+      AccountProvider.create!(account: sure_accounts.fetch(index), provider: provider_account)
+    end
+  end
+
   test "renders a card per item and an add-connection form" do
     family = families(:dylan_family)
     items = [ trade_republic_items(:configured_item), trade_republic_items(:requires_update_item) ]
@@ -32,11 +41,25 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
   test "with several connections only those needing attention render expanded" do
     healthy = trade_republic_items(:configured_item)
     needs_update = trade_republic_items(:requires_update_item)
+    link_all_accounts(healthy)
 
     render_inline(TradeRepublic::AccountEditorComponent.new(items: [ healthy, needs_update ], family: families(:dylan_family)))
 
     assert_no_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(healthy)} details[open]"
     assert_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(needs_update)} details[open]"
+  end
+
+  test "a healthy connection with unlinked accounts renders expanded so the setup CTA stays visible" do
+    with_unlinked = trade_republic_items(:configured_item)
+    fully_linked = trade_republic_items(:no_session_item)
+    fully_linked.update!(session_blob: "session")
+    link_all_accounts(fully_linked)
+
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [ with_unlinked, fully_linked ], family: families(:dylan_family)))
+
+    assert_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(with_unlinked)} details[open]",
+                    text: I18n.t("settings.providers.trade_republic_panel.setup_accounts")
+    assert_no_selector "##{TradeRepublic::ConnectionCardComponent.dom_id_for(fully_linked)} details[open]"
   end
 
   test "the connection whose QR login just started renders expanded with its QR code" do

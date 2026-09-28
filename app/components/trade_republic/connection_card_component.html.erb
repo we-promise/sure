@@ -21,7 +21,7 @@
     <% end %>
 
     <div class="mt-4 space-y-4"
-         <% if item.persisted? && item.login_stage == "waiting_for_approval" %>
+         <% if item.persisted? && login_stage == "waiting_for_approval" %>
            data-controller="trade-republic-login"
            data-trade-republic-login-url-value="<%= helpers.poll_login_trade_republic_item_path(item) %>"
          <% end %>>
@@ -59,7 +59,7 @@
             ) %>
       </div>
 
-          <% if item.pending_login_state.blank? || item.login_stage == "qr_pending" %>
+          <% if item.pending_login_state.blank? || login_stage == "qr_pending" %>
         <div class="space-y-3" data-controller="trade-republic-qr"
            data-trade-republic-qr-auto-poll-value="<%= qr_active %>"
            data-trade-republic-qr-initiate-url-value="<%= helpers.initiate_qr_login_trade_republic_item_path(item) %>"
@@ -91,7 +91,7 @@
         </div>
       <% end %>
 
-      <% if item.login_stage == "authenticator_code" %>
+      <% if login_stage == "authenticator_code" %>
         <%= render DS::Alert.new(
               message: translation("authenticator_code_notice"),
               variant: :info
@@ -110,7 +110,7 @@
             <%= form.submit(translation("complete_login")) %>
           </div>
         <% end %>
-      <% elsif item.login_stage == "waiting_for_approval" %>
+      <% elsif login_stage == "waiting_for_approval" %>
         <%= render DS::Alert.new(message: translation("push_login_notice"), variant: :info) %>
         <div class="flex flex-wrap justify-end gap-2">
           <%= render DS::Button.new(
@@ -151,7 +151,7 @@
 
       <div class="flex items-center gap-2">
         <% if item.pending_login_state.present? %>
-          <% if item.login_stage == "expired" %>
+          <% if login_stage == "expired" %>
             <div class="w-2 h-2 bg-destructive rounded-full"></div>
             <p class="text-sm text-secondary"><%= translation("login_expired") %></p>
             <%= render DS::Button.new(
@@ -166,7 +166,7 @@
           <% else %>
             <div class="w-2 h-2 bg-warning rounded-full"></div>
             <p class="text-sm text-secondary">
-              <%= item.login_stage == "authenticator_code" ? translation("awaiting_authenticator_code") : translation("awaiting_confirmation") %>
+              <%= login_stage == "authenticator_code" ? translation("awaiting_authenticator_code") : translation("awaiting_confirmation") %>
             </p>
           <% end %>
         <% elsif item.status == "good" && item.session_configured? %>

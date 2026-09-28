@@ -1,4 +1,6 @@
 class TradeRepublic::ConnectionCardComponent < ApplicationComponent
+  include TradeRepublic::PanelTranslatable
+
   def self.dom_id_for(item)
     ActionView::RecordIdentifier.dom_id(item, :trade_republic_card)
   end
@@ -27,8 +29,13 @@ class TradeRepublic::ConnectionCardComponent < ApplicationComponent
     translation("identifier_#{identifier.first}") if identifier
   end
 
-  def translation(key, **options)
-    helpers.t("settings.providers.trade_republic_panel.#{key}", **options)
+  # TradeRepublicItem#login_stage decodes the pending login payload on every
+  # call, and the template checks the stage several times per card, so cache
+  # it for the duration of the render.
+  def login_stage
+    return @login_stage if defined?(@login_stage)
+
+    @login_stage = item.login_stage
   end
 
   private
