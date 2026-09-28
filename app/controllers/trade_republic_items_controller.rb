@@ -37,9 +37,8 @@ class TradeRepublicItemsController < ApplicationController
             "trade-republic-providers-panel",
             partial: "settings/providers/trade_republic_panel",
             locals: {
-              trade_republic_item: @trade_republic_item,
               qr_code_svg: @qr_code_svg,
-              qr_login_auto_poll: qr_login_requested && @error_message.blank?
+              qr_login_auto_poll_item: (@trade_republic_item if qr_login_requested && @error_message.blank?)
             }
           ),
           *flash_notification_stream_items
@@ -113,13 +112,31 @@ class TradeRepublicItemsController < ApplicationController
       else
         redirect_to settings_providers_path(anchor: "trade-republic"), notice: t(".approval_pending")
       end
+    elsif duplicate_connection?(result)
+      discard_duplicate_connection!
+      if turbo_panel_request?
+        render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
+      else
+        redirect_to settings_providers_path(anchor: "trade-republic"), alert: t("trade_republic_items.duplicate_connection"), status: :see_other
+      end
     else
-      ActiveRecord::Base.transaction do
-        @trade_republic_item.update!(
-          session_blob: result.data.fetch("session_txt"),
-          pending_login_state: nil,
-          status: :good
-        )
+      begin
+        ActiveRecord::Base.transaction do
+          @trade_republic_item.update!(
+            session_blob: result.data.fetch("session_txt"),
+            pending_login_state: nil,
+            status: :good,
+            brokerage_account_id: account_id_from(result)
+          )
+        end
+      rescue ActiveRecord::RecordNotUnique
+        discard_duplicate_connection!
+        if turbo_panel_request?
+          render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
+        else
+          redirect_to settings_providers_path(anchor: "trade-republic"), alert: t("trade_republic_items.duplicate_connection"), status: :see_other
+        end
+        return
       end
       @trade_republic_item.sync_later unless @trade_republic_item.syncing?
       if turbo_panel_request?
@@ -149,8 +166,16 @@ class TradeRepublicItemsController < ApplicationController
     if result.data["status"] == "pending"
       @trade_republic_item.update!(pending_login_state: result.data.fetch("pending_login_b64")) if result.data["pending_login_b64"].present?
       render_login_panel
+    elsif duplicate_connection?(result)
+      discard_duplicate_connection!
+      render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
     else
-      @trade_republic_item.update!(session_blob: result.data.fetch("session_txt"), pending_login_state: nil, status: :good)
+      begin
+        @trade_republic_item.update!(session_blob: result.data.fetch("session_txt"), pending_login_state: nil, status: :good, brokerage_account_id: account_id_from(result))
+      rescue ActiveRecord::RecordNotUnique
+        discard_duplicate_connection!
+        return render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
+      end
       @trade_republic_item.sync_later unless @trade_republic_item.syncing?
       render_login_panel(success: true)
     end
@@ -189,9 +214,23 @@ class TradeRepublicItemsController < ApplicationController
       response_data = result.data.except("pending_login_b64")
       response_data["qr_code_svg"] = view_context.generate_mfa_qr_code(result.data["qr_code_payload"]) if result.data["qr_code_payload"].present?
       render json: response_data
+    elsif duplicate_connection?(result)
+      return render_superseded_qr_login unless update_if_pending_login_current!(pending, pending_login_state: nil, status: :requires_update)
+
+      discard_duplicate_connection!
+      # The QR controller reloads the providers page for any non-pending
+      # status, where this alert is shown.
+      flash[:alert] = t("trade_republic_items.duplicate_connection")
+      render json: { status: "duplicate_connection" }
     else
-      unless update_if_pending_login_current!(pending, session_blob: result.data.fetch("session_txt"), pending_login_state: nil, status: :good)
-        return render_superseded_qr_login
+      begin
+        unless update_if_pending_login_current!(pending, session_blob: result.data.fetch("session_txt"), pending_login_state: nil, status: :good, brokerage_account_id: account_id_from(result))
+          return render_superseded_qr_login
+        end
+      rescue ActiveRecord::RecordNotUnique
+        discard_duplicate_connection!
+        flash[:alert] = t("trade_republic_items.duplicate_connection")
+        return render json: { status: "duplicate_connection" }
       end
 
       @trade_republic_item.sync_later unless @trade_republic_item.syncing?
@@ -214,13 +253,7 @@ class TradeRepublicItemsController < ApplicationController
   def cancel_qr_login
     @trade_republic_item.update!(pending_login_state: nil, status: :requires_update)
     respond_to do |format|
-      format.turbo_stream do
-        render turbo_stream: turbo_stream.replace(
-          "trade-republic-providers-panel",
-          partial: "settings/providers/trade_republic_panel",
-          locals: { trade_republic_item: @trade_republic_item }
-        )
-      end
+      format.turbo_stream { render turbo_stream: replace_card_stream }
       format.json { render json: { status: "cancelled" } }
     end
   end
@@ -245,11 +278,7 @@ class TradeRepublicItemsController < ApplicationController
           flash.now[:notice] = t(".success")
         end
         render turbo_stream: [
-          turbo_stream.replace(
-            "trade-republic-providers-panel",
-            partial: "settings/providers/trade_republic_panel",
-            locals: { trade_republic_item: @trade_republic_item }
-          ),
+          replace_card_stream,
           *flash_notification_stream_items
         ]
       elsif @error_message.present?
@@ -524,7 +553,7 @@ class TradeRepublicItemsController < ApplicationController
       params.fetch(:trade_republic_login, {}).permit(:code)
     end
 
-    def render_login_panel(alert: nil, notice: nil, success: false)
+    def render_login_panel(alert: nil, notice: nil, success: false, whole_panel: false)
       if success
         return render turbo_stream: [
           turbo_stream.replace("drawer", view_context.turbo_frame_tag("drawer")),
@@ -538,13 +567,59 @@ class TradeRepublicItemsController < ApplicationController
       flash.now[:alert] = alert if alert
       flash.now[:notice] = notice if notice
       render turbo_stream: [
-        turbo_stream.replace(
-          "trade-republic-providers-panel",
-          partial: "settings/providers/trade_republic_panel",
-          locals: { trade_republic_item: @trade_republic_item }
-        ),
+        whole_panel ? replace_panel_stream : replace_card_stream,
         *flash_notification_stream_items
       ]
+    end
+
+    # Push-login polling re-renders about once per second; replacing only this
+    # item's card keeps other cards (open state, typed credentials, running QR
+    # logins) intact.
+    def replace_card_stream(item = @trade_republic_item)
+      turbo_stream.replace(
+        TradeRepublic::ConnectionCardComponent.dom_id_for(item),
+        TradeRepublic::ConnectionCardComponent.new(item: item, qr_active: item.login_stage == "qr_pending")
+      )
+    end
+
+    def replace_panel_stream
+      turbo_stream.replace("trade-republic-providers-panel", partial: "settings/providers/trade_republic_panel")
+    end
+
+    # Connecting the same Trade Republic account through a second item would
+    # import its accounts twice.
+    def account_id_from(result)
+      result.data.dig("account", "brokerage_account_id").presence
+    end
+
+    def other_active_trade_republic_items
+      Current.family.trade_republic_items.active.where.not(id: @trade_republic_item.id)
+    end
+
+    # trade_republic_accounts rows only exist once the importer's first sync
+    # runs, so checking only those would let a second item finish login for
+    # the same account in the gap before that job runs (or truly
+    # concurrently). brokerage_account_id is written on the item itself the
+    # moment login succeeds and is backed by a unique index, so this is an
+    # early, user-facing check; the index (see discard_duplicate_connection!
+    # callers) is what actually closes the race.
+    def duplicate_connection?(result)
+      account_id = account_id_from(result)
+      return false if account_id.blank?
+
+      other_active_trade_republic_items.exists?(brokerage_account_id: account_id) ||
+        other_active_trade_republic_items
+          .joins(:trade_republic_accounts)
+          .where(trade_republic_accounts: { trade_republic_account_id: [ account_id, "cash:#{account_id}" ] })
+          .exists?
+    end
+
+    def discard_duplicate_connection!
+      # A failed unique-index write from the losing update! left brokerage_account_id
+      # dirty on the in-memory record with the other item's value; clear it
+      # explicitly or this update! would collide with the same index again.
+      @trade_republic_item.update!(session_blob: nil, pending_login_state: nil, status: :requires_update, brokerage_account_id: nil)
+      @trade_republic_item.destroy_later if @trade_republic_item.trade_republic_accounts.none?
     end
 
     def turbo_panel_request?
@@ -558,7 +633,13 @@ class TradeRepublicItemsController < ApplicationController
         render turbo_stream: turbo_stream.replace(
           "trade-republic-providers-panel",
           partial: "settings/providers/trade_republic_panel",
-          locals: { error_message: @error_message, trade_republic_item: @trade_republic_item }
+          locals: {
+            error_message: @error_message,
+            # Only the add-connection form's own unsaved item should replace
+            # its blank default; an existing item failing update/login keeps
+            # the add form blank.
+            new_item: (@trade_republic_item if @trade_republic_item&.new_record?)
+          }
         ), status: :unprocessable_entity
       else
         redirect_to settings_providers_path(anchor: "trade-republic"), alert: @error_message, status: :see_other
