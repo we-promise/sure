@@ -822,7 +822,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not cash_sure.entries.exists?(external_id: "trade_republic_event_evt_settle_stale")
   end
 
-  test "cash account deposits are fund movements, not investment contributions" do
+  test "cash account deposits are standard transactions, not transfers or investment contributions" do
     cash_account, cash_sure = create_linked_cash_account!
     wallet_top_up = deposit_event.merge(id: "evt_google_pay", eventType: "PAYMENT_INBOUND_GOOGLE_PAY", title: "Cash in")
     bank_credit = deposit_event.merge(id: "evt_bank_credit", eventType: "BANK_TRANSACTION_INCOMING", title: "Employer")
@@ -831,7 +831,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
 
     top_up = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_google_pay").transaction
-    assert_equal "funds_movement", top_up.kind
+    assert_equal "standard", top_up.kind
     assert_nil top_up.category_id
 
     credit = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_bank_credit").transaction
@@ -860,9 +860,83 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
 
     legacy.transaction.reload
-    assert_equal "funds_movement", legacy.transaction.kind
+    assert_equal "standard", legacy.transaction.kind
     assert_nil legacy.transaction.category_id
     assert_nil legacy.transaction.investment_activity_label
+  end
+
+  test "resets payments that earlier syncs stored as fund movements" do
+    cash_account, cash_sure = create_linked_cash_account!
+    adapter = Account::ProviderImportAdapter.new(cash_sure)
+    deposit = adapter.import_transaction(
+      external_id: "trade_republic_event_evt_legacy_in", amount: BigDecimal("-2000.00"), currency: "EUR",
+      date: Date.parse("2026-08-01"), name: "Niels Eulink", source: "trade_republic", kind: "funds_movement"
+    )
+    withdrawal = adapter.import_transaction(
+      external_id: "trade_republic_event_evt_legacy_out", amount: BigDecimal("300.00"), currency: "EUR",
+      date: Date.parse("2026-08-01"), name: "Payout", source: "trade_republic", kind: "funds_movement"
+    )
+
+    cash_account.update!(raw_timeline_payload: [
+      deposit_event.merge(id: "evt_legacy_in", eventType: "PAYMENT_INBOUND", title: "Niels Eulink", detail: { amount: "2000.00", currency: "EUR" }),
+      { id: "evt_legacy_out", timestamp: "2026-08-01T10:00:00Z", eventType: "PAYMENT_OUTBOUND", category: "POC_CREATED",
+        title: "Payout", detail: { amount: "300.00", currency: "EUR" } }
+    ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_equal "standard", deposit.transaction.reload.kind
+    assert_equal "standard", withdrawal.transaction.reload.kind
+  end
+
+  test "keeps fund movements of matched transfers, edited rows and sale settlements" do
+    cash_account, cash_sure = create_linked_cash_account!
+    bank = @family.accounts.create!(name: "Bank", balance: 0, currency: "EUR", accountable: Depository.new)
+    adapter = Account::ProviderImportAdapter.new(cash_sure)
+    matched = adapter.import_transaction(
+      external_id: "trade_republic_event_evt_matched", amount: BigDecimal("-2000.00"), currency: "EUR",
+      date: Date.parse("2026-08-01"), name: "Cash in", source: "trade_republic", kind: "funds_movement"
+    )
+    bank_outflow = bank.entries.create!(
+      name: "To Trade Republic", amount: 2000, currency: "EUR", date: Date.parse("2026-08-01"),
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    Transfer.create!(inflow_transaction: matched.transaction, outflow_transaction: bank_outflow.transaction)
+    edited = adapter.import_transaction(
+      external_id: "trade_republic_event_evt_edited", amount: BigDecimal("-100.00"), currency: "EUR",
+      date: Date.parse("2026-08-01"), name: "Cash in", source: "trade_republic", kind: "funds_movement"
+    )
+    edited.update!(user_modified: true)
+
+    sell = order_execution_detail(event_id: "evt_sell_keep", quantity: "-1", isin: "US0378331005", amount: "150.00")
+    @tr_account.update!(raw_timeline_payload: [ sell ])
+    cash_account.update!(raw_timeline_payload: [
+      deposit_event.merge(id: "evt_matched", eventType: "PAYMENT_INBOUND_GOOGLE_PAY", detail: { amount: "2000.00", currency: "EUR" }),
+      deposit_event.merge(id: "evt_edited", eventType: "PAYMENT_INBOUND_GOOGLE_PAY", detail: { amount: "100.00", currency: "EUR" })
+    ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_equal "funds_movement", matched.transaction.reload.kind
+    assert_equal "funds_movement", edited.transaction.reload.kind
+    assert_equal "funds_movement", cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_sell_keep").transaction.kind
+  end
+
+  test "a standard deposit is matched to the bank transfer that funded it" do
+    cash_account, cash_sure = create_linked_cash_account!
+    bank = @family.accounts.create!(name: "Bank", balance: 0, currency: "EUR", accountable: Depository.new)
+    bank_outflow = bank.entries.create!(
+      name: "To Trade Republic", amount: 2000, currency: "EUR", date: Date.parse("2026-08-01"),
+      entryable: Transaction.new
+    )
+    cash_account.update!(raw_timeline_payload: [
+      deposit_event.merge(id: "evt_funded", eventType: "PAYMENT_INBOUND", detail: { amount: "2000.00", currency: "EUR" })
+    ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    @family.auto_match_transfers!
+
+    deposit = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_funded").transaction
+    assert_equal bank_outflow.transaction, deposit.transfer&.outflow_transaction
+    assert_equal "funds_movement", deposit.reload.kind
   end
 
   test "keeps a rule-assigned investment contributions category and label on cash account deposits" do
@@ -1178,7 +1252,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     end
   end
 
-  test "Google Pay inbound deposits import as fund movements" do
+  test "Google Pay inbound deposits import as standard deposits" do
     cash_account, cash_sure = create_linked_cash_account!
     cash_account.update!(raw_timeline_payload: [ {
       id: "evt_gpay",
@@ -1192,7 +1266,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
 
     entry = Entry.find_by!(account: cash_sure, external_id: "trade_republic_event_evt_gpay")
     assert_equal BigDecimal("-50.00"), entry.amount
-    assert_equal "funds_movement", entry.transaction.kind
+    assert_equal "standard", entry.transaction.kind
     assert_nil entry.transaction.investment_activity_label
   end
 
