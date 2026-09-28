@@ -107,4 +107,18 @@ class ApplicationHelperTest < ActionView::TestCase
 
     assert_equal [ "SGD", "USD", "EUR" ], currency_picker_options_for_family(family, extra: "EUR")
   end
+
+  test "#mask_last4 masks all but the last 4 characters" do
+    assert_equal "•••3000", mask_last4("DE89370400440532013000")
+    assert_equal "•••2345", mask_last4("12345")
+  end
+
+  test "#mask_last4 returns nil for blank input" do
+    assert_nil mask_last4(nil)
+    assert_nil mask_last4("")
+  end
+
+  test "#mask_last4 handles values shorter than 4 characters" do
+    assert_equal "•••12", mask_last4("12")
+  end
 end

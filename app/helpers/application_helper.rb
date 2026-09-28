@@ -14,6 +14,14 @@ module ApplicationHelper
     form_with(**options, &block)
   end
 
+  # Masks a sensitive identifier (IBAN, account number, ...) down to its last
+  # 4 characters for display, e.g. "•••1234". Returns nil for blank input.
+  def mask_last4(value)
+    return nil if value.blank?
+
+    "•••#{value.to_s.last(4)}"
+  end
+
   # Locale-aware ordinal label for integers.
   # English falls through to Ruby's ordinalize ("1st"); Catalan returns "1r"/"2n"/...
   def localized_ordinal(number)
