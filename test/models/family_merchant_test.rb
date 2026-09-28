@@ -89,6 +89,18 @@ class FamilyMerchantConcurrencyTest < ActiveSupport::TestCase
   self.use_transactional_tests = false
 
   setup do
+    # The test's main thread, writer thread and reader thread each hold their
+    # own checked-out connection at once. The default pool (RAILS_MAX_THREADS,
+    # 3) leaves zero headroom for that, so under CI's parallelized test load a
+    # thread's connection checkout can itself queue behind another test's use
+    # of the pool, throwing off the race entirely. Widen it for this test only.
+    @original_db_config = ActiveRecord::Base.connection_db_config
+    if @original_db_config.max_connections.to_i < 6
+      ActiveRecord::Base.establish_connection(@original_db_config.configuration_hash.except(:pool).merge(max_connections: 6))
+    else
+      @original_db_config = nil
+    end
+
     @family = Family.create!(
       name: "Race Family", currency: "USD", locale: "en", country: "US",
       date_format: "%m/%d/%Y", timezone: "UTC"
@@ -97,6 +109,8 @@ class FamilyMerchantConcurrencyTest < ActiveSupport::TestCase
 
   teardown do
     @family.destroy
+  ensure
+    ActiveRecord::Base.establish_connection(@original_db_config) if @original_db_config
   end
 
   test "find_or_create_with_name survives a real unique-constraint violation without aborting the caller's transaction" do
@@ -139,16 +153,23 @@ class FamilyMerchantConcurrencyTest < ActiveSupport::TestCase
       # waiting on the writer's uncommitted row -- only then is releasing the
       # writer guaranteed to exercise the RecordNotUnique/savepoint path rather
       # than a RecordInvalid from a stale read, or no conflict at all.
-      deadline = Time.current + 5.seconds
+      deadline = Time.current + 10.seconds
       wait_event_type = nil
       loop do
         wait_event_type = ActiveRecord::Base.connection.select_value(
           "SELECT wait_event_type FROM pg_stat_activity WHERE pid = #{pid}"
         )
-        break if wait_event_type == "Lock" || Time.current > deadline
+        break if wait_event_type == "Lock" || Time.current > deadline || !reader.alive?
         sleep 0.01
       end
-      assert_equal "Lock", wait_event_type, "reader never blocked on the unique index; the race wasn't reproduced"
+
+      unless wait_event_type == "Lock"
+        # The reader finished (or died) before ever blocking on the lock --
+        # most likely it took the early find_by return because the writer's
+        # insert became visible too soon, rather than genuine CI slowness.
+        diagnosis = reader.alive? ? "timed out waiting" : "the reader thread already finished (status: #{reader.status.inspect})"
+        flunk "reader never blocked on the unique index (wait_event_type=#{wait_event_type.inspect}); #{diagnosis}; the race wasn't reproduced"
+      end
 
       release_writer << true
       # .value joins the thread and re-raises any exception it raised, instead
