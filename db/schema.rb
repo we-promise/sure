@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_27_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_27_161700) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2656,6 +2656,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_120000) do
   end
 
   create_table "trade_republic_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "brokerage_account_id"
     t.datetime "created_at", null: false
     t.string "currency"
     t.uuid "family_id", null: false
@@ -2668,6 +2669,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_27_120000) do
     t.text "session_blob"
     t.string "status", default: "good", null: false
     t.datetime "updated_at", null: false
+    t.index ["family_id", "brokerage_account_id"], name: "index_trade_republic_items_on_family_id_and_brokerage_account", unique: true, where: "((brokerage_account_id IS NOT NULL) AND (scheduled_for_deletion = false))"
     t.index ["family_id"], name: "index_trade_republic_items_on_family_id"
     t.index ["status"], name: "index_trade_republic_items_on_status"
   end

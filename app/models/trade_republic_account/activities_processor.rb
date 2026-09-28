@@ -17,7 +17,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     trade_count = 0
     transaction_count = 0
 
-    Array(@trade_republic_account.raw_timeline_payload).each do |event|
+    timeline_events.each do |event|
       next unless event.is_a?(Hash)
 
       event = event.with_indifferent_access
@@ -68,6 +68,29 @@ class TradeRepublicAccount::ActivitiesProcessor
       @trade_republic_account.currency
     end
 
+    # Trade Republic settles trades directly against the cash balance. The
+    # importer keeps order executions on the portfolio payload only, so the
+    # cash account reads them from there to book the settlement. Portfolio
+    # copies come first so they win the dedupe: a cash snapshot retained from
+    # a failed timeline update can still hold an order execution whose
+    # portfolio copy has since been deleted.
+    def timeline_events
+      @timeline_events ||= begin
+        events = Array(@trade_republic_account.raw_timeline_payload)
+        events = portfolio_order_execution_events + events if @trade_republic_account.cash?
+        events.uniq { |event| event.is_a?(Hash) ? (event["id"] || event[:id]).presence || event : event }
+      end
+    end
+
+    def portfolio_order_execution_events
+      portfolio = @trade_republic_account.trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      return [] unless portfolio
+
+      Array(portfolio.raw_timeline_payload).select do |event|
+        event.is_a?(Hash) && event_category(event.with_indifferent_access) == CATEGORY_ORDER_EXECUTION
+      end
+    end
+
     # Saveback and Round Up stay classified as POC_CREATED at the client
     # boundary so other cash withdrawals are unchanged. Routing happens here
     # by eventType: Saveback is portfolio-only; Round Up is portfolio trade
@@ -80,7 +103,6 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       category = event[:category].to_s
       return category == CATEGORY_ORDER_EXECUTION if linked_cash_account_present? && @trade_republic_account.portfolio?
-      return category != CATEGORY_ORDER_EXECUTION if @trade_republic_account.cash?
 
       true
     end
@@ -107,10 +129,15 @@ class TradeRepublicAccount::ActivitiesProcessor
       case event_category(event)
       when CATEGORY_ORDER_EXECUTION
         return nil if duplicate_savings_plan_invoice?(event, detail, date)
+        return import_order_settlement(event, detail, external_id, date) ? :transaction : nil if @trade_republic_account.cash?
 
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       when CATEGORY_DEPOSIT
-        import_cash_movement(event, detail, external_id, date, label: cash_label(event, default: t("contribution")), sign: -1) ? :transaction : nil
+        label = cash_label(event, default: nil)
+        import_cash_movement(
+          event, detail, external_id, date,
+          label: label || t("contribution"), activity_label: label || deposit_activity_label, sign: -1
+        ) ? :transaction : nil
       when CATEGORY_WITHDRAWAL
         import_cash_movement(event, detail, external_id, date, label: cash_label(event, default: t("withdrawal")), sign: 1) ? :transaction : nil
       when CATEGORY_INTEREST
@@ -141,7 +168,10 @@ class TradeRepublicAccount::ActivitiesProcessor
       if @trade_republic_account.portfolio?
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       else
-        import_cash_movement(event, detail, external_id, date, label: t("round_up"), sign: 1) ? :transaction : nil
+        import_cash_movement(
+          event, detail, external_id, date,
+          label: t("round_up"), sign: 1, kind: "investment_contribution"
+        ) ? :transaction : nil
       end
     end
 
@@ -168,7 +198,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     def savings_plan_execution_keys
-      @savings_plan_execution_keys ||= Array(@trade_republic_account.raw_timeline_payload).each_with_object(Set.new) do |event, keys|
+      @savings_plan_execution_keys ||= timeline_events.each_with_object(Set.new) do |event, keys|
         next unless event.is_a?(Hash)
 
         event = event.with_indifferent_access
@@ -271,11 +301,40 @@ class TradeRepublicAccount::ActivitiesProcessor
       true
     end
 
-    def import_cash_movement(event, detail, external_id, date, label:, sign:)
+    # The timeline list amount is what Trade Republic booked against the cash
+    # balance, fees and taxes included. Unlike cash movements (see
+    # import_cash_movement), order executions carry a consistent sign across
+    # topics: negative for buys, positive for sales. Payloads that only carry
+    # a magnitude fall back to the traded quantity; without either signal the
+    # direction is unknown and nothing is booked.
+    # Buys count as investment contributions in budgets; sale proceeds are a
+    # funds movement rather than income. Neither gets a category.
+    def import_order_settlement(event, detail, external_id, date)
+      signed_amount = parse_decimal(detail[:signed_amount])
+      amount = signed_amount || parse_decimal(detail[:amount])
+      return false unless amount && !amount.zero?
+
+      quantity = parse_decimal(detail[:quantity])
+      return false if signed_amount.nil? && (quantity.nil? || quantity.zero?)
+
+      outflow = signed_amount ? signed_amount.negative? : quantity.positive?
+
+      import_cash_movement(
+        event,
+        detail.merge(amount: amount.abs),
+        external_id,
+        date,
+        label: outflow ? "Buy" : "Sell",
+        sign: outflow ? 1 : -1,
+        kind: outflow ? "investment_contribution" : "funds_movement"
+      )
+    end
+
+    def import_cash_movement(event, detail, external_id, date, label:, sign:, activity_label: label, kind: nil)
       amount = parse_decimal(detail[:amount])
       return false unless amount && !amount.zero?
 
-      import_adapter.import_transaction(
+      entry = import_adapter.import_transaction(
         external_id: external_id,
         # The normalized category is the source of truth for direction. TR
         # payloads use different signs across timeline topics, so forwarding
@@ -288,8 +347,8 @@ class TradeRepublicAccount::ActivitiesProcessor
         notes: event[:subtitle].presence,
         source: "trade_republic",
         category_id: category_for(event, label)&.id,
-        kind: transfer_event?(event) ? "funds_movement" : nil,
-        investment_activity_label: label,
+        kind: kind || (transfer_event?(event) ? "funds_movement" : nil),
+        investment_activity_label: activity_label,
         extra: {
           trade_republic: {
             event_id: detail[:event_id] || external_id,
@@ -303,8 +362,40 @@ class TradeRepublicAccount::ActivitiesProcessor
           }.compact
         }
       )
+      reset_legacy_contribution!(entry, event)
 
       true
+    end
+
+    # The import adapter turns a Contribution label into investment_contribution,
+    # a kind budgets count as an expense. On the cash account a deposit is money
+    # arriving on a checking balance, so it carries no investment label.
+    def deposit_activity_label
+      @trade_republic_account.cash? ? nil : t("contribution")
+    end
+
+    # Earlier syncs stored cash-account deposits as investment contributions.
+    # The adapter neither downgrades that kind nor clears the category and
+    # label it assigned with it, so reset untouched inflows outside a matched
+    # transfer.
+    def reset_legacy_contribution!(entry, event)
+      return unless @trade_republic_account.cash?
+
+      transaction = entry&.entryable
+      return unless transaction.is_a?(Transaction) && entry.amount.negative?
+      return if entry.protected_from_sync? || transaction.transfer.present?
+
+      attrs = {}
+      attrs[:kind] = transfer_event?(event) ? "funds_movement" : "standard" if transaction.investment_contribution?
+      attrs[:category_id] = nil if investment_contribution_category_ids.include?(transaction.category_id)
+      attrs[:investment_activity_label] = nil if transaction.investment_activity_label == "Contribution"
+      transaction.update!(attrs) if attrs.any?
+    end
+
+    def investment_contribution_category_ids
+      @investment_contribution_category_ids ||= account.family.categories
+        .where(name: Category.all_investment_contributions_names)
+        .pluck(:id)
     end
 
     def category_for(event, label)
@@ -493,7 +584,7 @@ class TradeRepublicAccount::ActivitiesProcessor
     def reconcile_non_importable_entries!
       explicit_ids = []
       heuristic_ids = []
-      Array(@trade_republic_account.raw_timeline_payload).each do |event|
+      timeline_events.each do |event|
         next unless event.is_a?(Hash)
         next unless lifecycle_blocks_import?(event)
 
