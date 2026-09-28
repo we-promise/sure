@@ -100,6 +100,28 @@ class LoanProgressTest < ActiveSupport::TestCase
     end
   end
 
+  # The reference date is the caller's, like every other progress reader's: an
+  # overview that captured one date for its cards must get the instalment for
+  # that date, not for whatever the clock says when the partial renders.
+  test "the current instalment is the one for the date asked about" do
+    assert_equal 4, @loan.payment_breakdown(as_of: Date.new(2026, 4, 20))[:number]
+    assert_equal 7, @loan.payment_breakdown(as_of: Date.new(2026, 7, 20))[:number]
+    assert_nil @loan.payment_breakdown(as_of: Date.new(2027, 2, 15)), "finished by then"
+  end
+
+  # Rounding can clear the balance before the term ends, leaving the schedule
+  # shorter than term_months. Once its last payment is behind the borrower
+  # there is no current instalment, even though the term is still running; the
+  # clamp below would otherwise present the final, paid one as current.
+  test "a loan whose schedule ended before its term has no current instalment" do
+    short = @loan.amortization_schedule.payments.first(10)
+    @loan.amortization_schedule.stubs(:payments).returns(short)
+
+    assert_equal 10, @loan.payment_breakdown(as_of: Date.new(2026, 10, 20))[:number], "still on its last payment"
+    assert_not @loan.finished?(as_of: Date.new(2026, 11, 20)), "precondition: the term runs on"
+    assert_nil @loan.payment_breakdown(as_of: Date.new(2026, 11, 20)), "but the schedule has nothing left"
+  end
+
   test "a payment number past the end clamps to the last instalment" do
     assert_equal 12, @loan.payment_breakdown(payment_number: 99)[:number]
   end

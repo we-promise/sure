@@ -36,6 +36,17 @@ class LoanTest < ActiveSupport::TestCase
     assert_nil loan.initial_leverage_ratio, "zero is not a deposit either"
   end
 
+  # Imports can open a loan at a negative valuation. That is no amount borrowed
+  # to measure a deposit against, and a ratio from it has no band to name.
+  test "a negative opening balance has no leverage figure" do
+    loan = loans(:one)
+    loan.down_payment = 100_000
+    loan.stubs(:original_balance).returns(Money.new(-500_000, "USD"))
+
+    assert_nil loan.initial_leverage_ratio
+    assert_nil loan.leverage_band
+  end
+
   test "rejects a negative down payment or insurance rate" do
     loan = Loan.new(down_payment: -1, insurance_rate: -1, insurance_rate_type: "nonsense")
 

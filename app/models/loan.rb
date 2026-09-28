@@ -280,15 +280,18 @@ class Loan < ApplicationRecord
     insurance&.total || Money.new(0, account.currency)
   end
 
-  # Everything the loan costs the borrower: what was borrowed, the interest on
-  # it, and the premium charged alongside. Nil when there is no schedule to
-  # read an interest figure from, because a cost without interest in it would
-  # understate the loan rather than decline to answer.
+  # Everything the loan costs the borrower: what the schedule has them repay
+  # (principal and interest, the Schedule tab's own "Total Cost") plus the
+  # premium charged alongside. Read off the schedule rather than re-added from
+  # its parts, so with no premium the two figures are the same figure. Nil when
+  # there is no schedule to read an interest figure from, because a cost
+  # without interest in it would understate the loan rather than decline to
+  # answer.
   def total_cost
     schedule = amortization_schedule
     return nil if schedule.nil?
 
-    original_balance + schedule.total_interest + total_insurance
+    schedule.total_paid + total_insurance
   end
 
   # How far into the term the loan is, measured from origination rather than
@@ -332,20 +335,23 @@ class Loan < ApplicationRecord
 
   # One instalment, split into what it repays, what it costs and what it
   # insures, with each part as a share of the whole. Defaults to the payment
-  # the loan is currently on.
+  # the loan is on as of `as_of`, which the caller supplies so the instalment
+  # agrees with every other figure it shows for that date.
   #
   # The ratios are for a progress bar, so they are floats summing to 1 rather
   # than money. A zero payment -- an interest-free loan repaid in full by its
   # opening instalment -- gives zeroes rather than a division by zero.
-  def payment_breakdown(payment_number: nil)
+  def payment_breakdown(payment_number: nil, as_of: Date.current)
     schedule = amortization_schedule
     return nil if schedule.nil?
 
     if payment_number.nil?
       # A finished loan is on no instalment; the clamp below would otherwise
-      # answer with the final, already-paid one as though it were current.
-      elapsed = months_elapsed
-      return nil if elapsed >= term_months
+      # answer with the final, already-paid one as though it were current. The
+      # same holds once a schedule that rounding cleared early has run out,
+      # though the term has not.
+      elapsed = months_elapsed(as_of: as_of)
+      return nil if elapsed >= term_months || elapsed >= schedule.payments.size
 
       payment_number = elapsed + 1
     end
@@ -400,10 +406,15 @@ class Loan < ApplicationRecord
     to_donut_segments&.to_json
   end
 
+  # Nil for a negative opening balance too: imports can record one, and it is
+  # no amount borrowed to measure a deposit against.
   def initial_leverage_ratio
     return nil unless down_payment&.positive?
 
-    original_balance.amount.fdiv(down_payment)
+    borrowed = original_balance.amount
+    return nil unless borrowed.positive?
+
+    borrowed.fdiv(down_payment)
   end
 
   def leverage_band

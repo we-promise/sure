@@ -70,6 +70,7 @@ en:
         total_cost: Total Cost
         total_interest: Total Interest
       overview:
+        insurance_rate_only: "%{rate} a year"
         interest_rate: Interest Rate
         leverage: Leverage
         leverage_band_conservative: Conservative
@@ -82,6 +83,7 @@ en:
         original_principal: Original Loan Amount
         remaining_principal: Remaining Loan Amount
         total_cost: Total Cost
+        total_cost_with_insurance: Total Cost incl. Insurance
         total_insurance: Insurance
         term: Term
         type: Type

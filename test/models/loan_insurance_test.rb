@@ -64,20 +64,25 @@ class LoanInsuranceTest < ActiveSupport::TestCase
     assert_equal "USD", loan.total_insurance.currency.iso_code
   end
 
-  # The cost of the loan is what was borrowed, the interest on it, and the
-  # premium beside it -- the premium is NOT inside the instalment, so it has to
-  # be added rather than read off the schedule's own total.
-  test "the total cost adds the premium to principal and interest" do
-    loan = build_loan(insurance_rate: 1.2, insurance_rate_type: "level_term",
+  # The cost of the loan is what the schedule has the borrower repay -- the
+  # Schedule tab's own "Total Cost" -- plus the premium beside it. The premium
+  # is NOT inside the instalment, so it has to be added rather than read off
+  # the schedule's total. Measured as a delta: the same loan with and without
+  # the policy.
+  test "the total cost is the schedule's total plus the premium" do
+    loan = build_loan(insurance_rate: nil, insurance_rate_type: nil,
                       balance: 12_000, term: 12, rate: 6)
-
     schedule = loan.amortization_schedule
 
     assert_operator schedule.total_interest.amount, :>, 0, "or this proves nothing about interest"
-    assert_equal loan.original_balance + schedule.total_interest + loan.total_insurance,
-                 loan.total_cost
-    assert_equal BigDecimal(144), loan.total_insurance.amount,
-                 "a level premium does not care what the interest rate is"
+    assert_equal schedule.total_paid, loan.total_cost, "no premium: the Schedule tab's figure exactly"
+
+    uninsured = loan.total_cost
+    loan.insurance_rate = 1.2
+    loan.insurance_rate_type = "level_term"
+
+    assert_equal BigDecimal(144), (loan.total_cost - uninsured).amount,
+                 "the policy adds its premium and nothing else; a level premium does not care what the interest rate is"
   end
 
   test "a loan with nothing to amortise has no cost to report" do

@@ -1,10 +1,12 @@
-<%# locals: (loan:) %>
+<%# locals: (loan:, as_of:) %>
 
 <%# The repayment ring and the instalment the borrower is on. Rendered only
     when the paydown can be measured -- an account with no balance to compare
     against what was borrowed gets no ring rather than an empty one. %>
 <% segments = loan.to_donut_segments_json %>
-<% breakdown = loan.payment_breakdown %>
+<%# The instalment for the Overview's own reference date, so this card and the
+    ones above it answer for the same day. %>
+<% breakdown = loan.payment_breakdown(as_of: as_of) %>
 
 <% if segments.present? || breakdown.present? %>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">

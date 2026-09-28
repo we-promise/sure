@@ -40,6 +40,58 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller='donut-chart'] p.privacy-sensitive", text: /of \$500,000/, count: 1
   end
 
+  # The Schedule tab's "Total Cost" is what the borrower repays: principal plus
+  # interest. Both tabs render in one request, so the Overview's card must
+  # either show that same figure or say what it adds -- a premium folded in
+  # under the same title put two different "Total Cost" amounts on one page.
+  test "the overview's total cost agrees with the schedule's and names the premium it adds" do
+    loan = @account.loan
+    loan.update!(interest_rate: 5, term_months: 120, rate_type: "fixed", start_date: 2.years.ago.to_date)
+
+    get account_path(@account)
+    uninsured = card_values("Total Cost")
+    assert_equal 2, uninsured.size, "precondition: the Overview and Schedule tabs each render the card"
+    assert_equal 1, uninsured.uniq.size, "with no premium the two figures are the same figure"
+
+    loan.update!(insurance_rate: 0.36, insurance_rate_type: "level_term")
+    loan = Loan.find(loan.id)
+
+    get account_path(@account)
+    assert_equal uninsured.first(1), card_values("Total Cost"),
+                 "one card still calls itself Total Cost, and it has not moved"
+    assert_equal [ format_money(loan.amortization_schedule.total_paid + loan.total_insurance) ],
+                 card_values("Total Cost incl. Insurance"),
+                 "the Overview names the premium it adds, and adds it to the Schedule's figure"
+  end
+
+  # A rate saved on a loan with no term has no schedule to project a premium
+  # against. The card must still say a policy is recorded rather than vanish,
+  # which read as though the save had been lost.
+  test "a recorded insurance rate shows even when no premium can be projected" do
+    @account.loan.update!(term_months: nil, insurance_rate: 0.36, insurance_rate_type: "level_term")
+    assert_nil Loan.find(@account.loan.id).insurance, "precondition: nothing to project against"
+
+    get account_path(@account)
+    assert_response :success
+    assert_equal [ "0.36% a year" ], card_values("Insurance")
+  end
+
+  # A negative opening valuation (imports produce them) has no leverage band,
+  # and the card built its label from the band -- a key that does not exist.
+  test "a negative opening balance shows no leverage card rather than a missing translation" do
+    @account.loan.update!(down_payment: 100_000)
+    @account.entries.create!(
+      date: Date.current - 2.years, name: "Opening balance", amount: -500_000, currency: @account.currency,
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+    assert @account.loan.original_balance.negative?, "precondition: the opening balance is negative"
+
+    get account_path(@account)
+    assert_response :success
+    assert_no_match(/translation missing: en\.loans/, response.body)
+    assert_select "h4", text: "Leverage", count: 0
+  end
+
   # The form renders these fields, so a save must keep them. Measured against
   # the loan's own state before the request: all three start blank.
   test "updates the down payment and insurance terms from the form" do
@@ -820,5 +872,14 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
         date: start_date, name: "Opening balance", amount: @account.balance, currency: @account.currency,
         entryable: Valuation.new(kind: "opening_anchor")
       )
+    end
+
+    # The figure under every summary card titled exactly `title`, in page order.
+    def card_values(title)
+      css_select("h4").select { |h4| h4.text.strip == title }.map { |h4| h4.next_element.text.strip }
+    end
+
+    def format_money(money)
+      ApplicationController.helpers.format_money(money)
     end
 end

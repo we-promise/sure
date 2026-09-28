@@ -1,8 +1,4 @@
 module LoansHelper
-  # The rate types the form offers, plus the loan's own when a provider wrote
-  # one the form does not know (#100 decision 8). Without it the select has no
-  # matching option, the browser submits the first one, and saving any other
-  # field silently turns an "arm" loan into a fixed one.
   # The two policies Loan::Insurance knows how to charge. Listed here rather
   # than built from the constant so each one carries a translated label.
   def loan_insurance_rate_type_options
@@ -22,6 +18,10 @@ module LoansHelper
     }.fetch(band, "text-secondary")
   end
 
+  # The rate types the form offers, plus the loan's own when a provider wrote
+  # one the form does not know (#100 decision 8). Without it the select has no
+  # matching option, the browser submits the first one, and saving any other
+  # field silently turns an "arm" loan into a fixed one.
   def loan_rate_type_options(loan)
     options = [
       [ t("loans.form.rate_type_fixed"), Loan::FIXED_RATE_TYPE ],
