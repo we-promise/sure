@@ -1,7 +1,19 @@
 # frozen_string_literal: true
 
 class DebugLogEntry < ApplicationRecord
+  include Encryptable
+
   LEVELS = %w[debug info warn error].freeze
+
+  # Key names redacted anywhere in metadata (any nesting depth), regardless of which
+  # call site wrote them — a safety net for the many capture(...) sites across provider
+  # importers that this class has no direct visibility into, on top of the individual
+  # sites that were audited and fixed not to pass these in the first place.
+  SENSITIVE_METADATA_KEY_PATTERN = /amount|balance|address|\bbody\b|qty|\buid\b|api_account_id/i
+
+  if encryption_ready?
+    encrypts :metadata
+  end
 
   belongs_to :family, optional: true
   belongs_to :account, optional: true
@@ -45,9 +57,22 @@ class DebugLogEntry < ApplicationRecord
     private
       def normalize_metadata(metadata)
         return {} if metadata.blank?
-        return metadata.deep_stringify_keys if metadata.respond_to?(:deep_stringify_keys)
+        return { value: metadata.to_s } unless metadata.respond_to?(:deep_stringify_keys)
 
-        { value: metadata.to_s }
+        redact_sensitive(metadata.deep_stringify_keys)
+      end
+
+      def redact_sensitive(value)
+        case value
+        when Hash
+          value.each_with_object({}) do |(key, v), result|
+            result[key] = key.to_s.match?(SENSITIVE_METADATA_KEY_PATTERN) ? "[REDACTED]" : redact_sensitive(v)
+          end
+        when Array
+          value.map { |v| redact_sensitive(v) }
+        else
+          value
+        end
       end
 
       def normalize_provider_key(provider_key, provider)
