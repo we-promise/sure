@@ -500,7 +500,14 @@ class Account < ApplicationRecord
         # -- so an exchange older than that imports its whole history on top of
         # its present value, and every entry before the anchor sits ahead of its
         # own opening balance.
-        account.set_opening_anchor_balance(balance: 0)
+        #
+        # Through the manager, not set_opening_anchor_balance: that queues a
+        # sync, which is what skip_initial_sync above just declined. Running
+        # before the provider link exists, it would see one zero anchor and no
+        # entries and write that zero over the balance set here.
+        result = Account::OpeningBalanceManager.new(account).set_opening_balance(balance: 0)
+        raise result.error if result.error
+
         account
       end
 

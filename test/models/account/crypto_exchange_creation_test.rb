@@ -71,6 +71,9 @@ class Account::CryptoExchangeCreationTest < ActiveSupport::TestCase
   # first sync writes the converted balance; until then zero is the honest figure.
   test "an exchange account starts at zero when no rate is available" do
     @family.update!(currency: "EUR")
+    # Stubbed rather than left absent: with no stored rate the lookup still
+    # asks the provider, and a rate coming back would make this pass by luck.
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
 
     account = Account.create_from_kraken_account(kraken_account(current_balance: 1_000, currency: "USD"))
 
