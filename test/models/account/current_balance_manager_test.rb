@@ -208,6 +208,39 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     assert_equal 1000, @linked_account.balance
   end
 
+  # A provider whose figures come from a statement knows the day they describe,
+  # which is not always today.
+  test "anchors a linked account balance on the date it is given" do
+    manager = Account::CurrentBalanceManager.new(@linked_account)
+    statement_date = Date.current - 1.day
+
+    result = manager.set_current_balance(1000, date: statement_date)
+    assert result.success?
+
+    entry = @linked_account.valuations.current_anchor.first.entry
+    assert_equal statement_date, entry.date
+    assert_equal 1000, entry.amount
+  end
+
+  # Two statements carrying the same date are one anchor, not an anchor and a
+  # reconciliation sitting on the same day.
+  test "a repeated statement date updates the anchor in place" do
+    manager = Account::CurrentBalanceManager.new(@linked_account)
+    statement_date = Date.current - 1.day
+    manager.set_current_balance(1000, date: statement_date)
+
+    travel_to Date.current + 1.day do
+      assert_no_difference -> { @linked_account.valuations.count } do
+        manager.set_current_balance(1500, date: statement_date)
+      end
+    end
+
+    assert_equal 1, @linked_account.valuations.current_anchor.count
+    entry = @linked_account.valuations.current_anchor.first.entry
+    assert_equal statement_date, entry.date
+    assert_equal 1500, entry.amount
+  end
+
   test "preserves previous day anchor as reconciliation when updating linked account balance" do
     # First create a current anchor
     manager = Account::CurrentBalanceManager.new(@linked_account)

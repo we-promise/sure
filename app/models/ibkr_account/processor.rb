@@ -32,7 +32,19 @@ class IbkrAccount::Processor
         currency: ibkr_account.currency
       )
       account.save!
-      account.set_current_balance(total_balance)
+      # Dated to the statement, not to today: the NAV is as of IBKR's report date
+      # and the holdings imported beside it carry that same date. Anchoring it to
+      # today instead pairs one day's NAV with the next day's prices, and the cash
+      # plug absorbs the difference -- a phantom balance the size of whatever the
+      # holdings moved that day, on every day of the account's history.
+      account.set_current_balance(total_balance, date: balance_date)
+    end
+
+    def balance_date
+      date = ibkr_account.report_date
+      return Date.current if date.blank? || date > Date.current
+
+      date
     end
 
     def repair_default_opening_anchor!

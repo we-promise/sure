@@ -1,0 +1,64 @@
+require "test_helper"
+
+class IbkrAccount::ProcessorTest < ActiveSupport::TestCase
+  setup do
+    @family = families(:empty)
+    @account = @family.accounts.create!(
+      name: "IBKR Brokerage",
+      balance: 0,
+      cash_balance: 0,
+      currency: "CHF",
+      accountable: Investment.new(subtype: "brokerage")
+    )
+    @ibkr_account = @family.ibkr_items.create!(
+      name: "IBKR",
+      query_id: "QUERY123",
+      token: "TOKEN123"
+    ).ibkr_accounts.create!(
+      name: "Main",
+      ibkr_account_id: "U1234567",
+      currency: "CHF",
+      current_balance: 3351,
+      cash_balance: 1000.5,
+      report_date: Date.current - 1.day
+    )
+    @ibkr_account.ensure_account_provider!(@account)
+  end
+
+  # The NAV is as of IBKR's report date, and the holdings imported beside it
+  # carry that same date. Anchored to today instead, one day's NAV is weighed
+  # against the next day's prices and the cash plug absorbs the difference.
+  test "anchors the balance on the statement's report date" do
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    entry = @account.valuations.current_anchor.first.entry
+    assert_equal Date.current - 1.day, entry.date
+    assert_equal 3351, entry.amount
+  end
+
+  # A statement that has not moved on is the same statement: it updates the
+  # anchor where it stands rather than leaving a reconciliation behind it.
+  test "a repeated report date does not accumulate valuations" do
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    travel_to Date.current + 1.day do
+      assert_no_difference -> { @account.valuations.count } do
+        IbkrAccount::Processor.new(@ibkr_account.reload).process
+      end
+    end
+
+    assert_equal Date.current - 1.day, @account.valuations.current_anchor.first.entry.date
+  end
+
+  # Nothing to date it by, or a statement dated ahead of today: fall back to
+  # today rather than anchoring the account in the future.
+  test "falls back to today when the report date is missing or ahead" do
+    @ibkr_account.update!(report_date: nil)
+    IbkrAccount::Processor.new(@ibkr_account).process
+    assert_equal Date.current, @account.valuations.current_anchor.first.entry.date
+
+    @ibkr_account.update!(report_date: Date.current + 3.days)
+    IbkrAccount::Processor.new(@ibkr_account.reload).process
+    assert_equal Date.current, @account.valuations.current_anchor.first.entry.date
+  end
+end

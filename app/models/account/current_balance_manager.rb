@@ -30,9 +30,13 @@ class Account::CurrentBalanceManager
     end
   end
 
-  def set_current_balance(balance)
+  # `date` is the day the balance describes, for a provider whose figures are
+  # as of a statement rather than of this moment. It only applies to a linked
+  # account: a manual one has no statement, and its strategies reconcile against
+  # today by design.
+  def set_current_balance(balance, date: nil)
     if account.linked?
-      result = set_current_balance_for_linked_account(balance)
+      result = set_current_balance_for_linked_account(balance, date || Date.current)
     else
       result = set_current_balance_for_manual_account(balance)
     end
@@ -96,19 +100,19 @@ class Account::CurrentBalanceManager
     # Before overwriting a stale (previous-day) current_anchor, we convert it to a
     # reconciliation valuation. This preserves the API-reported balance as a historical
     # waypoint that the ReverseCalculator uses for more accurate balance history.
-    def set_current_balance_for_linked_account(balance)
+    def set_current_balance_for_linked_account(balance, date)
       changes_made = false
 
       ActiveRecord::Base.transaction do
-        # If an anchor exists from a previous day, preserve it as a reconciliation
-        # before replacing it with today's fresh anchor.
-        preserve_anchor_as_reconciliation_if_stale if current_anchor_valuation
+        # If an anchor exists from an earlier day, preserve it as a reconciliation
+        # before replacing it with the fresh one.
+        preserve_anchor_as_reconciliation_if_stale(date) if current_anchor_valuation
 
         # Re-check: the memoized value was cleared if the anchor was converted
         if current_anchor_valuation
-          changes_made = update_current_anchor(balance)
+          changes_made = update_current_anchor(balance, date)
         else
-          create_current_anchor(balance)
+          create_current_anchor(balance, date)
           changes_made = true
         end
       end
@@ -125,9 +129,9 @@ class Account::CurrentBalanceManager
     # balance waypoints over time without creating extra entries per sync.
     #
     # Same-day updates are left in place (no extra reconciliations on repeated syncs).
-    def preserve_anchor_as_reconciliation_if_stale
+    def preserve_anchor_as_reconciliation_if_stale(date)
       entry = current_anchor_valuation.entry
-      return if entry.date == Date.current # Same-day update — nothing to preserve
+      return if entry.date == date # Same-day update — nothing to preserve
 
       current_anchor_valuation.update!(kind: "reconciliation")
       entry.update!(name: Valuation.build_reconciliation_name(account.accountable_type))
@@ -139,9 +143,9 @@ class Account::CurrentBalanceManager
       @current_anchor_valuation = nil
     end
 
-    def create_current_anchor(balance)
+    def create_current_anchor(balance, date)
       account.entries.create!(
-        date: Date.current,
+        date: date,
         name: Valuation.build_current_anchor_name(account.accountable_type),
         amount: balance,
         currency: account.currency,
@@ -152,7 +156,7 @@ class Account::CurrentBalanceManager
       @current_anchor_valuation = nil
     end
 
-    def update_current_anchor(balance)
+    def update_current_anchor(balance, date)
       changes_made = false
 
       # Update associated entry attributes
@@ -163,8 +167,8 @@ class Account::CurrentBalanceManager
         changes_made = true
       end
 
-      if entry.date != Date.current
-        entry.date = Date.current
+      if entry.date != date
+        entry.date = date
         changes_made = true
       end
 
