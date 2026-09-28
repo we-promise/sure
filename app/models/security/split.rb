@@ -22,6 +22,12 @@ class Security::Split < ApplicationRecord
   # BigDecimal by a Rational rounds at 32 digits, so 3 shares through a
   # 1-for-3 split came out 0.999...; multiplying by the numerator and then
   # dividing by the denominator is exact whenever the answer is.
+  #
+  # When the answer doesn't terminate (10 shares through a 1-for-3 split is
+  # 3.333...), the division keeps about 32 significant digits, so scaling and
+  # unscaling back can land 1e-31 away from where it started (9.999...9 for
+  # 10). The qty column holds 18 decimal places, so a stored holding never
+  # sees the difference.
   def self.scale(qty, ratio)
     qty.to_d * ratio.numerator / ratio.denominator
   end

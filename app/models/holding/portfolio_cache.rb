@@ -71,6 +71,9 @@ class Holding::PortfolioCache
   private
     PriceWithPriority = Data.define(:price, :priority, :source)
 
+    # Only splits the holdings can see: from the account's start date, when
+    # its holdings begin, to today. A split announced for a future ex-date is
+    # not applied early; it takes effect when that date arrives.
     def splits
       @splits ||= Security::Split
         .where(security_id: @security_cache.keys, ex_date: account.start_date..Date.current)
