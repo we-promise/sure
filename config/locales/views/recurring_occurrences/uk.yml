@@ -1,0 +1,53 @@
+---
+uk:
+  recurring_occurrences:
+    history_status:
+      paid: Оплачено
+      skipped: Пропущено
+      missed: Не оплачено
+      scheduled: До сплати
+    show:
+      due_on: Сплатити до %{date}
+      paid_of: Сплачено %{paid} з %{expected}
+      paid_headline: Сплачено %{amount}
+      remaining: Залишилося сплатити %{amount}
+      settled: Сплачено повністю
+      overpaid: більше, ніж очікувалося
+      skipped: Пропущено
+      missed: Позначено як неоплачений
+      payments: Оплати
+      manual_payment: Оплата вручну
+      unlink: Від'єднати
+      review_heading: Перевірте оплату
+      find_heading: Знайти оплату
+      add_heading: Додати ще одну оплату
+      other_matches: Інші ймовірні збіги
+      no_ranked_candidates: Поки що тут немає нічого схожого на оплату цього платежу.
+      search_all: Шукати серед усіх транзакцій
+      search_placeholder: Пошук транзакцій
+      no_candidates: Немає транзакцій поблизу цієї дати, які можна пов'язати.
+      no_search_results: Нічого не знайдено за запитом %{query}.
+      link_payment: Пов'язати оплату
+      not_this_one: Не ця
+      cant_find: Не можете знайти транзакцію?
+      manual_explainer: Зареєструйте оплату, яка точно відбулася, якщо жодна транзакція тут їй не відповідає.
+      manual_amount_label: Сума
+      manual_date_label: Дата
+      record_payment: Зареєструвати оплату
+      mark_paid: Позначити як оплачений
+      mark_paid_hint: Закриває залишок без реєстрації транзакції.
+      skip: Пропустити
+      snooze_week: Відкласти на тиждень
+      reopen: Відкрити знову
+      view_bill: Переглянути весь платіж
+    mark_paid:
+      success: Платіж позначено як оплачений
+    skip:
+      success: Платіж пропущено
+    reopen:
+      success: Платіж знову відкрито
+    snooze:
+      success: Відкладено до %{date}
+      invalid_date: Не вдалося розпізнати цю дату
+    override_amount:
+      success: Очікувану суму оновлено

@@ -9,3 +9,4 @@ ca:
         a provar d'aquí a uns minuts.
       temporarily_unavailable: El proveïdor d'IA no està disponible temporalment.
         Torna-ho a provar d'aquí a uns minuts.
+      no_response: L'assistent no ha respost. Pot ser que el procés en segon pla estigui aturat o que la IA no estigui configurada del tot. Torna-ho a provar.

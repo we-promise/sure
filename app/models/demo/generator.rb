@@ -322,6 +322,9 @@ class Demo::Generator
 
       @personal_loc  = family.accounts.create!(accountable: OtherLiability.new, name: "Personal Line of Credit", balance: 0, currency: "USD")
 
+      @financekit_generator = Demo::FinancekitGenerator.new(family, seed: seed)
+      @financekit_generator.create_accounts!
+
       # Other asset (USD)
       @jewelry = family.accounts.create!(accountable: OtherAsset.new, name: "Jewelry Collection", balance: 0, currency: "USD")
     end
@@ -376,6 +379,9 @@ class Demo::Generator
 
       puts "   🔒 Generating crypto & misc asset transactions..."
       generate_crypto_and_misc_assets!
+
+      puts "   👛 Generating Apple Wallet transactions..."
+      @financekit_generator.create_transactions!
 
       puts "   ✅ Reconciling balances to target snapshot..."
       reconcile_balances!(family)

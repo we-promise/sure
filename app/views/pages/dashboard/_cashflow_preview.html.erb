@@ -5,6 +5,7 @@
 <% end %>
 <section id="cashflow-preview" class="mt-6 border-t border-primary pt-4 space-y-4 ph-no-capture group/sankey-preview"
   data-controller="sankey-preview"
+  data-sankey-preview-sure-version-value="<%= Sure.version.to_s %>"
   data-sankey-preview-legacy-data-value="<%= legacy_data.to_json %>"
   data-sankey-preview-self-hosted-value="<%= self_hosted? %>"
   data-sankey-preview-feedback-key-value="<%= feedback[:api_key] %>"

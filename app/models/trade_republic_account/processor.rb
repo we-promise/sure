@@ -8,13 +8,13 @@ class TradeRepublicAccount::Processor
   def process
     return unless account.present?
 
+    exchange_securities = TradeRepublicAccount::SecurityPrefetcher.new(trade_republic_account).prefetch
+
     ActiveRecord::Base.transaction do
       total_balance = update_account_balance!
-      TradeRepublicAccount::HoldingsProcessor.new(trade_republic_account).process
-      TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account).process
-
-      # Anchor the reported balance AFTER importing, so the standing anchor is judged against a
-      # complete ledger. See Account::CurrentBalanceManager.
+      TradeRepublicAccount::HoldingsProcessor.new(trade_republic_account, exchange_securities: exchange_securities).process
+      TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account, exchange_securities: exchange_securities).process
+      
       account.set_current_balance(total_balance)
     end
 
