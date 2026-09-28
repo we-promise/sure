@@ -9,7 +9,7 @@ class Settings::ProviderCard < ApplicationComponent
     I18n.t(key) if key
   end
 
-  def initialize(provider_key:, name:, tagline: nil, region: nil, kinds: nil, tier: nil, maturity: :stable)
+  def initialize(provider_key:, name:, tagline: nil, region: nil, kinds: nil, tier: nil, maturity: :stable, external_link: nil)
     @provider_key = provider_key
     @name         = name
     @tagline      = tagline
@@ -17,9 +17,10 @@ class Settings::ProviderCard < ApplicationComponent
     @kinds        = Array(kinds).compact
     @tier         = tier
     @maturity     = maturity.to_sym
+    @external_link = external_link
   end
 
-  attr_reader :provider_key, :name, :tagline
+  attr_reader :provider_key, :name, :tagline, :external_link
 
   def maturity_label
     self.class.maturity_label(@maturity)

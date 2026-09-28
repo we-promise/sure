@@ -8,7 +8,12 @@ class Eval::Langfuse::ExperimentRunner
     @model = model
     @provider = provider
     @client = client || Eval::Langfuse::Client.new
-    @provider_config = provider_config
+    # This class reads provider_config with symbol keys, but the same config is
+    # spelled with string keys everywhere else — Eval::Run#provider_config is a
+    # jsonb column, so it always reads back as strings. Normalizing means a
+    # caller passing either spelling gets the configured value instead of
+    # silently falling through to ENV.
+    @provider_config = (provider_config || {}).with_indifferent_access
   end
 
   def run(run_name: nil)
@@ -348,23 +353,11 @@ class Eval::Langfuse::ExperimentRunner
       @llm_provider ||= build_provider
     end
 
+    # Mirrors Eval::Runners::Base#build_provider — the two runners construct
+    # providers independently, so a provider added to one has to be added here
+    # too or Langfuse experiments reject it.
     def build_provider
-      case provider
-      when "openai"
-        access_token = provider_config[:access_token] ||
-                       ENV["OPENAI_ACCESS_TOKEN"] ||
-                       Setting.openai_access_token
-
-        raise "OpenAI access token not configured" unless access_token.present?
-
-        uri_base = provider_config[:uri_base] ||
-                   ENV["OPENAI_URI_BASE"] ||
-                   Setting.openai_uri_base
-
-        Provider::Openai.new(access_token, uri_base: uri_base, model: model)
-      else
-        raise "Unsupported provider: #{provider}"
-      end
+      Eval::ProviderFactory.build(provider: provider, model: model, config: provider_config)
     end
 
     # Determine the effective JSON mode for a batch based on expected null ratio

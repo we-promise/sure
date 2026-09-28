@@ -1,0 +1,102 @@
+---
+ca:
+  providers:
+    trading212:
+      name: Trading 212
+      connection_description: Connecta un compte d'inversió de Trading 212 amb una clau API
+      institution_name: Trading 212
+  trading212_items:
+    defaults:
+      name: Trading 212
+    trading212_item:
+      deletion_in_progress: Eliminació en curs
+      environment_label_live: Compte real
+      environment_label_demo: Compte de demostració
+      syncing: Sincronitzant
+      requires_update: La clau API necessita atenció
+      error: Error
+      synced: Sincronitzat fa %{time}. %{summary}.
+      never_synced: Mai sincronitzat.
+      setup_accounts: Configura els comptes
+      delete: Elimina
+      accounts_need_setup: El compte necessita configuració
+      accounts_need_setup_description: El teu compte de Trading 212 s'ha d'enllaçar amb un compte de Sure.
+      no_accounts_discovered: Encara no s'ha descobert cap compte de Trading 212.
+      no_accounts_discovered_description: Executa una sincronització després de desar la clau API per descobrir el teu compte.
+    setup_accounts:
+      page_title: Configura el compte de Trading 212
+      dialog_title: Configura el teu compte de Trading 212
+      subtitle: Enllaça el teu compte d'inversió de Trading 212.
+      info_box:
+        title: Importació per API de Trading 212
+        items:
+          item_1: Posicions actuals amb preus i quantitats
+          item_2: Historial complet d'ordres (compres i vendes)
+          item_3: Dividends i moviments d'efectiu
+      status:
+        fetching_accounts: Obtenint el compte de Trading 212...
+        no_accounts_found_title: No s'ha trobat cap compte.
+        no_accounts_found_description: Sure no ha trobat cap compte de Trading 212. Comprova que la clau API sigui vàlida.
+      available_accounts:
+        title: Compte disponible
+        account_type_investment: Inversió
+        account_summary: '%{account_type} • Saldo: %{balance}'
+        account_id: 'ID del compte: %{account_id}'
+      link_existing:
+        description: O enllaça el compte de Trading 212 descobert amb un compte d'inversió manual existent.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Selecciona un compte...
+      linked_accounts:
+        title: Ja enllaçat
+        linked_to_html: 'Enllaçat amb: %{account}'
+      buttons:
+        refresh: Actualitza
+        cancel: Cancel·la
+        back_to_settings: Torna a la configuració
+        create_selected_accounts: Crea els comptes seleccionats
+        link: Enllaça
+        done: Fet
+    sync:
+      status:
+        checking_credentials: Comprovant les credencials de Trading 212...
+        importing_account: Important el compte de Trading 212...
+        checking_configuration: Comprovant la configuració del compte...
+        accounts_need_setup:
+          one: '%{count} compte de Trading 212 necessita configuració...'
+          other: '%{count} comptes de Trading 212 necessiten configuració...'
+        processing_activity: Processant les posicions i l'activitat...
+        calculating_balances: Calculant els saldos...
+    sync_status:
+      no_accounts: Encara no s'ha descobert cap compte de Trading 212
+      all_linked:
+        one: '%{count} compte enllaçat'
+        other: '%{count} comptes enllaçats'
+      partial: '%{linked} enllaçats, %{unlinked} pendents de configurar'
+    select_existing_account:
+      title: Enllaça el compte de Trading 212
+      no_accounts_available: Encara no hi ha comptes de Trading 212 sense enllaçar disponibles.
+      run_sync_hint: Executa una sincronització des de Configuració > Proveïdors després de desar la clau API.
+      wait_for_sync: Espera que acabi la sincronització de descobriment de comptes.
+      balance: Saldo
+      link: Enllaça
+      cancel: Cancel·la
+    create:
+      success: Trading 212 s'ha configurat correctament.
+    update:
+      success: La configuració de Trading 212 s'ha actualitzat correctament.
+    destroy:
+      success: S'ha programat l'eliminació de la connexió de Trading 212.
+    select_accounts:
+      not_configured: Trading 212 no està configurat.
+    link_existing_account:
+      not_found: No s'ha trobat el compte o la configuració de Trading 212.
+      only_manual_investment: Només es poden enllaçar amb Trading 212 comptes d'inversió manuals.
+      already_linked: Aquest compte de Trading 212 ja està enllaçat.
+      success: S'ha enllaçat correctament amb el compte de Trading 212.
+      failed: No s'ha pogut enllaçar el compte de Trading 212.
+    complete_account_setup:
+      success:
+        one: S'ha creat correctament %{count} compte de Trading 212.
+        other: S'han creat correctament %{count} comptes de Trading 212.
+      none_selected: No s'ha seleccionat cap compte.
+      none_created: No s'ha creat cap compte.
