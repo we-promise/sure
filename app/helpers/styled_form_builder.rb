@@ -27,6 +27,29 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
     super(method, tag_value, merged_options)
   end
 
+  # The browser's own file button otherwise, unstyled beside every other
+  # control. Given a label, it sits in the same bordered field as the rest;
+  # the selector button is a compact chip, so the field keeps their height.
+  # Without a label it comes back bare, as the dropzones use it: they pass
+  # `hidden` and draw their own target, and the classes merge so that stays.
+  #
+  # The chip inherits its colour rather than taking `file:text-primary`: that
+  # utility's dark variant is a `:where()` selector, which cannot follow the
+  # pseudo-element, so the chip kept its light-mode text on a dark ground.
+  FILE_FIELD_CLASSES = "w-full text-sm text-primary cursor-pointer " \
+    "file:mr-2 file:px-2 file:rounded-md file:border-0 file:bg-container-inset " \
+    "file:font-medium file:cursor-pointer hover:file:bg-container-inset-hover".freeze
+
+  def file_field(method, options = {})
+    form_options = options.slice(:label, :label_tooltip, :container_class, :required)
+    html_options = options.except(:label, :label_tooltip, :container_class)
+    html_options[:class] = @template.class_names(FILE_FIELD_CLASSES, html_options[:class])
+
+    return super(method, html_options) unless form_options[:label]
+
+    build_field(method, form_options, html_options) { |merged_options| super(method, merged_options) }
+  end
+
   def select(method, choices, options = {}, html_options = {})
     field_options = normalize_options(options, html_options)
 
