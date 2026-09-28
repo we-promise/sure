@@ -2,12 +2,6 @@
 # default browser confirm API via Turbo.
 class CustomConfirm
   class << self
-    # `body` is the one field the dialog renders as HTML — confirm_dialog_controller
-    # assigns it to innerHTML so bodies such as accounts' `confirm_body_html` can
-    # carry markup, while title and button label go through textContent. Every
-    # caller passes a user-named record here, so the name is escaped on its way
-    # into the body: without it a record named "<img src=x onerror=…>" executes
-    # as soon as someone opens the confirmation.
     # `titleize` / `downcase` are English-shaped and stay applied to the record
     # name so the English copy is unchanged; a locale that needs different
     # casing can absorb it in its own string.
@@ -16,9 +10,7 @@ class CustomConfirm
         destructive: true,
         high_severity: high_severity,
         title: I18n.t("shared.custom_confirm.resource_deletion_title", resource: resource_name.titleize),
-        # Escaped, unlike the other two: this is the only field the dialog
-        # renders as HTML.
-        body: I18n.t("shared.custom_confirm.resource_deletion_body", resource: ERB::Util.html_escape(resource_name.downcase)),
+        body: I18n.t("shared.custom_confirm.resource_deletion_body", resource: resource_name.downcase),
         btn_text: I18n.t("shared.custom_confirm.resource_deletion_btn_text", resource: resource_name.titleize)
       )
     end
@@ -26,7 +18,14 @@ class CustomConfirm
 
   def initialize(title: default_title, body: default_body, btn_text: default_btn_text, destructive: false, high_severity: false)
     @title = title
-    @body = body
+    # `body` is the one field the dialog renders as HTML: confirm_dialog_controller
+    # assigns it to innerHTML, while title and button label go through
+    # textContent. Callers interpolate record names into it (merchants, accounts,
+    # brokerages, goals), which come from users and providers, so a plain string
+    # is escaped here; without it a name like "<img src=x onerror=…>" executes as
+    # soon as someone opens the confirmation. Markup still passes as an
+    # html_safe string, e.g. from a view's `t(".…_html")`.
+    @body = ERB::Util.html_escape(body)
     @btn_text = btn_text
     @btn_variant = derive_btn_variant(destructive, high_severity)
   end

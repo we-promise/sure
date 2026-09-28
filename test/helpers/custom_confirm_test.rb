@@ -12,6 +12,28 @@ class CustomConfirmTest < ActiveSupport::TestCase
     assert_no_match(/<img/, data[:body])
   end
 
+  # Every caller interpolates into `body`: merchant, account and brokerage names
+  # come from bank feeds, providers and other family members, not from the
+  # person confirming.
+  test "escapes a plain-string body" do
+    data = CustomConfirm.new(body: "Remove <img src=x onerror=alert(1)>?").to_data_attribute
+
+    assert_equal "Remove &lt;img src=x onerror=alert(1)&gt;?", data[:body]
+  end
+
+  test "keeps the markup of an html_safe body" do
+    data = CustomConfirm.new(body: "<p>You will not be able to undo this</p>".html_safe).to_data_attribute
+
+    assert_equal "<p>You will not be able to undo this</p>", data[:body]
+  end
+
+  test "escapes the resource name only once" do
+    data = CustomConfirm.for_resource_deletion("Rock & Roll").to_data_attribute
+
+    assert_includes data[:body], "rock &amp; roll"
+    assert_not_includes data[:body], "&amp;amp;"
+  end
+
   # Title and button label reach the dialog through textContent, so they are
   # inert — pinned here so a future move to innerHTML doesn't pass silently.
   test "keeps the English copy the hardcoded strings produced" do

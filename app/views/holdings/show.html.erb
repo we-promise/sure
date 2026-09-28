@@ -280,10 +280,10 @@
                   method: :post,
                   class: "inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-primary button-bg-secondary-strong hover:button-bg-secondary-strong-hover",
                   form: { data: { turbo: false } },
-                  data: { turbo_confirm: {
+                  data: { turbo_confirm: CustomConfirm.new(
                     title: t(".reset_confirm_title"),
                     body: t(".reset_confirm_body", current: @holding.security.ticker, original: @holding.provider_security.ticker)
-                  } } %>
+                  ).to_data_attribute } %>
             </div>
           <% end %>
           <% unless @holding.security.offline? %>

@@ -11,6 +11,20 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # The confirm dialog renders its body as HTML, and provider merchant names come
+  # from bank feeds and imports rather than from this family.
+  test "escapes a provider merchant's name in the remove confirmation" do
+    merchant = ProviderMerchant.create!(name: "<img src=x onerror=alert(1)>", source: "plaid")
+    Transaction.joins(entry: :account).merge(@user.accessible_accounts).first.update!(merchant: merchant)
+
+    get family_merchants_path
+
+    body = confirm_bodies.find { |text| text.include?("onerror") }
+    assert body, "expected the remove confirmation to mention the merchant"
+    assert_includes body, "&lt;img src=x onerror=alert(1)&gt;"
+    assert_no_match(/<img/, body)
+  end
+
   test "new" do
     get new_family_merchant_path
     assert_response :success
@@ -80,4 +94,13 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to family_merchants_path
   end
+
+  private
+    def confirm_bodies
+      css_select("[data-turbo-confirm]").filter_map do |element|
+        JSON.parse(element["data-turbo-confirm"])["body"]
+      rescue JSON::ParserError
+        nil
+      end
+    end
 end
