@@ -1019,6 +1019,21 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "funds_movement", cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_sell_keep").transaction.kind
   end
 
+  test "keeps the settlement kind on a sale that earlier syncs stored as an investment contribution" do
+    cash_account, cash_sure = create_linked_cash_account!
+    legacy = Account::ProviderImportAdapter.new(cash_sure).import_transaction(
+      external_id: "trade_republic_event_evt_legacy_sell", amount: BigDecimal("-150.00"), currency: "EUR",
+      date: Date.parse("2026-08-01"), name: "Apple", source: "trade_republic", kind: "investment_contribution"
+    )
+    assert_equal "investment_contribution", legacy.transaction.kind
+
+    sell = order_execution_detail(event_id: "evt_legacy_sell", quantity: "-1", isin: "US0378331005", amount: "150.00")
+    @tr_account.update!(raw_timeline_payload: [ sell ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_equal "funds_movement", legacy.transaction.reload.kind
+  end
+
   test "a standard deposit is matched to the bank transfer that funded it" do
     cash_account, cash_sure = create_linked_cash_account!
     bank = @family.accounts.create!(name: "Bank", balance: 0, currency: "EUR", accountable: Depository.new)
