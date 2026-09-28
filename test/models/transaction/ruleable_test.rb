@@ -32,6 +32,13 @@ class Transaction::RuleableTest < ActiveSupport::TestCase
     assert @transaction.eligible_for_category_rule?
   end
 
+  test "ignores rules for other resource types instead of raising" do
+    rule = create_category_rule(name_like: "AMZN")
+    rule.update_column(:resource_type, "account")
+
+    assert_nothing_raised { assert @transaction.eligible_for_category_rule? }
+  end
+
   test "not eligible without a category" do
     @transaction.update!(category: nil)
 
