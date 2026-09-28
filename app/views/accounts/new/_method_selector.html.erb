@@ -18,9 +18,11 @@
       <%= icon("chevron-right", size: "sm", class: "ml-auto shrink-0 text-subdued transition-colors group-hover:text-secondary") %>
     <% end %>
 
-    <%# Dynamic provider links - only admins can create provider connections %>
-    <% if Current.user&.admin? %>
+    <%# Dynamic provider links. Admins may connect anything; a member may only
+        connect providers whose credential is scoped to the single connection
+        they authenticate (see ProviderItemOwnable). %>
     <% provider_configs.each do |config| %>
+      <% next unless Current.user&.admin? || config[:member_connectable] %>
       <% link_path = config[:new_account_path].call(accountable_type, params[:return_to]) %>
       <% is_lunchflow = config[:key] == "lunchflow" %>
 
@@ -47,7 +49,6 @@
 
         <%= icon("chevron-right", size: "sm", class: "ml-auto shrink-0 text-subdued transition-colors group-hover:text-secondary") %>
       <% end %>
-    <% end %>
     <% end %>
 
   </div>

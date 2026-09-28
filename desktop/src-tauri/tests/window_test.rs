@@ -1,5 +1,8 @@
 use sure_desktop_lib::servers::{base_covers, normalize_server_url};
-use sure_desktop_lib::window::{popup_action, print_report_server, PopupAction, RefusedDownloads};
+use sure_desktop_lib::window::{
+    download_notification, popup_action, print_report_server, DownloadToast, PopupAction,
+    RefusedDownloads,
+};
 use url::Url;
 
 #[test]
@@ -134,5 +137,96 @@ fn reports_every_download_outcome_except_refused_downloads() {
     assert!(
         downloads.should_report(&tracker, false),
         "each refusal silences only its own failure"
+    );
+}
+
+#[test]
+fn reads_what_the_toast_script_reports() {
+    assert_eq!(
+        DownloadToast::from_script_result(
+            r#"{"shown":true,"message":"Téléchargement terminé","description":"Le fichier se trouve dans votre dossier Téléchargements."}"#
+        ),
+        DownloadToast {
+            shown: true,
+            message: Some("Téléchargement terminé".to_string()),
+            description: Some(
+                "Le fichier se trouve dans votre dossier Téléchargements.".to_string()
+            ),
+        }
+    );
+    assert_eq!(
+        DownloadToast::from_script_result(
+            r#"{"shown":false,"message":"Download failed. Please try again.","description":null}"#
+        ),
+        DownloadToast {
+            shown: false,
+            message: Some("Download failed. Please try again.".to_string()),
+            description: None,
+        }
+    );
+    // A page without the template, a failed script, or anything unexpected.
+    for result in ["null", "", "true", "{\"shown\":\"yes\"}"] {
+        assert_eq!(
+            DownloadToast::from_script_result(result),
+            DownloadToast::default(),
+            "{result}"
+        );
+    }
+}
+
+#[test]
+fn notifies_in_the_page_language_when_the_page_provides_the_text() {
+    let complete = DownloadToast {
+        shown: true,
+        message: Some("Téléchargement terminé".to_string()),
+        description: Some("Le fichier se trouve dans votre dossier Téléchargements.".to_string()),
+    };
+    assert_eq!(
+        download_notification(true, &complete),
+        (
+            "Téléchargement terminé".to_string(),
+            "Le fichier se trouve dans votre dossier Téléchargements.".to_string()
+        )
+    );
+
+    let failed = DownloadToast {
+        shown: false,
+        message: Some("Le téléchargement a échoué. Veuillez réessayer.".to_string()),
+        description: None,
+    };
+    assert_eq!(
+        download_notification(false, &failed),
+        (
+            "Sure".to_string(),
+            "Le téléchargement a échoué. Veuillez réessayer.".to_string()
+        )
+    );
+}
+
+#[test]
+fn notifies_in_english_when_the_page_has_no_toast_text() {
+    let none = DownloadToast::default();
+    assert_eq!(
+        download_notification(true, &none),
+        (
+            "Sure".to_string(),
+            "Download complete. The file is in your Downloads folder.".to_string()
+        )
+    );
+    assert_eq!(
+        download_notification(false, &none),
+        (
+            "Sure".to_string(),
+            "Download failed. Please try again.".to_string()
+        )
+    );
+    let empty = DownloadToast {
+        shown: false,
+        message: Some(String::new()),
+        description: Some(String::new()),
+    };
+    assert_eq!(
+        download_notification(true, &empty),
+        download_notification(true, &none)
     );
 }

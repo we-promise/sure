@@ -1,5 +1,10 @@
 class PlaidItem < ApplicationRecord
-  include Syncable, Provided, Encryptable, DestroyableLater
+  include Syncable, Provided, Encryptable, DestroyableLater, ProviderItemOwnable
+
+  # A Plaid access_token only covers the institution the user authenticated
+  # to through Link, so a household member may connect their own bank without
+  # gaining any visibility into anyone else's connections.
+  credential_scope :per_connection
 
   enum :plaid_region, { us: "us", eu: "eu" }
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good

@@ -90,7 +90,7 @@
               <p class="text-xs text-secondary truncate">
                 <%= frequency_label(series) %>
                 <% if series.next_expected_date %>
-                  &middot; <%= t(".next_short", date: l(series.next_expected_date, format: :short)) %>
+                  &middot; <%= t(".next_short", date: bills_upcoming_date(series.next_expected_date)) %>
                 <% end %>
               </p>
             </div>
@@ -169,7 +169,7 @@
                   <p class="text-xs text-secondary"><%= t(".monthly_equivalent", amount: format_money(monthly)) %></p>
                 <% end %>
               </td>
-              <td class="py-3 px-2 text-sm text-secondary"><%= series.next_expected_date ? l(series.next_expected_date, format: :short) : "–" %></td>
+              <td class="py-3 px-2 text-sm text-secondary"><%= series.next_expected_date ? bills_upcoming_date(series.next_expected_date) : "–" %></td>
               <td class="py-3 px-2 text-sm">
                 <%= render DS::Pill.new(label: t("recurring_transactions.status.#{series.status}"), tone: recurring_status_pill_tone(series.status), marker: false) %>
               </td>

@@ -25,6 +25,9 @@ nl:
       data_quality:
         title: "Datakwaliteit en synchronisatiedetails"
         repair: "Geïmporteerde gegevens herstellen"
+        pending_trade_details:
+          one: "%{count} beleggingsactiviteit wacht op details"
+          other: "%{count} beleggingsactiviteiten wachten op details"
     setup_accounts:
       page_title: "Trade Republic-rekening instellen"
       subtitle: "Koppel je Trade Republic-beleggingsrekening."
@@ -76,5 +79,4 @@ nl:
         card_fee: Kaartkosten
         card_refund: Kaartterugbetaling
         tax_refund: Belastingteruggaaf
-        buy: Koop
-        sell: Verkoop
+        round_up: Round up

@@ -59,6 +59,8 @@ fr:
       first_due_on_label: Prochaine échéance
       frequency_day_label: Le jour
       frequency_hint: À quelle fréquence cette facture arrive à échéance. Choisissez les détails du jour pour correspondre à votre relevé.
+      frequency_interval_label: Intervalle
+      frequency_interval_unit_label: Unité
       frequency_label: Fréquence
       frequency_month_label: En
       frequency_new_hint: Les détails du jour proviennent de la date d'échéance ci-dessus. Vous pourrez affiner l'échéancier après l'enregistrement.
@@ -94,6 +96,9 @@ fr:
       annual: Chaque année le %{day} %{month}
       biweekly: Toutes les 2 semaines, le %{weekday}
       custom: Échéancier personnalisé
+      every_n_months: Tous les %{interval} mois, le %{day}
+      every_n_weeks: Toutes les %{interval} semaines, le %{weekday}
+      every_n_years: Tous les %{interval} ans, le %{day} %{month}
       last_day: dernier jour
       monthly: Chaque mois, le %{day}
       quarterly: Chaque trimestre, le %{day}
@@ -104,11 +109,16 @@ fr:
       annual: Annuelle
       biweekly: Toutes les 2 semaines
       custom: Échéancier personnalisé
+      interval: Intervalle personnalisé
       monthly: Mensuelle
       quarterly: Trimestrielle
       semiannual: Tous les 6 mois
       semimonthly: Deux fois par mois
       weekly: Hebdomadaire
+    frequency_interval_units:
+      monthly: mois
+      weekly: semaines
+      yearly: années
     identified: "%{count} modèles de transactions récurrentes identifiés"
     identify_already_running: La détection est déjà en cours. Revenez dans un instant.
     identify_patterns: Identifier les modèles

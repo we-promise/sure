@@ -43,6 +43,26 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "PlaidAccount", account.account_providers.first.provider_type
   end
 
+  test "a new account inherits the owner of the item that produced it" do
+    # Accounts are created inside the sync job, where Current.user is nil. If
+    # the owner were left to Account#assign_default_owner it would fall back to
+    # the family's first admin, quietly taking a member's own connection away
+    # from them (issue #3579).
+    Account.destroy_all
+    member = users(:family_member)
+    @plaid_account.plaid_item.update!(owner: member)
+
+    expect_default_subprocessor_calls
+
+    Current.reset
+
+    assert_difference "Account.count" do
+      PlaidAccount::Processor.new(@plaid_account).process
+    end
+
+    assert_equal member, Account.order(created_at: :desc).first.owner
+  end
+
   test "processing is idempotent with updates and enrichments" do
     expect_default_subprocessor_calls
 

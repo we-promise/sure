@@ -21,7 +21,11 @@ ru:
       all_skipped: Все счета были пропущены. Счета не были созданы.
       creation_failed: 'Не удалось создать счета: %{error}'
       no_accounts: Нет счетов для настройки.
-      success: Успешно создано %{count} счёт(ов).
+      success:
+        one: "Успешно создан %{count} счёт."
+        few: "Успешно создано %{count} счёта."
+        many: "Успешно создано %{count} счетов."
+        other: "Успешно создано %{count} счёта."
     create:
       success: Подключение к Mercury успешно создано
     destroy:
@@ -44,10 +48,8 @@ ru:
       no_accounts_selected: Пожалуйста, выберите хотя бы один счёт
       no_api_token: API токен Mercury не найден. Пожалуйста, настройте его в настройках
         провайдера.
-      partial_invalid: Успешно связано %{created_count} счёт(ов), %{already_linked_count}
-        уже были связаны, %{invalid_count} счёт(ов) имели недопустимые имена
-      partial_success: 'Успешно связано %{created_count} счёт(ов). %{already_linked_count}
-        счёт(ов) уже были связаны: %{already_linked_names}'
+      partial_invalid: "Привязано счетов: %{created_count}; уже были привязаны: %{already_linked_count}; с недопустимыми именами: %{invalid_count}"
+      partial_success: "Привязано счетов: %{created_count}. Уже были привязаны (%{already_linked_count}): %{already_linked_names}"
       select_connection: Выберите подключение к Mercury перед связыванием счетов.
       success:
         few: Успешно связаны %{count} счёта
@@ -193,7 +195,7 @@ ru:
         other_asset: Дополнительные параметры для других активов не требуются.
       subtypes:
         depository:
-          cd: Депозитный сертификат
+          cd: Срочный вклад
           checking: Текущий
           hsa: Счёт медицинских сбережений
           money_market: Денежный рынок

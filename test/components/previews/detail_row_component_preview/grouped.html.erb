@@ -1,0 +1,7 @@
+<%# Rows are meant to sit inside a <dl>, which is what carries the spacing. %>
+<dl class="space-y-2">
+  <%= render DS::DetailRow.new(label: "Payee", value: "Whole Foods") %>
+  <%= render DS::DetailRow.new(label: "Original description", value: "WHOLEFDS MKT 10345 AUSTIN TX") %>
+  <%= render DS::DetailRow.new(label: "Payment channel", value: "in store") %>
+  <%= render DS::DetailRow.new(label: "Counterparty 1 · confidence level", value: "VERY_HIGH") %>
+</dl>

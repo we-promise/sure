@@ -16,6 +16,14 @@ class Setting < RailsSettings::Base
   field :anthropic_base_url, type: :string, default: ENV["ANTHROPIC_BASE_URL"]
   field :llm_provider, type: :string, default: ENV.fetch("LLM_PROVIDER", "openai")
 
+  # Jev (TypeSafe) — a classification provider, not an LLM. Reachable either
+  # through OpenRouter's Decisions API (the default) or TypeSafe's own endpoint.
+  # Deliberately no OPENROUTER_API_KEY fallback: an operator holding that key
+  # for an unrelated purpose should not silently enable Jev.
+  field :jev_api_key, type: :string, default: ENV["JEV_API_KEY"]
+  field :jev_endpoint, type: :string, default: ENV["JEV_ENDPOINT"]
+  field :jev_model, type: :string, default: ENV["JEV_MODEL"]
+
   # LLM token budget (applies to every outbound LLM call: chat, auto-categorize,
   # merchant detection, enhance-merchants, PDF processing). Defaults track
   # Ollama's historical 2048-token baseline so local small-context models work
@@ -32,6 +40,7 @@ class Setting < RailsSettings::Base
   field :ai_response_timeout, type: :integer, default: ENV["AI_RESPONSE_TIMEOUT"]&.to_i
   field :external_assistant_url, type: :string
   field :external_assistant_token, type: :string
+  field :external_assistant_model, type: :string
   field :external_assistant_agent_id, type: :string
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
@@ -105,6 +114,7 @@ class Setting < RailsSettings::Base
       realie_api_key
       openai_access_token
       anthropic_access_token
+      jev_api_key
       external_assistant_token
     ].freeze
 

@@ -2,17 +2,17 @@
 ru:
   holdings:
     cash:
-      brokerage_cash: Брокерский счёт
+      brokerage_cash: Денежные средства на брокерском счёте
     cost_basis_cell:
       cancel: Отмена
       or_per_share_label: 'Или введите за акцию:'
-      overwrite_confirm_body: Это заменит текущую стоимость %{current}.
-      overwrite_confirm_title: Перезаписать стоимость?
+      overwrite_confirm_body: Это заменит текущую стоимость приобретения %{current}.
+      overwrite_confirm_title: Перезаписать стоимость приобретения?
       per_share: за акцию
       save: Сохранить
       set: Установить
-      set_cost_basis_header: Установить стоимость для %{ticker} (%{qty} акций)
-      total_cost_basis_label: Общая стоимость
+      set_cost_basis_header: Установить стоимость приобретения для %{ticker} (%{qty} акций)
+      total_cost_basis_label: Общая стоимость приобретения
       unknown: "--"
     cost_basis_sources:
       calculated: Из сделок
@@ -25,7 +25,7 @@ ru:
       security_collision: 'Невозможно переназначить: у вас уже есть актив для %{ticker}
         на %{date}.'
     holding:
-      no_cost_basis: Нет стоимости
+      no_cost_basis: Нет стоимости приобретения
       per_share: за акцию
       shares: "%{qty} акций"
       unknown: "--"
@@ -33,6 +33,8 @@ ru:
       positions:
         one: "%{count} позиция"
         other: "%{count} позиций"
+        few: '%{count} позиции'
+        many: '%{count} позиций'
       average_cost: Средняя стоимость
       holdings: Активы
       name: Название
@@ -53,9 +55,9 @@ ru:
       avg_cost_label: Средняя стоимость
       book_value_label: Балансовая стоимость
       cancel: Отмена
-      cost_basis_locked_description: Ваша вручную установленная стоимость не будет
+      cost_basis_locked_description: Заданная вручную стоимость приобретения не будет
         изменена при синхронизации.
-      cost_basis_locked_label: Стоимость заблокирована
+      cost_basis_locked_label: Стоимость приобретения заблокирована
       current_market_price_label: Текущая рыночная цена
       delete: Удалить
       delete_subtitle: Это удалит актив и все связанные с ним сделки на этом счёте.
@@ -101,9 +103,9 @@ ru:
         актив был добавлен после даты вашей сделки или если поставщик предлагает ограниченное
         количество исторических данных в текущем тарифе.
       unknown: Неизвестно
-      unlock_confirm_body: Это позволит обновлять стоимость при синхронизации с поставщиком
+      unlock_confirm_body: Это позволит обновлять стоимость приобретения при синхронизации с поставщиком
         или расчётах сделок.
-      unlock_confirm_title: Разблокировать стоимость?
+      unlock_confirm_title: Разблокировать стоимость приобретения?
       unlock_cost_basis: Разблокировать
     sync_prices:
       provider_error: Не удалось получить последние цены. Пожалуйста, попробуйте снова
@@ -111,7 +113,7 @@ ru:
       success: Рыночные данные успешно синхронизированы.
       unavailable: Синхронизация рыночных данных недоступна для офлайн-активов.
     unlock_cost_basis:
-      success: Стоимость разблокирована. Она может быть обновлена при следующей синхронизации.
+      success: Стоимость приобретения разблокирована. Она может быть обновлена при следующей синхронизации.
     update:
-      error: Неверное значение стоимости.
-      success: Стоимость сохранена.
+      error: Неверное значение стоимости приобретения.
+      success: Стоимость приобретения сохранена.
