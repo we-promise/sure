@@ -126,6 +126,15 @@ class Transfer::MatcherTest < ActiveSupport::TestCase
     assert_equal :account_not_found, error.code
   end
 
+  test "does not offer split children as candidates, or candidates for one" do
+    parent = create_transaction(account: @card, amount: -100)
+    children = parent.split!([ { name: "Part A", amount: -60 }, { name: "Part B", amount: -40 } ])
+    outflow = create_transaction(account: @checking, amount: 60).transaction
+
+    assert_empty Transfer::Matcher.new(outflow).candidates
+    assert_empty Transfer::Matcher.new(children.first.entryable).candidates
+  end
+
   test "lists candidates with the manual dialog's 30 day window" do
     outflow = create_transaction(account: @checking, amount: 75, date: Date.current).transaction
     near = create_transaction(account: @card, amount: -75, date: 20.days.ago.to_date).transaction
