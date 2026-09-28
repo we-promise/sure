@@ -345,4 +345,26 @@ class EnableBankingItemTest < ActiveSupport::TestCase
 
     assert_not @item.sync_start_date_shortfall?
   end
+
+  test "changing sync_start_date clears a stale effective_sync_start_date" do
+    @item.sync_start_date = 1.year.ago.to_date
+    @item.save!
+    # Mirrors how the importer actually sets this - via update_column, after
+    # the record already exists, never bundled into the same save as a
+    # sync_start_date change.
+    @item.update_column(:effective_sync_start_date, 90.days.ago.to_date)
+
+    @item.update!(sync_start_date: 6.months.ago.to_date)
+
+    assert_nil @item.effective_sync_start_date
+  end
+
+  test "saving without changing sync_start_date preserves effective_sync_start_date" do
+    @item.save!
+    @item.update_column(:effective_sync_start_date, 90.days.ago.to_date)
+
+    @item.update!(name: "Renamed")
+
+    assert_equal 90.days.ago.to_date, @item.reload.effective_sync_start_date
+  end
 end

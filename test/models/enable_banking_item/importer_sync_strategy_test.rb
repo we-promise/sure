@@ -227,4 +227,36 @@ class EnableBankingItem::ImporterSyncStrategyTest < ActiveSupport::TestCase
 
     assert_equal granted_date, @enable_banking_item.reload.effective_sync_start_date
   end
+
+  test "import never moves effective_sync_start_date earlier - a later account's less-restrictive initial fetch must not erase an earlier account's shortfall" do
+    linked_enable_banking_account = @enable_banking_item.enable_banking_accounts.create!(
+      uid: "linked_uid", name: "Linked", currency: "EUR"
+    )
+    depository = Depository.create!
+    linked_account = Account.create!(
+      family: @family, name: "Linked", balance: 0, cash_balance: 0, currency: "EUR", accountable: depository
+    )
+    AccountProvider.create!(account: linked_account, provider: linked_enable_banking_account)
+
+    # A previous sync already recorded a restrictive boundary (e.g. from a
+    # different account that has since become incremental and no longer
+    # contributes to this sync's effective_date_froms). A later (more recent)
+    # effective date is the more restrictive one - it means less history was
+    # granted.
+    restrictive_date = 30.days.ago.to_date
+    @enable_banking_item.update_column(:effective_sync_start_date, restrictive_date)
+
+    less_restrictive_date = 200.days.ago.to_date
+
+    @enable_banking_item.stubs(:upsert_enable_banking_snapshot!)
+    @importer.stubs(:fetch_session_data).returns(accounts: [])
+    @importer.stubs(:fetch_and_update_balance).returns(true)
+    @importer.stubs(:fetch_and_store_transactions).returns(
+      success: true, transactions_count: 0, effective_date_from: less_restrictive_date
+    )
+
+    @importer.import
+
+    assert_equal restrictive_date, @enable_banking_item.reload.effective_sync_start_date
+  end
 end

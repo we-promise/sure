@@ -146,11 +146,20 @@ class EnableBankingItem::Importer
     end
 
     if effective_date_froms.any?
-      # The latest (most restrictive) effective date across accounts is what
-      # would actually trigger the shortfall notice - if any linked account's
-      # history was truncated, the user should see it.
+      # Only accounts still doing their initial (non-incremental) fetch on
+      # this particular sync contribute here - once an account has stored
+      # transactions it drops out of effective_date_froms for good, even
+      # though its previously recorded boundary may be more restrictive than
+      # whatever a later-added account reports on its own initial fetch.
+      # Only ever extend the stored boundary (never move it earlier) so a
+      # later sync can't silently erase an earlier account's shortfall.
+      # EnableBankingItem#reset_effective_sync_start_date_when_requested_date_changes
+      # clears it back to nil whenever sync_start_date itself changes, which
+      # is the only case this value should ever move earlier.
       latest_effective_date_from = effective_date_froms.max
-      if enable_banking_item.effective_sync_start_date != latest_effective_date_from
+      current_effective_date_from = enable_banking_item.effective_sync_start_date
+
+      if current_effective_date_from.nil? || latest_effective_date_from > current_effective_date_from
         enable_banking_item.update_column(:effective_sync_start_date, latest_effective_date_from)
       end
     end

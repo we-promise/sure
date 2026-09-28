@@ -17,6 +17,14 @@ class EnableBankingItem < ApplicationRecord
   validates :application_id, presence: true
   validates :client_certificate, presence: true, on: :create
 
+  # A stale effective_sync_start_date from a previous requested date would
+  # otherwise linger and be compared against the new sync_start_date in
+  # sync_start_date_shortfall?, producing a false read in either direction.
+  # The importer records a fresh boundary via update_column (bypassing this
+  # callback), so this only fires on requested-date changes made through the
+  # normal save path (controller updates), not on importer writes.
+  before_save :reset_effective_sync_start_date_when_requested_date_changes
+
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
 
@@ -403,6 +411,10 @@ class EnableBankingItem < ApplicationRecord
   end
 
   private
+
+    def reset_effective_sync_start_date_when_requested_date_changes
+      self.effective_sync_start_date = nil if will_save_change_to_sync_start_date?
+    end
 
     # Authentication approach preference, lowest number wins.
     # REDIRECT is the smoothest (PSU authenticates entirely on the ASPSP page).
