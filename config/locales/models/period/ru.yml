@@ -20,6 +20,7 @@ ru:
     custom:
       label: Свой период
       label_short: Свой
+      comparison_label: по сравнению с периодом %{start_date} – %{end_date}
     last_10_years:
       comparison_label: по сравнению с 10 лет назад
       label: Последние 10 лет
@@ -52,3 +53,4 @@ ru:
       comparison_label: по сравнению с прошлым месяцем
       label: Прошлый месяц
       label_short: ПМ
+    range: '%{start_date} – %{end_date}'

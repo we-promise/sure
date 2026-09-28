@@ -14,11 +14,13 @@ ca:
       service_down_label: Servei caigut
       title: Error de connexió Lunch Flow
       unable_to_connect: No s'ha pogut connectar a Lunch Flow
+      unexpected_error: S'ha produït un error inesperat. Torna-ho a provar més tard.
     complete_account_setup:
       all_skipped: S'han omès tots els comptes. No s'ha creat cap compte.
       creation_failed: 'No s''han pogut crear els comptes: %{error}'
       no_accounts: No hi ha comptes per configurar.
       success: S'han creat correctament %{count} compte(s).
+      unexpected_error: S'ha produït un error inesperat
     create:
       success: La connexió amb Lunch Flow s'ha creat correctament
     destroy:
@@ -77,6 +79,14 @@ ca:
       syncing: Sincronitzant...
       total: Total
       unlinked: Sense enllaç
+      sync_status:
+        no_accounts: No s'han trobat comptes
+        synced:
+          one: '%{count} compte sincronitzat'
+          other: '%{count} comptes sincronitzats'
+        partial_setup:
+          one: '%{linked} sincronitzats, %{unlinked} per configurar'
+          other: '%{linked} sincronitzats, %{unlinked} per configurar'
     select_accounts:
       accounts_selected: comptes seleccionats
       api_error: 'Error de l''API: %{message}'
@@ -147,7 +157,7 @@ ca:
         other_asset: No calen opcions addicionals per a altres actius.
       subtypes:
         depository:
-          cd: Certificat de dipòsit
+          cd: Dipòsit a termini
           checking: Compte corrent
           hsa: Compte d'estalvi per a salut
           money_market: Mercat monetari
@@ -175,6 +185,7 @@ ca:
         Hi ha un màxim de 3 anys d'historial disponible.
       sync_start_date_label: 'Comença a sincronitzar transaccions des de:'
       title: Configura els teus comptes de Lunch Flow
+      page_title: Configura els comptes de Lunch Flow
     setup_required:
       api_key_description: Abans d'enllaçar comptes Lunch Flow, has de configurar
         la teva clau API de Lunch Flow.
@@ -190,3 +201,7 @@ ca:
       success: Sincronització iniciada
     update:
       success: La connexió amb Lunch Flow s'ha actualitzat
+    subtype_select:
+      placeholder:
+        subtype: Selecciona el subtipus
+        type: Selecciona el tipus

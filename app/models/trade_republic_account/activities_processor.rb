@@ -1,12 +1,14 @@
 class TradeRepublicAccount::ActivitiesProcessor
   include TradeRepublicAccount::DataHelpers
 
-  # Timeline event categories that carry trade payloads once their detail has
-  # been resolved by the Trade Republic client boundary.
-  CATEGORY_ORDER_EXECUTION = "orderExecution"
+  SAVEBACK_EVENT_TYPE = "SAVEBACK_AGGREGATE"
+  ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
+  SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
+  SAVINGS_PLAN_EXECUTION_EVENT_TYPES = %w[TRADING_SAVINGSPLAN_EXECUTED SAVINGS_PLAN_EXECUTED].freeze
 
-  def initialize(trade_republic_account)
+  def initialize(trade_republic_account, exchange_securities: {})
     @trade_republic_account = trade_republic_account
+    @exchange_securities = exchange_securities
   end
 
   def process
@@ -14,21 +16,32 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     trade_count = 0
     transaction_count = 0
-    split_accounts = linked_cash_account_present?
 
-    Array(@trade_republic_account.raw_timeline_payload).each do |event|
+    timeline_events.each do |event|
       next unless event.is_a?(Hash)
 
-      next if split_accounts && @trade_republic_account.portfolio? && event.with_indifferent_access[:category].to_s != CATEGORY_ORDER_EXECUTION
-      next if @trade_republic_account.cash? && event.with_indifferent_access[:category].to_s == CATEGORY_ORDER_EXECUTION
+      event = event.with_indifferent_access
+      classification = classify_timeline_event(event)
+      next if classification == :ignored
+      next if lifecycle_blocks_import?(event)
+      # After routing, so split portfolio/cash connections log an unknown
+      # event once (from the cash side) instead of twice.
+      next unless processable_event?(event)
 
-      case process_event(event.with_indifferent_access)
+      if classification == :unknown
+        record_unknown_event(event)
+        next
+      end
+
+      case process_event(event)
       when :trade then trade_count += 1
       when :transaction then transaction_count += 1
       end
     end
 
     reconcile_split_portfolio_transactions!
+    reconcile_stale_saveback_cash_transactions!
+    reconcile_non_importable_entries!
 
     { trades: trade_count, transactions: transaction_count }
   end
@@ -55,6 +68,45 @@ class TradeRepublicAccount::ActivitiesProcessor
       @trade_republic_account.currency
     end
 
+    # Trade Republic settles trades directly against the cash balance. The
+    # importer keeps order executions on the portfolio payload only, so the
+    # cash account reads them from there to book the settlement. Portfolio
+    # copies come first so they win the dedupe: a cash snapshot retained from
+    # a failed timeline update can still hold an order execution whose
+    # portfolio copy has since been deleted.
+    def timeline_events
+      @timeline_events ||= begin
+        events = Array(@trade_republic_account.raw_timeline_payload)
+        events = portfolio_order_execution_events + events if @trade_republic_account.cash?
+        events.uniq { |event| event.is_a?(Hash) ? (event["id"] || event[:id]).presence || event : event }
+      end
+    end
+
+    def portfolio_order_execution_events
+      portfolio = @trade_republic_account.trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      return [] unless portfolio
+
+      Array(portfolio.raw_timeline_payload).select do |event|
+        event.is_a?(Hash) && event_category(event.with_indifferent_access) == CATEGORY_ORDER_EXECUTION
+      end
+    end
+
+    # Saveback and Round Up stay classified as POC_CREATED at the client
+    # boundary so other cash withdrawals are unchanged. Routing happens here
+    # by eventType: Saveback is portfolio-only; Round Up is portfolio trade
+    # plus cash outflow when both accounts are linked.
+    def processable_event?(event)
+      event_type = event[:eventType].to_s
+
+      return @trade_republic_account.portfolio? if saveback_event?(event_type)
+      return true if round_up_event?(event_type)
+
+      category = event[:category].to_s
+      return category == CATEGORY_ORDER_EXECUTION if linked_cash_account_present? && @trade_republic_account.portfolio?
+
+      true
+    end
+
     # Events arrive bridge-normalized:
     #   { id:, timestamp:, category:, title:, subtitle:,
     #     detail: { isin, name, quantity (signed), amount (magnitude),
@@ -69,21 +121,29 @@ class TradeRepublicAccount::ActivitiesProcessor
       return nil unless date
 
       detail = event[:detail] || {}
+      event_type = event[:eventType].to_s
+
+      return process_saveback(event, detail, external_id, date) if saveback_event?(event_type)
+      return process_round_up(event, detail, external_id, date) if round_up_event?(event_type)
 
       case event_category(event)
       when CATEGORY_ORDER_EXECUTION
+        return nil if duplicate_savings_plan_invoice?(event, detail, date)
+        return import_order_settlement(event, detail, external_id, date) ? :transaction : nil if @trade_republic_account.cash?
+
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       when CATEGORY_DEPOSIT
-        import_cash_movement(event, detail, external_id, date, label: cash_label(event, default: t("contribution")), sign: -1) ? :transaction : nil
+        label = cash_label(event, default: nil)
+        import_cash_movement(
+          event, detail, external_id, date,
+          label: label || t("contribution"), activity_label: label || deposit_activity_label, sign: -1
+        ) ? :transaction : nil
       when CATEGORY_WITHDRAWAL
         import_cash_movement(event, detail, external_id, date, label: cash_label(event, default: t("withdrawal")), sign: 1) ? :transaction : nil
       when CATEGORY_INTEREST
         import_cash_movement(event, detail, external_id, date, label: t("interest"), sign: -1) ? :transaction : nil
       when CATEGORY_DIVIDEND
         import_cash_movement(event, detail, external_id, date, label: t("dividend"), sign: -1) ? :transaction : nil
-      else
-        record_unknown_event(event)
-        nil
       end
     rescue => e
       DebugLogEntry.capture(
@@ -98,29 +158,114 @@ class TradeRepublicAccount::ActivitiesProcessor
       nil
     end
 
+    def process_saveback(event, detail, external_id, date)
+      return nil unless @trade_republic_account.portfolio?
+
+      import_order_execution(event, detail, external_id, date) ? :trade : nil
+    end
+
+    def process_round_up(event, detail, external_id, date)
+      if @trade_republic_account.portfolio?
+        import_order_execution(event, detail, external_id, date) ? :trade : nil
+      else
+        import_cash_movement(
+          event, detail, external_id, date,
+          label: t("round_up"), sign: 1, kind: "investment_contribution"
+        ) ? :transaction : nil
+      end
+    end
+
+    # Trade Republic switched savings-plan executions from invoices to
+    # TRADING_SAVINGSPLAN_EXECUTED. Should an execution ever arrive in both
+    # shapes, import only the execution.
+    def duplicate_savings_plan_invoice?(event, detail, date)
+      return false unless event[:eventType].to_s == SAVINGS_PLAN_INVOICE_EVENT_TYPE
+
+      key = savings_plan_key(detail, date)
+      return false unless savings_plan_execution_keys.include?(key)
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Skipped Trade Republic savings-plan invoice duplicated by an execution event",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: { event_id: event[:id], isin: key[0], date: key[1], quantity: key[2]&.to_s("F") }
+      )
+      true
+    end
+
+    def savings_plan_execution_keys
+      @savings_plan_execution_keys ||= timeline_events.each_with_object(Set.new) do |event, keys|
+        next unless event.is_a?(Hash)
+
+        event = event.with_indifferent_access
+        next unless SAVINGS_PLAN_EXECUTION_EVENT_TYPES.include?(event[:eventType].to_s)
+        next unless importable_timeline_event?(event)
+
+        keys << savings_plan_key(event[:detail] || {}, parse_date(event[:timestamp]))
+      end
+    end
+
+    def savings_plan_key(detail, date)
+      [ detail[:isin].to_s, date, parse_decimal(detail[:quantity])&.abs ]
+    end
+
+    def saveback_event?(event_type)
+      event_type == SAVEBACK_EVENT_TYPE
+    end
+
+    def round_up_event?(event_type)
+      event_type == ROUND_UP_EVENT_TYPE
+    end
+
     def import_order_execution(event, detail, external_id, date)
       isin = detail[:isin].to_s
       quantity = parse_decimal(detail[:quantity])
 
       return false if isin.blank? || quantity.nil? || quantity.zero?
 
-      security = resolve_security(isin, detail[:name] || event[:title])
+      security = resolve_security(
+        isin,
+        detail[:name] || event[:title],
+        symbol: detail[:symbol],
+        exchange_slug: detail[:exchange_slug]
+      )
       return false unless security
 
       is_buy = quantity.positive?
       signed_quantity = quantity # Bridge reports sells as negative quantities already
 
-      # Amount falls back to |quantity| × price only when the provider omits
-      # the exact cash amount. Fees and taxes stay embedded in the provider
-      # amount rather than being inferred separately.
+      fee = parse_decimal(detail[:fees])&.abs
+      fee = nil if fee&.zero?
+      tax = parse_decimal(detail[:taxes])&.abs
+      tax = nil if tax&.zero?
+      # Match the client detail parser: cash totals embed fees and taxes.
+      costs = (fee || 0) + (tax || 0)
+
+      # Prefer the provider share price. Fall back to cash amount net of costs
+      # so the per-share price is not inflated by transaction costs.
       price = parse_decimal(detail[:price])
       price = nil if price&.zero?
       amount = parse_decimal(detail[:amount])
-      amount = quantity.abs * price.abs if (!amount || amount.zero?) && price
+      if (!amount || amount.zero?) && price
+        gross = quantity.abs * price.abs
+        # Costs increase buy cost and reduce sell proceeds (same as SnapTrade /
+        # manual trades).
+        amount = is_buy ? gross + costs : gross - costs
+      end
       return false unless amount && !amount.zero?
 
       signed_amount = is_buy ? -amount.abs : amount.abs
-      price ||= amount.abs / signed_quantity.abs
+      if price.nil?
+        # Provider totals include costs: buy total = gross + costs, sell total =
+        # gross - costs. Recover share price from the cash amount accordingly.
+        gross = is_buy ? amount.abs - costs : amount.abs + costs
+        price = gross / signed_quantity.abs if gross.positive?
+        price ||= amount.abs / signed_quantity.abs
+      end
 
       entry = import_adapter.import_trade(
         external_id:    external_id,
@@ -128,9 +273,10 @@ class TradeRepublicAccount::ActivitiesProcessor
         quantity:       signed_quantity,
         price:          price,
         amount:         signed_amount,
+        fee:            fee,
         currency:       detail[:currency].presence || currency,
         date:           date,
-        name:           build_trade_name(security.ticker, signed_quantity),
+        name:           build_trade_name(detail[:name], security, signed_quantity),
         source:         "trade_republic",
         activity_label: is_buy ? "Buy" : "Sell"
       )
@@ -155,11 +301,40 @@ class TradeRepublicAccount::ActivitiesProcessor
       true
     end
 
-    def import_cash_movement(event, detail, external_id, date, label:, sign:)
+    # The timeline list amount is what Trade Republic booked against the cash
+    # balance, fees and taxes included. Unlike cash movements (see
+    # import_cash_movement), order executions carry a consistent sign across
+    # topics: negative for buys, positive for sales. Payloads that only carry
+    # a magnitude fall back to the traded quantity; without either signal the
+    # direction is unknown and nothing is booked.
+    # Buys count as investment contributions in budgets; sale proceeds are a
+    # funds movement rather than income. Neither gets a category.
+    def import_order_settlement(event, detail, external_id, date)
+      signed_amount = parse_decimal(detail[:signed_amount])
+      amount = signed_amount || parse_decimal(detail[:amount])
+      return false unless amount && !amount.zero?
+
+      quantity = parse_decimal(detail[:quantity])
+      return false if signed_amount.nil? && (quantity.nil? || quantity.zero?)
+
+      outflow = signed_amount ? signed_amount.negative? : quantity.positive?
+
+      import_cash_movement(
+        event,
+        detail.merge(amount: amount.abs),
+        external_id,
+        date,
+        label: outflow ? "Buy" : "Sell",
+        sign: outflow ? 1 : -1,
+        kind: outflow ? "investment_contribution" : "funds_movement"
+      )
+    end
+
+    def import_cash_movement(event, detail, external_id, date, label:, sign:, activity_label: label, kind: nil)
       amount = parse_decimal(detail[:amount])
       return false unless amount && !amount.zero?
 
-      import_adapter.import_transaction(
+      entry = import_adapter.import_transaction(
         external_id: external_id,
         # The normalized category is the source of truth for direction. TR
         # payloads use different signs across timeline topics, so forwarding
@@ -172,8 +347,8 @@ class TradeRepublicAccount::ActivitiesProcessor
         notes: event[:subtitle].presence,
         source: "trade_republic",
         category_id: category_for(event, label)&.id,
-        kind: transfer_event?(event) ? "funds_movement" : nil,
-        investment_activity_label: label,
+        kind: kind || (transfer_event?(event) ? "funds_movement" : nil),
+        investment_activity_label: activity_label,
         extra: {
           trade_republic: {
             event_id: detail[:event_id] || external_id,
@@ -181,12 +356,46 @@ class TradeRepublicAccount::ActivitiesProcessor
             event_type: event[:eventType],
             title: event[:title],
             subtitle: event[:subtitle],
-            provider_detail: detail.except(:amount, :signed_amount, :currency)
+            provider_detail: detail.except(
+              :amount, :signed_amount, :currency, *Provider::TradeRepublicClient::RETRY_MARKER_KEYS
+            )
           }.compact
         }
       )
+      reset_legacy_contribution!(entry, event)
 
       true
+    end
+
+    # The import adapter turns a Contribution label into investment_contribution,
+    # a kind budgets count as an expense. On the cash account a deposit is money
+    # arriving on a checking balance, so it carries no investment label.
+    def deposit_activity_label
+      @trade_republic_account.cash? ? nil : t("contribution")
+    end
+
+    # Earlier syncs stored cash-account deposits as investment contributions.
+    # The adapter neither downgrades that kind nor clears the category and
+    # label it assigned with it, so reset untouched inflows outside a matched
+    # transfer.
+    def reset_legacy_contribution!(entry, event)
+      return unless @trade_republic_account.cash?
+
+      transaction = entry&.entryable
+      return unless transaction.is_a?(Transaction) && entry.amount.negative?
+      return if entry.protected_from_sync? || transaction.transfer.present?
+
+      attrs = {}
+      attrs[:kind] = transfer_event?(event) ? "funds_movement" : "standard" if transaction.investment_contribution?
+      attrs[:category_id] = nil if investment_contribution_category_ids.include?(transaction.category_id)
+      attrs[:investment_activity_label] = nil if transaction.investment_activity_label == "Contribution"
+      transaction.update!(attrs) if attrs.any?
+    end
+
+    def investment_contribution_category_ids
+      @investment_contribution_category_ids ||= account.family.categories
+        .where(name: Category.all_investment_contributions_names)
+        .pluck(:id)
     end
 
     def category_for(event, label)
@@ -205,7 +414,8 @@ class TradeRepublicAccount::ActivitiesProcessor
       signed_amount = parse_decimal(event.dig(:detail, :signed_amount) || event.dig(:detail, :amount))
       return CATEGORY_WITHDRAWAL if event[:eventType].to_s == "CARD_CASH_BACK" && signed_amount&.negative?
 
-      event[:category].to_s
+      event[:category].to_s.presence ||
+        Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES[event[:eventType].to_s].to_s
     end
 
     def cash_label(event, default:)
@@ -222,6 +432,8 @@ class TradeRepublicAccount::ActivitiesProcessor
         t("card_refund")
       when "TAX_REFUND", "SSP_TAX_CORRECTION", "ssp_tax_correction_invoice"
         t("tax_refund")
+      when ROUND_UP_EVENT_TYPE
+        t("round_up")
       else
         default
       end
@@ -256,6 +468,199 @@ class TradeRepublicAccount::ActivitiesProcessor
       )
     end
 
+    # Saveback used to import as a cash withdrawal. Once split accounts are
+    # linked, remove those leftover cash entries only after the portfolio
+    # replacement trade exists, and unless the user edited or split them.
+    def reconcile_stale_saveback_cash_transactions!
+      return unless @trade_republic_account.cash?
+
+      portfolio_account = linked_portfolio_account
+      return unless portfolio_account
+
+      saveback_event_ids = Array(@trade_republic_account.raw_timeline_payload).filter_map do |event|
+        next unless event.is_a?(Hash)
+        next unless event["eventType"].to_s == SAVEBACK_EVENT_TYPE
+
+        event["id"].presence
+      end
+      return if saveback_event_ids.empty?
+
+      external_ids = saveback_event_ids.map { |event_id| "trade_republic_event_#{event_id}" }
+      candidates = account.entries
+        .where(source: "trade_republic", entryable_type: "Transaction")
+        .where(external_id: external_ids)
+        .includes(:entryable)
+
+      removed_count = 0
+      skipped_count = 0
+
+      candidates.find_each do |entry|
+        event_type = entry.entryable.try(:extra)&.dig("trade_republic", "event_type")
+        next if event_type.present? && event_type != SAVEBACK_EVENT_TYPE
+
+        if entry.protected_from_sync? || entry.split_parent? || entry.split_child?
+          skipped_count += 1
+          DebugLogEntry.capture(
+            category: "sync",
+            level: "info",
+            message: "Skipped removing protected Saveback cash transaction #{entry.external_id}",
+            source: "trade_republic",
+            family: @trade_republic_account.trade_republic_item.family,
+            provider_key: "trade_republic",
+            account: account,
+            metadata: {
+              trade_republic_account_id: @trade_republic_account.id,
+              external_id: entry.external_id,
+              protection_reason: entry.protection_reason || (entry.split_parent? || entry.split_child? ? :split : nil)
+            }
+          )
+          next
+        end
+
+        # Keep the legacy cash row until the portfolio trade is present so an
+        # incomplete Saveback detail cannot open a ledger gap.
+        unless portfolio_saveback_trade_present?(portfolio_account, entry.external_id)
+          skipped_count += 1
+          DebugLogEntry.capture(
+            category: "sync",
+            level: "info",
+            message: "Skipped removing Saveback cash transaction #{entry.external_id} until portfolio trade exists",
+            source: "trade_republic",
+            family: @trade_republic_account.trade_republic_item.family,
+            provider_key: "trade_republic",
+            account: account,
+            metadata: {
+              trade_republic_account_id: @trade_republic_account.id,
+              external_id: entry.external_id,
+              portfolio_account_id: portfolio_account.id
+            }
+          )
+          next
+        end
+
+        entry.destroy!
+        removed_count += 1
+      end
+
+      return unless removed_count.positive? || skipped_count.positive?
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Reconciled stale Saveback cash transactions (removed=#{removed_count}, skipped=#{skipped_count})",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: {
+          trade_republic_account_id: @trade_republic_account.id,
+          removed_count: removed_count,
+          skipped_count: skipped_count
+        }
+      )
+    end
+
+    def linked_portfolio_account
+      portfolio_tr = @trade_republic_account.trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      return unless portfolio_tr
+
+      portfolio_account = portfolio_tr.current_account
+      return unless portfolio_account
+      return if portfolio_account.pending_deletion? || portfolio_account.disabled?
+
+      portfolio_account
+    end
+
+    def portfolio_saveback_trade_present?(portfolio_account, external_id)
+      portfolio_account.entries
+        .where(source: "trade_republic", entryable_type: "Trade", external_id: external_id)
+        .exists?
+    end
+
+    # Remove previously imported entries whose upstream events are now deleted,
+    # hidden or in a terminal non-importable status, unless the user protected
+    # them. Events blocked only by the free-text subtitle heuristic are skipped
+    # on import but never delete existing entries.
+    def reconcile_non_importable_entries!
+      explicit_ids = []
+      heuristic_ids = []
+      timeline_events.each do |event|
+        next unless event.is_a?(Hash)
+        next unless lifecycle_blocks_import?(event)
+
+        event_id = event["id"].presence || event[:id].presence
+        next if event_id.blank?
+
+        (explicit_lifecycle_block?(event) ? explicit_ids : heuristic_ids) << "trade_republic_event_#{event_id}"
+      end
+      return if explicit_ids.empty? && heuristic_ids.empty?
+
+      candidates = account.entries
+        .where(source: "trade_republic")
+        .where(external_id: explicit_ids + heuristic_ids)
+        .includes(:entryable)
+
+      removed_count = 0
+      skipped_count = 0
+      heuristic_ids = heuristic_ids.to_set
+
+      candidates.find_each do |entry|
+        if heuristic_ids.include?(entry.external_id)
+          skipped_count += 1
+          DebugLogEntry.capture(
+            category: "sync",
+            level: "info",
+            message: "Kept Trade Republic entry #{entry.external_id} flagged only by its subtitle",
+            source: "trade_republic",
+            family: @trade_republic_account.trade_republic_item.family,
+            provider_key: "trade_republic",
+            account: account,
+            metadata: { trade_republic_account_id: @trade_republic_account.id, external_id: entry.external_id }
+          )
+          next
+        end
+
+        if entry.protected_from_sync? || entry.split_parent? || entry.split_child?
+          skipped_count += 1
+          DebugLogEntry.capture(
+            category: "sync",
+            level: "info",
+            message: "Skipped removing protected Trade Republic entry for non-importable event #{entry.external_id}",
+            source: "trade_republic",
+            family: @trade_republic_account.trade_republic_item.family,
+            provider_key: "trade_republic",
+            account: account,
+            metadata: {
+              trade_republic_account_id: @trade_republic_account.id,
+              external_id: entry.external_id,
+              protection_reason: entry.protection_reason || (entry.split_parent? || entry.split_child? ? :split : nil)
+            }
+          )
+          next
+        end
+
+        entry.destroy!
+        removed_count += 1
+      end
+
+      return unless removed_count.positive? || skipped_count.positive?
+
+      DebugLogEntry.capture(
+        category: "sync",
+        level: "info",
+        message: "Reconciled non-importable Trade Republic entries (removed=#{removed_count}, skipped=#{skipped_count})",
+        source: "trade_republic",
+        family: @trade_republic_account.trade_republic_item.family,
+        provider_key: "trade_republic",
+        account: account,
+        metadata: {
+          trade_republic_account_id: @trade_republic_account.id,
+          removed_count: removed_count,
+          skipped_count: skipped_count
+        }
+      )
+    end
+
     def linked_cash_account_present?
       @trade_republic_account.trade_republic_item.trade_republic_accounts
         .where(kind: "cash")
@@ -271,12 +676,20 @@ class TradeRepublicAccount::ActivitiesProcessor
         source: "trade_republic",
         family: @trade_republic_account.trade_republic_item.family,
         provider_key: "trade_republic",
-        metadata: { event_id: event[:id], category: event[:category] }
+        metadata: {
+          event_id: event[:id],
+          event_type: event[:eventType],
+          category: event[:category],
+          status: event[:status]
+        }
       )
     end
 
-    def build_trade_name(ticker, signed_quantity)
-      action = signed_quantity.negative? ? t("sell") : t("buy")
-      "#{action} #{signed_quantity.abs} shares of #{ticker}"
+    def build_trade_name(provider_name, security, signed_quantity)
+      name = provider_name.presence || security.name.presence || security.ticker
+      quantity = signed_quantity.abs.to_s("F").sub(/\.0+\z/, "")
+      return "#{security.ticker} · #{quantity}x" if name.casecmp?(security.ticker)
+
+      "#{security.ticker} · #{quantity}x #{name}"
     end
 end

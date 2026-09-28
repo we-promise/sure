@@ -253,7 +253,7 @@ pl:
         one: 1 rachunek nie jest uwzględniony — brak dostępnego kursu wymiany
         other: "%{count} rachunków nie jest uwzględnionych — brak dostępnego kursu
           wymiany"
-      view_upcoming: Zobacz nadchodzące
+      view_calendar: Zobacz kalendarz
     paid_from: z %{account}
     paid_label: Opłacone
     paid_over: Zapłacono %{paid}, więcej niż oczekiwano
