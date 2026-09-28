@@ -1,0 +1,45 @@
+<%# locals: (tags:, editable:) %>
+<% names = tags.map(&:name).join(", ") %>
+
+<%# A single tag as a (truncating) pill, or several as a neutral pill of
+    letter badges (first two plus "+N" beyond three). Hovering lists the
+    full tag names. %>
+<%= render DS::Tooltip.new(placement: "top", variant: :surface, html_class: "min-w-0 max-w-full") do |tooltip| %>
+  <% tooltip.with_trigger do %>
+    <%# Editable summaries sit inside the picker button, which takes focus.
+        Read-only ones need their own tab stop so keyboard users can open
+        the tooltip with the full names. %>
+    <%= tag.span class: ["inline-flex min-w-0", { "rounded-full focus-ring": !editable }], tabindex: (editable ? nil : 0) do %>
+      <% if tags.one? %>
+        <%# Empty title: the tooltip below replaces the pill's native one. %>
+        <%= render DS::Pill.new(
+              label: tags.first.name,
+              custom_color: tags.first.color,
+              marker: false,
+              size: :md,
+              truncate: true,
+              title: "") %>
+      <% else %>
+        <% shown = tags.size > 3 ? tags.first(2) : tags %>
+        <%= tag.span class: ["inline-flex shrink-0 items-center gap-1 rounded-full border border-secondary bg-container-inset p-0.5 text-sm leading-none", { "pr-2": tags.size > shown.size }] do %>
+          <span class="inline-flex items-center -space-x-1">
+            <% shown.each do |tag| %>
+              <span class="inline-flex rounded-full ring-2 ring-container-inset"><%= render "tags/initial", tag: tag %></span>
+            <% end %>
+          </span>
+          <% if tags.size > shown.size %>
+            <span class="text-xs font-medium text-secondary" aria-hidden="true">+<%= tags.size - shown.size %></span>
+          <% end %>
+          <span class="sr-only"><%= t("tags.summary.title", names: names) %></span>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+  <ul class="flex flex-col items-start gap-1 py-0.5" data-tag-summary-tooltip>
+    <% tags.each do |tag| %>
+      <li class="flex max-w-full min-w-0">
+        <%= render DS::Pill.new(label: tag.name, custom_color: tag.color, marker: false, size: :md, truncate: true, title: "") %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>

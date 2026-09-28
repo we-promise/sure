@@ -15,11 +15,18 @@ class Financekit::DiagnosticsTest < ActiveSupport::TestCase
     assert_equal @item.id, accepted.metadata["connection_id"]
     assert_equal 3, accepted.metadata["event_count"]
 
-    assert Financekit::Processor.new(@item).apply_next!
+    applied = Financekit::Processor.new(@item).apply_next!
+    assert applied
     imported = log_for("capture_imported")
     assert_equal batch.batch_id, imported.metadata["batch_id"]
     assert_equal 1, imported.metadata.dig("counts", "upserted")
-    assert log_for("downstream_completed")
+
+    # Downstream work is the drain's, not the processor's, so it completes the
+    # whole applied capture in one pass.
+    Financekit::Downstream.new(@item, FinancekitBatch.where(id: applied.map(&:id))).perform!
+    completed = log_for("downstream_completed")
+    assert_equal applied.size, completed.metadata["batches"]
+    assert_equal batch.batch_id, completed.metadata["batch_id"]
     assert_private_fields_absent
   end
 
@@ -69,7 +76,7 @@ class Financekit::DiagnosticsTest < ActiveSupport::TestCase
     batch, = accept_batch
     Account.any_instance.stubs(:sync_later).raises(RuntimeError, "private-financial-details")
 
-    Financekit::Downstream.new(batch).perform!
+    Financekit::Downstream.new(@item, FinancekitBatch.where(id: batch.id)).perform!
 
     log = log_for("downstream_failed")
     assert_equal @source.financekit_account_lineage.account_provider, log.account_provider

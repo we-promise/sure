@@ -1,7 +1,11 @@
 class Financekit::Payload
   STATUSES = %w[authorized pending booked rejected memo unknown].freeze
   EVENT_KINDS = %w[account_upsert account_unavailable balance_upsert transaction_upsert transaction_tombstone].freeze
-  UUID = /\A[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/i
+  # Source identifiers come from FinanceKit, so accept any RFC 4122 layout
+  # rather than pinning the version and variant nibbles: a UUIDv7 or a nil UUID
+  # is still a valid opaque identifier, and rejecting one wedges the stream on a
+  # record Sure does not mint. Matches lib/uuid_format.rb, used everywhere else.
+  UUID = UuidFormat::PATTERN
   DIGEST = /\A[0-9a-f]{64}\z/
   DECIMAL = /\A(?:0|[1-9][0-9]{0,14})(?:\.[0-9]{1,4})?\z/
   EXCHANGE_RATE = /\A(?:0|[1-9][0-9]{0,17})(?:\.[0-9]{1,18})?\z/
