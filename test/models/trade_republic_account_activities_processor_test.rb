@@ -273,7 +273,42 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Buy", entry.trade.investment_activity_label
   end
 
-  test "card events keep a card-specific activity label" do
+  test "cash movements store canonical activity labels under a non-English locale" do
+    I18n.with_locale(:nl) do
+      @tr_account.update!(raw_timeline_payload: [
+        deposit_event,
+        { id: "evt_wd_nl", timestamp: "2026-08-01T10:00:00Z", category: "POC_CREATED", detail: { amount: "300.00", currency: "EUR" } },
+        { id: "evt_interest_nl", timestamp: "2026-08-01T10:00:00Z", category: "INTEREST_PAYOUT_CREATED", detail: { amount: "1.20", currency: "EUR" } },
+        { id: "evt_fee_nl", timestamp: "2026-08-01T10:00:00Z", eventType: "CARD_ORDER_FEE", category: "POC_CREATED", detail: { amount: "5.00", currency: "EUR" } }
+      ])
+      TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    end
+
+    labels = %w[evt_dep evt_wd_nl evt_interest_nl evt_fee_nl].map do |id|
+      Entry.find_by!(external_id: "trade_republic_event_#{id}").transaction.investment_activity_label
+    end
+    assert_equal %w[Contribution Withdrawal Interest Fee], labels
+    assert_equal I18n.t("trade_republic_items.activities.labels.interest", locale: :nl),
+                 Entry.find_by!(external_id: "trade_republic_event_evt_interest_nl").name
+  end
+
+  test "cash account card, deposit and withdrawal activity carries no activity label under any locale" do
+    cash_account, cash_sure = create_linked_cash_account!
+    I18n.with_locale(:nl) do
+      cash_account.update!(raw_timeline_payload: [
+        deposit_event.merge(id: "evt_cash_dep_nl"),
+        { id: "evt_cash_wd_nl", timestamp: "2026-08-01T10:00:00Z", category: "POC_CREATED", detail: { amount: "300.00", currency: "EUR" } },
+        { id: "evt_cash_card_nl", timestamp: "2026-08-01T10:00:00Z", eventType: "CARD_TRANSACTION", category: "POC_CREATED", detail: { amount: "42.00", currency: "EUR" } }
+      ])
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+
+    %w[evt_cash_dep_nl evt_cash_wd_nl evt_cash_card_nl].each do |id|
+      assert_nil cash_sure.entries.find_by!(external_id: "trade_republic_event_#{id}").transaction.investment_activity_label, id
+    end
+  end
+
+  test "card events are named after the card activity but carry no activity label" do
     import_event({
       id: "evt_card_payment",
       timestamp: "2026-08-01T10:00:00Z",
@@ -283,7 +318,8 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     })
 
     entry = Entry.find_by(external_id: "trade_republic_event_evt_card_payment")
-    assert_equal "Card payment", entry.transaction.investment_activity_label
+    assert_equal "Card payment", entry.name
+    assert_nil entry.transaction.investment_activity_label
   end
 
   test "card cash back events that are purchases are imported as expenses with merchant details" do
@@ -300,7 +336,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     entry = Entry.find_by(external_id: "trade_republic_event_evt_card_cash_back")
     assert_equal BigDecimal("204.18"), entry.amount
     assert_equal "Marktkauf", entry.name
-    assert_equal "Card payment", entry.transaction.investment_activity_label
+    assert_nil entry.transaction.investment_activity_label
     assert_equal "CARD_CASH_BACK", entry.transaction.extra.dig("trade_republic", "event_type")
     assert_equal "Card purchase", entry.transaction.extra.dig("trade_republic", "subtitle")
   end
@@ -559,7 +595,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not_nil cash_entry
     assert_equal "Transaction", cash_entry.entryable_type
     assert_equal BigDecimal("0.40"), cash_entry.amount
-    assert_equal "Round up", cash_entry.transaction.investment_activity_label
+    assert_equal "Buy", cash_entry.transaction.investment_activity_label
     assert_equal "investment_contribution", cash_entry.transaction.kind
     assert_nil cash_entry.transaction.category_id
     assert_equal "SPARE_CHANGE_AGGREGATE", cash_entry.transaction.extra.dig("trade_republic", "event_type")
@@ -617,7 +653,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     cash_entry = Entry.find_by(account: cash_sure, external_id: "trade_republic_event_evt_round_up")
     assert_not_nil cash_entry
     assert_equal BigDecimal("0.40"), cash_entry.amount
-    assert_equal "Round up", cash_entry.transaction.investment_activity_label
+    assert_equal "Buy", cash_entry.transaction.investment_activity_label
   end
 
   test "portfolio-only saveback and round up import as trades without cash entries" do
