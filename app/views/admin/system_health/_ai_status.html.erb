@@ -30,9 +30,9 @@
         <%= t("admin.system_health.show.ai.not_checked_help") %>
       <% end %>
     </p>
-    <%= render DS::Button.new(
+    <%# A link, because a GET form drops the query string from its action. %>
+    <%= render DS::Link.new(
       href: admin_system_health_path(tab: "ai", refresh_ai_health: "1"),
-      method: :get,
       variant: :outline,
       size: :sm,
       icon: "refresh-cw",
@@ -327,13 +327,17 @@
         <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.ai.worker.title") %></h2>
         <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.ai.worker.description") %></p>
       </div>
+      <%# `replace` renders the redirect back here as a morphing refresh, which
+          keeps the status on screen, even when a tab switch changed the URL
+          behind Turbo's back. %>
       <%= render DS::Button.new(
         href: verify_worker_ai_admin_system_health_path,
         method: :post,
         variant: :outline,
         size: :sm,
         icon: "server",
-        text: t("admin.system_health.show.ai.worker.verify_button")
+        text: t("admin.system_health.show.ai.worker.verify_button"),
+        data: { turbo_action: "replace" }
       ) %>
     </div>
 
@@ -413,12 +417,15 @@
     <% end %>
   <% end %>
 
-  <%= render DS::Alert.new(title: t("admin.system_health.show.ai.worker.settings_origin.title"), variant: :info) do %>
+  <% guidance_body_class = "mt-2 space-y-2 px-3 text-sm text-secondary" %>
+  <%= render DS::Disclosure.new(title: t("admin.system_health.show.ai.worker.settings_origin.title"), align: :left,
+        body_class: guidance_body_class) do %>
     <p><%= t("admin.system_health.show.ai.worker.settings_origin.database_backed") %></p>
     <p><%= t("admin.system_health.show.ai.worker.settings_origin.env_backed") %></p>
   <% end %>
 
-  <%= render DS::Alert.new(title: t("admin.system_health.show.ai.local_setup.title"), variant: :info) do %>
+  <%= render DS::Disclosure.new(title: t("admin.system_health.show.ai.local_setup.title"), align: :left,
+        body_class: guidance_body_class) do %>
     <p><%= t("admin.system_health.show.ai.local_setup.description") %></p>
     <p>
       <code class="rounded bg-container-inset px-1.5 py-0.5">VECTOR_STORE_PROVIDER=pgvector</code>
