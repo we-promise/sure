@@ -90,7 +90,7 @@ class CashFlowTest < ApplicationSystemTestCase
       end
       assert_no_selector "#cashflow-preview-expanded-dialog[open]"
       assert_selector "#cashflow-preview [data-sankey-preview-target='expandButton']:focus"
-      assert_equal "true", find("[data-section-key='cashflow_sankey']")["draggable"]
+      assert_selector "[data-section-key='cashflow_sankey'][draggable='true']"
     end
   end
 
@@ -167,12 +167,12 @@ class CashFlowTest < ApplicationSystemTestCase
       click_button "Expand", enable_aria_label: true
     end
     assert_selector "#cashflow-preview-expanded-dialog[open] svg .sankey-link"
-    assert_equal "false", find("[data-section-key='cashflow_sankey']")["draggable"]
+    assert_selector "[data-section-key='cashflow_sankey'][draggable='false']"
     assert_event_count "sankey_preview_displayed", 2
     within "#cashflow-preview-expanded-dialog" do
       find("button[data-action='DS--dialog#close']").click
     end
-    assert_equal "true", find("[data-section-key='cashflow_sankey']")["draggable"]
+    assert_selector "[data-section-key='cashflow_sankey'][draggable='true']"
 
     [ "Looks right", "Something looks wrong" ].each_with_index do |rating, index|
       within "#cashflow-preview" do

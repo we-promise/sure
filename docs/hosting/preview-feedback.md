@@ -71,7 +71,8 @@ compared. Add events only with their capture code, allowlist, and offline tests;
 registering a survey does not automatically instrument the feature.
 
 These are the events **currently implemented for Sankey**. All include
-`preview_version: cash_flow_v1`:
+`preview_version: cash_flow_v1` and `sure_version` (the deployed release string
+from `.sure-version`, including any prerelease suffix):
 
 | Event | Trigger | Additional properties |
 | --- | --- | --- |
@@ -94,8 +95,8 @@ labels, colors, and API-only metadata do not affect the result. An empty legacy
 zero-valued center is equivalent to an empty preview graph. Missing or invalid
 inputs produce no event. Zoomed and expanded views do not create new comparisons.
 
-Only `new_sankey_match` or `new_sankey_mismatch`, plus `preview_version`, is sent
-to PostHog. No graph, amount, category, user ID, or date range is included in the
+Only `new_sankey_match` or `new_sankey_mismatch`, plus `preview_version` and
+`sure_version`, is sent to PostHog. No graph, amount, category, user ID, or date range is included in the
 comparison payload. Existing managed SDK metadata and self-hosted privacy rules
 still apply. Intentional deficit/netting changes can produce mismatches;
 a match proves input equivalence, not visual correctness. The separate requests
@@ -147,8 +148,9 @@ autocapture and session recording.
 Managed deployments retain their existing SDK metadata. The dedicated self-hosted
 client disables automatic tracking, pageviews, session recording, and person
 profiles; it strips incidental URL, referrer, and device metadata. Opting out of
-either client suppresses capture. GeoIP enrichment is disabled, although the
-ingestion service necessarily receives the network connection's IP address.
+either client suppresses capture. GeoIP enrichment is enabled using the browser
+connection's IP address, allowing PostHog to add approximate location properties
+to these events without creating person profiles. The destination project must also allow GeoIP enrichment.
 
 Use `feedback_config(:feature_name)` and the per-feature survey registry for the
 next preview. Follow [Adding feature feedback surveys](../llm-guides/feedback-surveys.md)

@@ -6,6 +6,13 @@ class BillsHelperTest < ActionView::TestCase
   # ApplicationHelper rather than this module.
   include ApplicationHelper
 
+  test "an upcoming date gains the year only when it falls in another one" do
+    travel_to Date.new(2026, 9, 25) do
+      assert_equal I18n.l(Date.new(2026, 10, 5), format: :short), bills_upcoming_date(Date.new(2026, 10, 5))
+      assert_equal I18n.l(Date.new(2028, 9, 1), format: :short_with_year), bills_upcoming_date(Date.new(2028, 9, 1))
+    end
+  end
+
   # The matcher has always stored WHY it matched something, in match_signals.
   # Nothing rendered it, so the app showed a bare percentage instead of the
   # facts the percentage is made of.
@@ -193,6 +200,19 @@ class BillsHelperTest < ActionView::TestCase
 
     assert_no_match(/overdue/i, label)
     assert_match(/due/i, label)
+  end
+
+  # An every-2-years bill's current cycle can be a year or more out, and
+  # "Due in 707 days, Sep 1" did not say which September.
+  test "a cycle due in another year names the year" do
+    travel_to Date.new(2026, 9, 25) do
+      later = build_occurrence(due_on: Date.new(2028, 9, 1), status: "scheduled")
+      soon = build_occurrence(due_on: Date.new(2026, 10, 5), status: "scheduled")
+
+      assert_includes occurrence_due_label(later), I18n.l(Date.new(2028, 9, 1), format: :short_with_year)
+      assert_includes occurrence_due_label(soon), I18n.l(Date.new(2026, 10, 5), format: :short)
+      assert_not_includes occurrence_due_label(soon), "2026"
+    end
   end
 
   test "a cycle past its grace is still labelled overdue" do

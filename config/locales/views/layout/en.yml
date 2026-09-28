@@ -32,6 +32,10 @@ en:
         are_you_sure: Are you sure?
         cannot_be_undone: This action cannot be undone.
         confirm: Confirm
+      notification_tray:
+        download_complete: Download complete
+        download_failed: Download failed. Please try again.
+        download_location: The file is in your Downloads folder.
     trial:
       open_demo: Open demo
       data_deleted_in_days: Data deleted in %{days} days

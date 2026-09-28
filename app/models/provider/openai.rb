@@ -12,9 +12,11 @@ class Provider::Openai < Provider
   REASONING_EFFORTS = %w[none minimal low medium high].freeze
 
   # Returns the effective model that would be used by the provider.
-  # Priority: explicit ENV > Setting > DEFAULT_MODEL.
+  # Priority: explicit ENV > Setting > DEFAULT_MODEL. A blank ENV value is
+  # treated as unset and falls through to the Setting.
   def self.effective_model
-    ENV.fetch("OPENAI_MODEL") { Setting.openai_model }.presence || DEFAULT_MODEL
+    configured_model = ENV["OPENAI_MODEL"].presence || Setting.openai_model
+    configured_model.presence || DEFAULT_MODEL
   end
 
   def self.configured?
@@ -698,9 +700,9 @@ class Provider::Openai < Provider
       if function_results.any?
         # Build assistant message with tool_calls
         tool_calls = function_results.map do |fn_result|
-          # Convert arguments to JSON string if it's not already a string
-          arguments = fn_result[:arguments]
-          arguments_str = arguments.is_a?(String) ? arguments : arguments.to_json
+          # Shared with ToolCall::Function.serialize_arguments so history and
+          # follow-up payloads stay in sync for strict OpenAI-compatible endpoints.
+          arguments_str = ToolCall::Function.serialize_arguments(fn_result[:arguments])
 
           {
             id: fn_result[:call_id],
@@ -735,7 +737,6 @@ class Provider::Openai < Provider
           payload << {
             role: "tool",
             tool_call_id: fn_result[:call_id],
-            name: fn_result[:name],
             content: content
           }
         end

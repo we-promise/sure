@@ -244,7 +244,7 @@ The item model stores per-family connection credentials:
 
 ```ruby
 class MyBankItem < ApplicationRecord
-  include Syncable, Provided
+  include Syncable, Provided, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -265,11 +265,6 @@ class MyBankItem < ApplicationRecord
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   def credentials_configured?
     api_key.present? && refresh_token.present?

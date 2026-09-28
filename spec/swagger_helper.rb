@@ -31,6 +31,25 @@ RSpec.configure do |config|
             name: 'X-Api-Key',
             in: :header,
             description: 'API key for authentication. Generate one from your account settings.'
+          },
+          financekitPublisher: {
+            type: :http,
+            scheme: :bearer,
+            bearerFormat: 'opaque publisher credential',
+            description: 'Revocable credential restricted to one FinanceKit publisher upload URL.'
+          },
+          oauth2: {
+            type: :oauth2,
+            flows: {
+              authorizationCode: {
+                authorizationUrl: '/oauth/authorize',
+                tokenUrl: '/oauth/token',
+                scopes: {
+                  read: 'Read access',
+                  read_write: 'Read and write access'
+                }
+              }
+            }
           }
         },
         schemas: {
@@ -1853,6 +1872,10 @@ RSpec.configure do |config|
       }
     }
   }
+
+  config.openapi_specs["openapi.yaml"][:components][:schemas].merge!(
+    JSON.parse(Rails.root.join("docs/api/financekit/schemas.json").read)
+  )
 
   config.openapi_format = :yaml
 end
