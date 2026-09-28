@@ -125,6 +125,13 @@ class Api::V1::TradesController < Api::V1::BaseController
 
   private
 
+    # A linked transfer writes to the other account too, so it needs the same write access.
+    def writable_transfer_account_id
+      return if trade_params[:transfer_account_id].blank?
+
+      current_resource_owner.family.accounts.writable_by(current_resource_owner).find(trade_params[:transfer_account_id]).id
+    end
+
     def set_trade
       family = current_resource_owner.family
       # Reading needs access to the account; changing a trade needs write access.

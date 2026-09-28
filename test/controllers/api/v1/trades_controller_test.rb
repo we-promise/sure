@@ -1039,6 +1039,38 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "a linked deposit or withdrawal needs write access to the other account" do
+    member = users(:family_member)
+    member.api_keys.active.destroy_all
+    key = ApiKey.create!(user: member, name: "Member RW", key: ApiKey.generate_secure_key, scopes: %w[read_write], source: "web")
+    Redis.new.del("api_rate_limit:#{key.id}")
+
+    brokerage = member.family.accounts.create!(name: "Member Brokerage", owner: member, balance: 1_000,
+                                               currency: "USD", accountable: Investment.new)
+    read_only = member.family.accounts.create!(name: "Admin Read-only Checking", owner: @user, balance: 1_000,
+                                               currency: "USD", accountable: Depository.new)
+    read_only.account_shares.create!(user: member, permission: "read_only", include_in_finances: true)
+    full_control = member.family.accounts.create!(name: "Admin Shared Checking", owner: @user, balance: 1_000,
+                                                  currency: "USD", accountable: Depository.new)
+    full_control.account_shares.create!(user: member, permission: "full_control", include_in_finances: true)
+    unshared = member.family.accounts.create!(name: "Admin Private Checking", owner: @user, balance: 1_000,
+                                              currency: "USD", accountable: Depository.new)
+
+    [ [ "deposit", read_only ], [ "withdrawal", read_only ], [ "withdrawal", unshared ] ].each do |type, other|
+      assert_no_difference [ "Entry.count", "Transfer.count" ] do
+        post "/api/v1/trades", params: { trade: { account_id: brokerage.id, type: type, date: Date.current,
+                                                  amount: 50, transfer_account_id: other.id } }, headers: api_headers(key)
+      end
+      assert_response :not_found
+    end
+
+    assert_difference "Transfer.count", 1 do
+      post "/api/v1/trades", params: { trade: { account_id: brokerage.id, type: "withdrawal", date: Date.current,
+                                                amount: 50, transfer_account_id: full_control.id } }, headers: api_headers(key)
+    end
+    assert_response :created
+  end
+
   private
 
     def read_write_api_key
