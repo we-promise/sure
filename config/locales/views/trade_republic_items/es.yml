@@ -6,6 +6,7 @@ es:
       connection_description: "Conecta una cuenta de inversión de Trade Republic mediante un inicio de sesión web seguro"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Esta cuenta de Trade Republic ya está conectada. Se ha eliminado la nueva conexión."
     portfolio_categories:
       brokerage: "Cuenta de corretaje"
       private_markets: "Mercados privados"

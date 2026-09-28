@@ -6,6 +6,7 @@ ca:
       connection_description: "Connecta un compte d'inversió de Trade Republic mitjançant un inici de sessió web segur"
       institution_name: Trade Republic
   trade_republic_items:
+    duplicate_connection: "Aquest compte de Trade Republic ja està connectat. S'ha eliminat la connexió nova."
     portfolio_categories:
       brokerage: "Compte de corretatge"
       private_markets: "Mercats privats"
