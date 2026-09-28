@@ -334,6 +334,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       amount = parse_decimal(detail[:amount])
       return false unless amount && !amount.zero?
 
+      legacy_contribution = legacy_contribution_external_ids.include?(external_id)
       entry = import_adapter.import_transaction(
         external_id: external_id,
         # The normalized category is the source of truth for direction. TR
@@ -362,7 +363,7 @@ class TradeRepublicAccount::ActivitiesProcessor
           }.compact
         }
       )
-      reset_legacy_contribution!(entry, event)
+      reset_legacy_contribution!(entry, event) if legacy_contribution
 
       true
     end
@@ -375,21 +376,34 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     # Earlier syncs stored cash-account deposits as investment contributions.
-    # The adapter neither downgrades that kind nor clears the category and
-    # label it assigned with it, so reset untouched inflows outside a matched
-    # transfer.
+    # The adapter never clears the category and label it assigned with that
+    # kind, so reset untouched inflows outside a matched transfer. Callers only
+    # pass rows stored with that kind: a family can assign the same category or
+    # label through a Rule, which must survive a sync.
     def reset_legacy_contribution!(entry, event)
-      return unless @trade_republic_account.cash?
-
       transaction = entry&.entryable
       return unless transaction.is_a?(Transaction) && entry.amount.negative?
       return if entry.protected_from_sync? || transaction.transfer.present?
 
-      attrs = {}
-      attrs[:kind] = transfer_event?(event) ? "funds_movement" : "standard" if transaction.investment_contribution?
+      attrs = { kind: transfer_event?(event) ? "funds_movement" : "standard" }
       attrs[:category_id] = nil if investment_contribution_category_ids.include?(transaction.category_id)
       attrs[:investment_activity_label] = nil if transaction.investment_activity_label == "Contribution"
-      transaction.update!(attrs) if attrs.any?
+      transaction.update!(attrs)
+    end
+
+    # Read before the first cash movement is imported: the adapter overwrites
+    # the kind of transfer events, so the stored kind is gone afterwards.
+    def legacy_contribution_external_ids
+      @legacy_contribution_external_ids ||=
+        if @trade_republic_account.cash?
+          Transaction.investment_contribution
+            .joins(:entry)
+            .where(entries: { account_id: account.id, source: "trade_republic" })
+            .pluck("entries.external_id")
+            .to_set
+        else
+          Set.new
+        end
     end
 
     def investment_contribution_category_ids

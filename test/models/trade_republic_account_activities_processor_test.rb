@@ -850,6 +850,28 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_nil legacy.transaction.investment_activity_label
   end
 
+  test "keeps a rule-assigned investment contributions category and label on cash account deposits" do
+    cash_account, cash_sure = create_linked_cash_account!
+    category = @family.investment_contributions_category
+    cash_account.update!(raw_timeline_payload: [
+      deposit_event.merge(id: "evt_rule_dep", eventType: "BANK_TRANSACTION_INCOMING", title: "Employer")
+    ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    transaction = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_rule_dep").transaction
+    assert_equal "standard", transaction.kind
+    assert transaction.enrich_attribute(:category_id, category.id, source: "rule")
+    assert transaction.enrich_attribute(:investment_activity_label, "Contribution", source: "rule")
+    assert_not transaction.entry.reload.protected_from_sync?
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    transaction.reload
+    assert_equal "standard", transaction.kind
+    assert_equal category.id, transaction.category_id
+    assert_equal "Contribution", transaction.investment_activity_label
+  end
+
   test "savings-plan invoice imports as a portfolio trade and a cash outflow" do
     cash_account, cash_sure = create_linked_cash_account!
     event = savings_plan_invoice_event
