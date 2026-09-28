@@ -67,13 +67,15 @@ class Account::CryptoExchangeCreationTest < ActiveSupport::TestCase
     assert_equal 650, account.balance
   end
 
-  test "an exchange account keeps its balance when no rate is available" do
+  # Relabelling 1,000 USD as 1,000 EUR would be wrong by the whole rate. The
+  # first sync writes the converted balance; until then zero is the honest figure.
+  test "an exchange account starts at zero when no rate is available" do
     @family.update!(currency: "EUR")
 
     account = Account.create_from_kraken_account(kraken_account(current_balance: 1_000, currency: "USD"))
 
     assert_equal "EUR", account.currency
-    assert_equal 1_000, account.balance
+    assert_equal 0, account.balance
   end
 
   private
