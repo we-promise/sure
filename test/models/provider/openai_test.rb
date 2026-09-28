@@ -40,6 +40,23 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  test "native o-series PDF processing reserves only an explicitly configured output limit" do
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+      Setting.stubs(:llm_max_response_tokens).returns(nil)
+      %w[o1 o3].each do |model|
+        expect_pdf_response_limit(@openai, model: model, limit: nil)
+        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
+      end
+    end
+
+    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "8192") do
+      %w[o1 o3].each do |model|
+        expect_pdf_response_limit(@openai, model: model, limit: 8192)
+        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
+      end
+    end
+  end
+
   test "legacy and custom PDF processing preserve the fallback output limit" do
     with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
       Setting.stubs(:llm_max_response_tokens).returns(nil)
@@ -49,6 +66,9 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       custom = Provider::Openai.new("test-token", uri_base: "https://custom.example/v1", model: "gpt-6-sol")
       expect_pdf_response_limit(custom, model: "gpt-6-sol", limit: 512)
       assert custom.process_pdf(pdf_content: "synthetic PDF", model: "gpt-6-sol").success?
+
+      expect_pdf_response_limit(custom, model: "o3", limit: 512)
+      assert custom.process_pdf(pdf_content: "synthetic PDF", model: "o3").success?
     end
   end
 

@@ -155,6 +155,28 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     assert_equal "Synthetic PDF", processor.process.summary
   end
 
+  test "native o-series PDF vision uses completion limits when configured" do
+    %w[o1 o3].each do |model|
+      processor = vision_processor(model: model, max_response_tokens: 8192)
+      expect_vision_request(processor, model: model) do |params|
+        params[:max_completion_tokens] == 8192 && !params.key?(:max_tokens)
+      end
+
+      assert_equal "Synthetic PDF", processor.process.summary
+    end
+  end
+
+  test "native o-series PDF vision omits unconfigured completion limits" do
+    %w[o1 o3].each do |model|
+      processor = vision_processor(model: model, max_response_tokens: nil)
+      expect_vision_request(processor, model: model) do |params|
+        !params.key?(:max_tokens) && !params.key?(:max_completion_tokens)
+      end
+
+      assert_equal "Synthetic PDF", processor.process.summary
+    end
+  end
+
   test "legacy OpenAI PDF vision retains max_tokens" do
     processor = vision_processor(model: "gpt-4.1", max_response_tokens: 512)
     expect_vision_request(processor, model: "gpt-4.1") do |params|
@@ -167,6 +189,15 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
   test "custom provider PDF vision retains max_tokens even with a GPT-6 model name" do
     processor = vision_processor(model: "gpt-6-sol", max_response_tokens: 512, custom_provider: true)
     expect_vision_request(processor, model: "gpt-6-sol") do |params|
+      params[:max_tokens] == 512 && !params.key?(:max_completion_tokens)
+    end
+
+    assert_equal "Synthetic PDF", processor.process.summary
+  end
+
+  test "custom provider PDF vision retains max_tokens with an o-series model name" do
+    processor = vision_processor(model: "o3", max_response_tokens: 512, custom_provider: true)
+    expect_vision_request(processor, model: "o3") do |params|
       params[:max_tokens] == 512 && !params.key?(:max_completion_tokens)
     end
 

@@ -193,7 +193,7 @@ class Provider::Openai::PdfProcessor
           { role: "user", content: content }
         ]
       }
-      if native_gpt6?
+      if Provider::Openai.native_pdf_completion_limit?(model: effective_model, custom_provider: custom_provider)
         params[:max_completion_tokens] = max_response_tokens if max_response_tokens
       else
         params[:max_tokens] = max_response_tokens
@@ -211,12 +211,6 @@ class Provider::Openai::PdfProcessor
       )
 
       parse_response_generic(response)
-    end
-
-    # Identify native requests that use OpenAI's GPT-6 token-limit parameter.
-    # @return [Boolean] whether native GPT-6 request syntax applies
-    def native_gpt6?
-      !custom_provider && model.to_s.start_with?("gpt-6")
     end
 
     # Render each PDF page to a base64-encoded PNG using pdftoppm

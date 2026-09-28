@@ -132,12 +132,14 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 **Pricing:** See [OpenAI Pricing](https://openai.com/api/pricing/)
 
 GPT-6 Sol uses the native Responses API for assistant tools. Leave the custom
-Base URL setting empty when connecting directly to OpenAI. Its PDF vision
-requests use `max_completion_tokens`, which includes reasoning and visible
-output, when an output limit is explicitly configured. Text extraction keeps
-its existing request behavior. Custom endpoints retain their existing token
-parameters. Increase the LLM context budget for cloud reasoning models; the
-default 2048-token context is intended for small local models.
+Base URL setting empty when connecting directly to OpenAI. Native GPT-6 Sol,
+`o1`, and `o3` PDF vision requests use `max_completion_tokens`, which includes
+reasoning and visible output, when an output limit is explicitly configured.
+Set `LLM_MAX_RESPONSE_TOKENS` to a positive value to bound each such request;
+the default 512-token context reserve is not sent as a provider limit.
+Text extraction keeps its existing request behavior. Custom endpoints retain
+their existing token parameters. Increase the LLM context budget for cloud
+reasoning models; the default 2048-token context is intended for small local models.
 
 ### Google Gemini (via OpenRouter)
 

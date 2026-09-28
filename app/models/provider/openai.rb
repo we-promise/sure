@@ -9,6 +9,13 @@ class Provider::Openai < Provider
   MIN_REQUEST_TIMEOUT = 1
   SUPPORTED_MODELS = %w[gpt-4 gpt-5 gpt-6 o1 o3].freeze
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 gpt-6 o1 o3].freeze
+  PDF_COMPLETION_LIMIT_MODEL_PREFIXES = %w[gpt-6 o1 o3].freeze
+
+  # Keep the provider's response budget and the PDF request parameter in sync.
+  # @return [Boolean] whether native PDF vision uses max_completion_tokens
+  def self.native_pdf_completion_limit?(model:, custom_provider:)
+    !custom_provider && PDF_COMPLETION_LIMIT_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }
+  end
 
   # Returns the effective model that would be used by the provider.
   # Priority: explicit ENV > Setting > DEFAULT_MODEL. A blank ENV value is
@@ -327,9 +334,9 @@ class Provider::Openai < Provider
         input: { pdf_size: pdf_content&.bytesize }
       )
 
-      # GPT-6 completion limits include reasoning; the fallback is a budget reserve.
+      # Reasoning-model completion limits include reasoning; the fallback is a budget reserve.
       response_limit =
-        if !custom_provider? && effective_model.start_with?("gpt-6")
+        if self.class.native_pdf_completion_limit?(model: effective_model, custom_provider: custom_provider?)
           explicit_max_response_tokens
         else
           max_response_tokens
