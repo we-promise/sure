@@ -63,7 +63,7 @@ curl -o compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compo
 
 ## Step 3: Configure Environment Variables
 
-Create the environment file with a secret key and database password unique to your install. Docker Compose does not run commands inside `.env`, so generate the values in your shell. The command does nothing if `.env` already exists:
+Create the environment file with a secret key and database password unique to your install. Docker Compose does not run commands inside `.env`, so generate the values in your shell. The first command does nothing if `.env` already exists:
 
 ```bash
 [ -e .env ] || cat > .env <<EOF
@@ -77,9 +77,10 @@ POSTGRES_DB="sure_production"
 # Optional: OpenAI integration (add your API key if you want AI features)
 # OPENAI_ACCESS_TOKEN="your_openai_api_key_here"
 EOF
+grep -qE "^[[:space:]]*(export[[:space:]]+)?SECRET_KEY_BASE[[:space:]]*=[[:space:]]*[\"']?[^\"'[:space:]]" .env 2>/dev/null || echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> .env
 ```
 
-Open `.env` and check that `SECRET_KEY_BASE` and `POSTGRES_PASSWORD` are long random strings.
+The last line adds a key if an existing `.env` has none or only an empty one. Open `.env` and check that `SECRET_KEY_BASE` and `POSTGRES_PASSWORD` are long random strings.
 
 > [!IMPORTANT]
 > **Installed with an earlier version of this guide?** It had you type `SECRET_KEY_BASE="$(openssl rand -hex 64)"` into `.env`. Compose does not run that command, so your key is that literal text, the same on every install that followed the guide, and `POSTGRES_PASSWORD` is likewise the literal `$(openssl rand -base64 32)`. Do not replace either value in place: your stored credentials (bank connections and similar) are encrypted with keys derived from `SECRET_KEY_BASE`, and the database was created with that password. See [Configure your environment](docker.md#step-3-configure-your-environment) for background, and treat moving off the public key as a follow-up.
