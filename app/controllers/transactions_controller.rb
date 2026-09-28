@@ -5,7 +5,7 @@ class TransactionsController < ApplicationController
   before_action :set_entry_for_tags, only: :update_tags
   before_action :store_params!, only: :index
 
-  helper_method :new_transaction_idempotency_key
+  helper_method :new_transaction_idempotency_key, :transaction_sort
 
   def show
     super
@@ -25,7 +25,7 @@ class TransactionsController < ApplicationController
     @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: @accessible_account_ids)
 
     base_scope = @search.transactions_scope
-                       .reverse_chronological
+                       .sorted(transaction_sort)
                        .includes(
                          { entry: :account },
                          :category, :merchant, :tags,
@@ -55,7 +55,7 @@ class TransactionsController < ApplicationController
     entry_ids = @transactions.map { |t| t.entry.id }
 
     # Load split parent entries for grouped display (only when grouping is enabled)
-    @split_parents = if Current.user.show_split_grouped?
+    @split_parents = if transaction_sort == "date_desc" && Current.user.show_split_grouped?
       split_parent_ids = @transactions.filter_map { |t| t.entry.parent_entry_id }.uniq
       if split_parent_ids.any?
         Entry.where(id: split_parent_ids)
@@ -98,7 +98,8 @@ class TransactionsController < ApplicationController
     updated_params = {
       "q" => search_params,
       "page" => params[:page],
-      "per_page" => params[:per_page]
+      "per_page" => params[:per_page],
+      "sort" => transaction_sort
     }
 
     q_params = updated_params["q"] || {}
@@ -702,6 +703,10 @@ class TransactionsController < ApplicationController
       end
     end
 
+    def transaction_sort
+      params[:sort].presence_in(Transaction::SORT_OPTIONS) || "date_desc"
+    end
+
     def search_params
       cleaned_params = params.fetch(:q, {})
               .permit(
@@ -726,6 +731,7 @@ class TransactionsController < ApplicationController
         params_to_restore[:q] = stored_params["q"].presence || {}
         params_to_restore[:page] = stored_params["page"].presence || 1
         params_to_restore[:per_page] = stored_params["per_page"].presence || 50
+        params_to_restore[:sort] = stored_params["sort"] if stored_params["sort"].present?
 
         redirect_to transactions_path(params_to_restore)
       else
@@ -733,14 +739,15 @@ class TransactionsController < ApplicationController
           prev_transaction_page_params: {
             q: search_params,
             page: params[:page],
-            per_page: params[:per_page].presence || stored_params["per_page"]
+            per_page: params[:per_page].presence || stored_params["per_page"],
+            sort: transaction_sort == "date_desc" ? nil : transaction_sort
           }
         )
       end
     end
 
     def should_restore_params?
-      request.query_parameters.blank? && (stored_params["q"].present? || stored_params["page"].present? || stored_params["per_page"].present?)
+      request.query_parameters.blank? && (stored_params["q"].present? || stored_params["page"].present? || stored_params["per_page"].present? || stored_params["sort"].present?)
     end
 
     def stored_params

@@ -24,23 +24,7 @@ module EntriesHelper
   end
 
   def entries_by_date(entries, totals: false)
-    transfer_groups = entries.group_by do |entry|
-      # Only check for transfer if it's a transaction
-      next nil unless entry.entryable_type == "Transaction"
-      entry.entryable.transfer&.id
-    end
-
-    # For a more intuitive UX, we do not want to show the same transfer twice in the list
-    deduped_entries = transfer_groups.flat_map do |transfer_id, grouped_entries|
-      if transfer_id.nil? || grouped_entries.size == 1
-        grouped_entries
-      else
-        grouped_entries.reject do |e|
-          e.entryable_type == "Transaction" &&
-          e.entryable.transfer_as_inflow.present?
-        end
-      end
-    end
+    deduped_entries = entries_without_duplicate_transfers(entries)
 
     deduped_entries.group_by(&:date).sort.reverse_each.map do |date, grouped_entries|
       content = capture do
@@ -60,5 +44,18 @@ module EntriesHelper
       entry.account.name,
       entry.name
     ].join(" • ")
+  end
+
+  # Hide the inflow only when both transfer legs are on this page. Rejecting
+  # in place preserves the query order, including amount sorting across dates.
+  def entries_without_duplicate_transfers(entries)
+    outflow_transfer_ids = entries.filter_map do |entry|
+      entry.entryable.transfer_as_outflow&.id if entry.entryable_type == "Transaction"
+    end.to_set
+
+    entries.reject do |entry|
+      entry.entryable_type == "Transaction" &&
+        entry.entryable.transfer_as_inflow&.id.in?(outflow_transfer_ids)
+    end
   end
 end

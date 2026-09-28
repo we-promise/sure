@@ -40,23 +40,32 @@
         </div>
       <% end %>
 
-      <div class="space-y-6">
-        <%= entries_by_date(@transactions.map(&:entry), totals: true) do |entries| %>
-          <% if Current.user.show_split_grouped? %>
-            <% group_split_entries(entries, @split_parents).each do |item| %>
-              <% if item.is_a?(EntriesHelper::SplitGroup) %>
-                <%= render "entries/split_group", split_group: item %>
-              <% else %>
-                <%= render item %>
+      <% if transaction_sort != "date_desc" %>
+        <p class="text-xs text-secondary mb-3"><%= t("transactions.sort.amount_hint") %></p>
+        <div class="bg-container shadow-border-xs rounded-lg">
+          <% entries_without_duplicate_transfers(@transactions.map(&:entry)).each do |entry| %>
+            <%= render "transactions/transaction", entry: entry, show_date: true %>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="space-y-6">
+          <%= entries_by_date(@transactions.map(&:entry), totals: true) do |entries| %>
+            <% if Current.user.show_split_grouped? %>
+              <% group_split_entries(entries, @split_parents).each do |item| %>
+                <% if item.is_a?(EntriesHelper::SplitGroup) %>
+                  <%= render "entries/split_group", split_group: item %>
+                <% else %>
+                  <%= render item %>
+                <% end %>
+              <% end %>
+            <% else %>
+              <% entries.each do |entry| %>
+                <%= render entry %>
               <% end %>
             <% end %>
-          <% else %>
-            <% entries.each do |entry| %>
-              <%= render entry %>
-            <% end %>
           <% end %>
-        <% end %>
-      </div>
+        </div>
+      <% end %>
     </div>
   <% else %>
     <%= render "entries/empty" %>
