@@ -32,6 +32,21 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("2472.14"), trade.amount
   end
 
+  test "crypto trades resolve to the same crypto security as crypto holdings" do
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data binance_public])
+    @tr_account.update!(raw_positions_payload: [
+      { "isin" => "XF000BTC0017", "name" => "Bitcoin", "category" => "crypto_wallet", "quantity" => "0.000134", "price" => "72688.64" }
+    ])
+    TradeRepublicAccount::HoldingsProcessor.new(@tr_account.reload).process
+
+    import_event(order_execution_detail(quantity: "0.000134", isin: "XF000BTC0017", amount: "11.00")
+      .deep_merge(detail: { name: "Bitcoin", symbol: "BTCEUR", exchange_slug: "BHS" }))
+
+    trade = find_trade("trade_republic_event_evt_buy").entryable
+    assert_equal "CRYPTO:BTC", trade.security.ticker
+    assert_equal @account.holdings.sole.security, trade.security
+  end
+
   test "fractional quantity retains exact precision" do
     import_event(order_execution_detail(quantity: "13.439945", isin: "US0378331005", amount: "2472.14"))
 
