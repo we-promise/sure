@@ -833,19 +833,37 @@ class Provider::YahooFinance < Provider
     # If Yahoo returns a stale-crumb error (200 OK with Unauthorized body),
     # clears the crumb cache and retries once with fresh credentials.
     def fetch_authenticated_chart(symbol, params)
-      cookie, crumb = fetch_cookie_and_crumb
-      response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-        params.each { |k, v| req.params[k] = v }
-        req.params["crumb"] = crumb
+      # The /v8/finance/chart endpoint does NOT require cookie/crumb auth, and
+      # Yahoo rate-limits AUTHENTICATED chart requests far more aggressively than
+      # anonymous ones (verified live: cookie+crumb => 429, same symbol/IP with
+      # no auth => 200). Use the plain client for price/chart data. Cookie+crumb
+      # remains scoped to quoteSummary (fetch_security_info), which needs it.
+      begin
+        response = client.get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+          params.each { |k, v| req.params[k] = v }
+        end
+        data = JSON.parse(response.body)
+        needs_auth = data.dig("chart", "error", "code") == "Unauthorized"
+      rescue Faraday::UnauthorizedError
+        # Hard HTTP 401 (raised by client's :raise_error) -- fall through to the
+        # authenticated retry below, same as a soft Unauthorized body code.
+        needs_auth = true
       end
-      data = JSON.parse(response.body)
 
-      if data.dig("chart", "error", "code") == "Unauthorized"
+      # Rare fallback: if Yahoo demands auth for a specific symbol (a hard 401
+      # or a 200 OK with an Unauthorized body), retry once with FRESH cookie+
+      # crumb. Clear any cached crumb first so a stale-but-shape-valid one
+      # isn't reused.
+      if needs_auth
         clear_crumb_cache
         cookie, crumb = fetch_cookie_and_crumb
-        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-          params.each { |k, v| req.params[k] = v }
-          req.params["crumb"] = crumb
+        begin
+          response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+            params.each { |k, v| req.params[k] = v }
+            req.params["crumb"] = crumb
+          end
+        rescue Faraday::UnauthorizedError
+          raise AuthenticationError, "Yahoo Finance authentication failed after crumb refresh"
         end
         data = JSON.parse(response.body)
         if data.dig("chart", "error", "code") == "Unauthorized"
