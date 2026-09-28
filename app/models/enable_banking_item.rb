@@ -80,6 +80,13 @@ class EnableBankingItem < ApplicationRecord
 
   def sync_start_date_within_bounds
     if sync_start_date.blank?
+      # A nonblank value that failed date coercion is cast to nil by Rails,
+      # which would otherwise be indistinguishable from intentional absence.
+      if sync_start_date_before_type_cast.present?
+        errors.add(:sync_start_date, "is not a valid date")
+        return
+      end
+
       # A brand-new connection is created before the setup modal collects
       # sync_start_date (EnableBankingItemsController#create/#authorize), and
       # the importer falls back to its 3-month default until the field is

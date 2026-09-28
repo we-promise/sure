@@ -259,7 +259,10 @@ class Provider::EnableBanking
       end
 
       if allow_longest_retry && !already_longest && retry_attempt <= 1
-        return { date_from: current_date_from, strategy: "longest" }
+        # date_from is omitted (not current_date_from) so Enable Banking
+        # selects the earliest available point instead of being bounded by
+        # whatever corrected/fallback window the prior retry rung tried.
+        return { date_from: nil, strategy: "longest" }
       end
 
       # Otherwise pick the first progressively-shorter window that advances the

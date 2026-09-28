@@ -122,7 +122,7 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
 
     assert_equal [], result[:transactions]
     assert_nil requested_queries.first[:strategy]
-    assert_equal 6.months.ago.to_date.iso8601, requested_queries.second[:date_from]
+    assert_nil requested_queries.second[:date_from]
     assert_equal "longest", requested_queries.second[:strategy]
   end
 
@@ -153,6 +153,41 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_equal [], result[:transactions]
     assert_equal "2026-01-17", requested_queries.second[:date_from]
     assert_nil requested_queries.second[:strategy]
+  end
+
+  test "get_account_transactions omits date_from for the longest retry after a failed corrected_date_from retry" do
+    requested_queries = []
+
+    corrected_validation_response = OpenStruct.new(
+      code: 422,
+      body: {
+        error: "WRONG_TRANSACTIONS_PERIOD",
+        detail: { message: "...", date_from: "2026-01-17" }
+      }.to_json
+    )
+    validation_response = OpenStruct.new(
+      code: 422,
+      body: { error: "WRONG_TRANSACTIONS_PERIOD", detail: { message: "out of bound" } }.to_json
+    )
+    success_response = OpenStruct.new(code: 200, body: { transactions: [] }.to_json)
+
+    Provider::EnableBanking.expects(:get).times(3).with do |_url, options|
+      requested_queries << options[:query].dup
+      true
+    end.returns(corrected_validation_response, validation_response, success_response)
+
+    result = @provider.get_account_transactions(
+      account_id: "acct_123",
+      date_from: Date.new(2025, 12, 1),
+      transaction_status: "BOOK",
+      allow_longest_retry: true
+    )
+
+    assert_equal [], result[:transactions]
+    assert_equal "2026-01-17", requested_queries.second[:date_from]
+    assert_nil requested_queries.second[:strategy]
+    assert_nil requested_queries.third[:date_from]
+    assert_equal "longest", requested_queries.third[:strategy]
   end
 
   test "get_account_transactions falls through a failed longest retry to the full 89/60/30 ladder" do
@@ -254,9 +289,10 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
       allow_longest_retry: true
     )
 
-    # The retry succeeded via the strategy: "longest" rung, so callers must
-    # repeat exactly these parameters on continuation requests.
-    assert_equal 6.months.ago.to_date, result[:effective_date_from]
+    # The retry succeeded via the strategy: "longest" rung (date_from omitted
+    # so Enable Banking selects the earliest available point), so callers
+    # must repeat exactly these parameters on continuation requests.
+    assert_nil result[:effective_date_from]
     assert_equal "longest", result[:effective_strategy]
   end
 

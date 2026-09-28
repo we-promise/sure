@@ -258,6 +258,13 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     assert_includes @item.errors[:sync_start_date], "can't be blank"
   end
 
+  test "is invalid when sync_start_date is a malformed value that Rails coerces to nil" do
+    @item.sync_start_date = "not-a-date"
+
+    assert_not @item.valid?
+    assert_includes @item.errors[:sync_start_date], "is not a valid date"
+  end
+
   test "is invalid when sync_strategy is date and sync_start_date is in the future" do
     @item.sync_start_date = 1.day.from_now.to_date
 
