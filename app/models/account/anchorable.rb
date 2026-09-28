@@ -35,8 +35,11 @@ module Account::Anchorable
   # wrong way. Called after an import, this moves the anchor to the day before
   # the first entry and keeps its balance. Uses the manager directly so it does
   # not queue a sync of its own; the caller's sync follows anyway.
+  # Only the zero anchor an exchange account is bootstrapped with is moved: an
+  # anchor with a balance is one somebody entered, on a manual account linked
+  # to the exchange later, and it means "this much, on this day".
   def ensure_opening_anchor_precedes_entries
-    return unless has_opening_anchor?
+    return unless has_opening_anchor? && opening_anchor_balance.zero?
 
     oldest = entries.where.not(entryable_type: "Valuation").minimum(:date)
     return if oldest.nil? || opening_anchor_date < oldest

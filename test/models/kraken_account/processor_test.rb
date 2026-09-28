@@ -105,6 +105,26 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 0, account.opening_anchor_balance
   end
 
+  # A manual account linked to the exchange later may carry an anchor somebody
+  # entered: "this much, on this day". Moving it would change what it says.
+  test "leaves an opening anchor with a balance where it is" do
+    old_trade = trade_payload("buy", "0.001", "50.00", "0.10").merge("time" => 3.years.ago.to_f)
+    kraken_account = @item.kraken_accounts.create!(
+      name: "Kraken (linked)", account_id: "linked", account_type: "combined", currency: "USD", current_balance: 50,
+      raw_payload: @kraken_account.raw_payload,
+      raw_transactions_payload: { "trades" => { "old_tx" => old_trade } }
+    )
+    account = Account.create_from_kraken_account(kraken_account)
+    AccountProvider.create!(account: account, provider: kraken_account)
+    account.set_opening_anchor_balance(balance: 250, date: 2.years.ago.to_date)
+
+    KrakenAccount::Processor.new(kraken_account).process
+
+    account = Account.find(account.id)
+    assert_equal 2.years.ago.to_date, account.opening_anchor_date
+    assert_equal 250, account.opening_anchor_balance
+  end
+
   private
 
     def trade_payload(type, volume, cost, fee)
