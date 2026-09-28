@@ -111,45 +111,53 @@
           <span data-category-select-target="createLabel"></span>
         <% end %>
 
-        <% if parent_options.any? %>
-          <button type="button"
-                  class="hidden text-secondary text-sm cursor-pointer items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-container-inset-hover"
-                  data-category-select-target="createAsSubcategory"
-                  data-action="click->category-select#showParentPicker">
-            <%= helpers.icon("corner-down-right") %>
-            <span><%= helpers.t("transactions.form.create_as_subcategory") %></span>
-          </button>
-        <% end %>
+        <%# Hidden by the controller while there is no top-level category to nest under. %>
+        <%= render DS::ActionRow.new(
+              text: helpers.t("transactions.form.create_as_subcategory"),
+              icon: "corner-down-right",
+              tone: :secondary,
+              hidden: true,
+              data: { category_select_target: "createAsSubcategory", action: "click->category-select#showParentPicker" }
+            ) %>
 
         <p class="hidden px-3 py-1 text-xs text-destructive"
+           role="alert"
            data-category-select-target="createError"></p>
       </div>
 
       <%# Shown in place of the list after "Add as a subcategory…": pick a top-level parent. %>
       <%# Only top-level categories can be parents (categories are at most two levels deep). %>
-      <% if parent_options.any? %>
-        <div class="hidden flex-col gap-1 max-h-64 overflow-auto mt-1"
-             data-category-select-target="parentPicker">
-          <p class="px-3 py-1 text-xs text-secondary"
-             data-category-select-target="parentPickerLabel"></p>
+      <div class="hidden flex-col gap-1 max-h-64 overflow-auto mt-1"
+           data-category-select-target="parentPicker">
+        <p class="px-3 py-1 text-xs text-secondary"
+           data-category-select-target="parentPickerLabel"></p>
 
-          <% parent_options.each do |parent| %>
-            <button type="button"
-                    class="flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded-lg hover:bg-container-inset-hover"
-                    data-parent-id="<%= parent.id %>"
-                    data-action="click->category-select#createUnderParent">
-              <%= render partial: "categories/badge", locals: { category: parent } %>
-            </button>
+        <% parent_options.each do |parent| %>
+          <%= render DS::ActionRow.new(
+                tone: :secondary,
+                data: { category_select_target: "parentOption", parent_id: parent.id, parent_name: parent.name, action: "click->category-select#createUnderParent" }
+              ) do %>
+            <%= render partial: "categories/badge", locals: { category: parent } %>
           <% end %>
+        <% end %>
 
-          <button type="button"
-                  class="flex items-center gap-2 px-3 py-1.5 text-sm text-secondary rounded-lg hover:bg-container-inset-hover"
-                  data-action="click->category-select#hideParentPicker">
-            <%= helpers.icon("arrow-left") %>
-            <span><%= helpers.t("transactions.form.back_to_categories") %></span>
-          </button>
-        </div>
-      <% end %>
+        <%# Cloned for a top-level category created inline, so it can be a parent straight away. %>
+        <template data-category-select-target="parentOptionTemplate">
+          <%= render DS::ActionRow.new(
+                tone: :secondary,
+                data: { category_select_target: "parentOption", action: "click->category-select#createUnderParent" }
+              ) do %>
+            <span data-category-select-parent-badge></span>
+          <% end %>
+        </template>
+
+        <%= render DS::ActionRow.new(
+              text: helpers.t("transactions.form.back_to_categories"),
+              icon: "arrow-left",
+              tone: :secondary,
+              data: { action: "click->category-select#hideParentPicker" }
+            ) %>
+      </div>
     </div>
   <% end %>
 </div>

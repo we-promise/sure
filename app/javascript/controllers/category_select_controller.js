@@ -16,6 +16,8 @@ export default class extends Controller {
     "createAsSubcategory",
     "parentPicker",
     "parentPickerLabel",
+    "parentOption",
+    "parentOptionTemplate",
   ];
 
   static values = {
@@ -83,8 +85,10 @@ export default class extends Controller {
     this.createFormTarget.classList.toggle("flex", canCreate);
 
     if (this.hasCreateAsSubcategoryTarget) {
-      this.createAsSubcategoryTarget.classList.toggle("hidden", !canCreate);
-      this.createAsSubcategoryTarget.classList.toggle("flex", canCreate);
+      // Nesting needs at least one top-level category to nest under.
+      const canNest = canCreate && this.parentOptionTargets.length > 0;
+      this.createAsSubcategoryTarget.classList.toggle("hidden", !canNest);
+      this.createAsSubcategoryTarget.classList.toggle("flex", canNest);
     }
 
     this.createLabelTarget.textContent =
@@ -213,6 +217,7 @@ export default class extends Controller {
       );
 
       if (newOption) this.selectOption(newOption);
+      if (!parentId) this.#addParentOption(category, newOption);
 
       this.searchTarget.value = "";
       this.filter();
@@ -222,6 +227,31 @@ export default class extends Controller {
       this.creating = false;
       this.createFormTarget.disabled = false;
     }
+  }
+
+  // A top-level category created inline can be a parent straight away,
+  // without reloading: add it to the parent picker in alphabetical order.
+  #addParentOption(category, option) {
+    if (!this.hasParentOptionTemplateTarget) return;
+
+    const row =
+      this.parentOptionTemplateTarget.content.firstElementChild.cloneNode(true);
+    row.dataset.parentId = String(category.id);
+    row.dataset.parentName = category.name;
+
+    const badge = option?.querySelector("[data-category-select-badge]");
+    const slot = row.querySelector("[data-category-select-parent-badge]");
+    if (badge && slot) slot.replaceWith(badge.cloneNode(true));
+
+    const name = category.name.toLocaleLowerCase();
+    const before = this.parentOptionTargets.find(
+      (existing) =>
+        (existing.dataset.parentName || "").toLocaleLowerCase() > name,
+    );
+    this.parentPickerTarget.insertBefore(
+      row,
+      before || this.parentOptionTemplateTarget,
+    );
   }
 
   async submitForm() {
