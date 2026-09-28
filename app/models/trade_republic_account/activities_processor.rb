@@ -499,12 +499,20 @@ class TradeRepublicAccount::ActivitiesProcessor
         return unless entry.amount.negative?
 
         attrs = { kind: "standard" }
-        attrs[:category_id] = nil if investment_contribution_category_ids.include?(transaction.category_id)
-        attrs[:investment_activity_label] = nil if transaction.investment_activity_label == "Contribution"
+        attrs[:category_id] = nil if investment_contribution_category_ids.include?(transaction.category_id) &&
+          !rule_assigned?(transaction, :category_id)
+        attrs[:investment_activity_label] = nil if transaction.investment_activity_label == "Contribution" &&
+          !rule_assigned?(transaction, :investment_activity_label)
         transaction.update!(attrs)
       elsif transfer_event?(event)
         transaction.update!(kind: "standard")
       end
+    end
+
+    # A Rule can assign the same category or label to a legacy row before this
+    # reset runs; the value then belongs to the Rule.
+    def rule_assigned?(transaction, attribute)
+      transaction.data_enrichments.exists?(attribute_name: attribute.to_s, source: "rule")
     end
 
     # Read before the first cash movement is imported, while it still holds
