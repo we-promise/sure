@@ -4,21 +4,28 @@ workflows:
     instance_type: mac_mini_m1
     working_directory: mobile
     environment:
-      flutter: 3.24.5
+      flutter: stable
     scripts:
+      - name: Clean previous builds
+        script: |
+          flutter clean
+      
       - name: Install dependencies
         script: |
           flutter pub get
-      - name: Clean iOS build cache
+      
+      - name: Prepare iOS (CocoaPods)
         script: |
           cd ios
           rm -rf Pods Podfile.lock .symlinks
           pod repo update || true
-          pod install
+          pod install --repo-update
           cd ..
+      
       - name: Build iOS without code signing
         script: |
-          flutter build ios --release --no-codesign
+          flutter build ios --release --no-codesign --no-enable-swift-package-manager
+      
       - name: Package IPA
         script: |
           mkdir -p Payload
