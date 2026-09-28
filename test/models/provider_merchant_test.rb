@@ -105,4 +105,14 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     assert_equal "#4da568", converted.color
     assert_nil @provider_merchant.reload.color
   end
+
+  test "convert_to_family_merchant_for clears a website submitted blank and inherits an omitted one" do
+    @provider_merchant.update!(website_url: "https://acme.example")
+
+    cleared = @provider_merchant.convert_to_family_merchant_for(@family, name: "Acme Cleared", website_url: "")
+    inherited = @provider_merchant.convert_to_family_merchant_for(@family, name: "Acme Inherited")
+
+    assert_nil cleared.website_url
+    assert_equal "https://acme.example", inherited.website_url
+  end
 end

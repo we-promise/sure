@@ -49,7 +49,8 @@ class ProviderMerchant < Merchant
       family_merchant = family.merchants.create!(
         name: attributes[:name].presence || name,
         color: attributes[:color].presence || FamilyMerchant::COLORS.sample,
-        website_url: attributes[:website_url].presence || website_url
+        # A submitted blank website clears it; only an omitted one is inherited.
+        website_url: attributes.key?(:website_url) ? attributes[:website_url].presence : website_url
       )
 
       scope = family.transactions.where(merchant_id: id)
