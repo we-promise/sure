@@ -75,6 +75,9 @@ module Assistant
         Function::UpdateTransaction,
         Function::CreateTransaction,
         Function::DeleteTransaction,
+        Function::GetTransferMatchCandidates,
+        Function::MatchTransfer,
+        Function::ReviewTransfer,
         Function::UpdateBudget
       ]
 
