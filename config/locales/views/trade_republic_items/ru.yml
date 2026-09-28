@@ -166,6 +166,7 @@ ru:
         card_refund: Возврат на карту
         tax_refund: Налоговый возврат
         round_up: Round up
+    duplicate_connection: "Этот счёт Trade Republic уже подключён. Новое подключение удалено."
     defaults:
       name: Trade Republic
     sync_status:
