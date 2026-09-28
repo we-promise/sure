@@ -3,21 +3,21 @@ ru:
   settings:
     hostings:
       alpha_vantage_settings:
-        description: Введите API ключ от Alpha Vantage. Поддерживает ETF ЕС на Лондонской
+        description: Введите API-ключ от Alpha Vantage. Поддерживает ETF ЕС на Лондонской
           фондовой бирже, XETRA и других биржах.
         env_configured_message: Успешно настроено через переменную окружения ALPHA_VANTAGE_API_KEY.
-        label: API ключ
+        label: API-ключ
         no_health_check_note: Проверка состояния подключения недоступна для этого
           поставщика из-за строгого ограничения скорости.
-        placeholder: Введите ваш Alpha Vantage API ключ здесь
+        placeholder: Введите ваш Alpha Vantage API-ключ здесь
         rate_limit_warning: Бесплатный тариф Alpha Vantage ограничен 25 API вызовами
           в день. Лучше всего использовать как дополнительного поставщика для ETF
           ЕС, недоступных у других поставщиков.
         show_details: "(показать детали)"
         step_1_html: Посетите <a href="https://www.alphavantage.co/support/#api-key"
           target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a>
-          и получите ваш бесплатный API ключ.
-        step_2: Скопируйте API ключ и вставьте его ниже.
+          и получите ваш бесплатный API-ключ.
+        step_2: Скопируйте API-ключ и вставьте его ниже.
         title: Alpha Vantage
       anthropic_settings:
         access_token_label: API-ключ
@@ -176,8 +176,16 @@ ru:
         title: OpenAI
         uri_base_label: Базовый URL API (необязательно)
         uri_base_placeholder: https://api.openai.com/v1 (по умолчанию)
+        model_function_calling_help: AI-ассистент читает ваши данные через вызовы функций, поэтому выберите модель, для которой ваш поставщик заявляет поддержку инструментов (tools/function calling). Модели без такой поддержки прерывают чат малопонятной ошибкой поставщика.
+        model_function_calling_link: Проверить настроенную модель
+        timeout_heading: Тайм-ауты
+        timeout_description: Определяет, сколько могут выполняться вызовы моделей, совместимых с OpenAI, прежде чем Sure прекратит ожидание. Увеличьте значения, если запускаете локальную модель на медленном оборудовании.
+        openai_request_timeout_label: Тайм-аут запроса в секундах (необязательно)
+        openai_request_timeout_help: 'По умолчанию: 60. Применяется к каждому HTTP-запросу к API, совместимому с OpenAI, включая автоматическую категоризацию, обнаружение продавцов, чат, обработку PDF и вызовы векторного хранилища. Переменная OPENAI_REQUEST_TIMEOUT имеет приоритет над этим полем.'
+        ai_response_timeout_label: Тайм-аут ответа в секундах (необязательно)
+        ai_response_timeout_help: 'По умолчанию: 90. Применяется только к сторожевому таймеру всего хода чата, поэтому задавайте его как сумму: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × тайм-аут запроса плюс время выполнения инструментов и ожидания в очереди. Переменная AI_RESPONSE_TIMEOUT имеет приоритет над этим полем.'
       provider_selection:
-        binance_public_hint: бесплатно, API ключ не требуется — только криптовалюта
+        binance_public_hint: бесплатно, API-ключ не требуется — только криптовалюта
           (BTC, ETH и т.д.)
         env_configured_message: Выбор поставщика отключен, так как установлены переменные
           окружения. Чтобы включить выбор здесь, удалите эти переменные из вашей конфигурации.
@@ -185,7 +193,7 @@ ru:
           валют.
         exchange_rate_provider_label: Поставщик курсов валют
         exchange_rate_title: Поставщик курсов валют
-        mfapi_hint: бесплатно, API ключ не требуется — только индийские паевые фонды
+        mfapi_hint: бесплатно, API-ключ не требуется — только индийские паевые фонды
         moex_public_hint: бесплатно, без API-ключа — российские акции, фонды и облигации 
          (MOEX), включая валюту RUB
         providers:
@@ -198,17 +206,20 @@ ru:
           tinkoff_invest: T-Invest (Т-Банк)
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
-        requires_api_key: требуется API ключ
-        requires_api_key_alpha_vantage: требуется API ключ, лимит 25 запросов/день
-        requires_api_key_eodhd: требуется API ключ, лимит 20 запросов/день
+          frankfurter: Frankfurter
+          mansa: Mansa
+        requires_api_key: требуется API-ключ
+        requires_api_key_alpha_vantage: требуется API-ключ, лимит 25 запросов/день
+        requires_api_key_eodhd: требуется API-ключ, лимит 20 запросов/день
         securities_description: Включите одного или нескольких поставщиков для получения
           цен на акции, ETF и паевые инвестиционные фонды. При поиске все включенные
           поставщики запрашиваются, и результаты объединяются.
         securities_title: Поставщики ценных бумаг
         tinkoff_invest_hint: требуется токен только для чтения — цены российских акций, 
           фондов и облигаций + логотипы брендов
-        twelve_data_hint: требуется API ключ, 800 запросов/день
-        yahoo_finance_hint: бесплатно, API ключ не требуется
+        twelve_data_hint: требуется API-ключ, 800 запросов/день
+        yahoo_finance_hint: бесплатно, API-ключ не требуется
+        requires_api_key_mansa: требуется API-ключ, бесплатно 100 запросов/день — только NGX (Нигерийская биржа)
       show:
         ai_assistant: AI Ассистент
         clear_cache: Очистить кэш данных
@@ -226,6 +237,7 @@ ru:
         invites: Коды приглашений
         sync_settings: Настройки синхронизации
         title: Самостоятельный хостинг
+        property_valuation_providers: Поставщики оценки недвижимости
       sync_auto_sync_scheduler!:
         scheduler_sync_failed: Настройки сохранены, но не удалось обновить расписание
           синхронизации. Пожалуйста, попробуйте снова или проверьте журналы сервера.
@@ -271,12 +283,13 @@ ru:
         step_2: Создайте токен с правами только на чтение.
         step_3: Скопируйте токен и вставьте его ниже.
         title: T-Invest (Т-Банк)        
+        moex_only_notice: Не включён для получения цен — но если задан токен, T-Invest загружает логотипы брендов для всех ваших ценных бумаг независимо от флажка выше.
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API вызовов в день использовано (%{percentage})"
-        description: Введите API ключ, предоставленный Twelve Data
+        description: Введите API-ключ, предоставленный Twelve Data
         env_configured_message: Успешно настроено через переменную окружения TWELVE_DATA_API_KEY.
-        label: API ключ
-        placeholder: Введите ваш API ключ здесь
+        label: API-ключ
+        placeholder: Введите ваш API-ключ здесь
         plan: Тариф %{plan}
         plan_upgrade_warning_description: Следующие тикеры в вашем портфеле не могут
           синхронизировать цены с вашим текущим тарифом Twelve Data.
@@ -287,7 +300,7 @@ ru:
           rel="noopener noreferrer" class="underline">twelvedata.com</a> и создайте
           бесплатный аккаунт разработчика Twelve Data.
         step_2_html: Перейдите на страницу <a href="https://twelvedata.com/account/api-keys"
-          target="_blank" rel="noopener noreferrer" class="underline">API ключи</a>.
+          target="_blank" rel="noopener noreferrer" class="underline">API-ключи</a>.
         step_3: Покажите ваш секретный ключ и вставьте его ниже.
         title: Twelve Data
         view_pricing: Посмотреть цены Twelve Data
@@ -306,9 +319,41 @@ ru:
       yahoo_finance_settings:
         connection_failed: Не удалось подключиться к Yahoo Finance
         description: Yahoo Finance предоставляет бесплатный доступ к ценам на акции,
-          курсам валют и финансовым данным без необходимости в API ключе.
+          курсам валют и финансовым данным без необходимости в API-ключе.
         status_active: Yahoo Finance активен и работает
         status_inactive: Подключение к Yahoo Finance не удалось
         title: Yahoo Finance
         troubleshooting: Проверьте ваше интернет-соединение и настройки брандмауэра.
           Yahoo Finance может быть временно недоступен.
+        status_healthy: Yahoo Finance активен и работает.
+        status_rate_limited: Yahoo Finance временно ограничивает частоту запросов.
+        rate_limited_title: Достигнут лимит запросов Yahoo Finance.
+        rate_limited_message: Никаких действий не требуется. В течение 30 минут Sure не будет выполнять дополнительные проверки состояния. Получение цен и курсов валют продолжается независимо от этого.
+        status_unavailable: Yahoo Finance сейчас недоступен.
+        unavailable_title: Не удалось проверить Yahoo Finance.
+        unavailable_message: Не удалось связаться с Yahoo Finance, или сервис вернул неожиданный ответ. Проверьте интернет-соединение и повторите попытку позже.
+        status_unknown: Проверяем состояние Yahoo Finance.
+      rentcast_settings:
+        title: RentCast
+        description: Введите API-ключ RentCast, чтобы при добавлении недвижимости получать сведения об объектах в США и оценку их стоимости. Бесплатный тариф ограничен 50 API-запросами в месяц, которые расходуются и на поиск объектов, и на ежедневное обновление оценок. На платном тарифе увеличьте лимит с помощью переменной окружения RENTCAST_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Успешно настроено через переменную окружения RENTCAST_API_KEY.
+        label: API-ключ
+        placeholder: Введите ваш API-ключ RentCast здесь
+        usage: Использовано %{used} из %{limit} запросов в месяц
+      realie_settings:
+        title: Realie
+        description: Введите API-ключ Realie, чтобы при добавлении недвижимости получать сведения об объектах в США и оценку их стоимости. Бесплатный тариф ограничен 25 API-запросами в месяц, которые расходуются и на поиск объектов, и на ежедневное обновление оценок. На платном тарифе увеличьте лимит с помощью переменной окружения REALIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Успешно настроено через переменную окружения REALIE_API_KEY.
+        label: API-ключ
+        placeholder: Введите ваш API-ключ Realie здесь
+        usage: Использовано %{used} из %{limit} запросов в месяц
+      mansa_settings:
+        title: Mansa
+        description: Введите API-ключ от Mansa API. Поддерживает NGX (Нигерийскую биржу), которую не охватывает ни один другой поставщик здесь. Mansa охватывает и другие африканские биржи, но с этой интеграцией проверена только NGX.
+        env_configured_message: Успешно настроено через переменную окружения MANSA_API_KEY.
+        label: API-ключ
+        placeholder: Введите ваш API-ключ Mansa здесь
+        show_details: (показать детали)
+        step_1_html: Посетите <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> и получите бесплатный API-ключ — банковская карта не требуется.
+        step_2: Скопируйте API-ключ и вставьте его ниже.
+        rate_limit_warning: Бесплатный тариф Mansa ограничен 100 API-вызовами в день и даёт только текущие котировки — для исторических цен нужен платный тариф. С этой интеграцией проверена только NGX (Нигерийская биржа); другие африканские биржи, которые охватывает Mansa, здесь пока не поддерживаются.

@@ -1,0 +1,355 @@
+---
+ru:
+  bills:
+    row_overdue: Просрочено
+    row_today: Сегодня
+    detect:
+      found:
+        one: Найден %{count} возможный платёж. Проверьте его ниже.
+        few: Найдено %{count} возможных платежа. Проверьте их ниже.
+        many: Найдено %{count} возможных платежей. Проверьте их ниже.
+        other: Найдено %{count} возможного платежа. Проверьте их ниже.
+      none_found: Новых регулярных платежей не найдено. Вы можете добавить платежи вручную.
+      already_running: Поиск уже выполняется. Загляните чуть позже.
+    feed:
+      calendar_name: 'Sure: платежи'
+    ai_prompts:
+      due_before_paycheck: Что нужно оплатить до следующей зарплаты?
+      subscriptions_up: Какие подписки подорожали в этом году?
+      monthly_subscriptions: Сколько я плачу за подписки в месяц?
+      safe_to_spend: Сколько можно спокойно потратить в этом периоде?
+    smart_configurations:
+      show:
+        trigger: Настроить с помощью ИИ
+        title: Предложения ИИ для «%{name}»
+        intro: Отметьте изменения, которые нужно применить. Неотмеченные останутся без изменений.
+        no_changes: Этот платёж уже соответствует истории оплат. Менять нечего.
+        failed: Сейчас не удалось проанализировать этот платёж. Его настройки не изменены.
+        field_name: Название
+        field_amount: Сумма
+        field_schedule: График
+        field_category: Категория
+        field_kind: Тип
+        field_autopay: Автоплатёж
+        uncategorized: Без категории
+        autopay_off: Выкл.
+        autopay_on: Вкл.
+        apply: Применить выбранное
+    detail:
+      current: Текущий
+      next_payment: Следующий платёж
+      around: около %{date}
+      rules: Как распознаётся этот платёж
+      rule_named: «%{name}»
+      rule_amount_range: от %{min} до %{max}
+      rule_aliases: Также распознаётся как %{names}
+      rule_learned_tolerance: Суммы в пределах %{percent} от обычной суммы относятся к этому платежу
+      history_title: Последние 12 месяцев
+      history_aria: Оплаты за последние двенадцать месяцев
+      key_metrics: По годам
+      year: Год
+      spent_per_year: Потрачено
+      avg_payment: Средний платёж
+      average: В среднем оплачено
+      range: от %{min} до %{max}
+      annualized: В год
+      ytd: Оплачено с начала года
+      last_account: Последний использованный счёт
+      upcoming: Предстоящие
+      recent_payments: Последние оплаты
+      manual_payment: Оплата вручную
+      history: История
+      payment_count:
+        one: '%{count} оплата'
+        few: '%{count} оплаты'
+        many: '%{count} оплат'
+        other: '%{count} оплаты'
+      notes: Заметки
+      trial_chip: Пробный период до %{date}
+      renews_chip: Продление %{date}
+      cancelled_chip: Отменено %{date}
+      price_changes: Изменения цены
+      price_change_line: '%{from} → %{to}'
+    month_pulse:
+      bill_count:
+        one: '%{count} платёж'
+        few: '%{count} платежа'
+        many: '%{count} платежей'
+        other: '%{count} платежа'
+      left_to_pay: осталось оплатить
+      pulse_paid: оплачено
+      pulse_overdue: просрочено
+      pulse_next_seven: в ближайшие 7 дней
+      pulse_bar_aria: Оплачено %{percent}% платежей этого месяца
+      next_up: Ближайшие
+      view_upcoming: Посмотреть предстоящие
+      date_today: Сегодня
+      date_tomorrow: Завтра
+      unconvertible:
+        one: '%{count} платёж не учтён: нет обменного курса'
+        few: '%{count} платежа не учтены: нет обменного курса'
+        many: '%{count} платежей не учтены: нет обменного курса'
+        other: '%{count} платежа не учтены: нет обменного курса'
+    summary:
+      remaining: Осталось %{amount}
+      paid_headline: Оплачено %{amount}
+      cost_line: В среднем %{average} за платёж, около %{annualized} в год
+    pane:
+      close: Свернуть подробности
+    add_bill: Добавить платёж
+    manage: Управлять
+    find_payment: Найти оплату
+    add_payment: Добавить оплату
+    review_match: Проверить совпадение
+    resolve: Решить
+    manage_payments: Управлять оплатами
+    view_full_bill: Открыть платёж полностью
+    match:
+      same_merchant: Тот же продавец
+      name_matches: Совпадает название
+      exact_amount: Точная сумма
+      amount_off: Отличается на %{amount}
+      due_date: Совпадает срок оплаты
+      days_before:
+        one: За %{count} день до срока
+        few: За %{count} дня до срока
+        many: За %{count} дней до срока
+        other: За %{count} дня до срока
+      days_after:
+        one: Через %{count} день после срока
+        few: Через %{count} дня после срока
+        many: Через %{count} дней после срока
+        other: Через %{count} дня после срока
+    attention:
+      needs_review: Совпадение требует проверки
+      partial: Частично · осталось %{amount}
+      amount_changed: Сумма изменилась
+      overdue:
+        one: Просрочено на %{count} день
+        few: Просрочено на %{count} дня
+        many: Просрочено на %{count} дней
+        other: Просрочено на %{count} дня
+    paid_label: Оплачено
+    paid_over_short: Переплата
+    installment_progress: Платёж %{done_plus_one} из %{total}
+    partial_progress: Оплачено %{paid} из %{expected}
+    cancelled_still_scheduled: Вы отметили это как отменённое %{date}, но платёж всё ещё запланирован, поэтому будущие платежи продолжат появляться.
+    paid_over: Оплачено %{paid} — больше ожидаемого
+    remaining_label: осталось
+    debt_payment: · погашение долга
+    paid_from: со счёта %{account}
+    amount_range: от %{min} до %{max}
+    possible_duplicate: Возможный дубликат
+    due_label:
+      overdue:
+        one: Просрочено на %{count} день, срок был %{date}
+        few: Просрочено на %{count} дня, срок был %{date}
+        many: Просрочено на %{count} дней, срок был %{date}
+        other: Просрочено на %{count} дня, срок был %{date}
+      today: Оплатить сегодня
+      settled: Срок был %{date}
+      due_since: Срок оплаты %{date}
+      snoozed: Отложено до %{date}
+      upcoming:
+        one: Через %{count} день, %{date}
+        few: Через %{count} дня, %{date}
+        many: Через %{count} дней, %{date}
+        other: Через %{count} дня, %{date}
+    views:
+      aria_label: Представления платежей
+      overview: Обзор
+      calendar: Календарь
+      paycheck: План доходов
+      all: Все платежи
+    pay_period:
+      paycheck_on: Зарплата %{date}
+      before_next_paycheck: До следующей зарплаты
+      due_before_date: '%{amount} к оплате до %{date}'
+    paycheck:
+      unconvertible:
+        one: '%{count} обязательство не учтено: нет обменного курса'
+        few: '%{count} обязательства не учтены: нет обменного курса'
+        many: '%{count} обязательств не учтены: нет обменного курса'
+        other: '%{count} обязательства не учтены: нет обменного курса'
+      income_section_title: График доходов
+      manage: Управлять
+      add_income: Добавить доход
+      income_paused: Приостановлено, не планируется
+      income_detected: Обнаружено автоматически, не задаёт дни зарплаты
+      income_next_payday: следующее %{date}
+      income_source_count:
+        one: '%{count} источник дохода'
+        few: '%{count} источника дохода'
+        many: '%{count} источников дохода'
+        other: '%{count} источника дохода'
+      next_on: Следующее %{date}
+      no_upcoming_income: Дальше доходы не запланированы.
+      empty:
+        title: Укажите график доходов
+        description: Добавьте свои доходы, чтобы видеть, что должен покрыть каждый день зарплаты. Обнаруженные поступления никогда не задают дни зарплаты сами — это делаете вы.
+        action: Добавить доход
+      all_clear:
+        title: Покрывать нечего
+        description: До %{date} нет платежей к оплате, поэтому деньги за этот период ни на что не зарезервированы.
+      safe_after_bills: Свободно после платежей
+      short_after_bills: Не хватает после платежей
+      period_source: ' · %{source}'
+      period_source_multiple: ' · источников дохода: %{count}'
+      before_next_paycheck: До %{date}
+      no_income_arriving: Поступлений дохода нет
+      income_amount: Доход %{amount}
+      due_this_period: К оплате в периоде
+      reserved_ahead: Отложено заранее
+      safe_short: Свободно
+      short_short: Нехватка
+      reserved_footer:
+        one: Отложено заранее на %{count} последующий платёж
+        few: Отложено заранее на %{count} последующих платежа
+        many: Отложено заранее на %{count} последующих платежей
+        other: Отложено заранее на %{count} последующего платежа
+      bills_this_period:
+        one: Платежи в этом периоде · %{count}
+        few: Платежи в этом периоде · %{count}
+        many: Платежи в этом периоде · %{count}
+        other: Платежи в этом периоде · %{count}
+      bills_before_payday:
+        one: Платежи до следующей зарплаты · %{count}
+        few: Платежи до следующей зарплаты · %{count}
+        many: Платежи до следующей зарплаты · %{count}
+        other: Платежи до следующей зарплаты · %{count}
+      of_total: из %{amount}
+      bridge_label: До следующей зарплаты
+      bridge_amount: · к оплате %{amount}
+      bridge_split: К оплате до %{date}; покрывается суммой %{cash} на ваших счетах.
+      shortfall_label: Не хватает до следующей зарплаты
+      shortfall_amount: · %{amount}
+      shortfall_split: До %{date} нужно оплатить %{obligations}, а на ваших счетах %{cash}.
+      shortfall_largest: 'Крупнейшее предстоящее обязательство:'
+      review_plan: Проверить план
+      allocation_aria: Из дохода %{income} сейчас к оплате %{due}, на будущее отложено %{reserved}, а %{safe} можно свободно потратить.
+      allocation_aria_short: Весь доход %{income} уходит на обязательства этого периода, и нужно ещё %{short}.
+    reset_feed_token:
+      done: Ссылка на календарь сброшена. Календари со старой ссылкой перестанут обновляться — подпишитесь заново по новой ссылке.
+      confirm: Сбросить ссылку на календарь? Все ранее отправленные ссылки перестанут работать.
+    calendar:
+      subscribe_ical: Подписаться (iCal)
+      reset_feed: Сбросить ссылку
+      previous_month: Предыдущий месяц
+      next_month: Следующий месяц
+      today: Сегодня
+      month_totals: Ожидается %{expected} · оплачено %{paid}
+      empty_month: В этом месяце нет платежей к оплате.
+    all:
+      search_placeholder: Поиск платежей
+      any_status: Любой статус
+      status_filters:
+        overdue: Просроченные
+        due: Скоро к оплате
+        partial: Оплаченные частично
+        paid: Оплаченные
+        paused: Приостановленные
+        ended: Завершённые
+      subscription_monthly: В месяц
+      subscription_annual: В год
+      subscription_active: Активные
+      subscription_price_changes: Изменения цен в этом году
+      subscription_price_change_line: '%{from} → %{to} (%{percent}%)'
+      any_type: Любой тип
+      sort_due: По сроку оплаты
+      sort_name: По названию
+      sort_amount: По сумме
+      no_matches_title: Ничего не найдено
+      no_matches_description: Попробуйте сбросить фильтр или поиск.
+      col_name: Название
+      col_type: Тип
+      col_frequency: Периодичность
+      col_amount: Сумма
+      col_next: Следующая оплата
+      next_short: след. %{date}
+      col_status: Статус
+      col_actions: Действия
+      monthly_equivalent: '%{amount}/мес'
+      types:
+        bill: Счёт к оплате
+        subscription: Подписка
+        installment: Рассрочка
+        income: Доход
+        transfer: Перевод
+        other: Другое
+    show:
+      edit: Редактировать платёж
+    index:
+      left_to_pay: осталось оплатить
+      paid_so_far: Уже оплачено
+      hero_past_due: Просрочено %{amount}
+      hero_next_seven: '%{amount} к оплате в ближайшие 7 дней'
+      add_bill: Добавить платёж
+      add_income: Добавить доход
+      review_with_ai: Проверить с ИИ
+      detected_review:
+        one: Мы нашли %{count} регулярный платёж в ваших операциях. Проверьте его, чтобы итоги здесь соответствовали тому, что вы действительно платите.
+        few: Мы нашли %{count} регулярных платежа в ваших операциях. Проверьте их, чтобы итоги здесь соответствовали тому, что вы действительно платите.
+        many: Мы нашли %{count} регулярных платежей в ваших операциях. Проверьте их, чтобы итоги здесь соответствовали тому, что вы действительно платите.
+        other: Мы нашли %{count} регулярного платежа в ваших операциях. Проверьте их, чтобы итоги здесь соответствовали тому, что вы действительно платите.
+      detected_review_action: Проверить
+      needs_review: Требует проверки
+      notice_trial: Пробный период «%{name}» заканчивается %{date}
+      notice_renewal: «%{name}» продлевается %{date}
+      notice_price: '«%{name}» изменил цену: %{from} → %{to} (%{percent})'
+      notices_routine:
+        one: '%{count} мелкое изменение'
+        few: '%{count} мелких изменения'
+        many: '%{count} мелких изменений'
+        other: '%{count} мелкого изменения'
+      suggestion_line: '%{entry} похоже на оплату платежа «%{bill}»'
+      suggestion_unknown_entry: Операция
+      confidence: Совпадение %{percent}%
+      accept: Применить
+      reject: Это не тот платёж
+      title: Платежи
+      summary_label: К оплате в этом месяце
+      summary_count:
+        one: '%{count} платёж к оплате'
+        few: '%{count} платежа к оплате'
+        many: '%{count} платежей к оплате'
+        other: '%{count} платежа к оплате'
+      summary_needs_action:
+        one: '%{count} требует вашего внимания'
+        few: '%{count} требуют вашего внимания'
+        many: '%{count} требуют вашего внимания'
+        other: '%{count} требуют вашего внимания'
+      all_automatic: все на автоплатеже
+      recurring_label: Регулярные обязательства
+      recurring_monthly: '%{amount} в месяц'
+      recurring_annual: '%{amount} в год'
+      unconvertible:
+        one: '%{count} платёж не учтён: нет обменного курса'
+        few: '%{count} платежа не учтены: нет обменного курса'
+        many: '%{count} платежей не учтены: нет обменного курса'
+        other: '%{count} платежа не учтены: нет обменного курса'
+      overdue: Просроченные
+      needs_attention: Требуют внимания
+      attention_overdue_total: Просрочено %{amount}
+      this_month: В этом месяце
+      later: После этого месяца
+      paid_this_month: Оплачено в этом месяце
+      dormant: Неактивные
+      kpi_remaining: Осталось в этом месяце
+      kpi_paid: Оплачено в этом месяце
+      kpi_next_seven: К оплате за 7 дней
+      kpi_past_due: Просрочено
+      paid_count:
+        one: '%{count} платёж оплачен'
+        few: '%{count} платежа оплачены'
+        many: '%{count} платежей оплачены'
+        other: '%{count} платежа оплачены'
+      needs_action_count:
+        one: '%{count} требует вашего внимания'
+        few: '%{count} требуют вашего внимания'
+        many: '%{count} требуют вашего внимания'
+        other: '%{count} требуют вашего внимания'
+      empty:
+        title: Платежей пока нет
+        description: Платежи — это ваши регулярные расходы. Sure автоматически находит их в истории операций, а к каждому можно добавить ссылку для оплаты, чтобы платить прямо отсюда.
+        action: Найти регулярные операции
+        no_history_description: Операций пока нет. Подключите счёт или импортируйте историю — Sure найдёт ваши платежи автоматически. Или добавьте платёж вручную.

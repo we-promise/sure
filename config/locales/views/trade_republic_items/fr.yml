@@ -62,6 +62,9 @@ fr:
         unknown:
           one: "%{count} activité inconnue"
           other: "%{count} activités inconnues"
+        pending_trade_details:
+          one: "%{count} opération d'investissement en attente de détails"
+          other: "%{count} opérations d'investissement en attente de détails"
         expenses:
           one: "%{count} dépense au cours des 30 derniers jours (%{amount})"
           other: "%{count} dépenses au cours des 30 derniers jours (%{amount})"
@@ -132,7 +135,7 @@ fr:
       wait_for_sync: Attendez la fin de la synchronisation de découverte des comptes.
     initiate_login:
       not_configured: Trade Republic n'est pas configuré.
-      pin_required: Saisissez votre code PIN Trade Republic pour lancer une nouvelle connexion.
+      pin_required: Saisissez votre code PIN ou mot de passe Trade Republic pour lancer une nouvelle connexion.
       verification_required: "Connexion démarrée. Confirmez-la via %{method}, puis cliquez sur Confirmer la connexion."
     complete_login:
       approval_pending: "Pas encore confirmé. Approuvez la connexion dans l’application Trade Republic, puis réessayez."
@@ -167,8 +170,7 @@ fr:
         card_fee: Frais de carte
         card_refund: Remboursement par carte
         tax_refund: Remboursement d'impôt
-        buy: Achat
-        sell: Vente
+        round_up: Round up
     update:
-      pin_required: Saisissez votre code PIN Trade Republic pour vous réauthentifier.
+      pin_required: Saisissez votre code PIN ou mot de passe Trade Republic pour vous réauthentifier.
       success: Configuration Trade Republic mise à jour avec succès.
