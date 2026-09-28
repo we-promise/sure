@@ -48,20 +48,38 @@
         </div>
 
         <!-- Sync Date Range Selection -->
-        <div class="bg-surface border border-primary p-4 rounded-lg">
+        <div class="bg-surface border border-primary p-4 rounded-lg" data-controller="enable-banking-sync-strategy">
           <div class="flex items-start gap-3">
             <%= icon "calendar", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
-            <div class="flex-1">
-              <p class="text-sm text-primary mb-3">
+            <div class="flex-1 space-y-3">
+              <p class="text-sm text-primary">
                 <strong><%= t(".historical_data_range") %></strong>
               </p>
-              <%= form.date_field :sync_start_date,
-                    label: t(".sync_start_date_label"),
-                    value: @enable_banking_item.sync_start_date || 3.months.ago.to_date,
-                    min: 2.years.ago.to_date,
-                    max: Date.current,
-                    class: "w-full max-w-xs rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary",
-                    help_text: t(".sync_start_date_help") %>
+
+              <div class="space-y-2">
+                <% EnableBankingItem.sync_strategies.each_key do |strategy| %>
+                  <label class="flex items-start gap-2 rounded-lg border border-primary p-3 cursor-pointer has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
+                    <%= form.radio_button :sync_strategy, strategy,
+                          checked: @enable_banking_item.sync_strategy == strategy,
+                          class: "radio mt-0.5 shrink-0",
+                          data: { enable_banking_sync_strategy_target: "radio", action: "change->enable-banking-sync-strategy#refresh" } %>
+                    <span class="min-w-0">
+                      <span class="block text-sm font-medium text-primary"><%= t(".sync_strategies.#{strategy}.label") %></span>
+                      <span class="block text-xs text-secondary"><%= t(".sync_strategies.#{strategy}.hint") %></span>
+                    </span>
+                  </label>
+                <% end %>
+              </div>
+
+              <div data-enable-banking-sync-strategy-target="dateField">
+                <%= form.date_field :sync_start_date,
+                      label: t(".sync_start_date_label"),
+                      value: @enable_banking_item.sync_start_date || 3.months.ago.to_date,
+                      min: 2.years.ago.to_date,
+                      max: Date.current,
+                      class: "w-full max-w-xs rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary",
+                      help_text: t(".sync_start_date_help") %>
+              </div>
             </div>
           </div>
         </div>

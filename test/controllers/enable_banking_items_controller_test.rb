@@ -81,4 +81,35 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil flash[:alert]
     assert_equal "DECOUPLED", @item.reload.aspsp_auth_approach
   end
+
+  test "complete_account_setup persists sync_strategy longest without requiring a date" do
+    post complete_account_setup_enable_banking_item_url(@item), params: { sync_strategy: "longest" }
+
+    assert_response :redirect
+    @item.reload
+    assert @item.longest?
+  end
+
+  test "complete_account_setup rejects an out-of-range date instead of raising" do
+    post complete_account_setup_enable_banking_item_url(@item), params: {
+      sync_strategy: "date", sync_start_date: 3.years.ago.to_date.iso8601
+    }
+
+    assert_redirected_to accounts_path
+    assert_match "must be within the last 2 years", flash[:alert]
+    assert_equal 3.months.ago.to_date, @item.reload.sync_start_date
+  end
+
+  test "complete_account_setup ignores params outside its explicit allowlist" do
+    original_cert = @item.client_certificate
+
+    post complete_account_setup_enable_banking_item_url(@item), params: {
+      sync_strategy: "date", sync_start_date: 1.month.ago.to_date.iso8601,
+      client_certificate: "smuggled"
+    }
+
+    assert_response :redirect
+    assert_equal original_cert, @item.reload.client_certificate
+    assert_equal 1.month.ago.to_date, @item.sync_start_date
+  end
 end
