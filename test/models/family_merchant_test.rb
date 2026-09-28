@@ -103,6 +103,8 @@ class FamilyMerchantConcurrencyTest < ActiveSupport::TestCase
     name = "Race Merchant"
     writer_inserted = Queue.new
     release_writer = Queue.new
+    reader_pid = Queue.new
+    reader_result = Queue.new
 
     writer = Thread.new do
       ActiveRecord::Base.connection_pool.with_connection do
@@ -116,23 +118,45 @@ class FamilyMerchantConcurrencyTest < ActiveSupport::TestCase
 
     writer_inserted.pop
 
-    releaser = Thread.new do
-      sleep 0.3
-      release_writer << true
+    reader = Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do |connection|
+        reader_pid << connection.select_value("SELECT pg_backend_pid()")
+
+        ActiveRecord::Base.transaction do
+          merchant, created = FamilyMerchant.find_or_create_with_name(@family, name)
+          # Proves the rescued RecordNotUnique didn't poison this transaction.
+          count_inside_tx = @family.merchants.where(name: name).count
+          reader_result << { merchant: merchant, created: created, count_inside_tx: count_inside_tx }
+        end
+      end
     end
 
-    merchant = created = nil
-    ActiveRecord::Base.transaction do
-      merchant, created = FamilyMerchant.find_or_create_with_name(@family, name)
-      # Proves the rescued RecordNotUnique didn't poison this transaction.
-      assert_equal 1, @family.merchants.where(name: name).count
-    end
+    pid = reader_pid.pop.to_i
 
+    # Wait until Postgres itself reports the reader blocked on a lock, proving
+    # it reached the INSERT (not the early find_by return) and is genuinely
+    # waiting on the writer's uncommitted row -- only then is releasing the
+    # writer guaranteed to exercise the RecordNotUnique/savepoint path rather
+    # than a RecordInvalid from a stale read, or no conflict at all.
+    deadline = Time.current + 5.seconds
+    wait_event_type = nil
+    loop do
+      wait_event_type = ActiveRecord::Base.connection.select_value(
+        "SELECT wait_event_type FROM pg_stat_activity WHERE pid = #{pid}"
+      )
+      break if wait_event_type == "Lock" || Time.current > deadline
+      sleep 0.01
+    end
+    assert_equal "Lock", wait_event_type, "reader never blocked on the unique index; the race wasn't reproduced"
+
+    release_writer << true
     writer.join
-    releaser.join
+    result = reader_result.pop
+    reader.join
 
-    assert_equal name, merchant.name
-    assert_not created
+    assert_equal name, result[:merchant].name
+    assert_not result[:created]
+    assert_equal 1, result[:count_inside_tx]
     assert_equal 1, @family.merchants.where(name: name).count
   end
 end
