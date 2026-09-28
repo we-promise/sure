@@ -170,6 +170,59 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
   end
 
+  test "show filter menu offers the same filters as transactions except the account tab" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "#transaction-filters-menu button[data-id=?]", "account_filter", count: 0
+    assert_select "#transaction-filters-menu button[data-id=?]", "category_filter", count: 1
+    assert_select "#transaction-filters-menu button[data-id=?]", "tag_filter", count: 1
+    assert_select "#transaction-filters-menu button[data-id=?]", "merchant_filter", count: 1
+    assert_select "#transaction-filters-menu button[data-id=?]", "type_filter", count: 1
+  end
+
+  test "show filters activity by category and excludes non-Transaction entries" do
+    categorized = create_transaction(name: "Categorized", amount: 50, account: @account, category: categories(:food_and_drink))
+    uncategorized = create_transaction(name: "Uncategorized", amount: 60, account: @account)
+    valuation = @account.entries.create!(
+      name: "Balance update", date: 1.day.ago.to_date, amount: 1000, currency: "USD", entryable: Valuation.new
+    )
+
+    get account_url(@account), params: { q: { categories: [ "Food & Drink" ] } }
+
+    assert_response :success
+    assert_select "##{dom_id(categorized)}"
+    assert_select "##{dom_id(uncategorized)}", count: 0
+    assert_select "##{dom_id(valuation)}", count: 0
+  end
+
+  test "show renders a badge for each active filter" do
+    get account_url(@account), params: { q: { categories: [ "Food & Drink" ], search: "grocery" } }
+
+    assert_response :success
+    assert_select "#account-activity-filters li", count: 2
+  end
+
+  test "clear_filter removes only the targeted filter value and preserves the rest" do
+    delete clear_filter_account_url(@account), params: {
+      q: { categories: [ "Food & Drink" ], search: "grocery" },
+      param_key: "categories",
+      param_value: "Food & Drink"
+    }
+
+    assert_redirected_to account_url(@account, q: { search: "grocery" }, tab: "activity", page: nil, per_page: nil)
+  end
+
+  test "clear_filter drops the amount_operator once amount is cleared" do
+    delete clear_filter_account_url(@account), params: {
+      q: { amount: "50", amount_operator: "equal" },
+      param_key: "amount",
+      param_value: "50"
+    }
+
+    assert_redirected_to account_url(@account, q: nil, tab: "activity", page: nil, per_page: nil)
+  end
+
   test "sync all requests fresh Plaid transactions before syncing the family" do
     sequence = sequence("manual sync all")
     Family.any_instance
