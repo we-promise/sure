@@ -1,70 +1,82 @@
 <%= content_for :page_title, t(".title") %>
+<% manages_instance_settings = Current.user.manages_instance_settings? %>
+<% unless manages_instance_settings %>
+  <%= render DS::Alert.new(message: t(".instance_settings_restricted"), variant: :info) %>
+<% end %>
 <%= settings_section title: t(".ai_assistant") do %>
-  <%= render "settings/hostings/assistant_settings" %>
+  <%= render "settings/hostings/assistant_settings", manages_instance_settings: manages_instance_settings %>
 <% end %>
-<%= settings_section title: t(".general") do %>
-  <div class="space-y-6"
-       data-controller="provider-settings"
-       data-provider-settings-active-value="<%= Setting.llm_provider %>">
-    <%= render "settings/hostings/llm_provider_selector" %>
-    <%= tag.div data: { "provider-settings-target": "panel", provider: "openai" },
-                hidden: Setting.llm_provider != "openai" do %>
-      <%= render "settings/hostings/openai_settings" %>
-    <% end %>
-    <%= tag.div data: { "provider-settings-target": "panel", provider: "anthropic" },
-                hidden: Setting.llm_provider != "anthropic" do %>
-      <%= render "settings/hostings/anthropic_settings" %>
-    <% end %>
-    <%# Jev is a classification provider, not an LLM: it answers typed questions
-        and cannot generate text. This sits outside the panels above so the
-        llm_provider selector never shows or hides it — that selector governs
-        chat and PDF, which Jev can never serve. The panel renders its own
-        credential fields once Jev is selected.
+<% if manages_instance_settings || preview_features_enabled? %>
+  <%= settings_section title: t(".general") do %>
+    <div class="space-y-6"
+         data-controller="provider-settings"
+         data-provider-settings-active-value="<%= Setting.llm_provider %>">
+      <% if manages_instance_settings %>
+        <%= render "settings/hostings/llm_provider_selector" %>
+        <%= tag.div data: { "provider-settings-target": "panel", provider: "openai" },
+                    hidden: Setting.llm_provider != "openai" do %>
+          <%= render "settings/hostings/openai_settings" %>
+        <% end %>
+        <%= tag.div data: { "provider-settings-target": "panel", provider: "anthropic" },
+                    hidden: Setting.llm_provider != "anthropic" do %>
+          <%= render "settings/hostings/anthropic_settings" %>
+        <% end %>
+      <% end %>
+      <%# Jev is a classification provider, not an LLM: it answers typed questions
+          and cannot generate text. This sits outside the panels above so the
+          llm_provider selector never shows or hides it — that selector governs
+          chat and PDF, which Jev can never serve. The panel renders its own
+          credential fields once Jev is selected.
 
-        Preview gates the entry point only — see
-        docs/llm-guides/gating-a-preview-feature.md. Resolution reads the family
-        column, so a family that opts in and then picks the LLM provider keeps
-        the LLM provider. %>
-    <% if preview_features_enabled? %>
-      <%= render "settings/hostings/categorization_provider_selector" %>
-    <% end %>
-    <%= render "settings/hostings/brand_fetch_settings" %>
-  </div>
+          Preview gates the entry point only — see
+          docs/llm-guides/gating-a-preview-feature.md. Resolution reads the family
+          column, so a family that opts in and then picks the LLM provider keeps
+          the LLM provider. %>
+      <% if preview_features_enabled? %>
+        <%= render "settings/hostings/categorization_provider_selector", manages_instance_settings: manages_instance_settings %>
+      <% end %>
+      <% if manages_instance_settings %>
+        <%= render "settings/hostings/brand_fetch_settings" %>
+      <% end %>
+    </div>
+  <% end %>
 <% end %>
-<%= settings_section title: t(".financial_data_providers") do %>
-  <div class="space-y-6">
-    <%= render "settings/hostings/provider_selection" %>
-    <% if @show_yahoo_finance_settings %>
-      <%= render "settings/hostings/yahoo_finance_settings" %>
-    <% end %>
-    <% if @show_twelve_data_settings %>
-      <%= render "settings/hostings/twelve_data_settings" %>
-    <% end %>
-    <% if @show_tiingo_settings %>
-      <%= render "settings/hostings/tiingo_settings" %>
-    <% end %>
-    <% if @show_eodhd_settings %>
-      <%= render "settings/hostings/eodhd_settings" %>
-    <% end %>
-    <% if @show_alpha_vantage_settings %>
-      <%= render "settings/hostings/alpha_vantage_settings" %>
-    <% end %>
-    <% if @show_tinkoff_invest_settings %>
-      <%= render "settings/hostings/tinkoff_invest_settings" %>
-    <% end %>
-    <% if @show_mansa_settings %>
-      <%= render "settings/hostings/mansa_settings" %>
-    <% end %>
-  </div>
-<% end %>
-<%= settings_section title: t(".property_valuation_providers") do %>
-  <div class="space-y-6">
-    <%= render "settings/hostings/rentcast_settings" %>
-    <%= render "settings/hostings/realie_settings" %>
-  </div>
-<% end %>
-<%= settings_section title: t(".sync_settings") do %>
-  <%= render "settings/hostings/sync_settings" %>
+<% if manages_instance_settings %>
+  <%= settings_section title: t(".financial_data_providers") do %>
+    <div class="space-y-6">
+      <%= render "settings/hostings/provider_selection" %>
+      <% if @show_yahoo_finance_settings %>
+        <%= render "settings/hostings/yahoo_finance_settings" %>
+      <% end %>
+      <% if @show_twelve_data_settings %>
+        <%= render "settings/hostings/twelve_data_settings" %>
+      <% end %>
+      <% if @show_tiingo_settings %>
+        <%= render "settings/hostings/tiingo_settings" %>
+      <% end %>
+      <% if @show_eodhd_settings %>
+        <%= render "settings/hostings/eodhd_settings" %>
+      <% end %>
+      <% if @show_alpha_vantage_settings %>
+        <%= render "settings/hostings/alpha_vantage_settings" %>
+      <% end %>
+      <% if @show_tinkoff_invest_settings %>
+        <%= render "settings/hostings/tinkoff_invest_settings" %>
+      <% end %>
+      <% if @show_mansa_settings %>
+        <%= render "settings/hostings/mansa_settings" %>
+      <% end %>
+    </div>
+  <% end %>
+  <%= settings_section title: t(".property_valuation_providers") do %>
+    <div class="space-y-6">
+      <%= render "settings/hostings/rentcast_settings" %>
+      <%= render "settings/hostings/realie_settings" %>
+    </div>
+  <% end %>
+  <%= settings_section title: t(".sync_settings") do %>
+    <%= render "settings/hostings/sync_settings" %>
+  <% end %>
 <% end %>
 <% if Current.user.super_admin? %>
   <%= settings_section title: t(".invites") do %>

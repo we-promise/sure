@@ -874,6 +874,28 @@ class UserTest < ActiveSupport::TestCase
     assert_includes user.errors[:password], "can't be blank"
   end
 
+  test "only a super admin manages instance settings when the instance hosts several families" do
+    assert Family.count > 1
+
+    assert users(:sure_support_staff).manages_instance_settings?
+    assert_not users(:family_admin).manages_instance_settings?
+    assert_not users(:family_member).manages_instance_settings?
+
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    assert_not users(:family_admin).manages_instance_settings?
+  end
+
+  test "the admins of the only family on a self-hosted instance manage instance settings" do
+    Family.stubs(:count).returns(1)
+
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    assert users(:family_admin).manages_instance_settings?
+    assert_not users(:family_member).manages_instance_settings?
+
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    assert_not users(:family_admin).manages_instance_settings?
+  end
+
   # First user role assignment tests
   test "role_for_new_family_creator returns super_admin when no users exist" do
     # Delete all users to simulate fresh instance
