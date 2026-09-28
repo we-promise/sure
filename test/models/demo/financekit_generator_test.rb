@@ -57,6 +57,7 @@ class Demo::FinancekitGeneratorTest < ActiveSupport::TestCase
       assert_equal 12, payments.count
       payments.each do |entry|
         transfer = entry.entryable.transfer
+        assert_predicate transfer, :confirmed?
         assert_equal @checking, transfer.from_account
         assert_equal account, transfer.to_account
         assert_equal -entry.amount, transfer.outflow_transaction.entry.amount
@@ -206,6 +207,7 @@ class Demo::FinancekitGeneratorTest < ActiveSupport::TestCase
     assert_equal 6, gifts.count
     gifts.each do |entry|
       transfer = entry.entryable.transfer
+      assert_predicate transfer, :confirmed?
       assert_equal cash, transfer.from_account
       assert_equal nancy, transfer.to_account
       assert_equal entry.date, transfer.outflow_transaction.entry.date
