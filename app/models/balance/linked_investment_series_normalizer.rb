@@ -1,5 +1,5 @@
 class Balance::LinkedInvestmentSeriesNormalizer
-  attr_reader :account, :series
+  attr_reader :account, :series, :view
 
   class << self
     def aggregate_accounts(accounts:, currency:, period:, favorable_direction:, interval: "1 day")
@@ -37,9 +37,13 @@ class Balance::LinkedInvestmentSeriesNormalizer
       )
     end
 
+    def supported_history_start_date(account)
+      new(account: account, series: nil).supported_history_start_date
+    end
+
     private
       def common_supported_history_start_date(account_ids)
-        account_ids = Array(account_ids)
+        account_ids = Array(account_ids).compact
         return if account_ids.empty?
 
         activity_dates = Entry.where(account_id: account_ids)
@@ -77,34 +81,72 @@ class Balance::LinkedInvestmentSeriesNormalizer
       end
   end
 
-  def initialize(account:, series:)
+  # Normalizes chart series for linked investment accounts by trimming unsupported
+  # history and aligning the inception boundary.
+  def initialize(account:, series:, view: :balance)
     @account = account
     @series = series
+    @view = view
   end
 
+  # Trims points before supported provider history and prepends an anchor point at inception
+  # if coarse sampling missed the opening date within the requested period.
   def normalize
     return series unless account.linked? && account.balance_type == :investment
 
     first_supported_history_date = supported_history_start_date
     return series unless first_supported_history_date.present?
 
-    trimmed_values = series.values.select { |value| value.date >= first_supported_history_date }
-    return series if trimmed_values.blank? || trimmed_values.length == series.values.length
+    active_points = series.values.select { |value| value.date >= first_supported_history_date }
+    return series if active_points.blank?
+
+    # If periodic sampling missed the exact opening date (e.g. coarse 1-month or 1-week intervals),
+    # prepend an anchor point on the exact opening date with the initial balance (e.g. $0)
+    # only when the inception date falls within the requested series date range.
+    if first_supported_history_date >= series.start_date && active_points.first.date > first_supported_history_date
+      currency = active_points.first.value.currency
+      initial_amount = case view.to_sym
+      when :gains, :holdings_balance
+        0
+      when :cash_balance, :balance
+        if account.has_opening_anchor? && first_supported_history_date == account.opening_anchor_date
+          account.opening_anchor_balance || 0
+        else
+          0
+        end
+      else
+        0
+      end
+      opening_money = Money.new(initial_amount, currency)
+      anchor_value = Series::Value.new(
+        date: first_supported_history_date,
+        date_formatted: I18n.l(first_supported_history_date, format: :long),
+        value: opening_money,
+        trend: Trend.new(
+          current: opening_money,
+          previous: nil,
+          favorable_direction: series.favorable_direction
+        )
+      )
+      active_points = [ anchor_value, *active_points ]
+    end
+
+    return series if active_points.first&.date == series.values.first&.date && active_points.length == series.values.length
 
     Series.new(
-      start_date: trimmed_values.first.date,
+      start_date: active_points.first.date,
       end_date: series.end_date,
       interval: series.interval,
-      values: trimmed_values,
+      values: active_points,
       favorable_direction: series.favorable_direction
     )
   end
 
-  private
+  def supported_history_start_date
+    [ first_provider_activity_date, stable_provider_holding_start_date ].compact.min
+  end
 
-    def supported_history_start_date
-      [ first_provider_activity_date, stable_provider_holding_start_date ].compact.min
-    end
+  private
 
     def first_provider_activity_date
       @first_provider_activity_date ||= account.entries

@@ -86,6 +86,13 @@ This single command generates:
 - ✅ Routes
 - ✅ Updates to settings controller and view
 
+The generated item partial renders the provider's logo with `ProviderLogo`. That reads the
+provider's `Provider::Metadata::REGISTRY` entry, which the generator does not create, so add
+one in `app/models/provider/metadata.rb`. See
+[provider logos](../llm-guides/providers.md#provider-logos) for the fields it reads
+(`domain`, `logo_text`, `logo_color`, `logo_icon`) and which are used when Brandfetch has no
+icon or is not configured.
+
 ### Key Characteristics
 - **Credentials**: Stored in `my_bank_items` table (encrypted)
 - **Isolation**: Each family has completely separate credentials
@@ -237,7 +244,7 @@ The item model stores per-family connection credentials:
 
 ```ruby
 class MyBankItem < ApplicationRecord
-  include Syncable, Provided
+  include Syncable, Provided, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -258,11 +265,6 @@ class MyBankItem < ApplicationRecord
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   def credentials_configured?
     api_key.present? && refresh_token.present?

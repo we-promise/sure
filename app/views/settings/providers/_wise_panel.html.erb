@@ -25,9 +25,7 @@
           <% disclosure.with_summary_content do %>
             <div class="flex items-center justify-between gap-2 w-full">
               <div class="flex items-center gap-3">
-                <div class="flex items-center justify-center h-8 w-8 bg-container-inset rounded-full">
-                  <p class="text-primary text-xs font-medium">WI</p>
-                </div>
+                <%= render ProviderLogo.new(provider_key: :wise) %>
                 <div>
                   <p class="font-medium text-primary"><%= item.name %></p>
                   <p class="text-xs text-secondary"><%= item.sync_status_summary %></p>

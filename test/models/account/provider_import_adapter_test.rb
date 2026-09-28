@@ -222,6 +222,246 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "finds or creates merchant with an iban" do
+    assert_difference "ProviderMerchant.count", 1 do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "enable_banking_merchant_1",
+        name: "Landlord GmbH",
+        source: "enable_banking",
+        iban: "de89 3704 0044 0532 0130 00"
+      )
+
+      assert_equal "DE89370400440532013000", merchant.iban # pipelock:ignore IBAN
+    end
+  end
+
+  test "finds or creates merchant with an iban containing dots and dashes" do
+    assert_difference "ProviderMerchant.count", 1 do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "enable_banking_merchant_1",
+        name: "Landlord GmbH",
+        source: "enable_banking",
+        iban: "de89.3704-0044/0532:0130'00"
+      )
+
+      assert_equal "DE89370400440532013000", merchant.iban # pipelock:ignore IBAN
+    end
+  end
+
+  test "prefers a family merchant matched by iban over creating a provider merchant" do
+    family_merchant = @family.merchants.create!(
+      name: "My Landlord",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_no_difference "ProviderMerchant.count" do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "enable_banking_merchant_new_name",
+        name: "Some Varying Provider Name",
+        source: "enable_banking",
+        iban: "de89 3704 0044 0532 0130 00"
+      )
+
+      assert_equal family_merchant.id, merchant.id
+    end
+  end
+
+  test "finds an existing merchant by iban even when provider_merchant_id and name differ" do
+    existing_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "old_hash",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_no_difference "ProviderMerchant.count" do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "different_hash_because_remittance_text_changed",
+        name: "Different Remittance Text",
+        source: "enable_banking",
+        iban: "de89 3704 0044 0532 0130 00"
+      )
+
+      assert_equal existing_merchant.id, merchant.id
+    end
+  end
+
+  test "survives a concurrent insert winning the (source, iban) unique index during backfill" do
+    # A merchant found by name/provider_merchant_id, blank iban -- the
+    # backfill path. Simulates another process's row winning the (source,
+    # iban) unique index in the window between our find and our update.
+    name_matched_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "hash_1",
+      name: "Landlord GmbH",
+      source: "enable_banking"
+    )
+    concurrent_winner = ProviderMerchant.create!(
+      provider_merchant_id: "hash_2",
+      name: "Concurrent Winner",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+    name_matched_merchant.stubs(:update!).with(iban: "DE89370400440532013000").raises( # pipelock:ignore IBAN
+      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+    )
+    # First call is the initial preferred-iban lookup (nil -- the merchant
+    # gets matched via provider_merchant_id instead); second call is the
+    # post-race re-query in the rescue, which now finds the winner.
+    ProviderMerchant.stubs(:find_by).with(source: "enable_banking", iban: "DE89370400440532013000").returns(nil, concurrent_winner) # pipelock:ignore IBAN
+    ProviderMerchant.stubs(:find_by).with(provider_merchant_id: "hash_1", source: "enable_banking").returns(name_matched_merchant)
+
+    merchant = nil
+    assert_nothing_raised do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "hash_1",
+        name: "Landlord GmbH",
+        source: "enable_banking",
+        iban: "DE89370400440532013000" # pipelock:ignore IBAN
+      )
+    end
+
+    assert_equal concurrent_winner.id, merchant.id,
+      "the transaction must be assigned to the merchant that actually holds this iban, not the stale losing merchant"
+    assert_nil name_matched_merchant.reload.iban
+    assert_equal "DE89370400440532013000", concurrent_winner.reload.iban # pipelock:ignore IBAN
+
+    # The support debug UI renders this entry's message and metadata
+    # verbatim -- neither may contain the raw iban, or logging the race
+    # would defeat the point of encrypting the column at rest.
+    debug_entry = DebugLogEntry.last
+    assert_equal "provider_sync_warning", debug_entry.category
+    assert_not_includes debug_entry.message, "DE89370400440532013000" # pipelock:ignore IBAN
+    assert_not_includes debug_entry.metadata.to_s, "DE89370400440532013000" # pipelock:ignore IBAN
+    assert_equal name_matched_merchant.id, debug_entry.metadata["merchant_id"]
+  end
+
+  test "falls back to the stale merchant when the race winner can't be re-found" do
+    name_matched_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "hash_1",
+      name: "Landlord GmbH",
+      source: "enable_banking"
+    )
+    name_matched_merchant.stubs(:update!).with(iban: "DE89370400440532013000").raises( # pipelock:ignore IBAN
+      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+    )
+    ProviderMerchant.stubs(:find_by).with(source: "enable_banking", iban: "DE89370400440532013000").returns(nil) # pipelock:ignore IBAN
+    ProviderMerchant.stubs(:find_by).with(provider_merchant_id: "hash_1", source: "enable_banking").returns(name_matched_merchant)
+
+    merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "hash_1",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_equal name_matched_merchant.id, merchant.id
+  end
+
+  test "recovers from a RecordInvalid uniqueness race when creating a new iban merchant" do
+    # No merchant matches by iban, provider_merchant_id, or name yet, so
+    # find_or_create_merchant reaches ProviderMerchant.create! -- simulates
+    # a concurrent insert winning the (source, iban) unique index between
+    # our find and this create!, surfaced as a Rails-level validation
+    # failure (RecordInvalid) rather than the raw DB constraint
+    # (RecordNotUnique), which the rescue must also recover from.
+    concurrent_winner = ProviderMerchant.create!(
+      provider_merchant_id: "hash_other",
+      name: "Concurrent Winner",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+    invalid = ProviderMerchant.new(source: "enable_banking", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    invalid.errors.add(:iban, :taken)
+    ProviderMerchant.stubs(:create!).raises(ActiveRecord::RecordInvalid.new(invalid))
+    # First call is the initial preferred-iban lookup (nil -- nothing
+    # matches yet, so find_or_create_merchant reaches create!); second call
+    # is the post-race re-query in the rescue, which finds the winner.
+    ProviderMerchant.stubs(:find_by)
+      .with(source: "enable_banking", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+      .returns(nil, concurrent_winner)
+    # Neither the provider_merchant_id nor name fallback matches an existing
+    # row either -- that's what actually reaches create! below.
+    ProviderMerchant.stubs(:find_by).with(provider_merchant_id: "hash_new", source: "enable_banking").returns(nil)
+    ProviderMerchant.stubs(:find_by).with(source: "enable_banking", name: "New Payee").returns(nil)
+
+    merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "hash_new",
+      name: "New Payee",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_equal concurrent_winner.id, merchant.id
+  end
+
+  test "re-raises a non-uniqueness RecordInvalid instead of swallowing it" do
+    invalid = ProviderMerchant.new
+    invalid.errors.add(:name, :blank)
+    ProviderMerchant.stubs(:create!).raises(ActiveRecord::RecordInvalid.new(invalid))
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      @adapter.find_or_create_merchant(
+        provider_merchant_id: "hash_new",
+        name: "New Payee",
+        source: "enable_banking"
+      )
+    end
+  end
+
+  test "falls back to name-based lookup when no iban is provided" do
+    existing_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "enable_banking_merchant_2",
+      name: "Landlord GmbH",
+      source: "enable_banking"
+    )
+
+    assert_no_difference "ProviderMerchant.count" do
+      merchant = @adapter.find_or_create_merchant(
+        provider_merchant_id: "enable_banking_merchant_2",
+        name: "Landlord GmbH",
+        source: "enable_banking"
+      )
+
+      assert_equal existing_merchant.id, merchant.id
+      assert_nil merchant.iban
+    end
+  end
+
+  test "backfills a blank iban on an existing name-matched merchant" do
+    existing_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "enable_banking_merchant_3",
+      name: "Landlord GmbH",
+      source: "enable_banking"
+    )
+
+    @adapter.find_or_create_merchant(
+      provider_merchant_id: "enable_banking_merchant_3",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_equal "DE89370400440532013000", existing_merchant.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "does not overwrite an already-present merchant iban" do
+    existing_merchant = ProviderMerchant.create!(
+      provider_merchant_id: "enable_banking_merchant_4",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "AT611904300234573201" # pipelock:ignore IBAN
+    )
+
+    @adapter.find_or_create_merchant(
+      provider_merchant_id: "enable_banking_merchant_4",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    )
+
+    assert_equal "AT611904300234573201", existing_merchant.reload.iban # pipelock:ignore IBAN
+  end
+
   test "updates account balance" do
     @adapter.update_balance(
       balance: 5000.00,
@@ -297,7 +537,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         security: security,
         quantity: 5,
         price: 150.00,
-        amount: 750.00,
+        amount: 754.95,
+        fee: 4.95,
         currency: "USD",
         date: Date.today,
         source: "plaid"
@@ -306,7 +547,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_kind_of Trade, entry.entryable
       assert_equal 5, entry.entryable.qty
       assert_equal 150.00, entry.entryable.price
-      assert_equal 750.00, entry.amount
+      assert_equal BigDecimal("4.95"), entry.entryable.fee
+      assert_equal BigDecimal("754.95"), entry.amount
       assert_match(/Buy.*5.*shares/i, entry.name)
     end
   end
@@ -328,6 +570,39 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     )
 
     assert_equal 0.91, entry.entryable.exchange_rate
+  end
+
+  # So user-entered fees aren't erased by syncing from providers that don't report fees
+  test "preserves existing trade fee when reimport omits it" do
+    investment_account = accounts(:investment)
+    adapter = Account::ProviderImportAdapter.new(investment_account)
+    aapl = securities(:aapl)
+
+    entry = adapter.import_trade(
+      external_id: "plaid_trade_fee_preserved",
+      security: aapl,
+      quantity: 5,
+      price: 150.00,
+      amount: 754.95,
+      fee: 4.95,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid"
+    )
+
+    updated_entry = adapter.import_trade(
+      external_id: "plaid_trade_fee_preserved",
+      security: aapl,
+      quantity: 5,
+      price: 150.00,
+      amount: 754.95,
+      currency: "USD",
+      date: Date.today,
+      source: "plaid"
+    )
+
+    assert_equal entry.id, updated_entry.id
+    assert_equal BigDecimal("4.95"), updated_entry.entryable.reload.fee
   end
 
   test "raises error when security is missing for trade import" do
@@ -1574,5 +1849,119 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_not booked_entry.transaction.pending?,
         "pending flag must be cleared even for user-modified entries"
     end
+  end
+
+  test "backfills counterparty iban on a user-modified entry that predates the feature" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_user_mod_no_iban",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Old Landlord Payment",
+      source: "enable_banking"
+    )
+    assert_nil entry.transaction.counterparty_iban
+
+    entry.mark_user_modified!
+    assert entry.reload.user_modified?, "entry should be marked user-modified"
+
+    # A later sync now carries counterparty data the original payload lacked.
+    # The entry is protected (user_modified), but this field has no UI for the
+    # user to have relied upon, so it should still be backfilled.
+    assert_no_difference "@account.entries.count" do
+      updated_entry = @adapter.import_transaction(
+        external_id: "eb_user_mod_no_iban",
+        amount: 20.0,
+        currency: "EUR",
+        date: Date.today - 5.days,
+        name: "Old Landlord Payment",
+        source: "enable_banking",
+        extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+      )
+
+      assert_equal entry.id, updated_entry.id
+      updated_entry.reload
+      assert_equal "AT611904300234573201", updated_entry.transaction.counterparty_iban # pipelock:ignore IBAN
+    end
+  end
+
+  test "does not clobber a backfilled counterparty iban with a later nil on a user-modified entry" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_user_mod_iban_then_nil",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Old Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+    )
+    assert_equal "AT611904300234573201", entry.transaction.counterparty_iban # pipelock:ignore IBAN
+
+    entry.mark_user_modified!
+    assert entry.reload.user_modified?, "entry should be marked user-modified"
+
+    # A later sync's payload doesn't carry counterparty data this time (e.g. a
+    # re-delivery through a path that doesn't populate it) -- this is a purely
+    # additive backfill for a protected entry, so it must not erase data a
+    # previous sync already filled in.
+    assert_no_difference "@account.entries.count" do
+      updated_entry = @adapter.import_transaction(
+        external_id: "eb_user_mod_iban_then_nil",
+        amount: 20.0,
+        currency: "EUR",
+        date: Date.today - 5.days,
+        name: "Old Landlord Payment",
+        source: "enable_banking",
+        extra: { "counterparty_iban" => nil }
+      )
+
+      assert_equal entry.id, updated_entry.id
+      updated_entry.reload
+      assert_equal "AT611904300234573201", updated_entry.transaction.counterparty_iban, # pipelock:ignore IBAN
+        "a nil counterparty_iban on a later sync must not clobber an already-backfilled value on a protected entry"
+    end
+  end
+
+  test "always assigns counterparty iban on the unprotected path, clearing a stale value on correction" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_unprotected_iban_then_nil",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => "AT611904300234573201" } # pipelock:ignore IBAN
+    )
+    assert_equal "AT611904300234573201", entry.transaction.counterparty_iban # pipelock:ignore IBAN
+
+    updated_entry = @adapter.import_transaction(
+      external_id: "eb_unprotected_iban_then_nil",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Landlord Payment",
+      source: "enable_banking",
+      extra: { "counterparty_iban" => nil }
+    )
+
+    assert_equal entry.id, updated_entry.id
+    assert_nil updated_entry.reload.transaction.counterparty_iban,
+      "an unprotected entry must have a corrected/removed counterparty iban actually cleared"
+  end
+
+  test "leaves counterparty iban columns untouched when the provider never mentions them" do
+    entry = @adapter.import_transaction(
+      external_id: "eb_no_counterparty_keys",
+      amount: 20.0,
+      currency: "EUR",
+      date: Date.today - 5.days,
+      name: "Some Payment",
+      source: "plaid",
+      extra: { "fx_rate" => "1.05" }
+    )
+
+    assert_nil entry.transaction.counterparty_iban
+    assert_nil entry.transaction.counterparty_account_id
+    assert_equal "1.05", entry.transaction.extra["fx_rate"]
   end
 end

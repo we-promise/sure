@@ -290,10 +290,35 @@ class Demo::Generator
       # Crypto (USD)
       @coinbase_usdc = family.accounts.create!(accountable: Crypto.new, name: "Coinbase USDC", balance: 0, currency: "USD")
 
-      # Loans / Liabilities (USD)
-      @mortgage      = family.accounts.create!(accountable: Loan.new, name: "Home Mortgage", balance: 0, currency: "USD")
-      @car_loan      = family.accounts.create!(accountable: Loan.new, name: "Car Loan", balance: 0, currency: "USD")
-      @student_loan  = family.accounts.create!(accountable: Loan.new, name: "Student Loan", balance: 0, currency: "USD")
+      # Loans / Liabilities (USD). Each carries the terms its amortisation
+      # schedule is built from; its principal is the opening valuation written
+      # by open_demo_loan!. The mortgage is adjustable with two recorded rate
+      # changes -- a cut two years in, a rise two years later -- so the demo
+      # shows a schedule re-amortising. The car and student loans start the
+      # month before generate_loan_payments! makes their first payment.
+      mortgage_start = 5.years.ago.to_date
+      loans_start = 37.months.ago.beginning_of_month.to_date
+      @mortgage = family.accounts.create!(
+        accountable: Loan.new(
+          subtype: "mortgage", rate_type: "adjustable", interest_rate: 6.25, term_months: 360,
+          start_date: mortgage_start, initial_balance: 320_000,
+          rate_changes: [
+            { effective_date: (mortgage_start >> 24).iso8601, rate: "5.5" },
+            { effective_date: (mortgage_start >> 48).iso8601, rate: "6.75" }
+          ]
+        ),
+        name: "Home Mortgage", balance: 0, currency: "USD"
+      )
+      @car_loan = family.accounts.create!(
+        accountable: Loan.new(subtype: "auto", rate_type: "fixed", interest_rate: 6.9, term_months: 60,
+                              start_date: loans_start, initial_balance: 24_000),
+        name: "Car Loan", balance: 0, currency: "USD"
+      )
+      @student_loan = family.accounts.create!(
+        accountable: Loan.new(subtype: "student", rate_type: "fixed", interest_rate: 5.5, term_months: 120,
+                              start_date: loans_start, initial_balance: 42_000),
+        name: "Student Loan", balance: 0, currency: "USD"
+      )
 
       @personal_loc  = family.accounts.create!(accountable: OtherLiability.new, name: "Personal Line of Credit", balance: 0, currency: "USD")
 
@@ -465,16 +490,9 @@ class Demo::Generator
       start_date = 3.years.ago.to_date  # Reduced from 12 years
       base_rent = 2500 # Higher starting amount for higher income family
 
-      # Monthly rent/mortgage payments
-      (start_date..Date.current).each do |date|
-        next unless date.day == 1 # First of month
-
-        # Mortgage payment from checking account (positive expense)
-        create_transaction!(@chase_checking, 2800, "Mortgage Payment", @rent_cat, date)
-        # Principal payment reduces mortgage debt (negative transaction)
-        principal_payment = 800 # ~$800 goes to principal
-        create_transaction!(@mortgage, -principal_payment, "Principal Payment", nil, date)
-      end
+      # The mortgage is paid by generate_loan_payments!, from its own schedule.
+      # A flat payment booked here as well moved the loan's balance a second
+      # time, so the demo mortgage owed less than any schedule could explain.
 
       # Monthly utilities (reduced frequency)
       utilities = [
@@ -528,9 +546,11 @@ class Demo::Generator
         create_transaction!(@chase_checking, amount, "#{stations.sample} Gas", @gas_cat, date)
       end
 
-      # Car payment (monthly for 6 years)
+      # Payments on the previous car, up to the day before the demo car loan
+      # starts: from then on generate_loan_payments! pays the car loan from its
+      # schedule, and a flat payment alongside it would count the car twice.
       car_payment_start = 6.years.ago.to_date
-      car_payment_end = 1.year.ago.to_date
+      car_payment_end = [ 1.year.ago.to_date, @car_loan.loan.start_date - 1 ].min
 
       (car_payment_start..car_payment_end).each do |date|
         next unless date.day == 15 # 15th of month
@@ -721,9 +741,14 @@ class Demo::Generator
     def generate_major_purchases!
       # Home purchase (5 years ago) - only record the down payment, not full value
       # Property value will be set by valuation in reconcile_balances!
-      home_date = 5.years.ago.to_date
+      home_date = @mortgage.loan.start_date
       create_transaction!(@chase_checking, 70_000, "Home Down Payment", @housing_cat, home_date)
-      create_transaction!(@mortgage, 320_000, "Mortgage Principal", nil, home_date) # Initial mortgage debt
+
+      # Each loan opens at its principal on its start date -- the mortgage's
+      # 320,000 among them. A valuation rather than a transaction, because
+      # Loan#original_balance reads the first valuation: recorded as a
+      # transaction, the debt left the schedule with no principal to amortise.
+      [ @mortgage, @car_loan, @student_loan ].each { |loan_account| open_demo_loan!(loan_account) }
 
       # Initial account funding (realistic amounts)
       create_transaction!(@chase_checking, -5_000, "Initial Deposit", @salary_cat, 12.years.ago.to_date)
@@ -741,6 +766,19 @@ class Demo::Generator
       create_transaction!(@chase_checking, 12_000, "Roof Replacement", @utilities_cat, 3.years.ago.to_date)
       create_transaction!(@chase_checking, 8_000, "Family Emergency", @healthcare_cat, 4.years.ago.to_date)
       create_transaction!(@chase_checking, 15_000, "Wedding Expenses", @entertainment_cat, 9.years.ago.to_date)
+    end
+
+    # The opening anchor valuation a loan account created through the form
+    # would carry: the loan's principal on its start date.
+    def open_demo_loan!(account)
+      loan = account.loan
+      account.entries.create!(
+        entryable: Valuation.new(kind: "opening_anchor"),
+        amount: loan.initial_balance,
+        name: Valuation.build_opening_anchor_name(account.accountable_type),
+        currency: account.currency,
+        date: loan.start_date
+      )
     end
 
     def generate_transfers_and_payments!
@@ -1018,43 +1056,37 @@ class Demo::Generator
     # ---------------------------------------------------------------------------
     # Loan payments (Task 8)
     # ---------------------------------------------------------------------------
+    # The one extra principal payment the student loan makes, a year ago.
+    STUDENT_LOAN_EXTRA_PAYMENT = 2_000
+
+    # Each demo loan pays what its own schedule asks, split into that payment's
+    # principal and interest, on every scheduled date up to today, so its
+    # balance is the one its schedule gives. Flat figures here (600 principal
+    # and 1,100 interest on the mortgage, whatever its rate) left the balances
+    # disagreeing with the schedules beside them. The student loan also makes
+    # one extra payment, so the demo shows a loan ahead of schedule for a real
+    # reason; the mortgage and the car loan sit on theirs.
     def generate_loan_payments!
-      date_cursor = 36.months.ago.beginning_of_month
-      while date_cursor <= Date.current
-        payment_date = first_business_day(date_cursor)
+      [
+        [ @mortgage, "Mortgage Payment", @rent_cat ],
+        [ @student_loan, "Student Loan Payment", @interest_cat ],
+        [ @car_loan, "Auto Loan Payment", @transportation_cat ]
+      ].each do |account, memo, interest_category|
+        account.loan.amortization_schedule.payments.each do |payment|
+          break if payment.date > Date.current
 
-        # Mortgage
-        make_loan_payment!(
-          principal_account: @mortgage,
-          principal_amount: 600,
-          interest_amount: 1_100,
-          interest_category: @housing_cat,
-          date: payment_date,
-          memo: "Mortgage Payment"
-        )
-
-        # Student loan
-        make_loan_payment!(
-          principal_account: @student_loan,
-          principal_amount: 350,
-          interest_amount: 100,
-          interest_category: @interest_cat,
-          date: payment_date,
-          memo: "Student Loan Payment"
-        )
-
-        # Car loan – assume 300 principal / 130 interest
-        make_loan_payment!(
-          principal_account: @car_loan,
-          principal_amount: 300,
-          interest_amount: 130,
-          interest_category: @transportation_cat,
-          date: payment_date,
-          memo: "Auto Loan Payment"
-        )
-
-        date_cursor = date_cursor.next_month.beginning_of_month
+          make_loan_payment!(
+            principal_account: account,
+            principal_amount: payment.principal.amount,
+            interest_amount: payment.interest.amount,
+            interest_category: interest_category,
+            date: payment.date,
+            memo: memo
+          )
+        end
       end
+
+      create_transfer!(@chase_checking, @student_loan, STUDENT_LOAN_EXTRA_PAYMENT, "Student Loan Extra Payment", 1.year.ago.to_date)
     end
 
     def make_loan_payment!(principal_account:, principal_amount:, interest_amount:, interest_category:, date:, memo:)

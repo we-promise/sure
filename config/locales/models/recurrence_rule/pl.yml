@@ -1,0 +1,36 @@
+---
+pl:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        day_of_month: Dzień miesiąca
+        frequency: Częstotliwość
+        interval: Odstęp
+        month_of_year: Miesiąc
+        weekday: Dzień tygodnia
+        weekday_ordinal: Tydzień miesiąca
+      recurring_transaction/recurrence_rules:
+        base: 'Reguła powtarzania:'
+        day_of_month: Dzień miesiąca
+        frequency: Częstotliwość
+        interval: Odstęp
+        month_of_year: Miesiąc
+        weekday: Dzień tygodnia
+        weekday_ordinal: Tydzień miesiąca
+    errors:
+      models:
+        recurrence_rule:
+          attributes:
+            day_of_month:
+              not_allowed_for_weekly: nie dotyczy reguły tygodniowej
+            month_of_year:
+              not_allowed: dotyczy tylko reguły rocznej
+              required_for_yearly: jest wymagany dla reguły rocznej
+            weekday:
+              required_for_weekly: jest wymagany dla reguły tygodniowej
+            weekday_ordinal:
+              not_allowed_for_weekly: nie dotyczy reguły tygodniowej
+              not_allowed_without_weekday: dotyczy tylko wtedy, gdy ustawiono dzień
+                tygodnia
+              required_with_weekday: jest wymagany, gdy ustawiono dzień tygodnia
+          day_spec_required: 'Wybierz dokładnie jedno: dzień miesiąca albo dzień tygodnia'

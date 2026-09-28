@@ -4,7 +4,7 @@
 # the family tracks; the addresses and the assets held at them live on
 # onchain_wallet_accounts.
 class OnchainWalletItem < ApplicationRecord
-  include Syncable, Provided, Encryptable
+  include Syncable, Provided, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -25,11 +25,6 @@ class OnchainWalletItem < ApplicationRecord
   scope :needs_update, -> { where(status: :requires_update) }
 
   before_validation :strip_credentials
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   # Self-custody needs no credentials: every chain is readable keyless. The
   # optional Etherscan key only raises Ethereum's rate limit.

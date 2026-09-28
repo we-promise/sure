@@ -123,7 +123,7 @@ namespace :security do
             # Normalizing on write, bypassing validations/callbacks as above,
             # matches the normalize_iban callback so find_by(iban:) with a
             # canonical value still matches a formatted/lowercase legacy row.
-            value = value.to_s.gsub(/[[:space:]]+/, "").upcase.presence if field == :iban
+            value = IbanNormalizable.normalize(value) if field == :iban
             encryptor.send("#{field}=", value)
           end
 
