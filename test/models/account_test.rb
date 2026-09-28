@@ -920,4 +920,15 @@ class AccountTest < ActiveSupport::TestCase
 
     assert_nil account.history_start_date
   end
+
+  test "annotatable_by includes owned and annotate-tier shares but not read-only ones" do
+    member = users(:family_member)
+    ids = Account.annotatable_by(member).pluck(:id)
+
+    assert_includes ids, accounts(:depository).id, "full_control share"
+    assert_not_includes ids, accounts(:credit_card).id, "read_only share"
+
+    accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
+    assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
+  end
 end

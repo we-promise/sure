@@ -15,6 +15,19 @@
                 hidden: Setting.llm_provider != "anthropic" do %>
       <%= render "settings/hostings/anthropic_settings" %>
     <% end %>
+    <%# Jev is a classification provider, not an LLM: it answers typed questions
+        and cannot generate text. This sits outside the panels above so the
+        llm_provider selector never shows or hides it — that selector governs
+        chat and PDF, which Jev can never serve. The panel renders its own
+        credential fields once Jev is selected.
+
+        Preview gates the entry point only — see
+        docs/llm-guides/gating-a-preview-feature.md. Resolution reads the family
+        column, so a family that opts in and then picks the LLM provider keeps
+        the LLM provider. %>
+    <% if preview_features_enabled? %>
+      <%= render "settings/hostings/categorization_provider_selector" %>
+    <% end %>
     <%= render "settings/hostings/brand_fetch_settings" %>
   </div>
 <% end %>

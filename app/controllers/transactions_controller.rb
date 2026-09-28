@@ -242,15 +242,46 @@ class TransactionsController < ApplicationController
   def update_tags
     return unless require_account_permission!(@entry.account, :annotate, redirect_path: transaction_path(@entry))
 
-    tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
+    # The transaction-row tag picker toggles one tag at a time; the drawer's
+    # multiselect sends the full set.
+    if params[:toggle_tag_id].present?
+      @toggled_tag = Current.family.tags.find(params[:toggle_tag_id])
+      @entry.transaction.toggle_tag!(@toggled_tag)
+    else
+      @entry.transaction.tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
+    end
 
-    @entry.transaction.tag_ids = tag_ids
     @entry.lock_saved_attributes!
     @entry.mark_user_modified!
     @entry.transaction.lock_attr!(:tag_ids)
     @entry.sync_account_later
 
-    render json: { tag_ids: @entry.transaction.tag_ids }
+    respond_to do |format|
+      # JSON stays first so Accept: */* callers keep the original response.
+      format.json { render json: { tag_ids: @entry.transaction.tag_ids } }
+      # Without Turbo the row picker's button_to posts as plain HTML.
+      format.html { redirect_back_or_to transaction_path(@entry) }
+      format.turbo_stream do
+        transaction = @entry.transaction
+        streams = %i[desktop mobile].map do |variant|
+          turbo_stream.replace(
+            dom_id(transaction, "tag_summary_#{variant}"),
+            partial: "tags/summary",
+            locals: { transaction: transaction, variant: variant }
+          )
+        end
+        if @toggled_tag
+          # autofocus hands keyboard focus back to the re-rendered option,
+          # which Turbo focuses after the stream renders.
+          streams << turbo_stream.replace(
+            "#{dom_id(@entry, :tag_option)}_#{@toggled_tag.id}",
+            partial: "tag/dropdowns/row",
+            locals: { tag: @toggled_tag, entry: @entry, selected: transaction.tag_ids.include?(@toggled_tag.id), autofocus: true }
+          )
+        end
+        render turbo_stream: streams
+      end
+    end
   end
 
   def merge_duplicate

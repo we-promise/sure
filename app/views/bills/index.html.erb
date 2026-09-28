@@ -84,7 +84,7 @@
                  ) %>
               <p class="text-xs text-secondary privacy-sensitive">
                 <%= format_money(suggestion.allocated_amount_money) %>
-                &middot; <%= l(suggestion.paid_on, format: :short) %><%= " · #{reasons.join(" · ")}" if reasons.any? %>
+                &middot; <%= l(suggestion.paid_on, format: :short_with_year) %><%= " · #{reasons.join(" · ")}" if reasons.any? %>
               </p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
