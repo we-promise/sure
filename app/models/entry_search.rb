@@ -117,10 +117,13 @@ class EntrySearch
 
     if transaction_specific_filters?
       # Only Transaction entries have a category/merchant/type/tags, so this
-      # join is skipped unless one of those filters is active — Valuations
-      # and Trades are excluded from the join's downstream conditions (see
-      # Transaction::Search's apply_* methods) rather than from here.
+      # join is skipped unless one of those filters is active. Most of
+      # Transaction::Search's apply_* methods exclude non-Transaction entries
+      # as a side effect of their own conditions, but apply_type_filter
+      # doesn't when every type is selected (it's a no-op then) — so exclude
+      # non-Transaction entries explicitly here instead of relying on that.
       query = query.joins("LEFT JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
+      query = query.where(entries: { entryable_type: "Transaction" })
       query = Transaction::Search.apply_category_filter(query, categories, family)
       query = Transaction::Search.apply_type_filter(query, types)
       query = Transaction::Search.apply_merchant_filter(query, merchants)

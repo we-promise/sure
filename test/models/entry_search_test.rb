@@ -43,6 +43,16 @@ class EntrySearchTest < ActiveSupport::TestCase
     assert_not_includes result_ids, valuation.id
   end
 
+  test "type filter excludes non-Transaction entries even when every type is selected" do
+    expense = create_transaction(account: @account, amount: 100, kind: "standard")
+    valuation = create_valuation(account: @account)
+
+    result_ids = @account.entries.search({ types: [ "expense", "income", "transfer" ] }).pluck(:id)
+
+    assert_includes result_ids, expense.id
+    assert_not_includes result_ids, valuation.id
+  end
+
   test "merchant filter's No merchant bucket excludes non-Transaction entries" do
     without_merchant = create_transaction(account: @account, amount: 100)
     valuation = create_valuation(account: @account)
