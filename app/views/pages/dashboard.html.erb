@@ -105,7 +105,8 @@
             <% end %>
             <% layout = section[:layout] %>
             <% show_width = layout[:width_toggle] && two_column %>
-            <% if layout[:grow] || show_width %>
+            <% sankey_options = section[:key] == "cashflow_sankey" %>
+            <% if layout[:grow] || show_width || sankey_options %>
               <details
                 class="relative hidden lg:block"
                 data-controller="dashboard-widget-size"
@@ -117,6 +118,23 @@
                   <%= icon("sliders-horizontal", size: "sm", class: "!w-3.5 !h-3.5") %>
                 </summary>
                 <div class="absolute right-0 top-full mt-1.5 z-10 w-48 p-2.5 space-y-2.5 bg-surface rounded-xl shadow-border-xs border border-primary">
+                  <% if sankey_options %>
+                    <div class="space-y-1.5" data-controller="cashflow-sankey-view">
+                      <p class="flex items-center gap-1.5 text-xs font-medium text-secondary">
+                        <%= icon("waypoints", size: "xs") %>
+                        <%= t("pages.dashboard.cashflow_sankey.view_label") %>
+                      </p>
+                      <%= render DS::SegmentedControl.new(full_width: true, aria_label: t("pages.dashboard.cashflow_sankey.view_label")) do |sc| %>
+                        <% User::CASHFLOW_SANKEY_VIEWS.each do |view| %>
+                          <% sc.with_segment(
+                               t("pages.dashboard.cashflow_sankey.view_#{view}"),
+                               active: @cashflow_sankey_view == view,
+                               data: { action: "cashflow-sankey-view#select", view: view }
+                             ) %>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  <% end %>
                   <% if show_width %>
                     <div class="space-y-1.5">
                       <p class="flex items-center gap-1.5 text-xs font-medium text-secondary">

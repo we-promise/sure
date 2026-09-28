@@ -615,6 +615,14 @@ class User < ApplicationRecord
     preferences&.dig("dashboard_section_layout", section_key, "height")
   end
 
+  CASHFLOW_SANKEY_VIEWS = %w[categories accounts].freeze
+
+  # Dashboard cash-flow Sankey: flows by category (default) or split by account.
+  def cashflow_sankey_view
+    view = preferences&.dig("cashflow_sankey_view")
+    CASHFLOW_SANKEY_VIEWS.include?(view) ? view : "categories"
+  end
+
   # Per-widget column-span override ("single" | "full"); nil = use default.
   def dashboard_section_width(section_key)
     preferences&.dig("dashboard_section_layout", section_key, "col_span")
