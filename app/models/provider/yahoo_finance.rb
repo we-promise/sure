@@ -844,8 +844,10 @@ class Provider::YahooFinance < Provider
       data = JSON.parse(response.body)
 
       # Rare fallback: if Yahoo ever demands auth for a specific symbol
-      # (200 OK with an Unauthorized body), retry once with cookie+crumb.
+      # (200 OK with an Unauthorized body), retry once with FRESH cookie+crumb.
+      # Clear any cached crumb first so a stale-but-shape-valid one isn't reused.
       if data.dig("chart", "error", "code") == "Unauthorized"
+        clear_crumb_cache
         cookie, crumb = fetch_cookie_and_crumb
         response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
           params.each { |k, v| req.params[k] = v }
