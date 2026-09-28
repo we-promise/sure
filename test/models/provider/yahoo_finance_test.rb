@@ -962,8 +962,33 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
 
   test "normalize_symbol leaves unconfigured MIC symbols unchanged" do
     assert_equal "AAPL", @provider.send(:normalize_symbol, "AAPL", "XNAS")
-    assert_equal "BARC", @provider.send(:normalize_symbol, "BARC", "XLON")
+    assert_equal "SHOP", @provider.send(:normalize_symbol, "SHOP", "XTSE")
     assert_equal "AAPL", @provider.send(:normalize_symbol, "AAPL", nil)
+  end
+
+  # A European listing sent bare is a 404 at Yahoo; the security then fails
+  # every fetch and silently never gets a price.
+  test "normalize_symbol appends the Yahoo suffix for European exchanges" do
+    assert_equal "IUSQ.DE",   @provider.send(:normalize_symbol, "IUSQ", "XETR")
+    assert_equal "SAP.F",     @provider.send(:normalize_symbol, "SAP", "XFRA")
+    assert_equal "BARC.L",    @provider.send(:normalize_symbol, "BARC", "XLON")
+    assert_equal "MC.PA",     @provider.send(:normalize_symbol, "MC", "XPAR")
+    assert_equal "ASML.AS",   @provider.send(:normalize_symbol, "ASML", "XAMS")
+    assert_equal "NESN.SW",   @provider.send(:normalize_symbol, "NESN", "XSWX")
+    assert_equal "VOLV-B.ST", @provider.send(:normalize_symbol, "VOLV-B", "XSTO")
+    assert_equal "OMV.VI",    @provider.send(:normalize_symbol, "OMV", "XWBO")
+  end
+
+  test "normalize_symbol does not double-suffix a European symbol stored with its suffix" do
+    assert_equal "IUSQ.DE", @provider.send(:normalize_symbol, "IUSQ.DE", "XETR")
+    assert_equal "BARC.L",  @provider.send(:normalize_symbol, "BARC.L", "XLON")
+  end
+
+  test "default_currency_for_exchange knows the European venues Yahoo names" do
+    assert_equal "GBP", @provider.send(:default_currency_for_exchange, "LSE")
+    assert_equal "EUR", @provider.send(:default_currency_for_exchange, "FRA")
+    assert_equal "EUR", @provider.send(:default_currency_for_exchange, "PAR")
+    assert_equal "CHF", @provider.send(:default_currency_for_exchange, "SWX")
   end
 
   test "normalize_symbol appends suffix to dotted symbols that do not already end with the configured suffix" do
