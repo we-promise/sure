@@ -857,9 +857,13 @@ class Provider::YahooFinance < Provider
       if needs_auth
         clear_crumb_cache
         cookie, crumb = fetch_cookie_and_crumb
-        response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
-          params.each { |k, v| req.params[k] = v }
-          req.params["crumb"] = crumb
+        begin
+          response = authenticated_client(cookie).get("#{base_url}/v8/finance/chart/#{symbol}") do |req|
+            params.each { |k, v| req.params[k] = v }
+            req.params["crumb"] = crumb
+          end
+        rescue Faraday::UnauthorizedError
+          raise AuthenticationError, "Yahoo Finance authentication failed after crumb refresh"
         end
         data = JSON.parse(response.body)
         if data.dig("chart", "error", "code") == "Unauthorized"
