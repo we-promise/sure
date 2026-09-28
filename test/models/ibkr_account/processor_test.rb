@@ -50,6 +50,24 @@ class IbkrAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal Date.current - 1.day, @account.valuations.current_anchor.first.entry.date
   end
 
+  # An older statement describes a day gone by. The account's own balance, and
+  # the cash split beside it, are what it is worth now, so neither follows it.
+  test "an older statement leaves the account's own balance alone" do
+    IbkrAccount::Processor.new(@ibkr_account).process
+    assert_equal 3351, @account.reload.balance
+
+    @ibkr_account.update!(report_date: Date.current - 3.days, current_balance: 2000, cash_balance: 40)
+    IbkrAccount::Processor.new(@ibkr_account.reload).process
+
+    @account.reload
+    assert_equal 3351, @account.balance, "the cached balance must not follow an older statement"
+    assert_equal 1000.5, @account.cash_balance, "nor its cash split"
+    assert_equal Date.current - 1.day, @account.valuations.current_anchor.first.entry.date
+    older = @account.entries.valuations.find_by(date: Date.current - 3.days)
+    assert_not_nil older, "the older statement is kept where it belongs"
+    assert_equal 2000, older.amount
+  end
+
   # Nothing to date it by, or a statement dated ahead of today: fall back to
   # today rather than anchoring the account in the future.
   test "falls back to today when the report date is missing or ahead" do

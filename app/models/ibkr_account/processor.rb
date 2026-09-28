@@ -26,18 +26,22 @@ class IbkrAccount::Processor
       total_balance = ibkr_account.current_balance || ibkr_account.cash_balance || 0
       cash_balance = ibkr_account.cash_balance || 0
 
-      account.assign_attributes(
-        balance: total_balance,
-        cash_balance: cash_balance,
-        currency: ibkr_account.currency
-      )
-      account.save!
+      # Currency belongs to the account rather than to any one statement.
+      account.update!(currency: ibkr_account.currency) if account.currency != ibkr_account.currency
+
       # Dated to the statement, not to today: the NAV is as of IBKR's report date
       # and the holdings imported beside it carry that same date. Anchoring it to
       # today instead pairs one day's NAV with the next day's prices, and the cash
       # plug absorbs the difference -- a phantom balance the size of whatever the
       # holdings moved that day, on every day of the account's history.
-      account.set_current_balance(total_balance, date: balance_date)
+      result = account.set_current_balance(total_balance, date: balance_date)
+
+      # The cached balance and its cash split are what the account is worth now,
+      # and set_current_balance owns the first of them. A statement older than the
+      # anchor describes a day gone by, so it moves neither.
+      account.update!(cash_balance: cash_balance) unless result.historical?
+
+      result
     end
 
     def balance_date

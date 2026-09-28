@@ -1,7 +1,10 @@
 class Account::CurrentBalanceManager
   InvalidOperation = Class.new(StandardError)
 
-  Result = Struct.new(:success?, :changes_made?, :error, keyword_init: true)
+  # `historical?` marks the statement as older than the anchor: it was recorded
+  # behind the current balance, which nothing about the account as it stands now
+  # should follow.
+  Result = Struct.new(:success?, :changes_made?, :error, :historical?, keyword_init: true)
 
   def initialize(account)
     @account = account
@@ -103,6 +106,7 @@ class Account::CurrentBalanceManager
     def set_current_balance_for_linked_account(balance, date)
       changes_made = false
       error = nil
+      historical = false
 
       # Locked, with the anchor re-read inside it: everything below turns on
       # which side of the anchor's date this statement falls, and a sync running
@@ -118,6 +122,7 @@ class Account::CurrentBalanceManager
           result = record_historical_balance(balance, date)
           changes_made = result.changes_made?
           error = result.error
+          historical = true
         else
           # Only a statement that moves the balance forward leaves the previous
           # anchor behind as a reconciliation. One carrying the anchor's own date
@@ -137,7 +142,7 @@ class Account::CurrentBalanceManager
         end
       end
 
-      Result.new(success?: error.nil?, changes_made?: changes_made, error: error)
+      Result.new(success?: error.nil?, changes_made?: changes_made, error: error, historical?: historical)
     end
 
     def anchor_newer_than?(date)
