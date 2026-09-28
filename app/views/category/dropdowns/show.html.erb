@@ -1,10 +1,14 @@
 <%= turbo_frame_tag "category_dropdown" do %>
+  <%# Creating is only offered where the category can then be assigned: a user who %>
+  <%# can't annotate this account would get a new category the assignment then rejects. %>
+  <% can_create = can_annotate_account?(@transaction.entry.account) %>
   <div class="flex flex-col relative"
        data-controller="list-filter category-quick-create"
        data-category-quick-create-create-url-value="<%= categories_path(format: :json) %>"
        data-category-quick-create-color-value="<%= Category::COLORS.sample %>"
        data-category-quick-create-label-template-value="<%= t(".create", name: "__NAME__") %>"
        data-category-quick-create-error-message-value="<%= t(".create_error") %>"
+       data-category-quick-create-assign-error-message-value="<%= t(".assign_error") %>"
        data-category-quick-create-parent-picker-label-value="<%= t(".choose_parent", name: "__NAME__") %>"
        data-category-quick-create-existing-names-value="<%= @categories.map(&:name).to_json %>">
     <div class="grow p-1.5">
@@ -24,38 +28,40 @@
           <%= icon("search", class: "absolute inset-0 ml-2 transform top-1/2 -translate-y-1/2") %>
         </div>
       </div>
-      <% parent_options = @categories.select { |category| category.parent_id.nil? }.sort_by { |category| category.name.downcase } %>
+      <% parent_options = can_create ? @categories.select { |category| category.parent_id.nil? }.sort_by { |category| category.name.downcase } : [] %>
       <div data-list-filter-target="list" data-category-quick-create-target="list" role="listbox" class="flex flex-col gap-0.5 p-1.5 mt-0.5 mr-2 max-h-64 overflow-y-scroll scrollbar">
         <div class="pb-2 pl-4 mr-2 text-secondary hidden" data-list-filter-target="emptyMessage">
           <%= t(".no_categories") %>
         </div>
-        <%# Shown by category-quick-create when the search matches no existing category name. %>
-        <%# Creating goes through the same update form as picking a row, so the list row %>
-        <%# refreshes and the "create a rule?" prompt still appears. %>
-        <%= form_with url: transaction_category_path(@transaction.entry, grouped: params[:grouped]),
-                      method: :patch,
-                      data: { turbo_frame: "category_dropdown", category_quick_create_target: "assignForm" } do |f| %>
-          <%= hidden_field_tag "entry[entryable_type]", "Transaction", id: nil %>
-          <%= hidden_field_tag "entry[entryable_attributes][id]", @transaction.id, id: nil %>
-          <%= hidden_field_tag "entry[entryable_attributes][category_id]", nil, id: nil, data: { category_quick_create_target: "categoryIdField" } %>
+        <% if can_create %>
+          <%# Shown by category-quick-create when the search matches no existing category name. %>
+          <%# Creating goes through the same update form as picking a row, so the list row %>
+          <%# refreshes and the "create a rule?" prompt still appears. %>
+          <%= form_with url: transaction_category_path(@transaction.entry, grouped: params[:grouped]),
+                        method: :patch,
+                        data: { turbo_frame: "category_dropdown", category_quick_create_target: "assignForm" } do |f| %>
+            <%= hidden_field_tag "entry[entryable_type]", "Transaction", id: nil %>
+            <%= hidden_field_tag "entry[entryable_attributes][id]", @transaction.id, id: nil %>
+            <%= hidden_field_tag "entry[entryable_attributes][category_id]", nil, id: nil, data: { category_quick_create_target: "categoryIdField" } %>
+          <% end %>
+          <%= render DS::ActionRow.new(
+                icon: "plus",
+                hidden: true,
+                data: { category_quick_create_target: "createButton", action: "category-quick-create#create" }
+              ) do %>
+            <span data-category-quick-create-target="createLabel"></span>
+          <% end %>
+          <% if parent_options.any? %>
+            <%= render DS::ActionRow.new(
+                  text: t(".create_as_subcategory"),
+                  icon: "corner-down-right",
+                  tone: :secondary,
+                  hidden: true,
+                  data: { category_quick_create_target: "createAsSubcategory", action: "category-quick-create#showParentPicker" }
+                ) %>
+          <% end %>
+          <p class="hidden px-2 pb-1 text-xs text-destructive" role="alert" data-category-quick-create-target="error"></p>
         <% end %>
-        <button type="button"
-                class="hidden items-center gap-1.5 w-full rounded-lg px-2 py-2 text-sm font-medium text-primary hover:bg-container-inset-hover cursor-pointer disabled:opacity-50"
-                data-category-quick-create-target="createButton"
-                data-action="category-quick-create#create">
-          <span class="flex items-center justify-center w-5 h-5 shrink-0"><%= icon("plus") %></span>
-          <span data-category-quick-create-target="createLabel"></span>
-        </button>
-        <% if parent_options.any? %>
-          <button type="button"
-                  class="hidden items-center gap-1.5 w-full rounded-lg px-2 py-2 text-sm text-secondary hover:bg-container-inset-hover cursor-pointer"
-                  data-category-quick-create-target="createAsSubcategory"
-                  data-action="category-quick-create#showParentPicker">
-            <span class="flex items-center justify-center w-5 h-5 shrink-0"><%= icon("corner-down-right") %></span>
-            <span><%= t(".create_as_subcategory") %></span>
-          </button>
-        <% end %>
-        <p class="hidden px-2 pb-1 text-xs text-destructive" data-category-quick-create-target="error"></p>
         <% if @recent_categories.any? %>
           <div data-list-filter-target="recentSection">
             <p class="pl-2 pb-1 text-xs font-medium text-secondary uppercase tracking-wide"><%= t(".recent") %></p>
@@ -96,20 +102,16 @@
              data-category-quick-create-target="parentPicker">
           <p class="px-2 pb-1 text-xs text-secondary" data-category-quick-create-target="parentPickerLabel"></p>
           <% parent_options.each do |parent| %>
-            <button type="button"
-                    class="flex items-center gap-1.5 w-full rounded-lg px-2 py-1 hover:bg-container-inset-hover cursor-pointer"
-                    data-parent-id="<%= parent.id %>"
-                    data-action="category-quick-create#createUnderParent">
-              <span class="w-5 h-5 shrink-0"></span>
+            <%= render DS::ActionRow.new(tone: :secondary, data: { parent_id: parent.id, action: "category-quick-create#createUnderParent" }) do %>
               <%= render partial: "categories/badge", locals: { category: parent } %>
-            </button>
+            <% end %>
           <% end %>
-          <button type="button"
-                  class="flex items-center gap-1.5 w-full rounded-lg px-2 py-2 text-sm text-secondary hover:bg-container-inset-hover cursor-pointer"
-                  data-action="category-quick-create#hideParentPicker">
-            <span class="flex items-center justify-center w-5 h-5 shrink-0"><%= icon("arrow-left") %></span>
-            <span><%= t(".back") %></span>
-          </button>
+          <%= render DS::ActionRow.new(
+                text: t(".back"),
+                icon: "arrow-left",
+                tone: :secondary,
+                data: { action: "category-quick-create#hideParentPicker" }
+              ) %>
         </div>
       <% end %>
 

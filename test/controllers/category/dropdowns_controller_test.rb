@@ -2,6 +2,7 @@ require "test_helper"
 
 class Category::DropdownsControllerTest < ActionDispatch::IntegrationTest
   include ActionView::RecordIdentifier
+  include EntriesTestHelper
 
   setup do
     sign_in users(:family_admin)
@@ -77,5 +78,17 @@ class Category::DropdownsControllerTest < ActionDispatch::IntegrationTest
       assert_select "button[data-parent-id=?]", categories(:food_and_drink).id
       assert_select "button[data-parent-id=?]", categories(:subcategory).id, count: 0
     end
+  end
+
+  test "does not offer creating a category on an account the user can only view" do
+    sign_in users(:family_member)
+    entry = create_transaction(account: accounts(:credit_card), name: "Read-only card spend")
+
+    get category_dropdown_url(transaction_id: entry.entryable.id)
+
+    assert_response :success
+    assert_select "[data-category-quick-create-target='createButton']", count: 0
+    assert_select "[data-category-quick-create-target='createAsSubcategory']", count: 0
+    assert_select "[data-category-quick-create-target='parentPicker']", count: 0
   end
 end
