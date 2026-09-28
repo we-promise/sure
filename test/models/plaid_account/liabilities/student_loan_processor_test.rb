@@ -68,7 +68,7 @@ class PlaidAccount::Liabilities::StudentLoanProcessorTest < ActiveSupport::TestC
     assert_equal Date.new(2019, 3, 4), @plaid_account.current_account.loan.start_date
   end
 
-  # Under 30 days between origination and payoff rounds to zero months. Stored
+  # A payoff less than a month after origination is zero months. Stored
   # as nil, because a term of no months is not a term -- and the rest of the
   # payload must still land rather than being lost with it.
   test "a term of under a month is no term, and does not cost the rest of the sync" do
@@ -88,6 +88,66 @@ class PlaidAccount::Liabilities::StudentLoanProcessorTest < ActiveSupport::TestC
     assert_nil loan.term_months
     assert_equal 6.25, loan.interest_rate, "the rest of the payload still lands"
     assert_equal 900, loan.initial_balance
+  end
+
+  # Counted in calendar months, not 30-day blocks: thirty years is 10,958 days,
+  # which divided by 30 made a 360-month loan a 365-month one and put its payoff
+  # date and current instalment five months out.
+  test "the term is counted in calendar months" do
+    @plaid_account.update!(raw_liabilities_payload: {
+      student: {
+        interest_rate_percentage: 5.5,
+        origination_principal_amount: 20000,
+        origination_date: Date.new(2000, 1, 1),
+        expected_payoff_date: Date.new(2030, 1, 1)
+      }
+    })
+
+    PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account).process
+
+    assert_equal 360, @plaid_account.current_account.loan.term_months
+  end
+
+  # Both sides of the boundary: a month counts once it has been served in full,
+  # which is how Loan#months_elapsed counts the same loan's progress.
+  test "a term month counts once it is served in full" do
+    [ [ Date.new(2026, 2, 24), nil ], [ Date.new(2026, 2, 25), 1 ], [ Date.new(2027, 1, 24), 11 ] ].each do |payoff, expected|
+      @plaid_account.update!(raw_liabilities_payload: {
+        student: {
+          interest_rate_percentage: 5.5,
+          origination_principal_amount: 20000,
+          origination_date: Date.new(2026, 1, 25),
+          expected_payoff_date: payoff
+        }
+      })
+
+      PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account).process
+
+      assert_equal expected, @plaid_account.current_account.loan.reload.term_months, "payoff on #{payoff}"
+    end
+  end
+
+  # A loan cannot start in the future (Loan validates it), and a provider date
+  # that says otherwise must not fail the whole liabilities sync with it. The
+  # date is left unrecorded and the rest of the payload lands.
+  test "a future origination date is not recorded and does not fail the sync" do
+    travel_to Date.new(2026, 1, 10) do
+      @plaid_account.update!(raw_liabilities_payload: {
+        student: {
+          interest_rate_percentage: 5.5,
+          origination_principal_amount: 20000,
+          origination_date: Date.new(2026, 3, 1),
+          expected_payoff_date: Date.new(2036, 3, 1)
+        }
+      })
+
+      PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account).process
+
+      loan = @plaid_account.current_account.loan.reload
+      assert_nil loan.start_date
+      assert_equal 5.5, loan.interest_rate, "the rest of the payload still lands"
+      assert_equal 120, loan.term_months
+    end
   end
 
   test "handles missing payoff dates gracefully" do

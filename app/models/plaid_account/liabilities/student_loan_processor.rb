@@ -31,18 +31,29 @@ class PlaidAccount::Liabilities::StudentLoanProcessor
     # Never overwrites a date already recorded: a borrower who corrected the
     # drawdown by hand knows something the provider does not, and a sync is
     # not the place to argue with them.
+    #
+    # Nor records one in the future: Loan rejects a start date after today, and
+    # a provider date that says otherwise would fail the whole sync with it.
     def start_date
-      account.loan.start_date || origination_date
+      account.loan.start_date || recordable_origination_date
     end
 
-    # A loan within ~30 days of payoff, or one whose payoff date isn't after
-    # its origination, rounds down to nothing here. nil rather than zero: a
-    # term of no months is not a term, and it would make the loan look
-    # amortisable over a schedule that cannot exist.
+    def recordable_origination_date
+      origination_date if origination_date && origination_date <= Date.current
+    end
+
+    # Counted in whole calendar months, as the schedule and Loan#months_elapsed
+    # count them: 30-day blocks made a 30-year loan 365 months long. A month
+    # counts once it is served in full, so a payoff less than a month after
+    # origination, or before it, is nil rather than zero: a term of no months
+    # is not a term, and it would make the loan look amortisable over a
+    # schedule that cannot exist.
     def term_months
       return nil unless origination_date && expected_payoff_date
 
-      months = ((expected_payoff_date - origination_date).to_i / 30).to_i
+      months = (expected_payoff_date.year * 12 + expected_payoff_date.month) -
+        (origination_date.year * 12 + origination_date.month)
+      months -= 1 if origination_date + months.months > expected_payoff_date
       months.positive? ? months : nil
     end
 
