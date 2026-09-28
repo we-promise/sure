@@ -26,14 +26,30 @@ class Transfer::Matcher
     @transaction = transaction
   end
 
+  # Only pairs match_with! accepts: the family query already skips excluded
+  # entries (including split parents), so split children are dropped here.
   def candidates(date_window: DATE_WINDOW)
+    return [] if entry.excluded? || entry.split_child?
+
     filter = entry.amount.negative? ? { inflow_transaction_id: transaction.id } : { outflow_transaction_id: transaction.id }
 
-    family.transfer_match_candidates(
+    rows = family.transfer_match_candidates(
       date_window: date_window,
       exchange_rate_tolerance: Family::AutoTransferMatchable.manual_match_exchange_rate_tolerance,
       **filter
     )
+
+    split_child_ids = Entry.where(entryable_type: "Transaction", entryable_id: rows.map { |row| counterpart_id(row) })
+      .where.not(parent_entry_id: nil)
+      .pluck(:entryable_id)
+      .to_set
+
+    rows.reject { |row| split_child_ids.include?(counterpart_id(row)) }
+  end
+
+  # The other transaction in a candidate row.
+  def counterpart_id(row)
+    row.inflow_transaction_id == transaction.id ? row.outflow_transaction_id : row.inflow_transaction_id
   end
 
   # With dry_run: true, runs every check and returns the unsaved transfer.
@@ -41,7 +57,7 @@ class Transfer::Matcher
     ensure_matchable!(transaction)
     ensure_matchable!(counterpart)
 
-    unless candidates.any? { |c| [ c.inflow_transaction_id, c.outflow_transaction_id ].include?(counterpart.id) }
+    unless candidates.any? { |row| counterpart_id(row) == counterpart.id }
       raise Error.new(:not_a_candidate, "The two transactions cannot form a transfer: they need opposite, matching amounts in different accounts of the same family, at most #{DATE_WINDOW} days apart.")
     end
 
