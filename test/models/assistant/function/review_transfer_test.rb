@@ -38,6 +38,18 @@ class Assistant::Function::ReviewTransferTest < ActiveSupport::TestCase
     assert Transfer.exists?(@transfer.id)
   end
 
+  test "a review that lost a race to another review changes nothing" do
+    # Loaded while pending, then confirmed by a concurrent request
+    stale = Transfer.find(@transfer.id)
+    @transfer.confirm!
+    @function.stubs(:find_transfer).returns(stale)
+
+    result = @function.call("transfer_id" => @transfer.id, "action" => "reject")
+
+    assert_equal "not_pending", result[:error]
+    assert Transfer.find(@transfer.id).confirmed?
+  end
+
   test "refuses an unknown action" do
     result = @function.call("transfer_id" => @transfer.id, "action" => "delete")
 

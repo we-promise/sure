@@ -60,11 +60,19 @@ class Assistant::Function::ReviewTransfer < Assistant::Function
       inflow: serialize_transaction(transfer.inflow_transaction)
     }
 
+    # Lock and recheck, so of two concurrent reviews only the first one acts:
+    # otherwise a reject could destroy a transfer another call just confirmed.
+    reviewed = transfer.with_lock do
+      next false unless transfer.pending?
+
+      params["action"] == "confirm" ? transfer.confirm! : transfer.reject!
+      true
+    end
+    return error("not_pending", "The transfer was reviewed by another request; it is no longer pending.") unless reviewed
+
     if params["action"] == "confirm"
-      transfer.confirm!
       { success: true, action: "confirmed", transfer: snapshot.merge(status: transfer.status) }
     else
-      transfer.reject!
       { success: true, action: "rejected", transfer: snapshot }
     end
   end
