@@ -949,6 +949,33 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_nil legacy.transaction.investment_activity_label
   end
 
+  test "keeps a rule-assigned category and label on a deposit that earlier syncs stored as an investment contribution" do
+    cash_account, cash_sure = create_linked_cash_account!
+    category = @family.investment_contributions_category
+    legacy = Account::ProviderImportAdapter.new(cash_sure).import_transaction(
+      external_id: "trade_republic_event_evt_rule_legacy",
+      amount: BigDecimal("-500.00"),
+      currency: "EUR",
+      date: Date.parse("2026-08-01"),
+      name: "Cash in",
+      source: "trade_republic",
+      kind: "investment_contribution"
+    )
+    assert_nil legacy.transaction.category_id
+    assert legacy.transaction.enrich_attribute(:category_id, category.id, source: "rule")
+    assert legacy.transaction.enrich_attribute(:investment_activity_label, "Contribution", source: "rule")
+
+    cash_account.update!(raw_timeline_payload: [
+      deposit_event.merge(id: "evt_rule_legacy", eventType: "PAYMENT_INBOUND_GOOGLE_PAY", title: "Cash in")
+    ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    legacy.transaction.reload
+    assert_equal "standard", legacy.transaction.kind
+    assert_equal category.id, legacy.transaction.category_id
+    assert_equal "Contribution", legacy.transaction.investment_activity_label
+  end
+
   test "resets payments that earlier syncs stored as fund movements" do
     cash_account, cash_sure = create_linked_cash_account!
     adapter = Account::ProviderImportAdapter.new(cash_sure)
