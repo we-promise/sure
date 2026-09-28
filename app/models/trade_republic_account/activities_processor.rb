@@ -116,13 +116,25 @@ class TradeRepublicAccount::ActivitiesProcessor
     end
 
     # Matches the positions the Crypto account holds: an XF000 pseudo-ISIN,
-    # or the ISIN of a position Trade Republic lists under crypto.
+    # or the ISIN of a position Trade Republic lists under crypto. A trade the
+    # Crypto account already holds stays there after the position is closed
+    # and leaves the snapshot.
     def crypto_event?(event)
       detail = event[:detail]
       return false unless detail.is_a?(Hash)
 
       isin = detail.with_indifferent_access[:isin].to_s
-      TradeRepublicAccount.crypto_isin?(isin) || crypto_position_isins.include?(isin)
+      TradeRepublicAccount.crypto_isin?(isin) ||
+        crypto_position_isins.include?(isin) ||
+        crypto_account_trade_ids.include?("trade_republic_event_#{event[:id]}")
+    end
+
+    def crypto_account_trade_ids
+      @crypto_account_trade_ids ||= begin
+        crypto_account = @trade_republic_account.sibling("crypto")&.usable_account
+        ids = crypto_account&.entries&.where(source: "trade_republic", entryable_type: "Trade")&.pluck(:external_id)
+        Array(ids).to_set
+      end
     end
 
     def crypto_position_isins
