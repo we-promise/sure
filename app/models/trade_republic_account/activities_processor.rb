@@ -5,6 +5,15 @@ class TradeRepublicAccount::ActivitiesProcessor
   ROUND_UP_EVENT_TYPE = "SPARE_CHANGE_AGGREGATE"
   SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
   SAVINGS_PLAN_EXECUTION_EVENT_TYPES = %w[TRADING_SAVINGSPLAN_EXECUTED SAVINGS_PLAN_EXECUTED].freeze
+  ACTIVITY_LABELS_BY_KEY = {
+    "contribution" => "Contribution",
+    "withdrawal" => "Withdrawal",
+    "interest" => "Interest",
+    "dividend" => "Dividend",
+    "card_fee" => "Fee",
+    "round_up" => "Buy"
+  }.freeze
+  CASH_UNLABELED_KEYS = %w[contribution withdrawal].freeze
 
   def initialize(trade_republic_account, exchange_securities: {})
     @trade_republic_account = trade_republic_account
@@ -133,17 +142,13 @@ class TradeRepublicAccount::ActivitiesProcessor
 
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       when CATEGORY_DEPOSIT
-        label = cash_label(event, default: nil)
-        import_cash_movement(
-          event, detail, external_id, date,
-          label: label || t("contribution"), activity_label: label || deposit_activity_label, sign: -1
-        ) ? :transaction : nil
+        import_labeled_cash_movement(event, detail, external_id, date, cash_label_key(event, default: "contribution"), sign: -1)
       when CATEGORY_WITHDRAWAL
-        import_cash_movement(event, detail, external_id, date, label: cash_label(event, default: t("withdrawal")), sign: 1) ? :transaction : nil
+        import_labeled_cash_movement(event, detail, external_id, date, cash_label_key(event, default: "withdrawal"), sign: 1)
       when CATEGORY_INTEREST
-        import_cash_movement(event, detail, external_id, date, label: t("interest"), sign: -1) ? :transaction : nil
+        import_labeled_cash_movement(event, detail, external_id, date, "interest", sign: -1)
       when CATEGORY_DIVIDEND
-        import_cash_movement(event, detail, external_id, date, label: t("dividend"), sign: -1) ? :transaction : nil
+        import_labeled_cash_movement(event, detail, external_id, date, "dividend", sign: -1)
       end
     rescue => e
       DebugLogEntry.capture(
@@ -168,10 +173,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       if @trade_republic_account.portfolio?
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       else
-        import_cash_movement(
-          event, detail, external_id, date,
-          label: t("round_up"), sign: 1, kind: "investment_contribution"
-        ) ? :transaction : nil
+        import_labeled_cash_movement(event, detail, external_id, date, "round_up", sign: 1, kind: "investment_contribution")
       end
     end
 
@@ -325,12 +327,22 @@ class TradeRepublicAccount::ActivitiesProcessor
         external_id,
         date,
         label: outflow ? "Buy" : "Sell",
+        activity_label: outflow ? "Buy" : "Sell",
         sign: outflow ? 1 : -1,
         kind: outflow ? "investment_contribution" : "funds_movement"
       )
     end
 
-    def import_cash_movement(event, detail, external_id, date, label:, sign:, activity_label: label, kind: nil)
+    # The label key names the entry (in the sync's locale) when Trade Republic
+    # sends no title, and picks the stored activity label.
+    def import_labeled_cash_movement(event, detail, external_id, date, label_key, sign:, kind: nil)
+      import_cash_movement(
+        event, detail, external_id, date,
+        label: t(label_key), activity_label: activity_label_for(label_key), sign: sign, kind: kind
+      ) ? :transaction : nil
+    end
+
+    def import_cash_movement(event, detail, external_id, date, label:, activity_label:, sign:, kind: nil)
       amount = parse_decimal(detail[:amount])
       return false unless amount && !amount.zero?
 
@@ -368,11 +380,16 @@ class TradeRepublicAccount::ActivitiesProcessor
       true
     end
 
-    # The import adapter turns a Contribution label into investment_contribution,
-    # a kind budgets count as an expense. On the cash account a deposit is money
-    # arriving on a checking balance, so it carries no investment label.
-    def deposit_activity_label
-      @trade_republic_account.cash? ? nil : t("contribution")
+    # Stored as fixed Transaction::ACTIVITY_LABELS values: budgets, the import
+    # adapter and the label picker compare against them, so they must not
+    # follow the locale a sync runs in. Card activity carries no label. On the
+    # cash account deposits and withdrawals move money on a checking balance,
+    # so they carry none either; a Contribution label would make the adapter
+    # book them as investment_contribution.
+    def activity_label_for(label_key)
+      return nil if @trade_republic_account.cash? && CASH_UNLABELED_KEYS.include?(label_key)
+
+      ACTIVITY_LABELS_BY_KEY[label_key]
     end
 
     # Cash-account deposits and withdrawals are imported as standard
@@ -442,22 +459,20 @@ class TradeRepublicAccount::ActivitiesProcessor
         Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES[event[:eventType].to_s].to_s
     end
 
-    def cash_label(event, default:)
+    def cash_label_key(event, default:)
       case event[:eventType].to_s
-      when "CARD_TRANSACTION", "card_successful_transaction"
-        t("card_payment")
+      when "CARD_TRANSACTION", "card_successful_transaction", "CARD_CASH_BACK"
+        "card_payment"
       when "CARD_ATM_WITHDRAWAL"
-        t("cash_withdrawal")
+        "cash_withdrawal"
       when "CARD_ORDER_FEE"
-        t("card_fee")
-      when "CARD_CASH_BACK"
-        t("card_payment")
+        "card_fee"
       when "card_refund", "CARD_REFUND"
-        t("card_refund")
+        "card_refund"
       when "TAX_REFUND", "SSP_TAX_CORRECTION", "ssp_tax_correction_invoice"
-        t("tax_refund")
+        "tax_refund"
       when ROUND_UP_EVENT_TYPE
-        t("round_up")
+        "round_up"
       else
         default
       end
