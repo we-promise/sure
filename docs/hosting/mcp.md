@@ -353,10 +353,10 @@ For a production-ready setup with security scanning:
 2. **Create `.env` with a secret key and your MCP credentials:**
 
    ```bash
-   echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> .env
+   grep -qE '^[[:space:]]*(export[[:space:]]+)?SECRET_KEY_BASE[[:space:]]*=' .env 2>/dev/null || echo "SECRET_KEY_BASE=$(openssl rand -hex 64)" >> .env
    ```
 
-   The stack will not start without a `SECRET_KEY_BASE`. On an existing install, keep the one you already use; see [Configure your environment](docker.md#step-3-configure-your-environment). Then add:
+   The stack will not start without a `SECRET_KEY_BASE`, and the command only adds one when `.env` has none. On an existing install, keep the one you already use; see [Configure your environment](docker.md#step-3-configure-your-environment). Then add:
 
    ```bash
    MCP_API_TOKEN=your-secret-token
