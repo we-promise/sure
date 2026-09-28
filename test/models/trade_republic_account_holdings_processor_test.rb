@@ -511,6 +511,37 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal "TGAT", security.exchange_operating_mic
   end
 
+  test "crypto positions resolve to the shared crypto security when crypto prices are enabled" do
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data binance_public])
+
+    import_position(isin: "XF000BTC0017", quantity: "0.000134", price: "72688.64")
+
+    security = @account.holdings.sole.security
+    assert_equal "CRYPTO:BTC", security.ticker
+    assert_equal "binance_public", security.price_provider
+    assert security.crypto?
+  end
+
+  test "crypto positions keep the offline ISIN security without a crypto price provider" do
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data])
+
+    import_position(isin: "XF000BTC0017", quantity: "0.000134", price: "72688.64")
+
+    security = @account.holdings.sole.security
+    assert_equal "XF000BTC0017", security.ticker
+    assert security.offline?
+  end
+
+  test "holdings move from the offline crypto ISIN once crypto prices are enabled" do
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data])
+    import_position(isin: "XF000BTC0017", quantity: "0.000134", price: "72688.64")
+
+    Setting.stubs(:enabled_securities_providers).returns(%w[twelve_data binance_public])
+    import_position(isin: "XF000BTC0017", quantity: "0.000134", price: "72688.64")
+
+    assert_equal [ "CRYPTO:BTC" ], @account.holdings.includes(:security).map { |holding| holding.security.ticker }
+  end
+
   private
 
     def import_position(isin:, quantity:, price:, average_cost: nil, symbol: nil, exchange_slug: nil)
