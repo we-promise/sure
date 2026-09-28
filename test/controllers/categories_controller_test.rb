@@ -142,6 +142,8 @@ class CategoriesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
+    # The inline create reads `errors` first (then `error`, then `message`).
+    assert_includes JSON.parse(response.body).fetch("errors"), "Parent is invalid"
   end
 
   test "create and assign to transaction" do

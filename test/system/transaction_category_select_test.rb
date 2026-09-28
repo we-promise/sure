@@ -120,4 +120,27 @@ class TransactionCategorySelectTest < ApplicationSystemTestCase
       assert_button 'Create "Changed My Mind"'
     end
   end
+
+  test "a top-level category created inline is offered as a parent without reloading" do
+    visit new_transaction_url
+    find("[data-controller='category-select'] button").click
+
+    within "[data-controller='category-select']" do
+      fill_in "Search categories", with: "Fresh Parent"
+      click_button 'Create "Fresh Parent"'
+      assert_selector "[data-category-select-target='selectionContainer']", text: "Fresh Parent"
+    end
+
+    fresh_parent = Category.find_by!(name: "Fresh Parent")
+    find("[data-controller='category-select'] button").click
+
+    within "[data-controller='category-select']" do
+      fill_in "Search categories", with: "Fresh Child"
+      click_button "Add as a subcategory…"
+      find("button[data-parent-id='#{fresh_parent.id}']").click
+      assert_selector "[data-category-select-target='selectionContainer']", text: "Fresh Child"
+    end
+
+    assert_equal fresh_parent, Category.find_by!(name: "Fresh Child").parent
+  end
 end
