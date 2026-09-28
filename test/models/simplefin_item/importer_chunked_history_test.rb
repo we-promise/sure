@@ -102,6 +102,40 @@ class SimplefinItem::ImporterChunkedHistoryTest < ActiveSupport::TestCase
     assert history["stopped_early"]
   end
 
+  test "settled rows without a posted date count toward the window of their transaction date" do
+    # Some bridges omit posted on settled transactions and only send transacted_at.
+    unposted = ->(id, time) { { id: id, transacted_at: time.to_i, amount: "-10.00", description: "Purchase #{id}" } }
+    stub_windows(
+      [ unposted.call("t1", 10.days.ago) ],
+      [ unposted.call("t2", 70.days.ago) ],
+      [ unposted.call("t3", 130.days.ago) ],
+      [],
+      []
+    )
+
+    @importer.send(:import_with_chunked_history)
+
+    history = @importer.send(:stats)["chunked_history"]
+    assert_equal 5, history["chunks_processed"]
+    assert_equal %w[t1 t2 t3], stored_transaction_ids
+  end
+
+  test "rows flagged pending do not count as history even with an in-window posted date" do
+    flagged = ->(id, time) { tx(id, time).merge(pending: true) }
+    stub_windows(
+      [ tx("t1", 10.days.ago) ],
+      [ flagged.call("p2", 70.days.ago) ],
+      [ flagged.call("p3", 130.days.ago) ],
+      [ tx("t4", 190.days.ago) ]
+    )
+
+    @importer.send(:import_with_chunked_history)
+
+    history = @importer.send(:stats)["chunked_history"]
+    assert_equal 3, history["chunks_processed"]
+    assert history["stopped_early"]
+  end
+
   private
     def stub_windows(*windows)
       responses = windows.map do |transactions|
