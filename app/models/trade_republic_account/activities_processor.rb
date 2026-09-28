@@ -736,8 +736,9 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     # Once the Crypto account is linked, it imports the crypto trades the
     # portfolio held until then. Remove the portfolio copies after the Crypto
-    # account has its own. A copy the user edited stays on the portfolio, and
-    # the Crypto account skips that trade (see processable_event?).
+    # account has its own. A trade whose portfolio copy or settlement
+    # counterpart the user edited stays on the portfolio, and the Crypto
+    # account skips it (see processable_event?).
     def reconcile_moved_crypto_trades!
       return unless @trade_republic_account.crypto?
 
@@ -774,8 +775,9 @@ class TradeRepublicAccount::ActivitiesProcessor
       portfolio_account = @trade_republic_account.sibling("portfolio")&.current_account
       return false unless portfolio_account
 
+      external_id = "trade_republic_event_#{event[:id]}"
       portfolio_account.entries
-        .where(source: "trade_republic", entryable_type: "Trade", external_id: "trade_republic_event_#{event[:id]}")
+        .where(source: "trade_republic", external_id: [ external_id, settlement_counterpart_external_id(external_id) ])
         .any?(&:protected_from_sync?)
     end
 

@@ -835,6 +835,21 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not crypto_sure.entries.exists?
   end
 
+  test "a crypto trade with an edited settlement counterpart stays on the portfolio" do
+    cash_account, _cash_sure = create_linked_cash_account!
+    bitcoin = order_execution_detail(event_id: "evt_btc", quantity: "0.000134", isin: "XF000BTC0017", amount: "11.00")
+      .deep_merge(detail: { signed_amount: -11.0 })
+    @tr_account.update!(raw_timeline_payload: [ bitcoin ])
+    process_all(@tr_account, cash_account)
+    @account.entries.find_by!(external_id: "trade_republic_settlement_evt_btc").update!(user_modified: true)
+
+    crypto_account, crypto_sure = create_linked_crypto_account!
+    process_all(@tr_account, crypto_account, cash_account)
+
+    assert find_trade("trade_republic_event_evt_btc")
+    assert_not crypto_sure.entries.exists?
+  end
+
   test "crypto trades stay on the portfolio while the Crypto account is unlinked" do
     @item.trade_republic_accounts.create!(name: "Crypto", kind: "crypto", trade_republic_account_id: "crypto:DEPROC1", currency: "EUR")
 
