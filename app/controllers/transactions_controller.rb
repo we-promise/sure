@@ -24,7 +24,7 @@ class TransactionsController < ApplicationController
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
     @search = Transaction::Search.new(Current.family, filters: @q, accessible_account_ids: @accessible_account_ids)
 
-    base_scope = @search.transactions_scope
+    base_scope = @search.display_transactions_scope
                        .sorted(transaction_sort)
                        .includes(
                          { entry: :account },

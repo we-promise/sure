@@ -87,6 +87,35 @@ class TransactionSortingTest < ActionDispatch::IntegrationTest
     assert_select ".split-group", count: 0
   end
 
+  test "transfer deduplication fills pages and does not repeat transfers on the next page" do
+    transfer = create_transfer(from_account: accounts(:depository), to_account: accounts(:credit_card), amount: 50)
+    outflow = transfer.outflow_transaction.reload.entry
+    inflow = transfer.inflow_transaction.reload.entry
+    [ outflow, inflow ].each { |entry| entry.update!(name: "Sort boundary transfer") }
+    # The raw order places the outflow at position 10 and inflow at 11.
+    outflow.update!(created_at: 1.hour.ago)
+    inflow.update!(created_at: 2.hours.ago)
+    larger = 9.times.map do |i|
+      create_transaction(name: "Sort boundary #{i}", amount: 100 + i, date: Date.current)
+    end
+    smaller = create_transaction(name: "Sort boundary small", amount: 10)
+
+    get transactions_path, params: { q: { search: "Sort boundary" }, sort: "amount_desc", per_page: 10 }
+    assert_response :success
+    assert_rows larger.reverse + [ outflow ]
+
+    get transactions_path, params: { q: { search: "Sort boundary" }, sort: "amount_desc", per_page: 10, page: 2 }
+    assert_response :success
+    assert_rows [ smaller ]
+
+    # Put both transfer legs on page one in the raw ascending order. The
+    # displayed first page must still contain ten rows, not nine.
+    get transactions_path, params: { q: { search: "Sort boundary" }, sort: "amount_asc", per_page: 10 }
+    assert_rows [ smaller, outflow ] + larger.first(8)
+    get transactions_path, params: { q: { search: "Sort boundary" }, sort: "amount_asc", per_page: 10, page: 2 }
+    assert_rows larger.last(1)
+  end
+
   private
     def assert_rows(entries)
       assert_select "#transactions turbo-frame[id^='entry_']" do |rows|

@@ -49,6 +49,14 @@ class Transaction::Search
     end
   end
 
+  # Paginate display rows separately from totals. Keep a lone inflow when its
+  # outflow is outside the search filters or the user's accessible accounts.
+  def display_transactions_scope
+    duplicate_inflow_ids = Transfer.where(outflow_transaction_id: transactions_scope.select(:id))
+                                  .select(:inflow_transaction_id)
+    transactions_scope.where.not(id: duplicate_inflow_ids)
+  end
+
   # Compute totals for the specific search, excluding tax-advantaged accounts
   def totals
     @totals ||= begin

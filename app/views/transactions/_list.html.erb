@@ -43,8 +43,8 @@
       <% if transaction_sort != "date_desc" %>
         <p class="text-xs text-secondary mb-3"><%= t("transactions.sort.amount_hint") %></p>
         <div class="bg-container shadow-border-xs rounded-lg">
-          <% entries_without_duplicate_transfers(@transactions.map(&:entry)).each do |entry| %>
-            <%= render "transactions/transaction", entry: entry, show_date: true %>
+          <% @transactions.each do |transaction| %>
+            <%= render "transactions/transaction", entry: transaction.entry, show_date: true %>
           <% end %>
         </div>
       <% else %>
