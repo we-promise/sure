@@ -186,6 +186,50 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal item, trade_republic_account.trade_republic_item
   end
 
+  test "link_existing_account links the Crypto account only to a Crypto exchange account" do
+    item = trade_republic_items(:configured_item)
+    crypto_provider = item.trade_republic_accounts.create!(
+      name: "Trade Republic Crypto", kind: "crypto", trade_republic_account_id: "crypto:DE1", currency: "EUR"
+    )
+    family = item.family
+    wallet = family.accounts.create!(name: "Wallet", balance: 0, currency: "EUR", accountable: Crypto.new(subtype: "wallet"))
+    exchange = family.accounts.create!(name: "Exchange", balance: 0, currency: "EUR", accountable: Crypto.new(subtype: "exchange"))
+    TradeRepublicAccount::Processor.any_instance.stubs(:process)
+
+    post link_existing_account_trade_republic_items_url, params: { account_id: wallet.id, trade_republic_account_id: crypto_provider.id }
+    assert_nil crypto_provider.reload.current_account
+
+    post link_existing_account_trade_republic_items_url, params: { account_id: exchange.id, trade_republic_account_id: crypto_provider.id }
+    assert_equal exchange, crypto_provider.reload.current_account
+  end
+
+  test "account setup offers only matching manual accounts for linking" do
+    item = trade_republic_items(:configured_item)
+    item.trade_republic_accounts.create!(
+      name: "Trade Republic Crypto", kind: "crypto", trade_republic_account_id: "crypto:DE1", currency: "EUR"
+    )
+    item.family.accounts.create!(name: "Cold Wallet", balance: 0, currency: "EUR", accountable: Crypto.new(subtype: "wallet"))
+    item.family.accounts.create!(name: "Crypto Exchange", balance: 0, currency: "EUR", accountable: Crypto.new(subtype: "exchange"))
+
+    get setup_accounts_trade_republic_item_url(item)
+
+    assert_response :success
+    options = css_select("select[name='account_id'] option").map(&:text)
+    assert options.any? { |option| option.start_with?("Crypto Exchange") }
+    assert_not options.any? { |option| option.start_with?("Cold Wallet") }
+  end
+
+  test "link_existing_account does not link the portfolio to a Crypto account" do
+    item = trade_republic_items(:configured_item)
+    portfolio = trade_republic_accounts(:main_account)
+    exchange = item.family.accounts.create!(name: "Exchange", balance: 0, currency: "EUR", accountable: Crypto.new(subtype: "exchange"))
+
+    assert_no_difference "AccountProvider.count" do
+      post link_existing_account_trade_republic_items_url, params: { account_id: exchange.id, trade_republic_account_id: portfolio.id }
+    end
+    assert_equal I18n.t("trade_republic_items.link_existing_account.only_manual_investment"), flash[:alert]
+  end
+
   test "successful QR polling can complete without a phone number" do
     item = families(:dylan_family).trade_republic_items.create!(
       name: "Trade Republic QR Connection",

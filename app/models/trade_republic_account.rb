@@ -50,6 +50,19 @@ class TradeRepublicAccount < ApplicationRecord
     trade_republic_item.trade_republic_accounts.find_by(kind: kind)
   end
 
+  # Manual accounts this provider account can be linked to. Crypto only
+  # links to a Crypto exchange account, the Crypto subtype that supports
+  # trades, or to an Investment account; Portfolio and Cash keep linking to
+  # Investment and Depository accounts.
+  def linkable_to?(account)
+    case account.accountable_type
+    when "Investment" then true
+    when "Depository" then !crypto?
+    when "Crypto" then crypto? && account.accountable&.subtype == "exchange"
+    else false
+    end
+  end
+
   # Portfolio and Crypto accounts hold securities; the Cash account settles
   # their trades.
   def holds_securities?
