@@ -54,6 +54,15 @@ class NormalizeTradeRepublicActivityLabelsMigrationTest < ActiveSupport::TestCas
     assert_nil deposit.reload.investment_activity_label
   end
 
+  test "clears English cash labels when English is the only locale" do
+    withdrawal = create_transaction(@cash, "Withdrawal")
+
+    I18n.stubs(:available_locales).returns([ :en ])
+    run_migration
+
+    assert_nil withdrawal.reload.investment_activity_label
+  end
+
   test "keeps English cash labels set by the user or a rule" do
     user_modified = create_transaction(@cash, "Withdrawal")
     user_modified.entry.update!(user_modified: true)
