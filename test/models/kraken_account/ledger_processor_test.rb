@@ -223,6 +223,22 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
     assert_in_delta 1.0, fee.amount.to_f, 0.01
   end
 
+  # The legacy check must not cost a query per ledger row: the principal
+  # amounts are loaded with the external ids, in the same bulk read.
+  test "the legacy-principal check does not scale entries queries with ledger count" do
+    set_ledgers(
+      "LWQ1" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-100.00", fee: "1.00", time: 1_700_000_000),
+      "LWQ2" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-200.00", fee: "1.00", time: 1_700_000_100),
+      "LWQ3" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-300.00", fee: "1.00", time: 1_700_000_200)
+    )
+
+    process
+    queries = capture_sql_queries { process }
+    entries_selects = queries.count { |q| q.match?(/from "entries"/i) }
+    assert_equal 1, entries_selects,
+      "second pass should still issue exactly one bulk read, not one per split-fee row"
+  end
+
   test "a split fee entry is not duplicated on reprocessing" do
     set_ledgers(
       "LWIT03" => ledger_entry(type: "withdrawal", asset: "ZUSD", amount: "-500.00", fee: "1.00", time: 1_700_000_000)

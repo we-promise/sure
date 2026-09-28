@@ -38,11 +38,14 @@ class KrakenAccount::LedgerProcessor
     # membership in memory, instead of an EXISTS query per ledger entry (a full
     # sync can carry up to ~10k entries — see MAX_LEDGER_PAGES in the importer).
     # Scoped to the kraken_ledger_ prefix so trade entries aren't loaded.
-    @existing_external_ids = account.entries
-                                    .where(source: "kraken")
-                                    .where("external_id LIKE 'kraken_ledger_%'")
-                                    .pluck(:external_id)
-                                    .to_set
+    # The amount comes along so a principal already holding its fee can be told
+    # from one still owed it, without a lookup per ledger row.
+    existing = account.entries
+                      .where(source: "kraken")
+                      .where("external_id LIKE 'kraken_ledger_%'")
+                      .pluck(:external_id, :amount, :user_modified)
+    @existing_external_ids = existing.map(&:first).to_set
+    @existing_principals = existing.to_h { |external_id, amount, user_modified| [ external_id, [ amount, user_modified ] ] }
 
     raw_ledgers.each do |ledger_id, ledger|
       process_ledger_entry(ledger_id, ledger)
@@ -118,7 +121,8 @@ class KrakenAccount::LedgerProcessor
       # half -- pricing it can fail on one sync and succeed on the next --
       # without duplicating the one it has.
       if abs_impact.zero? || @existing_external_ids.include?(external_id)
-        if split_fee && principal_awaits_fee?(external_id, raw_amount, raw_fee, symbol, date)
+        if split_fee && !@existing_external_ids.include?("#{external_id}_fee") &&
+           principal_awaits_fee?(external_id, raw_amount, raw_fee, symbol, date)
           process_ledger_fee(external_id, ledger_id, ledger, raw_fee, symbol, date)
         end
         return
@@ -163,15 +167,15 @@ class KrakenAccount::LedgerProcessor
     # nearer to, so a rate that has moved since cannot turn one into the other,
     # and ties go to leaving it alone.
     def principal_awaits_fee?(external_id, raw_amount, raw_fee, symbol, date)
-      entry = account.entries.find_by(external_id: external_id)
-      return true if entry.nil? # no principal at all: a correction row carrying only a fee
-      return false if entry.user_modified?
+      stored_amount, user_modified = @existing_principals[external_id]
+      return true if stored_amount.nil? # no principal at all: a correction row carrying only a fee
+      return false if user_modified
 
       split, = resolve_amount(raw_amount.abs, symbol, date)
       legacy, = resolve_amount((raw_amount - raw_fee).abs, symbol, date)
       return false if split.nil? || legacy.nil?
 
-      stored = entry.amount.abs
+      stored = stored_amount.abs
       (stored - split.abs).abs < (stored - legacy.abs).abs
     end
 
