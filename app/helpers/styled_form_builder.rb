@@ -111,14 +111,17 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
 
   private
     def build_field(method, options = {}, html_options = {}, &block)
-      if options[:inline] || options[:label] == false
-        return yield({ class: "form-field__input" }.merge(html_options))
-      end
-
       if options[:help_text].present?
         help_text_id = field_id(method, :help_text)
         describedby = [ html_options.dig(:aria, :describedby), help_text_id ].compact.join(" ")
         html_options = html_options.deep_merge(aria: { describedby: describedby })
+        help_text_element = @template.tag.p(options[:help_text], id: help_text_id, class: "text-xs text-secondary px-1")
+      end
+
+      # Bare fields keep their layout, so the hint follows the input unwrapped.
+      if options[:inline] || options[:label] == false
+        field_element = yield({ class: "form-field__input" }.merge(html_options))
+        return help_text_element ? field_element + help_text_element : field_element
       end
 
       label_element = build_label(method, options)
@@ -144,11 +147,9 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
         end
       end
 
-      return container unless help_text_id
+      return container unless help_text_element
 
-      @template.tag.div(class: "space-y-1") do
-        container + @template.tag.p(options[:help_text], id: help_text_id, class: "text-xs text-secondary px-1")
-      end
+      @template.tag.div(class: "space-y-1") { container + help_text_element }
     end
 
     def normalize_options(options, html_options)
