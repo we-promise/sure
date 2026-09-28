@@ -329,9 +329,10 @@
       </div>
       <%# `replace` renders the redirect back here as a morphing refresh, which
           keeps the status on screen, even when a tab switch changed the URL
-          behind Turbo's back. %>
+          behind Turbo's back. The morph reloads this frame from its old src,
+          so a locale override has to make the round trip too. %>
       <%= render DS::Button.new(
-        href: verify_worker_ai_admin_system_health_path,
+        href: verify_worker_ai_admin_system_health_path(locale: locale_from_param),
         method: :post,
         variant: :outline,
         size: :sm,

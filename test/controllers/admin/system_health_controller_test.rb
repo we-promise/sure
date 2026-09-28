@@ -219,13 +219,37 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "running the checks again passes the refresh on to the lazy frame" do
+  test "the lazy frame keeps the page's refresh and locale override" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
 
-    get admin_system_health_url(tab: "ai", refresh_ai_health: "1")
+    get admin_system_health_url(tab: "ai", refresh_ai_health: "1", locale: "de")
 
-    assert_select "turbo-frame#ai_status[src='#{ai_status_admin_system_health_path(refresh_ai_health: "1")}']"
+    assert_select "turbo-frame#ai_status[src='#{ai_status_admin_system_health_path(refresh_ai_health: "1", locale: "de")}']"
+  end
+
+  test "the lazy frame drops a refresh or locale it can't use" do
+    sign_in users(:sure_support_staff)
+
+    [ { refresh_ai_health: "0", locale: "xx" }, { refresh_ai_health: { "x" => "1" }, locale: { "x" => "de" } } ].each do |query|
+      get admin_system_health_url(tab: "ai", **query)
+
+      assert_response :success
+      assert_select "turbo-frame#ai_status[src='#{ai_status_admin_system_health_path}']"
+    end
+  end
+
+  # The redirect's morph reloads the frame from its old src, so an override
+  # dropped on the way would leave the page and the frame in two languages.
+  test "a locale override survives the worker check round trip" do
+    sign_in users(:sure_support_staff)
+
+    with_ai_environment do
+      get ai_status_admin_system_health_url(locale: "de")
+    end
+    assert_select "form[action=?]", verify_worker_ai_admin_system_health_path(locale: "de")
+
+    post verify_worker_ai_admin_system_health_url(locale: "de")
+    assert_redirected_to admin_system_health_path(tab: "ai", locale: "de")
   end
 
   test "AI status warns when a custom OpenAI endpoint is paired with the hosted vector store" do

@@ -37,7 +37,7 @@ module Admin
     # finishes, typically within a few seconds.
     def verify_worker_ai
       WorkerAiHealth.request_check!
-      redirect_to admin_system_health_path(tab: "ai"), notice: t(".queued")
+      redirect_to admin_system_health_path(tab: "ai", locale: locale_from_param), notice: t(".queued")
     end
 
     def send_test_push
