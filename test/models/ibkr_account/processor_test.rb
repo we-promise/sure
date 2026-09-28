@@ -68,6 +68,22 @@ class IbkrAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 2000, older.amount
   end
 
+  # A failed NAV write leaves the anchor and the cached balance where they were,
+  # so the cash split must stay with them rather than move on alone.
+  test "a failed balance write leaves the cash split alone" do
+    IbkrAccount::Processor.new(@ibkr_account).process
+    assert_equal 1000.5, @account.reload.cash_balance
+
+    Account::CurrentBalanceManager.any_instance.stubs(:set_current_balance).returns(
+      Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "boom")
+    )
+    @ibkr_account.update!(cash_balance: 42)
+
+    IbkrAccount::Processor.new(@ibkr_account.reload).process
+
+    assert_equal 1000.5, @account.reload.cash_balance
+  end
+
   # Nothing to date it by, or a statement dated ahead of today: fall back to
   # today rather than anchoring the account in the future.
   test "falls back to today when the report date is missing or ahead" do

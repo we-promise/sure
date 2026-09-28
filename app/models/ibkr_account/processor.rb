@@ -38,8 +38,10 @@ class IbkrAccount::Processor
 
       # The cached balance and its cash split are what the account is worth now,
       # and set_current_balance owns the first of them. A statement older than the
-      # anchor describes a day gone by, so it moves neither.
-      account.update!(cash_balance: cash_balance) unless result.historical?
+      # anchor describes a day gone by, so it moves neither -- and neither does a
+      # write that failed, which would leave the cash and the NAV describing
+      # different states of the account.
+      account.update!(cash_balance: cash_balance) if result.success? && !result.historical?
 
       # set_current_balance rescues and reports through its result, so a failed
       # write is otherwise silent. Logged rather than raised, as the anchor
