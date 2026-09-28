@@ -47,6 +47,18 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal [ existing ], @import.reconciled_entries.to_a
   end
 
+  test "deleting a reconciled-only import releases its statement marks" do
+    existing = create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
+
+    @import.update!(extracted_data: { "transactions" => [ extracted(date: @date, amount: -50, name: "Coffee") ] })
+    @import.generate_rows_from_extracted_data
+
+    assert @import.directly_deletable?
+    assert @import.destroy_if_directly_deletable!
+    assert_not existing.reload.reconciled?
+    assert_nil existing.reconciled_by_statement_id
+  end
+
   test "a provider-synced transaction counts as already recorded" do
     synced = create_transaction(
       account: @account, date: @date, amount: 50, name: "COFFEE", external_id: "plaid-1", source: "plaid"

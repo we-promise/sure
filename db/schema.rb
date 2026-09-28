@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_26_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -62,6 +62,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
     t.decimal "match_confidence", precision: 5, scale: 4
     t.decimal "opening_balance", precision: 19, scale: 4
     t.decimal "parser_confidence", precision: 5, scale: 4
+    t.boolean "pdf_import_owned", default: false, null: false
     t.date "period_end_on"
     t.date "period_start_on"
     t.string "review_status", default: "unmatched", null: false
@@ -80,7 +81,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
     t.index ["suggested_account_id"], name: "index_account_statements_on_suggested_account_id"
     t.check_constraint "account_last4_hint IS NULL OR char_length(account_last4_hint::text) <= 4", name: "chk_account_statements_account_last4_hint_length"
     t.check_constraint "account_name_hint IS NULL OR char_length(account_name_hint::text) <= 200", name: "chk_account_statements_account_name_hint_length"
-    t.check_constraint "byte_size <= 26214400", name: "chk_account_statements_byte_size_max"
     t.check_constraint "byte_size > 0", name: "chk_account_statements_byte_size_positive"
     t.check_constraint "char_length(checksum::text) <= 64", name: "chk_account_statements_checksum_length"
     t.check_constraint "char_length(content_type::text) <= 100", name: "chk_account_statements_content_type_length"
@@ -918,7 +918,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_25_220151) do
     t.index ["account_id"], name: "index_financekit_account_lineages_on_account_id"
     t.index ["family_id", "account_id"], name: "financekit_lineage_canonical_account", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["family_id"], name: "index_financekit_account_lineages_on_family_id"
-    t.check_constraint "account_origin IS NULL OR (account_origin::text = ANY (ARRAY['created'::character varying, 'linked'::character varying]::text[]))", name: "financekit_lineage_account_origin"
+    t.check_constraint "account_origin IS NULL OR (account_origin::text = ANY (ARRAY['created'::character varying::text, 'linked'::character varying::text]))", name: "financekit_lineage_account_origin"
   end
 
   create_table "financekit_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

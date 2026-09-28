@@ -1,6 +1,6 @@
 <%# locals: form:, method:, collection:, options: {} %>
 
-<div class="relative" data-controller="select <%= "list-filter" if searchable %> form-dropdown" data-select-menu-placement-value="<%= menu_placement %>" data-action="dropdown:select->form-dropdown#onSelect">
+<div class="relative" data-controller="select <%= "list-filter" if searchable %> form-dropdown" data-select-menu-placement-value="<%= menu_placement %>" data-select-highlight-selected-item-value="<%= highlight_selected_item %>" data-action="dropdown:select->form-dropdown#onSelect">
   <div class="form-field <%= options[:container_class] %>">
     <div class="form-field__body">
         <%= form.label method, options[:label], class: "form-field__label", id: "#{method}_label" if options[:label].present? %>
@@ -27,8 +27,9 @@
                 aria-haspopup="listbox"
                 aria-expanded="false"
                 tabindex="0"
+                data-placeholder="<%= @placeholder %>"
                 <%= "aria-labelledby=\"#{method}_label #{method}_trigger\"".html_safe if options[:label].present? %>>
-          <%= selected_item&.dig(:label) || @placeholder %>
+          <%= selected_item&.dig(:label).presence || @placeholder %>
         </button>
     </div>
   </div>
@@ -54,18 +55,21 @@
         <%# Options use tabindex="-1" always — keyboard focus is managed
             programmatically so listbox items never appear in the Tab
             sequence and skip past the trigger to the next form field. %>
-        <div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected %>"
+        <div class="filterable-item text-primary text-sm cursor-pointer flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-container-inset-hover <%= "bg-container-inset" if is_selected && highlight_selected_item %> <%= "opacity-50 cursor-not-allowed" if item[:disabled] %>"
               role="option"
               tabindex="-1"
+              aria-disabled="<%= item[:disabled] %>"
               aria-selected="<%= is_selected %>"
               data-select-target="option"
               data-action="click->select#select"
               data-value="<%= item[:value] %>"
               data-filter-name="<%= item[:label] %>">
 
-          <span class="check-icon <%= "hidden" unless is_selected %>">
-            <%= helpers.icon("check") %>
-          </span>
+          <% if show_selected_checkmark %>
+            <span class="check-icon <%= "hidden" unless is_selected %>">
+              <%= helpers.icon("check") %>
+            </span>
+          <% end %>
 
           <% if is_child %>
             <%= helpers.icon("corner-down-right", size: "sm") %>

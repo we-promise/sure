@@ -21,6 +21,8 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
   test "gets new" do
     get new_import_url
 
+    assert_response :see_other
+    follow_redirect!
     assert_response :success
 
     assert_select "turbo-frame#modal"
@@ -59,21 +61,23 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "importing", import.reload.status
   end
 
-  test "shows disabled account-dependent imports when family has no accounts" do
+  test "defaults to account import and disables account-dependent CSV imports when family has no accounts" do
     sign_in users(:empty)
 
     get new_import_url
 
+    assert_response :see_other
+    follow_redirect!
     assert_response :success
-    assert_select "button", text: "Import accounts"
-    assert_select "button", text: "Import transactions", count: 0
-    assert_select "button", text: "Import investments", count: 0
-    assert_select "button", text: "Import from Mint", count: 1
-    assert_select "button", text: "Import from Actual Budget", count: 1
-    assert_select "button", text: "Import from Quicken (QIF)", count: 1
-    assert_select "button", text: "Import from YNAB", count: 1
-    assert_select "span", text: "Import accounts first to unlock this option.", count: 2
-    assert_select "div[aria-disabled=true]", count: 2
+    assert_select "select[name='import_kind'] option[value='AccountImport'][selected]"
+    assert_select "select[name='import_kind'] option[value='TransactionImport'][disabled]"
+    assert_select "select[name='import_kind'] option[value='TradeImport'][disabled]"
+    assert_select "select[name='import_kind'] option[value='CategoryImport']"
+    assert_select "select[name='file_format'] option[value='csv'][selected]"
+    document_option_count = VectorStore.adapter&.supported_extensions&.any? ? 1 : 0
+    assert_select "select[name='file_format'] option[value='document']", count: document_option_count
+    assert_select "select[name='file_format'] option[value='qif']"
+    assert_select "select[name='file_format'] option[value='sure']"
   end
 
   test "creates import" do
