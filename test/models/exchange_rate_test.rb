@@ -114,4 +114,15 @@ class ExchangeRateTest < ActiveSupport::TestCase
       )
     end
   end
+
+  # Infinity only exists for numeric on PostgreSQL 14+ and satisfies `rate > 0`,
+  # so the constraint excludes it with a text comparison instead.
+  test "database rejects an infinite rate written without validations" do
+    assert_raises ActiveRecord::CheckViolation do
+      ExchangeRate.upsert_all(
+        [ { from_currency: "CHF", to_currency: "CNY", date: Date.current, rate: Float::INFINITY } ],
+        unique_by: %i[from_currency to_currency date]
+      )
+    end
+  end
 end
