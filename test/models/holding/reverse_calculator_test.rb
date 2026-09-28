@@ -462,6 +462,22 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     end
   end
 
+  # The provider reports nothing held today: the whole post-split position was
+  # sold on the ex-date (Production Readiness Review on #253). Walking back, the
+  # sale is undone first, in post-split shares, and then the split.
+  test "a split and a sale of everything on the ex-date walk back to the pre-split position" do
+    security = split_security(before: 100, after: 50)
+    create_trade(security, qty: 10, date: 4.days.ago.to_date, price: 100, account: @account)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1)
+    create_trade(security, qty: -20, date: 2.days.ago.to_date, price: 50, account: @account)
+
+    holdings = reverse_holdings(security, today_qty: 0)
+
+    assert_equal 0, holdings[2.days.ago.to_date].qty
+    assert_equal 10, holdings[3.days.ago.to_date].qty, "20 sold, then halved back to 10"
+    assert_equal 0, holdings[5.days.ago.to_date].qty
+  end
+
   test "a split on one security leaves every other security's history as it was" do
     load_today_portfolio
     create_trade(@voo, qty: 5, date: 3.days.ago.to_date, price: 470, account: @account)

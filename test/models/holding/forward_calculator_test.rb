@@ -320,6 +320,23 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1"), holding_on(security, 2.days.ago.to_date).qty
   end
 
+  # Splits belong to the security, and every family's accounts read them
+  # (Production Readiness Review on #253): each account holding it applies the
+  # split once, to its own shares.
+  test "a split on a security held in two accounts applies once in each" do
+    security = split_security(before: 100, after: 50)
+    other = families(:dylan_family).accounts.create!(name: "Other", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    create_trade(security, qty: 10, date: 4.days.ago.to_date, price: 100, account: @account)
+    create_trade(security, qty: 3, date: 4.days.ago.to_date, price: 100, account: other)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1)
+
+    other_on = ->(date) { Holding::ForwardCalculator.new(other).calculate.find { |h| h.security_id == security.id && h.date == date } }
+
+    assert_equal [ 10, 20 ], [ holding_on(security, 3.days.ago.to_date).qty, holding_on(security, 2.days.ago.to_date).qty ]
+    assert_equal [ 3, 6 ], [ other_on.call(3.days.ago.to_date).qty, other_on.call(2.days.ago.to_date).qty ]
+    assert_equal [ 100, 50 ], [ other_on.call(3.days.ago.to_date).cost_basis, other_on.call(2.days.ago.to_date).cost_basis ]
+  end
+
   test "a split on one security leaves every other security's holdings as they were" do
     load_prices
     create_trade(@voo, qty: 10, date: 3.days.ago.to_date, price: 470, account: @account)
