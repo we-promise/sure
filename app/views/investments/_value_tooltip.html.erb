@@ -1,4 +1,4 @@
-<%# locals: (balance:, holdings:, cash:) %>
+<%# locals: (balance:, holdings:, cash:, scheduled: nil, projected: nil) %>
 
 <div data-controller="tooltip" data-tooltip-placement-value="right" data-tooltip-offset-value=10 data-tooltip-cross-axis-value=50>
   <%= icon("info", size: "sm") %>
@@ -33,5 +33,27 @@
         <%= tag.p format_money(balance, precision: 0) %>
       </div>
     </div>
+
+    <% if scheduled %>
+      <div class="flex">
+        <div class="text-inverse opacity-70">
+          <%= t(".scheduled") %>
+        </div>
+        <div class="text-inverse ml-auto privacy-sensitive">
+          <%= tag.p "#{'+' if scheduled.amount.positive?}#{format_money(scheduled, precision: 0)}" %>
+        </div>
+      </div>
+
+      <hr class="my-2 border-inverse">
+
+      <div class="flex">
+        <div class="text-inverse opacity-70">
+          <%= t(".projected") %>
+        </div>
+        <div class="text-inverse font-bold ml-auto privacy-sensitive">
+          <%= tag.p format_money(projected, precision: 0) %>
+        </div>
+      </div>
+    <% end %>
   </div>
 </div>

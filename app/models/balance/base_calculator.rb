@@ -31,8 +31,15 @@ class Balance::BaseCalculator
   # branches) and the underlying MIN(date) is a non-trivial scan on accounts
   # with large entry histories. Calculator instances are per-sync, so there is
   # no staleness concern.
+  # Clamped at Date.current: when an account's only entries are scheduled
+  # (future-dated) and it has no opening anchor yet, Account#opening_anchor_date
+  # falls back to (oldest entry date - 1 day), which can itself land in the
+  # future. Without the clamp, calc_start_date would exceed calc_end_date
+  # (which never extends past today -- see Balance::ForwardCalculator) and the
+  # calculation would silently produce zero balance rows instead of a
+  # Date.current baseline.
   def calculation_start_date
-    @calculation_start_date ||= [ account.opening_anchor_date, account.entries.excluding_pending.minimum(:date) ].compact.min
+    @calculation_start_date ||= [ account.opening_anchor_date, account.entries.excluding_pending.minimum(:date), Date.current ].compact.min
   end
 
   private

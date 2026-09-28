@@ -729,7 +729,52 @@ class Family < ApplicationRecord
     Rails.application.message_verifier("bills-user-feed")
   end
 
+  # The family's timezone, validated and with a safe fallback -- used both by
+  # `Localize#switch_timezone` (request path) and `Sync#perform` (background
+  # path), so a scheduled entry's "has it arrived yet?" check (Entry#scheduled?)
+  # agrees with the family's own clock in both places instead of silently
+  # defaulting to the app's zone (UTC) only in the background.
+  #
+  # `timezone` is a free-text IANA name (e.g. from an older DB dump, or a zone
+  # the tzdata maintainers later renamed, like the historical "Europe/Kiev" ->
+  # "Europe/Kyiv" switch), so this re-validates rather than trusting the
+  # column -- see `timezone_must_be_a_known_zone` below.
+  def resolved_time_zone
+    return Time.zone if timezone.blank?
+
+    zone = ActiveSupport::TimeZone[timezone]
+    return zone if zone.present?
+
+    log_invalid_timezone_once
+    Time.zone
+  end
+
+  # How often to write a DebugLogEntry for the same (family, bad value)
+  # pair. `resolved_time_zone` runs on every request and every sync, so
+  # without this an affected family would write one row per call forever.
+  INVALID_TIMEZONE_LOG_INTERVAL = 1.day
+  private_constant :INVALID_TIMEZONE_LOG_INTERVAL
+
   private
+
+    def log_invalid_timezone_once
+      cache_key = [ "invalid_family_timezone", id, timezone ]
+
+      # `fetch` is read-then-write, not atomic -- two concurrent
+      # requests/jobs could both see a miss and both log. `write(unless_exist:
+      # true)` maps to Redis's atomic SET NX in production, so only one ever
+      # wins the lease and logs.
+      lease_acquired = Rails.cache.write(cache_key, true, expires_in: INVALID_TIMEZONE_LOG_INTERVAL, unless_exist: true)
+      return unless lease_acquired
+
+      DebugLogEntry.capture(
+        category: "other",
+        level: "warn",
+        message: "Invalid family timezone #{timezone.inspect}, falling back to #{Time.zone.name}",
+        source: "Family#resolved_time_zone",
+        family: self
+      )
+    end
     # Mirrors the inline `investment_ids` / `crypto_ids` SQL blocks in
     # `tax_advantaged_account_ids`. Joins `depositories` and filters by
     # `Depository::TAX_ADVANTAGED_SUBTYPES` (currently `%w[hsa]`). Extracted

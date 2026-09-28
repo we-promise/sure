@@ -450,6 +450,39 @@ class FamilyTest < ActiveSupport::TestCase
     assert family.save
   end
 
+  test "resolved_time_zone returns the family's zone" do
+    family = families(:dylan_family)
+    family.update_column(:timezone, "America/New_York")
+
+    assert_equal "America/New_York", family.resolved_time_zone.name
+  end
+
+  test "resolved_time_zone falls back to the app default and logs once for a stale/invalid zone" do
+    family = families(:dylan_family)
+    family.update_column(:timezone, "Invalid/Timezone")
+
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    assert_difference "DebugLogEntry.count", 1 do
+      2.times { assert_equal Time.zone, family.resolved_time_zone }
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "warn", entry.level
+    assert_includes entry.message, "Invalid/Timezone"
+    assert_equal family, entry.family
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "resolved_time_zone falls back to the app default for a blank timezone" do
+    family = families(:dylan_family)
+    family.update_column(:timezone, nil)
+
+    assert_equal Time.zone, family.resolved_time_zone
+  end
+
   test "balance_sheet memoizes per user for the same family instance" do
     family = families(:dylan_family)
     admin = users(:family_admin)
