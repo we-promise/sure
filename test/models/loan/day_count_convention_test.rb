@@ -160,16 +160,71 @@ class Loan::DayCountConventionTest < ActiveSupport::TestCase
     assert_equal expected, interest_for(Date.new(2027, 12, 15), Date.new(2028, 1, 15), :actual_365)
   end
 
+  # The same boundary with the leap year on the OPENING side: 15 Dec 2028 to
+  # 15 Jan 2029 is 17 days of 2028 over 366 plus 14 days of 2029 over 365. The
+  # test above has the leap year closing the period; this one catches an
+  # implementation that takes either end's denominator for the whole span.
+  test "an actual/actual period leaving a leap year uses each year's own denominator" do
+    from = Date.new(2028, 12, 15)
+    to = Date.new(2029, 1, 15)
+
+    expected = (BigDecimal("300000") * BigDecimal("0.06") *
+      ((BigDecimal("17") / 366) + (BigDecimal("14") / 365))).round(2)
+    opening_year_only = (BigDecimal("300000") * BigDecimal("0.06") * BigDecimal("31") / 366).round(2)
+    closing_year_only = (BigDecimal("300000") * BigDecimal("0.06") * BigDecimal("31") / 365).round(2)
+
+    assert_not_equal opening_year_only, expected, "must differ from the opening year's denominator alone"
+    assert_not_equal closing_year_only, expected, "must differ from the closing year's denominator alone"
+    assert_equal expected, interest_for(from, to, :actual_actual)
+  end
+
+  # The payment is sized on the nominal monthly rate, so on actual/365 the
+  # periods charge a little more or a little less than that sizing assumed and
+  # the last row absorbs the difference. Both directions are pinned: February
+  # and March (59 days) charge less than two flat twelfths, so the final
+  # payment falls BELOW the contracted one; December and January (62 days)
+  # charge more, so it rises ABOVE it. Either way the loan closes at zero.
+  test "the settling row absorbs an actual/365 shortfall below the contracted payment" do
+    result = simulate(schedule: [ Date.new(2026, 3, 1), Date.new(2026, 4, 1) ], convention: :actual_365,
+                      accrual_start: Date.new(2026, 2, 1))
+    contracted, final = result.payments.map { |p| p[:payment_amount] }
+
+    assert_operator final, :<, contracted, "59 days of actual/365 charge less than two flat twelfths"
+    assert_final_row_settles(result)
+  end
+
+  test "the settling row absorbs an actual/365 excess above the contracted payment" do
+    result = simulate(schedule: [ Date.new(2026, 1, 1), Date.new(2026, 2, 1) ], convention: :actual_365,
+                      accrual_start: Date.new(2025, 12, 1))
+    contracted, final = result.payments.map { |p| p[:payment_amount] }
+
+    assert_operator final, :>, contracted, "62 days of actual/365 charge more than two flat twelfths"
+    assert_final_row_settles(result)
+  end
+
   private
-    def simulate(schedule:, convention:, balance: BALANCE, rate: RATE)
+    def simulate(schedule:, convention:, balance: BALANCE, rate: RATE, accrual_start: schedule.first - 31)
       Loan::Simulator.new(
         starting_balance: balance,
-        accrual_start_date: schedule.first - 31,
+        accrual_start_date: accrual_start,
         payment_schedule: schedule,
         accrual_rate_for: ->(_date) { rate },
         currency_precision: 2,
         day_count_convention: convention
       ).run
+    end
+
+    # The final row pays exactly its opening balance plus its own charge, hand
+    # computed on actual/365 from the row's own dates, and leaves nothing owing.
+    def assert_final_row_settles(result)
+      assert result.converged?
+      final = result.payments.last
+      days = (final[:payment_date] - result.payments[-2][:payment_date]).to_i
+      charge = (final[:beginning_balance] * BigDecimal(RATE.to_s) / 100 * days / 365).round(2)
+
+      assert_equal charge, final[:interest_payment]
+      assert_equal final[:beginning_balance] + charge, final[:payment_amount]
+      assert_equal BigDecimal("0"), final[:ending_balance]
     end
 
     # One period, so the figure asserted is the charge for exactly that span.
