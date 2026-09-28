@@ -120,4 +120,38 @@ class SnaptradeAccount::DataHelpersTest < ActiveSupport::TestCase
     }
     assert_equal "US", @helper.extract_country_code(symbol_data)
   end
+
+  test "extract_security_name formats option contract when underlying_symbol is a bare string" do
+    symbol_data = {
+      option_type: "CALL",
+      strike_price: 51.0,
+      expiration_date: "2026-02-20",
+      underlying_symbol: "TQQQ"
+    }
+    result = @helper.extract_security_name(symbol_data, "TQQQ  260220C00051000")
+    assert_equal "TQQQ $51 CALL (2026-02-20)", result
+  end
+
+  test "extract_security_name handles malformed non-hash non-string underlying_symbol gracefully" do
+    symbol_data = {
+      option_type: "CALL",
+      strike_price: 51.0,
+      expiration_date: "2026-02-20",
+      underlying_symbol: 12345
+    }
+    result = @helper.extract_security_name(symbol_data, "TQQQ  260220C00051000")
+    assert_equal "TQQQ  260220C00051000", result
+  end
+
+  test "extract_exchange handles bare string and malformed underlying_symbol without error" do
+    assert_nil @helper.extract_exchange({ underlying_symbol: "TQQQ" })
+    assert_nil @helper.extract_exchange({ underlying_symbol: [ "invalid" ] })
+    assert_nil @helper.extract_exchange({ underlying_symbol: 123 })
+  end
+
+  test "extract_country_code handles bare string and malformed underlying_symbol without error" do
+    assert_nil @helper.extract_country_code({ underlying_symbol: "TQQQ" })
+    assert_nil @helper.extract_country_code({ underlying_symbol: [ "invalid" ] })
+    assert_nil @helper.extract_country_code({ underlying_symbol: 123 })
+  end
 end

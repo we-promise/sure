@@ -176,12 +176,7 @@ class SnaptradeAccount::ActivitiesProcessor
       # Check `option_symbol` first: if present, this is an option contract trade.
       # Prioritizing `option_symbol` prevents brokerages like Robinhood (which populate
       # plain `symbol` with the underlying equity) from importing options as common stock.
-      raw_option_symbol = data["option_symbol"] || data[:option_symbol]
-      if raw_option_symbol.present? && raw_option_symbol.is_a?(Hash)
-        option_symbol_data = raw_option_symbol.with_indifferent_access
-        ticker = option_symbol_data["ticker"] || option_symbol_data[:ticker]
-        symbol_data = option_symbol_data if ticker.present?
-      end
+      ticker, symbol_data = option_ticker_and_data(data)
 
       if ticker.blank?
         # Extract and normalize symbol data
@@ -345,11 +340,8 @@ class SnaptradeAccount::ActivitiesProcessor
       raw_symbol_data = data[:symbol] || data["symbol"] || {}
       symbol_data = raw_symbol_data.is_a?(Hash) ? raw_symbol_data.with_indifferent_access : {}
       symbol = symbol_data[:symbol] || symbol_data["symbol"] || symbol_data[:ticker]
-      if (raw_opt = data[:option_symbol] || data["option_symbol"]).present?
-        opt_data = raw_opt.is_a?(Hash) ? raw_opt.with_indifferent_access : {}
-        option_ticker = opt_data[:ticker]
-        symbol = option_ticker if option_ticker.present?
-      end
+      option_ticker, = option_ticker_and_data(data)
+      symbol = option_ticker if option_ticker.present?
       description = data[:description] || data["description"] || build_description(activity_type, symbol)
 
       # Normalize amount sign for certain activity types
@@ -444,5 +436,16 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       label || "Other"
+    end
+
+    def option_ticker_and_data(data)
+      raw_option_symbol = data["option_symbol"] || data[:option_symbol]
+      return [ nil, nil ] unless raw_option_symbol.is_a?(Hash)
+
+      option_symbol_data = raw_option_symbol.with_indifferent_access
+      ticker = option_symbol_data[:ticker]
+      return [ nil, nil ] if ticker.blank?
+
+      [ ticker, option_symbol_data ]
     end
 end

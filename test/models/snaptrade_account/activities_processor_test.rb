@@ -1263,6 +1263,59 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Transfer - U     270115C00015000", entry.name
   end
 
+  # Modeled on SnapTrade payload with bare string underlying_symbol
+  test "processes option trade when underlying_symbol is a bare string instead of a hash" do
+    process_activities(
+      {
+        "id" => "opt_bare_underlying_001",
+        "type" => "BUY",
+        "units" => 2.0,
+        "price" => 0.57,
+        "amount" => -114.05,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => nil,
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "TQQQ  260220C00051000",
+          "option_type" => "CALL",
+          "strike_price" => 51.0,
+          "expiration_date" => "2026-02-20",
+          "underlying_symbol" => "TQQQ"
+        }
+      }
+    )
+
+    entry = snaptrade_entry("opt_bare_underlying_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    assert_equal "TQQQ  260220C00051000", entry.entryable.security.ticker
+    assert_equal "TQQQ $51 CALL (2026-02-20)", entry.entryable.security.name
+  end
+
+  test "option_ticker_and_data extracts ticker and data or returns nil when absent or malformed" do
+    processor = SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account)
+
+    ticker, data = processor.send(:option_ticker_and_data, { "option_symbol" => { "ticker" => "AAPL  260116C00200000" } })
+    assert_equal "AAPL  260116C00200000", ticker
+    assert_equal "AAPL  260116C00200000", data[:ticker]
+
+    ticker, = processor.send(:option_ticker_and_data, { option_symbol: { ticker: "AAPL  260116C00200000" } })
+    assert_equal "AAPL  260116C00200000", ticker
+
+    ticker, data = processor.send(:option_ticker_and_data, { "option_symbol" => nil })
+    assert_nil ticker
+    assert_nil data
+
+    ticker, data = processor.send(:option_ticker_and_data, { "option_symbol" => "AAPL" })
+    assert_nil ticker
+    assert_nil data
+
+    ticker, data = processor.send(:option_ticker_and_data, { "option_symbol" => { "ticker" => "" } })
+    assert_nil ticker
+    assert_nil data
+  end
+
   # Modeled on minimal SnapTrade option payload with bare ticker
   test "falls back to raw ticker when option symbol lacks underlying symbol details" do
     process_activities(
