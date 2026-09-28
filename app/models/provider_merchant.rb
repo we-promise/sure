@@ -136,8 +136,15 @@ class ProviderMerchant < Merchant
       self.logo_url = brandfetch_logo_url
     end
 
+    # Ties ownership to our own Brandfetch account id, not just the CDN host,
+    # so a provider-supplied logo that merely happens to be hosted on
+    # cdn.brandfetch.io (e.g. under the provider's own account) is never
+    # mistaken for one this app generated.
     def brandfetch_logo?
-      logo_url.to_s.include?("cdn.brandfetch.io")
+      client_id = Setting.brand_fetch_client_id
+      return false if client_id.blank?
+
+      logo_url.to_s.start_with?("https://cdn.brandfetch.io/") && logo_url.include?("?c=#{client_id}")
     end
 
     def brandfetch_logo_url

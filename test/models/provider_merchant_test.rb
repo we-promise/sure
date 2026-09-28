@@ -149,6 +149,21 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     end
   end
 
+  # Regression: a provider-supplied logo hosted on the Brandfetch CDN itself
+  # (e.g. under the provider's own account) must not be mistaken for a logo
+  # this app generated just because the host matches (issue #2925).
+  test "generate_logo_url_from_website! keeps a provider-supplied logo hosted on the Brandfetch CDN" do
+    with_brandfetch do
+      provider_supplied = "https://cdn.brandfetch.io/walmart.com/icon/fallback/lettermark/w/40/h/40?c=some_other_account_id"
+      merchant = ProviderMerchant.create!(name: "Walmart", source: "plaid", website_url: "walmart.com", logo_url: provider_supplied)
+
+      merchant.update!(website_url: "walmart.de")
+      merchant.generate_logo_url_from_website!
+
+      assert_equal provider_supplied, merchant.reload.logo_url
+    end
+  end
+
   test "generate_logo_url_from_website! refreshes a Brandfetch logo after a website change" do
     with_brandfetch do
       merchant = ProviderMerchant.create!(name: "Walmart", source: "ai", website_url: "walmart.com")
