@@ -8,6 +8,7 @@ tr:
         title: Anlık bildirimler
         requested_at: Son test isteği %{time}
         result_help: APNs tarafından kabul edilmesi, bildirimin cihazınıza ulaştığını doğrulamaz. Çalışan sonuçlarını görmek için yenileyin. Sonuçlar 24 saat saklanır.
+        results_label: Test sonuçları
         device: Cihaz %{number}
         pending: Beklemede
         refresh: Sonuçları yenile
