@@ -108,7 +108,7 @@ class AccountsController < ApplicationController
       return render_statement_tab_frame if statement_tab_frame_request?
     end
 
-<    # Only for a response that will actually show the chart card. The payload
+    # Only for a response that will actually show the chart card. The payload
     # runs the schedule and the projection; a Turbo frame request for the
     # activity feed's `entries` frame (its pagination) renders the whole page
     # and keeps one frame, so building it there was a full simulation per page
