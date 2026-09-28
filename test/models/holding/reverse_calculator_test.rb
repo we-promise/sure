@@ -361,7 +361,146 @@ class Holding::ReverseCalculatorTest < ActiveSupport::TestCase
     assert_nil cost_basis_for(calc, security, Date.current)
   end
 
+  # --- Stock splits (#249) ---------------------------------------------------
+
+  test "walking back past a 2-for-1 split halves the provider's share count" do
+    security = split_security(before: 100, after: 50)
+    create_trade(security, qty: 10, date: 4.days.ago.to_date, price: 100, account: @account)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1)
+
+    holdings = reverse_holdings(security, today_qty: 20)
+
+    assert_equal 20, holdings[Date.current].qty
+    assert_equal 20, holdings[2.days.ago.to_date].qty
+    assert_equal 10, holdings[3.days.ago.to_date].qty
+    assert_equal 0, holdings[5.days.ago.to_date].qty, "the buy is undone in pre-split shares"
+  end
+
+  test "the cost per share halves at the split and the total cost does not move" do
+    security = split_security(before: 100, after: 50)
+    create_trade(security, qty: 10, date: 4.days.ago.to_date, price: 100, account: @account)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1)
+
+    holdings = reverse_holdings(security, today_qty: 20)
+    day_before = holdings[3.days.ago.to_date]
+    ex_day = holdings[2.days.ago.to_date]
+
+    assert_equal [ 100, 50 ], [ day_before.cost_basis, ex_day.cost_basis ]
+    assert_equal day_before.qty * day_before.cost_basis, ex_day.qty * ex_day.cost_basis
+  end
+
+  test "walking back past a 1-for-10 reverse split multiplies the share count" do
+    security = split_security(before: 5, after: 50)
+    create_trade(security, qty: 100, date: 4.days.ago.to_date, price: 5, account: @account)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 1, denominator: 10)
+
+    holdings = reverse_holdings(security, today_qty: 10)
+
+    assert_equal [ 100, 10 ], [ holdings[3.days.ago.to_date].qty, holdings[2.days.ago.to_date].qty ]
+    assert_equal [ 5, 50 ], [ holdings[3.days.ago.to_date].cost_basis, holdings[2.days.ago.to_date].cost_basis ]
+  end
+
+  test "walking back past a 1-for-3 reverse split of one share gives exactly three" do
+    security = split_security(before: 10, after: 30)
+    create_trade(security, qty: 3, date: 4.days.ago.to_date, price: 10, account: @account)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 1, denominator: 3)
+
+    holdings = reverse_holdings(security, today_qty: 1)
+
+    assert_equal BigDecimal("3"), holdings[3.days.ago.to_date].qty
+    # The cost-basis replay walks the same split both ways; 30.000...03 here
+    # means it rounded.
+    assert_equal BigDecimal("30"), holdings[2.days.ago.to_date].cost_basis
+  end
+
+  # The replay that tracks cost basis starts from the position before the first
+  # trade, worked out from today's snapshot. Across a split that has to undo the
+  # split too: 10 shares today, back through a rebuy of 10, a sale of 30, a
+  # 2-for-1 split, a transfer in of 5 and a buy of 10, is 0 -- not the 15 that
+  # "snapshot minus net trades" gives. From 15, the sale leaves 30 and the
+  # transferred-in units are never cleared.
+  test "a transferred-in position sold down after a split becomes known again on the rebuy" do
+    security = Security.create!(ticker: "TST", name: "Test")
+    buy_date      = 12.days.ago.to_date
+    transfer_date = 9.days.ago.to_date
+    ex_date       = 7.days.ago.to_date
+    close_date    = 5.days.ago.to_date
+    rebuy_date    = 3.days.ago.to_date
+
+    calc = calculator_with_trades(security) do
+      create_trade(security, account: @account, qty: 10, price: 100, date: buy_date)
+      transfer_in = create_trade(security, account: @account, qty: 5, price: 120, date: transfer_date)
+      transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+      add_split(security, ex_date: ex_date, numerator: 2, denominator: 1)
+      create_trade(security, account: @account, qty: -30, price: 65, date: close_date) # all 30 post-split shares
+      create_trade(security, account: @account, qty: 10, price: 150, date: rebuy_date)
+    end
+
+    assert_nil cost_basis_for(calc, security, close_date - 1)
+    assert_in_delta 150.0, cost_basis_for(calc, security, rebuy_date).to_f, 1e-6
+  end
+
+  # The replay decides a transferred-in position is sold out when it reaches
+  # zero, so a split that leaves 1e-32 behind keeps the span unknown for ever.
+  # 1-for-3 is undone to 3.000...03 by a Rational division (the seed walk), and
+  # 2-for-3 applied to 2.000...01 by a Rational multiply (the replay).
+  test "a transferred-in position sold to exactly zero after an uneven split becomes known again on the rebuy" do
+    { [ 1, 3 ] => 1, [ 2, 3 ] => 2 }.each do |(numerator, denominator), sold|
+      security = Security.create!(ticker: "TS#{numerator}", name: "Test #{numerator}-for-#{denominator}")
+      close_date = 5.days.ago.to_date
+      rebuy_date = 3.days.ago.to_date
+
+      calc = calculator_with_trades(security) do
+        transfer_in = create_trade(security, account: @account, qty: 3, price: 120, date: 9.days.ago.to_date)
+        transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+        add_split(security, ex_date: 7.days.ago.to_date, numerator: numerator, denominator: denominator)
+        create_trade(security, account: @account, qty: -sold, price: 65, date: close_date)
+        create_trade(security, account: @account, qty: 10, price: 150, date: rebuy_date)
+      end
+
+      assert_in_delta 150.0, cost_basis_for(calc, security, rebuy_date).to_f, 1e-6, "#{numerator}-for-#{denominator}"
+    end
+  end
+
+  test "a split on one security leaves every other security's history as it was" do
+    load_today_portfolio
+    create_trade(@voo, qty: 5, date: 3.days.ago.to_date, price: 470, account: @account)
+    create_trade(@wmt, qty: 10, date: 4.days.ago.to_date, price: 100, account: @account)
+    wmt_split_date = 2.days.ago.to_date
+    voo_rows = ->(holdings) { holdings.select { |h| h.security_id == @voo.id }.map { |h| [ h.date, h.qty, h.amount, h.cost_basis ] }.sort }
+    snapshot = OpenStruct.new(to_h: { @voo.id => 10, @wmt.id => 100 })
+
+    before = voo_rows.call(Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate)
+    add_split(@wmt, ex_date: wmt_split_date, numerator: 2, denominator: 1)
+    after = Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate
+
+    assert_equal before, voo_rows.call(after)
+    assert_equal 50, after.find { |h| h.security_id == @wmt.id && h.date == wmt_split_date - 1 }.qty, "the split security itself did change"
+  end
+
   private
+    def split_security(before:, after:)
+      security = Security.create!(ticker: "SPLT", name: "Split Test")
+      (5.days.ago.to_date..Date.current).each do |date|
+        Security::Price.create!(security: security, date: date, price: date < 2.days.ago.to_date ? before : after)
+      end
+      security
+    end
+
+    def add_split(security, ex_date:, numerator:, denominator:)
+      Security::Split.create!(security: security, ex_date: ex_date, numerator: numerator, denominator: denominator, source: "manual")
+    end
+
+    # Today's row comes from the provider, as it does in a real reverse sync.
+    def reverse_holdings(security, today_qty:)
+      price = Security::Price.find_by!(security: security, date: Date.current).price
+      @account.holdings.create!(security: security, date: Date.current, qty: today_qty, price: price, amount: today_qty * price, currency: "USD")
+      snapshot = OpenStruct.new(to_h: { security.id => today_qty })
+      Holding::ReverseCalculator.new(@account, portfolio_snapshot: snapshot).calculate
+        .select { |h| h.security_id == security.id }
+        .index_by(&:date)
+    end
+
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
         calculated_entry = calculated.find { |c| c.security_id == expected_entry.security_id && c.date == expected_entry.date }
