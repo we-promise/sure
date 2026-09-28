@@ -9,7 +9,7 @@ module Transaction::Ruleable
   def eligible_for_category_rule?
     return false if category_id.blank?
 
-    rules.where(active: true)
+    rules.where(active: true, resource_type: "transaction")
          .joins(:actions)
          .where(actions: { action_type: "set_transaction_category", value: category_id })
          .distinct
