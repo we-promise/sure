@@ -1729,10 +1729,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.string "currency", null: false
     t.decimal "current_balance", precision: 19, scale: 4
     t.datetime "history_synced_from"
-    t.string "iban"
     t.boolean "ignored", default: false, null: false
     t.jsonb "institution_metadata"
-    t.string "masked_pan"
     t.uuid "monobank_item_id", null: false
     t.string "name", null: false
     t.string "provider"
@@ -1980,7 +1978,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
   end
 
   create_table "questrade_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "account_number"
     t.string "account_status"
     t.string "account_type"
     t.boolean "activities_fetch_pending", default: false
@@ -2178,7 +2175,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
   end
 
   create_table "redbark_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "account_number"
     t.string "account_status"
     t.string "account_type"
     t.string "connection_id"
