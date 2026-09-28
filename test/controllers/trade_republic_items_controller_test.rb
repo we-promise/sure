@@ -491,6 +491,51 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "new-login", item.reload.pending_login_state
   end
 
+  test "completed push login from an old poll keeps a newer login started meanwhile" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "old-login")
+    provider = mock
+    provider.expects(:complete_login).with do |pending_login_b64:|
+      TradeRepublicItem.where(id: item.id).update_all(pending_login_state: "new-login")
+      pending_login_b64 == "old-login"
+    end.returns(
+      Provider::TradeRepublicClient::Result.new(
+        data: { "status" => "ok", "session_txt" => "old-session", "account" => { "brokerage_account_id" => "DE9999" } }
+      )
+    )
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: login_poller_headers
+
+    assert_response :no_content
+    item.reload
+    assert_equal "new-login", item.pending_login_state
+    assert_not_equal "old-session", item.session_blob
+  end
+
+  test "duplicate push login from an old poll keeps a newer login started meanwhile" do
+    item = families(:dylan_family).trade_republic_items.create!(
+      name: "Trade Republic", currency: "EUR", status: :requires_update, pending_login_state: "old-login"
+    )
+    provider = mock
+    provider.expects(:complete_login).with do |pending_login_b64:|
+      TradeRepublicItem.where(id: item.id).update_all(pending_login_state: "new-login")
+      pending_login_b64 == "old-login"
+    end.returns(
+      Provider::TradeRepublicClient::Result.new(
+        data: { "status" => "ok", "session_txt" => "duplicate-session", "account" => { "brokerage_account_id" => "DE1234" } }
+      )
+    )
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: login_poller_headers
+
+    assert_response :no_content
+    item.reload
+    assert_equal "new-login", item.pending_login_state
+    assert_not_predicate item, :scheduled_for_deletion?
+  end
+
   test "push login for an account already connected by another item is discarded" do
     item = families(:dylan_family).trade_republic_items.create!(
       name: "Trade Republic", currency: "EUR", status: :requires_update, pending_login_state: "pending-login"

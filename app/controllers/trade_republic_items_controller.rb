@@ -168,11 +168,15 @@ class TradeRepublicItemsController < ApplicationController
       update_if_pending_login_current!(pending, pending_login_state: result.data.fetch("pending_login_b64")) if result.data["pending_login_b64"].present?
       login_poll_response(:no_content) { render_login_panel }
     elsif duplicate_connection?(result)
+      return render_superseded_push_login unless update_if_pending_login_current!(pending, pending_login_state: nil, status: :requires_update)
+
       discard_duplicate_connection!
       render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
     else
       begin
-        @trade_republic_item.update!(session_blob: result.data.fetch("session_txt"), pending_login_state: nil, status: :good, brokerage_account_id: account_id_from(result))
+        unless update_if_pending_login_current!(pending, session_blob: result.data.fetch("session_txt"), pending_login_state: nil, status: :good, brokerage_account_id: account_id_from(result))
+          return render_superseded_push_login
+        end
       rescue ActiveRecord::RecordNotUnique
         discard_duplicate_connection!
         return render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
