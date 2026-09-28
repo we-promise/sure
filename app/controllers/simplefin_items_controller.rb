@@ -230,9 +230,11 @@ class SimplefinItemsController < ApplicationController
     if @stale_simplefin_accounts.any?
       # Build list of target accounts for "move transactions to" dropdown
       # Only show accounts from this SimpleFin connection (excluding stale ones)
+      # that the user can write, since complete_account_setup refuses the rest.
       stale_account_ids = @stale_simplefin_accounts.map { |sfa| sfa.current_account&.id }.compact
       @target_accounts = @simplefin_item.accounts
         .reject { |acct| stale_account_ids.include?(acct.id) }
+        .select { |acct| writable_account_ids.include?(acct.id) }
         .sort_by(&:name)
     end
   end
@@ -598,6 +600,13 @@ class SimplefinItemsController < ApplicationController
         account = sfa.current_account
         next unless account
 
+        # Both actions destroy the stale account, and a move writes into the
+        # target, so each needs write access like any other link change.
+        unless writable_account_ids.include?(account.id)
+          results[:errors] << { account: account.name, action: action }
+          next
+        end
+
         case action
         when "delete"
           if handle_stale_account_delete(sfa, account)
@@ -635,7 +644,7 @@ class SimplefinItemsController < ApplicationController
 
     def handle_stale_account_move(simplefin_account, source_account, target_account_id)
       target_account = @simplefin_item.accounts.find { |acct| acct.id.to_s == target_account_id.to_s }
-      return false unless target_account
+      return false unless target_account && writable_account_ids.include?(target_account.id)
 
       ActiveRecord::Base.transaction do
         # Handle transfers that would become invalid after moving entries.

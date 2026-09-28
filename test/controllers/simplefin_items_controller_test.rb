@@ -1104,4 +1104,113 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert Account.exists?(stale_account.id)
     assert SimplefinAccount.exists?(stale_sfa.id)
   end
+  # The stale-account actions delete an account, or move its entries into
+  # another account and then delete it. Both write the accounts involved, so
+  # the admin role alone is not enough (#3534).
+  test "complete_account_setup does not delete a stale account the admin cannot write" do
+    stale_sfa, stale_account = stale_member_link(:read_write, account_id: "stale_rw_delete")
+
+    assert_no_difference [ "Account.count", "SimplefinAccount.count" ] do
+      post complete_account_setup_simplefin_item_url(@simplefin_item), params: {
+        stale_account_actions: { stale_sfa.id => { action: "delete" } }
+      }
+    end
+
+    assert_redirected_to accounts_path
+    assert Account.exists?(stale_account.id)
+    assert_equal I18n.t("simplefin_items.complete_account_setup.stale_accounts_errors", count: 1), flash[:alert]
+  end
+
+  test "complete_account_setup deletes a stale account shared with full control" do
+    stale_sfa, stale_account = stale_member_link(:full_control, account_id: "stale_fc_delete")
+
+    assert_difference [ "Account.count", "SimplefinAccount.count" ], -1 do
+      post complete_account_setup_simplefin_item_url(@simplefin_item), params: {
+        stale_account_actions: { stale_sfa.id => { action: "delete" } }
+      }
+    end
+
+    assert_not Account.exists?(stale_account.id)
+  end
+
+  test "complete_account_setup does not move a stale account the admin cannot write" do
+    stale_sfa, stale_account = stale_member_link(:read_write, account_id: "stale_rw_source")
+    _target_sfa, target_account = stale_member_link(:full_control, account_id: "active_fc_target")
+    entry = stale_link_entry(stale_account)
+
+    assert_no_difference [ "Account.count", "SimplefinAccount.count" ] do
+      post complete_account_setup_simplefin_item_url(@simplefin_item), params: {
+        stale_account_actions: { stale_sfa.id => { action: "move", target_account_id: target_account.id } }
+      }
+    end
+
+    assert_equal stale_account.id, entry.reload.account_id
+    assert_equal I18n.t("simplefin_items.complete_account_setup.stale_accounts_errors", count: 1), flash[:alert]
+  end
+
+  test "complete_account_setup does not move a stale account onto a target the admin cannot write" do
+    stale_sfa, stale_account = stale_member_link(:full_control, account_id: "stale_fc_source")
+    _target_sfa, target_account = stale_member_link(:read_write, account_id: "active_rw_target")
+    entry = stale_link_entry(stale_account)
+
+    assert_no_difference [ "Account.count", "SimplefinAccount.count" ] do
+      post complete_account_setup_simplefin_item_url(@simplefin_item), params: {
+        stale_account_actions: { stale_sfa.id => { action: "move", target_account_id: target_account.id } }
+      }
+    end
+
+    assert_equal stale_account.id, entry.reload.account_id
+    assert_equal I18n.t("simplefin_items.complete_account_setup.stale_accounts_errors", count: 1), flash[:alert]
+  end
+
+  test "complete_account_setup moves a stale account when the admin can write both accounts" do
+    stale_sfa, stale_account = stale_member_link(:full_control, account_id: "stale_fc_move")
+    _target_sfa, target_account = stale_member_link(:full_control, account_id: "active_fc_move")
+    entry = stale_link_entry(stale_account)
+
+    assert_difference [ "Account.count", "SimplefinAccount.count" ], -1 do
+      post complete_account_setup_simplefin_item_url(@simplefin_item), params: {
+        stale_account_actions: { stale_sfa.id => { action: "move", target_account_id: target_account.id } }
+      }
+    end
+
+    assert_equal target_account.id, entry.reload.account_id
+  end
+
+  test "setup_accounts offers only writable accounts as stale-move targets" do
+    stale_sfa, _stale_account = stale_member_link(:full_control, account_id: "stale_fc_offer")
+    _fc_sfa, fc_target = stale_member_link(:full_control, account_id: "active_fc_offer")
+    _rw_sfa, rw_target = stale_member_link(:read_write, account_id: "active_rw_offer")
+    @simplefin_item.update!(raw_payload: { accounts: [ { id: "active_fc_offer" }, { id: "active_rw_offer" } ] })
+
+    get setup_accounts_simplefin_item_url(@simplefin_item)
+
+    assert_response :success
+    target_select = "select[name='stale_account_actions[#{stale_sfa.id}][target_account_id]']"
+    assert_select "#{target_select} option[value=?]", fc_target.id, count: 1
+    assert_select "#{target_select} option[value=?]", rw_target.id, count: 0
+  end
+
+  private
+    # A SimpleFIN account linked (legacy FK and AccountProvider) to an account
+    # family_member owns and family_admin holds exactly `permission` on. The raw
+    # payload lists no accounts, so every linked account reads as stale.
+    def stale_member_link(permission, account_id:)
+      sfa = @simplefin_item.simplefin_accounts.create!(name: account_id, account_id: account_id, currency: "USD",
+                                                       current_balance: 0, account_type: "depository")
+      account = @family.accounts.create!(owner: users(:family_member), name: account_id, balance: 0, currency: "USD",
+                                         accountable: Depository.create!(subtype: "checking"))
+      account.account_shares.where(user: users(:family_admin)).destroy_all
+      account.share_with!(users(:family_admin), permission: permission)
+      assert_equal permission, account.reload.permission_for(users(:family_admin))
+      sfa.update!(account: account)
+      account.update!(simplefin_account_id: sfa.id)
+      @simplefin_item.update!(raw_payload: { accounts: [] })
+      [ sfa, account ]
+    end
+
+    def stale_link_entry(account)
+      Entry.create!(account: account, name: "Stale entry", amount: 25, currency: "USD", date: Date.current,
+                    entryable: Transaction.create!)
+    end
 end
