@@ -413,6 +413,21 @@ en:
         eyebrow: Setup
         need_help: "Need help?"
       connect: Connect
+      financekit:
+        app_store: App Store
+        coming_soon: Coming soon!
+        description: "Manage Apple Wallet connections in the Sure iOS app. Wallet data syncs while the app is open; unattended background sync is not available yet."
+        summary: Wallet sync
+        accounts: Linked accounts
+        linked_accounts:
+          one: 1 linked account
+          other: "%{count} linked accounts"
+        status:
+          active: Sync active
+          repair_required: Repair required — open the Sure iOS app
+        last_accepted_at: Last accepted by Sure
+        last_imported_at: Last imported into your family
+        not_yet: Not yet
       groups:
         your_connections: Your connections
         available: Available
@@ -437,6 +452,7 @@ en:
       sync_provider_in_progress: Sync started.
       recently_synced: Synced recently. Try again in a moment.
       taglines:
+        financekit: Sync (some) FinanceKit accounts through the Sure iOS app.
         akahu: Sync New Zealand financial institutions via Akahu.
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.
         lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
@@ -703,15 +719,15 @@ en:
           title: Encryption is not configured
           message: Trade Republic credentials and session data cannot be stored securely until Active Record Encryption is configured.
         steps:
-          step_1: Enter the phone number and PIN you use for the Trade Republic app, then save.
+          step_1: Enter the phone number and PIN or password you use for the Trade Republic app, then save.
           step_2: Enter the code from your authenticator app when requested.
           step_3: Approve the login in your Trade Republic app when prompted.
         phone_number_label: Phone number
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Leave blank to keep the current phone number
-        pin_label: PIN
-        pin_placeholder_new: Your Trade Republic app PIN
-        pin_placeholder_existing: Leave blank to keep the current PIN
+        pin_label: PIN or password
+        pin_placeholder_new: Your Trade Republic PIN or password
+        pin_placeholder_existing: Leave blank to keep the current PIN or password
         currency_label: Account currency
         connect: Log in
         confirm_login: Check login
@@ -733,16 +749,21 @@ en:
           close: Done
         qr_login: Log in with QR code
         qr_cancel: Cancel QR login
-        qr_back_to_credentials: Back to phone number and PIN
+        qr_back_to_credentials: Back to phone number and PIN or password
         qr_loading: Preparing QR code …
         qr_instruction: Scan the QR code with your Trade Republic app and approve the login.
         qr_success: Login approved. Sure is refreshing the provider page.
         qr_error: QR login could not be started. Please try again.
+        add_account: Add another connection
         save_configuration: Save & Start Login
         update_configuration: Update Configuration
         sync: Sync
+        syncing: Syncing...
         disconnect: Disconnect Trade Republic
         disconnect_confirm: Disconnect Trade Republic? Your synced accounts will become manual accounts.
+        disconnect_confirm_with_identifier: "Disconnect the Trade Republic connection ending in %{last4}? Your synced accounts will become manual accounts."
+        identifier_phone: Phone
+        identifier_account: Account
         status_configured_prefix: "Connected. Visit the"
         accounts_tab: Accounts
         setup_accounts: Set up accounts

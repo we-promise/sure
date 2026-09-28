@@ -9,6 +9,9 @@
     <div class="mb-4">
       <%= render DS::Alert.new(title: t("accounts.confirm_unlink.warning_title"), variant: :warning) do %>
         <ul class="list-disc list-inside">
+          <% if @account.linked_to?("FinancekitAccountLineage") %>
+            <li><%= t("accounts.confirm_unlink.warning_wallet_connection") %></li>
+          <% end %>
           <li><%= t("accounts.confirm_unlink.warning_no_sync") %></li>
           <li><%= t("accounts.confirm_unlink.warning_manual_updates") %></li>
           <li><%= t("accounts.confirm_unlink.warning_transactions_kept") %></li>

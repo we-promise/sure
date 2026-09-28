@@ -5,8 +5,8 @@ tr:
       asset_fee: Wise Assets ücreti
       default_name: Wise etkinliği
       interest: Wise faizi
-      jar_deposit: Jar'a transfer
-      jar_withdrawal: Jar'dan transfer
+      jar_deposit: Kumbaraya transfer
+      jar_withdrawal: Kumbaradan transfer
       transfer_from_jar: "%{jar} kaynağından transfer"
       transfer_to_jar: "%{jar} hedefine transfer"
     complete_account_setup:
@@ -81,6 +81,16 @@ tr:
       token_label: API token'ı
       token_placeholder: Wise kişisel API token'ınızı yapıştırın
       update_connection: Bağlantıyı güncelle
+      sca:
+        title: Güçlü Müşteri Kimlik Doğrulaması (SCA)
+        description: Wise, gelen ödemeler dahil tüm hesap özetlerini okumak için imzalı bir tek kullanımlık token doğrulaması ister. Bunu etkinleştirmek için burada bir anahtar çifti oluşturun ve açık anahtarı Wise'a kaydedin.
+        public_key_label: Açık anahtar (PEM)
+        registered_help_html: 'Bu anahtarı Wise''a kaydedin: Settings → Connect and manage apps → Developer tools → Public keys → Add public key.'
+        copy: Kopyala
+        copied: Kopyalandı!
+        generate: Anahtar çifti oluştur
+        regenerate: Anahtar çiftini yeniden oluştur
+        regenerate_confirm: Bu işlem yeni bir anahtar çifti oluşturur. Wise, önceki açık anahtarı siz Wise hesabınızdan kaldırana kadar kabul etmeye devam eder — Sure bu anahtarı uzaktan iptal edemez. Hesap özetlerinin yeniden eşitlenebilmesi için yeni açık anahtarı Wise'a kaydetmeniz gerekir. Devam edilsin mi?
     select_accounts:
       cancel: İptal
       description: "%{product_name} hesabınıza bağlamak istediğiniz Wise para birimi
@@ -165,3 +175,6 @@ tr:
       status_never: Hiç eşitlenmedi
       status_with_summary: Son eşitleme %{timestamp} önce — %{summary}
       syncing: Eşitleniyor...
+    generate_sca_keypair:
+      success: Yeni SCA anahtar çifti oluşturuldu. Etkinleştirmeyi tamamlamak için açık anahtarı Wise'a kaydedin.
+      failed: Yeni SCA anahtar çifti oluşturulamadı. Lütfen tekrar deneyin.

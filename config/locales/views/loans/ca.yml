@@ -13,25 +13,52 @@ ca:
       subtype_prompt: Selecciona el tipus de préstec
       term_months: Termini (mesos)
       term_months_placeholder: '360'
+      rate_type_adjustable: Revisable
+      rate_type_fixed: Fix
+      rate_type_variable: Variable
+      rate_changes: Canvis de tipus
+      rate_changes_hint: Cada fila fixa el tipus que s'aplica des de la seva data d'efecte fins a la següent. Si tornes a introduir una data, se substitueix aquella fila en lloc d'afegir-ne una segona.
+      rate_changes_empty: No hi ha cap canvi de tipus registrat. El préstec aplica el tipus d'interès indicat a dalt.
+      rate_change_effective_date: Data d'efecte
+      rate_change_rate: Tipus
+      rate_change_add: Afegeix un canvi de tipus
+      rate_change_remove: Elimina
+      start_date: Data de formalització
+      start_date_hint: Quan es va desemborsar el préstec. Deixa-ho en blanc per utilitzar la data d'obertura del compte.
     new:
       title: Introdueix les dades del préstec
     overview:
       interest_rate: Tipus d'interès
       monthly_payment: Quota mensual
       not_applicable: N/A
-      original_principal: Principal original
-      remaining_principal: Principal pendent
+      original_principal: Capital original
+      remaining_principal: Capital pendent
       term: Termini
       type: Tipus
       unknown: Desconegut
+      original_payoff_date: Data de venciment original
     tabs:
       overview:
         edit_loan_details: Edita els detalls del préstec
         interest_rate: Tipus d'interès
         monthly_payment: Quota mensual
         not_applicable: No aplicable
-        original_principal: Principal original
-        remaining_principal: Principal pendent
+        original_principal: Capital original
+        remaining_principal: Capital pendent
         term: Termini
         type: Tipus
         unknown: Desconegut
+        original_payoff_date: Data de venciment original
+      schedule:
+        date: Data
+        description: Projecció a partir del saldo, el tipus i el termini originals, des del %{start_date}. No reflecteix les amortitzacions anticipades.
+        variable_rate_notice: El tipus d'aquest préstec varia amb el temps. El quadre d'amortització es recalcula a cada canvi registrat, mantenint la data de venciment original i ajustant la quota; un canvi que encara no s'hagi registrat modificarà aquestes xifres.
+        opening_payment: Quota inicial
+        interest: Interessos
+        monthly_payment: Quota mensual
+        number: Núm.
+        payment: Quota
+        principal: Capital
+        remaining_balance: Capital pendent
+        total_cost: Cost total
+        total_interest: Interessos totals

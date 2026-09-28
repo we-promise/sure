@@ -3,6 +3,7 @@ class AccountsController < ApplicationController
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default]
   before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
+  before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
   def index
@@ -13,6 +14,10 @@ class AccountsController < ApplicationController
           .with_attached_logo
           .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
+    @financekit_accounts = Current.family.accounts
+      .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
+      .joins(:account_providers).where(account_providers: { provider_type: "FinancekitAccountLineage" })
+      .distinct.with_attached_logo.includes(:accountable, account_providers: :provider).order(:name)
     @plaid_items = visible_provider_items(family.plaid_items.ordered.with_attached_logo.includes(:plaid_accounts))
     @simplefin_items = visible_provider_items(family.simplefin_items.ordered.with_attached_logo)
     @lunchflow_items = visible_provider_items(family.lunchflow_items.ordered.with_attached_logo.includes(:lunchflow_accounts))
@@ -79,6 +84,11 @@ class AccountsController < ApplicationController
   def show
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
+    # One reference date for everything on the page that is date-sensitive:
+    # the chart, its projection, the cards and the Schedule tab. Read
+    # separately, a render crossing midnight shows a chart projecting from one
+    # date beside a table shaded against another.
+    @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
     @q = params.fetch(:q, {}).permit(:search, status: [])
     entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
@@ -86,6 +96,17 @@ class AccountsController < ApplicationController
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
     end
+
+    # Only for a response that will actually show the chart card. The payload
+    # runs the schedule and the projection; a Turbo frame request for the
+    # activity feed's `entries` frame (its pagination) renders the whole page
+    # and keeps one frame, so building it there was a full simulation per page
+    # turn for nothing. Same reasoning as the statements-frame return above.
+    #
+    # The chart and the Schedule tab's forecast card read the same projection,
+    # so it is built once here and handed to both.
+    @loan_projection = @account.loan.payoff_projection(as_of: @as_of) if @account.accountable.is_a?(Loan)
+    @loan_chart = loan_payoff_chart(@account, as_of: @as_of, period: @period, projection: @loan_projection) if chart_card_requested?
 
     per_page = safe_per_page(stored_per_page_default)
     store_per_page!(per_page) if params[:per_page].present?
@@ -115,7 +136,7 @@ class AccountsController < ApplicationController
     if transactions.any?
       ActiveRecord::Associations::Preloader.new(
         records: transactions,
-        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, :merchant ]
+        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, :merchant, :tags ]
       ).call
     end
 
@@ -233,19 +254,13 @@ class AccountsController < ApplicationController
   end
 
   def confirm_unlink
-    unless @account.linked?
-      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
-    end
   end
 
   def unlink
-    unless @account.linked?
-      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
-      return
-    end
-
     begin
       Account.transaction do
+        @account.provider_account_for("FinancekitAccountLineage")&.disconnect!
+
         # Detach holdings from provider links before destroying them
         provider_link_ids = @account.account_providers.pluck(:id)
         if provider_link_ids.any?
@@ -260,7 +275,7 @@ class AccountsController < ApplicationController
         # This follows the Plaid pattern where the provider account survives as "unlinked".
         # SnapTrade has limited connection slots (5 free), so preserving the record avoids
         # wasting a slot on reconnect.
-        @account.account_providers.destroy_all
+        @account.account_providers.reload.destroy_all
 
         # Remove legacy system links (foreign keys)
         @account.update!(plaid_account_id: nil, simplefin_account_id: nil)
@@ -314,6 +329,45 @@ class AccountsController < ApplicationController
   end
 
   private
+    # Built here rather than in the template: assembling a chart payload is
+    # domain work, and `show` asks for it exactly once per request, so there
+    # is nothing to memoise.
+    #
+    # The payload runs the schedule, the projection and a balance query from
+    # inputs this app does not fully control: `term_months` and `rate_type`
+    # arrive from providers, `start_date` and the rate schedule from the form,
+    # balances from sync. A raise in any of them costs the chart, not the page:
+    # nil is what the component already takes as "no chart", and the account
+    # page then renders exactly as it did before the chart existed. Reported,
+    # because a loan silently losing its chart is a bug someone has to see.
+    def loan_payoff_chart(account, as_of:, period:, projection: nil)
+      return nil unless account.accountable.is_a?(Loan)
+
+      Loan::PayoffChart.new(account.loan, as_of: as_of, period: period, projection: projection).payload
+    rescue StandardError => e
+      Rails.logger.error("Loan payoff chart failed for account #{account.id}: #{e.class} - #{e.message}")
+      Sentry.capture_exception(e) { |scope| scope.set_tags(record_type: "Account", record_id: account.id) } if defined?(Sentry)
+      nil
+    end
+
+    # A plain visit, or a frame request for one of the two frames the chart
+    # card sits inside: the account's container frame and the chart card's own
+    # chart_details frame. Any other frame is rendered and then discarded.
+    def chart_card_requested?
+      return true unless turbo_frame_request?
+
+      request.headers["Turbo-Frame"].in?([
+        helpers.dom_id(@account, :container),
+        helpers.dom_id(@account, :chart_details)
+      ])
+    end
+
+    def ensure_linked_account
+      return if @account.linked?
+
+      redirect_to account_path(@account), alert: t("accounts.unlink.not_linked")
+    end
+
     def family
       Current.family
     end
@@ -399,7 +453,7 @@ class AccountsController < ApplicationController
         @onchain_wallet_items
       ].flatten.compact
 
-      accounts = @manual_accounts.to_a
+      accounts = @manual_accounts.to_a + @financekit_accounts.to_a
       items.each do |item|
         next unless item.respond_to?(:accounts)
         accounts.concat(item.accounts)
