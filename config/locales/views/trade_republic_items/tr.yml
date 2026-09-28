@@ -37,6 +37,9 @@ tr:
         unknown:
           one: "%{count} bilinmeyen işlem"
           other: "%{count} bilinmeyen işlem"
+        pending_trade_details:
+          one: '%{count} yatırım işlemi ayrıntı bekliyor'
+          other: '%{count} yatırım işlemi ayrıntı bekliyor'
         expenses:
           one: "Son 30 günde %{count} gider (%{amount})"
           other: "Son 30 günde %{count} gider (%{amount})"
@@ -110,7 +113,7 @@ tr:
     initiate_login:
       verification_required: "Giriş başlatıldı. %{method} ile onaylayın, ardından Girişi onayla düğmesine basın."
       not_configured: Trade Republic yapılandırılmamış.
-      pin_required: Yeni bir giriş başlatmak için Trade Republic PIN'inizi girin.
+      pin_required: Yeni bir giriş başlatmak için Trade Republic PIN'inizi veya şifrenizi girin.
     complete_login:
       approval_pending: "Henüz onaylanmadı. Trade Republic uygulamasında girişi onaylayıp tekrar deneyin."
       success: "Trade Republic başarıyla bağlandı."
@@ -144,8 +147,7 @@ tr:
         card_fee: Kart ücreti
         card_refund: Kart iadesi
         tax_refund: Vergi iadesi
-        buy: Alış
-        sell: Satış
+        round_up: Round up
     defaults:
       name: Trade Republic
     sync_status:
@@ -158,7 +160,7 @@ tr:
       success: Trade Republic kaydedildi. Bağlantıyı tamamlamak için Trade Republic uygulamasında girişi onaylayın.
     update:
       success: Trade Republic yapılandırması başarıyla güncellendi.
-      pin_required: Yeniden kimlik doğrulamak için Trade Republic PIN'inizi girin.
+      pin_required: Yeniden kimlik doğrulamak için Trade Republic PIN'inizi veya şifrenizi girin.
     destroy:
       success: Trade Republic bağlantısı silinmek üzere planlandı.
       unlink_failed: Trade Republic bağlantısı tamamen kesilemedi. Güvenle yeniden denenebilmesi için bağlantı korundu.

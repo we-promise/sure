@@ -9,9 +9,12 @@ ca:
         any: qualsevol
         match: coincideixen
         of_the_following_conditions: de les condicions següents
+      condition:
+        value_placeholder: Introdueix un valor
   rules:
     actions:
       value_placeholder: Introdueix un valor
+      to_label: a
     apply_all:
       ai_cost_message: Això utilitzarà IA per categoritzar fins a %{transactions}
         transaccions.
@@ -43,6 +46,18 @@ ca:
         expense: Despesa
         income: Ingrés
         transfer: Transferència
+      operators:
+        contains: Conté
+        does_not_contain: No conté
+        equal_to: Igual a
+        is_equal_to: És igual a
+        not_equal_to: Diferent de
+        is_empty: Està buit
+        is_not_empty: No està buit
+        greater_than: Més gran que
+        greater_or_equal_to: Més gran o igual que
+        less_than: Més petit que
+        less_than_or_equal_to: Més petit o igual que
     confirm:
       ai_cost_no_estimate_html: Això utilitzarà IA per categoritzar %{count} transaccions.
       ai_cost_title: Estimació de cost d'IA
@@ -115,10 +130,10 @@ ca:
       action_label_to: "%{label} a %{value}"
       all_past_and_future: Totes les %{resource} passades i futures
       and_more_actions:
-        one: i 1 acció més
+        one: i %{count} acció més
         other: i %{count} accions més
       and_more_conditions:
-        one: i 1 condició més
+        one: i %{count} condició més
         other: i %{count} condicions més
       delete: Elimina
       edit: Edita

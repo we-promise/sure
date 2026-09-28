@@ -666,15 +666,15 @@ ru:
           title: Шифрование не настроено
           message: Учётные данные и данные сессии Trade Republic нельзя хранить безопасно, пока не настроено шифрование Active Record.
         steps:
-          step_1: Введите номер телефона и PIN-код, которые вы используете в приложении Trade Republic, затем сохраните.
+          step_1: Введите номер телефона и PIN-код или пароль, которые вы используете в приложении Trade Republic, затем сохраните.
           step_2: Введите код из приложения-аутентификатора, когда он будет запрошен.
           step_3: Подтвердите вход в приложении Trade Republic, когда появится запрос.
         phone_number_label: Номер телефона
         phone_number_placeholder_new: +49 170 1234567
         phone_number_placeholder_existing: Оставьте пустым, чтобы сохранить текущий номер телефона
-        pin_label: PIN-код
-        pin_placeholder_new: PIN-код приложения Trade Republic
-        pin_placeholder_existing: Оставьте пустым, чтобы сохранить текущий PIN-код
+        pin_label: PIN-код или пароль
+        pin_placeholder_new: PIN-код или пароль приложения Trade Republic
+        pin_placeholder_existing: Оставьте пустым, чтобы сохранить текущий PIN-код или пароль
         currency_label: Валюта счёта
         connect: Войти
         confirm_login: Проверить вход
@@ -696,7 +696,7 @@ ru:
           close: Готово
         qr_login: Войти по QR-коду
         qr_cancel: Отменить вход по QR-коду
-        qr_back_to_credentials: Вернуться к номеру телефона и PIN-коду
+        qr_back_to_credentials: Вернуться к номеру телефона и PIN-коду или паролю
         qr_loading: Подготовка QR-кода…
         qr_instruction: Отсканируйте QR-код в приложении Trade Republic и подтвердите вход.
         qr_success: Вход подтверждён. Sure обновляет страницу провайдера.
