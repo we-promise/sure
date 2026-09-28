@@ -128,6 +128,25 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     assert merchant.reload.logo_url.present?
   end
 
+  # A logo backfill failure is cosmetic and must not abort the enhance run —
+  # otherwise it would skip LLM enhancement and deduplication for the family.
+  test "a logo backfill failure does not prevent enhancement" do
+    merchant = ProviderMerchant.create!(source: "lunchflow", name: "Walmart", provider_merchant_id: "lf_walmart")
+    create_transaction(account: @account, name: "Walmart purchase", merchant: merchant)
+    ProviderMerchant.stubs(:backfill_logos).raises(StandardError, "boom")
+
+    provider_response = provider_success_response([
+      EnhancedMerchant.new(merchant_id: merchant.id, business_url: "walmart.com")
+    ])
+    @llm_provider.expects(:enhance_provider_merchants).returns(provider_response).once
+
+    result = ProviderMerchant::Enhancer.new(@family).enhance
+
+    assert_equal 0, result[:logos]
+    assert_equal 1, result[:enhanced]
+    assert_equal "walmart.com", merchant.reload.website_url
+  end
+
   test "keeps a provider-supplied logo when adding the website" do
     merchant = ProviderMerchant.create!(source: "coinstats", name: "Binance", provider_merchant_id: "cs_binance", logo_url: "https://coinstats.app/binance.png")
     create_transaction(account: @account, name: "Binance transfer", merchant: merchant)

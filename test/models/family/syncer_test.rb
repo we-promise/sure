@@ -103,7 +103,7 @@ class Family::SyncerTest < ActiveSupport::TestCase
       actions: [ Rule::Action.new(action_type: "exclude_transaction") ]
     )
     @family.rules.stubs(:where).with(active: true).returns([ rule ])
-    @family.stubs(:backfill_provider_merchant_logos).raises(StandardError, "boom")
+    ProviderMerchant.stubs(:backfill_logos).raises(StandardError, "boom")
 
     rule.expects(:apply_later).once
 

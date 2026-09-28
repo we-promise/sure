@@ -410,8 +410,14 @@ class Family < ApplicationRecord
   # Generates missing Brandfetch logos for provider merchants that have a
   # website, so records that got their website before Brandfetch was configured
   # self-heal (issue #2925). Returns the number of logos generated.
+  #
+  # Logos are cosmetic: a failure here must not fail the callers (post-sync
+  # rule application, LLM merchant enhancement).
   def backfill_provider_merchant_logos
     ProviderMerchant.where(id: transactions.select(:merchant_id)).backfill_logos
+  rescue StandardError => e
+    Rails.logger.error("Failed to backfill provider merchant logos for family #{id}: #{e.message}")
+    0
   end
 
   def available_merchants

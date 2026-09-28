@@ -21,7 +21,7 @@ class Family::Syncer
 
   def perform_post_sync
     family.auto_match_transfers!
-    backfill_provider_merchant_logos
+    family.backfill_provider_merchant_logos
 
     Rails.logger.info("Applying rules for family #{family.id}")
     family.rules.where(active: true).each do |rule|
@@ -30,13 +30,6 @@ class Family::Syncer
   end
 
   private
-
-    # Logos are cosmetic: a failure here must not fail the sync or skip rules.
-    def backfill_provider_merchant_logos
-      family.backfill_provider_merchant_logos
-    rescue StandardError => e
-      Rails.logger.error("Failed to backfill provider merchant logos for family #{family.id}: #{e.message}")
-    end
 
     # Collect all syncable provider items via reflection so new `*_items`
     # integrations participate in nightly family sync as soon as they include

@@ -96,7 +96,12 @@ class ProviderMerchant < Merchant
   end
 
   # Generate logo URL from website_url using BrandFetch, if configured.
+  # Only refreshes or clears a logo generated here: a provider-supplied logo
+  # (Plaid, CoinStats) must not be replaced (issue #2925), while a Brandfetch
+  # logo must follow the website it was derived from.
   def generate_logo_url_from_website!
+    return unless logo_url.blank? || brandfetch_logo?
+
     if website_url.present? && Setting.brand_fetch_client_id.present?
       update!(logo_url: brandfetch_logo_url)
     elsif website_url.blank?
@@ -129,6 +134,10 @@ class ProviderMerchant < Merchant
 
     def generate_logo_url_from_website
       self.logo_url = brandfetch_logo_url
+    end
+
+    def brandfetch_logo?
+      logo_url.to_s.include?("cdn.brandfetch.io")
     end
 
     def brandfetch_logo_url
