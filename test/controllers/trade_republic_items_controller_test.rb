@@ -378,11 +378,45 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     )
     TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
 
-    post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+    post poll_login_trade_republic_item_url(item), headers: login_poller_headers
 
     assert_response :no_content
     assert_empty response.body
     assert_equal "pending-login-2", item.reload.pending_login_state
+  end
+
+  test "manual push login status check re-renders only that connection's card while pending" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "pending-login")
+    provider = mock
+    provider.expects(:complete_login).returns(
+      Provider::TradeRepublicClient::Result.new(data: { "status" => "pending" })
+    )
+    provider.stubs(:login_stage).returns("waiting_for_approval")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    card_id = TradeRepublic::ConnectionCardComponent.dom_id_for(item)
+    assert_includes response.body, %(target="#{card_id}")
+    assert_not_includes response.body, %(target="trade-republic-providers-panel")
+    assert_equal "pending-login", item.reload.pending_login_state
+  end
+
+  test "manual push login status check shows a rate limit on the card" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "pending-login")
+    provider = mock
+    provider.expects(:complete_login).raises(Provider::TradeRepublicClient::RateLimited, "slow down")
+    provider.stubs(:login_stage).returns("waiting_for_approval")
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_includes response.body, "slow down"
+    assert_equal "pending-login", item.reload.pending_login_state
   end
 
   test "expired push login replaces only that connection's card" do
@@ -412,10 +446,10 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
 
     assert_difference -> { DebugLogEntry.where(source: "trade_republic", level: "info").count }, 2 do
-      post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+      post poll_login_trade_republic_item_url(item), headers: login_poller_headers
       assert_response :too_many_requests
 
-      post poll_login_trade_republic_item_url(item), headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
+      post poll_login_trade_republic_item_url(item), headers: login_poller_headers
       assert_response :service_unavailable
     end
 
@@ -561,4 +595,10 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "fresh-session", item.session_blob
     assert_not item.scheduled_for_deletion?
   end
+
+  private
+
+    def login_poller_headers
+      { "ACCEPT" => "text/vnd.turbo-stream.html", "X-Requested-With" => "XMLHttpRequest" }
+    end
 end

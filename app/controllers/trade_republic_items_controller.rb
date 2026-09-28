@@ -165,9 +165,7 @@ class TradeRepublicItemsController < ApplicationController
     result = provider.complete_login(pending_login_b64: @trade_republic_item.pending_login_state)
     if result.data["status"] == "pending"
       @trade_republic_item.update!(pending_login_state: result.data.fetch("pending_login_b64")) if result.data["pending_login_b64"].present?
-      # Re-rendering the card would reconnect the poller, which restarts its
-      # timeout and polls again without waiting.
-      head :no_content
+      login_poll_response(:no_content) { render_login_panel }
     elsif duplicate_connection?(result)
       discard_duplicate_connection!
       render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
@@ -186,11 +184,11 @@ class TradeRepublicItemsController < ApplicationController
     render_login_panel(alert: t(".login_expired"))
   rescue Provider::TradeRepublicClient::RateLimited => e
     capture_login_poll_error(e, login: "push", retryable: true)
-    head :too_many_requests
+    login_poll_response(:too_many_requests) { render_login_panel(alert: e.message) }
   rescue Provider::TradeRepublicClient::Timeout,
          Provider::TradeRepublicClient::TransientProviderError => e
     capture_login_poll_error(e, login: "push", retryable: true)
-    head :service_unavailable
+    login_poll_response(:service_unavailable) { render_login_panel(alert: e.message) }
   rescue Provider::TradeRepublicClient::Error => e
     capture_login_poll_error(e, login: "push", retryable: false)
     @trade_republic_item.update!(pending_login_state: nil)
@@ -665,6 +663,14 @@ class TradeRepublicItemsController < ApplicationController
       end
 
       render json: { error: error.message, retryable: retryable }, status: status
+    end
+
+    # The background poller lives on the card, so re-rendering the card for it
+    # would reconnect it, restart its timeout and poll again without waiting.
+    # The manual status button submits a Turbo form (no XHR header) and needs
+    # the card back as feedback.
+    def login_poll_response(poller_status)
+      request.xhr? ? head(poller_status) : yield
     end
 
     def capture_login_poll_error(error, login:, retryable:)
