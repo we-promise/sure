@@ -80,7 +80,12 @@ class EnableBankingItem < ApplicationRecord
 
   def sync_start_date_within_bounds
     if sync_start_date.blank?
-      errors.add(:sync_start_date, "can't be blank")
+      # A brand-new connection is created before the setup modal collects
+      # sync_start_date (EnableBankingItemsController#create/#authorize), and
+      # the importer falls back to its 3-month default until the field is
+      # set. Blank is therefore only invalid once a value has been stored -
+      # this guards against clearing it later, not the pre-setup window.
+      errors.add(:sync_start_date, "can't be blank") if sync_start_date_in_database.present?
       return
     end
 

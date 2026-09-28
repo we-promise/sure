@@ -487,7 +487,7 @@ class EnableBankingItem::Importer
       # escalate into strategy: longest on WRONG_TRANSACTIONS_PERIOD (see
       # allow_longest_retry_for) - it's independent of, and must not gate,
       # whether the user chose "longest" as their initial strategy outright.
-      initial_strategy = enable_banking_item.longest? ? "longest" : nil
+      initial_strategy = initial_strategy_for(enable_banking_account)
       include_pending = include_pending?
 
       begin
@@ -856,12 +856,10 @@ class EnableBankingItem::Importer
     end
 
     def determine_sync_start_date(enable_banking_account)
-      has_stored_transactions = enable_banking_account.raw_transactions_payload.to_a.any?
-
       # Use user-configured sync_start_date if set, otherwise default
       user_start_date = enable_banking_item.sync_start_date
 
-      if has_stored_transactions
+      if stored_transactions?(enable_banking_account)
         # For incremental syncs, get transactions from 7 days before last sync
         if enable_banking_item.last_synced_at
           enable_banking_item.last_synced_at.to_date - 7.days
@@ -884,7 +882,20 @@ class EnableBankingItem::Importer
     # catch-up sync must never silently balloon into a full-history refetch
     # just because it hit this error once.
     def allow_longest_retry_for(enable_banking_account)
-      has_stored_transactions = enable_banking_account.raw_transactions_payload.to_a.any?
-      !has_stored_transactions && enable_banking_item.date?
+      !stored_transactions?(enable_banking_account) && enable_banking_item.date?
+    end
+
+    # The user's "longest" choice only applies to the initial sync:
+    # determine_sync_start_date already returns a bounded incremental window
+    # once transactions are stored, and sending strategy: "longest" alongside
+    # it would re-fetch the full available history on every routine sync.
+    def initial_strategy_for(enable_banking_account)
+      return nil unless enable_banking_item.longest?
+
+      stored_transactions?(enable_banking_account) ? nil : "longest"
+    end
+
+    def stored_transactions?(enable_banking_account)
+      enable_banking_account.raw_transactions_payload.to_a.any?
     end
 end

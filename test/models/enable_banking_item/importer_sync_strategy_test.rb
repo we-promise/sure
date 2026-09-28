@@ -77,6 +77,29 @@ class EnableBankingItem::ImporterSyncStrategyTest < ActiveSupport::TestCase
     assert result[:success]
   end
 
+  test "fetch_and_store_transactions does not request strategy longest for an incremental sync" do
+    @enable_banking_item.update!(sync_strategy: "longest")
+    @enable_banking_item.stubs(:last_synced_at).returns(10.days.ago)
+    @enable_banking_account.stubs(:raw_transactions_payload).returns([ { "transaction_id" => "1" } ])
+    @importer.stubs(:include_pending?).returns(false)
+
+    # Once transactions are stored, the sync is incremental: the request must
+    # use the bounded catch-up window and never strategy: "longest", which
+    # would re-fetch the full available history on every routine sync.
+    @importer.expects(:fetch_paginated_transactions)
+      .with(@enable_banking_account, has_entries(
+        transaction_status: "BOOK",
+        start_date: 10.days.ago.to_date - 7.days,
+        strategy: nil,
+        allow_longest_retry: false
+      ))
+      .returns([])
+
+    result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+
+    assert result[:success]
+  end
+
   test "fetch_and_store_transactions does not request strategy longest when sync_strategy is date" do
     @importer.stubs(:include_pending?).returns(false)
 

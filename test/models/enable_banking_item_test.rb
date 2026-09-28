@@ -242,7 +242,16 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     assert_not @item.longest?
   end
 
-  test "is invalid when sync_strategy is date and sync_start_date is blank" do
+  test "is valid without sync_start_date before setup collects it" do
+    # create/authorize build the connection before the setup modal asks for
+    # sync_start_date, so a blank value must not block those paths.
+    @item.sync_start_date = nil
+
+    assert @item.valid?
+  end
+
+  test "is invalid when a stored sync_start_date is cleared" do
+    @item.save!
     @item.sync_start_date = nil
 
     assert_not @item.valid?
