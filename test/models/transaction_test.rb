@@ -346,6 +346,15 @@ class TransactionTest < ActiveSupport::TestCase
     assert inflow.reload.shows_transfer_category?
   end
 
+  test "a transfer linked as confirmed without transfer kinds shows the transfer category" do
+    # Wise interbalance moves are linked this way, without Transfer#confirm!
+    outflow, inflow = create_transfer_pair(to: accounts(:credit_card))
+    outflow.transfer_as_outflow.update!(status: "confirmed")
+
+    assert outflow.reload.shows_transfer_category?
+    assert inflow.reload.shows_transfer_category?
+  end
+
   test "a confirmed loan payment keeps its own category" do
     outflow, _inflow = create_transfer_pair(to: accounts(:loan))
     outflow.transfer_as_outflow.confirm!

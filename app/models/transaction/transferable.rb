@@ -18,8 +18,12 @@ module Transaction::Transferable
   # transaction's own category. An unconfirmed auto-match keeps its standard
   # kind (see Transfer#confirm!) and still counts under its own category, so
   # it keeps showing that category until the user confirms the match.
+  # Confirmed transfers linked without a transfer kind (e.g. Wise interbalance
+  # moves) keep showing the badge.
   def shows_transfer_category?
-    transfer? && transfer.present? && !transfer.categorizable?
+    return false if transfer.nil? || transfer.categorizable?
+
+    transfer? || transfer.confirmed?
   end
 
   def transfer_match_candidates(
