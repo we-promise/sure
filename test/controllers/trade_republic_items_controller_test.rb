@@ -135,6 +135,19 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil provider_account.current_account
   end
 
+  test "complete account setup creates a Crypto exchange account for the Crypto account" do
+    item = trade_republic_items(:configured_item)
+    provider_account = item.trade_republic_accounts.create!(
+      name: "Trade Republic Crypto", kind: "crypto", trade_republic_account_id: "crypto:DE1", currency: "EUR"
+    )
+
+    post complete_account_setup_trade_republic_item_url(item), params: { account_ids: [ provider_account.id ] }
+
+    account = provider_account.reload.current_account
+    assert_equal "Crypto", account.accountable_type
+    assert_equal "exchange", account.accountable.subtype
+  end
+
   test "complete account setup rolls back an account when linking fails" do
     item = trade_republic_items(:configured_item)
     provider_account = trade_republic_accounts(:main_account)

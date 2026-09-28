@@ -351,7 +351,7 @@ class TradeRepublicItemsController < ApplicationController
       return
     end
 
-    unless account.accountable_type.in?(%w[Investment Depository]) &&
+    unless account.accountable_type.in?(%w[Investment Depository Crypto]) &&
         account.account_providers.none? &&
         account.plaid_account_id.blank? &&
         account.simplefin_account_id.blank?
@@ -420,7 +420,7 @@ class TradeRepublicItemsController < ApplicationController
 
     @linkable_accounts = Current.family.accounts
       .visible
-      .where(accountable_type: %w[Investment Depository])
+      .where(accountable_type: %w[Investment Depository Crypto])
       .left_joins(:account_providers)
       .where(account_providers: { id: nil })
       .order(:name)

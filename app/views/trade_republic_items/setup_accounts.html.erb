@@ -78,7 +78,7 @@
                       <p class="text-sm text-secondary">
                         <%= t(
                           ".available_accounts.account_summary",
-                          account_type: tr_account.cash? ? t(".available_accounts.account_type_cash") : t(".available_accounts.account_type_investment"),
+                          account_type: { "cash" => t(".available_accounts.account_type_cash"), "crypto" => t(".available_accounts.account_type_crypto") }.fetch(tr_account.kind, t(".available_accounts.account_type_investment")),
                           balance: number_to_currency(tr_account.current_balance || 0, unit: Money::Currency.new(tr_account.currency.presence || Current.family.currency).symbol)
                         ) %>
                       </p>

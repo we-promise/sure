@@ -26,7 +26,7 @@ class TradeRepublicAccount::Processor
     end
 
     def update_account_balance!
-      total_balance = trade_republic_account.current_balance || 0
+      total_balance = trade_republic_account.account_balance || 0
       cash_balance = trade_republic_account.cash_balance || 0
 
       account.assign_attributes(
