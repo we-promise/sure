@@ -115,4 +115,14 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     assert_nil cleared.website_url
     assert_equal "https://acme.example", inherited.website_url
   end
+
+  test "convert_to_family_merchant_for reuses an existing same-name family merchant instead of raising" do
+    existing = @family.merchants.create!(name: "Acme Synced", color: "#4da568", website_url: "https://old.example")
+    @provider_merchant.update!(website_url: "https://acme.example")
+
+    converted = @provider_merchant.convert_to_family_merchant_for(@family, website_url: "https://acme.example")
+
+    assert_equal existing.id, converted.id
+    assert_equal 1, @family.merchants.where(name: "Acme Synced").count
+  end
 end

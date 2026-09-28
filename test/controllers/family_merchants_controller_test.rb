@@ -30,6 +30,20 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://attacker.example", own.website_url
   end
 
+  test "changing a provider merchant's website reuses an existing same-name family merchant" do
+    shared = ProviderMerchant.create!(name: "Coffee Co", source: "plaid", website_url: "https://coffee.example")
+    existing = @user.family.merchants.create!(name: "Coffee Co", website_url: "https://old.example")
+    transaction = Transaction.joins(entry: :account).merge(@user.accessible_accounts).first
+    transaction.update!(merchant: shared)
+
+    assert_no_difference -> { @user.family.merchants.count } do
+      patch family_merchant_url(shared), params: { provider_merchant: { name: "Coffee Co", website_url: "https://attacker.example" } }
+    end
+
+    assert_redirected_to family_merchants_path
+    assert_equal existing, transaction.reload.merchant
+  end
+
   test "saving a provider merchant unchanged keeps using the shared merchant" do
     shared = ProviderMerchant.create!(name: "Coffee Co", source: "plaid", website_url: "https://coffee.example")
     transaction = Transaction.joins(entry: :account).merge(@user.accessible_accounts).first

@@ -764,6 +764,14 @@ class SureImportTest < ActiveSupport::TestCase
         accountable_type: "Depository",
         accountable: { subtype: "checking" }
       } },
+      { type: "Valuation", data: {
+        id: "valuation-1",
+        account_id: "account-1",
+        date: "2024-01-14",
+        amount: "1000.00",
+        currency: "USD",
+        kind: "opening_anchor"
+      } },
       { type: "ProviderMerchant", data: {
         id: "provider-merchant-1",
         name: "AMZN MKTP",
@@ -791,6 +799,7 @@ class SureImportTest < ActiveSupport::TestCase
     end
 
     assert_equal "complete", @import.status
+    assert_equal "matched", @import.verification_status
 
     entry = @family.entries.find_by!(name: "Amazon purchase")
     merchant = entry.entryable.merchant
@@ -815,6 +824,7 @@ class SureImportTest < ActiveSupport::TestCase
     end
 
     assert_equal "complete", @import.status
+    assert_equal "matched", @import.verification_status
     assert_nil ProviderMerchant.find_by(provider_merchant_id: "plaid_amzn", source: "plaid")
 
     merchant = @family.entries.find_by!(name: "Amazon purchase").entryable.merchant
@@ -1075,6 +1085,10 @@ class SureImportTest < ActiveSupport::TestCase
         { type: "Account", data: {
           id: "account-1", name: "Provider Merchant Checking", balance: "1000.00", currency: "USD",
           accountable_type: "Depository", accountable: { subtype: "checking" }
+        } },
+        { type: "Valuation", data: {
+          id: "valuation-1", account_id: "account-1", date: "2024-01-14", amount: "1000.00",
+          currency: "USD", kind: "opening_anchor"
         } },
         { type: "ProviderMerchant", data: {
           id: "provider-merchant-1", name: "AMZN MKTP", source: "plaid", provider_merchant_id: "plaid_amzn"

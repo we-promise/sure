@@ -528,13 +528,13 @@ class Family::DataImporter
         if (merchant = ProviderMerchant.find_by_import_data(data, source))
           increment_summary("ProviderMerchant", :updated)
         else
-          merchant = @family.merchants.find_by(name: data["name"])
-          increment_summary("Merchant", merchant ? :updated : :created)
-          merchant ||= @family.merchants.create!(
-            name: data["name"],
+          merchant, created = FamilyMerchant.find_or_create_with_name(
+            @family,
+            data["name"],
             logo_url: data["logo_url"],
             website_url: data["website_url"]
           )
+          increment_summary("ProviderMerchant", created ? :created : :updated)
         end
 
         map_source!(:merchants, old_id, merchant)

@@ -46,8 +46,11 @@ class ProviderMerchant < Merchant
   # Returns the newly created FamilyMerchant.
   def convert_to_family_merchant_for(family, attributes = {})
     transaction do
-      family_merchant = family.merchants.create!(
-        name: attributes[:name].presence || name,
+      # If the family already has a FamilyMerchant with this name, reuse it
+      # instead of failing on the uniqueness validation.
+      family_merchant, _created = FamilyMerchant.find_or_create_with_name(
+        family,
+        attributes[:name].presence || name,
         color: attributes[:color].presence || FamilyMerchant::COLORS.sample,
         # A submitted blank website clears it; only an omitted one is inherited.
         website_url: attributes.key?(:website_url) ? attributes[:website_url].presence : website_url
