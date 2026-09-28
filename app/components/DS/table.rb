@@ -28,7 +28,8 @@ class DS::Table < DesignSystemComponent
   #   while the body scrolls under it, for long tables such as a loan schedule
   # @param label [String, nil] accessible name for the scroll area. Makes it a
   #   focusable region so a keyboard user can scroll a table that overflows;
-  #   pass one whenever the table can scroll.
+  #   pass one whenever the table can scroll, including sideways on a narrow
+  #   screen.
   # @param row_class [Proc, nil] called with each row, returns extra classes for
   #   its <tr>, e.g. the tint on a loan's past payments
   # @param opts [Hash] forwarded to the outer element; :class merges with the base classes

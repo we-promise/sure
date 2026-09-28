@@ -38,6 +38,7 @@ header and every cell with the standard padding, header style and row rules.
   `align: :right` for other right-hand columns such as actions.
 - `inset: true` when the table sits inside a card. On the page background the
   table is a card of its own.
-- `sticky_header: true` for long tables. Pass `label:` whenever the table can
-  scroll, so keyboard users can reach it.
+- `sticky_header: true` for long tables.
+- Pass `label:` whenever the table can scroll, including sideways on a narrow
+  screen, so keyboard users can reach it.
 - A column block must output markup or return a String; call `to_s` on numbers.

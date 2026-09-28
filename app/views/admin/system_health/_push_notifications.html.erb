@@ -27,7 +27,7 @@
   <% if latest_test %>
     <div class="space-y-3">
       <p class="text-sm text-secondary"><%= t("admin.system_health.push_notifications.result_help") %></p>
-      <%= render DS::Table.new(rows: results, inset: true) do |table| %>
+      <%= render DS::Table.new(rows: results, inset: true, label: t("admin.system_health.push_notifications.results_label")) do |table| %>
         <% table.with_column(t("admin.system_health.push_notifications.columns.device"), row_header: true) do |_result, index| %>
           <%= t("admin.system_health.push_notifications.device", number: index + 1) %>
         <% end %>

@@ -8,7 +8,7 @@ class TableComponentPreview < ViewComponent::Preview
   # A table on the page background is a card of its own.
   # @display container_classes max-w-[640px]
   def default
-    render DS::Table.new(rows: BILLS) do |table|
+    render DS::Table.new(rows: BILLS, label: "Bills") do |table|
       table.with_column("Name") { |bill| bill[:name] }
       table.with_column("Frequency", class: "text-secondary") { |bill| bill[:frequency] }
       table.with_column("Amount", numeric: true) { |bill| bill[:amount] }

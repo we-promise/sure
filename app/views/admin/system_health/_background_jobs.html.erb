@@ -78,7 +78,7 @@
     <% if breakdown.empty? %>
       <p class="text-sm text-secondary"><%= t("admin.system_health.show.values.no_queues") %></p>
     <% else %>
-      <%= render DS::Table.new(rows: breakdown, inset: true) do |table| %>
+      <%= render DS::Table.new(rows: breakdown, inset: true, label: t("admin.system_health.show.queues_section_title")) do |table| %>
         <% table.with_column(t("admin.system_health.show.labels.queue")) { |(name)| name } %>
         <% table.with_column(t("admin.system_health.show.labels.size"), numeric: true) { |(_name, size)| number_with_delimiter(size) } %>
         <% table.with_column(t("admin.system_health.show.labels.latency"), numeric: true) do |(_name, _size, latency)| %>
