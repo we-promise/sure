@@ -76,6 +76,15 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_select "textarea[name='user[assistant_notes]']", count: 0
   end
 
+  test "shows the assistant notes card when ASSISTANT_TYPE holds an unrecognized value" do
+    with_env_overrides("ASSISTANT_TYPE" => "not-a-real-type") do
+      get settings_preferences_url
+    end
+
+    assert_response :success
+    assert_select "textarea[name='user[assistant_notes]']"
+  end
+
   test "update saves assistant notes" do
     patch settings_preferences_url, params: { user: { assistant_notes: "The trust accounts are not mine." } }
 

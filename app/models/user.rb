@@ -220,9 +220,10 @@ class User < ApplicationRecord
 
   # Which chat assistant handles this user's messages. Mirrors the resolution
   # in Assistant.implementation_for: the ASSISTANT_TYPE override, then the
-  # family's setting, then builtin.
+  # family's setting, with anything unrecognized falling back to builtin.
   def effective_assistant_type
-    ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
+    type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence
+    Assistant::REGISTRY.key?(type) ? type : "builtin"
   end
 
   # Assistant notes only reach the builtin assistant's prompt; an external

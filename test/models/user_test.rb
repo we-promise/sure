@@ -56,6 +56,18 @@ class UserTest < ActiveSupport::TestCase
     assert @user.valid?, @user.errors.full_messages.to_sentence
   end
 
+  test "effective_assistant_type falls back to builtin for an unrecognized override" do
+    with_env_overrides("ASSISTANT_TYPE" => "not-a-real-type") do
+      assert_equal "builtin", @user.effective_assistant_type
+    end
+  end
+
+  test "effective_assistant_type honors a recognized override over the family setting" do
+    with_env_overrides("ASSISTANT_TYPE" => "external") do
+      assert_equal "external", @user.effective_assistant_type
+    end
+  end
+
   # email
   test "email must be present" do
     potential_user = User.new(
