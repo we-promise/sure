@@ -484,7 +484,8 @@ class User < ApplicationRecord
     update!(
       otp_secret: ROTP::Base32.random(32),
       otp_required: false,
-      otp_backup_codes: []
+      otp_backup_codes: [],
+      otp_last_used_at: nil
     )
   end
 
@@ -507,7 +508,8 @@ class User < ApplicationRecord
       update!(
         otp_secret: nil,
         otp_required: false,
-        otp_backup_codes: []
+        otp_backup_codes: [],
+        otp_last_used_at: nil
       )
       webauthn_credentials.destroy_all
     end
@@ -518,7 +520,12 @@ class User < ApplicationRecord
 
     normalized_code = normalize_mfa_code(code)
     return false if normalized_code.blank?
-    return true if totp.verify(normalized_code, drift_behind: 15)
+
+    # after: rejects the time step already used, so a code seen once (over a
+    # shoulder, in a proxy log) cannot sign in again while it is still valid.
+    if (time_step = totp.verify(normalized_code, drift_behind: 15, after: otp_last_used_at))
+      return claim_otp_time_step!(time_step)
+    end
     return false unless backup_code_input?(normalized_code)
 
     consume_backup_code!(normalized_code)
@@ -792,6 +799,23 @@ class User < ApplicationRecord
 
     def totp
       ROTP::TOTP.new(otp_secret, issuer: "Sure Finances")
+    end
+
+    # Two requests carrying the same code can both pass verify before either
+    # records it; the conditional update lets only one of them through.
+    def claim_otp_time_step!(time_step)
+      used_at = Time.zone.at(time_step)
+      claimed = self.class.where(id: id)
+        .where("otp_last_used_at IS NULL OR otp_last_used_at < ?", used_at)
+        .update_all(otp_last_used_at: used_at) == 1
+
+      if claimed
+        # Already written by update_all; keep the record clean so a later
+        # with_lock or update! sees it as persisted.
+        self.otp_last_used_at = used_at
+        clear_attribute_changes([ :otp_last_used_at ])
+      end
+      claimed
     end
 
     def consume_backup_code!(normalized_code)

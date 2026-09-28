@@ -224,6 +224,59 @@ class UserTest < ActiveSupport::TestCase
     assert_not user.verify_otp?("123456")
   end
 
+  # A code stays valid for its whole time step (and the 15s drift window), so
+  # without this anyone who saw it could sign in with it a second time.
+  test "verify_otp? accepts a TOTP code only once" do
+    user = users(:family_member)
+    user.setup_mfa!
+    code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+
+    assert user.verify_otp?(code)
+    assert_not user.verify_otp?(code)
+    assert_not User.find(user.id).verify_otp?(code), "a freshly loaded user must reject it too"
+  end
+
+  test "verify_otp? accepts the next time step's code after one was used" do
+    user = users(:family_member)
+    user.setup_mfa!
+    totp = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances")
+
+    travel_to Time.zone.at(1_800_000_000) do
+      assert user.verify_otp?(totp.now)
+    end
+
+    travel_to Time.zone.at(1_800_000_000 + totp.interval) do
+      assert user.verify_otp?(totp.now)
+      assert_not user.verify_otp?(totp.at(1_800_000_000)), "an earlier step stays rejected"
+    end
+  end
+
+  # Two sign-in requests with the same code, both loaded before either records it.
+  test "verify_otp? lets only one of two concurrent uses of a code through" do
+    user = users(:family_member)
+    user.setup_mfa!
+    code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+    first = User.find(user.id)
+    second = User.find(user.id)
+
+    assert first.verify_otp?(code)
+    assert_not second.verify_otp?(code)
+  end
+
+  test "setting up or disabling MFA forgets the last used time step" do
+    user = users(:family_member)
+    user.setup_mfa!
+    assert user.verify_otp?(ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now)
+    assert_not_nil user.reload.otp_last_used_at
+
+    user.setup_mfa!
+    assert_nil user.reload.otp_last_used_at
+
+    assert user.verify_otp?(ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now)
+    user.disable_mfa!
+    assert_nil user.reload.otp_last_used_at
+  end
+
   test "verify_otp? does not check backup code digests for normal TOTP input" do
     user = users(:family_member)
     user.setup_mfa!
