@@ -6,6 +6,10 @@ workflows:
     environment:
       flutter: stable
     scripts:
+      - name: Disable Swift Package Manager globally
+        script: |
+          flutter config --no-enable-swift-package-manager
+      
       - name: Clean previous builds
         script: |
           flutter clean
@@ -24,7 +28,7 @@ workflows:
       
       - name: Build iOS without code signing
         script: |
-          flutter build ios --release --no-codesign --no-enable-swift-package-manager
+          flutter build ios --release --no-codesign
       
       - name: Package IPA
         script: |
