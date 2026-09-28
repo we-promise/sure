@@ -9,7 +9,7 @@ en:
       description: You can create a rule to automatically categorize transactions like this one
       dont_show_again: Don't show this again
       hide_for_today: Hide for today
-      hide_for_today_hint: Hides these rule suggestions for the next 24 hours
+      hide_for_today_hint: "Hide for today pauses these suggestions for 24 hours."
       message: Updated to %{category_name}
     rule:
       edit: Edit

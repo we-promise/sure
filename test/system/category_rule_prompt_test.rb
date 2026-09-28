@@ -25,8 +25,22 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
 
     within "#cta" do
       assert_text "Updated to #{@categories.first.name}"
-      click_button "Close"
+      assert_text "Hide for today pauses these suggestions for 24 hours."
     end
+
+    # The X sits in the toast's top-right corner (not pushed down by the content stack).
+    offsets = page.evaluate_script(<<~JS)
+      (() => {
+        const toast = document.querySelector("#cta > div");
+        const close = toast.querySelector("button[aria-label='Close']");
+        const t = toast.getBoundingClientRect(), c = close.getBoundingClientRect();
+        return { top: c.top - t.top, right: t.right - c.right };
+      })()
+    JS
+    assert_operator offsets["top"], :<=, 12
+    assert_operator offsets["right"], :<=, 12
+
+    within("#cta") { click_button "Close" }
 
     assert_no_text "Updated to #{@categories.first.name}"
     assert_nil @user.reload.rule_prompt_dismissed_at
@@ -44,6 +58,10 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     assert_no_text "Updated to #{@categories.first.name}"
     assert_not_nil @user.reload.rule_prompt_dismissed_at
     assert_not @user.rule_prompts_disabled
+
+    # While snoozed, the next eligible category change doesn't prompt either.
+    assign_category @categories.second
+    assert_no_text "Updated to #{@categories.second.name}"
   end
 
   private
