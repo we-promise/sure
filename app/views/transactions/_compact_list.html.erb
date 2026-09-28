@@ -60,7 +60,7 @@
       <% if @group_by_date == false %>
         <div class="bg-container-inset rounded-xl p-1">
           <div class="bg-container shadow-border-xs rounded-lg">
-            <% entries = @transactions.map(&:entry).compact %>
+            <% entries = dedupe_transfer_entries(@transactions.map(&:entry).compact) %>
             <% if Current.user.show_split_grouped? %>
               <% group_split_entries(entries, @split_parents).each do |item| %>
                 <% if item.is_a?(EntriesHelper::SplitGroup) %>

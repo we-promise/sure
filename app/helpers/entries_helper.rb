@@ -23,7 +23,7 @@ module EntriesHelper
     result
   end
 
-  def entries_by_date(entries, totals: false)
+  def dedupe_transfer_entries(entries)
     transfer_groups = entries.group_by do |entry|
       # Only check for transfer if it's a transaction
       next nil unless entry.entryable_type == "Transaction"
@@ -31,7 +31,7 @@ module EntriesHelper
     end
 
     # For a more intuitive UX, we do not want to show the same transfer twice in the list
-    deduped_entries = transfer_groups.flat_map do |transfer_id, grouped_entries|
+    transfer_groups.flat_map do |transfer_id, grouped_entries|
       if transfer_id.nil? || grouped_entries.size == 1
         grouped_entries
       else
@@ -41,6 +41,10 @@ module EntriesHelper
         end
       end
     end
+  end
+
+  def entries_by_date(entries, totals: false)
+    deduped_entries = dedupe_transfer_entries(entries)
 
     deduped_entries.group_by(&:date).sort.reverse_each.map do |date, grouped_entries|
       content = capture do

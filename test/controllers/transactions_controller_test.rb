@@ -408,6 +408,24 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/justify-end px-2/, entry_row_html, "unfiltered account context should render the running balance")
   end
 
+  test "turbo_stream update renders calculator-backed running balance" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+    create_transaction(account: @entry.account, name: "Same Day Sibling", amount: 5, date: @entry.date)
+
+    patch transaction_url(@entry), params: {
+      view_ctx: "account",
+      is_filtered: "0",
+      entry: {
+        name: "Updated name",
+        entryable_attributes: { id: @entry.entryable_id }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    expected = Account::RunningBalanceCalculator.new([ @entry.reload ]).running_balances[@entry.id]
+    assert_includes turbo_stream_row_html(@entry), ApplicationController.helpers.format_money(expected)
+  end
+
   test "turbo_stream update hides balance for explicit filtered account context" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
 
@@ -1802,6 +1820,24 @@ end
     assert_select "div.grid-cols-12.bg-container-inset.rounded-xl.px-3.py-2", count: 0
   end
 
+  test "compact flat list renders each internal transfer once" do
+    family = families(:empty)
+    sign_in users(:empty)
+    user = users(:empty)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true, "transactions_compact" => true, "transactions_group_by_date" => false))
+    family.accounts.each { |a| a.entries.delete_all }
+    from_account = family.accounts.create! name: "From", balance: 0, currency: "USD", accountable: Depository.new
+    to_account = family.accounts.create! name: "To", balance: 0, currency: "USD", accountable: Depository.new
+    transfer = create_transfer(from_account: from_account, to_account: to_account, amount: 25, date: Date.current)
+
+    get transactions_url(per_page: 50)
+
+    assert_response :success
+    rendered_ids = rendered_entry_ids
+    assert_includes rendered_ids, transfer.outflow_transaction.entry.id.to_s
+    assert_not_includes rendered_ids, transfer.inflow_transaction.entry.id.to_s
+  end
+
   test "group_by_date toggle only affects compact view" do
     family = families(:empty)
     sign_in users(:empty)
@@ -1842,6 +1878,34 @@ end
     assert_response :success
     assert_select "select[name='per_page'] option[value='20'][selected]"
     assert_equal 20, css_select("turbo-frame[id^='entry_']").count
+  end
+
+  test "restore redirect prefers preview per_page preference over stale session value" do
+    family = families(:empty)
+    sign_in users(:empty)
+    user = users(:empty)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => false))
+    family.accounts.each { |a| a.entries.delete_all }
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    5.times { |i| create_transaction(account: account, name: "Tx #{i}", amount: 100 + i, date: Date.current - i.days) }
+
+    # Store a stale per_page=10 in the session while preview is off
+    get transactions_url(per_page: 10)
+    assert_response :success
+
+    # User then changes "Transactions per page" to 50 in Appearance settings
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true, "transactions_per_page" => 50))
+
+    # A plain visit (no query params) restores params — must carry 50, not the stale 10
+    get transactions_url
+    assert_response :redirect
+    redirect_params = URI.decode_www_form(URI.parse(response.location).query.to_s).to_h
+    assert_equal "50", redirect_params["per_page"]
+
+    follow_redirect!
+    assert_response :success
+    assert_select "select[name='per_page'] option[value='50'][selected]"
+    assert_equal 50, user.reload.transactions_per_page
   end
 
   test "per_page falls back to session when preview disabled ignores preference" do

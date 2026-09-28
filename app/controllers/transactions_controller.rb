@@ -226,7 +226,7 @@ class TransactionsController < ApplicationController
           running_balance = nil
           hide_balance = true
           if is_flat_compact
-            running_balance = Balance.find_by(account_id: @entry.account_id, date: @entry.date)&.end_balance_money || Money.new(0, @entry.currency)
+            running_balance = Account::RunningBalanceCalculator.new([ @entry ]).running_balances[@entry.id] || Money.new(0, @entry.currency)
             hide_balance = view_ctx != "account" || is_filtered ? true : false
           end
           entry_row_stream = if is_compact
@@ -762,12 +762,8 @@ class TransactionsController < ApplicationController
 
         params_to_restore[:q] = stored_params["q"].presence || {}
         params_to_restore[:page] = stored_params["page"].presence || 1
-        per_page_default = if Current.user.preview_features_enabled? && Current.user.transactions_per_page.present?
-          Current.user.transactions_per_page
-        else
-          50
-        end
-        params_to_restore[:per_page] = stored_params["per_page"].presence || per_page_default
+        preview_per_page = Current.user.transactions_per_page if Current.user.preview_features_enabled? && Current.user.transactions_per_page.present?
+        params_to_restore[:per_page] = preview_per_page.presence || stored_params["per_page"].presence || 50
 
         redirect_to transactions_path(params_to_restore)
       else

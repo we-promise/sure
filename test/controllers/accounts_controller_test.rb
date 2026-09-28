@@ -425,6 +425,19 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match non_matching.name, response.body
   end
 
+  test "show filters entries by category on a disabled account" do
+    category = categories(:food_and_drink)
+    matching = create_transaction(name: "Disabled Categorized Entry", amount: 10, account: @account, category: category)
+    non_matching = create_transaction(name: "Disabled Uncategorized Entry", amount: 10, account: @account)
+    @account.disable!
+
+    get account_url(@account, q: { categories: [ category.name ] })
+
+    assert_response :success
+    assert_match matching.name, response.body
+    assert_no_match non_matching.name, response.body
+  end
+
   test "show filters entries by status" do
     confirmed = create_transaction(name: "Confirmed Status Entry", amount: 10, account: @account)
     pending_entry = create_transaction(name: "Pending Status Entry", amount: 10, account: @account)

@@ -65,6 +65,7 @@
           </div>
 
           <div class="text-secondary text-xs font-normal">
+            <span class="lg:hidden shrink-0"><%= format_date(entry.date) %> • </span>
             <% if transaction.transfer? %>
               <span class="text-secondary">
                 <%= transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer") %> •
@@ -126,7 +127,7 @@
         <% end %>
         <%= content_tag :p,
             transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
-            class: ["privacy-sensitive text-sm font-medium truncate", "text-green-600": entry.amount.negative?, "opacity-50": entry.excluded] %>
+            class: ["privacy-sensitive text-sm font-medium truncate", "text-success": entry.amount.negative?, "opacity-50": entry.excluded] %>
       <% end %>
 
       <% if has_running_balance && view_ctx == "account" && !hide_balance %>

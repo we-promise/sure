@@ -60,7 +60,7 @@ class TradesController < ApplicationController
           running_balance = nil
           hide_balance = true
           if is_flat_compact
-            running_balance = Balance.find_by(account_id: @entry.account_id, date: @entry.date)&.end_balance_money || Money.new(0, @entry.currency)
+            running_balance = Account::RunningBalanceCalculator.new([ @entry ]).running_balances[@entry.id] || Money.new(0, @entry.currency)
             hide_balance = view_ctx != "account" || is_filtered ? true : false
           end
           entry_row_stream = if is_compact
