@@ -298,6 +298,18 @@ class Account::OpeningBalanceManagerTest < ActiveSupport::TestCase
     assert_nil @depository_account.valuations.opening_anchor.first
   end
 
+  test "date_error checks a date without writing" do
+    oldest_date = 60.days.ago.to_date
+    @depository_account.entries.create!(date: oldest_date, name: "Test transaction", amount: 100, currency: "USD", entryable: Transaction.new)
+    manager = Account::OpeningBalanceManager.new(@depository_account)
+
+    assert_nil manager.date_error(nil)
+    assert_nil manager.date_error(oldest_date - 1.day)
+    assert_equal "Opening balance date must be before the oldest entry date", manager.date_error(oldest_date)
+    assert_equal oldest_date, manager.oldest_entry_date
+    assert_nil @depository_account.valuations.opening_anchor.first
+  end
+
   test "when no changes made, returns success with no changes made" do
     # First create an opening anchor
     manager = Account::OpeningBalanceManager.new(@depository_account)
