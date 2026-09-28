@@ -5,9 +5,11 @@ class Account::MarketDataImporter
     @account = account
   end
 
+  # Prices are imported first so their currencies are known when deciding
+  # which exchange rate pairs the account needs.
   def import_all
-    import_exchange_rates
     import_security_prices
+    import_exchange_rates
   end
 
   def import_exchange_rates
@@ -39,6 +41,14 @@ class Account::MarketDataImporter
       pair_dates[key] = [ pair_dates[key], account.start_date ].compact.min
     end
 
+    # 3. SECURITY PRICE PAIRS – holdings convert each security price into the
+    # account currency, so every foreign price currency needs rates from the
+    # first date a price for that security is required.
+    security_price_currency_start_dates.each do |source_currency, date|
+      key = [ source_currency, account.currency ]
+      pair_dates[key] = [ pair_dates[key], date ].compact.min
+    end
+
     pair_dates.each do |(source, target), start_date|
       ExchangeRate.import_provider_rates(
         from: source,
@@ -60,7 +70,7 @@ class Account::MarketDataImporter
 
     securities = Security.online.where(id: all_security_ids).index_by(&:id)
 
-    start_dates    = batch_first_required_price_dates(all_security_ids)
+    start_dates    = first_required_price_dates
     historical_ids = traded_security_ids - current_security_ids.to_a
 
     # For securities no longer held, cap end_date at the last holding date so
@@ -99,6 +109,29 @@ class Account::MarketDataImporter
   end
 
   private
+    def security_ids
+      @security_ids ||= (account.current_holdings.pluck(:security_id) | account.trades.pluck(:security_id))
+    end
+
+    def first_required_price_dates
+      @first_required_price_dates ||= batch_first_required_price_dates(security_ids)
+    end
+
+    # Earliest required date per price currency that differs from the account currency.
+    # Securities are shared across families, so a price's own date is not a bound.
+    def security_price_currency_start_dates
+      @security_price_currency_start_dates ||= begin
+        foreign_prices = Security::Price.where(security_id: security_ids)
+                                        .where.not(currency: account.currency)
+                                        .distinct
+                                        .pluck(:security_id, :currency)
+
+        foreign_prices.each_with_object({}) do |(security_id, currency), dates|
+          dates[currency] = [ dates[currency], first_required_price_dates[security_id] ].compact.min
+        end
+      end
+    end
+
     # Replaces 2-queries-per-security with 3 queries total.
     def batch_first_required_price_dates(security_ids)
       # account.trades is a has_many :through :entries, so entries is already joined
@@ -120,7 +153,7 @@ class Account::MarketDataImporter
     end
 
     def needs_exchange_rates?
-      has_multi_currency_entries? || foreign_account?
+      has_multi_currency_entries? || foreign_account? || security_price_currency_start_dates.any?
     end
 
     def has_multi_currency_entries?
