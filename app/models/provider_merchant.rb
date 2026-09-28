@@ -48,13 +48,20 @@ class ProviderMerchant < Merchant
     transaction do
       # If the family already has a FamilyMerchant with this name, reuse it
       # instead of failing on the uniqueness validation.
-      family_merchant, _created = FamilyMerchant.find_or_create_with_name(
+      family_merchant, created = FamilyMerchant.find_or_create_with_name(
         family,
         attributes[:name].presence || name,
         color: attributes[:color].presence || FamilyMerchant::COLORS.sample,
         # A submitted blank website clears it; only an omitted one is inherited.
         website_url: attributes.key?(:website_url) ? attributes[:website_url].presence : website_url
       )
+
+      # find_or_create_with_name doesn't touch a merchant it reused, so an
+      # explicitly submitted website (present or blank-to-clear) still needs
+      # applying here; an omitted one leaves the reused merchant untouched.
+      if !created && attributes.key?(:website_url)
+        family_merchant.update!(website_url: attributes[:website_url].presence)
+      end
 
       scope = family.transactions.where(merchant_id: id)
 

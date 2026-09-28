@@ -42,6 +42,7 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to family_merchants_path
     assert_equal existing, transaction.reload.merchant
+    assert_equal "https://attacker.example", existing.reload.website_url
   end
 
   test "saving a provider merchant unchanged keeps using the shared merchant" do

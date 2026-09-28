@@ -65,17 +65,74 @@ class FamilyMerchantTest < ActiveSupport::TestCase
     assert_equal "https://new.example", merchant.website_url
   end
 
-  test "find_or_create_with_name recovers when a concurrent insert wins the race" do
+  test "find_or_create_with_name recovers from a RecordInvalid uniqueness conflict" do
     existing = FamilyMerchant.create!(family: @family, name: "Race Merchant")
     relation = @family.merchants
 
     relation.stub :find_by, nil do
-      relation.stub :create!, ->(*) { raise ActiveRecord::RecordNotUnique, "duplicate key" } do
-        merchant, created = FamilyMerchant.find_or_create_with_name(@family, "Race Merchant")
+      merchant, created = FamilyMerchant.find_or_create_with_name(@family, "Race Merchant")
 
-        assert_equal existing, merchant
-        assert_not created
+      assert_equal existing, merchant
+      assert_not created
+    end
+  end
+end
+
+# A duplicate name reaching the database's unique index (rather than being
+# caught by the model's own uniqueness validation first) needs a genuine
+# second, concurrently-committing connection to reproduce: Postgres only
+# raises RecordNotUnique, instead of the app-level RecordInvalid, when the
+# conflicting row wasn't yet visible to this session's own validation query.
+# Runs without transactional fixtures so the writer thread's commit is
+# visible to the reader's separate connection.
+class FamilyMerchantConcurrencyTest < ActiveSupport::TestCase
+  self.use_transactional_tests = false
+
+  setup do
+    @family = Family.create!(
+      name: "Race Family", currency: "USD", locale: "en", country: "US",
+      date_format: "%m/%d/%Y", timezone: "UTC"
+    )
+  end
+
+  teardown do
+    @family.destroy
+  end
+
+  test "find_or_create_with_name survives a real unique-constraint violation without aborting the caller's transaction" do
+    name = "Race Merchant"
+    writer_inserted = Queue.new
+    release_writer = Queue.new
+
+    writer = Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        ActiveRecord::Base.transaction do
+          FamilyMerchant.create!(family: @family, name: name)
+          writer_inserted << true
+          release_writer.pop
+        end
       end
     end
+
+    writer_inserted.pop
+
+    releaser = Thread.new do
+      sleep 0.3
+      release_writer << true
+    end
+
+    merchant = created = nil
+    ActiveRecord::Base.transaction do
+      merchant, created = FamilyMerchant.find_or_create_with_name(@family, name)
+      # Proves the rescued RecordNotUnique didn't poison this transaction.
+      assert_equal 1, @family.merchants.where(name: name).count
+    end
+
+    writer.join
+    releaser.join
+
+    assert_equal name, merchant.name
+    assert_not created
+    assert_equal 1, @family.merchants.where(name: name).count
   end
 end

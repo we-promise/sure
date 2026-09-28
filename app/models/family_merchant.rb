@@ -18,7 +18,11 @@ class FamilyMerchant < Merchant
     return [ existing, false ] if existing
 
     begin
-      [ family.merchants.create!(attributes.merge(name: name)), true ]
+      # requires_new: true opens a savepoint, so a RecordNotUnique here rolls
+      # back only the failed insert. Without it, Postgres aborts the whole
+      # enclosing transaction and the rescue's find_by! below would also fail.
+      merchant = transaction(requires_new: true) { family.merchants.create!(attributes.merge(name: name)) }
+      [ merchant, true ]
     rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
       raise if e.is_a?(ActiveRecord::RecordInvalid) && !e.record.errors.of_kind?(:name, :taken)
       [ family.merchants.find_by!(name: name), false ]

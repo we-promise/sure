@@ -118,11 +118,29 @@ class ProviderMerchantTest < ActiveSupport::TestCase
 
   test "convert_to_family_merchant_for reuses an existing same-name family merchant instead of raising" do
     existing = @family.merchants.create!(name: "Acme Synced", color: "#4da568", website_url: "https://old.example")
-    @provider_merchant.update!(website_url: "https://acme.example")
 
-    converted = @provider_merchant.convert_to_family_merchant_for(@family, website_url: "https://acme.example")
+    converted = @provider_merchant.convert_to_family_merchant_for(@family, website_url: "https://new.example")
 
     assert_equal existing.id, converted.id
     assert_equal 1, @family.merchants.where(name: "Acme Synced").count
+    assert_equal "https://new.example", existing.reload.website_url
+  end
+
+  test "convert_to_family_merchant_for clears a reused merchant's website when submitted blank" do
+    existing = @family.merchants.create!(name: "Acme Synced", color: "#4da568", website_url: "https://old.example")
+
+    converted = @provider_merchant.convert_to_family_merchant_for(@family, website_url: "")
+
+    assert_equal existing.id, converted.id
+    assert_nil existing.reload.website_url
+  end
+
+  test "convert_to_family_merchant_for leaves a reused merchant's website untouched when omitted" do
+    existing = @family.merchants.create!(name: "Acme Synced", color: "#4da568", website_url: "https://old.example")
+
+    converted = @provider_merchant.convert_to_family_merchant_for(@family, name: "Acme Synced")
+
+    assert_equal existing.id, converted.id
+    assert_equal "https://old.example", existing.reload.website_url
   end
 end
