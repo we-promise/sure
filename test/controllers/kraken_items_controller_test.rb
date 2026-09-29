@@ -271,6 +271,25 @@ class KrakenItemsControllerTest < ActionDispatch::IntegrationTest
     assert_includes @response.body, "EUR"
   end
 
+  # With no rate the account opens at zero, so the screen says zero: showing the
+  # reported figure would promise a balance the account will not have.
+  test "setup accounts shows zero when the balance cannot be converted" do
+    ensure_tailwind_build
+    @family.update!(currency: "EUR")
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    @second_item.kraken_accounts.create!(
+      name: "Kraken", account_id: "combined", account_type: "combined",
+      currency: "USD", current_balance: 1_000
+    )
+
+    get setup_accounts_kraken_item_url(@second_item)
+
+    assert_response :success
+    # The balance cell itself: other accounts on the page carry figures of their own.
+    assert_match %r{text-primary">€0\.00<}, @response.body
+    assert_no_match %r{text-primary">\$1,000\.00<}, @response.body
+  end
+
   test "cannot access another family's kraken item" do
     other_item = KrakenItem.create!(
       family: families(:empty),
