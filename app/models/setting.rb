@@ -2,6 +2,11 @@
 class Setting < RailsSettings::Base
   class ValidationError < StandardError; end
 
+  # Per-request memoization of dynamic ("dynamic:"-prefixed) settings
+  class DynamicValuesCache < ActiveSupport::CurrentAttributes
+    attribute :values
+  end
+
   cache_prefix { "v1" }
 
   # Third-party API keys
@@ -263,9 +268,16 @@ class Setting < RailsSettings::Base
       if respond_to?(key_str)
         public_send(key_str)
       else
-        # Fall back to individual dynamic entry lookup
-        find_by(var: dynamic_key_name(key_str))&.value
+        # Fall back to dynamic entries, loaded once per request/cache cycle
+        # to avoid issuing one query per key (N+1).
+        dynamic_values[dynamic_key_name(key_str)]
       end
+    end
+
+    # Also reset the per-request dynamic values cache whenever settings change.
+    def clear_cache
+      DynamicValuesCache.reset
+      super
     end
 
     def []=(key, value)
@@ -318,6 +330,12 @@ class Setting < RailsSettings::Base
 
       def dynamic_key_name(key_str)
         "dynamic:#{key_str}"
+      end
+
+      # Loads all dynamic entries in a single query and memoizes them for the
+      # current request (reset automatically between requests/jobs).
+      def dynamic_values
+        DynamicValuesCache.values ||= where("var LIKE ?", "dynamic:%").to_h { |record| [ record.var, record.value ] }
       end
   end
 
