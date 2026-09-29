@@ -3,6 +3,45 @@
 class CoinbaseAccount::Processor
   include CurrencyNormalizable
 
+  # Maps Coinbase transaction types outside buy/sell to Sure's Trade
+  # activity labels (see Trade::ACTIVITY_LABELS), so an account funded
+  # mostly by staking rewards shows how its balance actually built up
+  # over time instead of a single balance snapshot.
+  #
+  #   staking_reward                              -> Dividend   (income, paid in the held asset)
+  #   interest                                    -> Interest   (exact match)
+  #   pro_deposit/pro_withdrawal,
+  #   staking_transfer/unstaking_transfer         -> Transfer   (moved between the user's own
+  #                                                   Coinbase/Coinbase Pro/staking sub-accounts;
+  #                                                   ownership preserved, no cost basis - see
+  #                                                   Trade::TRANSFER_LABEL)
+  #   exchange_deposit                            -> Transfer   (same asset, moved to another
+  #                                                   exchange the user controls)
+  #   asset_migration                             -> Exchange   (security-for-security swap,
+  #                                                   e.g. a token rebrand)
+  #   send                                        -> Other      (could be a reward relabeled as
+  #                                                   "send" - seen in real data - or a genuine
+  #                                                   external transfer; no reliable way to tell
+  #                                                   from the payload, so left uncategorized
+  #                                                   rather than guessing)
+  ACTIVITY_LABEL_BY_COINBASE_TXN_TYPE = {
+    "staking_reward" => "Dividend",
+    "interest" => "Interest",
+    "pro_deposit" => "Transfer",
+    "pro_withdrawal" => "Transfer",
+    "staking_transfer" => "Transfer",
+    "unstaking_transfer" => "Transfer",
+    "exchange_deposit" => "Transfer",
+    "asset_migration" => "Exchange",
+    "send" => "Other"
+  }.freeze
+
+  # Coinbase's transactions endpoint sometimes describes one real Pro/staking
+  # transfer as two records in the same batch: a generic "send" plus a
+  # specific pro_deposit/pro_withdrawal/etc with the same date+amount+currency.
+  # Used by #shadowed_by_specific_transfer? to de-dupe those.
+  SPECIFIC_TRANSFER_TYPES = %w[pro_deposit pro_withdrawal staking_transfer unstaking_transfer exchange_deposit].freeze
+
   attr_reader :coinbase_account
 
   # @param coinbase_account [CoinbaseAccount] Account to process
@@ -146,15 +185,110 @@ class CoinbaseAccount::Processor
       report_exception(e, "trades")
     end
 
-    # Process a transaction from the /v2/accounts/{id}/transactions endpoint
+    # Process a transaction from the /v2/accounts/{id}/transactions endpoint.
+    # Buy/sell go through the trade-specific path below; every other
+    # completed type (staking_reward, interest, send, pro_deposit/withdrawal,
+    # exchange_deposit, asset_migration, staking/unstaking_transfer) is
+    # imported as a generic activity via #process_other_transaction_type
+    # instead of being silently dropped.
     def process_transaction(txn_data)
+      if %w[buy sell].include?(txn_data["type"])
+        process_buy_sell_transaction(txn_data)
+      else
+        process_other_transaction_type(txn_data)
+      end
+    end
+
+    # Handles every non-buy/sell completed transaction type using Coinbase's
+    # own amount sign (positive = received into this wallet, negative = left
+    # it - confirmed against real payloads for every type in
+    # ACTIVITY_LABEL_BY_COINBASE_TXN_TYPE, no from/to parsing needed).
+    def process_other_transaction_type(txn_data)
       return unless txn_data["status"] == "completed"
 
       account = coinbase_account.current_account
       return unless account
 
       txn_type = txn_data["type"]
-      return unless %w[buy sell].include?(txn_type)
+      label = ACTIVITY_LABEL_BY_COINBASE_TXN_TYPE[txn_type]
+      return unless label # unknown type - skip rather than guess
+
+      raw_qty = txn_data.dig("amount", "amount").to_d
+      return if raw_qty.zero?
+
+      # Confirmed against real data: only a minority of "send" entries are
+      # duplicates of a specific-type sibling (most are standalone, e.g. Earn
+      # rewards tagged as "send") - so only skip a "send" when a specific-type
+      # sibling actually matches it.
+      return if txn_type == "send" && shadowed_by_specific_transfer?(txn_data)
+
+      security = find_or_create_security(txn_data)
+      return unless security
+
+      external_id = "coinbase_txn_#{txn_data['id']}"
+      return if account.entries.exists?(external_id: external_id)
+
+      date = Time.zone.parse(txn_data["created_at"]).to_date
+      qty = raw_qty.abs
+      native_amount = txn_data.dig("native_amount", "amount").to_d.abs
+      price = qty > 0 ? (native_amount / qty).round(8) : 0
+      txn_currency = txn_data.dig("native_amount", "currency") || native_currency
+      received = raw_qty.positive?
+
+      notes_parts = []
+      notes_parts << txn_data["description"] if txn_data["description"].present?
+      notes_parts << txn_type.humanize
+      notes = notes_parts.join(" - ").presence
+
+      account.entries.create!(
+        date: date,
+        name: "#{received ? "Received" : "Sent"} #{qty.round(8)} #{security.ticker} (#{txn_type.humanize})",
+        amount: received ? -native_amount : native_amount,
+        currency: txn_currency,
+        external_id: external_id,
+        source: "coinbase",
+        notes: notes,
+        entryable: Trade.new(
+          security: security,
+          qty: received ? qty : -qty,
+          price: price,
+          currency: txn_currency,
+          investment_activity_label: label
+        )
+      )
+      Rails.logger.info(
+        "CoinbaseAccount::Processor - Created #{txn_type} entry: #{raw_qty} #{security.ticker} @ #{price} #{txn_currency}"
+      )
+    rescue => e
+      Rails.logger.error "CoinbaseAccount::Processor - Failed to process #{txn_data['type']} transaction #{txn_data['id']}: #{e.message}"
+    end
+
+    # True when txn_data (a "send") describes the same transfer as a
+    # specific pro_deposit/pro_withdrawal/staking_transfer/etc sibling in the
+    # same batch - see SPECIFIC_TRANSFER_TYPES.
+    def shadowed_by_specific_transfer?(txn_data)
+      siblings = coinbase_account.raw_transactions_payload&.dig("transactions") || []
+      date = txn_data["created_at"].to_s[0, 10]
+      amount = txn_data.dig("amount", "amount").to_d.abs
+      currency = txn_data.dig("amount", "currency")
+
+      siblings.any? do |sibling|
+        next false if sibling["id"] == txn_data["id"]
+        next false unless SPECIFIC_TRANSFER_TYPES.include?(sibling["type"])
+        sibling["created_at"].to_s[0, 10] == date &&
+          sibling.dig("amount", "amount").to_d.abs == amount &&
+          sibling.dig("amount", "currency") == currency
+      end
+    end
+
+    # Buy/sell transaction handling (trade with a cost-basis-relevant price).
+    def process_buy_sell_transaction(txn_data)
+      return unless txn_data["status"] == "completed"
+
+      account = coinbase_account.current_account
+      return unless account
+
+      txn_type = txn_data["type"]
 
       # Get or create the security for this crypto
       security = find_or_create_security(txn_data)
