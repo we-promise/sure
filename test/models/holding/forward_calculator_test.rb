@@ -227,7 +227,147 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_holdings(expected, calculated)
   end
 
+  # --- Stock splits (#249) ---------------------------------------------------
+
+  test "a 2-for-1 split doubles the shares from the ex-date and halves the cost per share" do
+    security = split_security(before: 100, after: 50)
+    create_trade(security, qty: 10, date: 4.days.ago.to_date, price: 100, account: @account)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1)
+
+    day_before = holding_on(security, 3.days.ago.to_date)
+    ex_day = holding_on(security, 2.days.ago.to_date)
+
+    assert_equal [ 10, 20 ], [ day_before.qty, ex_day.qty ]
+    assert_equal [ 100, 50 ], [ day_before.cost_basis, ex_day.cost_basis ]
+    assert_equal day_before.qty * day_before.cost_basis, ex_day.qty * ex_day.cost_basis, "total cost is unchanged by a split"
+    assert_equal 20, holding_on(security, Date.current).qty
+  end
+
+  test "a trade on the ex-date is in post-split shares, applied after the split" do
+    security = split_security(before: 100, after: 50)
+    create_trade(security, qty: 10, date: 4.days.ago.to_date, price: 100, account: @account)
+    create_trade(security, qty: 5, date: 2.days.ago.to_date, price: 50, account: @account)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1)
+
+    ex_day = holding_on(security, 2.days.ago.to_date)
+
+    # 10 become 20 at the open, then 5 are bought: 25 shares that cost 1,250.
+    assert_equal 25, ex_day.qty
+    assert_equal 50, ex_day.cost_basis
+  end
+
+  test "a 1-for-10 reverse split cuts the shares from the ex-date and keeps the total cost" do
+    security = split_security(before: 5, after: 50)
+    create_trade(security, qty: 100, date: 4.days.ago.to_date, price: 5, account: @account)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 1, denominator: 10)
+
+    day_before = holding_on(security, 3.days.ago.to_date)
+    ex_day = holding_on(security, 2.days.ago.to_date)
+
+    assert_equal [ 100, 10 ], [ day_before.qty, ex_day.qty ]
+    assert_equal [ 5, 50 ], [ day_before.cost_basis, ex_day.cost_basis ]
+  end
+
+  test "a 1-for-3 reverse split of three shares leaves exactly one" do
+    security = split_security(before: 10, after: 30)
+    create_trade(security, qty: 3, date: 4.days.ago.to_date, price: 10, account: @account)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 1, denominator: 3)
+
+    assert_equal BigDecimal("1"), holding_on(security, 2.days.ago.to_date).qty
+  end
+
+  # Splits belong to the security, and every family's accounts read them
+  # (Production Readiness Review on #253): each account holding it applies the
+  # split once, to its own shares.
+  test "a split on a security held in two accounts applies once in each" do
+    security = split_security(before: 100, after: 50)
+    other = families(:dylan_family).accounts.create!(name: "Other", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    create_trade(security, qty: 10, date: 4.days.ago.to_date, price: 100, account: @account)
+    create_trade(security, qty: 3, date: 4.days.ago.to_date, price: 100, account: other)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1)
+
+    other_on = ->(date) { Holding::ForwardCalculator.new(other).calculate.find { |h| h.security_id == security.id && h.date == date } }
+
+    assert_equal [ 10, 20 ], [ holding_on(security, 3.days.ago.to_date).qty, holding_on(security, 2.days.ago.to_date).qty ]
+    assert_equal [ 3, 6 ], [ other_on.call(3.days.ago.to_date).qty, other_on.call(2.days.ago.to_date).qty ]
+    assert_equal [ 100, 50 ], [ other_on.call(3.days.ago.to_date).cost_basis, other_on.call(2.days.ago.to_date).cost_basis ]
+  end
+
+  test "a split on one security leaves every other security's holdings as they were" do
+    load_prices
+    create_trade(@voo, qty: 10, date: 3.days.ago.to_date, price: 470, account: @account)
+    create_trade(@wmt, qty: 100, date: 3.days.ago.to_date, price: 100, account: @account)
+    voo_rows = ->(holdings) { holdings.select { |h| h.security_id == @voo.id }.map { |h| [ h.date, h.qty, h.amount, h.cost_basis ] } }
+
+    before = voo_rows.call(Holding::ForwardCalculator.new(@account).calculate)
+    add_split(@wmt, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1)
+    after = Holding::ForwardCalculator.new(@account).calculate
+
+    assert_equal before, voo_rows.call(after)
+    assert_equal 200, after.find { |h| h.security_id == @wmt.id && h.date == Date.current }.qty, "the split security itself did change"
+  end
+
+  # A day with no price emits no holding, so gapfill copies the last one it has
+  # forward. Before this the copy was made in pre-split terms: the split had
+  # already scaled the portfolio, but the day it went ex had no price, so what
+  # was carried into today was the old share count and the old cost per share —
+  # and for a security whose prices have stopped, that is what the user sees
+  # from then on.
+  test "a split still lands when the ex-date and every day after it has no price" do
+    security = Security.create!(ticker: "GAPS", name: "Gapfill Split")
+    Security::Price.create!(security: security, date: 5.days.ago.to_date, price: 100)
+    create_trade(security, qty: 10, date: 5.days.ago.to_date, price: 100, account: @account)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1)
+
+    today = holding_on(security, Date.current)
+
+    assert_equal 20, today.qty, "the split doubled the position even though no price was published"
+    assert_equal 50, today.price, "a split moves no money, so the carried price halves with the count"
+    assert_equal 50, today.cost_basis
+    assert_equal 1000, today.amount, "the position is worth what it was worth before the split"
+  end
+
+  # Security::Split.scale used to keep more precision than the qty column can
+  # hold, so a position sold down to the last share the column can express kept
+  # about 3e-31 of a share. The forward calculator decides a liquidation by an
+  # exact zero, so the transfer's "cost unknown" mark never cleared and the
+  # repurchase inherited it.
+  test "selling every representable share of a split position clears the unknown basis" do
+    security = Security.create!(ticker: "FRAC", name: "Fractional")
+    (6.days.ago.to_date..Date.current).each do |date|
+      Security::Price.create!(security: security, date: date, price: 150)
+    end
+
+    transfer_in = create_trade(security, qty: 10, date: 6.days.ago.to_date, price: 10, account: @account)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL) # moved in, unknown cost
+    add_split(security, ex_date: 4.days.ago.to_date, numerator: 1, denominator: 3)
+    create_trade(security, qty: -BigDecimal("3.333333333333333333"), date: 2.days.ago.to_date, price: 150, account: @account)
+    create_trade(security, qty: 1, date: 1.day.ago.to_date, price: 150, account: @account)
+
+    today = holding_on(security, Date.current)
+
+    assert_equal BigDecimal("1"), today.qty, "the sell cleared the position exactly"
+    assert_equal 150, today.cost_basis, "the repurchase starts from a clean basis"
+    assert_not today.cost_basis_unknown, "the transfer's mark is released once the position is closed"
+  end
+
   private
+    def split_security(before:, after:)
+      security = Security.create!(ticker: "SPLT", name: "Split Test")
+      (4.days.ago.to_date..Date.current).each do |date|
+        Security::Price.create!(security: security, date: date, price: date < 2.days.ago.to_date ? before : after)
+      end
+      security
+    end
+
+    def add_split(security, ex_date:, numerator:, denominator:)
+      Security::Split.create!(security: security, ex_date: ex_date, numerator: numerator, denominator: denominator, source: "manual")
+    end
+
+    def holding_on(security, date)
+      Holding::ForwardCalculator.new(@account).calculate.find { |h| h.security_id == security.id && h.date == date }
+    end
+
     def assert_holdings(expected, calculated)
       expected.each do |expected_entry|
         calculated_entry = calculated.find { |c| c.security_id == expected_entry.security_id && c.date == expected_entry.date }
