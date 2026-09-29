@@ -83,6 +83,32 @@ class SettingTest < ActiveSupport::TestCase
     assert_equal "value3", Setting["key3"]
   end
 
+  test "reading multiple dynamic fields issues at most one query" do
+    Setting["key1"] = "value1"
+    Setting["key2"] = "value2"
+    Setting.clear_cache
+
+    queries = 0
+    counter = ->(*, payload) { queries += 1 if payload[:sql].include?('FROM "settings"') }
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      3.times do
+        assert_equal "value1", Setting["key1"]
+        assert_equal "value2", Setting["key2"]
+        assert_nil Setting["missing_key"]
+      end
+    end
+
+    assert_operator queries, :<=, 1
+  end
+
+  test "dynamic field reads reflect updates after caching" do
+    Setting["cached_key"] = "old"
+    assert_equal "old", Setting["cached_key"]
+
+    Setting["cached_key"] = "new"
+    assert_equal "new", Setting["cached_key"]
+  end
+
   test "setting nil value deletes dynamic field" do
     Setting["temp_key"] = "temp_value"
     assert_equal "temp_value", Setting["temp_key"]
