@@ -2,7 +2,8 @@
 Rails.application.config.to_prepare do
   module ActiveStorageAttachmentAuthorization
     extend ActiveSupport::Concern
-    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement].freeze
+    # STI subclasses (PdfImport, SureImport, ...) are stored under their base class, "Import".
+    PROTECTED_RECORD_TYPES = %w[Transaction AccountStatement FamilyExport Import FamilyDocument].freeze
 
     included do
       include Authentication
@@ -32,6 +33,12 @@ Rails.application.config.to_prepare do
           transaction_attachment_authorized?(attachment)
         when "AccountStatement"
           account_statement_attachment_authorized?(attachment)
+        when "FamilyExport"
+          family_export_attachment_authorized?(attachment)
+        when "Import"
+          import_attachment_authorized?(attachment)
+        when "FamilyDocument"
+          family_record_attachment_authorized?(attachment)
         else
           false
         end
@@ -51,6 +58,35 @@ Rails.application.config.to_prepare do
         return false if statement.nil?
 
         statement.viewable_by?(Current.user)
+      rescue ActiveRecord::RecordNotFound
+        false
+      end
+
+      # Mirrors FamilyExportsController, which limits exports to family admins.
+      def family_export_attachment_authorized?(attachment)
+        export = attachment.record
+        return false if export.nil?
+
+        Current.family == export.family && Current.user.admin?
+      rescue ActiveRecord::RecordNotFound
+        false
+      end
+
+      # Mirrors ImportsController#set_import: imports linked to a statement follow its visibility.
+      def import_attachment_authorized?(attachment)
+        import = attachment.record
+        return false if import.nil? || Current.family != import.family
+
+        import.account_statement.nil? || import.account_statement.viewable_by?(Current.user)
+      rescue ActiveRecord::RecordNotFound
+        false
+      end
+
+      def family_record_attachment_authorized?(attachment)
+        record = attachment.record
+        return false if record.nil?
+
+        Current.family == record.family
       rescue ActiveRecord::RecordNotFound
         false
       end
