@@ -309,6 +309,64 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
     assert_match(/Deposit.*BTC/, entry.name)
   end
 
+  # An account synced before this change holds the coin movement as a
+  # Transaction: a cash leg that never existed, and a quantity the holdings never
+  # saw. A plain sync replaces it, so nobody has to re-import to be right.
+  test "a legacy crypto transaction is replaced by the trade on the next sync" do
+    set_ledgers(
+      "LBTC10" => ledger_entry(type: "deposit", asset: "XXBT", amount: "0.10000000", fee: "0.00000000", time: 1_700_000_000)
+    )
+    legacy = @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date, name: "Deposit 0.1 BTC", amount: -4_000, currency: "EUR",
+      external_id: "kraken_ledger_LBTC10", source: "kraken",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    assert_nil Entry.find_by(id: legacy.id), "the old cash row must be gone"
+    entry = @account.entries.find_by(external_id: "kraken_ledger_LBTC10", source: "kraken")
+    assert_equal "Trade", entry.entryable_type
+    assert_equal 0, entry.amount
+    assert_in_delta 0.1, entry.entryable.qty.to_f, 1e-8
+  end
+
+  # A row somebody has matched into a transfer, or edited, is theirs: it stays
+  # as it is even though it is the old shape.
+  test "a legacy crypto transaction in a transfer, or edited, is left alone" do
+    set_ledgers(
+      "LBTC11" => ledger_entry(type: "withdrawal", asset: "XXBT", amount: "-0.05000000", fee: "0.00000000", time: 1_700_000_000),
+      "LBTC12" => ledger_entry(type: "deposit", asset: "XXBT", amount: "0.02000000", fee: "0.00000000", time: 1_700_000_100)
+    )
+    outflow = @account.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date, name: "Withdrawal 0.05 BTC", amount: 2_000, currency: "EUR",
+      external_id: "kraken_ledger_LBTC11", source: "kraken", entryable: Transaction.new(kind: "funds_movement")
+    )
+    # A transfer needs the other leg on another account of the same family.
+    wallet = @account.family.accounts.create!(name: "Cold wallet", balance: 0, currency: "EUR", accountable: Depository.new)
+    inflow = wallet.entries.create!(
+      date: Time.zone.at(1_700_000_000).to_date, name: "Received 0.05 BTC", amount: -2_000, currency: "EUR",
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    Transfer.create!(inflow_transaction: inflow.entryable, outflow_transaction: outflow.entryable)
+    edited = @account.entries.create!(
+      date: Time.zone.at(1_700_000_100).to_date, name: "Deposit 0.02 BTC", amount: -800, currency: "EUR",
+      external_id: "kraken_ledger_LBTC12", source: "kraken", user_modified: true,
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+
+    assert_equal "Transaction", outflow.reload.entryable_type
+    assert_equal 2_000, outflow.amount
+    assert_equal "Transaction", edited.reload.entryable_type
+    assert_equal(-800, edited.amount)
+  end
+
   # The price is the one on the day the units moved, read from the prices
   # already in the database; the provider is asked once per asset for the
   # whole span, not once per entry.

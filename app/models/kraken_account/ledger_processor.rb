@@ -52,9 +52,9 @@ class KrakenAccount::LedgerProcessor
     existing = account.entries
                       .where(source: "kraken")
                       .where("external_id LIKE 'kraken_ledger_%'")
-                      .pluck(:external_id, :name, :user_modified)
+                      .pluck(:external_id, :name, :user_modified, :entryable_type)
     @existing_external_ids = existing.map(&:first).to_set
-    @existing_principals = existing.to_h { |external_id, name, user_modified| [ external_id, [ name, user_modified ] ] }
+    @existing_principals = existing.to_h { |external_id, *rest| [ external_id, rest ] }
 
     warm_crypto_prices
 
@@ -194,10 +194,16 @@ class KrakenAccount::LedgerProcessor
     # phantom cash. The units and their price carry the value instead.
     def process_crypto_ledger_entry(external_id:, ledger_id:, ledger:, type:, raw_asset:, base_symbol:, symbol:, qty:, date:)
       # A crypto row carries its fee inside the quantity, so once it is in there
-      # is no second half owed and nothing to revisit. The caller's early return
-      # lets deposits and withdrawals through for the fee a fiat row may still
-      # need, which would otherwise bring this one back every sync.
-      return if @existing_external_ids.include?(external_id)
+      # is no second half owed. The caller's early return lets deposits and
+      # withdrawals through for the fee a fiat row may still need, which would
+      # otherwise bring this one back every sync -- unless what is in is the old
+      # shape, which a sync should heal rather than keep.
+      if @existing_external_ids.include?(external_id)
+        legacy = legacy_crypto_transaction(external_id)
+        return if legacy.nil?
+
+        legacy.destroy!
+      end
 
       security = resolve_security(base_symbol)
       return unless security
@@ -223,6 +229,33 @@ class KrakenAccount::LedgerProcessor
       )
 
       @existing_external_ids << external_id
+      @existing_principals[external_id] = [ build_name(type, qty, symbol), false, "Trade" ]
+    end
+
+    # An account synced before crypto rows became trades holds this row as a
+    # Transaction: a cash movement that never happened, carrying a quantity the
+    # holdings never saw. Replaced on the next sync, so an install does not have
+    # to re-import to be right -- unless somebody has edited the row or matched
+    # it into a transfer, in which case it is theirs and stays. Only a legacy
+    # row costs a query; a Trade is already the new shape and answers from the
+    # preload.
+    def legacy_crypto_transaction(external_id)
+      _name, user_modified, entryable_type = @existing_principals[external_id]
+      return nil unless entryable_type == "Transaction"
+      return nil if user_modified
+
+      entry = account.entries.includes(:entryable).find_by(external_id: external_id)
+      return nil if entry.nil? || in_transfer?(entry.entryable)
+
+      entry
+    end
+
+    # A transfer records its two legs on its own row; the transaction's own
+    # transfer_id is only set by some paths, so both are checked.
+    def in_transfer?(transaction)
+      return true if transaction.transfer_id.present?
+
+      Transfer.where(inflow_transaction_id: transaction.id).or(Transfer.where(outflow_transaction_id: transaction.id)).exists?
     end
 
     # A coin arriving from outside has a cost nothing here knows, so it is a
@@ -286,11 +319,19 @@ class KrakenAccount::LedgerProcessor
         return [ converted, false ]
       end
 
-      fallback, = resolve_amount(1.to_d, base_symbol, date)
-      [ fallback || 0, true ]
+      [ spot_price_fallback(base_symbol, date), true ]
     rescue StandardError
+      [ spot_price_fallback(base_symbol, date), true ]
+    end
+
+    # The spot price as a last resort. It cannot be allowed to raise: it is
+    # also what the rescue above reaches for, and an exception there would
+    # escape it and lose the ledger row for this sync.
+    def spot_price_fallback(base_symbol, date)
       fallback, = resolve_amount(1.to_d, base_symbol, date)
-      [ fallback || 0, true ]
+      fallback || 0
+    rescue StandardError
+      0
     end
 
     # Kraken's fee is always a cost, so it is an outflow whichever way the principal
