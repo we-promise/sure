@@ -1049,16 +1049,66 @@ Good test queries that exercise different capabilities:
 
 ### Cloud Costs
 
-Typical costs for OpenAI (as of early 2025):
+**Pricing table last updated and verified: September 29, 2026.** Every model
+listed in [`LlmUsage::PRICING`](../../app/models/llm_usage.rb) was checked against
+official sources. `PRICING_VERIFIED_ON` supplies the verification date shown on
+the LLM usage screen. This is a manual review date, not a claim that providers
+changed every price that day.
 
-- **gpt-4.1:** ~$5-15 per 1M input tokens, ~$15-60 per 1M output tokens
-- **gpt-5:** ~2-3x more expensive than gpt-4.1
-- **gpt-4o-mini:** ~$0.15 per 1M input tokens (very cheap)
+Rates are USD per million tokens at the Standard tier. The source coverage is:
+
+| Models in the code | Official pricing source |
+| --- | --- |
+| GPT-6 Sol/6.1 Sol, GPT-5.6, GPT-5.5, GPT-5.4, GPT-5.2, GPT-5.1, GPT-5, GPT-4.1, GPT-4o, o1, o3, o4-mini (including listed variants) | [OpenAI pricing](https://developers.openai.com/api/docs/pricing) |
+| GPT-5.2/5.1 Chat aliases | [GPT-5.2 Chat](https://developers.openai.com/api/docs/models/gpt-5.2-chat-latest), [GPT-5.1 Chat](https://developers.openai.com/api/docs/models/gpt-5.1-chat-latest) |
+| o1-mini | [o1-mini](https://developers.openai.com/api/docs/models/o1-mini) |
+| Gemini 2.5 Pro/Flash | [Google pricing](https://ai.google.dev/gemini-api/docs/pricing) |
+| Claude Opus 4.6/4.7, Sonnet 4.5/4.6, Haiku 4.5 | [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
+
+#### Dated pricing changes
+
+| Model | Input / output | Latest relevant published date found |
+| --- | --- | --- |
+| GPT-6.1 Sol | $2 / $10 | September 29, 2026: launch pricing |
+| GPT-6 Sol | $2 / $10 | September 22, 2026: launch pricing |
+| GPT-5.6 Sol | $4 / $20 | August 21, 2026: price reduction; promotion available at least through November 21, 2026 |
+| GPT-5.6 Terra | $2 / $12 | July 30, 2026: price reduction |
+| GPT-5.6 Luna | $0.20 / $1.20 | July 30, 2026: price reduction |
+| Claude Opus 4.7 | $5 / $25 | April 16, 2026: published launch rate; corrects Sure's erroneous $15 / $75 |
+| Claude Opus 4.6 | $5 / $25 | February 5, 2026: published base launch rate; corrects Sure's erroneous $15 / $75 |
+
+Dates above come from the [OpenAI changelog](https://developers.openai.com/api/docs/changelog)
+and the [Opus 4.7](https://www.anthropic.com/news/claude-opus-4-7) and
+[Opus 4.6](https://www.anthropic.com/news/claude-opus-4-6) announcements.
+For other listed rates, the latest price-change date was **not established**;
+their current prices were verified on September 29. Google's pricing page says
+it was last updated September 24, 2026; that is a page update, not evidence of a
+Gemini 2.5 price change.
+
+#### Context tiers and estimate limits
+
+OpenAI's listed GPT-6 Sol, GPT-6.1 Sol, GPT-5.6, GPT-5.5/Pro and GPT-5.4/Pro
+rates increase above 272,000 input tokens: input doubles and output increases
+by 50% for the entire request. GPT-5.4 mini/nano retain their flat rates.
+Gemini 2.5 Pro changes from $1.25 / $10 to $2.50 / $15 above 200,000 input
+tokens. Gemini 2.5 Flash remains $0.30 / $2.50 for text/image/video input.
+Claude 4.6/4.7 use standard rates throughout their context window.
+
+Sure estimates individual requests using these tiers. Aggregate categorization
+previews assume short requests. Saved usage costs are historical estimates and
+are not recalculated by this update. Estimates exclude regional premiums,
+alternative service tiers, tool charges and audio-specific rates. Anthropic
+five-minute cache writes and reads are included when reported; OpenAI and Gemini
+cache discounts and cache-write/storage charges are not currently modeled.
+Custom endpoints may charge different rates.
+
+For comparison, GPT-4.1 is $2 input / $8 output, GPT-5 is $1.25 / $10,
+and GPT-4o mini is $0.15 / $0.60.
 
 **Typical usage:**
 - Chat message: 500-2000 tokens (input) + 100-500 tokens (output)
 - Auto-categorization: 1000-3000 tokens per 25 transactions
-- Cost per chat message: $0.01-0.05 for gpt-4.1
+- Cost per chat message: about $0.0018-0.008 for GPT-4.1 at the token counts above
 
 **Optimization tips:**
 1. Use `gpt-4o-mini` for categorization

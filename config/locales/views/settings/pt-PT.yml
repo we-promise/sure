@@ -110,7 +110,7 @@ pt-PT:
         failed: "Falhadas"
         no_usage_data: "Não foram encontrados dados de utilização para o período selecionado"
         cost_estimates_title: "Sobre as Estimativas de Custo"
-        cost_estimates_description: "Os custos são estimados com base nos preços publicados dos serviços, incluindo os preços da OpenAI a partir de julho de 2026. Os custos reais podem variar. O preço é por 1 milhão de tokens e varia consoante o modelo. Os modelos personalizados ou autoalojados mostrarão \"N/A\" e não estão incluídos nos totais de custo."
+        cost_estimates_description: "Os custos são estimados com base nos preços publicados dos serviços, verificados pela última vez em %{date}. Os custos reais podem variar. O preço é por 1 milhão de tokens e varia consoante o modelo. Os modelos personalizados ou autoalojados mostrarão \"N/A\" e não estão incluídos nos totais de custo."
     ai_prompts:
       show:
         page_title: Prompts de IA

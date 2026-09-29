@@ -110,7 +110,7 @@ en:
         failed: "Failed"
         no_usage_data: "No usage data found for the selected period"
         cost_estimates_title: "About Cost Estimates"
-        cost_estimates_description: "Costs are estimated from published provider pricing, including OpenAI pricing as of July 2026. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
+        cost_estimates_description: "Costs are estimated from published provider pricing last verified on %{date}. Actual costs may vary. Pricing is per 1 million tokens and varies by model. Custom or self-hosted models will show \"N/A\" and are not included in cost totals."
     ai_prompts:
       prompt_field:
         provider_label: Provider

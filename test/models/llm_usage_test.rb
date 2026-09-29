@@ -31,7 +31,7 @@ class LlmUsageTest < ActiveSupport::TestCase
 
   test "calculate_cost uses current OpenAI pricing" do
     gpt_54 = LlmUsage.calculate_cost(model: "gpt-5.4", prompt_tokens: 1_000_000, completion_tokens: 100_000)
-    assert_in_delta 4.0, gpt_54, 0.0001
+    assert_in_delta 7.25, gpt_54, 0.0001
 
     nano = LlmUsage.calculate_cost(model: "gpt-4.1-nano", prompt_tokens: 1_000_000, completion_tokens: 1_000_000)
     assert_in_delta 0.5, nano, 0.0001
@@ -124,11 +124,60 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_in_delta 4.5, cost, 0.0001
   end
 
-  test "calculate_cost uses higher pricing for Opus" do
-    cost = LlmUsage.calculate_cost(model: "claude-opus-4-7", prompt_tokens: 1_000_000, completion_tokens: 0)
+  %w[claude-opus-4-6 claude-opus-4-7].each do |model|
+    test "calculate_cost uses corrected input output and cache rates for #{model}" do
+      cost = LlmUsage.calculate_cost(
+        model: model, prompt_tokens: 100_000, completion_tokens: 10_000,
+        cache_creation_tokens: 20_000, cache_read_tokens: 50_000
+      )
 
-    # 1M input * $15/MTok = $15.00
-    assert_in_delta 15.0, cost, 0.0001
+      # $0.50 input + $0.25 output + $0.125 cache write + $0.025 cache read.
+      assert_in_delta 0.9, cost, 0.000001
+    end
+  end
+
+  {
+    "gpt-5.6-sol" => [ 6.0, 11.0 ],
+    "gpt-5.6-terra" => [ 3.2, 5.8 ],
+    "gpt-5.6-luna" => [ 0.32, 0.58 ],
+    "gpt-5.5" => [ 8.0, 14.5 ],
+    "gpt-5.5-pro" => [ 48.0, 87.0 ],
+    "gpt-5.4" => [ 4.0, 7.25 ],
+    "gpt-5.4-pro" => [ 48.0, 87.0 ],
+    "gemini-2.5-pro" => [ 2.25, 4.0 ]
+  }.each do |model, (short_cost, long_cost)|
+    test "calculate_cost uses reviewed short and long context rates for #{model}" do
+      assert_in_delta short_cost / 10, LlmUsage.calculate_cost(
+        model: model, prompt_tokens: 100_000, completion_tokens: 10_000
+      ), 0.000001
+      assert_in_delta long_cost, LlmUsage.calculate_cost(
+        model: model, prompt_tokens: 1_000_000, completion_tokens: 100_000
+      ), 0.000001
+    end
+  end
+
+  test "Gemini Pro long-context pricing starts strictly above 200000 input tokens" do
+    assert_in_delta 1.25, LlmUsage.calculate_cost(
+      model: "gemini-2.5-pro", prompt_tokens: 200_000, completion_tokens: 100_000
+    ), 0.000001
+    assert_in_delta 2.000003, LlmUsage.calculate_cost(
+      model: "gemini-2.5-pro", prompt_tokens: 200_001, completion_tokens: 100_000
+    ), 0.000001
+  end
+
+  test "GPT-5.6 long-context pricing starts strictly above 272000 input tokens" do
+    assert_in_delta 3.088, LlmUsage.calculate_cost(
+      model: "gpt-5.6-sol", prompt_tokens: 272_000, completion_tokens: 100_000
+    ), 0.000001
+    assert_in_delta 5.176008, LlmUsage.calculate_cost(
+      model: "gpt-5.6-sol", prompt_tokens: 272_001, completion_tokens: 100_000
+    ), 0.000001
+  end
+
+  test "Gemini bulk categorization estimates retain short-context rates" do
+    assert_in_delta 6.251438, LlmUsage.estimate_auto_categorize_cost(
+      model: "gemini-2.5-pro", transaction_count: 10_000, category_count: 20
+    ), 0.000001
   end
 
   test "calculate_cost uses lower pricing for Haiku" do
