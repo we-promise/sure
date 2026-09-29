@@ -6,7 +6,7 @@
                        class: "space-y-4" do |form| %>
     <%= form.select :demo_family_refresh_family_id,
                     options_for_select([[t(".none"), ""]] +
-                      Family.joins(:users).where(users: { email: Rails.application.config_for(:demo).with_indifferent_access.fetch(:email) }).distinct.map { |family| ["#{family.name} (##{family.id})", family.id] },
+                      Family.joins(:users).where(users: { email: Rails.application.config_for(:demo).with_indifferent_access.fetch(:email), role: :admin }).where.not(id: User.super_admin.select(:family_id)).distinct.map { |family| ["#{family.name} (##{family.id})", family.id] },
                       Setting.demo_family_refresh_family_id),
                     { label: t(".family_label") } %>
     <%= form.submit t(".save_family") %>

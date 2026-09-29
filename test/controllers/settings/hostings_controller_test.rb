@@ -111,6 +111,49 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "demo family selection excludes non-admin email owners and cannot be cleared while enabled" do
+    demo_email = "demo-selection@example.com"
+    Rails.application.stubs(:config_for).with(:demo).returns({ email: demo_email })
+    demo_family = Family.create!(name: "Demo Selection")
+    demo_user = demo_family.users.create!(first_name: "Demo", last_name: "Member", email: demo_email, password: "password123", role: :member)
+    sign_in users(:sure_support_staff)
+
+    with_self_hosting do
+      get settings_hosting_url
+      assert_response :success
+      assert_select "option[value='#{demo_family.id}']", count: 0
+
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: demo_family.id } }
+      assert_response :unprocessable_entity
+      assert_nil Setting.demo_family_refresh_family_id
+
+      demo_user.update!(role: :super_admin)
+      get settings_hosting_url
+      assert_select "option[value='#{demo_family.id}']", count: 0
+      demo_user.update!(role: :admin)
+      other_admin = demo_family.users.create!(first_name: "Instance", last_name: "Admin", email: "instance-admin@example.com", password: "password123", role: :super_admin)
+      get settings_hosting_url
+      assert_select "option[value='#{demo_family.id}']", count: 0
+      other_admin.update!(role: :member)
+      get settings_hosting_url
+      assert_select "option[value='#{demo_family.id}']", count: 1
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: demo_family.id } }
+      assert_redirected_to settings_hosting_path
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_enabled: "1" } }
+      assert Setting.demo_family_refresh_enabled
+
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: "" } }
+      assert_response :unprocessable_entity
+      assert_equal demo_family.id.to_s, Setting.demo_family_refresh_family_id
+      assert Setting.demo_family_refresh_enabled
+
+      patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: "", demo_family_refresh_enabled: "0" } }
+      assert_redirected_to settings_hosting_path
+      assert_nil Setting.demo_family_refresh_family_id
+      assert_not Setting.demo_family_refresh_enabled
+    end
+  end
+
   test "can update rentcast api key when self hosting is enabled" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { rentcast_api_key: "rentcast-token" } }

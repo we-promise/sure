@@ -72,8 +72,11 @@ class Settings::HostingsController < ApplicationController
       if hosting_params.key?(:demo_family_refresh_family_id)
         family_id = hosting_params[:demo_family_refresh_family_id].presence
         demo_email = Rails.application.config_for(:demo).with_indifferent_access.fetch(:email)
-        unless family_id.nil? || User.exists?(family_id: family_id, email: demo_email)
+        unless family_id.nil? || User.admin.exists?(family_id: family_id, email: demo_email) && !User.super_admin.exists?(family_id: family_id)
           raise Setting::ValidationError, t(".invalid_demo_family")
+        end
+        if family_id.nil? && Setting.demo_family_refresh_enabled && hosting_params[:demo_family_refresh_enabled] != "0"
+          raise Setting::ValidationError, t(".select_demo_family")
         end
         Setting.demo_family_refresh_family_id = family_id
       end

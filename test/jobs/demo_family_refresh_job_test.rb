@@ -89,7 +89,8 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     Setting.demo_family_refresh_enabled = true
 
     generator = mock
-    generator.expects(:generate_default_data!).with(skip_clear: true, email: @demo_email) do
+    generator.expects(:generate_default_data!).with do |options|
+      assert_equal({ skip_clear: true, email: @demo_email }, options)
       new_family = Family.create!(name: "Fresh Demo")
       new_family.users.create!(first_name: "New", last_name: "Demo", email: @demo_email, password: "password123", role: :admin)
     end
@@ -100,6 +101,40 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     end
     assert_equal visitor.id, visitor_user.reload.family_id
     assert_equal User.find_by!(email: @demo_email).family_id.to_s, Setting.demo_family_refresh_family_id
+  ensure
+    Setting.demo_family_refresh_enabled = false
+    Setting.demo_family_refresh_family_id = nil
+  end
+
+  test "self-hosted refresh revokes old credentials and disarms the synthetic subscription" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    Setting.demo_family_refresh_family_id = @demo_family.id.to_s
+    Setting.demo_family_refresh_enabled = true
+    @demo_family.start_subscription!("sub_demo_123")
+    session = Session.create!(user: @demo_user)
+    app = Doorkeeper::Application.create!(name: "Demo Retirement Test", redirect_uri: "https://example.com/callback", confidential: false)
+    token = Doorkeeper::AccessToken.create!(application: app, resource_owner_id: @demo_user.id, scopes: "read", expires_in: 1.year)
+    grant = Doorkeeper::AccessGrant.create!(application: app, resource_owner_id: @demo_user.id, redirect_uri: app.redirect_uri, expires_in: 10.minutes, scopes: "read")
+    key = @demo_user.api_keys.create!(name: "visitor", key: "old-demo-visitor-key", scopes: [ "read" ], source: "web")
+
+    generator = mock
+    generator.expects(:generate_default_data!).with(skip_clear: true, email: @demo_email) do
+      new_family = Family.create!(name: "Replacement Demo")
+      new_family.users.create!(first_name: "New", last_name: "Demo", email: @demo_email, password: "password123", role: :admin)
+    end
+    Demo::Generator.expects(:new).returns(generator)
+    Provider::Registry.expects(:get_provider).with(:stripe).never
+
+    assert_enqueued_with(job: DestroyJob, args: [ @demo_family ]) do
+      DemoFamilyRefreshJob.perform_now
+    end
+    assert_not @demo_user.reload.active?
+    assert_not Session.exists?(session.id)
+    assert key.reload.revoked?
+    assert token.reload.revoked_at
+    assert grant.reload.revoked_at
+    assert @demo_family.reload.subscription.canceled?
+    assert @demo_family.destroy
   ensure
     Setting.demo_family_refresh_enabled = false
     Setting.demo_family_refresh_family_id = nil
@@ -116,6 +151,36 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     Setting.demo_family_refresh_family_id = @demo_family.id.to_s
     @super_admin.api_keys.create!(name: "monitoring", key: ApiKey::DEMO_MONITORING_KEY, scopes: [ "read" ], source: "monitoring")
     DemoFamilyRefreshJob.perform_now
+    assert_equal @demo_email, @demo_user.reload.email
+  ensure
+    Setting.demo_family_refresh_enabled = false
+    Setting.demo_family_refresh_family_id = nil
+  end
+
+  test "self-hosted refresh refuses a selected family whose demo user lost admin access" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    Setting.demo_family_refresh_family_id = @demo_family.id.to_s
+    Setting.demo_family_refresh_enabled = true
+    @demo_user.update!(role: :member)
+    Demo::Generator.expects(:new).never
+
+    assert_no_enqueued_jobs do
+      DemoFamilyRefreshJob.perform_now
+    end
+    assert_equal @demo_email, @demo_user.reload.email
+  ensure
+    Setting.demo_family_refresh_enabled = false
+    Setting.demo_family_refresh_family_id = nil
+  end
+
+  test "self-hosted refresh refuses a selected family containing a super admin" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    Setting.demo_family_refresh_family_id = @demo_family.id.to_s
+    Setting.demo_family_refresh_enabled = true
+    @demo_family.users.create!(first_name: "Instance", last_name: "Admin", email: "instance-admin@example.com", password: "password123", role: :super_admin)
+    Demo::Generator.expects(:new).never
+
+    assert_no_enqueued_jobs { DemoFamilyRefreshJob.perform_now }
     assert_equal @demo_email, @demo_user.reload.email
   ensure
     Setting.demo_family_refresh_enabled = false
