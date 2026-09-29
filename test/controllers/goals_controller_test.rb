@@ -145,7 +145,7 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     get consume_goal_url(@goal)
 
     assert_response :success
-    assert_select "[data-controller='money-field'] input[type=number][name=amount][id=amount][autofocus]"
+    assert_select "[data-controller='money-field'] input[type=text][name=amount][id=amount][autofocus]"
     assert_select "label[for=amount]", text: /#{I18n.t("goals.consume.amount_label")}/
   end
 
