@@ -170,6 +170,13 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
   end
 
+  test "show renders without missing translations" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_empty response.body.scan(/translation missing: [\w.]+/).uniq
+  end
+
   test "sync all requests fresh Plaid transactions before syncing the family" do
     sequence = sequence("manual sync all")
     Family.any_instance
