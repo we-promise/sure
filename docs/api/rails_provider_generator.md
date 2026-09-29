@@ -470,10 +470,10 @@ controller's Turbo Streams replace:
 
 **File:** `app/controllers/my_bank_items_controller.rb`
 
-A simple controller with CRUD actions and Turbo Stream support. The panel's forms post
-from the page (a connection row or the drawer), so `turbo_panel_request?` is true for
-any Turbo submission. Updates and errors re-render the panel in place; a new
-connection reloads Bank sync:
+A simple controller with CRUD actions. The panel's forms post from the page (a
+connection row or the drawer), and `render_provider_panel` answers their updates and
+errors in place: it replaces the panel root named by the provider's `FAMILY_PANELS`
+entry, or redirects when the request isn't from Turbo. A new connection reloads Bank sync:
 
 ```ruby
 class MyBankItemsController < ApplicationController
@@ -486,48 +486,15 @@ class MyBankItemsController < ApplicationController
     if @my_bank_item.save
       redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @my_bank_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "my_bank-providers-panel",
-          partial: "settings/providers/my_bank_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("my_bank", alert: @my_bank_item.errors.full_messages.join(", "))
     end
   end
 
   def update
     if @my_bank_item.update(my_bank_item_params)
-      if turbo_panel_request?
-        flash.now[:notice] = t(".success", default: "Successfully updated My Bank configuration.")
-        @my_bank_items = Current.family.my_bank_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "my_bank-providers-panel",
-            partial: "settings/providers/my_bank_panel",
-            locals: { my_bank_items: @my_bank_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("my_bank", notice: t(".success"))
     else
-      @error_message = @my_bank_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "my_bank-providers-panel",
-          partial: "settings/providers/my_bank_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("my_bank", alert: @my_bank_item.errors.full_messages.join(", "))
     end
   end
 
@@ -832,7 +799,7 @@ end
 
 2. Check the panel root ID matches:
    - View: `<div id="my_bank-providers-panel">`
-   - Controller: Uses `"my_bank-providers-panel"` in turbo_stream.replace
+   - `FAMILY_PANELS`: `turbo_id: "my_bank"`, which `render_provider_panel` replaces as `my_bank-providers-panel`
 
 ### Encryption Not Working
 

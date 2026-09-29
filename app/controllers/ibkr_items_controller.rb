@@ -11,17 +11,7 @@ class IbkrItemsController < ApplicationController
 
       redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @ibkr_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "ibkr-providers-panel",
-          partial: "settings/providers/ibkr_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("ibkr", alert: @ibkr_item.errors.full_messages.join(", "))
     end
   end
 
@@ -33,30 +23,9 @@ class IbkrItemsController < ApplicationController
     if @ibkr_item.update(attrs.merge(status: :good))
       @ibkr_item.sync_later unless @ibkr_item.syncing?
 
-      if turbo_panel_request?
-        flash.now[:notice] = t(".success")
-        render turbo_stream: [
-          turbo_stream.replace(
-            "ibkr-providers-panel",
-            partial: "settings/providers/ibkr_panel"
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("ibkr", notice: t(".success"), fallback_path: accounts_path)
     else
-      @error_message = @ibkr_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "ibkr-providers-panel",
-          partial: "settings/providers/ibkr_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("ibkr", alert: @ibkr_item.errors.full_messages.join(", "))
     end
   end
 

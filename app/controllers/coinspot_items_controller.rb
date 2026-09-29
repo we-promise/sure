@@ -18,7 +18,7 @@ class CoinspotItemsController < ApplicationController
       @coinspot_item.sync_later
       redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      render_panel_error(@coinspot_item.errors.full_messages.join(", "))
+      render_provider_panel("coinspot", alert: @coinspot_item.errors.full_messages.join(", "))
     end
   end
 
@@ -26,9 +26,9 @@ class CoinspotItemsController < ApplicationController
   # optionally new credentials).
   def update
     if @coinspot_item.update(coinspot_item_params)
-      render_panel_success(t(".success"))
+      render_provider_panel("coinspot", notice: t(".success"))
     else
-      render_panel_error(@coinspot_item.errors.full_messages.join(", "))
+      render_provider_panel("coinspot", alert: @coinspot_item.errors.full_messages.join(", "))
     end
   end
 
@@ -249,38 +249,6 @@ class CoinspotItemsController < ApplicationController
         permitted.delete(:api_secret) if permitted[:api_secret].blank?
       end
       permitted
-    end
-
-    # Reports a settings-panel update's success: the panel replaced in place
-    # for a Turbo request, or a full-page redirect otherwise.
-    def render_panel_success(message)
-      if turbo_panel_request?
-        flash.now[:notice] = message
-        @coinspot_items = Current.family.coinspot_items.active.ordered
-        stream = turbo_stream.replace(
-          "coinspot-providers-panel",
-          partial: "settings/providers/coinspot_panel",
-          locals: { coinspot_items: @coinspot_items }
-        )
-        render turbo_stream: [ stream, *flash_notification_stream_items ]
-      else
-        redirect_to settings_providers_path, notice: message, status: :see_other
-      end
-    end
-
-    # Reports a settings-panel action's failure: a Turbo Stream replace for a
-    # Turbo request, or a full-page redirect with an alert otherwise.
-    def render_panel_error(message)
-      if turbo_panel_request?
-        @coinspot_items = Current.family.coinspot_items.active.ordered
-        render turbo_stream: turbo_stream.replace(
-          "coinspot-providers-panel",
-          partial: "settings/providers/coinspot_panel",
-          locals: { error_message: message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: message, status: :see_other
-      end
     end
 
     # Resolves which connection an account-linking flow should act on: the

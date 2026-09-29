@@ -394,13 +394,13 @@ class SophtronItemsController < ApplicationController
 
     if @sophtron_item.save
       unless verify_and_provision_customer(@sophtron_item)
-        render_sophtron_panel_error(@sophtron_item.last_connection_error)
+        render_provider_panel("sophtron", alert: @sophtron_item.last_connection_error)
         return
       end
 
       redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
-      render_sophtron_panel_error(@sophtron_item.errors.full_messages.join(", "))
+      render_provider_panel("sophtron", alert: @sophtron_item.errors.full_messages.join(", "))
     end
   end
 
@@ -410,13 +410,13 @@ class SophtronItemsController < ApplicationController
   def update
     if @sophtron_item.update(sophtron_params)
       unless verify_and_provision_customer(@sophtron_item)
-        render_sophtron_panel_error(@sophtron_item.last_connection_error)
+        render_provider_panel("sophtron", alert: @sophtron_item.last_connection_error)
         return
       end
 
-      render_sophtron_panel_update_success
+      render_provider_panel("sophtron", notice: t(".success"), fallback_path: accounts_path)
     else
-      render_sophtron_panel_error(@sophtron_item.errors.full_messages.join(", "))
+      render_provider_panel("sophtron", alert: @sophtron_item.errors.full_messages.join(", "))
     end
   end
 
@@ -942,36 +942,6 @@ class SophtronItemsController < ApplicationController
       item.update(status: :requires_update, last_connection_error: e.message)
       Rails.logger.error("Sophtron customer provisioning failed: #{e.message}")
       false
-    end
-
-    def render_sophtron_panel_update_success
-      if turbo_panel_request?
-        flash.now[:notice] = t("sophtron_items.update.success")
-        @sophtron_items = Current.family.sophtron_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "sophtron-providers-panel",
-            partial: "settings/providers/sophtron_panel",
-            locals: { sophtron_items: @sophtron_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t("sophtron_items.update.success"), status: :see_other
-      end
-    end
-
-    def render_sophtron_panel_error(message)
-      @error_message = message
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "sophtron-providers-panel",
-          partial: "settings/providers/sophtron_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
     end
 
     def render_or_redirect_setup_required

@@ -187,7 +187,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    assert_redirected_to accounts_path
+    assert_redirected_to settings_providers_path
     assert_match "Api key can't be blank", flash[:alert]
   end
 end

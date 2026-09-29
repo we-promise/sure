@@ -12,17 +12,7 @@ class Trading212ItemsController < ApplicationController
 
       redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @trading212_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "trading212-providers-panel",
-          partial: "settings/providers/trading212_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("trading212", alert: @trading212_item.errors.full_messages.join(", "))
     end
   end
 
@@ -34,30 +24,9 @@ class Trading212ItemsController < ApplicationController
     if @trading212_item.update(attrs.merge(status: :good))
       @trading212_item.sync_later unless @trading212_item.syncing?
 
-      if turbo_panel_request?
-        flash.now[:notice] = t(".success")
-        render turbo_stream: [
-          turbo_stream.replace(
-            "trading212-providers-panel",
-            partial: "settings/providers/trading212_panel"
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("trading212", notice: t(".success"), fallback_path: accounts_path)
     else
-      @error_message = @trading212_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "trading212-providers-panel",
-          partial: "settings/providers/trading212_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("trading212", alert: @trading212_item.errors.full_messages.join(", "))
     end
   end
 

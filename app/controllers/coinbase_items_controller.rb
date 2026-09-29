@@ -29,17 +29,7 @@ class CoinbaseItemsController < ApplicationController
 
       redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @coinbase_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "coinbase-providers-panel",
-          partial: "settings/providers/coinbase_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("coinbase", alert: @coinbase_item.errors.full_messages.join(", "))
     end
   end
 

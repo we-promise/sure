@@ -19,16 +19,16 @@ class MonobankItemsController < ApplicationController
       @monobank_item.sync_later
       redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      render_provider_panel_error(@monobank_item.errors.full_messages.join(", "))
+      render_provider_panel("monobank", alert: @monobank_item.errors.full_messages.join(", "))
     end
   end
 
   # Update connection settings (name/token/start date).
   def update
     if @monobank_item.update(update_params)
-      render_provider_panel(:notice, t(".success"))
+      render_provider_panel("monobank", notice: t(".success"))
     else
-      render_provider_panel_error(@monobank_item.errors.full_messages.join(", "))
+      render_provider_panel("monobank", alert: @monobank_item.errors.full_messages.join(", "))
     end
   end
 
@@ -362,38 +362,6 @@ class MonobankItemsController < ApplicationController
         },
         skip_initial_sync: true
       )
-    end
-
-    # Re-render the providers settings panel (Turbo) or redirect with a flash.
-    def render_provider_panel(flash_type, message)
-      if turbo_panel_request?
-        flash.now[flash_type] = message
-        @monobank_items = Current.family.monobank_items.active.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "monobank-providers-panel",
-            partial: "settings/providers/monobank_panel",
-            locals: { monobank_items: @monobank_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, { flash_type => message, status: :see_other }
-      end
-    end
-
-    # Re-render the providers panel with an error (Turbo) or redirect with alert.
-    def render_provider_panel_error(message)
-      @error_message = message
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "monobank-providers-panel",
-          partial: "settings/providers/monobank_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
     end
 
     # Validate the return_to param as a safe in-app relative path, or nil.

@@ -29,7 +29,7 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
       }, headers: { "ACCEPT" => "text/vnd.turbo-stream.html" }
     end
 
-    assert_response :unprocessable_entity
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "trade-republic-providers-panel"
     assert_includes response.body, I18n.t("trade_republic_items.initiate_login.pin_required")
     assert_select "input[name='trade_republic_item[phone_number]'][value='+491701234567']"
   end

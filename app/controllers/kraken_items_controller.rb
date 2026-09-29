@@ -13,15 +13,15 @@ class KrakenItemsController < ApplicationController
       @kraken_item.sync_later
       redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      render_panel_error(@kraken_item.errors.full_messages.join(", "))
+      render_provider_panel("kraken", alert: @kraken_item.errors.full_messages.join(", "))
     end
   end
 
   def update
     if @kraken_item.update(kraken_item_params)
-      render_panel_success(t(".success"))
+      render_provider_panel("kraken", notice: t(".success"))
     else
-      render_panel_error(@kraken_item.errors.full_messages.join(", "))
+      render_provider_panel("kraken", alert: @kraken_item.errors.full_messages.join(", "))
     end
   end
 
@@ -164,29 +164,6 @@ class KrakenItemsController < ApplicationController
         permitted.delete(:api_secret) if permitted[:api_secret].blank?
       end
       permitted
-    end
-
-    def render_panel_success(message)
-      if turbo_panel_request?
-        flash.now[:notice] = message
-        @kraken_items = Current.family.kraken_items.active.ordered
-        stream = turbo_stream.replace("kraken-providers-panel", partial: "settings/providers/kraken_panel", locals: { kraken_items: @kraken_items })
-        render turbo_stream: [ stream, *flash_notification_stream_items ]
-      else
-        redirect_to settings_providers_path, notice: message, status: :see_other
-      end
-    end
-
-    def render_panel_error(message)
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "kraken-providers-panel",
-          partial: "settings/providers/kraken_panel",
-          locals: { error_message: message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: message, status: :see_other
-      end
     end
 
     def kraken_item_account_flow_context

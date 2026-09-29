@@ -27,48 +27,15 @@ class IndexaCapitalItemsController < ApplicationController
     if @indexa_capital_item.save
       redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @indexa_capital_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "indexa_capital-providers-panel",
-          partial: "settings/providers/indexa_capital_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("indexa_capital", alert: @indexa_capital_item.errors.full_messages.join(", "))
     end
   end
 
   def update
     if @indexa_capital_item.update(indexa_capital_item_params)
-      if turbo_panel_request?
-        flash.now[:notice] = t(".success", default: "Successfully updated IndexaCapital configuration.")
-        @indexa_capital_items = Current.family.indexa_capital_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "indexa_capital-providers-panel",
-            partial: "settings/providers/indexa_capital_panel",
-            locals: { indexa_capital_items: @indexa_capital_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("indexa_capital", notice: t(".success"))
     else
-      @error_message = @indexa_capital_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "indexa_capital-providers-panel",
-          partial: "settings/providers/indexa_capital_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("indexa_capital", alert: @indexa_capital_item.errors.full_messages.join(", "))
     end
   end
 

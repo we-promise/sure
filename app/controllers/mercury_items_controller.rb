@@ -412,17 +412,7 @@ class MercuryItemsController < ApplicationController
 
       redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @mercury_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "mercury-providers-panel",
-          partial: "settings/providers/mercury_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("mercury", alert: @mercury_item.errors.full_messages.join(", "))
     end
   end
 
@@ -436,32 +426,10 @@ class MercuryItemsController < ApplicationController
     if @mercury_item.update(permitted_params)
       Rails.cache.delete(mercury_accounts_cache_key(@mercury_item)) if expire_accounts_cache
 
-      if turbo_panel_request?
-        flash.now[:notice] = t(".success")
-        @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
-        render turbo_stream: [
-          turbo_stream.replace(
-            "mercury-providers-panel",
-            partial: "settings/providers/mercury_panel",
-            locals: { mercury_items: @mercury_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("mercury", notice: t(".success"), fallback_path: accounts_path,
+                            mercury_items: Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts))
     else
-      @error_message = @mercury_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "mercury-providers-panel",
-          partial: "settings/providers/mercury_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("mercury", alert: @mercury_item.errors.full_messages.join(", "))
     end
   end
 

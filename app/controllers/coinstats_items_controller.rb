@@ -22,13 +22,13 @@ class CoinstatsItemsController < ApplicationController
 
     # Validate API key before saving
     unless validate_api_key(@coinstats_item.api_key)
-      return render_error_response(@coinstats_item.errors.full_messages.join(", "))
+      return render_provider_panel("coinstats", alert: @coinstats_item.errors.full_messages.join(", "))
     end
 
     if @coinstats_item.save
       redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      render_error_response(@coinstats_item.errors.full_messages.join(", "))
+      render_provider_panel("coinstats", alert: @coinstats_item.errors.full_messages.join(", "))
     end
   end
 
@@ -38,13 +38,13 @@ class CoinstatsItemsController < ApplicationController
   def update
     # Validate API key if it's being changed
     unless validate_api_key(coinstats_item_params[:api_key])
-      return render_error_response(@coinstats_item.errors.full_messages.join(", "))
+      return render_provider_panel("coinstats", alert: @coinstats_item.errors.full_messages.join(", "))
     end
 
     if @coinstats_item.update(coinstats_item_params)
-      render_success_response(".success")
+      render_provider_panel("coinstats", notice: t(".success"))
     else
-      render_error_response(@coinstats_item.errors.full_messages.join(", "))
+      render_provider_panel("coinstats", alert: @coinstats_item.errors.full_messages.join(", "))
     end
   end
 
@@ -163,35 +163,6 @@ class CoinstatsItemsController < ApplicationController
     rescue => e
       @coinstats_item.errors.add(:api_key, t("coinstats_items.create.errors.validation_failed", message: e.message))
       false
-    end
-
-    def render_error_response(error_message)
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "coinstats-providers-panel",
-          partial: "settings/providers/coinstats_panel",
-          locals: { error_message: error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: error_message, status: :see_other
-      end
-    end
-
-    def render_success_response(notice_key)
-      if turbo_panel_request?
-        flash.now[:notice] = t(notice_key, default: notice_key.to_s.humanize)
-        @coinstats_items = Current.family.coinstats_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "coinstats-providers-panel",
-            partial: "settings/providers/coinstats_panel",
-            locals: { coinstats_items: @coinstats_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(notice_key), status: :see_other
-      end
     end
 
     def render_link_wallet_error(error_message)

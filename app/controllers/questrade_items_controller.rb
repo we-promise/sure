@@ -31,17 +31,7 @@ class QuestradeItemsController < ApplicationController
 
       redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @questrade_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "questrade-providers-panel",
-          partial: "settings/providers/questrade_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message
-      end
+      render_provider_panel("questrade", alert: @questrade_item.errors.full_messages.join(", "))
     end
   end
 
@@ -51,32 +41,9 @@ class QuestradeItemsController < ApplicationController
     update_attrs = update_attrs.merge(status: :good) if update_attrs[:refresh_token].present?
 
     if @questrade_item.update(update_attrs)
-      if turbo_panel_request?
-        flash.now[:notice] = t(".success", default: "Successfully updated Questrade configuration.")
-        @questrade_items = Current.family.questrade_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "questrade-providers-panel",
-            partial: "settings/providers/questrade_panel",
-            locals: { questrade_items: @questrade_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("questrade", notice: t(".success"), questrade_items: Current.family.questrade_items.ordered)
     else
-      @error_message = @questrade_item.errors.full_messages.join(", ")
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "questrade-providers-panel",
-          partial: "settings/providers/questrade_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message
-      end
+      render_provider_panel("questrade", alert: @questrade_item.errors.full_messages.join(", "))
     end
   end
 

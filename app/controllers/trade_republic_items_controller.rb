@@ -643,24 +643,11 @@ class TradeRepublicItemsController < ApplicationController
       @trade_republic_item.destroy_later if @trade_republic_item.trade_republic_accounts.none?
     end
 
+    # Only the add-connection form's own unsaved item should replace its blank
+    # default; an existing item failing update/login keeps the add form blank.
     def render_panel_error(message)
-      @error_message = message
-
-      if turbo_panel_request?
-        render turbo_stream: turbo_stream.replace(
-          "trade-republic-providers-panel",
-          partial: "settings/providers/trade_republic_panel",
-          locals: {
-            error_message: @error_message,
-            # Only the add-connection form's own unsaved item should replace
-            # its blank default; an existing item failing update/login keeps
-            # the add form blank.
-            new_item: (@trade_republic_item if @trade_republic_item&.new_record?)
-          }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path(anchor: "trade-republic"), alert: @error_message, status: :see_other
-      end
+      render_provider_panel("trade_republic", alert: message, fallback_path: settings_providers_path(anchor: "trade-republic"),
+                            new_item: (@trade_republic_item if @trade_republic_item&.new_record?))
     end
 
     def render_qr_login_error(error, pending: nil, status: :unprocessable_entity, retryable: false)

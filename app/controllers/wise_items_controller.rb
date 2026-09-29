@@ -281,30 +281,12 @@ class WiseItemsController < ApplicationController
     end
 
     def render_provider_panel_success(message)
-      return redirect_to accounts_path, notice: message, status: :see_other unless turbo_panel_request?
-
-      flash.now[:notice] = message
-      @wise_items = Current.family.wise_items.active.ordered.includes(:syncs, :wise_accounts)
-      render_wise_provider_panel(locals: { wise_items: @wise_items }, include_flash: true)
+      render_provider_panel("wise", notice: message, fallback_path: accounts_path,
+                            wise_items: Current.family.wise_items.active.ordered.includes(:syncs, :wise_accounts))
     end
 
     def render_provider_panel_error
-      @error_message = @wise_item.errors.full_messages.join(", ")
-      return redirect_to settings_providers_path, alert: @error_message, status: :see_other unless turbo_panel_request?
-
-      render_wise_provider_panel(locals: { error_message: @error_message }, status: :unprocessable_entity)
-    end
-
-    def render_wise_provider_panel(locals:, status: :ok, include_flash: false)
-      streams = [
-        turbo_stream.replace(
-          "wise-providers-panel",
-          partial: "settings/providers/wise_panel",
-          locals: locals
-        )
-      ]
-      streams += flash_notification_stream_items if include_flash
-      render turbo_stream: streams, status: status
+      render_provider_panel("wise", alert: @wise_item.errors.full_messages.join(", "))
     end
 
     def encrypt_pending_token(token)
