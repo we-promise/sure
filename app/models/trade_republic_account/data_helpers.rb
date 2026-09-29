@@ -95,12 +95,25 @@ module TradeRepublicAccount::DataHelpers
     }.freeze
     OFFLINE_ISIN_REASON = "trade_republic_isin"
 
+    # Trade Republic lists crypto under pseudo-ISINs that embed the coin
+    # symbol: XF000BTC0017 is Bitcoin, XF000ETH0019 Ether. Digits pad the
+    # symbol up to the check digit.
+    CRYPTO_ISIN_PATTERN = /\AXF000(?=[A-Z0-9]{7}\z)([A-Z][A-Z0-9]*[A-Z])\d+\z/
+
     # Resolve (or create) a Security from a Trade Republic position/trade.
-    # Prefer an exact exchange ticker when the client supplied one; otherwise
-    # keep the ISIN as ticker but mark the security offline so market-data
-    # importers skip it while snapshot prices still value the holding.
+    # Crypto maps onto the shared CRYPTO:<SYMBOL> security when a crypto price
+    # provider is enabled. Otherwise prefer an exact exchange ticker when the
+    # client supplied one, else keep the ISIN as ticker but mark the security
+    # offline so market-data importers skip it while snapshot prices still
+    # value the holding.
     def resolve_security(isin, name, symbol: nil, exchange_slug: nil)
       return nil if isin.blank?
+
+      crypto_security = resolve_crypto_security(isin, name)
+      if crypto_security
+        rematch_account_from_isin!(isin, crypto_security)
+        return crypto_security
+      end
 
       usable_symbol, mic = exchange_listing_for(isin, symbol: symbol, exchange_slug: exchange_slug)
       if usable_symbol
@@ -110,6 +123,23 @@ module TradeRepublicAccount::DataHelpers
       end
 
       resolve_offline_isin_security(isin, name)
+    end
+
+    # Holdings and trades share this path, so both land on the same security.
+    # Without the crypto price provider a CRYPTO: security could not be priced
+    # at all; the offline ISIN keeps Trade Republic's own snapshot prices, and
+    # the rematch moves it over once the provider is enabled.
+    def resolve_crypto_security(isin, name)
+      symbol = crypto_symbol_for_isin(isin)
+      return nil if symbol.blank?
+      return nil unless Onchain::SecurityResolver.price_provider_enabled?
+
+      @crypto_securities ||= {}
+      @crypto_securities[symbol] ||= Onchain::SecurityResolver.resolve(symbol: symbol, name: name)
+    end
+
+    def crypto_symbol_for_isin(isin)
+      isin.to_s.strip.upcase[CRYPTO_ISIN_PATTERN, 1]
     end
 
     # [symbol, mic] when Trade Republic supplied a usable exchange ticker.

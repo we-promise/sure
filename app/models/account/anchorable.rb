@@ -39,9 +39,13 @@ module Account::Anchorable
     end
   end
 
-  def set_current_balance(balance, date: nil)
+  # `date` is the day the balance describes, for a provider whose figures are
+  # as of a statement rather than of this moment; it defaults to today.
+  # Pass schedule_sync: false when the caller schedules the account sync
+  # itself, such as a provider sync that syncs its accounts afterwards.
+  def set_current_balance(balance, date: nil, schedule_sync: true)
     result = current_balance_manager.set_current_balance(balance, date: date)
-    sync_later if result.success?
+    sync_later if schedule_sync && result.success?
     result
   end
 

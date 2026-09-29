@@ -74,6 +74,7 @@ en:
         title: Available account
         account_type_investment: Investment portfolio
         account_type_cash: Cash account
+        account_type_crypto: Crypto account
         account_summary: "%{account_type} • Balance: %{balance}"
         account_id: "Account ID: %{account_id}"
       link_existing:
