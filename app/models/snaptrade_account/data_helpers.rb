@@ -163,6 +163,9 @@ module SnaptradeAccount::DataHelpers
         data[:symbol] || data[:raw_symbol]
       elsif raw.is_a?(String)
         raw.presence
+      else
+        sym = symbol_data[:symbol] || symbol_data["symbol"]
+        sym.is_a?(Hash) ? (sym[:symbol] || sym["symbol"]) : sym.presence
       end
     end
 

@@ -176,34 +176,41 @@ class SnaptradeAccount::ActivitiesProcessor
       # Check `option_symbol` first: if present, this is an option contract trade.
       # Prioritizing `option_symbol` prevents brokerages like Robinhood (which populate
       # plain `symbol` with the underlying equity) from importing options as common stock.
-      ticker, symbol_data = option_ticker_and_data(data)
+      ticker, option_data = option_ticker_and_data(data)
 
-      if ticker.blank?
-        # Extract and normalize symbol data
-        # SnapTrade activities have DIFFERENT structure than holdings:
-        #   activity.symbol.symbol = "MSTR" (ticker string directly)
-        #   activity.symbol.description = name
-        # Holdings have deeper nesting: symbol.symbol.symbol = ticker
-        raw_symbol_wrapper = data["symbol"] || data[:symbol] || {}
-        symbol_wrapper = raw_symbol_wrapper.is_a?(Hash) ? raw_symbol_wrapper.with_indifferent_access : {}
+      # Extract and normalize symbol data
+      # SnapTrade activities have DIFFERENT structure than holdings:
+      #   activity.symbol.symbol = "MSTR" (ticker string directly)
+      #   activity.symbol.description = name
+      # Holdings have deeper nesting: symbol.symbol.symbol = ticker
+      raw_symbol_wrapper = data["symbol"] || data[:symbol] || {}
+      symbol_wrapper = raw_symbol_wrapper.is_a?(Hash) ? raw_symbol_wrapper.with_indifferent_access : {}
 
-        # Get the symbol field - could be a string (ticker) or nested object
-        raw_symbol_data = symbol_wrapper["symbol"] || symbol_wrapper[:symbol]
+      # Get the symbol field - could be a string (ticker) or nested object
+      raw_symbol_data = symbol_wrapper["symbol"] || symbol_wrapper[:symbol]
 
-        # Determine ticker based on data type
-        if raw_symbol_data.is_a?(String)
-          # Activities: symbol.symbol is the ticker string directly
-          ticker = raw_symbol_data
-          symbol_data = symbol_wrapper # Use the wrapper for description, etc.
-        elsif raw_symbol_data.is_a?(Hash)
-          # Holdings structure: symbol.symbol is an object with symbol inside
-          symbol_data = raw_symbol_data.with_indifferent_access
-          ticker = symbol_data["symbol"] || symbol_data[:symbol]
-          ticker = symbol_data["raw_symbol"] if ticker.is_a?(Hash)
-        else
-          ticker = nil
-          symbol_data = {}
-        end
+      # Determine ticker based on data type
+      if raw_symbol_data.is_a?(String)
+        # Activities: symbol.symbol is the ticker string directly
+        fallback_ticker = raw_symbol_data
+        underlying_symbol_data = symbol_wrapper # Use the wrapper for description, etc.
+      elsif raw_symbol_data.is_a?(Hash)
+        # Holdings structure: symbol.symbol is an object with symbol inside
+        underlying_symbol_data = raw_symbol_data.with_indifferent_access
+        fallback_ticker = underlying_symbol_data["symbol"] || underlying_symbol_data[:symbol]
+        fallback_ticker = underlying_symbol_data["raw_symbol"] if fallback_ticker.is_a?(Hash)
+      else
+        fallback_ticker = nil
+        underlying_symbol_data = {}
+      end
+
+      if ticker.present?
+        # When option_symbol is present, use option_data but merge in underlying symbol
+        # metadata as fallback (e.g. exchange, currency, ticker) when option_symbol lacks them.
+        symbol_data = underlying_symbol_data.merge(option_data).with_indifferent_access
+      else
+        ticker = fallback_ticker
+        symbol_data = underlying_symbol_data
       end
 
       # Must have a symbol for trades
@@ -246,6 +253,8 @@ class SnaptradeAccount::ActivitiesProcessor
         quantity.abs
       end
 
+      multiplier = contract_multiplier(symbol_data)
+
       case rule[:zero_amount]
       when :unconditional
         amount = BigDecimal("0.0")
@@ -263,7 +272,7 @@ class SnaptradeAccount::ActivitiesProcessor
         elsif price
           # Same convention as a manually entered trade: the fee adds to a buy's
           # cost and comes out of a sell's proceeds.
-          quantity * price + (fee || 0)
+          quantity * price * multiplier + (fee || 0)
         end
       end
 
@@ -274,7 +283,7 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       if price.nil? && !quantity.zero?
-        price = (amount - (fee || 0)) / quantity
+        price = (amount - (fee || 0)) / (quantity * multiplier)
         capture_debug_log(
           level: "info",
           message: "Derived missing price for trade #{external_id} from its amount and quantity",
@@ -447,5 +456,14 @@ class SnaptradeAccount::ActivitiesProcessor
       return [ nil, nil ] if ticker.blank?
 
       [ ticker, option_symbol_data ]
+    end
+
+    def contract_multiplier(symbol_data)
+      return 1 unless symbol_data.is_a?(Hash)
+
+      data = symbol_data.with_indifferent_access
+      return 1 unless data[:option_type].present? || data[:is_mini_option] != nil
+
+      ActiveModel::Type::Boolean.new.cast(data[:is_mini_option]) ? 10 : 100
     end
 end

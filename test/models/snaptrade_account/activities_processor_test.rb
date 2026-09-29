@@ -1341,6 +1341,155 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "SPY   250620P00500000", entry.entryable.security.name
   end
 
+  test "derives option amount using 100x contract multiplier when amount is missing" do
+    process_activities(
+      {
+        "id" => "opt_missing_amount_001",
+        "type" => "BUY",
+        "units" => 2.0,
+        "price" => 0.57,
+        "amount" => nil,
+        "fee" => 0.05,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => nil,
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "TQQQ  260220C00051000",
+          "option_type" => "CALL",
+          "strike_price" => 51.0,
+          "expiration_date" => "2026-02-20",
+          "is_mini_option" => false
+        }
+      }
+    )
+
+    entry = snaptrade_entry("opt_missing_amount_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    assert_equal BigDecimal("114.05"), entry.amount
+    assert_equal BigDecimal("0.57"), entry.entryable.price
+    assert_equal BigDecimal("2.0"), entry.entryable.qty
+  end
+
+  test "derives option price using 100x contract multiplier when price is missing" do
+    process_activities(
+      {
+        "id" => "opt_missing_price_001",
+        "type" => "BUY",
+        "units" => 2.0,
+        "price" => nil,
+        "amount" => -114.05,
+        "fee" => 0.05,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => nil,
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "TQQQ  260220C00051000",
+          "option_type" => "CALL",
+          "strike_price" => 51.0,
+          "expiration_date" => "2026-02-20",
+          "is_mini_option" => false
+        }
+      }
+    )
+
+    entry = snaptrade_entry("opt_missing_price_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    assert_equal BigDecimal("0.57"), entry.entryable.price
+    assert_equal BigDecimal("114.05"), entry.amount
+  end
+
+  test "derives mini-option amount and price using 10x contract multiplier" do
+    process_activities(
+      {
+        "id" => "mini_opt_missing_amount",
+        "type" => "BUY",
+        "units" => 2.0,
+        "price" => 0.57,
+        "amount" => nil,
+        "fee" => 0.05,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => nil,
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "AAPL7 260116C00200000",
+          "option_type" => "CALL",
+          "strike_price" => 200.0,
+          "expiration_date" => "2026-01-16",
+          "is_mini_option" => true
+        }
+      },
+      {
+        "id" => "mini_opt_missing_price",
+        "type" => "BUY",
+        "units" => 2.0,
+        "price" => nil,
+        "amount" => -11.45,
+        "fee" => 0.05,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => nil,
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "AAPL7 260116C00200000",
+          "option_type" => "CALL",
+          "strike_price" => 200.0,
+          "expiration_date" => "2026-01-16",
+          "is_mini_option" => true
+        }
+      }
+    )
+
+    amount_entry = snaptrade_entry("mini_opt_missing_amount")
+    price_entry = snaptrade_entry("mini_opt_missing_price")
+
+    assert_not_nil amount_entry
+    assert_equal BigDecimal("11.45"), amount_entry.amount
+    assert_equal BigDecimal("0.57"), amount_entry.entryable.price
+
+    assert_not_nil price_entry
+    assert_equal BigDecimal("0.57"), price_entry.entryable.price
+    assert_equal BigDecimal("11.45"), price_entry.amount
+  end
+
+  test "retains underlying exchange and currency metadata when option_symbol lacks underlying_symbol" do
+    process_activities(
+      {
+        "id" => "opt_fallback_meta_001",
+        "type" => "BUY",
+        "units" => 2.0,
+        "price" => 0.57,
+        "amount" => -114.05,
+        "settlement_date" => Date.current.to_s,
+        "symbol" => {
+          "symbol" => "TQQQ",
+          "description" => "ProShares UltraPro QQQ",
+          "currency" => { "code" => "USD" },
+          "exchange" => { "mic_code" => "XNAS" }
+        },
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "TQQQ  260220C00051000",
+          "option_type" => "CALL",
+          "strike_price" => 51.0,
+          "expiration_date" => "2026-02-20"
+        }
+      }
+    )
+
+    entry = snaptrade_entry("opt_fallback_meta_001")
+    assert_not_nil entry
+    security = entry.entryable.security
+    assert_equal "TQQQ  260220C00051000", security.ticker
+    assert_equal "TQQQ $51 CALL (2026-02-20)", security.name
+    assert_equal "XNAS", security.exchange_mic
+    assert_equal "US", security.country_code
+  end
+
   # Modeled on SnapTrade payload with generic "COMMON STOCK" description (preserves 5-letter ticker case)
   test "preserves raw ticker without titleize when description is generic type" do
     process_activities(
