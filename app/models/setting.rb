@@ -267,8 +267,11 @@ class Setting < RailsSettings::Base
     end
 
     # Also reset the per-request dynamic values cache whenever settings change.
+    # If the write happens inside a transaction that is later rolled back, the
+    # memoized values may contain uncommitted data, so reset again on rollback.
     def clear_cache
       DynamicValuesCache.reset
+      current_transaction.after_rollback { DynamicValuesCache.reset }
       super
     end
 
