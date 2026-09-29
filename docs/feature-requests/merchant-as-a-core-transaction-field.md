@@ -9,6 +9,7 @@ Transactions can already be associated with a merchant, but the association is e
 Treat merchant as a first-class, optional transaction attribute, alongside categories and tags. The transaction list already shows the merchant name in its secondary text when one is assigned. On wide rows, the leading image currently prefers an activity/security logo, then a merchant logo, and otherwise shows a circular one-letter mark derived from the transaction description. On mobile, the category icon is primary, with a small activity/security or merchant logo overlaid when available. Keep these useful existing fallbacks and make the merchant information and editing affordance more consistent:
 
 - When the displayed merchant logo or fallback mark is hovered or keyboard-focused, make the merchant name easy to identify. This is especially useful when a logo is unfamiliar; keep the existing transaction-description letter mark as the fallback when no logo is available.
+- Let users optionally enter a custom logo URL for a family merchant. A manually provided logo should take precedence over the Brandfetch logo generated from its website and remain selected when the website changes; clearing the custom logo should return to the generated logo when available, then the existing fallback.
 - Let people select, change, or clear a merchant inline from the transaction list, using a searchable picker similar to the recent inline tag experience. Keep transaction detail editing available as well.
 - Include merchant as an optional field in transaction import and export workflows. Imports should map supplied merchant data to the appropriate family merchant when possible, and exports should preserve the association for round trips. Omitting merchant data must remain valid and must not erase an existing merchant unintentionally.
 - Offer merchant selection in the initial manual transaction entry flow so people do not have to reopen a newly created transaction to add one.
@@ -30,6 +31,7 @@ Merchant names often explain a transaction more clearly than a bank-provided des
 
 - [ ] Merchant remains optional throughout the transaction lifecycle.
 - [ ] Transaction rows expose a selected merchant clearly, with logo fallback and an accessible way to identify the merchant by name.
+- [ ] A family merchant can optionally use a manually entered logo URL, which takes precedence over a Brandfetch-generated logo until cleared.
 - [ ] People can select, change, and clear a merchant inline, with the same association available in transaction details.
 - [ ] The initial manual transaction form can optionally set a merchant.
 - [ ] Transaction import can consume an optional merchant field and associate it safely with a family merchant.
