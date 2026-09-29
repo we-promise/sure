@@ -59,6 +59,8 @@ class WiseItem::Importer
       end
       mark_requires_update_if_credentials_error(e)
       Rails.logger.error "WiseItem::Importer - Failed to fetch balances: #{e.message}"
+      # A rejected token fails the sync instead of completing it with nothing imported
+      raise if credentials_error?(e)
       nil
     rescue => e
       Rails.logger.error "WiseItem::Importer - Unexpected error fetching balances: #{e.class} - #{e.message}"
@@ -595,8 +597,12 @@ class WiseItem::Importer
       Time.current
     end
 
+    def credentials_error?(error)
+      error.is_a?(Provider::Wise::WiseError) && error.error_type.in?([ :unauthorized, :access_forbidden ])
+    end
+
     def mark_requires_update_if_credentials_error(error)
-      return unless error.is_a?(Provider::Wise::WiseError) && error.error_type.in?([ :unauthorized, :access_forbidden ])
+      return unless credentials_error?(error)
 
       wise_item.update!(status: :requires_update)
     rescue => e
