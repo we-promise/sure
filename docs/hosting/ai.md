@@ -124,6 +124,7 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 ```
 
 **Recommended models:**
+- `gpt-6.1-sol` - Latest Sol model for complex financial analysis; assistant tools require the native Responses API
 - `gpt-6-sol` - Strong reasoning for multi-step financial analysis; use the native OpenAI provider and Responses API for reasoning with function tools
 - `gpt-4.1` - Default, best balance of speed and quality
 - `gpt-5` - Earlier-generation reasoning model
@@ -131,8 +132,11 @@ OPENAI_ACCESS_TOKEN=sk-proj-...
 
 **Pricing:** See [OpenAI Pricing](https://openai.com/api/pricing/)
 
-GPT-6 Sol uses the native Responses API for assistant tools. Leave the custom
-Base URL setting empty when connecting directly to OpenAI. Native GPT-6 Sol,
+GPT-6.1 Sol and GPT-6 Sol use the native Responses API for assistant tools.
+Leave the custom Base URL setting empty when connecting directly to OpenAI.
+GPT-6.1 Sol does not support tool calling in Chat Completions, or the `none`
+and `minimal` reasoning efforts. See the [model documentation](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
+Native GPT-6.1 Sol, GPT-6 Sol,
 `o1`, and `o3` PDF vision requests use `max_completion_tokens`, which includes
 reasoning and visible output, when an output limit is explicitly configured.
 Set `LLM_MAX_RESPONSE_TOKENS` to a positive value to bound each such request;

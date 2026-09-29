@@ -97,62 +97,64 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     assert_equal expected, processor.process
   end
 
-  test "GPT-6 Sol PDF vision uses the completion token budget" do
-    client = mock
-    client.expects(:chat).with do |request|
-      params = request[:parameters]
-      params[:model] == "gpt-6-sol" &&
-        params[:max_completion_tokens] == 8192 &&
-        !params.key?(:max_tokens)
-    end.returns(
-      "choices" => [ { "message" => { "content" => {
-        document_type: "other", summary: "Synthetic PDF", extracted_data: {}
-      }.to_json } } ],
-      "usage" => { "prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30 }
-    )
-    processor = Provider::Openai::PdfProcessor.new(
-      client,
-      model: "gpt-6-sol",
-      pdf_content: @pdf_content,
-      max_response_tokens: 8192,
-      processing_mode: :vision
-    )
-    processor.stubs(:convert_pdf_to_images).returns([ "synthetic-image" ])
+  %w[gpt-6-sol gpt-6.1-sol].each do |model|
+    test "#{model} PDF vision uses the completion token budget" do
+      client = mock
+      client.expects(:chat).with do |request|
+        params = request[:parameters]
+        params[:model] == model &&
+          params[:max_completion_tokens] == 8192 &&
+          !params.key?(:max_tokens)
+      end.returns(
+        "choices" => [ { "message" => { "content" => {
+          document_type: "other", summary: "Synthetic PDF", extracted_data: {}
+        }.to_json } } ],
+        "usage" => { "prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30 }
+      )
+      processor = Provider::Openai::PdfProcessor.new(
+        client,
+        model: model,
+        pdf_content: @pdf_content,
+        max_response_tokens: 8192,
+        processing_mode: :vision
+      )
+      processor.stubs(:convert_pdf_to_images).returns([ "synthetic-image" ])
 
-    assert_equal "Synthetic PDF", processor.process.summary
-  end
-
-  test "GPT-6 Sol PDF text extraction preserves the existing uncapped request" do
-    client = mock
-    client.expects(:chat).with do |request|
-      params = request[:parameters]
-      params[:model] == "gpt-6-sol" &&
-        !params.key?(:max_completion_tokens) && !params.key?(:max_tokens)
-    end.returns(
-      "choices" => [ { "message" => { "content" => {
-        document_type: "other", summary: "Synthetic text", extracted_data: {}
-      }.to_json } } ],
-      "usage" => { "prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30 }
-    )
-    processor = Provider::Openai::PdfProcessor.new(
-      client,
-      model: "gpt-6-sol",
-      pdf_content: @pdf_content,
-      max_response_tokens: 8192,
-      processing_mode: :text
-    )
-    processor.stubs(:extract_text_from_pdf).returns("Synthetic statement")
-
-    assert_equal "Synthetic text", processor.process.summary
-  end
-
-  test "GPT-6 Sol PDF vision omits an unconfigured completion limit" do
-    processor = vision_processor(model: "gpt-6-sol", max_response_tokens: nil)
-    expect_vision_request(processor, model: "gpt-6-sol") do |params|
-      !params.key?(:max_tokens) && !params.key?(:max_completion_tokens)
+      assert_equal "Synthetic PDF", processor.process.summary
     end
 
-    assert_equal "Synthetic PDF", processor.process.summary
+    test "#{model} PDF text extraction preserves the existing uncapped request" do
+      client = mock
+      client.expects(:chat).with do |request|
+        params = request[:parameters]
+        params[:model] == model &&
+          !params.key?(:max_completion_tokens) && !params.key?(:max_tokens)
+      end.returns(
+        "choices" => [ { "message" => { "content" => {
+          document_type: "other", summary: "Synthetic text", extracted_data: {}
+        }.to_json } } ],
+        "usage" => { "prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30 }
+      )
+      processor = Provider::Openai::PdfProcessor.new(
+        client,
+        model: model,
+        pdf_content: @pdf_content,
+        max_response_tokens: 8192,
+        processing_mode: :text
+      )
+      processor.stubs(:extract_text_from_pdf).returns("Synthetic statement")
+
+      assert_equal "Synthetic text", processor.process.summary
+    end
+
+    test "#{model} PDF vision omits an unconfigured completion limit" do
+      processor = vision_processor(model: model, max_response_tokens: nil)
+      expect_vision_request(processor, model: model) do |params|
+        !params.key?(:max_tokens) && !params.key?(:max_completion_tokens)
+      end
+
+      assert_equal "Synthetic PDF", processor.process.summary
+    end
   end
 
   test "native o-series PDF vision uses completion limits when configured" do
@@ -186,13 +188,15 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     assert_equal "Synthetic PDF", processor.process.summary
   end
 
-  test "custom provider PDF vision retains max_tokens even with a GPT-6 model name" do
-    processor = vision_processor(model: "gpt-6-sol", max_response_tokens: 512, custom_provider: true)
-    expect_vision_request(processor, model: "gpt-6-sol") do |params|
-      params[:max_tokens] == 512 && !params.key?(:max_completion_tokens)
-    end
+  %w[gpt-6-sol gpt-6.1-sol].each do |model|
+    test "custom provider PDF vision retains max_tokens even with a #{model} model name" do
+      processor = vision_processor(model: model, max_response_tokens: 512, custom_provider: true)
+      expect_vision_request(processor, model: model) do |params|
+        params[:max_tokens] == 512 && !params.key?(:max_completion_tokens)
+      end
 
-    assert_equal "Synthetic PDF", processor.process.summary
+      assert_equal "Synthetic PDF", processor.process.summary
+    end
   end
 
   test "custom provider PDF vision retains max_tokens with an o-series model name" do

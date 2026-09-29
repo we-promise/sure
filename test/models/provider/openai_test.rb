@@ -8,35 +8,67 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject_model = "gpt-4.1"
   end
 
-  test "builtin assistant resolves GPT-6 Sol to the native Responses provider" do
-    with_env_overrides(
-      "OPENAI_ACCESS_TOKEN" => "test-openai-token",
-      "OPENAI_URI_BASE" => nil,
-      "OPENAI_MODEL" => "gpt-6-sol",
-      "OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => nil
-    ) do
-      Setting.stubs(:openai_uri_base).returns(nil)
-      assistant = Assistant::Builtin.for_chat(chats(:two))
-      provider = assistant.get_model_provider("gpt-6-sol")
+  %w[gpt-6-sol gpt-6.1-sol].each do |model|
+    test "builtin assistant resolves #{model} to the native Responses provider" do
+      with_env_overrides(
+        "OPENAI_ACCESS_TOKEN" => "test-openai-token",
+        "OPENAI_URI_BASE" => nil,
+        "OPENAI_MODEL" => model,
+        "OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => nil
+      ) do
+        Setting.stubs(:openai_uri_base).returns(nil)
+        assistant = Assistant::Builtin.for_chat(chats(:two))
+        provider = assistant.get_model_provider(model)
 
-      assert_instance_of Provider::Openai, provider
-      assert provider.supports_responses_endpoint?
-      assert provider.supports_pdf_processing?(model: "gpt-6-sol")
+        assert_instance_of Provider::Openai, provider
+        assert provider.supports_responses_endpoint?
+        assert provider.supports_pdf_processing?(model: model)
+      end
+    end
+
+    test "#{model} PDF processing reserves only an explicitly configured output limit" do
+      with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
+        Setting.stubs(:llm_max_response_tokens).returns(nil)
+        expect_pdf_response_limit(@openai, model: model, limit: nil)
+        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
+      end
+    end
+
+    test "#{model} PDF processing honors an explicit output limit" do
+      with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "8192") do
+        expect_pdf_response_limit(@openai, model: model, limit: 8192)
+        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
+      end
     end
   end
 
-  test "GPT-6 PDF processing reserves only an explicitly configured output limit" do
-    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
-      Setting.stubs(:llm_max_response_tokens).returns(nil)
-      expect_pdf_response_limit(@openai, model: "gpt-6-sol", limit: nil)
-      assert @openai.process_pdf(pdf_content: "synthetic PDF", model: "gpt-6-sol").success?
-    end
-  end
+  test "GPT-6.1 Sol sends assistant tools through Responses with supported request parameters" do
+    with_env_overrides("OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => nil) do
+      fake_responses = mock
+      fake_client = mock
+      fake_client.stubs(:responses).returns(fake_responses)
+      fake_client.expects(:chat).never
+      @openai.stubs(:client).returns(fake_client)
 
-  test "GPT-6 PDF processing honors an explicit output limit" do
-    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "8192") do
-      expect_pdf_response_limit(@openai, model: "gpt-6-sol", limit: 8192)
-      assert @openai.process_pdf(pdf_content: "synthetic PDF", model: "gpt-6-sol").success?
+      fake_responses.expects(:create).with do |parameters:|
+        parameters[:model] == "gpt-6.1-sol" &&
+          parameters[:tools].first[:name] == "get_net_worth" &&
+          !parameters.key?(:reasoning) && !parameters.key?(:reasoning_effort)
+      end.returns(
+        "id" => "resp_sol61", "model" => "gpt-6.1-sol",
+        "output" => [ {
+          "type" => "function_call", "id" => "fc_sol61", "call_id" => "call_sol61",
+          "name" => "get_net_worth", "arguments" => "{}"
+        } ]
+      )
+
+      response = @openai.chat_response(
+        "What is my net worth?", model: "gpt-6.1-sol",
+        functions: [ { name: "get_net_worth", params_schema: { type: "object", properties: {} } } ]
+      )
+
+      assert response.success?
+      assert_equal "get_net_worth", response.data.function_requests.first.function_name
     end
   end
 

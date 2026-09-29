@@ -14,6 +14,12 @@ class LlmUsage < ApplicationRecord
   # Source: https://platform.openai.com/docs/pricing
   PRICING = {
     "openai" => {
+      # GPT-6.1 Sol Standard pricing, September 2026.
+      # Source: https://developers.openai.com/api/docs/models/gpt-6.1-sol
+      "gpt-6.1-sol" => {
+        prompt: 2.00, completion: 10.00,
+        long_context: { threshold: 272_000, prompt: 4.00, completion: 15.00 }
+      },
       # GPT-6 Sol Standard pricing, September 2026.
       # Source: https://developers.openai.com/api/docs/models/gpt-6-sol
       "gpt-6-sol" => {
