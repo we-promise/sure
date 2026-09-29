@@ -78,26 +78,13 @@
     <% if breakdown.empty? %>
       <p class="text-sm text-secondary"><%= t("admin.system_health.show.values.no_queues") %></p>
     <% else %>
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="text-left text-secondary border-b border-primary">
-            <th class="py-2 font-medium"><%= t("admin.system_health.show.labels.queue") %></th>
-            <th class="py-2 font-medium"><%= t("admin.system_health.show.labels.size") %></th>
-            <th class="py-2 font-medium"><%= t("admin.system_health.show.labels.latency") %></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-primary">
-          <% breakdown.each do |name, size, latency| %>
-            <tr>
-              <td class="py-2 text-primary"><%= name %></td>
-              <td class="py-2 text-primary"><%= number_with_delimiter(size) %></td>
-              <td class="py-2 text-primary">
-                <%= t("admin.system_health.show.values.seconds", seconds: number_with_precision(latency, precision: 1)) %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+      <%= render DS::Table.new(rows: breakdown, inset: true, label: t("admin.system_health.show.queues_section_title")) do |table| %>
+        <% table.with_column(t("admin.system_health.show.labels.queue")) { |(name)| name } %>
+        <% table.with_column(t("admin.system_health.show.labels.size"), numeric: true) { |(_name, size)| number_with_delimiter(size) } %>
+        <% table.with_column(t("admin.system_health.show.labels.latency"), numeric: true) do |(_name, _size, latency)| %>
+          <%= t("admin.system_health.show.values.seconds", seconds: number_with_precision(latency, precision: 1)) %>
+        <% end %>
+      <% end %>
     <% end %>
   </div>
   <% if push_notification_test %>

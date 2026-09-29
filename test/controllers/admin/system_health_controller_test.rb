@@ -47,6 +47,9 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Healthy/, response.body)
     assert_select "button[role='tab']", text: "AI status"
     assert_select "[data-ds--tabs-navigate-on-change-value='true']"
+    # Nothing in the queue table takes focus, so on a narrow screen the scroll
+    # area has to be a named tab stop of its own for a keyboard to scroll it.
+    assert_select "[role='region'][aria-label='Queues']"
   end
 
   test "renders degraded state with reason when Sidekiq is unhealthy" do

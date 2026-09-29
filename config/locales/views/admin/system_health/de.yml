@@ -8,6 +8,7 @@ de:
         title: "Push-Benachrichtigungen"
         requested_at: "Letzter Test angefordert am %{time}"
         result_help: "Die Annahme durch APNs bestätigt nicht die Zustellung auf deinem Gerät. Aktualisiere die Ergebnisse, um den Worker-Status zu sehen. Ergebnisse werden 24 Stunden gespeichert."
+        results_label: "Testergebnisse"
         device: "Gerät %{number}"
         pending: "Ausstehend"
         refresh: "Ergebnisse aktualisieren"
