@@ -9,6 +9,10 @@ class Account < ApplicationRecord
   after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
+  validates :provider_balance_adjustment, numericality: true
+  validates :provider_balance_adjustment_reason, presence: true, if: :provider_balance_adjusted?
+  validates :provider_balance_adjustment_effective_date, presence: true, if: :provider_balance_adjusted?
+  validates :provider_balance_adjustment_reason, length: { maximum: 255 }, allow_blank: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
@@ -37,12 +41,31 @@ class Account < ApplicationRecord
            foreign_key: :destination_account_id,
            dependent: :destroy
 
-  monetize :balance, :cash_balance
+  monetize :balance, :cash_balance, :provider_balance_adjustment, :provider_balance_adjustment_caught_up_amount
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
   VISIBLE_STATUSES = %w[draft active].freeze
   HISTORICAL_STATUSES = (VISIBLE_STATUSES + %w[disabled]).freeze
+
+  # Providers whose processors route synced balances through
+  # `set_current_balance(..., apply_provider_adjustment: true)` or
+  # `resolve_provider_balance_adjustment`. Other providers write the balance
+  # directly and would silently overwrite an adjustment on the next sync, so a
+  # provider is added here only once its processor applies the adjustment.
+  PROVIDER_BALANCE_ADJUSTMENT_PROVIDER_TYPES = %w[
+    CoinstatsAccount
+    EnableBankingAccount
+    IbkrAccount
+    IndexaCapitalAccount
+    PlaidAccount
+    QuestradeAccount
+    RedbarkAccount
+    SimplefinAccount
+    SnaptradeAccount
+    TradeRepublicAccount
+    Trading212Account
+  ].freeze
 
   scope :visible, -> { where(status: VISIBLE_STATUSES) }
   scope :historical, -> { where(status: HISTORICAL_STATUSES) }
@@ -681,6 +704,92 @@ class Account < ApplicationRecord
     else
       raise "Unknown account type: #{accountable_type}"
     end
+  end
+
+  def provider_balance_adjusted?
+    provider_balance_adjustment.to_d.nonzero?
+  end
+
+  def supports_provider_balance_adjustment?
+    provider_types = account_providers.map(&:provider_type)
+    provider_types << "PlaidAccount" if plaid_account_id.present?
+    provider_types << "SimplefinAccount" if simplefin_account_id.present?
+
+    provider_types.any? && (provider_types - PROVIDER_BALANCE_ADJUSTMENT_PROVIDER_TYPES).empty?
+  end
+
+  def provider_adjusted_balance(provider_balance)
+    provider_balance.to_d + provider_balance_adjustment.to_d
+  end
+
+  def provider_balance_adjustment_caught_up?
+    provider_balance_adjustment_caught_up_at.present?
+  end
+
+  def resolve_provider_balance_adjustment(provider_balance)
+    provider_balance = provider_balance.to_d
+    return provider_balance unless provider_balance_adjusted?
+
+    previous_provider_balance = provider_balance_adjustment_provider_balance&.to_d
+    adjustment = provider_balance_adjustment.to_d
+
+    # If the raw provider balance moves by exactly the signed adjustment, the
+    # institution has incorporated the correction. Clear the active adjustment
+    # so it is not applied twice, while retaining an audit notice for the user.
+    if previous_provider_balance && (provider_balance - previous_provider_balance - adjustment).abs <= 0.01
+      update!(
+        provider_balance_adjustment: 0,
+        provider_balance_adjustment_provider_balance: provider_balance,
+        provider_balance_adjustment_caught_up_amount: adjustment,
+        provider_balance_adjustment_caught_up_at: Time.current
+      )
+      provider_balance
+    else
+      update_column(:provider_balance_adjustment_provider_balance, provider_balance) if provider_balance != previous_provider_balance
+      provider_balance + adjustment
+    end
+  end
+
+  def set_provider_balance_adjustment(amount:, reason:)
+    amount = amount.presence&.to_d || 0.to_d
+    previous_adjustment = provider_balance_adjustment.to_d
+    provider_balance = balance.to_d - previous_adjustment
+    normalized_reason = amount.zero? ? nil : reason.presence
+
+    if amount == previous_adjustment && normalized_reason == provider_balance_adjustment_reason
+      return Account::CurrentBalanceManager::Result.new(success?: true, changes_made?: false, error: nil)
+    end
+
+    # Clearing stays allowed so an adjustment set before a provider change or
+    # unlink can still be removed.
+    unless amount.zero? || supports_provider_balance_adjustment?
+      return Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "This account's provider does not support balance adjustments")
+    end
+
+    Account.transaction do
+      update!(
+        provider_balance_adjustment: amount,
+        provider_balance_adjustment_reason: normalized_reason,
+        provider_balance_adjustment_effective_date: amount.zero? ? nil : Date.current,
+        provider_balance_adjustment_provider_balance: amount.zero? ? nil : provider_balance,
+        provider_balance_adjustment_caught_up_amount: nil,
+        provider_balance_adjustment_caught_up_at: nil
+      )
+
+      # Once unlinked, the balance belongs to the user. Writing it through the
+      # manual path could shift the opening anchor and restate history, so
+      # clearing only removes the adjustment record.
+      next Account::CurrentBalanceManager::Result.new(success?: true, changes_made?: true, error: nil) if unlinked?
+
+      result = set_current_balance(provider_balance, apply_provider_adjustment: true)
+      raise Account::CurrentBalanceManager::InvalidOperation, result.error unless result.success?
+
+      result
+    end
+  rescue ActiveRecord::RecordInvalid => e
+    Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: e.record.errors.full_messages.join(", "))
+  rescue Account::CurrentBalanceManager::InvalidOperation => e
+    Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: e.message)
   end
 
   def owned_by?(user)

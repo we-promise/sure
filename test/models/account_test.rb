@@ -944,4 +944,69 @@ class AccountTest < ActiveSupport::TestCase
     accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
     assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
   end
+
+  test "supports provider balance adjustments only when every provider applies them" do
+    assert_not @account.supports_provider_balance_adjustment?
+
+    AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    assert @account.reload.supports_provider_balance_adjustment?
+
+    AccountProvider.create!(account: @account, provider: mercury_accounts(:checking_account))
+    assert_not @account.reload.supports_provider_balance_adjustment?
+  end
+
+  test "supports provider balance adjustments for legacy SimpleFIN links" do
+    simplefin_account = SimplefinAccount.create!(
+      simplefin_item: SimplefinItem.create!(family: @family, name: "SimpleFIN", access_url: "https://example.com/token"),
+      name: "Legacy SimpleFIN checking",
+      account_id: "legacy_checking",
+      currency: "USD",
+      account_type: "checking",
+      current_balance: 100
+    )
+    @account.update!(simplefin_account: simplefin_account)
+
+    assert @account.supports_provider_balance_adjustment?
+  end
+
+  test "rejects a provider balance adjustment when the provider would overwrite it" do
+    AccountProvider.create!(account: @account, provider: mercury_accounts(:checking_account))
+    original_balance = @account.balance
+
+    result = @account.reload.set_provider_balance_adjustment(amount: "-25", reason: "Pending refund")
+
+    assert_not result.success?
+    assert_equal "This account's provider does not support balance adjustments", result.error
+    assert_equal 0, @account.reload.provider_balance_adjustment
+    assert_equal original_balance, @account.balance
+  end
+
+  test "resubmitting an unchanged adjustment succeeds after the provider stops supporting it" do
+    AccountProvider.create!(account: @account, provider: mercury_accounts(:checking_account))
+    @account.update_columns(provider_balance_adjustment: -25, provider_balance_adjustment_reason: "Pending refund",
+      provider_balance_adjustment_effective_date: Date.current)
+
+    result = @account.reload.set_provider_balance_adjustment(amount: "-25", reason: "Pending refund")
+
+    assert result.success?
+    assert_not result.changes_made?
+    assert_equal(-25, @account.reload.provider_balance_adjustment)
+  end
+
+  test "clears a leftover adjustment on an unlinked account without restating history" do
+    @account.update_columns(provider_balance_adjustment: -25, provider_balance_adjustment_reason: "Pending refund",
+      provider_balance_adjustment_effective_date: Date.current)
+    assert @account.reload.unlinked?
+    balance = @account.balance
+    entry_snapshot = @account.entries.order(:id).pluck(:id, :date, :amount)
+
+    result = @account.set_provider_balance_adjustment(amount: "", reason: "")
+
+    assert result.success?, result.error
+    assert_equal 0, @account.reload.provider_balance_adjustment
+    assert_nil @account.provider_balance_adjustment_reason
+    assert_nil @account.provider_balance_adjustment_effective_date
+    assert_equal balance, @account.balance
+    assert_equal entry_snapshot, @account.entries.order(:id).pluck(:id, :date, :amount)
+  end
 end

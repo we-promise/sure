@@ -85,7 +85,7 @@ class EnableBankingAccount::Processor
           # Use set_current_balance to create a current_anchor valuation entry.
           # This enables Balance::ReverseCalculator, which works backward from the
           # bank-reported balance — eliminating spurious cash adjustment spikes.
-          result = account.set_current_balance(balance)
+          result = account.set_current_balance(balance, apply_provider_adjustment: true)
           raise ProcessingError, "Failed to set current balance: #{result.error}" unless result.success?
         end
       end

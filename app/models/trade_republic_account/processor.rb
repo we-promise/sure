@@ -38,6 +38,6 @@ class TradeRepublicAccount::Processor
       # TradeRepublicItem#schedule_account_syncs syncs the account once every
       # Trade Republic account has been processed. A sync started here would
       # run before the other accounts book their settlements, and then again.
-      account.set_current_balance(total_balance, schedule_sync: false)
+      account.set_current_balance(total_balance, schedule_sync: false, apply_provider_adjustment: true)
     end
 end
