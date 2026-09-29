@@ -13,9 +13,11 @@ class DashboardCustomizeTest < ApplicationSystemTestCase
     find_button(I18n.t("pages.dashboard.customize.hide", title: net_worth)).send_keys(:enter)
 
     assert_no_selector "section[data-section-key='net_worth_chart']"
+    assert_equal net_worth, page.evaluate_script("document.activeElement.textContent").strip
 
     click_on net_worth
     assert_selector "section[data-section-key='net_worth_chart']"
+    assert_equal "net_worth_chart", page.evaluate_script("document.activeElement.dataset.sectionKey")
 
     click_on I18n.t("pages.dashboard.customize.done")
     assert_no_button I18n.t("pages.dashboard.customize.hide", title: net_worth)

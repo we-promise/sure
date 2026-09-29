@@ -84,12 +84,67 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   test "update_section_hidden hides and re-adds a section" do
     patch dashboard_section_hidden_path("net_worth_chart"), params: { hidden: true }
 
-    assert_redirected_to root_path(customize: true)
+    assert_redirected_to root_path(customize: true, hidden_section: "net_worth_chart")
     assert_equal %w[net_worth_chart], @user.reload.dashboard_hidden_sections
 
     patch dashboard_section_hidden_path("net_worth_chart"), params: { hidden: false }
 
+    assert_redirected_to root_path(customize: true, shown_section: "net_worth_chart")
+
     assert_equal [], @user.reload.dashboard_hidden_sections
+  end
+
+  test "update_section_hidden keeps the dashboard's view params and focuses the changed widget" do
+    view_params = {
+      start_date: "2026-08-01", end_date: "2026-08-31",
+      money_flow_month: "2026-07-01", money_flow_account_ids: [ accounts(:depository).id ],
+      spending_month: "2026-06-01"
+    }
+
+    patch dashboard_section_hidden_path("net_worth_chart"), params: view_params.merge(hidden: true)
+
+    assert_redirected_to root_path(view_params.merge(customize: true, hidden_section: "net_worth_chart"))
+  end
+
+  test "customize mode carries the dashboard's view params through its links and buttons" do
+    get root_path(customize: true, start_date: "2026-08-01", end_date: "2026-08-31", spending_month: "2026-06-01")
+
+    assert_select "a[href='#{root_path(start_date: "2026-08-01", end_date: "2026-08-31", spending_month: "2026-06-01")}']", text: I18n.t("pages.dashboard.customize.done")
+    assert_select "form[action='#{dashboard_section_hidden_path("balance_sheet")}'] input[name='spending_month'][value='2026-06-01']"
+  end
+
+  test "customize mode focuses the widget that was just added back, or its re-add button once hidden" do
+    @user.update_dashboard_section_hidden("net_worth_chart", true)
+
+    get root_path(customize: true, hidden_section: "net_worth_chart")
+    assert_select "form[action='#{dashboard_section_hidden_path("net_worth_chart")}'] button[autofocus]"
+
+    get root_path(customize: true, shown_section: "balance_sheet")
+    assert_select "section[data-section-key='balance_sheet'][autofocus]"
+  end
+
+  test "dashboard points to Customize when every widget is hidden" do
+    PagesController::DASHBOARD_SECTION_LAYOUTS.each_key { |key| @user.update_dashboard_section_hidden(key, true) }
+
+    get root_path
+
+    assert_response :ok
+    assert_select "section[data-section-key]", count: 0
+    assert_select "p", text: I18n.t("pages.dashboard.customize.all_hidden_title")
+  end
+
+  test "dashboard skips the data queries of hidden widgets" do
+    %w[cashflow_sankey outflows_donut money_flow spending_trend].each { |key| @user.update_dashboard_section_hidden(key, true) }
+    IncomeStatement.any_instance.expects(:income_totals).never
+    IncomeStatement.any_instance.expects(:expense_totals).never
+    IncomeStatement.any_instance.expects(:net_category_totals).never
+    PagesController.any_instance.expects(:build_money_flow_data).never
+    PagesController.any_instance.expects(:build_spending_trend_data).never
+
+    get root_path
+
+    assert_response :ok
+    assert_select "section[data-section-key='net_worth_chart']"
   end
 
   test "update_section_hidden rejects unknown sections" do

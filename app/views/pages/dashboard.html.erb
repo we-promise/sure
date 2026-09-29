@@ -16,21 +16,21 @@
             variant: "outline",
             icon: "check",
             text: t("pages.dashboard.customize.done"),
-            href: root_path
+            href: root_path(@dashboard_view_params)
           ) %>
         <% else %>
           <%= render DS::Link.new(
             variant: "outline",
             icon: "layout-grid",
             text: t("pages.dashboard.customize.start"),
-            href: root_path(customize: true),
+            href: root_path(@dashboard_view_params.merge(customize: true)),
             class: "hidden lg:inline-flex"
           ) %>
 
           <%= render DS::Link.new(
             variant: "icon",
             icon: "layout-grid",
-            href: root_path(customize: true),
+            href: root_path(@dashboard_view_params.merge(customize: true)),
             aria_label: t("pages.dashboard.customize.start"),
             class: "rounded-full lg:hidden"
           ) %>
@@ -81,10 +81,30 @@
               text: t(section[:title]),
               href: dashboard_section_hidden_path(section[:key]),
               method: :patch,
-              params: { hidden: false }
+              params: @dashboard_view_params.merge(hidden: false),
+              autofocus: @just_hidden_section == section[:key]
             ) %>
           <% end %>
         </div>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <% if accessible_accounts.any? && @dashboard_sections.empty? && !@customizing_dashboard %>
+    <%= render DS::Card.new(class: "mb-6") do %>
+      <%= render DS::EmptyState.new(
+        icon: "layout-grid",
+        title: t("pages.dashboard.customize.all_hidden_title"),
+        description: t("pages.dashboard.customize.all_hidden_description")
+      ) do |empty_state| %>
+        <% empty_state.with_action do %>
+          <%= render DS::Link.new(
+            variant: "outline",
+            icon: "layout-grid",
+            text: t("pages.dashboard.customize.start"),
+            href: root_path(@dashboard_view_params.merge(customize: true))
+          ) %>
+        <% end %>
       <% end %>
     <% end %>
   <% end %>
@@ -98,6 +118,7 @@
         style="<%= "--dash-widget-h: #{section[:layout][:height_px]}px;" if section[:layout][:grow] %>"
         data-dashboard-sortable-target="section"
         data-section-key="<%= section[:key] %>"
+        <%= "autofocus" if @just_shown_section == section[:key] %>
         data-controller="dashboard-section<%= " cashflow-expand" if section[:key] == "cashflow_sankey" %>"
         data-dashboard-section-section-key-value="<%= section[:key] %>"
         data-dashboard-section-collapsed-value="<%= Current.user.dashboard_section_collapsed?(section[:key]) %>"
@@ -163,7 +184,7 @@
                 icon: "eye-off",
                 href: dashboard_section_hidden_path(section[:key]),
                 method: :patch,
-                params: { hidden: true },
+                params: @dashboard_view_params.merge(hidden: true),
                 aria_label: hide_label,
                 title: hide_label
               ) %>
