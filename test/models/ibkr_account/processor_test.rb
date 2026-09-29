@@ -79,7 +79,9 @@ class IbkrAccount::ProcessorTest < ActiveSupport::TestCase
     )
     @ibkr_account.update!(cash_balance: 42)
 
-    IbkrAccount::Processor.new(@ibkr_account.reload).process
+    assert_difference -> { DebugLogEntry.where(source: "IbkrAccount::Processor", category: "provider_sync_error").count }, 1 do
+      IbkrAccount::Processor.new(@ibkr_account.reload).process
+    end
 
     assert_equal 1000.5, @account.reload.cash_balance
   end

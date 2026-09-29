@@ -44,13 +44,19 @@ class IbkrAccount::Processor
       account.update!(cash_balance: cash_balance) if result.success? && !result.historical?
 
       # set_current_balance rescues and reports through its result, so a failed
-      # write is otherwise silent. Logged rather than raised, as the anchor
+      # write is otherwise silent. Captured rather than raised, as the anchor
       # repair below is: broadcast_sync_complete still has to run.
       unless result.success?
-        Rails.logger.error(
-          "IbkrAccount::Processor - Failed to set the current balance for account #{account.id}: #{result.error}"
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "error",
+          message: "Failed to set the current balance: #{result.error}",
+          source: self.class.name,
+          provider_key: "ibkr",
+          account_provider: ibkr_account.account_provider,
+          family: ibkr_account.ibkr_item&.family,
+          metadata: { report_date: ibkr_account.report_date&.to_s, balance_date: balance_date.to_s }
         )
-        Sentry.capture_message(result.error)
       end
 
       result
