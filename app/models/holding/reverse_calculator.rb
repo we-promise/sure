@@ -26,8 +26,9 @@ class Holding::ReverseCalculator
     end
 
     def calculate_holdings
-      # Start with the portfolio snapshot passed in from the materializer
-      current_portfolio = portfolio_snapshot.to_h
+      # Start with the portfolio snapshot passed in from the materializer,
+      # brought forward to today first (see #starting_portfolio).
+      current_portfolio = starting_portfolio
       previous_portfolio = {}
 
       holdings = []
@@ -42,6 +43,33 @@ class Holding::ReverseCalculator
       end
 
       holdings
+    end
+
+    # The snapshot as it stands today.
+    #
+    # The walk below starts at `Date.current` and undoes its way back, so it
+    # reads the snapshot as today's position. A provider snapshot is often
+    # older than that -- a sync that failed and retried late, or a provider
+    # that had not refreshed -- and a split that went ex in between has already
+    # changed the share count the provider reported. Left alone, today's
+    # holding kept the pre-split quantity, and the walk then *undid* that same
+    # split on the way past, so the history came out short as well.
+    #
+    # Each quantity is carried forward by the splits between the day it was
+    # observed and today. Trades in that window are a separate, older gap: this
+    # calculator has always assumed the snapshot already includes them, and
+    # nothing here changes that.
+    def starting_portfolio
+      # A snapshot that reports no dates is read as current, which is what this
+      # did before there were any.
+      dates = portfolio_snapshot.effective_dates || {}
+
+      portfolio_snapshot.to_h.to_h do |security_id, qty|
+        factor = portfolio_cache.split_factor_between(security_id, dates[security_id], Date.current)
+        next [ security_id, qty ] if factor == 1
+
+        [ security_id, Security::Split.scale(qty, factor) ]
+      end
     end
 
     def transform_portfolio(previous_portfolio, trade_entries, direction: :forward)

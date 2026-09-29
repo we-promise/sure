@@ -68,6 +68,20 @@ class Holding::PortfolioCache
     splits
   end
 
+  # How many shares one share held at the close of `from` has become by the
+  # close of `to`: the product of the ratios of the splits in between. 1 when
+  # there are none, so a caller can multiply unconditionally.
+  def split_factor_between(security_id, from, to)
+    return Rational(1) if from.nil? || to.nil? || from >= to
+
+    splits.reduce(Rational(1)) do |factor, split|
+      next factor unless split.security_id == security_id
+      next factor unless split.ex_date > from && split.ex_date <= to
+
+      factor * split.ratio
+    end
+  end
+
   private
     PriceWithPriority = Data.define(:price, :priority, :source)
 
