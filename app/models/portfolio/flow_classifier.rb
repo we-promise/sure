@@ -45,9 +45,11 @@ class Portfolio::FlowClassifier
   CLASSES = %i[external_inflow external_outflow income fee internal].freeze
 
   # Activity label -> class. Two pseudo-classes resolve at classification
-  # time: :external becomes an inflow or an outflow by direction, and
-  # :transfer becomes :internal when the counterpart is in scope and an
-  # external flow otherwise. A nil rule means the label decides nothing and
+  # time, and both consult the link before the label: :external and :transfer
+  # each become :internal when the entry is a linked Transfer whose other leg
+  # is inside the scope, and an inflow or an outflow by direction otherwise.
+  # A label describes what the borrower meant; a Transfer row records where
+  # the money went, and between two accounts in scope it went nowhere. A nil rule means the label decides nothing and
   # the fallthrough applies (a Trade is internal; a Transaction goes by kind).
   #
   # "Exchange" is internal on both a Trade and a Transaction here, following
@@ -172,7 +174,7 @@ class Portfolio::FlowClassifier
         WHEN #{label_sql} IN (#{quote_list(INCOME_LABELS)}) THEN 'income'
         WHEN #{label_sql} IN (#{quote_list(FEE_LABELS)}) THEN 'fee'
         WHEN #{label_sql} IN (#{quote_list(INTERNAL_LABELS)}) THEN 'internal'
-        WHEN #{label_sql} IN (#{quote_list(EXTERNAL_LABELS)}) THEN #{direction_sql}
+        WHEN #{label_sql} IN (#{quote_list(EXTERNAL_LABELS)}) THEN #{transfer_resolution_sql}
         WHEN #{label_sql} = '#{TRANSFER_LABEL}' AND entries.entryable_type = 'Trade'
           THEN CASE WHEN #{security_transfer_counterpart_in_scope_sql} THEN 'internal' ELSE #{direction_sql} END
         WHEN #{label_sql} = '#{TRANSFER_LABEL}' THEN #{transfer_resolution_sql}
@@ -206,7 +208,13 @@ class Portfolio::FlowClassifier
       case rule
       when nil
         transaction.transfer? ? transfer_resolution(entry, transaction) : transaction_direction(entry)
-      when :external then transaction_direction(entry)
+      # A Contribution or Withdrawal label says where the borrower thinks the
+      # money went; a linked Transfer says where it actually went. When both
+      # legs are inside the scope the movement is internal whatever either leg
+      # is labelled, so the label cannot outrank the link. #transfer_resolution
+      # falls back to the same direction this used to return whenever there is
+      # no link, or the counterpart sits outside the scope.
+      when :external then transfer_resolution(entry, transaction)
       when :transfer then transfer_resolution(entry, transaction)
       else rule
       end
