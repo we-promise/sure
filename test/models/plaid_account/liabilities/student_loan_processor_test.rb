@@ -170,6 +170,35 @@ class PlaidAccount::Liabilities::StudentLoanProcessorTest < ActiveSupport::TestC
     assert_equal 15000, loan.initial_balance
   end
 
+  # End to end: what the processor writes has to be what the loan then measures
+  # itself against. The account carries a balance part way through the term --
+  # which is all an import ever sees -- and the figures on the overview read the
+  # origination principal the payload sent, not that balance.
+  test "an imported loan measures its figures against the principal Plaid sent" do
+    @plaid_account.update!(raw_liabilities_payload: {
+      student: {
+        interest_rate_percentage: 5.0,
+        origination_principal_amount: 20_000,
+        origination_date: 5.years.ago.to_date,
+        expected_payoff_date: 5.years.from_now.to_date
+      }
+    })
+    account = @plaid_account.current_account
+    account.update!(balance: 10_000)
+    account.entries.create!(
+      name: "Starting balance", amount: 10_000, currency: account.currency,
+      date: 5.years.ago.to_date, entryable: Valuation.new(kind: "opening_anchor")
+    )
+
+    PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account).process
+
+    loan = account.reload.loan
+
+    assert_equal 20_000, loan.initial_balance
+    assert_equal 20_000, loan.original_balance.amount, "the overview reads the origination principal"
+    assert_in_delta 0.5, loan.balance_paid_ratio, 0.0001
+  end
+
   test "does nothing when loan data absent" do
     @plaid_account.update!(raw_liabilities_payload: {})
 

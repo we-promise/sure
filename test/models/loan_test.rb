@@ -163,7 +163,95 @@ class LoanTest < ActiveSupport::TestCase
     assert loan.valid?
   end
 
+  # An imported loan is the case where what was borrowed and what has been seen
+  # are different numbers. Plaid sends `origination_principal_amount`, which
+  # lands in `initial_balance`; the first valuation the account carries is
+  # whatever the balance was on the day it was linked, years of repayments in.
+  #
+  # 20,000 borrowed, 10,000 outstanding, 5,000 deposit, a level-term policy at
+  # 0.36% a year. Every figure below was measured against the 10,000 before
+  # this: the schedule amortised half a loan, the borrower had repaid "none" of
+  # it, the deposit looked twice as effective as it was, and the premium was
+  # half what the policy charges.
+  # Four separate tests rather than four assertions, so each figure is observed
+  # to fail on its own: one of them failing first would otherwise hide the rest.
+  test "the principal is the recorded one, not the first tracked balance" do
+    loan = build_imported_loan_account.loan
+
+    assert_equal 20_000, loan.original_balance.amount
+  end
+
+  test "the schedule amortises what was borrowed" do
+    loan = build_imported_loan_account.loan
+
+    repaid = loan.amortization_schedule.payments.sum(BigDecimal("0")) { |payment| payment.principal.amount }
+
+    assert_in_delta 20_000, repaid, 1, "half a loan was being amortised"
+  end
+
+  test "repaid is measured against what was borrowed" do
+    loan = build_imported_loan_account.loan
+
+    assert_in_delta 0.5, loan.balance_paid_ratio, 0.0001, "10,000 outstanding on 20,000 borrowed is half repaid"
+  end
+
+  test "leverage is measured against what was borrowed" do
+    loan = build_imported_loan_account.loan
+
+    assert_in_delta 4.0, loan.initial_leverage_ratio, 0.001, "20,000 against a 5,000 deposit"
+  end
+
+  test "a level-term premium is charged on what was borrowed" do
+    loan = build_imported_loan_account.loan
+
+    assert_equal 6, Loan::Insurance.for(loan).premium_for(1).amount.amount, "0.36% a year on 20,000"
+  end
+
+  # The fallback, which is every loan created here: no principal is recorded
+  # separately from the opening valuation, and the two must not disagree.
+  test "a loan with no recorded principal still reads its first valuation" do
+    loan = build_loan_account(balance: 80_000, down_payment: 20_000).loan
+
+    assert_nil loan.initial_balance
+    assert_equal 80_000, loan.original_balance.amount
+  end
+
+  # An import can write either, and neither is an amount borrowed, so both fall
+  # back rather than producing a zero or a negative principal.
+  test "a zero or negative recorded principal falls back to the first valuation" do
+    account = build_loan_account(balance: 80_000, down_payment: 20_000)
+
+    account.loan.update!(initial_balance: 0)
+    assert_equal 80_000, account.loan.reload.original_balance.amount
+
+    account.loan.update!(initial_balance: -5_000)
+    assert_equal 80_000, account.loan.reload.original_balance.amount
+  end
+
   private
+    # A loan imported part way through its life: the principal it was written
+    # for is recorded, and the only valuation the account carries is the
+    # balance on the day it was linked.
+    def build_imported_loan_account
+      account = Account.create!(
+        family: families(:dylan_family),
+        name: "Imported #{SecureRandom.hex(3)}",
+        balance: 10_000,
+        currency: "USD",
+        accountable: Loan.create!(
+          subtype: "mortgage", interest_rate: 5, term_months: 120, rate_type: "fixed",
+          initial_balance: 20_000, down_payment: 5_000,
+          insurance_rate: 0.36, insurance_rate_type: "level_term",
+          start_date: 5.years.ago.to_date
+        )
+      )
+      account.entries.create!(
+        name: "Starting balance", amount: 10_000, currency: "USD",
+        date: 5.years.ago.to_date, entryable: Valuation.new(kind: "opening_anchor")
+      )
+      account
+    end
+
     def build_loan_account(balance:, down_payment:)
       Account.create!(
         family: families(:dylan_family),

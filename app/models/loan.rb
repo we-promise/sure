@@ -438,7 +438,32 @@ class Loan < ApplicationRecord
     start_date || account.first_valuation&.date || account.opening_anchor_date
   end
 
+  # What the loan was written for, which is not always what the account has
+  # been seen holding.
+  #
+  # `initial_balance` is the recorded contractual principal. The account form
+  # writes it beside the opening valuation and the demo generator does the
+  # same, so for anything created here the two agree. Plaid's student-loan
+  # import writes `origination_principal_amount` into it, and there they can
+  # disagree by the whole of the repayment history: a loan imported after
+  # years of payments has a first tracked valuation part way down the curve,
+  # not the amount borrowed.
+  #
+  # Every figure measured against what was borrowed reads this: the schedule's
+  # principal, the insurance base, how much has been repaid, and the leverage
+  # against the deposit. Taking the first valuation instead understated all of
+  # them, for the whole life of the loan, and the wrong principal was
+  # amortised from the real origination date -- so the error was spread across
+  # the loan's actual history rather than being visibly recent.
+  #
+  # Falls back to the first tracked valuation when no principal was recorded,
+  # which is every loan whose import does not send one. Non-positive counts as
+  # unrecorded: an import can write a zero or a negative, and neither is an
+  # amount borrowed.
   def original_balance
+    recorded_principal = initial_balance
+    return Money.new(recorded_principal, account.currency) if recorded_principal&.positive?
+
     Money.new(account.first_valuation_amount, account.currency)
   end
 
