@@ -311,7 +311,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     def transaction_params
       params.require(:transaction).permit(
-        :date, :amount, :name, :description, :notes, :currency,
+        :date, :time, :amount, :name, :description, :notes, :currency,
         :category_id, :merchant_id, :nature, :user_modified, tag_ids: []
       )
     end
@@ -334,6 +334,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       entry_params = {
         name: transaction_params[:name] || transaction_params[:description],
         date: transaction_params[:date],
+        time: transaction_params[:time],
         amount: calculate_signed_amount,
         currency: transaction_params[:currency] || current_resource_owner.family.currency,
         notes: transaction_params[:notes],
@@ -356,6 +357,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       entry_params = {
         name: transaction_params[:name] || transaction_params[:description],
         date: transaction_params[:date],
+        time: transaction_params[:time],
         notes: transaction_params[:notes],
         entryable_attributes: {
           id: @entry.entryable_id,
