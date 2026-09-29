@@ -10,6 +10,33 @@
     </div>
 
     <div class="flex items-center gap-2">
+      <% if accessible_accounts.any? %>
+        <% if @customizing_dashboard %>
+          <%= render DS::Link.new(
+            variant: "outline",
+            icon: "check",
+            text: t("pages.dashboard.customize.done"),
+            href: root_path
+          ) %>
+        <% else %>
+          <%= render DS::Link.new(
+            variant: "outline",
+            icon: "layout-grid",
+            text: t("pages.dashboard.customize.start"),
+            href: root_path(customize: true),
+            class: "hidden lg:inline-flex"
+          ) %>
+
+          <%= render DS::Link.new(
+            variant: "icon",
+            icon: "layout-grid",
+            href: root_path(customize: true),
+            aria_label: t("pages.dashboard.customize.start"),
+            class: "rounded-full lg:hidden"
+          ) %>
+        <% end %>
+      <% end %>
+
       <%= render DS::Link.new(
         icon: "plus",
         text: t("pages.dashboard.new"),
@@ -36,11 +63,36 @@
     </div>
   <% end %>
 
+  <% if @customizing_dashboard && accessible_accounts.any? %>
+    <%= render DS::Card.new(class: "mb-6 gap-3") do %>
+      <div class="space-y-1">
+        <h2 class="text-base font-medium text-primary"><%= t("pages.dashboard.customize.hidden_title") %></h2>
+        <p class="text-sm text-secondary">
+          <%= @hidden_dashboard_sections.any? ? t("pages.dashboard.customize.hidden_description") : t("pages.dashboard.customize.none_hidden") %>
+        </p>
+      </div>
+      <% if @hidden_dashboard_sections.any? %>
+        <div class="flex flex-wrap gap-2">
+          <% @hidden_dashboard_sections.each do |section| %>
+            <%= render DS::Button.new(
+              variant: "outline",
+              size: "sm",
+              icon: "plus",
+              text: t(section[:title]),
+              href: dashboard_section_hidden_path(section[:key]),
+              method: :patch,
+              params: { hidden: false }
+            ) %>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+
   <% two_column = Current.user.dashboard_two_column? %>
   <div class="grid grid-cols-1 <%= "2xl:grid-cols-2 2xl:items-start 2xl:gap-y-0 2xl:[grid-auto-flow:row_dense] 2xl:[grid-auto-rows:1px]" if two_column %> gap-6 pb-6 lg:pb-12" data-controller="dashboard-sortable dashboard-masonry" data-action="dragover->dashboard-sortable#dragOver drop->dashboard-sortable#drop" role="list" aria-label="<%= t("pages.dashboard.sections_aria_label") %>">
   <% if accessible_accounts.any? %>
     <% @dashboard_sections.each do |section| %>
-      <% next unless section[:visible] %>
       <section
         class="bg-container rounded-xl shadow-border-xs transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2<%= " 2xl:col-span-2" if two_column && section[:layout][:col_span] == "full" %>"
         style="<%= "--dash-widget-h: #{section[:layout][:height_px]}px;" if section[:layout][:grow] %>"
@@ -102,6 +154,19 @@
                 aria-label="<%= t("global.expand") %>">
                 <%= icon("maximize-2", size: "sm", class: "!w-3.5 !h-3.5") %>
               </button>
+            <% end %>
+            <% if @customizing_dashboard %>
+              <% hide_label = t("pages.dashboard.customize.hide", title: t(section[:title])) %>
+              <%= render DS::Button.new(
+                variant: "icon",
+                size: "sm",
+                icon: "eye-off",
+                href: dashboard_section_hidden_path(section[:key]),
+                method: :patch,
+                params: { hidden: true },
+                aria_label: hide_label,
+                title: hide_label
+              ) %>
             <% end %>
             <% layout = section[:layout] %>
             <% show_width = layout[:width_toggle] && two_column %>

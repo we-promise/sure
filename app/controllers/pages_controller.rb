@@ -68,7 +68,8 @@ class PagesController < ApplicationController
     @spending_trend_month = spending_trend_month_param
     @spending_trend_data = build_spending_trend_data(income_statement, @spending_trend_month)
 
-    @dashboard_sections = build_dashboard_sections
+    @dashboard_sections, @hidden_dashboard_sections = build_dashboard_sections
+    @customizing_dashboard = params[:customize].present?
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.dashboard"), nil ] ]
   end
@@ -83,6 +84,14 @@ class PagesController < ApplicationController
     else
       head :unprocessable_entity
     end
+  end
+
+  def update_section_hidden
+    section_key = params[:section_key]
+    return head :not_found unless DASHBOARD_SECTION_LAYOUTS.key?(section_key)
+
+    Current.user.update_dashboard_section_hidden(section_key, ActiveModel::Type::Boolean.new.cast(params[:hidden]))
+    redirect_to root_path(customize: true), status: :see_other
   end
 
   def changelog
@@ -236,7 +245,12 @@ class PagesController < ApplicationController
         end
       end
 
-      ordered_sections
+      # Returns [shown, hidden]. Sections with nothing to show are dropped
+      # first, so the hidden list never offers back a widget that wouldn't
+      # appear once re-added.
+      hidden_keys = Current.user.dashboard_hidden_sections
+      hidden, shown = ordered_sections.select { |s| s[:visible] }.partition { |s| hidden_keys.include?(s[:key]) }
+      [ shown, hidden ]
     end
 
     # Resolves a section's layout guardrails, applying the user's height preset

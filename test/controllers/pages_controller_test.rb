@@ -49,6 +49,56 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "single", @user.reload.dashboard_section_width("cashflow_sankey")
   end
 
+  test "dashboard leaves hidden sections out" do
+    @user.update_dashboard_section_hidden("net_worth_chart", true)
+
+    get root_path
+
+    assert_response :ok
+    assert_select "section[data-section-key='net_worth_chart']", count: 0
+    assert_select "section[data-section-key='balance_sheet']"
+    assert_select "form[action='#{dashboard_section_hidden_path("balance_sheet")}']", count: 0
+  end
+
+  test "customize mode offers hiding shown sections and re-adding hidden ones" do
+    @user.update_dashboard_section_hidden("net_worth_chart", true)
+
+    get root_path(customize: true)
+
+    assert_response :ok
+    assert_select "section[data-section-key='balance_sheet'] form[action='#{dashboard_section_hidden_path("balance_sheet")}'] input[name='hidden'][value='true']"
+    assert_select "form[action='#{dashboard_section_hidden_path("net_worth_chart")}'] input[name='hidden'][value='false']"
+    assert_select "button", text: I18n.t("pages.dashboard.net_worth_chart.title")
+  end
+
+  test "customize mode does not offer back a hidden section with nothing to show" do
+    @user.update_dashboard_section_hidden("investment_summary", true)
+    InvestmentStatement.any_instance.stubs(:investment_accounts).returns(Account.none)
+
+    get root_path(customize: true)
+
+    assert_response :ok
+    assert_select "form[action='#{dashboard_section_hidden_path("investment_summary")}']", count: 0
+  end
+
+  test "update_section_hidden hides and re-adds a section" do
+    patch dashboard_section_hidden_path("net_worth_chart"), params: { hidden: true }
+
+    assert_redirected_to root_path(customize: true)
+    assert_equal %w[net_worth_chart], @user.reload.dashboard_hidden_sections
+
+    patch dashboard_section_hidden_path("net_worth_chart"), params: { hidden: false }
+
+    assert_equal [], @user.reload.dashboard_hidden_sections
+  end
+
+  test "update_section_hidden rejects unknown sections" do
+    patch dashboard_section_hidden_path("not_a_widget"), params: { hidden: true }
+
+    assert_response :not_found
+    assert_equal [], @user.reload.dashboard_hidden_sections
+  end
+
   test "update_preferences ignores malformed dashboard_section_layout without erroring" do
     previous_height = @user.reload.dashboard_section_height("net_worth_chart")
 
