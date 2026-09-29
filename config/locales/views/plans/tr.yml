@@ -5,8 +5,14 @@ tr:
       title: Plan
       subtitle: Paranızın nereye gideceğine karar verin — neyi harcayacağınıza ve neyi biriktireceğinize.
     bills_card:
+      nothing_owed: "Bu ay ödenecek başka bir şey yok."
+      overdue_count:
+        one: "1 gecikmiş"
+        other: "%{count} gecikmiş"
+      owed_count:
+        one: "Bu ay ödenecek 1 fatura"
+        other: "Bu ay ödenecek %{count} fatura"
       title: Faturalar
-      body: Vadesi gelenleri, ödenenleri ve sıradakileri takip edin.
       view_bills: Faturaları görüntüle
     budget_card:
       title: Bu ay

@@ -102,6 +102,34 @@ class PlansControllerTest < ActionDispatch::IntegrationTest
     assert_select "nav a[href=?][aria-current=page]", plan_path, minimum: 1
   end
 
+  test "the bills card counts what is owed this month" do
+    get plan_url
+    assert_select "main p", text: I18n.t("plans.bills_card.nothing_owed")
+
+    recurring_transactions(:netflix_subscription).recurring_occurrences.create!(
+      family: @user.family, original_due_on: Date.current, due_on: Date.current, currency: "USD"
+    )
+
+    get plan_url
+    assert_select "main p", text: I18n.t("plans.bills_card.owed_count", count: 1)
+  end
+
+  # The card headers' trailing counts are the easiest strings to lose to a
+  # lazy lookup resolving against the wrong template, and a missing key
+  # renders a humanized fallback rather than failing.
+  test "card headers carry their own translated counts" do
+    recurring_transactions(:netflix_subscription).recurring_occurrences.create!(
+      family: @user.family, original_due_on: Date.current - 10, due_on: Date.current - 10, currency: "USD"
+    )
+
+    get plan_url
+
+    assert_response :success
+    assert_select "main span", text: "· #{I18n.t("plans.goals_card.active_count", count: Goal.active_prepared_for(@user.family).size)}"
+    assert_select "main", text: /#{I18n.t("plans.bills_card.overdue_count", count: 1)}/
+    assert_no_match(/translation_missing/, response.body)
+  end
+
   test "drops the bills card while recurring detection is off" do
     @user.family.update!(recurring_transactions_disabled: true)
 

@@ -34,6 +34,20 @@ class RecurringOccurrence < ApplicationRecord
   scope :closed, -> { where.not(status: :scheduled) }
   scope :due_between, ->(from, to) { where(due_on: from..to) }
 
+  # What the user's bills owe right now: open occurrences of their active
+  # payable series falling due by month end, overdue ones included. The same
+  # set the Bills overview counts as owed now.
+  def self.owed_summary_for(user)
+    series_ids = user.family.recurring_transactions.payable.accessible_by(user).select(:id)
+    owed = user.family.recurring_occurrences.open_status
+               .where(recurring_transaction_id: series_ids)
+               .where("due_on <= ?", Date.current.end_of_month)
+               .includes(:recurring_transaction)
+               .to_a
+
+    { owed_count: owed.size, overdue_count: owed.count(&:overdue?) }
+  end
+
   # The amount this occurrence expects, resolving NULL through the series'
   # amount strategy, which is what lets a price edit update every open
   # occurrence with no sweep. `series_amount` overrides what the series says it

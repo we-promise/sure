@@ -5,8 +5,14 @@ es:
       title: Plan
       subtitle: "Decide a dónde va tu dinero: lo que gastas y lo que ahorras."
     bills_card:
+      nothing_owed: "No queda nada por pagar este mes."
+      overdue_count:
+        one: "1 vencida"
+        other: "%{count} vencidas"
+      owed_count:
+        one: "1 factura por pagar este mes"
+        other: "%{count} facturas por pagar este mes"
       title: Facturas
-      body: Controla qué vence, qué está pagado y qué llega próximamente.
       view_bills: Ver facturas
     budget_card:
       title: Este mes

@@ -26,6 +26,7 @@ class PlansController < ApplicationController
     # Same gate the Bills pages apply: a family with recurring detection off
     # has nothing to list.
     @show_bills = !Current.family.recurring_transactions_disabled?
+    @bills_summary = RecurringOccurrence.owed_summary_for(Current.user) if @show_bills
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.plan"), nil ] ]
   end

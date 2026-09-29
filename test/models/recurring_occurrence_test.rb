@@ -100,6 +100,28 @@ class RecurringOccurrenceTest < ActiveSupport::TestCase
     assert_equal "user", occurrence.closed_source
   end
 
+  test "owed summary counts what the user's bills owe by month end" do
+    travel_to Date.new(2026, 9, 15) do
+      create_occurrence(due_on: Date.new(2026, 9, 1))
+      create_occurrence(due_on: Date.new(2026, 9, 25))
+      create_occurrence(due_on: Date.new(2026, 10, 5))
+      create_occurrence(due_on: Date.new(2026, 9, 20)).skip!
+
+      assert_equal({ owed_count: 2, overdue_count: 1 },
+                   RecurringOccurrence.owed_summary_for(users(:family_admin)))
+    end
+  end
+
+  test "owed summary leaves out paused bills" do
+    travel_to Date.new(2026, 9, 15) do
+      create_occurrence(due_on: Date.new(2026, 9, 25))
+      @series.update!(status: "inactive")
+
+      assert_equal({ owed_count: 0, overdue_count: 0 },
+                   RecurringOccurrence.owed_summary_for(users(:family_admin)))
+    end
+  end
+
   private
     def create_occurrence(due_on: Date.current + 10, original: nil)
       @series.recurring_occurrences.create!(

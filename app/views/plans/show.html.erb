@@ -15,7 +15,7 @@
     <%= render "plans/goals_card", goals: @goals, summary: @goals_summary, linkable_account_count: @linkable_account_count, family_has_goals: @family_has_goals %>
     <% if @show_bills %>
       <div class="@3xl:col-span-2">
-        <%= render "plans/bills_card" %>
+        <%= render "plans/bills_card", summary: @bills_summary %>
       </div>
     <% end %>
   </div>

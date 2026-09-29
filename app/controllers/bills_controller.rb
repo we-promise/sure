@@ -198,6 +198,12 @@ class BillsController < ApplicationController
   end
 
   private
+    # Preview users reach Bills through the Plan hub, and Bills is
+    # preview-only, so the trail always runs Home > Plan > Bills.
+    def default_breadcrumbs
+      plan_breadcrumb_prefix + [ [ I18n.t("breadcrumbs.bills"), nil ] ]
+    end
+
     # The plan plus the income facts the page states alongside it. One planner
     # instance answers both, so the income list and the periods always agree.
     def load_paycheck_plan

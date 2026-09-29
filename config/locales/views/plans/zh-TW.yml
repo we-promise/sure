@@ -5,8 +5,14 @@ zh-TW:
       title: 規劃
       subtitle: 決定您的錢要花在哪裡，又要存下多少。
     bills_card:
+      nothing_owed: "本月已無待付帳單。"
+      overdue_count:
+        one: "1 筆逾期"
+        other: "%{count} 筆逾期"
+      owed_count:
+        one: "本月有 1 筆帳單待付"
+        other: "本月有 %{count} 筆帳單待付"
       title: 帳單
-      body: 追蹤到期、已付款和即將到來的帳單。
       view_bills: 查看帳單
     budget_card:
       title: 本月
