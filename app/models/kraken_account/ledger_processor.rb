@@ -198,19 +198,30 @@ class KrakenAccount::LedgerProcessor
       # withdrawals through for the fee a fiat row may still need, which would
       # otherwise bring this one back every sync -- unless what is in is the old
       # shape, which a sync should heal rather than keep.
+      legacy = nil
       if @existing_external_ids.include?(external_id)
         legacy = legacy_crypto_transaction(external_id)
         return if legacy.nil?
-
-        legacy.destroy!
       end
 
+      # Resolved before anything is removed: a symbol this cannot place must
+      # leave the old row standing rather than take it away and put nothing back.
       security = resolve_security(base_symbol)
       return unless security
 
       price, price_missing = unit_price_on(security, base_symbol, date)
       signed_qty = inflow?(type) ? qty.abs : -qty.abs
 
+      Entry.transaction do
+        legacy&.destroy!
+        create_crypto_trade(external_id, ledger_id, ledger, type, raw_asset, symbol, qty, signed_qty, security, price, price_missing, date)
+      end
+
+      @existing_external_ids << external_id
+      @existing_principals[external_id] = [ build_name(type, qty, symbol), false, "Trade" ]
+    end
+
+    def create_crypto_trade(external_id, ledger_id, ledger, type, raw_asset, symbol, qty, signed_qty, security, price, price_missing, date)
       account.entries.create!(
         date: date,
         name: build_name(type, qty, symbol),
@@ -227,9 +238,6 @@ class KrakenAccount::LedgerProcessor
           extra: build_extra(ledger_id, ledger, raw_asset, price_missing)
         )
       )
-
-      @existing_external_ids << external_id
-      @existing_principals[external_id] = [ build_name(type, qty, symbol), false, "Trade" ]
     end
 
     # An account synced before crypto rows became trades holds this row as a
