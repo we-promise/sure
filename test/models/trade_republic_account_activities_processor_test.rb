@@ -884,6 +884,22 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not @account.entries.exists?(external_id: "trade_republic_settlement_evt_no_trade")
   end
 
+  test "cash settlement in another currency than the portfolio books no counterpart" do
+    cash_account, cash_sure = create_linked_cash_account!
+    buy = order_execution_detail(event_id: "evt_other_currency", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")
+    @tr_account.update!(raw_timeline_payload: [ buy ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    @account.update!(currency: "USD")
+
+    assert_difference -> { DebugLogEntry.where(level: "warn", account: @account).count }, 1 do
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+
+    cash_entry = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_other_currency")
+    assert_nil cash_entry.transaction.transfer
+    assert_not @account.entries.exists?(external_id: "trade_republic_settlement_evt_other_currency")
+  end
+
   test "cash settlement is skipped when the trade direction is unknown" do
     cash_account, cash_sure = create_linked_cash_account!
     event = order_execution_detail(event_id: "evt_settle_unknown", quantity: nil, isin: "IE00B5BMR087", amount: "1024.92")
