@@ -392,14 +392,14 @@ jobs:
       contents: write
 
     steps:
-      - name: Create/update minor release branch
+      - name: Create/update patch release branch
         env:
           TAG_NAME: ${{ github.ref_name }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
-          BRANCH_NAME="$(echo "$TAG_NAME" | sed -E 's/^v([0-9]+)\.([0-9]+)\..*/v\1.\2-release-branch/')"
+          BRANCH_NAME="$(echo "$TAG_NAME" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)(-.*)?$/v\1.\2.\3-release-branch/')"
           SHA="${GITHUB_SHA}"
 
           echo "Updating ${BRANCH_NAME} -> ${SHA}"
@@ -443,7 +443,8 @@ jobs:
           # Prefer the matching release branch over main. Do not select arbitrary
           # feature or PR branches that happen to contain the tagged commit.
           SOURCE_BRANCH="main"
-          RELEASE_BRANCH="$(printf '%s\n' "$TAG_NAME" | sed -E 's/^v([0-9]+)\.([0-9]+)\..*/v\1.\2-release-branch/')"
+          RELEASE_BRANCH="$(printf '%s\n' "$TAG_NAME" | sed -E 's/^v([0-9]+)\.([0-9]+)\.([0-9]+)(-.*)?$/v\1.\2.\3-release-branch/')"
+          LEGACY_RELEASE_BRANCH="$(printf '%s\n' "$TAG_NAME" | sed -E 's/^v([0-9]+)\.([0-9]+)\..*/v\1.\2-release-branch/')"
 
           for branch in $BRANCHES; do
             if [ "$branch" = "$RELEASE_BRANCH" ]; then
@@ -454,7 +455,7 @@ jobs:
 
           if [ "$SOURCE_BRANCH" = "main" ]; then
             for branch in $BRANCHES; do
-              if [[ "$branch" =~ ^v[0-9]+\.[0-9]+-release-branch$ ]]; then
+              if [ "$branch" = "$LEGACY_RELEASE_BRANCH" ]; then
                 SOURCE_BRANCH="$branch"
                 break
               fi
