@@ -2818,6 +2818,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_120000) do
     t.string "locale"
     t.datetime "onboarded_at"
     t.string "otp_backup_codes", default: [], array: true
+    t.datetime "otp_last_used_at"
     t.boolean "otp_required", default: false, null: false
     t.string "otp_secret"
     t.string "password_digest"
