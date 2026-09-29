@@ -118,6 +118,17 @@ class TransactionQuickCategoryCreateTest < ApplicationSystemTestCase
 
     assert @user.family.categories.exists?(name: "Created But Not Assigned")
     assert_not_equal "Created But Not Assigned", @entry.entryable.reload.category&.name
+
+    # Retrying assigns the category created the first time instead of
+    # posting a duplicate.
+    browser.execute_cdp("Network.setBlockedURLs", urls: [])
+    within "turbo-frame#category_dropdown" do
+      click_button 'Create "Created But Not Assigned"'
+    end
+
+    assert_selector "##{dom_id(@entry.entryable, 'category_menu_desktop')} [data-testid='category-name']", text: "Created But Not Assigned"
+    assert_equal 1, @user.family.categories.where(name: "Created But Not Assigned").count
+    assert_equal "Created But Not Assigned", @entry.entryable.reload.category&.name
   ensure
     page.driver.browser.execute_cdp("Network.setBlockedURLs", urls: [])
   end

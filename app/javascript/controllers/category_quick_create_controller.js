@@ -138,17 +138,24 @@ export default class extends Controller {
     this.#clearError();
 
     try {
-      const { category, error } = await createCategory({
-        url: this.createUrlValue,
-        name,
-        color: this.colorValue,
-        parentId,
-      });
-
+      // A retry after a failed assignment reuses the category created the
+      // first time; posting it again would fail as a duplicate name.
+      let category = this.#createdCategory(name);
       if (!category) {
-        this.hideParentPicker();
-        this.#showError(error || this.errorMessageValue);
-        return;
+        const result = await createCategory({
+          url: this.createUrlValue,
+          name,
+          color: this.colorValue,
+          parentId,
+        });
+        category = result.category;
+
+        if (!category) {
+          this.hideParentPicker();
+          this.#showError(result.error || this.errorMessageValue);
+          return;
+        }
+        this.created = { name, id: category.id };
       }
 
       this.categoryIdFieldTarget.value = category.id;
@@ -181,6 +188,13 @@ export default class extends Controller {
     this.assigning = false;
     this.hideParentPicker();
     this.#showError(this.assignErrorMessageValue);
+  }
+
+  #createdCategory(name) {
+    if (this.created?.name.toLocaleLowerCase() !== name.toLocaleLowerCase()) {
+      return null;
+    }
+    return { id: this.created.id };
   }
 
   #nameExists(name) {

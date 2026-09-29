@@ -6,7 +6,7 @@ en:
         delete: Delete category
         edit: Edit category
       show:
-        assign_error: Created the category but couldn't assign it. Pick it from the list to try again.
+        assign_error: Created the category but couldn't assign it. Choose Create again to retry.
         back: Back
         choose_parent: 'Create "%{name}" under:'
         clear: Clear category
