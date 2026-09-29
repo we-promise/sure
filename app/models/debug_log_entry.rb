@@ -16,7 +16,7 @@ class DebugLogEntry < ApplicationRecord
   # redaction alone cannot catch secrets hiding in innocuously named keys.
   SENSITIVE_METADATA_VALUE_PATTERNS = [
     /\b(?:Bearer|Basic)\s+[A-Za-z0-9\-._~+\/=]+/i,
-    /"[^"]*(?:#{SENSITIVE_METADATA_KEY_PATTERN.source})[^"]*"\s*(?::|=>)\s*"[^"]*"/i
+    /"[^"]*(?:#{SENSITIVE_METADATA_KEY_PATTERN.source})[^"]*"\s*(?::|=>)\s*(?:"[^"]*"|[^,}\]\s"]+)/i
   ].freeze
 
   if encryption_ready?
