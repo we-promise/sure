@@ -1316,7 +1316,62 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_nil data
   end
 
-  # Modeled on minimal SnapTrade option payload with bare ticker
+  test "contract_multiplier correctly returns multiplier based on is_mini_option and option_type" do
+    processor = SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account)
+
+    assert_equal 10, processor.send(:contract_multiplier, { is_mini_option: true, option_type: "CALL" })
+    assert_equal 10, processor.send(:contract_multiplier, { "is_mini_option" => true, "option_type" => "PUT" })
+    assert_equal 100, processor.send(:contract_multiplier, { is_mini_option: false, option_type: "CALL" })
+    assert_equal 100, processor.send(:contract_multiplier, { "is_mini_option" => false, "option_type" => "CALL" })
+    assert_equal 100, processor.send(:contract_multiplier, { option_type: "CALL" })
+    assert_equal 1, processor.send(:contract_multiplier, { ticker: "AAPL" })
+    assert_equal 1, processor.send(:contract_multiplier, {})
+    assert_equal 1, processor.send(:contract_multiplier, nil)
+  end
+
+  test "processes mini-option trade with full payload when is_mini_option is true" do
+    process_activities(
+      {
+        "id" => "mini_opt_trade_001",
+        "type" => "BUY",
+        "units" => 3.0,
+        "price" => 1.25,
+        "amount" => -37.50,
+        "settlement_date" => Date.current.to_s,
+        "currency" => { "code" => "USD" },
+        "symbol" => {
+          "symbol" => "AAPL",
+          "description" => "Apple Inc.",
+          "currency" => { "code" => "USD" },
+          "exchange" => { "mic_code" => "XNAS" }
+        },
+        "option_symbol" => {
+          "id" => SecureRandom.uuid,
+          "ticker" => "AAPL7 260116C00200000",
+          "option_type" => "CALL",
+          "strike_price" => 200.0,
+          "expiration_date" => "2026-01-16",
+          "is_mini_option" => true,
+          "underlying_symbol" => {
+            "symbol" => "AAPL",
+            "currency" => { "code" => "USD" },
+            "exchange" => { "mic_code" => "XNAS" }
+          }
+        }
+      }
+    )
+
+    entry = snaptrade_entry("mini_opt_trade_001")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    assert_equal "AAPL7 260116C00200000", entry.entryable.security.ticker
+    assert_equal "AAPL $200 CALL (2026-01-16)", entry.entryable.security.name
+    assert_equal BigDecimal("3.0"), entry.entryable.qty
+    assert_equal BigDecimal("1.25"), entry.entryable.price
+    assert_equal BigDecimal("37.50"), entry.amount
+  end
+
+  # Modeled on SnapTrade option payload where underlying symbol is omitted
   test "falls back to raw ticker when option symbol lacks underlying symbol details" do
     process_activities(
       {
@@ -1330,7 +1385,12 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
         "symbol" => nil,
         "option_symbol" => {
           "id" => SecureRandom.uuid,
-          "ticker" => "SPY   250620P00500000"
+          "ticker" => "SPY   250620P00500000",
+          "option_type" => "PUT",
+          "strike_price" => 500.0,
+          "expiration_date" => "2025-06-20",
+          "is_mini_option" => false,
+          "underlying_symbol" => nil
         }
       }
     )
@@ -1476,7 +1536,8 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
           "ticker" => "TQQQ  260220C00051000",
           "option_type" => "CALL",
           "strike_price" => 51.0,
-          "expiration_date" => "2026-02-20"
+          "expiration_date" => "2026-02-20",
+          "is_mini_option" => false
         }
       }
     )
@@ -1488,6 +1549,89 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "TQQQ $51 CALL (2026-02-20)", security.name
     assert_equal "XNAS", security.exchange_mic
     assert_equal "US", security.country_code
+  end
+
+  # Modeled on official SnapTrade getAccountActivities documentation payload
+  test "processes option trade modeled on official SnapTrade API documentation payload" do
+    process_activities(
+      {
+        "id" => "2f7dc9b3-5c33-4668-3440-2b31e056ebe6",
+        "symbol" => {
+          "id" => "2bcd7cc3-e922-4976-bce1-9858296801c3",
+          "symbol" => "VAB.TO",
+          "raw_symbol" => "VAB",
+          "description" => "VANGUARD CDN AGGREGATE BOND INDEX ETF",
+          "currency" => {
+            "id" => "87b24961-b51e-4db8-9226-f198f6518a89",
+            "code" => "USD",
+            "name" => "US Dollar"
+          },
+          "exchange" => {
+            "id" => "2bcd7cc3-e922-4976-bce1-9858296801c3",
+            "code" => "TSX",
+            "mic_code" => "XTSE",
+            "name" => "Toronto Stock Exchange"
+          },
+          "type" => {
+            "id" => "2bcd7cc3-e922-4976-bce1-9858296801c3",
+            "code" => "cs",
+            "description" => "Common Stock"
+          }
+        },
+        "option_symbol" => {
+          "id" => "2bcd7cc3-e922-4976-bce1-9858296801c3",
+          "ticker" => "AAPL  261218C00240000",
+          "option_type" => "CALL",
+          "strike_price" => 240,
+          "expiration_date" => "2026-12-18T00:00:00.000Z",
+          "is_mini_option" => false,
+          "underlying_symbol" => {
+            "id" => "2bcd7cc3-e922-4976-bce1-9858296801c3",
+            "symbol" => "SPY",
+            "raw_symbol" => "VAB",
+            "description" => "SPDR S&P 500 ETF Trust",
+            "currency" => {
+              "id" => "87b24961-b51e-4db8-9226-f198f6518a89",
+              "code" => "USD",
+              "name" => "US Dollar"
+            },
+            "exchange" => {
+              "id" => "2bcd7cc3-e922-4976-bce1-9858296801c3",
+              "code" => "ARCX",
+              "mic_code" => "ARCA",
+              "name" => "NYSE ARCA"
+            }
+          }
+        },
+        "price" => 0.4,
+        "units" => 5.2,
+        "amount" => 263.82,
+        "currency" => {
+          "id" => "87b24961-b51e-4db8-9226-f198f6518a89",
+          "code" => "USD",
+          "name" => "US Dollar"
+        },
+        "type" => "BUY",
+        "option_type" => "BUY_TO_OPEN",
+        "description" => "WALT DISNEY UNIT DIST ON 21 SHS REC 12/31/21 PAY 01/06/22",
+        "trade_date" => "2024-03-22T16:27:55.000Z",
+        "settlement_date" => "2024-03-26T00:00:00.000Z",
+        "fee" => 0,
+        "institution" => "Robinhood"
+      }
+    )
+
+    entry = snaptrade_entry("2f7dc9b3-5c33-4668-3440-2b31e056ebe6")
+    assert_not_nil entry
+    assert entry.entryable.is_a?(Trade)
+    security = entry.entryable.security
+    assert_equal "AAPL  261218C00240000", security.ticker
+    assert_equal "SPY $240 CALL (2026-12-18)", security.name
+    assert_equal "ARCA", security.exchange_mic
+    assert_equal "US", security.country_code
+    assert_equal BigDecimal("5.2"), entry.entryable.qty
+    assert_equal BigDecimal("0.4"), entry.entryable.price
+    assert_equal BigDecimal("263.82"), entry.amount
   end
 
   # Modeled on SnapTrade payload with generic "COMMON STOCK" description (preserves 5-letter ticker case)

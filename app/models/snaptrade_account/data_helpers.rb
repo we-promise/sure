@@ -117,11 +117,9 @@ module SnaptradeAccount::DataHelpers
     end
 
     def extract_exchange(symbol_data)
-      exchange = symbol_data[:exchange] || symbol_data["exchange"]
-      if exchange.blank?
-        underlying = extract_underlying_data(symbol_data)
-        exchange = underlying[:exchange] if underlying
-      end
+      underlying = extract_underlying_data(symbol_data)
+      exchange = underlying[:exchange] if underlying
+      exchange ||= symbol_data[:exchange] || symbol_data["exchange"]
       return exchange.presence if exchange.is_a?(String)
       return nil unless exchange.is_a?(Hash)
 
@@ -130,11 +128,9 @@ module SnaptradeAccount::DataHelpers
 
     def extract_country_code(symbol_data)
       # Try to extract country from currency or exchange
-      currency = symbol_data[:currency] || symbol_data["currency"]
-      if currency.blank?
-        underlying = extract_underlying_data(symbol_data)
-        currency = underlying[:currency] if underlying
-      end
+      underlying = extract_underlying_data(symbol_data)
+      currency = underlying[:currency] if underlying
+      currency ||= symbol_data[:currency] || symbol_data["currency"]
       currency = currency[:code] || currency["code"] if currency.is_a?(Hash)
 
       case currency
