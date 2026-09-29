@@ -18,7 +18,7 @@ en:
           closed: Closed
           invite_only: Invite-only
       demo_refresh_settings:
-        description: "Replace only the selected demo family daily at 05:00 UTC. All its data and logins will be removed. Other families are untouched. Requires a running worker with at least 2 GiB RAM. First create a disposable demo family using the demo generator, then select it here. Do not choose a real user's family."
+        description: "Automatically refresh only the selected demo family. All its data and logins will be removed. Other families are untouched. Requires a running worker with at least 2 GiB RAM. First create a disposable demo family using the demo generator, then select it here. Do not choose a real user's family."
         none: No demo family selected
         family_label: Disposable demo family
         save_family: Save demo family

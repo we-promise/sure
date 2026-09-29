@@ -85,6 +85,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "only a super admin can opt in and the selected family must own the demo email" do
+    # The configured demo email is already used by the new_email fixture.
+    demo_email = "disposable-demo@example.com"
+    Rails.application.stubs(:config_for).with(:demo).returns({ email: demo_email })
+
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { demo_family_refresh_enabled: "1" } }
       assert_not Setting.demo_family_refresh_enabled
@@ -99,7 +103,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
 
       demo_family = Family.create!(name: "Disposable Demo")
-      demo_family.users.create!(first_name: "Demo", last_name: "Owner", email: Rails.application.config_for(:demo).with_indifferent_access.fetch(:email), password: "password123", role: :admin)
+      demo_family.users.create!(first_name: "Demo", last_name: "Owner", email: demo_email, password: "password123", role: :admin)
       patch settings_hosting_url, params: { setting: { demo_family_refresh_family_id: demo_family.id } }
       assert_redirected_to settings_hosting_path
       patch settings_hosting_url, params: { setting: { demo_family_refresh_enabled: "1" } }
