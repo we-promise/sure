@@ -53,10 +53,9 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
   test "create from the drawer shows a blank token error in the panel" do
     post wise_items_url,
          params: { wise_item: { token: "" } },
-         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+         as: :turbo_stream
 
-    assert_response :unprocessable_entity
-    assert_includes response.body, %(target="wise-providers-panel")
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "wise-providers-panel"
     assert_includes response.body, ERB::Util.html_escape("Token can't be blank")
   end
 
@@ -146,10 +145,9 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     WiseItem.any_instance.stubs(:sca_encryption_available?).returns(true)
 
     post generate_sca_keypair_wise_item_url(@wise_item),
-         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+         as: :turbo_stream
 
-    assert_response :success
-    assert_includes response.body, %(target="wise-providers-panel")
+    assert_turbo_stream action: "replace", target: "wise-providers-panel"
     assert_includes response.body, %(id="wise-providers-panel")
     assert_includes response.body, @wise_item.reload.sca_public_key.lines.second.strip
   end
@@ -157,10 +155,9 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
   test "update from the page re-renders the panel in place instead of leaving for accounts" do
     patch wise_item_url(@wise_item),
           params: { wise_item: { name: "Renamed Wise" } },
-          headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+          as: :turbo_stream
 
-    assert_response :success
-    assert_includes response.body, %(target="wise-providers-panel")
+    assert_turbo_stream action: "replace", target: "wise-providers-panel"
     assert_equal "Renamed Wise", @wise_item.reload.name
   end
 

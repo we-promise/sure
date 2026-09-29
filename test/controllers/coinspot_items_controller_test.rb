@@ -96,11 +96,31 @@ class CoinspotItemsControllerTest < ActionDispatch::IntegrationTest
         api_key: "   ",
         api_secret: "\n"
       }
-    }, as: :turbo_stream, headers: { "Turbo-Frame" => "coinspot-providers-panel" }
+    }, as: :turbo_stream
 
     assert_response :unprocessable_entity
     assert_includes @response.body, "coinspot-providers-panel"
     assert_includes @response.body, "Api key can&#39;t be blank"
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row. The panel
+  # root carries the id, so it is replaced rather than nested inside itself.
+  test "update from the page re-renders the panel in place" do
+    patch coinspot_item_url(@second_item),
+          params: { coinspot_item: { name: "Renamed Business CoinSpot" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "coinspot-providers-panel"
+    assert_includes response.body, %(id="coinspot-providers-panel")
+    assert_equal "Renamed Business CoinSpot", @second_item.reload.name
+  end
+
+  test "create from the page still reloads Bank sync" do
+    post coinspot_items_url,
+         params: { coinspot_item: { name: "Joint CoinSpot", api_key: "joint_coinspot_key", api_secret: "joint_coinspot_secret" } },
+         as: :turbo_stream
+
+    assert_redirected_to settings_providers_path
   end
 
   test "select accounts requires an explicit connection when multiple coinspot items exist" do

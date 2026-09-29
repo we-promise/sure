@@ -34,6 +34,15 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match "can't be blank", flash[:alert]
   end
 
+  test "invalid create from the page shows the error in the panel" do
+    post coinbase_items_url,
+         params: { coinbase_item: { api_key: "", api_secret: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "coinbase-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("can't be blank")
+  end
+
   test "invalid update outside a frame redirects to the providers page with a 303" do
     patch coinbase_item_url(@coinbase_item), params: { coinbase_item: { api_key: "" } }
 

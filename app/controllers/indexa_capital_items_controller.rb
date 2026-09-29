@@ -25,24 +25,11 @@ class IndexaCapitalItemsController < ApplicationController
     @indexa_capital_item.name ||= "IndexaCapital Connection"
 
     if @indexa_capital_item.save
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully configured IndexaCapital.")
-        @indexa_capital_items = Current.family.indexa_capital_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "indexa_capital-providers-panel",
-            partial: "settings/providers/indexa_capital_panel",
-            locals: { indexa_capital_items: @indexa_capital_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
       @error_message = @indexa_capital_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "indexa_capital-providers-panel",
           partial: "settings/providers/indexa_capital_panel",
@@ -56,7 +43,7 @@ class IndexaCapitalItemsController < ApplicationController
 
   def update
     if @indexa_capital_item.update(indexa_capital_item_params)
-      if turbo_frame_request?
+      if turbo_panel_request?
         flash.now[:notice] = t(".success", default: "Successfully updated IndexaCapital configuration.")
         @indexa_capital_items = Current.family.indexa_capital_items.ordered
         render turbo_stream: [
@@ -73,7 +60,7 @@ class IndexaCapitalItemsController < ApplicationController
     else
       @error_message = @indexa_capital_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "indexa_capital-providers-panel",
           partial: "settings/providers/indexa_capital_panel",

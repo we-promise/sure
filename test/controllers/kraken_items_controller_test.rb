@@ -89,6 +89,36 @@ class KrakenItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/API key can't be blank/i, flash[:alert])
   end
 
+  test "invalid create from the page shows the error in the panel" do
+    post kraken_items_url,
+         params: { kraken_item: { name: "Blank Kraken", api_key: "   ", api_secret: "\n" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "kraken-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Api key can't be blank")
+  end
+
+  # The new connection belongs in Your connections, so the page reloads.
+  test "create from the page still reloads Bank sync" do
+    post kraken_items_url,
+         params: { kraken_item: { name: "Joint Kraken", api_key: "joint_kraken_key", api_secret: "joint_kraken_secret" } },
+         as: :turbo_stream
+
+    assert_redirected_to settings_providers_path
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row. The panel
+  # root carries the id, so it is replaced rather than nested inside itself.
+  test "update from the page re-renders the panel in place" do
+    patch kraken_item_url(@second_item),
+          params: { kraken_item: { name: "Renamed Business Kraken" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "kraken-providers-panel"
+    assert_includes response.body, %(id="kraken-providers-panel")
+    assert_equal "Renamed Business Kraken", @second_item.reload.name
+  end
+
   test "select accounts requires an explicit connection when multiple kraken items exist" do
     get select_accounts_kraken_items_url, params: { accountable_type: "Crypto" }
 

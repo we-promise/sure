@@ -26,7 +26,7 @@ class CoinstatsItemsController < ApplicationController
     end
 
     if @coinstats_item.save
-      render_success_response(".success")
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
       render_error_response(@coinstats_item.errors.full_messages.join(", "))
     end
@@ -166,7 +166,7 @@ class CoinstatsItemsController < ApplicationController
     end
 
     def render_error_response(error_message)
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "coinstats-providers-panel",
           partial: "settings/providers/coinstats_panel",
@@ -178,7 +178,7 @@ class CoinstatsItemsController < ApplicationController
     end
 
     def render_success_response(notice_key)
-      if turbo_frame_request?
+      if turbo_panel_request?
         flash.now[:notice] = t(notice_key, default: notice_key.to_s.humanize)
         @coinstats_items = Current.family.coinstats_items.ordered
         render turbo_stream: [

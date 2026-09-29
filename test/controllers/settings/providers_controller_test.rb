@@ -34,7 +34,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "[data-provider-name='apple wallet']", count: 0
     assert_select "details#financekit-connection" do
-      assert_select "a[href=?][data-turbo-frame='_top']", account_path(@source.account), text: "Test Wallet"
+      assert_select "a[href=?]", account_path(@source.account), text: "Test Wallet"
       assert_select "span", text: "Sync active"
       assert_select "dt", text: "Last accepted by Sure"
       assert_select "dt", text: "Last imported into your family"
@@ -217,21 +217,15 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_equal panel_ids.uniq, panel_ids
   end
 
-  # Page-level saves re-render these panels in place, and
-  # EnableBankingItem::SyncCompleteEvent replaces its panel when a sync finishes.
-  test "connection rows render the panel roots their streams replace" do
-    families(:dylan_family).enable_banking_items.create!(
-      name: "Test Connection",
-      country_code: "DE",
-      application_id: "test_app_id",
-      client_certificate: OpenSSL::PKey::RSA.new(2048).to_pem
-    )
+  # Saves and errors from a row or the drawer re-render the panel by replacing
+  # "<turbo_id>-providers-panel", and EnableBankingItem::SyncCompleteEvent does
+  # the same when a sync finishes. SimpleFIN and SnapTrade never stream to it.
+  test "every streamed panel renders the root its streams replace" do
+    Settings::ProvidersController::FAMILY_PANELS.reject { |panel| %w[simplefin snaptrade].include?(panel[:key]) }.each do |panel|
+      get connect_form_settings_providers_url(provider_key: panel[:key])
 
-    get settings_providers_url
-
-    assert_response :success
-    %w[brex enable_banking ibkr lunchflow mercury trading212 wise].each do |key|
-      assert_select "details##{key}-connection ##{key}-providers-panel"
+      assert_response :success
+      assert_select "##{panel[:turbo_id]}-providers-panel", 1, "#{panel[:key]} panel root"
     end
   end
 

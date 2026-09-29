@@ -11,7 +11,7 @@ class KrakenItemsController < ApplicationController
     if @kraken_item.save
       @kraken_item.set_kraken_institution_defaults!
       @kraken_item.sync_later
-      render_panel_success(t(".success"))
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
       render_panel_error(@kraken_item.errors.full_messages.join(", "))
     end
@@ -167,10 +167,10 @@ class KrakenItemsController < ApplicationController
     end
 
     def render_panel_success(message)
-      if turbo_frame_request?
+      if turbo_panel_request?
         flash.now[:notice] = message
         @kraken_items = Current.family.kraken_items.active.ordered
-        stream = turbo_stream.update("kraken-providers-panel", partial: "settings/providers/kraken_panel", locals: { kraken_items: @kraken_items })
+        stream = turbo_stream.replace("kraken-providers-panel", partial: "settings/providers/kraken_panel", locals: { kraken_items: @kraken_items })
         render turbo_stream: [ stream, *flash_notification_stream_items ]
       else
         redirect_to settings_providers_path, notice: message, status: :see_other
@@ -178,7 +178,7 @@ class KrakenItemsController < ApplicationController
     end
 
     def render_panel_error(message)
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "kraken-providers-panel",
           partial: "settings/providers/kraken_panel",

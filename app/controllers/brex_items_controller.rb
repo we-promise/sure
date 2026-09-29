@@ -20,7 +20,7 @@ class BrexItemsController < ApplicationController
 
     if @brex_item.save
       @brex_item.sync_later
-      render_provider_panel_success(t(".success"))
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
       render_provider_panel_error
     end
@@ -31,7 +31,7 @@ class BrexItemsController < ApplicationController
 
   def update
     if BrexItem::AccountFlow.update_item_with_cache_expiration(@brex_item, family: Current.family, attributes: brex_item_params)
-      render_provider_panel_success(t(".success"), in_place: turbo_panel_request?)
+      render_provider_panel_success(t(".success"))
     else
       render_provider_panel_error
     end
@@ -54,10 +54,8 @@ class BrexItemsController < ApplicationController
 
   private
 
-    # A new connection moves on to Accounts unless it came from a frame; an
-    # update stays in the panel it was saved from.
-    def render_provider_panel_success(message, in_place: turbo_frame_request?)
-      return redirect_to accounts_path, notice: message, status: :see_other unless in_place
+    def render_provider_panel_success(message)
+      return redirect_to accounts_path, notice: message, status: :see_other unless turbo_panel_request?
 
       flash.now[:notice] = message
       @brex_items = Current.family.brex_items.active.ordered.includes(:syncs, :brex_accounts)

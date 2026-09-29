@@ -10,22 +10,11 @@ class Trading212ItemsController < ApplicationController
     if @trading212_item.save
       @trading212_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        render turbo_stream: [
-          turbo_stream.replace(
-            "trading212-providers-panel",
-            partial: "settings/providers/trading212_panel"
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
       @error_message = @trading212_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "trading212-providers-panel",
           partial: "settings/providers/trading212_panel",

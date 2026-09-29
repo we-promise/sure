@@ -16,10 +16,14 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     flunk "generated invalid Ruby: #{e.message}\n\n#{source}"
   end
 
+  def render_template(name, **locals)
+    template = Rails.root.join("lib/generators/provider/family/templates", name).read
+    context = Struct.new(*locals.keys).new(*locals.values)
+    ERB.new(template, trim_mode: "-").result(context.instance_eval { binding })
+  end
+
   test "the unlinking scaffold renders to valid Ruby and carries the disposition seam" do
-    template = Rails.root.join("lib/generators/provider/family/templates/unlinking_concern.rb.tt").read
-    context = Struct.new(:class_name, :file_name).new("Gocardless", "gocardless")
-    rendered = ERB.new(template, trim_mode: "-").result(context.instance_eval { binding })
+    rendered = render_template("unlinking_concern.rb.tt", class_name: "Gocardless", file_name: "gocardless")
 
     assert_parses rendered
     # A generated provider retains by default and refuses a discard it has not
@@ -105,6 +109,43 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     result = append(%(enum :source, { plaid: "pl\\\\aid" }))
 
     assert_includes result, "pl\\\\aid"
+  end
+
+  # Row and drawer forms post from the page, so no request carries a Turbo-Frame
+  # header: saves and errors stream into the panel, and a new connection reloads.
+  test "the controller scaffold renders to valid Ruby and answers panel requests in place" do
+    rendered = render_template("controller.rb.tt", class_name: "Gocardless", file_name: "gocardless",
+                               table_name: "gocardless_items", parsed_fields: [ { name: "secret_id" } ])
+
+    assert_parses rendered
+    assert_not_includes rendered, "turbo_frame_request?"
+    assert_includes rendered, "if turbo_panel_request?"
+    assert_match(/if @gocardless_item\.save\n\s+redirect_to settings_providers_path, notice:/, rendered)
+  end
+
+  # Bank sync builds its connection rows and drawers from FAMILY_PANELS, so a
+  # section injected into show.html.erb would render outside both.
+  test "adds the provider to the family panels of the real providers controller" do
+    source = Rails.root.join("app/controllers/settings/providers_controller.rb").read
+    result = Provider::FamilyGenerator.append_family_panel_entry(source, key: "gocardless", title: "Gocardless")
+
+    assert_parses result
+    assert_includes result, %(      { key: "gocardless", title: "Gocardless", turbo_id: "gocardless", partial: "gocardless_panel" }\n    ].freeze)
+  end
+
+  test "separates the new family panel from the previous last entry" do
+    result = Provider::FamilyGenerator.append_family_panel_entry(<<~RUBY, key: "gocardless", title: "Gocardless")
+      FAMILY_PANELS = [
+        { key: "akahu", title: "Akahu", turbo_id: "akahu", partial: "akahu_panel" }
+      ].freeze
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(partial: "akahu_panel" },\n  { key: "gocardless")
+  end
+
+  test "returns nil when there are no family panels to update" do
+    assert_nil Provider::FamilyGenerator.append_family_panel_entry("class Foo\nend\n", key: "gocardless", title: "Gocardless")
   end
 
   test "reserved item columns exclude family but include family_id" do

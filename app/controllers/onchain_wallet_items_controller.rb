@@ -264,11 +264,11 @@ class OnchainWalletItemsController < ApplicationController
     end
 
     def render_panel_success(message)
-      if turbo_frame_request?
+      if turbo_panel_request?
         flash.now[:notice] = message
         @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
         render turbo_stream: [
-          turbo_stream.update(
+          turbo_stream.replace(
             "onchain_wallet-providers-panel",
             partial: "settings/providers/onchain_wallet_panel",
             locals: { onchain_wallet_items: @onchain_wallet_items }
@@ -281,8 +281,8 @@ class OnchainWalletItemsController < ApplicationController
     end
 
     def render_panel_error(message)
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.update(
+      if turbo_panel_request?
+        render turbo_stream: turbo_stream.replace(
           "onchain_wallet-providers-panel",
           partial: "settings/providers/onchain_wallet_panel",
           locals: { error_message: message }

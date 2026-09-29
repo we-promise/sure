@@ -24,6 +24,16 @@ class BinanceItemsControllerTest < ActionDispatch::IntegrationTest
     assert @binance_item.scheduled_for_deletion?
   end
 
+  test "invalid create from the page shows the error in the panel" do
+    post binance_items_url,
+         params: { binance_item: { api_key: "", api_secret: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "binance-providers-panel"
+    assert_includes response.body, %(id="binance-providers-panel")
+    assert_includes response.body, ERB::Util.html_escape("can't be blank")
+  end
+
   test "should sync binance item" do
     post sync_binance_item_url(@binance_item)
     assert_response :redirect

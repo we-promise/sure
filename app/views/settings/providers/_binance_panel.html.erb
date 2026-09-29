@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div id="binance-providers-panel" class="space-y-4">
   <% items = local_assigns[:binance_items] || @binance_items || Current.family.binance_items.active.ordered %>
 
   <%= render DS::Alert.new(

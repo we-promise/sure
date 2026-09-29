@@ -27,7 +27,7 @@ class AkahuItemsController < ApplicationController
 
     if @akahu_item.save
       @akahu_item.sync_later
-      render_provider_panel(:notice, t(".success"))
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
       render_provider_panel_error(@akahu_item.errors.full_messages.join(", "))
     end
@@ -306,7 +306,7 @@ class AkahuItemsController < ApplicationController
     end
 
     def render_provider_panel(flash_type, message)
-      if turbo_frame_request?
+      if turbo_panel_request?
         flash.now[flash_type] = message
         @akahu_items = Current.family.akahu_items.active.ordered
         render turbo_stream: [
@@ -324,7 +324,7 @@ class AkahuItemsController < ApplicationController
 
     def render_provider_panel_error(message)
       @error_message = message
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "akahu-providers-panel",
           partial: "settings/providers/akahu_panel",

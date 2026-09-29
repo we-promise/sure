@@ -68,6 +68,15 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Token can't be blank", flash[:alert]
   end
 
+  test "invalid create from the page shows the error in the panel" do
+    post mercury_items_url,
+         params: { mercury_item: { name: "Joint Mercury", token: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "mercury-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Token can't be blank")
+  end
+
   test "invalid update outside a frame redirects instead of rendering a missing template" do
     patch mercury_item_url(@second_item), params: { mercury_item: { name: "" } }
 
@@ -81,10 +90,9 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
   test "update from the page re-renders the panel in place instead of leaving for accounts" do
     patch mercury_item_url(@second_item),
           params: { mercury_item: { name: "Renamed Business Mercury" } },
-          headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+          as: :turbo_stream
 
-    assert_response :success
-    assert_includes response.body, %(target="mercury-providers-panel")
+    assert_turbo_stream action: "replace", target: "mercury-providers-panel"
     assert_includes response.body, %(id="mercury-providers-panel")
     assert_equal "Renamed Business Mercury", @second_item.reload.name
   end
@@ -92,10 +100,9 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
   test "invalid update from the page re-renders the panel with the error" do
     patch mercury_item_url(@second_item),
           params: { mercury_item: { name: "" } },
-          headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+          as: :turbo_stream
 
-    assert_response :unprocessable_entity
-    assert_includes response.body, %(target="mercury-providers-panel")
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "mercury-providers-panel"
     assert_includes response.body, ERB::Util.html_escape("Name can't be blank")
   end
 

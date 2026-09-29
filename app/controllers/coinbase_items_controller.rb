@@ -27,24 +27,11 @@ class CoinbaseItemsController < ApplicationController
       # Trigger initial sync to fetch accounts
       @coinbase_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @coinbase_items = Current.family.coinbase_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "coinbase-providers-panel",
-            partial: "settings/providers/coinbase_panel",
-            locals: { coinbase_items: @coinbase_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
       @error_message = @coinbase_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "coinbase-providers-panel",
           partial: "settings/providers/coinbase_panel",
@@ -56,34 +43,12 @@ class CoinbaseItemsController < ApplicationController
     end
   end
 
+  # The panel has no edit form, so an update never re-renders it.
   def update
     if @coinbase_item.update(coinbase_item_params)
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @coinbase_items = Current.family.coinbase_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "coinbase-providers-panel",
-            partial: "settings/providers/coinbase_panel",
-            locals: { coinbase_items: @coinbase_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @coinbase_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "coinbase-providers-panel",
-          partial: "settings/providers/coinbase_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      redirect_to settings_providers_path, alert: @coinbase_item.errors.full_messages.join(", "), status: :see_other
     end
   end
 

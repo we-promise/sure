@@ -40,6 +40,35 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("fio_items.create.token_required"), flash[:alert]
   end
 
+  test "invalid create from the page shows the error in the panel" do
+    post fio_items_url,
+         params: { fio_item: { name: "No token", token: "   " } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "fio-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("fio_items.create.token_required"))
+  end
+
+  # The new connection belongs in Your connections, so the page reloads.
+  test "create from the page still reloads Bank sync" do
+    post fio_items_url,
+         params: { fio_item: { name: "Savings", token: "second-token" } },
+         as: :turbo_stream
+
+    assert_redirected_to settings_providers_path
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row.
+  test "update from the page re-renders the panel in place" do
+    patch fio_item_url(@fio_item),
+          params: { fio_item: { name: "Renamed Fio", token: "" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "fio-providers-panel"
+    assert_includes response.body, %(id="fio-providers-panel")
+    assert_equal "Renamed Fio", @fio_item.reload.name
+  end
+
   # The form sets the status, so only a sync can establish whether Fio accepts the new
   # token — without one the connection would claim to be healthy on the user's word.
   test "update rotates the token, clears requires_update and revalidates it" do

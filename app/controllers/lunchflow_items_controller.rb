@@ -417,24 +417,11 @@ class LunchflowItemsController < ApplicationController
       # Trigger initial sync to fetch accounts
       @lunchflow_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @lunchflow_items = Current.family.lunchflow_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "lunchflow-providers-panel",
-            partial: "settings/providers/lunchflow_panel",
-            locals: { lunchflow_items: @lunchflow_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
       @error_message = @lunchflow_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "lunchflow-providers-panel",
           partial: "settings/providers/lunchflow_panel",

@@ -16,7 +16,7 @@ class CoinspotItemsController < ApplicationController
     if @coinspot_item.save
       @coinspot_item.set_coinspot_institution_defaults!
       @coinspot_item.sync_later
-      render_panel_success(t(".success"))
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
       render_panel_error(@coinspot_item.errors.full_messages.join(", "))
     end
@@ -251,13 +251,13 @@ class CoinspotItemsController < ApplicationController
       permitted
     end
 
-    # Reports a settings-panel action's success: a Turbo Stream update for a
-    # frame request, or a full-page redirect otherwise.
+    # Reports a settings-panel update's success: the panel replaced in place
+    # for a Turbo request, or a full-page redirect otherwise.
     def render_panel_success(message)
-      if turbo_frame_request?
+      if turbo_panel_request?
         flash.now[:notice] = message
         @coinspot_items = Current.family.coinspot_items.active.ordered
-        stream = turbo_stream.update(
+        stream = turbo_stream.replace(
           "coinspot-providers-panel",
           partial: "settings/providers/coinspot_panel",
           locals: { coinspot_items: @coinspot_items }
@@ -269,9 +269,9 @@ class CoinspotItemsController < ApplicationController
     end
 
     # Reports a settings-panel action's failure: a Turbo Stream replace for a
-    # frame request, or a full-page redirect with an alert otherwise.
+    # Turbo request, or a full-page redirect with an alert otherwise.
     def render_panel_error(message)
-      if turbo_frame_request?
+      if turbo_panel_request?
         @coinspot_items = Current.family.coinspot_items.active.ordered
         render turbo_stream: turbo_stream.replace(
           "coinspot-providers-panel",

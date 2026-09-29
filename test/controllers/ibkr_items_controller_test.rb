@@ -37,13 +37,21 @@ class IbkrItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  test "invalid create from the page shows the error in the panel" do
+    post ibkr_items_url,
+         params: { ibkr_item: { query_id: "", token: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "ibkr-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("can't be blank")
+  end
+
   test "update from the page re-renders the panel in place instead of leaving for accounts" do
     patch ibkr_item_url(@ibkr_item),
           params: { ibkr_item: { query_id: "", token: "" } },
-          headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+          as: :turbo_stream
 
-    assert_response :success
-    assert_includes response.body, %(target="ibkr-providers-panel")
+    assert_turbo_stream action: "replace", target: "ibkr-providers-panel"
     assert_includes response.body, %(id="ibkr-providers-panel")
   end
 

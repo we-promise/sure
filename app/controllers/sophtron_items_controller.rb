@@ -398,7 +398,7 @@ class SophtronItemsController < ApplicationController
         return
       end
 
-      render_sophtron_panel_success(:create)
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
       render_sophtron_panel_error(@sophtron_item.errors.full_messages.join(", "))
     end
@@ -414,7 +414,7 @@ class SophtronItemsController < ApplicationController
         return
       end
 
-      render_sophtron_panel_success(:update)
+      render_sophtron_panel_update_success
     else
       render_sophtron_panel_error(@sophtron_item.errors.full_messages.join(", "))
     end
@@ -944,9 +944,9 @@ class SophtronItemsController < ApplicationController
       false
     end
 
-    def render_sophtron_panel_success(action_name)
-      if turbo_frame_request?
-        flash.now[:notice] = t("sophtron_items.#{action_name}.success")
+    def render_sophtron_panel_update_success
+      if turbo_panel_request?
+        flash.now[:notice] = t("sophtron_items.update.success")
         @sophtron_items = Current.family.sophtron_items.ordered
         render turbo_stream: [
           turbo_stream.replace(
@@ -957,13 +957,13 @@ class SophtronItemsController < ApplicationController
           *flash_notification_stream_items
         ]
       else
-        redirect_to accounts_path, notice: t("sophtron_items.#{action_name}.success"), status: :see_other
+        redirect_to accounts_path, notice: t("sophtron_items.update.success"), status: :see_other
       end
     end
 
     def render_sophtron_panel_error(message)
       @error_message = message
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "sophtron-providers-panel",
           partial: "settings/providers/sophtron_panel",

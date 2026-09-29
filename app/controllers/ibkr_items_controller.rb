@@ -9,22 +9,11 @@ class IbkrItemsController < ApplicationController
     if @ibkr_item.save
       @ibkr_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        render turbo_stream: [
-          turbo_stream.replace(
-            "ibkr-providers-panel",
-            partial: "settings/providers/ibkr_panel"
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
       @error_message = @ibkr_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "ibkr-providers-panel",
           partial: "settings/providers/ibkr_panel",

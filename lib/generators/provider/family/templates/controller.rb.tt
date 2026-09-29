@@ -24,24 +24,11 @@ class <%= class_name %>ItemsController < ApplicationController
     @<%= file_name %>_item.name ||= "<%= class_name %> Connection"
 
     if @<%= file_name %>_item.save
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully configured <%= class_name %>.")
-        @<%= table_name %> = Current.family.<%= table_name %>.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "<%= file_name %>-providers-panel",
-            partial: "settings/providers/<%= file_name %>_panel",
-            locals: { <%= file_name %>_items: @<%= table_name %> }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
       @error_message = @<%= file_name %>_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "<%= file_name %>-providers-panel",
           partial: "settings/providers/<%= file_name %>_panel",
@@ -55,7 +42,7 @@ class <%= class_name %>ItemsController < ApplicationController
 
   def update
     if @<%= file_name %>_item.update(<%= file_name %>_item_params)
-      if turbo_frame_request?
+      if turbo_panel_request?
         flash.now[:notice] = t(".success", default: "Successfully updated <%= class_name %> configuration.")
         @<%= table_name %> = Current.family.<%= table_name %>.ordered
         render turbo_stream: [
@@ -72,7 +59,7 @@ class <%= class_name %>ItemsController < ApplicationController
     else
       @error_message = @<%= file_name %>_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "<%= file_name %>-providers-panel",
           partial: "settings/providers/<%= file_name %>_panel",

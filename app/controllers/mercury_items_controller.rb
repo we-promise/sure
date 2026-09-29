@@ -410,24 +410,11 @@ class MercuryItemsController < ApplicationController
       # Trigger initial sync to fetch accounts
       @mercury_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
-        render turbo_stream: [
-          turbo_stream.replace(
-            "mercury-providers-panel",
-            partial: "settings/providers/mercury_panel",
-            locals: { mercury_items: @mercury_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
       @error_message = @mercury_item.errors.full_messages.join(", ")
 
-      if turbo_frame_request?
+      if turbo_panel_request?
         render turbo_stream: turbo_stream.replace(
           "mercury-providers-panel",
           partial: "settings/providers/mercury_panel",

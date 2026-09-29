@@ -45,10 +45,10 @@ class Trading212ItemsControllerTest < ActionDispatch::IntegrationTest
           api_secret: "",
           environment: "live"
         }
-      }, headers: { "Turbo-Frame" => "modal" }
+      }, as: :turbo_stream
     end
 
-    assert_response :unprocessable_entity
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "trading212-providers-panel"
   end
 
   # === update ===
@@ -69,10 +69,9 @@ class Trading212ItemsControllerTest < ActionDispatch::IntegrationTest
   test "update from the page re-renders the panel in place instead of leaving for accounts" do
     patch trading212_item_url(@item),
           params: { trading212_item: { api_key: "", api_secret: "", environment: "demo" } },
-          headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+          as: :turbo_stream
 
-    assert_response :success
-    assert_includes response.body, %(target="trading212-providers-panel")
+    assert_turbo_stream action: "replace", target: "trading212-providers-panel"
     assert_includes response.body, %(id="trading212-providers-panel")
     assert_equal "demo", @item.reload.environment
   end
