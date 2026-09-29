@@ -86,6 +86,23 @@ class IbkrAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 1000.5, @account.reload.cash_balance
   end
 
+  # The currency changes only with a balance that was actually written, so the
+  # cached figures keep the denomination they were written in.
+  test "an older statement or a failed write does not change the currency" do
+    IbkrAccount::Processor.new(@ibkr_account).process
+
+    @ibkr_account.update!(report_date: Date.current - 3.days, currency: "USD")
+    IbkrAccount::Processor.new(@ibkr_account.reload).process
+    assert_equal "CHF", @account.reload.currency, "an older statement leaves the currency alone"
+
+    @ibkr_account.update!(report_date: Date.current)
+    Account::CurrentBalanceManager.any_instance.stubs(:set_current_balance).returns(
+      Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "boom")
+    )
+    IbkrAccount::Processor.new(@ibkr_account.reload).process
+    assert_equal "CHF", @account.reload.currency, "a failed write puts the currency back"
+  end
+
   # Nothing to date it by, or a statement dated ahead of today: fall back to
   # today rather than anchoring the account in the future.
   test "falls back to today when the report date is missing or ahead" do
