@@ -56,11 +56,16 @@ class ProviderMerchant < Merchant
         website_url: attributes.key?(:website_url) ? attributes[:website_url].presence : website_url
       )
 
-      # find_or_create_with_name doesn't touch a merchant it reused, so an
-      # explicitly submitted website (present or blank-to-clear) still needs
-      # applying here; an omitted one leaves the reused merchant untouched.
-      if !created && attributes.key?(:website_url)
-        family_merchant.update!(website_url: attributes[:website_url].presence)
+      # find_or_create_with_name doesn't touch a merchant it reused, so
+      # explicitly submitted attributes still need applying here; omitted
+      # ones leave the reused merchant untouched. A submitted website
+      # (present or blank-to-clear) is honored; color can't be cleared
+      # (FamilyMerchant requires it), so only a non-blank submission applies.
+      if !created
+        reuse_updates = {}
+        reuse_updates[:website_url] = attributes[:website_url].presence if attributes.key?(:website_url)
+        reuse_updates[:color] = attributes[:color] if attributes[:color].present?
+        family_merchant.update!(reuse_updates) if reuse_updates.any?
       end
 
       scope = family.transactions.where(merchant_id: id)

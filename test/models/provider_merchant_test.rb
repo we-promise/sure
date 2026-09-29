@@ -143,4 +143,22 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     assert_equal existing.id, converted.id
     assert_equal "https://old.example", existing.reload.website_url
   end
+
+  test "convert_to_family_merchant_for applies a submitted color when reusing a merchant" do
+    existing = @family.merchants.create!(name: "Acme Synced", color: "#4da568")
+
+    converted = @provider_merchant.convert_to_family_merchant_for(@family, color: "#db5a54")
+
+    assert_equal existing.id, converted.id
+    assert_equal "#db5a54", existing.reload.color
+  end
+
+  test "convert_to_family_merchant_for leaves a reused merchant's color untouched when blank or omitted" do
+    existing = @family.merchants.create!(name: "Acme Synced", color: "#4da568")
+
+    converted = @provider_merchant.convert_to_family_merchant_for(@family, color: "")
+
+    assert_equal existing.id, converted.id
+    assert_equal "#4da568", existing.reload.color
+  end
 end
