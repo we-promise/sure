@@ -58,16 +58,15 @@
 
               <div class="space-y-2">
                 <% EnableBankingItem.sync_strategies.each_key do |strategy| %>
-                  <label class="flex items-start gap-2 rounded-lg border border-primary p-3 cursor-pointer has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
-                    <%= form.radio_button :sync_strategy, strategy,
-                          checked: @enable_banking_item.sync_strategy == strategy,
-                          class: "radio mt-0.5 shrink-0",
-                          data: { enable_banking_sync_strategy_target: "radio", action: "change->enable-banking-sync-strategy#refresh" } %>
-                    <span class="min-w-0">
-                      <span class="block text-sm font-medium text-primary"><%= t(".sync_strategies.#{strategy}.label") %></span>
-                      <span class="block text-xs text-secondary"><%= t(".sync_strategies.#{strategy}.hint") %></span>
-                    </span>
-                  </label>
+                  <%= render DS::RadioCard.new(
+                        form: form,
+                        method: :sync_strategy,
+                        value: strategy,
+                        checked: @enable_banking_item.sync_strategy == strategy,
+                        label: t(".sync_strategies.#{strategy}.label"),
+                        hint: t(".sync_strategies.#{strategy}.hint"),
+                        data: { enable_banking_sync_strategy_target: "radio", action: "change->enable-banking-sync-strategy#refresh" }
+                      ) %>
                 <% end %>
               </div>
 
