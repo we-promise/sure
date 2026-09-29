@@ -40,6 +40,16 @@ class ReportsTest < ApplicationSystemTestCase
     assert_equal %w[ArrowLeft], clicked_hotkeys
   end
 
+  test "a held arrow key steps one period" do
+    page.execute_script(<<~JS)
+      for (const repeat of [false, true, true]) {
+        document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", repeat, bubbles: true }));
+      }
+    JS
+
+    assert_equal %w[ArrowLeft], clicked_hotkeys
+  end
+
   private
     def clicked_hotkeys
       page.evaluate_script("window.clickedHotkeys")
