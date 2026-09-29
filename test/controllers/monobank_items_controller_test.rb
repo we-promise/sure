@@ -173,6 +173,15 @@ class MonobankItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_monobank_item_url(@monobank_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "monobank-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @monobank_item.reload.syncing?
+  end
+
   test "destroy schedules the connection for deletion" do
     DestroyJob.expects(:perform_later).with(@monobank_item).once
 

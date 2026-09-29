@@ -14,6 +14,23 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     ]
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_wise_item_url(@wise_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "wise-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @wise_item.reload.syncing?
+  end
+
+  # The Accounts page's Sync button posts here too, without the panel's source.
+  test "sync from the Accounts page goes back to it" do
+    post sync_wise_item_url(@wise_item),
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml", "Referer" => accounts_url }
+
+    assert_redirected_to accounts_url
+  end
+
   # create redirects to select_profiles (Turbo requires a redirect from a standard
   # form submission) — the encrypted token travels via the session, not the response body.
 

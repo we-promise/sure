@@ -42,6 +42,7 @@ class IbkrItemsController < ApplicationController
 
   def sync
     @ibkr_item.sync_later unless @ibkr_item.syncing?
+    return render_provider_panel("ibkr", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }

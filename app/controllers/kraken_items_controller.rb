@@ -33,6 +33,7 @@ class KrakenItemsController < ApplicationController
 
   def sync
     @kraken_item.sync_later unless @kraken_item.syncing?
+    return render_provider_panel("kraken", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to settings_providers_path }

@@ -537,7 +537,7 @@ class SimplefinItemsController < ApplicationController
       # The Bank sync panel and the new-connection modal send the same Turbo
       # request, so the panel marks its form. The modals render their template,
       # which the edit modal's frame picks out of the response.
-      if params[:source] == "panel"
+      if provider_panel_form?
         render_provider_panel("simplefin", alert: message)
       else
         render context, status: :unprocessable_entity

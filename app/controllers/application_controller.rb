@@ -59,6 +59,12 @@ class ApplicationController < ActionController::Base
       turbo_frame_request? || request.format.turbo_stream?
     end
 
+    # Set by a panel form whose action also serves another page with the same
+    # Turbo request, such as a Sync that the Accounts page posts to as well.
+    def provider_panel_form?
+      params[:source] == "panel"
+    end
+
     # Re-renders a Bank sync panel where it was posted from, with the alert in
     # the panel or the notice as a flash. `key` is the panel's FAMILY_PANELS key.
     # A request without Turbo is redirected with the flash instead.

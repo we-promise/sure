@@ -143,10 +143,9 @@
 
           <div class="flex items-center gap-2">
             <% if item.session_valid? %>
-              <%= button_to sync_enable_banking_item_path(item),
+              <%= button_to sync_enable_banking_item_path(item, source: "panel"),
                             method: :post,
-                            class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-primary bg-container border border-primary hover:bg-surface-inset transition-colors",
-                            data: { turbo: false } do %>
+                            class: "inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-medium text-primary bg-container border border-primary hover:bg-surface-inset transition-colors" do %>
                 <%= t("settings.providers.enable_banking_panel.sync") %>
               <% end %>
             <% elsif item.session_expired? %>

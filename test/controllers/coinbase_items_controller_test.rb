@@ -56,6 +56,15 @@ class CoinbaseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_coinbase_item_url(@coinbase_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "coinbase-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @coinbase_item.reload.syncing?
+  end
+
   test "should show setup_accounts page" do
     get setup_accounts_coinbase_item_url(@coinbase_item)
     assert_response :success

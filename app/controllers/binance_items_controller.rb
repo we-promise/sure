@@ -50,6 +50,7 @@ class BinanceItemsController < ApplicationController
     unless @binance_item.syncing?
       @binance_item.sync_later
     end
+    return render_provider_panel("binance", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }

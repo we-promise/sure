@@ -126,6 +126,15 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_fio_item_url(@fio_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "fio-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @fio_item.reload.syncing?
+  end
+
   test "destroy unlinks the account and schedules the connection for deletion" do
     @fio_account.ensure_account_provider!(accounts(:depository))
     DestroyJob.expects(:perform_later).with(@fio_item).once

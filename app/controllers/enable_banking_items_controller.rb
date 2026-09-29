@@ -43,6 +43,10 @@ class EnableBankingItemsController < ApplicationController
     unless @enable_banking_item.syncing?
       @enable_banking_item.sync_later
     end
+    if provider_panel_form?
+      return render_provider_panel("enable_banking", notice: t("settings.providers.sync_provider_in_progress"),
+                                   enable_banking_items: Current.family.enable_banking_items.ordered)
+    end
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }

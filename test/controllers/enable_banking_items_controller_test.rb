@@ -40,6 +40,23 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
       "Expected the searchable data attribute to still include the bank name (existing name-search behavior)"
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_enable_banking_item_url(@item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "enable_banking-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @item.reload.syncing?
+  end
+
+  # The Accounts page's Sync button posts here too, without the panel's source.
+  test "sync from the Accounts page goes back to it" do
+    post sync_enable_banking_item_url(@item),
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml", "Referer" => accounts_url }
+
+    assert_redirected_to accounts_url
+  end
+
   test "invalid create outside a frame redirects to the providers page with a 303" do
     assert_no_difference "EnableBankingItem.count" do
       post enable_banking_items_url, params: { enable_banking_item: { country_code: "", application_id: "" } }

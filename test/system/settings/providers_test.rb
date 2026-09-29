@@ -64,6 +64,21 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
     assert_equal "Renamed Mercury again", item.reload.name
   end
 
+  test "syncing a connection from its row keeps the row open" do
+    item = mercury_items(:one)
+
+    visit settings_providers_path
+    find("summary", text: "Mercury").click
+    find("summary", text: item.name).click
+    find("form[action='#{sync_mercury_item_path(item, source: "panel")}'] button").click
+
+    # The toast arrives in the same stream as the panel, after it.
+    assert_text I18n.t("settings.providers.sync_provider_in_progress")
+    assert_selector "details#mercury-connection[open]"
+    assert_current_path settings_providers_path
+    assert item.reload.syncing?
+  end
+
   test "Wallet advertises App Store availability without a web connection flow" do
     visit settings_providers_path
     find('[data-providers-filter-target="input"]').set("Apple Wallet")

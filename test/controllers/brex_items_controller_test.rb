@@ -426,6 +426,15 @@ class BrexItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_brex_item_url(@second_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "brex-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @second_item.reload.syncing?
+  end
+
   test "complete account setup ignores unsupported account type and subtype params" do
     valid_brex_account = @second_item.brex_accounts.create!(
       account_id: "setup_valid",

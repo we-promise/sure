@@ -83,6 +83,7 @@ class UpItemsController < ApplicationController
   # Trigger a manual sync unless one is already running.
   def sync
     @up_item.sync_later unless @up_item.syncing?
+    return render_provider_panel("up", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }

@@ -320,6 +320,10 @@ class TradeRepublicItemsController < ApplicationController
 
   def sync
     @trade_republic_item.sync_later unless @trade_republic_item.syncing?
+    if provider_panel_form? && turbo_panel_request?
+      # Only this card, as the login steps do, so the other cards keep their state.
+      return render_login_panel(notice: t("settings.providers.sync_provider_in_progress"))
+    end
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
