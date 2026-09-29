@@ -84,7 +84,7 @@ This single command generates:
 - ✅ Simple manual panel view for provider settings
 - ✅ Controller with CRUD actions and Turbo Stream support
 - ✅ Routes
-- ✅ Updates to the settings controller, including its `FAMILY_PANELS` entry
+- ✅ Bank sync wiring: the settings controller's `FAMILY_PANELS` entry and sync maps, and a `provider_summary` case
 
 The generated item partial renders the provider's logo with `ProviderLogo`. That reads the
 provider's `Provider::Metadata::REGISTRY` entry, which the generator does not create, so add
@@ -550,11 +550,12 @@ end
 - Adds `@my_bank_items` instance variable
 - Adds a `FAMILY_PANELS` entry, so Bank sync lists My Bank and opens its panel in the
   drawer. `FAMILY_PANEL_KEYS` also keeps it out of the global provider forms.
+- Adds `my_bank` to `PANEL_SYNCABLE_TYPES` and `family_panel_items`, which give its
+  connection row a sync status and a working Sync button.
 
-To list a connected My Bank under Your connections, add a `"my_bank"` case to
-`provider_summary` in `app/helpers/settings_helper.rb`; keys it doesn't know stay under
-Available. For its status and Sync button, add `my_bank` to `PANEL_SYNCABLE_TYPES` and
-`family_panel_items` in the same controller.
+**File:** `app/helpers/settings_helper.rb` (updated)
+- Adds a `"my_bank"` case to `provider_summary`, so a connected My Bank is listed under
+  Your connections. Keys it doesn't know stay under Available.
 
 ---
 
@@ -786,9 +787,6 @@ end
    ```ruby
    @my_bank_items = Current.family.my_bank_items.ordered.select(:id)
    ```
-
-3. If a connected provider stays under Available, check that `provider_summary` in
-   `app/helpers/settings_helper.rb` has a `"my_bank"` case.
 
 ### Form Not Submitting
 

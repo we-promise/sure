@@ -149,6 +149,50 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_nil Provider::FamilyGenerator.append_family_panel_entry("class Foo\nend\n", key: "gocardless", title: "Gocardless")
   end
 
+  # provider_summary leaves a key it doesn't know under Available, so a connected
+  # provider only moves to Your connections through its own case.
+  test "adds a provider_summary case to the real settings helper" do
+    source = Rails.root.join("app/helpers/settings_helper.rb").read
+    result = Provider::FamilyGenerator.append_provider_summary_case(source, key: "gocardless")
+
+    assert_parses result
+    assert_includes result[/def provider_summary\b.*?\n  end\n/m],
+                    %(    when "gocardless"\n      return { status: :off } unless @gocardless_items&.any?\n      sync_based_summary(key)\n    else\n      { status: :off }\n)
+  end
+
+  test "returns nil when there is no provider_summary to update" do
+    assert_nil Provider::FamilyGenerator.append_provider_summary_case("module Foo\nend\n", key: "gocardless")
+  end
+
+  # The row's sync status reads both maps, and its Sync button posts a key that
+  # Settings::ProvidersController#sync looks up in PANEL_SYNCABLE_TYPES.
+  test "adds the provider to the sync maps of the real providers controller" do
+    source = Rails.root.join("app/controllers/settings/providers_controller.rb").read
+    result = Provider::FamilyGenerator.append_panel_syncable_type(source, key: "gocardless", class_name: "Gocardless")
+    result = Provider::FamilyGenerator.append_family_panel_item(result, key: "gocardless")
+
+    assert_parses result
+    syncable = result[/PANEL_SYNCABLE_TYPES = \{\n(.*?)\n\s*\}\.freeze/m, 1].lines(chomp: true)
+    items = result[/def family_panel_items\n\s*\{\n(.*?)\n\s*\}\n/m, 1].lines(chomp: true)
+
+    assert_equal %("gocardless" => "GocardlessItem"), syncable.last.squish
+    assert_equal %("gocardless" => @gocardless_items), items.last.squish
+    # The arrows line up with the entry above, however long the longest key is.
+    assert_equal syncable[-2].index("=>"), syncable.last.index("=>")
+    assert_equal items[-2].index("=>"), items.last.index("=>")
+  end
+
+  test "keeps a space before the arrow when the new key is longer than the column" do
+    result = Provider::FamilyGenerator.append_panel_syncable_type(<<~RUBY, key: "gocardless_bank_data", class_name: "GocardlessBankData")
+      PANEL_SYNCABLE_TYPES = {
+        "up" => "UpItem"
+      }.freeze
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(  "up" => "UpItem",\n  "gocardless_bank_data" => "GocardlessBankDataItem"\n}.freeze)
+  end
+
   test "reserved item columns exclude family but include family_id" do
     # family is created by t.references :family as family_id, so a field named family is
     # not a collision and must not be rejected.
