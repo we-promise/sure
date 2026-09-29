@@ -1,5 +1,6 @@
 class DemoFamilyRefreshJob < ApplicationJob
   queue_as :scheduled
+  sidekiq_options retry: false
 
   def perform
     return unless Rails.application.config.app_mode.managed?
@@ -21,21 +22,23 @@ class DemoFamilyRefreshJob < ApplicationJob
       old_family_session_count = sessions_count_for(old_family, period_start:, period_end:)
       newly_created_families_count = Family.where(created_at: period_start...period_end).count
 
-      if old_family
-        anonymize_family_emails!(old_family)
+      ActiveRecord::Base.transaction do
+        if old_family
+          anonymize_family_emails!(old_family)
+        end
+
+        Demo::Generator.new.generate_default_data!(skip_clear: true, email: demo_email)
+
+        DestroyJob.perform_later(old_family) if old_family
+
+        notify_super_admins!(
+          old_family:,
+          old_family_session_count:,
+          newly_created_families_count:,
+          period_start:,
+          period_end:
+        )
       end
-
-      Demo::Generator.new.generate_default_data!(skip_clear: true, email: demo_email)
-
-      DestroyJob.perform_later(old_family) if old_family
-
-      notify_super_admins!(
-        old_family:,
-        old_family_session_count:,
-        newly_created_families_count:,
-        period_start:,
-        period_end:
-      )
     end
 
     def sessions_count_for(family, period_start:, period_end:)
