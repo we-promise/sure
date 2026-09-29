@@ -74,6 +74,7 @@ de:
         account_id: "Konto-ID: %{account_id}"
         account_type_investment: "Investment-Portfolio"
         account_type_cash: "Cash-Konto"
+        account_type_crypto: "Krypto-Konto"
       link_existing:
         description: "Alternativ kannst du das gefundene Trade-Republic-Konto mit einem bestehenden manuellen Investmentkonto verknüpfen."
         manual_account_option: "%{name} (%{balance})"
