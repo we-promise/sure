@@ -8,6 +8,7 @@ en:
         title: "Push notifications"
         requested_at: "Latest test requested at %{time}"
         result_help: "APNs acceptance does not confirm delivery to your device. Refresh to see worker results. Results are retained for 24 hours."
+        results_label: "Test results"
         device: "Device %{number}"
         pending: "Pending"
         refresh: "Refresh results"

@@ -8,6 +8,7 @@ pt-PT:
         title: "Notificações push"
         requested_at: "Último teste pedido em %{time}"
         result_help: "A aceitação pelo APNs não confirma a entrega no dispositivo. Atualize para ver os resultados do worker. Os resultados são guardados durante 24 horas."
+        results_label: "Resultados do teste"
         device: "Dispositivo %{number}"
         pending: "Pendente"
         refresh: "Atualizar resultados"

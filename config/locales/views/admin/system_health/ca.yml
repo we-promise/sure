@@ -8,6 +8,7 @@ ca:
         title: Notificacions push
         requested_at: Última prova sol·licitada el %{time}
         result_help: Que APNs l'accepti no confirma que s'hagi lliurat al dispositiu. Actualitza per veure els resultats del worker. Els resultats es conserven durant 24 hores.
+        results_label: Resultats de la prova
         device: Dispositiu %{number}
         pending: Pendent
         refresh: Actualitza els resultats
