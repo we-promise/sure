@@ -96,6 +96,12 @@ module Onchain
 
     POLKADOT = "polkadot"
 
+    # The P-Chain, where AVAX staking/delegation happens — not EVM-compatible,
+    # so it shares nothing with the EVM C-Chain definitions above and needs
+    # its own adapter/provider (Onchain::AvalanchePChainAdapter,
+    # Provider::AvalanchePChain).
+    AVALANCHE_P = "avalanche_p"
+
     BUILTIN = [
       Definition.new(
         key: BITCOIN,
@@ -136,6 +142,45 @@ module Onchain
         native: NativeAsset.new(symbol: "DOT", name: "Polkadot", decimals: 10),
         token_kind: nil,
         adapter_class_name: "Onchain::PolkadotAdapter",
+        adapter_options: {}
+      ),
+      Definition.new(
+        key: AVALANCHE_P,
+        native: NativeAsset.new(symbol: "AVAX", name: "Avalanche", decimals: 9),
+        token_kind: nil,
+        adapter_class_name: "Onchain::AvalanchePChainAdapter",
+        adapter_options: {}
+      ),
+      # A single Solana stake account, separate from the `solana` wallet
+      # chain above - see Onchain::SolanaStakeAdapter for why a delegated
+      # position can't be reached through the normal wallet balance read.
+      Definition.new(
+        key: "solana_stake",
+        native: NativeAsset.new(symbol: "SOL", name: "Solana", decimals: 9),
+        token_kind: nil,
+        adapter_class_name: "Onchain::SolanaStakeAdapter",
+        adapter_options: {}
+      ),
+      # Native POL staked with Polygon validators, separate from the
+      # `polygon` L2 wallet chain above - staking happens on Ethereum L1, see
+      # Onchain::PolygonStakeAdapter.
+      Definition.new(
+        key: "polygon_stake",
+        native: NativeAsset.new(symbol: "POL", name: "Polygon", decimals: 18),
+        token_kind: nil,
+        adapter_class_name: "Onchain::PolygonStakeAdapter",
+        adapter_options: {}
+      ),
+      # A single Ethereum beacon-chain validator (native 32-ETH staking),
+      # identified by its BLS pubkey rather than a wallet address - see
+      # Onchain::EthereumValidatorAdapter. Liquid staking tokens (stETH,
+      # rETH, etc.) need nothing new since they're already ordinary ERC-20s
+      # the `ethereum` chain above picks up automatically.
+      Definition.new(
+        key: "ethereum_validator",
+        native: NativeAsset.new(symbol: "ETH", name: "Ethereum", decimals: 18),
+        token_kind: nil,
+        adapter_class_name: "Onchain::EthereumValidatorAdapter",
         adapter_options: {}
       )
     ].freeze

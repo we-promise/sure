@@ -48,6 +48,24 @@ class Provider::SolanaRpc
     (result.is_a?(Hash) ? result["value"] : result).to_i
   end
 
+  # A single already-known account (e.g. a stake account), read via the
+  # free, keyless getAccountInfo - unlike getProgramAccounts on the Stake
+  # program (which every public RPC tested requires a paid key for), this
+  # works on the default endpoint with no authentication.
+  # @return [Hash, nil] {"owner" => program_id, "lamports" => Integer,
+  #   "program" => "stake"|"vote"|...}, or nil if the account doesn't exist.
+  def get_stake_account_info(address)
+    result = rpc("getAccountInfo", [ address, { encoding: "jsonParsed" } ])
+    value = result.is_a?(Hash) ? result["value"] : nil
+    return nil if value.nil?
+
+    {
+      "owner" => value["owner"],
+      "lamports" => value["lamports"].to_i,
+      "program" => value.dig("data", "program")
+    }
+  end
+
   # @return [Array<Hash>] { pubkey:, mint:, raw_amount:, decimals: }
   def get_token_accounts(address)
     TOKEN_PROGRAM_IDS.flat_map do |program_id|
