@@ -73,6 +73,46 @@ class DebugLogEntryTest < ActiveSupport::TestCase
     assert_equal "ok", entry.metadata["status"]
   end
 
+  test "capture redacts personal-identifier keys at any depth" do
+    entry = DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "warn",
+      message: "Provider event",
+      source: "Provider::Test",
+      metadata: {
+        iban: "DE89370400440532013000",
+        email: "person@example.com",
+        details: { account_number: "12345678" },
+        status: "ok"
+      }
+    )
+
+    assert_equal "[REDACTED]", entry.metadata["iban"]
+    assert_equal "[REDACTED]", entry.metadata["email"]
+    assert_equal "[REDACTED]", entry.metadata["details"]["account_number"]
+    assert_equal "ok", entry.metadata["status"]
+  end
+
+  test "capture redacts credential shapes embedded in string values" do
+    entry = DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "warn",
+      message: "Provider event",
+      source: "Provider::Test",
+      metadata: {
+        error_message: "401 Unauthorized for header Authorization: Bearer sk-live-secret-123",
+        response_fragment: 'server said {"access_token":"tok-abc","scope":"read"}',
+        nested: [ { note: "retry with Basic dXNlcjpwYXNz later" } ],
+        harmless: "connection timed out"
+      }
+    )
+
+    assert_equal "401 Unauthorized for header Authorization: [REDACTED]", entry.metadata["error_message"]
+    assert_equal 'server said {[REDACTED],"scope":"read"}', entry.metadata["response_fragment"]
+    assert_equal "retry with [REDACTED] later", entry.metadata["nested"][0]["note"]
+    assert_equal "connection timed out", entry.metadata["harmless"]
+  end
+
   test "capture redacts sensitive metadata keys inside nested hashes and arrays" do
     entry = DebugLogEntry.capture(
       category: "provider_sync_error",

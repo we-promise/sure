@@ -9,7 +9,15 @@ class DebugLogEntry < ApplicationRecord
   # call site wrote them — a safety net for the many capture(...) sites across provider
   # importers that this class has no direct visibility into, on top of the individual
   # sites that were audited and fixed not to pass these in the first place.
-  SENSITIVE_METADATA_KEY_PATTERN = /amount|balance|address|\bbody\b|qty|\buid\b|api_account_id|api_key|access_token|refresh_token|password|authorization|secret/i
+  SENSITIVE_METADATA_KEY_PATTERN = /amount|balance|address|\bbody\b|qty|\buid\b|api_account_id|api_key|access_token|refresh_token|password|authorization|secret|iban|account_number|email/i
+
+  # Credential shapes redacted inside string values (e.g. an error_message that
+  # embeds an Authorization header or a serialized JSON fragment) — key-based
+  # redaction alone cannot catch secrets hiding in innocuously named keys.
+  SENSITIVE_METADATA_VALUE_PATTERNS = [
+    /\b(?:Bearer|Basic)\s+[A-Za-z0-9\-._~+\/=]+/i,
+    /"[^"]*(?:#{SENSITIVE_METADATA_KEY_PATTERN.source})[^"]*"\s*(?::|=>)\s*"[^"]*"/i
+  ].freeze
 
   if encryption_ready?
     encrypts :metadata
@@ -72,6 +80,8 @@ class DebugLogEntry < ApplicationRecord
           end
         when Array
           value.map { |v| redact_sensitive(v) }
+        when String
+          SENSITIVE_METADATA_VALUE_PATTERNS.reduce(value) { |result, pattern| result.gsub(pattern, "[REDACTED]") }
         else
           value
         end
