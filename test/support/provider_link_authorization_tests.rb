@@ -142,6 +142,32 @@ module ProviderLinkAuthorizationTests
         end
       end
 
+      # The pre-lock check answers about the mapping as it was when it looked.
+      # A second request can move the link between that read and the lock, and
+      # the mutation then runs against a holder nobody authorized -- one that
+      # several providers go on to queue for deletion. Answering the early
+      # check the way a stale read would, with the DB already holding the
+      # account the user cannot write, is that interleaving without threads.
+      test "link_existing_account refuses a relink when the holder changed before the lock" do
+        holder = provider_link_member_account("read_write")
+        provider_record = provider_link_new_provider_account
+        AccountProvider.create!(account: holder, provider: provider_record)
+        target_account = provider_link_admin_account
+
+        ApplicationController.any_instance
+          .stubs(:require_relinkable_provider_account!).returns(true)
+
+        assert_no_enqueued_jobs(only: DestroyJob) do
+          assert_no_difference "AccountProvider.count" do
+            post provider_link_url(:link_url), params: provider_link_link_params(target_account, provider_record)
+          end
+        end
+
+        assert_provider_link_refused
+        assert_equal holder, provider_record.reload.account_provider.account
+        refute holder.reload.pending_deletion?
+      end
+
       { "owns" => :owner, "holds full_control on" => "full_control" }.each do |label, access|
         test "link_existing_account moves a link off an account the admin #{label}" do
           holder = access == :owner ? provider_link_admin_account : provider_link_member_account(access)

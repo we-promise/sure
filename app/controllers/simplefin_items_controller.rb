@@ -413,9 +413,7 @@ class SimplefinItemsController < ApplicationController
     return unless require_relinkable_provider_account!(simplefin_account, @account)
 
     # Relink behavior: detach any legacy link and point provider link at the chosen account
-    Account.transaction do
-      simplefin_account.lock!
-
+    relinked = relinking(simplefin_account, @account) do
       # Detach @account's EXISTING SimpleFIN link (if any) before attaching the
       # new one. This is the fraud-replacement path: user is swapping from
       # sfa_old (dead card) to sfa_new (replacement). Without this, @account
@@ -461,6 +459,7 @@ class SimplefinItemsController < ApplicationController
         end
       end
     end
+    return unless relinked
 
     if turbo_frame_request?
       # Reload the item to ensure associations are fresh
