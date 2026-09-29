@@ -7,6 +7,9 @@
       <%= form.select :date_format, Family::DATE_FORMATS, { label: t(".date_format_label")}, label: true, required: true %>
     </div>
 
+    <%= form.select :timestamp_col_label, import.csv_headers,
+                    { include_blank: t(".leave_empty"), label: t("imports.timestamps.separate_column") } %>
+
     <div class="flex items-center gap-4">
       <%= form.select :qty_col_label, import.csv_headers, { include_blank: t(".select_column"), label: t(".quantity_label") }, required: true %>
       <%= form.select :signage_convention, [[t(".buys_are_positive"), "inflows_positive"], [t(".buys_are_negative"), "inflows_negative"]], label: true, required: true %>

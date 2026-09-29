@@ -182,12 +182,12 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       # Check transactions.csv
       transactions_csv = zip.read("transactions.csv")
-      assert_equal [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ],
+      assert_equal [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency", "transacted_at" ],
                    CSV.parse(transactions_csv, headers: true).headers
 
       # Check trades.csv
       trades_csv = zip.read("trades.csv")
-      assert_equal [ "date", "account_name", "ticker", "quantity", "price", "amount", "currency" ],
+      assert_equal [ "date", "account_name", "ticker", "quantity", "price", "amount", "currency", "transacted_at" ],
                    CSV.parse(trades_csv, headers: true).headers
 
       # Check categories.csv

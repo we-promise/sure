@@ -42,6 +42,15 @@ class TradeImportTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1500"), row.signed_amount
   end
 
+  test "a blank selected trade timestamp does not fall back to the export column" do
+    @import.update!(raw_file_str: "Date,Ticker,Quantity,Price,Occurred,transacted_at\n2026-09-17,AAPL,1,10,,2026-09-17T14:48:50Z\n",
+      date_col_label: "Date", ticker_col_label: "Ticker", qty_col_label: "Quantity",
+      price_col_label: "Price", date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
+
+    @import.generate_rows_from_csv
+    assert_equal "", @import.rows.first.transacted_at
+  end
+
   test "imports trades and accounts" do
     aapl_resolver = mock
     googl_resolver = mock

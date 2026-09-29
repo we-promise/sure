@@ -940,6 +940,13 @@ class Family::DataImporter
         )
 
         entry ||= Entry.new(entryable: transaction)
+        if data.key?("transacted_at")
+          entry.transacted_at = data["transacted_at"].present? ? Entry::Timestamp.parse(data["transacted_at"]) : nil
+        end
+        restore_csv_source!(transaction, data)
+        if boolean_import_value(data, "transacted_at_locked", default: false)
+          entry.locked_attributes = entry.locked_attributes.merge("transacted_at" => Time.current.iso8601)
+        end
         entry.assign_attributes(
           account: account,
           date: Date.parse(data["date"].to_s),
@@ -1003,7 +1010,8 @@ class Family::DataImporter
           excluded: boolean_import_value(row, "excluded", default: false),
           tag_ids: mapped_tag_ids(row["tag_ids"], record_type: "Transaction"),
           tag_ids_provided: row.key?("tag_ids"),
-          kind: row["kind"]
+          kind: row["kind"],
+          csv_metadata: row.slice("csv_transacted_at", "csv_source_date")
         }
       end
     end
@@ -1026,6 +1034,7 @@ class Family::DataImporter
           merchant_id: row[:merchant_id_provided] ? row[:merchant_id] : transaction.merchant_id,
           kind: row[:kind].presence || transaction.kind
         )
+        transaction.save! if restore_csv_source!(transaction, row[:csv_metadata])
         child_entry.update!(notes: row[:notes]) if row[:notes].present?
 
         tag_ids = row[:tag_ids_provided] ? row[:tag_ids] : fallback_tag_ids
@@ -1036,6 +1045,16 @@ class Family::DataImporter
         map_source!(:transactions, row[:old_id], transaction) if row[:old_id].present?
         @created_entries << child_entry
       end
+    end
+
+    def restore_csv_source!(transaction, data)
+      return false if data["csv_transacted_at"].blank?
+
+      source_timestamp = Entry::Timestamp.parse(data["csv_transacted_at"])
+      source = { "transacted_at" => source_timestamp.utc.iso8601(6) }
+      source["date"] = Date.iso8601(data["csv_source_date"]).iso8601 if data["csv_source_date"].present?
+      transaction.extra = transaction.extra.deep_merge("csv" => source)
+      true
     end
 
     def import_transfers(records)
@@ -1150,6 +1169,9 @@ class Family::DataImporter
         )
 
         entry ||= Entry.new(entryable: trade)
+        if data.key?("transacted_at")
+          entry.transacted_at = data["transacted_at"].present? ? Entry::Timestamp.parse(data["transacted_at"]) : nil
+        end
         entry.assign_attributes(
           account: account,
           date: Date.parse(data["date"].to_s),

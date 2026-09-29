@@ -249,6 +249,22 @@ en:
         hint_html: Upload the <strong>all.ndjson</strong> file from your data export ZIP
         ndjson_invalid: Must be valid NDJSON with at least one record
   imports:
+    timestamps:
+      iso8601: ISO 8601 date and time with timezone
+      auto: Detect automatically
+      detected: One supported date/time format matches all nonblank values. Automatic detection will use this format; you can also select a format manually.
+      ambiguous: The date/time format is ambiguous. Select the correct format using the previews, or convert your CSV to a supported format. Two-digit years require confirmation.
+      unsupported: No single supported format matches all values. Select a format and correct invalid rows, or convert your CSV to a supported format and upload it again.
+      column: Transaction timestamp
+      separate_column: Separate transaction timestamp column (optional)
+      separate_hint: Use only when the file has both an accounting date and an ISO 8601 timestamp with a timezone. The explicit accounting date will be preserved.
+      date_basis: Accounting date for timestamps
+      source_date: Keep the date written in the file
+      local_date: "Use my Sure timezone (%{timezone})"
+      preview: "First value: accounting date %{date}; transaction time %{time}."
+      unknown: not supplied
+      invalid_preview: The first value does not match the selected format. Select another format or correct the input data.
+      ambiguous_match: "Row %{row}: several transactions could match this timestamp. Review the existing date-only transactions before re-importing."
     mapping_labels:
       account_type: "Account Type"
       account: "Account"

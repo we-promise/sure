@@ -81,7 +81,7 @@ class Family::DataExporter
 
     def generate_transactions_csv
       CSV.generate do |csv|
-        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ]
+        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency", "transacted_at" ]
 
         # Only export transactions from accounts belonging to this family
         # Exclude split parents (export children instead)
@@ -96,7 +96,8 @@ class Family::DataExporter
               transaction.category&.name,
               transaction.tags.map { |tag| escape_legacy_tag_name(tag.name) }.join(","),
               transaction.entry.notes,
-              transaction.entry.currency
+              transaction.entry.currency,
+              transaction.entry.transacted_at&.utc&.iso8601(6)
             ]
           end
       end
@@ -108,7 +109,7 @@ class Family::DataExporter
 
     def generate_trades_csv
       CSV.generate do |csv|
-        csv << [ "date", "account_name", "ticker", "quantity", "price", "amount", "currency" ]
+        csv << [ "date", "account_name", "ticker", "quantity", "price", "amount", "currency", "transacted_at" ]
 
         # Only export trades from accounts belonging to this family
         @family.trades
@@ -121,7 +122,8 @@ class Family::DataExporter
               trade.qty.to_s,
               trade.price.to_s,
               trade.entry.amount.to_s,
-              trade.currency
+              trade.currency,
+              trade.entry.transacted_at&.utc&.iso8601(6)
             ]
           end
       end
@@ -401,6 +403,10 @@ class Family::DataExporter
           entry_id: transaction.entry.id,
           account_id: transaction.entry.account_id,
           date: transaction.entry.date,
+          transacted_at: transaction.entry.transacted_at&.utc&.iso8601(6),
+          transacted_at_locked: transaction.entry.locked?(:transacted_at),
+          csv_transacted_at: transaction.extra.dig("csv", "transacted_at"),
+          csv_source_date: transaction.extra.dig("csv", "date"),
           amount: transaction.entry.amount,
           currency: transaction.entry.currency,
           name: transaction.entry.name,
@@ -464,6 +470,7 @@ class Family::DataExporter
             security_name: trade.security.name,
             exchange_operating_mic: trade.security.exchange_operating_mic,
             date: trade.entry.date,
+            transacted_at: trade.entry.transacted_at&.utc&.iso8601(6),
             qty: trade.qty,
             price: trade.price,
             amount: trade.entry.amount,
@@ -572,6 +579,8 @@ class Family::DataExporter
           name: child_entry.name,
           notes: child_entry.notes,
           excluded: child_entry.excluded,
+          csv_transacted_at: transaction.extra.dig("csv", "transacted_at"),
+          csv_source_date: transaction.extra.dig("csv", "date"),
           category_id: transaction.category_id,
           merchant_id: transaction.merchant_id,
           tag_ids: transaction.tag_ids,

@@ -25,6 +25,7 @@ class TradeImport < Import
           entry: Entry.new(
             account: mapped_account,
             date: row.date_iso,
+            transacted_at: row.transacted_at_time,
             amount: row.signed_amount,
             name: row.name,
             currency: row.currency.presence || mapped_account.currency,
@@ -50,6 +51,7 @@ class TradeImport < Import
 
   def column_keys
     base = %i[date ticker exchange_operating_mic currency qty price name]
+    base.insert(1, :transacted_at) if timestamp_col_label.present?
     base.unshift(:account) if account.nil?
     base
   end

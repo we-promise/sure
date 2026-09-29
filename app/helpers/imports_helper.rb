@@ -11,6 +11,7 @@ module ImportsHelper
   def import_col_label(key)
     {
       date: I18n.t("imports.column_labels.date"),
+      transacted_at: I18n.t("imports.timestamps.column"),
       amount: I18n.t("imports.column_labels.amount"),
       name: I18n.t("imports.column_labels.name"),
       currency: I18n.t("imports.column_labels.currency"),
@@ -55,6 +56,23 @@ module ImportsHelper
 
   def import_verification_view(import)
     ImportVerificationView.new(import.verification_payload)
+  end
+
+  def import_date_format_options(import)
+    previews = import.valid_date_formats_with_preview.index_by { |preview| preview[:format] }
+    [ [ t("imports.timestamps.auto"), "auto" ] ] + import.date_format_options.map do |label, format|
+      preview = previews[format]
+      [ preview ? "#{label} (#{preview[:preview]})" : label, format ]
+    end
+  end
+
+  def import_timestamp_preview(import)
+    parsed = import.date_preview
+    return unless parsed
+    time = parsed.timestamp&.in_time_zone(import.timestamp_timezone)&.iso8601
+    t("imports.timestamps.preview", date: parsed.date.iso8601, time: time || t("imports.timestamps.unknown"))
+  rescue ArgumentError
+    t("imports.timestamps.invalid_preview")
   end
 
   def permitted_import_configuration_path(import)
