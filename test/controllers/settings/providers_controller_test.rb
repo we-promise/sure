@@ -219,9 +219,9 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
   # Saves and errors from a row or the drawer re-render the panel by replacing
   # "<turbo_id>-providers-panel", and EnableBankingItem::SyncCompleteEvent does
-  # the same when a sync finishes. SimpleFIN and SnapTrade never stream to it.
+  # the same when a sync finishes. SnapTrade never streams to it.
   test "every streamed panel renders the root its streams replace" do
-    Settings::ProvidersController::FAMILY_PANELS.reject { |panel| %w[simplefin snaptrade].include?(panel[:key]) }.each do |panel|
+    Settings::ProvidersController::FAMILY_PANELS.reject { |panel| panel[:key] == "snaptrade" }.each do |panel|
       get connect_form_settings_providers_url(provider_key: panel[:key])
 
       assert_response :success

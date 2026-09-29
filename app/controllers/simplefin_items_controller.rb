@@ -71,20 +71,7 @@ class SimplefinItemsController < ApplicationController
         item_name: "SimpleFIN Connection"
       )
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @simplefin_items = Current.family.simplefin_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "simplefin-providers-panel",
-            partial: "settings/providers/simplefin_panel",
-            locals: { simplefin_items: @simplefin_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token)
     rescue Provider::Simplefin::SimplefinError => e
@@ -547,14 +534,11 @@ class SimplefinItemsController < ApplicationController
       end
       @error_message = message
 
-      if turbo_frame_request?
-        # Re-render the SimpleFIN providers panel in place to avoid "Content missing"
-        @simplefin_items = Current.family.simplefin_items.ordered
-        render turbo_stream: turbo_stream.replace(
-          "simplefin-providers-panel",
-          partial: "settings/providers/simplefin_panel",
-          locals: { simplefin_items: @simplefin_items }
-        ), status: :unprocessable_entity
+      # The Bank sync panel and the new-connection modal send the same Turbo
+      # request, so the panel marks its form. The modals render their template,
+      # which the edit modal's frame picks out of the response.
+      if params[:source] == "panel"
+        render_provider_panel("simplefin", alert: message)
       else
         render context, status: :unprocessable_entity
       end
