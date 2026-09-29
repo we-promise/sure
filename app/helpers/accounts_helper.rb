@@ -36,7 +36,7 @@ module AccountsHelper
       end
 
     [
-      family.build_cache_key("account_sidebar_tabs_v3", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v4", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
       active_tab,
@@ -49,5 +49,30 @@ module AccountsHelper
       # would not otherwise reflect the change).
       Current.user&.always_expanded_account_groups&.sort
     ]
+  end
+
+  # Data version for the sidebar's sparkline frames. It is built from the same
+  # inputs as the sparkline ETags (latest sync + account updates), so it moves
+  # exactly when a sparkline could change. Computed once per sidebar render.
+  def sidebar_sparkline_version(family)
+    key = family.build_cache_key("sidebar_sparklines_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
+    Digest::SHA256.hexdigest(key).first(12)
+  end
+
+  # DOM id for a sparkline frame in the sidebar. The sidebar renders each group
+  # and account up to four times (All tab + type tab, desktop + mobile), so the
+  # id carries the placement to stay unique. The frames are
+  # data-turbo-permanent: a loaded sparkline survives Turbo navigations while
+  # its id is unchanged, and the data version in the id makes a sync render new
+  # frames that load fresh.
+  def sidebar_sparkline_frame_id(base_id, all_tab:, mobile:, version:)
+    [ ("mobile" if mobile), (all_tab ? "all" : "tab"), base_id, version ].compact.join("_")
+  end
+
+  # Frame id for a sparkline response: echoes the requesting frame's id so
+  # Turbo can match it, falling back to the base id for direct requests.
+  def sparkline_response_frame_id(base_id)
+    requested = turbo_frame_request_id.to_s
+    requested.match?(/\A[\w-]+\z/) && requested.include?(base_id) ? requested : base_id
   end
 end

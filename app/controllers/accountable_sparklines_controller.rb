@@ -1,11 +1,16 @@
 class AccountableSparklinesController < ApplicationController
+  # Sparkline frames load lazily from the sidebar on every page and render no
+  # layout: skip layout-only setup and never start an auto-sync from them.
+  skip_before_action :sync_family, :set_default_chat, :restore_active_tabs, :detect_os
+
   def show
     @accountable = Accountable.from_type(params[:accountable_type]&.classify)
 
     etag_key = cache_key
 
     # Use HTTP conditional GET so the client receives 304 Not Modified when possible.
-    if stale?(etag: etag_key, last_modified: family.latest_sync_completed_at)
+    # The frame id is part of the response body, so it is part of the ETag.
+    if stale?(etag: [ etag_key, turbo_frame_request_id ], last_modified: family.latest_sync_completed_at)
       @series = Rails.cache.fetch(etag_key, expires_in: 24.hours) do
         build_series
       end

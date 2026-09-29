@@ -5,6 +5,10 @@ export default class extends Controller {
   static values = { timeout: { type: Number, default: 10000 } }
 
   connect() {
+    // A data-turbo-permanent frame reconnects on every Turbo visit; once it has
+    // loaded there is nothing left to time out.
+    if (this.element.hasAttribute("complete")) return
+
     this.timeoutId = setTimeout(() => {
       this.handleTimeout()
     }, this.timeoutValue)

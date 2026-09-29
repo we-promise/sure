@@ -10,6 +10,23 @@ class AccountableSparklinesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show does not trigger auto-sync" do
+    Sync.destroy_all
+    Family.any_instance.expects(:sync_later).never
+
+    get accountable_sparkline_url("depository")
+
+    assert_response :success
+  end
+
+  test "show echoes the requesting sidebar frame id" do
+    get accountable_sparkline_url("depository"), headers: { "Turbo-Frame" => "mobile_tab_depository_sparkline_abc123" }
+
+    assert_response :success
+    assert_select "turbo-frame#mobile_tab_depository_sparkline_abc123", count: 1
+    assert_select "#mobile_tab_depository_sparkline_abc123_chart", count: 1
+  end
+
   test "show renders an empty series without a trend" do
     empty_series = Series.new(
       start_date: 1.day.ago.to_date,

@@ -1,4 +1,4 @@
-<%# locals: (account_group:, mobile: false, all_tab: false, open: nil, **args) %>
+<%# locals: (account_group:, sparkline_version:, mobile: false, all_tab: false, open: nil, **args) %>
 
 <div id="<%= account_group.dom_id(tab: all_tab ? :all : nil, mobile: mobile) %>" data-group-key="<%= account_group.key %>">
   <% is_open = open.nil? ? (account_group.accounts.any? { |account| page_active?(account_path(account)) } || Current.user.always_expanded_account_group?(account_group.key)) : open %>
@@ -13,7 +13,9 @@
 
       <div class="ml-auto text-right grow">
         <%= tag.p format_money(account_group.total_money), class: "text-sm font-medium text-primary privacy-sensitive" %>
-        <%= turbo_frame_tag "#{account_group.key}_sparkline", src: accountable_sparkline_path(account_group.key), loading: "lazy", data: { controller: "turbo-frame-timeout", turbo_frame_timeout_timeout_value: 10000 } do %>
+        <%= turbo_frame_tag sidebar_sparkline_frame_id("#{account_group.key}_sparkline", all_tab: all_tab, mobile: mobile, version: sparkline_version),
+                            src: accountable_sparkline_path(account_group.key), loading: "lazy",
+                            data: { turbo_permanent: true, controller: "turbo-frame-timeout permanent-frame", turbo_frame_timeout_timeout_value: 10000 } do %>
           <div class="flex items-center w-8 h-4 ml-auto">
             <div class="w-6 h-px bg-loader"></div>
           </div>
@@ -44,7 +46,9 @@
 
           <div class="ml-auto text-right grow h-10">
             <%= tag.p format_money(account.balance_money), class: "text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
-            <%= turbo_frame_tag dom_id(account, :sparkline), src: sparkline_account_path(account), loading: "lazy", data: { controller: "turbo-frame-timeout", turbo_frame_timeout_timeout_value: 10000 } do %>
+            <%= turbo_frame_tag sidebar_sparkline_frame_id(dom_id(account, :sparkline), all_tab: all_tab, mobile: mobile, version: sparkline_version),
+                                src: sparkline_account_path(account), loading: "lazy",
+                                data: { turbo_permanent: true, controller: "turbo-frame-timeout permanent-frame", turbo_frame_timeout_timeout_value: 10000 } do %>
               <div class="flex items-center w-8 h-4 ml-auto">
                 <div class="w-6 h-px bg-loader"></div>
               </div>
