@@ -14,8 +14,11 @@ class TradeRepublicAccount::Processor
       total_balance = update_account_balance!
       TradeRepublicAccount::HoldingsProcessor.new(trade_republic_account, exchange_securities: exchange_securities).process
       TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account, exchange_securities: exchange_securities).process
-      
-      account.set_current_balance(total_balance)
+
+      # TradeRepublicItem#schedule_account_syncs syncs the account once every
+      # Trade Republic account has been processed. A sync started here would
+      # run before the other accounts book their settlements, and then again.
+      account.set_current_balance(total_balance, schedule_sync: false)
     end
 
     account.broadcast_sync_complete
@@ -28,7 +31,7 @@ class TradeRepublicAccount::Processor
     end
 
     def update_account_balance!
-      total_balance = trade_republic_account.current_balance || 0
+      total_balance = trade_republic_account.account_balance || 0
       cash_balance = trade_republic_account.cash_balance || 0
 
       account.assign_attributes(

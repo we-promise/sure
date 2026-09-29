@@ -204,6 +204,41 @@
   --shadow-lg: 0px 12px 16px -4px --alpha(var(--color-black) / 6%);
   --shadow-xl: 0px 20px 24px -4px --alpha(var(--color-black) / 6%);
   --animate-stroke-fill: stroke-fill 3s 300ms forwards;
+  --utility-bg-inverse: var(--color-gray-800);
+  --utility-bg-inverse-hover: var(--color-gray-700);
+  --utility-bg-subdued: var(--color-gray-400);
+  --utility-bg-overlay: --alpha(var(--color-gray-100) / 50%);
+  --utility-text-primary: var(--color-gray-900);
+  --utility-text-inverse: var(--color-white);
+  --utility-text-secondary: var(--color-gray-500);
+  --utility-text-subdued: var(--color-gray-400);
+  --utility-shadow-border-xs: var(--shadow-xs), 0px 0px 0px 1px var(--color-alpha-black-50);
+  --utility-shadow-border-sm: var(--shadow-sm), 0px 0px 0px 1px var(--color-alpha-black-50);
+  --utility-shadow-border-md: var(--shadow-md), 0px 0px 0px 1px var(--color-alpha-black-50);
+  --utility-shadow-border-lg: var(--shadow-lg), 0px 0px 0px 1px var(--color-alpha-black-50);
+  --utility-shadow-border-xl: var(--shadow-xl), 0px 0px 0px 1px var(--color-alpha-black-50);
+  --utility-border-primary: var(--color-alpha-black-300);
+  --utility-border-secondary: var(--color-alpha-black-200);
+  --utility-border-subdued: var(--color-alpha-black-50);
+  --utility-border-solid: var(--color-black);
+  --utility-border-destructive: var(--color-red-500);
+  --utility-border-inverse: var(--color-alpha-white-200);
+  --utility-divide-subdued: var(--color-alpha-black-50);
+  --utility-button-bg-primary: var(--color-gray-900);
+  --utility-button-bg-primary-hover: var(--color-gray-800);
+  --utility-button-bg-secondary: var(--color-gray-50);
+  --utility-button-bg-secondary-hover: var(--color-gray-100);
+  --utility-button-bg-secondary-strong: var(--color-gray-200);
+  --utility-button-bg-secondary-strong-hover: var(--color-gray-300);
+  --utility-button-bg-disabled: var(--color-gray-50);
+  --utility-button-bg-destructive: var(--color-red-600);
+  --utility-button-bg-destructive-hover: var(--color-red-700);
+  --utility-button-bg-outline-hover: var(--color-gray-100);
+  --utility-button-bg-accent: var(--color-blue-tint-5);
+  --utility-button-bg-accent-hover: var(--color-blue-tint-10);
+  --utility-tab-item-active: var(--color-white);
+  --utility-tab-item-hover: var(--color-gray-200);
+  --utility-tab-bg-group: var(--color-gray-50);
 
   @keyframes stroke-fill {
     0% { stroke-dashoffset: 43.9822971503; }
@@ -239,39 +274,62 @@
     --shadow-md: 0px 4px 8px -2px --alpha(var(--color-white) / 8%);
     --shadow-lg: 0px 12px 16px -4px --alpha(var(--color-white) / 8%);
     --shadow-xl: 0px 20px 24px -4px --alpha(var(--color-white) / 8%);
+    --utility-bg-inverse: var(--color-white);
+    --utility-bg-inverse-hover: var(--color-gray-100);
+    --utility-bg-subdued: var(--color-gray-400);
+    --utility-bg-overlay: var(--color-alpha-black-900);
+    --utility-text-primary: var(--color-white);
+    --utility-text-inverse: var(--color-gray-900);
+    --utility-text-secondary: var(--color-gray-300);
+    --utility-text-subdued: var(--color-gray-400);
+    --utility-shadow-border-xs: var(--shadow-xs), 0px 0px 0px 1px var(--color-alpha-white-50);
+    --utility-shadow-border-sm: var(--shadow-sm), 0px 0px 0px 1px var(--color-alpha-white-50);
+    --utility-shadow-border-md: var(--shadow-md), 0px 0px 0px 1px var(--color-alpha-white-50);
+    --utility-shadow-border-lg: var(--shadow-lg), 0px 0px 0px 1px var(--color-alpha-white-50);
+    --utility-shadow-border-xl: var(--shadow-xl), 0px 0px 0px 1px var(--color-alpha-white-50);
+    --utility-border-primary: var(--color-alpha-white-500);
+    --utility-border-secondary: var(--color-alpha-white-400);
+    --utility-border-subdued: var(--color-alpha-white-200);
+    --utility-border-solid: var(--color-white);
+    --utility-border-destructive: var(--color-red-400);
+    --utility-border-inverse: var(--color-alpha-black-300);
+    --utility-divide-subdued: var(--color-alpha-white-200);
+    --utility-button-bg-primary: var(--color-white);
+    --utility-button-bg-primary-hover: var(--color-gray-50);
+    --utility-button-bg-secondary: var(--color-gray-700);
+    --utility-button-bg-secondary-hover: var(--color-gray-600);
+    --utility-button-bg-secondary-strong: var(--color-gray-700);
+    --utility-button-bg-secondary-strong-hover: var(--color-gray-600);
+    --utility-button-bg-disabled: var(--color-gray-700);
+    --utility-button-bg-destructive: var(--color-red-400);
+    --utility-button-bg-destructive-hover: var(--color-red-500);
+    --utility-button-bg-outline-hover: var(--color-gray-700);
+    --utility-button-bg-accent: var(--color-blue-tint-5);
+    --utility-button-bg-accent-hover: var(--color-blue-tint-10);
+    --utility-tab-item-active: var(--color-gray-700);
+    --utility-tab-item-hover: var(--color-gray-800);
+    --utility-tab-bg-group: var(--color-alpha-black-700);
   }
 }
 
 @utility bg-inverse {
   @apply bg-gray-800;
-
-  @variant theme-dark {
-    @apply bg-white;
-  }
+  @apply bg-(--utility-bg-inverse);
 }
 
 @utility bg-inverse-hover {
   @apply bg-gray-700;
-
-  @variant theme-dark {
-    @apply bg-gray-100;
-  }
+  @apply bg-(--utility-bg-inverse-hover);
 }
 
 @utility bg-subdued {
   @apply bg-gray-400;
-
-  @variant theme-dark {
-    @apply bg-gray-400;
-  }
+  @apply bg-(--utility-bg-subdued);
 }
 
 @utility bg-overlay {
   background-color: --alpha(var(--color-gray-100) / 50%);
-
-  @variant theme-dark {
-    background-color: var(--color-alpha-black-900);
-  }
+  background-color: var(--utility-bg-overlay);
 }
 
 @utility bg-loader {
@@ -280,90 +338,57 @@
 
 @utility text-primary {
   @apply text-gray-900;
-
-  @variant theme-dark {
-    @apply text-white;
-  }
+  @apply text-(--utility-text-primary);
 }
 
 @utility text-inverse {
   @apply text-white;
-
-  @variant theme-dark {
-    @apply text-gray-900;
-  }
+  @apply text-(--utility-text-inverse);
 }
 
 @utility text-secondary {
   @apply text-gray-500;
-
-  @variant theme-dark {
-    @apply text-gray-300;
-  }
+  @apply text-(--utility-text-secondary);
 }
 
 @utility text-subdued {
   @apply text-gray-400;
-
-  @variant theme-dark {
-    @apply text-gray-400;
-  }
+  @apply text-(--utility-text-subdued);
 }
 
 @utility shadow-border-xs {
   box-shadow: var(--shadow-xs), 0px 0px 0px 1px var(--color-alpha-black-50);
-
-  @variant theme-dark {
-    box-shadow: var(--shadow-xs), 0px 0px 0px 1px var(--color-alpha-white-50);
-  }
+  box-shadow: var(--utility-shadow-border-xs);
 }
 
 @utility shadow-border-sm {
   box-shadow: var(--shadow-sm), 0px 0px 0px 1px var(--color-alpha-black-50);
-
-  @variant theme-dark {
-    box-shadow: var(--shadow-sm), 0px 0px 0px 1px var(--color-alpha-white-50);
-  }
+  box-shadow: var(--utility-shadow-border-sm);
 }
 
 @utility shadow-border-md {
   box-shadow: var(--shadow-md), 0px 0px 0px 1px var(--color-alpha-black-50);
-
-  @variant theme-dark {
-    box-shadow: var(--shadow-md), 0px 0px 0px 1px var(--color-alpha-white-50);
-  }
+  box-shadow: var(--utility-shadow-border-md);
 }
 
 @utility shadow-border-lg {
   box-shadow: var(--shadow-lg), 0px 0px 0px 1px var(--color-alpha-black-50);
-
-  @variant theme-dark {
-    box-shadow: var(--shadow-lg), 0px 0px 0px 1px var(--color-alpha-white-50);
-  }
+  box-shadow: var(--utility-shadow-border-lg);
 }
 
 @utility shadow-border-xl {
   box-shadow: var(--shadow-xl), 0px 0px 0px 1px var(--color-alpha-black-50);
-
-  @variant theme-dark {
-    box-shadow: var(--shadow-xl), 0px 0px 0px 1px var(--color-alpha-white-50);
-  }
+  box-shadow: var(--utility-shadow-border-xl);
 }
 
 @utility border-primary {
   @apply border-alpha-black-300;
-
-  @variant theme-dark {
-    @apply border-alpha-white-500;
-  }
+  @apply border-(--utility-border-primary);
 }
 
 @utility border-secondary {
   @apply border-alpha-black-200;
-
-  @variant theme-dark {
-    @apply border-alpha-white-400;
-  }
+  @apply border-(--utility-border-secondary);
 }
 
 @utility border-divider {
@@ -372,114 +397,72 @@
 
 @utility border-subdued {
   @apply border-alpha-black-50;
-
-  @variant theme-dark {
-    @apply border-alpha-white-200;
-  }
+  @apply border-(--utility-border-subdued);
 }
 
 @utility border-solid {
   @apply border-black;
-
-  @variant theme-dark {
-    @apply border-white;
-  }
+  @apply border-(--utility-border-solid);
 }
 
 @utility border-destructive {
   @apply border-red-500;
-
-  @variant theme-dark {
-    @apply border-red-400;
-  }
+  @apply border-(--utility-border-destructive);
 }
 
 @utility border-inverse {
   @apply border-alpha-white-200;
-
-  @variant theme-dark {
-    @apply border-alpha-black-300;
-  }
+  @apply border-(--utility-border-inverse);
 }
 
 @utility divide-subdued {
   @apply divide-alpha-black-50;
-
-  @variant theme-dark {
-    @apply divide-alpha-white-200;
-  }
+  @apply divide-(--utility-divide-subdued);
 }
 
 @utility button-bg-primary {
   @apply bg-gray-900;
-
-  @variant theme-dark {
-    @apply bg-white;
-  }
+  @apply bg-(--utility-button-bg-primary);
 }
 
 @utility button-bg-primary-hover {
   @apply bg-gray-800;
-
-  @variant theme-dark {
-    @apply bg-gray-50;
-  }
+  @apply bg-(--utility-button-bg-primary-hover);
 }
 
 @utility button-bg-secondary {
   @apply bg-gray-50;
-
-  @variant theme-dark {
-    @apply bg-gray-700;
-  }
+  @apply bg-(--utility-button-bg-secondary);
 }
 
 @utility button-bg-secondary-hover {
   @apply bg-gray-100;
-
-  @variant theme-dark {
-    @apply bg-gray-600;
-  }
+  @apply bg-(--utility-button-bg-secondary-hover);
 }
 
 @utility button-bg-secondary-strong {
   @apply bg-gray-200;
-
-  @variant theme-dark {
-    @apply bg-gray-700;
-  }
+  @apply bg-(--utility-button-bg-secondary-strong);
 }
 
 @utility button-bg-secondary-strong-hover {
   @apply bg-gray-300;
-
-  @variant theme-dark {
-    @apply bg-gray-600;
-  }
+  @apply bg-(--utility-button-bg-secondary-strong-hover);
 }
 
 @utility button-bg-disabled {
   @apply bg-gray-50;
-
-  @variant theme-dark {
-    @apply bg-gray-700;
-  }
+  @apply bg-(--utility-button-bg-disabled);
 }
 
 @utility button-bg-destructive {
   @apply bg-red-600;
-
-  @variant theme-dark {
-    @apply bg-red-400;
-  }
+  @apply bg-(--utility-button-bg-destructive);
 }
 
 @utility button-bg-destructive-hover {
   @apply bg-red-700;
-
-  @variant theme-dark {
-    @apply bg-red-500;
-  }
+  @apply bg-(--utility-button-bg-destructive-hover);
 }
 
 @utility button-bg-ghost-hover {
@@ -492,48 +475,30 @@
 
 @utility button-bg-outline-hover {
   @apply bg-gray-100;
-
-  @variant theme-dark {
-    @apply bg-gray-700;
-  }
+  @apply bg-(--utility-button-bg-outline-hover);
 }
 
 @utility button-bg-accent {
   @apply bg-blue-tint-5;
-
-  @variant theme-dark {
-    @apply bg-blue-tint-5;
-  }
+  @apply bg-(--utility-button-bg-accent);
 }
 
 @utility button-bg-accent-hover {
   @apply bg-blue-tint-10;
-
-  @variant theme-dark {
-    @apply bg-blue-tint-10;
-  }
+  @apply bg-(--utility-button-bg-accent-hover);
 }
 
 @utility tab-item-active {
   @apply bg-white;
-
-  @variant theme-dark {
-    @apply bg-gray-700;
-  }
+  @apply bg-(--utility-tab-item-active);
 }
 
 @utility tab-item-hover {
   @apply bg-gray-200;
-
-  @variant theme-dark {
-    @apply bg-gray-800;
-  }
+  @apply bg-(--utility-tab-item-hover);
 }
 
 @utility tab-bg-group {
   @apply bg-gray-50;
-
-  @variant theme-dark {
-    @apply bg-alpha-black-700;
-  }
+  @apply bg-(--utility-tab-bg-group);
 }

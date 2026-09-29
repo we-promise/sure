@@ -72,6 +72,31 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
     DemoFamilyRefreshJob.perform_now
   end
 
+  test "does not retry after a failed refresh" do
+    assert_equal false, DemoFamilyRefreshJob.sidekiq_options_hash["retry"]
+  end
+
+  test "rolls back generated demo data when refresh fails" do
+    failing_generator = Class.new do
+      def generate_default_data!(skip_clear:, email:)
+        Family.create!(name: "Partial Demo Family")
+        raise ActiveRecord::RecordInvalid.new(Family.new)
+      end
+    end.new
+
+    Demo::Generator.expects(:new).returns(failing_generator)
+
+    assert_no_difference -> { Family.where(name: "Partial Demo Family").count } do
+      assert_no_enqueued_jobs do
+        assert_raises(ActiveRecord::RecordInvalid) do
+          DemoFamilyRefreshJob.perform_now
+        end
+      end
+    end
+
+    assert_equal @demo_email, @demo_user.reload.email
+  end
+
   test "skips refresh when another worker holds the advisory lock" do
     connection = ActiveRecord::Base.connection
     connection.expects(:select_value).with(regexp_matches(/pg_try_advisory_lock/)).returns(false)
