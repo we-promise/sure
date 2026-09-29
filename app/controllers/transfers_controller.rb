@@ -87,7 +87,7 @@ class TransfersController < ApplicationController
   end
 
   def update
-    return reject_transfer if transfer_update_params[:status] == "rejected"
+    return reject_transfer if rejecting?
 
     outflow_account = @transfer.outflow_transaction.entry.account
     return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
@@ -193,17 +193,34 @@ class TransfersController < ApplicationController
     def set_transfer
       # Finds the transfer and ensures the user has access to it. Unlinking
       # (reject/destroy) only needs access to one side, so a user can undo a
-      # match against an account that is not shared with them.
+      # match against an account that is not shared with them. Any other
+      # update edits both entries, so it needs access to both sides.
       accessible_transaction_ids = Current.family.transactions
         .joins(entry: :account)
         .merge(Account.accessible_by(Current.user))
         .select(:id)
 
       scope = Transfer.where(id: params[:id])
-      accessible = scope.where(inflow_transaction_id: accessible_transaction_ids)
-      accessible = accessible.or(scope.where(outflow_transaction_id: accessible_transaction_ids)) if action_name.in?(%w[update destroy])
+      inflow_accessible = scope.where(inflow_transaction_id: accessible_transaction_ids)
+      outflow_accessible = scope.where(outflow_transaction_id: accessible_transaction_ids)
+
+      accessible = if unlinking?
+        inflow_accessible.or(outflow_accessible)
+      elsif action_name == "update"
+        inflow_accessible.where(outflow_transaction_id: accessible_transaction_ids)
+      else
+        inflow_accessible
+      end
 
       @transfer = accessible.first!
+    end
+
+    def rejecting?
+      params.dig(:transfer, :status) == "rejected"
+    end
+
+    def unlinking?
+      action_name == "destroy" || (action_name == "update" && rejecting?)
     end
 
     def reject_transfer

@@ -723,14 +723,26 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_not Transaction.exists?(fee.id)
   end
 
-  test "cannot edit a match without write access to the outflow account" do
+  test "cannot edit a match when only the inflow account is accessible" do
     transfer = cross_owner_transfer(outflow_account: member_loan, inflow_account: accounts(:depository))
 
     patch transfer_url(transfer), params: { transfer: { status: "confirmed", notes: "Nope" } }
 
-    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert_response :not_found
     assert transfer.reload.pending?
     assert_nil transfer.notes
+  end
+
+  test "cannot edit a match when only the outflow account is accessible" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+    inflow_amount = transfer.inflow_transaction.entry.amount
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed", amount: transfer.amount + 10, notes: "Nope" } }
+
+    assert_response :not_found
+    assert transfer.reload.pending?
+    assert_nil transfer.notes
+    assert_equal inflow_amount, transfer.inflow_transaction.entry.reload.amount
   end
 
   test "cannot reject a match when neither side is accessible" do
