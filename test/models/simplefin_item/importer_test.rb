@@ -119,19 +119,24 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert_equal 1_000, depository.cash_balance
   end
 
-  # The count reads every provider's flag, as the stale exclusion that runs
-  # just before it does (Entry.stale_pending), so a stale Lunch Flow entry is
-  # counted rather than excluded by one step and ignored by the next.
-  test "stale unmatched tracking handles malformed flags and reads every provider" do
+  # Both steps read every provider's flag and decide "pending" the same way, so
+  # the sync must count for review before it excludes: run through their one
+  # caller and the stale Lunch Flow entry is reported and then excluded, rather
+  # than excluded by the first step and invisible to the second. Swap the two
+  # calls and stale_unmatched_pending goes to nil here.
+  test "stale pending review counts every provider's flag before the exclusion hides it" do
     account = @family.accounts.create!(name: "Stale pending", balance: 0, currency: "USD", accountable: Depository.new)
     create_pending_entry(account, "simplefin_maybe", "simplefin", "maybe", 10)
     create_pending_entry(account, "simplefin_false", "simplefin", "off", 11)
     create_pending_entry(account, "lunchflow_pending", "lunchflow", true, 12)
 
-    @importer.send(:track_stale_unmatched_pending, account)
+    @importer.send(:review_and_exclude_stale_pending, account)
 
-    assert_equal 2, @importer.send(:stats)["stale_unmatched_pending"]
-    assert_empty @importer.send(:stats).fetch("reconciliation_errors", [])
+    stats = @importer.send(:stats)
+    assert_equal 2, stats["stale_unmatched_pending"]
+    assert_equal 2, stats["stale_pending_excluded"]
+    assert_empty stats.fetch("reconciliation_errors", [])
+    assert_equal [ "simplefin_false" ], account.entries.where(excluded: false).pluck(:name)
   end
 
   private
