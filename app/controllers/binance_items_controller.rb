@@ -168,8 +168,7 @@ class BinanceItemsController < ApplicationController
       end
     end
 
-    Account.transaction do
-      binance_account.lock!
+    relinked = relinking(binance_account, @account) do
       ap = AccountProvider.find_or_initialize_by(provider: binance_account)
       previous_account = ap.account
       ap.account_id = @account.id
@@ -181,6 +180,7 @@ class BinanceItemsController < ApplicationController
         Rails.logger.info("Binance: re-linked BinanceAccount #{binance_account.id} from account ##{previous_account.id} to ##{@account.id}")
       end
     end
+    return unless relinked
 
     if turbo_frame_request?
       item = binance_account.binance_item.reload

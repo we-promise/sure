@@ -172,9 +172,7 @@ class CoinbaseItemsController < ApplicationController
     end
 
     # Relink behavior: detach any existing link and point provider link at the chosen account
-    Account.transaction do
-      coinbase_account.lock!
-
+    relinked = relinking(coinbase_account, @account) do
       # Upsert the AccountProvider mapping
       ap = AccountProvider.find_or_initialize_by(provider: coinbase_account)
       previous_account = ap.account
@@ -194,6 +192,7 @@ class CoinbaseItemsController < ApplicationController
         end
       end
     end
+    return unless relinked
 
     if turbo_frame_request?
       coinbase_account.reload

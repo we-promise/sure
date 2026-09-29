@@ -485,9 +485,7 @@ class EnableBankingItemsController < ApplicationController
     return unless require_relinkable_provider_account!(enable_banking_account, @account)
 
     # Relink behavior: detach any legacy link and point provider link at the chosen account
-    Account.transaction do
-      enable_banking_account.lock!
-
+    relinked = relinking(enable_banking_account, @account) do
       # Upsert the AccountProvider mapping deterministically
       ap = AccountProvider.find_or_initialize_by(provider: enable_banking_account)
       previous_account = ap.account
@@ -509,6 +507,7 @@ class EnableBankingItemsController < ApplicationController
         end
       end
     end
+    return unless relinked
 
     if turbo_frame_request?
       # Reload the item to ensure associations are fresh
