@@ -17,13 +17,13 @@ tr:
       transactions_failed: Akahu işlemleri alınamadı
     institution_summary:
       count:
-        one: 1 kurum
+        one: "%{count} kurum"
         other: "%{count} kurum"
       none: Bağlı kurum yok
       one: 1 kurum
     sync_status:
       all_synced:
-        one: 1 hesap senkronize edildi
+        one: "%{count} hesap senkronize edildi"
         other: "%{count} hesap senkronize edildi"
       no_accounts: Hesap bulunamadı
       partial: "%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor"
@@ -46,7 +46,7 @@ tr:
       creation_failed: Akahu hesapları oluşturulamadı.
       no_accounts: Hiç Akahu hesabı seçilmedi.
       success:
-        one: 1 Akahu hesabı oluşturuldu.
+        one: "%{count} Akahu hesabı oluşturuldu."
         other: "%{count} Akahu hesabı oluşturuldu."
     create:
       success: Akahu bağlantısı kaydedildi.
@@ -58,7 +58,7 @@ tr:
       no_accounts_selected: En az bir hesap seçin.
       no_credentials_configured: Önce sağlayıcı ayarlarında Akahu'yu yapılandırın.
       success:
-        one: 1 Akahu hesabı bağlandı.
+        one: "%{count} Akahu hesabı bağlandı."
         other: "%{count} Akahu hesabı bağlandı."
       unsupported_account_type: Akahu bu hesap türünü desteklemiyor.
     link_existing_account:
@@ -67,21 +67,21 @@ tr:
       success: Akahu hesabı %{account_name} ile bağlandı.
     provider_panel:
       add_connection: Akahu bağlantısı ekle
-      app_token_label: Uygulama Jetonu
-      app_token_placeholder: Akahu uygulama jetonunuzu yapıştırın
+      app_token_label: Uygulama Token'ı
+      app_token_placeholder: Akahu uygulama token'ınızı yapıştırın
       connection_name_label: Bağlantı adı
       connection_name_placeholder: Ana Akahu
       default_connection_name: Akahu Bağlantısı
       disconnect: Bağlantıyı kes
       disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?"
-      keep_app_token_placeholder: Mevcut uygulama jetonunu korumak için boş bırakın
-      keep_user_token_placeholder: Mevcut kullanıcı jetonunu korumak için boş bırakın
+      keep_app_token_placeholder: Mevcut uygulama token'ını korumak için boş bırakın
+      keep_user_token_placeholder: Mevcut kullanıcı token'ını korumak için boş bırakın
       setup_accounts: Hesapları kur
       sync: Senkronize et
       syncing: Senkronize ediliyor...
       update_connection: Bağlantıyı güncelle
-      user_token_label: Kullanıcı Jetonu
-      user_token_placeholder: Akahu kullanıcı jetonunuzu yapıştırın
+      user_token_label: Kullanıcı Token'ı
+      user_token_placeholder: Akahu kullanıcı token'ınızı yapıştırın
     select_accounts:
       cancel: İptal
       description: Eklemek istediğiniz Akahu hesaplarını seçin.

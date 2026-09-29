@@ -108,7 +108,7 @@ All clients should connect to a Sure server the user controls or trusts. Native,
 mobile, API, and MCP clients do not replace the server; they are different ways
 to access it.
 
-### Native reporting and device continuity
+## Native reporting and device continuity
 
 Read monthly server-calculated totals and the daily spending comparison using
 [`GET /api/v1/cash_flow`](api/openapi.yaml). Native clients should
@@ -157,3 +157,7 @@ a matching key allows atomic replacement with a **new subscription ID**, making
 old queued deliveries and deletes harmless. A missing or wrong proof returns 422.
 An existing registration without a digest must first be enrolled by its original
 owner or removed by that owner; knowing the APNs token alone never authorizes transfer.
+
+## FinanceKit device publisher
+
+The native Apple client can enroll as a FinanceKit device publisher, map explicitly selected Wallet accounts, and upload an ordered local outbox during foreground or iOS-granted background execution. Setup and repair use normal Sure authentication; uploads use a revocable one-purpose credential that cannot read Sure data. Stable server-issued account lineages preserve identity across publisher replacement. See the [OpenAPI reference](api/openapi.yaml) and [operator guide](hosting/financekit.md).

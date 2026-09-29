@@ -16,6 +16,13 @@ class ProviderLogoTest < ViewComponent::TestCase
     assert_selector "span[aria-hidden='true'] + img"
   end
 
+  test "Apple Wallet uses the standard Apple domain logo" do
+    render_inline(ProviderLogo.new(provider_key: :financekit))
+
+    assert_selector "img[src='https://cdn.brandfetch.io/apple.com/icon/fallback/404/w/40/h/40?c=test-client-id']"
+    assert_selector "span[aria-hidden='true'] + img"
+  end
+
   test "renders only the fallback when the provider has no domain" do
     stub_metadata(logo_icon: "wallet", logo_text: "EX", logo_color: "#6b7280")
 

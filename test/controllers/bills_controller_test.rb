@@ -512,6 +512,13 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Alpha bill", response.body
     assert_match "Beta paused", response.body
     assert_match "Gamma income", response.body
+    # DS::Table renders the desktop table's cells from blocks written in this
+    # view, so their relative keys still have to resolve against bills/all.
+    assert_select "table td", text: I18n.t("bills.all.types.bill")
+    assert_select ".translation_missing", false
+    # Seven columns can overflow just above @3xl, where the table replaces the
+    # cards: the scroll area is named, so a keyboard can reach the columns.
+    assert_select "[role=region][aria-label=?]", I18n.t("bills.views.all")
 
     get bills_url(view: "all", q: { status: "paused" })
     assert_match "Beta paused", response.body

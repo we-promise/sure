@@ -1,0 +1,124 @@
+<%
+  locked = ENV["CATEGORIZATION_PROVIDER"].present?
+  effective = Current.family.effective_categorization_provider
+  jev_active = effective == "jev"
+  threshold_locked = ENV["CATEGORIZATION_CONFIDENCE_THRESHOLD"].present?
+  shadow_locked = ENV["CATEGORIZATION_SHADOW_RATE"].present?
+%>
+
+<div class="space-y-3">
+  <div>
+    <div class="flex items-center gap-2 mb-1">
+      <h2 class="font-medium"><%= t(".title") %></h2>
+      <%= render DS::Pill.new(label: t(".preview_pill")) %>
+    </div>
+    <% if locked %>
+      <p class="text-sm text-secondary"><%= t(".env_notice", type: ENV["CATEGORIZATION_PROVIDER"]) %></p>
+    <% else %>
+      <p class="text-secondary text-sm"><%= t(".description") %></p>
+    <% end %>
+  </div>
+
+  <%# Scoped to the family, not a global Setting: this decides whose transaction
+      descriptions leave the instance. Mirrors the assistant_type selector. %>
+  <%= styled_form_with model: Current.family,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       class: "space-y-4",
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "change"
+                       } do |form| %>
+    <%= form.select :categorization_provider,
+                    options_for_select(
+                      [
+                        [ t(".provider_llm"), "llm" ],
+                        [ t(".provider_jev"), "jev" ]
+                      ],
+                      effective
+                    ),
+                    { label: t(".provider_label") },
+                    { disabled: locked,
+                      data: { "auto-submit-form-target": "auto" } } %>
+  <% end %>
+
+  <p class="text-xs text-secondary"><%= t(".provider_help") %></p>
+
+  <%# Credentials live inside this panel rather than beside it: selecting the
+      provider and giving it a key are one task, and splitting them meant the
+      panel had to explain that a key alone changes nothing. Same shape as the
+      external-assistant fields in _assistant_settings. %>
+  <% if jev_active %>
+    <div class="flex items-center gap-2 text-sm">
+      <% if Provider::Jev.configured? %>
+        <span class="inline-block w-2 h-2 rounded-full bg-success"></span>
+        <span class="text-secondary"><%= t(".jev_configured") %></span>
+      <% else %>
+        <span class="inline-block w-2 h-2 rounded-full bg-destructive"></span>
+        <span class="text-secondary"><%= t(".jev_not_configured") %></span>
+      <% end %>
+    </div>
+
+    <%= render "settings/hostings/jev_settings" %>
+
+    <%# Only meaningful for a provider that reports confidence — the LLM
+        providers return a bare category name, so there is nothing to threshold
+        against. %>
+    <%= styled_form_with model: Current.family,
+                         url: settings_hosting_path,
+                         method: :patch,
+                         class: "space-y-1",
+                         data: {
+                           controller: "auto-submit-form",
+                           "auto-submit-form-trigger-event-value": "change"
+                         } do |form| %>
+      <%= form.number_field :categorization_confidence_threshold,
+                            label: t(".confidence_threshold_label"),
+                            in: 0..1,
+                            step: 0.05,
+                            value: Current.family.effective_categorization_confidence_threshold,
+                            disabled: threshold_locked,
+                            data: { "auto-submit-form-target": "auto" } %>
+    <% end %>
+    <p class="text-xs text-secondary"><%= t(".confidence_threshold_help") %></p>
+    <% if threshold_locked %>
+      <p class="text-xs text-secondary"><%= t(".confidence_threshold_env_notice") %></p>
+    <% end %>
+
+    <%# Names the host actually configured. Saying "sent to TypeSafe" would be
+        wrong whenever a gateway is in front of it — the descriptions transit
+        that party too. %>
+    <%= render DS::Note.new(title: t(".data_retention_heading")) do %>
+      <% if Provider::Jev.effective_proxied? %>
+        <p><%= t(".data_retention_proxied", host: Provider::Jev.effective_host) %></p>
+      <% else %>
+        <p><%= t(".data_retention_direct") %></p>
+      <% end %>
+    <% end %>
+  <% end %>
+
+  <%# Shadow mode runs whichever provider is NOT selected alongside the one that
+      is, so it is worth offering either way round. %>
+  <%= styled_form_with model: Current.family,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       class: "space-y-1",
+                       data: {
+                         controller: "auto-submit-form",
+                         "auto-submit-form-trigger-event-value": "change"
+                       } do |form| %>
+    <%= form.number_field :categorization_shadow_rate,
+                          label: t(".shadow_rate_label"),
+                          in: 0..1,
+                          step: 0.05,
+                          value: Current.family.effective_categorization_shadow_rate,
+                          disabled: shadow_locked,
+                          data: { "auto-submit-form-target": "auto" } %>
+  <% end %>
+  <p class="text-xs text-warning"><%= t(".shadow_rate_help") %></p>
+  <% if shadow_locked %>
+    <p class="text-xs text-secondary"><%= t(".shadow_rate_env_notice") %></p>
+  <% end %>
+
+  <%= render "settings/hostings/categorization_shadow_results" %>
+</div>

@@ -14,7 +14,7 @@ uk:
       type: Тип
       type_buy: Купівля
       type_sell: Продаж
-      type_deposit: Депозит
+      type_deposit: Поповнення
       type_withdrawal: Зняття
       type_dividend: Дивіденди
       type_interest: Відсотки
@@ -31,6 +31,15 @@ uk:
       purchase_qty_label: Кількість покупки
       symbol_label: Символ
       total_return_label: Нереалізований прибуток/збиток
+      contribution: Внесок
+      exchange: Обмін
+      fee: Комісія
+      other: Інше
+      reinvestment: Реінвестування
+      sweep_in: Автоматичне зарахування
+      sweep_out: Автоматичне списання
+      transfer: Переказ
+      withdrawal: Зняття
     new:
       title: Нова транзакція
     show:
@@ -55,3 +64,8 @@ uk:
       sell: Продаж
       settings: Налаштування
       type_label: Тип
+    api_errors:
+      activity_label_must_match_type: investment_activity_label має бути %{label}, коли type — %{type}
+      invalid_activity_label: Недійсна мітка інвестиційної операції
+      invalid_type: Недійсний тип
+      supported_types: 'type має бути одним із: %{types}'
