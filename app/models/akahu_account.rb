@@ -1,6 +1,10 @@
 class AkahuAccount < ApplicationRecord
   include CurrencyNormalizable, Encryptable
 
+  # Separates the originating Akahu account id from the fund key in synthetic
+  # per-fund accounts derived by AkahuAccount::PortfolioSplitter.
+  SYNTHETIC_ID_SEPARATOR = "::".freeze
+
   AKAHU_ACCOUNT_TYPE_MAP = {
     "CHECKING" => { accountable_type: "Depository", subtype: "checking" },
     "SAVINGS" => { accountable_type: "Depository", subtype: "savings" },
@@ -27,6 +31,13 @@ class AkahuAccount < ApplicationRecord
 
   def current_account
     account
+  end
+
+  # True for per-fund accounts derived from a multi-fund Akahu account. These
+  # have no counterpart at Akahu, so they must never be used for API calls —
+  # requesting transactions for one returns 404 and fails the whole item sync.
+  def synthetic?
+    account_id.to_s.include?(SYNTHETIC_ID_SEPARATOR)
   end
 
   def suggested_account_type

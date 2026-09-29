@@ -291,18 +291,32 @@ class AkahuItemsController < ApplicationController
       end
       cash_balance = account_type == "Investment" ? 0 : balance
 
-      Account.create_and_sync(
-        {
-          family: Current.family,
-          name: akahu_account.name,
+      existing_account = Current.family.accounts
+        .left_joins(:account_providers)
+        .where(account_providers: { id: nil })
+        .find_by(name: akahu_account.name, accountable_type: account_type)
+
+      if existing_account
+        existing_account.update!(
           balance: balance,
           cash_balance: cash_balance,
-          currency: akahu_account.currency || "NZD",
-          accountable_type: account_type,
-          accountable_attributes: subtype.present? ? { subtype: subtype } : {}
-        },
-        skip_initial_sync: true
-      )
+          currency: akahu_account.currency || "NZD"
+        )
+        existing_account
+      else
+        Account.create_and_sync(
+          {
+            family: Current.family,
+            name: akahu_account.name,
+            balance: balance,
+            cash_balance: cash_balance,
+            currency: akahu_account.currency || "NZD",
+            accountable_type: account_type,
+            accountable_attributes: subtype.present? ? { subtype: subtype } : {}
+          },
+          skip_initial_sync: true
+        )
+      end
     end
 
     def render_provider_panel(flash_type, message)

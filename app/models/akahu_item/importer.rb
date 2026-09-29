@@ -56,7 +56,7 @@ class AkahuItem::Importer
 
     def import_accounts(accounts_data)
       stats = { updated: 0, created: 0, failed: 0 }
-      accounts = Array(accounts_data[:items])
+      accounts = expand_portfolio_accounts(Array(accounts_data[:items]))
       linked_account_ids = akahu_item.akahu_accounts.joins(:account_provider).pluck(:account_id).map(&:to_s)
       all_existing_ids = akahu_item.akahu_accounts.pluck(:account_id).map(&:to_s)
 
@@ -80,6 +80,18 @@ class AkahuItem::Importer
       end
 
       stats
+    end
+
+    # Expands multi-fund accounts into one synthetic account per fund, keeping
+    # the originating account so an already-linked blended account keeps
+    # updating until the user moves over to the per-fund accounts.
+    def expand_portfolio_accounts(accounts)
+      accounts.flat_map do |account_data|
+        next [ account_data ] unless account_data.is_a?(Hash)
+
+        data = account_data.with_indifferent_access
+        [ data, *AkahuAccount::PortfolioSplitter.new(data).split ]
+      end
     end
 
     def import_account(account_data)
@@ -115,6 +127,10 @@ class AkahuItem::Importer
       pending_refresh_succeeded = pending_result[:success]
 
       akahu_item.akahu_accounts.joins(:account).merge(Account.visible).each do |akahu_account|
+        # Synthetic per-fund accounts don't exist at Akahu; their balances come
+        # from the parent's portfolio breakdown, so there is nothing to fetch.
+        next if akahu_account.synthetic?
+
         result = fetch_and_store_transactions(
           akahu_account,
           pending_by_account[akahu_account.account_id.to_s],
