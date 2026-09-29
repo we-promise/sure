@@ -133,6 +133,81 @@ class Family::TransactionTimestampRoundTripTest < ActiveSupport::TestCase
     assert_equal restored.id, repeated.entries.first.id
   end
 
+  test "session-restored transactions match both original and restored CSV identities" do
+    files = exported_files
+    session = @target.import_sessions.create!(expected_chunks: 1)
+    Family::DataImporter.new(@target, files.fetch("all.ndjson"), import_session: session).import!
+    restored = @target.entries.find_by!(name: @entry.name)
+    assert restored.external_id.present?
+
+    [ files, exported_files(@target) ].each do |export|
+      rows = CSV.parse(export.fetch("transactions.csv"), headers: true)
+      csv = CSV.generate do |output|
+        output << rows.headers
+        output << rows.find { |row| row["name"] == @entry.name }.fields
+      end
+      import = TransactionImport.create!(family: @target, account: restored.account, raw_file_str: csv,
+        date_col_label: "date", date_format: "%Y-%m-%d", timestamp_col_label: "transacted_at",
+        amount_col_label: "amount", name_col_label: "name", currency_col_label: "currency",
+        signage_convention: "inflows_negative")
+      import.generate_rows_from_csv
+      assert_no_difference "Entry.count" do
+        import.publish
+      end
+      assert_equal "complete", import.status, import.error
+      assert_equal restored.id, import.entries.first.id
+    end
+  end
+
+  test "session-restored split children match both original and restored CSV identities" do
+    @entry.split!([ { name: "Session split child", amount: @entry.amount / 2 },
+                    { name: "Other session child", amount: @entry.amount / 2 } ])
+    files = exported_files
+    session = @target.import_sessions.create!(expected_chunks: 1)
+    Family::DataImporter.new(@target, files.fetch("all.ndjson"), import_session: session).import!
+    restored = @target.entries.find_by!(name: "Session split child")
+
+    [ files, exported_files(@target) ].each do |export|
+      rows = CSV.parse(export.fetch("transactions.csv"), headers: true)
+      csv = CSV.generate do |output|
+        output << rows.headers
+        output << rows.find { |row| row["name"] == restored.name }.fields
+      end
+      import = TransactionImport.create!(family: @target, account: restored.account, raw_file_str: csv,
+        date_col_label: "date", date_format: "%Y-%m-%d", timestamp_col_label: "transacted_at",
+        amount_col_label: "amount", name_col_label: "name", currency_col_label: "currency",
+        signage_convention: "inflows_negative")
+      import.generate_rows_from_csv
+      assert_no_difference "Entry.count" do
+        import.publish
+      end
+      assert_equal "complete", import.status, import.error
+      assert_equal restored.id, import.entries.first.id
+    end
+  end
+
+  test "explicit CSV export identities preserve provider external IDs without creating duplicates" do
+    @entry.update!(source: "plaid", external_id: "timestamp-export-provider-id")
+    rows = CSV.parse(exported_files.fetch("transactions.csv"), headers: true)
+    csv = CSV.generate do |output|
+      output << rows.headers
+      output << rows.find { |row| row["sure_entry_id"] == @entry.id }.fields
+    end
+    import = TransactionImport.create!(family: @source, account: @entry.account, raw_file_str: csv,
+      date_col_label: "date", date_format: "%Y-%m-%d", timestamp_col_label: "transacted_at",
+      amount_col_label: "amount", name_col_label: "name", currency_col_label: "currency",
+      signage_convention: "inflows_negative")
+    import.generate_rows_from_csv
+    assert_no_difference "Entry.count" do
+      import.publish
+    end
+    assert_equal "complete", import.status, import.error
+    assert_equal @entry.id, import.entries.first.id
+    assert_equal "plaid", @entry.reload.source
+    assert_equal "timestamp-export-provider-id", @entry.external_id
+    assert_equal @timestamp, @entry.transacted_at
+  end
+
   test "a split child keeps its own Sure export ID after NDJSON restore" do
     child = @entry.split!([ { name: "Split ID Child", amount: @entry.amount / 2 },
                             { name: "Other split", amount: @entry.amount / 2 } ]).first

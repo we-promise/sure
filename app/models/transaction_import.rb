@@ -213,7 +213,7 @@ class TransactionImport < Import
 
         candidates = prepared.account.entries
           .joins("INNER JOIN transactions AS csv_transactions ON csv_transactions.id = entries.entryable_id")
-          .where(entryable_type: "Transaction", external_id: nil)
+          .where(entryable_type: "Transaction")
         entry = candidates.find_by(id: id)
         unless entry
           aliases = candidates.where("(csv_transactions.extra -> 'csv' -> 'sure_entry_ids') @> CAST(:ids AS jsonb)",

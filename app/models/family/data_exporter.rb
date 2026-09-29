@@ -98,7 +98,7 @@ class Family::DataExporter
               transaction.entry.notes,
               transaction.entry.currency,
               transaction.entry.transacted_at&.utc&.iso8601(6),
-              transaction.entry.external_id.nil? ? transaction.entry.id : nil
+              transaction.entry.id
             ]
           end
       end
