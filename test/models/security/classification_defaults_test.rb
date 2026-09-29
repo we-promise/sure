@@ -108,6 +108,42 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
     assert_equal "asia_pacific", security.region, "the country lookup overwrote a region already set"
   end
 
+  # `development_status` is derived live from `country_code` and `region` is
+  # stored, so a country correction used to move one and not the other: the
+  # same security claiming Japan and north_america at once. The region the
+  # lookup wrote is the lookup's to move.
+  test "correcting the country moves a region the country lookup wrote" do
+    security = Security.create!(ticker: "REG-FIX", country_code: "US")
+    assert_equal [ "north_america", "developed" ], [ security.region, security.development_status ]
+
+    security.update!(country_code: "JP")
+
+    assert_equal "asia_pacific", security.reload.region
+    assert_equal "asia_pacific", Security::REGIONS.dig("JP", "region"), "the two halves must agree on the same country"
+    assert_equal security.development_status, Security::REGIONS.dig("JP", "development")
+  end
+
+  # The counterpart: a region that disagrees with the country was set by
+  # someone who knew something the listing does not say, and a later country
+  # correction must not overwrite it.
+  test "correcting the country leaves a region someone else set" do
+    security = Security.create!(ticker: "REG-ADR", country_code: "US", region: "asia_pacific")
+
+    security.update!(country_code: "GB")
+
+    assert_equal "asia_pacific", security.reload.region, "a deliberately set region was overwritten"
+  end
+
+  # A country the config does not name leaves the region unanswered rather
+  # than standing on the superseded one.
+  test "correcting the country to an unknown one clears a region the lookup wrote" do
+    security = Security.create!(ticker: "REG-UNK", country_code: "US")
+
+    security.update!(country_code: "ZZ")
+
+    assert_nil security.reload.region
+  end
+
   # An offline security's country_code is a search hint about the PERSON, not a
   # fact about the instrument: `Security::Resolver#offline_security` persists
   # whatever the caller passed, and the resolver's own ranking calls that value
