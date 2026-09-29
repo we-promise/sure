@@ -43,8 +43,11 @@ de:
         description: Hochgerechnet aus ursprünglicher Kreditsumme, Zinssatz und Laufzeit, beginnend am %{start_date}. Sondertilgungen sind nicht berücksichtigt.
         variable_rate_notice: Der Zinssatz dieses Kredits ändert sich im Laufe der Zeit. Der Tilgungsplan wird bei jeder erfassten Änderung neu berechnet; das ursprüngliche Ablösedatum bleibt, die Rate passt sich an. Eine noch nicht erfasste Änderung verschiebt diese Zahlen.
         opening_payment: Anfangsrate
+        forecasted_payoff_date: Voraussichtliches Ablösedatum
+        forecasted_payoff_not_converged: Mit der aktuellen Rate nicht getilgt
         interest: Zinsen
         monthly_payment: Monatsrate
+        not_applicable: "–"
         number: "Nr."
         payment: Rate
         principal: Tilgung

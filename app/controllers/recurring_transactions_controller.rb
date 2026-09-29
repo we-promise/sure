@@ -362,13 +362,14 @@ class RecurringTransactionsController < ApplicationController
         :payment_url, :autopay, :notes, :bill_type, :category_id,
         :renews_on, :trial_ends_on, :cancelled_on, :end_after_count,
         :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
-        :frequency_weekday, :frequency_month_of_year
+        :frequency_weekday, :frequency_month_of_year, :frequency_interval, :frequency_interval_unit
       )
     end
 
     def new_recurring_transaction_params
       params.require(:recurring_transaction).permit(
         :name, :amount, :account_id, :first_due_on, :frequency_preset,
+        :frequency_interval, :frequency_interval_unit,
         :payment_url, :autopay, :notes, :is_income
       )
     end
@@ -395,6 +396,8 @@ class RecurringTransactionsController < ApplicationController
       @recurring_transaction.frequency_second_day_of_month = detection.second_day_of_month
       @recurring_transaction.frequency_weekday = detection.weekday
       @recurring_transaction.frequency_month_of_year = detection.month_of_year
+      @recurring_transaction.frequency_interval = detection.interval
+      @recurring_transaction.frequency_interval_unit = detection.interval_unit
     end
 
     # A bill outliving its own price is the normal case, and the only way to
@@ -447,7 +450,9 @@ class RecurringTransactionsController < ApplicationController
         day_of_month: @recurring_transaction.frequency_day_of_month,
         second_day_of_month: @recurring_transaction.frequency_second_day_of_month,
         weekday: @recurring_transaction.frequency_weekday,
-        month_of_year: @recurring_transaction.frequency_month_of_year
+        month_of_year: @recurring_transaction.frequency_month_of_year,
+        interval: @recurring_transaction.frequency_interval,
+        interval_unit: @recurring_transaction.frequency_interval_unit
       )
 
       # A hand-set cadence is intent, not a guess for detection to correct.

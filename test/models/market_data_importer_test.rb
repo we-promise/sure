@@ -60,6 +60,41 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     assert_operator after, :>, before + 1, "Should insert at least two new exchange-rate rows (forward + computed inverse)"
   end
 
+  test "syncs account exchange rates into the primary currency when the family currency is blank or NULL" do
+    blank_family = Family.create!(name: "Blank", currency: "")
+    null_family = Family.create!(name: "Null", currency: "USD")
+    null_family.update_column(:currency, nil)
+
+    [ blank_family, null_family ].each do |family|
+      family.accounts.create!(name: "Chequing", currency: "CAD", balance: 100, accountable: Depository.new)
+      family.accounts.create!(name: "Savings", currency: "USD", balance: 100, accountable: Depository.new)
+    end
+
+    # One CAD→USD fetch covers both families; the USD accounts already match the
+    # USD fallback and need no rates.
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "CAD", to: "USD", start_date: anything, end_date: anything)
+             .once
+             .returns(provider_success_response([]))
+
+    MarketDataImporter.new(mode: :snapshot).import_exchange_rates
+  end
+
+  test "syncs foreign entry currencies against the family currency as well as the account currency" do
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(name: "Chequing", currency: "CAD", balance: 100, accountable: Depository.new)
+    account.entries.create!(date: 10.days.ago.to_date, amount: 10, currency: "GBP", name: "Card payment", entryable: Transaction.new)
+
+    [ %w[GBP CAD], %w[GBP USD], %w[CAD USD] ].each do |from, to|
+      @provider.expects(:fetch_exchange_rates)
+               .with(from: from, to: to, start_date: anything, end_date: anything)
+               .once
+               .returns(provider_success_response([]))
+    end
+
+    MarketDataImporter.new(mode: :snapshot).import_exchange_rates
+  end
+
   test "syncs security prices" do
     security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
 
