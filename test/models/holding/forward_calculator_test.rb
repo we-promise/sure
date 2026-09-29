@@ -307,6 +307,26 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal 200, after.find { |h| h.security_id == @wmt.id && h.date == Date.current }.qty, "the split security itself did change"
   end
 
+  # A day with no price emits no holding, so gapfill copies the last one it has
+  # forward. Before this the copy was made in pre-split terms: the split had
+  # already scaled the portfolio, but the day it went ex had no price, so what
+  # was carried into today was the old share count and the old cost per share —
+  # and for a security whose prices have stopped, that is what the user sees
+  # from then on.
+  test "a split still lands when the ex-date and every day after it has no price" do
+    security = Security.create!(ticker: "GAPS", name: "Gapfill Split")
+    Security::Price.create!(security: security, date: 5.days.ago.to_date, price: 100)
+    create_trade(security, qty: 10, date: 5.days.ago.to_date, price: 100, account: @account)
+    add_split(security, ex_date: 2.days.ago.to_date, numerator: 2, denominator: 1)
+
+    today = holding_on(security, Date.current)
+
+    assert_equal 20, today.qty, "the split doubled the position even though no price was published"
+    assert_equal 50, today.price, "a split moves no money, so the carried price halves with the count"
+    assert_equal 50, today.cost_basis
+    assert_equal 1000, today.amount, "the position is worth what it was worth before the split"
+  end
+
   # Security::Split.scale used to keep more precision than the qty column can
   # hold, so a position sold down to the last share the column can express kept
   # about 3e-31 of a share. The forward calculator decides a liquidation by an
