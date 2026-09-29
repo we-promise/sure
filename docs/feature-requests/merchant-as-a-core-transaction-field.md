@@ -6,10 +6,9 @@ Transactions can already be associated with a merchant, but the association is e
 
 ## Proposed experience
 
-Treat merchant as a first-class, optional transaction attribute, alongside categories and tags:
+Treat merchant as a first-class, optional transaction attribute, alongside categories and tags. The transaction list already shows the merchant name in its secondary text when one is assigned. On wide rows, the leading image currently prefers an activity/security logo, then a merchant logo, and otherwise shows a circular one-letter mark derived from the transaction description. On mobile, the category icon is primary, with a small activity/security or merchant logo overlaid when available. Keep these useful existing fallbacks and make the merchant information and editing affordance more consistent:
 
-- Show a transaction's merchant in the transaction list without adding persistent visual clutter. Where a merchant logo is available, consider using it in the transaction's existing logo/avatar area; retain a clear fallback when there is no logo.
-- Make the merchant name discoverable on hover and keyboard focus, including when the logo alone is not recognizable. On narrow screens, keep the name available in the compact transaction row or its accessible details.
+- When the displayed merchant logo or fallback mark is hovered or keyboard-focused, make the merchant name easy to identify. This is especially useful when a logo is unfamiliar; keep the existing transaction-description letter mark as the fallback when no logo is available.
 - Let people select, change, or clear a merchant inline from the transaction list, using a searchable picker similar to the recent inline tag experience. Keep transaction detail editing available as well.
 - Include merchant as an optional field in transaction import and export workflows. Imports should map supplied merchant data to the appropriate family merchant when possible, and exports should preserve the association for round trips. Omitting merchant data must remain valid and must not erase an existing merchant unintentionally.
 - Offer merchant selection in the initial manual transaction entry flow so people do not have to reopen a newly created transaction to add one.
