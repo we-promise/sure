@@ -11,15 +11,18 @@ class Transaction::Search
     #
     # `family` scopes the category-name lookup so two families that each
     # named a category the same way don't cross-contaminate the parent-id
-    # match.
+    # match. Required (rather than silently falling back to a global
+    # Category.all scope) so a future caller that forgets to thread family
+    # through fails loudly instead of resolving parent categories across
+    # every family's data.
     def apply_category_filter(query, categories, family)
       return query unless categories.present?
+      raise ArgumentError, "family is required to filter by category" if family.nil?
 
       include_uncategorized = categories.include?(Category::UNCATEGORIZED_FILTER_VALUE)
       real_categories = categories - [ Category::UNCATEGORIZED_FILTER_VALUE ]
 
-      category_scope = family ? family.categories : Category.all
-      parent_category_ids = category_scope.where(name: real_categories).pluck(:id)
+      parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
 
       # The Uncategorized bucket answers "which rows have no category", so it
       # excludes only the kinds that have nothing to categorize — the paired

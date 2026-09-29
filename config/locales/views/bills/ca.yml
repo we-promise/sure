@@ -76,7 +76,7 @@ ca:
       pulse_next_seven: pròxims 7 dies
       pulse_bar_aria: '%{percent}% de les factures d''aquest mes pagades'
       next_up: A continuació
-      view_upcoming: Mostra les properes
+      view_calendar: Mostra el calendari
       date_today: Avui
       date_tomorrow: Demà
       unconvertible:
