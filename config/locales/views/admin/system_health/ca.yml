@@ -82,6 +82,7 @@ ca:
           run_checks: Torna a executar les comprovacions
           last_checked: Comprovacions en directe completades fa %{time_ago}. Els resultats es desen breument a la memòria cau.
           not_checked_help: Obre directament l'URL d'estat de la IA o executa les comprovacions per verificar que el servei respon.
+          loading: "S'estan executant les comprovacions en directe…"
           alerts:
             custom_openai:
               title: La comprovació del magatzem vectorial allotjat ha fallat en aquest endpoint personalitzat
