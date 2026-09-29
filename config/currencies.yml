@@ -2546,3 +2546,485 @@ kgs:
   delimiter: ","
   default_format: "%n %u"
   default_precision: 2
+
+# Additional crypto assets, needed so Money::Currency can value non-BTC
+# holdings (ETH, SOL, AVAX, ...) without raising UnknownCurrencyError on
+# sync. minor_unit_conversion/precision follow the btc entry above (8
+# decimals) except where a token's own convention differs (e.g. USDT, a
+# cent-denominated stablecoin).
+ada:
+  name: Cardano
+  priority: 100
+  iso_code: ADA
+  iso_numeric: ""
+  html_code: ""
+  symbol: ADA
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+amp:
+  name: Amp
+  priority: 100
+  iso_code: AMP
+  iso_numeric: ""
+  html_code: ""
+  symbol: AMP
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+avax:
+  name: Avalanche
+  priority: 100
+  iso_code: AVAX
+  iso_numeric: ""
+  html_code: ""
+  symbol: AVAX
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+baby:
+  name: Baby
+  priority: 100
+  iso_code: BABY
+  iso_numeric: ""
+  html_code: ""
+  symbol: BABY
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+bal:
+  name: Balancer
+  priority: 100
+  iso_code: BAL
+  iso_numeric: ""
+  html_code: ""
+  symbol: BAL
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+band:
+  name: Band Protocol
+  priority: 100
+  iso_code: BAND
+  iso_numeric: ""
+  html_code: ""
+  symbol: BAND
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+bat:
+  name: Basic Attention Token
+  priority: 100
+  iso_code: BAT
+  iso_numeric: ""
+  html_code: ""
+  symbol: BAT
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+boden:
+  name: Boden
+  priority: 100
+  iso_code: BODEN
+  iso_numeric: ""
+  html_code: ""
+  symbol: BODEN
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+bond:
+  name: BarnBridge
+  priority: 100
+  iso_code: BOND
+  iso_numeric: ""
+  html_code: ""
+  symbol: BOND
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+cgld:
+  name: Celo
+  priority: 100
+  iso_code: CGLD
+  iso_numeric: ""
+  html_code: ""
+  symbol: CGLD
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+clv:
+  name: Clover Finance
+  priority: 100
+  iso_code: CLV
+  iso_numeric: ""
+  html_code: ""
+  symbol: CLV
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+comp:
+  name: Compound
+  priority: 100
+  iso_code: COMP
+  iso_numeric: ""
+  html_code: ""
+  symbol: COMP
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+enj:
+  name: Enjin Coin
+  priority: 100
+  iso_code: ENJ
+  iso_numeric: ""
+  html_code: ""
+  symbol: ENJ
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+eth:
+  name: Ethereum
+  priority: 100
+  iso_code: ETH
+  iso_numeric: ""
+  html_code: "&#x39e;"
+  symbol: ETH
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+fet:
+  name: Fetch.ai
+  priority: 100
+  iso_code: FET
+  iso_numeric: ""
+  html_code: ""
+  symbol: FET
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+fil:
+  name: Filecoin
+  priority: 100
+  iso_code: FIL
+  iso_numeric: ""
+  html_code: ""
+  symbol: FIL
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+forth:
+  name: Ampleforth Governance Token
+  priority: 100
+  iso_code: FORTH
+  iso_numeric: ""
+  html_code: ""
+  symbol: FORTH
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+grt:
+  name: The Graph
+  priority: 100
+  iso_code: GRT
+  iso_numeric: ""
+  html_code: ""
+  symbol: GRT
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+knc:
+  name: Kyber Network Crystal
+  priority: 100
+  iso_code: KNC
+  iso_numeric: ""
+  html_code: ""
+  symbol: KNC
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+nkn:
+  name: NKN
+  priority: 100
+  iso_code: NKN
+  iso_numeric: ""
+  html_code: ""
+  symbol: NKN
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+nos:
+  name: Nosana
+  priority: 100
+  iso_code: NOS
+  iso_numeric: ""
+  html_code: ""
+  symbol: NOS
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+nu:
+  name: NuCypher
+  priority: 100
+  iso_code: NU
+  iso_numeric: ""
+  html_code: ""
+  symbol: NU
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+ogn:
+  name: Origin Protocol
+  priority: 100
+  iso_code: OGN
+  iso_numeric: ""
+  html_code: ""
+  symbol: OGN
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+pol:
+  name: Polygon
+  priority: 100
+  iso_code: POL
+  iso_numeric: ""
+  html_code: ""
+  symbol: POL
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+ren:
+  name: Ren
+  priority: 100
+  iso_code: REN
+  iso_numeric: ""
+  html_code: ""
+  symbol: REN
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+skl:
+  name: SKALE
+  priority: 100
+  iso_code: SKL
+  iso_numeric: ""
+  html_code: ""
+  symbol: SKL
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+sky:
+  name: Sky
+  priority: 100
+  iso_code: SKY
+  iso_numeric: ""
+  html_code: ""
+  symbol: SKY
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+snx:
+  name: Synthetix Network Token
+  priority: 100
+  iso_code: SNX
+  iso_numeric: ""
+  html_code: ""
+  symbol: SNX
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+sol:
+  name: Solana
+  priority: 100
+  iso_code: SOL
+  iso_numeric: ""
+  html_code: ""
+  symbol: SOL
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+storj:
+  name: Storj
+  priority: 100
+  iso_code: STORJ
+  iso_numeric: ""
+  html_code: ""
+  symbol: STORJ
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+sushi:
+  name: SushiSwap
+  priority: 100
+  iso_code: SUSHI
+  iso_numeric: ""
+  html_code: ""
+  symbol: SUSHI
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+uni:
+  name: Uniswap
+  priority: 100
+  iso_code: UNI
+  iso_numeric: ""
+  html_code: ""
+  symbol: UNI
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
+usdt:
+  name: Tether USD
+  priority: 100
+  iso_code: USDT
+  iso_numeric: ""
+  html_code: "$"
+  symbol: USDT
+  minor_unit: Cent
+  minor_unit_conversion: 100
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 2
+zec:
+  name: Zcash
+  priority: 100
+  iso_code: ZEC
+  iso_numeric: ""
+  html_code: ""
+  symbol: ZEC
+  minor_unit: Unit
+  minor_unit_conversion: 100000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
