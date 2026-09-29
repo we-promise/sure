@@ -79,6 +79,7 @@ de:
           seconds: "%{seconds} s"
           no_queues: Es sind keine Warteschlangen registriert. Möglicherweise läuft der Worker nicht.
         ai:
+          loading: "Live-Prüfungen laufen…"
           labels:
             failure_reason: Fehlerursache
             function_calling_failure_reason: Fehlerursache beim Funktionsaufruf
