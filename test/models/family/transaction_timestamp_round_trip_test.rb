@@ -221,6 +221,108 @@ class Family::TransactionTimestampRoundTripTest < ActiveSupport::TestCase
     assert_nil @target.entries.find_by!(name: @entry.name).transacted_at
   end
 
+  test "session restores reject malformed timestamp metadata without partial writes" do
+    invalid_values = {
+      "entry_id" => [ 123, {}, false, " " ],
+      "csv_sure_entry_ids" => [ [ 123 ], [ nil ], [ "" ], { "id" => @entry.id }, @entry.id ],
+      "transacted_at" => [ "2026-02-30T12:00:00Z", 123 ],
+      "csv_transacted_at" => [ "2026-09-17T12:00", {} ],
+      "csv_source_date" => [ "2026-02-30", 123 ]
+    }
+    records = exported_files.fetch("all.ndjson").lines.map { |line| JSON.parse(line) }
+    session = @target.import_sessions.create!(expected_chunks: 1)
+
+    invalid_values.each do |field, values|
+      values.each do |value|
+        malformed = records.deep_dup
+        malformed.find { |record| record["type"] == "Transaction" }["data"][field] = value
+        assert_no_difference [ "Account.count", "Entry.count", "Transaction.count", "ImportSourceMapping.count" ] do
+          error = assert_raises(Family::DataImporter::InvalidRecordError) do
+            Family::DataImporter.new(@target, malformed.map(&:to_json).join("\n"), import_session: session).import!
+          end
+          assert_equal "invalid_import_record", error.code
+          assert_equal field, error.details[:field]
+          assert_equal value, error.details[:value]
+        end
+      end
+    end
+  end
+
+  test "legacy restores skip transactions with invalid identities instead of discarding identity metadata" do
+    records = exported_files.fetch("all.ndjson").lines.map { |line| JSON.parse(line) }
+    record = records.find { |item| item["type"] == "Transaction" && item["data"]["name"] == @entry.name }
+    record["data"]["csv_sure_entry_ids"] = [ SecureRandom.uuid, 123 ]
+
+    result = Family::DataImporter.new(@target, records.map(&:to_json).join("\n")).import!
+
+    assert_nil @target.entries.find_by(name: @entry.name)
+    assert_equal 1, result[:summary]["transactions"]["skipped"]
+  end
+
+  test "invalid split metadata skips the whole legacy transaction before creating its parent" do
+    @entry.split!([ { name: "Invalid child", amount: @entry.amount / 2 },
+                    { name: "Valid child", amount: @entry.amount / 2 } ])
+    records = exported_files.fetch("all.ndjson").lines.map { |line| JSON.parse(line) }
+    record = records.find { |item| item["type"] == "Transaction" && item["data"]["name"] == @entry.name }
+    record["data"]["split_lines"].first["entry_id"] = 123
+
+    result = Family::DataImporter.new(@target, records.map(&:to_json).join("\n")).import!
+
+    assert_nil @target.entries.find_by(name: @entry.name)
+    assert_nil @target.entries.find_by(name: "Invalid child")
+    assert_nil @target.entries.find_by(name: "Valid child")
+    assert_equal 1, result[:summary]["transactions"]["skipped"]
+  end
+
+  test "invalid split metadata rolls back session restores" do
+    @entry.split!([ { name: "Invalid child", amount: @entry.amount } ])
+    records = exported_files.fetch("all.ndjson").lines.map { |line| JSON.parse(line) }
+    record = records.find { |item| item["type"] == "Transaction" && item["data"]["name"] == @entry.name }
+    record["data"]["split_lines"].first["csv_source_date"] = "2026-02-30"
+    session = @target.import_sessions.create!(expected_chunks: 1)
+
+    assert_no_difference [ "Account.count", "Entry.count", "Transaction.count", "ImportSourceMapping.count" ] do
+      error = assert_raises(Family::DataImporter::InvalidRecordError) do
+        Family::DataImporter.new(@target, records.map(&:to_json).join("\n"), import_session: session).import!
+      end
+      assert_equal "csv_source_date", error.details[:field]
+    end
+  end
+
+  test "backup identities normalize uppercase UUIDs and permit absent metadata" do
+    records = exported_files.fetch("all.ndjson").lines.map { |line| JSON.parse(line) }
+    record = records.find { |item| item["type"] == "Transaction" && item["data"]["name"] == @entry.name }
+    record["data"]["entry_id"] = @entry.id.upcase
+    record["data"]["csv_sure_entry_ids"] = [ @entry.id.upcase, @entry.id ]
+    record["data"]["csv_transacted_at"] = nil
+    record["data"]["csv_source_date"] = ""
+
+    Family::DataImporter.new(@target, records.map(&:to_json).join("\n")).import!
+
+    restored = @target.entries.find_by!(name: @entry.name)
+    assert_equal [ @entry.id ], restored.transaction.extra.dig("csv", "sure_entry_ids")
+    assert_equal @timestamp, restored.transacted_at
+  end
+
+  test "legacy opaque parent and child identities survive restore export and session restore" do
+    @entry.split!([ { name: "Opaque child", amount: @entry.amount } ])
+    records = exported_files.fetch("all.ndjson").lines.map { |line| JSON.parse(line) }
+    record = records.find { |item| item["type"] == "Transaction" && item["data"]["name"] == @entry.name }
+    record["data"]["entry_id"] = "OLD-ENTRY"
+    record["data"]["split_lines"].first["entry_id"] = "OLD-CHILD"
+    Family::DataImporter.new(@target, records.map(&:to_json).join("\n")).import!
+
+    final_family = Family.create!(name: "Second restore", currency: "USD", locale: "en")
+    session = final_family.import_sessions.create!(expected_chunks: 1)
+    Family::DataImporter.new(final_family, exported_files(@target).fetch("all.ndjson"), import_session: session).import!
+
+    parent = final_family.entries.find_by!(name: @entry.name)
+    child = final_family.entries.find_by!(name: "Opaque child")
+    assert_includes parent.transaction.extra.dig("csv", "sure_entry_ids"), "old-entry"
+    assert_includes child.transaction.extra.dig("csv", "sure_entry_ids"), "old-child"
+    assert_equal @timestamp, parent.transacted_at
+  end
+
   test "trade CSV and NDJSON preserve timestamps after transaction conversion" do
     security = Security.create!(ticker: "TIMESTAMPTEST", name: "Synthetic security")
     account = @source.accounts.create!(name: "Timestamp investments", balance: 0, currency: "USD", accountable: Investment.new)
@@ -248,9 +350,9 @@ class Family::TransactionTimestampRoundTripTest < ActiveSupport::TestCase
   end
 
   private
-    def exported_files
+    def exported_files(family = @source)
       files = {}
-      Zip::InputStream.open(Family::DataExporter.new(@source).generate_export) do |zip|
+      Zip::InputStream.open(Family::DataExporter.new(family).generate_export) do |zip|
         while (entry = zip.get_next_entry)
           files[entry.name] = zip.read
         end

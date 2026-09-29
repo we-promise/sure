@@ -73,5 +73,12 @@ timestamps, source-date and Sure CSV identity provenance, and manual timestamp
 protection, including split transactions. Older backups that omit timestamps
 remain supported.
 
+Backup restores validate timestamp and identity metadata before saving a transaction
+or its split children. Session restores report malformed metadata as an invalid
+record and roll back the chunk. Legacy restores skip the entire invalid transaction
+using their existing summary policy. Opaque string IDs from older backups remain
+supported, including after export and restore; invalid metadata is not silently
+discarded.
+
 Transaction API responses include a nullable, read-only `transacted_at` field in
 UTC ISO 8601 format. The existing `date` field keeps its meaning.

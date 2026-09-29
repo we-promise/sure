@@ -907,6 +907,12 @@ class Family::DataImporter
 
         require_source_id!("Transaction", old_id)
 
+        # Validate children before saving the parent so legacy restores can skip
+        # the whole transaction rather than leave a partially restored split.
+        split_rows = data["split_lines"].presence || data["splitLines"].presence || data["splits"].presence
+        metadata_rows = [ data ] + Array(split_rows).select { |row| row.is_a?(Hash) && (row["amount"] || row["amount_money"] || row["amount_decimal"]).present? }
+        next unless metadata_rows.all? { |row| timestamp_metadata_valid?(row) }
+
         # Map account ID
         new_account_id = mapped_id(:accounts, data["account_id"], record_type: "Transaction")
         next unless new_account_id
@@ -1056,6 +1062,33 @@ class Family::DataImporter
       return false if source.empty?
 
       transaction.extra = transaction.extra.deep_merge("csv" => source)
+      true
+    end
+
+    def timestamp_metadata_valid?(data)
+      %w[transacted_at csv_transacted_at csv_source_date csv_sure_entry_ids entry_id].each do |field|
+        value = data[field]
+        next if value.nil? || (value == "" && field != "csv_sure_entry_ids")
+
+        begin
+          valid = case field
+          when "csv_sure_entry_ids"
+            value.is_a?(Array) && value.all? { |id| id.is_a?(String) && id.present? }
+          when "entry_id"
+            # Legacy opaque IDs can also appear in aliases after a re-export.
+            value.is_a?(String) && value.present?
+          when "csv_source_date"
+            value.is_a?(String) && Date.iso8601(value)
+          else
+            value.is_a?(String) && Entry::Timestamp.parse(value)
+          end
+          raise ArgumentError unless valid
+        rescue ArgumentError, TypeError
+          invalid_record!("Transaction", field, value)
+          return false
+        end
+      end
+
       true
     end
 
