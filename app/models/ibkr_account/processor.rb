@@ -8,9 +8,14 @@ class IbkrAccount::Processor
   def process
     return unless account.present?
 
-    update_account_balance!
+    total_balance = update_account_balance!
     IbkrAccount::HoldingsProcessor.new(ibkr_account).process
     IbkrAccount::ActivitiesProcessor.new(ibkr_account).process
+
+    # Anchor the reported balance AFTER importing, so the standing anchor is judged against a
+    # complete ledger. See Account::CurrentBalanceManager.
+    account.set_current_balance(total_balance)
+
     repair_default_opening_anchor!
 
     account.broadcast_sync_complete
@@ -32,7 +37,9 @@ class IbkrAccount::Processor
         currency: ibkr_account.currency
       )
       account.save!
-      account.set_current_balance(total_balance)
+
+      # Returned to `process`, which anchors it once holdings and activities are in.
+      total_balance
     end
 
     def repair_default_opening_anchor!

@@ -11,9 +11,14 @@ class TradeRepublicAccount::Processor
     exchange_securities = TradeRepublicAccount::SecurityPrefetcher.new(trade_republic_account).prefetch
 
     ActiveRecord::Base.transaction do
-      update_account_balance!
+      total_balance = update_account_balance!
       TradeRepublicAccount::HoldingsProcessor.new(trade_republic_account, exchange_securities: exchange_securities).process
       TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account, exchange_securities: exchange_securities).process
+
+      # TradeRepublicItem#schedule_account_syncs syncs the account once every
+      # Trade Republic account has been processed. A sync started here would
+      # run before the other accounts book their settlements, and then again.
+      account.set_current_balance(total_balance, schedule_sync: false)
     end
 
     account.broadcast_sync_complete
@@ -35,9 +40,8 @@ class TradeRepublicAccount::Processor
         currency: trade_republic_account.currency
       )
       account.save!
-      # TradeRepublicItem#schedule_account_syncs syncs the account once every
-      # Trade Republic account has been processed. A sync started here would
-      # run before the other accounts book their settlements, and then again.
-      account.set_current_balance(total_balance, schedule_sync: false)
+
+      # Returned to `process`, which anchors it once holdings and activities are in.
+      total_balance
     end
 end
