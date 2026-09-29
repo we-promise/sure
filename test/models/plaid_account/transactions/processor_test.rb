@@ -35,7 +35,34 @@ class PlaidAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     processor.process
   end
 
-  test "removes transactions no longer in plaid" do
+  test "removes transactions stored with external_id/source" do
+    removed_id = "ext_destroy_me"
+    @plaid_account.current_account.entries.create!(
+      external_id: removed_id,
+      source: "plaid",
+      date: Date.current,
+      amount: 100,
+      name: "Destroy me",
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    @plaid_account.update!(raw_transactions_payload: {
+      added: [],
+      modified: [],
+      removed: [ { "transaction_id" => removed_id } ]
+    })
+
+    processor = PlaidAccount::Transactions::Processor.new(@plaid_account)
+
+    assert_difference [ "Entry.count", "Transaction.count" ], -1 do
+      processor.process
+    end
+
+    assert_nil Entry.find_by(external_id: removed_id, source: "plaid")
+  end
+
+  test "removes legacy transactions stored with plaid_id" do
     destroyable_transaction_id = "destroy_me"
     @plaid_account.current_account.entries.create!(
       plaid_id: destroyable_transaction_id,
