@@ -11,6 +11,7 @@ pt-BR:
       page_title: Códigos de Backup
       title: Salve Seus Códigos de Backup
     create:
+      code_already_used: Esse código já foi usado. Insira o próximo código do seu aplicativo autenticador.
       invalid_code: Código de verificação inválido. Tente novamente.
       setup_failed: Algo deu errado ao ativar a autenticação de dois fatores. Tente novamente.
     disable:

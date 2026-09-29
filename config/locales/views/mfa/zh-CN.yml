@@ -9,6 +9,7 @@ zh-CN:
       page_title: 备用代码
       title: 保存您的备用代码
     create:
+      code_already_used: 该验证码已被使用。请输入验证器应用中的下一个验证码。
       invalid_code: 验证码无效。请重试。
       setup_failed: 启用双重认证时出错,请重试。
     disable:

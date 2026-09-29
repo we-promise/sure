@@ -11,6 +11,7 @@ es:
       page_title: Códigos de Respaldo
       title: Guarda Tus Códigos de Respaldo
     create:
+      code_already_used: Ese código ya se ha utilizado. Por favor, introduce el siguiente código de tu aplicación de autenticación.
       invalid_code: Código de verificación inválido. Por favor, inténtalo de nuevo.
       setup_failed: Ocurrió un error al activar la autenticación de dos factores. Por favor, inténtalo de nuevo.
     disable:

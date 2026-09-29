@@ -9,6 +9,7 @@ ro:
       page_title: Coduri de rezervă
       title: Salvați codurile dumneavoastră de rezervă
     create:
+      code_already_used: Acest cod a fost deja utilizat. Vă rugăm să introduceți următorul cod din aplicația de autentificare.
       invalid_code: Cod de verificare invalid. Vă rugăm să încercați din nou.
       setup_failed: Ceva nu a mers bine la activarea autentificării cu doi factori. Vă rugăm să încercați din nou.
     disable:

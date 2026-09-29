@@ -51,6 +51,11 @@ tr:
       unlinked_info: Bu satıcılar yakın zamanda işlemlerinizden kaldırıldı. Bir işleme
         yeniden atanmadıkça 30 gün sonra bu listeden kaybolacaklar.
       unlinked_title: Son bağlantısı kaldırılanlar
+      search_family_merchants: Aile satıcılarında ara...
+      search_provider_merchants: Sağlayıcı satıcılarında ara...
+      no_family_merchants_found: Eşleşen aile satıcısı bulunamadı
+      no_provider_merchants_found: Eşleşen sağlayıcı satıcısı bulunamadı
+      per_page: sayfa başına
     merchant:
       confirm_accept: Satıcıyı sil
       confirm_body: Bu satıcıyı silmek istediğinizden emin misiniz? Satıcıyı kaldırmak
@@ -68,6 +73,8 @@ tr:
       submit: Seçilenleri birleştir
       target_label: Şununla birleştir (hedef)
       title: Satıcıları birleştir
+      sources_search_placeholder: Satıcılarda ara...
+      no_merchants_found: Eşleşen satıcı bulunamadı
     new:
       title: Yeni satıcı
     perform_merge:

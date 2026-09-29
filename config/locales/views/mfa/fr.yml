@@ -11,6 +11,7 @@ fr:
       page_title: Codes de Sauvegarde
       title: Enregistrer vos Codes de Sauvegarde
     create:
+      code_already_used: Ce code a déjà été utilisé. Veuillez saisir le code suivant de votre application d'authentification.
       invalid_code: Code de vérification invalide. Veuillez essayer à nouveau.
       setup_failed: Une erreur s'est produite lors de l'activation de l'authentification à deux facteurs. Veuillez réessayer.
     disable:

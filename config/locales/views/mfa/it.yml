@@ -9,6 +9,7 @@ it:
       page_title: Codici di backup
       title: Salva i tuoi codici di backup
     create:
+      code_already_used: Questo codice è già stato utilizzato. Inserisci il codice successivo dalla tua app di autenticazione.
       invalid_code: Codice di verifica non valido. Riprova.
       setup_failed: Si è verificato un errore durante l'attivazione dell'autenticazione a due fattori. Riprova.
     disable:

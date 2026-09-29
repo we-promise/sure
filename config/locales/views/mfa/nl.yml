@@ -9,6 +9,7 @@ nl:
       page_title: Back-upcodes
       title: Bewaar uw back-upcodes
     create:
+      code_already_used: Deze code is al gebruikt. Voer de volgende code uit je authenticatie-app in.
       invalid_code: Ongeldige verificatiecode. Probeer het opnieuw.
       setup_failed: Er is iets misgegaan bij het inschakelen van twee-factor authenticatie. Probeer het opnieuw.
     disable:

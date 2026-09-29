@@ -10,21 +10,24 @@ class MfaController < ApplicationController
   end
 
   def create
-    # Only reachable as a setup-rollback (wrong code while enrolling): if MFA
-    # is already enabled, this must not fall through to the wrong-code branch
-    # below, which calls disable_mfa! unconditionally and with no audit trail
-    # — otherwise a hijacked session could strip a victim's second factor by
-    # POSTing any wrong code, with nothing left to show it happened.
-    if Current.user.otp_required?
-      redirect_to root_path and return
-    end
+    # A duplicate submit of the enrollment form lands here again after the
+    # first one already enabled MFA; it (or any stray POST) must not fall
+    # through to disable_mfa! and tear a finished setup down with no audit
+    # trail.
+    return redirect_to root_path if Current.user.otp_required?
 
-    if Current.user.verify_otp?(params[:code])
+    case Current.user.verify_otp(params[:code])
+    when :accepted
       ActiveRecord::Base.transaction do
         @backup_codes = Current.user.enable_mfa!
         SecurityAuditLog.log_mfa_enabled!(user: Current.user, request: request, actor: Current.true_user)
       end
       render :backup_codes
+    when :replayed
+      # Correct code, but its time step was already claimed by a concurrent
+      # submit. Keep the pending secret so the user can enter the next code
+      # instead of restarting setup.
+      redirect_to new_mfa_path, alert: t(".code_already_used")
     else
       Current.user.disable_mfa!
       redirect_to new_mfa_path, alert: t(".invalid_code")

@@ -10,6 +10,7 @@ pl:
       page_title: Kody zapasowe
       title: Zapisz swoje kody zapasowe
     create:
+      code_already_used: Ten kod został już użyty. Wprowadź następny kod z aplikacji uwierzytelniającej.
       invalid_code: Nieprawidłowy kod weryfikacyjny. Spróbuj ponownie.
       setup_failed: Coś poszło nie tak podczas włączania uwierzytelniania dwuskładnikowego. Spróbuj ponownie.
     disable:

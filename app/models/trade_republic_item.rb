@@ -64,7 +64,17 @@ class TradeRepublicItem < ApplicationRecord
   def process_accounts
     return [] if trade_republic_accounts.empty?
 
-    linked_trade_republic_accounts.includes(account_provider: :account).each_with_object([]) do |tr_account, results|
+    # Portfolio and Crypto before cash so Saveback trades exist before cash
+    # reconciliation removes legacy Saveback withdrawals in the same
+    # process_accounts pass, and cash settlements find the trade they link to.
+    # The accounts are processed without a spanning transaction: each pass
+    # derives its entries and reconciliations from the stored snapshots, so
+    # when one account fails, the next successful sync repairs any trade or
+    # settlement counterpart left halfway through a move.
+    linked_trade_republic_accounts
+      .includes(account_provider: :account)
+      .order(Arel.sql("CASE kind WHEN 'portfolio' THEN 0 WHEN 'crypto' THEN 1 WHEN 'cash' THEN 2 ELSE 3 END"), :id)
+      .each_with_object([]) do |tr_account, results|
       account = tr_account.current_account
       next unless account
       next if account.pending_deletion? || account.disabled?
@@ -159,16 +169,23 @@ class TradeRepublicItem < ApplicationRecord
 
   def data_quality_summary
     positions = trade_republic_accounts.where(kind: "portfolio").flat_map { |account| Array(account.raw_positions_payload) }
-    events = trade_republic_accounts.flat_map { |account| Array(account.raw_timeline_payload) }
-    unknown_events = events.count do |event|
-      !event.is_a?(Hash) || !TradeRepublicAccount::DataHelpers::KNOWN_ACTIVITY_CATEGORIES.include?(event["category"])
+    portfolio_events = trade_republic_accounts.where(kind: "portfolio").flat_map { |account| Array(account.raw_timeline_payload) }
+    cash_events = trade_republic_accounts.where(kind: "cash").flat_map { |account| Array(account.raw_timeline_payload) }
+    unique_events = TradeRepublicAccount::DataHelpers.unique_timeline_events(portfolio_events, cash_events)
+    hash_positions = positions.select { |position| position.is_a?(Hash) }
+    unknown_events = unique_events.count do |event|
+      Provider::TradeRepublicTimelineEvent.classify(event) == :unknown
+    end
+    pending_trade_details = unique_events.count do |event|
+      Provider::TradeRepublicClient.incomplete_trade_detail_event?(event)
     end
 
     {
-      positions: positions.size,
-      unpriced_positions: positions.count { |position| position["price"].blank? },
-      events: events.size,
+      positions: hash_positions.size,
+      unpriced_positions: hash_positions.count { |position| position["price"].blank? },
+      events: unique_events.size,
       unknown_events: unknown_events,
+      pending_trade_details: pending_trade_details,
       linked_accounts: linked_accounts_count,
       unlinked_accounts: unlinked_accounts_count
     }
@@ -179,7 +196,7 @@ class TradeRepublicItem < ApplicationRecord
       account = provider_account.current_account
       next if account.blank?
 
-      expected = provider_account.current_balance.to_d
+      expected = provider_account.account_balance.to_d
       actual = account.balance.to_d
       difference = (expected - actual).abs
       {

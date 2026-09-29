@@ -9,6 +9,7 @@ nb:
       page_title: Sikkerhetskoder
       title: Lagre dine sikkerhetskoder
     create:
+      code_already_used: Denne koden er allerede brukt. Skriv inn neste kode fra autentiseringsappen din.
       invalid_code: Ugyldig verifiseringskode. Prøv igjen.
       setup_failed: Noe gikk galt under aktivering av to-faktor autentisering. Prøv igjen.
     disable:

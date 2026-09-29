@@ -11,6 +11,7 @@ en:
       page_title: Backup Codes
       title: Save Your Backup Codes
     create:
+      code_already_used: That code was already used. Please enter the next code from your authenticator app.
       invalid_code: Invalid verification code. Please try again.
       setup_failed: Something went wrong enabling two-factor authentication. Please try again.
     disable:
