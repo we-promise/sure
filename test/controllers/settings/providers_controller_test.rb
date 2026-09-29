@@ -33,7 +33,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "[data-provider-name='apple wallet']", count: 0
-    assert_select "turbo-frame#financekit-providers-panel" do
+    assert_select "details#financekit-connection" do
       assert_select "a[href=?][data-turbo-frame='_top']", account_path(@source.account), text: "Test Wallet"
       assert_select "span", text: "Sync active"
       assert_select "dt", text: "Last accepted by Sure"
@@ -53,7 +53,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     get settings_providers_url
 
     assert_response :success
-    assert_select "turbo-frame#financekit-providers-panel" do
+    assert_select "details#financekit-connection" do
       assert_select "span", text: "Repair required — open the Sure iOS app"
       assert_select "dd", text: "Not yet", count: 2
       assert_select "a", text: "Test Wallet"
@@ -68,7 +68,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     get settings_providers_url
 
     assert_response :success
-    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "details#financekit-connection", count: 0
     assert_select "[data-provider-name='apple wallet'] button[disabled]", text: "App Store"
   end
 
@@ -84,7 +84,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       get settings_providers_url
 
       assert_response :success
-      assert_select "turbo-frame#financekit-providers-panel"
+      assert_select "details#financekit-connection"
       connections = @controller.view_assigns.values_at("connected", "needs_attention").flatten
       assert_equal [ "financekit" ], connections.map { |entry| entry[:provider_key] }
       assert_select "form[action=?]", sync_all_settings_providers_path, count: 0
@@ -101,12 +101,12 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     @source.account.update!(status: "disabled")
     get settings_providers_url
     assert_response :success
-    assert_select "turbo-frame#financekit-providers-panel a[href=?]", account_path(@source.account)
+    assert_select "details#financekit-connection a[href=?]", account_path(@source.account)
 
     @source.account.update!(status: "pending_deletion")
     get settings_providers_url
     assert_response :success
-    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "details#financekit-connection", count: 0
     assert_select "a[href=?]", account_path(@source.account), count: 0
     assert_select "[data-provider-name='apple wallet']"
   end
@@ -117,7 +117,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     get settings_providers_url
 
     assert_response :success
-    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "details#financekit-connection", count: 0
     assert_select "[data-provider-name='apple wallet']"
   end
 
@@ -129,7 +129,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     get settings_providers_url
 
     assert_response :success
-    assert_select "turbo-frame#financekit-providers-panel", count: 0
+    assert_select "details#financekit-connection", count: 0
     assert_select "[data-provider-name='apple wallet']"
   end
 
@@ -198,8 +198,40 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     %w[wise coinspot].each do |key|
-      assert_select "turbo-frame##{key}-providers-panel"
+      assert_select "details##{key}-connection"
       assert_select "a[href=?]", connect_form_settings_providers_path(provider_key: key), count: 0
+    end
+  end
+
+  # Row panels used to sit in a frame of their own. A redirect to a page
+  # without that frame showed "Content missing", and a stream to
+  # "<key>-providers-panel" replaced the frame when the two shared that id.
+  test "connection rows post from the page and leave panel ids unique" do
+    get settings_providers_url
+
+    assert_response :success
+    assert_operator css_select("details[id$='-connection']").size, :>, 1
+    assert_select "details[id$='-connection'] turbo-frame", count: 0
+
+    panel_ids = css_select("[id$='-providers-panel']").map { |element| element["id"] }
+    assert_equal panel_ids.uniq, panel_ids
+  end
+
+  # Page-level saves re-render these panels in place, and
+  # EnableBankingItem::SyncCompleteEvent replaces its panel when a sync finishes.
+  test "connection rows render the panel roots their streams replace" do
+    families(:dylan_family).enable_banking_items.create!(
+      name: "Test Connection",
+      country_code: "DE",
+      application_id: "test_app_id",
+      client_certificate: OpenSSL::PKey::RSA.new(2048).to_pem
+    )
+
+    get settings_providers_url
+
+    assert_response :success
+    %w[brex enable_banking ibkr lunchflow mercury trading212 wise].each do |key|
+      assert_select "details##{key}-connection ##{key}-providers-panel"
     end
   end
 
@@ -210,7 +242,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     %w[wise coinspot].each do |key|
-      assert_select "turbo-frame##{key}-providers-panel", count: 0
+      assert_select "details##{key}-connection", count: 0
       assert_select "a[href=?]", connect_form_settings_providers_path(provider_key: key)
     end
   end
