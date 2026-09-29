@@ -309,6 +309,20 @@ class KrakenAccount::LedgerProcessorTest < ActiveSupport::TestCase
     assert_match(/Deposit.*BTC/, entry.name)
   end
 
+  test "a zero-quantity crypto row creates no trade" do
+    set_ledgers(
+      # A correction row, a deposit the fee consumed whole, and a staking
+      # reward below the eight decimals the qty column holds.
+      "LZERO1" => ledger_entry(type: "deposit", asset: "XXBT", amount: "0.00000000", fee: "0.00000000", time: 1_700_000_000),
+      "LZERO2" => ledger_entry(type: "deposit", asset: "XXBT", amount: "0.00010000", fee: "0.00010000", time: 1_700_000_100),
+      "LZERO3" => ledger_entry(type: "staking", asset: "DOT", amount: "0.0000000022", fee: "0.0000000006", time: 1_700_000_200)
+    )
+
+    assert_no_difference "@account.entries.count" do
+      process
+    end
+  end
+
   # Pricing can fail on one sync and succeed on the next. A trade recorded at
   # zero with the flag is completed once the price on its date exists.
   test "a crypto trade recorded without a price is priced on a later sync" do

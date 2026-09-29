@@ -135,7 +135,12 @@ class KrakenAccount::LedgerProcessor
       split_fee = fiat && SPLIT_FEE_TYPES.include?(type) && !raw_fee.zero?
       abs_impact = split_fee ? raw_amount.abs : (raw_amount - raw_fee).abs
 
+      # A crypto row has no fee half to owe, so a quantity of nothing -- a
+      # correction row, a movement the fee consumed whole, or a reward below
+      # the eight decimals trades.qty holds -- has nothing to record.
       unless fiat
+        return if abs_impact.round(8).zero?
+
         process_crypto_ledger_entry(
           external_id: external_id, ledger_id: ledger_id, ledger: ledger, type: type,
           raw_asset: raw_asset, base_symbol: base_symbol, symbol: symbol,
