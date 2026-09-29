@@ -10,18 +10,18 @@
 # aliases (`ae`, `a`). The including class must set `@family`.
 module IncomeStatement::ScopedTransactionsQuery
   private
-    # Contributions and loan payments are cash outflows recorded as negative
-    # amounts, so they always classify as expense; other negative amounts
-    # classify as income.
+    # Contributions and loan payments always classify as expense, while
+    # investment withdrawals always classify as income. Other transactions
+    # follow the entry amount sign.
     def classification_sql(t)
-      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
+      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN #{t}.kind = 'investment_withdrawal' OR ae.amount < 0 THEN 'income' ELSE 'expense' END"
     end
 
     # Entry amount converted to the family currency at the day's exchange
-    # rate. Contribution/loan-payment outflows are flipped positive so they
-    # add to expense totals.
+    # rate. Contribution/loan-payment outflows and investment withdrawals are
+    # absolute-valued so they add to their respective totals.
     def converted_amount_sql(t)
-      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END"
+      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment', 'investment_withdrawal') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END"
     end
 
     def entries_join_sql(t)

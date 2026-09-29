@@ -24,7 +24,7 @@ class InvestmentFlowStatement
       .visible
       .excluding_pending
       .where(entries: { date: period.date_range })
-      .where(kind: %w[standard investment_contribution])
+      .where(kind: %w[standard investment_contribution investment_withdrawal])
       .where(investment_activity_label: %w[Contribution Withdrawal])
 
     if user
