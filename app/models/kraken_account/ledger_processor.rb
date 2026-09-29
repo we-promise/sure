@@ -189,6 +189,12 @@ class KrakenAccount::LedgerProcessor
     # its amount regardless of label, so anything else would reintroduce the
     # phantom cash. The units and their price carry the value instead.
     def process_crypto_ledger_entry(external_id:, ledger_id:, ledger:, type:, raw_asset:, base_symbol:, symbol:, qty:, date:)
+      # A crypto row carries its fee inside the quantity, so once it is in there
+      # is no second half owed and nothing to revisit. The caller's early return
+      # lets deposits and withdrawals through for the fee a fiat row may still
+      # need, which would otherwise bring this one back every sync.
+      return if @existing_external_ids.include?(external_id)
+
       security = resolve_security(base_symbol)
       return unless security
 
