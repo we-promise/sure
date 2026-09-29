@@ -918,7 +918,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_28_090000) do
     t.index ["account_id"], name: "index_financekit_account_lineages_on_account_id"
     t.index ["family_id", "account_id"], name: "financekit_lineage_canonical_account", unique: true, where: "(account_id IS NOT NULL)"
     t.index ["family_id"], name: "index_financekit_account_lineages_on_family_id"
-    t.check_constraint "account_origin IS NULL OR (account_origin::text = ANY (ARRAY['created'::character varying::text, 'linked'::character varying::text]))", name: "financekit_lineage_account_origin"
+    t.check_constraint "account_origin IS NULL OR (account_origin::text = ANY (ARRAY['created'::character varying, 'linked'::character varying]::text[]))", name: "financekit_lineage_account_origin"
   end
 
   create_table "financekit_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
