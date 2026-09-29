@@ -94,6 +94,7 @@
             <% end %>
           <% end %>
         <% end %>
+        <%= render "transactions/category_provenance", entry: @entry %>
       </div>
     <% end %>
     <% dialog.with_section(title: t(".details")) do %>

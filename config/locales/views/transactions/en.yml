@@ -165,7 +165,20 @@ en:
       payment_confirmed: Payment is confirmed
       reject_match: Reject match
       transfer_confirmed: Transfer is confirmed
+    category_provenance:
+      title: Auto-categorization
+      assigned: 'Assigned "%{category}" by %{source} %{time_ago} ago.'
+      changed_afterwards: The category was changed afterwards.
+      deleted_category: a category that no longer exists
+      sources:
+        ai: AI
+        bayes: the local Bayes classifier
     transaction:
+      category_provenance:
+        current: AI
+        history: AI history
+        current_tooltip: Category assigned by %{source}
+        history_tooltip: Auto-categorized by %{source}, then changed
       pending: Pending
       pending_tooltip: Pending transaction — may change when posted
       linked_with_provider: Linked with %{provider}
