@@ -80,7 +80,9 @@ class DebugLogEntryTest < ActiveSupport::TestCase
       message: "Provider event",
       source: "Provider::Test",
       metadata: {
-        iban: "DE89370400440532013000",
+        # Deliberately not IBAN-shaped: redaction keys off the name, and a
+        # realistic value would trip the CI secret scanner on this very diff.
+        iban: "an-account-identifier",
         email: "person@example.com",
         details: { account_number: "12345678" },
         status: "ok"
