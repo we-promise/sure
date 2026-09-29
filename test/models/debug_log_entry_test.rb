@@ -46,6 +46,33 @@ class DebugLogEntryTest < ActiveSupport::TestCase
     assert_equal "ok", entry.metadata["status"]
   end
 
+  test "capture redacts credential-shaped metadata keys at any depth" do
+    entry = DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "warn",
+      message: "Provider event",
+      source: "Provider::Test",
+      metadata: {
+        api_key: "sk-live-123",
+        password: "hunter2",
+        authorization: "Bearer abc",
+        request: {
+          headers: [ { access_token: "tok-1" }, { refresh_token: "tok-2" } ],
+          client_secret: "shh"
+        },
+        status: "ok"
+      }
+    )
+
+    assert_equal "[REDACTED]", entry.metadata["api_key"]
+    assert_equal "[REDACTED]", entry.metadata["password"]
+    assert_equal "[REDACTED]", entry.metadata["authorization"]
+    assert_equal "[REDACTED]", entry.metadata["request"]["headers"][0]["access_token"]
+    assert_equal "[REDACTED]", entry.metadata["request"]["headers"][1]["refresh_token"]
+    assert_equal "[REDACTED]", entry.metadata["request"]["client_secret"]
+    assert_equal "ok", entry.metadata["status"]
+  end
+
   test "capture redacts sensitive metadata keys inside nested hashes and arrays" do
     entry = DebugLogEntry.capture(
       category: "provider_sync_error",

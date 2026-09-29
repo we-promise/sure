@@ -9,7 +9,7 @@ class DebugLogEntry < ApplicationRecord
   # call site wrote them — a safety net for the many capture(...) sites across provider
   # importers that this class has no direct visibility into, on top of the individual
   # sites that were audited and fixed not to pass these in the first place.
-  SENSITIVE_METADATA_KEY_PATTERN = /amount|balance|address|\bbody\b|qty|\buid\b|api_account_id/i
+  SENSITIVE_METADATA_KEY_PATTERN = /amount|balance|address|\bbody\b|qty|\buid\b|api_account_id|api_key|access_token|refresh_token|password|authorization|secret/i
 
   if encryption_ready?
     encrypts :metadata
@@ -54,14 +54,16 @@ class DebugLogEntry < ApplicationRecord
       nil
     end
 
+    # Public because the security:backfill_encryption task must run the same
+    # redaction over pre-existing plaintext rows before re-encrypting them.
+    def normalize_metadata(metadata)
+      return {} if metadata.blank?
+      return { value: metadata.to_s } unless metadata.respond_to?(:deep_stringify_keys)
+
+      redact_sensitive(metadata.deep_stringify_keys)
+    end
+
     private
-      def normalize_metadata(metadata)
-        return {} if metadata.blank?
-        return { value: metadata.to_s } unless metadata.respond_to?(:deep_stringify_keys)
-
-        redact_sensitive(metadata.deep_stringify_keys)
-      end
-
       def redact_sensitive(value)
         case value
         when Hash
