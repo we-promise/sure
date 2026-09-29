@@ -28,17 +28,17 @@ class DemoFamilyRefreshJob < ApplicationJob
         end
 
         Demo::Generator.new.generate_default_data!(skip_clear: true, email: demo_email)
-
-        DestroyJob.perform_later(old_family) if old_family
-
-        notify_super_admins!(
-          old_family:,
-          old_family_session_count:,
-          newly_created_families_count:,
-          period_start:,
-          period_end:
-        )
       end
+
+      DestroyJob.perform_later(old_family) if old_family
+
+      notify_super_admins!(
+        old_family:,
+        old_family_session_count:,
+        newly_created_families_count:,
+        period_start:,
+        period_end:
+      )
     end
 
     def sessions_count_for(family, period_start:, period_end:)
