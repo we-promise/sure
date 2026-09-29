@@ -2,6 +2,11 @@
 <% dry_run = import.dry_run %>
 <% resources_with_counts = dry_run.select { |_, count| count > 0 }.filter_map { |key, count| [dry_run_resource(key), count] if dry_run_resource(key) } %>
 <% import_summary_empty = resources_with_counts.empty? %>
+<% sure_preflight_result = import.is_a?(SureImport) ? import.sure_preflight : nil %>
+<% missing_merchant_count = sure_preflight_result&.skipped_missing_merchant_count.to_i %>
+<% skipped_recurring_count = sure_preflight_result&.skipped_unnamed_recurring_count.to_i %>
+<% reused_taxonomy_count = sure_preflight_result&.reused_taxonomy_count.to_i %>
+<% provider_merchant_diffs = sure_preflight_result&.provider_merchant_diff_warnings || [] %>
 
 <div class="text-center space-y-2 mb-4 mx-auto max-w-md">
   <h1 class="text-3xl text-primary font-medium"><%= t(".title") %></h1>
@@ -9,6 +14,58 @@
 </div>
 
 <div class="mx-auto max-w-2xl space-y-4">
+  <% if missing_merchant_count > 0 || skipped_recurring_count > 0 %>
+    <%= render DS::Alert.new(
+      variant: :warning,
+      title: t(".missing_merchant_warning_title"),
+      message: [
+        (t(".missing_merchant_warning_description", count: missing_merchant_count) if missing_merchant_count > 0),
+        (t(".skipped_recurring_description", count: skipped_recurring_count) if skipped_recurring_count > 0)
+      ].compact.join(" ")
+    ) %>
+  <% end %>
+
+  <% if reused_taxonomy_count > 0 %>
+    <%= render DS::Alert.new(
+      variant: :info,
+      title: t(".reused_taxonomy_notice_title"),
+      message: t(".reused_taxonomy_notice_description", count: reused_taxonomy_count)
+    ) %>
+  <% end %>
+
+  <% if provider_merchant_diffs.any? %>
+    <div>
+      <%= render DS::Alert.new(
+        variant: :info,
+        title: t(".provider_merchant_diff_title"),
+        message: t(".provider_merchant_diff_description", count: provider_merchant_diffs.size)
+      ) %>
+
+      <%= render DS::Disclosure.new(variant: :inline, body_class: "space-y-3 mt-2 pl-4 border-l border-primary") do |disclosure| %>
+        <% disclosure.with_summary_content do %>
+          <span class="text-sm text-secondary hover:text-primary flex items-center gap-1 py-2">
+            <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>
+            <%= t(".provider_merchant_diff_summary") %>
+          </span>
+        <% end %>
+
+        <% provider_merchant_diffs.each do |warning| %>
+          <div class="text-sm space-y-1">
+            <p class="text-primary font-medium"><%= warning.dig(:details, :merchant_name) %></p>
+            <% warning.dig(:details, :diff).each do |change| %>
+              <p class="text-secondary">
+                <%= t(".provider_merchant_diff_row",
+                      field: t(".provider_merchant_diff_fields.#{change[:field]}"),
+                      kept: change[:kept_value].presence || t(".provider_merchant_diff_none"),
+                      imported: change[:imported_value]) %>
+              </p>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+
   <div class="bg-container-inset rounded-xl p-1 space-y-1">
     <div class="flex justify-between items-center text-xs font-medium text-secondary uppercase px-5 py-3">
       <p><%= t(".summary_item_label") %></p>

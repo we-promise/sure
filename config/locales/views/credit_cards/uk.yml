@@ -15,14 +15,10 @@ uk:
       minimum_payment_placeholder: '100'
       treat_balance_as_available_credit_description: "Увімкніть, якщо ваш банк повідомляє баланс цієї картки як залишок доступного кредиту, а не як суму боргу. Тоді борг розраховується з кредитного ліміту, повідомленого вашим банком, або з поля «Доступний кредит», якщо ваш банк його не надає."
       treat_balance_as_available_credit_label: "Баланс — це доступний кредит"
+      simplefin_balance_sign_auto: Автоматично
+      simplefin_balance_sign_credit: Кредитовий залишок (банк винен вам)
+      simplefin_balance_sign_debt: Борг (ви винні банку)
+      simplefin_balance_sign_description: Змінюйте це налаштування лише тоді, коли SimpleFIN повідомляє неоднозначний знак. В автоматичному режимі й надалі використовуються історія транзакцій і баланс від постачальника.
+      simplefin_balance_sign_label: Значення балансу SimpleFIN
     new:
       title: "Введіть дані кредитної картки"
-    overview:
-      amount_owed: "Сума боргу"
-      annual_fee: "Річна плата"
-      apr: "Річна процентна ставка"
-      available_credit: "Доступний кредит"
-      edit_account_details: "Редагувати дані рахунку"
-      expiration_date: "Дата закінчення терміну дії"
-      minimum_payment: "Мінімальний платіж"
-      unknown: "Невідомо"

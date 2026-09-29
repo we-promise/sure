@@ -760,4 +760,75 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       config.build_input(prompt: "hi", messages: [ { role: "user", content: "old" } ])
     end
   end
+
+  test "generic chat path omits tool message name and sends string arguments" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://example.com/v1",
+      model: "test-model"
+    )
+
+    client = provider.instance_variable_get(:@client)
+    captured_params = nil
+    client.expects(:chat).with do |params|
+      captured_params = params.fetch(:parameters)
+      true
+    end.returns(
+      {
+        "id" => "chatcmpl-1",
+        "model" => "test-model",
+        "choices" => [ { "message" => { "role" => "assistant", "content" => "ok" } } ],
+        "usage" => { "prompt_tokens" => 10, "completion_tokens" => 5, "total_tokens" => 15 }
+      }
+    )
+
+    response = provider.chat_response(
+      "What is my net worth?",
+      model: "test-model",
+      functions: [ {
+        name: "get_net_worth",
+        description: "Gets a user's net worth",
+        params_schema: { type: "object", properties: {}, required: [], additionalProperties: false },
+        strict: true
+      } ],
+      function_results: [ {
+        call_id: "call_1",
+        name: "get_net_worth",
+        arguments: { "currency" => "USD" },
+        output: { "amount" => 10000 }
+      } ]
+    )
+
+    assert response.success?
+
+    tool_calls = captured_params[:messages]
+                       .select { |m| m[:role] == "assistant" }
+                       .flat_map { |m| m[:tool_calls] || [] }
+    assert_equal 1, tool_calls.size
+    assert_equal "get_net_worth", tool_calls.first.dig(:function, :name)
+    assert_instance_of String, tool_calls.first.dig(:function, :arguments)
+    assert_equal({ "currency" => "USD" }, JSON.parse(tool_calls.first.dig(:function, :arguments)))
+
+    tool_messages = captured_params[:messages].select { |m| m[:role] == "tool" }
+    assert_equal 1, tool_messages.size
+    assert_equal "call_1", tool_messages.first[:tool_call_id]
+    assert_not tool_messages.first.key?(:name), "tool messages must not carry the deprecated `name` field"
+  end
+
+  test "generic chat builder normalizes blank arguments to an empty JSON object" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://example.com/v1",
+      model: "test-model"
+    )
+
+    messages = provider.send(
+      :build_generic_messages,
+      prompt: "hi",
+      function_results: [ { call_id: "call_1", name: "get_net_worth", arguments: "", output: { "amount" => 10000 } } ]
+    )
+
+    tool_call = messages.find { |m| m[:role] == "assistant" }[:tool_calls].first
+    assert_equal "{}", tool_call.dig(:function, :arguments)
+  end
 end
