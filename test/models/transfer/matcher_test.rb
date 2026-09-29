@@ -104,6 +104,36 @@ class Transfer::MatcherTest < ActiveSupport::TestCase
     assert_equal :already_linked, error.code
   end
 
+  test "refuses a transaction another match linked after it was loaded" do
+    outflow = create_transaction(account: @checking, amount: 100).transaction
+    inflow = create_transaction(account: @card, amount: -100).transaction
+    stale = Transaction.find(outflow.id)
+    assert_nil stale.transfer # loaded before the other match
+
+    Transfer::Matcher.new(outflow).match_with!(inflow)
+
+    error = assert_no_difference "Transfer.count" do
+      assert_raises(Transfer::Matcher::Error) { Transfer::Matcher.new(stale).match_to_account!(@loan) }
+    end
+    assert_equal :already_linked, error.code
+  end
+
+  test "locks both transactions before saving the transfer" do
+    outflow = create_transaction(account: @checking, amount: 100).transaction
+    inflow = create_transaction(account: @card, amount: -100).transaction
+    sql = []
+    callback = ->(*, payload) { sql << payload[:sql] }
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      Transfer::Matcher.new(outflow).match_with!(inflow)
+    end
+
+    lock = sql.index { |q| q.include?("FOR UPDATE") && q.include?('"transactions"') }
+    insert = sql.index { |q| q.start_with?('INSERT INTO "transfers"') }
+    assert lock, "expected the transactions to be locked"
+    assert_operator lock, :<, insert
+  end
+
   test "refuses excluded and split transactions" do
     excluded = create_transaction(account: @checking, amount: 100, excluded: true).transaction
     error = assert_raises(Transfer::Matcher::Error) { Transfer::Matcher.new(excluded).match_to_account!(@loan) }
