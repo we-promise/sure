@@ -39,9 +39,9 @@ class IbkrAccount::Processor
         # The currency is written ahead of the anchor so the anchor is made in
         # it, but only when this statement is the one the anchor will follow:
         # an older one leaves the balance where it is, and the cached figures
-        # must keep the denomination they were written in.
-        previous_currency = account.currency
-        if ibkr_account.currency != previous_currency && !statement_behind_anchor?(manager)
+        # must keep the denomination they were written in. Rolled back below
+        # with everything else if the write fails.
+        if ibkr_account.currency != account.currency && !statement_behind_anchor?(manager)
           account.update!(currency: ibkr_account.currency)
         end
 
@@ -53,15 +53,17 @@ class IbkrAccount::Processor
         # account's history.
         result = manager.set_current_balance(total_balance, date: balance_date)
 
-        if result.success?
-          # The cached balance and its cash split are what the account is worth
-          # now, and set_current_balance owns the first of them. A statement
-          # older than the anchor describes a day gone by, so it moves neither.
-          account.update!(cash_balance: cash_balance) unless result.historical?
-        elsif account.currency != previous_currency
-          # Nothing was written, so the currency goes back with it.
-          account.update!(currency: previous_currency)
-        end
+        # The manager rescues and reports failure through its result, and its
+        # own lock joined this transaction rather than opening one -- so what
+        # it wrote before failing (an anchor already rotated into a
+        # reconciliation, a reconciliation saved before its pledge failed)
+        # would commit with the currency. Nothing of this statement may stay.
+        raise ActiveRecord::Rollback unless result.success?
+
+        # The cached balance and its cash split are what the account is worth
+        # now, and set_current_balance owns the first of them. A statement
+        # older than the anchor describes a day gone by, so it moves neither.
+        account.update!(cash_balance: cash_balance) unless result.historical?
       end
 
       if result.success?

@@ -103,6 +103,29 @@ class IbkrAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "CHF", @account.reload.currency, "a failed write puts the currency back"
   end
 
+  # The manager's lock joins the processor's transaction, so a write that fails
+  # part-way -- after the old anchor has already been rotated -- must be rolled
+  # back here, or the rotation commits and the account is left with no current
+  # anchor at all.
+  test "a write that fails part-way leaves the previous anchor as it was" do
+    IbkrAccount::Processor.new(@ibkr_account).process
+    original = @account.valuations.current_anchor.first
+    assert_equal Date.current - 1.day, original.entry.date
+
+    @ibkr_account.update!(report_date: Date.current, current_balance: 4000, currency: "USD")
+    Account::CurrentBalanceManager.any_instance.stubs(:create_current_anchor).raises(ActiveRecord::StatementInvalid, "boom")
+
+    assert_no_difference -> { @account.valuations.count } do
+      IbkrAccount::Processor.new(@ibkr_account.reload).process
+    end
+
+    @account.reload
+    assert_equal "current_anchor", Valuation.find(original.id).kind, "the rotation must have been rolled back"
+    assert_equal 3351, @account.balance
+    assert_equal 1000.5, @account.cash_balance
+    assert_equal "CHF", @account.currency, "the currency write must have been rolled back too"
+  end
+
   # Nothing to date it by, or a statement dated ahead of today: fall back to
   # today rather than anchoring the account in the future.
   test "falls back to today when the report date is missing or ahead" do
