@@ -36,13 +36,13 @@ class CashflowSankeySortTest < ApplicationSystemTestCase
     # Reads the rendered layout (d3 binds each node's datum to its <g>) and
     # checks every column with 2+ nodes is ordered top-to-bottom by value.
     def assert_column_order(direction)
-      columns = nil
-      # Wait out the redraw transition before reading positions.
-      assert page.has_css?("[data-sankey-chart-target='chart'] svg .sankey-link", wait: 5)
-      sleep 0.4
+      # A redraw fades the old drawing out and appends a new one, stamped with
+      # its sort order, so wait for that one and read it.
+      svg = "[data-sankey-chart-target='chart'] svg[data-sort-order='#{direction}']"
+      assert page.has_css?("#{svg} .sankey-link", wait: 5)
       columns = page.evaluate_script(<<~JS)
         (() => {
-          const svg = document.querySelector("[data-sankey-chart-target='chart'] svg");
+          const svg = document.querySelector(#{svg.to_json});
           const byLayer = {};
           svg.querySelectorAll("g > g").forEach((g) => {
             const d = g.__data__;

@@ -150,6 +150,8 @@ export default class extends Controller {
       .append("svg")
       .attr("width", width)
       .attr("height", height)
+      // Marks which order this drawing uses (a redraw fades the old one out).
+      .attr("data-sort-order", this.sortOrder)
       .style("opacity", animate ? 0 : 1);
 
     const effectivePadding = this.#calculateNodePadding(nodes.length, height);
