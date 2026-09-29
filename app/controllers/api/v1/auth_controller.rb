@@ -13,6 +13,12 @@ module Api
       rescue_from SsoIdentityBlock::BlockedIdentity, with: :render_removed_identity
 
       def signup
+        # Mirrors RegistrationsController#ensure_signup_open.
+        if self_hosted? && Setting.onboarding_state == "closed"
+          render json: { error: "Signups are closed" }, status: :forbidden
+          return
+        end
+
         # Check if invite code is required
         if invite_code_required? && params[:invite_code].blank?
           render json: { error: "Invite code is required" }, status: :forbidden
@@ -40,10 +46,12 @@ module Api
 
         user = User.new(user_signup_params)
 
-        # Create family for new user
-        # First user of an instance becomes super_admin
-        family = Family.new
-        user.family = family
+        # Same family assignment as RegistrationsController#create: invite-only
+        # instances with a default family add new users to it as members;
+        # otherwise the user gets a new family (first user becomes super_admin).
+        default_family = invite_only_default_family
+        creating_new_family = default_family.nil?
+        user.family = default_family || Family.new
 
         # Atomic: user creation, invite-code claim, and device/token issuance
         # either all commit or none do. Without this, a post-commit device
@@ -52,14 +60,26 @@ module Api
         token_response = nil
         begin
           ActiveRecord::Base.transaction do
-            User.lock_first_user_role!
-            user.role = User.role_for_new_family_creator
+            if creating_new_family
+              User.lock_first_user_role!
+              user.role = User.role_for_new_family_creator
+            else
+              user.role = :member
+            end
 
             unless user.save
               render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
               raise ActiveRecord::Rollback
             end
-            InviteCode.claim!(params[:invite_code]) if params[:invite_code].present?
+
+            # The code may have been claimed by a concurrent signup since the
+            # check above; only the request that deletes it may proceed.
+            if params[:invite_code].present? && !InviteCode.claim!(params[:invite_code])
+              render json: { error: "Invalid invite code" }, status: :forbidden
+              raise ActiveRecord::Rollback
+            end
+
+            user.family.auto_share_existing_accounts_with(user) unless creating_new_family
             device = MobileDevice.upsert_device!(user, device_params)
             token_response = device.issue_token!
           end
@@ -73,9 +93,22 @@ module Api
       end
 
       def login
-        user = User.find_by(email: params[:email])
+        # SSO-only instances allow local login only for super admins, and
+        # only when the emergency override is enabled (as SessionsController).
+        unless AuthConfig.local_login_form_visible?
+          render json: { error: "Local login is disabled. Please sign in with SSO." }, status: :forbidden
+          return
+        end
 
-        if user&.authenticate(params[:password])
+        # authenticate_by also hashes the password when no user matches, so
+        # response time does not reveal whether the email is registered.
+        user = User.authenticate_by(email: params[:email].to_s, password: params[:password].to_s)
+
+        # Under the override, a non-super-admin gets the same answer as a wrong
+        # password, so the endpoint does not reveal who the super admins are.
+        user = nil unless AuthConfig.local_login_allowed_for?(user)
+
+        if user
           unless user.active?
             render json: { error: "This account has been deactivated. Please contact an administrator." }, status: :unauthorized
             return
@@ -391,6 +424,12 @@ module Api
       end
 
       private
+        def invite_only_default_family
+          return unless Setting.onboarding_state == "invite_only"
+
+          default_family_id = Setting.invite_only_default_family_id
+          Family.find_by(id: default_family_id) if default_family_id.present?
+        end
 
         def user_signup_params
           params.require(:user).permit(:email, :password, :first_name, :last_name)

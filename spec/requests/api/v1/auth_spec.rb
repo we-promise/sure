@@ -9,7 +9,8 @@ RSpec.describe 'API V1 Auth', type: :request do
       consumes 'application/json'
       produces 'application/json'
       description 'Creates a new user and family. The first user on a fresh instance is assigned ' \
-                  'the super_admin role; later family creators are assigned an admin role.'
+                  'the super_admin role; later family creators are assigned an admin role. On invite-only ' \
+                  'instances with a default family, the user joins that family as a member instead.'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -67,7 +68,7 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '403', 'invite code required or invalid' do
+      response '403', 'invite code required or invalid, or signups closed' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
@@ -124,6 +125,11 @@ RSpec.describe 'API V1 Auth', type: :request do
       end
 
       response '401', 'invalid credentials, MFA required, or account deactivated' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+
+      response '403', 'local login disabled (SSO-only instance)' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end

@@ -143,6 +143,12 @@ class Rack::Attack
     credential_guess_email.call(request) if request.post? && credential_guess_path.call(request, "/api/v1/auth/sso_link")
   end
 
+  # Signup takes an 8-hex-character invite code, so it is a guessing
+  # surface too.
+  throttle("api_signup/ip", limit: 10, period: 1.minute) do |request|
+    request.ip if request.post? && credential_guess_path.call(request, "/api/v1/auth/signup")
+  end
+
   # FinanceKit publisher endpoints belong to this section: both the upload and
   # the receipt read authenticate a bearer token against a stored SHA-256
   # digest (FinancekitItem#authenticate_credential?), the same
