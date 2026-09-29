@@ -105,32 +105,42 @@ class Family::AutoMerchantDetector
     end
 
     def find_or_create_ai_merchant(auto_detection)
-      # Strategy 1: Find existing merchant by website_url (most reliable for deduplication)
+      # Strategy 1: Find an existing merchant by website_url (most reliable for
+      # deduplication). Reusing an already-vetted shared merchant is safe —
+      # unlike creating one, it doesn't let this family's transaction text
+      # write anything into a record other families see.
       if auto_detection.business_url.present?
         existing = ProviderMerchant.find_by(website_url: auto_detection.business_url)
         return existing if existing
       end
 
-      # Strategy 2: Find by exact name match
+      # Strategy 2: Find an existing AI-sourced merchant by exact name match.
       existing = ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
       return existing if existing
 
-      # Strategy 3: Create new merchant
-      ProviderMerchant.create!(
-        source: "ai",
-        name: auto_detection.business_name,
-        website_url: auto_detection.business_url,
-        logo_url: build_logo_url(auto_detection.business_url)
-      )
-    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
-      # Race condition: another process created the merchant between our find and create
-      ProviderMerchant.find_by(source: "ai", name: auto_detection.business_name)
-    end
+      # Strategy 3: no shared merchant to reuse. Create a merchant scoped to
+      # this family rather than a globally-shared ProviderMerchant, so a
+      # family can't use LLM-extracted data derived from its own transaction
+      # description/notes to create a record visible to every other family
+      # (issue #3842).
+      existing = family.merchants.find_by(name: auto_detection.business_name)
+      return existing if existing
 
-    def build_logo_url(business_url)
-      return nil unless Setting.brand_fetch_client_id.present? && business_url.present?
-      size = Setting.brand_fetch_logo_size
-      "#{default_logo_provider_url}/#{business_url}/icon/fallback/lettermark/w/#{size}/h/#{size}?c=#{Setting.brand_fetch_client_id}"
+      # requires_new: true opens a savepoint, so a RecordNotUnique here rolls
+      # back only the failed insert; without it Postgres would abort any
+      # enclosing transaction and the rescue's find_by! below would also fail.
+      FamilyMerchant.transaction(requires_new: true) do
+        family.merchants.create!(
+          name: auto_detection.business_name,
+          website_url: auto_detection.business_url,
+          color: FamilyMerchant::COLORS.sample
+        )
+      end
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
+      # Race condition: another process created this family's merchant of
+      # the same name between our find and create.
+      raise if e.is_a?(ActiveRecord::RecordInvalid) && !e.record.errors.of_kind?(:name, :taken)
+      family.merchants.find_by!(name: auto_detection.business_name)
     end
 
     def enhance_provider_merchant(merchant, auto_detection)
