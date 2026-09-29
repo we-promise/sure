@@ -5,9 +5,10 @@
     <div class="form-field__body">
         <% if options[:label].present? %>
           <%= form.label method, class: "form-field__label", id: "#{method}_label" do %>
-            <%= options[:label] %>
             <% if options.dig(:html_options, :required) %>
-              <span class="text-destructive ml-0.5">*</span>
+              <%= safe_join([options[:label], tag.span("*", class: "text-destructive ml-0.5")]) %>
+            <% else %>
+              <%= options[:label] %>
             <% end %>
           <% end %>
         <% end %>
