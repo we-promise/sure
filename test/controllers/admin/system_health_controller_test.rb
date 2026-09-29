@@ -46,7 +46,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Sidekiq status/, response.body)
     assert_match(/Healthy/, response.body)
     assert_select "button[role='tab']", text: "AI status"
-    assert_select "[data-ds--tabs-navigate-on-change-value='true']"
     # Nothing in the queue table takes focus, so on a narrow screen the scroll
     # area has to be a named tab stop of its own for a keyboard to scroll it.
     assert_select "[role='region'][aria-label='Queues']"
@@ -163,16 +162,28 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
   end
 
-  test "AI status reports the default OpenAI LLM and hosted vector store" do
-    sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
+  test "only super admins can run the AI checks" do
+    AiHealth::Probe.any_instance.expects(:llm).never
 
     with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
+      assert_redirected_to new_session_path
+
+      sign_in users(:family_admin)
+      get ai_status_admin_system_health_url
+      assert_redirected_to root_path
+    end
+  end
+
+  test "AI status reports the default OpenAI LLM and hosted vector store" do
+    sign_in users(:sure_support_staff)
+
+    with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
-    assert_select "button[role='tab'][aria-selected='true']", text: "AI status"
+    assert_select "turbo-frame#ai_status"
     assert_match(/LLM and PDF processing/, response.body)
     assert_select "[data-testid='selected-llm-provider']", text: "OpenAI"
     assert_select "[data-testid='effective-llm-provider']", text: "OpenAI"
@@ -187,7 +198,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/sk-secret-openai/, response.body)
   end
 
-  test "background jobs tab does not run AI probes" do
+  test "the page leaves the AI probes to a lazy frame on either tab" do
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
     AiHealth::Probe.any_instance.expects(:llm).never
@@ -197,17 +208,52 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     AiHealth::Probe.any_instance.expects(:openai_vector_store).never
 
     with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
-      get admin_system_health_url
-    end
+      { "background_jobs" => "Background jobs", "ai" => "AI status" }.each do |tab, label|
+        get admin_system_health_url(tab: tab)
 
-    assert_response :success
-    assert_match(/Not checked/, response.body)
-    assert_no_match(/sk-secret-openai/, response.body)
+        assert_response :success
+        assert_select "button[role='tab'][aria-selected='true']", text: label
+        assert_select "turbo-frame#ai_status[loading='lazy'][src='#{ai_status_admin_system_health_path}']",
+          text: "Running live checks…"
+      end
+    end
+  end
+
+  test "the lazy frame keeps the page's refresh and locale override" do
+    sign_in users(:sure_support_staff)
+
+    get admin_system_health_url(tab: "ai", refresh_ai_health: "1", locale: "de")
+
+    assert_select "turbo-frame#ai_status[src='#{ai_status_admin_system_health_path(refresh_ai_health: "1", locale: "de")}']"
+  end
+
+  test "the lazy frame drops a refresh or locale it can't use" do
+    sign_in users(:sure_support_staff)
+
+    [ { refresh_ai_health: "0", locale: "xx" }, { refresh_ai_health: { "x" => "1" }, locale: { "x" => "de" } } ].each do |query|
+      get admin_system_health_url(tab: "ai", **query)
+
+      assert_response :success
+      assert_select "turbo-frame#ai_status[src='#{ai_status_admin_system_health_path}']"
+    end
+  end
+
+  # The redirect's morph reloads the frame from its old src, so an override
+  # dropped on the way would leave the page and the frame in two languages.
+  test "a locale override survives the worker check round trip" do
+    sign_in users(:sure_support_staff)
+
+    with_ai_environment do
+      get ai_status_admin_system_health_url(locale: "de")
+    end
+    assert_select "form[action=?]", verify_worker_ai_admin_system_health_path(locale: "de")
+
+    post verify_worker_ai_admin_system_health_url(locale: "de")
+    assert_redirected_to admin_system_health_path(tab: "ai", locale: "de")
   end
 
   test "AI status warns when a custom OpenAI endpoint is paired with the hosted vector store" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
 
     with_ai_environment(
       "OPENAI_ACCESS_TOKEN" => "local-token",
@@ -225,7 +271,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
       AiHealth::Probe.any_instance.stubs(:openai_vector_store).returns(
         probe_result(:failing, failure_code: :request_failed, http_status: 404)
       )
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -241,7 +287,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status names the missing function-calling support behind an unhelpful chat error" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
     AiHealth::Probe.any_instance.stubs(:function_calling).returns(
       probe_result(:failing, failure_code: :tools_refused, http_status: 404)
     )
@@ -251,7 +296,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
       "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1",
       "OPENAI_MODEL" => "tngtech/deepseek-r1t2-chimera:free"
     ) do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -263,7 +308,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status names an unavailable configured LLM model" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
     AiHealth::Probe.any_instance.stubs(:llm).returns(
       probe_result(:failing, failure_code: :model_not_available)
     )
@@ -273,7 +317,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
       "OPENAI_URI_BASE" => "https://generativelanguage.googleapis.com/v1beta/openai",
       "OPENAI_MODEL" => "retired-gemini-model"
     ) do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -284,13 +328,12 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status separates a model that ignores tools from one that cannot use them" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
     AiHealth::Probe.any_instance.stubs(:function_calling).returns(
       probe_result(:failing, failure_code: :no_tool_call)
     )
 
     with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -301,13 +344,12 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status reports text and vision PDF probes separately" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
     AiHealth::Probe.any_instance.stubs(:pdf_vision_processing).returns(
       probe_result(:failing, failure_code: :invalid_response)
     )
 
     with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -323,7 +365,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status surfaces LLM and probe request timeouts as distinct values" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
 
     # OPENAI_REQUEST_TIMEOUT bounds real LLM calls the app makes (chat, PDF
     # import). AI_HEALTH_PROBE_TIMEOUT only bounds the admin "live checks".
@@ -332,7 +373,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
       "OPENAI_REQUEST_TIMEOUT" => "300",
       "AI_HEALTH_PROBE_TIMEOUT" => "5"
     ) do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -348,7 +389,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status does not probe PDF processing when it is explicitly disabled" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
     AiHealth::Probe.any_instance.expects(:pdf_text_extraction).never
     AiHealth::Probe.any_instance.expects(:pdf_vision_processing).never
 
@@ -356,7 +396,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
       "OPENAI_ACCESS_TOKEN" => "sk-secret-openai",
       "OPENAI_SUPPORTS_PDF_PROCESSING" => "false"
     ) do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -366,7 +406,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status reports Anthropic with an available pgvector store" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
     Setting.stubs(:llm_provider).returns("anthropic")
 
     connection = stub("connection")
@@ -388,7 +427,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
       "EMBEDDING_MODEL" => "mxbai-embed-large",
       "EMBEDDING_DIMENSIONS" => "1024"
     ) do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -403,7 +442,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status explains a missing pgvector table" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
     Setting.stubs(:llm_provider).returns("anthropic")
     VectorStore::Pgvector.stubs(:available?).returns(true)
     AiHealth::Probe.any_instance.stubs(:pgvector).returns(
@@ -422,7 +460,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
       "EMBEDDING_MODEL" => "mxbai-embed-large",
       "EMBEDDING_DIMENSIONS" => "1024"
     ) do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -434,7 +472,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status explains an embedding dimensions mismatch" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
     Setting.stubs(:llm_provider).returns("anthropic")
     VectorStore::Pgvector.stubs(:available?).returns(true)
     AiHealth::Probe.any_instance.stubs(:embedding).returns(
@@ -453,7 +490,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
       "EMBEDDING_MODEL" => "gemini-embedding-2-preview",
       "EMBEDDING_DIMENSIONS" => "1024"
     ) do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -466,7 +503,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status explains embedding probe timeouts" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
     Setting.stubs(:llm_provider).returns("anthropic")
     VectorStore::Pgvector.stubs(:available?).returns(true)
     AiHealth::Probe.any_instance.stubs(:embedding).returns(
@@ -485,7 +521,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
       "EMBEDDING_MODEL" => "gemini-embedding-2-preview",
       "EMBEDDING_DIMENSIONS" => "3072"
     ) do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -497,10 +533,9 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status explains when no vector store is configured" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
 
     with_ai_environment do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -510,7 +545,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status marks Qdrant as scaffolded and redacts its URL" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
 
     with_ai_environment(
       "VECTOR_STORE_PROVIDER" => "qdrant",
@@ -524,7 +558,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
       ),
       "QDRANT_API_KEY" => "header-secret"
     ) do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -534,12 +568,23 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/qdrant-secret|query-secret|header-secret/, response.body)
   end
 
+  test "AI status keeps its standing guidance collapsed" do
+    sign_in users(:sure_support_staff)
+
+    with_ai_environment do
+      get ai_status_admin_system_health_url
+    end
+
+    assert_response :success
+    assert_select "details:not([open]) summary", text: "Which settings need a restart?"
+    assert_select "details:not([open]) summary", text: "Recommended local setup"
+  end
+
   test "AI status explains when no worker has checked in yet" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
 
     with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
-      get admin_system_health_url(tab: "ai")
+      get ai_status_admin_system_health_url
     end
 
     assert_response :success
@@ -549,7 +594,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status renders a worker result and flags it matching the web configuration" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
 
     with_memory_cache do
       with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
@@ -561,7 +605,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
           vector_store_adapter: :openai
         ))
 
-        get admin_system_health_url(tab: "ai")
+        get ai_status_admin_system_health_url
       end
     end
 
@@ -573,7 +617,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status flags a worker result whose configuration differs from the web process" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
 
     with_memory_cache do
       with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
@@ -584,7 +627,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
           llm_endpoint: "https://api.openai.com/v1"
         ))
 
-        get admin_system_health_url(tab: "ai")
+        get ai_status_admin_system_health_url
       end
     end
 
@@ -594,7 +637,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status shows a failing worker result with its failure reason" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
 
     with_memory_cache do
       with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
@@ -604,7 +646,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
           failure_codes: [ :model_not_available ]
         ))
 
-        get admin_system_health_url(tab: "ai")
+        get ai_status_admin_system_health_url
       end
     end
 
@@ -639,11 +681,10 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     end
 
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
     with_memory_cache do
       with_ai_environment do
         WorkerAiHealth.record!(worker_snapshot(llm_status: :failing, failure_codes: reasons.keys))
-        get admin_system_health_url(tab: "ai", locale: :de)
+        get ai_status_admin_system_health_url(locale: :de)
       end
     end
 
@@ -654,7 +695,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
   test "AI status shows a stale worker result as stale rather than passing" do
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
 
     with_memory_cache do
       with_ai_environment("OPENAI_ACCESS_TOKEN" => "sk-secret-openai") do
@@ -663,7 +703,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
           checked_at: (WorkerAiHealth::STALE_AFTER + 1.minute).ago
         ))
 
-        get admin_system_health_url(tab: "ai")
+        get ai_status_admin_system_health_url
       end
     end
 
@@ -722,7 +762,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
 
     with_memory_cache do
       with_ai_environment do
-        get admin_system_health_url(tab: "ai")
+        get ai_status_admin_system_health_url
         assert_response :success
         assert_select "h2", text: "Worker-Verifikation"
         assert_select "button", text: "Worker-Konfiguration prüfen"
@@ -745,7 +785,6 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
   test "German worker results distinguish passing failing stale and differing configurations" do
     users(:sure_support_staff).update!(locale: "de")
     sign_in users(:sure_support_staff)
-    stub_healthy_sidekiq
 
     with_memory_cache do
       with_ai_environment("OPENAI_ACCESS_TOKEN" => "synthetic-token") do
@@ -755,7 +794,7 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
           [ { checked_at: (WorkerAiHealth::STALE_AFTER + 1.minute).ago }, "Veraltet", "Entspricht dem Web-Prozess" ]
         ].each do |overrides, status, configuration|
           WorkerAiHealth.record!(worker_snapshot(**{ vector_store_adapter: :openai, vector_store_status: :passing }.merge(overrides)))
-          get admin_system_health_url(tab: "ai")
+          get ai_status_admin_system_health_url
           assert_response :success
           assert_select "[data-testid='worker-ai-health-result']" do
             assert_select "[data-testid='worker-process-identity']", text: "worker:1"
