@@ -16,7 +16,7 @@
 # another. So one rule table lives here and both forms of the classifier --
 # the Ruby #classify for tests and small sets, the SQL #sql_case for the daily
 # queries a series needs -- are generated from it, with a parity test proving
-# they agree (docs/portfolio/methodology.md, contract rows P1-P16).
+# they agree.
 #
 # Scope is a required argument, not a default. A transfer between two
 # brokerage accounts is internal to the family portfolio and external to

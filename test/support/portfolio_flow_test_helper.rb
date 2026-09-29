@@ -1,7 +1,7 @@
 # Builders for the entry shapes providers actually write into investment
 # accounts, so classifier and totals tests exercise real storage shapes
-# rather than one idealised trade. The provider each shape comes from is
-# recorded in docs/portfolio/methodology.md (provider audit).
+# rather than one idealised trade. Each builder names the provider whose
+# storage shape it reproduces.
 module PortfolioFlowTestHelper
   def create_portfolio_account(family, name: "Investment #{SecureRandom.hex(3)}", balance: 1000, cash_balance: 0, currency: "USD", accountable: Investment.new)
     family.accounts.create!(

@@ -1,10 +1,10 @@
 require "test_helper"
 
-# Each test here demonstrates one row of the flow contract in
-# docs/portfolio/methodology.md (P1-P19); config/portfolio_contract_tests.yml
-# binds the row to the test name and portfolio:verify_contract_coverage
-# fails when they drift apart. Rename a test and the gate says which row lost
-# its evidence.
+# Each test here demonstrates one rule of the classifier's contract, which is
+# stated in full at the top of Portfolio::FlowClassifier: what counts as
+# income, fee, internal movement or external flow, how scope decides a
+# transfer, and what a caller must do with the answer. One test per rule, so a
+# rule that loses its evidence loses a named test with it.
 class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
   include PortfolioFlowTestHelper
 
