@@ -297,6 +297,35 @@ class UserTest < ActiveSupport::TestCase
     assert_not_nil user.reload.otp_last_used_at
   end
 
+  test "verify_otp tells a replayed code apart from an invalid one" do
+    user = users(:family_member)
+    user.setup_mfa!
+    code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+
+    assert_equal :accepted, user.verify_otp(code)
+    assert_equal :replayed, user.verify_otp(code)
+    assert_equal :replayed, User.find(user.id).verify_otp(code), "a freshly loaded user must see the replay too"
+    assert_equal :invalid, user.verify_otp("invalid")
+    assert_equal :invalid, user.verify_otp("123456")
+  end
+
+  # A claim carried by a stale instance must not mark a time step as used on
+  # a factor enrolled after the secret changed underneath it.
+  test "verify_otp? claim_otp_time_step! does not claim across a replaced secret" do
+    user = users(:family_member)
+    user.setup_mfa!
+    totp = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances")
+    now = Time.current
+    time_step = totp.verify(totp.at(now), at: now)
+    stale = User.find(user.id)
+
+    user.disable_mfa!
+    user.setup_mfa!
+
+    assert_not stale.send(:claim_otp_time_step!, time_step)
+    assert_nil user.reload.otp_last_used_at, "the new factor must not inherit the old claim"
+  end
+
   test "setting up or disabling MFA forgets the last used time step" do
     user = users(:family_member)
     user.setup_mfa!
