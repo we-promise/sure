@@ -1,0 +1,10 @@
+<%= render DS::Card.new do %>
+  <h2 class="text-lg font-semibold text-primary mb-1">Queues</h2>
+  <p class="text-sm text-secondary mb-4">Jobs waiting in each queue.</p>
+
+  <%= render DS::Table.new(rows: [ [ "default", 12, 0.4 ], [ "high_priority", 0, 0.0 ], [ "low_priority", 1_204, 38.2 ] ], inset: true, label: "Queues") do |table| %>
+    <% table.with_column("Queue") { |(name)| name } %>
+    <% table.with_column("Size", numeric: true) { |(_name, size)| number_with_delimiter(size) } %>
+    <% table.with_column("Latency", numeric: true) { |(_name, _size, latency)| "#{latency}s" } %>
+  <% end %>
+<% end %>

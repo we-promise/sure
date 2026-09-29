@@ -253,6 +253,38 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "Test Brex Connection"
   end
 
+  test "lists active Wise and CoinSpot connections under your connections" do
+    get settings_providers_url
+
+    assert_response :success
+    %w[wise coinspot].each do |key|
+      assert_select "turbo-frame##{key}-providers-panel"
+      assert_select "a[href=?]", connect_form_settings_providers_path(provider_key: key), count: 0
+    end
+  end
+
+  test "lists Wise and CoinSpot as available when the family has no connections" do
+    sign_in users(:empty)
+
+    get settings_providers_url
+
+    assert_response :success
+    %w[wise coinspot].each do |key|
+      assert_select "turbo-frame##{key}-providers-panel", count: 0
+      assert_select "a[href=?]", connect_form_settings_providers_path(provider_key: key)
+    end
+  end
+
+  # The provider card reads its tagline with `default: nil`, so a missing key
+  # renders a bare name rather than failing. Up shipped that way.
+  test "every family panel provider has an English tagline" do
+    missing = Settings::ProvidersController::FAMILY_PANEL_KEYS.reject do |key|
+      I18n.exists?("settings.providers.taglines.#{key}", :en)
+    end
+
+    assert_empty missing
+  end
+
   test "sync all control submits with POST" do
     SimplefinItem.create!(
       family: families(:dylan_family),
