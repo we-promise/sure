@@ -13,7 +13,8 @@ using the previews, correct invalid rows, or convert the CSV to a supported form
 and upload it again. Two-digit years always require a manual choice.
 
 The ISO 8601 timestamp option accepts values such as
-`2026-09-17T14:48:50Z` and `2026-09-17T16:48:50.123456+02:00`. An explicit timezone
+`2026-09-17T14:48Z`, `2026-09-17T14:48:50Z` and
+`2026-09-17T16:48:50.123456+02:00`. An explicit timezone
 offset is required. Timestamp precision is retained up to six fractional digits.
 Date-only formats must match the complete value; they cannot discard a time suffix.
 
@@ -32,7 +33,13 @@ correction. An explicit date in a later CSV cannot claim a different dated row
 solely because the timestamp matches; cross-date matches without source-date
 provenance require review rather than guessing.
 Same-day CSV exports of manually corrected dates or times can match the existing
-entry by its current instant while retaining the original CSV provenance.
+entry by its current instant while retaining the original CSV provenance. Sure's
+transaction CSV export also includes `sure_entry_id` to identify a corrected
+entry when its accounting date and original CSV date differ. This ID is used
+only within the selected account when the row's current fields still match.
+Older exports without the ID fail for review if a current-time match conflicts
+with the stored original CSV date; they cannot safely distinguish a correction
+from a different transaction.
 Date-only rows never erase a known time. If old entries have no time and more than
 one correspondence is possible, the import reports the ambiguous row and rolls
 back rather than guessing. No transaction is identified by timestamp alone:
@@ -62,8 +69,9 @@ Hovering over a timestamped transaction's name shows its local timestamp.
 Transaction CSV exports include separate `date` and `transacted_at` columns. Map
 both to preserve their independent values. Trade CSVs also carry the timestamp,
 including when a transaction has been converted to a trade. NDJSON backups restore
-timestamps, source-date provenance, and manual timestamp protection, including
-split transactions. Older backups that omit timestamps remain supported.
+timestamps, source-date and Sure CSV identity provenance, and manual timestamp
+protection, including split transactions. Older backups that omit timestamps
+remain supported.
 
 Transaction API responses include a nullable, read-only `transacted_at` field in
 UTC ISO 8601 format. The existing `date` field keeps its meaning.

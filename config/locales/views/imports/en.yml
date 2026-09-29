@@ -264,7 +264,7 @@ en:
       preview: "First value: accounting date %{date}; transaction time %{time}."
       unknown: not supplied
       invalid_preview: The first value does not match the selected format. Select another format or correct the input data.
-      ambiguous_match: "Row %{row}: several transactions could match this timestamp. Review the existing date-only transactions before re-importing."
+      ambiguous_match: "Row %{row}: the timestamp or Sure entry ID cannot safely identify a transaction. Review the existing transactions before re-importing."
     mapping_labels:
       account_type: "Account Type"
       account: "Account"

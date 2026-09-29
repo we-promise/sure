@@ -245,7 +245,7 @@ fr:
       preview: "Première valeur : date comptable %{date} ; date et heure de transaction %{time}."
       unknown: non renseignées
       invalid_preview: La première valeur ne correspond pas au format choisi. Sélectionnez un autre format ou corrigez les données.
-      ambiguous_match: "Ligne %{row} : plusieurs transactions pourraient correspondre à cet horodatage. Vérifiez les transactions sans heure avant de réimporter."
+      ambiguous_match: "Ligne %{row} : l'horodatage ou l'identifiant Sure ne permet pas d'identifier une transaction de façon sûre. Vérifiez les transactions existantes avant de réimporter."
     apply_template:
       no_template_found: Aucun modèle trouvé, veuillez configurer manuellement votre importation.
       template_applied: Modèle appliqué.

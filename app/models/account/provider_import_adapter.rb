@@ -1087,7 +1087,11 @@ class Account::ProviderImportAdapter
       raise AmbiguousTimestampMatch if current_match && exact_match && current_match.id != exact_match.id
       raise AmbiguousTimestampMatch if allow_cross_date && (!exact_match || !dates.include?(exact_match.date)) && unprovenanced.exists?
       return exact_match if exact_match
-      return current_match if current_match
+      if current_match
+        raise AmbiguousTimestampMatch unless current_match.transaction.extra.dig("csv", "date") == source_date.iso8601
+
+        return current_match
+      end
       return unless allow_legacy
 
       legacy = csv_query.where(date: dates, transacted_at: nil).where("#{source_key} IS NULL").limit(2).to_a

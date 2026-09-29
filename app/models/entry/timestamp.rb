@@ -13,7 +13,7 @@ class Entry::Timestamp
     raise ArgumentError, "Invalid timestamp" unless valid
 
     if match[1]
-      Time.iso8601(text)
+      Time.iso8601(parts[:sec] ? text : text.sub(/T\d{2}:\d{2}/) { |clock| "#{clock}:00" })
     else
       zone = Time.find_zone!(timezone)
       timestamp = zone.iso8601(text)

@@ -1,6 +1,6 @@
 class TransactionImport < Import
   store_accessor :column_mappings, :date_basis, :date_timezone
-  PreparedRow = Data.define(:row, :account, :currency, :date, :source_date, :timestamp, :amount)
+  PreparedRow = Data.define(:row, :account, :currency, :date, :source_date, :timestamp, :amount, :sure_entry_id)
   private_constant :PreparedRow
 
   validates :date_basis, inclusion: { in: %w[source local] }, allow_blank: true
@@ -113,10 +113,13 @@ class TransactionImport < Import
         else
           # Create new transaction (no duplicate found)
           # Mark as import_locked to protect from provider sync overwrites
+          csv_extra = { "date" => prepared.source_date.iso8601 }
+          csv_extra["transacted_at"] = timestamp.getutc.iso8601(6) if timestamp
+          csv_extra["sure_entry_ids"] = [ prepared.sure_entry_id.downcase ] if prepared.sure_entry_id.present?
           new_transactions << Transaction.new(
             category: category,
             tags: tags,
-            extra: timestamp ? { "csv" => { "transacted_at" => timestamp.getutc.iso8601(6), "date" => prepared.source_date.iso8601 } } : {},
+            extra: timestamp || prepared.sure_entry_id.present? ? { "csv" => csv_extra } : {},
             entry: Entry.new(
               account: prepared.account,
               date: prepared.date,
@@ -193,18 +196,51 @@ class TransactionImport < Import
         currency = currency_col_label.present? ? row.currency : (mapped_account.currency.presence || family.currency)
         PreparedRow.new(row: row, account: mapped_account, currency: currency,
                         date: parsed.date, source_date: DateParser.parse(row.date, format: date_format).date,
-                        timestamp: parsed.timestamp, amount: row.signed_amount)
+                        timestamp: parsed.timestamp, amount: row.signed_amount,
+                        sure_entry_id: csv_value(csv_rows[row.source_row_number - 1], "sure_entry_id"))
       end
     end
 
     def match_rows(prepared_rows)
       matches = {}
       claimed = Set.new
+      exported_ids = Set.new
+      prepared_rows.each do |prepared|
+        id = prepared.sure_entry_id
+        next if id.blank?
+
+        raise_ambiguous_match(prepared) unless id.match?(/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i) && exported_ids.add?(id.downcase)
+
+        candidates = prepared.account.entries
+          .joins("INNER JOIN transactions AS csv_transactions ON csv_transactions.id = entries.entryable_id")
+          .where(entryable_type: "Transaction", external_id: nil)
+        entry = candidates.find_by(id: id)
+        unless entry
+          aliases = candidates.where("(csv_transactions.extra -> 'csv' -> 'sure_entry_ids') @> CAST(:ids AS jsonb)",
+                                     ids: [ id.downcase ].to_json)
+          parents = aliases.where(parent_entry_id: nil).limit(2).to_a
+          raise_ambiguous_match(prepared) if parents.many?
+          children = parents.empty? ? aliases.limit(2).to_a : []
+          raise_ambiguous_match(prepared) if children.many?
+          entry = parents.first || children.first
+        end
+        next unless entry
+        raise_ambiguous_match(prepared) if claimed.include?(entry.id)
+
+        unless entry.date == prepared.date && entry.transacted_at == prepared.timestamp &&
+               entry.name == prepared.row.name && entry.amount == prepared.amount && entry.currency == prepared.currency
+          raise_ambiguous_match(prepared)
+        end
+
+        matches[prepared.row.id] = entry
+        claimed.add(entry.id)
+      end
+
       # Reserve same-date matches for every row before trying cross-date matches;
       # CSV row order must not let another accounting day claim them first.
       [ false, true ].each do |allow_cross_date|
         prepared_rows.select(&:timestamp).each do |prepared|
-          next if matches.key?(prepared.row.id)
+          next if prepared.sure_entry_id.present? || matches.key?(prepared.row.id)
 
           entry = find_row_match(prepared, claimed, allow_legacy: false, allow_cross_date: allow_cross_date)
           next unless entry
@@ -214,7 +250,7 @@ class TransactionImport < Import
         end
       end
 
-      unresolved = prepared_rows.reject { |prepared| matches.key?(prepared.row.id) }
+      unresolved = prepared_rows.reject { |prepared| prepared.sure_entry_id.present? || matches.key?(prepared.row.id) }
       counts = unresolved.each_with_object(Hash.new(0)) do |prepared, result|
         result[match_key(prepared, prepared.date)] += 1
       end
@@ -243,6 +279,10 @@ class TransactionImport < Import
 
     def match_key(prepared, date)
       [ prepared.account.id, prepared.amount, prepared.currency, prepared.row.name, date ]
+    end
+
+    def raise_ambiguous_match(prepared)
+      raise Import::MappingError, I18n.t("imports.timestamps.ambiguous_match", row: prepared.row.source_row_number)
     end
 
     def reset_date_detection

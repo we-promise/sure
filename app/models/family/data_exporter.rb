@@ -81,7 +81,7 @@ class Family::DataExporter
 
     def generate_transactions_csv
       CSV.generate do |csv|
-        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency", "transacted_at" ]
+        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency", "transacted_at", "sure_entry_id" ]
 
         # Only export transactions from accounts belonging to this family
         # Exclude split parents (export children instead)
@@ -97,7 +97,8 @@ class Family::DataExporter
               transaction.tags.map { |tag| escape_legacy_tag_name(tag.name) }.join(","),
               transaction.entry.notes,
               transaction.entry.currency,
-              transaction.entry.transacted_at&.utc&.iso8601(6)
+              transaction.entry.transacted_at&.utc&.iso8601(6),
+              transaction.entry.external_id.nil? ? transaction.entry.id : nil
             ]
           end
       end
@@ -407,6 +408,7 @@ class Family::DataExporter
           transacted_at_locked: transaction.entry.locked?(:transacted_at),
           csv_transacted_at: transaction.extra.dig("csv", "transacted_at"),
           csv_source_date: transaction.extra.dig("csv", "date"),
+          csv_sure_entry_ids: transaction.extra.dig("csv", "sure_entry_ids"),
           amount: transaction.entry.amount,
           currency: transaction.entry.currency,
           name: transaction.entry.name,
@@ -581,6 +583,7 @@ class Family::DataExporter
           excluded: child_entry.excluded,
           csv_transacted_at: transaction.extra.dig("csv", "transacted_at"),
           csv_source_date: transaction.extra.dig("csv", "date"),
+          csv_sure_entry_ids: transaction.extra.dig("csv", "sure_entry_ids"),
           category_id: transaction.category_id,
           merchant_id: transaction.merchant_id,
           tag_ids: transaction.tag_ids,

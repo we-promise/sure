@@ -48,6 +48,18 @@ class Import::DateParserTest < ActiveSupport::TestCase
     assert_nil Import::DateParser.parse("2026-09-17", format: "%Y-%m-%d").timestamp
   end
 
+  test "minute-only offset timestamps detect and retain their source date" do
+    [ "2026-09-18T01:30Z", "2026-09-18T01:30+02:00" ].each do |value|
+      assert_equal "iso8601", Import::DateParser.detect([ value ]).format
+      parsed = Import::DateParser.parse(value, format: "iso8601")
+      assert_equal Date.new(2026, 9, 18), parsed.date
+      assert_equal 0, parsed.timestamp.sec
+      assert_equal(value.end_with?("Z") ? 0 : 7200, parsed.timestamp.utc_offset)
+    end
+
+    assert_equal Time.utc(2026, 9, 17, 23, 30), Import::DateParser.parse("2026-09-18T01:30+02:00", format: "iso8601").timestamp
+  end
+
   test "timestamps require an explicit offset and a valid clock and calendar" do
     %w[2026-09-17T14:48:50 2026-02-30T10:00:00Z 2026-09-17T25:00:00Z 2026-09-17T14:60:00Z 2026-09-17T14:00:61Z].each do |value|
       assert_raises(ArgumentError) { Import::DateParser.parse(value, format: "iso8601") }

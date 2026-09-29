@@ -1011,7 +1011,7 @@ class Family::DataImporter
           tag_ids: mapped_tag_ids(row["tag_ids"], record_type: "Transaction"),
           tag_ids_provided: row.key?("tag_ids"),
           kind: row["kind"],
-          csv_metadata: row.slice("csv_transacted_at", "csv_source_date")
+          csv_metadata: row.slice("csv_transacted_at", "csv_source_date", "csv_sure_entry_ids", "entry_id")
         }
       end
     end
@@ -1048,11 +1048,13 @@ class Family::DataImporter
     end
 
     def restore_csv_source!(transaction, data)
-      return false if data["csv_transacted_at"].blank?
-
-      source_timestamp = Entry::Timestamp.parse(data["csv_transacted_at"])
-      source = { "transacted_at" => source_timestamp.utc.iso8601(6) }
+      source = {}
+      source["transacted_at"] = Entry::Timestamp.parse(data["csv_transacted_at"]).utc.iso8601(6) if data["csv_transacted_at"].present?
       source["date"] = Date.iso8601(data["csv_source_date"]).iso8601 if data["csv_source_date"].present?
+      ids = (Array(data["csv_sure_entry_ids"]) + [ data["entry_id"] ]).compact_blank.map(&:downcase).uniq
+      source["sure_entry_ids"] = ids if ids.any?
+      return false if source.empty?
+
       transaction.extra = transaction.extra.deep_merge("csv" => source)
       true
     end

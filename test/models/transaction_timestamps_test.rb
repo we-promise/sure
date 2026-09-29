@@ -20,6 +20,21 @@ class TransactionTimestampsTest < ActiveSupport::TestCase
     assert_equal values, Entry.where(id: original.values).reverse_chronological.map { |entry| entry.transacted_at.utc.iso8601 }
   end
 
+  test "CSV minute-only offsets work in both date and separate timestamp columns" do
+    dated = import_csv([ "2026-09-18T01:30+02:00" ]).entries.first
+    assert_equal Date.new(2026, 9, 18), dated.date
+    assert_equal Time.utc(2026, 9, 17, 23, 30), dated.transacted_at
+
+    separate = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
+    separate.raw_file_str = "Date,Amount,Name,Occurred\n2026-09-19,0,Synthetic merchant,2026-09-19T10:45Z\n"
+    separate.save!
+    separate.generate_rows_from_csv
+    separate.publish
+
+    assert_equal "complete", separate.status, separate.error
+    assert_equal Time.utc(2026, 9, 19, 10, 45), separate.entries.first.transacted_at
+  end
+
   test "date policy is saved and changing it on reimport does not move existing entries" do
     value = "2026-09-17T23:30:00Z"
     entry = import_csv([ value ], date_basis: "source").entries.first
@@ -114,8 +129,8 @@ class TransactionTimestampsTest < ActiveSupport::TestCase
     entry.lock_saved_attributes!
     corrected = entry.reload.transacted_at
 
-    exported = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
-    exported.raw_file_str = "Date,Amount,Name,Occurred\n2026-09-18,0,Synthetic merchant,#{corrected.utc.iso8601(6)}\n"
+    exported = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "transacted_at")
+    exported.raw_file_str = exported_transaction_csv(entry)
     exported.save!
     exported.generate_rows_from_csv
 
@@ -128,12 +143,32 @@ class TransactionTimestampsTest < ActiveSupport::TestCase
     assert_equal Time.iso8601(source).utc.iso8601(6), entry.transaction.extra.dig("csv", "transacted_at")
   end
 
+  test "a corrected accounting date requires export identity when its source date differs" do
+    source = "2026-09-17T14:48:50Z"
+    entry = import_csv([ source ]).entries.first
+    entry.update!(date: "2026-09-18", transacted_at_local: "2026-09-17T18:00:12")
+    corrected = entry.transacted_at
+
+    legacy = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
+    legacy.raw_file_str = "Date,Amount,Name,Occurred\n2026-09-18,0,Synthetic merchant,#{corrected.utc.iso8601(6)}\n"
+    legacy.save!
+    legacy.generate_rows_from_csv
+
+    assert_no_difference "Entry.count" do
+      legacy.publish
+    end
+    assert_equal "failed", legacy.status
+    assert_match "Row 1", legacy.error
+    assert_equal corrected, entry.reload.transacted_at
+    assert_equal "2026-09-17", entry.transaction.extra.dig("csv", "date")
+  end
+
   test "CSV export matches after the accounting date alone is corrected" do
     source = "2026-09-17T14:48:50Z"
     entry = import_csv([ source ]).entries.first
     entry.update!(date: "2026-09-18")
-    exported = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
-    exported.raw_file_str = "Date,Amount,Name,Occurred\n2026-09-18,0,Synthetic merchant,#{source}\n"
+    exported = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "transacted_at")
+    exported.raw_file_str = exported_transaction_csv(entry)
     exported.save!
     exported.generate_rows_from_csv
 
@@ -489,6 +524,158 @@ class TransactionTimestampsTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 9, 18), reimport.entries.first.date
   end
 
+  test "a different source date cannot claim a manually corrected current timestamp" do
+    original = import_csv([ "2026-09-16T10:00:00Z" ]).entries.first
+    original.update!(date: "2026-09-17", transacted_at_local: "2026-09-17T16:48:50")
+    original.lock_saved_attributes!
+
+    incoming = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred", notes_col_label: "Notes")
+    incoming.raw_file_str = "Date,Amount,Name,Occurred,Notes\n2026-09-17,0,Synthetic merchant,2026-09-17T14:48:50Z,Wrong entry\n"
+    incoming.save!
+    incoming.generate_rows_from_csv
+
+    assert_no_difference "Entry.count" do
+      incoming.publish
+    end
+    assert_equal "failed", incoming.status
+    assert_match "Row 1", incoming.error
+    assert original.reload.notes.blank?
+    assert_equal "2026-09-16", original.transaction.extra.dig("csv", "date")
+  end
+
+  test "a conflicting Sure export ID cannot claim a different entry" do
+    first = import_csv([ "2026-09-16T10:00:00Z" ]).entries.first
+    second = import_csv([ "2026-09-17T14:48:50Z" ]).entries.first
+    first.update!(transacted_at: second.transacted_at)
+    original_import_id = second.import_id
+
+    incoming = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
+    incoming.raw_file_str = "Date,Amount,Name,Occurred,sure_entry_id\n2026-09-17,0,Synthetic merchant,2026-09-17T14:48:50Z,#{first.id}\n"
+    incoming.save!
+    incoming.generate_rows_from_csv
+
+    assert_no_difference "Entry.count" do
+      incoming.publish
+    end
+    assert_equal "failed", incoming.status
+    assert_match "Row 1", incoming.error
+    assert_equal original_import_id, second.reload.import_id
+  end
+
+  test "unknown Sure export IDs do not claim matching entries in the selected account" do
+    original = import_csv([ "2026-09-16T10:00:00Z" ]).entries.first
+    original.update!(date: "2026-09-17", transacted_at: Time.utc(2026, 9, 17, 14, 48, 50))
+
+    incoming = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
+    incoming.raw_file_str = "Date,Amount,Name,Occurred,sure_entry_id\n2026-09-17,0,Synthetic merchant,2026-09-17T14:48:50Z,#{SecureRandom.uuid}\n"
+    incoming.save!
+    incoming.generate_rows_from_csv
+
+    assert_difference "Entry.count", 1 do
+      incoming.publish
+    end
+    assert_equal "complete", incoming.status, incoming.error
+    created_id = incoming.entries.first.id
+    assert_not_equal original.id, created_id
+
+    repeated = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
+    repeated.raw_file_str = incoming.raw_file_str
+    repeated.save!
+    repeated.generate_rows_from_csv
+    assert_no_difference "Entry.count" do
+      repeated.publish
+    end
+    assert_equal "complete", repeated.status, repeated.error
+    assert_equal created_id, repeated.entries.first.id
+  end
+
+  test "a Sure export ID from another account cannot claim its entry" do
+    other = accounts(:credit_card).entries.create!(date: "2026-09-17", transacted_at: Time.utc(2026, 9, 17, 14, 48, 50),
+      amount: 0, currency: "USD", name: "Synthetic merchant", entryable: Transaction.new)
+    incoming = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
+    incoming.raw_file_str = "Date,Amount,Name,Occurred,sure_entry_id\n2026-09-17,0,Synthetic merchant,2026-09-17T14:48:50Z,#{other.id}\n"
+    incoming.save!
+    incoming.generate_rows_from_csv
+
+    assert_difference "Entry.count", 1 do
+      incoming.publish
+    end
+    assert_equal "complete", incoming.status, incoming.error
+    assert_equal @account.id, incoming.entries.first.account_id
+    assert_not_equal other.id, incoming.entries.first.id
+    assert_nil other.reload.import_id
+  end
+
+  test "duplicate or malformed Sure export IDs fail without updating entries" do
+    original = import_csv([ "2026-09-17T14:48:50Z" ]).entries.first
+    original_import_id = original.import_id
+
+    [ "#{original.id},#{original.id.upcase}", "not-a-uuid" ].each do |identities|
+      rows = identities.split(",").map do |id|
+        "2026-09-17,0,Synthetic merchant,2026-09-17T14:48:50Z,#{id}\n"
+      end.join
+      incoming = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
+      incoming.raw_file_str = "Date,Amount,Name,Occurred,sure_entry_id\n#{rows}"
+      incoming.save!
+      incoming.generate_rows_from_csv
+
+      assert_no_difference "Entry.count" do
+        incoming.publish
+      end
+      assert_equal "failed", incoming.status
+      assert_match "Row", incoming.error
+      assert_equal original_import_id, original.reload.import_id
+    end
+  end
+
+  test "two Sure export IDs cannot update the same transaction in one CSV" do
+    foreign_id = SecureRandom.uuid
+    first = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
+    first.raw_file_str = "Date,Amount,Name,Occurred,sure_entry_id\n2026-09-17,0,Synthetic merchant,2026-09-17T14:48:50Z,#{foreign_id}\n"
+    first.save!
+    first.generate_rows_from_csv
+    first.publish
+    assert_equal "complete", first.status, first.error
+    entry = first.entries.first
+
+    incoming = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred", notes_col_label: "Notes")
+    incoming.raw_file_str = "Date,Amount,Name,Occurred,Notes,sure_entry_id\n" \
+                            "2026-09-17,0,Synthetic merchant,2026-09-17T14:48:50Z,First,#{foreign_id}\n" \
+                            "2026-09-17,0,Synthetic merchant,2026-09-17T14:48:50Z,Second,#{entry.id}\n"
+    incoming.save!
+    incoming.generate_rows_from_csv
+
+    assert_no_difference "Entry.count" do
+      incoming.publish
+    end
+    assert_equal "failed", incoming.status
+    assert_match "Row 2", incoming.error
+    assert entry.reload.notes.blank?
+  end
+
+  test "a Sure export ID on a split parent wins over inherited child metadata" do
+    foreign_id = SecureRandom.uuid
+    source = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
+    source.raw_file_str = "Date,Amount,Name,Occurred,sure_entry_id\n2026-09-17,0,Synthetic merchant,2026-09-17T14:48:50Z,#{foreign_id}\n"
+    source.save!
+    source.generate_rows_from_csv
+    source.publish
+    assert_equal "complete", source.status, source.error
+    parent = source.entries.first
+    children = parent.split!([ { name: "One", amount: 0 }, { name: "Two", amount: 0 } ])
+
+    repeated = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
+    repeated.raw_file_str = source.raw_file_str
+    repeated.save!
+    repeated.generate_rows_from_csv
+    assert_no_difference "Entry.count" do
+      repeated.publish
+    end
+    assert_equal "complete", repeated.status, repeated.error
+    assert_equal parent.id, repeated.entries.first.id
+    assert children.all? { |child| child.reload.parent_entry_id == parent.id }
+  end
+
   test "a corrected accounting date matches its original CSV date on reimport" do
     import = build_import(date_format: "%Y-%m-%d", timestamp_col_label: "Occurred")
     import.raw_file_str = "Date,Amount,Name,Occurred\n2026-09-17,0,Synthetic merchant,2026-09-17T14:48:50Z\n"
@@ -565,6 +752,19 @@ class TransactionTimestampsTest < ActiveSupport::TestCase
   end
 
   private
+    def exported_transaction_csv(entry)
+      result = nil
+      Zip::File.open_buffer(Family::DataExporter.new(entry.account.family).generate_export) do |zip|
+        data = CSV.parse(zip.read("transactions.csv"), headers: true)
+        selected = data.find { |row| row["sure_entry_id"] == entry.id }
+        result = CSV.generate do |csv|
+          csv << data.headers
+          csv << selected.fields
+        end
+      end
+      result
+    end
+
     def create_entry(**attributes)
       Entry.create!({ account: @account, date: "2026-09-17", amount: 0, currency: "USD",
                      name: "Synthetic merchant", entryable: Transaction.new }.merge(attributes))

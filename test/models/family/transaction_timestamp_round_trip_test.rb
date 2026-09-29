@@ -75,6 +75,112 @@ class Family::TransactionTimestampRoundTripTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 9, 18), restored.reload.date
   end
 
+  test "NDJSON preserves a foreign Sure CSV ID for repeat imports" do
+    foreign_id = SecureRandom.uuid
+    csv = "Date,Amount,Name,Occurred,sure_entry_id\n2026-09-19,0,Synthetic external export,2026-09-19T10:45Z,#{foreign_id}\n"
+    import = TransactionImport.create!(family: @source, account: @entry.account, raw_file_str: csv,
+      date_col_label: "Date", date_format: "%Y-%m-%d", timestamp_col_label: "Occurred",
+      amount_col_label: "Amount", name_col_label: "Name", signage_convention: "inflows_negative")
+    import.generate_rows_from_csv
+    import.publish
+    assert_equal "complete", import.status, import.error
+
+    Family::DataImporter.new(@target, exported_files.fetch("all.ndjson")).import!
+    restored = @target.entries.find_by!(name: "Synthetic external export")
+    assert_includes restored.transaction.extra.dig("csv", "sure_entry_ids"), foreign_id
+
+    repeated = TransactionImport.create!(family: @target, account: restored.account, raw_file_str: csv,
+      date_col_label: "Date", date_format: "%Y-%m-%d", timestamp_col_label: "Occurred",
+      amount_col_label: "Amount", name_col_label: "Name", signage_convention: "inflows_negative")
+    repeated.generate_rows_from_csv
+    assert_no_difference "Entry.count" do
+      repeated.publish
+    end
+    assert_equal "complete", repeated.status, repeated.error
+    assert_equal restored.id, repeated.entries.first.id
+  end
+
+  test "NDJSON restores a native Sure CSV ID for corrected-export reimports" do
+    source_csv = "Date,Amount,Name,Occurred\n2026-09-17,0,Synthetic backup merchant,2026-09-17T14:48:50Z\n"
+    source_import = TransactionImport.create!(family: @source, account: @entry.account, raw_file_str: source_csv,
+      date_col_label: "Date", date_format: "%Y-%m-%d", timestamp_col_label: "Occurred",
+      amount_col_label: "Amount", name_col_label: "Name", signage_convention: "inflows_negative")
+    source_import.generate_rows_from_csv
+    source_import.publish
+    assert_equal "complete", source_import.status, source_import.error
+    entry = source_import.entries.first
+    entry.update!(date: "2026-09-18", transacted_at: Time.utc(2026, 9, 17, 18))
+
+    files = exported_files
+    rows = CSV.parse(files.fetch("transactions.csv"), headers: true)
+    native_csv = CSV.generate do |csv|
+      csv << rows.headers
+      csv << rows.find { |row| row["sure_entry_id"] == entry.id }.fields
+    end
+    Family::DataImporter.new(@target, files.fetch("all.ndjson")).import!
+    restored = @target.entries.find_by!(name: "Synthetic backup merchant")
+    assert_includes restored.transaction.extra.dig("csv", "sure_entry_ids"), entry.id
+
+    repeated = TransactionImport.create!(family: @target, account: restored.account, raw_file_str: native_csv,
+      date_col_label: "date", date_format: "%Y-%m-%d", timestamp_col_label: "transacted_at",
+      amount_col_label: "amount", name_col_label: "name", currency_col_label: "currency",
+      signage_convention: "inflows_negative")
+    repeated.generate_rows_from_csv
+    assert_no_difference "Entry.count" do
+      repeated.publish
+    end
+    assert_equal "complete", repeated.status, repeated.error
+    assert_equal restored.id, repeated.entries.first.id
+  end
+
+  test "a split child keeps its own Sure export ID after NDJSON restore" do
+    child = @entry.split!([ { name: "Split ID Child", amount: @entry.amount / 2 },
+                            { name: "Other split", amount: @entry.amount / 2 } ]).first
+    files = exported_files
+    rows = CSV.parse(files.fetch("transactions.csv"), headers: true)
+    child_csv = CSV.generate do |csv|
+      csv << rows.headers
+      csv << rows.find { |row| row["sure_entry_id"] == child.id }.fields
+    end
+
+    Family::DataImporter.new(@target, files.fetch("all.ndjson")).import!
+    restored = @target.entries.find_by!(name: "Split ID Child")
+    repeated = TransactionImport.create!(family: @target, account: restored.account, raw_file_str: child_csv,
+      date_col_label: "date", date_format: "%Y-%m-%d", timestamp_col_label: "transacted_at",
+      amount_col_label: "amount", name_col_label: "name", currency_col_label: "currency",
+      signage_convention: "inflows_negative")
+    repeated.generate_rows_from_csv
+    assert_no_difference "Entry.count" do
+      repeated.publish
+    end
+    assert_equal "complete", repeated.status, repeated.error
+    assert_equal restored.id, repeated.entries.first.id
+  end
+
+  test "NDJSON restores a split parent's shared foreign ID without claiming a child" do
+    foreign_id = SecureRandom.uuid
+    csv = "Date,Amount,Name,Occurred,sure_entry_id\n2026-09-19,0,Synthetic split export,2026-09-19T10:45Z,#{foreign_id}\n"
+    source_import = TransactionImport.create!(family: @source, account: @entry.account, raw_file_str: csv,
+      date_col_label: "Date", date_format: "%Y-%m-%d", timestamp_col_label: "Occurred",
+      amount_col_label: "Amount", name_col_label: "Name", signage_convention: "inflows_negative")
+    source_import.generate_rows_from_csv
+    source_import.publish
+    assert_equal "complete", source_import.status, source_import.error
+    source_import.entries.first.split!([ { name: "First", amount: 0 }, { name: "Second", amount: 0 } ])
+
+    Family::DataImporter.new(@target, exported_files.fetch("all.ndjson")).import!
+    restored = @target.entries.find_by!(name: "Synthetic split export")
+    repeated = TransactionImport.create!(family: @target, account: restored.account, raw_file_str: csv,
+      date_col_label: "Date", date_format: "%Y-%m-%d", timestamp_col_label: "Occurred",
+      amount_col_label: "Amount", name_col_label: "Name", signage_convention: "inflows_negative")
+    repeated.generate_rows_from_csv
+    assert_no_difference "Entry.count" do
+      repeated.publish
+    end
+    assert_equal "complete", repeated.status, repeated.error
+    assert_equal restored.id, repeated.entries.first.id
+  end
+
   test "NDJSON restores a split child's own CSV provenance independently of its parent" do
     parent = @entry.account.entries.create!(date: "2026-09-17", amount: 0, currency: "USD",
       name: "Synthetic split parent", entryable: Transaction.new)
@@ -108,7 +214,7 @@ class Family::TransactionTimestampRoundTripTest < ActiveSupport::TestCase
   test "old exports without occurrence timestamps remain supported" do
     lines = exported_files.fetch("all.ndjson").lines.map do |line|
       record = JSON.parse(line)
-      record["data"].except!("transacted_at", "csv_transacted_at", "csv_source_date", "transacted_at_locked")
+      record["data"].except!("transacted_at", "csv_transacted_at", "csv_source_date", "csv_sure_entry_ids", "transacted_at_locked")
       record.to_json
     end
     Family::DataImporter.new(@target, lines.join("\n")).import!
