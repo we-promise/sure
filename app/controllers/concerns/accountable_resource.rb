@@ -70,8 +70,7 @@ module AccountableResource
     @account = if e.record.is_a?(Account)
       e.record
     else
-      e.record.try(:account) ||
-        Current.family.accounts.build(account_params.except(:return_to, :opening_balance_date))
+      e.record.try(:account) || rebuilt_account_from_submission
     end
     @error_message = e.record.errors.full_messages.join(", ").presence || e.message
     # The `new` template's method-selection branch reads `@provider_configs`,
@@ -130,6 +129,21 @@ module AccountableResource
   end
 
   private
+    # The account the 422 form renders when the exception carried none.
+    #
+    # `accountable_attributes` is defaulted the way `create_and_sync` defaults
+    # it. `accountable_type=` only writes the type column: the accountable
+    # object itself is built as a side effect of `accountable_attributes=` or
+    # of `subtype=`. A submission that names neither -- a loan form whose
+    # nested fields are all blank, say -- rebuilt an account with a nil
+    # `accountable`, and the form came back without any of the type's own
+    # inputs, which is the opposite of what this rescue exists to do.
+    def rebuilt_account_from_submission
+      attributes = account_params.except(:return_to, :opening_balance_date)
+      attributes[:accountable_attributes] ||= {}
+      Current.family.accounts.build(attributes)
+    end
+
     def set_link_options
       account_type_name = accountable_type.name
 
