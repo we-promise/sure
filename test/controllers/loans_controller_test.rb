@@ -730,6 +730,28 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='account[accountable_attributes][interest_rate]'][value='6']", count: 1
   end
 
+  # The submission that trips this rescue need not carry nested attributes at
+  # all. `accountable_type=` writes only the type column, so rebuilding from
+  # such a submission left `accountable` nil and the 422 form came back
+  # without a single one of the loan's own fields -- nothing for the borrower
+  # to correct, on a form whose whole purpose here is correction.
+  test "a late create failure renders the loan's fields even when the form sent none" do
+    invalid_entry = Entry.new.tap(&:validate)
+    Account::OpeningBalanceManager.any_instance.stubs(:set_opening_balance)
+      .raises(ActiveRecord::RecordInvalid.new(invalid_entry))
+
+    assert_no_difference "Account.count" do
+      post loans_path, params: { account: {
+        name: "Loan Without Nested Attributes", balance: 50_000, currency: "USD", accountable_type: "Loan"
+      } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "form[action='#{loans_path}']", count: 1
+    assert_select "input[name='account[name]'][value='Loan Without Nested Attributes']", count: 1
+    assert_select "input[name='account[accountable_attributes][interest_rate]']", minimum: 1
+  end
+
   private
     # The payment cells of the Schedule tab's table, the only table on the page.
     def schedule_table_cells
