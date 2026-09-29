@@ -369,7 +369,6 @@ class Security < ApplicationRecord
     end
 
     def apply_default_region
-      return if region.present?
       # An offline security's `country_code` is not the instrument's listing
       # country. `Security::Resolver#offline_security` persists whatever the
       # caller passed, and the resolver's own ranking calls that value
@@ -381,7 +380,28 @@ class Security < ApplicationRecord
       # classify.
       return if offline?
 
-      self.region = REGIONS.dig(country_code.to_s.upcase, "region")
+      derived = REGIONS.dig(country_code.to_s.upcase, "region")
+
+      if region.blank?
+        self.region = derived
+      elsif country_code_changed? && region == REGIONS.dig(country_code_was.to_s.upcase, "region")
+        # The country the region was read from has been corrected, and the
+        # region still says exactly what the old country implied -- so this
+        # callback is what put it there, and it is this callback's to move.
+        #
+        # There is no column recording who wrote the region, so agreement with
+        # the superseded country is what stands in for one. That is the same
+        # test `apply_classification_defaults` makes above before touching an
+        # asset class it did not assert. A region that disagrees was set by
+        # someone who knew something the country does not say -- a
+        # cross-listing, a fund domiciled away from what it holds -- and stays.
+        #
+        # Without this, correcting a country left the two halves of the same
+        # fact contradicting each other: `region` frozen on the old country
+        # while `development_status`, derived live from `country_code`, had
+        # already moved to the new one.
+        self.region = derived
+      end
     end
 
     def upcase_symbols
